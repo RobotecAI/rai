@@ -1,6 +1,6 @@
 # 🤖 ROS2 AI
 
-RAI is a framework for creating conversations between users and assistants. It uses predefined, flexible scenarios with built-in actions. The engine is designed to be adaptable and scalable, supporting a wide range of interactive applications across different domains.
+RAI is a framework for creating conversations between users and assistants in the [ROS2](https://ros.org/) ecosystem. It uses predefined, flexible scenarios with built-in actions. The engine is designed to be adaptable and scalable, supporting a wide range of nodes across different domains.
 
 ## Table of Contents
 
@@ -15,6 +15,10 @@ RAI is a framework for creating conversations between users and assistants. It u
 - [Integration with Robotic Systems](#-integration-with-robotic-systems)
 - [Installation](#installation-instructions)
 - [Further documentation](#further-documentation)
+
+## General Architecture Diagram with Current and Planned Features.
+
+![rai_arch](https://github.com/RobotecAI/rai/assets/22739059/11df4029-0291-4cfb-9d2e-03211550bf98)
 
 ## 🧩 Scenario Definition
 
