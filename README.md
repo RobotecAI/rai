@@ -36,7 +36,7 @@ Scenarios can be built using the following elements:
 ![Scenario Building Blocks](./docs/imgs/scenario_building_blocks.png)
 
 For more about scenario building see: [docs/scenarios.md](docs/scenarios.md)\
-For more about scenario running: [src/rai/scenario_engine/README.md](src/rai/scenario_engine/README.md)
+For more about scenario running: [src/rai/scenario_engine](src/rai/scenario_engine)
 
 #### For available messages see:
 
@@ -73,7 +73,7 @@ Planned:
 - ☁️ Anthropic [link](https://www.anthropic.com/api)
 - ☁️ Cohere [link](https://cohere.com/)
 
-For more see: [src/rai/vendors/README.md](src/rai/vendors/README.md)
+For more see: [src/rai/vendors](src/rai/vendors)
 
 ### 🚀 Vendors Initialization Examples
 
@@ -107,7 +107,7 @@ AWSBedrockVendor(
 ## 🔗 Integration with Robotic Systems
 
 This engine provides support for integration with robotic systems through ROS2, allowing for real-time control and feedback within various robotic applications.\
-For more information see: [src/rai/communication/README.md](src/rai/communication/README.md)
+For more information see: [src/rai/communication](src/rai/communication)
 
 ## 📚 Installation and further documentation
 
