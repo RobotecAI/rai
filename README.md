@@ -2,6 +2,12 @@
 
 **RAI** is a framework for creating conversations between users and assistants in the [ROS2](https://ros.org/) ecosystem. It uses predefined, flexible scenarios with built-in actions. The engine is designed to be adaptable and scalable, supporting a wide range of nodes across different domains.
 
+## Planned demos 👀
+
+- [🌾 agriculture demo](https://github.com/RobotecAI/rai-agriculture-demo)
+- [🤖 husarion demo](https://github.com/RobotecAI/rai-husarion-demo)
+- [🦾 manipulation demo](https://github.com/RobotecAI/rai-manipulation-demo)
+
 ## Table of Contents
 
 - [Scenario Definition](#-scenario-definition)
