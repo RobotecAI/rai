@@ -1,6 +1,12 @@
-# 🤖 ROS2 AI
+# 🤖 RAI
 
-RAI is a framework for creating conversations between users and assistants. It uses predefined, flexible scenarios with built-in actions. The engine is designed to be adaptable and scalable, supporting a wide range of interactive applications across different domains.
+**RAI** is a framework for creating conversations between users and assistants in the [ROS2](https://ros.org/) ecosystem. It uses predefined, flexible scenarios with built-in actions. The engine is designed to be adaptable and scalable, supporting a wide range of nodes across different domains.
+
+## Planned demos 👀
+
+- [🌾 agriculture demo](https://github.com/RobotecAI/rai-agriculture-demo)
+- [🤖 husarion demo](https://github.com/RobotecAI/rai-husarion-demo)
+- [🦾 manipulation demo](https://github.com/RobotecAI/rai-manipulation-demo)
 
 ## Table of Contents
 
@@ -15,6 +21,10 @@ RAI is a framework for creating conversations between users and assistants. It u
 - [Integration with Robotic Systems](#-integration-with-robotic-systems)
 - [Installation](#installation-instructions)
 - [Further documentation](#further-documentation)
+
+## General Architecture Diagram with Current and Planned Features
+
+![rai_arch](docs/imgs/rai_arch.png)
 
 ## 🧩 Scenario Definition
 
@@ -32,7 +42,7 @@ Scenarios can be built using the following elements:
 ![Scenario Building Blocks](./docs/imgs/scenario_building_blocks.png)
 
 For more about scenario building see: [docs/scenarios.md](docs/scenarios.md)\
-For more about scenario running: [src/rai/scenario_engine/README.md](src/rai/scenario_engine/README.md)
+For more about scenario running: [src/rai/scenario_engine](src/rai/scenario_engine)
 
 #### For available messages see:
 
@@ -69,7 +79,7 @@ Planned:
 - ☁️ Anthropic [link](https://www.anthropic.com/api)
 - ☁️ Cohere [link](https://cohere.com/)
 
-For more see: [src/rai/vendors/README.md](src/rai/vendors/README.md)
+For more see: [src/rai/vendors](src/rai/vendors)
 
 ### 🚀 Vendors Initialization Examples
 
@@ -103,7 +113,7 @@ AWSBedrockVendor(
 ## 🔗 Integration with Robotic Systems
 
 This engine provides support for integration with robotic systems through ROS2, allowing for real-time control and feedback within various robotic applications.\
-For more information see: [src/rai/communication/README.md](src/rai/communication/README.md)
+For more information see: [src/rai/communication](src/rai/communication)
 
 ## 📚 Installation and further documentation
 
