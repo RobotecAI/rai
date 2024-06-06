@@ -25,6 +25,8 @@ langchain = "^0.2.2"
 langchain-openai = "^0.1.8"
 langchain-aws = "^0.1.6"
 ipykernel = "^6.29.4"
+langchain-community = "^0.2.3"
+langchain-experimental = "^0.0.60"
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]

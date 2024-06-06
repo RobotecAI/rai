@@ -30,7 +30,7 @@ class open_set_segmentation(BaseModel):
     def run(self):
         """Implements the segmentation logic for the specified classes on the given topic."""
         # Placeholder for actual segmentation logic
-        return f"Segmentation on topic {self['topic']} for classes {self['classes']} started."
+        return f"Segmentation on topic {self.topic} for classes {self.classes} started."
 
 
 class visual_question_answering(BaseModel):
@@ -53,7 +53,7 @@ class observe_surroundings(BaseModel):
     def run(self):
         """Observes and processes data from the given ROS2 topic."""
         # Placeholder for actual observation logic
-        return f"Observing surroundings using topic {self['topic']}"
+        return f"Observing surroundings using topic {self.topic}"
 
 
 class start_camera_node(BaseModel):
@@ -89,8 +89,12 @@ class use_honk(BaseModel):
 
     def run(self):
         """Activates the honk."""
+        subprocess.check_output("play outputs/car-honk-1-short.wav", shell=True)
         result = subprocess.run(
-            "echo 'Honk has been activated'", shell=True, capture_output=True, text=True
+            "ros2 topic pub --once /tractor1/alert/flash std_msgs/Bool \"data: 'true'\"",
+            shell=True,
+            capture_output=True,
+            text=True,
         )
         return result.stdout.strip()
 
@@ -100,12 +104,16 @@ class replan_without_current_path(BaseModel):
 
     def run(self):
         """Replans without the current path."""
+        command = "ros2 topic pub /tractor1/control/move std_msgs/msg/String \"{data: 'REPLAN'}\" --once"
+
+        subprocess.run(command, shell=True)
         result = subprocess.run(
             "echo 'Replanning without current path'",
             shell=True,
             capture_output=True,
             text=True,
         )
+
         return result.stdout.strip()
 
 
@@ -114,6 +122,9 @@ class continue_action(BaseModel):
 
     def run(self):
         """Continues the current operation."""
+        command = "ros2 topic pub /tractor1/control/move std_msgs/msg/String \"{data: 'CONTINUE'}\" --once"
+
+        subprocess.run(command, shell=True)
         result = subprocess.run(
             "echo 'Continuing'", shell=True, capture_output=True, text=True
         )
