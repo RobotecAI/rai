@@ -13,13 +13,9 @@ class send_voice_message(BaseModel):
         """Gets the current map from the specified topic."""
 
         filepath = f"outputs/{time.time_ns()}.wav"
-        content = ""
-        try:
-            content = self.content
-        except:
-            content = self["content"]
+
         p = subprocess.check_output(
-            f"echo {content} | piper   --model en_US-libritts-high   --output_file {filepath}",
+            f"echo {self.content} | piper   --model en_US-libritts-high   --output_file {filepath}",
             shell=True,
         )
         subprocess.run(["play", filepath])
