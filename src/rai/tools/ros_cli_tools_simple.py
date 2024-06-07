@@ -36,6 +36,39 @@ class ros2_generic_cli_call(BaseModel):
         return result
 
 
+class ros2_topic(BaseModel):
+    """
+        usage: ros2 topic [-h] [--include-hidden-topics] Call `ros2 topic <command> -h` for more detailed usage. ...
+
+    Various topic related sub-commands
+
+    options:
+      -h, --help            show this help message and exit
+      --include-hidden-topics
+                            Consider hidden topics as well
+
+    Commands:
+      bw     Display bandwidth used by topic
+      delay  Display delay of topic from timestamp in header
+      echo   Output messages from a topic
+      find   Output a list of available topics of a given type
+      hz     Print the average publishing rate to screen
+      info   Print information about a topic
+      list   Output a list of available topics
+      pub    Publish a message to a topic
+      type   Print a topic's type
+
+      Call `ros2 topic <command> -h` for more detailed usage.
+    """
+
+    command: str = Field(..., description="The command to run")
+
+    def run(self):
+        command = f"ros2 topic {self.command}"
+        result = subprocess.run(command, shell=True, capture_output=True)
+        return result
+
+
 class ros2_interface(BaseModel):
     """
     usage: ros2 interface [-h] Call `ros2 interface <command> -h` for more detailed usage. ...

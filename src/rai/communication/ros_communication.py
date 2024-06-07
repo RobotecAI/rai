@@ -67,6 +67,15 @@ def wait_for_message(
     return False, None
 
 
+from rclpy.duration import Duration
+from rclpy.qos import (
+    QoSDurabilityPolicy,
+    QoSHistoryPolicy,
+    QoSLivelinessPolicy,
+    QoSReliabilityPolicy,
+)
+
+
 class SingleMessageGrabber:
     def __init__(
         self,
@@ -91,6 +100,17 @@ class SingleMessageGrabber:
 
         node = rclpy.create_node(self.__class__.__name__ + "_node")  # type: ignore
         qos_profile = rclpy.qos.qos_profile_sensor_data
+        if "odom" in self.topic:
+            qos_profile = QoSProfile(
+                reliability=QoSReliabilityPolicy.RELIABLE,
+                history=QoSHistoryPolicy.KEEP_LAST,
+                depth=1,
+                durability=QoSDurabilityPolicy.VOLATILE,
+                lifespan=Duration(seconds=0),
+                deadline=Duration(seconds=0),
+                liveliness=QoSLivelinessPolicy.AUTOMATIC,
+                liveliness_lease_duration=Duration(seconds=0),
+            )
 
         success, msg = wait_for_message(
             self.message_type,

@@ -13,10 +13,25 @@ class send_voice_message(BaseModel):
         """Gets the current map from the specified topic."""
 
         filepath = f"outputs/{time.time_ns()}.wav"
-
-        p = subprocess.check_output(
-            f"echo {self.content} | piper   --model en_US-libritts-high   --output_file {filepath}",
+        content = self.content.replace("'", "")
+        subprocess.run(
+            f"echo {content} | piper   --model en_US-libritts-high   --output_file {filepath}",
             shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
-        subprocess.run(["play", filepath])
-        return filepath
+        subprocess.run(
+            ["play", filepath], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        return "Voice message sent."
+
+
+class wait_for_seconds(BaseModel):
+    """Wait for a specified number of seconds"""
+
+    seconds: int = Field(..., description="The number of seconds to wait")
+
+    def run(self):
+        """Waits for the specified number of seconds."""
+        time.sleep(self.seconds)
+        return f"Waited for {self.seconds} seconds."

@@ -16,7 +16,7 @@ class set_goal_pose_relative_to_the_map(BaseModel):
         cmd = (
             f"ros2 topic pub {self.topic} geometry_msgs/PoseStamped "
             f'\'{{header: {{stamp: {{sec: 0, nanosec: 0}}, frame_id: "map"}}, '
-            f"pose: {{position: {{x: {self.x}, y: {self.y}, z: {self.z}}}}}}}'"
+            f"pose: {{position: {{x: {self.x}, y: {self.y}, z: {self.z}}}}}}}' --once"
         )
         subprocess.run(cmd, shell=True)
 
