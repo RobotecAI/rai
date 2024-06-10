@@ -1,4 +1,5 @@
 import subprocess
+from typing import Type
 
 from langchain.tools import BaseTool
 from langchain_core.pydantic_v1 import BaseModel, Field
@@ -13,7 +14,7 @@ class Ros2TopicToolInput(BaseModel):
 class Ros2TopicTool(BaseTool):
     """Tool for interacting with ROS2 topics."""
 
-    name: str = "ros2_topic"
+    name: str = "Ros2TopicTool"
     description: str = """
         usage: ros2 topic [-h] [--include-hidden-topics] Call `ros2 topic <command> -h` for more detailed usage. ...
 
@@ -37,7 +38,7 @@ class Ros2TopicTool(BaseTool):
 
       Call `ros2 topic <command> -h` for more detailed usage.
     """
-    args_schema = Ros2TopicToolInput
+    args_schema: Type[Ros2TopicToolInput] = Ros2TopicToolInput
 
     def _run(self, command: str):
         """Executes the specified ROS2 topic command."""
@@ -55,7 +56,7 @@ class Ros2InterafaceToolInput(BaseModel):
 
 class Ros2InterfaceTool(BaseTool):
 
-    name: str = "ros2 interace tool"
+    name: str = "Ros2InterfaceTool"
 
     description: str = """
     usage: ros2 interface [-h] Call `ros2 interface <command> -h` for more detailed usage. ...
@@ -75,7 +76,7 @@ class Ros2InterfaceTool(BaseTool):
       Call `ros2 interface <command> -h` for more detailed usage.
     """
 
-    args_schema = Ros2InterafaceToolInput
+    args_schema: Type[Ros2InterafaceToolInput] = Ros2InterafaceToolInput
 
     def _run(self, command: str):
         command = f"ros2 interface {command}"
@@ -89,8 +90,8 @@ class Ros2ServiceToolInput(BaseModel):
     command: str = Field(..., description="The command to run")
 
 
-class Ros2ServiceTool(BaseModel):
-    name: str = "ros2 service tool"
+class Ros2ServiceTool(BaseTool):
+    name: str = "Ros2ServiceTool"
 
     description: str = """
     usage: ros2 service [-h] [--include-hidden-services] Call `ros2 service <command> -h` for more detailed usage. ...
@@ -107,19 +108,40 @@ class Ros2ServiceTool(BaseModel):
       find  Output a list of available services of a given type
       list  Output a list of available services
       type  Output a service's type
-
-    usage: ros2 service call [-h] [-r N] service_name service_type [values]
-    ros2 service call: error: the following arguments are required: service_name, service_type
-
-    usage: ros2 service find [-h] [-c] [--include-hidden-services] service_type
-    ros2 service find: error: the following arguments are required: service_type
-    usage: ros2 service type [-h] service_name
-    ros2 service type: error: the following arguments are required: service_name
     """
 
-    args_schema = Ros2ServiceToolInput
+    args_schema: Type[Ros2ServiceToolInput] = Ros2ServiceToolInput
 
     def _run(self, command: str):
         command = f"ros2 service {command}"
         result = subprocess.run(command, shell=True, capture_output=True)
         return result
+
+
+class SetGoalPoseToolInput(BaseModel):
+    """Input for the set_goal_pose tool."""
+
+    topic: str = Field(
+        "/goal_pose", description="Ros2 topic to publish the goal pose to"
+    )
+    x: float = Field(..., description="The x coordinate of the goal pose")
+    y: float = Field(..., description="The y coordinate of the goal pose")
+
+
+class SetGoalPoseTool(BaseTool):
+    """Set the goal pose for the robot"""
+
+    name = "SetGoalPoseTool"
+    description: str = "A tool for setting the goal pose for the robot."
+
+    args_schema: Type[SetGoalPoseToolInput] = SetGoalPoseToolInput
+
+    def _run(self, topic: str, x: float, y: float):
+        """Sets the goal pose for the robot."""
+
+        cmd = (
+            f"ros2 topic pub {topic} geometry_msgs/PoseStamped "
+            f'\'{{header: {{stamp: {{sec: 0, nanosec: 0}}, frame_id: "map"}}, '
+            f"pose: {{position: {{x: {x}, y: {y}, z: {0.0}}}}}}}' --once"
+        )
+        return subprocess.run(cmd, shell=True)

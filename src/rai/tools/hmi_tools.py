@@ -1,5 +1,6 @@
 import subprocess
 import time
+from typing import Type
 
 from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_core.tools import BaseTool
@@ -14,27 +15,24 @@ class PlayVoiceMessageToolInput(BaseModel):
 class PlayVoiceMessageTool(BaseTool):
     """Output a voice message"""
 
-    name: str = "play_voice_message"
+    name: str = "PlayVoiceMessageTool"
     description: str = (
         "A tool for sending voice messages. "
         "Useful for sending audio content as messages. "
         "Input should be the content of the voice message."
     )
 
-    args_schema = PlayVoiceMessageToolInput
+    args_schema: Type[PlayVoiceMessageToolInput] = PlayVoiceMessageToolInput
 
     def _run(self, content: str):
         """plays the voice message."""
         filepath = f"outputs/{time.time_ns()}.wav"
         content = content.replace("'", "")
-        subprocess.run(
-            f"echo {content} | piper   --model en_US-libritts-high   --output_file {filepath}",
+        subprocess.Popen(
+            f"echo {content} | piper   --model en_US-libritts-high   --output_file {filepath} && play {filepath}",
             shell=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-        )
-        subprocess.run(
-            ["play", filepath], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
         return "Voice message sent."
 
@@ -48,14 +46,14 @@ class WaitForSecondsToolInput(BaseModel):
 class WaitForSecondsTool(BaseTool):
     """Wait for a specified number of seconds"""
 
-    name: str = "wait_for_seconds"
+    name: str = "WaitForSecondsTool"
     description: str = (
         "A tool for waiting. "
         "Useful for pausing execution for a specified number of seconds. "
         "Input should be the number of seconds to wait."
     )
 
-    args_schema = WaitForSecondsToolInput
+    args_schema: Type[WaitForSecondsToolInput] = WaitForSecondsToolInput
 
     def _run(self, seconds: int):
         """Waits for the specified number of seconds."""

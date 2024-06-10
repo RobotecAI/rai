@@ -1,4 +1,6 @@
 import base64
+import subprocess
+from typing import Type
 
 import cv2
 import numpy as np
@@ -10,20 +12,20 @@ from tf_transformations import euler_from_quaternion
 from rai.communication.ros_communication import SingleImageGrabber, SingleMessageGrabber
 
 
-class GetCurrentMapToolInput(BaseModel):
+class GetOccupancyGridToolInput(BaseModel):
     """Input for the get_current_map tool."""
 
     topic: str = Field(..., description="Ros2 occupancy grid topic to subscribe to")
     odom_topic: str = Field("/odom", description="Ros2 odometry topic to subscribe to")
 
 
-class GetCurrentMapTool(BaseTool):
+class GetOccupancyGridTool(BaseTool):
     """Get the current map as an image with the robot's position marked on it."""
 
-    name: str = "get_current_map"
+    name: str = "GetOccupancyGridTool"
     description: str = "A tool for getting the current map as an image with the robot's position marked on it."
 
-    args_schema = GetCurrentMapToolInput
+    args_schema: Type[GetOccupancyGridToolInput] = GetOccupancyGridToolInput
 
     def _postprocess_msg(self, map_msg: OccupancyGrid, odom_msg: Odometry):
         width = map_msg.info.width
@@ -108,7 +110,7 @@ class GetCurrentMapTool(BaseTool):
         cv2.imwrite("map.png", image)
         return base64.b64encode(buffer.tobytes()).decode("utf-8")
 
-    def _run(self, topic: str, odom_topic: str):
+    def _run(self, topic: str, odom_topic: str = "/odom"):
         """Gets the current map from the specified topic."""
         map_grabber = SingleMessageGrabber(topic, OccupancyGrid, timeout_sec=10)
         odom_grabber = SingleMessageGrabber(odom_topic, Odometry, timeout_sec=10)
@@ -132,10 +134,10 @@ class GetCameraImageToolInput(BaseModel):
 class GetCameraImageTool(BaseTool):
     """Get the current image"""
 
-    name = "get_current_image"
+    name = "GetCameraImageTool"
     description: str = "A tool for getting the current image from a ROS2 topic."
 
-    args_schema = GetCameraImageToolInput
+    args_schema: Type[GetCameraImageToolInput] = GetCameraImageToolInput
 
     def _run(self, topic: str):
         """Gets the current image from the specified topic."""

@@ -1,6 +1,6 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
-from langchain_core.messages import AnyMessage, HumanMessage, ToolMessage
+from langchain_core.messages import HumanMessage, ToolMessage
 
 
 def images_to_vendor_format(images: List[str], vendor: str) -> List[Dict[str, Any]]:
@@ -19,12 +19,15 @@ def images_to_vendor_format(images: List[str], vendor: str) -> List[Dict[str, An
 
 
 class RaiToolMessage(ToolMessage):
+    content: str
+    tool_call_id: str
+    images: Optional[List[str]] = None
+
     def __init__(
         self, content: str, tool_call_id: str, images: Optional[List[str]] = None
     ):
-        self.content = content
+        super().__init__(content=content, tool_call_id=tool_call_id)
         self.images = images
-        self.tool_call_id = tool_call_id
 
     def to_openai(self) -> List[ToolMessage | HumanMessage]:
         if self.images is None:
@@ -41,7 +44,7 @@ class RaiToolMessage(ToolMessage):
                 },
             ]
             images_prepared = images_to_vendor_format(self.images, vendor="openai")
-            human_content = human_content.extend(images_prepared)
+            human_content.extend(images_prepared)
             human_message = HumanMessage(content=human_content)
 
             return [tool_message, human_message]
