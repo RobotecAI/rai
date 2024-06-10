@@ -1,26 +1,27 @@
-import subprocess
+import base64
 
 import cv2
 import numpy as np
 from langchain_core.pydantic_v1 import BaseModel, Field
 from nav_msgs.msg import OccupancyGrid, Odometry
-from sensor_msgs.msg import Image
+from tf_transformations import euler_from_quaternion
 
 from rai.communication.ros_communication import SingleImageGrabber, SingleMessageGrabber
 
 
 class get_current_map(BaseModel):
-    """Get the current map"""
+    """Get the current map as an image with the robot's position marked on it."""
 
     topic: str = Field(..., description="Ros2 occupancy grid topic to subscribe to")
 
-    def _postprocess_msg(self, msg: OccupancyGrid, odom_msg: Odometry):
-        width = msg.info.width
-        height = msg.info.height
-        resolution = msg.info.resolution
-        origin = msg.info.origin.position
+    def _postprocess_msg(self, map_msg: OccupancyGrid, odom_msg: Odometry):
+        width = map_msg.info.width
+        height = map_msg.info.height
+        resolution = map_msg.info.resolution
+        origin_position = map_msg.info.origin.position
+        origin_orientation = map_msg.info.origin.orientation
 
-        data = np.array(msg.data).reshape((height, width))
+        data = np.array(map_msg.data).reshape((height, width))
 
         # Convert the OccupancyGrid values to grayscale image (0-255)
         # the final image shape should be at most (1000x1000), scale to fit
@@ -64,32 +65,51 @@ class get_current_map(BaseModel):
             )
 
         # Calculate robot's position in the image
-        robot_x: int = int((odom_msg.pose.pose.position.x - origin.x) / resolution)
-        robot_y: int = int((odom_msg.pose.pose.position.y - origin.y) / resolution)
+        robot_x: float = (
+            odom_msg.pose.pose.position.x - origin_position.x
+        ) / resolution
+        robot_y: float = (
+            odom_msg.pose.pose.position.y - origin_position.y
+        ) / resolution
 
-        # reshabe bw to rgb
+        _, _, yaw = euler_from_quaternion(
+            [
+                origin_orientation.x,
+                origin_orientation.y,
+                origin_orientation.z,
+                origin_orientation.w,
+            ]
+        )
+        # Rotate the robot's position based on the yaw angle
+        rotated_x = robot_x * np.cos(yaw) - robot_y * np.sin(yaw)
+        rotated_y = robot_x * np.sin(yaw) + robot_y * np.cos(yaw)
+        robot_x = int(rotated_x)
+        robot_y = int(rotated_y)
+
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+
         # Draw the robot's position as a red dot
         if 0 <= robot_x < width and 0 <= robot_y < height:
-            cv2.circle(
-                image, (robot_x, height - robot_y), 5, (0, 0, 255), -1
-            )  # Red dot for the robot
+            cv2.circle(image, (robot_x, height - robot_y), 5, (0, 0, 255), -1)
 
         # Encode into PNG base64
         _, buffer = cv2.imencode(".png", image)
         cv2.imwrite("map.png", image)
-        return buffer.tobytes()
+        return base64.b64encode(buffer.tobytes()).decode("utf-8")
 
     def run(self):
         """Gets the current map from the specified topic."""
-        grabber = SingleMessageGrabber(self.topic, OccupancyGrid, timeout_sec=10)  # type: ignore
-        grabber_pose = SingleMessageGrabber("/odom", Odometry, timeout_sec=10)  # type: ignore
-        msg = grabber.get_data()
+        grabber = SingleMessageGrabber(self.topic, OccupancyGrid, timeout_sec=10)
+        grabber_pose = SingleMessageGrabber("/odom", Odometry, timeout_sec=10)
+
+        map_msg = grabber.get_data()
         odom_msg = grabber_pose.get_data()
-        if msg is None or odom_msg is None:
+
+        if map_msg is None or odom_msg is None:
             return {"content": "Failed to get the map, wrong topic?"}
-        image = self._postprocess_msg(msg, odom_msg)
-        return {"content": "Map grabbed successfully", "image": image}
+
+        base64_image = self._postprocess_msg(map_msg, odom_msg)
+        return {"content": "Map grabbed successfully", "images": [base64_image]}
 
 
 class get_current_position_relative_to_the_map(BaseModel):
@@ -99,14 +119,9 @@ class get_current_position_relative_to_the_map(BaseModel):
 
     def run(self):
         """Gets the current position relative to the map from the specified topic."""
-        for i in range(5):
-            try:
-                grabber = SingleMessageGrabber(self.topic, OccupancyGrid, timeout_sec=10)  # type: ignore
-                msg = grabber.get_data()
-                return msg
-            except:
-                print("Failed to get the odom, retrying...")
-        return grabber.get_data()
+        grabber = SingleMessageGrabber(self.topic, Odometry, timeout_sec=10)
+        msg = grabber.get_data()
+        return {"content": msg}
 
 
 class get_current_image(BaseModel):
@@ -117,4 +132,5 @@ class get_current_image(BaseModel):
     def run(self):
         """Gets the current image from the specified topic."""
         grabber = SingleImageGrabber(self.topic, timeout_sec=10)
-        return {"content": "Image grabbed successfully", "image": grabber.get_data()}
+        base64_image = grabber.get_data()
+        return {"content": "Image grabbed successfully", "images": [base64_image]}
