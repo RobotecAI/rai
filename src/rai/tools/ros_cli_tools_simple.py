@@ -1,43 +1,20 @@
 import subprocess
 
+from langchain.tools import BaseTool
 from langchain_core.pydantic_v1 import BaseModel, Field
 
 
-class ros2_generic_cli_call(BaseModel):
-    """
-    usage: ros2 [-h] Call `ros2 <command> -h` for more detailed usage.
-    ros2 is an extensible command-line tool for ROS 2.
+class Ros2TopicToolInput(BaseModel):
+    """Input for the ros2_topic tool."""
 
-    Commands:
-      ros2 action
-      ros2 bag
-      ros2 component
-      ros2 daemon
-      ros2 doctor
-      ros2 interface
-      ros2 launch
-      ros2 lifecycle
-      ros2 multicast
-      ros2 node
-      ros2 param
-      ros2 pkg
-      ros2 run
-      ros2 security
-      ros2 service
-      ros2 topic
-      ros2 wtf
-      Call `ros2 <command> -h` for more detailed usage."""
-
-    command: str = Field(..., description="A ros2 command to execute.")
-
-    def run(self):
-        """Executes the specified ROS2 command."""
-        result = subprocess.run(self.command, shell=True)
-        return result
+    command: str = Field(..., description="The command to run")
 
 
-class ros2_topic(BaseModel):
-    """
+class Ros2TopicTool(BaseTool):
+    """Tool for interacting with ROS2 topics."""
+
+    name: str = "ros2_topic"
+    description: str = """
         usage: ros2 topic [-h] [--include-hidden-topics] Call `ros2 topic <command> -h` for more detailed usage. ...
 
     Various topic related sub-commands
@@ -60,17 +37,27 @@ class ros2_topic(BaseModel):
 
       Call `ros2 topic <command> -h` for more detailed usage.
     """
+    args_schema = Ros2TopicToolInput
 
-    command: str = Field(..., description="The command to run")
-
-    def run(self):
-        command = f"ros2 topic {self.command}"
-        result = subprocess.run(command, shell=True, capture_output=True)
+    def _run(self, command: str):
+        """Executes the specified ROS2 topic command."""
+        result = subprocess.run(
+            f"ros2 topic {command}", shell=True, capture_output=True
+        )
         return result
 
 
-class ros2_interface(BaseModel):
-    """
+class Ros2InterafaceToolInput(BaseModel):
+    """Input for the ros2_interface tool."""
+
+    command: str = Field(..., description="The command to run")
+
+
+class Ros2InterfaceTool(BaseTool):
+
+    name: str = "ros2 interace tool"
+
+    description: str = """
     usage: ros2 interface [-h] Call `ros2 interface <command> -h` for more detailed usage. ...
 
     Show information about ROS interfaces
@@ -88,16 +75,24 @@ class ros2_interface(BaseModel):
       Call `ros2 interface <command> -h` for more detailed usage.
     """
 
-    command: str = Field(..., description="The command to run")
+    args_schema = Ros2InterafaceToolInput
 
-    def run(self):
-        command = f"ros2 interface {self.command}"
+    def _run(self, command: str):
+        command = f"ros2 interface {command}"
         result = subprocess.run(command, shell=True, capture_output=True)
         return result
 
 
-class ros2_service(BaseModel):
-    """
+class Ros2ServiceToolInput(BaseModel):
+    """Input for the ros2_service tool."""
+
+    command: str = Field(..., description="The command to run")
+
+
+class Ros2ServiceTool(BaseModel):
+    name: str = "ros2 service tool"
+
+    description: str = """
     usage: ros2 service [-h] [--include-hidden-services] Call `ros2 service <command> -h` for more detailed usage. ...
 
     Various service related sub-commands
@@ -122,9 +117,9 @@ class ros2_service(BaseModel):
     ros2 service type: error: the following arguments are required: service_name
     """
 
-    command: str = Field(..., description="The command to run")
+    args_schema = Ros2ServiceToolInput
 
-    def run(self):
-        command = f"ros2 service {self.command}"
+    def _run(self, command: str):
+        command = f"ros2 service {command}"
         result = subprocess.run(command, shell=True, capture_output=True)
         return result

@@ -1,5 +1,7 @@
 from typing import List
 
+from langchain.tools import BaseTool
+from langchain_community.tools import WikipediaQueryRun
 from langchain_core.messages import AIMessage, AnyMessage
 from langchain_core.messages import HumanMessage as _HumanMessage
 from langchain_core.messages import SystemMessage
@@ -7,14 +9,14 @@ from langchain_core.messages import ToolMessage as _ToolMessage
 from langchain_core.pydantic_v1 import BaseModel
 from langchain_openai import ChatOpenAI
 
-from rai.tools.hmi_tools import send_voice_message, wait_for_seconds
-from rai.tools.ros_cli_tools import set_goal_pose_relative_to_the_map
-from rai.tools.ros_cli_tools_simple import ros2_interface, ros2_service, ros2_topic
-from rai.tools.ros_tools import (
-    get_current_image,
-    get_current_map,
-    get_current_position_relative_to_the_map,
+from rai.langchain_extension.tooling import RaiToolMessage
+from rai.tools.hmi_tools import PlayVoiceMessageTool, WaitForSecondsTool
+from rai.tools.ros_cli_tools_simple import (
+    Ros2InterfaceTool,
+    Ros2ServiceTool,
+    Ros2TopicTool,
 )
+from rai.tools.ros_tools import GetCameraImageTool, GetCurrentMapTool
 
 
 class HumanMessage(_HumanMessage):  # handle images
@@ -56,9 +58,9 @@ class ToolMessage(_ToolMessage):
 
 
 def run_requested_tools(
-    ai_msg: AIMessage, tools: List[BaseModel], messages: List[AnyMessage]
+    ai_msg: AIMessage, tools: List[BaseTool], messages: List[AnyMessage]
 ):
-    selected_tools: List[BaseModel] = []
+    selected_tools: List[BaseTool] = []
     for tool_call in ai_msg.tool_calls:
         selected_tool = {k.__name__: k for k in tools}[tool_call["name"].lower()]
         selected_tools.append(selected_tool)
@@ -67,31 +69,29 @@ def run_requested_tools(
         tool_instance = selected_tool(**tool_call["args"])
         tool_output = tool_instance.run()
         if isinstance(tool_output, dict):
-            tool_message = ToolMessage(
-                message=tool_output.get("content", ""),
+            tool_message = RaiToolMessage(
+                content=tool_output.get("content", ""),
                 images=tool_output.get("images", []),
                 tool_call_id=tool_call["id"],
             )
         else:
-            tool_message = ToolMessage(
-                message=str(tool_output), tool_call_id=tool_call["id"]
-            )
-        messages.append(tool_message)
+            tool_message = [
+                ToolMessage(message=str(tool_output), tool_call_id=tool_call["id"])
+            ]
+        messages.extend(tool_message)
 
     return messages, selected_tools
 
 
 def main():
     tools = [
-        get_current_map,
-        get_current_position_relative_to_the_map,
-        get_current_image,
-        set_goal_pose_relative_to_the_map,
-        send_voice_message,
-        ros2_service,
-        ros2_interface,
-        ros2_topic,
-        wait_for_seconds,
+        GetCurrentMapTool(),
+        GetCameraImageTool(),
+        PlayVoiceMessageTool(),
+        WaitForSecondsTool(),
+        Ros2TopicTool(),
+        Ros2ServiceTool(),
+        Ros2InterfaceTool(),
     ]
     messages = [
         SystemMessage(

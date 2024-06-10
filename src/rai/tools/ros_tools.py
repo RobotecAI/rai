@@ -3,16 +3,27 @@ import base64
 import cv2
 import numpy as np
 from langchain_core.pydantic_v1 import BaseModel, Field
+from langchain_core.tools import BaseTool
 from nav_msgs.msg import OccupancyGrid, Odometry
 from tf_transformations import euler_from_quaternion
 
 from rai.communication.ros_communication import SingleImageGrabber, SingleMessageGrabber
 
 
-class get_current_map(BaseModel):
-    """Get the current map as an image with the robot's position marked on it."""
+class GetCurrentMapToolInput(BaseModel):
+    """Input for the get_current_map tool."""
 
     topic: str = Field(..., description="Ros2 occupancy grid topic to subscribe to")
+    odom_topic: str = Field("/odom", description="Ros2 odometry topic to subscribe to")
+
+
+class GetCurrentMapTool(BaseTool):
+    """Get the current map as an image with the robot's position marked on it."""
+
+    name: str = "get_current_map"
+    description: str = "A tool for getting the current map as an image with the robot's position marked on it."
+
+    args_schema = GetCurrentMapToolInput
 
     def _postprocess_msg(self, map_msg: OccupancyGrid, odom_msg: Odometry):
         width = map_msg.info.width
@@ -97,13 +108,13 @@ class get_current_map(BaseModel):
         cv2.imwrite("map.png", image)
         return base64.b64encode(buffer.tobytes()).decode("utf-8")
 
-    def run(self):
+    def _run(self, topic: str, odom_topic: str):
         """Gets the current map from the specified topic."""
-        grabber = SingleMessageGrabber(self.topic, OccupancyGrid, timeout_sec=10)
-        grabber_pose = SingleMessageGrabber("/odom", Odometry, timeout_sec=10)
+        map_grabber = SingleMessageGrabber(topic, OccupancyGrid, timeout_sec=10)
+        odom_grabber = SingleMessageGrabber(odom_topic, Odometry, timeout_sec=10)
 
-        map_msg = grabber.get_data()
-        odom_msg = grabber_pose.get_data()
+        map_msg = map_grabber.get_data()
+        odom_msg = odom_grabber.get_data()
 
         if map_msg is None or odom_msg is None:
             return {"content": "Failed to get the map, wrong topic?"}
@@ -112,25 +123,22 @@ class get_current_map(BaseModel):
         return {"content": "Map grabbed successfully", "images": [base64_image]}
 
 
-class get_current_position_relative_to_the_map(BaseModel):
-    """Get the current position relative to the map"""
-
-    topic: str = Field(..., description="Ros2 occupancy grid topic to subscribe to")
-
-    def run(self):
-        """Gets the current position relative to the map from the specified topic."""
-        grabber = SingleMessageGrabber(self.topic, Odometry, timeout_sec=10)
-        msg = grabber.get_data()
-        return {"content": msg}
-
-
-class get_current_image(BaseModel):
-    """Get the current image"""
+class GetCameraImageToolInput(BaseModel):
+    """Input for the get_current_image tool."""
 
     topic: str = Field(..., description="Ros2 image topic to subscribe to")
 
-    def run(self):
+
+class GetCameraImageTool(BaseTool):
+    """Get the current image"""
+
+    name = "get_current_image"
+    description: str = "A tool for getting the current image from a ROS2 topic."
+
+    args_schema = GetCameraImageToolInput
+
+    def _run(self, topic: str):
         """Gets the current image from the specified topic."""
-        grabber = SingleImageGrabber(self.topic, timeout_sec=10)
+        grabber = SingleImageGrabber(topic, timeout_sec=10)
         base64_image = grabber.get_data()
         return {"content": "Image grabbed successfully", "images": [base64_image]}
