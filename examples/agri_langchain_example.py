@@ -9,13 +9,13 @@ from langchain_openai import ChatOpenAI
 
 from rai.message import Message
 from rai.tools.ros_mock_tools import (
-    continue_action,
-    finish,
-    replan_without_current_path,
-    stop,
-    use_honk,
-    use_lights,
+    ContinueActionTool,
+    ReplanWithoutCurrentPathTool,
+    StopTool,
+    UseHonkTool,
+    UseLightsTool,
 )
+from rai.tools.utils import run_requested_tools
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 sys.path.append(".")
@@ -40,19 +40,6 @@ class HumanMessage(_HumanMessage):  # handle images
         super().__init__(content=content)
 
 
-def run_requested_tools(ai_msg, tools, messages):
-    selected_tools = []
-    for tool_call in ai_msg.tool_calls:
-        selected_tool = {k.__name__: k for k in tools}[tool_call["name"].lower()]
-        selected_tools.append(selected_tool)
-        tool_output = selected_tool.run(tool_call["args"])
-        logging.info(
-            f'Running tool {selected_tool.__name__} with args {tool_call["args"]} -> Status: {tool_output}',
-        )
-        messages.append(ToolMessage(tool_output, tool_call_id=tool_call["id"]))
-    return messages, selected_tools
-
-
 def main():
     messages = [
         SystemMessage(
@@ -68,15 +55,21 @@ def main():
         ),
     ]
     llm = ChatOpenAI(model="gpt-4o")
-    tools = [use_lights, use_honk, replan_without_current_path, continue_action, stop]
+    tools = [
+        UseLightsTool(),
+        UseHonkTool(),
+        ReplanWithoutCurrentPathTool(),
+        ContinueActionTool(),
+        StopTool(),
+    ]
     llm_with_tools = llm.bind_tools(tools)
 
     while True:
         ai_msg = llm_with_tools.invoke(messages)
         messages.append(ai_msg)
-        messages, selected_tools = run_requested_tools(ai_msg, tools, messages)
+        messages = run_requested_tools(ai_msg, tools, messages)
 
-        if use_honk in selected_tools:  # hack, scare the cat away
+        if "UseHonkTool" in str(messages):  # hack, scare the cat away
             logging.info(
                 "Scaring the cat away (injecting new cat free image into message history)"
             )
@@ -86,10 +79,6 @@ def main():
                     images=[Message.preprocess_image("examples/imgs/cat_after.png")],
                 )
             )
-
-        if {finish, continue_action}.intersection(set(selected_tools)):
-            logging.info("Finishing conversation")
-            break
 
 
 if __name__ == "__main__":

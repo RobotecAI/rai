@@ -18,7 +18,7 @@ def images_to_vendor_format(images: List[str], vendor: str) -> List[Dict[str, An
         raise ValueError(f"Vendor {vendor} not supported")
 
 
-class RaiToolMessage(ToolMessage):
+class ToolMessageWithOptionalImages(ToolMessage):
     content: str
     tool_call_id: str
     images: Optional[List[str]] = None
@@ -31,7 +31,7 @@ class RaiToolMessage(ToolMessage):
 
     def to_openai(self) -> List[ToolMessage | HumanMessage]:
         if self.images is None:
-            return [ToolMessage(content=self.content, tool_call_id=self.tool_call_id)]
+            return [self]
         else:
             tool_message = ToolMessage(
                 content=self.content, tool_call_id=self.tool_call_id
