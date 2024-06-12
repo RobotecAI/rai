@@ -21,6 +21,9 @@ tqdm = "^4.66.4"
 pytest = "^8.2.0"
 xxhash = "^3.4.1"
 optuna = "^3.6.1"
+langchain = "^0.2.3"
+langchain-aws = "^0.1.6"
+langchain-openai = "^0.1.8"
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]
