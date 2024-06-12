@@ -20,8 +20,9 @@ class AgentLoop:
     Class to represent a loop of agent actions.
     """
 
-    def __init__(self, stop_action: str):
+    def __init__(self, stop_action: str, stop_iters: int = 10):
         self.stop_action = stop_action
+        self.stop_iters = stop_iters
 
 
 def preprocess_image(

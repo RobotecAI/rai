@@ -122,7 +122,7 @@ class ScenarioRunner:
                 self.logger.info(
                     f"Looping agent actions until {msg.stop_action}. Max 10 loops."
                 )
-                for _ in range(10):
+                for _ in range(msg.stop_iters):
                     ai_msg = cast(AIMessage, self.llm_with_tools.invoke(self.history))
                     self.history.append(ai_msg)
                     self.history = run_requested_tools(ai_msg, self.tools, self.history)

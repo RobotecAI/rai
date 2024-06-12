@@ -47,12 +47,13 @@ def main():
         HumanMessage(
             content="The robot is moving. Use vision to understand the surroundings, and add waypoints based on observations. camera is accesible at topic /camera/camera/color/image_raw ."
         ),
-        AgentLoop(stop_action=FinishTool().__class__.__name__),
+        AgentLoop(stop_action=FinishTool().__class__.__name__, stop_iters=50),
     ]
 
     llm = ChatOpenAI(model="gpt-4o")
     runner = ScenarioRunner(scenario, llm, tools=tools)
     runner.run()
+    runner.save_to_html()
 
 
 if __name__ == "__main__":

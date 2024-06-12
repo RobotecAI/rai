@@ -48,7 +48,7 @@ class SetWaypointTool(BaseTool):
             def __init__(self):
                 super().__init__("marker_publisher")
                 self.publisher_ = self.create_publisher(
-                    Marker, "visualization_marker", 10
+                    Marker, "/visualization_marker", 10
                 )
                 self.timer = self.create_timer(0.1, self.publish_marker)
                 self.done = False
@@ -57,6 +57,7 @@ class SetWaypointTool(BaseTool):
                 nonlocal x, y, z, text
                 global marker_it
                 if self.done:
+                    self.timer.cancel()
                     return
                 marker = Marker()
                 marker.header.frame_id = "map"
