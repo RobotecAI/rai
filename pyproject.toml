@@ -24,6 +24,8 @@ optuna = "^3.6.1"
 langchain = "^0.2.3"
 langchain-aws = "^0.1.6"
 langchain-openai = "^0.1.8"
+langchain-community = "^0.2.4"
+transforms3d = "^0.4.1"
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]

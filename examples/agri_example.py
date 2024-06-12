@@ -1,13 +1,44 @@
 import argparse
 import logging
+from typing import Dict, List, Optional, Union
 
-from rai.actions.actions import CallCommand, Wait
-from rai.actions.executor import Executor
-from rai.message import AssistantMessage, Message, SystemMessage, UserMessage
-from rai.scenario_engine.scenario_engine import ConditionalScenario, ScenarioRunner
-from rai.vendors.vendors import AWSBedrockVendor, OllamaVendor, OpenAIVendor
+from langchain_core.messages import HumanMessage as _HumanMessage
+from langchain_core.messages import SystemMessage
+
+from rai.scenario_engine.messages import FutureAiMessage, preprocess_image
+from rai.scenario_engine.scenario_engine import ScenarioRunner
+from rai.tools.ros.cat_demo_tools import (
+    ContinueActionTool,
+    ReplanWithoutCurrentPathTool,
+    StopTool,
+    UseHonkTool,
+    UseLightsTool,
+)
 
 logging.basicConfig(level=logging.INFO)
+
+
+class HumanMessage(_HumanMessage):  # handle images
+    def __init__(
+        self,
+        content: Union[str, List[Union[str, Dict]]],
+        images: Optional[List[str]] = None,
+    ):
+        images = images or []
+        final_content = [
+            {"type": "text", "text": content},
+        ]
+        images_prepared = [
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{image}",
+                },
+            }
+            for image in images
+        ]
+        final_content.extend(images_prepared)
+        super().__init__(content=final_content)
 
 
 SYSTEM_PROMPT = """
@@ -90,42 +121,19 @@ def get_scenario():
     Defining the scenario as a function allows us to capture the image at runtime instead of import time.
     """
     return [
-        SystemMessage(SYSTEM_PROMPT),
-        UserMessage(
-            TRACTOR_INTRODUCTION,
-            images=[Message.preprocess_image("examples/imgs/tractor.png")],
+        SystemMessage(content=SYSTEM_PROMPT),
+        HumanMessage(
+            content=TRACTOR_INTRODUCTION,
+            images=[preprocess_image("examples/imgs/tractor.png")],
         ),
-        AssistantMessage(max_tokens=4096),
-        UserMessage(
+        FutureAiMessage(max_tokens=4096),
+        HumanMessage(
             TASK_PROMPT,
-            images=[Message.preprocess_image("examples/imgs/cat_before.png")],
+            images=[preprocess_image("examples/imgs/cat_before.png")],
         ),
-        AssistantMessage(max_tokens=4096),
-        UserMessage(POSSIBLE_ACTIONS),
-        AssistantMessage(max_tokens=50),
-        ConditionalScenario(
-            if_true=[
-                Executor(
-                    CallCommand(
-                        action_to_command=action_to_command,
-                        separate_thread=False,
-                    )
-                ),
-                Executor(Wait(seconds=5)),
-                UserMessage(
-                    time_waited(5) + TASK_PROMPT,
-                    images=[Message.preprocess_image("examples/imgs/cat_after.png")],
-                ),
-                AssistantMessage(max_tokens=4096),
-                UserMessage(POSSIBLE_ACTIONS),
-                AssistantMessage(max_tokens=50),
-                Executor(CallCommand(action_to_command=action_to_command)),
-            ],
-            if_false=[
-                Executor(CallCommand(action_to_command=action_to_command)),
-            ],
-            condition=lambda x: "use_honk" in x[-1].content.lower(),
-        ),
+        FutureAiMessage(max_tokens=4096),
+        HumanMessage(POSSIBLE_ACTIONS),
+        FutureAiMessage(max_tokens=50),
     ]
 
 
@@ -144,22 +152,31 @@ def main():
     args = parser.parse_args()
 
     if args.vendor == "ollama":
-        vendor = OllamaVendor(
-            ip_address="10.244.51.231",
-            port="11434",
-            model="llava",
-            logging_level=logging.INFO,
-        )
+        from langchain_community.chat_models import ChatOllama
+
+        llm = ChatOllama(model="llava")
     elif args.vendor == "openai":
-        vendor = OpenAIVendor(model="gpt-4o", stream=False, logging_level=logging.INFO)
+        from langchain_openai.chat_models import ChatOpenAI
+
+        llm = ChatOpenAI(model="gpt-4o")
     elif args.vendor == "awsbedrock":
-        vendor = AWSBedrockVendor(
-            model="anthropic.claude-3-opus-20240229-v1:0", logging_level=logging.INFO
-        )
+        from langchain_aws.chat_models import ChatBedrock
+
+        llm = ChatBedrock(model_id="anthropic.claude-3-opus-20240229-v1:0")
     else:
         raise ValueError("Invalid vendor argument")
 
-    scenario_runner = ScenarioRunner(get_scenario(), vendor, logging_level=logging.INFO)
+    tools = [
+        UseLightsTool(),
+        UseHonkTool(),
+        ReplanWithoutCurrentPathTool(),
+        ContinueActionTool(),
+        StopTool(),
+    ]
+
+    scenario_runner = ScenarioRunner(
+        get_scenario(), llm=llm, tools=tools, logging_level=logging.INFO
+    )
     scenario_runner.run()
     scenario_runner.save_to_html()
 
