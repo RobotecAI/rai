@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from langchain_core.messages import HumanMessage, ToolMessage
 
@@ -19,15 +19,7 @@ def images_to_vendor_format(images: List[str], vendor: str) -> List[Dict[str, An
 
 
 class ToolMessageWithOptionalImages(ToolMessage):
-    content: str
-    tool_call_id: str
     images: Optional[List[str]] = None
-
-    def __init__(
-        self, content: str, tool_call_id: str, images: Optional[List[str]] = None
-    ):
-        super().__init__(content=content, tool_call_id=tool_call_id)
-        self.images = images
 
     def to_openai(self) -> List[ToolMessage | HumanMessage]:
         if self.images is None:

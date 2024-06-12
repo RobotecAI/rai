@@ -129,12 +129,8 @@ class UseHonkTool(BaseTool):
 
     def _run(self):
         """Activates the honk."""
-        subprocess.check_output("play outputs/car-honk-1-short.wav", shell=True)
         result = subprocess.run(
-            "ros2 topic pub --once /tractor1/alert/flash std_msgs/Bool \"data: 'true'\"",
-            shell=True,
-            capture_output=True,
-            text=True,
+            "echo 'Activating honk'", shell=True, capture_output=True, text=True
         )
         return result.stdout.strip()
 
@@ -154,8 +150,6 @@ class ReplanWithoutCurrentPathTool(BaseTool):
 
     def _run(self):
         """Replans without the current path."""
-        command = "ros2 topic pub /tractor1/control/move std_msgs/msg/String \"{data: 'REPLAN'}\" --once"
-        subprocess.run(command, shell=True)
         result = subprocess.run(
             "echo 'Replanning without current path'",
             shell=True,
@@ -178,8 +172,6 @@ class ContinueActionTool(BaseTool):
 
     def _run(self):
         """Continues the current operation."""
-        command = "ros2 topic pub /tractor1/control/move std_msgs/msg/String \"{data: 'CONTINUE'}\" --once"
-        subprocess.run(command, shell=True)
         result = subprocess.run(
             "echo 'Continuing'", shell=True, capture_output=True, text=True
         )
