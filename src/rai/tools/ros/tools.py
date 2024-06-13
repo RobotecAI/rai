@@ -4,12 +4,17 @@ from typing import Type
 
 import cv2
 import numpy as np
+from geometry_msgs.msg import TransformStamped
 from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_core.tools import BaseTool
 from nav_msgs.msg import OccupancyGrid, Odometry
 from tf_transformations import euler_from_quaternion
 
-from rai.communication.ros_communication import SingleImageGrabber, SingleMessageGrabber
+from rai.communication.ros_communication import (
+    SingleImageGrabber,
+    SingleMessageGrabber,
+    TF2TransformFetcher,
+)
 
 marker_it = 0
 
@@ -59,6 +64,7 @@ class SetWaypointTool(BaseTool):
                 if self.done:
                     self.timer.cancel()
                     return
+                print(x, y, z, text)
                 marker = Marker()
                 marker.header.frame_id = "map"
                 marker.header.stamp = self.get_clock().now().to_msg()
@@ -71,7 +77,7 @@ class SetWaypointTool(BaseTool):
                 marker.pose.position.y = y
                 marker.pose.position.z = z
                 marker.pose.orientation.w = 1.0
-                marker.scale.z = 0.5
+                marker.scale.z = 0.3
                 marker.color.a = 1.0
                 marker.color.r = 0.0
                 marker.color.g = 0.0
@@ -92,9 +98,6 @@ class GetOccupancyGridToolInput(BaseModel):
     """Input for the get_current_map tool."""
 
     topic: str = Field(..., description="Ros2 occupancy grid topic to subscribe to")
-    odom_topic: str = Field(
-        "/odometry/filtered", description="Ros2 odometry topic to subscribe to"
-    )
 
 
 class GetOccupancyGridTool(BaseTool):
@@ -105,7 +108,7 @@ class GetOccupancyGridTool(BaseTool):
 
     args_schema: Type[GetOccupancyGridToolInput] = GetOccupancyGridToolInput
 
-    def _postprocess_msg(self, map_msg: OccupancyGrid, odom_msg: Odometry):
+    def _postprocess_msg(self, map_msg: OccupancyGrid, transform: TransformStamped):
         width = map_msg.info.width
         height = map_msg.info.height
         resolution = map_msg.info.resolution
@@ -134,11 +137,11 @@ class GetOccupancyGridTool(BaseTool):
             cv2.line(image, (x, 0), (x, height), (200, 200, 200), 1)
             cv2.putText(
                 image,
-                f"{x * resolution + origin_position.x :.2f}",
+                f"{x * resolution + origin_position.x :.1f}",
                 (x, 15),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (50, 50, 50),
+                0.4,
+                (0, 0, 0),
                 1,
                 cv2.LINE_AA,
             )
@@ -146,21 +149,21 @@ class GetOccupancyGridTool(BaseTool):
             cv2.line(image, (0, y), (width, y), (200, 200, 200), 1)
             cv2.putText(
                 image,
-                f"{y * resolution + origin_position.y:.2f}",
+                f"{y * resolution + origin_position.y:.1f}",
                 (5, y + 15),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (50, 50, 50),
+                0.4,
+                (0, 0, 0),
                 1,
                 cv2.LINE_AA,
             )
 
         # Calculate robot's position in the image
         robot_x: float = (
-            odom_msg.pose.pose.position.x - origin_position.x
+            transform.transform.translation.x - origin_position.x
         ) / resolution
         robot_y: float = (
-            odom_msg.pose.pose.position.y - origin_position.y
+            transform.transform.translation.y - origin_position.y
         ) / resolution
 
         _, _, yaw = euler_from_quaternion(
@@ -179,27 +182,40 @@ class GetOccupancyGridTool(BaseTool):
 
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
 
-        # Draw the robot's position as a red dot
+        # Draw the robot's position as an arrow
         if 0 <= robot_x < width and 0 <= robot_y < height:
-            cv2.circle(image, (robot_x, robot_y), 5, (0, 0, 255), -1)
+            _, _, yaw = euler_from_quaternion(
+                [
+                    transform.transform.rotation.x,
+                    transform.transform.rotation.y,
+                    transform.transform.rotation.z,
+                    transform.transform.rotation.w,
+                ]
+            )
+            arrow_length = 10
+            arrow_end_x = int(robot_x + arrow_length * np.cos(yaw))
+            arrow_end_y = int(robot_y + arrow_length * np.sin(yaw))
+            cv2.arrowedLine(
+                image, (robot_x, robot_y), (arrow_end_x, arrow_end_y), (0, 0, 255), 2
+            )
 
         # Encode into PNG base64
         _, buffer = cv2.imencode(".png", image)
         cv2.imwrite("map.png", image)
         return base64.b64encode(buffer.tobytes()).decode("utf-8")
 
-    def _run(self, topic: str, odom_topic: str = "/odom"):
+    def _run(self, topic: str):
         """Gets the current map from the specified topic."""
         map_grabber = SingleMessageGrabber(topic, OccupancyGrid, timeout_sec=10)
-        odom_grabber = SingleMessageGrabber(odom_topic, Odometry, timeout_sec=10)
+        tf_grabber = TF2TransformFetcher()
 
         map_msg = map_grabber.get_data()
-        odom_msg = odom_grabber.get_data()
+        transform = tf_grabber.get_data()
 
-        if map_msg is None or odom_msg is None:
+        if map_msg is None or transform is None:
             return {"content": "Failed to get the map, wrong topic?"}
 
-        base64_image = self._postprocess_msg(map_msg, odom_msg)
+        base64_image = self._postprocess_msg(map_msg, transform)
         return {"content": "Map grabbed successfully", "images": [base64_image]}
 
 

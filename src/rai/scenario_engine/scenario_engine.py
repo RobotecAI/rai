@@ -120,15 +120,19 @@ class ScenarioRunner:
                 self.history = run_requested_tools(ai_msg, self.tools, self.history)
             elif isinstance(msg, AgentLoop):
                 self.logger.info(
-                    f"Looping agent actions until {msg.stop_action}. Max 10 loops."
+                    f"Looping agent actions until {msg.stop_action}. Max {msg.stop_iters} loops."
                 )
                 for _ in range(msg.stop_iters):
                     ai_msg = cast(AIMessage, self.llm_with_tools.invoke(self.history))
                     self.history.append(ai_msg)
                     self.history = run_requested_tools(ai_msg, self.tools, self.history)
-                    for tool_call in ai_msg.tool_calls:
-                        if tool_call["name"] == msg.stop_action:
-                            break
+                    break_loop = any(
+                        tool_call["name"] == msg.stop_action
+                        for tool_call in ai_msg.tool_calls
+                    )
+                    if break_loop:
+                        break
+
             elif isinstance(msg, ConditionalScenario):
                 new_scenario = msg(self.history)
                 self._run(new_scenario)

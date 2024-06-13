@@ -142,6 +142,6 @@ class SetGoalPoseTool(BaseTool):
         cmd = (
             f"ros2 topic pub {topic} geometry_msgs/PoseStamped "
             f'\'{{header: {{stamp: {{sec: 0, nanosec: 0}}, frame_id: "map"}}, '
-            f"pose: {{position: {{x: {x}, y: {y}, z: {0.0}}}}}}}' --once"
+            f"pose: {{position: {{x: {x}, y: {y}, z: {0.0}}}}}}}' --once --spin-time 1"
         )
         return subprocess.run(cmd, shell=True)

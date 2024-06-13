@@ -13,6 +13,7 @@ from rclpy.qos import QoSProfile
 from rclpy.signals import SignalHandlerGuardCondition
 from rclpy.utilities import timeout_sec_to_nsec
 from sensor_msgs.msg import Image
+from tf2_ros import Buffer, TransformListener
 
 
 def wait_for_message(
@@ -144,6 +145,46 @@ class SingleImageGrabber(SingleMessageGrabber):
         image_data = cv2.imencode(".png", cv_image)[1].tostring()  # type: ignore
         base64_image = base64.b64encode(image_data).decode("utf-8")  # type: ignore
         return base64_image
+
+
+class TF2Listener(Node):
+    def __init__(self):
+        super().__init__("tf2_listener")
+
+        # Create a buffer and listener
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+
+        # This will store the transform when received
+        self.transform = None
+
+    def get_transform(self):
+        try:
+            # Lookup transform between base_link and map
+            now = rclpy.time.Time()
+            self.transform = self.tf_buffer.lookup_transform("map", "base_link", now)
+        except Exception as ex:
+            self.get_logger().debug(f"Could not transform: {ex}")
+
+
+class TF2TransformFetcher:
+    def get_data(self):
+        rclpy.init()
+        node = TF2Listener()
+        executor = rclpy.executors.SingleThreadedExecutor()
+        executor.add_node(node)
+
+        try:
+            while rclpy.ok() and node.transform is None:
+                node.get_transform()
+                rclpy.spin_once(node, timeout_sec=1.0)
+        except KeyboardInterrupt:
+            pass
+
+        transform = node.transform
+        node.destroy_node()
+        rclpy.shutdown()
+        return transform
 
 
 class ReadAvailableTopics:
