@@ -280,3 +280,49 @@ class GetCameraImageTool(BaseTool):
         grabber = SingleImageGrabber(topic, timeout_sec=10)
         base64_image = grabber.get_data()
         return {"content": "Image grabbed successfully", "images": [base64_image]}
+
+
+class DetectObjectsToolInput(BaseModel):
+    """Input for the detect_objects tool."""
+
+    topic: str = Field(..., description="ROS2 image topic to subscribe to")
+
+
+class DetectObjectsTool(BaseTool):
+    """Detect objects in an image from a ROS2 topic using YOLOv8."""
+
+    from ultralytics import YOLO
+
+    name = "DetectObjectsTool"
+    description: str = "A tool for detecting objects in an image from a ROS2 topic using YOLOv8 for object detection."
+
+    args_schema: Type[DetectObjectsToolInput] = DetectObjectsToolInput
+    model: YOLO
+
+    def _run(self, topic: str):
+        """Detects objects in the image from the specified topic."""
+        grabber = SingleImageGrabber(topic, timeout_sec=10)
+        base64_image = grabber.get_data()
+
+        if base64_image is None:
+            return {"content": "Failed to get the image, wrong topic?"}
+
+        # Decode the base64 image
+        image_data = base64.b64decode(base64_image)
+        np_arr = np.frombuffer(image_data, np.uint8)
+        image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+        # Perform object detection
+        results = self.model(image, verbose=False)
+
+        # Extract detections and format them as text
+        detections = []
+        for box in results[0].boxes:
+            label = self.model.names[box.cls.item()]
+            confidence = box.conf.item()
+
+            detections.append(
+                f"class: {label}, conf: {confidence:.2f}, bbox: {box.xyxy.cpu().tolist()}"
+            )
+
+        return {"content": "Objects detected successfully", "detections": detections}
