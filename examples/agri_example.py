@@ -90,24 +90,8 @@ TASK_PROMPT = """
 Task Input: Analyze the provided image to understand the current environmental and operational context.
 Based on the system prompt's protocols, decide if the tractor should proceed as planned, adjust its course, or take any preventative measures.
 Clearly articulate the reasoning behind your decision and the implications for task completion and safety.
+When the decision is made, use a tool to communicate the next steps to the tractor.
 """
-
-POSSIBLE_ACTIONS = """
-Given your assessment of the risks, which action from this list should be executed?
-use_lights
-use_honk
-replan_without_current_path
-continue
-Respond with only the action's name. Do not add any extra characters.
-"""
-
-action_to_command = {
-    "use_lights": "echo 'Lights have been turned on'",
-    "use_honk": "echo 'Honk has been activated'",
-    "replan_without_current_path": "echo 'Replanning without current path'",
-    "continue": "echo 'Continuing'",
-    "stop": "echo 'Stopping'",
-}
 
 time_waited = (
     lambda time: f"The action has been requested. Since then {time}s has passed. Please reavaluate the situation.\n"
@@ -126,14 +110,16 @@ def get_scenario():
             content=TRACTOR_INTRODUCTION,
             images=[preprocess_image("examples/imgs/tractor.png")],
         ),
-        FutureAiMessage(max_tokens=4096),
         HumanMessage(
             TASK_PROMPT,
             images=[preprocess_image("examples/imgs/cat_before.png")],
         ),
         FutureAiMessage(max_tokens=4096),
-        HumanMessage(POSSIBLE_ACTIONS),
-        FutureAiMessage(max_tokens=50),
+        HumanMessage(
+            TASK_PROMPT,
+            images=[preprocess_image("examples/imgs/cat_after.png")],
+        ),
+        FutureAiMessage(max_tokens=4096),
     ]
 
 
