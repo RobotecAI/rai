@@ -148,7 +148,9 @@ def main():
     elif args.vendor == "awsbedrock":
         from langchain_aws.chat_models import ChatBedrock
 
-        llm = ChatBedrock(model_id="anthropic.claude-3-opus-20240229-v1:0")
+        llm = ChatBedrock(
+            model_id="anthropic.claude-3-opus-20240229-v1:0", region_name="us-west-2"
+        )
     else:
         raise ValueError("Invalid vendor argument")
 
