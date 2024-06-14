@@ -79,7 +79,16 @@ class ToolMultimodalMessage(ToolMessage, MultimodalMessage):
             return ToolMessage(tool_call_id=self.tool_call_id, content=self.content)
 
     def _postprocess_bedrock(self):
-        return ToolMessage(tool_call_id=self.tool_call_id, content=self.content)
+        return self._postprocess_openai()
+        # https://github.com/langchain-ai/langchain-aws/issues/75
+        # at this moment im not sure if bedrock supports images in the tool message
+        content = self.content
+        # bedrock expects image and not image_url
+        content[1]["type"] = "image"
+        content[1]["image"] = content[1].pop("image_url")
+        content[1]["image"]["source"] = content[1]["image"].pop("url")
+
+        return ToolMessage(tool_call_id=self.tool_call_id, content=content)
 
 
 class AiMultimodalMessage(AIMessage, MultimodalMessage):

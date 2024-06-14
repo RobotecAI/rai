@@ -67,7 +67,10 @@ def run_requested_tools(
             tool_message = [
                 ToolMessage(content=str(tool_output), tool_call_id=tool_call["id"])
             ]
-        internal_messages.extend(tool_message)
+        if isinstance(tool_message, list):
+            internal_messages.extend(tool_message)
+        else:
+            internal_messages.append(tool_message)
 
     # because we can't answer an aiMessage with an alternating sequence of tool and human messages
     # we sort the messages by type so that the tool messages are sent first
