@@ -1,61 +1,86 @@
 import base64
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Union
 
 import numpy as np
 import requests
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
-from langchain_core.pydantic_v1 import BaseModel
+from langchain_core.messages.base import BaseMessage
 
 
-class MultimodalMessage(BaseModel):
-    images_content: Optional[List[Dict[str, Union[str, Dict[str, str]]]]] = None
-    audio_content: Optional[List[Dict[str, Union[str, Dict[str, str]]]]] = None
+class MultimodalMessage(BaseMessage):
+    images: Optional[List[str]] = None
+    audios: Optional[Any] = None
 
     def __init__(
         self,
-        images: Optional[List[str]] = None,
-        audio: Optional[Any] = None,
         **kwargs: Any,
     ):
-        _images = None
-        if images is not None:
-            assert isinstance(
-                images, list
-            ), "Images must be a list of base64 png strings"
-            _images = [
+        super().__init__(**kwargs)  # type: ignore
+
+        if self.audios is not None:
+            raise ValueError("Audio is not yet supported")
+
+        _content: List[Union[str, Dict[str, Union[Dict[str, str], str]]]] = []
+
+        if isinstance(self.content, str):
+            _content.append({"type": "text", "text": self.content})
+        else:
+            raise ValueError("Content must be a string")  # for now, to guarantee compat
+
+        if isinstance(self.images, list):
+            _image_content = [
                 {
                     "type": "image_url",
                     "image_url": {
                         "url": f"data:image/png;base64,{image}",
                     },
                 }
-                for image in images
+                for image in self.images
             ]
-
-        if audio is not None:
-            raise NotImplementedError("Audio content is not yet supported")
-
-        super().__init__(images_content=_images, audio_content=None, **kwargs)
+            _content.extend(_image_content)
+        self.content = _content
 
 
-class HumanMultimodalMessage(MultimodalMessage, HumanMessage):
+class HumanMultimodalMessage(HumanMessage, MultimodalMessage):
     pass
 
 
-class SystemMultimodalMessage(MultimodalMessage, SystemMessage):
+class SystemMultimodalMessage(SystemMessage, MultimodalMessage):
     pass
 
 
-class AiMultimodalMessage(MultimodalMessage, AIMessage):
+class ToolMultimodalMessage(ToolMessage, MultimodalMessage):
+    def postprocess(self, format: Literal["openai", "bedrock"]):
+        if format == "openai":
+            return self._postprocess_openai()
+        elif format == "bedrock":
+            return self._postprocess_bedrock()
+        else:
+            raise ValueError(f"Unsupported format: {format}")
+
+    def _postprocess_openai(self):
+        """OpenAI does not allow images in the tool message.
+        Functions dumps the message into human multimodal message and tool message.
+        """
+        if isinstance(self.images, list):
+            human_message = HumanMultimodalMessage(
+                content=f"Image returned by a tool call {self.tool_call_id}",
+                images=self.images,
+            )
+            tool_message = ToolMultimodalMessage(
+                tool_call_id=self.tool_call_id, content=self.content
+            )
+            return [tool_message, human_message]
+        else:
+            # TODO(maciejmajek): find out if content can be a list
+            return ToolMessage(tool_call_id=self.tool_call_id, content=self.content)
+
+    def _postprocess_bedrock(self):
+        return ToolMessage(tool_call_id=self.tool_call_id, content=self.content)
+
+
+class AiMultimodalMessage(AIMessage, MultimodalMessage):
     pass
-
-
-class ToolMultimodalMessage(MultimodalMessage, ToolMessage):
-    def to_openai(self) -> Tuple[ToolMessage, HumanMultimodalMessage] | ToolMessage:
-        pass
-
-    def to_bedrock(self):
-        pass
 
 
 class FutureAiMessage:
