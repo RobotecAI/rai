@@ -44,22 +44,17 @@ Scenarios can be built using the following elements:
 For more about scenario building see: [docs/scenarios.md](docs/scenarios.md)\
 For more about scenario running: [src/rai/scenario_engine](src/rai/scenario_engine)
 
-#### For available messages see:
+#### For available tools see:
 
-- 📬 [Messages](./src/rai/message.py)
-
-#### For available actions see:
-
-- 🔨 [Actions](./src/rai/actions/actions.py)
-- 🤖 [ROS2 Actions](./src/rai/actions/ros_actions.py)
+- 🔨 [Tools](./src/rai/tools/)
+- 🤖 [ROS2 Actions](./src/rai/tools/ros/)
 
 #### 📝 Scenario Definition Example
 
 For example scenarios see:
 
-- 📘 [Simple scenario with email communication](./examples/demo_example.py)
-- 🤖 [ROS2 scenario](./examples/agri_ros_example.py)
-- 🔄 [Conditional messages and executors scenario](./examples/agri_example.py)
+- 🤖 [ROS2 scenario](./examples/husarion_poc_example.py)
+- 🔄 [Simple scenario](./examples/agri_example.py)
 
 ## 🌐 Available LLM Vendors
 
@@ -86,27 +81,28 @@ For more see: [src/rai/vendors](src/rai/vendors)
 #### Ollama
 
 ```python
-OllamaVendor(
-    ip_address="ip address",
-    port="11434",
-    model="llava",
-    logging_level=logging.INFO,
-)
+from langchain_community.chat_models import ChatOllama
+
+llm = ChatOllama(model='llava')
 ```
 
 #### OpenAI
 
 ```python
-open_ai_vendor = OpenAIVendor(
-    model="gpt-4o", stream=False, logging_level=logging.INFO
+from langchain_openai.chat_models import ChatOpenAI
+
+llm = ChatOpenAI(
+    model="gpt-4o",
 )
 ```
 
 #### AWS Bedrock
 
 ```python
-AWSBedrockVendor(
-    model="anthropic.claude-3-opus-20240229-v1:0", logging_level=logging.INFO
+from langchain_aws.chat_models import ChatBedrock
+
+llm = ChatBedrock(
+    model="anthropic.claude-3-opus-20240229-v1:0",
 )
 ```
 
@@ -162,13 +158,11 @@ For more information see readmes in respective folders.
 ├── README.md
 └── src
     └── rai
-        ├── actions
+        ├── tools
         │   └── README.md
         ├── communication
         │   └── README.md
         ├── README.md
-        ├── scenario_engine
-        │   └── README.md
-        └── vendors
+        └── scenario_engine
             └── README.md
 ```
