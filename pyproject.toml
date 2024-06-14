@@ -27,6 +27,7 @@ langchain-openai = "^0.1.8"
 langchain-community = "^0.2.4"
 transforms3d = "^0.4.1"
 langgraph = "^0.0.66"
+piper-tts = "^1.2.0"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.4"
