@@ -88,6 +88,10 @@ llm = ChatOllama(model='llava')
 
 #### OpenAI
 
+```bash
+export OPENAI_API_KEY="sk-..."
+```
+
 ```python
 from langchain_openai.chat_models import ChatOpenAI
 
@@ -97,6 +101,12 @@ llm = ChatOpenAI(
 ```
 
 #### AWS Bedrock
+
+```bash
+export AWS_ACCESS_KEY_ID="..."
+export AWS_SECRET_ACCESS_KEY="..."
+export AWS_SESSION_TOKEN="..."
+```
 
 ```python
 from langchain_aws.chat_models import ChatBedrock
