@@ -115,16 +115,22 @@ def main():
         from langchain_community.chat_models import ChatOllama
 
         llm = ChatOllama(model="llava")
+        llm_type = "ollama"
+        raise NotImplementedError("Ollama is not yet supported")
+
     elif args.vendor == "openai":
         from langchain_openai.chat_models import ChatOpenAI
 
         llm = ChatOpenAI(model="gpt-4o")
+        llm_type = "openai"
+
     elif args.vendor == "awsbedrock":
         from langchain_aws.chat_models import ChatBedrock
 
         llm = ChatBedrock(
             model_id="anthropic.claude-3-opus-20240229-v1:0", region_name="us-west-2"
         )
+        llm_type = "bedrock"
     else:
         raise ValueError("Invalid vendor argument")
 
@@ -137,7 +143,11 @@ def main():
     ]
 
     scenario_runner = ScenarioRunner(
-        get_scenario(), llm=llm, tools=tools, logging_level=logging.INFO
+        get_scenario(),
+        llm=llm,
+        tools=tools,
+        logging_level=logging.INFO,
+        llm_type=llm_type,
     )
     scenario_runner.run()
     scenario_runner.save_to_html()

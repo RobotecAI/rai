@@ -4,7 +4,7 @@ import logging
 import os
 import pickle
 import threading
-from typing import Any, Callable, Dict, List, Sequence, Union, cast
+from typing import Any, Callable, Dict, List, Literal, Sequence, Union, cast
 
 import coloredlogs
 import xxhash
@@ -74,6 +74,7 @@ class ScenarioRunner:
         self,
         scenario: ScenarioType,
         llm: BaseChatModel,
+        llm_type: Literal["openai", "bedrock"],
         tools: Sequence[BaseTool],
         logging_level: int = logging.WARNING,
         use_cache: bool = False,
@@ -81,6 +82,7 @@ class ScenarioRunner:
         self.scenario = scenario
         self.tools = tools
         self.llm = llm
+        self.llm_type = llm_type
         self.llm_with_tools = llm.bind_tools(tools)
         self.logging_level = logging_level
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -125,7 +127,9 @@ class ScenarioRunner:
                 for _ in range(msg.stop_iters):
                     ai_msg = cast(AIMessage, self.llm_with_tools.invoke(self.history))
                     self.history.append(ai_msg)
-                    self.history = run_requested_tools(ai_msg, self.tools, self.history)
+                    self.history = run_requested_tools(
+                        ai_msg, self.tools, self.history, llm_type=self.llm_type
+                    )
                     for tool_call in ai_msg.tool_calls:
                         if tool_call["name"] == msg.stop_action:
                             break

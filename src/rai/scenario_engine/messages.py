@@ -67,8 +67,11 @@ class ToolMultimodalMessage(ToolMessage, MultimodalMessage):
                 content=f"Image returned by a tool call {self.tool_call_id}",
                 images=self.images,
             )
+            # at this point self.content is a list of dicts
+            # we need to extract the text from each dict
             tool_message = ToolMultimodalMessage(
-                tool_call_id=self.tool_call_id, content=self.content
+                tool_call_id=self.tool_call_id,
+                content=" ".join([part.get("text", "") for part in self.content]),
             )
             return [tool_message, human_message]
         else:
