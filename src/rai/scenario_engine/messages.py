@@ -1,9 +1,61 @@
 import base64
-from typing import Any, Callable, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import requests
-from langchain_core.tools import BaseTool
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.pydantic_v1 import BaseModel
+
+
+class MultimodalMessage(BaseModel):
+    images_content: Optional[List[Dict[str, Union[str, Dict[str, str]]]]] = None
+    audio_content: Optional[List[Dict[str, Union[str, Dict[str, str]]]]] = None
+
+    def __init__(
+        self,
+        images: Optional[List[str]] = None,
+        audio: Optional[Any] = None,
+        **kwargs: Any,
+    ):
+        _images = None
+        if images is not None:
+            assert isinstance(
+                images, list
+            ), "Images must be a list of base64 png strings"
+            _images = [
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/png;base64,{image}",
+                    },
+                }
+                for image in images
+            ]
+
+        if audio is not None:
+            raise NotImplementedError("Audio content is not yet supported")
+
+        super().__init__(images_content=_images, audio_content=None, **kwargs)
+
+
+class HumanMultimodalMessage(MultimodalMessage, HumanMessage):
+    pass
+
+
+class SystemMultimodalMessage(MultimodalMessage, SystemMessage):
+    pass
+
+
+class AiMultimodalMessage(MultimodalMessage, AIMessage):
+    pass
+
+
+class ToolMultimodalMessage(MultimodalMessage, ToolMessage):
+    def to_openai(self) -> Tuple[ToolMessage, HumanMultimodalMessage] | ToolMessage:
+        pass
+
+    def to_bedrock(self):
+        pass
 
 
 class FutureAiMessage:
