@@ -1,11 +1,13 @@
 import argparse
 import logging
-from typing import Dict, List, Optional, Union
 
-from langchain_core.messages import HumanMessage as _HumanMessage
 from langchain_core.messages import SystemMessage
 
-from rai.scenario_engine.messages import FutureAiMessage, preprocess_image
+from rai.scenario_engine.messages import (
+    FutureAiMessage,
+    HumanMultimodalMessage,
+    preprocess_image,
+)
 from rai.scenario_engine.scenario_engine import ScenarioRunner
 from rai.tools.ros.cat_demo_tools import (
     ContinueActionTool,
@@ -16,30 +18,6 @@ from rai.tools.ros.cat_demo_tools import (
 )
 
 logging.basicConfig(level=logging.INFO)
-
-
-class HumanMessage(_HumanMessage):  # handle images
-    def __init__(
-        self,
-        content: Union[str, List[Union[str, Dict]]],
-        images: Optional[List[str]] = None,
-    ):
-        images = images or []
-        final_content = [
-            {"type": "text", "text": content},
-        ]
-        images_prepared = [
-            {
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/png;base64,{image}",
-                },
-            }
-            for image in images
-        ]
-        final_content.extend(images_prepared)
-        super().__init__(content=final_content)
-
 
 SYSTEM_PROMPT = """
 **Autonomous Tractor System Prompt**
@@ -93,10 +71,6 @@ Clearly articulate the reasoning behind your decision and the implications for t
 When the decision is made, use a tool to communicate the next steps to the tractor.
 """
 
-time_waited = (
-    lambda time: f"The action has been requested. Since then {time}s has passed. Please reavaluate the situation.\n"
-)
-
 
 def get_scenario():
     """
@@ -106,17 +80,17 @@ def get_scenario():
     """
     return [
         SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(
+        HumanMultimodalMessage(
             content=TRACTOR_INTRODUCTION,
             images=[preprocess_image("examples/imgs/tractor.png")],
         ),
-        HumanMessage(
-            TASK_PROMPT,
+        HumanMultimodalMessage(
+            content=TASK_PROMPT,
             images=[preprocess_image("examples/imgs/cat_before.png")],
         ),
         FutureAiMessage(max_tokens=4096),
-        HumanMessage(
-            TASK_PROMPT,
+        HumanMultimodalMessage(
+            content=TASK_PROMPT,
             images=[preprocess_image("examples/imgs/cat_after.png")],
         ),
         FutureAiMessage(max_tokens=4096),
@@ -131,7 +105,7 @@ def main():
         "--vendor",
         type=str,
         choices=["ollama", "openai", "awsbedrock"],
-        default="awsbedrock",
+        default="openai",
         help="Vendor to use for the scenario runner (default: awsbedrock)",
     )
 
