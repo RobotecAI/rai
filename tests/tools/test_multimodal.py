@@ -5,6 +5,10 @@ import cv2
 import numpy as np
 import pytest
 from langchain.tools import BaseTool
+from langchain_community.callbacks.manager import (
+    get_bedrock_anthropic_callback,
+    get_openai_callback,
+)
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.pydantic_v1 import BaseModel, Field
@@ -35,11 +39,18 @@ class GetImageTool(BaseTool):
 
 
 @pytest.mark.parametrize(
-    ("llm", "llm_type"),
-    [("chat_openai_multimodal", "openai"), ("chat_bedrock_multimodal", "bedrock")],
+    ("llm", "llm_type", "callback"),
+    [
+        ("chat_openai_multimodal", "openai", get_openai_callback),
+        ("chat_bedrock_multimodal", "bedrock", get_bedrock_anthropic_callback),
+    ],
 )
 def test_multimodal_openai(
-    llm: BaseChatModel, llm_type: Literal["openai", "bedrock"], request: FixtureRequest
+    llm: BaseChatModel,
+    llm_type: Literal["openai", "bedrock"],
+    callback,
+    usage_tracker,
+    request: FixtureRequest,
 ):
     llm = request.getfixturevalue(llm)  # type: ignore
     tools = [GetImageTool()]
@@ -50,8 +61,15 @@ def test_multimodal_openai(
             content="Can you please describe the contents of test.png image? Remember to use the available tools."
         ),
     ]
-
-    ai_msg = cast(AIMessage, llm_with_tools.invoke(scenario))
-    scenario.append(ai_msg)
-    scenario = run_requested_tools(ai_msg, tools, scenario, llm_type=llm_type)
-    ai_msg = llm_with_tools.invoke(scenario)
+    with callback() as cb:
+        ai_msg = cast(AIMessage, llm_with_tools.invoke(scenario))
+        scenario.append(ai_msg)
+        scenario = run_requested_tools(ai_msg, tools, scenario, llm_type=llm_type)
+        ai_msg = llm_with_tools.invoke(scenario)
+        usage_tracker.add_usage(
+            llm_type,
+            cost=cb.total_cost,
+            total_tokens=cb.total_tokens,
+            input_tokens=cb.prompt_tokens,
+            output_tokens=cb.completion_tokens,
+        )
