@@ -1222,6 +1222,23 @@ pydantic = ">=1,<3"
 requests = ">=2,<3"
 
 [[package]]
+name = "lark"
+version = "1.1.9"
+description = "a modern parsing library"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "lark-1.1.9-py3-none-any.whl", hash = "sha256:a0dd3a87289f8ccbb325901e4222e723e7d745dbfc1803eaf5f3d2ace19cf2db"},
+    {file = "lark-1.1.9.tar.gz", hash = "sha256:15fa5236490824c2c4aba0e22d2d6d823575dcaf4cdd1848e34b6ad836240fba"},
+]
+
+[package.extras]
+atomic-cache = ["atomicwrites"]
+interegular = ["interegular (>=0.3.1,<0.4.0)"]
+nearley = ["js2py"]
+regex = ["regex"]
+
+[[package]]
 name = "mako"
 version = "1.3.5"
 description = "A super-fast templating language that borrows the best ideas from the existing templating languages."
@@ -3018,4 +3035,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10, <3.12"
-content-hash = "f423b107cba50ab8b98b85325d970adeceddffb4a282a98905bd5ea6dd819907"
+content-hash = "0b3493d7231bbdc0d64b66ec31ca0d6da12c4764503e45bf4efabfb7ba27f61c"
