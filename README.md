@@ -130,6 +130,14 @@ For more information see: [src/rai/communication](src/rai/communication)
 - python3.10^
 - poetry
 
+Additionally some of the modules or examples may require langfuse api keys for usage tracking. Contact repo mainteiners for api keys.
+
+```bash
+export LANGFUSE_PK="pk-lf-*****"
+export LANGFUSE_SK="sk-lf-****"
+export LANGFUSE_HOST=""
+```
+
 Poetry installation (probably other versions will work too):
 
 ```bash

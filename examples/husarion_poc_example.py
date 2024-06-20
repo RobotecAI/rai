@@ -1,3 +1,4 @@
+import os
 from typing import List
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -49,9 +50,16 @@ def main():
         ),
         AgentLoop(stop_action=FinishTool().__class__.__name__, stop_iters=50),
     ]
-
+    log_usage = all((os.getenv("LANGFUSE_PK"), os.getenv("LANGFUSE_SK")))
     llm = ChatOpenAI(model="gpt-4o")
-    runner = ScenarioRunner(scenario, llm, tools=tools)
+    runner = ScenarioRunner(
+        scenario,
+        llm,
+        tools=tools,
+        llm_type="openai",
+        scenario_name="Husarion example",
+        log_usage=log_usage,
+    )
     runner.run()
     runner.save_to_html()
 
