@@ -38,6 +38,7 @@ class GetImageTool(BaseTool):
         return {"content": f"Here is the image {name}", "images": [base64_image]}
 
 
+@pytest.mark.billable
 @pytest.mark.parametrize(
     ("llm", "llm_type", "callback"),
     [

@@ -47,3 +47,8 @@ ignore_missing_imports = true
 
 [tool.isort]
 profile = "black"
+
+[tool.pytest.ini_options]
+markers = [
+    "billable: marks test as billable  (deselect with '-m \"not billable\"')",
+]
