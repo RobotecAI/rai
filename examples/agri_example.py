@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 
 from langchain_core.messages import SystemMessage
 
@@ -141,9 +142,11 @@ def main():
         ContinueActionTool(),
         StopTool(),
     ]
-
+    log_usage = all((os.getenv("LANGFUSE_PK"), os.getenv("LANGFUSE_SK")))
     scenario_runner = ScenarioRunner(
         get_scenario(),
+        scenario_name="Agri example",
+        log_usage=log_usage,
         llm=llm,
         tools=tools,
         logging_level=logging.INFO,
