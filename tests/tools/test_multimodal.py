@@ -62,7 +62,7 @@ def test_multimodal_messages(
     langfuse_handler = CallbackHandler(
         public_key=os.getenv("LANGFUSE_PK"),
         secret_key=os.getenv("LANGFUSE_SK"),
-        host="https://cloud.langfuse.com",
+        host="http://via-ip-robo-vm-028.robotec.tm.pl:3000",
         trace_name=request.node.name,
         tags=["test"],
     )
