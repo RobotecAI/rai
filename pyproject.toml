@@ -52,3 +52,4 @@ profile = "black"
 markers = [
     "billable: marks test as billable  (deselect with '-m \"not billable\"')",
 ]
+addopts = "-m 'not billable'"
