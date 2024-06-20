@@ -4,55 +4,31 @@ Scenario can consist of:
 
 ```python
 ScenarioPartType = Union[
-    ConstantMessage, # UserMessage, SystemMessage
-    AssistantMessage,
-    ConditionalMessage,
-    ConditionalExecutor,
+    SystemMessage,
+    HumanMessage,
+    AIMessage,
+    ToolMessage,
+    BaseMessage,
     ConditionalScenario,
-    Executor,
+    FutureAiMessage,
+    AgentLoop,
 ]
 ```
 
 Example scenario:
 
 ```python
-from rai.message import (
-    Message,
-    AssistantMessage,
-    UserMessage,
-    SystemMessage,
-    ConditionalMessage,
-)
-from rai.actions.executor import ConditionalExecutor, Executor
-from rai.actions.actions import SendEmailAction
-
-scenario = [
-    SystemMessage(
-        content="You are an AI assistant specialized in providing technical support for autonomous tractors.",
-    ),
-    UserMessage(
-        content="Analyze the surroundings and determine if the path is clear. Reply with just one word: yes or no.",
-        images=[Message.preprocess_image('examples/imgs/tractor_view.png')],
-    ),
-    AssistantMessage(),
-    ConditionalScenario(
-        if_true=[
-            UserMessage(content="The path seems clear. Please proceed with the current path."),
-            AssistantMessage(),
-        ],
-        if_false=[
-            UserMessage(content="There seems to be an obstacle. Do you need more information?"),
-            AssistantMessage(),
-        ],
-        condition=lambda x: "yes" in x[-1]["content"].lower(),
-    ),
-    ConditionalExecutor(
-        action=SendEmailAction(email="support@example.com"),
-        condition=lambda x: "yes" in x[-1]["content"].lower(),
-    ),
-    Executor(
-        action=SendEmailAction(email="admin@example.com"),
-    ),
-]
-
+    scenario: List[ScenarioPartType] = [
+        SystemMessage(
+            content="You are an autonomous agent. Your main goal is to fulfill the user's requests. "
+            "Do not make assumptions about the environment you are currently in. "
+            "Use the tooling provided to gather information about the environment."
+            "You are always required to send a voice message to the user about your decisions. This is crucial."
+            "The voice message should contain a very short information about what is going on and what is the next step. "
+        ),
+        HumanMessage(
+            content="The robot is moving. Use vision to understand the surroundings, and add waypoints based on observations. camera is accesible at topic /camera/camera/color/image_raw ."
+        ),
+        AgentLoop(stop_action=FinishTool().__class__.__name__, stop_iters=50),
+    ]
 ```
