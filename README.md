@@ -135,6 +135,7 @@ Additionally some of the modules or examples may require langfuse api keys for u
 ```bash
 export LANGFUSE_PK="pk-lf-*****"
 export LANGFUSE_SK="sk-lf-****"
+export LANGFUSE_HOST=""
 ```
 
 Poetry installation (probably other versions will work too):
