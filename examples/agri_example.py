@@ -1,14 +1,23 @@
 import argparse
 import logging
 
-from rai.actions.actions import CallCommand, Wait
-from rai.actions.executor import Executor
-from rai.message import AssistantMessage, Message, SystemMessage, UserMessage
-from rai.scenario_engine.scenario_engine import ConditionalScenario, ScenarioRunner
-from rai.vendors.vendors import AWSBedrockVendor, OllamaVendor, OpenAIVendor
+from langchain_core.messages import SystemMessage
+
+from rai.scenario_engine.messages import (
+    FutureAiMessage,
+    HumanMultimodalMessage,
+    preprocess_image,
+)
+from rai.scenario_engine.scenario_engine import ScenarioRunner
+from rai.tools.ros.cat_demo_tools import (
+    ContinueActionTool,
+    ReplanWithoutCurrentPathTool,
+    StopTool,
+    UseHonkTool,
+    UseLightsTool,
+)
 
 logging.basicConfig(level=logging.INFO)
-
 
 SYSTEM_PROMPT = """
 **Autonomous Tractor System Prompt**
@@ -59,28 +68,8 @@ TASK_PROMPT = """
 Task Input: Analyze the provided image to understand the current environmental and operational context.
 Based on the system prompt's protocols, decide if the tractor should proceed as planned, adjust its course, or take any preventative measures.
 Clearly articulate the reasoning behind your decision and the implications for task completion and safety.
+When the decision is made, use a tool to communicate the next steps to the tractor.
 """
-
-POSSIBLE_ACTIONS = """
-Given your assessment of the risks, which action from this list should be executed?
-use_lights
-use_honk
-replan_without_current_path
-continue
-Respond with only the action's name. Do not add any extra characters.
-"""
-
-action_to_command = {
-    "use_lights": "echo 'Lights have been turned on'",
-    "use_honk": "echo 'Honk has been activated'",
-    "replan_without_current_path": "echo 'Replanning without current path'",
-    "continue": "echo 'Continuing'",
-    "stop": "echo 'Stopping'",
-}
-
-time_waited = (
-    lambda time: f"The action has been requested. Since then {time}s has passed. Please reavaluate the situation.\n"
-)
 
 
 def get_scenario():
@@ -90,42 +79,21 @@ def get_scenario():
     Defining the scenario as a function allows us to capture the image at runtime instead of import time.
     """
     return [
-        SystemMessage(SYSTEM_PROMPT),
-        UserMessage(
-            TRACTOR_INTRODUCTION,
-            images=[Message.preprocess_image("examples/imgs/tractor.png")],
+        SystemMessage(content=SYSTEM_PROMPT),
+        HumanMultimodalMessage(
+            content=TRACTOR_INTRODUCTION,
+            images=[preprocess_image("examples/imgs/tractor.png")],
         ),
-        AssistantMessage(max_tokens=4096),
-        UserMessage(
-            TASK_PROMPT,
-            images=[Message.preprocess_image("examples/imgs/cat_before.png")],
+        HumanMultimodalMessage(
+            content=TASK_PROMPT,
+            images=[preprocess_image("examples/imgs/cat_before.png")],
         ),
-        AssistantMessage(max_tokens=4096),
-        UserMessage(POSSIBLE_ACTIONS),
-        AssistantMessage(max_tokens=50),
-        ConditionalScenario(
-            if_true=[
-                Executor(
-                    CallCommand(
-                        action_to_command=action_to_command,
-                        separate_thread=False,
-                    )
-                ),
-                Executor(Wait(seconds=5)),
-                UserMessage(
-                    time_waited(5) + TASK_PROMPT,
-                    images=[Message.preprocess_image("examples/imgs/cat_after.png")],
-                ),
-                AssistantMessage(max_tokens=4096),
-                UserMessage(POSSIBLE_ACTIONS),
-                AssistantMessage(max_tokens=50),
-                Executor(CallCommand(action_to_command=action_to_command)),
-            ],
-            if_false=[
-                Executor(CallCommand(action_to_command=action_to_command)),
-            ],
-            condition=lambda x: "use_honk" in x[-1].content.lower(),
+        FutureAiMessage(max_tokens=4096),
+        HumanMultimodalMessage(
+            content=TASK_PROMPT,
+            images=[preprocess_image("examples/imgs/cat_after.png")],
         ),
+        FutureAiMessage(max_tokens=4096),
     ]
 
 
@@ -137,29 +105,50 @@ def main():
         "--vendor",
         type=str,
         choices=["ollama", "openai", "awsbedrock"],
-        default="awsbedrock",
+        default="openai",
         help="Vendor to use for the scenario runner (default: awsbedrock)",
     )
 
     args = parser.parse_args()
 
     if args.vendor == "ollama":
-        vendor = OllamaVendor(
-            ip_address="10.244.51.231",
-            port="11434",
-            model="llava",
-            logging_level=logging.INFO,
-        )
+        from langchain_community.chat_models import ChatOllama
+
+        raise NotImplementedError("Ollama is not yet supported")
+
+        llm = ChatOllama(model="llava")
+        llm_type = "ollama"
     elif args.vendor == "openai":
-        vendor = OpenAIVendor(model="gpt-4o", stream=False, logging_level=logging.INFO)
+        from langchain_openai.chat_models import ChatOpenAI
+
+        llm = ChatOpenAI(model="gpt-4o")
+        llm_type = "openai"
+
     elif args.vendor == "awsbedrock":
-        vendor = AWSBedrockVendor(
-            model="anthropic.claude-3-opus-20240229-v1:0", logging_level=logging.INFO
+        from langchain_aws.chat_models import ChatBedrock
+
+        llm = ChatBedrock(
+            model_id="anthropic.claude-3-opus-20240229-v1:0", region_name="us-west-2"
         )
+        llm_type = "bedrock"
     else:
         raise ValueError("Invalid vendor argument")
 
-    scenario_runner = ScenarioRunner(get_scenario(), vendor, logging_level=logging.INFO)
+    tools = [
+        UseLightsTool(),
+        UseHonkTool(),
+        ReplanWithoutCurrentPathTool(),
+        ContinueActionTool(),
+        StopTool(),
+    ]
+
+    scenario_runner = ScenarioRunner(
+        get_scenario(),
+        llm=llm,
+        tools=tools,
+        logging_level=logging.INFO,
+        llm_type=llm_type,
+    )
     scenario_runner.run()
     scenario_runner.save_to_html()
 

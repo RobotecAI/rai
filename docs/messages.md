@@ -1,64 +1,32 @@
 # Message Types
 
-## ConstantMessage
+RAI implements MultimodalMessage that allows using image and audio* information.\
+*audio is currently added as a placeholder
 
-`ConstantMessage` represents a message with fixed content. It requires the `role` (e.g., "user") and `content` parameters. An optional `images` parameter can be used to attach images to the message. Images can be either a path to a locally stored image or a URL pointing to a website location. The link should start with either `http` or `https`.
+## Usage
 
-```python
-ConstantMessage(
-    role="user",
-    content="Your content here",
-    images=[Message.preprocess_image("path/to/image.jpg")],
-)
-```
-
-## UserMessage
-
-`UserMessage` is a specific type of `ConstantMessage` that represents a message from the user. It simplifies creating user messages by setting the `role` to "user" by default.
+Use multimodal message via it's concrete implementation.
 
 ```python
-UserMessage(
-    content="Your content here",
-    images=[Message.preprocess_image("path/to/image.jpg")], # optional
-)
+class HumanMultimodalMessage(HumanMessage, MultimodalMessage):
+class SystemMultimodalMessage(SystemMessage, MultimodalMessage):
+class AiMultimodalMessage(AIMessage, MultimodalMessage):
+class ToolMultimodalMessage(ToolMessage, MultimodalMessage):
 ```
 
-## SystemMessage
-
-`SystemMessage` is a specific type of `ConstantMessage` that represents a message from the system. It simplifies creating system messages by setting the `role` to "system" by default.
+Example:
 
 ```python
-SystemMessage(
-    content="System initialization message",
-)
+from rai.scenario_engine.messages import HumanMultimodalMessage, preprocess_image
+from langchain_openai.chat_models import ChatOpenAI
+
+base64_image = preprocess_image('https://raw.githubusercontent.com/RobotecAI/RobotecGPULidar/develop/docs/image/rgl-logo.png')
+
+llm = ChatOpenAI(model="gpt-4o")
+msg = [HumanMultimodalMessage(content='This is an example', images=[base64_image])]
+llm.invoke(msg)
 ```
 
-## AssistantMessage
+Implementation of the following messages is identical: HumanMultimodalMessage, SystemMultimodalMessage, AiMultimodalMessage.
 
-`AssistantMessage` represents a message from the AI assistant, including requirements that dictate conditions the assistant's response must meet. If these requirements are not met, the system attempts to gather a proper response multiple times. When the severity is set to OPTIONAL, the scenario continues with a warning. For MANDATORY severity, an error is raised.
-
-```python
-AssistantMessage(
-    requirements=[
-        MessageLengthRequirement(severity=RequirementSeverity.OPTIONAL, max_length=5)
-    ]
-)
-```
-
-## ConditionalMessage
-
-`ConditionalMessage` represents a message that depends on a condition. It requires a `condition` function that takes the assistant's previous response as input and returns a boolean. Depending on the result, either the `if_true` or `if_false` message will be used.
-
-```python
-ConditionalMessage(
-    condition=lambda x: "yes" in x.lower(),
-    if_true=Message(
-        role="user",
-        content="Content if condition is true",
-    ),
-    if_false=Message(
-        role="user",
-        content="Content if condition is false",
-    ),
-)
-```
+ToolMultimodalMessage has an addition of postprocess method, which converts the ToolMultimodalMessage into format that is compatible with a chosen vendor.

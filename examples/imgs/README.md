@@ -2,5 +2,5 @@ Download images from [drive.google.com/drive/folders/1KRwCph465SBEMbuu5y1srzF9Zx
 
 ```shell
 pip install gdown
-gdown --folder -O . https://drive.google.com/drive/folders/1KRwCph465SBEMbuu5y1srzF9ZxVqjffw\?usp\=drive_link
+gdown --folder -O examples/imgs https://drive.google.com/drive/folders/1KRwCph465SBEMbuu5y1srzF9ZxVqjffw\?usp\=drive_link
 ```
