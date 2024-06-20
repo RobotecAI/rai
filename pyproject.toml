@@ -3,7 +3,7 @@ name = "rai"
 version = "0.0.1"
 description = "your_description_here"
 readme = "README.md"
-authors = ["Maciej Majek <maciej.majek@robotec.ai>"]
+authors = ["Maciej Majek <maciej.majek@robotec.ai>", "Bartłomiej Boczek <bartlomiej.boczek@robotec.ai>"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
