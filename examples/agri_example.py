@@ -113,8 +113,9 @@ def main():
 
     if args.vendor == "ollama":
         from langchain_community.chat_models import ChatOllama
+
         raise NotImplementedError("Ollama is not yet supported")
-        
+
         llm = ChatOllama(model="llava")
         llm_type = "ollama"
     elif args.vendor == "openai":
