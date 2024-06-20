@@ -107,10 +107,17 @@ class ScenarioRunner:
         self.invoke_config: RunnableConfig = {}
         self.langfuse_handler = None
         if self.log_usage:
+            public_key = os.getenv("LANGFUSE_PK")
+            secret_key = os.getenv("LANGFUSE_SK")
+            host = os.getenv("LANGFUSE_HOST")
+            if not all((public_key, secret_key, host)):
+                raise ValueError(
+                    "Please provide LANGFUSE_PK, LANGFUSE_SK, LANGFUSE_HOST in the environment."
+                )
             self.langfuse_handler = CallbackHandler(
-                public_key=os.getenv("LANGFUSE_PK"),
-                secret_key=os.getenv("LANGFUSE_SK"),
-                host="http://via-ip-robo-vm-028.robotec.tm.pl:3000",
+                public_key=public_key,
+                secret_key=secret_key,
+                host=host,
                 trace_name=scenario_name or "unknown scenario",
                 tags=["scenario_runner"],
             )
