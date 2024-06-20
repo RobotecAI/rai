@@ -1204,13 +1204,13 @@ extended-testing = ["beautifulsoup4 (>=4.12.3,<5.0.0)", "lxml (>=4.9.3,<6.0)"]
 
 [[package]]
 name = "langfuse"
-version = "2.36.1"
+version = "2.36.2"
 description = "A client library for accessing langfuse"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langfuse-2.36.1-py3-none-any.whl", hash = "sha256:2cba244024bdf63aa3295bffada6b257497f9d18a3ca09026595470f46e09e5b"},
-    {file = "langfuse-2.36.1.tar.gz", hash = "sha256:5117038d35d4629cfa37e8d89986132c926c52c05631cdfef4f9d54bc05591d8"},
+    {file = "langfuse-2.36.2-py3-none-any.whl", hash = "sha256:66728feddcec0974e4eb31612151a282fcce2e333b5a61474182b5e67e78e090"},
+    {file = "langfuse-2.36.2.tar.gz", hash = "sha256:3e784505d408aa2c9c2da79487b64d185d8f7fa8a855e5303bcce678454c715b"},
 ]
 
 [package.dependencies]
@@ -3153,8 +3153,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10, <3.12"
-<<<<<<< HEAD
-content-hash = "0b3493d7231bbdc0d64b66ec31ca0d6da12c4764503e45bf4efabfb7ba27f61c"
-=======
-content-hash = "27babbb8e41edb42bddde9e8b212ccae394792ba642d48a56bd3da19f516fa87"
->>>>>>> d24fdbc (feat: integrate langfuse into rai)
+content-hash = "35063ed5bc4052b3b64294537c73bb47b33bcbb37e8d533e632bf8ac6c96a9f3"
