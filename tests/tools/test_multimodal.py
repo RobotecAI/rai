@@ -1,4 +1,5 @@
 import base64
+import os
 from typing import List, Literal, Type, cast
 
 import cv2
@@ -12,6 +13,7 @@ from langchain_community.callbacks.manager import (
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.pydantic_v1 import BaseModel, Field
+from langfuse.callback import CallbackHandler
 from pytest import FixtureRequest
 
 from rai.scenario_engine.messages import HumanMultimodalMessage
@@ -46,7 +48,7 @@ class GetImageTool(BaseTool):
         ("chat_bedrock_multimodal", "bedrock", get_bedrock_anthropic_callback),
     ],
 )
-def test_multimodal_openai(
+def test_multimodal_messages(
     llm: BaseChatModel,
     llm_type: Literal["openai", "bedrock"],
     callback,
@@ -57,16 +59,29 @@ def test_multimodal_openai(
     tools = [GetImageTool()]
     llm_with_tools = llm.bind_tools(tools)  # type: ignore
 
+    langfuse_handler = CallbackHandler(
+        public_key=os.getenv("LANGFUSE_PK"),
+        secret_key=os.getenv("LANGFUSE_SK"),
+        host="https://cloud.langfuse.com",
+        trace_name=request.node.name,
+        tags=["test"],
+    )
+
     scenario: List[BaseMessage] = [
         HumanMultimodalMessage(
             content="Can you please describe the contents of test.png image? Remember to use the available tools."
         ),
     ]
     with callback() as cb:
-        ai_msg = cast(AIMessage, llm_with_tools.invoke(scenario))
+        ai_msg = cast(
+            AIMessage,
+            llm_with_tools.invoke(scenario, config={"callbacks": [langfuse_handler]}),
+        )
         scenario.append(ai_msg)
         scenario = run_requested_tools(ai_msg, tools, scenario, llm_type=llm_type)
-        ai_msg = llm_with_tools.invoke(scenario)
+        ai_msg = llm_with_tools.invoke(
+            scenario, config={"callbacks": [langfuse_handler]}
+        )
         usage_tracker.add_usage(
             llm_type,
             cost=cb.total_cost,

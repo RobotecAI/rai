@@ -13,7 +13,9 @@ from langchain_core.messages import (
     SystemMessage,
     ToolMessage,
 )
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
+from langfuse.callback import CallbackHandler
 
 from rai.history_saver import HistorySaver
 from rai.scenario_engine.messages import AgentLoop, FutureAiMessage
@@ -72,11 +74,14 @@ class ScenarioRunner:
         llm: BaseChatModel,
         llm_type: Literal["openai", "bedrock"],
         tools: Sequence[BaseTool],
+        scenario_name: str = "",
         logging_level: int = logging.WARNING,
+        log_usage: bool = True,
         use_cache: bool = False,
     ):
         self.scenario = scenario
         self.tools = tools
+        self.log_usage = log_usage
         self.llm = llm
         self.llm_type = llm_type
         self.llm_with_tools = llm.bind_tools(tools)
@@ -99,6 +104,18 @@ class ScenarioRunner:
             except FileNotFoundError:
                 self.cache = {}
 
+        self.invoke_config: RunnableConfig = {}
+        self.langfuse_handler = None
+        if self.log_usage:
+            self.langfuse_handler = CallbackHandler(
+                public_key=os.getenv("LANGFUSE_PK"),
+                secret_key=os.getenv("LANGFUSE_SK"),
+                host="https://cloud.langfuse.com",
+                trace_name=scenario_name or "unknown scenario",
+                tags=["scenario_runner"],
+            )
+            self.invoke_config["callbacks"] = [self.langfuse_handler]
+
     def run(self):
         self.logger.info(f"Starting conversation.")
         self._run(self.scenario)
@@ -113,7 +130,10 @@ class ScenarioRunner:
             if isinstance(msg, (HumanMessage, AIMessage, ToolMessage, SystemMessage)):
                 self.history.append(msg)
             elif isinstance(msg, FutureAiMessage):
-                ai_msg = cast(AIMessage, self.llm_with_tools.invoke(self.history))
+                ai_msg = cast(
+                    AIMessage,
+                    self.llm_with_tools.invoke(self.history, config=self.invoke_config),
+                )
                 self.history.append(ai_msg)
                 self.history = run_requested_tools(
                     ai_msg, self.tools, self.history, llm_type=self.llm_type
@@ -123,7 +143,12 @@ class ScenarioRunner:
                     f"Looping agent actions until {msg.stop_action}. Max {msg.stop_iters} loops."
                 )
                 for _ in range(msg.stop_iters):
-                    ai_msg = cast(AIMessage, self.llm_with_tools.invoke(self.history))
+                    ai_msg = cast(
+                        AIMessage,
+                        self.llm_with_tools.invoke(
+                            self.history, config=self.invoke_config
+                        ),
+                    )
                     self.history.append(ai_msg)
                     self.history = run_requested_tools(
                         ai_msg, self.tools, self.history, llm_type=self.llm_type
