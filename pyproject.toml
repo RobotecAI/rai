@@ -22,7 +22,7 @@ pytest = "^8.2.0"
 xxhash = "^3.4.1"
 optuna = "^3.6.1"
 langchain = "^0.2.3"
-langchain-aws = { git = "https://github.com/langchain-ai/langchain-aws", subdirectory = "libs/aws", rev = "99409d8" }
+langchain-aws = "^0.1.7"
 langchain-openai = "^0.1.8"
 langchain-community = "^0.2.4"
 transforms3d = "^0.4.1"
