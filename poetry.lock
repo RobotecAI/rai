@@ -1108,24 +1108,19 @@ tenacity = ">=8.1.0,<9.0.0"
 
 [[package]]
 name = "langchain-aws"
-version = "0.1.6"
+version = "0.1.7"
 description = "An integration package connecting AWS and LangChain"
 optional = false
-python-versions = ">=3.8.1,<4.0"
-files = []
-develop = false
+python-versions = "<4.0,>=3.8.1"
+files = [
+    {file = "langchain_aws-0.1.7-py3-none-any.whl", hash = "sha256:413f88cbb120cc1d6ca0e9f6d72b89c1d930b78ce071fef5b03e1595fc4d6029"},
+    {file = "langchain_aws-0.1.7.tar.gz", hash = "sha256:aa0bbd3e530e21fdc1d0459e97ee14fa387ce9bb2d00d721cf526e9c3ecea78f"},
+]
 
 [package.dependencies]
 boto3 = ">=1.34.51,<1.35.0"
 langchain-core = ">=0.2.2,<0.3"
-numpy = "^1"
-
-[package.source]
-type = "git"
-url = "https://github.com/langchain-ai/langchain-aws"
-reference = "99409d8"
-resolved_reference = "99409d8233413a210858858f0228a3ef3238b340"
-subdirectory = "libs/aws"
+numpy = ">=1,<2"
 
 [[package]]
 name = "langchain-community"
@@ -3153,4 +3148,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10, <3.12"
-content-hash = "35063ed5bc4052b3b64294537c73bb47b33bcbb37e8d533e632bf8ac6c96a9f3"
+content-hash = "2ec1d37e45abe9b2a3d5858e95c7b9ebf3059e633e6072dd21b0c311023d4cee"
