@@ -46,7 +46,7 @@ def main():
             "The voice message should contain a very short information about what is going on and what is the next step. "
         ),
         HumanMessage(
-            content="The robot is moving. Use vision to understand the surroundings, and add waypoints based on observations. camera is accesible at topic /camera_image_color ."
+            content="The robot is moving. Use vision to understand the surroundings, and add waypoints based on observations. camera is accesible at topic /camera/camera/color/image_raw ."
         ),
         AgentLoop(stop_action=FinishTool().__class__.__name__, stop_iters=50),
     ]
