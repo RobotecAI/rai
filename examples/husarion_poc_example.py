@@ -61,7 +61,6 @@ def main():
         log_usage=log_usage,
     )
     runner.run()
-    runner.save_to_html()
 
 
 if __name__ == "__main__":
