@@ -124,10 +124,10 @@ class ScenarioRunner:
             self.invoke_config["callbacks"] = [self.langfuse_handler]
 
     def run(self):
-        self.logger.info(f"Starting conversation.")
+        self.logger.info("Starting conversation.")
         self._run(self.scenario)
 
-        self.logger.info(f"Conversation completed.")
+        self.logger.info("Conversation completed.")
         return self.history
 
     def _run(self, scenario: ScenarioType):

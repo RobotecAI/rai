@@ -1,13 +1,7 @@
-from typing import Any, Dict, List, Literal, Optional, Sequence
+from typing import Any, Dict, List, Literal, Sequence
 
 from langchain.tools import BaseTool
-from langchain_core.messages import (
-    AIMessage,
-    BaseMessage,
-    HumanMessage,
-    ToolCall,
-    ToolMessage,
-)
+from langchain_core.messages import AIMessage, BaseMessage, ToolCall, ToolMessage
 
 from rai.scenario_engine.messages import ToolMultimodalMessage
 

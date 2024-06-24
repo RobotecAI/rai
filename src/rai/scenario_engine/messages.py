@@ -129,10 +129,10 @@ def preprocess_image(
             image_data = image_file.read()
     elif isinstance(image, bytes):
         image_data = image
-        encoding_function = lambda x: x.decode("utf-8")
+        encoding_function = lambda x: x.decode("utf-8")  # noqa
     elif isinstance(image, np.ndarray):  # type: ignore
         image_data = image.tobytes()
-        encoding_function = lambda x: base64.b64encode(x).decode("utf-8")
+        encoding_function = lambda x: base64.b64encode(x).decode("utf-8")  # noqa
     else:
         image_data = image
 
