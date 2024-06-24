@@ -1,4 +1,4 @@
-name: Pre-commit Checks
+name: ruff checks
 
 on:
   pull_request:
@@ -17,7 +17,4 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run pre-commit
-        uses: pre-commit/action@v3.0.1
-        with:
-          extra_args: "--all-files"
+      - uses: chartboost/ruff-action@v1
