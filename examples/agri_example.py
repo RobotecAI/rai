@@ -153,7 +153,6 @@ def main():
         llm_type=llm_type,
     )
     scenario_runner.run()
-    scenario_runner.save_to_html()
 
 
 if __name__ == "__main__":

@@ -125,9 +125,13 @@ class ScenarioRunner:
 
     def run(self):
         self.logger.info("Starting conversation.")
-        self._run(self.scenario)
 
-        self.logger.info("Conversation completed.")
+        try:
+            self._run(self.scenario)
+
+            self.logger.info("Conversation completed.")
+        finally:
+            self.save_to_html()
         return self.history
 
     def _run(self, scenario: ScenarioType):
