@@ -89,11 +89,8 @@ class ScenarioRunner:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(self.logging_level)
         self.history: List[BaseMessage] = []
-        self.logs_dir = os.path.join(
-            "logs",
-            self.llm.__class__.__name__
-            + datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S.%f"),
-        )
+        now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S.%f")
+        self.logs_dir = os.path.join("logs", self.llm.__class__.__name__ + now)
         self.use_cache = use_cache
         self.cache: Dict[str, Dict[int, BaseMessage]] = {}
         if self.use_cache:
@@ -124,12 +121,12 @@ class ScenarioRunner:
             self.invoke_config["callbacks"] = [self.langfuse_handler]
 
     def run(self):
-        self.logger.info(f"Starting conversation.")
+        self.logger.info("Starting conversation.")
 
         try:
             self._run(self.scenario)
 
-            self.logger.info(f"Conversation completed.")
+            self.logger.info("Conversation completed.")
         finally:
             self.save_to_html()
         return self.history
