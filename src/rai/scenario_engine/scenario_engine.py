@@ -151,6 +151,12 @@ class ScenarioRunner:
                     f"Looping agent actions until {msg.stop_action}. Max {msg.stop_iters} loops."
                 )
                 for _ in range(msg.stop_iters):
+                    if self.history[-1].type == "ai":
+                        self.history.append(
+                            HumanMessage(
+                                content="Thank you. Please continue your mision with tools."
+                            )
+                        )
                     ai_msg = cast(
                         AIMessage,
                         self.llm_with_tools.invoke(

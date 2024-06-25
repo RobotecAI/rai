@@ -79,18 +79,18 @@ def main():
         SystemMessage(
             content="You are an autonomous agent. Your main goal is to fulfill the user's requests. "
             "Do not make assumptions about the environment you are currently in. "
-            "Use the tooling provided to gather information about the environment."
+            "Use the tooling provided to gather information about the environment. Remember to list available topics. "
         ),
         HumanMultimodalMessage(
             content="Describe your surroundings and gather more information as needed. "
             "Move to explore further, aiming for clear areas near the robot (red arrow). Make sure to describe the area during movement."
             "Utilize available methods to obtain the map and identify relevant data streams. "
-            "Before starting the exploration, find out what kind of tooling is available and based on that plan your exploration."
+            "Before starting the exploration, find out what kind of tooling is available and based on that plan your exploration. For description, use the available tooling."
         ),
-        AgentLoop(stop_action=FinishTool().__class__.__name__, stop_iters=10),
+        AgentLoop(stop_action=FinishTool().__class__.__name__, stop_iters=50),
     ]
 
-    llm = ChatBedrock(model_id="anthropic.claude-3-5-sonnet-20240620-v1:0", region_name="us-west-2")  # type: ignore
+    llm = ChatBedrock(model_id="anthropic.claude-3-5-sonnet-20240620-v1:0", region_name="us-east-1")  # type: ignore
     runner = ScenarioRunner(scenario, llm=llm, tools=tools, llm_type="bedrock")
     runner.run()
     runner.save_to_html()

@@ -7,9 +7,16 @@ import cv2
 import rclpy
 import rclpy.qos
 from cv_bridge import CvBridge
+from rclpy.duration import Duration
 from rclpy.impl.implementation_singleton import rclpy_implementation as _rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile
+from rclpy.qos import (
+    QoSDurabilityPolicy,
+    QoSHistoryPolicy,
+    QoSLivelinessPolicy,
+    QoSProfile,
+    QoSReliabilityPolicy,
+)
 from rclpy.signals import SignalHandlerGuardCondition
 from rclpy.utilities import timeout_sec_to_nsec
 from sensor_msgs.msg import Image
@@ -92,7 +99,16 @@ class SingleMessageGrabber:
 
         node = rclpy.create_node(self.__class__.__name__ + "_node")  # type: ignore
         qos_profile = rclpy.qos.qos_profile_sensor_data
-
+        if self.topic == "/map":
+            qos_profile = QoSProfile(
+                reliability=QoSReliabilityPolicy.RELIABLE,
+                history=QoSHistoryPolicy.KEEP_ALL,
+                durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+                lifespan=Duration(seconds=0),
+                deadline=Duration(seconds=0),
+                liveliness=QoSLivelinessPolicy.AUTOMATIC,
+                liveliness_lease_duration=Duration(seconds=0),
+            )
         success, msg = wait_for_message(
             self.message_type,
             node,

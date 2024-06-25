@@ -103,7 +103,7 @@ class GetOccupancyGridTool(BaseTool):
 
     name: str = "GetOccupancyGridTool"
     description: str = (
-        "A tool for getting the current map as an image with the robot's position marked on it."
+        "A tool for getting the current map as an image with the robot's position marked on it. The coordinates are written at the edges of the image. Make sure to read them correctly if you are planning on using the coordinates to set a new goal pose."
     )
 
     args_schema: Type[GetOccupancyGridToolInput] = GetOccupancyGridToolInput
@@ -119,7 +119,7 @@ class GetOccupancyGridTool(BaseTool):
 
         # Convert the OccupancyGrid values to grayscale image (0-255)
         # the final image shape should be at most (1000x1000), scale to fit
-        scale = 1000 / max(width, height)
+        scale = 1500 / max(width, height)
         width = int(width * scale)
         height = int(height * scale)
         data = cv2.resize(data, (width, height), interpolation=cv2.INTER_NEAREST)
@@ -164,7 +164,7 @@ class GetOccupancyGridTool(BaseTool):
         )
 
         robot_y = cast(
-            float, (transform.transform.translation.y - origin_position.y / resolution)
+            float, (transform.transform.translation.y - origin_position.y) / resolution
         )
 
         _, _, yaw = euler_from_quaternion(
@@ -193,7 +193,7 @@ class GetOccupancyGridTool(BaseTool):
                     transform.transform.rotation.w,  # type: ignore
                 ]
             )
-            arrow_length = 10
+            arrow_length = 20
             arrow_end_x = int(robot_x + arrow_length * np.cos(yaw))
             arrow_end_y = int(robot_y + arrow_length * np.sin(yaw))
             cv2.arrowedLine(
