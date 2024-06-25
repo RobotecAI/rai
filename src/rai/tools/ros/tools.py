@@ -38,8 +38,6 @@ class SetWaypointTool(BaseTool):
         global marker_it
         """Sets a waypoint on the map."""
         import rclpy
-        from builtin_interfaces.msg import Time
-        from geometry_msgs.msg import Point
         from rclpy.node import Node
         from visualization_msgs.msg import Marker
 
