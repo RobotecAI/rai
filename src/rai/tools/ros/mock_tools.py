@@ -39,9 +39,9 @@ class VisualQuestionAnsweringTool(BaseTool):
     description: str = (
         "Processes an image from a ROS2 topic and answers a specified question."
     )
-    args_schema: Type[
+    args_schema: Type[VisualQuestionAnsweringToolInput] = (
         VisualQuestionAnsweringToolInput
-    ] = VisualQuestionAnsweringToolInput
+    )
 
     def _run(self, topic: str, question: str):
         """Processes the image from the specified topic and answers the given question."""

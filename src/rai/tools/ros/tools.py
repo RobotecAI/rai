@@ -1,5 +1,4 @@
 import base64
-import subprocess
 from typing import Type
 
 import cv2
@@ -29,7 +28,9 @@ class SetWaypointTool(BaseTool):
     """Set a waypoint on the map."""
 
     name = "SetWaypointTool"
-    description: str = "A tool for setting a waypoint on the map. This tool is used for adding information onto the map."
+    description: str = (
+        "A tool for setting a waypoint on the map. This tool is used for adding information onto the map."
+    )
 
     args_schema: Type[SetWaypointToolInput] = SetWaypointToolInput
 
@@ -101,7 +102,9 @@ class GetOccupancyGridTool(BaseTool):
     """Get the current map as an image with the robot's position marked on it (red dot)."""
 
     name: str = "GetOccupancyGridTool"
-    description: str = "A tool for getting the current map as an image with the robot's position marked on it."
+    description: str = (
+        "A tool for getting the current map as an image with the robot's position marked on it."
+    )
 
     args_schema: Type[GetOccupancyGridToolInput] = GetOccupancyGridToolInput
 
