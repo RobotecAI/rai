@@ -55,9 +55,9 @@ class ReplanWithoutCurrentPathTool(BaseTool):
 
     name: str = "ReplanWithoutCurrentPathTool"
     description: str = "Replans without the current path."
-    args_schema: Type[
+    args_schema: Type[ReplanWithoutCurrentPathToolInput] = (
         ReplanWithoutCurrentPathToolInput
-    ] = ReplanWithoutCurrentPathToolInput
+    )
 
     def _run(self):
         """Replans without the current path."""
