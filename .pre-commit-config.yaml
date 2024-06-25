@@ -39,3 +39,9 @@ repos:
     rev: 24.4.2
     hooks:
       - id: black
+
+  - repo: https://github.com/pycqa/flake8
+    rev: "" # pick a git hash / tag to point to
+    hooks:
+      - id: flake8
+        args: ["--ignore=E501,E731"]
