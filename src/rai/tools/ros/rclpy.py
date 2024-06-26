@@ -107,7 +107,6 @@ class Ros2PubMessageTool(BaseTool):
         )  # TODO(boczekbartek): infer qos profile from topic info
         try:
             msg.header.stamp = node.get_clock().now().to_msg()
-            msg.header.frame_id = "map"
 
             rclpy.spin_once(node)
             publisher.publish(msg)
