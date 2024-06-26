@@ -4,7 +4,7 @@
 
 This example can be used with real robot or the O3DE simulation.
 To run in the simulation it's easiest to use pre-built docker image: see [rai-husarion-demo-private/docker/README.md][husarion_o3de_docker_readme].
-Full docs can be found in: [rai-husarion-demo-private/README.md][husarion_o3de_reamde].
+Full docs can be found in: [rai-husarion-demo-private/README.md][husarion_o3de_readme].
 
 ```bash
 python examples/husarion_poc_example.py
@@ -35,5 +35,5 @@ options:
 
 - Integration with 2405_vlm demo (ros 2 agri demo): [link](https://github.com/RobotecAI/MultiDomainAgricultureProject/tree/demo/2405_vlm)
 
-[husarion_o3de_reamde]: https://github.com/RobotecAI/rai-husarion-demo-private
+[husarion_o3de_readme]: https://github.com/RobotecAI/rai-husarion-demo-private
 [husarion_o3de_docker_readme]: https://github.com/RobotecAI/rai-husarion-demo-private/blob/bb/docker/docker/README.md
