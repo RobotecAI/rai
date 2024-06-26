@@ -39,7 +39,7 @@ class Ros2GetOneMsgFromTopicInput(BaseModel):
 class Ros2GetOneMsgFromTopicTool(BaseTool):
     """Get one message from a specific ros2 topic"""
 
-    name = "Ros2GetOneMsgFromTopic"
+    name: str = "Ros2GetOneMsgFromTopic"
     description: str = "A tool for getting one message from a ros2 topic"
 
     args_schema: Type[Ros2GetOneMsgFromTopicInput] = Ros2GetOneMsgFromTopicInput
@@ -70,7 +70,7 @@ class PubRos2MessageToolInput(BaseModel):
 
 
 class Ros2PubMessageTool(BaseTool):
-    name = "PubRos2MessageTool"
+    name: str = "PubRos2MessageTool"
     description: str = "A tool for setting the goal pose for the robot."
 
     args_schema: Type[PubRos2MessageToolInput] = PubRos2MessageToolInput
