@@ -4,10 +4,7 @@ import rclpy
 from langchain.tools import BaseTool, tool
 from langchain_core.pydantic_v1 import BaseModel, Field
 from rclpy.node import Node
-from rosidl_parser.definition import NamespacedType
-from rosidl_runtime_py.import_message import import_message_from_namespaced_type
 from rosidl_runtime_py.set_message import set_message_fields
-from rosidl_runtime_py.utilities import get_namespaced_type
 
 from rai.communication.ros_communication import SingleMessageGrabber
 
@@ -15,10 +12,10 @@ from .utils import import_message_from_str
 
 
 @tool
-def get_topics_names_and_types():
-    """Call rclpy.node.Node().get_topics_names_and_types(). Return in a csv format. topic_name, serice_type"""
+def get_topics_names_and_types_tool():
+    """Call rclpy.node.Node().get_topics_names_and_types()."""
 
-    node = Node(node_name="rai_tool_node")
+    node = Node(node_name="rai_get_topics_names_and_types_tool")
     rclpy.spin_once(node, timeout_sec=2)
     try:
         return [
@@ -84,9 +81,8 @@ class Ros2PubMessageTool(BaseTool):
 
     def _build_msg(
         self, msg_type: str, msg_args: Dict[str, Any]
-    ) -> Tuple[object, object]:
-        msg_namespaced_type: NamespacedType = get_namespaced_type(msg_type)
-        msg_cls = import_message_from_namespaced_type(msg_namespaced_type)
+    ) -> Tuple[object, Type]:
+        msg_cls: Type = import_message_from_str(msg_type)
         msg = msg_cls()
         set_message_fields(msg, msg_args)
         return msg, msg_cls
@@ -96,7 +92,7 @@ class Ros2PubMessageTool(BaseTool):
 
         msg, msg_cls = self._build_msg(msg_type, msg_args)
 
-        node = Node(node_name="RAI_PubRos2MessageTool")
+        node = Node(node_name=f"rai_{self,__class__.__name__}")
         publisher = node.create_publisher(
             msg_cls, topic_name, 10
         )  # TODO(boczekbartek): infer qos profile from topic info

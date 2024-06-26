@@ -11,13 +11,13 @@ from rai.tools.ros.cat_demo_tools import FinishTool
 from rai.tools.ros.rclpy import (
     Ros2GetOneMsgFromTopicTool,
     Ros2PubMessageTool,
-    get_topics_names_and_types,
+    get_topics_names_and_types_tool,
 )
 
 
 def main():
     tools = [
-        get_topics_names_and_types,
+        get_topics_names_and_types_tool,
         Ros2PubMessageTool(),
         Ros2GetOneMsgFromTopicTool(),
         FinishTool(),
