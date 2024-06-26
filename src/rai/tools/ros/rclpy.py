@@ -60,8 +60,6 @@ class Ros2GetOneMsgFromTopicTool(BaseTool):
 
 
 class PubRos2MessageToolInput(BaseModel):
-    """Input for the set_goal_pose tool."""
-
     topic_name: str = Field(..., description="Ros2 topic to publish the goal pose to")
     msg_type: str = Field(
         ..., description="Type of ros2 message in typical ros2 format."
@@ -72,8 +70,6 @@ class PubRos2MessageToolInput(BaseModel):
 
 
 class Ros2PubMessageTool(BaseTool):
-    """Set the goal pose for the robot"""
-
     name = "PubRos2MessageTool"
     description: str = "A tool for setting the goal pose for the robot."
 
