@@ -52,7 +52,7 @@ class Ros2GetOneMsgFromTopicTool(BaseTool):
         msg = grabber.get_data()
 
         if msg is None:
-            return {"content": "Failed to get the position, wrong topic?"}
+            return {"content": "No message received."}
 
         return {
             "content": str(msg),
@@ -60,7 +60,7 @@ class Ros2GetOneMsgFromTopicTool(BaseTool):
 
 
 class PubRos2MessageToolInput(BaseModel):
-    topic_name: str = Field(..., description="Ros2 topic to publish the goal pose to")
+    topic_name: str = Field(..., description="Ros2 topic to publish the message")
     msg_type: str = Field(
         ..., description="Type of ros2 message in typical ros2 format."
     )
@@ -71,7 +71,21 @@ class PubRos2MessageToolInput(BaseModel):
 
 class Ros2PubMessageTool(BaseTool):
     name: str = "PubRos2MessageTool"
-    description: str = "A tool for setting the goal pose for the robot."
+    description: str = """A tool for publishing a message to a ros2 topic
+    Example usage:
+
+    ```python
+    tool = Ros2PubMessageTool()
+    tool.run(
+        {
+            "topic_name": "/some_topic",
+            "msg_type": "geometry_msgs/Point",
+            "msg_args": {"x": 0.0, "y": 0.0, "z": 0.0},
+        }
+    )
+
+    ```
+    """
 
     args_schema: Type[PubRos2MessageToolInput] = PubRos2MessageToolInput
 
@@ -84,8 +98,7 @@ class Ros2PubMessageTool(BaseTool):
         return msg, msg_cls
 
     def _run(self, topic_name: str, msg_type: str, msg_args: Dict[str, Any]):
-        """Sets the goal pose for the robot."""
-
+        """Publishes a message to the specified topic."""
         msg, msg_cls = self._build_msg(msg_type, msg_args)
 
         node = Node(node_name=f"rai_{self,__class__.__name__}")
