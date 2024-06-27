@@ -13,9 +13,9 @@ from rai.scenario_engine.tool_runner import run_requested_tools
 from rai.tools.ros.cat_demo_tools import FinishTool
 from rai.tools.ros.cli import Ros2TopicTool, SetGoalPoseTool
 from rai.tools.ros.tools import (
+    AddDescribedWaypointToDatabaseTool,
     GetCameraImageTool,
     GetOccupancyGridTool,
-    SetWaypointTool,
 )
 
 
@@ -37,7 +37,7 @@ class DescribeAreaTool(BaseTool):
 
     def _run(self, image_topic: str):
         get_camera_image_tool = GetCameraImageTool()
-        set_waypoint_tool = SetWaypointTool()
+        set_waypoint_tool = AddDescribedWaypointToDatabaseTool()
 
         current_position = TF2TransformFetcher().get_data()
         image = get_camera_image_tool.run(image_topic)["images"]

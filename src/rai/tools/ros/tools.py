@@ -18,7 +18,7 @@ from rai.communication.ros_communication import (
 marker_it = 0
 
 
-class SetWaypointToolInput(BaseModel):
+class AddDescribedWaypointToDatabaseToolInput(BaseModel):
     """Input for the set_waypoint tool."""
 
     x: float = Field(..., description="X coordinate of the waypoint")
@@ -29,15 +29,17 @@ class SetWaypointToolInput(BaseModel):
     )
 
 
-class SetWaypointTool(BaseTool):
+class AddDescribedWaypointToDatabaseTool(BaseTool):
     """Set a waypoint on the map."""
 
-    name = "SetWaypointTool"
+    name = "AddDescribedWaypointToDatabaseTool"
     description: str = (
         "A tool for setting a waypoint on the map. This tool is used for adding information onto the map."
     )
 
-    args_schema: Type[SetWaypointToolInput] = SetWaypointToolInput
+    args_schema: Type[AddDescribedWaypointToDatabaseToolInput] = (
+        AddDescribedWaypointToDatabaseToolInput
+    )
 
     def _run(self, x: float, y: float, z: float = 0.0, text: str = ""):
         global marker_it

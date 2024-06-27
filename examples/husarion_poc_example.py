@@ -15,10 +15,10 @@ from rai.tools.ros.cli import (
     SetGoalPoseTool,
 )
 from rai.tools.ros.tools import (
+    AddDescribedWaypointToDatabaseTool,
     GetCameraImageTool,
     GetCurrentPositionTool,
     GetOccupancyGridTool,
-    SetWaypointTool,
 )
 
 
@@ -32,7 +32,7 @@ def main():
         Ros2ServiceTool(),
         Ros2InterfaceTool(),
         SetGoalPoseTool(),
-        SetWaypointTool(),
+        AddDescribedWaypointToDatabaseTool(),
         GetCurrentPositionTool(),
         FinishTool(),
     ]
