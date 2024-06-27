@@ -99,9 +99,11 @@ class Ros2PubMessageTool(BaseTool):
 
     def _run(self, topic_name: str, msg_type: str, msg_args: Dict[str, Any]):
         """Publishes a message to the specified topic."""
+        if "/msg/" not in msg_type:
+            raise ValueError("msg_name must contain 'msg' in the name.")
         msg, msg_cls = self._build_msg(msg_type, msg_args)
 
-        node = Node(node_name=f"rai_{self,__class__.__name__}")
+        node = Node(node_name="rai_pub_msg_tool")
         publisher = node.create_publisher(
             msg_cls, topic_name, 10
         )  # TODO(boczekbartek): infer qos profile from topic info
