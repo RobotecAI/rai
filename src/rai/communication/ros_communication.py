@@ -7,12 +7,20 @@ import cv2
 import rclpy
 import rclpy.qos
 from cv_bridge import CvBridge
+from rclpy.duration import Duration
 from rclpy.impl.implementation_singleton import rclpy_implementation as _rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile
+from rclpy.qos import (
+    QoSDurabilityPolicy,
+    QoSHistoryPolicy,
+    QoSLivelinessPolicy,
+    QoSProfile,
+    QoSReliabilityPolicy,
+)
 from rclpy.signals import SignalHandlerGuardCondition
 from rclpy.utilities import timeout_sec_to_nsec
 from sensor_msgs.msg import Image
+from tf2_ros import Buffer, TransformListener
 
 
 def wait_for_message(
@@ -91,7 +99,18 @@ class SingleMessageGrabber:
 
         node = rclpy.create_node(self.__class__.__name__ + "_node")  # type: ignore
         qos_profile = rclpy.qos.qos_profile_sensor_data
-
+        if (
+            self.topic == "/map"
+        ):  # overfitting to husarion TODO(maciejmajek): find a better way
+            qos_profile = QoSProfile(
+                reliability=QoSReliabilityPolicy.RELIABLE,
+                history=QoSHistoryPolicy.KEEP_ALL,
+                durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+                lifespan=Duration(seconds=0),
+                deadline=Duration(seconds=0),
+                liveliness=QoSLivelinessPolicy.AUTOMATIC,
+                liveliness_lease_duration=Duration(seconds=0),
+            )
         success, msg = wait_for_message(
             self.message_type,
             node,
@@ -197,3 +216,43 @@ class ReadAvailableActions:
         command = "ros2 action list"
         output = subprocess.check_output(command, shell=True).decode("utf-8")
         return output
+
+
+class TF2Listener(Node):
+    def __init__(self):
+        super().__init__("tf2_listener")
+
+        # Create a buffer and listener
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+
+        # This will store the transform when received
+        self.transform = None
+
+    def get_transform(self):
+        try:
+            # Lookup transform between base_link and map
+            now = rclpy.time.Time()
+            self.transform = self.tf_buffer.lookup_transform("map", "base_link", now)
+        except Exception as ex:
+            self.get_logger().debug(f"Could not transform: {ex}")
+
+
+class TF2TransformFetcher:
+    def get_data(self):
+        rclpy.init()
+        node = TF2Listener()
+        executor = rclpy.executors.SingleThreadedExecutor()
+        executor.add_node(node)
+
+        try:
+            while rclpy.ok() and node.transform is None:
+                node.get_transform()
+                rclpy.spin_once(node, timeout_sec=1.0)
+        except KeyboardInterrupt:
+            pass
+
+        transform = node.transform
+        node.destroy_node()
+        rclpy.shutdown()
+        return transform

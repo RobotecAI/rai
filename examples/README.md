@@ -14,6 +14,16 @@ python examples/agri_example.py
 
 In this demo all images are hardcoded.
 
+## For husarion The Describer demo
+
+Husarion is supposed to roam the environment and describe what it sees. \
+The observations are saved to map_database.txt in the format of `x: {}, y: {}, z: {}, observation"`
+The demo only works with bedrock for now.
+
+```bash
+python examples/explore_and_describe_bedrock.py
+```
+
 ### Help
 
 ```bash

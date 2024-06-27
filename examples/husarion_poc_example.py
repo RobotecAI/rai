@@ -8,17 +8,17 @@ from rai.scenario_engine.messages import AgentLoop
 from rai.scenario_engine.scenario_engine import ScenarioPartType, ScenarioRunner
 from rai.tools.hmi_tools import PlayVoiceMessageTool, WaitForSecondsTool
 from rai.tools.ros.cat_demo_tools import FinishTool
-from rai.tools.ros.cli_tools import (
+from rai.tools.ros.cli import (
     Ros2InterfaceTool,
     Ros2ServiceTool,
     Ros2TopicTool,
     SetGoalPoseTool,
 )
 from rai.tools.ros.tools import (
+    AddDescribedWaypointToDatabaseTool,
     GetCameraImageTool,
     GetCurrentPositionTool,
     GetOccupancyGridTool,
-    SetWaypointTool,
 )
 
 
@@ -32,7 +32,7 @@ def main():
         Ros2ServiceTool(),
         Ros2InterfaceTool(),
         SetGoalPoseTool(),
-        SetWaypointTool(),
+        AddDescribedWaypointToDatabaseTool(),
         GetCurrentPositionTool(),
         FinishTool(),
     ]
