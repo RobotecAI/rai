@@ -1,3 +1,4 @@
+import os
 from typing import List, Type
 
 from langchain_aws import ChatBedrock
@@ -26,7 +27,11 @@ class DescribeAreaToolInput(BaseModel):
 
 
 class DescribeAreaTool(BaseTool):
-    """Describe the area"""
+    """
+    Describe the area. The tool uses the available tooling to describe the area around the robot.
+    The output is saved to the map database.
+    The tool does not return anything specific to the tool run.
+    """
 
     name: str = "DescribeAreaTool"
     description: str = "A tool for describing the area around the robot."
@@ -34,10 +39,13 @@ class DescribeAreaTool(BaseTool):
 
     llm: BaseChatModel  # without tools
     system_message: SystemMessage
+    map_database: str = ""
 
     def _run(self, image_topic: str):
         get_camera_image_tool = GetCameraImageTool()
-        set_waypoint_tool = AddDescribedWaypointToDatabaseTool()
+        set_waypoint_tool = AddDescribedWaypointToDatabaseTool(
+            map_database=self.map_database
+        )
 
         current_position = TF2TransformFetcher().get_data()
         image = get_camera_image_tool.run(image_topic)["images"]
@@ -62,6 +70,11 @@ You are an expert in describing the environment around you. Your main goal is to
 
 
 def main():
+    # setup database for the example
+    if not os.path.exists("map_database.txt"):
+        with open("map_database.txt", "w") as f:
+            f.write("")
+
     simple_llm = ChatBedrock(
         model_id="anthropic.claude-3-haiku-20240307-v1:0", region_name="us-west-2"  # type: ignore
     )
@@ -70,7 +83,9 @@ def main():
         SetGoalPoseTool(),
         Ros2TopicTool(),
         DescribeAreaTool(
-            llm=simple_llm, system_message=SystemMessage(content=DESCRIBER_PROMPT)
+            llm=simple_llm,
+            system_message=SystemMessage(content=DESCRIBER_PROMPT),
+            map_database="map_database.txt",
         ),
         FinishTool(),
     ]
