@@ -103,7 +103,7 @@ class GetOccupancyGridTool(BaseTool):
 
     name: str = "GetOccupancyGridTool"
     description: str = (
-        "A tool for getting the current map as an image with the robot's position marked on it. The coordinates are written at the edges of the image. Make sure to read them correctly if you are planning on using the coordinates to set a new goal pose."
+        "A tool for getting the current map as an image with the robot's position marked on it."
     )
 
     args_schema: Type[GetOccupancyGridToolInput] = GetOccupancyGridToolInput
