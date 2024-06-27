@@ -11,7 +11,7 @@ from rai.scenario_engine.messages import AgentLoop, HumanMultimodalMessage
 from rai.scenario_engine.scenario_engine import ScenarioPartType, ScenarioRunner
 from rai.scenario_engine.tool_runner import run_requested_tools
 from rai.tools.ros.cat_demo_tools import FinishTool
-from rai.tools.ros.cli_tools import Ros2TopicTool, SetGoalPoseTool
+from rai.tools.ros.cli import Ros2TopicTool, SetGoalPoseTool
 from rai.tools.ros.tools import (
     GetCameraImageTool,
     GetOccupancyGridTool,

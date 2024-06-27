@@ -108,6 +108,8 @@ class GetOccupancyGridTool(BaseTool):
 
     args_schema: Type[GetOccupancyGridToolInput] = GetOccupancyGridToolInput
 
+    debug: bool = False
+
     def _postprocess_msg(self, map_msg: OccupancyGrid, transform: TransformStamped):
         width = cast(int, map_msg.info.width)
         height = cast(int, map_msg.info.height)
@@ -202,7 +204,8 @@ class GetOccupancyGridTool(BaseTool):
 
         # Encode into PNG base64
         _, buffer = cv2.imencode(".png", image)
-        cv2.imwrite("map.png", image)
+        if self.debug:
+            cv2.imwrite("map.png", image)
         return base64.b64encode(buffer.tobytes()).decode("utf-8")
 
     def _run(self, topic: str):

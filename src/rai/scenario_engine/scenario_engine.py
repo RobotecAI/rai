@@ -151,10 +151,12 @@ class ScenarioRunner:
                     f"Looping agent actions until {msg.stop_action}. Max {msg.stop_iters} loops."
                 )
                 for _ in range(msg.stop_iters):
+                    # if the last message is from the AI, we need to add a human message to continue the agent loop
+                    # otherwise the bedrock model will not be able to continue the conversation
                     if self.history[-1].type == "ai":
                         self.history.append(
                             HumanMessage(
-                                content="Thank you. Please continue your mision with tools."
+                                content="Thank you. Please continue your mision using tools."
                             )
                         )
                     ai_msg = cast(

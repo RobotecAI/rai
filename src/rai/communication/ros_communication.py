@@ -99,7 +99,9 @@ class SingleMessageGrabber:
 
         node = rclpy.create_node(self.__class__.__name__ + "_node")  # type: ignore
         qos_profile = rclpy.qos.qos_profile_sensor_data
-        if self.topic == "/map":
+        if (
+            self.topic == "/map"
+        ):  # overfitting to husarion TODO(maciejmajek): find a better way
             qos_profile = QoSProfile(
                 reliability=QoSReliabilityPolicy.RELIABLE,
                 history=QoSHistoryPolicy.KEEP_ALL,

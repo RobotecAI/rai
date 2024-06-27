@@ -139,9 +139,9 @@ class SetGoalPoseTool(BaseTool):
     def _run(self, topic: str, x: float, y: float):
         """Sets the goal pose for the robot."""
 
-        _ = (
+        cmd = (
             f"ros2 topic pub {topic} geometry_msgs/PoseStamped "
             f'\'{{header: {{stamp: {{sec: 0, nanosec: 0}}, frame_id: "map"}}, '
             f"pose: {{position: {{x: {x}, y: {y}, z: {0.0}}}}}}}' --once"
         )
-        return "done"  # subprocess.run(cmd, shell=True)
+        return subprocess.run(cmd, shell=True)
