@@ -1,6 +1,8 @@
-from typing import Any, Dict, Tuple, Type
+import json
+from typing import Any, Dict, OrderedDict, Tuple, Type
 
 import rclpy
+import rosidl_runtime_py.utilities
 from langchain.tools import BaseTool
 from langchain_core.pydantic_v1 import BaseModel, Field
 from rclpy.impl.rcutils_logger import RcutilsLogger
@@ -38,6 +40,32 @@ class Ros2GetTopicsNamesAndTypesTool(BaseTool):
                 for topic_name, topic_type in node.get_topic_names_and_types()
                 if len(topic_name.split("/")) <= 2
             ]
+
+
+class ShowRos2MsgInterfaceInput(BaseModel):
+    """Input for the show_ros2_msg_interface tool."""
+
+    msg_name: str = Field(..., description="Ros2 message name in typical ros2 format.")
+
+
+class Ros2ShowRos2MsgInterfaceTool(Ros2BaseTool):
+    name: str = "ShowRos2MsgInterface"
+    description: str = """A tool for showing ros2 message interface in json format.
+    usage:
+    ```python
+    ShowRos2MsgInterface.run({"msg_name": "geometry_msgs/msg/PoseStamped"})
+    ```
+    """
+
+    args_schema: Type[ShowRos2MsgInterfaceInput] = ShowRos2MsgInterfaceInput
+
+    def _run(self, msg_name: str):
+        """Show ros2 message interface in json format."""
+        msg_cls: Type = rosidl_runtime_py.utilities.get_interface(msg_name)
+        msg_dict: OrderedDict = rosidl_runtime_py.convert.message_to_ordereddict(
+            msg_cls()
+        )
+        return json.dumps(msg_dict)
 
 
 class Ros2GetOneMsgFromTopicInput(BaseModel):
