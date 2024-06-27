@@ -43,7 +43,7 @@ class Ros2TopicTool(BaseTool):
     def _run(self, command: str):
         """Executes the specified ROS2 topic command."""
         result = subprocess.run(
-            f"ros2 topic {command} -v", shell=True, capture_output=True
+            f"ros2 topic {command}", shell=True, capture_output=True
         )
         return result
 
