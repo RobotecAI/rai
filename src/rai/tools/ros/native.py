@@ -48,7 +48,7 @@ class ShowRos2MsgInterfaceInput(BaseModel):
     msg_name: str = Field(..., description="Ros2 message name in typical ros2 format.")
 
 
-class Ros2ShowRos2MsgInterfaceTool(Ros2BaseTool):
+class Ros2ShowRos2MsgInterfaceTool(BaseTool):
     name: str = "ShowRos2MsgInterface"
     description: str = """A tool for showing ros2 message interface in json format.
     usage:

@@ -16,11 +16,11 @@ from rai.tools.ros.native import (
     Ros2GetOneMsgFromTopicTool,
     Ros2GetTopicsNamesAndTypesTool,
     Ros2PubMessageTool,
+    Ros2ShowRos2MsgInterfaceTool,
 )
 
 
 def main():
-
     log_usage = all((os.getenv("LANGFUSE_PK"), os.getenv("LANGFUSE_SK")))
     llm = ChatOpenAI(**OPENAI_MULTIMODAL)
 
@@ -32,6 +32,7 @@ def main():
         Ros2GetTopicsNamesAndTypesTool(),
         Ros2GetOneMsgFromTopicTool(node=rai_node),
         Ros2PubMessageTool(node=rai_node),
+        Ros2ShowRos2MsgInterfaceTool(),
         FinishTool(),
     ]
 
@@ -52,6 +53,7 @@ def main():
         llm,
         llm_type="openai",
         scenario_name="Husarion example",
+        logging_level=logging.INFO,
         log_usage=log_usage,
         logging_level=logging.INFO,
     )
