@@ -8,7 +8,7 @@ from langchain_openai import ChatOpenAI
 from rai.scenario_engine.messages import AgentLoop
 from rai.scenario_engine.scenario_engine import ScenarioPartType, ScenarioRunner
 from rai.tools.ros.cat_demo_tools import FinishTool
-from rai.tools.ros.rclpy import (
+from rai.tools.ros.native import (
     Ros2GetOneMsgFromTopicTool,
     Ros2PubMessageTool,
     get_topics_names_and_types_tool,
