@@ -52,7 +52,7 @@ class DescribeAreaTool(BaseTool):
         messages.append(ai_msg)
         run_requested_tools(
             ai_msg, [set_waypoint_tool], messages, llm_type="bedrock"
-        )  # TODO(@maciejmajek): fix this
+        )  # TODO(@maciejmajek): fix hardcoded llm_type
         return "Description of the area completed."
 
 
