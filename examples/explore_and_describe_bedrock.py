@@ -1,3 +1,4 @@
+import json
 import os
 from typing import List, Type
 
@@ -71,9 +72,9 @@ You are an expert in describing the environment around you. Your main goal is to
 
 def main():
     # setup database for the example
-    if not os.path.exists("map_database.txt"):
-        with open("map_database.txt", "w") as f:
-            f.write("")
+    if not os.path.exists("map_database.json"):
+        with open("map_database.json", "w") as f:
+            json.dump([], f)
 
     simple_llm = ChatBedrock(
         model_id="anthropic.claude-3-haiku-20240307-v1:0", region_name="us-west-2"  # type: ignore

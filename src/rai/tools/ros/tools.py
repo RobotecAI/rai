@@ -1,6 +1,8 @@
 import base64
+import json
 import logging
-from typing import Type, cast
+import time
+from typing import Any, Dict, Type, cast
 
 import cv2
 import numpy as np
@@ -47,13 +49,36 @@ class AddDescribedWaypointToDatabaseTool(BaseTool):
 
     def _run(self, x: float, y: float, z: float = 0.0, text: str = ""):
         try:
-            with open(self.map_database, "a") as f:
-                f.write(f"base_link to map: x:{x:.2f}, {y:.2f}, {z:.2f}, {text}\n")
+            self.update_map_database(x, y, z, text)
         except FileNotFoundError:
-            logger.warn(
-                f"Database {self.map_database} not found. Tried adding base_link to map: x:{x:.2f}, {y:.2f}, {z:.2f}, {text}\n"
-            )
+            logger.warn(f"Database {self.map_database} not found.")
         return {"content": "Waypoint added successfully"}
+
+    def update_map_database(
+        self,
+        x: float,
+        y: float,
+        z: float,
+        text: str,
+        frame_id: str = "map",
+        child_frame_id: str = "base_link",
+    ):
+        with open(self.map_database, "r") as file:
+            map_database = json.load(file)
+
+        data: Dict[str, Any] = {
+            "header": {"frame_id": frame_id, "stamp": time.time()},
+            "child_frame_id": child_frame_id,
+            "transform": {
+                "translation": {"x": x, "y": y, "z": z},
+                "rotation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+            },
+            "text": text,
+        }
+        map_database.append(data)
+
+        with open(self.map_database, "w") as file:
+            json.dump(map_database, file, indent=2)
 
 
 class GetOccupancyGridToolInput(BaseModel):
