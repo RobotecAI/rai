@@ -72,6 +72,7 @@ class GetOccupancyGridTool(BaseTool):
 
     args_schema: Type[GetOccupancyGridToolInput] = GetOccupancyGridToolInput
 
+    image_width: int = 1500
     debug: bool = False
 
     def _postprocess_msg(self, map_msg: OccupancyGrid, transform: TransformStamped):
@@ -84,8 +85,8 @@ class GetOccupancyGridTool(BaseTool):
         data = np.array(map_msg.data).reshape((height, width))
 
         # Convert the OccupancyGrid values to grayscale image (0-255)
-        # the final image shape should be at most (1000x1000), scale to fit
-        scale = 1500 / max(width, height)
+        # the final image shape is (self.image_width, self.image_width), scale to fit
+        scale = self.image_width / max(width, height)
         width = int(width * scale)
         height = int(height * scale)
         data = cv2.resize(data, (width, height), interpolation=cv2.INTER_NEAREST)
@@ -96,32 +97,44 @@ class GetOccupancyGridTool(BaseTool):
         image[data > 0] = 0  # Occupied space
 
         # Draw grid lines
-        step_size: float = 2.0  # Step size for grid lines in meters, adjust as needed
-        step_size_pixels = int(step_size / resolution)
+        step_size_m: float = 2.0  # Step size for grid lines in meters, adjust as needed
+        step_size_pixels = int(step_size_m / resolution)
         # print(step_size_pixels, scale)
         for x in range(0, width, step_size_pixels):
-            cv2.line(image, (x, 0), (x, height), (200, 200, 200), 1)
+            cv2.line(
+                img=image,
+                pt1=(x, 0),
+                pt2=(x, height),
+                color=(200, 200, 200),
+                thickness=1,
+            )
             cv2.putText(
-                image,
-                f"{x * resolution + origin_position.x :.1f}",
-                (x, 15),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.4,
-                (0, 0, 0),
-                1,
-                cv2.LINE_AA,
+                img=image,
+                text=f"{x * resolution + origin_position.x :.1f}",
+                org=(x, 15),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                fontScale=0.4,
+                color=(0, 0, 0),
+                thickness=1,
+                lineType=cv2.LINE_AA,
             )
         for y in range(0, height, step_size_pixels):
-            cv2.line(image, (0, y), (width, y), (200, 200, 200), 1)
+            cv2.line(
+                img=image,
+                pt1=(0, y),
+                pt2=(width, y),
+                color=(200, 200, 200),
+                thickness=1,
+            )
             cv2.putText(
-                image,
-                f"{y * resolution + origin_position.y:.1f}",
-                (5, y + 15),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.4,
-                (0, 0, 0),
-                1,
-                cv2.LINE_AA,
+                img=image,
+                text=f"{y * resolution + origin_position.y:.1f}",
+                org=(5, y + 15),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                fontScale=0.4,
+                color=(0, 0, 0),
+                thickness=1,
+                lineType=cv2.LINE_AA,
             )
 
         # Calculate robot's position in the image
