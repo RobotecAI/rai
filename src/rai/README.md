@@ -15,7 +15,7 @@ Directory tree
     ├── planning_tools.py        # Planning Tools: Tools for planning and scheduling
     └── ros
         ├── cat_demo_tools.py    # Cat Demo Tools: Tools for demonstration purposes
-        ├── cli.py         # Command Line Interface ros utilities
+        ├── cli.py               # Command Line Interface ros utilities
         ├── mock_tools.py        # Mock implementations for testing
         └── tools.py             # General tools for ROS
 ```

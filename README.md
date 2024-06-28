@@ -170,6 +170,7 @@ pytest -m billable
 
 3. Run example
 
+This example mocks the interaction with [rai-agriculture-demo](https://github.com/RobotecAI/rai-agriculture-demo) by using static images and skipping ros2 communication. The full integration is planned in future releases.
 ```bash
 pip install gdown
 gdown --folder -O examples/imgs https://drive.google.com/drive/folders/1KRwCph465SBEMbuu5y1srzF9ZxVqjffw\?usp\=drive_link
