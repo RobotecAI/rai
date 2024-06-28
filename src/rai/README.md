@@ -29,7 +29,6 @@ Directory tree
 
 - **`ros`**: ROS oriented tools
 - **`ros.cli`**: ros2 cli based tools
-- **`ros.native`**: rclpy based tools
 - **`other`**: Standard tools
 
 #### 📡 `communication`

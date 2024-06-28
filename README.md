@@ -165,12 +165,34 @@ poetry shell
 pytest -m billable
 ```
 
+> [!WARNING]
+> Running the tests will trigger paid api calls.
+
 3. Run example
 
 ```bash
 pip install gdown
 gdown --folder -O examples/imgs https://drive.google.com/drive/folders/1KRwCph465SBEMbuu5y1srzF9ZxVqjffw\?usp\=drive_link
 python examples/agri_example.py
+```
+
+> [!NOTE]
+> gdown is used for downloading images used in the agri_example.py
+
+Expected outcome:
+
+```
+$ python examples/agri_example.py
+2024-06-28 12:33:09 robo-pc-054 ScenarioRunner[2593946] INFO Starting conversation.
+2024-06-28 12:33:09 robo-pc-054 langfuse[2593946] WARNING Item exceeds size limit (size: 4703784), dropping input/output of item.
+2024-06-28 12:33:09 robo-pc-054 langfuse[2593946] WARNING Item exceeds size limit (size: 4703871), dropping input/output of item.
+Running tool: StopTool with args: {}
+Running tool: UseHonkTool with args: {}
+2024-06-28 12:33:24 robo-pc-054 langfuse[2593946] WARNING Item exceeds size limit (size: 8150030), dropping input/output of item.
+2024-06-28 12:33:24 robo-pc-054 langfuse[2593946] WARNING Item exceeds size limit (size: 8150117), dropping input/output of item.
+Running tool: ContinueActionTool with args: {}
+2024-06-28 12:33:43 robo-pc-054 ScenarioRunner[2593946] INFO Conversation completed.
+2024-06-28 12:33:43 robo-pc-054 ScenarioRunner[2593946] INFO Conversation saved to: logs/ChatOpenAIxxxx-xx-xx_xx:xx:xx.xxxxxx/history.html
 ```
 
 ### Further documentation
