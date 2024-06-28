@@ -1,12 +1,12 @@
-# 🤖 RAI
+# 🦊 RAI
 
 **RAI** is a framework for creating conversations between users and assistants in the [ROS2](https://ros.org/) ecosystem. It uses predefined, flexible scenarios with built-in actions. The engine is designed to be adaptable and scalable, supporting a wide range of nodes across different domains.
 
 ## Planned demos 👀
 
-- [🌾 agriculture demo](https://github.com/RobotecAI/rai-agriculture-demo)
-- [🤖 husarion demo](https://github.com/RobotecAI/rai-husarion-demo)
-- [🦾 manipulation demo](https://github.com/RobotecAI/rai-manipulation-demo)
+- [agriculture demo 🌾](https://github.com/RobotecAI/rai-agriculture-demo)
+- [husarion demo 🤖](https://github.com/RobotecAI/rai-husarion-demo)
+- [manipulation demo 🦾](https://github.com/RobotecAI/rai-manipulation-demo)
 
 ## Table of Contents
 
@@ -35,11 +35,7 @@ A scenario is a programmatically defined sequence of interactions between a User
 Scenarios can be built using the following elements:
 
 - **Messages**: Static or dynamic content communicated to the user.
-- **Conditional Messages**: Content that changes based on certain conditions.
-- **Executors**: Actions that the system can execute.
-- **Conditional Executors**: Actions that are executed based on specific conditions.
-
-![Scenario Building Blocks](./docs/imgs/scenario_building_blocks.png)
+- **Conditional Scenarios**: Content that changes based on certain conditions.
 
 For more about scenario building see: [docs/scenarios.md](docs/scenarios.md)\
 For more about scenario running: [src/rai/scenario_engine](src/rai/scenario_engine)
@@ -149,8 +145,8 @@ python3 -m pip install poetry==1.8.3
 1. Clone the repository:
 
 ```sh
-git clone https://github.com/RobotecAI/rai.git
-cd rai
+git clone git@github.com:RobotecAI/rai-private.git
+cd rai-private
 ```
 
 2. Create and activate a virtual environment:
@@ -158,6 +154,23 @@ cd rai
 ```sh
 poetry install
 poetry shell
+```
+
+##### Installation verification (optional)
+
+1. Set vendor keys
+2. Run pytest
+
+```bash
+pytest -m billable
+```
+
+3. Run example
+
+```bash
+pip install gdown
+gdown --folder -O examples/imgs https://drive.google.com/drive/folders/1KRwCph465SBEMbuu5y1srzF9ZxVqjffw\?usp\=drive_link
+python examples/agri_example.py
 ```
 
 ### Further documentation

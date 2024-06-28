@@ -17,7 +17,7 @@ In this demo all images are hardcoded.
 ## For husarion The Describer demo
 
 Husarion is supposed to roam the environment and describe what it sees. \
-The observations are saved to map_database.txt in the format of `x: {}, y: {}, z: {}, observation"`
+The observations are saved to map_database.json in the similar format to [geometry_msgs/TransformStamped Message](https://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/TransformStamped.html).
 The demo only works with bedrock for now.
 
 ```bash
