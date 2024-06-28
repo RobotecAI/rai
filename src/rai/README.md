@@ -26,14 +26,14 @@ Directory tree
 
 #### 🚀 `tools`
 
-- **`ros`**: ROS oriented tools
-- **`ros.cli`**: ros2 cli based tools
-- **`other`**: Standard tools
+- **`tools.ros`**: ROS oriented tools
+- **`tools.planning_tools`**: Planning oriented tools
+- **`hmi_tools.py`**: Tools focused on providing seamless Human-Machine interface
 
 #### 📡 `communication`
 
 - **`communication.py`**: Here, standard communication protocols or methods that aren't specific to any particular platform should be implemented. This could involve REST API communications, handling standard input/output, etc.
-- **`ros_communication.py`**: Originally designed for ROS2 communications, this file can be adapted to handle interactions with other real-time systems or complex multi-component software environments.
+- **`ros_communication.py`**: ROS 2 communications utils.
 
 #### 📖 `history_saver.py`
 

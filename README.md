@@ -1,6 +1,18 @@
 # 🦊 RAI
 
-**RAI** is a framework for creating conversations between users and assistants in the [ROS2](https://ros.org/) ecosystem. It uses predefined, flexible scenarios with built-in actions. The engine is designed to be adaptable and scalable, supporting a wide range of nodes across different domains.
+Welcome to the RAI Framework repository! We are dedicated to advancing robotics by integrating Generative AI to enable intelligent task fulfillment and enhance conventional algorithms.
+
+## Overview
+
+The RAI framework aims to:
+
+- Advance robotics through the integration of GenAI.
+- Enable intelligent task fulfillment.
+- Enhance conventional algorithms.
+- Develop a sophisticated multiagent system.
+- Incorporate an advanced database for persistent agent memory.
+- Create sophisticated ROS 2-oriented tooling for agents.
+- Build a comprehensive task/mission orchestrator.
 
 # Table of Contents
 
@@ -27,7 +39,7 @@ Scenarios can be built using the following elements:
 - **Conditional Scenarios**: Content that changes based on certain conditions.
 
 For more about scenario building see: [docs/scenarios.md](docs/scenarios.md)\
-For more about scenario running: [src/rai/scenario_engine](src/rai/scenario_engine)
+For more about scenario running: [src/rai/scenario_engine/README.md](src/rai/scenario_engine/README.md)
 
 #### For available tools see:
 
@@ -53,12 +65,12 @@ We currently support the following vendors:
 | [Anthropic](https://www.anthropic.com/api)     | Cloud hosted   | ⏳        | ⏳           | ⏳         |
 | [Cohere](https://cohere.com/)                  | Cloud hosted   | ⏳        | ⏳           | ⏳         |
 
-For more see: [src/rai/vendors](src/rai/vendors)
+For more see: [docs/vendors.md](./docs/vendors.md)
 
 ## Integration with Robotic Systems
 
 This engine provides support for integration with robotic systems through ROS2, allowing for real-time control and feedback within various robotic applications.\
-For more information see: [src/rai/communication](src/rai/communication)
+For more information see: [src/rai/communication/README.md](./src/rai/communication/README.md)
 
 # Installation
 
@@ -110,7 +122,7 @@ export AWS_SESSION_TOKEN=""
 
 ## Installation verification (optional)
 
-### 1. Set vendor keys
+### 1. Set up vendor keys
 
 ### 2. Run pytest
 
@@ -163,7 +175,7 @@ export LANGFUSE_HOST=""
 
 # Further documentation
 
-For examples see [examples](examples/)\
+For examples see [examples](./examples/README.md)\
 For Message definition: [messages.md](docs/messages.md)\
 For Scenario definition: [scenarios.md](docs/scenarios.md)
 
