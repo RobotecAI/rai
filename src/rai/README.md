@@ -5,17 +5,17 @@ Directory tree
 ├── communication
 │   ├── communication.py         # Non-ROS communication implementations
 │   ├── ros_communication.py     # Interfaces for ROS2 systems
-├── history_saver.py             # History Saver: Archive chat history in various formats
+├── history_saver.py             # Archive chat history in various formats
 ├── scenario_engine
 │   ├── messages.py              # Message structures specific to scenario engine
 │   ├── scenario_engine.py       # Scenario Runner: Execute and control chat scenarios
 │   └── tool_runner.py           # Manage tool execution for scenarios
 └── tools
-    ├── hmi_tools.py             # HMI Tools: Human-Machine Interface utilities
-    ├── planning_tools.py        # Planning Tools: Tools for planning and scheduling
+    ├── hmi_tools.py             # Human-Machine Interface utilities
+    ├── planning_tools.py        # Tools for planning and scheduling
     └── ros
-        ├── cat_demo_tools.py    # Cat Demo Tools: Tools for demonstration purposes
-        ├── cli.py               # Command Line Interface ros utilities
+        ├── cat_demo_tools.py    # Tools for demonstration purposes
+        ├── cli_tools.py         # Command Line Interface ros utilities
         ├── mock_tools.py        # Mock implementations for testing
         └── tools.py             # General tools for ROS
 ```
