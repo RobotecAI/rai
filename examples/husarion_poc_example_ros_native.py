@@ -11,18 +11,14 @@ from rai.tools.ros.cat_demo_tools import FinishTool
 from rai.tools.ros.native import (
     Ros2GetOneMsgFromTopicTool,
     Ros2PubMessageTool,
-    get_topics_names_and_types_tool,
+    Ros2GetTopicsNamesAndTypesTool
 )
+
+from rclpy.node import Node
+from ros2cli.node.strategy import NodeStrategy
 
 
 def main():
-    tools = [
-        get_topics_names_and_types_tool,
-        Ros2PubMessageTool(),
-        Ros2GetOneMsgFromTopicTool(),
-        FinishTool(),
-    ]
-
     scenario: List[ScenarioPartType] = [
         SystemMessage(
             content="You are an autonomous agent. Your main goal is to fulfill the user's requests. "
@@ -37,15 +33,30 @@ def main():
     llm = ChatOpenAI(model="gpt-4o")
 
     rclpy.init()
-    runner = ScenarioRunner(
+
+    rai_node = Node("rai") # type: ignore
+
+
+    runner = ScenarioRunner( 
         scenario,
         llm,
-        tools=tools,
         llm_type="openai",
         scenario_name="Husarion example",
         log_usage=log_usage,
+        logging_level="DEBUG"
     )
+
+    tools = [
+        Ros2GetTopicsNamesAndTypesTool(),
+        Ros2GetOneMsgFromTopicTool(node=rai_node),
+        Ros2PubMessageTool(node=rai_node),
+        FinishTool(),
+    ]
+
+    runner.bind_tools(tools)
+
     runner.run()
+    rai_node.destroy_node()
 
     rclpy.shutdown()
 

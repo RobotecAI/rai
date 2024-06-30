@@ -3,6 +3,7 @@ import logging
 import os
 import pickle
 from typing import Callable, Dict, List, Literal, Sequence, Union, cast
+from rclpy.node import Node
 
 import coloredlogs
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -20,6 +21,7 @@ from langfuse.callback import CallbackHandler
 from rai.history_saver import HistorySaver
 from rai.scenario_engine.messages import AgentLoop, FutureAiMessage
 from rai.scenario_engine.tool_runner import run_requested_tools
+from rai.tools.ros.native import BaseRos2NativeTool
 
 __all__ = [
     "ScenarioRunner",
@@ -62,7 +64,7 @@ ScenarioPartType = Union[
 ScenarioType = Sequence[ScenarioPartType]
 
 
-class ScenarioRunner:
+class ScenarioRunner(Node):
     """
     The ScenarioRunner class is responsible for running a given scenario. It iterates over the scenario and executes the
     actions defined in the scenario.
@@ -79,8 +81,12 @@ class ScenarioRunner:
         log_usage: bool = True,
         use_cache: bool = False,
     ):
+        super().__init__(node_name="rai") # type: ignore
         self.scenario = scenario
         self.tools = tools
+        for t in self.tools: # TODO(@boczekbartek): refactor to the method 
+            if isinstance(t, BaseRos2NativeTool):
+                t.set_node(self)
         self.log_usage = log_usage
         self.llm = llm
         self.llm_type = llm_type
@@ -119,6 +125,7 @@ class ScenarioRunner:
                 tags=["scenario_runner"],
             )
             self.invoke_config["callbacks"] = [self.langfuse_handler]
+        self.run()
 
     def run(self):
         self.logger.info("Starting conversation.")
