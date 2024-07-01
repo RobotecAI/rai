@@ -20,7 +20,7 @@ The RAI framework aims to:
 - [Usage examples (demos)](#planned-demos)
 - [Available vendors](#available-llm-vendors)
 - [Documentation](#scenario-definition)
-- [Integration with Robotic Systems](#-integration-with-robotic-systems)
+- [Integration with Robotic Systems](#integration-with-robotic-systems)
 - [Further documentation](#further-documentation)
 
 ## General Architecture Diagram with Current and Planned Features
