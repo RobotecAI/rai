@@ -129,7 +129,7 @@ def main():
     elif args.vendor == "awsbedrock":
         from langchain_aws.chat_models import ChatBedrock
 
-        llm = ChatBedrock(**BEDROCK_CLAUDE_SONNET)  # type:
+        llm = ChatBedrock(**BEDROCK_CLAUDE_SONNET)  # type: ignore[arg-missing]
         llm_type = "bedrock"
     else:
         raise ValueError("Invalid vendor argument")
