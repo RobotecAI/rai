@@ -144,7 +144,7 @@ pytest -m billable
 This example mocks the interaction with [rai-agriculture-demo](https://github.com/RobotecAI/rai-agriculture-demo) by using static images and skipping ROS 2 communication. The full integration is planned in future releases.
 
 ```bash
-python examples/agri_example.py
+python examples/agri_example.py --vendor openai
 ```
 
 Expected outcome:

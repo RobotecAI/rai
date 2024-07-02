@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `ScenarioRunner` module is an essential part of our application. It allows us to run scenarios, which are series of messages and actions that simulate a conversation or a process. This is great for things like chatbots or automated systems that need to respond to user inputs in a consistent and logical way.
+The `ScenarioRunner` module is an essential part of our application. It enables running scenarios, which are series of messages and actions that simulate a conversation or a process. This is great for things like chatbots or automated systems that need to respond to user inputs in a consistent and logical way.
 
 ## Key Components
 
