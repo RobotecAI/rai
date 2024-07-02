@@ -26,6 +26,7 @@ def run_tool_call(
     tool_call: ToolCall,
     tools: Sequence[BaseTool],
 ) -> Dict[str, Any] | Any:
+    logger = logging.getLogger()
     selected_tool = {k.name: k for k in tools}[tool_call["name"]]
 
     try:
@@ -35,19 +36,19 @@ def run_tool_call(
             args = dict()
     except Exception as e:
         err_msg = f"Error in preparing arguments for {selected_tool.name}: {e}"
-        logging.error(err_msg)
+        logger.error(err_msg)
         return err_msg
 
-    logging.info(f"Running tool: {selected_tool.name} with args: {args}")
+    logger.info(f"Running tool: {selected_tool.name} with args: {args}")
 
     try:
         tool_output = selected_tool.run(args)
     except Exception as e:
         err_msg = f"Error in running tool {selected_tool.name}: {e}"
-        logging.error(err_msg)
+        logger.error(err_msg)
         return err_msg
 
-    logging.info(f"Successfully ran tool: {selected_tool.name}. Output: {tool_output}")
+    logger.info(f"Successfully ran tool: {selected_tool.name}. Output: {tool_output}")
     return tool_output
 
 
