@@ -44,7 +44,7 @@ For more about scenario running: [src/rai/scenario_engine/README.md](src/rai/sce
 #### For available tools see:
 
 - [Tools](./src/rai/tools/)
-- [ROS 2 Actions](./src/rai/tools/ros/)
+- [ROS 2 Tools](./src/rai/tools/ros/)
 
 #### Scenario Definition Example
 
