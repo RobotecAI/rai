@@ -169,9 +169,13 @@ class ScenarioRunner:
                     self.history = run_requested_tools(
                         ai_msg, self.tools, self.history, llm_type=self.llm_type
                     )
+                    break_loop = False
                     for tool_call in ai_msg.tool_calls:
                         if tool_call["name"] == msg.stop_action:
+                            break_loop = True
                             break
+                    if break_loop:
+                        break
             elif isinstance(msg, ConditionalScenario):
                 new_scenario = msg(self.history)
                 self._run(new_scenario)
