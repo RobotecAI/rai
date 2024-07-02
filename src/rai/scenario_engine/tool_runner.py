@@ -26,7 +26,7 @@ def run_tool_call(
     tool_call: ToolCall,
     tools: Sequence[BaseTool],
 ) -> Dict[str, Any] | Any:
-    logger = logging.getLogger()
+    logger = logging.getLogger(__name__)
     selected_tool = {k.name: k for k in tools}[tool_call["name"]]
 
     try:
