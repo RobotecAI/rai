@@ -24,6 +24,9 @@ model, utils = torch.hub.load(
 class ASRNode(Node):
     def __init__(self):
         super().__init__("automatic_speech_recognition")
+        self.declare_parameter("language", "en")
+        self.declare_parameter("model", "base")
+
         self.sample_rate = SAMPLING_RATE
         self.is_recording = False
         self.audio_buffer = []
@@ -36,6 +39,15 @@ class ASRNode(Node):
         )
         self.get_logger().info(
             "Voice Activity Detection enabled. Waiting for speech..."
+        )
+
+        self.language = (
+            self.get_parameter("language").get_parameter_value().string_value
+        )
+        self.model_type = self.get_parameter("model").get_parameter_value().string_value
+
+        self.get_logger().info(
+            f"Using model: {self.model_type}, language: {self.language}"
         )
 
     def capture_sound(self):
@@ -85,8 +97,8 @@ class ASRNode(Node):
             wavfile.write(temp_wav_file.name, self.sample_rate, combined_audio)
             self.get_logger().info(f"Saved audio to {temp_wav_file.name}")
 
-            model = whisper.load_model("base")
-            response = model.transcribe(temp_wav_file.name, language="en")
+            model = whisper.load_model(self.model_type)
+            response = model.transcribe(temp_wav_file.name, language=self.language)
             transcription = response["text"]
             self.get_logger().info(f"Transcription: {transcription}")
             self.publish_transcription(transcription)
