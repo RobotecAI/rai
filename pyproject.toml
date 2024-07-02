@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rai"
-version = "0.0.1"
+version = "0.1.0"
 description = "your_description_here"
 readme = "README.md"
 authors = ["Maciej Majek <maciej.majek@robotec.ai>", "Bartłomiej Boczek <bartlomiej.boczek@robotec.ai>"]
@@ -31,6 +31,7 @@ piper-tts = "^1.2.0"
 tabulate = "^0.9.0"
 lark = "^1.1.9"
 langfuse = "^2.36.1"
+netifaces = "^0.11.0"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.4"

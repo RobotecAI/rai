@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, List, Literal, Sequence
 
 from langchain.tools import BaseTool
@@ -22,21 +23,32 @@ def images_to_vendor_format(images: List[str], vendor: str) -> List[Dict[str, An
 
 
 def run_tool_call(
-    tool_call: ToolCall, tools: Sequence[BaseTool]
+    tool_call: ToolCall,
+    tools: Sequence[BaseTool],
 ) -> Dict[str, Any] | Any:
+    logger = logging.getLogger(__name__)
     selected_tool = {k.name: k for k in tools}[tool_call["name"]]
-    try:
-        args = selected_tool.args_schema(**tool_call["args"])  # type: ignore
-    except Exception as e:
-        return f"Error in preparing arguments for {selected_tool.name}: {e}"
-
-    print(f"Running tool: {selected_tool.name} with args: {args.dict()}")
 
     try:
-        tool_output = selected_tool.run(args.dict())
+        if selected_tool.args_schema is not None:
+            args = selected_tool.args_schema(**tool_call["args"]).dict()
+        else:
+            args = dict()
     except Exception as e:
-        return f"Error running tool {selected_tool.name}: {e}"
+        err_msg = f"Error in preparing arguments for {selected_tool.name}: {e}"
+        logger.error(err_msg)
+        return err_msg
 
+    logger.info(f"Running tool: {selected_tool.name} with args: {args}")
+
+    try:
+        tool_output = selected_tool.run(args)
+    except Exception as e:
+        err_msg = f"Error in running tool {selected_tool.name}: {e}"
+        logger.warning(err_msg)
+        return err_msg
+
+    logger.info(f"Successfully ran tool: {selected_tool.name}. Output: {tool_output}")
     return tool_output
 
 
