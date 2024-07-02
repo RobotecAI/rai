@@ -77,7 +77,7 @@ def main():
         with open("map_database.json", "w") as f:
             json.dump([], f)
 
-    simple_llm = ChatBedrock(**BEDROCK_CLAUDE_HAIKU)
+    simple_llm = ChatBedrock(**BEDROCK_CLAUDE_HAIKU)  # type: ignore[arg-missing]
     tools = [
         GetOccupancyGridTool(),
         SetGoalPoseTool(),
