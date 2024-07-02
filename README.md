@@ -79,12 +79,17 @@ For more information see: [src/rai/communication/README.md](./src/rai/communicat
 - python3.10 or python3.12
 - poetry
 - ROS 2 humble or ROS 2 jazzy
+- tf-transformations package
 
-### 0. Poetry installation:
+### 0. Packages installation:
 
 ```bash
 python3 -m pip install poetry
 export PATH="$HOME/.local/bin:$PATH"
+```
+
+```
+sudo apt install ros-${ROS_DISTRO}-tf-transformations
 ```
 
 ### 1. Clone the repository:
@@ -160,7 +165,7 @@ Running tool: ContinueActionTool with args: {}
 
 ## Maximizing RAI potential
 
-Some of the modules or examples may require langfuse api keys for usage tracking. Contact repo mainteiners for api keys.
+Some of the modules or examples may require langfuse api keys for usage tracking. Contact repo maintainers for api keys.
 
 ```bash
 export LANGFUSE_PK="pk-lf-*****"

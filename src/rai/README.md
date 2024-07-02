@@ -26,7 +26,7 @@ Directory tree
 
 #### 🚀 `tools`
 
-- **`tools.ros`**: ROS oriented tools
+- **`tools.ros`**: ROS 2 oriented tools
 - **`tools.planning_tools`**: Planning oriented tools
 - **`hmi_tools.py`**: Tools focused on providing seamless Human-Machine interface
 
