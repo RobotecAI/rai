@@ -25,6 +25,9 @@ base64_image = preprocess_image('https://raw.githubusercontent.com/RobotecAI/Rob
 llm = ChatOpenAI(model="gpt-4o")
 msg = [HumanMultimodalMessage(content='This is an example', images=[base64_image])]
 llm.invoke(msg)
+
+# AIMessage(content='The image contains the words "Robotec," "GPU," and "Lidar" written in a stylized,
+# colorful font against a black background. The text appears to be composed of red, green, and blue lines that create a 3D effect.'...
 ```
 
 Implementation of the following messages is identical: HumanMultimodalMessage, SystemMultimodalMessage, AiMultimodalMessage.

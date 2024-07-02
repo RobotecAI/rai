@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rai"
-version = "0.0.1"
+version = "0.1.0"
 description = "your_description_here"
 readme = "README.md"
 authors = ["Maciej Majek <maciej.majek@robotec.ai>", "Bartłomiej Boczek <bartlomiej.boczek@robotec.ai>"]

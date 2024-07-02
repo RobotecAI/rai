@@ -1,136 +1,171 @@
-# 🤖 RAI
+# 🦊 RAI
 
-**RAI** is a framework for creating conversations between users and assistants in the [ROS2](https://ros.org/) ecosystem. It uses predefined, flexible scenarios with built-in actions. The engine is designed to be adaptable and scalable, supporting a wide range of nodes across different domains.
+Welcome to the RAI Framework repository! We are dedicated to advancing robotics by integrating Generative AI to enable intelligent task fulfillment and enhance conventional algorithms.
 
-## Planned demos 👀
+## Overview
 
-- [🌾 agriculture demo](https://github.com/RobotecAI/rai-agriculture-demo)
-- [🤖 husarion demo](https://github.com/RobotecAI/rai-husarion-demo)
-- [🦾 manipulation demo](https://github.com/RobotecAI/rai-manipulation-demo)
+The RAI framework aims to:
 
-## Table of Contents
+- Advance robotics through the integration of GenAI.
+- Enable intelligent task fulfillment.
+- Enhance conventional algorithms.
+- Develop a sophisticated multiagent system.
+- Incorporate an advanced database for persistent agent memory.
+- Create sophisticated ROS 2-oriented tooling for agents.
+- Build a comprehensive task/mission orchestrator.
 
-- [Scenario Definition](#-scenario-definition)
-  - [Scenario Building Blocks](#-scenario-building-blocks)
-  - [Scenario Definition Example](#-scenario-definition-example)
-- [Available LLM Vendors](#-available-llm-vendors)
-  - [Vendors Initialization Examples](#-vendors-initialization-examples)
-    - [Ollama](#ollama)
-    - [OpenAI](#openai)
-    - [AWS Bedrock](#aws-bedrock)
-- [Integration with Robotic Systems](#-integration-with-robotic-systems)
-- [Installation](#installation-instructions)
+# Table of Contents
+
+- [Quick Start](#installation)
+- [Usage examples (demos)](#planned-demos)
+- [Available vendors](#available-llm-vendors)
+- [Documentation](#scenario-definition)
+- [Integration with Robotic Systems](#integration-with-robotic-systems)
 - [Further documentation](#further-documentation)
 
 ## General Architecture Diagram with Current and Planned Features
 
 ![rai_arch](docs/imgs/rai_arch.png)
 
-## 🧩 Scenario Definition
+## Scenario Definition
 
 A scenario is a programmatically defined sequence of interactions between a User and an Assistant (LLM). Each scenario consists of multiple components that dictate the flow of conversation and actions.
 
-### 🏗️ Scenario Building Blocks
+### Scenario Building Blocks
 
 Scenarios can be built using the following elements:
 
 - **Messages**: Static or dynamic content communicated to the user.
-- **Conditional Messages**: Content that changes based on certain conditions.
-- **Executors**: Actions that the system can execute.
-- **Conditional Executors**: Actions that are executed based on specific conditions.
-
-![Scenario Building Blocks](./docs/imgs/scenario_building_blocks.png)
+- **Conditional Scenarios**: Content that changes based on certain conditions.
 
 For more about scenario building see: [docs/scenarios.md](docs/scenarios.md)\
-For more about scenario running: [src/rai/scenario_engine](src/rai/scenario_engine)
+For more about scenario running: [src/rai/scenario_engine/README.md](src/rai/scenario_engine/README.md)
 
 #### For available tools see:
 
-- 🔨 [Tools](./src/rai/tools/)
-- 🤖 [ROS2 Actions](./src/rai/tools/ros/)
+- [Tools](./src/rai/tools/)
+- [ROS 2 Tools](./src/rai/tools/ros/)
 
-#### 📝 Scenario Definition Example
+#### Scenario Definition Example
 
 For example scenarios see:
 
-- 🤖 [ROS2 scenario](./examples/husarion_poc_example.py)
-- 🔄 [Simple scenario](./examples/agri_example.py)
+- [ROS 2 scenario](./examples/husarion_poc_example.py)
+- [Simple scenario](./examples/agri_example.py)
 
-## 🌐 Available LLM Vendors
+## Available LLM Vendors
 
 We currently support the following vendors:
 
-Locally hosted:
+| Vendor                                         | Host Type      | Supported | Tool Calling | Multimodal |
+| ---------------------------------------------- | -------------- | --------- | ------------ | ---------- |
+| [Ollama](https://ollama.com/)                  | Locally hosted | ✔️        | ❌           | ❌         |
+| [AWS Bedrock](https://aws.amazon.com/bedrock/) | Cloud hosted   | ✔️        | ✔️           | ✔️         |
+| [OpenAI](https://platform.openai.com/)         | Cloud hosted   | ✔️        | ✔️           | ✔️         |
+| [Anthropic](https://www.anthropic.com/api)     | Cloud hosted   | ⏳        | ⏳           | ⏳         |
+| [Cohere](https://cohere.com/)                  | Cloud hosted   | ⏳        | ⏳           | ⏳         |
 
-- 🏠 Ollama [link](https://ollama.com/)
+For more see: [docs/vendors.md](./docs/vendors.md)
 
-Cloud hosted:
+## Integration with Robotic Systems
 
-- ☁️ AWS Bedrock [link](https://aws.amazon.com/bedrock/)
-- ☁️ OpenAI [link](https://platform.openai.com/)
+This engine provides support for integration with robotic systems through ROS 2, allowing for real-time control and feedback within various robotic applications.\
+For more information see: [src/rai/communication/README.md](./src/rai/communication/README.md)
 
-Planned:
+# Installation
 
-- ☁️ Anthropic [link](https://www.anthropic.com/api)
-- ☁️ Cohere [link](https://cohere.com/)
+## Prerequisites
 
-For more see: [src/rai/vendors](src/rai/vendors)
+- python3.10 or python3.12
+- poetry
+- ROS 2 humble or ROS 2 jazzy
+- tf-transformations package
 
-### 🚀 Vendors Initialization Examples
+### 0. Packages installation:
 
-#### Ollama
-
-```python
-from langchain_community.chat_models import ChatOllama
-
-llm = ChatOllama(model='llava')
+```bash
+python3 -m pip install poetry
+export PATH="$HOME/.local/bin:$PATH"
 ```
+
+```
+sudo apt install ros-${ROS_DISTRO}-tf-transformations
+```
+
+### 1. Clone the repository:
+
+```sh
+git clone git@github.com:RobotecAI/rai-private.git
+cd rai-private
+```
+
+### 2. Create and activate a virtual environment:
+
+```sh
+poetry install
+poetry shell
+```
+
+### 3. Setup vendor keys (for paid vendors)
 
 #### OpenAI
 
-```bash
-export OPENAI_API_KEY="sk-..."
+If you do not have a key, see how to generate one [here](https://platform.openai.com/docs/quickstart).
+
 ```
-
-```python
-from langchain_openai.chat_models import ChatOpenAI
-
-llm = ChatOpenAI(
-    model="gpt-4o",
-)
+export OPENAI_API_KEY=""
 ```
 
 #### AWS Bedrock
 
+If you do not have the keys, see how to generate them [here](https://docs.aws.amazon.com/bedrock/latest/userguide/setting-up.html)
+
+```
+export AWS_ACCESS_KEY_ID=""
+export AWS_SECRET_ACCESS_KEY=""
+export AWS_SESSION_TOKEN=""
+```
+
+## Installation verification (optional)
+
+### 1. Set up vendor keys
+
+### 2. Run pytest
+
 ```bash
-export AWS_ACCESS_KEY_ID="..."
-export AWS_SECRET_ACCESS_KEY="..."
-export AWS_SESSION_TOKEN="..."
+pytest -m billable
 ```
 
-```python
-from langchain_aws.chat_models import ChatBedrock
+> [!WARNING]
+> Running the tests will trigger paid api calls.
 
-llm = ChatBedrock(
-    model="anthropic.claude-3-opus-20240229-v1:0",
-)
+### 3. Run example
+
+This example mocks the interaction with [rai-agriculture-demo](https://github.com/RobotecAI/rai-agriculture-demo) by using static images and skipping ROS 2 communication. The full integration is planned in future releases.
+
+```bash
+python examples/agri_example.py --vendor openai
 ```
 
-## 🔗 Integration with Robotic Systems
+Expected outcome:
 
-This engine provides support for integration with robotic systems through ROS2, allowing for real-time control and feedback within various robotic applications.\
-For more information see: [src/rai/communication](src/rai/communication)
+```
+$ python examples/agri_example.py
+2024-06-28 12:33:09 robo-pc-054 ScenarioRunner[2593946] INFO Starting conversation.
+2024-06-28 12:33:09 robo-pc-054 langfuse[2593946] WARNING Item exceeds size limit (size: 4703784), dropping input/output of item.
+2024-06-28 12:33:09 robo-pc-054 langfuse[2593946] WARNING Item exceeds size limit (size: 4703871), dropping input/output of item.
+Running tool: StopTool with args: {}
+Running tool: UseHonkTool with args: {}
+2024-06-28 12:33:24 robo-pc-054 langfuse[2593946] WARNING Item exceeds size limit (size: 8150030), dropping input/output of item.
+2024-06-28 12:33:24 robo-pc-054 langfuse[2593946] WARNING Item exceeds size limit (size: 8150117), dropping input/output of item.
+Running tool: ContinueActionTool with args: {}
+2024-06-28 12:33:43 robo-pc-054 ScenarioRunner[2593946] INFO Conversation completed.
+2024-06-28 12:33:43 robo-pc-054 ScenarioRunner[2593946] INFO Conversation saved to: logs/ChatOpenAIxxxx-xx-xx_xx:xx:xx.xxxxxx/history.html
+```
 
-## 📚 Installation and further documentation
+## Maximizing RAI potential
 
-### Installation instructions
-
-#### Requirements
-
-- python3.10^
-- poetry
-
-Additionally some of the modules or examples may require langfuse api keys for usage tracking. Contact repo mainteiners for api keys.
+Some of the modules or examples may require langfuse api keys for usage tracking. Contact repo maintainers for api keys.
 
 ```bash
 export LANGFUSE_PK="pk-lf-*****"
@@ -138,31 +173,15 @@ export LANGFUSE_SK="sk-lf-****"
 export LANGFUSE_HOST=""
 ```
 
-Poetry installation (probably other versions will work too):
+# Planned demos
 
-```bash
-python3 -m pip install poetry==1.8.3
-```
+- [agriculture demo 🌾](https://github.com/RobotecAI/rai-agriculture-demo)
+- [husarion demo 🤖](https://github.com/RobotecAI/rai-husarion-demo)
+- [manipulation demo 🦾](https://github.com/RobotecAI/rai-manipulation-demo)
 
-#### Installation
+# Further documentation
 
-1. Clone the repository:
-
-```sh
-git clone https://github.com/RobotecAI/rai.git
-cd rai
-```
-
-2. Create and activate a virtual environment:
-
-```sh
-poetry install
-poetry shell
-```
-
-### Further documentation
-
-For examples see [examples](examples/)\
+For examples see [examples](./examples/README.md)\
 For Message definition: [messages.md](docs/messages.md)\
 For Scenario definition: [scenarios.md](docs/scenarios.md)
 

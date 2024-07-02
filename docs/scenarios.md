@@ -26,6 +26,8 @@ Example scenario:
             "You are always required to send a voice message to the user about your decisions. This is crucial."
             "The voice message should contain a very short information about what is going on and what is the next step. "
         ),
+        HumanMessage(content="Analyze your role"),
+        FutureAiMessage(),
         HumanMessage(
             content="The robot is moving. Use vision to understand the surroundings, and add waypoints based on observations. camera is accesible at topic /camera/camera/color/image_raw ."
         ),
