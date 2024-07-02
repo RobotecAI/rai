@@ -7,6 +7,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from rclpy.node import Node
 
+from rai.config.models import OPENAI_MULTIMODAL
 from rai.scenario_engine.messages import AgentLoop
 from rai.scenario_engine.scenario_engine import ScenarioPartType, ScenarioRunner
 from rai.tools.ros.cat_demo_tools import FinishTool
@@ -29,7 +30,7 @@ def main():
     ]
 
     log_usage = all((os.getenv("LANGFUSE_PK"), os.getenv("LANGFUSE_SK")))
-    llm = ChatOpenAI(model="gpt-4o")
+    llm = ChatOpenAI(**OPENAI_MULTIMODAL)
 
     rclpy.init()
 

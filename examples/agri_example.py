@@ -4,6 +4,7 @@ import os
 
 from langchain_core.messages import SystemMessage
 
+from rai.config.models import BEDROCK_CLAUDE_SONNET, OPENAI_MULTIMODAL
 from rai.scenario_engine.messages import (
     FutureAiMessage,
     HumanMultimodalMessage,
@@ -122,15 +123,13 @@ def main():
     elif args.vendor == "openai":
         from langchain_openai.chat_models import ChatOpenAI
 
-        llm = ChatOpenAI(model="gpt-4o")
+        llm = ChatOpenAI(**OPENAI_MULTIMODAL)
         llm_type = "openai"
 
     elif args.vendor == "awsbedrock":
         from langchain_aws.chat_models import ChatBedrock
 
-        llm = ChatBedrock(
-            model_id="anthropic.claude-3-opus-20240229-v1:0", region_name="us-west-2"
-        )
+        llm = ChatBedrock(**BEDROCK_CLAUDE_SONNET)  # type:
         llm_type = "bedrock"
     else:
         raise ValueError("Invalid vendor argument")
