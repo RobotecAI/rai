@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import List
 
@@ -48,10 +49,8 @@ def main():
         llm_type="openai",
         scenario_name="Husarion example",
         log_usage=log_usage,
-        logging_level="DEBUG",
+        logging_level=logging.INFO,
     )
-
-    runner.bind_tools(tools)
 
     runner.run()
     rai_node.destroy_node()
