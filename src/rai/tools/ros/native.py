@@ -67,6 +67,7 @@ class Ros2GetOneMsgFromTopicTool(Ros2BaseTool):
         qos_profile = (
             rclpy.qos.qos_profile_sensor_data
         )  # TODO(@boczekbartek): infer QoS from topic
+
         success, msg = wait_for_message(
             msg_cls,
             self.node,
@@ -77,11 +78,9 @@ class Ros2GetOneMsgFromTopicTool(Ros2BaseTool):
         msg = msg.get_data()
 
         if success:
-            self.node.get_logger().info(
-                f"Received message of type {msg_type} from topic {topic}"
-            )
+            self.logger.info(f"Received message of type {msg_type} from topic {topic}")
         else:
-            self.node.get_logger().logger.error(
+            self.logger.error(
                 f"Failed to receive message of type {msg_type} from topic {topic}"
             )
 
