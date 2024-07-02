@@ -45,7 +45,7 @@ def run_tool_call(
         tool_output = selected_tool.run(args)
     except Exception as e:
         err_msg = f"Error in running tool {selected_tool.name}: {e}"
-        logger.error(err_msg)
+        logger.warning(err_msg)
         return err_msg
 
     logger.info(f"Successfully ran tool: {selected_tool.name}. Output: {tool_output}")
