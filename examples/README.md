@@ -6,19 +6,28 @@
 python examples/husarion_poc_example.py
 ```
 
+> [!NOTE]
+> This demo uses OpenAI's gpt-4o
+
 ## Demo without ROS 2 use
 
 ```bash
 python examples/agri_example.py
 ```
 
-In this demo all images are hardcoded.
+> [!TIP]
+> Choose a vendor by specifying --vendor (openai | awsbedrock)
+
+> [!NOTE]
+> In this demo all images are hardcoded.
 
 ## Husarion the describer demo
 
 Husarion is supposed to roam the environment and describe what it sees. \
 The observations are saved to map_database.json in the similar format to [geometry_msgs/TransformStamped Message](https://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/TransformStamped.html).
-The demo only works with bedrock for now.
+
+> [!NOTE]
+> This demo uses claude-3.5 sonnet (awsbedrock)
 
 ```bash
 python examples/explore_and_describe_bedrock.py
