@@ -44,13 +44,13 @@ For more about scenario running: [src/rai/scenario_engine/README.md](src/rai/sce
 #### For available tools see:
 
 - [Tools](./src/rai/tools/)
-- [ROS2 Actions](./src/rai/tools/ros/)
+- [ROS 2 Actions](./src/rai/tools/ros/)
 
 #### Scenario Definition Example
 
 For example scenarios see:
 
-- [ROS2 scenario](./examples/husarion_poc_example.py)
+- [ROS 2 scenario](./examples/husarion_poc_example.py)
 - [Simple scenario](./examples/agri_example.py)
 
 ## Available LLM Vendors
@@ -69,7 +69,7 @@ For more see: [docs/vendors.md](./docs/vendors.md)
 
 ## Integration with Robotic Systems
 
-This engine provides support for integration with robotic systems through ROS2, allowing for real-time control and feedback within various robotic applications.\
+This engine provides support for integration with robotic systems through ROS 2, allowing for real-time control and feedback within various robotic applications.\
 For more information see: [src/rai/communication/README.md](./src/rai/communication/README.md)
 
 # Installation
@@ -78,6 +78,7 @@ For more information see: [src/rai/communication/README.md](./src/rai/communicat
 
 - python3.10 or python3.12
 - poetry
+- ROS 2 humble or ROS 2 jazzy
 
 ### 0. Poetry installation:
 
@@ -135,7 +136,7 @@ pytest -m billable
 
 ### 3. Run example
 
-This example mocks the interaction with [rai-agriculture-demo](https://github.com/RobotecAI/rai-agriculture-demo) by using static images and skipping ros2 communication. The full integration is planned in future releases.
+This example mocks the interaction with [rai-agriculture-demo](https://github.com/RobotecAI/rai-agriculture-demo) by using static images and skipping ROS 2 communication. The full integration is planned in future releases.
 
 ```bash
 python examples/agri_example.py

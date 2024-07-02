@@ -4,7 +4,7 @@ Directory tree
 📂 rai
 ├── communication
 │   ├── communication.py         # Non-ROS communication implementations
-│   ├── ros_communication.py     # Interfaces for ROS2 systems
+│   ├── ros_communication.py     # Interfaces for ROS 2 systems
 ├── history_saver.py             # Archive chat history in various formats
 ├── scenario_engine
 │   ├── messages.py              # Message structures specific to scenario engine

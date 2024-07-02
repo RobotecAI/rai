@@ -39,4 +39,4 @@ options:
 
 ## Roadmap
 
-- Integration with 2405_vlm demo (ros 2 agri demo): [link](https://github.com/RobotecAI/MultiDomainAgricultureProject/tree/demo/2405_vlm)
+- Integration with 2405_vlm demo (ROS 2 agri demo): [link](https://github.com/RobotecAI/MultiDomainAgricultureProject/tree/demo/2405_vlm)
