@@ -3,7 +3,6 @@ import logging
 import os
 import pickle
 from typing import Callable, Dict, List, Literal, Sequence, Union, cast
-from rclpy.node import Node
 
 import coloredlogs
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -17,6 +16,7 @@ from langchain_core.messages import (
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langfuse.callback import CallbackHandler
+from rclpy.node import Node
 
 from rai.history_saver import HistorySaver
 from rai.scenario_engine.messages import AgentLoop, FutureAiMessage
@@ -81,10 +81,10 @@ class ScenarioRunner(Node):
         log_usage: bool = True,
         use_cache: bool = False,
     ):
-        super().__init__(node_name="rai") # type: ignore
+        super().__init__(node_name="rai")  # type: ignore
         self.scenario = scenario
         self.tools = tools
-        for t in self.tools: # TODO(@boczekbartek): refactor to the method 
+        for t in self.tools:  # TODO(@boczekbartek): refactor to the method
             if isinstance(t, BaseRos2NativeTool):
                 t.set_node(self)
         self.log_usage = log_usage

@@ -12,8 +12,10 @@ from rai.communication.ros_communication import wait_for_message
 
 from .utils import import_message_from_str
 
+
 class Ros2BaseInput(BaseModel):
-    """ Empty input for ros2 tool """ 
+    """Empty input for ros2 tool"""
+
 
 class Ros2BaseTool(BaseTool):
     node: Node = Field(..., exclude=True, include=False, required=True)
@@ -24,10 +26,11 @@ class Ros2BaseTool(BaseTool):
     def logger(self) -> RcutilsLogger:
         return self.node.get_logger()
 
+
 class Ros2GetTopicsNamesAndTypesTool(BaseTool):
     name: str = "Ros2GetTopicsNamesAndTypes"
     description: str = "A tool for getting all ros2 topics names and types"
-    
+
     def _run(self):
         with NodeStrategy(dict()) as node:
             return [
@@ -61,7 +64,9 @@ class Ros2GetOneMsgFromTopicTool(Ros2BaseTool):
         """Gets the current position from the specified topic."""
         msg_cls: Type = import_message_from_str(msg_type)
 
-        qos_profile = rclpy.qos.qos_profile_sensor_data # TODO(@boczekbartek): infer QoS from topic 
+        qos_profile = (
+            rclpy.qos.qos_profile_sensor_data
+        )  # TODO(@boczekbartek): infer QoS from topic
         success, msg = wait_for_message(
             msg_cls,
             self.node,

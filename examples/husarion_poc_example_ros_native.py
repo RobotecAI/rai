@@ -4,18 +4,16 @@ from typing import List
 import rclpy
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
+from rclpy.node import Node
 
 from rai.scenario_engine.messages import AgentLoop
 from rai.scenario_engine.scenario_engine import ScenarioPartType, ScenarioRunner
 from rai.tools.ros.cat_demo_tools import FinishTool
 from rai.tools.ros.native import (
     Ros2GetOneMsgFromTopicTool,
+    Ros2GetTopicsNamesAndTypesTool,
     Ros2PubMessageTool,
-    Ros2GetTopicsNamesAndTypesTool
 )
-
-from rclpy.node import Node
-from ros2cli.node.strategy import NodeStrategy
 
 
 def main():
@@ -34,17 +32,7 @@ def main():
 
     rclpy.init()
 
-    rai_node = Node("rai") # type: ignore
-
-
-    runner = ScenarioRunner( 
-        scenario,
-        llm,
-        llm_type="openai",
-        scenario_name="Husarion example",
-        log_usage=log_usage,
-        logging_level="DEBUG"
-    )
+    rai_node = Node("rai")  # type: ignore
 
     tools = [
         Ros2GetTopicsNamesAndTypesTool(),
@@ -52,6 +40,16 @@ def main():
         Ros2PubMessageTool(node=rai_node),
         FinishTool(),
     ]
+
+    runner = ScenarioRunner(
+        scenario,
+        llm,
+        tools=tools,
+        llm_type="openai",
+        scenario_name="Husarion example",
+        log_usage=log_usage,
+        logging_level="DEBUG",
+    )
 
     runner.bind_tools(tools)
 
