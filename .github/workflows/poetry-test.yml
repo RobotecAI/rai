@@ -36,3 +36,6 @@ jobs:
         run: |
           poetry run python --version
           poetry run pip list
+
+      - name: Run tests
+        run: poetry run pytest
