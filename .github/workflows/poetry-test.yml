@@ -11,11 +11,11 @@ jobs:
     name: Test with ROS2 Humble on Ubuntu 22.04
 
     steps:
-      - name: Build Docker Image for ROS2 Humble
-        run: docker build -f docker/Dockerfile.humble -t ros2_humble_poetry .
-
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Build Docker Image for ROS2 Humble
+        run: docker build -f docker/Dockerfile.humble -t ros2_humble_poetry .
 
       - name: Run Tests in ROS2 Humble Container
         run: |
@@ -27,11 +27,11 @@ jobs:
     name: Test with ROS2 Jazzy on Ubuntu 24.04
 
     steps:
-      - name: Build Docker Image for ROS2 Jazzy
-        run: docker build -f docker/Dockerfile.jazzy -t ros2_jazzy_poetry .
-
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Build Docker Image for ROS2 Jazzy
+        run: docker build -f docker/Dockerfile.jazzy -t ros2_jazzy_poetry .
 
       - name: Run Tests in ROS2 Jazzy Container
         run: |
