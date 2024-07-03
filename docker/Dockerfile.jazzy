@@ -46,6 +46,7 @@ RUN echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
 RUN apt-get update && apt-get install -y \
     python3-colcon-common-extensions \
     python3-rosdep \
+    ros-jazzy-tf-transformations \
     && rm -rf /var/lib/apt/lists/*
 
 # Initialize rosdep
