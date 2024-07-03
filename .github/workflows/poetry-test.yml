@@ -1,54 +1,39 @@
-name: Poetry Build and Test
+name: Poetry install and test in docker
 
 on:
   pull_request:
-    branches: [development]
+    branches:
+      - development
 
 jobs:
-  test:
+  test-with-ros2-humble:
     runs-on: self-hosted
-    strategy:
-      matrix:
-        include:
-          - python-version: "3.10"
-            ros-distro: "humble"
-          - python-version: "3.12"
-            ros-distro: "jazzy"
-
-    container:
-      image: osrf/ros:${{ matrix.ros-distro }}-desktop
-      options: --user root
+    name: Test with ROS2 Humble on Ubuntu 22.04
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Build Docker Image for ROS2 Humble
+        run: docker build -f docker/Dockerfile.humble -t ros2_humble_poetry .
 
-      - name: Install additional dependencies
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Tests in ROS2 Humble Container
         run: |
-          apt-get update && apt-get install -y curl gnupg2 lsb-release python3-pip
-          pip3 install --upgrade pip
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ros2_humble_poetry \
+          bash -c "poetry install && poetry run pytest"
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
+  test-with-ros2-jazzy:
+    runs-on: self-hosted
+    name: Test with ROS2 Jazzy on Ubuntu 24.04
 
-      - name: Install Poetry
+    steps:
+      - name: Build Docker Image for ROS2 Jazzy
+        run: docker build -f docker/Dockerfile.jazzy -t ros2_jazzy_poetry .
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Tests in ROS2 Jazzy Container
         run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-
-      - name: Add Poetry to PATH
-        run: echo "${HOME}/.local/bin" >> $GITHUB_PATH
-
-      - name: Check Poetry version
-        run: poetry --version
-
-      - name: Create Poetry virtual environment
-        run: poetry install
-
-      - name: Verify Poetry environment
-        run: |
-          poetry run python --version
-          poetry run pip list
-
-      - name: Run tests
-        run: poetry run pytest
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ros2_jazzy_poetry \
+          bash -c "poetry install && poetry run pytest"
