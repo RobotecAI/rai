@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Build Docker Image for ROS2 Humble
         run: docker build -f docker/Dockerfile.humble -t ros2_humble_poetry .
@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Build Docker Image for ROS2 Jazzy
         run: docker build -f docker/Dockerfile.jazzy -t ros2_jazzy_poetry .
