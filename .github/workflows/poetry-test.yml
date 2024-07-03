@@ -20,7 +20,7 @@ jobs:
       - name: Run Tests in ROS2 Humble Container
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ros2_humble_poetry \
-          bash -c "poetry install && source $(poetry env info --path)/bin/activate && pytest"
+          bash -c "poetry install && poetry shell && pytest"
 
   test-with-ros2-jazzy:
     runs-on: self-hosted
@@ -36,4 +36,4 @@ jobs:
       - name: Run Tests in ROS2 Jazzy Container
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ros2_jazzy_poetry \
-          bash -c "poetry install && source $(poetry env info --path)/bin/activate && pytest"
+          bash -c "poetry install && poetry shell && pytest"
