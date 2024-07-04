@@ -15,14 +15,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+        uses: snok/install-poetry@v1
 
-      - name: Install project dependencies
+      - name: Install python dependencies
+        run: poetry install
+
+      - name: Install ROS 2 dependencies
         shell: bash
         run: |
-          poetry install
           apt-get update
           apt-get install -y ros-humble-tf-transformations
 
@@ -41,14 +41,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+        uses: snok/install-poetry@v1
 
-      - name: Install project dependencies
+      - name: Install python dependencies
+        run: poetry install
+
+      - name: Install ROS 2 dependencies
         shell: bash
         run: |
-          poetry install
           apt-get update
           apt-get install -y ros-jazzy-tf-transformations
 
