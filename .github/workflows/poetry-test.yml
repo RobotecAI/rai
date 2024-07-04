@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-test-ros2-humble:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     container:
       image: osrf/ros:humble-desktop-full
 
@@ -33,7 +33,7 @@ jobs:
           poetry run pytest
 
   build-and-test-ros2-jazzy:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     container:
       image: osrf/ros:jazzy-desktop-full
 
