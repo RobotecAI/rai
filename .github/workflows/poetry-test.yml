@@ -14,6 +14,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install ROS packages
+        run: |
+          apt-get update
+          apt-get install -y ros-humble-tf-transformations
+
       - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
@@ -36,6 +41,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install ROS packages
+        run: |
+          apt-get update
+          apt-get install -y ros-jazzy-tf-transformations
 
       - name: Install Poetry
         run: |
