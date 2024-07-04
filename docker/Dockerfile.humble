@@ -57,3 +57,12 @@ RUN curl -sSL https://install.python-poetry.org | python3 -
 
 # Add Poetry to PATH
 ENV PATH="/root/.local/bin:$PATH"
+
+# Copy the repository into the Docker image
+COPY . /workspace
+
+# Set the working directory
+WORKDIR /workspace
+
+# Install project dependencies
+RUN poetry install
