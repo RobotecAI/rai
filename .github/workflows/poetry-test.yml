@@ -25,6 +25,7 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install project dependencies
+        shell: bash
         run: |
           poetry install
 
@@ -53,6 +54,7 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install project dependencies
+        shell: bash
         run: |
           poetry install
 
