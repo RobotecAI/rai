@@ -12,7 +12,7 @@ jobs:
       image: osrf/ros:humble-desktop-full
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Install Poetry
         run: |
@@ -25,9 +25,7 @@ jobs:
 
       - name: Run tests
         run: |
-          source /opt/ros/humble/setup.bash
-          poetry shell
-          pytest/opt/ros/humble/setup.bash && poetry run pytest"
+          poetry run pytest
 
   build-and-test-ros2-jazzy:
     runs-on: self-hosted
@@ -35,7 +33,7 @@ jobs:
       image: osrf/ros:jazzy-desktop-full
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Install Poetry
         run: |
@@ -48,6 +46,4 @@ jobs:
 
       - name: Run tests
         run: |
-          source /opt/ros/jazzy/setup.bash
-          poetry shell
-          pytest
+          poetry run pytest
