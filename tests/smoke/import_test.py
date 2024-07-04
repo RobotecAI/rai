@@ -1,47 +1,36 @@
 import importlib
 import os
-import pkgutil
+import pathlib
 from types import ModuleType
 
 import pytest
 
 
-def test_can_import_all_modules() -> None:
+def test_can_import_all_modules_pathlib() -> None:
     import rai
 
     def import_submodules(package: ModuleType) -> None:
-        package_path: str = os.path.dirname(package.__file__)
-        for root, dirs, files in os.walk(package_path):
-            for dir_name in dirs:
-                if dir_name.startswith("__"):
-                    continue
-                dir_path: str = os.path.join(root, dir_name)
-                relative_path: str = os.path.relpath(dir_path, package_path)
-                module_prefix: str = (
-                    f"{package.__name__}.{relative_path.replace(os.path.sep, '.')}"
-                )
 
-                for loader, name, is_pkg in pkgutil.walk_packages([dir_path]):
-                    full_name: str = f"{module_prefix}.{name}"
+        package_path = pathlib.Path(package.__file__).parent  # type: ignore
 
-                    try:
-                        importlib.import_module(full_name)
-                    except ImportError as e:
-                        pytest.fail(f"Failed to import {full_name}: {str(e)}")
+        importables = set()
 
-            for file_name in files:
-                if file_name.endswith(".py") and file_name != "__init__.py":
-                    script_path: str = os.path.join(root, file_name)
-                    relative_script_path: str = os.path.relpath(
-                        script_path, package_path
-                    )
-                    module_name: str = (
-                        f"{package.__name__}.{relative_script_path.replace(os.path.sep, '.')[:-3]}"  # Strip .py extension
-                    )
+        for path in package_path.rglob("*"):
+            if path.is_dir() and path.name.startswith("__"):
+                continue
+            if path.is_file() and path.suffix != ".py" or path.name == "__init__.py":
+                continue
 
-                    try:
-                        importlib.import_module(module_name)
-                    except ImportError as e:
-                        pytest.fail(f"Failed to import script {module_name}: {str(e)}")
+            relative_path = str(path.relative_to(package_path))
+            subpage_name = relative_path.replace(os.path.sep, ".").replace(".py", "")
+
+            module_prefix = f"{package_path.name}.{subpage_name}"
+            importables.add(module_prefix)
+
+        for full_name in sorted(list(importables)):
+            try:
+                importlib.import_module(full_name)
+            except ImportError as e:
+                pytest.fail(f"Failed to import {full_name}: {str(e)}")
 
     import_submodules(rai)
