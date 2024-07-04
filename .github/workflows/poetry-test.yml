@@ -18,7 +18,7 @@ jobs:
         run: docker build -f docker/Dockerfile.humble -t ros2_humble_poetry .
 
       - name: Run Tests in ROS2 Humble Container
-        run: docker run --rm bash -c "source /opt/ros/humble/setup.bash && poetry run pytest"
+        run: docker run --rm ros2_humble_poetry bash -c "source /opt/ros/humble/setup.bash && poetry run pytest"
 
   test-with-ros2-jazzy:
     runs-on: self-hosted
@@ -32,4 +32,4 @@ jobs:
         run: docker build -f docker/Dockerfile.jazzy -t ros2_jazzy_poetry .
 
       - name: Run Tests in ROS2 Jazzy Container
-        run: docker run --rm bash -c "source /opt/ros/jazzy/setup.bash && poetry run pytest"
+        run: docker run --rm ros2_jazzy_poetry bash -c "source /opt/ros/jazzy/setup.bash && poetry run pytest"
