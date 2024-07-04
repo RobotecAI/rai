@@ -1,4 +1,4 @@
-name: Poetry install and test in docker
+name: build and test
 
 on:
   pull_request:
@@ -6,30 +6,48 @@ on:
       - development
 
 jobs:
-  test-with-ros2-humble:
+  build-and-test-ros2-humble:
     runs-on: self-hosted
-    name: Test with ROS2 Humble on Ubuntu 22.04
+    container:
+      image: osrf/ros:humble-desktop-full
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v2
 
-      - name: Build Docker Image for ROS2 Humble
-        run: docker build -f docker/Dockerfile.humble -t ros2_humble_poetry .
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Run Tests in ROS2 Humble Container
-        run: docker run --rm ros2_humble_poetry bash -c "source /opt/ros/humble/setup.bash && poetry run pytest"
+      - name: Install project dependencies
+        run: |
+          poetry install
 
-  test-with-ros2-jazzy:
+      - name: Run tests
+        run: |
+          source /opt/ros/humble/setup.bash
+          poetry shell
+          pytest/opt/ros/humble/setup.bash && poetry run pytest"
+
+  build-and-test-ros2-jazzy:
     runs-on: self-hosted
-    name: Test with ROS2 Jazzy on Ubuntu 24.04
+    container:
+      image: osrf/ros:jazzy-desktop-full
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v2
 
-      - name: Build Docker Image for ROS2 Jazzy
-        run: docker build -f docker/Dockerfile.jazzy -t ros2_jazzy_poetry .
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Run Tests in ROS2 Jazzy Container
-        run: docker run --rm ros2_jazzy_poetry bash -c "source /opt/ros/jazzy/setup.bash && poetry run pytest"
+      - name: Install project dependencies
+        run: |
+          poetry install
+
+      - name: Run tests
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          poetry shell
+          pytest
