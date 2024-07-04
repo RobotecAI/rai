@@ -21,9 +21,11 @@ jobs:
 
       - name: Install project dependencies
         run: |
+          source /opt/ros/humble/setup.bash
           poetry install
 
       - name: Run tests
+        shell: bash
         run: |
           poetry run pytest
 
@@ -45,5 +47,7 @@ jobs:
           poetry install
 
       - name: Run tests
+        shell: bash
         run: |
+          source /opt/ros/jazzy/setup.bash
           poetry run pytest
