@@ -22,6 +22,14 @@ OPENAI_LLM: OpenAIKwargs = {
     "model": "gpt-3.5-turbo",
 }
 
+OPENAI_GPT_4o: OpenAIKwargs = {
+    "model": "gpt-4o",
+}
+
+OPENAI_GPT_3_5_TURBO: OpenAIKwargs = {
+    "model": "gpt-3.5-turbo",
+}
+
 # AWS Bedrock Models
 BEDROCK_CLAUDE_HAIKU: AWSBedrockKwargs = {
     "model_id": "anthropic.claude-3-haiku-20240307-v1:0",
@@ -36,4 +44,9 @@ BEDROCK_CLAUDE_SONNET: AWSBedrockKwargs = {
 BEDROCK_CLAUDE_OPUS: AWSBedrockKwargs = {
     "model_id": "anthropic.claude-3-opus-20240229-v1:0",
     "region_name": "us-west-2",
+}
+
+BEDROCK_MULTIMODAL: AWSBedrockKwargs = {
+    "model_id": "anthropic.claude-3-5-sonnet-20240620-v1:0",
+    "region_name": "us-west-1",
 }
