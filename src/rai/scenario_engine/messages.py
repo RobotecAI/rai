@@ -114,6 +114,9 @@ class AgentLoop:
     def __init__(self, tools: List[BaseTool], stop_tool: str, stop_iters: int = 10):
         self.stop_tool = stop_tool
         self.stop_iters = stop_iters
+        assert any(
+            [tool.__class__.__name__ == stop_tool for tool in tools]
+        ), "Stop tool not in tools"
         self.tools: List[BaseTool] = tools
 
 
