@@ -2,15 +2,12 @@ import importlib
 import os
 import pkgutil
 from types import ModuleType
-from typing import List
 
 import pytest
 
 
 def test_can_import_all_modules() -> None:
     import rai
-
-    EXCLUDED_DIRS: List[str] = ["tests", "examples", "docs", "logs"]
 
     def import_submodules(package: ModuleType) -> None:
         package_path: str = os.path.dirname(package.__file__)
@@ -27,11 +24,6 @@ def test_can_import_all_modules() -> None:
                 for loader, name, is_pkg in pkgutil.walk_packages([dir_path]):
                     full_name: str = f"{module_prefix}.{name}"
 
-                    if any(
-                        excluded in full_name.split(".") for excluded in EXCLUDED_DIRS
-                    ):
-                        continue
-
                     try:
                         importlib.import_module(full_name)
                     except ImportError as e:
@@ -46,11 +38,6 @@ def test_can_import_all_modules() -> None:
                     module_name: str = (
                         f"{package.__name__}.{relative_script_path.replace(os.path.sep, '.')[:-3]}"  # Strip .py extension
                     )
-
-                    if any(
-                        excluded in module_name.split(".") for excluded in EXCLUDED_DIRS
-                    ):
-                        continue
 
                     try:
                         importlib.import_module(module_name)
