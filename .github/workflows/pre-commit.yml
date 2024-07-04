@@ -18,7 +18,6 @@ jobs:
           fetch-depth: 0
 
       - name: Run pre-commit
-      - uses: actions/setup-python@v3
-      - uses: pre-commit/action@v3.0.1
+        uses: pre-commit/action@v3.0.1
         with:
           extra_args: "--all-files"
