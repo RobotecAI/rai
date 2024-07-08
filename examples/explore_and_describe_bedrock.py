@@ -9,6 +9,7 @@ from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_core.tools import BaseTool
 
 from rai.communication.ros_communication import TF2TransformFetcher
+from rai.config.models import BEDROCK_CLAUDE_HAIKU, BEDROCK_CLAUDE_SONNET
 from rai.scenario_engine.messages import AgentLoop, HumanMultimodalMessage
 from rai.scenario_engine.scenario_engine import ScenarioPartType, ScenarioRunner
 from rai.scenario_engine.tool_runner import run_requested_tools
@@ -76,9 +77,7 @@ def main():
         with open("map_database.json", "w") as f:
             json.dump([], f)
 
-    simple_llm = ChatBedrock(
-        model_id="anthropic.claude-3-haiku-20240307-v1:0", region_name="us-west-2"  # type: ignore
-    )
+    simple_llm = ChatBedrock(**BEDROCK_CLAUDE_HAIKU)  # type: ignore[arg-missing]
     tools: List[BaseTool] = [
         GetOccupancyGridTool(),
         SetGoalPoseTool(),
@@ -108,8 +107,8 @@ def main():
         ),
     ]
 
-    llm = ChatBedrock(model_id="anthropic.claude-3-5-sonnet-20240620-v1:0", region_name="us-east-1")  # type: ignore
-    runner = ScenarioRunner(scenario, llm=llm, llm_type="bedrock")
+    llm = ChatBedrock(**BEDROCK_CLAUDE_SONNET)  # type: ignore[arg-missing]
+    runner = ScenarioRunner(scenario, llm=llm, tools=tools, llm_type="bedrock")
     runner.run()
     runner.save_to_html()
 
