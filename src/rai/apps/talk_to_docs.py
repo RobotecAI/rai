@@ -2,17 +2,18 @@ import logging
 import operator
 from typing import Annotated, List, Type, TypedDict
 
-from langchain.agents.agent import AgentExecutor, PromptTemplate
+from langchain.agents.agent import AgentExecutor
 from langchain.agents.tool_calling_agent.base import create_tool_calling_agent
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_core.tools import BaseTool
 from langchain_core.vectorstores import VectorStore
 from langchain_openai import OpenAIEmbeddings
-from langgraph.graph import Graph
+from langgraph.graph import StateGraph
 
 from rai.documents.loader import ingest_documentation
 
@@ -50,7 +51,7 @@ def talk_to_docs(documentation_root: str, llm: BaseChatModel):
 
     query_docs = QueryDocsTool(vector_store=vector_store, k=3)
 
-    prompt = PromptTemplate.from_template(
+    prompt = ChatPromptTemplate.from_template(
         "You are a robot called with access to your documentation. "
         "You use a lot of emojis when responding to users. "
         "You always respond in first person. "
@@ -60,23 +61,23 @@ def talk_to_docs(documentation_root: str, llm: BaseChatModel):
         "Here is the conversation history: {messages} {agent_scratchpad}"
     )
 
-    agent = create_tool_calling_agent(llm, [query_docs], prompt)
+    agent = create_tool_calling_agent(llm, [query_docs], prompt)  # type: ignore
     agent_executor = AgentExecutor(
-        agent=agent, tools=[query_docs], return_intermediate_steps=True
+        agent=agent, tools=[query_docs], return_intermediate_steps=True  # type: ignore
     )
 
-    def user_input(state: State) -> State:
+    def input_node(state: State) -> State:
         user_message = HumanMessage(content=input("You: "))
-        return {"messages": state["messages"] + [user_message]}
+        return {"messages": [user_message]}
 
-    def agent(state: State) -> State:
+    def agent_node(state: State) -> State:
         messages = state["messages"]
         response = agent_executor.invoke({"messages": messages})
-        return {"messages": state["messages"] + [AIMessage(content=response["output"])]}
+        return {"messages": [AIMessage(content=response["output"])]}
 
-    workflow = Graph()
-    workflow.add_node("user_input", user_input)
-    workflow.add_node("agent", agent)
+    workflow = StateGraph(State)
+    workflow.add_node("user_input", input_node)
+    workflow.add_node("agent", agent_node)
     workflow.add_edge("user_input", "agent")
     workflow.add_edge("agent", "user_input")
     workflow.set_entry_point("user_input")
