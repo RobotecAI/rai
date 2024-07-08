@@ -6,10 +6,14 @@ on:
       - development
 
 jobs:
-  build-and-test-ros2-humble:
+  build-and-test-ros2:
+    strategy:
+      matrix:
+        ros_version: [humble, jazzy]
     runs-on: ubuntu-latest
+
     container:
-      image: osrf/ros:humble-desktop-full
+      image: osrf/ros:${{ matrix.ros_version }}-desktop-full
 
     steps:
       - uses: actions/checkout@v4
@@ -24,36 +28,10 @@ jobs:
         shell: bash
         run: |
           apt-get update
-          apt-get install -y ros-humble-tf-transformations
+          apt-get install -y ros-${{ matrix.ros_version }}-tf-transformations
 
       - name: Run tests
         shell: bash
         run: |
-          source /opt/ros/humble/setup.bash
-          poetry run pytest
-
-  build-and-test-ros2-jazzy:
-    runs-on: ubuntu-latest
-    container:
-      image: osrf/ros:jazzy-desktop-full
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-
-      - name: Install python dependencies
-        run: poetry install
-
-      - name: Install ROS 2 dependencies
-        shell: bash
-        run: |
-          apt-get update
-          apt-get install -y ros-jazzy-tf-transformations
-
-      - name: Run tests
-        shell: bash
-        run: |
-          source /opt/ros/jazzy/setup.bash
+          source /opt/ros/${{ matrix.ros_version }}/setup.bash
           poetry run pytest
