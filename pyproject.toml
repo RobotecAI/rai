@@ -33,6 +33,8 @@ langfuse = "^2.36.1"
 netifaces = "^0.11.0"
 faiss-cpu = "^1.8.0.post1"
 rich = "^13.7.1"
+docx2txt = "^0.8"
+pypdf = "^4.2.0"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.4"
