@@ -9,11 +9,11 @@ jobs:
   build-and-test-ros2:
     strategy:
       matrix:
-        ros_version: [humble, jazzy]
+        ros_distro: [humble, jazzy]
     runs-on: ubuntu-latest
 
     container:
-      image: osrf/ros:${{ matrix.ros_version }}-desktop-full
+      image: osrf/ros:${{ matrix.ros_distro }}-desktop-full
 
     steps:
       - uses: actions/checkout@v4
@@ -28,10 +28,10 @@ jobs:
         shell: bash
         run: |
           apt-get update
-          apt-get install -y ros-${{ matrix.ros_version }}-tf-transformations
+          apt-get install -y ros-${{ matrix.ros_distro }}-tf-transformations
 
       - name: Run tests
         shell: bash
         run: |
-          source /opt/ros/${{ matrix.ros_version }}/setup.bash
+          source /opt/ros/${{ matrix.ros_distro }}/setup.bash
           poetry run pytest
