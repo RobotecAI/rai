@@ -5,6 +5,7 @@ import numpy as np
 import requests
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.messages.base import BaseMessage
+from langchain_core.tools import BaseTool
 
 
 class MultimodalMessage(BaseMessage):
@@ -100,7 +101,8 @@ class FutureAiMessage:
     Class to represent a response from the AI that is not yet available.
     """
 
-    def __init__(self, max_tokens: int = 4096):
+    def __init__(self, tools: List[BaseTool], max_tokens: int = 4096):
+        self.tools = tools
         self.max_tokens = max_tokens
 
 
@@ -109,9 +111,12 @@ class AgentLoop:
     Class to represent a loop of agent actions.
     """
 
-    def __init__(self, stop_action: str, stop_iters: int = 10):
-        self.stop_action = stop_action
+    def __init__(self, tools: List[BaseTool], stop_tool: str, stop_iters: int = 10):
+        self.stop_tool = stop_tool
         self.stop_iters = stop_iters
+        if not any([tool.__class__.__name__ == stop_tool for tool in tools]):
+            raise ValueError("Stop tool not in tools")
+        self.tools: List[BaseTool] = tools
 
 
 def preprocess_image(
