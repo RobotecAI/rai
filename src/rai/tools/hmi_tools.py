@@ -1,4 +1,3 @@
-import subprocess
 import time
 from typing import Type
 
@@ -27,16 +26,7 @@ class PlayVoiceMessageTool(BaseTool):
     args_schema: Type[PlayVoiceMessageToolInput] = PlayVoiceMessageToolInput
 
     def _run(self, content: str):
-        """plays the voice message."""
-        filepath = f"outputs/{time.time_ns()}.wav"
-        content = content.replace("'", "")
-        subprocess.Popen(
-            f"echo {content} | piper   --model en_US-libritts-high   --output_file {filepath} && play {filepath}",
-            shell=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        return "Voice message sent."
+        raise NotImplementedError
 
 
 class WaitForSecondsToolInput(BaseModel):

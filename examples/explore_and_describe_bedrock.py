@@ -79,7 +79,7 @@ def main():
     simple_llm = ChatBedrock(
         model_id="anthropic.claude-3-haiku-20240307-v1:0", region_name="us-west-2"  # type: ignore
     )
-    tools = [
+    tools: List[BaseTool] = [
         GetOccupancyGridTool(),
         SetGoalPoseTool(),
         Ros2TopicTool(),
@@ -103,11 +103,13 @@ def main():
             "Utilize available methods to obtain the map and identify relevant data streams. "
             "Before starting the exploration, find out what kind of tooling is available and based on that plan your exploration. For description, use the available tooling."
         ),
-        AgentLoop(stop_action=FinishTool().__class__.__name__, stop_iters=50),
+        AgentLoop(
+            tools=tools, stop_tool=FinishTool().__class__.__name__, stop_iters=50
+        ),
     ]
 
     llm = ChatBedrock(model_id="anthropic.claude-3-5-sonnet-20240620-v1:0", region_name="us-east-1")  # type: ignore
-    runner = ScenarioRunner(scenario, llm=llm, tools=tools, llm_type="bedrock")
+    runner = ScenarioRunner(scenario, llm=llm, llm_type="bedrock")
     runner.run()
     runner.save_to_html()
 
