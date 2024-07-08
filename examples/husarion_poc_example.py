@@ -2,6 +2,7 @@ import os
 from typing import List
 
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
 
 from rai.config.models import OPENAI_MULTIMODAL
@@ -24,7 +25,7 @@ from rai.tools.ros.tools import (
 
 
 def main():
-    tools = [
+    tools: List[BaseTool] = [
         GetOccupancyGridTool(),
         GetCameraImageTool(),
         PlayVoiceMessageTool(),
@@ -49,14 +50,15 @@ def main():
         HumanMessage(
             content="The robot is moving. Use vision to understand the surroundings, and add waypoints based on observations. camera is accesible at topic /camera/camera/color/image_raw ."
         ),
-        AgentLoop(stop_action=FinishTool().__class__.__name__, stop_iters=50),
+        AgentLoop(
+            tools=tools, stop_tool=FinishTool().__class__.__name__, stop_iters=50
+        ),
     ]
     log_usage = all((os.getenv("LANGFUSE_PK"), os.getenv("LANGFUSE_SK")))
     llm = ChatOpenAI(**OPENAI_MULTIMODAL)
     runner = ScenarioRunner(
         scenario,
         llm,
-        tools=tools,
         llm_type="openai",
         scenario_name="Husarion example",
         log_usage=log_usage,

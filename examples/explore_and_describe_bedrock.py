@@ -78,7 +78,7 @@ def main():
             json.dump([], f)
 
     simple_llm = ChatBedrock(**BEDROCK_CLAUDE_HAIKU)  # type: ignore[arg-missing]
-    tools = [
+    tools: List[BaseTool] = [
         GetOccupancyGridTool(),
         SetGoalPoseTool(),
         Ros2TopicTool(),
@@ -102,7 +102,9 @@ def main():
             "Utilize available methods to obtain the map and identify relevant data streams. "
             "Before starting the exploration, find out what kind of tooling is available and based on that plan your exploration. For description, use the available tooling."
         ),
-        AgentLoop(stop_action=FinishTool().__class__.__name__, stop_iters=50),
+        AgentLoop(
+            tools=tools, stop_tool=FinishTool().__class__.__name__, stop_iters=50
+        ),
     ]
 
     llm = ChatBedrock(**BEDROCK_CLAUDE_SONNET)  # type: ignore[arg-missing]
