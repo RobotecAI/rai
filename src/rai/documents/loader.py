@@ -38,7 +38,7 @@ def load_documents(
 
 
 def ingest_documentation(
-    documentation_root: Path, recursive: bool = True
+    documentation_root: Path | str, recursive: bool = True
 ) -> List[Document]:
     documents = find_documents(documentation_root, recursive=recursive)
     return load_documents(documents)
