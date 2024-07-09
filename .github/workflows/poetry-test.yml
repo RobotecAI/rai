@@ -28,13 +28,7 @@ jobs:
         shell: bash
         run: |
           apt-get update
-          apt-get install -y ros-${{ matrix.ros_distro }}-tf-transformations python3-rosdep
-
-      - name: Install rosdep
-        shell: bash
-        run: |
-          rosdep init
-          rosdep update
+          apt-get install -y ros-${{ matrix.ros_distro }}-tf-transformations
 
       - name: Install ROS 2 package dependencies
         shell: bash
