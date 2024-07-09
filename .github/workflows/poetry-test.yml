@@ -30,6 +30,11 @@ jobs:
           apt-get update
           apt-get install -y ros-${{ matrix.ros_distro }}-tf-transformations
 
+      - name: Update rosdep
+        shell: bash
+        run: |
+          rosdep update
+
       - name: Install ROS 2 package dependencies
         shell: bash
         run: |
