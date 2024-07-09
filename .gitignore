@@ -130,6 +130,8 @@ cython_debug/
 .vscode/
 .vim/
 
+# RAI
+logs/
 
 # ROS 2
 build/
