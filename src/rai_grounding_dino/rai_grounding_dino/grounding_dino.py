@@ -1,12 +1,14 @@
+from argparse import ArgumentParser
 from typing import TypedDict
 
 import rclpy
-from rai_interfaces.msg import RAIDetectionArray
-from rai_interfaces.srv import RAIGroundingDino
+from numpy import who
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 
 from rai_grounding_dino.boxer import GDBoxer
+from rai_interfaces.msg import RAIDetectionArray
+from rai_interfaces.srv import RAIGroundingDino
 
 
 class GDRequest(TypedDict):
@@ -17,17 +19,21 @@ class GDRequest(TypedDict):
 
 
 class GDinoService(Node):
-    def __init__(self):
+    def __init__(self, weights_path: str):
         super().__init__(node_name="grounding_dino", parameter_overrides=[])
         self.srv = self.create_service(
             RAIGroundingDino, "grounding_dino_classify", self.classify_callback
-        )  # CHANGE
-        self.boxer = GDBoxer()
+        )
+        try:
+            self.boxer = GDBoxer(weights_path)
+        except Exception:
+            self.get_logger().error("Could not load model")
+            raise Exception("Could not load model")
 
-    def classify_callback(self, request: GDRequest, response: RAIDetectionArray):
+    def classify_callback(self, request, response: RAIDetectionArray):
         self.get_logger().info(
             f"Request received: {request.classes}, {request.box_threshold}, {request.text_threshold}"
-        )  # CHANGE
+        )
 
         class_array = request.classes.split(",")
         class_array = [class_name.strip() for class_name in class_array]
@@ -50,14 +56,27 @@ class GDinoService(Node):
         return response
 
 
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument("weights_path", type=str, required=True)
+    return parser.parse_args()
+
+
 def main(args=None):
     rclpy.init(args=args)
+    args = parse_args()
 
-    minimal_service = GDinoService()
+    gdino_service = GDinoService(args.weights_path)
 
-    rclpy.spin(minimal_service)
-
-    rclpy.shutdown()
+    try:
+        rclpy.spin(gdino_service)
+    except KeyboardInterrupt:
+        gdino_service.get_logger().info("Shutting down")
+    except Exception as e:
+        gdino_service.get_logger().error(f"Error: {e}")
+    finally:
+        gdino_service.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":

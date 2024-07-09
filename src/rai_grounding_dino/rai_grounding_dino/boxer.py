@@ -49,13 +49,11 @@ class Box:
 class GDBoxer:
     def __init__(
         self,
-        cfg_path: str
-        | PathLike = "./src/rai_grounding_dino/GroundingDINO/groundingdino/config/GroundingDINO_SwinT_OGC.py",
         weight_path: str
         | PathLike = "./src/rai_grounding_dino/GroundingDINO/weights/groundingdino_swint_ogc.pth",
         use_cuda: bool = True,
     ):
-        self.cfg_path = str(cfg_path)
+        self.cfg_path = __file__.replace("boxer.py", "config.py")
         self.weight_path = str(weight_path)
         if not use_cuda:
             self.model = Model(self.cfg_path, self.weight_path, device="cpu")
@@ -80,29 +78,16 @@ class GDBoxer:
             box_threshold=box_threshold,
             text_threshold=text_threshold,
         )
-        print("Predictions: ", predictions)
-
-        # boxes, logits, phrases = predict(
-        #     model=self.model,
-        #     image=image,
-        #     caption=text_prompt,
-        #     box_threshold=box_threshold,
-        #     text_threshold=text_threshold,
-        # )
-        # # save for future reference
-        # self.boxes = boxes
-        # self.logits = logits
-        # self.phrases = phrases
-        # print("Boxes: ", boxes)
-        # print("Phrases: ", phrases)
-        # print("Logits: ", logits)
         packed_boxes = []
-        # h, w, _ = image.shape
-        # boxes = boxes * torch.Tensor([w, h, w, h])
-        # xyxy = box_convert(boxes=boxes, in_fmt="cxcywh", out_fmt="xyxy").tolist()
         xyxy = predictions.xyxy
         class_ids = predictions.class_id
         confidences = predictions.confidence
+        if len(xyxy) == 0:
+            return []
+        else:
+            assert class_ids is not None
+            assert confidences is not None
+
         for i in range(len(xyxy)):
             x1, y1, x2, y2 = xyxy[i]
             phrase = classes[class_ids[i]]
