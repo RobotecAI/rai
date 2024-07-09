@@ -5,28 +5,28 @@ import pytest
 from _pytest.terminal import TerminalReporter
 from tabulate import tabulate
 
+from rai.config.models import BEDROCK_CLAUDE_HAIKU, OPENAI_LLM, OPENAI_MULTIMODAL
+
 
 @pytest.fixture
 def chat_openai_multimodal():
     from langchain_openai.chat_models import ChatOpenAI
 
-    return ChatOpenAI(model="gpt-4o")
+    return ChatOpenAI(**OPENAI_MULTIMODAL)
 
 
 @pytest.fixture
 def chat_openai_text():
     from langchain_openai.chat_models import ChatOpenAI
 
-    return ChatOpenAI(model="gpt-3.5")
+    return ChatOpenAI(**OPENAI_LLM)
 
 
 @pytest.fixture
 def chat_bedrock_multimodal():
     from langchain_aws.chat_models import ChatBedrock
 
-    return ChatBedrock(  # type: ignore
-        model_id="anthropic.claude-3-haiku-20240307-v1:0", region_name="us-west-2"
-    )
+    return ChatBedrock(**BEDROCK_CLAUDE_HAIKU)  # type: ignore[arg-missing]
 
 
 class UsageTracker:
