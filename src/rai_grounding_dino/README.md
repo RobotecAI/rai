@@ -54,9 +54,22 @@ Activate the virtucal environment:
 . src/rai_grounding_dino/.venv/bin/activate
 ```
 
-Run the ROS node using `ros2 run`:
+Run the ROS node using `ros2 launch`:
 
 ```
-ros2 run rai_grounding_dino grounding_dino
+ros2 lunch rai_grounding_dino gdino_launch.xml weights_path:=PATH/TO/WEIGHTS
 
 ```
+
+### Example
+
+An example client is provided with the package as `rai_grounding_dino/talker.py`
+
+You can see it working by running:
+
+```
+ros2 lunch rai_grounding_dino example_communnication_launch.xml weights_path:=PATH/TO/WEIGHTS image_path:=src/rai_grounding_dino/images/sample.jpg
+
+```
+
+If everything was set up properly you should see a couple of detections with classes `dinosaur`, `dragon`, and `lizard`.

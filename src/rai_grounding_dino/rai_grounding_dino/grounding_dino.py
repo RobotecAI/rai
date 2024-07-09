@@ -1,3 +1,4 @@
+import sys
 from argparse import ArgumentParser
 from typing import TypedDict
 
@@ -19,13 +20,16 @@ class GDRequest(TypedDict):
 
 
 class GDinoService(Node):
-    def __init__(self, weights_path: str):
+    def __init__(self):
         super().__init__(node_name="grounding_dino", parameter_overrides=[])
         self.srv = self.create_service(
             RAIGroundingDino, "grounding_dino_classify", self.classify_callback
         )
+        self.declare_parameter("weights_path", "")
         try:
-            self.boxer = GDBoxer(weights_path)
+            weight_path = self.get_parameter("weights_path").value
+            assert isinstance(weight_path, str)
+            self.boxer = GDBoxer(weight_path)
         except Exception:
             self.get_logger().error("Could not load model")
             raise Exception("Could not load model")
@@ -56,17 +60,10 @@ class GDinoService(Node):
         return response
 
 
-def parse_args():
-    parser = ArgumentParser()
-    parser.add_argument("weights_path", type=str, required=True)
-    return parser.parse_args()
-
-
 def main(args=None):
     rclpy.init(args=args)
-    args = parse_args()
 
-    gdino_service = GDinoService(args.weights_path)
+    gdino_service = GDinoService()
 
     try:
         rclpy.spin(gdino_service)

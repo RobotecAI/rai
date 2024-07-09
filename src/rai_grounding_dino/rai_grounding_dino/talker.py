@@ -1,16 +1,19 @@
 import sys
+from argparse import ArgumentParser
 
 import cv2
 import numpy as np
 import rclpy
 from cv_bridge import CvBridge
-from rai_interfaces.srv import RAIGroundingDino  # CHANGE
 from rclpy.node import Node
+
+from rai_interfaces.srv import RAIGroundingDino  # CHANGE
 
 
 class GDClientExample(Node):
     def __init__(self):
         super().__init__(node_name="GDClientExample", parameter_overrides=[])
+        self.declare_parameter("image_path", "")
         self.cli = self.create_client(RAIGroundingDino, "grounding_dino_classify")
         while not self.cli.wait_for_service(timeout_sec=1.0):
             self.get_logger().info("service not available, waiting again...")
@@ -18,7 +21,9 @@ class GDClientExample(Node):
         self.bridge = CvBridge()
 
     def send_request(self):
-        img = cv2.imread("/home/krachwal/Pictures/wallpapers/chihiro.jpg")
+        image_path = self.get_parameter("image_path").value
+        assert isinstance(image_path, str)
+        img = cv2.imread(image_path)
         # convert img to numpy array
         img = np.array(img)
         self.req.source_img = self.bridge.cv2_to_imgmsg(img, encoding="bgr8")

@@ -18,10 +18,4 @@ __pycache__/
 *.bak
 *.cache
 
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.svg
-
 .venv/

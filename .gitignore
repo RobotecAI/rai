@@ -169,3 +169,6 @@ logs/
 .vscode/
 
 !examples/imgs/*.md
+
+# models
+weights/
