@@ -9,7 +9,7 @@ jobs:
   build-and-test-ros2:
     strategy:
       matrix:
-        ros_distro: [humble, jazzy]
+        ros_distro: [jazzy]
     runs-on: ubuntu-latest
 
     container:
@@ -28,7 +28,24 @@ jobs:
         shell: bash
         run: |
           apt-get update
-          apt-get install -y ros-${{ matrix.ros_distro }}-tf-transformations
+          apt-get install -y ros-${{ matrix.ros_distro }}-tf-transformations python3-rosdep
+
+      - name: Install rosdep
+        shell: bash
+        run: |
+          rosdep init
+          rosdep update
+
+      - name: Install ROS 2 package dependencies
+        shell: bash
+        run: |
+          rosdep install --from-paths src --ignore-src -r -y
+
+      - name: Build the workspace
+        shell: bash
+        run: |
+          source /opt/ros/${{ matrix.ros_distro }}/setup.bash
+          colcon build
 
       - name: Run tests
         shell: bash
