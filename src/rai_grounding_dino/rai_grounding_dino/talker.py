@@ -1,6 +1,3 @@
-import sys
-from argparse import ArgumentParser
-
 import cv2
 import numpy as np
 import rclpy

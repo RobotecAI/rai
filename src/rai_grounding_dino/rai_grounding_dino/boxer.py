@@ -1,15 +1,11 @@
 from os import PathLike
 from typing import Dict
 
-import torch
 from cv_bridge import CvBridge
 from groundingdino.util.inference import Model
-from rclpy.serialization import deserialize_message
 from rclpy.time import Time
-from rosidl_runtime_py.utilities import get_message
 from sensor_msgs.msg import Image
 from std_msgs.msg import Header
-from torchvision.ops.boxes import box_convert
 from vision_msgs.msg import (
     BoundingBox2D,
     Detection2D,
@@ -49,8 +45,9 @@ class Box:
 class GDBoxer:
     def __init__(
         self,
-        weight_path: str
-        | PathLike = "./src/rai_grounding_dino/GroundingDINO/weights/groundingdino_swint_ogc.pth",
+        weight_path: (
+            str | PathLike
+        ) = "./src/rai_grounding_dino/GroundingDINO/weights/groundingdino_swint_ogc.pth",
         use_cuda: bool = True,
     ):
         self.cfg_path = __file__.replace("boxer.py", "config.py")

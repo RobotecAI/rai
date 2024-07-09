@@ -1,8 +1,7 @@
 <launch>
     <arg name="weights_path"/>
-    
+
     <node pkg="rai_grounding_dino" exec="grounding_dino" name="grounding_dino" output="screen">
         <param name="weights_path" value="$(var weights_path)" />
     </node>
 </launch>
-

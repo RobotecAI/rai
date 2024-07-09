@@ -1,9 +1,6 @@
-import sys
-from argparse import ArgumentParser
 from typing import TypedDict
 
 import rclpy
-from numpy import who
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 
