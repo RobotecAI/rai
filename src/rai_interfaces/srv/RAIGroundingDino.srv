@@ -1,0 +1,6 @@
+string classes
+float64 box_threshold
+float64 text_threshold
+sensor_msgs/Image source_img
+---
+RAIDetectionArray detections
