@@ -37,3 +37,11 @@ llm = ChatBedrock(
     model="anthropic.claude-3-opus-20240229-v1:0",
 )
 ```
+
+# Caching
+
+`ScenarioRunner` supports Redis cache through langchain. Make sure to set
+
+```bash
+export REDIS_CACHE_HOST="redis://<host>"
+```
