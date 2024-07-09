@@ -26,7 +26,7 @@ class WhoAmI(Node):
 
     def get_constitution_callback(
         self, request: Trigger_Request, response: Trigger_Response
-    ):
+    ) -> Trigger_Response:
         """Return robot constitution as text"""
         response.message = (
             "I am a robot, bound by the ethical code that I will always uphold. With each action,"
@@ -46,7 +46,9 @@ class WhoAmI(Node):
         self.get_logger().info("Incoming request for RAI constitution, responding")
         return response
 
-    def get_self_images_callback(self, request, response):
+    def get_self_images_callback(
+        self, request: Trigger_Request, response: Trigger_Response
+    ) -> Trigger_Response:
         """Return URI to a folder of images to process"""
         images_local_uri = (
             self.get_parameter("rai_self_images_local_uri")
