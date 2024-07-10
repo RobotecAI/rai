@@ -3,7 +3,7 @@ from glob import glob
 
 from setuptools import find_packages, setup
 
-package_name = "asr"
+package_name = "rai_asr"
 
 setup(
     name=package_name,
@@ -22,6 +22,6 @@ setup(
     license="TODO: License declaration",
     tests_require=["pytest"],
     entry_points={
-        "console_scripts": ["asr_node = asr.asr_node:main"],
+        "console_scripts": ["asr_node = rai_asr.asr_node:main"],
     },
 )
