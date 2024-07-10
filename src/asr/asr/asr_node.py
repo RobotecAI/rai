@@ -7,6 +7,7 @@ import rclpy
 import sounddevice as sd
 import torch
 import whisper
+from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.node import Node
 from scipy.io import wavfile
 from std_msgs.msg import String
@@ -24,27 +25,55 @@ model, utils = torch.hub.load(
 class ASRNode(Node):
     def __init__(self):
         super().__init__("automatic_speech_recognition")
-        self.declare_parameter("language", "en")
-        self.declare_parameter("model", "base")
-
+        self.declare_parameter(
+            "language",
+            "en",
+            ParameterDescriptor(
+                type=ParameterType.PARAMETER_STRING,
+                description="Language code for the ASR model",
+            ),
+        )
+        self.declare_parameter(
+            "model",
+            "base",
+            ParameterDescriptor(
+                type=ParameterType.PARAMETER_STRING,
+                description="Model type for the ASR model",
+            ),
+        )
+        self.declare_parameter(
+            "silence_grace_period",
+            1.0,
+            ParameterDescriptor(
+                type=ParameterType.PARAMETER_DOUBLE,
+                description="Grace period in seconds after silence to stop recording",
+            ),
+        )
         self.sample_rate = SAMPLING_RATE
         self.is_recording = False
         self.audio_buffer = []
         self.thread = None
         self.vad_iterator = VADIterator(model, sampling_rate=self.sample_rate)
         self.silence_start_time = None
-        self.grace_period = timedelta(seconds=2)
-        self.transcription_publisher = self.create_publisher(
+        self.transcription_publisher = self.create_publisher(  # type: ignore
             String, "transcription", 10
         )
-        self.get_logger().info(
+        self.get_logger().info(  # type: ignore
             "Voice Activity Detection enabled. Waiting for speech..."
         )
 
         self.language = (
             self.get_parameter("language").get_parameter_value().string_value
-        )
-        self.model_type = self.get_parameter("model").get_parameter_value().string_value
+        )  # type: ignore
+
+        self.model_type = self.get_parameter("model").get_parameter_value().string_value  # type: ignore
+
+        silence_grace_period = (
+            self.get_parameter("silence_grace_period")
+            .get_parameter_value()
+            .double_value
+        )  # type: ignore
+        self.grace_period = timedelta(seconds=silence_grace_period)
 
         self.get_logger().info(
             f"Using model: {self.model_type}, language: {self.language}"
@@ -93,7 +122,7 @@ class ASRNode(Node):
 
     def transcribe_audio(self):
         combined_audio = np.concatenate(self.audio_buffer)
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_wav_file:
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=True) as temp_wav_file:
             wavfile.write(temp_wav_file.name, self.sample_rate, combined_audio)
             self.get_logger().info(f"Saved audio to {temp_wav_file.name}")
 
