@@ -1,30 +1,39 @@
 # Running examples
 
-## For ROS 2 example use
+## ROS 2 example use
 
 ```bash
 python examples/husarion_poc_example.py
 ```
 
-## For demo without ROS 2 use
+> [!NOTE]
+> This demo uses OpenAI's gpt-4o
+
+## Demo without ROS 2 use
 
 ```bash
 python examples/agri_example.py
 ```
 
-In this demo all images are hardcoded.
+> [!TIP]
+> Choose a vendor by specifying --vendor (openai | awsbedrock)
 
-## For husarion The Describer demo
+> [!NOTE]
+> In this demo all images are hardcoded.
+
+## Husarion the describer demo
 
 Husarion is supposed to roam the environment and describe what it sees. \
-The observations are saved to map_database.txt in the format of `x: {}, y: {}, z: {}, observation"`
-The demo only works with bedrock for now.
+The observations are saved to map_database.json in the similar format to [geometry_msgs/TransformStamped Message](https://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/TransformStamped.html).
+
+> [!NOTE]
+> This demo uses claude-3.5 sonnet (awsbedrock)
 
 ```bash
 python examples/explore_and_describe_bedrock.py
 ```
 
-### Help
+## Help
 
 ```bash
 usage: examples/agri_example.py [-h] [--vendor {ollama,openai,awsbedrock}]
@@ -37,6 +46,6 @@ options:
                         Vendor to use for the scenario runner (default: awsbedrock)
 ```
 
-### Roadmap
+## Roadmap
 
-- Integration with 2405_vlm demo (ros 2 agri demo): [link](https://github.com/RobotecAI/MultiDomainAgricultureProject/tree/demo/2405_vlm)
+- Integration with 2405_vlm demo (ROS 2 agri demo): [link](https://github.com/RobotecAI/MultiDomainAgricultureProject/tree/demo/2405_vlm)

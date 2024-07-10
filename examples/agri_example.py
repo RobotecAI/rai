@@ -1,9 +1,12 @@
 import argparse
 import logging
 import os
+from typing import List
 
 from langchain_core.messages import SystemMessage
+from langchain_core.tools import BaseTool
 
+from rai.config.models import BEDROCK_CLAUDE_SONNET, OPENAI_MULTIMODAL
 from rai.scenario_engine.messages import (
     FutureAiMessage,
     HumanMultimodalMessage,
@@ -73,7 +76,7 @@ When the decision is made, use a tool to communicate the next steps to the tract
 """
 
 
-def get_scenario():
+def get_scenario(tools: List[BaseTool]):
     """
     Why function instead of a constant?
     We need to capture the latest image from the camera for the task prompt.
@@ -89,12 +92,12 @@ def get_scenario():
             content=TASK_PROMPT,
             images=[preprocess_image("examples/imgs/cat_before.png")],
         ),
-        FutureAiMessage(max_tokens=4096),
+        FutureAiMessage(tools=tools, max_tokens=4096),
         HumanMultimodalMessage(
             content=TASK_PROMPT,
             images=[preprocess_image("examples/imgs/cat_after.png")],
         ),
-        FutureAiMessage(max_tokens=4096),
+        FutureAiMessage(tools=tools, max_tokens=4096),
     ]
 
 
@@ -122,20 +125,18 @@ def main():
     elif args.vendor == "openai":
         from langchain_openai.chat_models import ChatOpenAI
 
-        llm = ChatOpenAI(model="gpt-4o")
+        llm = ChatOpenAI(**OPENAI_MULTIMODAL)
         llm_type = "openai"
 
     elif args.vendor == "awsbedrock":
         from langchain_aws.chat_models import ChatBedrock
 
-        llm = ChatBedrock(
-            model_id="anthropic.claude-3-opus-20240229-v1:0", region_name="us-west-2"
-        )
+        llm = ChatBedrock(**BEDROCK_CLAUDE_SONNET)  # type: ignore[arg-missing]
         llm_type = "bedrock"
     else:
         raise ValueError("Invalid vendor argument")
 
-    tools = [
+    tools: List[BaseTool] = [
         UseLightsTool(),
         UseHonkTool(),
         ReplanWithoutCurrentPathTool(),
@@ -144,11 +145,10 @@ def main():
     ]
     log_usage = all((os.getenv("LANGFUSE_PK"), os.getenv("LANGFUSE_SK")))
     scenario_runner = ScenarioRunner(
-        get_scenario(),
+        get_scenario(tools),
         scenario_name="Agri example",
         log_usage=log_usage,
         llm=llm,
-        tools=tools,
         logging_level=logging.INFO,
         llm_type=llm_type,
     )

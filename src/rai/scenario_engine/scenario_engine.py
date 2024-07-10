@@ -14,11 +14,14 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import BaseTool
 from langfuse.callback import CallbackHandler
 
 from rai.history_saver import HistorySaver
-from rai.scenario_engine.messages import AgentLoop, FutureAiMessage
+from rai.scenario_engine.messages import (
+    AgentLoop,
+    FutureAiMessage,
+    HumanMultimodalMessage,
+)
 from rai.scenario_engine.tool_runner import run_requested_tools
 
 __all__ = [
@@ -52,6 +55,7 @@ class ConditionalScenario:
 ScenarioPartType = Union[
     SystemMessage,
     HumanMessage,
+    HumanMultimodalMessage,
     AIMessage,
     ToolMessage,
     BaseMessage,
@@ -73,18 +77,15 @@ class ScenarioRunner:
         scenario: ScenarioType,
         llm: BaseChatModel,
         llm_type: Literal["openai", "bedrock"],
-        tools: Sequence[BaseTool],
         scenario_name: str = "",
         logging_level: int = logging.WARNING,
         log_usage: bool = True,
         use_cache: bool = False,
     ):
         self.scenario = scenario
-        self.tools = tools
         self.log_usage = log_usage
         self.llm = llm
         self.llm_type = llm_type
-        self.llm_with_tools = llm.bind_tools(tools)
         self.logging_level = logging_level
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(self.logging_level)
@@ -138,18 +139,20 @@ class ScenarioRunner:
             if isinstance(msg, (HumanMessage, AIMessage, ToolMessage, SystemMessage)):
                 self.history.append(msg)
             elif isinstance(msg, FutureAiMessage):
+                llm_with_tools = self.llm.bind_tools(msg.tools)
                 ai_msg = cast(
                     AIMessage,
-                    self.llm_with_tools.invoke(self.history, config=self.invoke_config),
+                    llm_with_tools.invoke(self.history, config=self.invoke_config),
                 )
                 self.history.append(ai_msg)
                 self.history = run_requested_tools(
-                    ai_msg, self.tools, self.history, llm_type=self.llm_type
+                    ai_msg, msg.tools, self.history, llm_type=self.llm_type
                 )
             elif isinstance(msg, AgentLoop):
                 self.logger.info(
-                    f"Looping agent actions until {msg.stop_action}. Max {msg.stop_iters} loops."
+                    f"Looping agent actions until {msg.stop_tool}. Max {msg.stop_iters} loops."
                 )
+                llm_with_tools = self.llm.bind_tools(msg.tools)
                 for _ in range(msg.stop_iters):
                     # if the last message is from the AI, we need to add a human message to continue the agent loop
                     # otherwise the bedrock model will not be able to continue the conversation
@@ -161,17 +164,19 @@ class ScenarioRunner:
                         )
                     ai_msg = cast(
                         AIMessage,
-                        self.llm_with_tools.invoke(
-                            self.history, config=self.invoke_config
-                        ),
+                        llm_with_tools.invoke(self.history, config=self.invoke_config),
                     )
                     self.history.append(ai_msg)
                     self.history = run_requested_tools(
-                        ai_msg, self.tools, self.history, llm_type=self.llm_type
+                        ai_msg, msg.tools, self.history, llm_type=self.llm_type
                     )
+                    break_loop = False
                     for tool_call in ai_msg.tool_calls:
-                        if tool_call["name"] == msg.stop_action:
+                        if tool_call["name"] == msg.stop_tool:
+                            break_loop = True
                             break
+                    if break_loop:
+                        break
             elif isinstance(msg, ConditionalScenario):
                 new_scenario = msg(self.history)
                 self._run(new_scenario)

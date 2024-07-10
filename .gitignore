@@ -162,5 +162,4 @@ cython_debug/
 logs/
 .vscode/
 
-examples/imgs/*
 !examples/imgs/*.md
