@@ -6,15 +6,15 @@ import rclpy
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
-from rclpy.node import Node
+from ros2cli.node.strategy import NodeStrategy
 
 from rai.config.models import OPENAI_MULTIMODAL
 from rai.scenario_engine.messages import AgentLoop
 from rai.scenario_engine.scenario_engine import ScenarioPartType, ScenarioRunner
 from rai.tools.ros.cat_demo_tools import FinishTool
 from rai.tools.ros.native import (
+    Ros2GetInterfacesTool,
     Ros2GetOneMsgFromTopicTool,
-    Ros2GetTopicsNamesAndTypesTool,
     Ros2PubMessageTool,
     Ros2ShowRos2MsgInterfaceTool,
 )
@@ -24,12 +24,15 @@ def main():
     log_usage = all((os.getenv("LANGFUSE_PK"), os.getenv("LANGFUSE_SK")))
     llm = ChatOpenAI(**OPENAI_MULTIMODAL)
 
-    rclpy.init()
+    # rclpy.init()
 
-    rai_node = Node("rai")  # type: ignore
+    rai_node = NodeStrategy(args=dict())  # type: ignore
 
     tools: List[BaseTool] = [
-        Ros2GetTopicsNamesAndTypesTool(),
+        # Ros2GetActionNamesAndTypesTool(),
+        # Ros2GetServicesNamesAndTypesTool(),
+        # Ros2GetTopicsNamesAndTypesTool(node=rai_node),
+        Ros2GetInterfacesTool(node=rai_node),
         Ros2GetOneMsgFromTopicTool(node=rai_node),
         Ros2PubMessageTool(node=rai_node),
         Ros2ShowRos2MsgInterfaceTool(),
@@ -42,7 +45,9 @@ def main():
             "Do not make assumptions about the environment you are currently in. "
             "Use the tooling provided to gather information about the environment."
         ),
-        HumanMessage(content="The robot is moving. Send robot to the random location"),
+        HumanMessage(
+            content="The robot is moving. Send robot to the random location and make sure the goal is reached."
+        ),
         AgentLoop(
             tools=tools, stop_tool=FinishTool().__class__.__name__, stop_iters=50
         ),
@@ -55,7 +60,6 @@ def main():
         scenario_name="Husarion example",
         logging_level=logging.INFO,
         log_usage=log_usage,
-        logging_level=logging.INFO,
     )
 
     runner.run()

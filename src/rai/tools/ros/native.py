@@ -1,12 +1,12 @@
 import json
-from typing import Any, Dict, OrderedDict, Tuple, Type
+from typing import Any, Dict, List, OrderedDict, Tuple, Type
 
 import rclpy
 import rosidl_runtime_py.utilities
 from langchain.tools import BaseTool
 from langchain_core.pydantic_v1 import BaseModel, Field
+from rclpy.action import get_action_names_and_types
 from rclpy.impl.rcutils_logger import RcutilsLogger
-from rclpy.node import Node
 from ros2cli.node.strategy import NodeStrategy
 from rosidl_runtime_py.set_message import set_message_fields
 
@@ -20,7 +20,7 @@ class Ros2BaseInput(BaseModel):
 
 
 class Ros2BaseTool(BaseTool):
-    node: Node = Field(..., exclude=True, include=False, required=True)
+    node: NodeStrategy = Field(..., exclude=True, include=False, required=True)
 
     args_schema: Type[Ros2BaseInput] = Ros2BaseInput
 
@@ -29,17 +29,57 @@ class Ros2BaseTool(BaseTool):
         return self.node.get_logger()
 
 
-class Ros2GetTopicsNamesAndTypesTool(BaseTool):
+class Ros2GetTopicsNamesAndTypesTool(Ros2BaseTool):
     name: str = "Ros2GetTopicsNamesAndTypes"
     description: str = "A tool for getting all ros2 topics names and types"
+
+    def _run(self):
+        return [
+            (topic_name, topic_type)
+            for topic_name, topic_type in self.node.get_topic_names_and_types()
+            if len(topic_name.split("/")) <= 2
+        ]
+
+
+class Ros2GetServicesNamesAndTypesTool(Ros2BaseTool):
+    name: str = "Ros2GetServicesNamesAndTypes"
+    description: str = "A tool for getting all ros2 services names and types"
 
     def _run(self):
         with NodeStrategy(dict()) as node:
             return [
                 (topic_name, topic_type)
-                for topic_name, topic_type in node.get_topic_names_and_types()
-                if len(topic_name.split("/")) <= 2
+                for topic_name, topic_type in node.get_service_names_and_types()
             ]
+
+
+class Ros2GetActionNamesAndTypesTool(Ros2BaseTool):
+    name: str = "Ros2GetActionNamesAndTypes"
+    description: str = "A tool for getting all ros2 actions names and types"
+
+    def _run(self):
+        # with NodeStrategy(dict()) as node:
+        return [
+            (topic_name, topic_type)
+            for topic_name, topic_type in get_action_names_and_types(self.node)  # type: ignore
+        ]
+
+
+class Ros2GetInterfacesTool(Ros2BaseTool):
+    name: str = "Ros2GetInterfaces"
+    description: str = "A tool for getting all ros2 interfaces names and types"
+
+    def _run(self) -> Dict[str, List[Tuple[str, str]]]:
+        topics = [
+            (topic_name, topic_type)
+            for topic_name, topic_type in self.node.get_topic_names_and_types()
+            if len(topic_name.split("/")) <= 2
+        ]
+        return {
+            "actions": get_action_names_and_types(self.node),  # type: ignore
+            "services": self.node.get_service_names_and_types(),
+            "topics": topics,
+        }
 
 
 class ShowRos2MsgInterfaceInput(BaseModel):
@@ -170,3 +210,32 @@ class Ros2PubMessageTool(Ros2BaseTool):
 
         msg.header.stamp = self.node.get_clock().now().to_msg()
         publisher.publish(msg)
+
+
+class Ros2ActionRunnerInput(BaseModel):
+    action_name: str = Field(..., description="Name of the action")
+
+
+class Ros2ActionRunner(Ros2BaseTool):
+    name: str = "Ros2ActionRunner"
+    description: str = "A tool for running a ros2 action"
+
+    args_schema: Type[Ros2ActionRunnerInput] = Ros2ActionRunnerInput
+
+    def _build_msg(
+        self, msg_type: str, msg_args: Dict[str, Any]
+    ) -> Tuple[object, Type]:
+        msg_cls: Type = import_message_from_str(msg_type)
+        msg = msg_cls.Goal()
+        set_message_fields(msg, msg_args)
+        return msg, msg_cls
+
+    def _run(
+        self, action_name: str, action_type: str, action_goal_args: Dict[str, Any]
+    ):
+        msg = _build_msg(action_type, action_goal_args)
+        action_client = self.node.create_action_client(action_name, action_type)
+        action_client.wait_for_server()
+        action_client.send_goal(msg)
+        action_client.wait_for_result()
+        return action_client.get_result()
