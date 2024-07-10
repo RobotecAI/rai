@@ -14,17 +14,10 @@ from std_msgs.msg import String
 
 SAMPLING_RATE = 16000
 
-# Download and load the model
-model, utils = torch.hub.load(
-    repo_or_dir="snakers4/silero-vad", model="silero_vad", force_reload=True
-)
-
-(get_speech_timestamps, save_audio, read_audio, VADIterator, collect_chunks) = utils
-
 
 class ASRNode(Node):
     def __init__(self):
-        super().__init__("automatic_speech_recognition")
+        super().__init__("rai_asr")
         self.declare_parameter(
             "language",
             "en",
@@ -49,10 +42,17 @@ class ASRNode(Node):
                 description="Grace period in seconds after silence to stop recording",
             ),
         )
+        model, utils = torch.hub.load(
+            repo_or_dir="snakers4/silero-vad", model="silero_vad", force_reload=True
+        )
+
+        (get_speech_timestamps, save_audio, read_audio, VADIterator, collect_chunks) = (
+            utils
+        )
+
         self.sample_rate = SAMPLING_RATE
         self.is_recording = False
         self.audio_buffer = []
-        self.thread = None
         self.vad_iterator = VADIterator(model, sampling_rate=self.sample_rate)
         self.silence_start_time = None
         self.transcription_publisher = self.create_publisher(  # type: ignore
@@ -121,10 +121,11 @@ class ASRNode(Node):
             self.transcribe_audio()
 
     def transcribe_audio(self):
+        self.get_logger().info("Calling ASR model")
         combined_audio = np.concatenate(self.audio_buffer)
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=True) as temp_wav_file:
             wavfile.write(temp_wav_file.name, self.sample_rate, combined_audio)
-            self.get_logger().info(f"Saved audio to {temp_wav_file.name}")
+            self.get_logger().debug(f"Saved audio to {temp_wav_file.name}")
 
             model = whisper.load_model(self.model_type)
             response = model.transcribe(temp_wav_file.name, language=self.language)

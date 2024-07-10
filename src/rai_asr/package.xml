@@ -2,10 +2,12 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>rai_asr</name>
-  <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <version>0.1.0</version>
+  <description> An Automatic Speech Recognition package, leveraging Whisper for transcription and
+    Silero VAD for voice activity detection. This node captures audio, detects speech, and
+    transcribes the spoken content, publishing the transcription to a topic. </description>
   <maintainer email="magdalena.kotynia@robotec.ai">mkotynia</maintainer>
-  <license>TODO: License declaration</license>
+  <license>Apache-2.0</license>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
