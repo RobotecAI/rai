@@ -28,11 +28,7 @@ class ElevenLabsClient(TTSClient):
         self.base_url = base_url
         self.voice = voice
         api_key = os.getenv(key="ELEVENLABS_API_KEY")
-        if api_key is None:
-            raise ValueError("ELEVENLABS_API_KEY not found in environment variables.")
-        self.client = ElevenLabs(
-            base_url=None, api_key=os.getenv(key="ELEVENLABS_API_KEY")
-        )
+        self.client = ElevenLabs(base_url=None, api_key=api_key)
 
     def synthesize_speech_to_file(self, text: str) -> str:
         response = self.client.generate(
