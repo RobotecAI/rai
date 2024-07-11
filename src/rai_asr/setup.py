@@ -18,8 +18,10 @@ setup(
     zip_safe=True,
     maintainer="mkotynia",
     maintainer_email="magdalena.kotynia@robotec.ai",
-    description="TODO: Package description",
-    license="TODO: License declaration",
+    description="An Automatic Speech Recognition package, leveraging Whisper for transcription and \
+        Silero VAD for voice activity detection. This node captures audio, detects speech, and \
+        transcribes the spoken content, publishing the transcription to a topic. ",
+    license="Apache-2.0",
     tests_require=["pytest"],
     entry_points={
         "console_scripts": ["asr_node = rai_asr.asr_node:main"],
