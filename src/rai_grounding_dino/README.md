@@ -18,16 +18,14 @@ wget -q https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-
 
 ```
 
-Then prepare the virtual environment for this package
-
-```
-cd src/rai_grounding_dino
-python -m venv .venv
-. .venv/bin/activate
-pip install -r requirements.txt
-```
-
 ### Build and run
+
+In the base directory of the `RAI` package install dependancies:
+
+```
+poetry install --with gdino
+
+```
 
 Source the ros installation
 
@@ -48,11 +46,12 @@ Source the local installation:
 source ./install/setup.bash
 ```
 
-Activate the virtucal environment:
+Activate the poetry environment:
 
 ```
-. src/rai_grounding_dino/.venv/bin/activate
+poetry shell
 ```
+
 
 Run the ROS node using `ros2 launch`:
 
