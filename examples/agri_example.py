@@ -151,6 +151,7 @@ def main():
         llm=llm,
         logging_level=logging.INFO,
         llm_type=llm_type,
+        use_cache=True,
     )
     scenario_runner.run()
 
