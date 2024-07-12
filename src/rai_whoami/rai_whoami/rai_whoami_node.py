@@ -11,9 +11,9 @@ class WhoAmI(Node):
 
     def __init__(self):
         super().__init__("rai_whoami_node")
-        self.declare_parameter("rai_self_images_local_uri", "self_images")
-        self.declare_parameter("robot_description_package", "robot_description")
-        self.declare_parameter("robot_description_file", "robot.urdf")
+        self.declare_parameter("rai_self_images_local_uri")
+        self.declare_parameter("robot_description_package")
+        self.declare_parameter("robot_description_file")
 
         self.srv = self.create_service(
             Trigger, "rai_whoami_constitution_service", self.get_constitution_callback
