@@ -102,7 +102,7 @@ class ScenarioRunner:
                 self.logger.warning("REDIS_CACHE_HOST is not set. Disabling cache.")
             else:
                 set_llm_cache(RedisCache(redis_=Redis.from_url(cache_host)))
-                self.logger.info("Cache enabled.")
+                self.logger.warning("Cache is enabled!")
 
         self.invoke_config: RunnableConfig = {}
         self.langfuse_handler = None
