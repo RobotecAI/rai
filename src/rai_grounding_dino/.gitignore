@@ -17,5 +17,3 @@ __pycache__/
 *.swp
 *.bak
 *.cache
-
-.venv/
