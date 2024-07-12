@@ -19,7 +19,7 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "silence_grace_period",
-                default_value="1.0",
+                default_value="2.0",
                 description="Grace period in seconds after silence to stop recording",
             ),
             DeclareLaunchArgument(
@@ -30,7 +30,7 @@ def generate_launch_description():
             Node(
                 package="rai_asr",
                 executable="asr_node",
-                name="automatic_speech_recognition",
+                name="rai_asr",
                 output="screen",
                 emulate_tty=True,
                 parameters=[

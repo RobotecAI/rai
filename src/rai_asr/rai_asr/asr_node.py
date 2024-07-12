@@ -1,6 +1,7 @@
 import tempfile
 import threading
 from datetime import datetime, timedelta
+from typing import Literal
 
 import numpy as np
 import rclpy
@@ -56,8 +57,12 @@ class ASRNode(Node):
         self.vad_iterator = VADIterator(model, sampling_rate=self.sample_rate)
         self.silence_start_time = None
         self.transcription_publisher = self.create_publisher(  # type: ignore
-            String, "transcription", 10
+            String, "~/transcription", 10
         )
+        self.status_publisher = self.create_publisher(  # type: ignore
+            String, "~/status", 10
+        )
+
         self.get_logger().info(  # type: ignore
             "Voice Activity Detection enabled. Waiting for speech..."
         )
@@ -110,6 +115,7 @@ class ASRNode(Node):
     def start_recording(self):
         if not self.is_recording:
             self.get_logger().info("Started recording")
+            self.publish_status("recording")
             self.is_recording = True
             self.audio_buffer = []
             self.silence_start_time = None
@@ -118,6 +124,7 @@ class ASRNode(Node):
         if self.is_recording:
             self.get_logger().info("Stopped recording")
             self.is_recording = False
+            self.publish_status("transcribing")
             self.transcribe_audio()
 
     def transcribe_audio(self):
@@ -138,6 +145,11 @@ class ASRNode(Node):
         msg = String()
         msg.data = transcription
         self.transcription_publisher.publish(msg)
+
+    def publish_status(self, status: Literal["recording", "transcribing"]):
+        msg = String()
+        msg.data = status
+        self.status_publisher.publish(msg)
 
 
 def main(args=None):

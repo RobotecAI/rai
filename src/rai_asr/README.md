@@ -16,7 +16,8 @@ This node does not subscribe to any topics. It operates independently, capturing
 
 ## Published Topics
 
-- **`transcription`** (`std_msgs/String`): Publishes the transcribed text obtained from the audio recording.
+- **`rai_asr/transcription`** (`std_msgs/String`): Publishes the transcribed text obtained from the audio recording.
+- **`rai_asr/status`** (`std_msgs/String`): Publishes node status (recording, transcribing). During transcription, the node does not listen/record.
 
 ## Parameters
 
