@@ -2,6 +2,12 @@
 
 RAI comes with multiple configurable ROS2 packages which can be installed alongside the main distribution.
 
+## RAI_asr
+
+The RAI ASR (Automatic Speech Recognition) node utilizes a combination of voice activity detection (VAD) and a speech recognition model to transcribe spoken language into text using [openai-whisper](https://github.com/openai/whisper).
+
+Detailed documentation and installation instructions are available in package [README](../src/rai_asr/README.md)
+
 ## RAI_grounding_dino
 
 Package enabling use of [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO) -- an open-set detection model with ROS2.
