@@ -18,6 +18,12 @@ wget -q https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-
 
 ```
 
+Add required ROS dependacies:
+
+```
+sudo apt install ros-humble-vision-msgs
+```
+
 ### Build and run
 
 In the base directory of the `RAI` package install dependancies:
@@ -51,7 +57,6 @@ Activate the poetry environment:
 ```
 poetry shell
 ```
-
 
 Run the ROS node using `ros2 launch`:
 
