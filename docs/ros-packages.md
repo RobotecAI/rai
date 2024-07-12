@@ -31,4 +31,3 @@ Package with launch files.
 
 ```
 ros2 launch rai_bringup hri.launch.py  tts_vendor:=(opentts|elevenlabs) robot_package_description:=(robot_whoami_package)
-```
