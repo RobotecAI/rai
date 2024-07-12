@@ -40,8 +40,19 @@ llm = ChatBedrock(
 
 # Caching
 
+## Redis
+
 `ScenarioRunner` supports Redis cache through langchain. Make sure to set
 
 ```bash
 export REDIS_CACHE_HOST="redis://<host>"
 ```
+
+Self hosting Redis:
+
+```bash
+docker run -p 6379:6379 -d redis/redis-stack:latest
+export REDIS_CACHE_HOST="redis://localhost:6379"
+```
+
+For more invormation see [redis.io/docs/latest/operate/oss_and_stack/install/install-stack/docker/](https://redis.io/docs/latest/operate/oss_and_stack/install/install-stack/docker/)
