@@ -9,7 +9,7 @@
   <maintainer email="magdalena.kotynia@robotec.ai">mkotynia</maintainer>
   <license>Apache-2.0</license>
 
-  <exec_depend>portaudio2</exec_depend>
+  <exec_depend>portaudio19-dev</exec_depend>
   <export>
     <build_type>ament_python</build_type>
   </export>
