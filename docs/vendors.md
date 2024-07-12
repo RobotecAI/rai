@@ -51,7 +51,7 @@ export REDIS_CACHE_HOST="redis://<host>"
 Self hosting Redis:
 
 ```bash
-docker run -p 6379:6379 -d redis/redis-stack:latest
+docker run -p 6379:6379 -d redis/redis:latest
 export REDIS_CACHE_HOST="redis://localhost:6379"
 ```
 

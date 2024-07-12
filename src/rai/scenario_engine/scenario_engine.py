@@ -82,7 +82,7 @@ class ScenarioRunner:
         scenario_name: str = "",
         logging_level: int = logging.WARNING,
         log_usage: bool = True,
-        use_cache: bool = False,
+        use_cache: bool = True,
     ):
         self.scenario = scenario
         self.log_usage = log_usage
