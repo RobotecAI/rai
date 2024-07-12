@@ -9,7 +9,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
 ]
 [tool.poetry.dependencies]
-python = "^3.10, <3.13"
+python = "^3.10, <3.12"
 requests = "^2.32.2"
 pre-commit = "^3.7.0"
 openai = "^1.23.3"
