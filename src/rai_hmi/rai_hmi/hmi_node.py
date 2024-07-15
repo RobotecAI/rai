@@ -72,7 +72,12 @@ class HMINode(Node):
         ai_msg: AIMessage = self.llm_with_tools.invoke(self.history)
         self.history.append(ai_msg)
 
-        # TODO: Make this code safe (handle exceptions when parsing)
+        if ai_msg.content:
+            self.send_message_to_human(ai_msg.content)
+
+        # Claude 3.5 Sonnet on AWS Bedrock seems not to include any message content
+        # if a tool is run. We need to to mitigate this issue by appending a tool
+        # message after the AI message that requested tool use.
         for tool_call in ai_msg.tool_calls:
             task_json = tool_call["args"]["task"]
             task = Task.model_validate(task_json)
@@ -82,15 +87,13 @@ class HMINode(Node):
                 ToolMessage("Task added!", tool_call_id=tool_call["id"])
             )
 
-        if ai_msg.content:
-            self.send_message_to_human(ai_msg.content)
-        elif ai_msg.tool_calls:
-            # TODO: This is ugly code repetition and should be refactored
-            ai_msg: AIMessage = self.llm_with_tools.invoke(self.history)
-            self.history.append(ai_msg)
+        # Request a new AI message if any tools have been run.
+        if ai_msg.tool_calls:
+            new_ai_msg: AIMessage = self.llm_with_tools.invoke(self.history)
+            self.history.append(new_ai_msg)
 
-            if ai_msg.content:
-              self.send_message_to_human(ai_msg.content)
+            if new_ai_msg.content:
+              self.send_message_to_human(new_ai_msg.content)
 
     def send_message_to_human(self, content: str):
         msg = String()
