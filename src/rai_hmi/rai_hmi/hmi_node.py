@@ -56,7 +56,7 @@ class HMINode(Node):
         self.hmi_publisher = self.create_publisher(String, "to_human", 10)
 
         self.task_addition_request_publisher = self.create_publisher(
-            String, "tasks_addition_requests", 10
+            String, "task_addition_requests", 10
         )
 
         self.get_logger().info("HMI Node has been started")
