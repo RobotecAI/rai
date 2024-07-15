@@ -1,21 +1,18 @@
-
-from langchain_aws import ChatBedrock
 from typing import List
 
-from .task import Task
-
-from langchain_core.messages import (
-  BaseMessage,
-  SystemMessage,
-  HumanMessage,
-  AIMessage,
-  ToolMessage
-)
-
 import rclpy
+from langchain_aws import ChatBedrock
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+    ToolMessage,
+)
 from rclpy.node import Node
 from std_msgs.msg import String
 
+from .task import Task
 
 SYSTEM_PROMPT = """
 You are a helpful office assistant robot. You driver around using a Husarion ROSBot XL platform, equipped with
@@ -45,8 +42,8 @@ class HMINode(Node):
         self.history: List[BaseMessage] = [SystemMessage(SYSTEM_PROMPT)]
 
         llm = ChatBedrock(
-            model_id='anthropic.claude-3-5-sonnet-20240620-v1:0',
-            region_name='us-east-1'
+            model_id="anthropic.claude-3-5-sonnet-20240620-v1:0",
+            region_name="us-east-1",
         )
 
         tools = [self.add_task_to_queue]
@@ -56,9 +53,7 @@ class HMINode(Node):
             String, "from_human", self.handle_human_message, 10
         )
 
-        self.hmi_publisher = self.create_publisher(
-            String, "to_human", 10
-        )
+        self.hmi_publisher = self.create_publisher(String, "to_human", 10)
 
         self.task_addition_request_publisher = self.create_publisher(
             String, "tasks_addition_requests", 10
@@ -93,7 +88,7 @@ class HMINode(Node):
             self.history.append(new_ai_msg)
 
             if new_ai_msg.content:
-              self.send_message_to_human(new_ai_msg.content)
+                self.send_message_to_human(new_ai_msg.content)
 
     def send_message_to_human(self, content: str):
         msg = String()

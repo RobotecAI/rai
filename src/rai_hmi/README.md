@@ -32,23 +32,13 @@ Tasks published on the `task_addition_request` follow the schema below:
     },
     "priority": {
       "type": "string",
-      "enum": [
-        "highest",
-        "high",
-        "medium",
-        "low",
-        "lowest"
-        ]
+      "enum": ["highest", "high", "medium", "low", "lowest"]
     },
     "robot": {
       "type": "string"
     }
   },
-  "required": [
-    "name",
-    "description",
-    "priority"
-  ]
+  "required": ["name", "description", "priority"]
 }
 ```
 
