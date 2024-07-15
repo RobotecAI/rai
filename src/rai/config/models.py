@@ -38,7 +38,7 @@ BEDROCK_CLAUDE_HAIKU: AWSBedrockKwargs = {
 
 BEDROCK_CLAUDE_SONNET: AWSBedrockKwargs = {
     "model_id": "anthropic.claude-3-5-sonnet-20240620-v1:0",
-    "region_name": "us-west-1",
+    "region_name": "us-east-1",
 }
 
 BEDROCK_CLAUDE_OPUS: AWSBedrockKwargs = {
@@ -48,5 +48,5 @@ BEDROCK_CLAUDE_OPUS: AWSBedrockKwargs = {
 
 BEDROCK_MULTIMODAL: AWSBedrockKwargs = {
     "model_id": "anthropic.claude-3-5-sonnet-20240620-v1:0",
-    "region_name": "us-west-1",
+    "region_name": "us-east-1",
 }
