@@ -62,6 +62,10 @@ class HMINode(Node):
         self.get_logger().info("HMI Node has been started")
 
     def handle_human_message(self, human_ros_msg: String):
+        if not human_ros_msg.data:
+            self.get_logger().warn('Received an empty message, discarding')
+            return
+
         self.history.append(HumanMessage(human_ros_msg.data))
 
         ai_msg: AIMessage = self.llm_with_tools.invoke(self.history)
