@@ -14,7 +14,9 @@ class WhoAmI(Node):
         self.declare_parameter("rai_self_images_local_uri")
         self.declare_parameter("robot_description_package")
         self.declare_parameter("robot_description_file")
-        self.declare_parameter("robot_constitution_path", 'resource/default_robot_constitution.txt')
+        self.declare_parameter(
+            "robot_constitution_path", "resource/default_robot_constitution.txt"
+        )
 
         self.srv = self.create_service(
             Trigger, "rai_whoami_constitution_service", self.get_constitution_callback
@@ -23,11 +25,17 @@ class WhoAmI(Node):
             Trigger, "rai_whoami_selfimages_service", self.get_self_images_callback
         )
 
-        self.robot_constitution_path = self.get_parameter("robot_constitution_path").get_parameter_value().string_value
+        self.robot_constitution_path = (
+            self.get_parameter("robot_constitution_path")
+            .get_parameter_value()
+            .string_value
+        )
 
         with open(self.robot_constitution_path, "r") as file:
             self.robot_constitution = file.read()
-            self.get_logger().info(f"Robot constitution loaded from {self.robot_constitution_path}")
+            self.get_logger().info(
+                f"Robot constitution loaded from {self.robot_constitution_path}"
+            )
 
         # TODO(@adamdbrw) Create other services such as get interfaces documentation (text file),
         # TODO(@adamdbrw) write and read knowledge about myself etc
