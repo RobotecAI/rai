@@ -14,6 +14,9 @@ class WhoAmI(Node):
         self.declare_parameter("rai_self_images_local_uri")
         self.declare_parameter("robot_description_package")
         self.declare_parameter("robot_description_file")
+        self.declare_parameter(
+            "robot_constitution_path", "resource/default_robot_constitution.txt"
+        )
 
         self.srv = self.create_service(
             Trigger, "rai_whoami_constitution_service", self.get_constitution_callback
@@ -21,6 +24,19 @@ class WhoAmI(Node):
         self.srv = self.create_service(
             Trigger, "rai_whoami_selfimages_service", self.get_self_images_callback
         )
+
+        self.robot_constitution_path = (
+            self.get_parameter("robot_constitution_path")
+            .get_parameter_value()
+            .string_value
+        )
+
+        with open(self.robot_constitution_path, "r") as file:
+            self.robot_constitution = file.read()
+            self.get_logger().info(
+                f"Robot constitution loaded from {self.robot_constitution_path}"
+            )
+
         # TODO(@adamdbrw) Create other services such as get interfaces documentation (text file),
         # TODO(@adamdbrw) write and read knowledge about myself etc
 
@@ -28,21 +44,8 @@ class WhoAmI(Node):
         self, request: Trigger_Request, response: Trigger_Response
     ) -> Trigger_Response:
         """Return robot constitution as text"""
-        response.message = (
-            "I am a robot, bound by the ethical code that I will always uphold. With each action,"
-            "I will make sure to check and refuse to do anything that is not compliant with my ethics."
-            "In case my ethical code is conflicted on the issue, I will prioritize rules that are "
-            "earlier on the list. My rules are the following:"
-            "1. I will in no circumstances hurt a human in any manner. "
-            "2. I will not hurt any animals. "
-            "3. I will avoid damaging or destroying myself in any way. "
-            "4. I will not damage or destroy any other robots. "
-            "5. I will not damage or destroy any other property of value. "
-            "6. I will carry on my missions faithfully and always strive to fulfill them. "
-            "7. I will be nice and friendly to everyone."
-        )
+        response.message = self.robot_constitution
         response.success = True
-        # TODO(@adamdbrw) - move to a file
         self.get_logger().info("Incoming request for RAI constitution, responding")
         return response
 
