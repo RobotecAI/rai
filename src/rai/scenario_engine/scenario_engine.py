@@ -1,10 +1,11 @@
 import datetime
 import logging
 import os
-import pickle
-from typing import Callable, Dict, List, Literal, Sequence, Union, cast
+from typing import Callable, List, Literal, Sequence, Union, cast
 
 import coloredlogs
+from langchain.globals import set_llm_cache
+from langchain_community.cache import RedisCache
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import (
     AIMessage,
@@ -15,6 +16,7 @@ from langchain_core.messages import (
 )
 from langchain_core.runnables import RunnableConfig
 from langfuse.callback import CallbackHandler
+from redis import Redis
 
 from rai.history_saver import HistorySaver
 from rai.scenario_engine.messages import (
@@ -80,7 +82,7 @@ class ScenarioRunner:
         scenario_name: str = "",
         logging_level: int = logging.WARNING,
         log_usage: bool = True,
-        use_cache: bool = False,
+        use_cache: bool = True,
     ):
         self.scenario = scenario
         self.log_usage = log_usage
@@ -93,14 +95,14 @@ class ScenarioRunner:
         now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S.%f")
         self.logs_dir = os.path.join("logs", self.llm.__class__.__name__ + now)
         self.use_cache = use_cache
-        self.cache: Dict[str, Dict[int, BaseMessage]] = {}
+
         if self.use_cache:
-            # check if exists
-            try:
-                with open("cache.pkl", "rb") as f:
-                    self.cache = pickle.load(f)
-            except FileNotFoundError:
-                self.cache = {}
+            cache_host = os.getenv("REDIS_CACHE_HOST")
+            if cache_host is None:
+                self.logger.warning("REDIS_CACHE_HOST is not set. Disabling cache.")
+            else:
+                set_llm_cache(RedisCache(redis_=Redis.from_url(cache_host)))
+                self.logger.warning("Cache is enabled!")
 
         self.invoke_config: RunnableConfig = {}
         self.langfuse_handler = None
