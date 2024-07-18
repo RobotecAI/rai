@@ -24,7 +24,7 @@ class TTSNode(Node):
         self.declare_parameter("tts_client", "opentts")
         self.declare_parameter("voice", "larynx:blizzard_lessac-glow_tts")
         self.declare_parameter("base_url", "http://localhost:5500/api/tts")
-        self.declare_parameter("topic", "tts/chunk")
+        self.declare_parameter("topic", "to_human")
 
         topic_param = self.get_parameter("topic").get_parameter_value().string_value  # type: ignore
 

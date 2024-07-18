@@ -57,7 +57,7 @@ class ASRNode(Node):
         self.vad_iterator = VADIterator(model, sampling_rate=self.sample_rate)
         self.silence_start_time = None
         self.transcription_publisher = self.create_publisher(  # type: ignore
-            String, "~/transcription", 10
+            String, "/from_human", 10
         )
         self.status_publisher = self.create_publisher(  # type: ignore
             String, "~/status", 10

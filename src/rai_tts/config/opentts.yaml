@@ -3,4 +3,4 @@ tts_node:
     tts_client: opentts
     voice: larynx:blizzard_lessac-glow_tts
     base_url: http://localhost:5500/api/tts
-    topic: tts/chunk
+    topic: to_human

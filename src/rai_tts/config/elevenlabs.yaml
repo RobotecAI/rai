@@ -3,4 +3,4 @@ tts_node:
     tts_client: elevenlabs
     voice: Serena
     base_url: ""
-    topic: tts/chunk
+    topic: to_human

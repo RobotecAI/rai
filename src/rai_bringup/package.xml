@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>rai_bringup</name>
+  <version>0.0.1</version>
+  <description>Bringup scripts and configurations for the RAI.</description>
+  <maintainer email="maciej.majek@robotec.ai">Maciej Majek</maintainer>
+  <license>Apache-2.0</license>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
