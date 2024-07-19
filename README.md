@@ -22,24 +22,24 @@ For more information, see the packages inside ./src directory. If there is a too
 RAI can be used in various ways:
 
 - Mission supervisor\
-Employ genAI as a supervisor & reporter for hiqh quality mission logs.
+Employ genAI as a supervisor & reporter for high quality mission logs.
 
-- Out of distribution helper\
-Use genAI in order to solve what cannot be solved using conventional algorithm.
+- Solver for unexpected situations\
+Use genAI in order to address situations that are not handled well conventionally, typically because they require reasoning.
 
 - Embodied agent\
-GenAI based robot, maximum flexability, natural language mission definition.
+Embodied AI with full flexibility, interacting with humans and other systems.
 
 # ROSCon 2024
 
-RAI will be released during [ROSCon 2024](https://roscon.ros.org/2024/)!
+RAI will be released before [ROSCon 2024](https://roscon.ros.org/2024/)!
 <p align="center">
 <img width="400" src="./imgs/sponsor.png" />
 </p>
 
 ## RAI Talk
 
-RAI will be presented as a talk on [ROSCon 2024](https://roscon.ros.org/2024/), make sure to participate!
+RAI will be presented as a talk at [ROSCon 2024](https://roscon.ros.org/2024/), make sure to participate!
 
 <p align="center">
 <img width="400" src="./imgs/talk.png" />
