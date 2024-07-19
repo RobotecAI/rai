@@ -1,174 +1,60 @@
-# 🤖 RAI
 
-**RAI** is a framework for creating conversations between users and assistants in the [ROS2](https://ros.org/) ecosystem. It uses predefined, flexible scenarios with built-in actions. The engine is designed to be adaptable and scalable, supporting a wide range of nodes across different domains.
+# RAI
 
-## Planned demos 👀
+![alt text](./imgs/demos.png)
 
-- [🌾 agriculture demo](https://github.com/RobotecAI/rai-agriculture-demo)
-- [🤖 husarion demo](https://github.com/RobotecAI/rai-husarion-demo)
-- [🦾 manipulation demo](https://github.com/RobotecAI/rai-manipulation-demo)
+**RAI** is a framework designed to enhance the functionality of robots through the use of GenAI. RAI employs an agent-based architecture that interacts using [ROS 2](https://ros.org/) interfaces, including topics, services, and actions. We support agent-based reasoning (offering maximum flexibility) as well as structured reasoning (providing greater reliability but less flexibility).
 
-## Table of Contents
+RAI is vendor-agnostic by design, making it compatible with AWS Bedrock, OpenAI, Anthropic, Cohere, as well as locally hosted solutions like Ollama or vllm.
 
-- [Scenario Definition](#-scenario-definition)
-  - [Scenario Building Blocks](#-scenario-building-blocks)
-  - [Scenario Definition Example](#-scenario-definition-example)
-- [Available LLM Vendors](#-available-llm-vendors)
-  - [Vendors Initialization Examples](#-vendors-initialization-examples)
-    - [Ollama](#ollama)
-    - [OpenAI](#openai)
-    - [AWS Bedrock](#aws-bedrock)
-- [Integration with Robotic Systems](#-integration-with-robotic-systems)
-- [Installation](#installation-instructions)
-- [Further documentation](#further-documentation)
+## Diverse Tooling
 
-## General Architecture Diagram with Current and Planned Features
+As RAI interacts with the environment via ROS 2 messages, much of the tooling is implemented as a ROS 2 packages that can be used within RAI's AI pipeline or as standalone packages.
 
-![rai_arch](docs/imgs/rai_arch.png)
+Given that RAI is a domain-agnostic framework, we are developing a diverse suite of tools using various state-of-the-art AI models, such as Grounding Dino, Grounding Sam, NoMaD, OpenVLA, Whisper, and more.
 
-## 🧩 Scenario Definition
+To make RAI easily integrable with your system, we are working on a seamless integration with Nav2 and MoveIt 2 stacks.
 
-A scenario is a programmatically defined sequence of interactions between a User and an Assistant (LLM). Each scenario consists of multiple components that dictate the flow of conversation and actions.
+For more information, see the packages inside ./src directory. If there is a tool you would like to see in RAI, feel free to drop an issue or contact us via LinkedIn.
 
-### 🏗️ Scenario Building Blocks
+## Adjusting RAI for your needs
 
-Scenarios can be built using the following elements:
+RAI can be used in various ways:
 
-- **Messages**: Static or dynamic content communicated to the user.
-- **Conditional Messages**: Content that changes based on certain conditions.
-- **Executors**: Actions that the system can execute.
-- **Conditional Executors**: Actions that are executed based on specific conditions.
+- Mission supervisor\
+Employ genAI as a supervisor & reporter for hiqh quality mission logs.
 
-![Scenario Building Blocks](./docs/imgs/scenario_building_blocks.png)
+- Out of distribution helper\
+Use genAI in order to solve what cannot be solved using conventional algorithm.
 
-For more about scenario building see: [docs/scenarios.md](docs/scenarios.md)\
-For more about scenario running: [src/rai/scenario_engine](src/rai/scenario_engine)
+- Embodied agent\
+GenAI based robot, maximum flexability, natural language mission definition.
 
-#### For available messages see:
+# ROSCon 2024
 
-- 📬 [Messages](./src/rai/message.py)
+RAI will be released during [ROSCon 2024](https://roscon.ros.org/2024/)!
+<p align="center">
+<img width="400" src="./imgs/sponsor.png" />
+</p>
 
-#### For available actions see:
+## RAI Talk
 
-- 🔨 [Actions](./src/rai/actions/actions.py)
-- 🤖 [ROS2 Actions](./src/rai/actions/ros_actions.py)
+RAI will be presented as a talk on [ROSCon 2024](https://roscon.ros.org/2024/), make sure to participate!
 
-#### 📝 Scenario Definition Example
+<p align="center">
+<img width="400" src="./imgs/talk.png" />
+</p>
 
-For example scenarios see:
+## Planned Demos 👀
 
-- 📘 [Simple scenario with email communication](./examples/demo_example.py)
-- 🤖 [ROS2 scenario](./examples/agri_ros_example.py)
-- 🔄 [Conditional messages and executors scenario](./examples/agri_example.py)
+We are planning a number of demos showcasing RAI's use cases in various environments and domains.
 
-## 🌐 Available LLM Vendors
+- [🌾 Agriculture Demo](https://github.com/RobotecAI/rai-agriculture-demo)
+- [🤖 Husarion Demo](https://github.com/RobotecAI/rai-husarion-demo)
+- [🦾 Manipulation Demo](https://github.com/RobotecAI/rai-manipulation-demo)
 
-We currently support the following vendors:
+The list will likely be extended, stay tuned!
 
-Locally hosted:
+---
 
-- 🏠 Ollama [link](https://ollama.com/)
-
-Cloud hosted:
-
-- ☁️ AWS Bedrock [link](https://aws.amazon.com/bedrock/)
-- ☁️ OpenAI [link](https://platform.openai.com/)
-
-Planned:
-
-- ☁️ Anthropic [link](https://www.anthropic.com/api)
-- ☁️ Cohere [link](https://cohere.com/)
-
-For more see: [src/rai/vendors](src/rai/vendors)
-
-### 🚀 Vendors Initialization Examples
-
-#### Ollama
-
-```python
-OllamaVendor(
-    ip_address="ip address",
-    port="11434",
-    model="llava",
-    logging_level=logging.INFO,
-)
-```
-
-#### OpenAI
-
-```python
-open_ai_vendor = OpenAIVendor(
-    model="gpt-4o", stream=False, logging_level=logging.INFO
-)
-```
-
-#### AWS Bedrock
-
-```python
-AWSBedrockVendor(
-    model="anthropic.claude-3-opus-20240229-v1:0", logging_level=logging.INFO
-)
-```
-
-## 🔗 Integration with Robotic Systems
-
-This engine provides support for integration with robotic systems through ROS2, allowing for real-time control and feedback within various robotic applications.\
-For more information see: [src/rai/communication](src/rai/communication)
-
-## 📚 Installation and further documentation
-
-### Installation instructions
-
-#### Requirements
-
-- python3.10^
-- poetry
-
-Poetry installation (probably other versions will work too):
-
-```bash
-python3 -m pip install poetry==1.8.3
-```
-
-#### Installation
-
-1. Clone the repository:
-
-```sh
-git clone https://github.com/RobotecAI/rai.git
-cd rai
-```
-
-2. Create and activate a virtual environment:
-
-```sh
-poetry install
-poetry shell
-```
-
-### Further documentation
-
-For examples see [examples](examples/)\
-For Message definition: [messages.md](docs/messages.md)\
-For Scenario definition: [scenarios.md](docs/scenarios.md)
-
-For more information see readmes in respective folders.
-
-```
-.
-├── docs
-│   ├── messages.md
-│   └── scenarios.md
-├── README.md
-└── src
-    └── rai
-        ├── actions
-        │   └── README.md
-        ├── communication
-        │   └── README.md
-        ├── README.md
-        ├── scenario_engine
-        │   └── README.md
-        └── vendors
-            └── README.md
-```
+For any inquires about RAI feel free to contact us on [LinkedIn](https://www.linkedin.com/company/robotec-ai) or visit us on [Robotec.ai](https://robotec.ai/)!
