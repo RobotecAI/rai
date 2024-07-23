@@ -1,0 +1,9 @@
+# Request
+string query
+
+---
+# Response
+bool success
+string message
+string[] documents
+float32[] scores
