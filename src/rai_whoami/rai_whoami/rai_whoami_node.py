@@ -37,7 +37,11 @@ class WhoAmI(Node):
             "rai_whoami_documentation_service",
             self.get_documentation_callback,
         )
-
+        self.srv = self.create_service(
+            Trigger,
+            "rai_whoami_identity_service",
+            self.get_identity_callback,
+        )
         self.robot_constitution_path = (
             self.get_parameter("robot_constitution_path")
             .get_parameter_value()
@@ -124,6 +128,20 @@ class WhoAmI(Node):
             response.success = False
 
         self.get_logger().info(f"Incoming request for documentation: {query}")
+        return response
+
+    def get_identity_callback(
+        self,
+        request: Trigger_Request,
+        response: Trigger_Response,
+    ) -> Trigger_Response:
+        """Return robot identity"""
+        identity_path = get_package_share_directory("rai_whoami") + "/identity.txt"
+        with open(identity_path, "r") as f:
+            identity = f.read()
+        response.success = True
+        response.message = identity
+        self.get_logger().info("Incoming request for RAI identity, responding")
         return response
 
 
