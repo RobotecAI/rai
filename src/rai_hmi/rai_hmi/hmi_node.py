@@ -11,26 +11,9 @@ from langchain_core.messages import (
 )
 from rclpy.node import Node
 from std_msgs.msg import String
+from std_srvs.srv import Trigger
 
 from .task import Task
-
-SYSTEM_PROMPT = """
-You are a helpful office assistant robot. You driver around using a Husarion ROSBot XL platform, equipped with
-1) a front-facing camera,
-2) a single-ray, 360° horizontal FOV LiDAR,
-3) an audio interface, consisting of a microphone and a speaker,
-4) a container box where small items can be placed.
-
-You drive around the office performing various tasks, and people might talk to you through an audio interface.
-If a user requests a task from you, continue the conversation until you are sure you have all information
-required to perform the task.
-
-Assume the conversation is carried over a voice interface, so try not to overwhelm the user.
-If you have multiple questions, please ask them one by one allowing user to respond before
-moving forward to the next question.
-
-Once you have gathered all information, add this task to queue, and acknoledge it to the user.
-"""
 
 
 class HMINode(Node):
@@ -39,7 +22,7 @@ class HMINode(Node):
 
         # TODO: add parameter to choose model
 
-        self.history: List[BaseMessage] = [SystemMessage(SYSTEM_PROMPT)]
+        self.history: List[BaseMessage] = []
 
         llm = ChatBedrock(
             model_id="anthropic.claude-3-5-sonnet-20240620-v1:0",
@@ -59,7 +42,60 @@ class HMINode(Node):
             String, "task_addition_requests", 10
         )
 
+        # TODO
+        # self.documentation_service = self.create_client(
+        #     VectorStoreRetrieval,
+        #     "rai_whoami_documentation_service",
+        #     self.documentation_service_callback,
+        # )
+        self.constitution_service = self.create_client(
+            Trigger,
+            "rai_whoami_constitution_service",
+        )
+        self.identity_service = self.create_client(
+            Trigger, "rai_whoami_identity_service"
+        )
+
         self.get_logger().info("HMI Node has been started")
+        self.initialize_system_prompt()
+
+    def initialize_system_prompt(self):
+        while not self.constitution_service.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info(
+                "Constitution service not available, waiting again..."
+            )
+
+        while not self.identity_service.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info("Identity service not available, waiting again...")
+
+        constitution_request = Trigger.Request()
+
+        constitution_future = self.constitution_service.call_async(constitution_request)
+        rclpy.spin_until_future_complete(self, constitution_future)
+        constitution_response = constitution_future.result()
+
+        identity_request = Trigger.Request()
+
+        identity_future = self.identity_service.call_async(identity_request)
+        rclpy.spin_until_future_complete(self, identity_future)
+        identity_response = identity_future.result()
+
+        system_prompt = f"""
+        Constitution:
+        {constitution_response.message}
+
+        Identity:
+        {identity_response.message}
+
+        You are a helpful assistant. You converse with users.
+        Assume the conversation is carried over a voice interface, so try not to overwhelm the user.
+        If you have multiple questions, please ask them one by one allowing user to respond before
+        moving forward to the next question. Keep the conversation short and to the point.
+        """
+
+        self.history.append(SystemMessage(content=system_prompt))
+
+        self.get_logger().info(f"System prompt initialized: {system_prompt}")
 
     def handle_human_message(self, human_ros_msg: String):
         if not human_ros_msg.data:
