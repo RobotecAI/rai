@@ -9,14 +9,6 @@ In your workspace you need to have an `src` folder containing this package `rai_
 
 ### Preparing the GroundingDINO
 
-Download the weights of the model:
-
-```
-mkdir PATH/TO/WEIGHTS
-cd PATH/TO/WEIGHTS
-wget https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth
-```
-
 Add required ROS dependencies:
 
 ```
@@ -30,31 +22,40 @@ In the base directory of the `RAI` package install dependancies:
 ```
 poetry install --with gdino
 ```
+
 Source the ros installation
 
 ```
 source /opt/ros/${ROS_DISTRO}/setup.bash
 ```
+
 Run the build process:
 
 ```
 colcon build
 ```
+
 Source the local installation:
 
 ```
 source ./install/setup.bash
 ```
+
 Activate the poetry environment:
 
 ```
 poetry shell
 ```
+
 Run the ROS node using `ros2 launch`:
 
 ```
-ros2 launch rai_grounding_dino gdino_launch.xml weights_path:=PATH/TO/WEIGHTS
+ros2 launch rai_grounding_dino gdino_launch.xml [weights_path:=PATH/TO/WEIGHTS]
 ```
+
+> [!NOTE] By default the weights will be downloaded to `$(ros2 pkg prefix rai_grounding_dino)/share/weights/`.
+> You can change this path if you downloaded the weights manually or moved them.
+
 ### Example
 
 An example client is provided with the package as `rai_grounding_dino/talker.py`
@@ -62,6 +63,7 @@ An example client is provided with the package as `rai_grounding_dino/talker.py`
 You can see it working by running:
 
 ```
-ros2 launch rai_grounding_dino example_communnication_launch.xml weights_path:=PATH/TO/WEIGHTS image_path:=src/rai_grounding_dino/images/sample.jpg
+ros2 launch rai_grounding_dino example_communnication_launch.xml image_path:=src/rai_grounding_dino/images/sample.jpg [weights_path:=PATH/TO/WEIGHTS]
 ```
+
 If everything was set up properly you should see a couple of detections with classes `dinosaur`, `dragon`, and `lizard`.
