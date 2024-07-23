@@ -1,3 +1,6 @@
+import os
+import subprocess
+from pathlib import Path
 from typing import TypedDict
 
 import rclpy
@@ -26,10 +29,49 @@ class GDinoService(Node):
         try:
             weight_path = self.get_parameter("weights_path").value
             assert isinstance(weight_path, str)
+            if self.get_parameter("weights_path").value == "":
+                weight_path = self._init_weight_path()
             self.boxer = GDBoxer(weight_path)
         except Exception:
             self.get_logger().error("Could not load model")
             raise Exception("Could not load model")
+
+    def _init_weight_path(self) -> Path:
+        try:
+            found_path = subprocess.check_output(
+                ["ros2", "pkg", "prefix", "rai_grounding_dino"]
+            ).decode("utf-8")
+            install_path = (
+                Path(found_path.strip())
+                / "share"
+                / "weights"
+                / "groundingdino_swint_ogc.pth"
+            )
+            # make sure the file exists
+            if install_path.exists():
+                return install_path
+            else:
+                self._download_weights(install_path)
+                return install_path
+
+        except Exception:
+            self.get_logger().error("Could not find package path")
+            raise Exception("Could not find package path")
+
+    def _download_weights(self, path: Path):
+        try:
+            os.makedirs(path.parent, exist_ok=True)
+            subprocess.run(
+                [
+                    "wget",
+                    "https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth",
+                    "-O",
+                    path,
+                ]
+            )
+        except Exception:
+            self.get_logger().error("Could not download weights")
+            raise Exception("Could not download weights")
 
     def classify_callback(self, request, response: RAIDetectionArray):
         self.get_logger().info(
