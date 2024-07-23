@@ -43,4 +43,13 @@ def generate_launch_description():
 
     tts_launch_inclusion = OpaqueFunction(function=include_tts_launch)
 
-    return LaunchDescription([tts_vendor_arg, asr_node, hmi_node, tts_launch_inclusion])
+    whoami_node = Node(
+        package="rai_whoami",
+        executable="rai_whoami_node",
+        name="rai_whoami_node",
+        output="screen",
+    )
+
+    return LaunchDescription(
+        [tts_vendor_arg, asr_node, hmi_node, tts_launch_inclusion, whoami_node]
+    )

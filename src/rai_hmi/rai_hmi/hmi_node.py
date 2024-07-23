@@ -1,19 +1,21 @@
 from typing import List
 
 import rclpy
-from langchain_aws import ChatBedrock
-from langchain_core.messages import (
-    AIMessage,
-    BaseMessage,
-    HumanMessage,
-    SystemMessage,
-    ToolMessage,
-)
+from ament_index_python.packages import get_package_share_directory
+from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain_community.vectorstores import FAISS
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
+from rai_interfaces.srv import VectorStoreRetrieval
+
 from .task import Task
+from .tools import QueryDatabaseTool, QueueTaskTool
 
 
 class HMINode(Node):
@@ -24,30 +26,28 @@ class HMINode(Node):
 
         self.history: List[BaseMessage] = []
 
-        llm = ChatBedrock(
-            model_id="anthropic.claude-3-5-sonnet-20240620-v1:0",
-            region_name="us-east-1",
-        )
-
-        tools = [self.add_task_to_queue]
-        self.llm_with_tools = llm.bind_tools(tools)
-
+        self.callback_group = ReentrantCallbackGroup()
         self.hmi_subscription = self.create_subscription(
-            String, "from_human", self.handle_human_message, 10
+            String,
+            "from_human",
+            self.handle_human_message,
+            10,
+            callback_group=self.callback_group,
         )
 
-        self.hmi_publisher = self.create_publisher(String, "to_human", 10)
+        self.hmi_publisher = self.create_publisher(
+            String, "to_human", 10, callback_group=self.callback_group
+        )
 
         self.task_addition_request_publisher = self.create_publisher(
             String, "task_addition_requests", 10
         )
 
-        # TODO
-        # self.documentation_service = self.create_client(
-        #     VectorStoreRetrieval,
-        #     "rai_whoami_documentation_service",
-        #     self.documentation_service_callback,
-        # )
+        self.documentation_service = self.create_client(
+            VectorStoreRetrieval,
+            "rai_whoami_documentation_service",
+            callback_group=self.callback_group,
+        )
         self.constitution_service = self.create_client(
             Trigger,
             "rai_whoami_constitution_service",
@@ -57,7 +57,51 @@ class HMINode(Node):
         )
 
         self.get_logger().info("HMI Node has been started")
-        self.initialize_system_prompt()
+        system_prompt = self.initialize_system_prompt()
+
+        llm = ChatOpenAI(model="gpt-4o")
+
+        tools = [
+            QueryDatabaseTool(get_response=self.get_database_response),
+            QueueTaskTool(add_task=self.add_task_to_queue),
+        ]
+        self.name_to_tool_map = {tool.name: tool for tool in tools}
+
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", system_prompt),
+                ("placeholder", "{chat_history}"),
+                ("human", "{input}"),
+                ("placeholder", "{agent_scratchpad}"),
+            ]
+        )
+        self.agent = create_tool_calling_agent(llm=llm, tools=tools, prompt=prompt)
+        self.agent_executor = AgentExecutor(agent=self.agent, tools=tools, verbose=True)
+        self.faiss_index = self._load_documentation()
+
+    def get_database_response(self, query: str) -> VectorStoreRetrieval.Response:
+        # The following code is a 1:1 replacement for the commented out code below
+        # The same code is used in the rai_whoami_node.py for the service callback
+        response = VectorStoreRetrieval.Response()
+        output = self.faiss_index.similarity_search_with_score(query)
+        response.message = "Query successful"
+        response.success = True
+        response.documents = [doc.page_content for doc, _ in output]
+        response.scores = [float(score) for _, score in output]
+        return response
+
+        # Running the following code is problematic because
+        # it works once, but then it blocks the handle_human_message
+        while not self.documentation_service.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info("Identity service not available, waiting again...")
+
+        request = VectorStoreRetrieval.Request()
+        request.query = query
+
+        request_future = self.documentation_service.call_async(request)
+        rclpy.spin_until_future_complete(self, request_future)
+        request_result = request_future.result()
+        return request_result
 
     def initialize_system_prompt(self):
         while not self.constitution_service.wait_for_service(timeout_sec=1.0):
@@ -93,42 +137,29 @@ class HMINode(Node):
         moving forward to the next question. Keep the conversation short and to the point.
         """
 
-        self.history.append(SystemMessage(content=system_prompt))
-
         self.get_logger().info(f"System prompt initialized: {system_prompt}")
+        return system_prompt
 
     def handle_human_message(self, human_ros_msg: String):
+        self.get_logger().info("Handling human message")
         if not human_ros_msg.data:
             self.get_logger().warn("Received an empty message, discarding")
             return
-
+        response = self.agent_executor.invoke(
+            {"input": human_ros_msg.data, "chat_history": self.history}
+        )
         self.history.append(HumanMessage(human_ros_msg.data))
+        self.history.append(SystemMessage(content=response["output"]))
+        self.send_message_to_human(response["output"])
+        self.get_logger().info("Finished handling human message")
 
-        ai_msg: AIMessage = self.llm_with_tools.invoke(self.history)
-        self.history.append(ai_msg)
-
-        if ai_msg.content:
-            self.send_message_to_human(ai_msg.content)
-
-        # Claude 3.5 Sonnet on AWS Bedrock seems not to include any message content
-        # if a tool is run. We need to to mitigate this issue by appending a tool
-        # message after the AI message that requested tool use.
-        for tool_call in ai_msg.tool_calls:
-            task_json = tool_call["args"]["task"]
-            task = Task.model_validate(task_json)
-            self.add_task_to_queue(task)
-
-            self.history.append(
-                ToolMessage("Task added!", tool_call_id=tool_call["id"])
-            )
-
-        # Request a new AI message if any tools have been run.
-        if ai_msg.tool_calls:
-            new_ai_msg: AIMessage = self.llm_with_tools.invoke(self.history)
-            self.history.append(new_ai_msg)
-
-            if new_ai_msg.content:
-                self.send_message_to_human(new_ai_msg.content)
+    def _load_documentation(self) -> FAISS:
+        faiss_index = FAISS.load_local(
+            get_package_share_directory("rai_whoami"),
+            OpenAIEmbeddings(),
+            allow_dangerous_deserialization=True,
+        )
+        return faiss_index
 
     def send_message_to_human(self, content: str):
         msg = String()
@@ -137,7 +168,7 @@ class HMINode(Node):
 
     def add_task_to_queue(self, task: Task):
         msg = String()
-        msg.data = task.model_dump_json()
+        msg.data = task.json()
         self.task_addition_request_publisher.publish(msg)
 
     # TODO: This method is currently not called anywhere

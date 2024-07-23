@@ -118,11 +118,13 @@ class WhoAmI(Node):
         self.get_logger().warn(f"Query: {query}")
 
         if query:
+            self.get_logger().info(f"Querying for documentation: {query}")
             output = self.faiss_index.similarity_search_with_score(query)
             response.message = "Query successful"
             response.success = True
-            response.documents = [str(doc) for doc, _ in output]
+            response.documents = [doc.page_content for doc, _ in output]
             response.scores = [float(score) for _, score in output]
+            self.get_logger().info(f"Query successful, found {len(output)} documents")
         else:
             response.message = "No query provided"
             response.success = False
