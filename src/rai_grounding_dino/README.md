@@ -17,10 +17,10 @@ cd PATH/TO/WEIGHTS
 wget https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth
 ```
 
-Add required ROS dependacies:
+Add required ROS dependencies:
 
 ```
-sudo apt install ros-humble-vision-msgs
+rosdep install --from-paths src --ignore-src -r
 ```
 
 ### Build and run
