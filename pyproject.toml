@@ -37,6 +37,10 @@ openai-whisper = "^20231117"
 scipy = "^1.14.0"
 torchaudio = "^2.3.1"
 elevenlabs = "^1.4.1"
+faiss-cpu = "^1.8.0.post1"
+rich = "^13.7.1"
+docx2txt = "^0.8"
+pypdf = "^4.2.0"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.4"
