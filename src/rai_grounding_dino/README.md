@@ -53,8 +53,10 @@ Run the ROS node using `ros2 launch`:
 ros2 launch rai_grounding_dino gdino_launch.xml [weights_path:=PATH/TO/WEIGHTS]
 ```
 
-> [!NOTE] By default the weights will be downloaded to `$(ros2 pkg prefix rai_grounding_dino)/share/weights/`.
+> [!NOTE]
+> By default the weights will be downloaded to `$(ros2 pkg prefix rai_grounding_dino)/share/weights/`.
 > You can change this path if you downloaded the weights manually or moved them.
+
 
 ### Example
 
