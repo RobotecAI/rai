@@ -12,12 +12,12 @@ setup(
     ],
     install_requires=["setuptools"],
     zip_safe=True,
-    maintainer="bboczek",
+    maintainer="Bartłomiej Boczek",
     maintainer_email="bartlomiej.boczek@robotec.ai",
     description="TODO: Package description",
     license="Apache-2.0",
     tests_require=["pytest"],
     entry_points={
-        "console_scripts": [],
+        "console_scripts": ["rai_node = rai.node:main"],
     },
 )
