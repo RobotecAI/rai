@@ -1,12 +1,17 @@
+import functools
+import uuid
 from typing import Any, Dict, Tuple, Type
 
 import rclpy
+import rosidl_runtime_py.set_message
+import rosidl_runtime_py.utilities
 from langchain.tools import BaseTool
 from langchain_core.pydantic_v1 import BaseModel, Field
+from rclpy.action import ActionClient
+from rclpy.action.client import ClientGoalHandle
 from rclpy.impl.rcutils_logger import RcutilsLogger
 from rclpy.node import Node
 from ros2cli.node.strategy import NodeStrategy
-from rosidl_runtime_py.set_message import set_message_fields
 
 from rai.communication.ros_communication import wait_for_message
 
@@ -127,7 +132,7 @@ class Ros2PubMessageTool(Ros2BaseTool):
     ) -> Tuple[object, Type]:
         msg_cls: Type = import_message_from_str(msg_type)
         msg = msg_cls()
-        set_message_fields(msg, msg_args)
+        rosidl_runtime_py.set_message.set_message_fields(msg, msg_args)
         return msg, msg_cls
 
     def _run(self, topic_name: str, msg_type: str, msg_args: Dict[str, Any]):
@@ -142,3 +147,59 @@ class Ros2PubMessageTool(Ros2BaseTool):
 
         msg.header.stamp = self.node.get_clock().now().to_msg()
         publisher.publish(msg)
+
+
+class Ros2ActionRunnerInput(BaseModel):
+    action_name: str = Field(..., description="Name of the action")
+    action_type: str = Field(..., description="Type of the action")
+    action_goal_args: Dict[str, Any] = Field(
+        ..., description="Arguments for the action goal"
+    )
+
+
+class Ros2ActionRunner(Ros2BaseTool):
+    name: str = "Ros2ActionRunner"
+    description: str = "A tool for running a ros2 action"
+
+    args_schema: Type[Ros2ActionRunnerInput] = Ros2ActionRunnerInput
+
+    def _build_msg(
+        self, msg_type: str, msg_args: Dict[str, Any]
+    ) -> Tuple[object, Type]:
+        msg_cls: Type = rosidl_runtime_py.utilities.get_interface(msg_type)
+        msg = msg_cls.Goal()
+        rosidl_runtime_py.set_message.set_message_fields(msg, msg_args)
+        return msg, msg_cls
+
+    def _run(
+        self, action_name: str, action_type: str, action_goal_args: Dict[str, Any]
+    ):
+        goal_msg, msg_cls = self._build_msg(action_type, action_goal_args)
+        client = ActionClient(
+            self.node, msg_cls, action_name, callback_group=self.node.callback_group
+        )
+        client.wait_for_server()
+        uid = str(uuid.uuid4())
+        client.send_goal_async(goal_msg, functools.partial(self.feedback_callback, uid))
+        self.node.get_actions_store().register_action(uid)
+        return uid  # TODO(boczekbartek): maybe refactor to langchain tool call id
+
+    # Calllback names follow official ros2 actions tutorial
+    def goal_response_callback(self, uid: str, future: rclpy.Future):
+        goal_handle: ClientGoalHandle = future.result()  # type: ignore
+        if not goal_handle.accepted:
+            self.node.get_actions_store().add_results(uid, "Action rejected")
+            return
+
+        get_result_future = goal_handle.get_result_async()
+        get_result_future.add_done_callback(
+            functools.partial(self.get_result_callback, uid)
+        )
+
+    def get_result_callback(self, uid: str, future: rclpy.Future):
+        result = future.result().result
+        self.node.get_actions_store().add_result(uid, result)
+
+    def feedback_callback(self, uid: str, feedback_msg: Any):
+        feedback = feedback_msg.feedback
+        self.node.get_actions_store().add_feedback(uid, feedback)
