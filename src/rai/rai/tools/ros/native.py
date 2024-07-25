@@ -1,19 +1,19 @@
 import functools
+import json
 import uuid
-from typing import Any, Dict, Tuple, Type
+from typing import Any, Dict, OrderedDict, Tuple, Type
 
 import rclpy
 import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
 from langchain.tools import BaseTool
 from langchain_core.pydantic_v1 import BaseModel, Field
-from rclpy.action import ActionClient
-from rclpy.action.client import ClientGoalHandle
+from rclpy.action import ActionClient, get_action_names_and_types
 from rclpy.impl.rcutils_logger import RcutilsLogger
-from rclpy.node import Node
 from ros2cli.node.strategy import NodeStrategy
 
 from rai.communication.ros_communication import wait_for_message
+from rai.node import RaiNode
 
 from .utils import import_message_from_str
 
@@ -23,7 +23,7 @@ class Ros2BaseInput(BaseModel):
 
 
 class Ros2BaseTool(BaseTool):
-    node: Node = Field(..., exclude=True, include=False, required=True)
+    node: RaiNode = Field(..., exclude=True, include=False, required=True)
 
     args_schema: Type[Ros2BaseInput] = Ros2BaseInput
 
@@ -43,6 +43,64 @@ class Ros2GetTopicsNamesAndTypesTool(BaseTool):
                 for topic_name, topic_type in node.get_topic_names_and_types()
                 if len(topic_name.split("/")) <= 2
             ]
+
+
+class Ros2GetActionNamesAndTypesTool(Ros2BaseTool):
+    name: str = "Ros2GetActionNamesAndTypes"
+    description: str = "A tool for getting all ros2 actions names and types"
+
+    def _run(self):
+        # with NodeStrategy(dict()) as node:
+        output = [
+            (topic_name, topic_type)
+            for topic_name, topic_type in get_action_names_and_types(self.node)  # type: ignore
+        ]
+        self.logger.info(f"Actions: {output}")
+        return str(output)
+
+
+class ShowRos2MsgInterfaceInput(BaseModel):
+    """Input for the show_ros2_msg_interface tool."""
+
+    msg_name: str = Field(..., description="Ros2 message name in typical ros2 format.")
+
+
+class Ros2ShowRos2MsgInterfaceTool(Ros2BaseTool):
+    name: str = "Ros2ShowRos2MsgInterface"
+    description: str = """A tool for showing ros2 message interface in json format.
+    usage:
+    ```python
+    ShowRos2MsgInterface.run({"msg_name": "geometry_msgs/msg/PoseStamped"})
+    ```
+    """
+
+    args_schema: Type[ShowRos2MsgInterfaceInput] = ShowRos2MsgInterfaceInput
+
+    def _run(self, msg_name: str):
+        """Show ros2 message interface in json format."""
+        msg_cls: Type = rosidl_runtime_py.utilities.get_interface(msg_name)
+        self.logger.info(f"Message: {msg_cls}")
+        try:
+            msg_dict: OrderedDict = rosidl_runtime_py.convert.message_to_ordereddict(
+                msg_cls()
+            )
+            return json.dumps(msg_dict)
+        except NotImplementedError:
+            # For action classes that can't be instantiated
+            goal_dict: OrderedDict = rosidl_runtime_py.convert.message_to_ordereddict(
+                msg_cls.Goal()
+            )
+
+            result_dict: OrderedDict = rosidl_runtime_py.convert.message_to_ordereddict(
+                msg_cls.Result()
+            )
+
+            feedback_dict: OrderedDict = (
+                rosidl_runtime_py.convert.message_to_ordereddict(msg_cls.Feedback())
+            )
+            return json.dumps(
+                {"goal": goal_dict, "result": result_dict, "feedback": feedback_dict}
+            )
 
 
 class Ros2GetOneMsgFromTopicInput(BaseModel):
@@ -180,26 +238,26 @@ class Ros2ActionRunner(Ros2BaseTool):
         )
         client.wait_for_server()
         uid = str(uuid.uuid4())
-        client.send_goal_async(goal_msg, functools.partial(self.feedback_callback, uid))
-        self.node.get_actions_store().register_action(uid)
-        return uid  # TODO(boczekbartek): maybe refactor to langchain tool call id
-
-    # Calllback names follow official ros2 actions tutorial
-    def goal_response_callback(self, uid: str, future: rclpy.Future):
-        goal_handle: ClientGoalHandle = future.result()  # type: ignore
-        if not goal_handle.accepted:
-            self.node.get_actions_store().add_results(uid, "Action rejected")
-            return
-
-        get_result_future = goal_handle.get_result_async()
-        get_result_future.add_done_callback(
-            functools.partial(self.get_result_callback, uid)
+        client.send_goal_async(
+            goal_msg, functools.partial(self.node.feedback_callback, uid)
         )
 
-    def get_result_callback(self, uid: str, future: rclpy.Future):
-        result = future.result().result
-        self.node.get_actions_store().add_result(uid, result)
+        self.node.get_logger().info(f"Action submitted {goal_msg=}")
+        self.node.get_actions_cache().register_action(
+            uid, action_name, action_type, action_goal_args
+        )
+        return uid  # TODO(boczekbartek): maybe refactor to langchain tool call id
 
-    def feedback_callback(self, uid: str, feedback_msg: Any):
-        feedback = feedback_msg.feedback
-        self.node.get_actions_store().add_feedback(uid, feedback)
+
+class CheckActionResultsInput(BaseModel):
+    pass
+
+
+class Ros2CheckActionResults(Ros2BaseTool):
+    name = "Ros2CheckActionResults"
+    description = "A tool for checking the results of submitted ros2 actions"
+
+    args_schema: Type[CheckActionResultsInput] = CheckActionResultsInput
+
+    def _run(self):
+        return str(self.node.get_results())

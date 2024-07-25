@@ -4,6 +4,7 @@ import os
 from typing import Callable, List, Literal, Sequence, Union, cast
 
 import coloredlogs
+import rclpy.executors
 from langchain.globals import set_llm_cache
 from langchain_community.cache import RedisCache
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -19,6 +20,7 @@ from langfuse.callback import CallbackHandler
 from redis import Redis
 
 from rai.history_saver import HistorySaver
+from rai.node import RaiNode
 from rai.scenario_engine.messages import (
     AgentLoop,
     FutureAiMessage,
@@ -78,12 +80,16 @@ class ScenarioRunner:
         self,
         scenario: ScenarioType,
         llm: BaseChatModel,
+        rosnode: RaiNode,
         llm_type: Literal["openai", "bedrock"],
         scenario_name: str = "",
         logging_level: int = logging.WARNING,
         log_usage: bool = True,
         use_cache: bool = True,
     ):
+        self.node = rosnode
+        # self.executor = rclpy.executors.MultiThreadedExecutor()
+        self.scenario_name = scenario_name
         self.scenario = scenario
         self.log_usage = log_usage
         self.llm = llm
@@ -138,6 +144,12 @@ class ScenarioRunner:
         """Recursively run the scenario."""
 
         for msg in scenario:
+            spins = 15
+            while spins > 0:
+                if rclpy.ok():
+                    rclpy.spin_once(self.node, timeout_sec=0.1)
+                    spins -= 1
+
             if isinstance(msg, (HumanMessage, AIMessage, ToolMessage, SystemMessage)):
                 self.history.append(msg)
             elif isinstance(msg, FutureAiMessage):
@@ -158,6 +170,11 @@ class ScenarioRunner:
                 for _ in range(msg.stop_iters):
                     # if the last message is from the AI, we need to add a human message to continue the agent loop
                     # otherwise the bedrock model will not be able to continue the conversation
+                    spins = 15
+                    while spins > 0:
+                        if rclpy.ok():
+                            rclpy.spin_once(self.node, timeout_sec=0.1)
+                            spins -= 1
                     if self.history[-1].type == "ai":
                         self.history.append(
                             HumanMessage(
