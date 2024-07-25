@@ -7,6 +7,7 @@ from rclpy.parameter import Parameter
 from std_srvs.srv import Trigger
 from std_srvs.srv._trigger import Trigger_Request, Trigger_Response
 
+
 class WhoAmI(Node):
 
     def __init__(self):
@@ -15,7 +16,11 @@ class WhoAmI(Node):
         self.declare_parameter("robot_description_package", Parameter.Type.STRING)
         self.declare_parameter("robot_description_file", Parameter.Type.STRING)
         self.declare_parameter(
-            "robot_constitution_path", os.path.join(get_package_share_directory("rai_whoami"), "default_robot_constitution.txt")
+            "robot_constitution_path",
+            os.path.join(
+                get_package_share_directory("rai_whoami"),
+                "default_robot_constitution.txt",
+            ),
         )
 
         self.srv = self.create_service(
