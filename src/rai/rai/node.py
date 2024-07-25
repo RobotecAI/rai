@@ -86,18 +86,14 @@ class RaiNode(Node):
 
         self.callback_group = ReentrantCallbackGroup()
         self._actions_cache = RaiActionStore()
-        # self.timer = self.create_timer(1.0, self._on_timer)
-
-    # def _on_timer(self):
-    #     self.get_logger().info(f"Timer callback: {self._actions_cache._feedbacks}")
 
     def get_actions_cache(self) -> RaiActionStoreInterface:
         return self._actions_cache
 
     def get_results(self) -> Dict[str, Any]:
         self.get_logger().info("Getting results")
-        # return self._actions_cache.get_results(drop=False)
-        return self._actions_cache._feedbacks
+        return self._actions_cache.get_results(drop=False)
+        # return self._actions_cache._feedbacks
 
     # Calllback names follow official ros2 actions tutorial
     def goal_response_callback(self, uid: str, future: rclpy.Future):

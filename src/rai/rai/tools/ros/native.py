@@ -211,7 +211,7 @@ class Ros2ActionRunnerInput(BaseModel):
     action_name: str = Field(..., description="Name of the action")
     action_type: str = Field(..., description="Type of the action")
     action_goal_args: Dict[str, Any] = Field(
-        ..., description="Arguments for the action goal"
+        ..., description="Dictionary with arguments for the action goal message"
     )
 
 
@@ -238,15 +238,19 @@ class Ros2ActionRunner(Ros2BaseTool):
         )
         client.wait_for_server()
         uid = str(uuid.uuid4())
-        client.send_goal_async(
-            goal_msg, functools.partial(self.node.feedback_callback, uid)
+        future = client.send_goal_async(
+            goal_msg,
+            feedback_callback=functools.partial(self.node.feedback_callback, uid),
+        )
+        future.add_done_callback(
+            functools.partial(self.node.goal_response_callback, uid)
         )
 
         self.node.get_logger().info(f"Action submitted {goal_msg=}")
         self.node.get_actions_cache().register_action(
             uid, action_name, action_type, action_goal_args
         )
-        return uid  # TODO(boczekbartek): maybe refactor to langchain tool call id
+        return f"Action call uid: {uid}"  # TODO(boczekbartek): maybe refactor to langchain tool call id
 
 
 class CheckActionResultsInput(BaseModel):
