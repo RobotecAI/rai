@@ -74,21 +74,36 @@ class ScenarioRunner:
     """
     The ScenarioRunner class is responsible for running a given scenario. It iterates over the scenario and executes the
     actions defined in the scenario.
+
+    Args:
+        scenario (ScenarioType): The scenario to run.
+        llm (BaseChatModel): The language model to use for the scenario
+        ros_node (RaiNode): The ROS2 node to use for the scenario
+        llm_type (Literal["openai", "bedrock"]): The type of language model to use for the scenario
+        scenario_name (str, optional): The name of the scenario. Defaults to "".
+        logging_level (int, optional): The logging level to use for the scenario. Defaults to logging.WARNING.
+        log_usage (bool, optional): Whether to log usage. Defaults to True.
+        use_cache (bool, optional): Whether to use the cache. Defaults to True.
+        ros_spin_time (int, optional): The ROS2 spin time for every LLM iteration. Defaults to 1s.
     """
 
     def __init__(
         self,
         scenario: ScenarioType,
         llm: BaseChatModel,
-        rosnode: RaiNode,
+        ros_node: RaiNode,
         llm_type: Literal["openai", "bedrock"],
         scenario_name: str = "",
         logging_level: int = logging.WARNING,
         log_usage: bool = True,
         use_cache: bool = True,
+        ros_spin_time: int = 1,
     ):
-        self.node = rosnode
-        # self.executor = rclpy.executors.MultiThreadedExecutor()
+        self.ros_node = ros_node
+
+        self.ros_single_spin_time = 0.1
+        self.ros_spins_per_iter = int(ros_spin_time / self.ros_single_spin_time)
+
         self.scenario_name = scenario_name
         self.scenario = scenario
         self.log_usage = log_usage
@@ -140,16 +155,15 @@ class ScenarioRunner:
             self.save_to_html()
         return self.history
 
+    def ros_spin(self):
+        for _ in range(self.ros_spins_per_iter):
+            if rclpy.ok():
+                rclpy.spin_once(self.ros_node, timeout_sec=self.ros_single_spin_time)
+
     def _run(self, scenario: ScenarioType):
         """Recursively run the scenario."""
 
         for msg in scenario:
-            spins = 15
-            while spins > 0:
-                if rclpy.ok():
-                    rclpy.spin_once(self.node, timeout_sec=0.1)
-                    spins -= 1
-
             if isinstance(msg, (HumanMessage, AIMessage, ToolMessage, SystemMessage)):
                 self.history.append(msg)
             elif isinstance(msg, FutureAiMessage):
@@ -170,11 +184,7 @@ class ScenarioRunner:
                 for _ in range(msg.stop_iters):
                     # if the last message is from the AI, we need to add a human message to continue the agent loop
                     # otherwise the bedrock model will not be able to continue the conversation
-                    spins = 15
-                    while spins > 0:
-                        if rclpy.ok():
-                            rclpy.spin_once(self.node, timeout_sec=0.1)
-                            spins -= 1
+                    self.ros_spin()
                     if self.history[-1].type == "ai":
                         self.history.append(
                             HumanMessage(

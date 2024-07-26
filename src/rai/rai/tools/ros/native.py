@@ -9,6 +9,7 @@ import rosidl_runtime_py.utilities
 from langchain.tools import BaseTool
 from langchain_core.pydantic_v1 import BaseModel, Field
 from rclpy.action import ActionClient, get_action_names_and_types
+from rclpy.action.client import ClientGoalHandle
 from rclpy.impl.rcutils_logger import RcutilsLogger
 from ros2cli.node.strategy import NodeStrategy
 
@@ -242,14 +243,20 @@ class Ros2ActionRunner(Ros2BaseTool):
             goal_msg,
             feedback_callback=functools.partial(self.node.feedback_callback, uid),
         )
-        future.add_done_callback(
-            functools.partial(self.node.goal_response_callback, uid)
+        rclpy.spin_until_future_complete(self.node, future)
+        # Calllback names follow official ros2 actions tutorial
+        goal_handle: ClientGoalHandle = future.result()  # type: ignore
+        if not goal_handle.accepted:
+            self.node.get_actions_cache().add_result(uid, "Action rejected")
+            return "Goal rejected"
+
+        self.node.get_logger().info("Goal accepted")
+        get_result_future = goal_handle.get_result_async()
+        self.node.get_actions_cache().register_action(
+            uid, action_name, action_type, action_goal_args, get_result_future
         )
 
         self.node.get_logger().info(f"Action submitted {goal_msg=}")
-        self.node.get_actions_cache().register_action(
-            uid, action_name, action_type, action_goal_args
-        )
         return f"Action call uid: {uid}"  # TODO(boczekbartek): maybe refactor to langchain tool call id
 
 
