@@ -4,18 +4,18 @@ from typing import List
 
 import rclpy
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
-from rclpy.node import Node
 
 from rai.config.models import OPENAI_MULTIMODAL
+from rai.node import RaiNode
 from rai.scenario_engine.messages import AgentLoop
 from rai.scenario_engine.scenario_engine import ScenarioPartType, ScenarioRunner
 from rai.tools.ros.cat_demo_tools import FinishTool
-from rai.tools.ros.native import (
-    Ros2GetOneMsgFromTopicTool,
-    Ros2GetTopicsNamesAndTypesTool,
-    Ros2PubMessageTool,
+from rai.tools.ros.native import (  # Ros2GetOneMsgFromTopicTool,; Ros2GetTopicsNamesAndTypesTool,; Ros2PubMessageTool,
+    Ros2ActionRunner,
+    Ros2CheckActionResults,
+    Ros2GetActionNamesAndTypesTool,
+    Ros2ShowRos2MsgInterfaceTool,
 )
 
 
@@ -26,12 +26,16 @@ def main():
 
     rclpy.init()
 
-    rai_node = Node("rai")  # type: ignore
+    rai_node = RaiNode()  # type: ignore
 
-    tools: List[BaseTool] = [
-        Ros2GetTopicsNamesAndTypesTool(),
-        Ros2GetOneMsgFromTopicTool(node=rai_node),
-        Ros2PubMessageTool(node=rai_node),
+    tools: List = [
+        # Ros2GetTopicsNamesAndTypesTool(),
+        # Ros2GetOneMsgFromTopicTool(node=rai_node),
+        # Ros2PubMessageTool(node=rai_node),
+        Ros2GetActionNamesAndTypesTool(node=rai_node),
+        Ros2ShowRos2MsgInterfaceTool(node=rai_node),
+        Ros2ActionRunner(node=rai_node),
+        Ros2CheckActionResults(node=rai_node),
         FinishTool(),
     ]
 
@@ -50,6 +54,7 @@ def main():
     runner = ScenarioRunner(
         scenario,
         llm,
+        rosnode=RaiNode(),  # type: ignore
         llm_type="openai",
         scenario_name="Husarion example",
         log_usage=log_usage,
