@@ -55,3 +55,6 @@ markers = [
     "billable: marks test as billable  (deselect with '-m \"not billable\"')",
 ]
 addopts = "-m 'not billable'"
+
+[tool.poetry.scripts]
+create_robot_package = "rai.cli.rai_cli:create_robot_package"
