@@ -32,7 +32,7 @@ This will require opening 2 terminals and running the following commands
    ```bash
    . /opt/ros/${ROS_DISTRO}/setup.bash
    . ./install/setup.bash
-   ros2 run action_tutorials_py fibonacci_server
+   ros2 run action_tutorials_py fibonacci_action_server
    ```
 
 2. Run the action `RAI` example
@@ -41,7 +41,7 @@ This will require opening 2 terminals and running the following commands
    . /opt/ros/${ROS_DISTRO}/setup.bash
    . ./install/setup.bash
    poetry shell
-   python simple_example_ros_actions.py
+   python examples/simple_example_ros_actions.py
    ```
 
 ## Nav2 Gazebo + Turtlebot
