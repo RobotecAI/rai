@@ -1,7 +1,7 @@
 import functools
 import json
 import uuid
-from typing import Any, Dict, OrderedDict, Tuple, Type
+from typing import Any, Dict, Optional, OrderedDict, Tuple, Type
 
 import rclpy
 import rosidl_runtime_py.set_message
@@ -225,8 +225,18 @@ class Ros2ActionRunner(Ros2BaseTool):
     def _build_msg(
         self, msg_type: str, msg_args: Dict[str, Any]
     ) -> Tuple[object, Type]:
+        """
+        Import message and create it. Return both ready message and message class.
+
+        msgs args can have two formats:
+        { "goal" : {arg 1 : xyz, ... } or {arg 1 : xyz, ... }
+        """
+
         msg_cls: Type = rosidl_runtime_py.utilities.get_interface(msg_type)
         msg = msg_cls.Goal()
+
+        if "goal" in msg_args:
+            msg_args = msg_args["goal"]
         rosidl_runtime_py.set_message.set_message_fields(msg, msg_args)
         return msg, msg_cls
 
@@ -261,7 +271,10 @@ class Ros2ActionRunner(Ros2BaseTool):
 
 
 class CheckActionResultsInput(BaseModel):
-    pass
+    uid: Optional[str] = Field(
+        None,
+        description="Optional action uid. If None - results from all submitted actions will be returned.",
+    )
 
 
 class Ros2CheckActionResults(Ros2BaseTool):
@@ -270,5 +283,29 @@ class Ros2CheckActionResults(Ros2BaseTool):
 
     args_schema: Type[CheckActionResultsInput] = CheckActionResultsInput
 
+    def _run(self, uid: Optional[str]):
+        return str(self.node.get_results(uid))
+
+
+class CancelActionResultsInput(BaseModel):
+    uid: str = Field(..., description="Action uid.")
+
+
+class Ros2CancelAction(Ros2BaseTool):
+    name = "Ros2CancelAction"
+    description = "Cancel submitted action"
+
+    args_schema: Type[CancelActionResultsInput] = CancelActionResultsInput
+
+    def _run(self, uid: str):
+        return str(self.node.cancel_action(uid))
+
+
+class Ros2GetRegisteredActions(Ros2BaseTool):
+    name = "Ros2GetRegisteredAction"
+    description = "List action run by LLM"
+
+    args_schema: Type[CancelActionResultsInput] = CancelActionResultsInput
+
     def _run(self):
-        return str(self.node.get_results())
+        return str(self.node.get_running_actions())
