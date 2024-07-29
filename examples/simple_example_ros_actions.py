@@ -12,7 +12,7 @@ from rai.node import RaiNode
 from rai.scenario_engine.messages import AgentLoop
 from rai.scenario_engine.scenario_engine import ScenarioPartType, ScenarioRunner
 from rai.tools.ros.cat_demo_tools import FinishTool
-from rai.tools.ros.native import Ros2ShowRos2MsgInterfaceTool
+from rai.tools.ros.native import Ros2ShowMsgInterfaceTool
 from rai.tools.ros.native_actions import (
     Ros2ActionRunner,
     Ros2CancelAction,
@@ -34,7 +34,7 @@ def main():
 
     tools: List[BaseTool] = [
         Ros2GetActionNamesAndTypesTool(node=rai_node),
-        Ros2ShowRos2MsgInterfaceTool(),
+        Ros2ShowMsgInterfaceTool(),
         Ros2ActionRunner(node=rai_node),
         Ros2CheckActionResults(node=rai_node),
         Ros2CancelAction(node=rai_node),
