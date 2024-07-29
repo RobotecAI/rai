@@ -67,3 +67,4 @@ addopts = "-m 'not billable' --ignore=src"
 
 [tool.poetry.scripts]
 create_rai_ws = "rai.cli.rai_cli:create_rai_ws"
+parse_whoami_package = "rai.cli.rai_cli:parse_whoami_package"

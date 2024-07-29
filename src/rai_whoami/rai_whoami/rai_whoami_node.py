@@ -115,7 +115,7 @@ class WhoAmI(Node):
     ) -> VectorStoreRetrieval_Response:
         """Return documentation based on the query string"""
         query = request.query
-        self.get_logger().warn(f"Query: {query}")
+        self.get_logger().info(f"Datbase queried with: {query}")
 
         if query:
             self.get_logger().info(f"Querying for documentation: {query}")
