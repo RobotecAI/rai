@@ -51,6 +51,7 @@ def create_rai_ws():
     modify_setup_py(setup_py_path)
 
 
+# TODO: Refactor this hacky solution
 # NOTE (mkotynia) fast solution, worth refactor in the future and testing if it generic for all setup.py file confgurations
 def modify_setup_py(setup_py_path):
     with open(setup_py_path, "r") as file:
@@ -58,7 +59,6 @@ def modify_setup_py(setup_py_path):
 
     # Add the get_all_files function at the top of the setup.py
     new_function = """
-import os
 def get_all_files(directory):
     file_paths = []
     for root, dirs, files in os.walk(directory):
@@ -66,6 +66,7 @@ def get_all_files(directory):
             file_paths.append(os.path.join(root, file))
     return file_paths
 """
+    setup_content = "import os\n" + setup_content
     # Find the position to insert the new function
     insert_pos = setup_content.find("setup(")
 
