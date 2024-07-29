@@ -54,4 +54,7 @@ profile = "black"
 markers = [
     "billable: marks test as billable  (deselect with '-m \"not billable\"')",
 ]
-addopts = "-m 'not billable'"
+addopts = "-m 'not billable' --ignore=src"
+
+[tool.poetry.scripts]
+create_rai_ws = "rai.cli.rai_cli:create_rai_ws"
