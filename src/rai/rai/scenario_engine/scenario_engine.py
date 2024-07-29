@@ -178,7 +178,7 @@ class ScenarioRunner:
                 )
             elif isinstance(msg, AgentLoop):
                 self.logger.info(
-                    f"Looping agent actions until {msg.stop_tool}. Max {msg.stop_iters} loops."
+                    f"looping agent actions until {msg.stop_tool}. max {msg.stop_iters} loops."
                 )
                 llm_with_tools = self.llm.bind_tools(msg.tools)
                 for _ in range(msg.stop_iters):
