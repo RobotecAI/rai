@@ -104,6 +104,7 @@ cd rai-private
 ```sh
 poetry install
 poetry shell
+source /opt/ros/${ROS_DISTRO}/setup.bash
 ```
 
 ### 3. Setup vendor keys (for paid vendors)
