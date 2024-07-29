@@ -3,7 +3,7 @@
 <package format="3">
   <name>husarion_whoami</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Package sharing information about the husarion robot.</description>
   <maintainer email="wiktoria.siekierska@robotec.ai">wsiekierska</maintainer>
   <license>Apache-2.0</license>
 
