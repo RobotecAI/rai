@@ -57,25 +57,21 @@ def modify_setup_py(setup_py_path):
     with open(setup_py_path, "r") as file:
         setup_content = file.read()
 
-    # Add the get_all_files function at the top of the setup.py
-    new_function = """
-def get_all_files(directory):
-    file_paths = []
-    for root, dirs, files in os.walk(directory):
-        for file in files:
-            file_paths.append(os.path.join(root, file))
-    return file_paths
-"""
-    setup_content = "import os\n" + setup_content
+    setup_content = "import glob\nimport os\n\n" + setup_content
     # Find the position to insert the new function
     insert_pos = setup_content.find("setup(")
 
     # Split the script to insert the new function
     part1 = setup_content[:insert_pos]
     part2 = setup_content[insert_pos:]
-    package_name = "package_name"
+
     # Adding the new line in the data_files section
-    data_files_insert = f"        ('share/' + {package_name} + '/description', get_all_files('description')),"
+    data_files_insert = """
+        (os.path.join("share", package_name, os.path.dirname(p)), [p])
+        for p in glob.glob("description/**/*", recursive=True)
+        if os.path.isfile(p)
+    ]
+    + ["""
 
     # Finding the position to insert the new line in the data_files section
     data_files_pos = part2.find("data_files=[\n") + len("data_files=[\n")
@@ -85,9 +81,7 @@ def get_all_files(directory):
     part2_tail = part2[data_files_pos:]
 
     # Reconstruct the modified script
-    modified_script = (
-        part1 + new_function + part2_head + data_files_insert + "\n" + part2_tail
-    )
+    modified_script = part1 + part2_head + data_files_insert + "\n" + part2_tail
 
     with open(setup_py_path, "w") as file:
         file.write(modified_script)

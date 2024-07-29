@@ -21,8 +21,14 @@ class WhoAmI(Node):
             Trigger, "rai_whoami_selfimages_service", self.get_self_images_callback
         )
 
+        # parse robot_description_package path
+        self.robot_description_package = (
+            self.get_parameter("robot_description_package")
+            .get_parameter_value()
+            .string_value
+        )  # type: ignore
         self.robot_constitution_path = os.path.join(
-            get_package_share_directory("rai_whoami"),
+            get_package_share_directory(self.robot_description_package),
             "description/robot_constitution.txt",
         )
 
@@ -50,17 +56,18 @@ class WhoAmI(Node):
         """Return URI to a folder of images to process"""
         images_local_uri = "description/images"
         images_full_uri = os.path.join(
-            get_package_share_directory("rai_whoami"), images_local_uri
+            get_package_share_directory(self.robot_description_package),
+            images_local_uri,
         )
         response.success = os.path.isdir(images_full_uri)
         if not response.success:
-            message = "Could not find a folder under URI:" + images_full_uri
+            message = f"Could not find a folder under URI: {images_full_uri}. This most likely means, that no images have been provided."
             self.get_logger().warn(message)
             response.message = message
             return response
 
         is_empty = os.listdir(images_full_uri)
-        if is_empty:
+        if not is_empty:
             # succeed but with a warning
             message = f"The images folder is empty, RAI will not know how the robot looks like: {images_full_uri}"
             self.get_logger().warn(message)
