@@ -20,7 +20,7 @@ from rai.tools.ros.native_actions import (
     Ros2GetRegisteredActions,
 )
 from rai.tools.ros.tools import GetCurrentPositionTool, GetOccupancyGridTool
-from rai.tools.time import sleep
+from rai.tools.time import sleep_max_5s
 
 
 def main():
@@ -44,7 +44,7 @@ def main():
         Ros2GetRegisteredActions(node=rai_node),
         GetCurrentPositionTool(),
         GetOccupancyGridTool(),
-        sleep,
+        sleep_max_5s,
     ]
 
     scenario: List[ScenarioPartType] = [
