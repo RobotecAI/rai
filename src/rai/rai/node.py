@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import Any, Dict, List
 
 import rclpy
-from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
 
 
@@ -32,7 +31,6 @@ class RaiActionStoreInterface(metaclass=ABCMeta):
 
 @dataclass
 class RaiActionStoreRecord:
-    # TODO(boczekbartek): temporary, because of cicular dependency - needs to be refactored
     uid: str
     action_name: str
     action_type: str
@@ -92,7 +90,6 @@ class RaiNode(Node):
     def __init__(self):
         super().__init__("rai_node")
 
-        self.callback_group = ReentrantCallbackGroup()
         self._actions_cache = RaiActionStore()
 
     def get_actions_cache(self) -> RaiActionStoreInterface:
