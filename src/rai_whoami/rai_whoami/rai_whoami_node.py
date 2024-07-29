@@ -12,16 +12,7 @@ class WhoAmI(Node):
 
     def __init__(self):
         super().__init__("rai_whoami_node")
-        self.declare_parameter("rai_self_images_local_uri", Parameter.Type.STRING)
         self.declare_parameter("robot_description_package", Parameter.Type.STRING)
-        self.declare_parameter("robot_description_file", Parameter.Type.STRING)
-        self.declare_parameter(
-            "robot_constitution_path",
-            os.path.join(
-                get_package_share_directory("rai_whoami"),
-                "default_robot_constitution.txt",
-            ),
-        )
 
         self.srv = self.create_service(
             Trigger, "rai_whoami_constitution_service", self.get_constitution_callback
@@ -30,10 +21,9 @@ class WhoAmI(Node):
             Trigger, "rai_whoami_selfimages_service", self.get_self_images_callback
         )
 
-        self.robot_constitution_path = (
-            self.get_parameter("robot_constitution_path")
-            .get_parameter_value()
-            .string_value
+        self.robot_constitution_path = os.path.join(
+            get_package_share_directory("rai_whoami"),
+            "description/robot_constitution.txt",
         )
 
         with open(self.robot_constitution_path, "r") as file:
@@ -58,13 +48,9 @@ class WhoAmI(Node):
         self, request: Trigger_Request, response: Trigger_Response
     ) -> Trigger_Response:
         """Return URI to a folder of images to process"""
-        images_local_uri = (
-            self.get_parameter("rai_self_images_local_uri")
-            .get_parameter_value()
-            .string_value
-        )
+        images_local_uri = "description/images"
         images_full_uri = os.path.join(
-            get_package_share_directory("rai_whoami"), "documentation", images_local_uri
+            get_package_share_directory("rai_whoami"), images_local_uri
         )
         response.success = os.path.isdir(images_full_uri)
         if not response.success:
