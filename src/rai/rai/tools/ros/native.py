@@ -121,11 +121,6 @@ class Ros2GetOneMsgFromTopicTool(Ros2BaseTool):
             rclpy.qos.qos_profile_sensor_data
         )  # TODO(@boczekbartek): infer QoS from topic
 
-        messages = list()
-
-        def callback(self):
-            messages.append(self)
-
         success, msg = wait_for_message(
             msg_cls,
             self.node,
