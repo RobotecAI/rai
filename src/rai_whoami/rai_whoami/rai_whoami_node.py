@@ -62,7 +62,8 @@ class WhoAmI(Node):
 
     def _load_documentation(self) -> FAISS:
         faiss_index = FAISS.load_local(
-            get_package_share_directory(self.robot_description_package),
+            get_package_share_directory(self.robot_description_package)
+            + "/description",
             OpenAIEmbeddings(),
             allow_dangerous_deserialization=True,
         )
