@@ -137,7 +137,10 @@ class WhoAmI(Node):
         response: Trigger_Response,
     ) -> Trigger_Response:
         """Return robot identity"""
-        identity_path = get_package_share_directory(self.robot_description_package) + "/identity.txt"
+        identity_path = (
+            get_package_share_directory(self.robot_description_package)
+            + "/robot_identity.txt"
+        )
         with open(identity_path, "r") as f:
             identity = f.read()
         response.success = True
