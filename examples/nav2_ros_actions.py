@@ -11,13 +11,13 @@ from rai.config.models import OPENAI_MULTIMODAL
 from rai.node import RaiNode
 from rai.scenario_engine.messages import AgentLoop
 from rai.scenario_engine.scenario_engine import ScenarioPartType, ScenarioRunner
-from rai.tools.ros.native import (
+from rai.tools.ros.native import Ros2ShowRos2MsgInterfaceTool
+from rai.tools.ros.native_actions import (
     Ros2ActionRunner,
     Ros2CancelAction,
     Ros2CheckActionResults,
     Ros2GetActionNamesAndTypesTool,
     Ros2GetRegisteredActions,
-    Ros2ShowRos2MsgInterfaceTool,
 )
 from rai.tools.ros.tools import GetCurrentPositionTool, GetOccupancyGridTool
 from rai.tools.time import sleep
@@ -33,17 +33,17 @@ def main():
     rai_node = RaiNode()  # type: ignore
 
     tools: List[BaseTool] = [
-        # Ros2GetTopicsNamesAndTypesTool(),
-        # Ros2GetOneMsgFromTopicTool(node=rai_node),
+        Ros2GetActionNamesAndTypesTool(node=rai_node),
+        # Ros2GetTopicsNamesAndTypesTool(node=rai_node),
         # Ros2PubMessageTool(node=rai_node),
+        Ros2ShowRos2MsgInterfaceTool(),
         Ros2ActionRunner(node=rai_node),
         Ros2CheckActionResults(node=rai_node),
-        Ros2GetActionNamesAndTypesTool(node=rai_node),
-        Ros2ShowRos2MsgInterfaceTool(node=rai_node),
-        GetOccupancyGridTool(),
-        GetCurrentPositionTool(),
-        Ros2GetRegisteredActions(node=rai_node),
         Ros2CancelAction(node=rai_node),
+        # Ros2ListActionFeedbacks(node=rai_node),
+        Ros2GetRegisteredActions(node=rai_node),
+        GetCurrentPositionTool(),
+        GetOccupancyGridTool(),
         sleep,
     ]
 
@@ -62,7 +62,7 @@ def main():
         llm,
         ros_node=rai_node,
         llm_type="openai",
-        scenario_name="Husarion example",
+        scenario_name="Nav2 example",
         log_usage=log_usage,
         logging_level=logging.INFO,
     )

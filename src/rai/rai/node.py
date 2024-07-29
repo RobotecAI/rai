@@ -1,6 +1,5 @@
 import logging
 from abc import ABCMeta, abstractmethod
-from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
@@ -47,7 +46,7 @@ class RaiActionStore(RaiActionStoreInterface):
     def __init__(self) -> None:
         self._actions: Dict[str, RaiActionStoreRecord] = dict()
         self._results: Dict[str, Any] = dict()
-        self._feedbacks: Dict[str, List[Any]] = defaultdict(list)
+        self._feedbacks: Dict[str, List[Any]] = dict()
 
     def register_action(
         self,
@@ -64,16 +63,29 @@ class RaiActionStore(RaiActionStoreInterface):
             action_goal_args=action_goal_args,
             result_future=result_future,
         )
+        self._feedbacks[uid] = list()
+
+    def add_feedback(self, uid: str, feedback: Any):
+        if uid not in self._feedbacks:
+            raise KeyError(f"Unknown action: {uid=}")
+        self._feedbacks[uid].append(feedback)
 
     def get_uids(self) -> List[str]:
-        # TODO(boczekbartek): optimize it
         return list(self._actions.keys())
+
+    def drop_action(self, uid: str) -> bool:
+        if uid not in self._actions:
+            raise KeyError(f"Unknown action: {uid=}")
+        self._actions.pop(uid, None)
+        self._feedbacks.pop(uid, None)
+        logging.getLogger().info(f"Action(uid={uid}) dropped")
+        return True
 
     def cancel_action(self, uid: str) -> bool:
         if uid not in self._actions:
             raise KeyError(f"Unknown action: {uid=}")
         self._actions[uid].result_future.cancel()
-        self._actions.pop(uid, None)
+        self.drop_action(uid)
         logging.getLogger().info(f"Action(uid={uid}) canceled")
         return True
 
@@ -103,6 +115,11 @@ class RaiActionStore(RaiActionStoreInterface):
 
         return results
 
+    def get_feedbacks(self, uid: str) -> List[Any]:
+        if uid not in self._feedbacks:
+            raise KeyError(f"Unknown action: {uid=}")
+        return self._feedbacks[uid]
+
 
 class RaiNode(Node):
     def __init__(self):
@@ -118,6 +135,10 @@ class RaiNode(Node):
         self.get_logger().info("Getting results")
         return self._actions_cache.get_results(uid)
 
+    def get_feedbacks(self, uid: str):
+        self.get_logger().info("Getting feedbacks")
+        return self._actions_cache.get_feedbacks(uid)
+
     def cancel_action(self, uid: str):
         self.get_logger().info(f"Canceling action: {uid=}")
         return self._actions_cache.cancel_action(uid)
@@ -128,4 +149,5 @@ class RaiNode(Node):
 
     def feedback_callback(self, uid: str, feedback_msg: Any):
         feedback = feedback_msg.feedback
-        self.get_logger().info(f"Received feedback: {feedback}")
+        self.get_logger().debug(f"Received feedback: {feedback}")
+        self._actions_cache.add_feedback(uid, feedback)
