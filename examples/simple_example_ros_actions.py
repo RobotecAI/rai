@@ -21,7 +21,7 @@ from rai.tools.ros.native_actions import (
     Ros2GetRegisteredActions,
     Ros2ListActionFeedbacks,
 )
-from rai.tools.time import sleep
+from rai.tools.time import sleep_max_5s
 
 
 def main():
@@ -40,7 +40,7 @@ def main():
         Ros2CancelAction(node=rai_node),
         Ros2ListActionFeedbacks(node=rai_node),
         Ros2GetRegisteredActions(node=rai_node),
-        sleep,
+        sleep_max_5s,
         FinishTool(),
     ]
 
