@@ -43,7 +43,7 @@ def main():
             content="You are an ros2 autonomous agent. Your main goal is to fulfill the user's requests using available ros2 interfaces."
         ),
         HumanMessage(
-            content="Please calculate 2 fibbonacci sequences of 2 different random numbers from 1 to 10."
+            content="Please calculate fibbonacci sequences of a random number from 1 to 10."
         ),
         AgentLoop(
             tools=tools, stop_tool=FinishTool().__class__.__name__, stop_iters=50
