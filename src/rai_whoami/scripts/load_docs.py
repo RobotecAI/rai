@@ -21,7 +21,9 @@ def main():
     )
     args = parser.parse_args()
 
-    docs = ingest_documentation(documentation_root=args.documentation_root)
+    docs = ingest_documentation(
+        documentation_root=args.documentation_root + "/documentation"
+    )
     faiss_index = FAISS.from_documents(docs, OpenAIEmbeddings())
     faiss_index.add_documents(docs)
     save_dir = args.output

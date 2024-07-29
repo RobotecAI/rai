@@ -140,7 +140,7 @@ class WhoAmI(Node):
         """Return robot identity"""
         identity_path = (
             get_package_share_directory(self.robot_description_package)
-            + "/robot_identity.txt"
+            + "/description/robot_identity.txt"
         )
         with open(identity_path, "r") as f:
             identity = f.read()
