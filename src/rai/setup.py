@@ -17,7 +17,5 @@ setup(
     description="TODO: Package description",
     license="Apache-2.0",
     tests_require=["pytest"],
-    entry_points={
-        "console_scripts": ["rai_node = rai.node:main"],
-    },
+    entry_points={},
 )
