@@ -94,15 +94,29 @@ sudo apt install ros-${ROS_DISTRO}-tf-transformations
 
 ### 1. Clone the repository:
 
-```sh
+```bash
 git clone git@github.com:RobotecAI/rai-private.git
 cd rai-private
 ```
 
-### 2. Create and activate a virtual environment:
+### 2. Create poetry virtual environment and install dependencies:
 
 ```sh
-poetry install
+poetry install --no-root
+```
+
+### 2. Build ros project:
+
+```bash
+. /opt/ros/${ROS_DISTRO}/setup.bash
+colcon build --symlink-install
+```
+
+### 2. Activate a virtual environment:
+
+```bash
+. /opt/ros/${ROS_DISTRO}/setup.bash
+. ./install/setup.bash
 poetry shell
 source /opt/ros/${ROS_DISTRO}/setup.bash
 ```

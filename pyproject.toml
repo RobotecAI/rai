@@ -49,13 +49,6 @@ ipykernel = "^6.29.4"
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = { find = { where = ["src"] } }
-
-[tool.mypy]
-mypy_path = "src"
-ignore_missing_imports = true
-
 [tool.isort]
 profile = "black"
 
