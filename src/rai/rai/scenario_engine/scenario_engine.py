@@ -4,7 +4,7 @@ import os
 from typing import Callable, List, Literal, Sequence, Union, cast
 
 import coloredlogs
-import rclpy.executors
+import rclpy
 from langchain.globals import set_llm_cache
 from langchain_community.cache import RedisCache
 from langchain_core.language_models.chat_models import BaseChatModel
