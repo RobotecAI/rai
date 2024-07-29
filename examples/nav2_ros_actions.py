@@ -11,7 +11,7 @@ from rai.config.models import OPENAI_MULTIMODAL
 from rai.node import RaiNode
 from rai.scenario_engine.messages import AgentLoop
 from rai.scenario_engine.scenario_engine import ScenarioPartType, ScenarioRunner
-from rai.tools.ros.native import Ros2ShowRos2MsgInterfaceTool
+from rai.tools.ros.native import Ros2ShowMsgInterfaceTool
 from rai.tools.ros.native_actions import (
     Ros2ActionRunner,
     Ros2CancelAction,
@@ -36,7 +36,7 @@ def main():
         Ros2GetActionNamesAndTypesTool(node=rai_node),
         # Ros2GetTopicsNamesAndTypesTool(node=rai_node),
         # Ros2PubMessageTool(node=rai_node),
-        Ros2ShowRos2MsgInterfaceTool(),
+        Ros2ShowMsgInterfaceTool(),
         Ros2ActionRunner(node=rai_node),
         Ros2CheckActionResults(node=rai_node),
         Ros2CancelAction(node=rai_node),
