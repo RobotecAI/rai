@@ -13,8 +13,9 @@ cd tmp
 git clone --branch ${ROS_DISTRO} https://github.com/ros2/demos
 cp -r demos/action_tutorials/action_tutorials_py ../examples
 cd ..
-rm -rd tmp
+rm -rdf tmp  #TODO(boczekbartek): refactor installtion of examples
 ```
+
 
 ### Build
 
