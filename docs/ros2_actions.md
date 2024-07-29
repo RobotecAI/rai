@@ -43,3 +43,33 @@ This will require opening 2 terminals and running the following commands
    poetry shell
    python simple_example_ros_actions.py
    ```
+
+## Nav2 Gazebo + Turtlebot
+
+### Installation
+
+Please refer to [Nav2 Installation][nav2 installation]
+
+```bash
+. /opt/ros/${ROS_DISTRO}/setup.bash
+. ./install/setup.bash
+poetry shell
+python simple_example_ros_actions.py
+```
+
+### Running
+
+To Run Gazebo and Navigation2 stack refer to [Nav2 Running The Example][nav2 running the example]
+
+To run the `RAI` example:
+
+```bash
+
+. /opt/ros/${ROS_DISTRO}/setup.bash
+. ./install/setup.bash
+poetry shell
+python nav2_example_ros_actions.py
+```
+
+[nav2 installation]: https://docs.nav2.org/getting_started/index.html#installation
+[nav2 running the example]: https://docs.nav2.org/getting_started/index.html#running-the-example

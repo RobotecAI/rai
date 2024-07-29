@@ -89,14 +89,9 @@ class SingleMessageGrabber:
         self.timeout_sec = timeout_sec
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(logging_level)
-        self.initialized = False
         self.postprocess = getattr(self, "postprocess", postprocess)
 
     def grab_message(self) -> Any:
-        if not rclpy.ok():
-            rclpy.init()
-            self.initialized = True
-
         node = rclpy.create_node(self.__class__.__name__ + "_node")  # type: ignore
         qos_profile = rclpy.qos.qos_profile_sensor_data
         if (
@@ -129,8 +124,6 @@ class SingleMessageGrabber:
             )
 
         node.destroy_node()
-        if self.initialized:
-            rclpy.shutdown()
         return msg
 
     def get_data(self) -> Any:
@@ -240,7 +233,6 @@ class TF2Listener(Node):
 
 class TF2TransformFetcher:
     def get_data(self):
-        rclpy.init()
         node = TF2Listener()
         executor = rclpy.executors.SingleThreadedExecutor()
         executor.add_node(node)
@@ -254,5 +246,4 @@ class TF2TransformFetcher:
 
         transform = node.transform
         node.destroy_node()
-        rclpy.shutdown()
         return transform
