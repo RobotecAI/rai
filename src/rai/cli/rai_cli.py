@@ -3,14 +3,14 @@ import subprocess
 from pathlib import Path
 
 
-def create_robot_package():
+def create_rai_ws():
     parser = argparse.ArgumentParser(description="Creation of a robot package.")
     parser.add_argument("--name", type=str, required=True, help="Package's name")
     parser.add_argument(
         "--destination-directory",
         type=str,
         required=False,
-        default="src/",
+        default="rai_ws/",
         help="Package's destination",
     )
     args = parser.parse_args()
@@ -46,6 +46,51 @@ def create_robot_package():
     with open(f"{package_path}/robot_constitution.txt", "w") as file:
         file.write(default_constitution)
 
+    # Modify setup.py file
+    setup_py_path = Path(f"{package_destination}/{package_name}_whoami/setup.py")
+    modify_setup_py(setup_py_path)
+
+
+# NOTE (mkotynia) fast solution, worth refactor in the future and testing if it generic for all setup.py file confgurations
+def modify_setup_py(setup_py_path):
+    with open(setup_py_path, "r") as file:
+        setup_content = file.read()
+
+    # Add the get_all_files function at the top of the setup.py
+    new_function = """
+import os
+def get_all_files(directory):
+    file_paths = []
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            file_paths.append(os.path.join(root, file))
+    return file_paths
+"""
+    # Find the position to insert the new function
+    insert_pos = setup_content.find("setup(")
+
+    # Split the script to insert the new function
+    part1 = setup_content[:insert_pos]
+    part2 = setup_content[insert_pos:]
+    package_name = "package_name"
+    # Adding the new line in the data_files section
+    data_files_insert = f"        ('share/' + {package_name} + '/description', get_all_files('description')),"
+
+    # Finding the position to insert the new line in the data_files section
+    data_files_pos = part2.find("data_files=[\n") + len("data_files=[\n")
+
+    # Splitting the part2 to insert the new line in the data_files section
+    part2_head = part2[:data_files_pos]
+    part2_tail = part2[data_files_pos:]
+
+    # Reconstruct the modified script
+    modified_script = (
+        part1 + new_function + part2_head + data_files_insert + "\n" + part2_tail
+    )
+
+    with open(setup_py_path, "w") as file:
+        file.write(modified_script)
+
 
 if __name__ == "__main__":
-    create_robot_package()
+    create_rai_ws()
