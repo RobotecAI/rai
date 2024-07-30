@@ -31,6 +31,8 @@ class TTSNode(Node):
         self.subscription = self.create_subscription(  # type: ignore
             String, topic_param, self.listener_callback, 10  # type: ignore
         )
+        self.playing = False
+        self.status_publisher = self.create_publisher(String, "tts_status", 10)  # type: ignore
         self.queue: PriorityQueue[TTSJob] = PriorityQueue()
         self.it: int = 0
         self.job_id: int = 0
@@ -67,20 +69,25 @@ class TTSNode(Node):
             time.sleep(0.01)
             if not self.queue.empty():
                 if self.queue.queue[0][0] == self.it:
+                    self.status_publisher.publish(String(data="playing"))  # type: ignore
                     self.it += 1
                     tts_job = self.queue.get()
                     self.get_logger().info(  # type: ignore
                         f"Playing audio for job {tts_job.id}. {tts_job.file_path}"
                     )
                     self._play_audio(tts_job.file_path)
+            elif self.playing is False:
+                self.status_publisher.publish(String(data="waiting"))
 
     def _play_audio(self, filepath: str):
+        self.playing = True
         subprocess.run(
             ["ffplay", "-v", "0", "-nodisp", "-autoexit", filepath],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
         self.get_logger().debug(f"Playing audio: {filepath}")  # type: ignore
+        self.playing = False
 
     def _initialize_client(self) -> TTSClient:
         tts_client_param = cast(str, self.get_parameter("tts_client").get_parameter_value().string_value)  # type: ignore

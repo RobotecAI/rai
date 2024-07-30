@@ -62,6 +62,9 @@ class ASRNode(Node):
         self.status_publisher = self.create_publisher(  # type: ignore
             String, "~/status", 10
         )
+        self.tts_status_subscriber = self.create_subscription(  # type: ignore
+            String, "/tts_status", self.tts_status_callback, 10
+        )
 
         self.get_logger().info(  # type: ignore
             "Voice Activity Detection enabled. Waiting for speech..."
@@ -83,6 +86,12 @@ class ASRNode(Node):
         self.get_logger().info(
             f"Using model: {self.model_type}, language: {self.language}"
         )
+
+    def tts_status_callback(self, msg: String):
+        if msg.data == "playing":
+            self.mute = True
+        elif msg.data == "waiting":
+            self.mute = False
 
     def capture_sound(self):
         window_size_samples = 512 if self.sample_rate == 16000 else 256
@@ -113,7 +122,7 @@ class ASRNode(Node):
                         self.stop_recording_and_transcribe()
 
     def start_recording(self):
-        if not self.is_recording:
+        if not self.is_recording and not self.mute:
             self.get_logger().info("Started recording")
             self.publish_status("recording")
             self.is_recording = True
