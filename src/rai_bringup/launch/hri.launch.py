@@ -33,12 +33,28 @@ def generate_launch_description():
         description="TTS vendor to use (opentts or elevenlabs)",
     )
 
+    robot_description_package_arg = DeclareLaunchArgument(
+        "robot_description_package",
+        default_value="husarion_whoami",
+        description="Robot description package to use",
+    )
+
     asr_node = Node(
         package="rai_asr", executable="asr_node", name="asr_node", output="screen"
     )
 
     hmi_node = Node(
-        package="rai_hmi", executable="hmi_node", name="hmi_node", output="screen"
+        package="rai_hmi",
+        executable="hmi_node",
+        name="hmi_node",
+        parameters=[
+            {
+                "robot_description_package": LaunchConfiguration(
+                    "robot_description_package"
+                )
+            }
+        ],
+        output="screen",
     )
 
     tts_launch_inclusion = OpaqueFunction(function=include_tts_launch)
@@ -47,9 +63,23 @@ def generate_launch_description():
         package="rai_whoami",
         executable="rai_whoami_node",
         name="rai_whoami_node",
+        parameters=[
+            {
+                "robot_description_package": LaunchConfiguration(
+                    "robot_description_package"
+                )
+            }
+        ],
         output="screen",
     )
 
     return LaunchDescription(
-        [tts_vendor_arg, asr_node, hmi_node, tts_launch_inclusion, whoami_node]
+        [
+            tts_vendor_arg,
+            robot_description_package_arg,
+            asr_node,
+            hmi_node,
+            tts_launch_inclusion,
+            whoami_node,
+        ]
     )

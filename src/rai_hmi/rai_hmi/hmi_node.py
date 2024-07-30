@@ -9,6 +9,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
@@ -21,7 +22,7 @@ from .tools import QueryDatabaseTool, QueueTaskTool
 class HMINode(Node):
     def __init__(self):
         super().__init__("rai_hmi_node")
-
+        self.declare_parameter("robot_description_package", Parameter.Type.STRING)
         # TODO: add parameter to choose model
 
         self.history: List[BaseMessage] = []
@@ -55,6 +56,12 @@ class HMINode(Node):
         self.identity_service = self.create_client(
             Trigger, "rai_whoami_identity_service"
         )
+
+        self.robot_description_package = (
+            self.get_parameter("robot_description_package")
+            .get_parameter_value()
+            .string_value
+        )  # type: ignore
 
         self.get_logger().info("HMI Node has been started")
         system_prompt = self.initialize_system_prompt()
@@ -155,7 +162,8 @@ class HMINode(Node):
 
     def _load_documentation(self) -> FAISS:
         faiss_index = FAISS.load_local(
-            get_package_share_directory("rai_whoami"),
+            get_package_share_directory(self.robot_description_package)
+            + "/description",
             OpenAIEmbeddings(),
             allow_dangerous_deserialization=True,
         )
