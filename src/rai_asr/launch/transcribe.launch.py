@@ -14,7 +14,7 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "model",
-                default_value="base",
+                default_value="whisper-1",
                 description="Model type for the ASR model",
             ),
             DeclareLaunchArgument(

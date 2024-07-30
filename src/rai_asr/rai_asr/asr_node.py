@@ -1,13 +1,14 @@
-import tempfile
+import io
 import threading
 from datetime import datetime, timedelta
+from functools import partial
 from typing import Literal
 
 import numpy as np
 import rclpy
 import sounddevice as sd
 import torch
-import whisper
+from openai import OpenAI
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.node import Node
 from scipy.io import wavfile
@@ -29,7 +30,7 @@ class ASRNode(Node):
         )
         self.declare_parameter(
             "model",
-            "base",
+            "whisper-1",
             ParameterDescriptor(
                 type=ParameterType.PARAMETER_STRING,
                 description="Model type for the ASR model",
@@ -66,25 +67,20 @@ class ASRNode(Node):
             String, "/tts_status", self.tts_status_callback, 10
         )
 
-        self.get_logger().info(  # type: ignore
-            "Voice Activity Detection enabled. Waiting for speech..."
-        )
-
-        self.language = (
-            self.get_parameter("language").get_parameter_value().string_value
-        )  # type: ignore
-
-        self.model_type = self.get_parameter("model").get_parameter_value().string_value  # type: ignore
-        self.model = whisper.load_model(self.model_type)
         silence_grace_period = (
             self.get_parameter("silence_grace_period")
             .get_parameter_value()
             .double_value
         )  # type: ignore
         self.grace_period = timedelta(seconds=silence_grace_period)
-
-        self.get_logger().info(
-            f"Using model: {self.model_type}, language: {self.language}"
+        self.whisper_model = self.get_parameter("model").get_parameter_value().string_value  # type: ignore
+        self.language = self.get_parameter("language").get_parameter_value().string_value  # type: ignore
+        self.openai_client = OpenAI()
+        self.model = partial(
+            self.openai_client.audio.transcriptions.create, model=self.whisper_model
+        )
+        self.get_logger().info(  # type: ignore
+            "Voice Activity Detection enabled. Waiting for speech..."
         )
 
     def tts_status_callback(self, msg: String):
@@ -139,14 +135,16 @@ class ASRNode(Node):
     def transcribe_audio(self):
         self.get_logger().info("Calling ASR model")
         combined_audio = np.concatenate(self.audio_buffer)
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=True) as temp_wav_file:
-            wavfile.write(temp_wav_file.name, self.sample_rate, combined_audio)
-            self.get_logger().debug(f"Saved audio to {temp_wav_file.name}")
 
-            response = self.model.transcribe(temp_wav_file.name, language=self.language)
-            transcription = response["text"]
+        with io.BytesIO() as temp_wav_buffer:
+            wavfile.write(temp_wav_buffer, self.sample_rate, combined_audio)
+            temp_wav_buffer.seek(0)
+
+            response = self.model(temp_wav_buffer, language=self.language)
+            transcription = response.text
             self.get_logger().info(f"Transcription: {transcription}")
             self.publish_transcription(transcription)
+
         self.audio_buffer = []
 
     def publish_transcription(self, transcription):
