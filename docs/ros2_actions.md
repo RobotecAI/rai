@@ -2,6 +2,10 @@
 
 This tutorial describes how `RAI` can run and check status of ros2 actions.
 
+## Flow diagram
+
+![](./imgs/actions_flow.png)
+
 ## Fibonacci action exaple
 
 ### Installation
@@ -72,5 +76,23 @@ poetry shell
 python nav2_example_ros_actions.py
 ```
 
+## Husarion O3DE example
+
+### Installation
+
+Please refer to [rai husarion demo][rai husarion demo] to run the simulation.
+
+### Running
+
+You can set the task for the agent in the `examples/nav2_example_ros_actions.py` file.
+
+```bash
+. /opt/ros/${ROS_DISTRO}/setup.bash
+. ./install/setup.bash
+poetry shell
+python examples/nav2_example_ros_actions.py
+```
+
 [nav2 installation]: https://docs.nav2.org/getting_started/index.html#installation
 [nav2 running the example]: https://docs.nav2.org/getting_started/index.html#running-the-example
+[rai husarion demo]: https://github.com/RobotecAI/rai-husarion-demo-private
