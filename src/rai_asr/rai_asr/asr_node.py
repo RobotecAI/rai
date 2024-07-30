@@ -75,7 +75,7 @@ class ASRNode(Node):
         )  # type: ignore
 
         self.model_type = self.get_parameter("model").get_parameter_value().string_value  # type: ignore
-
+        self.model = whisper.load_model(self.model_type)
         silence_grace_period = (
             self.get_parameter("silence_grace_period")
             .get_parameter_value()
@@ -143,8 +143,7 @@ class ASRNode(Node):
             wavfile.write(temp_wav_file.name, self.sample_rate, combined_audio)
             self.get_logger().debug(f"Saved audio to {temp_wav_file.name}")
 
-            model = whisper.load_model(self.model_type)
-            response = model.transcribe(temp_wav_file.name, language=self.language)
+            response = self.model.transcribe(temp_wav_file.name, language=self.language)
             transcription = response["text"]
             self.get_logger().info(f"Transcription: {transcription}")
             self.publish_transcription(transcription)
