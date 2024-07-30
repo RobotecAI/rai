@@ -6,7 +6,7 @@ This tutorial describes how `RAI` can run and check status of ros2 actions.
 
 ![](./imgs/actions_flow.png)
 
-## Fibonacci action exaple
+## Fibonacci action example
 
 ### Installation
 
@@ -19,7 +19,6 @@ cp -r demos/action_tutorials/action_tutorials_py ../examples
 cd ..
 rm -rdf tmp  #TODO(boczekbartek): refactor installtion of examples
 ```
-
 
 ### Build
 
@@ -73,7 +72,7 @@ To run the `RAI` example:
 . /opt/ros/${ROS_DISTRO}/setup.bash
 . ./install/setup.bash
 poetry shell
-python nav2_example_ros_actions.py
+python examples/nav2_example_ros_actions.py
 ```
 
 ## Husarion O3DE example
