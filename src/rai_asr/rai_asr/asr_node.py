@@ -30,10 +30,6 @@ class ASRNode(Node):
         self._setup_publishers_and_subscribers()
         self._load_whisper_model()
 
-        self.get_logger().info(
-            "Voice Activity Detection enabled. Waiting for speech..."
-        )
-
     def _declare_parameters(self):
         self.declare_parameter(
             "language",
@@ -75,7 +71,7 @@ class ASRNode(Node):
         self.is_recording = False
         self.audio_buffer = []
         self.silence_start_time = None
-        self.last_transcription_time = time.time()
+        self.last_transcription_time = 0
         self.hmi_lock = False
         self.tts_lock = False
 
@@ -92,7 +88,7 @@ class ASRNode(Node):
         )  # type: ignore
 
         self.grace_period = timedelta(seconds=silence_grace_period)
-        self.transcription_recording_timeout = 2
+        self.transcription_recording_timeout = 5
 
     def _setup_publishers_and_subscribers(self):
         self.transcription_publisher = self.create_publisher(String, "/from_human", 10)
@@ -139,6 +135,9 @@ class ASRNode(Node):
             blocksize=window_size_samples,
         )
         stream.start()
+        self.get_logger().info(
+            "Voice Activity Detection enabled. Waiting for speech..."
+        )
         while True:
             audio_data, _ = stream.read(window_size_samples)
             audio_data = audio_data.flatten()

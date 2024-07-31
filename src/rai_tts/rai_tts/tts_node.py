@@ -48,6 +48,7 @@ class TTSNode(Node):
             self.status_publisher.publish(String(data="playing"))
 
     def listener_callback(self, msg: String):
+        self.playing = True
         self.get_logger().info(  # type: ignore
             f"Registering new TTS job: {self.job_id} length: {len(msg.data)} chars."  # type: ignore
         )
@@ -75,7 +76,6 @@ class TTSNode(Node):
         while rclpy.ok():
             time.sleep(0.01)
             if not self.queue.empty():
-                self.playing = True
                 if self.queue.queue[0][0] == self.it:
                     self.it += 1
                     tts_job = self.queue.get()
