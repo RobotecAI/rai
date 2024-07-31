@@ -23,6 +23,18 @@ SAMPLING_RATE = 16000
 class ASRNode(Node):
     def __init__(self):
         super().__init__("rai_asr")
+        self._declare_parameters()
+        self._initialize_vad_model()
+        self._setup_node_components()
+        self._initialize_variables()
+        self._setup_publishers_and_subscribers()
+        self._load_whisper_model()
+
+        self.get_logger().info(
+            "Voice Activity Detection enabled. Waiting for speech..."
+        )
+
+    def _declare_parameters(self):
         self.declare_parameter(
             "language",
             "en",
@@ -47,58 +59,63 @@ class ASRNode(Node):
                 description="Grace period in seconds after silence to stop recording",
             ),
         )
-        model, utils = torch.hub.load(
-            repo_or_dir="snakers4/silero-vad", model="silero_vad", force_reload=True
-        )
 
-        (get_speech_timestamps, save_audio, read_audio, VADIterator, collect_chunks) = (
-            utils
+    def _initialize_vad_model(self):
+        model, (_, _, _, VADIterator, _) = torch.hub.load(
+            repo_or_dir="snakers4/silero-vad",
+            model="silero_vad",
         )
+        self.vad_iterator = VADIterator(model, sampling_rate=SAMPLING_RATE)
+
+    def _setup_node_components(self):
         self.callback_group = ReentrantCallbackGroup()
         self.sample_rate = SAMPLING_RATE
+
+    def _initialize_variables(self):
         self.is_recording = False
-        self.is_transcribing = False
         self.audio_buffer = []
-        self.vad_iterator = VADIterator(model, sampling_rate=self.sample_rate)
         self.silence_start_time = None
-        self.transcription_publisher = self.create_publisher(  # type: ignore
-            String, "/from_human", 10
-        )
-        self.status_publisher = self.create_publisher(  # type: ignore
-            String, "/asr_status", 10
-        )
-        self.tts_status_subscriber = self.create_subscription(  # type: ignore
+        self.last_transcription_time = time.time()
+        self.hmi_lock = False
+        self.tts_lock = False
+
+        silence_grace_period = (
+            self.get_parameter("silence_grace_period")
+            .get_parameter_value()
+            .double_value
+        )  # type: ignore
+        self.whisper_model = (
+            self.get_parameter("model").get_parameter_value().string_value
+        )  # type: ignore
+        self.language = (
+            self.get_parameter("language").get_parameter_value().string_value
+        )  # type: ignore
+
+        self.grace_period = timedelta(seconds=silence_grace_period)
+        self.transcription_recording_timeout = 2
+
+    def _setup_publishers_and_subscribers(self):
+        self.transcription_publisher = self.create_publisher(String, "/from_human", 10)
+        self.status_publisher = self.create_publisher(String, "/asr_status", 10)
+        self.tts_status_subscriber = self.create_subscription(
             String,
             "/tts_status",
             self.tts_status_callback,
             10,
             callback_group=self.callback_group,
         )
-        self.hmi_status_subscriber = self.create_subscription(  # type: ignore
+        self.hmi_status_subscriber = self.create_subscription(
             String,
             "/hmi_status",
             self.hmi_status_callback,
             10,
             callback_group=self.callback_group,
         )
-        silence_grace_period = (
-            self.get_parameter("silence_grace_period")
-            .get_parameter_value()
-            .double_value
-        )  # type: ignore
-        self.grace_period = timedelta(seconds=silence_grace_period)
-        self.whisper_model = self.get_parameter("model").get_parameter_value().string_value  # type: ignore
-        self.language = self.get_parameter("language").get_parameter_value().string_value  # type: ignore
+
+    def _load_whisper_model(self):
         self.openai_client = OpenAI()
         self.model = partial(
             self.openai_client.audio.transcriptions.create, model=self.whisper_model
-        )
-        self.transcription_recording_timeout = 2
-        self.last_transcription_time = time.time()
-        self.hmi_lock = False
-        self.tts_lock = False
-        self.get_logger().info(  # type: ignore
-            "Voice Activity Detection enabled. Waiting for speech..."
         )
 
     def tts_status_callback(self, msg: String):
@@ -173,15 +190,15 @@ class ASRNode(Node):
             transcription = response.text
             if transcription == "you":
                 self.get_logger().info("Dropping transcription: 'you'")
-                return
-            self.get_logger().info(f"Transcription: {transcription}")
-            self.publish_transcription(transcription)
+            else:
+                self.get_logger().info(f"Transcription: {transcription}")
+                self.publish_transcription(transcription)
 
         self.last_transcription_time = time.time()
 
         self.audio_buffer = []
 
-    def publish_transcription(self, transcription):
+    def publish_transcription(self, transcription: str):
         msg = String()
         msg.data = transcription
         self.transcription_publisher.publish(msg)
