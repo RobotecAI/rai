@@ -1,5 +1,6 @@
 import io
 import threading
+import time
 from datetime import datetime, timedelta
 from functools import partial
 from typing import Literal
@@ -10,6 +11,8 @@ import sounddevice as sd
 import torch
 from openai import OpenAI
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
+from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from scipy.io import wavfile
 from std_msgs.msg import String
@@ -51,9 +54,10 @@ class ASRNode(Node):
         (get_speech_timestamps, save_audio, read_audio, VADIterator, collect_chunks) = (
             utils
         )
-
+        self.callback_group = ReentrantCallbackGroup()
         self.sample_rate = SAMPLING_RATE
         self.is_recording = False
+        self.is_transcribing = False
         self.audio_buffer = []
         self.vad_iterator = VADIterator(model, sampling_rate=self.sample_rate)
         self.silence_start_time = None
@@ -61,12 +65,22 @@ class ASRNode(Node):
             String, "/from_human", 10
         )
         self.status_publisher = self.create_publisher(  # type: ignore
-            String, "~/status", 10
+            String, "/asr_status", 10
         )
         self.tts_status_subscriber = self.create_subscription(  # type: ignore
-            String, "/tts_status", self.tts_status_callback, 10
+            String,
+            "/tts_status",
+            self.tts_status_callback,
+            10,
+            callback_group=self.callback_group,
         )
-
+        self.hmi_status_subscriber = self.create_subscription(  # type: ignore
+            String,
+            "/hmi_status",
+            self.hmi_status_callback,
+            10,
+            callback_group=self.callback_group,
+        )
         silence_grace_period = (
             self.get_parameter("silence_grace_period")
             .get_parameter_value()
@@ -79,15 +93,25 @@ class ASRNode(Node):
         self.model = partial(
             self.openai_client.audio.transcriptions.create, model=self.whisper_model
         )
+        self.transcription_recording_timeout = 2
+        self.last_transcription_time = time.time()
+        self.hmi_lock = False
+        self.tts_lock = False
         self.get_logger().info(  # type: ignore
             "Voice Activity Detection enabled. Waiting for speech..."
         )
 
     def tts_status_callback(self, msg: String):
         if msg.data == "playing":
-            self.mute = True
+            self.tts_lock = True
         elif msg.data == "waiting":
-            self.mute = False
+            self.tts_lock = False
+
+    def hmi_status_callback(self, msg: String):
+        if msg.data == "processing":
+            self.hmi_lock = True
+        elif msg.data == "waiting":
+            self.hmi_lock = False
 
     def capture_sound(self):
         window_size_samples = 512 if self.sample_rate == 16000 else 256
@@ -98,10 +122,16 @@ class ASRNode(Node):
             blocksize=window_size_samples,
         )
         stream.start()
-
         while True:
             audio_data, _ = stream.read(window_size_samples)
             audio_data = audio_data.flatten()
+
+            asr_lock = (
+                time.time()
+                < self.last_transcription_time + self.transcription_recording_timeout
+            )
+            if asr_lock or self.hmi_lock or self.tts_lock:
+                continue
 
             speech_dict = self.vad_iterator(audio_data, return_seconds=True)
             if speech_dict:
@@ -118,19 +148,17 @@ class ASRNode(Node):
                         self.stop_recording_and_transcribe()
 
     def start_recording(self):
-        if not self.is_recording and not self.mute:
-            self.get_logger().info("Started recording")
-            self.publish_status("recording")
-            self.is_recording = True
-            self.audio_buffer = []
-            self.silence_start_time = None
+        self.get_logger().info("Recording...")
+        self.publish_status("recording")
+        self.is_recording = True
+        self.audio_buffer = []
+        self.silence_start_time = None
 
     def stop_recording_and_transcribe(self):
-        if self.is_recording:
-            self.get_logger().info("Stopped recording")
-            self.is_recording = False
-            self.publish_status("transcribing")
-            self.transcribe_audio()
+        self.get_logger().info("Stopped recording. Transcribing...")
+        self.is_recording = False
+        self.publish_status("transcribing")
+        self.transcribe_audio()
 
     def transcribe_audio(self):
         self.get_logger().info("Calling ASR model")
@@ -139,11 +167,17 @@ class ASRNode(Node):
         with io.BytesIO() as temp_wav_buffer:
             wavfile.write(temp_wav_buffer, self.sample_rate, combined_audio)
             temp_wav_buffer.seek(0)
+            temp_wav_buffer.name = "temp.wav"
 
-            response = self.model(temp_wav_buffer, language=self.language)
+            response = self.model(file=temp_wav_buffer, language=self.language)
             transcription = response.text
+            if transcription == "you":
+                self.get_logger().info("Dropping transcription: 'you'")
+                return
             self.get_logger().info(f"Transcription: {transcription}")
             self.publish_transcription(transcription)
+
+        self.last_transcription_time = time.time()
 
         self.audio_buffer = []
 
@@ -162,17 +196,17 @@ def main(args=None):
     rclpy.init(args=args)
     node = ASRNode()
 
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
+
     thread = threading.Thread(target=node.capture_sound)
     thread.start()
 
     try:
-        rclpy.spin(node)
+        executor.spin()
     except KeyboardInterrupt:
         pass
     finally:
+        executor.shutdown()
         node.destroy_node()
         rclpy.shutdown()
-
-
-if __name__ == "__main__":
-    main()

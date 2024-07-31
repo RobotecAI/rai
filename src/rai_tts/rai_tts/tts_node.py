@@ -37,8 +37,15 @@ class TTSNode(Node):
         self.it: int = 0
         self.job_id: int = 0
         self.tts_client = self._initialize_client()
+        self.create_timer(0.01, self.status_callback)
         threading.Thread(target=self._process_queue).start()
         self.get_logger().info("TTS Node has been started")  # type: ignore
+
+    def status_callback(self):
+        if self.queue.empty() and self.playing is False:
+            self.status_publisher.publish(String(data="waiting"))
+        else:
+            self.status_publisher.publish(String(data="playing"))
 
     def listener_callback(self, msg: String):
         self.get_logger().info(  # type: ignore
@@ -68,19 +75,16 @@ class TTSNode(Node):
         while rclpy.ok():
             time.sleep(0.01)
             if not self.queue.empty():
+                self.playing = True
                 if self.queue.queue[0][0] == self.it:
-                    self.status_publisher.publish(String(data="playing"))  # type: ignore
                     self.it += 1
                     tts_job = self.queue.get()
                     self.get_logger().info(  # type: ignore
                         f"Playing audio for job {tts_job.id}. {tts_job.file_path}"
                     )
                     self._play_audio(tts_job.file_path)
-            elif self.playing is False:
-                self.status_publisher.publish(String(data="waiting"))
 
     def _play_audio(self, filepath: str):
-        self.playing = True
         subprocess.run(
             ["ffplay", "-v", "0", "-nodisp", "-autoexit", filepath],
             stdout=subprocess.DEVNULL,

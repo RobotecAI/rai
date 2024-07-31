@@ -8,6 +8,7 @@ from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 from std_msgs.msg import String
@@ -35,11 +36,16 @@ class HMINode(Node):
             10,
             callback_group=self.callback_group,
         )
-
+        self.processing = False
         self.hmi_publisher = self.create_publisher(
             String, "to_human", 10, callback_group=self.callback_group
         )
 
+        self.create_timer(
+            0.01, self.status_callback, callback_group=self.callback_group
+        )
+
+        self.status_publisher = self.create_publisher(String, "hmi_status", 10)  # type: ignore
         self.task_addition_request_publisher = self.create_publisher(
             String, "task_addition_requests", 10
         )
@@ -85,6 +91,12 @@ class HMINode(Node):
         self.agent = create_tool_calling_agent(llm=llm, tools=tools, prompt=prompt)
         self.agent_executor = AgentExecutor(agent=self.agent, tools=tools, verbose=True)
         self.faiss_index = self._load_documentation()
+
+    def status_callback(self):
+        if self.processing:
+            self.status_publisher.publish(String(data="processing"))
+        else:
+            self.status_publisher.publish(String(data="waiting"))
 
     def get_database_response(self, query: str) -> VectorStoreRetrieval.Response:
         # The following code is a 1:1 replacement for the commented out code below
@@ -148,6 +160,7 @@ class HMINode(Node):
         return system_prompt
 
     def handle_human_message(self, human_ros_msg: String):
+        self.processing = True
         self.get_logger().info("Handling human message")
         if not human_ros_msg.data:
             self.get_logger().warn("Received an empty message, discarding")
@@ -159,6 +172,7 @@ class HMINode(Node):
         self.history.append(SystemMessage(content=response["output"]))
         self.send_message_to_human(response["output"])
         self.get_logger().info("Finished handling human message")
+        self.processing = False
 
     def _load_documentation(self) -> FAISS:
         faiss_index = FAISS.load_local(
@@ -188,7 +202,9 @@ class HMINode(Node):
 def main():
     rclpy.init()
     hmi_node = HMINode()
-    rclpy.spin(hmi_node)
+    executor = MultiThreadedExecutor()
+    executor.add_node(hmi_node)
+    executor.spin()
     hmi_node.destroy_node()
     rclpy.shutdown()
 
