@@ -223,6 +223,7 @@ class HMINode(Node):
         self.processing = True
         self.get_logger().info("Handling human message")
         if not human_ros_msg.data:
+            self.processing = False
             self.get_logger().warn("Received an empty message, discarding")
             return
 
