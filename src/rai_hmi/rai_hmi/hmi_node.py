@@ -164,6 +164,7 @@ class HMINode(Node):
         self.get_logger().info("Handling human message")
         if not human_ros_msg.data:
             self.get_logger().warn("Received an empty message, discarding")
+            self.processing = False
             return
         response = self.agent_executor.invoke(
             {"input": human_ros_msg.data, "chat_history": self.history}
