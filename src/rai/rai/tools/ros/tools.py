@@ -135,7 +135,7 @@ class GetOccupancyGridTool(BaseTool):
             )
             cv2.putText(
                 img=image,
-                text=f"{x * resolution + origin_position.x :.1f}",
+                text=f"{x * resolution + origin_position.x:.1f}",
                 org=(x, 15),
                 fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                 fontScale=0.4,
