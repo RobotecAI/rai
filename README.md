@@ -184,7 +184,8 @@ export LANGFUSE_HOST=""
 
 For examples see [examples](./examples/README.md)\
 For Message definition: [messages.md](docs/messages.md)\
-For Scenario definition: [scenarios.md](docs/scenarios.md)
+For Scenario definition: [scenarios.md](docs/scenarios.md)\
+For available ROS2 packages: [ros-packages.md](docs/ros-packages.md)\
 
 For more information see readmes in respective folders.
 

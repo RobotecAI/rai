@@ -1,0 +1,53 @@
+from typing import Any, Type
+
+from langchain_core.pydantic_v1 import BaseModel, Field
+from langchain_core.tools import BaseTool
+
+from .task import Task
+
+
+class QueryDatabaseInput(BaseModel):
+    query: str = Field(
+        ...,
+        description=(
+            "The query that will be searched in the database."
+            " eg: 'PWM informations', 'How to use the camera' etc."
+        ),
+    )
+
+
+class QueryDatabaseTool(BaseTool):
+    name: str = "query_database"
+    description: str = "Query the database for information"
+    input_type: Type[QueryDatabaseInput] = QueryDatabaseInput
+    args_schema: Type[QueryDatabaseInput] = QueryDatabaseInput
+
+    get_response: Any
+
+    def _run(self, query: str):
+        retrieval_response = self.get_response(query)
+        output = [
+            (document, score)
+            for document, score in zip(
+                retrieval_response.documents, retrieval_response.scores
+            )
+        ]
+        return output
+
+
+class QueueTaskInput(BaseModel):
+    task: Task = Field(..., description="The task to queue")
+
+
+class QueueTaskTool(BaseTool):
+    name: str = "queue_task"
+    description: str = "Queue a task for the platform"
+    input_type: Type[QueueTaskInput] = QueueTaskInput
+
+    args_schema: Type[QueueTaskInput] = QueueTaskInput
+
+    add_task: Any
+
+    def _run(self, task: Task):
+        self.add_task(task)
+        return f"Task {task} has been queued for the LLM"
