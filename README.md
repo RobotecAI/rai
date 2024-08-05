@@ -102,7 +102,7 @@ cd rai-private
 ### 2. Create poetry virtual environment and install dependencies:
 
 ```sh
-poetry install --no-root
+poetry install
 ```
 
 ### 2. Build ros project:
