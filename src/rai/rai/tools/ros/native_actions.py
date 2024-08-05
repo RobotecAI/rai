@@ -101,7 +101,7 @@ class Ros2ActionRunner(Ros2BaseTool):
 
 class Ros2GetRegisteredActions(Ros2BaseTool):
     name = "Ros2GetRegisteredAction"
-    description = "List action run by LLM"
+    description = "A tool for checking the results of submitted ros2 actions"
 
     def _run(self):
         return str(self.node.get_running_actions())
