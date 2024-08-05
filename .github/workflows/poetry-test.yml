@@ -18,17 +18,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-
-      - name: Install python dependencies
-        run: poetry install
-
-      - name: Install ROS 2 dependencies
+      - name: Install apt dependencies
         shell: bash
         run: |
           apt-get update
-          apt-get install -y ros-${{ matrix.ros_distro }}-tf-transformations
+          apt-get install -y ros-${{ matrix.ros_distro }}-tf-transformations python3-pip python3-virtualenv
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+
+      - name: Export requirements.txt
+        run: |
+          poetry self add poetry-plugin-export
+          poetry export -f requirements.txt --output requirements.txt
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          python3 -m virtualenv .venv
+          touch .venv/COLCON_IGNORE
+          source .venv/bin/activate
+          python3 -m pip install -r requirements.txt
 
       - name: Update rosdep
         shell: bash
@@ -49,6 +59,9 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
-          source /opt/ros/${{ matrix.ros_distro }}/setup.bash
-          source install/setup.bash
-          poetry run pytest
+          source .venv/bin/activate && \
+          source /opt/ros/${{ matrix.ros_distro }}/setup.bash && \
+          source install/setup.bash && \
+          source .venv/bin/activate && \
+          python -c "import rai.config" && \
+          python -m pytest .
