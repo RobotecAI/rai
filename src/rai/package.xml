@@ -3,8 +3,9 @@
 <package format="3">
   <name>rai</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="bartlomiej.boczek@robotec.ai">bboczek</maintainer>
+  <description>RAI core modules</description>
+  <maintainer email="bartlomiej.boczek@robotec.ai">Bartłomiej Boczek</maintainer>
+  <maintainer email="maciej.majek@robotec.ai">Maciej Majek</maintainer>
   <license>Apache-2.0</license>
 
   <test_depend>ament_copyright</test_depend>
