@@ -1,0 +1,12 @@
+[submodule "src/examples/rai-husarion-demo"]
+	path = src/examples/rai-husarion-demo
+	url = https://github.com/RobotecAI/rai-husarion-demo.git
+	branch = development
+[submodule "src/examples/rai-agriculture-demo"]
+	path = src/examples/rai-agriculture-demo
+	url = https://github.com/RobotecAI/rai-agriculture-demo.git
+	branch = development
+[submodule "src/examples/rai-manipulation-demo"]
+	path = src/examples/rai-manipulation-demo
+	url = https://github.com/RobotecAI/rai-manipulation-demo.git
+	branch = development
