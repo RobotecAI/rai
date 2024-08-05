@@ -103,6 +103,7 @@ cd rai-private
 
 ```sh
 poetry install
+rosdep install --from-paths src --ignore-src -r -y
 ```
 
 ### 2. Build ros project:
