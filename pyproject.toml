@@ -8,6 +8,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
 ]
+package-mode = false
 [tool.poetry.dependencies]
 python = "^3.10, <3.13"
 requests = "^2.32.2"
@@ -48,13 +49,6 @@ ipykernel = "^6.29.4"
 [build-system]
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
-
-[tool.setuptools]
-packages = { find = { where = ["src"] } }
-
-[tool.mypy]
-mypy_path = "src"
-ignore_missing_imports = true
 
 [tool.isort]
 profile = "black"
