@@ -1,43 +1,28 @@
-from typing import Any, Dict, Tuple, Type
+import json
+from typing import Any, Dict, OrderedDict, Tuple, Type
 
 import rclpy
+import rosidl_runtime_py.set_message
+import rosidl_runtime_py.utilities
 from langchain.tools import BaseTool
 from langchain_core.pydantic_v1 import BaseModel, Field
 from rclpy.impl.rcutils_logger import RcutilsLogger
-from rclpy.node import Node
-from ros2cli.node.strategy import NodeStrategy
-from rosidl_runtime_py.set_message import set_message_fields
 
 from rai.communication.ros_communication import wait_for_message
+from rai.node import RaiNode
 
 from .utils import import_message_from_str
 
 
+# --------------------- Inputs ---------------------
 class Ros2BaseInput(BaseModel):
     """Empty input for ros2 tool"""
 
 
-class Ros2BaseTool(BaseTool):
-    node: Node = Field(..., exclude=True, include=False, required=True)
+class Ros2MsgInterfaceInput(BaseModel):
+    """Input for the show_ros2_msg_interface tool."""
 
-    args_schema: Type[Ros2BaseInput] = Ros2BaseInput
-
-    @property
-    def logger(self) -> RcutilsLogger:
-        return self.node.get_logger()
-
-
-class Ros2GetTopicsNamesAndTypesTool(BaseTool):
-    name: str = "Ros2GetTopicsNamesAndTypes"
-    description: str = "A tool for getting all ros2 topics names and types"
-
-    def _run(self):
-        with NodeStrategy(dict()) as node:
-            return [
-                (topic_name, topic_type)
-                for topic_name, topic_type in node.get_topic_names_and_types()
-                if len(topic_name.split("/")) <= 2
-            ]
+    msg_name: str = Field(..., description="Ros2 message name in typical ros2 format.")
 
 
 class Ros2GetOneMsgFromTopicInput(BaseModel):
@@ -52,9 +37,77 @@ class Ros2GetOneMsgFromTopicInput(BaseModel):
     )
 
 
-class Ros2GetOneMsgFromTopicTool(Ros2BaseTool):
-    """Get one message from a specific ros2 topic"""
+class PubRos2MessageToolInput(BaseModel):
+    topic_name: str = Field(..., description="Ros2 topic to publish the message")
+    msg_type: str = Field(
+        ..., description="Type of ros2 message in typical ros2 format."
+    )
+    msg_args: Dict[str, Any] = Field(
+        ..., description="The arguments of the service call."
+    )
 
+
+# --------------------- Tools ---------------------
+class Ros2BaseTool(BaseTool):
+    node: RaiNode = Field(..., exclude=True, include=False, required=True)
+
+    args_schema: Type[Ros2BaseInput] = Ros2BaseInput
+
+    @property
+    def logger(self) -> RcutilsLogger:
+        return self.node.get_logger()
+
+
+class Ros2GetTopicsNamesAndTypesTool(Ros2BaseTool):
+    name: str = "Ros2GetTopicsNamesAndTypes"
+    description: str = "A tool for getting all ros2 topics names and types"
+
+    def _run(self):
+        return [
+            (topic_name, topic_type)
+            for topic_name, topic_type in self.node.get_topic_names_and_types()
+            if len(topic_name.split("/")) <= 2
+        ]
+
+
+class Ros2ShowMsgInterfaceTool(BaseTool):
+    name: str = "Ros2ShowMsgInterface"
+    description: str = """A tool for showing ros2 message interface in json format.
+    usage:
+    ```python
+    ShowRos2MsgInterface.run({"msg_name": "geometry_msgs/msg/PoseStamped"})
+    ```
+    """
+
+    args_schema: Type[Ros2MsgInterfaceInput] = Ros2MsgInterfaceInput
+
+    def _run(self, msg_name: str):
+        """Show ros2 message interface in json format."""
+        msg_cls: Type = rosidl_runtime_py.utilities.get_interface(msg_name)
+        try:
+            msg_dict: OrderedDict = rosidl_runtime_py.convert.message_to_ordereddict(
+                msg_cls()
+            )
+            return json.dumps(msg_dict)
+        except NotImplementedError:
+            # For action classes that can't be instantiated
+            goal_dict: OrderedDict = rosidl_runtime_py.convert.message_to_ordereddict(
+                msg_cls.Goal()
+            )
+
+            result_dict: OrderedDict = rosidl_runtime_py.convert.message_to_ordereddict(
+                msg_cls.Result()
+            )
+
+            feedback_dict: OrderedDict = (
+                rosidl_runtime_py.convert.message_to_ordereddict(msg_cls.Feedback())
+            )
+            return json.dumps(
+                {"goal": goal_dict, "result": result_dict, "feedback": feedback_dict}
+            )
+
+
+class Ros2GetOneMsgFromTopicTool(Ros2BaseTool):
     name: str = "Ros2GetOneMsgFromTopic"
     description: str = "A tool for getting one message from a ros2 topic"
 
@@ -92,16 +145,6 @@ class Ros2GetOneMsgFromTopicTool(Ros2BaseTool):
         }
 
 
-class PubRos2MessageToolInput(BaseModel):
-    topic_name: str = Field(..., description="Ros2 topic to publish the message")
-    msg_type: str = Field(
-        ..., description="Type of ros2 message in typical ros2 format."
-    )
-    msg_args: Dict[str, Any] = Field(
-        ..., description="The arguments of the service call."
-    )
-
-
 class Ros2PubMessageTool(Ros2BaseTool):
     name: str = "PubRos2MessageTool"
     description: str = """A tool for publishing a message to a ros2 topic
@@ -127,7 +170,7 @@ class Ros2PubMessageTool(Ros2BaseTool):
     ) -> Tuple[object, Type]:
         msg_cls: Type = import_message_from_str(msg_type)
         msg = msg_cls()
-        set_message_fields(msg, msg_args)
+        rosidl_runtime_py.set_message.set_message_fields(msg, msg_args)
         return msg, msg_cls
 
     def _run(self, topic_name: str, msg_type: str, msg_args: Dict[str, Any]):
