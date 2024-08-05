@@ -13,11 +13,13 @@
 # limitations under the License.
 #
 
+import asyncio
 from typing import List
 
 import rclpy
 from ament_index_python.packages import get_package_share_directory
 from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain.callbacks.base import BaseCallbackHandler
 from langchain_community.vectorstores import FAISS
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
@@ -39,7 +41,6 @@ class HMINode(Node):
     def __init__(self):
         super().__init__("rai_hmi_node")
         self.declare_parameter("robot_description_package", Parameter.Type.STRING)
-        # TODO: add parameter to choose model
 
         self.history: List[BaseMessage] = []
 
@@ -87,7 +88,7 @@ class HMINode(Node):
         self.get_logger().info("HMI Node has been started")
         system_prompt = self.initialize_system_prompt()
 
-        llm = ChatOpenAI(model="gpt-4o")
+        self.llm = ChatOpenAI(model="gpt-4o", streaming=True)
 
         tools = [
             QueryDatabaseTool(get_response=self.get_database_response),
@@ -103,7 +104,7 @@ class HMINode(Node):
                 ("placeholder", "{agent_scratchpad}"),
             ]
         )
-        self.agent = create_tool_calling_agent(llm=llm, tools=tools, prompt=prompt)
+        self.agent = create_tool_calling_agent(llm=self.llm, tools=tools, prompt=prompt)
         self.agent_executor = AgentExecutor(agent=self.agent, tools=tools, verbose=True)
         self.faiss_index = self._load_documentation()
 
@@ -114,8 +115,6 @@ class HMINode(Node):
             self.status_publisher.publish(String(data="waiting"))
 
     def get_database_response(self, query: str) -> VectorStoreRetrieval.Response:
-        # The following code is a 1:1 replacement for the commented out code below
-        # The same code is used in the rai_whoami_node.py for the service callback
         response = VectorStoreRetrieval.Response()
         output = self.faiss_index.similarity_search_with_score(query)
         response.message = "Query successful"
@@ -175,20 +174,7 @@ class HMINode(Node):
         return system_prompt
 
     def handle_human_message(self, human_ros_msg: String):
-        self.processing = True
-        self.get_logger().info("Handling human message")
-        if not human_ros_msg.data:
-            self.get_logger().warn("Received an empty message, discarding")
-            self.processing = False
-            return
-        response = self.agent_executor.invoke(
-            {"input": human_ros_msg.data, "chat_history": self.history}
-        )
-        self.history.append(HumanMessage(human_ros_msg.data))
-        self.history.append(SystemMessage(content=response["output"]))
-        self.send_message_to_human(response["output"])
-        self.get_logger().info("Finished handling human message")
-        self.processing = False
+        asyncio.run(self.handle_human_message_async(human_ros_msg))
 
     def _load_documentation(self) -> FAISS:
         faiss_index = FAISS.load_local(
@@ -204,25 +190,73 @@ class HMINode(Node):
         msg.data = content
         self.hmi_publisher.publish(msg)
 
+    async def send_message_to_human_async(self, content: str):
+        msg = String()
+        msg.data = content
+        self.hmi_publisher.publish(msg)
+
     def add_task_to_queue(self, task: Task):
         msg = String()
         msg.data = task.json()
         self.task_addition_request_publisher.publish(msg)
 
-    # TODO: This method is currently not called anywhere
     def clear_history(self):
-        # Remove everything except system prompt
         self.history = self.history[:1]
+
+    class StreamingCallback(BaseCallbackHandler):
+        def __init__(self, node: "HMINode"):
+            self.node = node
+            self.buffer = ""
+
+        def on_llm_new_token(self, token: str, **kwargs) -> None:
+            self.buffer += token
+            if len(self.buffer) >= 30 or token.endswith((".", "!", "?")):
+                self.node.send_message_to_human(self.buffer)
+                self.buffer = ""
+
+        def on_llm_end(self, response, **kwargs) -> None:
+            if self.buffer:
+                self.node.send_message_to_human(self.buffer)
+                self.buffer = ""
+
+    async def handle_human_message_async(self, human_ros_msg: String):
+        self.processing = True
+        self.get_logger().info("Handling human message")
+        if not human_ros_msg.data:
+            self.get_logger().warn("Received an empty message, discarding")
+            return
+
+        callback = self.StreamingCallback(self)
+        response = await self.agent_executor.ainvoke(
+            {"input": human_ros_msg.data, "chat_history": self.history},
+            config={"callbacks": [callback]},
+        )
+
+        self.history.append(HumanMessage(human_ros_msg.data))
+        self.history.append(SystemMessage(content=response["output"]))
+        self.get_logger().info("Finished handling human message")
+        self.processing = False
 
 
 def main():
     rclpy.init()
     hmi_node = HMINode()
-    executor = MultiThreadedExecutor()
-    executor.add_node(hmi_node)
-    executor.spin()
-    hmi_node.destroy_node()
-    rclpy.shutdown()
+
+    async def run_node():
+        executor = MultiThreadedExecutor()
+        executor.add_node(hmi_node)
+
+        try:
+            while rclpy.ok():
+                executor.spin_once()
+                await asyncio.sleep(0.1)
+        except KeyboardInterrupt:
+            hmi_node.get_logger().info("Keyboard interrupt, shutting down...")
+        finally:
+            hmi_node.destroy_node()
+            rclpy.shutdown()
+
+    asyncio.run(run_node())
 
 
 if __name__ == "__main__":
