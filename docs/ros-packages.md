@@ -22,3 +22,13 @@ To use add `<exec_depend>rai_interfaces</exec_depend>` to target package's `pack
 ## RAI_whoami
 
 Package with robot-self identification capabilities. It includes RAI constitution.
+
+## RAI_bringup
+
+Package with launch files.
+
+### Human - Robot interface via voice
+
+```
+ros2 launch rai_bringup hri.launch.py  tts_vendor:=(opentts|elevenlabs) robot_package_description:=(robot_whoami_package)
+```
