@@ -88,6 +88,12 @@ def generate_launch_description():
         output="screen",
     )
 
+    led_strip_node = Node(
+        package="led_strip",
+        executable="led_strip_node",
+        name="led_strip_node",
+    )
+
     return LaunchDescription(
         [
             tts_vendor_arg,
@@ -96,5 +102,6 @@ def generate_launch_description():
             hmi_node,
             tts_launch_inclusion,
             whoami_node,
+            led_strip_node,
         ]
     )

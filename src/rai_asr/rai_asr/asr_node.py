@@ -202,7 +202,7 @@ class ASRNode(Node):
 
             response = self.model(file=temp_wav_buffer, language=self.language)
             transcription = response.text
-            if transcription == "you":
+            if transcription.lower() == "you":
                 self.get_logger().info("Dropping transcription: 'you'")
             else:
                 self.get_logger().info(f"Transcription: {transcription}")
