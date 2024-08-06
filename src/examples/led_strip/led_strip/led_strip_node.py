@@ -58,11 +58,17 @@ class LEDStripController(Node):
             )
             return ""
 
+        if self.asr_state == "recording" and self.hmi_state == "processing":
+            self.get_logger().warn(
+                "ASR is recording and HMI is processing at the same time!"
+            )
+            return ""
+
         if self.asr_state == "recording":
             return "recording"
         if self.tts_state == "playing":
             return "playing"
-        if self.hmi_state == "processing":
+        if self.hmi_state == "processing" or self.asr_state == "transcribing":
             return "processing"
         if self.asr_state == "waiting" or self.hmi_state == "waiting":
             return "waiting"
