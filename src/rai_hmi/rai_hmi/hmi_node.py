@@ -20,6 +20,7 @@ import rclpy
 from ament_index_python.packages import get_package_share_directory
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain.callbacks.base import BaseCallbackHandler
+from langchain.tools import tool
 from langchain_community.vectorstores import FAISS
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
@@ -31,10 +32,35 @@ from rclpy.parameter import Parameter
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
+from rai.scenario_engine.messages import HumanMultimodalMessage
+from rai.tools.ros.native import (
+    Ros2GetOneMsgFromTopicTool,
+    Ros2GetTopicsNamesAndTypesTool,
+    Ros2PubMessageTool,
+)
+from rai.tools.ros.tools import GetCameraImageTool
 from rai_interfaces.srv import VectorStoreRetrieval
 
 from .task import Task
 from .tools import QueryDatabaseTool, QueueTaskTool
+
+
+@tool
+def get_current_image(topic: str) -> str:
+    """Use this tool to get an image from a camera topic"""
+    topic = "/camera/camera/color/image_raw"
+    try:
+        llm = ChatOpenAI(model="gpt-4o-mini", streaming=True)
+        output = GetCameraImageTool()._run(topic=topic)
+        images = output["images"]
+        msg = HumanMultimodalMessage(
+            content="Please describe the image as thoroughly as possible",
+            images=images,
+            name="tool",
+        )
+        llm.invoke([msg]).content
+    except Exception as e:
+        return f"Error: {e}. Make sure the camera topic is correct."
 
 
 class HMINode(Node):
@@ -93,6 +119,10 @@ class HMINode(Node):
         tools = [
             QueryDatabaseTool(get_response=self.get_database_response),
             QueueTaskTool(add_task=self.add_task_to_queue),
+            Ros2GetTopicsNamesAndTypesTool(node=self),
+            Ros2GetOneMsgFromTopicTool(node=self),
+            Ros2PubMessageTool(node=self),
+            get_current_image,
         ]
         self.name_to_tool_map = {tool.name: tool for tool in tools}
 
