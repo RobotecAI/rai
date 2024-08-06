@@ -39,10 +39,9 @@ from rai.tools.ros.native import (
     Ros2PubMessageTool,
 )
 from rai.tools.ros.tools import GetCameraImageTool
+from rai_hmi.task import Task
+from rai_hmi.tools import QueryDatabaseTool, QueueTaskTool
 from rai_interfaces.srv import VectorStoreRetrieval
-
-from .task import Task
-from .tools import QueryDatabaseTool, QueueTaskTool
 
 
 @tool
@@ -54,11 +53,11 @@ def get_current_image(topic: str) -> str:
         output = GetCameraImageTool()._run(topic=topic)
         images = output["images"]
         msg = HumanMultimodalMessage(
-            content="Please describe the image as thoroughly as possible",
+            content="Please describe the image as thoroughly as possible. Reply with I see...",
             images=images,
             name="tool",
         )
-        llm.invoke([msg]).content
+        return llm.invoke([msg]).content
     except Exception as e:
         return f"Error: {e}. Make sure the camera topic is correct."
 
@@ -198,6 +197,7 @@ class HMINode(Node):
         Assume the conversation is carried over a voice interface, so try not to overwhelm the user.
         If you have multiple questions, please ask them one by one allowing user to respond before
         moving forward to the next question. Keep the conversation short and to the point.
+        Always reply in first person. When you use the tool and get the output, always present it in first person.
         """
 
         self.get_logger().info(f"System prompt initialized: {system_prompt}")
