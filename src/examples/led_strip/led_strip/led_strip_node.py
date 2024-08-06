@@ -5,78 +5,80 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import String
 
 
-def invert_bits(n):
+# husarion's low level driver expects big endian encoding
+def reverse_bit_order(n: int) -> int:
     binary_rep = format(n, "08b")  # convert to 8-bit binary
     inverted_binary_rep = binary_rep[::-1]  # reverse the bits
     return int(inverted_binary_rep, 2)  # convert back to integer
 
 
-color = (255, 255, 255)  # white
-inverted_color = tuple(invert_bits(c) for c in color)
-
-led_colors = np.full((1, 18, 3), inverted_color, dtype=np.uint8)
-
-print("Original color:", color)
-print("Inverted color:", inverted_color)
-print("LED colors array:")
-print(led_colors)
+STATE_TO_COLOR = {
+    "waiting": (255, 255, 255),  # white
+    "processing": (255, 134, 0),  # yellow
+    "recording": (0, 255, 0),  # green
+    "playing": (0, 0, 255),  # blue
+}
+DEFAULT_COLOR = (255, 0, 0)  # red, unknown state
+PULSE_FREQUENCY = 3  # Hz
 
 
 class LEDStripController(Node):
 
     def __init__(self):
         super().__init__("led_strip_controller")
+        self.asr_state = ""
+        self.hmi_state = ""
+        self.tts_state = ""
+
+        self.create_subscription(String, "/asr_status", self.asr_status_callback, 10)
+        self.create_subscription(String, "/hmi_status", self.hmi_status_callback, 10)
+        self.create_subscription(String, "/tts_status", self.tts_status_callback, 10)
+
+        self.timer = self.create_timer(0.05, self.timer_callback)
+
         self.publisher_ = self.create_publisher(Image, "/led_strip", 10)
 
-        self.state = "waiting"
+    def asr_status_callback(self, msg: String) -> None:
+        if isinstance(msg.data, str):
+            self.asr_state = msg.data
 
-        self.create_subscription(String, "/asr_status", self.listener_callback, 10)
-        self.create_subscription(String, "/hmi_status", self.listener_callback, 10)
-        self.create_subscription(String, "/tts_status", self.tts_listener_callback, 10)
+    def hmi_status_callback(self, msg: String) -> None:
+        if isinstance(msg.data, str):
+            self.hmi_state = msg.data
 
-        self.blink_state = False
-        self.color = (255, 255, 255)  # white
-        self.timer = self.create_timer(0.01, self.timer_callback)
-        self.playing_state_value = 0
-        self.sign = 1
+    def tts_status_callback(self, msg: String) -> None:
+        if isinstance(msg.data, str):
+            self.tts_state = msg.data
 
-    def listener_callback(self, msg):
-        if msg.data in ["transcribing", "processing", "recording"]:
-            self.state = msg.data
+    def calculate_state(self) -> str:
+        # priority order: recording > playing > processing > waiting
+        if self.asr_state == "recording" and self.tts_state == "playing":
+            self.get_logger().warn(
+                "ASR is recording and TTS is playing at the same time!"
+            )
+            return ""
 
-    def tts_listener_callback(self, msg):
-        if msg.data == "playing":
-            if not self.state == "playing":
-                self.playing_state_value = 0
-            self.state = msg.data
-        elif msg.data == "waiting":
-            if self.state == "playing":
-                self.state = msg.data
+        if self.asr_state == "recording":
+            return "recording"
+        if self.tts_state == "playing":
+            return "playing"
+        if self.hmi_state == "processing":
+            return "processing"
+        if self.asr_state == "waiting" or self.hmi_state == "waiting":
+            return "waiting"
+        return ""
 
     def timer_callback(self):
-        if self.state == "playing":
-            # publishing color/black
-            self.blink_state = not self.blink_state
-            color = (
-                self.playing_state_value,
-                0,
-                self.playing_state_value,
-            )  # if self.blink_state else (0, 0, 0)
-            self.playing_state_value += 5 * self.sign
-            if self.playing_state_value >= 255:
-                self.sign = -1
-            elif self.playing_state_value <= 0:
-                self.sign = 1
+        state = self.calculate_state()
+        color = STATE_TO_COLOR.get(state, DEFAULT_COLOR)
 
-            self.playing_state_value = max(0, (min(255, self.playing_state_value)))
+        if state == "playing":
+            t = self.get_clock().now().nanoseconds / 1e9
+            value: float = np.sin(2 * np.pi * PULSE_FREQUENCY * t)
+            color = np.array(color)
+            color = (value * color).astype(np.uint8)
 
-        elif self.state in ["transcribing", "processing"]:
-            color = (255, 134, 0)  # yellow
-        elif self.state == "recording":
-            color = (0, 255, 0)  # green
-        else:
-            color = (255, 255, 255)  # white
-
+        color = list(map(reverse_bit_order, color))
         led_colors = np.full((1, 18, 3), color, dtype=np.uint8)
 
         msg = Image()
