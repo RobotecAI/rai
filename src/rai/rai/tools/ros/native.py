@@ -7,9 +7,9 @@ import rosidl_runtime_py.utilities
 from langchain.tools import BaseTool
 from langchain_core.pydantic_v1 import BaseModel, Field
 from rclpy.impl.rcutils_logger import RcutilsLogger
+from rclpy.node import Node
 
 from rai.communication.ros_communication import wait_for_message
-from rai.node import RaiNode
 
 from .utils import import_message_from_str
 
@@ -49,9 +49,11 @@ class PubRos2MessageToolInput(BaseModel):
 
 # --------------------- Tools ---------------------
 class Ros2BaseTool(BaseTool):
-    node: RaiNode = Field(..., exclude=True, include=False, required=True)
+    node: Node = Field(..., exclude=True, include=False, required=True)
 
     args_schema: Type[Ros2BaseInput] = Ros2BaseInput
+    handle_tool_error = True
+    handle_validation_error = True
 
     @property
     def logger(self) -> RcutilsLogger:
