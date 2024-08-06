@@ -122,7 +122,6 @@ class TTSNode(Node):
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        time.sleep(0.1)
         self.get_logger().debug(f"Playing audio: {filepath}")  # type: ignore
         self.playing = False
 
