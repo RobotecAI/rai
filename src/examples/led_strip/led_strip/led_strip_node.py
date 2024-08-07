@@ -26,9 +26,9 @@ class LEDStripController(Node):
 
     def __init__(self):
         super().__init__("led_strip_controller")
-        self.asr_state = ""
-        self.hmi_state = ""
-        self.tts_state = ""
+        self.asr_state = "waiting"
+        self.hmi_state = "waiting"
+        self.tts_state = "waiting"
 
         self.create_subscription(String, "/asr_status", self.asr_status_callback, 10)
         self.create_subscription(String, "/hmi_status", self.hmi_status_callback, 10)
@@ -38,17 +38,22 @@ class LEDStripController(Node):
 
         self.publisher_ = self.create_publisher(Image, "/led_strip", 10)
 
+        self.led_state = "waiting"
+
     def asr_status_callback(self, msg: String) -> None:
         if isinstance(msg.data, str):
             self.asr_state = msg.data
+            self.calculate_state()
 
     def hmi_status_callback(self, msg: String) -> None:
         if isinstance(msg.data, str):
             self.hmi_state = msg.data
+            self.calculate_state()
 
     def tts_status_callback(self, msg: String) -> None:
         if isinstance(msg.data, str):
             self.tts_state = msg.data
+            self.calculate_state()
 
     def calculate_state(self) -> str:
         # priority order: recording > playing > processing > waiting
@@ -64,21 +69,25 @@ class LEDStripController(Node):
             )
             return ""
 
-        if self.asr_state == "recording":
-            return "recording"
-        if self.tts_state == "playing":
-            return "playing"
-        if self.hmi_state == "processing" or self.asr_state == "transcribing":
-            return "processing"
-        if self.asr_state == "waiting" or self.hmi_state == "waiting":
-            return "waiting"
-        return ""
+        if self.led_state == "waiting":
+            if self.asr_state == "recording":
+                self.led_state = "recording"
+        elif self.led_state == "recording":
+            if self.asr_state == "transcribing":
+                self.led_state = "processing"
+        elif self.led_state == "processing":
+            if self.tts_state == "playing":
+                self.led_state = "playing"
+            elif self.asr_state == "dropping":
+                self.led_state = "waiting"
+        elif self.led_state == "playing":
+            if self.tts_state == "waiting":
+                self.led_state = "waiting"
 
     def timer_callback(self):
-        state = self.calculate_state()
-        color = STATE_TO_COLOR.get(state, DEFAULT_COLOR)
+        color = STATE_TO_COLOR.get(self.led_state, DEFAULT_COLOR)
 
-        if state == "playing":
+        if self.led_state == "playing":
             t = self.get_clock().now().nanoseconds / 1e9
             value: float = np.sin(2 * np.pi * PULSE_FREQUENCY * t)
             color = np.array(color)

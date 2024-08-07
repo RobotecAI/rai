@@ -190,6 +190,7 @@ class ASRNode(Node):
         self.is_recording = False
         self.publish_status("transcribing")
         self.transcribe_audio()
+        self.publish_status("waiting")
 
     def transcribe_audio(self):
         self.get_logger().info("Calling ASR model")
@@ -202,8 +203,9 @@ class ASRNode(Node):
 
             response = self.model(file=temp_wav_buffer, language=self.language)
             transcription = response.text
-            if transcription.lower() == "you":
-                self.get_logger().info("Dropping transcription: 'you'")
+            if transcription.lower() in ["you", ""]:
+                self.get_logger().info(f"Dropping transcription: '{transcription}'")
+                self.publish_status("dropping")
             else:
                 self.get_logger().info(f"Transcription: {transcription}")
                 self.publish_transcription(transcription)
@@ -217,7 +219,9 @@ class ASRNode(Node):
         msg.data = transcription
         self.transcription_publisher.publish(msg)
 
-    def publish_status(self, status: Literal["recording", "transcribing"]):
+    def publish_status(
+        self, status: Literal["recording", "transcribing", "dropping", "waiting"]
+    ):
         msg = String()
         msg.data = status
         self.status_publisher.publish(msg)

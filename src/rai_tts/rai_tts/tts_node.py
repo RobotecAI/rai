@@ -51,6 +51,7 @@ class TTSNode(Node):
         self.queue: PriorityQueue[TTSJob] = PriorityQueue()
         self.it: int = 0
         self.job_id: int = 0
+        self.queued_job_id = 0
         self.tts_client = self._initialize_client()
         self.create_timer(0.01, self.status_callback)
         threading.Thread(target=self._process_queue).start()
@@ -79,11 +80,15 @@ class TTSNode(Node):
     def start_synthesize_thread(self, msg: String, job_id: int):
         while True:
             with self.thread_lock:
-                if self.threads_number < self.threads_max:
+                if (
+                    self.threads_number < self.threads_max
+                    and self.queued_job_id == job_id
+                ):
                     threading.Thread(
                         target=self.synthesize_speech, args=(job_id, msg.data)  # type: ignore
                     ).start()
                     self.threads_number += 1
+                    self.queued_job_id += 1
                     return
 
     def synthesize_speech(
