@@ -111,7 +111,11 @@ def tools_condition(
 
 def thinker(llm: BaseChatModel, logger: loggers_type, state: State):
     logger.info("Running thinker")
-    prompt = "Based on the data, reason about the situation."
+    prompt = (
+        "Based on the data provided, reason about the situation. "
+        "Analyze the context, identify any problems or challenges, "
+        "and consider potential implications."
+    )
     ai_msg = llm.invoke([SystemMessage(content=prompt)] + state["messages"])
     state["messages"].append(ai_msg)
     return state
@@ -122,10 +126,11 @@ def decider(
 ):
     logger.info("Running decider")
     prompt = (
-        "Based on the previous information, make a decision using tools. "
+        "Based on the previous information, make a decision using tools if necessary. "
         "If you are sure the problem has been solved, do not request any tools. "
-        "Request one tool at once!!!!!."
+        "Request one tool at a time."
     )
+
     input = state["messages"] + [HumanMessage(prompt)]
     ai_msg = llm.invoke(input)
     state["messages"].append(ai_msg)
@@ -137,8 +142,8 @@ def decider(
 def summarizer(llm: BaseChatModel, logger: loggers_type, state: State):
     logger.info("Summarizing the conversation")
     prompt = (
-        "You are the reporter. Your task is to summarize what happend previously. "
-        "Make sure to mention the problem and the solution."
+        "You are the reporter. Your task is to summarize what happened previously. "
+        "Make sure to mention the problem, solution and the outcome."
     )
     ai_msg = llm.with_structured_output(Report).invoke(
         [SystemMessage(content=prompt)] + state["messages"]
