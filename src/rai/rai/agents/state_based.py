@@ -97,7 +97,7 @@ class MyToolNode(RunnableCallable):
 
 def tools_condition(
     state: Union[list[AnyMessage], dict[str, Any]],
-) -> Literal["tools", "summarizer"]:
+) -> Literal["tools", "reporter"]:
     if isinstance(state, list):
         ai_message = state[-1]
     elif messages := state.get("messages", []):
@@ -106,7 +106,7 @@ def tools_condition(
         raise ValueError(f"No messages found in input state to tool_edge: {state}")
     if hasattr(ai_message, "tool_calls") and len(ai_message.tool_calls) > 0:
         return "tools"
-    return "summarizer"
+    return "reporter"
 
 
 def thinker(llm: BaseChatModel, logger: loggers_type, state: State):
@@ -139,7 +139,7 @@ def decider(
     return state
 
 
-def summarizer(llm: BaseChatModel, logger: loggers_type, state: State):
+def reporter(llm: BaseChatModel, logger: loggers_type, state: State):
     logger.info("Summarizing the conversation")
     prompt = (
         "You are the reporter. Your task is to summarize what happened previously. "
@@ -217,13 +217,13 @@ def create_state_based_agent(
     workflow.add_node("tools", tool_node)
     workflow.add_node("thinker", partial(thinker, llm, _logger))
     workflow.add_node("decider", partial(decider, llm_with_tools, _logger))
-    workflow.add_node("summarizer", partial(summarizer, llm, _logger))
+    workflow.add_node("reporter", partial(reporter, llm, _logger))
 
     workflow.add_edge(START, "state_retriever")
     workflow.add_edge("state_retriever", "thinker")
     workflow.add_edge("thinker", "decider")
     workflow.add_edge("tools", "state_retriever")
-    workflow.add_edge("summarizer", END)
+    workflow.add_edge("reporter", END)
     workflow.add_conditional_edges(
         "decider",
         tools_condition,
