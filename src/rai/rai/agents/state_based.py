@@ -1,3 +1,4 @@
+import logging
 from functools import partial
 from typing import (
     Any,
@@ -31,8 +32,11 @@ from langchain_core.tools import tool as create_tool
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt.tool_node import str_output
 from langgraph.utils import RunnableCallable
+from rclpy.logging import RcutilsLogger
 
 from rai.scenario_engine.messages import HumanMultimodalMessage, preprocess_image
+
+loggers_type = Union[RcutilsLogger, logging.Logger]
 
 
 class State(TypedDict):
@@ -59,6 +63,7 @@ class MyToolNode(RunnableCallable):
         *,
         name: str = "tools",
         tags: Optional[list[str]] = None,
+        logger: loggers_type,
     ) -> None:
         super().__init__(self._func, name=name, tags=tags, trace=False)
         self.tools_by_name: Dict[str, BaseTool] = {}
@@ -66,6 +71,7 @@ class MyToolNode(RunnableCallable):
             if not isinstance(tool_, BaseTool):
                 tool_ = create_tool(tool_)
             self.tools_by_name[tool_.name] = tool_
+        self.logger = logger
 
     def _func(self, input: dict[str, Any], config: RunnableConfig) -> Any:
         if messages := input.get("messages", []):
@@ -77,6 +83,7 @@ class MyToolNode(RunnableCallable):
             raise ValueError("Last message is not an AIMessage")
 
         def run_one(call: ToolCall):
+            self.logger.info(f"Running tool: {call['name']}")
             output = self.tools_by_name[call["name"]].invoke(call["args"], config)
             return ToolMessage(
                 content=str_output(output), name=call["name"], tool_call_id=call["id"]
@@ -102,14 +109,18 @@ def tools_condition(
     return "summarizer"
 
 
-def thinker(llm: BaseChatModel, state: State):
+def thinker(llm: BaseChatModel, logger: loggers_type, state: State):
+    logger.info("Running thinker")
     prompt = "Based on the data, reason about the situation."
     ai_msg = llm.invoke([SystemMessage(content=prompt)] + state["messages"])
     state["messages"].append(ai_msg)
     return state
 
 
-def decider(llm: Runnable[LanguageModelInput, BaseMessage], state: State):
+def decider(
+    llm: Runnable[LanguageModelInput, BaseMessage], logger: loggers_type, state: State
+):
+    logger.info("Running decider")
     prompt = (
         "Based on the previous information, make a decision using tools. "
         "If you are sure the problem has been solved, do not request any tools. "
@@ -118,10 +129,13 @@ def decider(llm: Runnable[LanguageModelInput, BaseMessage], state: State):
     input = state["messages"] + [HumanMessage(prompt)]
     ai_msg = llm.invoke(input)
     state["messages"].append(ai_msg)
+    if ai_msg.tool_calls:
+        logger.info("Tools requested: {}".format(ai_msg.tool_calls))
     return state
 
 
-def summarizer(llm: BaseChatModel, state: State):
+def summarizer(llm: BaseChatModel, logger: loggers_type, state: State):
+    logger.info("Summarizing the conversation")
     prompt = (
         "You are the reporter. Your task is to summarize what happend previously. "
         "Make sure to mention the problem and the solution."
@@ -178,18 +192,27 @@ def create_state_based_agent(
     llm: BaseChatModel,
     tools: List[BaseTool],
     state_retriever: Callable[[], Dict[str, Any]],
+    logger: Optional[RcutilsLogger | logging.Logger] = None,
 ):
+    _logger = None
+    if isinstance(logger, RcutilsLogger):
+        _logger = logger
+    else:
+        _logger = logging.getLogger(__name__)
+
+    _logger.info("Creating state based agent")
+
     llm_with_tools = llm.bind_tools(tools)
-    tool_node = MyToolNode(tools=tools)
+    tool_node = MyToolNode(tools=tools, logger=_logger)
 
     workflow = StateGraph(State)
     workflow.add_node(
         "state_retriever", partial(retriever_wrapper, state_retriever, llm)
     )
     workflow.add_node("tools", tool_node)
-    workflow.add_node("thinker", partial(thinker, llm))
-    workflow.add_node("decider", partial(decider, llm_with_tools))
-    workflow.add_node("summarizer", partial(summarizer, llm))
+    workflow.add_node("thinker", partial(thinker, llm, _logger))
+    workflow.add_node("decider", partial(decider, llm_with_tools, _logger))
+    workflow.add_node("summarizer", partial(summarizer, llm, _logger))
 
     workflow.add_edge(START, "state_retriever")
     workflow.add_edge("state_retriever", "thinker")
@@ -202,4 +225,5 @@ def create_state_based_agent(
     )
 
     app = workflow.compile()
+    _logger.info("State based agent created")
     return app
