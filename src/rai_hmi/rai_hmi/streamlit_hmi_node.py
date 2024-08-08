@@ -12,8 +12,8 @@ from langchain.tools import tool
 from langchain_community.callbacks.streamlit.streamlit_callback_handler import (
     StreamlitCallbackHandler,
 )
-from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_community.vectorstores import FAISS
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_openai import OpenAIEmbeddings
 from langchain_openai.chat_models import ChatOpenAI
@@ -30,7 +30,7 @@ from rai_hmi.task import Task
 from rai_interfaces.srv import VectorStoreRetrieval
 
 st.set_page_config(page_title="LangChain Chat App", page_icon="🦜")
-st.title("LangChain Chat App")
+st.title(f"{sys.argv[1].replace('_whoami', '')} chat app")
 
 if "memory" not in st.session_state:
     st.session_state.memory = ConversationBufferMemory(
@@ -167,9 +167,7 @@ def search_database(query: str) -> str:
 
 @st.cache_resource
 def initialize_genAI(system_prompt: str, _node: Node):
-    search = DuckDuckGoSearchRun()
     tools = [
-        search,
         Ros2GetTopicsNamesAndTypesTool(node=_node),
         get_image_from_topic,
         add_task_to_queue,
@@ -206,12 +204,12 @@ if "messages" not in st.session_state:
     st.session_state["messages"] = []
 
 for message in st.session_state["messages"]:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+    with st.chat_message(message.type):
+        st.markdown(message.content)
 
 if prompt := st.chat_input("What is your question?"):
     st.chat_message("user").markdown(prompt)
-    st.session_state["messages"].append({"role": "user", "content": prompt})
+    st.session_state["messages"].append(HumanMessage(content=prompt))
 
     with st.chat_message("assistant"):
         cb = StreamlitCallbackHandler(st.container(), expand_new_thoughts=False)
@@ -227,4 +225,4 @@ if prompt := st.chat_input("What is your question?"):
 
         message_placeholder.markdown(full_response)
 
-    st.session_state["messages"].append({"role": "assistant", "content": full_response})
+    st.session_state["messages"].append(AIMessage(content=full_response))
