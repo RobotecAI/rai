@@ -1,23 +1,23 @@
-#include <rcutils/time.h>
-
 #include <algorithm>
 #include <filesystem>
 #include <map>
 #include <memory>
-#include <rcl_interfaces/msg/log.hpp>
-#include <rclcpp/rclcpp.hpp>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-#include "rai_interfaces/srv/string_list.hpp"
+#include <rai_interfaces/srv/string_list.hpp>
+#include <rcl_interfaces/msg/log.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <rcutils/time.h>
 
 class LogDigestNode : public rclcpp::Node
 {
 public:
   using Content = std::tuple<std::string, size_t, int64_t>;
 
-  LogDigestNode() : Node("rai_state_logs_node")
+  LogDigestNode()
+  : Node("rai_state_logs_node")
   {
     constexpr uint16_t default_limit = 512;
     this->declare_parameter("filters", std::vector<std::string>());
@@ -39,8 +39,8 @@ public:
 
     log_digest_srv_ = create_service<rai_interfaces::srv::StringList>(
       "get_log_digest", std::bind(
-                          &LogDigestNode::digest_request_callback, this, std::placeholders::_1,
-                          std::placeholders::_2));
+        &LogDigestNode::digest_request_callback, this, std::placeholders::_1,
+        std::placeholders::_2));
   }
 
 private:
@@ -71,7 +71,7 @@ private:
     // Surprisingly, log to string isn't exposed from ROS.
     static const std::unordered_map<uint8_t, std::string> levelMapping = {
       {rcl_interfaces::msg::Log::DEBUG, "DEBUG"}, {rcl_interfaces::msg::Log::INFO, "INFO"},
-      {rcl_interfaces::msg::Log::WARN, "WARN"},   {rcl_interfaces::msg::Log::ERROR, "ERROR"},
+      {rcl_interfaces::msg::Log::WARN, "WARN"}, {rcl_interfaces::msg::Log::ERROR, "ERROR"},
       {rcl_interfaces::msg::Log::FATAL, "FATAL"},
     };
     auto levelMapElement = levelMapping.find(msg.level);
@@ -94,9 +94,10 @@ private:
 
   bool passesFilters(const std::string & text) const
   {
-    return std::any_of(filters_.cbegin(), filters_.cend(), [&text](const std::string & f) {
-      return text.find(f) != std::string::npos;
-    });
+    return std::any_of(
+      filters_.cbegin(), filters_.cend(), [&text](const std::string & f) {
+        return text.find(f) != std::string::npos;
+      });
   }
 
   void log_callback(const rcl_interfaces::msg::Log & msg)
