@@ -1,6 +1,7 @@
 #include <chrono>
-#include <rclcpp/rclcpp.hpp>
 #include <thread>
+
+#include <rclcpp/rclcpp.hpp>
 
 // Move to tests etc.
 int main(int argc, char ** argv)
