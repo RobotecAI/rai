@@ -45,6 +45,7 @@ Activate the poetry environment:
 
 ```
 poetry shell
+export PYTHONPATH="$(dirname $(dirname $(poetry run which python)))/lib/python$(poetry run python --version | awk '{print $2}' | cut -d. -f1,2)/site-packages:$PYTHONPATH"
 ```
 
 Run the ROS node using `ros2 launch`:
