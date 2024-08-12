@@ -126,6 +126,11 @@ class ToolRunner(RunnableCallable):
                     outputs.append(raw_output.postprocess())
                 else:
                     outputs.append(raw_output)
+
+            # because we can't answer an aiMessage with an alternating sequence of tool and human messages
+            # we sort the messages by type so that the tool messages are sent first
+            # for more information see implementation of ToolMultimodalMessage.postprocess
+            outputs.sort(key=lambda x: x.__class__.__name__, reverse=True)
             input["messages"].extend(outputs)
             return input
 

@@ -51,7 +51,7 @@ class SystemMultimodalMessage(SystemMessage, MultimodalMessage):
 
 
 class ToolMultimodalMessage(ToolMessage, MultimodalMessage):
-    def postprocess(self, format: Literal["openai", "bedrock"]):
+    def postprocess(self, format: Literal["openai", "bedrock"] = "openai"):
         if format == "openai":
             return self._postprocess_openai()
         elif format == "bedrock":
