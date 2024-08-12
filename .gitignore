@@ -168,3 +168,5 @@ logs/
 .vscode/
 
 !examples/imgs/*.md
+
+src/examples/*-demo
