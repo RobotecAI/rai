@@ -1,11 +1,16 @@
 import base64
-from typing import Any, Callable, Dict, List, Literal, Optional, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, TypedDict, Union
 
 import numpy as np
 import requests
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.messages.base import BaseMessage
 from langchain_core.tools import BaseTool
+
+
+class MultimodalArtifact(TypedDict):
+    images: List[str]  # base64 encoded images
+    audios: List[str]
 
 
 class MultimodalMessage(BaseMessage):
