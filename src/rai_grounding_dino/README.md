@@ -57,7 +57,6 @@ ros2 launch rai_grounding_dino gdino_launch.xml [weights_path:=PATH/TO/WEIGHTS]
 > By default the weights will be downloaded to `$(ros2 pkg prefix rai_grounding_dino)/share/weights/`.
 > You can change this path if you downloaded the weights manually or moved them.
 
-
 ### Example
 
 An example client is provided with the package as `rai_grounding_dino/talker.py`
