@@ -18,9 +18,6 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/VectorStoreRetrieval.srv"
-)
-
-rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/RAIDetectionArray.msg"
   "srv/RAIGroundingDino.srv"
   DEPENDENCIES std_msgs vision_msgs sensor_msgs
