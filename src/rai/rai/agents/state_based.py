@@ -10,9 +10,9 @@ from typing import (
     Sequence,
     TypedDict,
     Union,
+    cast,
 )
 
-import numpy as np
 from langchain.chat_models.base import BaseChatModel
 from langchain_core.language_models.base import LanguageModelInput
 from langchain_core.messages import (
@@ -34,7 +34,7 @@ from langgraph.prebuilt.tool_node import str_output
 from langgraph.utils import RunnableCallable
 from rclpy.logging import RcutilsLogger
 
-from rai.scenario_engine.messages import HumanMultimodalMessage, preprocess_image
+from rai.scenario_engine.messages import HumanMultimodalMessage, ToolMultimodalMessage
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
 
@@ -56,7 +56,7 @@ class Report(BaseModel):
     )
 
 
-class MyToolNode(RunnableCallable):
+class ToolRunner(RunnableCallable):
     def __init__(
         self,
         tools: Sequence[Union[BaseTool, Callable]],
@@ -84,13 +84,48 @@ class MyToolNode(RunnableCallable):
 
         def run_one(call: ToolCall):
             self.logger.info(f"Running tool: {call['name']}")
-            output = self.tools_by_name[call["name"]].invoke(call["args"], config)
+            artifact = None
+            output = self.tools_by_name[call["name"]].invoke(call["args"], config)  # type: ignore
+            if isinstance(output, tuple):
+                if len(output) != 2:  # type: ignore
+                    # Bad tool configuration
+                    raise ValueError(
+                        f"Expected output to be a tuple of length 2 (content, artifact). Got {len(output)}"
+                    )
+                if not isinstance(output[0], str):
+                    raise ValueError("Content must be a string")
+                if not isinstance(output[1], dict):
+                    raise ValueError(
+                        "Artifact must be a dictionary with optional keys: 'images', 'audios'"
+                    )
+
+                output, artifact = output  # type: ignore
+                output = cast(str, output)
+                artifact = cast(Dict[str, Any], artifact)
+
+            if artifact is not None:  # multimodal case
+                return ToolMultimodalMessage(
+                    content=str_output(output),
+                    name=call["name"],
+                    tool_call_id=call["id"],
+                    images=artifact.get("images", []),
+                    audios=artifact.get("audios", []),
+                )
+
             return ToolMessage(
-                content=str_output(output), name=call["name"], tool_call_id=call["id"]
+                content=str_output(output),
+                name=call["name"],
+                tool_call_id=call["id"],
             )
 
         with get_executor_for_config(config) as executor:
-            outputs = [*executor.map(run_one, message.tool_calls)]
+            raw_outputs = [*executor.map(run_one, message.tool_calls)]
+            outputs: List[Any] = []
+            for raw_output in raw_outputs:
+                if isinstance(raw_output, ToolMultimodalMessage):
+                    outputs.append(raw_output.postprocess())
+                else:
+                    outputs.append(raw_output)
             input["messages"].extend(outputs)
             return input
 
@@ -155,41 +190,17 @@ def reporter(llm: BaseChatModel, logger: loggers_type, state: State):
 def retriever_wrapper(
     state_retriever: Callable[[], Dict[str, Any]], llm: BaseChatModel, state: State
 ):
+    """This wrapper is used to retrieve multimodal information from the output of state_retriever."""
     retrieved_info = state_retriever()
-    processed_info = {}
     images = retrieved_info.pop("images", [])
-    if "img" in retrieved_info:
-        if isinstance(retrieved_info["img"], list):
-            for image in images:
-                assert isinstance(
-                    image, (str, bytes, np.ndarray)
-                ), f"Image must be a string, bytes, or numpy array. Got {type(image)}"
-                processed_info["image_descriptions"].append(
-                    llm.invoke(
-                        [
-                            SystemMessage(content="Please describe the image."),
-                            HumanMultimodalMessage(
-                                content="The image", images=[preprocess_image(image)]
-                            ),
-                        ]
-                    ).content
-                )
-        elif isinstance(retrieved_info["img"], (str, bytes, np.ndarray)):
-            processed_info["image_descriptions"] = [
-                llm.invoke(
-                    [
-                        SystemMessage(content="Please describe the image."),
-                        HumanMultimodalMessage(
-                            content="The image",
-                            images=[preprocess_image(retrieved_info["img"])],
-                        ),
-                    ]
-                ).content
-            ]
+    audios = retrieved_info.pop("audios", [])
 
-    processed_info.update(retrieved_info)
-    info = str_output(processed_info)
-    state["messages"].append(HumanMessage(content="Retrieved state: {}".format(info)))
+    info = str_output(retrieved_info)
+    state["messages"].append(
+        HumanMultimodalMessage(
+            content="Retrieved state: {}".format(info), images=images, audios=audios
+        )
+    )
     return state
 
 
@@ -208,7 +219,7 @@ def create_state_based_agent(
     _logger.info("Creating state based agent")
 
     llm_with_tools = llm.bind_tools(tools)
-    tool_node = MyToolNode(tools=tools, logger=_logger)
+    tool_node = ToolRunner(tools=tools, logger=_logger)
 
     workflow = StateGraph(State)
     workflow.add_node(
