@@ -113,6 +113,14 @@ rosdep install --from-paths src --ignore-src -r -y
 
 ### 2. Build ros project:
 
+#### 2.1 Download demos
+
+```bash
+vcs import < demos.repos
+```
+
+#### 2.2
+
 ```bash
 . /opt/ros/${ROS_DISTRO}/setup.bash
 colcon build --symlink-install
