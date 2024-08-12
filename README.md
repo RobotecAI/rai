@@ -77,20 +77,25 @@ For more information see: [src/rai/communication/README.md](./src/rai/communicat
 ## Prerequisites
 
 - python3.10 or python3.12
-- poetry
+- poetry `>=1.8.0`
 - ROS 2 humble or ROS 2 jazzy
 - tf-transformations package
 
 ### 0. Packages installation:
 
-```bash
-python3 -m pip install poetry
-export PATH="$HOME/.local/bin:$PATH"
-```
+- Install `poetry >= 1.8.0` by following the official [docs](https://python-poetry.org/docs/#installation)
 
-```
-sudo apt install ros-${ROS_DISTRO}-tf-transformations
-```
+  - Remember to add `poetry` to your `PATH`.
+
+    ```bash
+    export PATH="$HOME/.local/bin:$PATH"
+    ```
+
+- Install ros dependencies:
+
+  ```bash
+  sudo apt install ros-${ROS_DISTRO}-tf-transformations
+  ```
 
 ### 1. Clone the repository:
 
@@ -101,7 +106,7 @@ cd rai-private
 
 ### 2. Create poetry virtual environment and install dependencies:
 
-```sh
+```bash
 poetry install
 rosdep install --from-paths src --ignore-src -r -y
 ```
