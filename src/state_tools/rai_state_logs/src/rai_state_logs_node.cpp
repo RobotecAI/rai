@@ -23,9 +23,11 @@ public:
     this->declare_parameter("filters", std::vector<std::string>());
     this->declare_parameter("max_lines", default_limit);
     this->declare_parameter("include_meta", true);
+    this->declare_parameter("clear_on_retrieval", true);
     filters_ = get_parameter("filters").as_string_array();
     max_lines_ = static_cast<uint16_t>(get_parameter("max_lines").as_int());
     include_meta_ = get_parameter("include_meta").as_bool();
+    clear_on_retrieval_ = get_parameter("clear_on_retrieval").as_bool();
 
     if (max_lines_ < 1) {
       RCLCPP_WARN(get_logger(), "Invalid value of max_lines_ parameter, reverting to default");
@@ -62,8 +64,10 @@ private:
 
     response->success = true;
     response->string_list = responseLogs;
-    timestamps_.clear();
-    logs_.clear();
+    if (clear_on_retrieval_) {
+      timestamps_.clear();
+      logs_.clear();
+    }
   }
 
   std::string formatSource(const rcl_interfaces::msg::Log & msg) const
@@ -147,6 +151,7 @@ private:
   rclcpp::Service<rai_interfaces::srv::StringList>::SharedPtr log_digest_srv_;
 
   bool include_meta_;
+  bool clear_on_retrieval_;
   uint16_t max_lines_;
   std::vector<std::string> filters_;
   std::unordered_map<std::string, Content> logs_;
