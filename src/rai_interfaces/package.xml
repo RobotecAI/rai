@@ -4,7 +4,8 @@
   <name>rai_interfaces</name>
   <version>0.1.0</version>
   <description>Interfaces for RAI communication</description>
-  <maintainer email="kajetan.rachwal@robotec.ai">Kajetan Rachwał</maintainer>
+    <maintainer email="adam.dabrowski@robotec.ai">Adam Dabrowski</maintainer>
+    <maintainer email="kajetan.rachwal@robotec.ai">Kajetan Rachwał</maintainer>
   <license>Apache-2.0</license>
 
   <depend>std_msgs</depend>
