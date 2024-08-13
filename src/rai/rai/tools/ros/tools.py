@@ -274,6 +274,7 @@ class GetCameraImageTool(BaseTool):
 
     name = "GetCameraImageTool"
     description: str = "A tool for getting the current image from a ROS2 topic."
+    response_format: str = "content_and_artifact"
 
     args_schema: Type[GetCameraImageToolInput] = GetCameraImageToolInput
 
@@ -281,4 +282,4 @@ class GetCameraImageTool(BaseTool):
         """Gets the current image from the specified topic."""
         grabber = SingleImageGrabber(topic, timeout_sec=10)
         base64_image = grabber.get_data()
-        return {"content": "Image grabbed successfully", "images": [base64_image]}
+        return "Image grabbed successfully", {"images": [base64_image]}

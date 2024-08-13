@@ -152,6 +152,8 @@ class SingleImageGrabber(SingleMessageGrabber):
                 bytes(cv2.imencode(".png", cv_image)[1])
             ).decode("utf-8")
             return base64_image
+        else:
+            cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
 
         image_data = cv2.imencode(".png", cv_image)[1].tostring()  # type: ignore
         base64_image = base64.b64encode(image_data).decode("utf-8")  # type: ignore

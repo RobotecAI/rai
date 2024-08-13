@@ -43,6 +43,7 @@ rich = "^13.7.1"
 docx2txt = "^0.8"
 pypdf = "^4.2.0"
 
+streamlit = "^1.37.1"
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.4"
 
