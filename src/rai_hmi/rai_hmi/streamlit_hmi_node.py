@@ -1,23 +1,15 @@
 import base64
 import sys
-from io import BytesIO
 
 import rclpy
 import streamlit as st
 from ament_index_python.packages import get_package_share_directory
-from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain.memory import ConversationBufferMemory
-from langchain.prompts import ChatPromptTemplate
 from langchain.tools import tool
-from langchain_community.callbacks.streamlit.streamlit_callback_handler import (
-    StreamlitCallbackHandler,
-)
 from langchain_community.vectorstores import FAISS
 from langchain_core.messages import AIMessage, HumanMessage
-from langchain_core.runnables import RunnableConfig
 from langchain_openai import OpenAIEmbeddings
 from langchain_openai.chat_models import ChatOpenAI
-from PIL import Image
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
 from std_msgs.msg import String
@@ -26,6 +18,8 @@ from std_srvs.srv import Trigger
 from rai.scenario_engine.messages import HumanMultimodalMessage
 from rai.tools.ros.native import Ros2GetTopicsNamesAndTypesTool
 from rai.tools.ros.tools import GetCameraImageTool
+from rai_hmi.agent import State as ConversationState
+from rai_hmi.agent import create_conversational_agent
 from rai_hmi.task import Task
 from rai_interfaces.srv import VectorStoreRetrieval
 
@@ -103,6 +97,7 @@ def initialize_ros(robot_description_package: str):
             If you have multiple questions, please ask them one by one allowing user to respond before
             moving forward to the next question. Keep the conversation short and to the point.
             Always reply in first person. When you use the tool and get the output, always present it in first person.
+            Do not ever guess the topic name. If you don't know the topic, use the available tools to find it.
             """
 
             self.get_logger().info(f"System prompt initialized: {system_prompt}")
@@ -124,8 +119,8 @@ def initialize_ros(robot_description_package: str):
 
 
 llm = ChatOpenAI(
-    temperature=0,
-    model="gpt-4o-mini",
+    temperature=0.5,
+    model="gpt-4o",
     streaming=True,
 )
 
@@ -135,22 +130,6 @@ def add_task_to_queue(task: Task):
     """Use this tool to add a task to the queue. The task will be handled by the executor part of your system."""
     hmi_node.task_addition_request_publisher.publish(String(data=task.json()))
     return f"Task added to the queue: {task.json()}"
-
-
-@tool
-def get_image_from_topic(topic: str):
-    """Use this tool to get an image from a ROS 2 topic."""
-    tool = GetCameraImageTool()
-    output = tool._run(topic=topic)
-    msg = HumanMultimodalMessage(
-        content="Please describe the image.", images=output["images"]
-    )
-    ai_msg = llm.invoke([msg])
-    image_data = base64.b64decode(output["images"][0])
-    image_buffer = BytesIO(image_data)
-    pil_image = Image.open(image_buffer)
-    st.container(border=True).image(pil_image, use_column_width=True)
-    return f"Image description: {ai_msg.content}"
 
 
 @tool
@@ -169,34 +148,21 @@ def search_database(query: str) -> str:
 def initialize_genAI(system_prompt: str, _node: Node):
     tools = [
         Ros2GetTopicsNamesAndTypesTool(node=_node),
-        get_image_from_topic,
+        GetCameraImageTool(),
         add_task_to_queue,
         search_database,
     ]
-
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", system_prompt),
-            ("human", "{input}"),
-            ("human", "Chat History: {chat_history}"),
-            ("human", "Agent Scratchpad: {agent_scratchpad}"),
-        ]
+    agent = create_conversational_agent(
+        llm, tools, debug=True, system_prompt=system_prompt
     )
 
-    agent = create_tool_calling_agent(llm, tools, prompt=prompt)
-    agent_executor = AgentExecutor(
-        agent=agent,
-        tools=tools,
-        verbose=True,
-        handle_parsing_errors=True,
-        memory=st.session_state.memory,
-    )
-
-    return agent_executor
+    state = ConversationState(messages=[])
+    return agent, state
 
 
 hmi_node, system_prompt, faiss_index = initialize_ros(sys.argv[1])
-agent_executor = initialize_genAI(system_prompt=system_prompt, _node=hmi_node)
+agent_executor, state = initialize_genAI(system_prompt=system_prompt, _node=hmi_node)
+
 
 st.subheader("Chat")
 
@@ -210,19 +176,24 @@ for message in st.session_state["messages"]:
 if prompt := st.chat_input("What is your question?"):
     st.chat_message("user").markdown(prompt)
     st.session_state["messages"].append(HumanMessage(content=prompt))
+    state["messages"].append(HumanMessage(content=prompt))
 
     with st.chat_message("assistant"):
-        cb = StreamlitCallbackHandler(st.container(), expand_new_thoughts=False)
-        cfg = RunnableConfig(callbacks=[cb])
-        message_placeholder = st.empty()
-        full_response = ""
+        message_placeholder = st.container()
+        n_messages = len(state["messages"])
+        with message_placeholder.status("Thinking..."):
+            response = agent_executor.invoke(state)
+        new_messages = state["messages"][n_messages:]
+        for message in new_messages:
+            if isinstance(message, HumanMultimodalMessage):
+                base64_images = [image for image in message.images]
+                # convert the str to bytes
+                images = [base64.b64decode(image) for image in base64_images]
+                for image in images:
+                    message_placeholder.image(image)
 
-        response = agent_executor.invoke({"input": prompt}, config=cfg)
-        if "output" in response:
-            full_response = response["output"]
-        else:
-            full_response = str(response)
+        output = response["messages"][-1]
 
-        message_placeholder.markdown(full_response)
+        message_placeholder.markdown(output.content)
 
-    st.session_state["messages"].append(AIMessage(content=full_response))
+    st.session_state["messages"].append(AIMessage(content=output.content))
