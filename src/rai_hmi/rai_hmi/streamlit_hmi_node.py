@@ -38,8 +38,13 @@ from rai_hmi.agent import create_conversational_agent
 from rai_hmi.task import Task
 from rai_interfaces.srv import VectorStoreRetrieval
 
+package_name = sys.argv[1] if len(sys.argv) > 1 else None
+
 st.set_page_config(page_title="LangChain Chat App", page_icon="🦜")
-st.title(f"{sys.argv[1].replace('_whoami', '')} chat app")
+if package_name:
+    st.title(f"{package_name.replace('_whoami', '')} chat app")
+else:
+    st.title("ROS 2 Chat App")
 
 if "memory" not in st.session_state:
     st.session_state.memory = ConversationBufferMemory(
@@ -127,10 +132,13 @@ def initialize_ros(robot_description_package: str):
             )
             return faiss_index
 
-    hmi_node = HMINode(robot_description_package=robot_description_package)
-    system_prompt = hmi_node.initialize_system_prompt()
-    faiss_index = hmi_node.load_documentation()
-    return hmi_node, system_prompt, faiss_index
+    if package_name is not None:
+        hmi_node = HMINode(robot_description_package=robot_description_package)
+        system_prompt = hmi_node.initialize_system_prompt()
+        faiss_index = hmi_node.load_documentation()
+        return hmi_node, system_prompt, faiss_index
+    else:
+        return rclpy.node.Node("rai_chat_node"), "", None
 
 
 llm = ChatOpenAI(
@@ -164,9 +172,11 @@ def initialize_genAI(system_prompt: str, _node: Node):
     tools = [
         Ros2GetTopicsNamesAndTypesTool(node=_node),
         GetCameraImageTool(),
-        add_task_to_queue,
-        search_database,
     ]
+    if package_name:
+        tools.append(add_task_to_queue)
+        tools.append(search_database)
+
     agent = create_conversational_agent(
         llm, tools, debug=True, system_prompt=system_prompt
     )
@@ -175,7 +185,7 @@ def initialize_genAI(system_prompt: str, _node: Node):
     return agent, state
 
 
-hmi_node, system_prompt, faiss_index = initialize_ros(sys.argv[1])
+hmi_node, system_prompt, faiss_index = initialize_ros(package_name)
 agent_executor, state = initialize_genAI(system_prompt=system_prompt, _node=hmi_node)
 
 
