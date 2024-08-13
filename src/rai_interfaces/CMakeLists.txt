@@ -11,10 +11,16 @@ find_package(ament_cmake REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
+find_package(std_msgs REQUIRED)
+find_package(vision_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/VectorStoreRetrieval.srv"
+  "msg/RAIDetectionArray.msg"
+  "srv/RAIGroundingDino.srv"
+  DEPENDENCIES std_msgs vision_msgs sensor_msgs
 )
 
 if(BUILD_TESTING)

@@ -4,8 +4,9 @@ __pycache__/
 *$py.class
 
 # ROS
-install/
 build/
+devel/
+install/
 log/
 
 # C extensions
