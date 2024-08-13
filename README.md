@@ -3,6 +3,8 @@
 > [!IMPORTANT]  
 > **RAI is currently a work in progress. We are consistently developing the framework, aiming for stabilization in time for ROSCon 2024.**
 
+![rai-image](./docs/imgs/demos.png)
+
 Welcome to the RAI Framework repository! We are dedicated to advancing robotics by integrating Generative AI to enable intelligent task fulfillment and enhance conventional algorithms.
 
 ## Overview
