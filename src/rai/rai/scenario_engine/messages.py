@@ -1,11 +1,16 @@
 import base64
-from typing import Any, Callable, Dict, List, Literal, Optional, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, TypedDict, Union
 
 import numpy as np
 import requests
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.messages.base import BaseMessage
 from langchain_core.tools import BaseTool
+
+
+class MultimodalArtifact(TypedDict):
+    images: List[str]  # base64 encoded images
+    audios: List[str]
 
 
 class MultimodalMessage(BaseMessage):
@@ -18,7 +23,7 @@ class MultimodalMessage(BaseMessage):
     ):
         super().__init__(**kwargs)  # type: ignore
 
-        if self.audios is not None:
+        if self.audios not in [None, []]:
             raise ValueError("Audio is not yet supported")
 
         _content: List[Union[str, Dict[str, Union[Dict[str, str], str]]]] = []
@@ -51,7 +56,7 @@ class SystemMultimodalMessage(SystemMessage, MultimodalMessage):
 
 
 class ToolMultimodalMessage(ToolMessage, MultimodalMessage):
-    def postprocess(self, format: Literal["openai", "bedrock"]):
+    def postprocess(self, format: Literal["openai", "bedrock"] = "openai"):
         if format == "openai":
             return self._postprocess_openai()
         elif format == "bedrock":
