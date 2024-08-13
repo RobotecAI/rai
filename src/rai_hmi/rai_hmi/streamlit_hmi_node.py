@@ -7,7 +7,7 @@ from ament_index_python.packages import get_package_share_directory
 from langchain.memory import ConversationBufferMemory
 from langchain.tools import tool
 from langchain_community.vectorstores import FAISS
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_openai import OpenAIEmbeddings
 from langchain_openai.chat_models import ChatOpenAI
 from rclpy.callback_groups import ReentrantCallbackGroup
@@ -15,7 +15,7 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
-from rai.scenario_engine.messages import HumanMultimodalMessage
+from rai.scenario_engine.messages import HumanMultimodalMessage, ToolMultimodalMessage
 from rai.tools.ros.native import Ros2GetTopicsNamesAndTypesTool
 from rai.tools.ros.tools import GetCameraImageTool
 from rai_hmi.agent import State as ConversationState
@@ -170,8 +170,28 @@ if "messages" not in st.session_state:
     st.session_state["messages"] = []
 
 for message in st.session_state["messages"]:
-    with st.chat_message(message.type):
-        st.markdown(message.content)
+    message_type = message.type
+    if isinstance(message, (HumanMultimodalMessage, ToolMessage)):
+        message_type = "ai"
+    with st.chat_message(message_type):
+        if isinstance(message, HumanMultimodalMessage):
+            base64_images = [image for image in message.images]
+            images = [base64.b64decode(image) for image in base64_images]
+            for image in images:
+                st.image(image)
+            if isinstance(message.content, list):
+                content = message.content[0]["text"]
+                st.markdown(content)
+        elif isinstance(message, (ToolMessage, ToolMultimodalMessage)):
+            st.expander(f"Tool: {message.name}").markdown(message.content)
+        elif isinstance(message, AIMessage):
+            if message.content == "":  # tool calling
+                for tool_call in message.tool_calls:
+                    st.markdown(f"Tool: {tool_call['name']}")
+            else:
+                st.markdown(message.content)
+        else:
+            st.markdown(message.content)
 
 if prompt := st.chat_input("What is your question?"):
     st.chat_message("user").markdown(prompt)
@@ -196,4 +216,4 @@ if prompt := st.chat_input("What is your question?"):
 
         message_placeholder.markdown(output.content)
 
-    st.session_state["messages"].append(AIMessage(content=output.content))
+    st.session_state["messages"].extend(new_messages)

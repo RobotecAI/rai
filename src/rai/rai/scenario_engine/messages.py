@@ -97,6 +97,7 @@ class ToolMultimodalMessage(ToolMessage, MultimodalMessage):
             # we need to extract the text from each dict
             tool_message = ToolMultimodalMessage(
                 tool_call_id=self.tool_call_id,
+                name=self.name,
                 content=" ".join([part.get("text", "") for part in self.content]),
             )
             return [tool_message, human_message]
