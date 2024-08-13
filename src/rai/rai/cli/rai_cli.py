@@ -92,7 +92,7 @@ def create_rai_ws():
     (package_path / "images").mkdir(exist_ok=True)
     (package_path / "robot_constitution.txt").touch()
 
-    default_constitution_path = "src/rai/cli/resources/default_robot_constitution.txt"
+    default_constitution_path = "src/rai/rai/cli/resources/default_robot_constitution.txt"
     with open(default_constitution_path, "r") as file:
         default_constitution = file.read()
 
