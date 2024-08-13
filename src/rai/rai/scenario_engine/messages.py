@@ -4,7 +4,7 @@ from typing import Any, Callable, Dict, List, Literal, Optional, TypedDict, Unio
 import numpy as np
 import requests
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
-from langchain_core.messages.base import BaseMessage
+from langchain_core.messages.base import BaseMessage, get_msg_title_repr
 from langchain_core.tools import BaseTool
 
 
@@ -48,7 +48,27 @@ class MultimodalMessage(BaseMessage):
 
 
 class HumanMultimodalMessage(HumanMessage, MultimodalMessage):
-    pass
+    def __repr_args__(self) -> Any:
+        args = super().__repr_args__()
+        new_args = []
+        for k, v in args:
+            if k == "content":
+                v = [c for c in v if c["type"] != "image_url"]
+            elif k == "images":
+                imgs_summary = [image[0:10] + "..." for image in v]
+                v = f'{len(v)} base64 encoded images: [{", ".join(imgs_summary)}]'
+            new_args.append((k, v))
+        return new_args
+
+    def _no_img_content(self):
+        return [c for c in self.content if c["type"] != "image_url"]
+
+    def pretty_repr(self, html: bool = False) -> str:
+        title = get_msg_title_repr(self.type.title() + " Message", bold=html)
+        # TODO: handle non-string content.
+        if self.name is not None:
+            title += f"\nName: {self.name}"
+        return f"{title}\n\n{self._no_img_content()}"
 
 
 class SystemMultimodalMessage(SystemMessage, MultimodalMessage):
@@ -77,6 +97,7 @@ class ToolMultimodalMessage(ToolMessage, MultimodalMessage):
             # we need to extract the text from each dict
             tool_message = ToolMultimodalMessage(
                 tool_call_id=self.tool_call_id,
+                name=self.name,
                 content=" ".join([part.get("text", "") for part in self.content]),
             )
             return [tool_message, human_message]

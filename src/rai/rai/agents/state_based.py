@@ -32,9 +32,13 @@ from langchain_core.tools import tool as create_tool
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt.tool_node import str_output
 from langgraph.utils import RunnableCallable
-from rclpy.logging import RcutilsLogger
+from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from rai.scenario_engine.messages import HumanMultimodalMessage, ToolMultimodalMessage
+from rai.scenario_engine.messages import (
+    HumanMultimodalMessage,
+    MultimodalArtifact,
+    ToolMultimodalMessage,
+)
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
 
@@ -85,27 +89,20 @@ class ToolRunner(RunnableCallable):
         def run_one(call: ToolCall):
             self.logger.info(f"Running tool: {call['name']}")
             artifact = None
-            output = self.tools_by_name[call["name"]].invoke(call["args"], config)  # type: ignore
-            if isinstance(output, tuple):
-                if len(output) != 2:  # type: ignore
-                    # Bad tool configuration
-                    raise ValueError(
-                        f"Expected output to be a tuple of length 2 (content, artifact). Got {len(output)}"
-                    )
-                if not isinstance(output[0], str):
-                    raise ValueError("Content must be a string")
-                if not isinstance(output[1], dict):
+            output = self.tools_by_name[call["name"]].invoke(call, config)  # type: ignore
+
+            if output.artifact is not None:
+                artifact = output.artifact
+                if not isinstance(artifact, dict):
                     raise ValueError(
                         "Artifact must be a dictionary with optional keys: 'images', 'audios'"
                     )
 
-                output, artifact = output  # type: ignore
-                output = cast(str, output)
-                artifact = cast(Dict[str, Any], artifact)
+                artifact = cast(MultimodalArtifact, artifact)
 
             if artifact is not None:  # multimodal case
                 return ToolMultimodalMessage(
-                    content=str_output(output),
+                    content=str_output(output.content),
                     name=call["name"],
                     tool_call_id=call["id"],
                     images=artifact.get("images", []),
@@ -123,7 +120,7 @@ class ToolRunner(RunnableCallable):
             outputs: List[Any] = []
             for raw_output in raw_outputs:
                 if isinstance(raw_output, ToolMultimodalMessage):
-                    outputs.append(raw_output.postprocess())
+                    outputs.extend(raw_output.postprocess())
                 else:
                     outputs.append(raw_output)
 
