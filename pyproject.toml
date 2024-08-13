@@ -46,6 +46,17 @@ pypdf = "^4.2.0"
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.4"
 
+
+[tool.poetry.group.gdino]
+optional = true
+
+[tool.poetry.group.gdino.dependencies]
+pip = "^24.1.2"
+torch = "^2.3.1"
+torchvision = "^0.18.1"
+rf-groundingdino = "^0.2.0"
+
+
 [build-system]
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
