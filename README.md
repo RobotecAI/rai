@@ -49,8 +49,8 @@ export PATH="$HOME/.local/bin:$PATH"
 ### 1. Clone the repository:
 
 ```bash
-git clone git@github.com:RobotecAI/rai-private.git
-cd rai-private
+git clone https://github.com/RobotecAI/rai.git
+cd rai
 ```
 
 ### 2. Create poetry virtual environment and install dependencies:
@@ -69,7 +69,7 @@ See [docs/demos.md](docs/demos.md)
 #### 2.2 Build ros project
 
 ```bash
-. /opt/ros/${ROS_DISTRO}/setup.bash
+source /opt/ros/${ROS_DISTRO}/setup.bash
 colcon build --symlink-install
 ```
 
@@ -79,10 +79,7 @@ colcon build --symlink-install
 #### 2.3 Activate a virtual environment:
 
 ```bash
-. /opt/ros/${ROS_DISTRO}/setup.bash
-. ./install/setup.bash
-poetry shell
-source /opt/ros/${ROS_DISTRO}/setup.bash
+source ./setup_shell.sh
 ```
 
 ### 3. Setting up vendors
@@ -119,8 +116,7 @@ pytest -m billable
 # Further documentation
 
 For examples see [examples](./examples/README.md)\
-For Message definition: [messages.md](docs/messages.md)\
-For Scenario definition: [scenarios.md](docs/scenarios.md)\
-For available ROS2 packages: [ros-packages.md](docs/ros-packages.md)\
+For Multimodal Messages definition: [multimodal messages](docs/messages.md)\
+For available ROS2 packages: [ros packages](docs/ros_-_packages.md)
 
 For more information see readmes in respective folders.
