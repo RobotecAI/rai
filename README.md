@@ -28,46 +28,47 @@ The RAI framework aims to:
 
 # Quick Start
 
-Currently, RAI supports Ubuntu 24.04 with ROS 2 Jazzy and Python 3.12, but it should also work on Humble stack.
+Currently, RAI supports Ubuntu 24.04 with ROS 2 Jazzy and Python 3.12, but it should also work on a Humble stack.
 
-### 0. Packages installation:
+### 1. Setting up the workspace:
 
-Install poetry (1.8+) by following the official [docs](https://python-poetry.org/docs/#installation)
+#### 1.1 Install poetry
 
-> [!TIP]
-> Don't forget to add poetry to your path! `export PATH="$HOME/.local/bin:$PATH"`
+Install poetry (1.8+) with the following line, or
 
-### 1. Clone the repository:
+```bash
+curl -sSL https://install.python-poetry.org | python3 -
+```
+
+by following the official [docs](https://python-poetry.org/docs/#installation)
+
+#### 1.2 Clone the repository:
 
 ```bash
 git clone https://github.com/RobotecAI/rai.git
 cd rai
 ```
 
-### 2. Create poetry virtual environment and install dependencies:
+#### 1.3 Create poetry virtual environment and install dependencies:
 
 ```bash
 poetry install
 rosdep install --from-paths src --ignore-src -r -y
 ```
 
-### 2. Build project:
+### 2. Build the project:
 
-#### 2.1 Download demos (Optional)
-
-See [docs/demos.md](docs/demos.md)
-
-#### 2.2 Build ros project
+#### 2.1 Build ros project
 
 ```bash
 source /opt/ros/${ROS_DISTRO}/setup.bash
 colcon build --symlink-install
 ```
 
-> [!NOTE]
+> [!TIP]
 > symlink install allows the IDEs to properly resolve python definitions
 
-#### 2.3 Activate a virtual environment:
+#### 2.2 Activate a virtual environment:
 
 ```bash
 source ./setup_shell.sh
@@ -85,18 +86,38 @@ If you do not have a key, see how to generate one [here](https://platform.openai
 export OPENAI_API_KEY=""
 ```
 
-## Installation verification (optional)
+#### Congratulations, your installation is now complete! You're just moments away from diving into your first RAI (beta) experience.
 
-### 1. Set up vendor keys
+# Running RAI
 
-### 2. Run pytest
+RAI is a sophisticated framework targetted at solving near general cases. As of now, we provide the following examples:
+
+1. Engage with your ROS 2 network through our intuitive Streamlit chat interface.
+2. Explore the O3DE Rosbot XL demo and assign tasks via natural language.
+
+But why stop there? If you’re up for a challenge and ready to push the boundaries:
+
+- Create your own robot description package and unleash it with the rai_whoami node.
+- Run Streamlit powered by your custom robot’s description package and effortlessly acces your robot's documentation as well as identity and constitution.
+- Implement additional tools via langchain's @tool and use them in your chat.
+
+## 1. Chat Interface
+
+Chat seamlessly with your setup, retrieve images from cameras, adjust parameters on the fly, and get comprehensive information about your topics.
 
 ```bash
-pytest -m billable
+streamlit run src/rai_hmi/rai_hmi/streamlit_hmi_node.py
 ```
 
-> [!WARNING]
-> Running the tests will trigger paid api calls.
+Remember to run this command in a sourced shell.
+
+## 2. O3DE Rosbot XL Demo
+
+This demo provides a practical way to interact with and control a virtual Rosbot XL within a simulated environment. Using natural language commands, you can assign tasks to the robot, allowing it to perform a variety of actions.
+
+Given that this is a beta release, consider this demo as an opportunity to explore the framework's capabilities and provide feedback. Try different commands, see how the robot responds, and use this experience to understand the potential and limitations of the system.
+
+For running information see: [husarion-demo](./docs/demos.md)
 
 # Planned demos
 
