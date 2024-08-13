@@ -65,9 +65,6 @@ source /opt/ros/${ROS_DISTRO}/setup.bash
 colcon build --symlink-install
 ```
 
-> [!TIP]
-> symlink install allows the IDEs to properly resolve python definitions
-
 #### 2.2 Activate a virtual environment:
 
 ```bash
