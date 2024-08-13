@@ -23,7 +23,7 @@ class MultimodalMessage(BaseMessage):
     ):
         super().__init__(**kwargs)  # type: ignore
 
-        if self.audios is not None:
+        if self.audios not in [None, []]:
             raise ValueError("Audio is not yet supported")
 
         _content: List[Union[str, Dict[str, Union[Dict[str, str], str]]]] = []
