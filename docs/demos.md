@@ -10,7 +10,7 @@ vcs import < demos.repos
 
 ## Husarion demo
 
-![Screenshot1](docs/images/o3deSimulation.png)
+![Screenshot1](imgs/o3deSimulation.png)
 
 Please refer to [rai husarion demo][rai husarion demo] to install and run the simulation.
 
