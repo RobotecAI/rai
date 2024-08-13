@@ -116,7 +116,7 @@ pytest -m billable
 # Further documentation
 
 For examples see [examples](./examples/README.md)\
-For Multimodal Messages definition: [multimodal messages](docs/messages.md)\
+For Multimodal Messages definition: [multimodal messages](docs/multimodal_messages.md)\
 For available ROS2 packages: [ros packages](docs/ros_-_packages.md)
 
 For more information see readmes in respective folders.
