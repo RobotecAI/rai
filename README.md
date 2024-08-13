@@ -1,4 +1,12 @@
 # 🦊 RAI
+![Static Badge](https://img.shields.io/badge/Python-3.10-blue)
+![Static Badge](https://img.shields.io/badge/ROS2-humble-blue)
+![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)(https://opensource.org/licenses/Apache-2.0)
+
+[comment]: # TODO: These will only work once the repo is public and CI and releases are configured on the public repo. Uncomment them then
+[comment]: # ![GitHub Release](https://img.shields.io/github/v/release/RobotecAI/rai)
+[comment]: # ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/RobotecAI/rai/poetry-test.yml)
+
 
 Welcome to the RAI Framework repository! We are dedicated to advancing robotics by integrating Generative AI to enable intelligent task fulfillment and enhance conventional algorithms.
 
