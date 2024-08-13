@@ -111,20 +111,23 @@ poetry install
 rosdep install --from-paths src --ignore-src -r -y
 ```
 
-### 2. Build ros project:
+### 2. Build project:
 
-#### 2.1 Download demos
+#### 2.1 Download demos (Optional)
 
 See [docs/demos.md](docs/demos.md)
 
-#### 2.2
+#### 2.2 Build ros project
 
 ```bash
 . /opt/ros/${ROS_DISTRO}/setup.bash
 colcon build --symlink-install
 ```
 
-### 2. Activate a virtual environment:
+> [!NOTE]
+> symlink install allows the IDEs to properly resolve python definitions
+
+#### 2.3 Activate a virtual environment:
 
 ```bash
 . /opt/ros/${ROS_DISTRO}/setup.bash
