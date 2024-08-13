@@ -14,7 +14,8 @@ The RAI framework aims to:
 - Advance robotics through the integration of GenAI.
 - Enable intelligent task fulfillment.
 - Enhance conventional algorithms.
-- Develop a sophisticated multiagent system.
+- Develop a general multiagent system.
+- Provide first-class support for multimodalities, enabling interaction with various data types.
 - Incorporate an advanced database for persistent agent memory.
 - Create sophisticated ROS 2-oriented tooling for agents.
 - Build a comprehensive task/mission orchestrator.
@@ -23,28 +24,18 @@ The RAI framework aims to:
 
 - [Quick Start](#installation)
 - [Usage examples (demos)](#planned-demos)
-- [Available vendors](#available-llm-vendors)
-- [Documentation](#scenario-definition)
-- [Integration with Robotic Systems](#integration-with-robotic-systems)
 - [Further documentation](#further-documentation)
 
 # Quick Start
 
-## Prerequisites
-
-- python3.10 or python3.12
-- poetry `>=1.8.0`
-- ROS 2 humble or ROS 2 jazzy
+Currently, RAI supports Ubuntu 24.04 with ROS 2 Jazzy and Python 3.12, but it should also work on Humble stack.
 
 ### 0. Packages installation:
 
-- Install `poetry >= 1.8.0` by following the official [docs](https://python-poetry.org/docs/#installation)
+Install poetry (1.8+) by following the official [docs](https://python-poetry.org/docs/#installation)
 
-- Remember to add `poetry` to your `PATH`.
-
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-```
+> [!TIP]
+> Don't forget to add poetry to your path! `export PATH="$HOME/.local/bin:$PATH"`
 
 ### 1. Clone the repository:
 
