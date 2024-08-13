@@ -115,9 +115,7 @@ rosdep install --from-paths src --ignore-src -r -y
 
 #### 2.1 Download demos
 
-```bash
-vcs import < demos.repos
-```
+See [docs/demos.md](docs/demos.md)
 
 #### 2.2
 
