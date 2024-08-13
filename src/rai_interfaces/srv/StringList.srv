@@ -1,0 +1,5 @@
+# Request - empty
+---
+# Response
+bool success
+string[] string_list
