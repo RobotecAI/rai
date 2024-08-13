@@ -22,7 +22,7 @@ You can set the task for the agent in the `examples/nav2_example_ros_actions.py`
 . /opt/ros/${ROS_DISTRO}/setup.bash # for e.g. ROS_DISTRO=jazzy
 . ./install/setup.bash
 poetry shell
-python examples/nav2_example_ros_actions.py
+python examples/nav2_ros_actions.py
 ```
 
 [rai husarion demo]: https://github.com/RobotecAI/rai-husarion-demo-private
