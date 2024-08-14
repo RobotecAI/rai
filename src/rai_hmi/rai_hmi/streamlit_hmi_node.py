@@ -32,8 +32,7 @@ from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
 from rai.scenario_engine.messages import HumanMultimodalMessage, ToolMultimodalMessage
-from rai.tools.ros.native import Ros2GetTopicsNamesAndTypesTool
-from rai.tools.ros.tools import GetCameraImageTool
+from rai.tools.ros.native import GetCameraImage, Ros2GetTopicsNamesAndTypesTool
 from rai_hmi.agent import State as ConversationState
 from rai_hmi.agent import create_conversational_agent
 from rai_hmi.custom_mavigator import RaiNavigator
@@ -192,7 +191,7 @@ def search_database(query: str) -> str:
 def initialize_genAI(system_prompt: str, _node: Node):
     tools = [
         Ros2GetTopicsNamesAndTypesTool(node=_node),
-        GetCameraImageTool(),
+        GetCameraImage(node=_node),
     ]
     if package_name:
         tools.append(add_task_to_queue)
