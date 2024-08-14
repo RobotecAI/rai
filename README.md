@@ -147,7 +147,7 @@ Follow this guide: [husarion-rosbot-xl-demo](./docs/demos.md)
 
 ## Manipulation demo
 
-We are actively working on integrating RAI with Vision-Language-Action (VLA) models to further extend the generalization capabilities of RAI. The upcoming manipulation demo will showcase a practical use case where a single prompt can be used to instruct a robotic arm to perform specific tasks. For more details about our plans and ongoing work related to the integration and fine-tuning of VLA models, please refer to [manipulation.md](docs/manipulation.md).
+We are actively working on integrating RAI with Vision-Language-Action (VLA) models to further extend the generalization capabilities of RAI. The upcoming manipulation demo will showcase a practical use case where a single prompt can be used to instruct a robotic arm to perform a series of specific tasks. For more details about our plans and ongoing work related to the integration and fine-tuning of VLA models, please refer to [manipulation.md](docs/manipulation.md).
 
 # Further documentation
 
