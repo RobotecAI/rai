@@ -17,7 +17,7 @@ cd tmp
 git clone --branch ${ROS_DISTRO} https://github.com/ros2/demos
 cp -r demos/action_tutorials/action_tutorials_py ../examples
 cd ..
-rm -rdf tmp  #TODO(boczekbartek): refactor installtion of examples
+rm -rdf tmp  #TODO(boczekbartek): refactor installation of examples
 ```
 
 ### Build
@@ -78,7 +78,7 @@ python examples/nav2_example_ros_actions.py
 
 ### Installation
 
-Please refer to [rai husarion demo][rai husarion demo] to run the simulation.
+Please refer to [rai rosbot xl demo][rai rosbot xl demo] to run the simulation.
 
 ### Running
 
@@ -93,4 +93,4 @@ python examples/nav2_example_ros_actions.py
 
 [nav2 installation]: https://docs.nav2.org/getting_started/index.html#installation
 [nav2 running the example]: https://docs.nav2.org/getting_started/index.html#running-the-example
-[rai husarion demo]: https://github.com/RobotecAI/rai-husarion-demo-private
+[rai rosbot xl demo]: https://github.com/RobotecAI/rai-rosbot-xl-demo
