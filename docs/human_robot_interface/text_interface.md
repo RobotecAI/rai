@@ -8,7 +8,7 @@
 When your robot's whoami package is ready, run the following:
 
 ```bash
-streamlit run src/rai_hmi/rai_hmi/streamlit_hmi_node.py <my_robot_whoami> # eg husarion_whoami
+streamlit run src/rai_hmi/rai_hmi/streamlit_hmi_node.py <my_robot_whoami> # eg rosbot_xl_whoami
 ```
 
 > [!NOTE]

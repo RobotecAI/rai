@@ -1,5 +1,5 @@
 repositories:
   src/examples/husarion-demo:
     type: git
-    url: git@github.com:RobotecAI/rai-husarion-demo-private.git
-    version: bb/ros2_jazzy
+    url: git@github.com:RobotecAI/rai-husarion-demo.git
+    version: development

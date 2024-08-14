@@ -2,7 +2,7 @@
 
 The RAI HMI (Human-Machine Interface) allows users to converse with the robot and order new tasks to be added to the queue. Communication topics use plaintext, but can be connected from ASR (Automatic Speech Recognition) and to TTS (Text To Speech) nodes to enable a voice interface.
 
-> **NOTE:** Currently the node is tailored for the Husarion demo use case. It is expected that it can be generalized to other use cases when `rai_whoami` package is fully developed and integrated.
+> **NOTE:** Currently the node is tailored for the Husarion ROSBot XL demo use case. It is expected that it can be generalized to other use cases when `rai_whoami` package is fully developed and integrated.
 
 ## ROS 2 Interface
 
