@@ -110,7 +110,7 @@ export OPENAI_API_KEY=""
 
 # Running RAI
 
-![rosbot-xl-example](./docs/imgs/output.gif)
+![rosbot-xl-example](./docs/imgs/rosbot-xl-example.gif)
 
 RAI is a sophisticated framework targeted at solving near general cases. As of now, we provide the following examples:
 
