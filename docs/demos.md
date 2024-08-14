@@ -38,7 +38,7 @@ By looking at the example code in `src/examples/rosbot-xl-generic-node-demo.py` 
 ```bash
 source setup_shell.sh
 
-python src/examples/rosbot-xl-generic-node-demo.py
+python examples/rosbot-xl-generic-node-demo.py
 ```
 
 3. Send the task to the node:
