@@ -30,6 +30,7 @@ The RAI framework aims to:
 - [Quick Start](#installation)
 - [Usage examples (demos)](#planned-demos)
 - [Further documentation](#further-documentation)
+- [ROSCon 2024 Talk](#roscon-2024)
 
 ## Features
 
