@@ -30,6 +30,7 @@ The RAI framework aims to:
 - [Quick Start](#installation)
 - [Usage examples (demos)](#planned-demos)
 - [Further documentation](#further-documentation)
+- [ROSCon 2024 Talk](#roscon-2024)
 
 ## Features
 
@@ -153,7 +154,7 @@ We are actively working on integrating RAI with Vision-Language-Action (VLA) mod
 
 # Further documentation
 
-- See some [examples](./examples/README.md)
+- See some [beta demos](./docs/demos.md)
 - See Multimodal Messages definition: [multimodal messages](docs/multimodal_messages.md)
 - Browse available ROS 2 packages: [ros packages](docs/ros_-_packages.md)
 
