@@ -1,6 +1,6 @@
 # robot_whoami
 
-Certain parts of RAI rely on robot's whoami package. Your robot's whoami package serves as a configuration package for the rai_whoami node which provides.
+Certain parts of RAI rely on robot's whoami package. Your robot's whoami package serves as a configuration package for the rai_whoami node, which is responsible for the robot identity, self-understanding, ethical code, and documentation.
 
 ## Creating robot's whoami (Franka Emika Panda)
 

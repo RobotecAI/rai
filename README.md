@@ -1,7 +1,7 @@
 # RAI
 
 > [!IMPORTANT]  
-> **RAI is currently a work in progress. We are consistently developing the framework, aiming for stabilization in time for ROSCon 2024.**
+> **RAI is developing fast towards a glorious release in time for ROSCon 2024.**
 
 ![rai-image](./docs/imgs/demos.png)
 
@@ -73,7 +73,7 @@ source ./setup_shell.sh
 
 ### 3. Setting up vendors
 
-While RAI strives to be fully vendor-agnostic, most of the development work currently utilizes OpenAI models. Setting the `OPENAI_API_KEY` environment variable will yield the best results.
+RAI is fully vendor-agnostic, however the beta development work currently utilizes OpenAI models. Setting the `OPENAI_API_KEY` environment variable will yield the best results.
 
 #### OpenAI
 
@@ -90,7 +90,7 @@ export OPENAI_API_KEY=""
 RAI is a sophisticated framework targetted at solving near general cases. As of now, we provide the following examples:
 
 1. Engage with your ROS 2 network through our intuitive Streamlit chat interface.
-2. Explore the O3DE Rosbot XL demo and assign tasks via natural language.
+2. Explore the O3DE Husarion ROSbot XL demo and assign tasks via natural language.
 
 But why stop there? If you’re up for a challenge and ready to push the boundaries:
 
@@ -110,11 +110,11 @@ Remember to run this command in a sourced shell.
 
 ## 2. O3DE Rosbot XL Demo
 
-This demo provides a practical way to interact with and control a virtual Rosbot XL within a simulated environment. Using natural language commands, you can assign tasks to the robot, allowing it to perform a variety of actions.
+This demo provides a practical way to interact with and control a virtual Husarion ROSbot XL within a simulated environment. Using natural language commands, you can assign tasks to the robot, allowing it to perform a variety of actions.
 
 Given that this is a beta release, consider this demo as an opportunity to explore the framework's capabilities and provide feedback. Try different commands, see how the robot responds, and use this experience to understand the potential and limitations of the system.
 
-For running information see: [husarion-demo](./docs/demos.md)
+For running information see: [husarion-rosbot-xl-demo](./docs/demos.md)
 
 # Planned demos
 
