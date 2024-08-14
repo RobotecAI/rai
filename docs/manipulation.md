@@ -14,7 +14,7 @@ VLA models represent a novel approach to controlling robots, offering significan
 
 To automatically generate a dataset with various scenes and robot's actions to fine-tune VLA (Vision-Language-Action) models for generalist robot manipulation policies, we leverage our [**LLM-powered Scene Generator**](https://github.com/RobotecAI/o3de-genai-gems) enabling easy generation of various scenarios based on user prompts.
 
-**LLM-powered Scene Generator** generates the Python code that creates the prompted scene and makes objects make desired actions. We use the most efficient [Claude models](https://www.anthropic.com/claude) (currently Claude 3.5 Sonnet). The tool is integrated with [O3DE - an open source, real-time 3D engine](https://o3de.org/industries/robotics-and-simulations/).
+**LLM-powered Scene Generator** is an [Open 3D Engine (O3DE)](https://o3de.org/industries/robotics-and-simulations/) Gem that generates the Python code that creates the prompted scene and makes objects make desired actions. We use the most efficient [Claude models](https://www.anthropic.com/claude) (currently Claude 3.5 Sonnet).
 
 ![manipulation_examples](imgs/manipulation_demo.gif)
 
