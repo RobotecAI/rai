@@ -1,6 +1,6 @@
 # AI powered robotics manipulation
 
-## Currently developed and Planned Steps
+## Currently planned and developed pipeline
 
 ![pipeline](imgs/openvla_diagram.gif)
 
