@@ -47,16 +47,9 @@ from rclpy.qos import (
 )
 from std_srvs.srv import Trigger
 
-from rai.agents.state_based import State, create_state_based_agent
+from rai.agents.state_based import State
 from rai.communication.ros_communication import wait_for_message
 from rai.scenario_engine.messages import HumanMultimodalMessage
-from rai.tools.ros.native import (
-    GetCameraImage,
-    GetMsgFromTopic,
-    Ros2ShowMsgInterfaceTool,
-)
-from rai.tools.ros.native_actions import Ros2RunActionSync
-from rai.tools.ros.tools import GetOccupancyGridTool
 from rai.tools.ros.utils import convert_ros_img_to_base64, import_message_from_str
 
 
@@ -357,7 +350,7 @@ class RaiNode(RaiBaseNode):
 
             state: State = self.llm_app.invoke(
                 payload, {"recursion_limit": self.AGENT_RECURSION_LIMIT}
-            )  # TODO(boczekbartek): increase recursion limit
+            )  # type: ignore
 
             report = state["messages"][-1]
 
@@ -420,77 +413,3 @@ def describe_ros_image(
     llm_msg = HumanMultimodalMessage(content=PROMPT, images=[base64_image])
     output = small_llm.invoke([llm_msg])
     return {"camera_image_summary": str(output.content)}
-
-
-if __name__ == "__main__":
-    rclpy.init()
-    llm = ChatOpenAI(model="gpt-4o")
-
-    observe_topics = [
-        "/camera/camera/color/image_raw",
-    ]
-
-    observe_postprocessors = {"/camera/camera/color/image_raw": describe_ros_image}
-    topics_whitelist = [
-        "/rosout",
-        "/camera/camera/color/image_raw",
-        "/map",
-        "/scan",
-        "/diagnostics",
-    ]
-
-    actions_whitelist = [
-        "/backup",
-        "/compute_path_through_poses",
-        "/compute_path_to_pose",
-        "/dock_robot",
-        "/drive_on_heading",
-        "/follow_gps_waypoints",
-        "/follow_path",
-        "/follow_waypoints",
-        "/navigate_through_poses",
-        "/navigate_to_pose",
-        "/smooth_path",
-        "/spin",
-        "/undock_robot",
-        "/wait",
-    ]
-
-    SYSTEM_PROMPT = "You are an autonomous robot connected to ros2 environment. Your main goal is to fulfill the user's requests. "
-    "Do not make assumptions about the environment you are currently in. "
-    "Use the tooling provided to gather information about the environment."
-    "You can use ros2 topics, services and actions to operate."
-
-    node = RaiNode(
-        llm=ChatOpenAI(model="gpt-4o-mini"),
-        observe_topics=observe_topics,
-        observe_postprocessors=observe_postprocessors,
-        whitelist=topics_whitelist + actions_whitelist,
-        system_prompt=SYSTEM_PROMPT,
-    )
-
-    tools = [
-        wait_for_2s,
-        GetMsgFromTopic(node=node),
-        Ros2RunActionSync(node=node),
-        GetCameraImage(node=node),
-        Ros2ShowMsgInterfaceTool(),
-        GetOccupancyGridTool(),
-    ]
-
-    state_retriever = node.get_robot_state
-
-    app = create_state_based_agent(
-        llm=llm,
-        tools=tools,
-        state_retriever=state_retriever,
-        logger=node.get_logger(),
-    )
-
-    node.set_app(app)
-
-    executor = rclpy.executors.MultiThreadedExecutor()
-    executor.add_node(node)
-    # executor.add_node(action_node)
-    executor.spin()
-    rclpy.shutdown()

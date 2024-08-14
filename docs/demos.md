@@ -12,25 +12,49 @@ vcs import < demos.repos
 
 ![Screenshot1](imgs/o3deSimulation.png)
 
-Please refer to [rai husarion rosbot xl demo][rai husarion demo] to install and run the simulation.
+Please refer to [rai husarion rosbot xl demo][rai rosbot demo] to install and run the simulation.
 
 ### Running RAI
 
 You can set the task for the agent in the `examples/nav2_example_ros_actions.py` file.
 
+1. Start `rai_whoami_node`
+   who_am_i node. It loads files from robot [description](https://github.com/RobotecAI/rai-rosbot-xl-demo/tree/development/src/rosbot_xl_whoami/description) folder to server robot identity.
+
 ```bash
-. /opt/ros/${ROS_DISTRO}/setup.bash # for e.g. ROS_DISTRO=jazzy
-. ./install/setup.bash
-poetry shell
-python examples/nav2_ros_actions.py
+source setup_shell.sh
+
+ros2 run rai_whoami rai_whoami_node --ros-args -p robot_description_package:="husarion_whoami"
 ```
 
-[rai husarion demo]: https://github.com/RobotecAI/rai-husarion-demo-private
+2. Start `rai_node`.
 
-## Agriculture demo
+By looking at the example code in `src/examples/rosbot-xl-generic-node-demo.py` you can see that:
 
-TBD
+- This node has no information about the robot besides what it can get from `rai_whoami_node`
+- Topics can be whitelisted to only receive information about the robot
+- Before every LLM decision, `rai_node` sends it's state to the LLM Agent. By default it contains ros interfaces (topics, services, actions) and rosout summary, but state can be extended. In the example we also adding the summary of the camera image.
 
-## Manipulation demo
+```bash
+source setup_shell.sh
 
-TBD
+python src/examples/rosbot-xl-generic-node-demo.py
+```
+
+3. Send the task to the node:
+
+> **NOTE**: For now agent is capable of performing only 1 task at once.
+
+```bash
+# Using robots camera to describe environment
+ros2 topic pub --once /task_addition_requests std_msgs/msg/String "data: 'Where are you now?'"
+
+# Automatic integration with navigation stack
+ros2 topic pub --once /task_addition_requests std_msgs/msg/String "data: 'Drive 1 meter forward'"
+ros2 topic pub --once /task_addition_requests std_msgs/msg/String "data: 'Spin 90 degrees'"
+
+# Knowledge composition to achieve more complicated tasks
+ros2 topic pub --once /task_addition_requests std_msgs/msg/String "data: 'Drive forward if the path is clear, otherwise backward'"
+```
+
+[rai rosbot demo]: https://github.com/RobotecAI/rai-rosbot-xl-demo
