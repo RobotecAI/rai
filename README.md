@@ -95,7 +95,7 @@ export OPENAI_API_KEY=""
 
 # Running RAI
 
-RAI is a sophisticated framework targetted at solving near general cases. As of now, we provide the following examples:
+RAI is a sophisticated framework targeted at solving near general cases. As of now, we provide the following examples:
 
 1. Engage with your ROS 2 network through our intuitive Streamlit chat interface.
 2. Explore the O3DE Husarion ROSbot XL demo and assign tasks via natural language.
@@ -103,7 +103,7 @@ RAI is a sophisticated framework targetted at solving near general cases. As of 
 But why stop there? If you’re up for a challenge and ready to push the boundaries:
 
 - Create your own robot description package and unleash it with the rai_whoami node.
-- Run Streamlit powered by your custom robot’s description package and effortlessly acces your robot's documentation as well as identity and constitution.
+- Run Streamlit powered by your custom robot’s description package and effortlessly access your robot's documentation as well as identity and constitution.
 - Implement additional tools via langchain's @tool and use them in your chat.
 
 ## 1. Chat Interface
@@ -127,7 +127,7 @@ For running information see: [husarion-rosbot-xl-demo](./docs/demos.md)
 # Planned demos
 
 - [agriculture demo 🌾](https://github.com/RobotecAI/rai-agriculture-demo)
-- [husarion demo 🤖](https://github.com/RobotecAI/rai-husarion-demo)
+- [rosbot xl demo 🤖](https://github.com/RobotecAI/rai-husarion-demo)
 - [manipulation demo 🦾](https://github.com/RobotecAI/rai-manipulation-demo)
 
 # Further documentation
