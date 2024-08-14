@@ -1,12 +1,16 @@
 # AI-powered robotics manipulation
 
+## Overview
+
+Vision-Language-Action (VLA) models represent a novel approach to controlling robots, offering significant potential to automate and generalize robotic operations. We are working on integrating this approach with RAI to further extend RAI's versatility. The upcoming manipulation demo will showcase the currently developed functionalities of RAI enhanced with VLA models. Users will be able to instruct a robotic arm to perform specific tasks, such as organizing scattered toys, with a single command prompt.
+
 ## Currently planned and developed pipeline
 
 ![pipeline](imgs/openvla_diagram.gif)
 
 ### **Automated Dataset Generation**
 
-We aim to automatically generate a dataset with various scenes and robot's actions to fine-tune VLA (Vision-Language-Action) models for generalist robot manipulation policies. We aim to leverage our **LLM-powered Scene Generator** enabling easy generation of various scenarios based on user prompts.
+We aim to automatically generate a dataset with various scenes and robot's actions to fine-tune VLA (Vision-Language-Action) models for generalist robot manipulation policies. We aim to leverage our [**LLM-powered Scene Generator**](https://github.com/RobotecAI/o3de-genai-gems) enabling easy generation of various scenarios based on user prompts.
 
 **LLM-powered Scene Generator** generates the Python code that creates the prompted scene and makes objects make desired actions. We use the most efficient [Claude models](https://www.anthropic.com/claude) (currently Claude 3.5 Sonnet). The tool is integrated with [O3DE - an open source, real-time 3D engine](https://o3de.org/industries/robotics-and-simulations/).
 
@@ -14,7 +18,7 @@ We aim to automatically generate a dataset with various scenes and robot's actio
 
 ### OpenVLA fine-tuning and inference
 
-We integrated [openVLA](https://openvla.github.io/) model with [O3DE Engine](https://o3de.org/industries/robotics-and-simulations/) and [ROS2](https://github.com/ros2) to efficiently evaluate the fine-tuning results on simulated robot. Our Robotic Arm Manipulation Demo is available [here](https://github.com/RobotecAI/rai-manipulation-demo). Instructions on how to run the demo will be released soon.
+We integrated [openVLA](https://openvla.github.io/) model with O3DE Engine and ROS2 to efficiently evaluate the fine-tuning results on simulated robot. Our Robotic Arm Manipulation Demo is available [here](https://github.com/RobotecAI/rai-manipulation-demo). Instructions on how to run the demo will be released soon.
 
 ## Issues and challenges
 
