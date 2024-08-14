@@ -14,7 +14,7 @@ We aim to automatically generate a dataset with various scenes and robot's actio
 
 ### OpenVLA fine-tuning and inference
 
-We integrated openVLA model with [O3DE Engine](https://o3de.org/industries/robotics-and-simulations/) and [ROS2](https://github.com/ros2) to efficiently evaluate the fine-tuning results on simulated robot. Our Robotic Arm Manipulation Demo is available [here](https://github.com/RobotecAI/rai-manipulation-demo). Instructions on how to run the demo will be released soon.
+We integrated [openVLA](https://openvla.github.io/) model with [O3DE Engine](https://o3de.org/industries/robotics-and-simulations/) and [ROS2](https://github.com/ros2) to efficiently evaluate the fine-tuning results on simulated robot. Our Robotic Arm Manipulation Demo is available [here](https://github.com/RobotecAI/rai-manipulation-demo). Instructions on how to run the demo will be released soon.
 
 ## Issues and challenges
 
