@@ -24,4 +24,4 @@ We integrated [openVLA](https://openvla.github.io/) model with O3DE and ROS 2. O
 
 ## Issues and challenges
 
-We are intensively working on determining the proper dataset size and diversity to optimally generalize the model for our needs. As VLA models are quite novel approach, intuitions regarding the fine-tuning of such models are only just being developed.
+We are investigating optimal dataset size and diversity to generalize the model for our needs. As VLA models are quite novel approach, intuitions regarding the fine-tuning of such models are only just being developed.
