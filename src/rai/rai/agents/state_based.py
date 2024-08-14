@@ -14,6 +14,7 @@
 #
 
 import logging
+import time
 from functools import partial
 from typing import (
     Any,
@@ -39,12 +40,13 @@ from langchain_core.messages import (
     ToolCall,
     ToolMessage,
 )
-from langchain_core.pydantic_v1 import BaseModel, Field
+from langchain_core.pydantic_v1 import BaseModel, Field, ValidationError
 from langchain_core.runnables import Runnable, RunnableConfig
 from langchain_core.runnables.config import get_executor_for_config
 from langchain_core.tools import BaseTool
 from langchain_core.tools import tool as create_tool
 from langgraph.graph import END, START, StateGraph
+from langgraph.graph.graph import CompiledGraph
 from langgraph.prebuilt.tool_node import str_output
 from langgraph.utils import RunnableCallable
 from rclpy.impl.rcutils_logger import RcutilsLogger
@@ -72,6 +74,9 @@ class Report(BaseModel):
     )
     steps: List[str] = Field(
         ..., title="Steps", description="The steps taken to solve the problem"
+    )
+    response_to_user: str = Field(
+        ..., title="Response", description="The response to the user"
     )
 
 
@@ -107,7 +112,28 @@ class ToolRunner(RunnableCallable):
         def run_one(call: ToolCall):
             self.logger.info(f"Running tool: {call['name']}")
             artifact = None
-            output = self.tools_by_name[call["name"]].invoke(call, config)  # type: ignore
+
+            try:
+                output = self.tools_by_name[call["name"]].invoke(call, config)  # type: ignore
+                self.logger.info(
+                    "Tool output (max 100 chars): " + str(output.content[0:100])
+                )
+            except ValidationError as e:
+                self.logger.info(
+                    f'Args validation error in "{call["name"]}", error: {e}'
+                )
+                output = ToolMessage(
+                    content=f"Failed to run tool. Error: {e}",
+                    name=call["name"],
+                    tool_call_id=call["id"],
+                )
+            except Exception as e:
+                self.logger.info(f'Error in "{call["name"]}", error: {e}')
+                output = ToolMessage(
+                    content=f"Failed to run tool. Error: {e}",
+                    name=call["name"],
+                    tool_call_id=call["id"],
+                )
 
             if output.artifact is not None:
                 artifact = output.artifact
@@ -127,11 +153,7 @@ class ToolRunner(RunnableCallable):
                     audios=artifact.get("audios", []),
                 )
 
-            return ToolMessage(
-                content=str_output(output),
-                name=call["name"],
-                tool_call_id=call["id"],
-            )
+            return output
 
         with get_executor_for_config(config) as executor:
             raw_outputs = [*executor.map(run_one, message.tool_calls)]
@@ -198,20 +220,38 @@ def reporter(llm: BaseChatModel, logger: loggers_type, state: State):
     logger.info("Summarizing the conversation")
     prompt = (
         "You are the reporter. Your task is to summarize what happened previously. "
-        "Make sure to mention the problem, solution and the outcome."
+        "Make sure to mention the problem, solution and the outcome. Prepare clear response to the user."
     )
-    ai_msg = llm.with_structured_output(Report).invoke(
-        [SystemMessage(content=prompt)] + state["messages"]
-    )
+    n_tries = 5
+    ai_msg = None
+    for i in range(n_tries):
+        try:
+            ai_msg = llm.with_structured_output(Report).invoke(
+                [SystemMessage(content=prompt)] + state["messages"]
+            )
+            break
+        except ValidationError:
+            logger.info(
+                f"Failed to summarize using given template. Repeating: {i}/{n_tries}"
+            )
+
+    if ai_msg is None:
+        logger.info("Failed to summarize. Trying without template")
+        ai_msg = llm.invoke([SystemMessage(content=prompt)] + state["messages"])
+
     state["messages"].append(ai_msg)
     return state
 
 
 def retriever_wrapper(
-    state_retriever: Callable[[], Dict[str, Any]], llm: BaseChatModel, state: State
+    state_retriever: Callable[[], Dict[str, Any]], logger: loggers_type, state: State
 ):
     """This wrapper is used to retrieve multimodal information from the output of state_retriever."""
+    ts = time.perf_counter()
     retrieved_info = state_retriever()
+    te = time.perf_counter() - ts
+    logger.info(f"Retrieved state in {te} seconds")
+
     images = retrieved_info.pop("images", [])
     audios = retrieved_info.pop("audios", [])
 
@@ -229,7 +269,7 @@ def create_state_based_agent(
     tools: List[BaseTool],
     state_retriever: Callable[[], Dict[str, Any]],
     logger: Optional[RcutilsLogger | logging.Logger] = None,
-):
+) -> CompiledGraph:
     _logger = None
     if isinstance(logger, RcutilsLogger):
         _logger = logger
@@ -243,16 +283,16 @@ def create_state_based_agent(
 
     workflow = StateGraph(State)
     workflow.add_node(
-        "state_retriever", partial(retriever_wrapper, state_retriever, llm)
+        "state_retriever", partial(retriever_wrapper, state_retriever, _logger)
     )
     workflow.add_node("tools", tool_node)
-    workflow.add_node("thinker", partial(thinker, llm, _logger))
+    # workflow.add_node("thinker", partial(thinker, llm, _logger))
     workflow.add_node("decider", partial(decider, llm_with_tools, _logger))
     workflow.add_node("reporter", partial(reporter, llm, _logger))
 
     workflow.add_edge(START, "state_retriever")
-    workflow.add_edge("state_retriever", "thinker")
-    workflow.add_edge("thinker", "decider")
+    workflow.add_edge("state_retriever", "decider")
+    # workflow.add_edge("thinker", "decider")
     workflow.add_edge("tools", "state_retriever")
     workflow.add_edge("reporter", END)
     workflow.add_conditional_edges(

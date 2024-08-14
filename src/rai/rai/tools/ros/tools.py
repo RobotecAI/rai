@@ -28,10 +28,11 @@ from nav_msgs.msg import OccupancyGrid
 from tf_transformations import euler_from_quaternion
 
 from rai.communication.ros_communication import (
-    SingleImageGrabber,
     SingleMessageGrabber,
     TF2TransformFetcher,
 )
+
+from .native import TopicInput
 
 logger = logging.getLogger(__name__)
 
@@ -96,12 +97,6 @@ class AddDescribedWaypointToDatabaseTool(BaseTool):
             json.dump(map_database, file, indent=2)
 
 
-class GetOccupancyGridToolInput(BaseModel):
-    """Input for the get_current_map tool."""
-
-    topic: str = Field(..., description="Ros2 occupancy grid topic to subscribe to")
-
-
 class GetOccupancyGridTool(BaseTool):
     """Get the current map as an image with the robot's position marked on it (red dot)."""
 
@@ -110,7 +105,7 @@ class GetOccupancyGridTool(BaseTool):
         "A tool for getting the current map as an image with the robot's position marked on it."
     )
 
-    args_schema: Type[GetOccupancyGridToolInput] = GetOccupancyGridToolInput
+    args_schema: Type[TopicInput] = TopicInput
 
     image_width: int = 1500
     debug: bool = False
@@ -135,47 +130,6 @@ class GetOccupancyGridTool(BaseTool):
         image[data == -1] = 127  # Unknown space
         image[data == 0] = 255  # Free space
         image[data > 0] = 0  # Occupied space
-
-        # Draw grid lines
-        step_size_m: float = 2.0  # Step size for grid lines in meters, adjust as needed
-        step_size_pixels = int(step_size_m / resolution)
-        # print(step_size_pixels, scale)
-        for x in range(0, width, step_size_pixels):
-            cv2.line(
-                img=image,
-                pt1=(x, 0),
-                pt2=(x, height),
-                color=(200, 200, 200),
-                thickness=1,
-            )
-            cv2.putText(
-                img=image,
-                text=f"{x * resolution + origin_position.x:.1f}",
-                org=(x, 15),
-                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                fontScale=0.4,
-                color=(0, 0, 0),
-                thickness=1,
-                lineType=cv2.LINE_AA,
-            )
-        for y in range(0, height, step_size_pixels):
-            cv2.line(
-                img=image,
-                pt1=(0, y),
-                pt2=(width, y),
-                color=(200, 200, 200),
-                thickness=1,
-            )
-            cv2.putText(
-                img=image,
-                text=f"{y * resolution + origin_position.y:.1f}",
-                org=(5, y + 15),
-                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                fontScale=0.4,
-                color=(0, 0, 0),
-                thickness=1,
-                lineType=cv2.LINE_AA,
-            )
 
         # Calculate robot's position in the image
         robot_x = cast(
@@ -212,22 +166,65 @@ class GetOccupancyGridTool(BaseTool):
                     transform.transform.rotation.w,  # type: ignore
                 ]
             )
-            arrow_length = 20
+            arrow_length = 100
             arrow_end_x = int(robot_x + arrow_length * np.cos(yaw))
             arrow_end_y = int(robot_y + arrow_length * np.sin(yaw))
             cv2.arrowedLine(
-                image, (robot_x, robot_y), (arrow_end_x, arrow_end_y), (0, 0, 255), 2
+                image, (robot_x, robot_y), (arrow_end_x, arrow_end_y), (0, 0, 255), 5
             )
 
+        image = cv2.flip(image, 1)
+
+        step_size_m: float = 2.0  # Step size for grid lines in meters, adjust as needed
+        step_size_pixels = int(step_size_m / resolution)
+        # print(step_size_pixels, scale)
+        for x in range(0, width, step_size_pixels):
+            cv2.line(
+                img=image,
+                pt1=(x, 0),
+                pt2=(x, height),
+                color=(200, 200, 200),
+                thickness=1,
+            )
+            cv2.putText(
+                img=image,
+                text=f"{x * resolution + origin_position.x:.1f}",
+                org=(x, 30),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                fontScale=1.0,
+                color=(0, 0, 0),
+                thickness=1,
+                lineType=cv2.LINE_AA,
+            )
+        for y in range(0, height, step_size_pixels):
+            cv2.line(
+                img=image,
+                pt1=(0, y),
+                pt2=(width, y),
+                color=(200, 200, 200),
+                thickness=1,
+            )
+            cv2.putText(
+                img=image,
+                text=f"{y * resolution + origin_position.y:.1f}",
+                org=(15, y + 35),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                fontScale=1.0,
+                color=(0, 0, 0),
+                thickness=1,
+                lineType=cv2.LINE_AA,
+            )
         # Encode into PNG base64
         _, buffer = cv2.imencode(".png", image)
+        return image
+
         if self.debug:
             cv2.imwrite("map.png", image)
         return base64.b64encode(buffer.tobytes()).decode("utf-8")
 
-    def _run(self, topic: str):
+    def _run(self, topic_name: str):
         """Gets the current map from the specified topic."""
-        map_grabber = SingleMessageGrabber(topic, OccupancyGrid, timeout_sec=10)
+        map_grabber = SingleMessageGrabber(topic_name, OccupancyGrid, timeout_sec=10)
         tf_grabber = TF2TransformFetcher()
 
         map_msg = map_grabber.get_data()
@@ -276,25 +273,3 @@ class GetCurrentPositionTool(BaseTool):
                 }
             ),
         }
-
-
-class GetCameraImageToolInput(BaseModel):
-    """Input for the get_current_image tool."""
-
-    topic: str = Field(..., description="Ros2 image topic to subscribe to")
-
-
-class GetCameraImageTool(BaseTool):
-    """Get the current image"""
-
-    name = "GetCameraImageTool"
-    description: str = "A tool for getting the current image from a ROS2 topic."
-    response_format: str = "content_and_artifact"
-
-    args_schema: Type[GetCameraImageToolInput] = GetCameraImageToolInput
-
-    def _run(self, topic: str):
-        """Gets the current image from the specified topic."""
-        grabber = SingleImageGrabber(topic, timeout_sec=10)
-        base64_image = grabber.get_data()
-        return "Image grabbed successfully", {"images": [base64_image]}
