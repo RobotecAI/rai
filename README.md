@@ -70,7 +70,6 @@ rosdep install --from-paths src --ignore-src -r -y
 #### 2.1 Build ros project
 
 ```bash
-source /opt/ros/${ROS_DISTRO}/setup.bash
 colcon build --symlink-install
 ```
 
