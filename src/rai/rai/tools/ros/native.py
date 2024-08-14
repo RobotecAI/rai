@@ -82,7 +82,7 @@ class Ros2GetTopicsNamesAndTypesTool(Ros2BaseTool):
     description: str = "A tool for getting all ros2 topics names and types"
 
     def _run(self):
-        return self.node.ros_discovery_info.topics_and_types
+        return self.node.get_topic_names_and_types()
 
 
 class Ros2GetRobotInterfaces(Ros2BaseTool):
