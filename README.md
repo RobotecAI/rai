@@ -1,4 +1,5 @@
 # 🦊 RAI
+
 ![Static Badge](https://img.shields.io/badge/Ubuntu-24.04-orange)
 ![Static Badge](https://img.shields.io/badge/Python-3.12-blue)
 ![Static Badge](https://img.shields.io/badge/ROS2-jazzy-blue)
