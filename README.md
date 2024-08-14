@@ -156,3 +156,23 @@ We are actively working on integrating RAI with Vision-Language-Action (VLA) mod
 - See some [examples](./examples/README.md)
 - See Multimodal Messages definition: [multimodal messages](docs/multimodal_messages.md)
 - Browse available ROS 2 packages: [ros packages](docs/ros_-_packages.md)
+
+# ROSCon 2024
+
+RAI will be released before [ROSCon 2024](https://roscon.ros.org/2024/)!
+
+<p align="center">
+<img width="400" src="./docs/imgs/sponsor.png" />
+</p>
+
+## RAI Talk
+
+RAI will be presented as a talk at [ROSCon 2024](https://roscon.ros.org/2024/), make sure to participate!
+
+<p align="center">
+<img width="400" src="./docs/imgs/talk.png" />
+</p>
+
+---
+
+For any inquires about RAI feel free to contact us on [LinkedIn](https://www.linkedin.com/company/robotec-ai) or visit us on [Robotec.ai](https://robotec.ai/)!
