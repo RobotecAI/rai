@@ -1,6 +1,6 @@
 # robot_whoami
 
-Certain parts of RAI rely on robot's whoami package.
+Certain parts of RAI rely on robot's whoami package. Your robot's whoami package serves as a configuration package for the rai_whoami node, which is responsible for the robot identity, self-understanding, ethical code, and documentation.
 
 ## Creating robot's whoami (Franka Emika Panda)
 
@@ -33,6 +33,7 @@ rai_whoami provides services for gathering information about current platform. T
 colcon build
 source install/setup.sh
 export PYTHONPATH="$(dirname $(dirname $(poetry run which python)))/lib/python$(poetry run python --version | awk '{print $2}' | cut -d. -f1,2)/site-packages:$PYTHONPATH"
+ros2 run rai_whoami rai_whoami_node --ros-args -p robot_description_package:="panda_whoami"
 ```
 
 2. Calling the rai_whoami services
@@ -43,3 +44,7 @@ ros2 service call /rai_whoami_selfimages_service std_srvs/srv/Trigger # ask for 
 ros2 service call /rai_whoami_constitution_service std_srvs/srv/Trigger # ask for robot constitution
 ros2 service call /rai_whoami_documentation_service rai_interfaces/srv/VectorStoreRetrieval "query:  'maximum load'" # ask for panda's maximum load
 ```
+
+## Voila
+
+If rai_whoami responds to the service calls, panda_whoami package has been properly initialized.
