@@ -1,10 +1,9 @@
 ---
 name: Bug report
 about: Create a report to help us improve
-title: ''
+title: ""
 labels: bug
-assignees: ''
-
+assignees: ""
 ---
 
 **Describe the bug**
@@ -12,6 +11,7 @@ A clear and concise description of what the bug is.
 
 **To Reproduce**
 Steps to reproduce the behavior:
+
 1. Go to '...'
 2. Click on '....'
 3. Scroll down to '....'
@@ -24,12 +24,13 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **Platform**
- - OS: [e.g. Ubuntu 24.04]
- - ROS 2 Version [e.g. Jazzy]
- - Other information you think might be relevant such as graphic card, drivers etc.
+
+- OS: [e.g. Ubuntu 24.04]
+- ROS 2 Version [e.g. Jazzy]
+- Other information you think might be relevant such as graphic card, drivers etc.
 
 **Version**
-Release number or commit hash. 
+Release number or commit hash.
 
 **Additional context**
 Add any other context about the problem here.
