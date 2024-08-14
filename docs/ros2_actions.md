@@ -74,7 +74,7 @@ poetry shell
 python examples/nav2_example_ros_actions.py
 ```
 
-## Husarion O3DE example
+## Husarion ROSBot XL O3DE example
 
 ### Installation
 

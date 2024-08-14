@@ -35,7 +35,7 @@ def generate_launch_description():
 
     robot_description_package_arg = DeclareLaunchArgument(
         "robot_description_package",
-        default_value="husarion_whoami",
+        default_value="rosbot_xl_whoami",
         description="Robot description package to use",
     )
 
