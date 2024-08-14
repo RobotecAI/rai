@@ -8,11 +8,11 @@ Download repositories
 vcs import < demos.repos
 ```
 
-## Husarion demo
+## Husarion ROSBot XL demo
 
 ![Screenshot1](imgs/o3deSimulation.png)
 
-Please refer to [rai husarion demo][rai husarion demo] to install and run the simulation.
+Please refer to [rai husarion rosbot xl demo][rai husarion demo] to install and run the simulation.
 
 ### Running RAI
 
