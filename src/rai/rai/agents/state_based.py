@@ -93,6 +93,9 @@ class ToolRunner(RunnableCallable):
         self.logger = logger
 
     def _func(self, input: dict[str, Any], config: RunnableConfig) -> Any:
+        config["max_concurrency"] = (
+            1  # TODO(maciejmajek): use better mechanism for task queueing
+        )
         if messages := input.get("messages", []):
             message = messages[-1]
         else:

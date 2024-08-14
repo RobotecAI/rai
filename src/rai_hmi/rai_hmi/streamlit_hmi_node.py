@@ -19,6 +19,7 @@ import sys
 import rclpy
 import streamlit as st
 from ament_index_python.packages import get_package_share_directory
+from geometry_msgs.msg import Point
 from langchain.memory import ConversationBufferMemory
 from langchain.tools import tool
 from langchain_community.vectorstores import FAISS
@@ -35,11 +36,17 @@ from rai.tools.ros.native import Ros2GetTopicsNamesAndTypesTool
 from rai.tools.ros.tools import GetCameraImageTool
 from rai_hmi.agent import State as ConversationState
 from rai_hmi.agent import create_conversational_agent
+from rai_hmi.custom_mavigator import RaiNavigator
 from rai_hmi.task import Task
 from rai_interfaces.srv import VectorStoreRetrieval
 
+package_name = sys.argv[1] if len(sys.argv) > 1 else None
+
 st.set_page_config(page_title="LangChain Chat App", page_icon="🦜")
-st.title(f"{sys.argv[1].replace('_whoami', '')} chat app")
+if package_name:
+    st.title(f"{package_name.replace('_whoami', '')} chat app")
+else:
+    st.title("ROS 2 Chat App")
 
 if "memory" not in st.session_state:
     st.session_state.memory = ConversationBufferMemory(
@@ -127,10 +134,13 @@ def initialize_ros(robot_description_package: str):
             )
             return faiss_index
 
-    hmi_node = HMINode(robot_description_package=robot_description_package)
-    system_prompt = hmi_node.initialize_system_prompt()
-    faiss_index = hmi_node.load_documentation()
-    return hmi_node, system_prompt, faiss_index
+    if package_name is not None:
+        hmi_node = HMINode(robot_description_package=robot_description_package)
+        system_prompt = hmi_node.initialize_system_prompt()
+        faiss_index = hmi_node.load_documentation()
+        return hmi_node, system_prompt, faiss_index
+    else:
+        return rclpy.node.Node("rai_chat_node"), "", None
 
 
 llm = ChatOpenAI(
@@ -145,6 +155,25 @@ def add_task_to_queue(task: Task):
     """Use this tool to add a task to the queue. The task will be handled by the executor part of your system."""
     hmi_node.task_addition_request_publisher.publish(String(data=task.json()))
     return f"Task added to the queue: {task.json()}"
+
+
+@tool
+def spin_robot(degrees_rad: float) -> str:
+    """Use this tool to spin the robot."""
+    navigator = RaiNavigator()
+    navigator.spin(spin_dist=degrees_rad)
+    return "Robot spinning."
+
+
+@tool
+def drive_forward(distance_m: float) -> str:
+    """Use this tool to drive the robot forward."""
+    navigator = RaiNavigator()
+    p = Point()
+    p.x = distance_m
+
+    navigator.drive_on_heading(p, 0.5, 10)
+    return "Robot driving forward."
 
 
 @tool
@@ -164,9 +193,13 @@ def initialize_genAI(system_prompt: str, _node: Node):
     tools = [
         Ros2GetTopicsNamesAndTypesTool(node=_node),
         GetCameraImageTool(),
-        add_task_to_queue,
-        search_database,
     ]
+    if package_name:
+        tools.append(add_task_to_queue)
+        tools.append(search_database)
+        tools.append(spin_robot)
+        tools.append(drive_forward)
+
     agent = create_conversational_agent(
         llm, tools, debug=True, system_prompt=system_prompt
     )
@@ -175,7 +208,7 @@ def initialize_genAI(system_prompt: str, _node: Node):
     return agent, state
 
 
-hmi_node, system_prompt, faiss_index = initialize_ros(sys.argv[1])
+hmi_node, system_prompt, faiss_index = initialize_ros(package_name)
 agent_executor, state = initialize_genAI(system_prompt=system_prompt, _node=hmi_node)
 
 
