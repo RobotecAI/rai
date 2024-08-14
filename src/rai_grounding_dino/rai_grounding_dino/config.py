@@ -2,6 +2,7 @@
 # Copyright: IDEA-Research
 # License: Apache License Version 2.0
 # Retrieved from: https://github.com/IDEA-Research/GroundingDINO/commit/3e7a8ca2dcef5b71910c4a38f586b995b34e6c3f#diff-c1cb8937ca1377cea0a1d4c3bb39325cd7dc4403f1874247a7b8b68b6b303bab
+
 batch_size = 1
 modelname = "groundingdino"
 backbone = "swin_T_224_1k"
