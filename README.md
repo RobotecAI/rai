@@ -1,7 +1,6 @@
 # RAI
 
-> [!IMPORTANT]  
-> **RAI is developing fast towards a glorious release in time for ROSCon 2024.**
+> [!IMPORTANT] > **RAI is in beta phase now, expect friction. Early contributors are the most welcome!** > **RAI is developing fast towards a glorious release in time for ROSCon 2024.**
 
 ![rai-image](./docs/imgs/demos.png)
 
@@ -12,30 +11,45 @@
 ![GitHub Release](https://img.shields.io/github/v/release/RobotecAI/rai)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/RobotecAI/rai/poetry-test.yml)
 
-Welcome to the RAI Framework repository! We are dedicated to advancing robotics by integrating Generative AI to enable intelligent task fulfillment and enhance conventional algorithms.
-
 ## Overview
 
 The RAI framework aims to:
 
-- Advance robotics through the integration of GenAI.
-- Enable intelligent task fulfillment.
-- Enhance conventional algorithms.
-- Develop a general multiagent system.
-- Provide first-class support for multimodalities, enabling interaction with various data types.
+- Supply a general multi-agent system, bringing Gen AI features to your robots.
+- Add human interactivity, flexibility in problem-solving, and out-of-box AI features to existing robot stacks.
+- Provide first-class support for multi-modalities, enabling interaction with various data types.
 - Incorporate an advanced database for persistent agent memory.
-- Create sophisticated ROS 2-oriented tooling for agents.
-- Build a comprehensive task/mission orchestrator.
+- Include ROS 2-oriented tooling for agents.
+- Support a comprehensive task/mission orchestrator.
 
 # Table of Contents
 
+- [Features](#features)
 - [Quick Start](#installation)
 - [Usage examples (demos)](#planned-demos)
 - [Further documentation](#further-documentation)
 
+## Features
+
+- [x] Voice interaction (both ways).
+- [x] Customizable robot identity, including constitution (ethical code) and documentation (understanding own capabilities).
+- [x] Accessing camera ("What do you see?") sensor, utilizing VLMs.
+- [x] Reasoning about its own state through ROS logs.
+- [x] ROS 2 action calling and other interfaces. The Agent can dynamically list interfaces, check their message type, and publish.
+- [x] Integration with LangChain to abstract vendors and access convenient AI tools.
+- [x] Tasks in natural language to nav2 goals.
+- [ ] NoMaD integration.
+- [ ] OpenVLA integration.
+- [ ] Improved Human-Robot Interaction with voice and text.
+- [ ] SDK for RAI developers.
+- [ ] Support for at least 3 different AI vendors.
+- [ ] Additional tooling such as GroundingDino.
+- [ ] UI for configuration to select features and tools relevant for your deployment.
+
 # Quick Start
 
-Currently, RAI supports Ubuntu 24.04 with ROS 2 Jazzy and Python 3.12, but it should also work on a Humble stack.
+Currently, RAI supports Ubuntu 24.04 with ROS 2 Jazzy and Python 3.12.
+The release will also support Ubuntu 22.04 with ROS 2 Humble (it should work or be close to working now).
 
 ### 1. Setting up the workspace:
 
@@ -65,7 +79,7 @@ rosdep install --from-paths src --ignore-src -r -y
 
 ### 2. Build the project:
 
-#### 2.1 Build ros project
+#### 2.1 Build RAI workspace
 
 ```bash
 colcon build --symlink-install
@@ -89,20 +103,20 @@ If you do not have a key, see how to generate one [here](https://platform.openai
 export OPENAI_API_KEY=""
 ```
 
-#### Congratulations, your installation is now complete! You're just moments away from diving into your first RAI (beta) experience.
+#### Congratulations, your installation is now complete!
 
 # Running RAI
 
-RAI is a sophisticated framework targetted at solving near general cases. As of now, we provide the following examples:
+RAI is a sophisticated framework targeted at solving near general cases. As of now, we provide the following examples:
 
-1. Engage with your ROS 2 network through our intuitive Streamlit chat interface.
+1. Engage with your ROS 2 network through an intuitive Streamlit chat interface.
 2. Explore the O3DE Husarion ROSbot XL demo and assign tasks via natural language.
 
-But why stop there? If you’re up for a challenge and ready to push the boundaries:
+If you are more ambitious:
 
 - Create your own robot description package and unleash it with the rai_whoami node.
-- Run Streamlit powered by your custom robot’s description package and effortlessly acces your robot's documentation as well as identity and constitution.
-- Implement additional tools via langchain's @tool and use them in your chat.
+- Run Streamlit powered by your custom robot’s description package and effortlessly access your robot's documentation as well as identity and constitution.
+- Implement additional tools via LangChain's @tool and use them in your chat.
 
 ## 1. Chat Interface
 
@@ -116,22 +130,23 @@ Remember to run this command in a sourced shell.
 
 ## 2. O3DE Rosbot XL Demo
 
-This demo provides a practical way to interact with and control a virtual Husarion ROSbot XL within a simulated environment. Using natural language commands, you can assign tasks to the robot, allowing it to perform a variety of actions.
+This demo provides a practical way to interact with and control a virtual Husarion ROSbot XL within a simulated environment.
+Using natural language commands, you can assign tasks to the robot, allowing it to perform a variety of actions.
 
-Given that this is a beta release, consider this demo as an opportunity to explore the framework's capabilities and provide feedback. Try different commands, see how the robot responds, and use this experience to understand the potential and limitations of the system.
+Given that this is a beta release, consider this demo as an opportunity to explore the framework's capabilities, provide feedback, and contribute.
+Try different commands, see how the robot responds, and use this experience to understand the potential and limitations of the system.
 
-For running information see: [husarion-rosbot-xl-demo](./docs/demos.md)
+Follow this guide: [husarion-rosbot-xl-demo](./docs/demos.md)
 
 # Planned demos
 
 - [agriculture demo 🌾](https://github.com/RobotecAI/rai-agriculture-demo)
 - [husarion demo 🤖](https://github.com/RobotecAI/rai-husarion-demo)
 - [manipulation demo 🦾](https://github.com/RobotecAI/rai-manipulation-demo)
+- Quadruped inspection demo
 
 # Further documentation
 
-For examples see [examples](./examples/README.md)\
-For Multimodal Messages definition: [multimodal messages](docs/multimodal_messages.md)\
-For available ROS2 packages: [ros packages](docs/ros_-_packages.md)
-
-For more information see readmes in respective folders.
+- See some [examples](./examples/README.md)
+- See Multimodal Messages definition: [multimodal messages](docs/multimodal_messages.md)
+- Browse available ROS 2 packages: [ros packages](docs/ros_-_packages.md)
