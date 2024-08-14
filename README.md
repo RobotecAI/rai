@@ -1,5 +1,5 @@
 # 🦊 RAI
-
+![Static Badge](https://img.shields.io/badge/Ubuntu-24.04-orange)
 ![Static Badge](https://img.shields.io/badge/Python-3.10-blue)
 ![Static Badge](https://img.shields.io/badge/ROS2-jazzy-blue)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
