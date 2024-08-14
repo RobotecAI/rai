@@ -1,4 +1,4 @@
-# AI powered robotics manipulation
+# AI-powered robotics manipulation
 
 ## Currently planned and developed pipeline
 
