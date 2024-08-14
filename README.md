@@ -1,8 +1,6 @@
 # RAI
 
-> [!IMPORTANT]
-> **RAI is in beta phase now, expect friction. Early contributors are the most welcome!**
-> **RAI is developing fast towards a glorious release in time for ROSCon 2024.**
+> [!IMPORTANT] > **RAI is in beta phase now, expect friction. Early contributors are the most welcome!** > **RAI is developing fast towards a glorious release in time for ROSCon 2024.**
 
 ![rai-image](./docs/imgs/demos.png)
 
@@ -16,6 +14,7 @@
 ## Overview
 
 The RAI framework aims to:
+
 - Supply a general multi-agent system, bringing Gen AI features to your robots.
 - Add human interactivity, flexibility in problem-solving, and out-of-box AI features to existing robot stacks.
 - Provide first-class support for multi-modalities, enabling interaction with various data types.
@@ -104,7 +103,7 @@ If you do not have a key, see how to generate one [here](https://platform.openai
 export OPENAI_API_KEY=""
 ```
 
-#### Congratulations, your installation is now complete! 
+#### Congratulations, your installation is now complete!
 
 # Running RAI
 
@@ -131,7 +130,7 @@ Remember to run this command in a sourced shell.
 
 ## 2. O3DE Rosbot XL Demo
 
-This demo provides a practical way to interact with and control a virtual Husarion ROSbot XL within a simulated environment. 
+This demo provides a practical way to interact with and control a virtual Husarion ROSbot XL within a simulated environment.
 Using natural language commands, you can assign tasks to the robot, allowing it to perform a variety of actions.
 
 Given that this is a beta release, consider this demo as an opportunity to explore the framework's capabilities, provide feedback, and contribute.
