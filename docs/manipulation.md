@@ -10,6 +10,8 @@ We aim to automatically generate a dataset with various scenes and robot's actio
 
 **LLM-powered Scene Generator** generates the Python code that creates the prompted scene and makes objects make desired actions. We use the most efficient [Claude models](https://www.anthropic.com/claude) (currently Claude 3.5 Sonnet). The tool is integrated with [O3DE - an open source, real-time 3D engine](https://o3de.org/industries/robotics-and-simulations/).
 
+![manipulation_examples](imgs/manipulation_demo.gif)
+
 ### OpenVLA fine-tuning and inference
 
 We integrated openVLA model with [O3DE Engine](https://o3de.org/industries/robotics-and-simulations/) and [ROS2](https://github.com/ros2) to efficiently evaluate the fine-tuning results on simulated robot. Our Robotic Arm Manipulation Demo is available [here](https://github.com/RobotecAI/rai-manipulation-demo). Instructions on how to run the demo will be released soon.
