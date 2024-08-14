@@ -19,6 +19,7 @@ import sys
 import rclpy
 import streamlit as st
 from ament_index_python.packages import get_package_share_directory
+from geometry_msgs.msg import Point
 from langchain.memory import ConversationBufferMemory
 from langchain.tools import tool
 from langchain_community.vectorstores import FAISS
@@ -35,6 +36,7 @@ from rai.tools.ros.native import Ros2GetTopicsNamesAndTypesTool
 from rai.tools.ros.tools import GetCameraImageTool
 from rai_hmi.agent import State as ConversationState
 from rai_hmi.agent import create_conversational_agent
+from rai_hmi.custom_mavigator import RaiNavigator
 from rai_hmi.task import Task
 from rai_interfaces.srv import VectorStoreRetrieval
 
@@ -156,6 +158,25 @@ def add_task_to_queue(task: Task):
 
 
 @tool
+def spin_robot(degrees_rad: float) -> str:
+    """Use this tool to spin the robot."""
+    navigator = RaiNavigator()
+    navigator.spin(spin_dist=degrees_rad)
+    return "Robot spinning."
+
+
+@tool
+def drive_forward(distance_m: float) -> str:
+    """Use this tool to drive the robot forward."""
+    navigator = RaiNavigator()
+    p = Point()
+    p.x = distance_m
+
+    navigator.drive_on_heading(p, 0.5, 10)
+    return "Robot driving forward."
+
+
+@tool
 def search_database(query: str) -> str:
     """Use this tool to search the documentation database."""
     results = faiss_index.similarity_search_with_score(query)
@@ -176,6 +197,8 @@ def initialize_genAI(system_prompt: str, _node: Node):
     if package_name:
         tools.append(add_task_to_queue)
         tools.append(search_database)
+        tools.append(spin_robot)
+        tools.append(drive_forward)
 
     agent = create_conversational_agent(
         llm, tools, debug=True, system_prompt=system_prompt
