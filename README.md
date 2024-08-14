@@ -1,6 +1,8 @@
 # RAI
 
-> [!IMPORTANT] > **RAI is in beta phase now, expect friction. Early contributors are the most welcome!** > **RAI is developing fast towards a glorious release in time for ROSCon 2024.**
+> [!IMPORTANT]  
+> **RAI is in beta phase now, expect friction. Early contributors are the most welcome!** \
+> **RAI is developing fast towards a glorious release in time for ROSCon 2024.**
 
 ![rai-image](./docs/imgs/demos.png)
 
