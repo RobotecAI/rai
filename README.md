@@ -147,6 +147,6 @@ Follow this guide: [husarion-rosbot-xl-demo](./docs/demos.md)
 
 # Further documentation
 
-- See some [examples](./examples/README.md)\
-- See Multimodal Messages definition: [multimodal messages](docs/multimodal_messages.md)\
+- See some [examples](./examples/README.md)
+- See Multimodal Messages definition: [multimodal messages](docs/multimodal_messages.md)
 - Browse available ROS 2 packages: [ros packages](docs/ros_-_packages.md)
