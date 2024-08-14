@@ -141,7 +141,7 @@ Follow this guide: [husarion-rosbot-xl-demo](./docs/demos.md)
 # Planned demos
 
 - [agriculture demo 🌾](https://github.com/RobotecAI/rai-agriculture-demo)
-- [robot xl demo demo 🤖](https://github.com/RobotecAI/rai-rosbot-xl-demo)
+- [rosbot xl demo demo 🤖](https://github.com/RobotecAI/rai-rosbot-xl-demo)
 - [manipulation demo 🦾](https://github.com/RobotecAI/rai-manipulation-demo)
 - Quadruped inspection demo
 
