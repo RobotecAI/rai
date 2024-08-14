@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 
+poetry shell
+
 # Suppress ShellCheck warning about not following external file
 # shellcheck disable=SC1091
 . install/setup.bash
