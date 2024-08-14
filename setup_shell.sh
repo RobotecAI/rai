@@ -1,6 +1,8 @@
 #!/usr/bin/env sh
 
-poetry shell
+# Suppress ShellCheck warning about not following external file
+# shellcheck disable=SC1091
+. "$(poetry env info --path)"/bin/activate
 
 # Suppress ShellCheck warning about not following external file
 # shellcheck disable=SC1091
