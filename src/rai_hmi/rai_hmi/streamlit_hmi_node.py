@@ -31,6 +31,7 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
+from rai.node import RaiBaseNode1
 from rai.scenario_engine.messages import HumanMultimodalMessage, ToolMultimodalMessage
 from rai.tools.ros.native import GetCameraImage, Ros2GetTopicsNamesAndTypesTool
 from rai_hmi.agent import State as ConversationState
@@ -58,10 +59,14 @@ def initialize_ros(robot_description_package: str):
 
     rclpy.init()
 
-    class HMINode(Node):
+    class HMINode(RaiBaseNode1):
         def __init__(self, robot_description_package: str):
             super().__init__("rai_hmi_node")
             self.callback_group = ReentrantCallbackGroup()
+
+            self.state_subscribers = dict()
+            self.robot_state = dict()
+
             self.robot_description_package = robot_description_package
             self.status_publisher = self.create_publisher(String, "hmi_status", 10)  # type: ignore
             self.task_addition_request_publisher = self.create_publisher(

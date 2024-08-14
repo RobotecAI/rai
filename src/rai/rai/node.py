@@ -132,6 +132,77 @@ class NodeDiscovery:
 class RaiBaseNode(Node):
     def __init__(
         self,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+
+        self.robot_state = dict()
+
+        self.DISCOVERY_FREQ = 2.0
+        self.DISCOVERY_DEPTH = 5
+        self.ros_discovery_info = NodeDiscovery()
+        self.discovery()
+        self.qos_profile = QoSProfile(
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            durability=DurabilityPolicy.VOLATILE,
+            liveliness=LivelinessPolicy.AUTOMATIC,
+        )
+
+        self.state_subscribers = dict()
+
+    def discovery(self):
+        self.ros_discovery_info.set(
+            self.get_topic_names_and_types(),
+            self.get_service_names_and_types(),
+            get_action_names_and_types(self),
+        )
+
+    def get_raw_message_from_topic(self, topic: str, timeout_sec: int = 1) -> Any:
+        self.get_logger().info(f"Getting msg from topic: {topic}")
+        if topic in self.state_subscribers and topic in self.robot_state:
+            self.get_logger().info("Returning cached message")
+            return self.robot_state[topic]
+        else:
+            msg_type = self.get_msg_type(topic)
+            success, msg = wait_for_message(
+                msg_type,
+                self,
+                topic,
+                qos_profile=self.qos_profile,
+                time_to_wait=timeout_sec,
+            )
+
+            if success:
+                self.get_logger().info(
+                    f"Received message of type {msg_type.__class__.__name__} from topic {topic}"
+                )
+                return msg
+            else:
+                error = (
+                    f"No message received in {timeout_sec} seconds from topic {topic}"
+                )
+                self.get_logger().error(error)
+                return error
+
+    def get_msg_type(self, topic: str, n_tries: int = 5) -> Any:
+        """Sometimes node fails to do full discovery, therefore we need to retry"""
+        for _ in range(n_tries):
+            if topic in self.ros_discovery_info.topics_and_types:
+                msg_type = self.ros_discovery_info.topics_and_types[topic]
+                return import_message_from_str(msg_type)
+            else:
+                self.get_logger().info(f"Waiting for topic: {topic}")
+                self.discovery()
+                time.sleep(self.DISCOVERY_FREQ)
+        raise KeyError(f"Topic {topic} not found")
+
+
+class RaiGenericBaseNode(RaiBaseNode):
+    def __init__(
+        self,
         node_name: str,
         system_prompt: str,
         llm,
@@ -218,52 +289,6 @@ class RaiBaseNode(Node):
         self.get_logger().info(f"System prompt initialized: {system_prompt}")
         return system_prompt
 
-    def discovery(self):
-        self.ros_discovery_info.set(
-            self.get_topic_names_and_types(),
-            self.get_service_names_and_types(),
-            get_action_names_and_types(self),
-        )
-
-    def get_raw_message_from_topic(self, topic: str, timeout_sec: int = 1) -> Any:
-        self.get_logger().info(f"Getting msg from topic: {topic}")
-        if topic in self.state_subscribers and topic in self.robot_state:
-            self.get_logger().info("Returning cached message")
-            return self.robot_state[topic]
-        else:
-            msg_type = self.get_msg_type(topic)
-            success, msg = wait_for_message(
-                msg_type,
-                self,
-                topic,
-                qos_profile=self.qos_profile,
-                time_to_wait=timeout_sec,
-            )
-
-            if success:
-                self.get_logger().info(
-                    f"Received message of type {msg_type.__class__.__name__} from topic {topic}"
-                )
-                return msg
-            else:
-                error = (
-                    f"No message received in {timeout_sec} seconds from topic {topic}"
-                )
-                self.get_logger().error(error)
-                return error
-
-    def get_msg_type(self, topic: str, n_tries: int = 5) -> Any:
-        """Sometimes node fails to do full discovery, therefore we need to retry"""
-        for _ in range(n_tries):
-            if topic in self.ros_discovery_info.topics_and_types:
-                msg_type = self.ros_discovery_info.topics_and_types[topic]
-                return import_message_from_str(msg_type)
-            else:
-                self.get_logger().info(f"Waiting for topic: {topic}")
-                self.discovery()
-                time.sleep(self.DISCOVERY_FREQ)
-        raise KeyError(f"Topic {topic} not found")
-
     def generic_state_subscriber_callback(self, topic_name: str, msg: Any):
         self.get_logger().debug(
             f"Received message of type {type(msg)} from topic {topic_name}"
@@ -289,7 +314,7 @@ class RaiBaseNode(Node):
             self.state_subscribers[topic] = subscriber
 
 
-class RaiNode(RaiBaseNode):
+class RaiNode(RaiGenericBaseNode):
     def __init__(
         self,
         system_prompt: str,
