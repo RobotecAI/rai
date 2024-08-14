@@ -141,7 +141,11 @@ class RaiBaseNode(Node):
 
         self.DISCOVERY_FREQ = 2.0
         self.DISCOVERY_DEPTH = 5
-        self.ros_discovery_info = NodeDiscovery()
+        self.timer = self.create_timer(
+            self.DISCOVERY_FREQ,
+            self.discovery,
+        )
+        self.ros_discovery_info = NodeDiscovery(whitelist=None)
         self.discovery()
         self.qos_profile = QoSProfile(
             history=HistoryPolicy.KEEP_LAST,
@@ -234,13 +238,6 @@ class RaiGenericBaseNode(RaiBaseNode):
         self.DISCOVERY_DEPTH = 5
 
         self.callback_group = rclpy.callback_groups.MutuallyExclusiveCallbackGroup()
-        self.timer = self.create_timer(
-            self.DISCOVERY_FREQ,
-            self.discovery,
-            callback_group=self.callback_group,
-        )
-        self.ros_discovery_info = NodeDiscovery(whitelist=self.whitelist)
-        self.discovery()
 
         self.qos_profile = QoSProfile(
             history=HistoryPolicy.KEEP_LAST,
