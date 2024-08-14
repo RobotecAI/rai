@@ -38,14 +38,15 @@ from sensor_msgs.msg import Image
 from tf2_ros import Buffer, TransformListener
 
 
+# Copied from https://github.com/ros2/rclpy/blob/jazzy/rclpy/rclpy/wait_for_message.py, to support humble
 def wait_for_message(
-    msg_type: type,
-    node: Node,
+    msg_type,
+    node: "Node",
     topic: str,
     *,
     qos_profile: Union[QoSProfile, int] = 1,
-    time_to_wait: int = -1,
-) -> tuple[bool, Any]:
+    time_to_wait=-1,
+):
     """
     Wait for the next incoming message.
 
