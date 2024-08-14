@@ -33,7 +33,7 @@ from std_srvs.srv import Trigger
 
 from rai.node import RaiBaseNode
 from rai.scenario_engine.messages import HumanMultimodalMessage, ToolMultimodalMessage
-from rai.tools.ros.native import GetCameraImage, Ros2GetTopicsNamesAndTypesTool
+from rai.tools.ros.native import GetCameraImage, Ros2GetRobotInterfaces
 from rai_hmi.agent import State as ConversationState
 from rai_hmi.agent import create_conversational_agent
 from rai_hmi.custom_mavigator import RaiNavigator
@@ -195,7 +195,7 @@ def search_database(query: str) -> str:
 @st.cache_resource
 def initialize_genAI(system_prompt: str, _node: Node):
     tools = [
-        Ros2GetTopicsNamesAndTypesTool(node=_node),
+        Ros2GetRobotInterfaces(node=_node),
         GetCameraImage(node=_node),
     ]
     if package_name:
