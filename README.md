@@ -112,7 +112,6 @@ export OPENAI_API_KEY=""
 
 ![hippo](./docs/imgs/output.gif)
 
-
 RAI is a sophisticated framework targeted at solving near general cases. As of now, we provide the following examples:
 
 1. Engage with your ROS 2 network through an intuitive Streamlit chat interface.
