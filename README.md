@@ -1,4 +1,18 @@
-# 🦊 RAI
+# RAI
+
+> [!IMPORTANT]  
+> **RAI is developing fast towards a glorious release in time for ROSCon 2024.**
+
+![rai-image](./docs/imgs/demos.png)
+
+![Static Badge](https://img.shields.io/badge/Ubuntu-24.04-orange)
+![Static Badge](https://img.shields.io/badge/Python-3.12-blue)
+![Static Badge](https://img.shields.io/badge/ROS2-jazzy-blue)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+[comment]: # TODO: These will only work once the repo is public and CI and releases are configured on the public repo. Uncomment them then
+[comment]: # ![GitHub Release](https://img.shields.io/github/v/release/RobotecAI/rai)
+[comment]: # ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/RobotecAI/rai/poetry-test.yml)
 
 Welcome to the RAI Framework repository! We are dedicated to advancing robotics by integrating Generative AI to enable intelligent task fulfillment and enhance conventional algorithms.
 
@@ -9,7 +23,8 @@ The RAI framework aims to:
 - Advance robotics through the integration of GenAI.
 - Enable intelligent task fulfillment.
 - Enhance conventional algorithms.
-- Develop a sophisticated multiagent system.
+- Develop a general multiagent system.
+- Provide first-class support for multimodalities, enabling interaction with various data types.
 - Incorporate an advanced database for persistent agent memory.
 - Create sophisticated ROS 2-oriented tooling for agents.
 - Build a comprehensive task/mission orchestrator.
@@ -18,125 +33,56 @@ The RAI framework aims to:
 
 - [Quick Start](#installation)
 - [Usage examples (demos)](#planned-demos)
-- [Available vendors](#available-llm-vendors)
-- [Documentation](#scenario-definition)
-- [Integration with Robotic Systems](#integration-with-robotic-systems)
 - [Further documentation](#further-documentation)
 
-## General Architecture Diagram with Current and Planned Features
+# Quick Start
 
-![rai_arch](docs/imgs/rai_arch.png)
+Currently, RAI supports Ubuntu 24.04 with ROS 2 Jazzy and Python 3.12, but it should also work on a Humble stack.
 
-## Scenario Definition
+### 1. Setting up the workspace:
 
-A scenario is a programmatically defined sequence of interactions between a User and an Assistant (LLM). Each scenario consists of multiple components that dictate the flow of conversation and actions.
+#### 1.1 Install poetry
 
-### Scenario Building Blocks
-
-Scenarios can be built using the following elements:
-
-- **Messages**: Static or dynamic content communicated to the user.
-- **Conditional Scenarios**: Content that changes based on certain conditions.
-
-For more about scenario building see: [docs/scenarios.md](docs/scenarios.md)\
-For more about scenario running: [src/rai/scenario_engine/README.md](src/rai/scenario_engine/README.md)
-
-#### For available tools see:
-
-- [Tools](./src/rai/tools/)
-- [ROS 2 Tools](./src/rai/tools/ros/)
-
-#### Scenario Definition Example
-
-For example scenarios see:
-
-- [ROS 2 scenario](./examples/husarion_poc_example.py)
-- [Simple scenario](./examples/agri_example.py)
-
-## Available LLM Vendors
-
-We currently support the following vendors:
-
-| Vendor                                         | Host Type      | Supported | Tool Calling | Multimodal |
-| ---------------------------------------------- | -------------- | --------- | ------------ | ---------- |
-| [Ollama](https://ollama.com/)                  | Locally hosted | ✔️        | ❌           | ❌         |
-| [AWS Bedrock](https://aws.amazon.com/bedrock/) | Cloud hosted   | ✔️        | ✔️           | ✔️         |
-| [OpenAI](https://platform.openai.com/)         | Cloud hosted   | ✔️        | ✔️           | ✔️         |
-| [Anthropic](https://www.anthropic.com/api)     | Cloud hosted   | ⏳        | ⏳           | ⏳         |
-| [Cohere](https://cohere.com/)                  | Cloud hosted   | ⏳        | ⏳           | ⏳         |
-
-For more see: [docs/vendors.md](./docs/vendors.md)
-
-## Integration with Robotic Systems
-
-This engine provides support for integration with robotic systems through ROS 2, allowing for real-time control and feedback within various robotic applications.\
-For more information see: [src/rai/communication/README.md](./src/rai/communication/README.md)
-
-# Installation
-
-## Prerequisites
-
-- python3.10 or python3.12
-- poetry `>=1.8.0`
-- ROS 2 humble or ROS 2 jazzy
-- tf-transformations package
-
-### 0. Packages installation:
-
-- Install `poetry >= 1.8.0` by following the official [docs](https://python-poetry.org/docs/#installation)
-
-  - Remember to add `poetry` to your `PATH`.
-
-    ```bash
-    export PATH="$HOME/.local/bin:$PATH"
-    ```
-
-- Install ros dependencies:
-
-  ```bash
-  sudo apt install ros-${ROS_DISTRO}-tf-transformations
-  ```
-
-### 1. Clone the repository:
+Install poetry (1.8+) with the following line, or
 
 ```bash
-git clone git@github.com:RobotecAI/rai-private.git
-cd rai-private
+curl -sSL https://install.python-poetry.org | python3 -
 ```
 
-### 2. Create poetry virtual environment and install dependencies:
+by following the official [docs](https://python-poetry.org/docs/#installation)
+
+#### 1.2 Clone the repository:
+
+```bash
+git clone https://github.com/RobotecAI/rai.git
+cd rai
+```
+
+#### 1.3 Create poetry virtual environment and install dependencies:
 
 ```bash
 poetry install
 rosdep install --from-paths src --ignore-src -r -y
 ```
 
-### 2. Build project:
+### 2. Build the project:
 
-#### 2.1 Download demos (Optional)
-
-See [docs/demos.md](docs/demos.md)
-
-#### 2.2 Build ros project
+#### 2.1 Build ros project
 
 ```bash
-. /opt/ros/${ROS_DISTRO}/setup.bash
+source /opt/ros/${ROS_DISTRO}/setup.bash
 colcon build --symlink-install
 ```
 
-> [!NOTE]
-> symlink install allows the IDEs to properly resolve python definitions
-
-#### 2.3 Activate a virtual environment:
+#### 2.2 Activate a virtual environment:
 
 ```bash
-. /opt/ros/${ROS_DISTRO}/setup.bash
-. ./install/setup.bash
-poetry shell
-source /opt/ros/${ROS_DISTRO}/setup.bash
+source ./setup_shell.sh
 ```
 
-### 3. Setup vendor keys (for paid vendors)
+### 3. Setting up vendors
+
+RAI is fully vendor-agnostic, however the beta development work currently utilizes OpenAI models. Setting the `OPENAI_API_KEY` environment variable will yield the best results.
 
 #### OpenAI
 
@@ -146,62 +92,38 @@ If you do not have a key, see how to generate one [here](https://platform.openai
 export OPENAI_API_KEY=""
 ```
 
-#### AWS Bedrock
+#### Congratulations, your installation is now complete! You're just moments away from diving into your first RAI (beta) experience.
 
-If you do not have the keys, see how to generate them [here](https://docs.aws.amazon.com/bedrock/latest/userguide/setting-up.html)
+# Running RAI
 
-```
-export AWS_ACCESS_KEY_ID=""
-export AWS_SECRET_ACCESS_KEY=""
-export AWS_SESSION_TOKEN=""
-```
+RAI is a sophisticated framework targetted at solving near general cases. As of now, we provide the following examples:
 
-## Installation verification (optional)
+1. Engage with your ROS 2 network through our intuitive Streamlit chat interface.
+2. Explore the O3DE Husarion ROSbot XL demo and assign tasks via natural language.
 
-### 1. Set up vendor keys
+But why stop there? If you’re up for a challenge and ready to push the boundaries:
 
-### 2. Run pytest
+- Create your own robot description package and unleash it with the rai_whoami node.
+- Run Streamlit powered by your custom robot’s description package and effortlessly acces your robot's documentation as well as identity and constitution.
+- Implement additional tools via langchain's @tool and use them in your chat.
 
-```bash
-pytest -m billable
-```
+## 1. Chat Interface
 
-> [!WARNING]
-> Running the tests will trigger paid api calls.
-
-### 3. Run example
-
-This example mocks the interaction with [rai-agriculture-demo](https://github.com/RobotecAI/rai-agriculture-demo) by using static images and skipping ROS 2 communication. The full integration is planned in future releases.
+Chat seamlessly with your setup, retrieve images from cameras, adjust parameters on the fly, and get comprehensive information about your topics.
 
 ```bash
-python examples/agri_example.py --vendor openai
+streamlit run src/rai_hmi/rai_hmi/streamlit_hmi_node.py
 ```
 
-Expected outcome:
+Remember to run this command in a sourced shell.
 
-```
-$ python examples/agri_example.py
-2024-06-28 12:33:09 robo-pc-054 ScenarioRunner[2593946] INFO Starting conversation.
-2024-06-28 12:33:09 robo-pc-054 langfuse[2593946] WARNING Item exceeds size limit (size: 4703784), dropping input/output of item.
-2024-06-28 12:33:09 robo-pc-054 langfuse[2593946] WARNING Item exceeds size limit (size: 4703871), dropping input/output of item.
-Running tool: StopTool with args: {}
-Running tool: UseHonkTool with args: {}
-2024-06-28 12:33:24 robo-pc-054 langfuse[2593946] WARNING Item exceeds size limit (size: 8150030), dropping input/output of item.
-2024-06-28 12:33:24 robo-pc-054 langfuse[2593946] WARNING Item exceeds size limit (size: 8150117), dropping input/output of item.
-Running tool: ContinueActionTool with args: {}
-2024-06-28 12:33:43 robo-pc-054 ScenarioRunner[2593946] INFO Conversation completed.
-2024-06-28 12:33:43 robo-pc-054 ScenarioRunner[2593946] INFO Conversation saved to: logs/ChatOpenAIxxxx-xx-xx_xx:xx:xx.xxxxxx/history.html
-```
+## 2. O3DE Rosbot XL Demo
 
-## Maximizing RAI potential
+This demo provides a practical way to interact with and control a virtual Husarion ROSbot XL within a simulated environment. Using natural language commands, you can assign tasks to the robot, allowing it to perform a variety of actions.
 
-Some of the modules or examples may require langfuse api keys for usage tracking. Contact repo maintainers for api keys.
+Given that this is a beta release, consider this demo as an opportunity to explore the framework's capabilities and provide feedback. Try different commands, see how the robot responds, and use this experience to understand the potential and limitations of the system.
 
-```bash
-export LANGFUSE_PK="pk-lf-*****"
-export LANGFUSE_SK="sk-lf-****"
-export LANGFUSE_HOST=""
-```
+For running information see: [husarion-rosbot-xl-demo](./docs/demos.md)
 
 # Planned demos
 
@@ -212,25 +134,7 @@ export LANGFUSE_HOST=""
 # Further documentation
 
 For examples see [examples](./examples/README.md)\
-For Message definition: [messages.md](docs/messages.md)\
-For Scenario definition: [scenarios.md](docs/scenarios.md)\
-For available ROS2 packages: [ros-packages.md](docs/ros-packages.md)\
+For Multimodal Messages definition: [multimodal messages](docs/multimodal_messages.md)\
+For available ROS2 packages: [ros packages](docs/ros_-_packages.md)
 
 For more information see readmes in respective folders.
-
-```
-.
-├── docs
-│   ├── messages.md
-│   └── scenarios.md
-├── README.md
-└── src
-    └── rai
-        ├── tools
-        │   └── README.md
-        ├── communication
-        │   └── README.md
-        ├── README.md
-        └── scenario_engine
-            └── README.md
-```
