@@ -145,6 +145,10 @@ Follow this guide: [husarion-rosbot-xl-demo](./docs/demos.md)
 - [manipulation demo 🦾](https://github.com/RobotecAI/rai-manipulation-demo)
 - Quadruped inspection demo
 
+## Manipulation demo
+
+We are intensively working on the integration of our Robotic Arm Simulation (related to [manipulation demo](https://github.com/RobotecAI/rai-manipulation-demo)) with Vision-Language-Action (VLA) models. For more details about our plans and ongoing work regarding the integration and fine-tuning of VLA models, please see [manipulation.md](docs/manipulation.md).
+
 # Further documentation
 
 - See some [examples](./examples/README.md)
