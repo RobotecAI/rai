@@ -26,6 +26,7 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
+from rai_hmi.task import Task
 from rai_interfaces.srv import Feedback
 
 
@@ -169,3 +170,9 @@ class BaseHMINode(Node):
             )
             raise e
         return faiss_index
+
+    def add_task_to_queue(self, task: Task):
+        """Publishes a task to be handled by the rai node."""
+        msg = String()
+        msg.data = task.json()
+        self.task_addition_request_publisher.publish(msg)
