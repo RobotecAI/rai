@@ -27,6 +27,7 @@ from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
 from rai_hmi.task import Task
+from rai_hmi.tools import QueryDatabaseTool, QueueTaskTool
 from rai_interfaces.srv import Feedback
 
 
@@ -87,6 +88,11 @@ class BaseHMINode(Node):
         self.get_logger().info("HMI Node has been started")
         self.system_prompt = self._initialize_system_prompt()
         self.faiss_index = self._load_documentation()
+        self.tools = [
+            QueryDatabaseTool(get_response=self.query_faiss_index_with_scores),
+            QueueTaskTool(add_task=self.add_task_to_queue),
+        ]
+        self.agent = None
 
     def status_callback(self):
         status = HMIStatus.PROCESSING if self.processing else HMIStatus.WAITING
