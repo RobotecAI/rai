@@ -15,12 +15,13 @@
 
 from abc import abstractmethod
 from enum import Enum
-from typing import List, Tuple
+from typing import List, Optional, Tuple, cast
 
 import rclpy
 from ament_index_python.packages import get_package_share_directory
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
+from langchain_core.tools import BaseTool
 from langchain_openai import OpenAIEmbeddings
 from rclpy.node import Node
 from std_msgs.msg import String
@@ -59,10 +60,18 @@ class BaseHMINode(Node):
         _load_documentation: Loads the FAISS index from the robot description package.
     """
 
-    def __init__(self, node_name: str, robot_description_package: str):
-        super().__init__(node_name)
+    def __init__(self, node_name: str):
+        super().__init__(node_name=node_name)
 
-        self.robot_description_package = robot_description_package
+        self.declare_parameter("robot_description_package", "")
+        self.robot_description_package = cast(
+            str,
+            (
+                self.get_parameter("robot_description_package")
+                .get_parameter_value()
+                .string_value
+            ),  # type: ignore
+        )
 
         self.processing = False
 
@@ -85,14 +94,23 @@ class BaseHMINode(Node):
             Feedback, "feedback_request", self.feedback_request_callback
         )
 
-        self.get_logger().info("HMI Node has been started")
+        self.agent = None
+        # order of the initialization is important
         self.system_prompt = self._initialize_system_prompt()
         self.faiss_index = self._load_documentation()
-        self.tools = [
-            QueryDatabaseTool(get_response=self.query_faiss_index_with_scores),
-            QueueTaskTool(add_task=self.add_task_to_queue),
-        ]
-        self.agent = None
+        self.tools = self._initialize_available_tools()
+
+        self.get_logger().info("HMI Node has been started")
+
+    def _initialize_available_tools(self):
+        """Initialize common tools for the HMI node."""
+        tools: List[BaseTool] = []
+        if self.faiss_index is not None:
+            tools.append(
+                QueryDatabaseTool(get_response=self.query_faiss_index_with_scores)
+            )
+        tools.append(QueueTaskTool(add_task=self.add_task_to_queue))
+        return tools
 
     def status_callback(self):
         status = HMIStatus.PROCESSING if self.processing else HMIStatus.WAITING
@@ -159,7 +177,7 @@ class BaseHMINode(Node):
         self.get_logger().info("System prompt initialized!")
         return system_prompt
 
-    def _load_documentation(self) -> FAISS:
+    def _load_documentation(self) -> Optional[FAISS]:
         try:
             faiss_index = FAISS.load_local(
                 get_package_share_directory(self.robot_description_package)
@@ -172,9 +190,9 @@ class BaseHMINode(Node):
             )
         except (FileNotFoundError, ValueError) as e:
             self.get_logger().error(
-                f"Could not load FAISS index from robot description package. {e}"
+                f"Could not load FAISS index from robot description package. Error: \n{e}"
             )
-            raise e
+            return None
         return faiss_index
 
     def add_task_to_queue(self, task: Task):
