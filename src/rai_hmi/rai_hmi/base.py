@@ -153,10 +153,19 @@ class BaseHMINode(Node):
         return system_prompt
 
     def _load_documentation(self) -> FAISS:
-        faiss_index = FAISS.load_local(
-            get_package_share_directory(self.robot_description_package)
-            + "/description",
-            OpenAIEmbeddings(),
-            allow_dangerous_deserialization=True,
-        )
+        try:
+            faiss_index = FAISS.load_local(
+                get_package_share_directory(self.robot_description_package)
+                + "/description",
+                OpenAIEmbeddings(),
+                allow_dangerous_deserialization=True,
+            )
+            self.get_logger().info(
+                f"FAISS index for {self.robot_description_package} loaded!"
+            )
+        except (FileNotFoundError, ValueError) as e:
+            self.get_logger().error(
+                f"Could not load FAISS index from robot description package. {e}"
+            )
+            raise e
         return faiss_index
