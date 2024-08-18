@@ -11,6 +11,6 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-        - uses: fuzzylabs/gha-poetry-update@v1
-          with:
-            python-version: 3.12
+      - uses: fuzzylabs/gha-poetry-update@v1
+        with:
+          python-version: 3.12
