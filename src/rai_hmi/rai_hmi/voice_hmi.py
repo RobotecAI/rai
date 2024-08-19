@@ -18,7 +18,7 @@ from typing import List
 import rclpy
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain.prompts import ChatPromptTemplate
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from rclpy.callback_groups import ReentrantCallbackGroup
 from std_msgs.msg import String
@@ -76,25 +76,9 @@ class VoiceHMINode(BaseHMINode):
         self.hmi_publisher.publish(String(data=output))
         self.processing = False
 
-    def handle_feedback_request(self, feedback_query: str) -> str:
-        self.processing = True
-
-        # handle feedback request
-        feedback_prompt = (
-            "The task executioner is asking for feedback on the following:"
-            f"```\n{feedback_query}\n```"
-            "Please provide needed information based on the following chat history:"
-        )
-        local_history: List[BaseMessage] = [
-            SystemMessage(content=self.system_prompt),
-            HumanMessage(content=feedback_prompt),
-        ]
-        local_history.extend(self.history)
-        response = self.agent.invoke({"user_input": "", "chat_history": local_history})
-        output = response["output"]
-
-        self.processing = False
-        return output
+    # TODO: Implement
+    def handle_task_feedback_request(self, goal_handle):
+        pass
 
 
 def main(args=None):
