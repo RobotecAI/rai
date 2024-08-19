@@ -36,7 +36,7 @@ from rai.node import RaiBaseNode
 from rai.tools.ros.native import GetCameraImage, Ros2GetTopicsNamesAndTypesTool
 from rai_hmi.agent import State as ConversationState
 from rai_hmi.agent import create_conversational_agent
-from rai_hmi.custom_mavigator import RaiNavigator
+from rai.extensions.navigator import RaiNavigator
 from rai_hmi.task import Task
 from rai_interfaces.srv import VectorStoreRetrieval
 
