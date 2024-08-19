@@ -159,7 +159,7 @@ Please take a look at [Q&A](https://github.com/RobotecAI/rai/discussions/categor
 
 ## Developer Resources
 
-See our [Developer Guide](docs/developer_guide).
+See our [Developer Guide](docs/developer_guide.md).
 
 ## Contributing
 
