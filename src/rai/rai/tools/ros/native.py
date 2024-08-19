@@ -14,7 +14,7 @@
 #
 
 import json
-from typing import Any, Dict, OrderedDict, Tuple, Type
+from typing import TYPE_CHECKING, Any, Dict, OrderedDict, Tuple, Type
 
 import rclpy
 import rclpy.callback_groups
@@ -29,8 +29,6 @@ import sensor_msgs.msg
 from langchain.tools import BaseTool
 from langchain_core.pydantic_v1 import BaseModel, Field
 from rclpy.impl.rcutils_logger import RcutilsLogger
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from rai.node import RaiNode
