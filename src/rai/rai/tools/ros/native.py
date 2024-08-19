@@ -14,7 +14,7 @@
 #
 
 import json
-from typing import TYPE_CHECKING, Any, Dict, OrderedDict, Tuple, Type
+from typing import Any, Dict, OrderedDict, Tuple, Type
 
 import rclpy
 import rclpy.callback_groups
@@ -29,9 +29,6 @@ import sensor_msgs.msg
 from langchain.tools import BaseTool
 from langchain_core.pydantic_v1 import BaseModel, Field
 from rclpy.impl.rcutils_logger import RcutilsLogger
-
-if TYPE_CHECKING:
-    from rai.node import RaiNode
 
 from .utils import convert_ros_img_to_base64, import_message_from_str
 
@@ -72,9 +69,7 @@ class PubRos2MessageToolInput(BaseModel):
 # --------------------- Tools ---------------------
 class Ros2BaseTool(BaseTool):
     # TODO: Make the decision between rclpy.node.Node and RaiNode
-    node: "rclpy.node.Node | RaiNode" = Field(
-        ..., exclude=True, include=False, required=True
-    )
+    node: rclpy.node.Node = Field(..., exclude=True, include=False, required=True)
 
     args_schema: Type[Ros2BaseInput] = Ros2BaseInput
 

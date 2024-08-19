@@ -147,13 +147,6 @@ def initialize_ros(robot_description_package: str):
         return rclpy.node.Node("rai_chat_node"), "", None
 
 
-llm = ChatOpenAI(
-    temperature=0.5,
-    model="gpt-4o",
-    streaming=True,
-)
-
-
 @tool
 def add_task_to_queue(task: Task):
     """Use this tool to add a task to the queue. The task will be handled by the executor part of your system."""
@@ -213,6 +206,11 @@ def initialize_genAI(system_prompt: str, _node: Node):
 
 
 if __name__ == "__main__":
+    llm = ChatOpenAI(
+        temperature=0.5,
+        model="gpt-4o",
+        streaming=True,
+    )
     hmi_node, system_prompt, faiss_index = initialize_ros(package_name)
     agent_executor, state = initialize_genAI(
         system_prompt=system_prompt, _node=hmi_node
