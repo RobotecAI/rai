@@ -20,10 +20,12 @@ from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain.prompts import ChatPromptTemplate
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_openai import ChatOpenAI
+from rclpy.action.server import ServerGoalHandle
 from rclpy.callback_groups import ReentrantCallbackGroup
 from std_msgs.msg import String
 
 from rai_hmi.base import BaseHMINode
+from rai_interfaces.action import TaskFeedback
 
 
 class VoiceHMINode(BaseHMINode):
@@ -77,8 +79,25 @@ class VoiceHMINode(BaseHMINode):
         self.processing = False
 
     # TODO: Implement
-    def handle_task_feedback_request(self, goal_handle):
-        pass
+    def handle_task_feedback_request(self, goal_handle: ServerGoalHandle):
+
+        # Extract goal data
+        goal: TaskFeedback.Goal = goal_handle.request
+        goal  # type: ignore
+
+        # Handle the goal.current_task and goal.issue_description
+        for _ in range(10):
+            goal_handle.publish_feedback(
+                TaskFeedback.Feedback(feedback="Processing...")
+            )
+
+        goal_handle.succeed()
+        # Create and return a result
+        result = TaskFeedback.Result()
+        result.informations = "Do this and that..."
+        result.success = True
+
+        return result
 
 
 def main(args=None):
