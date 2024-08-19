@@ -34,11 +34,11 @@ from std_srvs.srv import Trigger
 
 from rai.scenario_engine.messages import HumanMultimodalMessage
 from rai.tools.ros.native import (
-    Ros2GetOneMsgFromTopicTool,
+    GetCameraImage,
+    GetMsgFromTopic,
     Ros2GetTopicsNamesAndTypesTool,
     Ros2PubMessageTool,
 )
-from rai.tools.ros.tools import GetCameraImageTool
 from rai_hmi.task import Task
 from rai_hmi.tools import QueryDatabaseTool, QueueTaskTool
 from rai_interfaces.srv import VectorStoreRetrieval
@@ -47,10 +47,9 @@ from rai_interfaces.srv import VectorStoreRetrieval
 @tool
 def get_current_image(topic: str) -> str:
     """Use this tool to get an image from a camera topic"""
-    topic = "/camera/camera/color/image_raw"
     try:
         llm = ChatOpenAI(model="gpt-4o-mini", streaming=True)
-        output = GetCameraImageTool()._run(topic=topic)
+        output = GetCameraImage()._run(topic_name=topic)
         images = output["images"]
         msg = HumanMultimodalMessage(
             content="Please describe the image as thoroughly as possible. Reply with I see...",
@@ -119,7 +118,7 @@ class HMINode(Node):
             QueryDatabaseTool(get_response=self.get_database_response),
             QueueTaskTool(add_task=self.add_task_to_queue),
             Ros2GetTopicsNamesAndTypesTool(node=self),
-            Ros2GetOneMsgFromTopicTool(node=self),
+            GetMsgFromTopic(node=self),
             Ros2PubMessageTool(node=self),
             get_current_image,
         ]
