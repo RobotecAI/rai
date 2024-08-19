@@ -30,7 +30,7 @@ from langchain_core.vectorstores import VectorStore
 from langchain_openai import OpenAIEmbeddings
 from langgraph.graph import StateGraph
 
-from rai.documents.loader import ingest_documentation
+from rai.apps.document_loader import ingest_documentation
 
 logging.basicConfig(level=logging.WARN)
 
