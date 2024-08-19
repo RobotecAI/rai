@@ -2,9 +2,9 @@
 
 ## Overview
 
-The upcoming manipulation demo will showcase the currently developed functionalities of RAI enhanced with Vision-Language-Action (VLA) models. You will be able to instruct a robotic arm to perform complex tasks, such as organizing scattered toys, with a single command prompt. It is also meant to showcase how a more generalist agent cooperates with a specialized model.
+Vision-Language-Action (VLA) models represent a novel approach to controlling robots, offering significant potential to automate and generalize robotic operations. We are working on integrating this approach with RAI to further extend RAI's versatility.
 
-VLA models represent a novel approach to controlling robots, offering significant potential to automate and generalize robotic operations. We are working on integrating this approach with RAI to further extend RAI's versatility.
+The upcoming manipulation demo will showcase a practical use case where a single prompt can be used to instruct a robotic arm to perform a series of specific tasks. It is also meant to showcase how a more generalist agent cooperates with a specialized model.
 
 ## Currently planned and developed pipeline
 
