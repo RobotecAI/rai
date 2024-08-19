@@ -92,6 +92,7 @@ class BaseHMINode(TaskActionMixin):
         self.system_prompt = self._initialize_system_prompt()
         self.faiss_index = self._load_documentation()
         self.tools = self._initialize_available_tools()
+        self.initialize_task_action_client_and_server()
 
         self.get_logger().info("HMI Node has been started")
 
