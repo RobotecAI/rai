@@ -32,7 +32,7 @@ from langfuse.callback import CallbackHandler
 from pytest import FixtureRequest
 
 from rai.messages import HumanMultimodalMessage
-from rai.tools.tool_runner import run_requested_tools
+from rai.tools.utils import run_requested_tools
 
 
 class GetImageToolInput(BaseModel):
