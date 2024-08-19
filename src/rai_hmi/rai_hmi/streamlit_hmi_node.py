@@ -31,8 +31,8 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
+from rai.messages import HumanMultimodalMessage, ToolMultimodalMessage
 from rai.node import RaiBaseNode
-from rai.scenario_engine.messages import HumanMultimodalMessage, ToolMultimodalMessage
 from rai.tools.ros.native import GetCameraImage, Ros2GetTopicsNamesAndTypesTool
 from rai_hmi.agent import State as ConversationState
 from rai_hmi.agent import create_conversational_agent

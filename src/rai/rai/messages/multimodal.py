@@ -13,11 +13,8 @@
 # limitations under the License.
 #
 
-import base64
-from typing import Any, Callable, Dict, List, Literal, Optional, TypedDict, Union
+from typing import Any, Dict, List, Literal, Optional, TypedDict, Union
 
-import numpy as np
-import requests
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.messages.base import BaseMessage, get_msg_title_repr
 from langchain_core.tools import BaseTool
@@ -164,28 +161,3 @@ class AgentLoop:
             if not any([tool.__class__.__name__ == stop_tool for tool in tools]):
                 raise ValueError("Stop tool not in tools")
         self.tools: List[BaseTool] = tools
-
-
-def preprocess_image(
-    image: Union[str, bytes, np.ndarray[Any, np.dtype[np.uint8]]],
-    encoding_function: Callable[[Any], str] = lambda x: base64.b64encode(x).decode(
-        "utf-8"
-    ),
-) -> str:
-    if isinstance(image, str) and image.startswith(("http://", "https://")):
-        response = requests.get(image)
-        response.raise_for_status()
-        image_data = response.content
-    elif isinstance(image, str):
-        with open(image, "rb") as image_file:
-            image_data = image_file.read()
-    elif isinstance(image, bytes):
-        image_data = image
-        encoding_function = lambda x: x.decode("utf-8")
-    elif isinstance(image, np.ndarray):  # type: ignore
-        image_data = image.tobytes()
-        encoding_function = lambda x: base64.b64encode(x).decode("utf-8")
-    else:
-        image_data = image
-
-    return encoding_function(image_data)

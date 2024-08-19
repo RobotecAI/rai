@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Literal, Sequence
 from langchain.tools import BaseTool
 from langchain_core.messages import AIMessage, BaseMessage, ToolCall, ToolMessage
 
-from rai.scenario_engine.messages import ToolMultimodalMessage
+from rai.messages import ToolMultimodalMessage
 
 
 def images_to_vendor_format(images: List[str], vendor: str) -> List[Dict[str, Any]]:

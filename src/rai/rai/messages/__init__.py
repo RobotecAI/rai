@@ -12,3 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+from .multimodal import (
+    AiMultimodalMessage,
+    HumanMultimodalMessage,
+    MultimodalArtifact,
+    SystemMultimodalMessage,
+    ToolMultimodalMessage,
+)
+from .utils import preprocess_image
+
+__all__ = [
+    "HumanMultimodalMessage",
+    "AiMultimodalMessage",
+    "SystemMultimodalMessage",
+    "ToolMultimodalMessage",
+    "MultimodalArtifact",
+    "preprocess_image",
+]

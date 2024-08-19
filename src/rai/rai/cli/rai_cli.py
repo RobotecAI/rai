@@ -23,7 +23,7 @@ from langchain_core.messages import SystemMessage
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from rai.apps.talk_to_docs import ingest_documentation
-from rai.scenario_engine.messages import HumanMultimodalMessage, preprocess_image
+from rai.messages import HumanMultimodalMessage, preprocess_image
 
 
 def parse_whoami_package():
