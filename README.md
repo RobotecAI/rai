@@ -8,7 +8,9 @@
 
 ![Static Badge](https://img.shields.io/badge/Ubuntu-24.04-orange)
 ![Static Badge](https://img.shields.io/badge/Python-3.12-blue)
+![Static Badge](https://img.shields.io/badge/Python-3.10-blue)
 ![Static Badge](https://img.shields.io/badge/ROS2-jazzy-blue)
+![Static Badge](https://img.shields.io/badge/ROS2-humble-blue)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 ![GitHub Release](https://img.shields.io/github/v/release/RobotecAI/rai)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/RobotecAI/rai/poetry-test.yml)
