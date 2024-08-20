@@ -239,7 +239,8 @@ class HMINode(Node):
 
         def on_llm_new_token(self, token: str, **kwargs) -> None:
             self.buffer += token
-            if len(self.buffer) >= 30 or token.endswith((".", "!", "?")):
+            # if len(self.buffer) >= 30 or token.endswith((".", "!", "?")):
+            if token.endswith((".", "!", "?")):
                 self.node.send_message_to_human(self.buffer)
                 self.buffer = ""
 
