@@ -131,32 +131,3 @@ class Ros2ServiceTool(BaseTool):
         command = f"ros2 service {command}"
         result = subprocess.run(command, shell=True, capture_output=True)
         return result
-
-
-class SetGoalPoseToolInput(BaseModel):
-    """Input for the set_goal_pose tool."""
-
-    topic: str = Field(
-        "/goal_pose", description="Ros2 topic to publish the goal pose to"
-    )
-    x: float = Field(..., description="The x coordinate of the goal pose")
-    y: float = Field(..., description="The y coordinate of the goal pose")
-
-
-class SetGoalPoseTool(BaseTool):
-    """Set the goal pose for the robot"""
-
-    name = "SetGoalPoseTool"
-    description: str = "A tool for setting the goal pose for the robot."
-
-    args_schema: Type[SetGoalPoseToolInput] = SetGoalPoseToolInput
-
-    def _run(self, topic: str, x: float, y: float):
-        """Sets the goal pose for the robot."""
-
-        cmd = (
-            f"ros2 topic pub {topic} geometry_msgs/PoseStamped "
-            f'\'{{header: {{stamp: {{sec: 0, nanosec: 0}}, frame_id: "map"}}, '
-            f"pose: {{position: {{x: {x}, y: {y}, z: {0.0}}}}}}}' --once"
-        )
-        return subprocess.run(cmd, shell=True)

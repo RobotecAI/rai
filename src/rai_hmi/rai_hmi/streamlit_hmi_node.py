@@ -31,12 +31,12 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
+from rai.extensions.navigator import RaiNavigator
+from rai.messages import HumanMultimodalMessage, ToolMultimodalMessage
 from rai.node import RaiBaseNode
-from rai.scenario_engine.messages import HumanMultimodalMessage, ToolMultimodalMessage
 from rai.tools.ros.native import GetCameraImage, Ros2GetTopicsNamesAndTypesTool
 from rai_hmi.agent import State as ConversationState
 from rai_hmi.agent import create_conversational_agent
-from rai_hmi.custom_mavigator import RaiNavigator
 from rai_hmi.task import Task
 from rai_interfaces.srv import VectorStoreRetrieval
 
@@ -147,13 +147,6 @@ def initialize_ros(robot_description_package: str):
         return rclpy.node.Node("rai_chat_node"), "", None
 
 
-llm = ChatOpenAI(
-    temperature=0.5,
-    model="gpt-4o",
-    streaming=True,
-)
-
-
 @tool
 def add_task_to_queue(task: Task):
     """Use this tool to add a task to the queue. The task will be handled by the executor part of your system."""
@@ -212,60 +205,67 @@ def initialize_genAI(system_prompt: str, _node: Node):
     return agent, state
 
 
-hmi_node, system_prompt, faiss_index = initialize_ros(package_name)
-agent_executor, state = initialize_genAI(system_prompt=system_prompt, _node=hmi_node)
+if __name__ == "__main__":
+    llm = ChatOpenAI(
+        temperature=0.5,
+        model="gpt-4o",
+        streaming=True,
+    )
+    hmi_node, system_prompt, faiss_index = initialize_ros(package_name)
+    agent_executor, state = initialize_genAI(
+        system_prompt=system_prompt, _node=hmi_node
+    )
 
+    st.subheader("Chat")
 
-st.subheader("Chat")
+    if "messages" not in st.session_state:
+        st.session_state["messages"] = []
 
-if "messages" not in st.session_state:
-    st.session_state["messages"] = []
-
-for message in st.session_state["messages"]:
-    message_type = message.type
-    if isinstance(message, (HumanMultimodalMessage, ToolMessage)):
-        message_type = "ai"
-    with st.chat_message(message_type):
-        if isinstance(message, HumanMultimodalMessage):
-            base64_images = [image for image in message.images]
-            images = [base64.b64decode(image) for image in base64_images]
-            for image in images:
-                st.image(image)
-            if isinstance(message.content, list):
-                content = message.content[0]["text"]
-                st.markdown(content)
-        elif isinstance(message, (ToolMessage, ToolMultimodalMessage)):
-            st.expander(f"Tool: {message.name}").markdown(message.content)
-        elif isinstance(message, AIMessage):
-            if message.content == "":  # tool calling
-                for tool_call in message.tool_calls:
-                    st.markdown(f"Tool: {tool_call['name']}")
-            else:
-                st.markdown(message.content)
-        else:
-            st.markdown(message.content)
-
-if prompt := st.chat_input("What is your question?"):
-    st.chat_message("user").markdown(prompt)
-    st.session_state["messages"].append(HumanMessage(content=prompt))
-    state["messages"].append(HumanMessage(content=prompt))
-
-    with st.chat_message("assistant"):
-        message_placeholder = st.container()
-        n_messages = len(state["messages"])
-        with message_placeholder.status("Thinking..."):
-            response = agent_executor.invoke(state)
-        new_messages = state["messages"][n_messages:]
-        for message in new_messages:
+    for message in st.session_state["messages"]:
+        message_type = message.type
+        if isinstance(message, (HumanMultimodalMessage, ToolMessage)):
+            message_type = "ai"
+        with st.chat_message(message_type):
             if isinstance(message, HumanMultimodalMessage):
                 base64_images = [image for image in message.images]
-                # convert the str to bytes
                 images = [base64.b64decode(image) for image in base64_images]
                 for image in images:
-                    message_placeholder.image(image)
+                    st.image(image)
+                if isinstance(message.content, list):
+                    content = message.content[0]["text"]
+                    st.markdown(content)
+            elif isinstance(message, (ToolMessage, ToolMultimodalMessage)):
+                st.expander(f"Tool: {message.name}").markdown(message.content)
+            elif isinstance(message, AIMessage):
+                if message.content == "":  # tool calling
+                    for tool_call in message.tool_calls:
+                        st.markdown(f"Tool: {tool_call['name']}")
+                else:
+                    st.markdown(message.content)
+            else:
+                st.markdown(message.content)
 
-        output = response["messages"][-1]
+    if prompt := st.chat_input("What is your question?"):
+        st.chat_message("user").markdown(prompt)
+        st.session_state["messages"].append(HumanMessage(content=prompt))
+        state["messages"].append(HumanMessage(content=prompt))
 
-        message_placeholder.markdown(output.content)
+        with st.chat_message("assistant"):
+            message_placeholder = st.container()
+            n_messages = len(state["messages"])
+            with message_placeholder.status("Thinking..."):
+                response = agent_executor.invoke(state)
+            new_messages = state["messages"][n_messages:]
+            for message in new_messages:
+                if isinstance(message, HumanMultimodalMessage):
+                    base64_images = [image for image in message.images]
+                    # convert the str to bytes
+                    images = [base64.b64decode(image) for image in base64_images]
+                    for image in images:
+                        message_placeholder.image(image)
 
-    st.session_state["messages"].extend(new_messages)
+            output = response["messages"][-1]
+
+            message_placeholder.markdown(output.content)
+
+        st.session_state["messages"].extend(new_messages)

@@ -68,7 +68,8 @@ class PubRos2MessageToolInput(BaseModel):
 
 # --------------------- Tools ---------------------
 class Ros2BaseTool(BaseTool):
-    node: rclpy.node.Node = Field(..., exclude=True, include=False, required=True)
+    # TODO: Make the decision between rclpy.node.Node and RaiNode
+    node: rclpy.node.Node = Field(..., exclude=True, required=True)
 
     args_schema: Type[Ros2BaseInput] = Ros2BaseInput
 

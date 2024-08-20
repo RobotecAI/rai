@@ -21,8 +21,7 @@ from types import ModuleType
 import pytest
 
 
-def test_can_import_all_modules_pathlib() -> None:
-    import rai
+def test_can_import_all_modules_pathlib(rai_python_modules) -> None:
 
     def import_submodules(package: ModuleType) -> None:
 
@@ -44,8 +43,14 @@ def test_can_import_all_modules_pathlib() -> None:
 
         for full_name in sorted(list(importables)):
             try:
+                print(f"Importing {full_name}", end=" ")
                 importlib.import_module(full_name)
+                print("OK")
+
             except ImportError as e:
+                print("FAIL")
                 pytest.fail(f"Failed to import {full_name}: {str(e)}")
 
-    import_submodules(rai)
+    for module in rai_python_modules:
+        print(f"Checking {module}")
+        import_submodules(module)

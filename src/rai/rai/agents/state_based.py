@@ -51,7 +51,7 @@ from langgraph.prebuilt.tool_node import str_output
 from langgraph.utils import RunnableCallable
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from rai.scenario_engine.messages import (
+from rai.messages import (
     HumanMultimodalMessage,
     MultimodalArtifact,
     ToolMultimodalMessage,

@@ -16,12 +16,15 @@
 import base64
 import logging
 import subprocess
-from typing import Any, Callable, Union, cast
+from typing import Any, Callable, Dict, List, Literal, Sequence, Union, cast
 
 import cv2
 import rclpy
 import rclpy.qos
 from cv_bridge import CvBridge
+from deprecated import deprecated
+from langchain.tools import BaseTool
+from langchain_core.messages import AIMessage, BaseMessage, ToolCall, ToolMessage
 from rclpy.duration import Duration
 from rclpy.impl.implementation_singleton import rclpy_implementation as _rclpy
 from rclpy.node import Node
@@ -36,6 +39,8 @@ from rclpy.signals import SignalHandlerGuardCondition
 from rclpy.utilities import timeout_sec_to_nsec
 from sensor_msgs.msg import Image
 from tf2_ros import Buffer, TransformListener
+
+from rai.messages import ToolMultimodalMessage
 
 
 # Copied from https://github.com/ros2/rclpy/blob/jazzy/rclpy/rclpy/wait_for_message.py, to support humble
@@ -89,6 +94,89 @@ def wait_for_message(
         node.destroy_subscription(sub)
 
     return False, None
+
+
+@deprecated(reason="Multimodal images are handled using rai.messages.multimodal")
+def images_to_vendor_format(images: List[str], vendor: str) -> List[Dict[str, Any]]:
+    if vendor == "openai":
+        return [
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{image}",
+                },
+            }
+            for image in images
+        ]
+    else:
+        raise ValueError(f"Vendor {vendor} not supported")
+
+
+@deprecated(reason="Running tool is langchain.agent based now")
+def run_tool_call(
+    tool_call: ToolCall,
+    tools: Sequence[BaseTool],
+) -> Dict[str, Any] | Any:
+    logger = logging.getLogger(__name__)
+    selected_tool = {k.name: k for k in tools}[tool_call["name"]]
+
+    try:
+        if selected_tool.args_schema is not None:
+            args = selected_tool.args_schema(**tool_call["args"]).dict()
+        else:
+            args = dict()
+    except Exception as e:
+        err_msg = f"Error in preparing arguments for {selected_tool.name}: {e}"
+        logger.error(err_msg)
+        return err_msg
+
+    logger.info(f"Running tool: {selected_tool.name} with args: {args}")
+
+    try:
+        tool_output = selected_tool.run(args)
+    except Exception as e:
+        err_msg = f"Error in running tool {selected_tool.name}: {e}"
+        logger.warning(err_msg)
+        return err_msg
+
+    logger.info(f"Successfully ran tool: {selected_tool.name}. Output: {tool_output}")
+    return tool_output
+
+
+@deprecated(reason="Running tool is langchain.agent based now")
+def run_requested_tools(
+    ai_msg: AIMessage,
+    tools: Sequence[BaseTool],
+    messages: List[BaseMessage],
+    llm_type: Literal["openai", "bedrock"],
+):
+    internal_messages: List[BaseMessage] = []
+    for tool_call in ai_msg.tool_calls:
+        tool_output = run_tool_call(tool_call, tools)
+        assert isinstance(tool_call["id"], str), "Tool output must have an id."
+        if isinstance(tool_output, dict):
+            tool_message = ToolMultimodalMessage(
+                content=tool_output.get("content", "No response from the tool."),
+                images=tool_output.get("images"),
+                tool_call_id=tool_call["id"],
+            )
+            tool_message = tool_message.postprocess(format=llm_type)
+        else:
+            tool_message = [
+                ToolMessage(content=str(tool_output), tool_call_id=tool_call["id"])
+            ]
+        if isinstance(tool_message, list):
+            internal_messages.extend(tool_message)
+        else:
+            internal_messages.append(tool_message)
+
+    # because we can't answer an aiMessage with an alternating sequence of tool and human messages
+    # we sort the messages by type so that the tool messages are sent first
+    # for more information see implementation of ToolMultimodalMessage.postprocess
+
+    internal_messages.sort(key=lambda x: x.__class__.__name__, reverse=True)
+    messages.extend(internal_messages)
+    return messages
 
 
 class SingleMessageGrabber:

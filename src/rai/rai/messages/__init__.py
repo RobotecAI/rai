@@ -13,7 +13,20 @@
 # limitations under the License.
 #
 
-from .communication import EmailSender
-from .ros_communication import SingleImageGrabber
+from .multimodal import (
+    AiMultimodalMessage,
+    HumanMultimodalMessage,
+    MultimodalArtifact,
+    SystemMultimodalMessage,
+    ToolMultimodalMessage,
+)
+from .utils import preprocess_image
 
-__all__ = ["EmailSender", "SingleImageGrabber"]
+__all__ = [
+    "HumanMultimodalMessage",
+    "AiMultimodalMessage",
+    "SystemMultimodalMessage",
+    "ToolMultimodalMessage",
+    "MultimodalArtifact",
+    "preprocess_image",
+]

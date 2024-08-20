@@ -27,10 +27,7 @@ from langchain_core.tools import BaseTool
 from nav_msgs.msg import OccupancyGrid
 from tf_transformations import euler_from_quaternion
 
-from rai.communication.ros_communication import (
-    SingleMessageGrabber,
-    TF2TransformFetcher,
-)
+from rai.tools.utils import SingleMessageGrabber, TF2TransformFetcher
 
 from .native import TopicInput
 
