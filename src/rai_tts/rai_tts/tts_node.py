@@ -61,7 +61,7 @@ class TTSNode(Node):
         self.thread_lock = threading.Lock()
 
     def status_callback(self):
-        if self.queue.empty() and self.playing is False:
+        if self.threads_number == 0 and self.playing is False:
             self.status_publisher.publish(String(data="waiting"))
         else:
             self.status_publisher.publish(String(data="playing"))
@@ -122,6 +122,7 @@ class TTSNode(Node):
 
     def _play_audio(self, filepath: str):
         self.playing = True
+        self.status_publisher.publish(String(data="audio_playing"))
         subprocess.run(
             ["ffplay", "-v", "0", "-nodisp", "-autoexit", filepath],
             stdout=subprocess.DEVNULL,

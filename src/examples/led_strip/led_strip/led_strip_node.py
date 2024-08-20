@@ -70,7 +70,9 @@ class LEDStripController(Node):
             return ""
 
         if self.led_state == "waiting":
-            if self.asr_state == "recording":
+            if self.tts_state == "playing":
+                self.led_state = "playing"
+            elif self.asr_state == "recording":
                 self.led_state = "recording"
         elif self.led_state == "recording":
             if self.asr_state == "transcribing":
@@ -89,7 +91,7 @@ class LEDStripController(Node):
 
         if self.led_state == "playing":
             t = self.get_clock().now().nanoseconds / 1e9
-            value: float = np.sin(2 * np.pi * PULSE_FREQUENCY * t)
+            value: float = 0.5 * (np.sin(2 * np.pi * PULSE_FREQUENCY * t) + 1.0)
             color = np.array(color)
             color = (value * color).astype(np.uint8)
 

@@ -130,7 +130,7 @@ class ASRNode(Node):
         )
 
     def tts_status_callback(self, msg: String):
-        if msg.data == "playing":
+        if msg.data == "processing":
             self.tts_lock = True
         elif msg.data == "waiting":
             self.tts_lock = False
