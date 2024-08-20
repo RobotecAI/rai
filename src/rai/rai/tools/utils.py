@@ -22,6 +22,7 @@ import cv2
 import rclpy
 import rclpy.qos
 from cv_bridge import CvBridge
+from deprecated import deprecated
 from langchain.tools import BaseTool
 from langchain_core.messages import AIMessage, BaseMessage, ToolCall, ToolMessage
 from rclpy.duration import Duration
@@ -95,6 +96,7 @@ def wait_for_message(
     return False, None
 
 
+@deprecated(reason="Multimodal images are handled using rai.messages.multimodal")
 def images_to_vendor_format(images: List[str], vendor: str) -> List[Dict[str, Any]]:
     if vendor == "openai":
         return [
@@ -110,6 +112,7 @@ def images_to_vendor_format(images: List[str], vendor: str) -> List[Dict[str, An
         raise ValueError(f"Vendor {vendor} not supported")
 
 
+@deprecated(reason="Running tool is langchain.agent based now")
 def run_tool_call(
     tool_call: ToolCall,
     tools: Sequence[BaseTool],
@@ -140,6 +143,7 @@ def run_tool_call(
     return tool_output
 
 
+@deprecated(reason="Running tool is langchain.agent based now")
 def run_requested_tools(
     ai_msg: AIMessage,
     tools: Sequence[BaseTool],
