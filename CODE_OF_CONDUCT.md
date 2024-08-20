@@ -2,11 +2,18 @@
 
 RAI adopts the [ROS Code of Conduct](https://osrf.github.io/code_of_conduct/) maintained by the OSRF.
 We expand the scope of the Code of Conduct to all official RAI communication channels, including, but not limited to:
- - RAI source code repositories
+
+- RAI source code repositories
 
 What follows is the adopted ROS Code of Conduct (retrieved: 2024-08-22). It also includes contact information to RAI internal Conduct Team.
 
 # ROS Code of Conduct
+
+- [ROS Code of Conduct](https://osrf.github.io/code_of_conduct/)
+- [Python Software Foundation Code of Conduct](https://www.python.org/psf/conduct/)
+- [The RUST language Code of Conduct](https://www.rust-lang.org/policies/code-of-conduct)
+- [Contributor Covenant](https://www.contributor-covenant.org/)
+- [Frame Shift Consulting Code of Conduct Book](https://frameshiftconsulting.com/code-of-conduct-book/)
 
 ## Code of Conduct for ROS
 
@@ -125,6 +132,16 @@ Instances of abusive, harassing, or otherwise unacceptable behavior may be repor
 The Conduct Team will follow these Community Impact Guidelines in determining the consequences for any action they deem in violation of this Code of Conduct:
 
 #### Correction
+
+- Your contact info (so we can get in touch with you if we need to follow up)
+- Date and time of the incident
+- Any links, screen shots, videos, or other media that may help
+- Location of the incident
+- Whether the incident is ongoing
+- Description of the incident
+- Identifying information of the reported person
+- Additional circumstances surrounding the incident
+- Other people involved in or witnesses to the incident and their contact information or description
 
 - **Example Behavior:** Use of inappropriate language or other behavior deemed unprofessional or unwelcome in the community.
 - **Consequence:** A private, written warning from community leaders, providing clarity around the nature of the violation and an explanation of why the behavior was inappropriate. A public apology may be requested.
