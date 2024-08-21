@@ -15,7 +15,7 @@
 
 import logging
 import sys
-from typing import cast
+from typing import Dict, Optional, cast
 
 import rclpy
 import streamlit as st
@@ -47,7 +47,7 @@ else:
 
 
 @st.cache_resource
-def initialize_ros_node(robot_description_package: str):
+def initialize_ros_node(robot_description_package: Optional[str]):
     rclpy.init()
 
     node = BaseHMINode(
@@ -59,7 +59,7 @@ def initialize_ros_node(robot_description_package: str):
 
 
 @st.cache_resource
-def initialize_agent(_node):
+def initialize_agent(_node: BaseHMINode):
     llm = ChatOpenAI(
         temperature=0.5,
         model="gpt-4o-mini",
@@ -78,7 +78,10 @@ def initialize_session_memory():
         st.session_state.tool_calls = {}
 
 
-def convert_langchain_message_to_streamlit_message(message):
+def convert_langchain_message_to_streamlit_message(
+    message: BaseMessage,
+) -> Dict[str, str]:
+    message.content = cast(str, message.content)  # type: ignore
     if isinstance(message, HumanMessage):
         return {"type": "user", "avatar": "🧑‍💻", "content": message.content}
     elif isinstance(message, AIMessage):
@@ -86,10 +89,11 @@ def convert_langchain_message_to_streamlit_message(message):
     elif isinstance(message, ToolMessage):
         return {"type": "bot", "avatar": "🛠️", "content": message.content}
     else:
-        return {"type": "unknown", "content": message.content}
+        return {"type": "unknown", "avatar": "❓", "content": message.content}
 
 
 def handle_history_message(message: BaseMessage):
+    message.content = cast(str, message.content)  # type: ignore
     if isinstance(message, HumanMessage):
         user_chat_obj = st.chat_message("user", avatar="🧑‍💻")
         user_chat_obj.markdown(message.content)
@@ -107,7 +111,7 @@ def handle_history_message(message: BaseMessage):
         )
         tool_chat_obj.markdown(message.content)
     else:
-        st.write("Unknown message type")
+        raise ValueError("Unknown message type")
 
 
 if __name__ == "__main__":
