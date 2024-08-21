@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+import base64
+import io
 import logging
 import sys
 from typing import Dict, Optional, cast
@@ -27,7 +28,12 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from langchain_openai.chat_models import ChatOpenAI
+from PIL import Image
 
+from rai.agents.state_based import get_stored_artifacts
+from rai.messages import HumanMultimodalMessage
+from rai.node import RaiBaseNode
+from rai.tools.ros.native import GetCameraImage, Ros2GetTopicsNamesAndTypesTool
 from rai_hmi.agent import create_conversational_agent
 from rai_hmi.base import BaseHMINode
 
@@ -58,6 +64,11 @@ def initialize_ros_node(robot_description_package: Optional[str]):
     return node
 
 
+def decode_base64_into_image(base64_image: str):
+    image = Image.open(io.BytesIO(base64.b64decode(base64_image)))
+    return image
+
+
 @st.cache_resource
 def initialize_agent(_node: BaseHMINode):
     llm = ChatOpenAI(
@@ -65,10 +76,12 @@ def initialize_agent(_node: BaseHMINode):
         model="gpt-4o-mini",
         streaming=True,
     )
-    llm = create_conversational_agent(
-        llm, _node.tools, _node.system_prompt, logger=_node.get_logger()
+    rai_node = RaiBaseNode(node_name="__rai_node__")  # this is so wrong
+    tools = [Ros2GetTopicsNamesAndTypesTool(node=_node), GetCameraImage(node=rai_node)]
+    agent = create_conversational_agent(
+        llm, _node.tools + tools, _node.system_prompt, logger=_node.get_logger()
     )
-    return llm
+    return agent
 
 
 def initialize_session_memory():
@@ -95,6 +108,10 @@ def convert_langchain_message_to_streamlit_message(
 def handle_history_message(message: BaseMessage):
     message.content = cast(str, message.content)  # type: ignore
     if isinstance(message, HumanMessage):
+        if isinstance(
+            message, HumanMultimodalMessage
+        ):  # we do not handle user's images
+            return
         user_chat_obj = st.chat_message("user", avatar="🧑‍💻")
         user_chat_obj.markdown(message.content)
     elif isinstance(message, AIMessage):
@@ -109,7 +126,14 @@ def handle_history_message(message: BaseMessage):
         tool_chat_obj = st.expander(label=label + status).chat_message(
             "bot", avatar="🛠️"
         )
-        tool_chat_obj.markdown(message.content)
+        with tool_chat_obj:
+            st.markdown(message.content)
+            artifacts = get_stored_artifacts(message.tool_call_id)
+            for artifact in artifacts:
+                if "images" in artifact:
+                    base_64_image = artifact["images"][0]
+                    image = decode_base64_into_image(base_64_image)
+                    st.image(image)
     else:
         raise ValueError("Unknown message type")
 
@@ -162,7 +186,16 @@ if __name__ == "__main__":
 
                     elif node_name == "tools":
                         tool_messages = []
-                        for message in state[node_name]["messages"][::-1]:
+                        last_ai_msg_idx = 0
+                        for message in state[node_name]["messages"]:
+                            if isinstance(message, AIMessage):
+                                last_ai_msg_idx = state[node_name]["messages"].index(
+                                    message
+                                )
+
+                        for message in state[node_name]["messages"][
+                            last_ai_msg_idx + 1 :  # noqa: E203
+                        ]:
                             if message.type == "tool":
                                 st.session_state.tool_calls[message.tool_call_id] = (
                                     message
@@ -178,5 +211,15 @@ if __name__ == "__main__":
                                             st_message["type"],
                                             avatar=st_message["avatar"],
                                         ).markdown(st_message["content"])
+                                        artifacts = get_stored_artifacts(
+                                            message.tool_call_id
+                                        )
+                                        for artifact in artifacts:
+                                            if "images" in artifact:
+                                                base_64_image = artifact["images"][0]
+                                                image = decode_base64_into_image(
+                                                    base_64_image
+                                                )
+                                                st.image(image)
                             else:
                                 break
