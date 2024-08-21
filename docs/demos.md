@@ -18,16 +18,24 @@ Please refer to [rai husarion rosbot xl demo][rai rosbot demo] to install and ru
 
 You can set the task for the agent in the `examples/nav2_example_ros_actions.py` file.
 
-1. Start `rai_whoami_node`
+1. Prepare the robot description.
+
+```bash
+colcon build --symlink-install --packages-select rosbot_xl_whoami
+
+. install/setup.bash
+```
+
+2. Start `rai_whoami_node`
    who_am_i node. It loads files from robot [description](https://github.com/RobotecAI/rai-rosbot-xl-demo/tree/development/src/rosbot_xl_whoami/description) folder to server robot identity.
 
 ```bash
 source setup_shell.sh
 
-ros2 run rai_whoami rai_whoami_node --ros-args -p robot_description_package:="husarion_whoami"
+ros2 run rai_whoami rai_whoami_node --ros-args -p robot_description_package:="rosbot_xl_whoami"
 ```
 
-2. Start `rai_node`.
+3. Start `rai_node`.
 
 By looking at the example code in `src/examples/rosbot-xl-generic-node-demo.py` you can see that:
 
@@ -41,7 +49,7 @@ source setup_shell.sh
 python examples/rosbot-xl-generic-node-demo.py
 ```
 
-3. Send the task to the node:
+4. Send the task to the node:
 
 > **NOTE**: For now agent is capable of performing only 1 task at once.
 
