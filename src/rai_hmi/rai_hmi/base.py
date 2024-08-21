@@ -57,18 +57,21 @@ class BaseHMINode(TaskActionMixin):
         _load_documentation: Loads the FAISS index from the robot description package.
     """
 
-    def __init__(self, node_name: str):
+    def __init__(self, node_name: str, robot_description_package: Optional[str] = None):
         super().__init__(node_name=node_name)
 
-        self.declare_parameter("robot_description_package", "")
-        self.robot_description_package = cast(
-            str,
-            (
-                self.get_parameter("robot_description_package")
-                .get_parameter_value()
-                .string_value
-            ),  # type: ignore
-        )
+        if robot_description_package is None:
+            self.declare_parameter("robot_description_package", "")
+            self.robot_description_package = cast(
+                str,
+                (
+                    self.get_parameter("robot_description_package")
+                    .get_parameter_value()
+                    .string_value
+                ),  # type: ignore
+            )
+        else:
+            self.robot_description_package = robot_description_package
 
         self.processing = False
 
