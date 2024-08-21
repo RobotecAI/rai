@@ -34,6 +34,7 @@ class TaskActionMixin(Node):
 
         if not self.task_action_client.wait_for_server(timeout_sec=10.0):
             self.get_logger().error("Task action server not available!")
+            raise Exception("Task action server not available!")
             return
 
         goal_msg = TaskAction.Goal()
