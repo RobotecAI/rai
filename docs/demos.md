@@ -2,7 +2,7 @@
 
 ## Installation
 
-Download repositories
+In the root directory of the `rai` repo download repositories:
 
 ```bash
 vcs import < demos.repos
@@ -12,9 +12,30 @@ vcs import < demos.repos
 
 ![Screenshot1](imgs/o3deSimulation.png)
 
-Please refer to [rai husarion rosbot xl demo][rai rosbot demo] to install and run the simulation.
+### Using pre-bulit binary
 
-### Running RAI
+1. Download the newest binary release (`release.zip` file) from [rai-rosbot-xl-demo -> releases](https://github.com/RobotecAI/rai-rosbot-xl-demo/releases)
+2. Unpack the binary and run the simulation:
+
+   ```bash
+   unzip release.zip
+   . /opt/ros/${ROS_DISTRO}/setup.bash
+   ./release/RAIRosbotXLDemo.GameLauncher -bg_ConnectToAssetProcessor=0
+   ```
+
+3. Start navigation stack:
+   ```bash
+   ./src/examples/rosbot-xl-demo/run-nav.sh
+   ```
+
+### Building the project yourself
+
+If you would like to adapt the simulation to your needs, you can make changes using
+[O3DE Editor](https://www.docs.o3de.org/docs/welcome-guide/) and build the project
+yourself.
+Please refer to [rai husarion rosbot xl demo][rai rosbot demo] for more details.
+
+## Running RAI
 
 You can set the task for the agent in the `examples/nav2_example_ros_actions.py` file.
 
