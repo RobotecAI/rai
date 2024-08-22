@@ -236,6 +236,8 @@ class RaiGenericBaseNode(RaiBaseNode):
 
         self.DISCOVERY_FREQ = 2.0
         self.DISCOVERY_DEPTH = 5
+        self.ros_discovery_info = NodeDiscovery(whitelist=self.whitelist)
+        self.discovery()
 
         self.callback_group = rclpy.callback_groups.MutuallyExclusiveCallbackGroup()
 

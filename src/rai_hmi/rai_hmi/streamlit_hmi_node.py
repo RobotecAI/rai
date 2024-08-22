@@ -152,7 +152,6 @@ def initialize_ros(robot_description_package: str):
     else:
         return rclpy.node.Node("rai_chat_node"), "", None
 
-
 def wait_for_action_finish(navigator: BasicNavigator):
     while not navigator.isTaskComplete():
         time.sleep(0.1)
@@ -194,6 +193,8 @@ def drive_forward(distance_m: float) -> str:
     return "Robot driving forward."
 
 
+hmi_node, system_prompt, faiss_index = initialize_ros(package_name)
+
 @tool
 def search_database(query: str) -> str:
     """Use this tool to search the documentation database."""
@@ -226,6 +227,7 @@ def initialize_genAI(system_prompt: str, _node: Node):
     return agent, state
 
 
+<<<<<<< HEAD
 if __name__ == "__main__":
     llm = ChatOpenAI(
         temperature=0.5,
@@ -236,6 +238,9 @@ if __name__ == "__main__":
     agent_executor, state = initialize_genAI(
         system_prompt=system_prompt, _node=hmi_node
     )
+=======
+agent_executor, state = initialize_genAI(system_prompt=system_prompt, _node=hmi_node)
+>>>>>>> 2b3e8d1 (wip)
 
     st.subheader("Chat")
 
