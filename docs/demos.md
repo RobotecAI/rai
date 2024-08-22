@@ -15,7 +15,13 @@ vcs import < demos.repos
 ### Using pre-bulit binary
 
 1. Download the newest binary release (`release.zip` file) from [rai-rosbot-xl-demo -> releases](https://github.com/RobotecAI/rai-rosbot-xl-demo/releases)
-2. Unpack the binary and run the simulation:
+2. Install required packages
+
+   ```bash
+   sudo apt install ros-${ROS_DISTRO}-ackermann-msgs ros-${ROS_DISTRO}-gazebo-msgs ros-${ROS_DISTRO}-control-toolbox
+   ```
+
+3. Unpack the binary and run the simulation:
 
    ```bash
    unzip release.zip
@@ -23,7 +29,7 @@ vcs import < demos.repos
    ./release/RAIRosbotXLDemo.GameLauncher -bg_ConnectToAssetProcessor=0
    ```
 
-3. Start navigation stack:
+4. Start navigation stack:
    ```bash
    ./src/examples/rosbot-xl-demo/run-nav.sh
    ```
