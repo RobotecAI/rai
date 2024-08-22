@@ -15,8 +15,10 @@
 
 import base64
 import sys
+import time
 
 import rclpy
+import rclpy.node
 import streamlit as st
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import Point
@@ -26,6 +28,7 @@ from langchain_community.vectorstores import FAISS
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_openai import OpenAIEmbeddings
 from langchain_openai.chat_models import ChatOpenAI
+from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
 from std_msgs.msg import String
@@ -57,7 +60,10 @@ if "memory" not in st.session_state:
 @st.cache_resource
 def initialize_ros(robot_description_package: str):
 
-    rclpy.init()
+    try:
+        rclpy.init()
+    except Exception:
+        print("Rclpy already initialized")
 
     class HMINode(RaiBaseNode):
         def __init__(self, robot_description_package: str):
@@ -147,6 +153,19 @@ def initialize_ros(robot_description_package: str):
         return rclpy.node.Node("rai_chat_node"), "", None
 
 
+def wait_for_action_finish(navigator: BasicNavigator):
+    while not navigator.isTaskComplete():
+        time.sleep(0.1)
+
+    result = navigator.getResult()
+    if result == TaskResult.SUCCEEDED:
+        return "Goal succeeded!"
+    elif result == TaskResult.CANCELED:
+        return "Goal was canceled!"
+    elif result == TaskResult.FAILED:
+        return "Goal failed!"
+
+
 @tool
 def add_task_to_queue(task: Task):
     """Use this tool to add a task to the queue. The task will be handled by the executor part of your system."""
@@ -159,6 +178,7 @@ def spin_robot(degrees_rad: float) -> str:
     """Use this tool to spin the robot."""
     navigator = RaiNavigator()
     navigator.spin(spin_dist=degrees_rad)
+    wait_for_action_finish(navigator)
     return "Robot spinning."
 
 
@@ -170,6 +190,7 @@ def drive_forward(distance_m: float) -> str:
     p.x = distance_m
 
     navigator.drive_on_heading(p, 0.5, 10)
+    wait_for_action_finish(navigator)
     return "Robot driving forward."
 
 
