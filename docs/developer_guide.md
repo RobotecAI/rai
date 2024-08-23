@@ -73,7 +73,7 @@ user_prompt = (
 # ----- Invoke the agent -----
 output = agent.invoke({"messages": [system_prompt, user_prompt]}, config={"recursion_limit": 50})
 
-print(output["messages"][-1].response_to_user)
+print(output["messages"][-1].json(indent=4))
 ```
 
 ## Adjusting RAI for Your Robot
@@ -90,7 +90,6 @@ The whoami package is used for configuring your robot within the RAI ecosystem. 
 To extend RAI with tools specific to your robot, implement new tool functions as shown below. These functions should be decorated with @tool and should interact with your robot's API.
 
 ```python
-
 from langchain.tools import tool, BaseTool
 from langchain.pydantic_v1 import BaseModel, Field
 from typing import Type

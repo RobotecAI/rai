@@ -38,7 +38,8 @@ The RAI framework aims to:
 # Table of Contents
 
 - [Features](#features)
-- [Quick Start](#installation)
+- [Quick Start](#quick-start)
+- [Developer guide](./docs/developer_guide.md)
 - [Usage examples (demos)](#planned-demos)
 - [Further documentation](#further-documentation)
 - [ROSCon 2024 Talk](#roscon-2024)
@@ -117,7 +118,7 @@ If you do not have a key, see how to generate one [here](https://platform.openai
 export OPENAI_API_KEY=""
 ```
 
-#### Congratulations, your installation is now complete!
+#### Congratulations, your installation is now complete! Head to [Running example](./docs/developer_guide.md)
 
 # Running RAI
 
