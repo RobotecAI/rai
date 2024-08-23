@@ -107,8 +107,7 @@ def scan_object():
     """Tool used for x-raying previously picked object"""
     return robot.scan_object()
 
-# class based api, useful when tools use foreign objects
-
+# class based api, useful when tools use foreign objects like ROS 2 Node
 class SayToolInput(BaseModel):
     text: str = Field(..., description="Text to be said.")
 
@@ -133,9 +132,10 @@ Once you have implemented your tools, you can run the agent with these new tools
 
 ```python
 from rai.agents.state_based import create_state_based_agent
+from langchain_openai import ChatOpenAI
 from myrobot import robot
 
-llm = # initialize your favorite llm vendor
+llm = ChatOpenAI(model='gpt-4o') # initialize your vendor of choice
 tools = [pick_up_object, scan_object, SayTool(robot=robot)]
 agent = create_state_based_agent(llm=llm, state_retriever=state_retriever, tools=tools)
 agent.invoke({"messages": ["Please pick up an object and scan it."]})
@@ -143,7 +143,6 @@ agent.invoke({"messages": ["Please pick up an object and scan it."]})
 
 Additional resources:
 
-- How to [configure RAI for your robot](create_robots_whoami.md).
 - [Beta demos](demos.md).
 - [Multimodal Messages](multimodal_messages.md) definition.
 - Available ROS 2 packages: [ros packages](ros_packages.md).
