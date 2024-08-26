@@ -58,7 +58,7 @@ class Ros2TopicTool(BaseTool):
     def _run(self, command: str):
         """Executes the specified ROS2 topic command."""
         result = subprocess.run(
-            f"ros2 topic {command}", shell=True, capture_output=True
+            f"ros2 topic {command}", shell=True, capture_output=True, timeout=2
         )
         return result
 
@@ -95,7 +95,7 @@ class Ros2InterfaceTool(BaseTool):
 
     def _run(self, command: str):
         command = f"ros2 interface {command}"
-        result = subprocess.run(command, shell=True, capture_output=True)
+        result = subprocess.run(command, shell=True, capture_output=True, timeout=2)
         return result
 
 
@@ -129,5 +129,39 @@ class Ros2ServiceTool(BaseTool):
 
     def _run(self, command: str):
         command = f"ros2 service {command}"
+        result = subprocess.run(command, shell=True, capture_output=True, timeout=2)
+        return result
+
+
+class Ros2ActionToolInput(BaseModel):
+    """Input for the ros2_action tool."""
+
+    command: str = Field(..., description="The command to run")
+
+
+class Ros2ActionTool(BaseTool):
+    name: str = "Ros2ActionTool"
+
+    description: str = """
+    usage: ros2 action [-h] Call `ros2 action <command> -h` for more detailed usage. ...
+
+    Various action related sub-commands
+
+    options:
+      -h, --help            show this help message and exit
+
+    Commands:
+      info       Print information about an action
+      list       Output a list of action names
+      send_goal  Send an action goal
+      type       Print a action's type
+
+      Call `ros2 action <command> -h` for more detailed usage.
+    """
+
+    args_schema: Type[Ros2ActionToolInput] = Ros2ActionToolInput
+
+    def _run(self, command: str):
+        command = f"ros2 action {command}"
         result = subprocess.run(command, shell=True, capture_output=True)
         return result

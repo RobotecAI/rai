@@ -31,12 +31,12 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
+from rai.agents.conversational_agent import State as ConversationState
+from rai.agents.conversational_agent import create_conversational_agent
 from rai.extensions.navigator import RaiNavigator
 from rai.messages import HumanMultimodalMessage, ToolMultimodalMessage
 from rai.node import RaiBaseNode
 from rai.tools.ros.native import GetCameraImage, Ros2GetTopicsNamesAndTypesTool
-from rai_hmi.agent import State as ConversationState
-from rai_hmi.agent import create_conversational_agent
 from rai_hmi.task import Task
 from rai_interfaces.srv import VectorStoreRetrieval
 

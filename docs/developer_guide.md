@@ -2,78 +2,15 @@
 
 RAI is a problem-agnostic framework designed to provide a general solution for various tasks. It is easily extendable, allowing developers to adapt and integrate new functionalities and tools to meet specific needs.
 
-Before you dive into the developer guide, explore the idea behind RAI by helping the cow escape the farm with the following demo snippet!
-
-## Quickstart snippet
+## Try out RAI
 
 ```python
-import random
-from langchain.tools import tool
-from langchain_openai.chat_models import ChatOpenAI
-from rai.agents.state_based import create_state_based_agent
+from rai import ROS2Agent
 
-# ----- Your Robot Code -----
-class CowAI:
-    def eat_grass(self):
-        print("I am eating grass.")
-        return "I have eaten grass."
-
-    def spy_on_farmer(self):
-        print("I am spying on the farmer.", end=" ")
-        farmer_state = random.choice(["sleeping", "watching"])
-        print("The farmer is currently:", farmer_state)
-        return "The farmer is currently." + farmer_state
-
-    def return_to_base(self):
-        print("I am returning to the base.")
-        return "I've returned to the base."
-
-    def run_away(self):
-        print("I am running away!")
-        return "I've run away from the farmer."
-
-cow = CowAI()
-
-# ----- Your Robot specific tools -----
-@tool
-def eat_grass():
-    """Eat grass tool"""
-    return cow.eat_grass()
-
-@tool
-def spy_on_farmer():
-    """Spy on farmer tool"""
-    return cow.spy_on_farmer()
-
-@tool
-def return_to_base():
-    """Return to base tool"""
-    return cow.return_to_base()
-
-@tool
-def run_away():
-    """Run away tool"""
-    return cow.run_away()
-
-def state_retriever():
-    """State retriever used for feeding state information
-    to agent every iteration"""
-    return {"temperature": 30, "battery_state": 33}
-
-# ----- Initialize -----
-llm = ChatOpenAI(model="gpt-4o")
-tools = [eat_grass, spy_on_farmer, return_to_base, run_away]
-agent = create_state_based_agent(llm=llm, state_retriever=state_retriever, tools=tools)
-system_prompt = "You are a cow. You are in a field. "
-user_prompt = (
-    "Please eat the grass 3 times as a cover, then run away at first possibility."
-    "Make sure that you are not caught by the farmer."
-)
-
-# ----- Invoke the agent -----
-output = agent.invoke({"messages": [system_prompt, user_prompt]}, config={"recursion_limit": 50})
-
-print(output["messages"][-1].json(indent=4))
+agent = ROS2Agent(vendor='openai') # openai or bedrock
+print(agent("What topics, services, and actions are available?"))
+print(agent("Please describe the interfaces of two of the existing topics."))
+print(agent("Please publish 'Hello RAI' to /chatter topic only once"))
 ```
 
 ## Adjusting RAI for Your Robot
