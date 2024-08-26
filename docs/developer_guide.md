@@ -10,7 +10,7 @@ from rai import ROS2Agent
 agent = ROS2Agent(vendor='openai') # openai or bedrock
 print(agent("What topics, services, and actions are available?"))
 print(agent("Please describe the interfaces of two of the existing topics."))
-print(agent("Please publish 'Hello RAI' to /chatter topic only once"))
+print(agent("Please publish 'Hello RAI' to /chatter topic only once")) # make sure to listen first ros2 topic echo /chatter
 ```
 
 ## Adjusting RAI for Your Robot
@@ -57,8 +57,12 @@ class SayTool(BaseTool):
         return self.robot.speak(text)
 
 def state_retriever():
-    """State retriever used for feeding state information to agent every interation"""
-    return {"temperature": 30, "battery_state": 33}
+    """
+    State retriever used for feeding state information to agent every interation.
+    The state can consist of robot's logs, as well as any information that might
+    be useful to the robot's operations and agent's reasoning.
+    """
+    return {"temperature": 30, "battery_state": 33, "logs": [...]}
 
 ```
 

@@ -13,3 +13,5 @@
 # limitations under the License.
 #
 from rai.apps.high_level_api import ROS2Agent
+
+__all__ = ["ROS2Agent"]
