@@ -35,7 +35,7 @@ To get started install RAI from source code using these [instructions](/README.m
 
 ### Starting the discussion
 
-Always try to engage in discussion first. Browse Issues and RFCs to see if a feature you want to propose (or a similar one) has already been mentioned.
+Always try to engage in discussion first. Browse Issues and RFCs or start a discussion on [RAI Discord](https://discord.gg/C6TmsU7n) to see if a feature you want to propose (or a similar one) has already been mentioned.
 If that is the case feel free to offer that you'll work on it, and propose what changes/additions you will make.
 One of the project maintainers will assign the issue to you, and you can start working on the code.
 
