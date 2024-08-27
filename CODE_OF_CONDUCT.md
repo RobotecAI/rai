@@ -4,6 +4,7 @@ RAI adopts the [ROS Code of Conduct](https://osrf.github.io/code_of_conduct/) ma
 We expand the scope of the Code of Conduct to all official RAI communication channels, including, but not limited to:
 
 - RAI source code repositories
+- RAI discord and other communication channels
 
 What follows is the adopted ROS Code of Conduct (retrieved: 2024-08-22). It also includes contact information to RAI internal Conduct Team.
 
