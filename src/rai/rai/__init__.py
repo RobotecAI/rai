@@ -12,3 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from rai.apps.high_level_api import ROS2Agent
+
+__all__ = ["ROS2Agent"]
