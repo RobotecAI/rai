@@ -40,10 +40,10 @@ def pick_up_object(bbox_3d):
 
 @tool
 def scan_object():
-    """Tool used for x-raying previously picked object"""
+    """Tool used for examining previously picked object"""
     return robot.scan_object()
 
-# class based api, useful when tools use foreign objects like ROS 2 Node
+# class based api, useful when tools use objects like ROS 2 Node
 class SayToolInput(BaseModel):
     text: str = Field(..., description="Text to be said.")
 
@@ -58,7 +58,7 @@ class SayTool(BaseTool):
 
 def state_retriever():
     """
-    State retriever used for feeding state information to agent every interation.
+    State retriever used for feeding state information to agent every iteration.
     The state can consist of robot's logs, as well as any information that might
     be useful to the robot's operations and agent's reasoning.
     """
