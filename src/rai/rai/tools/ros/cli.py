@@ -58,7 +58,7 @@ class Ros2TopicTool(BaseTool):
     def _run(self, command: str):
         """Executes the specified ROS2 topic command."""
         result = subprocess.run(
-            f"ros2 topic {command}", shell=True, capture_output=True
+            f"ros2 topic {command}", shell=True, capture_output=True, timeout=2
         )
         return result
 
@@ -95,7 +95,7 @@ class Ros2InterfaceTool(BaseTool):
 
     def _run(self, command: str):
         command = f"ros2 interface {command}"
-        result = subprocess.run(command, shell=True, capture_output=True)
+        result = subprocess.run(command, shell=True, capture_output=True, timeout=2)
         return result
 
 
@@ -129,34 +129,39 @@ class Ros2ServiceTool(BaseTool):
 
     def _run(self, command: str):
         command = f"ros2 service {command}"
-        result = subprocess.run(command, shell=True, capture_output=True)
+        result = subprocess.run(command, shell=True, capture_output=True, timeout=2)
         return result
 
 
-class SetGoalPoseToolInput(BaseModel):
-    """Input for the set_goal_pose tool."""
+class Ros2ActionToolInput(BaseModel):
+    """Input for the ros2_action tool."""
 
-    topic: str = Field(
-        "/goal_pose", description="Ros2 topic to publish the goal pose to"
-    )
-    x: float = Field(..., description="The x coordinate of the goal pose")
-    y: float = Field(..., description="The y coordinate of the goal pose")
+    command: str = Field(..., description="The command to run")
 
 
-class SetGoalPoseTool(BaseTool):
-    """Set the goal pose for the robot"""
+class Ros2ActionTool(BaseTool):
+    name: str = "Ros2ActionTool"
 
-    name = "SetGoalPoseTool"
-    description: str = "A tool for setting the goal pose for the robot."
+    description: str = """
+    usage: ros2 action [-h] Call `ros2 action <command> -h` for more detailed usage. ...
 
-    args_schema: Type[SetGoalPoseToolInput] = SetGoalPoseToolInput
+    Various action related sub-commands
 
-    def _run(self, topic: str, x: float, y: float):
-        """Sets the goal pose for the robot."""
+    options:
+      -h, --help            show this help message and exit
 
-        cmd = (
-            f"ros2 topic pub {topic} geometry_msgs/PoseStamped "
-            f'\'{{header: {{stamp: {{sec: 0, nanosec: 0}}, frame_id: "map"}}, '
-            f"pose: {{position: {{x: {x}, y: {y}, z: {0.0}}}}}}}' --once"
-        )
-        return subprocess.run(cmd, shell=True)
+    Commands:
+      info       Print information about an action
+      list       Output a list of action names
+      send_goal  Send an action goal
+      type       Print a action's type
+
+      Call `ros2 action <command> -h` for more detailed usage.
+    """
+
+    args_schema: Type[Ros2ActionToolInput] = Ros2ActionToolInput
+
+    def _run(self, command: str):
+        command = f"ros2 action {command}"
+        result = subprocess.run(command, shell=True, capture_output=True)
+        return result

@@ -17,7 +17,7 @@ class ToolMultimodalMessage(ToolMessage, MultimodalMessage):
 Example:
 
 ```python
-from rai.scenario_engine.messages import HumanMultimodalMessage, preprocess_image
+from rai.messages import HumanMultimodalMessage, preprocess_image
 from langchain_openai.chat_models import ChatOpenAI
 
 base64_image = preprocess_image('https://raw.githubusercontent.com/RobotecAI/RobotecGPULidar/develop/docs/image/rgl-logo.png')

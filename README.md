@@ -6,12 +6,23 @@
 
 ![rai-image](./docs/imgs/demos.png)
 
-![Static Badge](https://img.shields.io/badge/Ubuntu-24.04-orange)
-![Static Badge](https://img.shields.io/badge/Python-3.12-blue)
-![Static Badge](https://img.shields.io/badge/ROS2-jazzy-blue)
+<div align="center">
+
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 ![GitHub Release](https://img.shields.io/github/v/release/RobotecAI/rai)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/RobotecAI/rai/poetry-test.yml)
+![Contributors](https://img.shields.io/github/contributors/robotecai/rai)
+
+![Static Badge](https://img.shields.io/badge/Ubuntu-24.04-orange)
+![Static Badge](https://img.shields.io/badge/Ubuntu-22.04-orange)
+![Static Badge](https://img.shields.io/badge/Python-3.12-blue)
+![Static Badge](https://img.shields.io/badge/Python-3.10-blue)
+![Static Badge](https://img.shields.io/badge/ROS2-jazzy-blue)
+![Static Badge](https://img.shields.io/badge/ROS2-humble-blue)
+
+[![](https://dcbadge.limes.pink/api/server/https://discord.gg/GZGfejUSjt)](https://discord.gg/GZGfejUSjt)
+
+</div>
 
 ## Overview
 
@@ -27,7 +38,8 @@ The RAI framework aims to:
 # Table of Contents
 
 - [Features](#features)
-- [Quick Start](#installation)
+- [Quick Start](#quick-start)
+- [Developer guide](./docs/developer_guide.md)
 - [Usage examples (demos)](#planned-demos)
 - [Further documentation](#further-documentation)
 - [ROSCon 2024 Talk](#roscon-2024)
@@ -106,11 +118,11 @@ If you do not have a key, see how to generate one [here](https://platform.openai
 export OPENAI_API_KEY=""
 ```
 
-#### Congratulations, your installation is now complete!
+#### Congratulations, your installation is now complete! Head to [Running example](./docs/developer_guide.md)
 
 # Running RAI
 
-![rosbot-xl-example](./docs/imgs/output.gif)
+![rosbot-xl-example](./docs/imgs/rosbot-xl-example.gif)
 
 RAI is a sophisticated framework targeted at solving near general cases. As of now, we provide the following examples:
 
@@ -143,39 +155,33 @@ Try different commands, see how the robot responds, and use this experience to u
 
 Follow this guide: [husarion-rosbot-xl-demo](./docs/demos.md)
 
-# Planned demos
+## Planned demos
 
-- [agriculture demo 🌾](https://github.com/RobotecAI/rai-agriculture-demo)
-- [rosbot xl demo demo 🤖](https://github.com/RobotecAI/rai-rosbot-xl-demo)
-- [manipulation demo 🦾](https://github.com/RobotecAI/rai-manipulation-demo)
-- Quadruped inspection demo
+| Application                                | Robot                          | Description                                                                                                                                      | Link                                                          |
+| ------------------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| Mission and obstacle reasoning in orchards | Autonomous tractor             | In a beautiful scene of a virtual orchard, RAI goes beyond obstacle detection to analyze best course of action for a given unexpected situation. | [🌾 demo](https://github.com/RobotecAI/rai-agriculture-demo)  |
+| Manipulation tasks with natural language   | Robot Arm (Franka Panda)       | Complete flexible manipulation tasks thanks to RAI and OpenVLA                                                                                   | [🦾 demo](https://github.com/RobotecAI/rai-manipulation-demo) |
+| Quadruped inspection demo                  | A robot dog (ANYbotics ANYmal) | Perform inspection in a warehouse environment, find and report anomalies                                                                         | link TBD                                                      |
 
-## Manipulation demo
+# Community
 
-We are actively working on integrating RAI with Vision-Language-Action (VLA) models to further extend the generalization capabilities of RAI. The upcoming manipulation demo will showcase a practical use case where a single prompt can be used to instruct a robotic arm to perform a series of specific tasks. For more details about our plans and ongoing work related to the integration and fine-tuning of VLA models, please refer to [manipulation.md](docs/manipulation.md).
+## RAI Q&A
 
-# Further documentation
+Please take a look at [Q&A](https://github.com/RobotecAI/rai/discussions/categories/q-a).
 
-- See some [beta demos](./docs/demos.md)
-- See Multimodal Messages definition: [multimodal messages](docs/multimodal_messages.md)
-- Browse available ROS 2 packages: [ros packages](docs/ros_-_packages.md)
+## Developer Resources
 
-# ROSCon 2024
+See our [Developer Guide](docs/developer_guide.md).
 
-RAI will be released before [ROSCon 2024](https://roscon.ros.org/2024/)!
+## Contributing
 
-<p align="center">
-<img width="400" src="./docs/imgs/sponsor.png" />
-</p>
+You are welcome to contribute to RAI! Please see our [Contribution Guide](CONTRIBUTING.md).
 
-## RAI Talk
+## RAI release and talk
 
-RAI will be presented as a talk at [ROSCon 2024](https://roscon.ros.org/2024/), make sure to participate!
+RAI will be released on **October 15th**, right before [ROSCon 2024](https://roscon.ros.org/2024/).
+If you are going to the conference, come join us at RAI talk on October 23rd.
 
 <p align="center">
 <img width="400" src="./docs/imgs/talk.png" />
 </p>
-
----
-
-For any inquires about RAI feel free to contact us on [LinkedIn](https://www.linkedin.com/company/robotec-ai) or visit us on [Robotec.ai](https://robotec.ai/)!

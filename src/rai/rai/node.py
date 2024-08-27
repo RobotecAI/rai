@@ -48,9 +48,9 @@ from rclpy.qos import (
 from std_srvs.srv import Trigger
 
 from rai.agents.state_based import State
-from rai.communication.ros_communication import wait_for_message
-from rai.scenario_engine.messages import HumanMultimodalMessage
+from rai.messages.multimodal import HumanMultimodalMessage
 from rai.tools.ros.utils import convert_ros_img_to_base64, import_message_from_str
+from rai.tools.utils import wait_for_message
 
 
 class RosoutBuffer:

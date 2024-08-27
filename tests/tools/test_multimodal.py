@@ -31,8 +31,8 @@ from langchain_core.pydantic_v1 import BaseModel, Field
 from langfuse.callback import CallbackHandler
 from pytest import FixtureRequest
 
-from rai.scenario_engine.messages import HumanMultimodalMessage
-from rai.scenario_engine.tool_runner import run_requested_tools
+from rai.messages import HumanMultimodalMessage
+from rai.tools.utils import run_requested_tools
 
 
 class GetImageToolInput(BaseModel):

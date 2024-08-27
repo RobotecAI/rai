@@ -13,6 +13,9 @@
 # limitations under the License.
 #
 
+import glob
+import importlib
+import os
 from collections import defaultdict
 from typing import Dict
 
@@ -21,6 +24,18 @@ from _pytest.terminal import TerminalReporter
 from tabulate import tabulate
 
 from rai.config.models import BEDROCK_CLAUDE_HAIKU, OPENAI_LLM, OPENAI_MULTIMODAL
+
+
+@pytest.fixture
+def rai_python_modules():
+    packages = glob.glob("src/*")
+    package_names = [os.path.basename(p) for p in packages]
+    ros2_python_packages = []
+    for package_path, package_name in zip(packages, package_names):
+        if os.path.isdir(f"{package_path}/{package_name}"):
+            ros2_python_packages.append(package_name)
+
+    return [importlib.import_module(p) for p in ros2_python_packages]
 
 
 @pytest.fixture
