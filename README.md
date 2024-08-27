@@ -20,7 +20,7 @@
 ![Static Badge](https://img.shields.io/badge/ROS2-jazzy-blue)
 ![Static Badge](https://img.shields.io/badge/ROS2-humble-blue)
 
-[![](https://dcbadge.limes.pink/api/server/https://discord.gg/C6TmsU7n)](https://discord.gg/C6TmsU7n)
+[![](https://dcbadge.limes.pink/api/server/https://discord.gg/GZGfejUSjt)](https://discord.gg/GZGfejUSjt)
 
 </div>
 
