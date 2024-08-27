@@ -12,6 +12,7 @@
 ![GitHub Release](https://img.shields.io/github/v/release/RobotecAI/rai)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/RobotecAI/rai/poetry-test.yml)
 ![Contributors](https://img.shields.io/github/contributors/robotecai/rai)
+[![](https://dcbadge.limes.pink/api/server/https://discord.gg/C6TmsU7n)](https://discord.gg/C6TmsU7n)
 
 ![Static Badge](https://img.shields.io/badge/Ubuntu-24.04-orange)
 ![Static Badge](https://img.shields.io/badge/Ubuntu-22.04-orange)
