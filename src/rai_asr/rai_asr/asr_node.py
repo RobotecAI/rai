@@ -47,6 +47,17 @@ class ASRNode(Node):
 
     def _declare_parameters(self):
         self.declare_parameter(
+            "recording_device",
+            0,
+            descriptor=ParameterDescriptor(
+                type=ParameterType.PARAMETER_INTEGER,
+                description=(
+                    "Recording device number. See available by running"
+                    "python -c 'import sounddevice as sd; print(sd.query_devices())'"
+                ),
+            ),
+        )
+        self.declare_parameter(
             "language",
             "en",
             ParameterDescriptor(
@@ -104,6 +115,7 @@ class ASRNode(Node):
 
         self.grace_period = timedelta(seconds=silence_grace_period)
         self.transcription_recording_timeout = 5
+        self.recording_device_number = self.get_parameter("recording_device").get_parameter_value().integer_value  # type: ignore
 
     def _setup_publishers_and_subscribers(self):
         self.transcription_publisher = self.create_publisher(String, "/from_human", 10)
@@ -146,6 +158,7 @@ class ASRNode(Node):
         stream = sd.InputStream(
             samplerate=self.sample_rate,
             channels=1,
+            device=self.recording_device_number,
             dtype="int16",
             blocksize=window_size_samples,
         )
