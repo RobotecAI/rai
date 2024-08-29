@@ -174,8 +174,5 @@ def main():
     tts_node.destroy_node()
     rclpy.shutdown()
 
-    process.terminate()
-
-
 if __name__ == "__main__":
     main()

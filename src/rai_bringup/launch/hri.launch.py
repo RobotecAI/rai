@@ -18,6 +18,7 @@ from launch.actions import (
     DeclareLaunchArgument,
     IncludeLaunchDescription,
     OpaqueFunction,
+    ExecuteProcess,
 )
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -109,5 +110,10 @@ def generate_launch_description():
             tts_launch_inclusion,
             whoami_node,
             led_strip_node,
+            ExecuteProcess(
+                cmd=['ffplay', '-f', 'lavfi', '-i', 'sine=frequency=432', '-af', 'volume=0.01', '-nodisp'],
+                name='ffplay_sine_wave',
+                output='screen'
+            ),
         ]
     )
