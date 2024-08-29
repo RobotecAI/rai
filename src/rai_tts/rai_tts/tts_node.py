@@ -61,7 +61,7 @@ class TTSNode(Node):
         self.thread_lock = threading.Lock()
 
     def status_callback(self):
-        if self.threads_number == 0 and self.playing is False:
+        if self.threads_number == 0 and self.playing is False and self.queue.empty():
             self.status_publisher.publish(String(data="waiting"))
         else:
             self.status_publisher.publish(String(data="processing"))
