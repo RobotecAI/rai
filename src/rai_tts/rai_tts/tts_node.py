@@ -64,7 +64,7 @@ class TTSNode(Node):
         if self.threads_number == 0 and self.playing is False:
             self.status_publisher.publish(String(data="waiting"))
         else:
-            self.status_publisher.publish(String(data="playing"))
+            self.status_publisher.publish(String(data="processing"))
 
     def listener_callback(self, msg: String):
         self.playing = True
@@ -122,7 +122,7 @@ class TTSNode(Node):
 
     def _play_audio(self, filepath: str):
         self.playing = True
-        self.status_publisher.publish(String(data="audio_playing"))
+        self.status_publisher.publish(String(data="playing"))
         subprocess.run(
             ["ffplay", "-v", "0", "-nodisp", "-autoexit", filepath],
             stdout=subprocess.DEVNULL,
