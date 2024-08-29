@@ -36,6 +36,7 @@ from rai.agents.state_based import get_stored_artifacts
 from rai.messages import HumanMultimodalMessage
 from rai.node import RaiBaseNode
 from rai.tools.ros.native import GetCameraImage, Ros2GetTopicsNamesAndTypesTool
+from rai.agents.conversational_agent import create_conversational_agent
 from rai_hmi.base import BaseHMINode
 
 logger = logging.getLogger(__name__)
