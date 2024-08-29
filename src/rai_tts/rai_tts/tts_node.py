@@ -165,6 +165,14 @@ class TTSNode(Node):
 
 
 def main():
+
+    process = subprocess.run([
+        'ffplay',
+        '-f', 'lavfi',
+        '-i', 'sine=frequency=432:duration=639',
+        '-af', 'volume=0.01'
+    ])
+
     rclpy.init()
 
     tts_node = TTSNode()
@@ -173,6 +181,8 @@ def main():
 
     tts_node.destroy_node()
     rclpy.shutdown()
+
+    process.terminate()
 
 
 if __name__ == "__main__":
