@@ -20,6 +20,7 @@ from typing import Dict, Optional, cast
 
 import rclpy
 import streamlit as st
+from langchain.tools import tool
 from langchain_core.messages import (
     AIMessage,
     BaseMessage,
@@ -34,10 +35,8 @@ from PIL import Image
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.agents.state_based import get_stored_artifacts
 from rai.messages import HumanMultimodalMessage
-from rai.node import RaiBaseNode
-from rai.tools.ros.native import GetCameraImage, Ros2GetTopicsNamesAndTypesTool
-from rai.agents.conversational_agent import create_conversational_agent
 from rai_hmi.base import BaseHMINode
+from rai_hmi.task import Task
 
 logger = logging.getLogger(__name__)
 
@@ -78,8 +77,14 @@ def initialize_agent(_node: BaseHMINode):
         model="gpt-4o-mini",
         streaming=True,
     )
-    rai_node = RaiBaseNode(node_name="__rai_node__")  # this is so wrong
-    tools = [Ros2GetTopicsNamesAndTypesTool(node=_node), GetCameraImage(node=rai_node)]
+
+    @tool
+    def add_task_to_queue(task: Task):
+        """Use this tool to add a task to the queue. The task will be handled by the executor part of your system."""
+        _node.add_task_to_queue(task)
+        return f"Task added to the queue: {task.json()}"
+
+    tools = [add_task_to_queue]
     agent = create_conversational_agent(
         llm, _node.tools + tools, _node.system_prompt, logger=_node.get_logger()
     )
@@ -145,6 +150,8 @@ def handle_history_message(message: BaseMessage):
 if __name__ == "__main__":
     with st.spinner("Initializing ROS 2 node..."):
         node = initialize_ros_node(robot_description_package)
+        print("ROS 2 node initialized")
+
     agent = initialize_agent(_node=node)
     initialize_session_memory(system_prompt=node.system_prompt)
 

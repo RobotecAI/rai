@@ -359,10 +359,12 @@ class RaiNode(RaiGenericBaseNode):
         # self.agent_loop_thread.start()
 
     def agent_loop(self, goal_handle: TaskAction.Goal):
+        self.get_logger().info(f"Received goal handle: {goal_handle}")
+        action_request = goal_handle.request
         task = dict(
-            task=goal_handle.task,
-            description=goal_handle.description,
-            priority=goal_handle.priority,
+            task=action_request.task,
+            description=action_request.description,
+            priority=action_request.priority,
         )
         self.get_logger().info(f"Received task: {task}")
 
