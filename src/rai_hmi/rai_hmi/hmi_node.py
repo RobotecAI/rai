@@ -32,7 +32,7 @@ from rclpy.parameter import Parameter
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
-from rai.scenario_engine.messages import HumanMultimodalMessage
+from rai.messages import HumanMultimodalMessage
 from rai.tools.ros.native import (
     GetCameraImage,
     GetMsgFromTopic,
@@ -239,8 +239,7 @@ class HMINode(Node):
 
         def on_llm_new_token(self, token: str, **kwargs) -> None:
             self.buffer += token
-            # if len(self.buffer) >= 30 or token.endswith((".", "!", "?")):
-            if token.endswith((".", "!", "?")):
+            if len(self.buffer) >= 30 and token.endswith((".", "!", "?")):
                 self.node.send_message_to_human(self.buffer)
                 self.buffer = ""
 
