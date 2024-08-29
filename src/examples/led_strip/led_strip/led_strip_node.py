@@ -19,7 +19,7 @@ STATE_TO_COLOR = {
     "playing": (0, 0, 255),  # blue
 }
 DEFAULT_COLOR = (255, 0, 0)  # red, unknown state
-PULSE_FREQUENCY = 3  # Hz
+PULSE_FREQUENCY = 1.5  # Hz
 
 
 class LEDStripController(Node):
