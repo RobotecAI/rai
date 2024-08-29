@@ -177,7 +177,6 @@ if __name__ == "__main__":
                             st.chat_message(
                                 st_message["type"], avatar=st_message["avatar"]
                             ).markdown(st_message["content"])
-                            continue
 
                         called_tools = last_message.tool_calls
                         for tool_call in called_tools:
