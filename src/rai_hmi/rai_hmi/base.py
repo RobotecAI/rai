@@ -28,6 +28,23 @@ from std_srvs.srv import Trigger
 from rai_hmi.action_handler_mixin import TaskActionMixin
 from rai_hmi.tools import QueryDatabaseTool, QueueTaskTool
 
+SYSTEM_PROMPT = """
+Constitution:
+{constitution}
+
+Identity:
+{identity}
+
+You are a helpful assistant. You converse with users.
+Assume the conversation is carried over a voice interface, so try not to overwhelm the user.
+If you have multiple questions, please ask them one by one allowing user to respond before
+moving forward to the next question. Keep the conversation short and to the point.
+If you are requested tasks that you are capable of perfoming as a robot, not as a
+conversational agent, please use tools to submit them to the task queue.
+They will be done by another agent resposible for communication with the robotic's
+stack.
+"""
+
 
 class HMIStatus(Enum):
     WAITING = "waiting"
@@ -142,18 +159,10 @@ class BaseHMINode(TaskActionMixin):
         rclpy.spin_until_future_complete(self, identity_future)
         identity_response = identity_future.result()
 
-        system_prompt = f"""
-        Constitution:
-        {constitution_response.message}
-
-        Identity:
-        {identity_response.message}
-
-        You are a helpful assistant. You converse with users.
-        Assume the conversation is carried over a voice interface, so try not to overwhelm the user.
-        If you have multiple questions, please ask them one by one allowing user to respond before
-        moving forward to the next question. Keep the conversation short and to the point.
-        """
+        system_prompt = SYSTEM_PROMPT.format(
+            constitution=constitution_response.message,
+            identity=identity_response.message,
+        )
 
         self.get_logger().info("System prompt initialized!")
         return system_prompt
