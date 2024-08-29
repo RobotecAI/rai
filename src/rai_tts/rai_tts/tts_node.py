@@ -169,8 +169,9 @@ def main():
     process = subprocess.run([
         'ffplay',
         '-f', 'lavfi',
-        '-i', 'sine=frequency=432:duration=639',
-        '-af', 'volume=0.01'
+        '-i', 'sine=frequency=639',
+        '-af', 'volume=0.01',
+        '-nodisp'
     ])
 
     rclpy.init()
