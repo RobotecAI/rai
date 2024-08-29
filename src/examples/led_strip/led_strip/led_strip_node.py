@@ -4,14 +4,6 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
 
-
-# husarion's low level driver expects big endian encoding
-def reverse_bit_order(n: int) -> int:
-    binary_rep = format(n, "08b")  # convert to 8-bit binary
-    inverted_binary_rep = binary_rep[::-1]  # reverse the bits
-    return int(inverted_binary_rep, 2)  # convert back to integer
-
-
 STATE_TO_COLOR = {
     "waiting": (255, 255, 255),  # white
     "processing": (255, 134, 0),  # yellow
@@ -19,7 +11,7 @@ STATE_TO_COLOR = {
     "playing": (0, 0, 255),  # blue
 }
 DEFAULT_COLOR = (255, 0, 0)  # red, unknown state
-PULSE_FREQUENCY = 1.5  # Hz
+PULSE_FREQUENCY = 0.5  # Hz
 
 
 class LEDStripController(Node):
@@ -91,11 +83,10 @@ class LEDStripController(Node):
 
         if self.led_state == "playing":
             t = self.get_clock().now().nanoseconds / 1e9
-            value: float = 0.5 * (np.sin(2 * np.pi * PULSE_FREQUENCY * t) + 1.0)
+            value: float = 0.1 + 0.45 * (np.sin(2 * np.pi * PULSE_FREQUENCY * t) + 1.0)
             color = np.array(color)
             color = (value * color).astype(np.uint8)
 
-        color = list(map(reverse_bit_order, color))
         led_colors = np.full((1, 18, 3), color, dtype=np.uint8)
 
         msg = Image()
