@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - development
+  push:
+    branches:
+      - development
 
 jobs:
   build-and-test-ros2:
