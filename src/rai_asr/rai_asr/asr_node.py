@@ -18,13 +18,16 @@ import threading
 import time
 from datetime import datetime, timedelta
 from functools import partial
-from typing import Literal
+from typing import List, Literal, Optional, cast
 
 import numpy as np
 import rclpy
 import sounddevice as sd
 import torch
+from numpy.typing import NDArray
 from openai import OpenAI
+from openwakeword.model import Model as OWWModel
+from openwakeword.utils import download_models
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
@@ -37,15 +40,52 @@ SAMPLING_RATE = 16000
 
 class ASRNode(Node):
     def __init__(self):
-        super().__init__("rai_asr")
+        super().__init__("rai_asr")  # type: ignore
         self._declare_parameters()
-        self._initialize_vad_model()
+        self._initialize_parameters()
         self._setup_node_components()
-        self._initialize_variables()
         self._setup_publishers_and_subscribers()
-        self._load_whisper_model()
+
+        self.asr_model = self._load_whisper_model()
+        self.vad_model = self._initialize_vad_model()
+        self.oww_model = self._initialize_open_wake_word()
+
+        self.is_recording = False
+        self.audio_buffer = []
+        self.silence_start_time: Optional[datetime] = None
+        self.last_transcription_time = 0
+        self.hmi_lock = False
+        self.tts_lock = False
+
+        self.grace_period = timedelta(seconds=self.silence_grace_period)
+        self.transcription_recording_timeout = 5
+        self.get_logger().info("ASR Node has been initialized")  # type: ignore
 
     def _declare_parameters(self):
+        self.declare_parameter(
+            "use_wake_word",
+            False,
+            descriptor=ParameterDescriptor(
+                type=ParameterType.PARAMETER_BOOL,
+                description=("Whether to use wake word for starting conversation"),
+            ),
+        )
+        self.declare_parameter(
+            "wake_word_threshold",
+            0.1,
+            descriptor=ParameterDescriptor(
+                type=ParameterType.PARAMETER_DOUBLE,
+                description=("Wake word threshold"),
+            ),
+        )
+        self.declare_parameter(
+            "vad_threshold",
+            0.1,
+            descriptor=ParameterDescriptor(
+                type=ParameterType.PARAMETER_DOUBLE,
+                description=("VAD threshold"),
+            ),
+        )
         self.declare_parameter(
             "recording_device",
             0,
@@ -82,40 +122,65 @@ class ASRNode(Node):
             ),
         )
 
+    def _initialize_open_wake_word(self) -> Optional[OWWModel]:
+        if self.use_wake_word:
+            download_models()
+            oww_model = OWWModel(
+                wakeword_models=[
+                    "/home/husarion/projects/openwakeword/hey_rosbott.onnx"
+                ],
+                inference_framework="onnx",
+            )
+            self.get_logger().info("Wake word model has been initialized")  # type: ignore
+            return oww_model
+        return None
+
     def _initialize_vad_model(self):
-        model, (_, _, _, VADIterator, _) = torch.hub.load(
+        model, _ = torch.hub.load(
             repo_or_dir="snakers4/silero-vad",
             model="silero_vad",
         )
-        self.vad_iterator = VADIterator(model, sampling_rate=SAMPLING_RATE)
+        return model
 
     def _setup_node_components(self):
         self.callback_group = ReentrantCallbackGroup()
         self.sample_rate = SAMPLING_RATE
 
-    def _initialize_variables(self):
-        self.is_recording = False
-        self.audio_buffer = []
-        self.silence_start_time = None
-        self.last_transcription_time = 0
-        self.hmi_lock = False
-        self.tts_lock = False
-
-        silence_grace_period = (
+    def _initialize_parameters(self):
+        self.silence_grace_period = cast(
+            float,
             self.get_parameter("silence_grace_period")
             .get_parameter_value()
-            .double_value
-        )  # type: ignore
-        self.whisper_model = (
-            self.get_parameter("model").get_parameter_value().string_value
-        )  # type: ignore
-        self.language = (
-            self.get_parameter("language").get_parameter_value().string_value
-        )  # type: ignore
+            .double_value,
+        )
+        self.whisper_model = cast(
+            str,
+            self.get_parameter("model").get_parameter_value().string_value,
+        )
+        self.language = cast(
+            str,
+            self.get_parameter("language").get_parameter_value().string_value,
+        )
+        self.vad_threshold = cast(
+            float,
+            self.get_parameter("vad_threshold").get_parameter_value().double_value,
+        )
 
-        self.grace_period = timedelta(seconds=silence_grace_period)
-        self.transcription_recording_timeout = 5
-        self.recording_device_number = self.get_parameter("recording_device").get_parameter_value().integer_value  # type: ignore
+        self.use_wake_word = cast(
+            bool,
+            self.get_parameter("use_wake_word").get_parameter_value().bool_value,
+        )
+        self.wake_word_threshold = cast(
+            float,
+            self.get_parameter("wake_word_threshold")
+            .get_parameter_value()
+            .double_value,
+        )
+        self.recording_device_number = cast(
+            int,
+            self.get_parameter("recording_device").get_parameter_value().integer_value,
+        )
+        self.get_logger().info("Parameters have been initialized")  # type: ignore
 
     def _setup_publishers_and_subscribers(self):
         self.transcription_publisher = self.create_publisher(String, "/from_human", 10)
@@ -137,9 +202,10 @@ class ASRNode(Node):
 
     def _load_whisper_model(self):
         self.openai_client = OpenAI()
-        self.model = partial(
+        model = partial(
             self.openai_client.audio.transcriptions.create, model=self.whisper_model
         )
+        return model
 
     def tts_status_callback(self, msg: String):
         if msg.data == "processing":
@@ -153,8 +219,32 @@ class ASRNode(Node):
         elif msg.data == "waiting":
             self.hmi_lock = False
 
+    def should_listen(self, audio_data: NDArray[np.int16]) -> bool:
+        if self.oww_model and not self.is_recording:  # use only for detecting wake word
+            predictions = self.oww_model.predict(audio_data[-512:])
+            for key, value in predictions.items():
+                if value > self.wake_word_threshold:
+                    self.get_logger().debug(f"Detected wake word: {key}")  # type: ignore
+                    return True
+
+        def int2float(sound: NDArray[np.int16]):
+            abs_max = np.abs(sound).max()
+            sound = sound.astype("float32")
+            if abs_max > 0:
+                sound *= 1 / 32768
+            sound = sound.squeeze()
+            return sound
+
+        confidence = self.vad_model(
+            torch.tensor(int2float(audio_data[-512:])), self.sample_rate
+        ).item()
+        if confidence > self.vad_threshold:
+            self.get_logger().debug(f"Detected speech with confidence: {confidence:.2f}")  # type: ignore
+            return True
+        return False
+
     def capture_sound(self):
-        window_size_samples = 512 if self.sample_rate == 16000 else 256
+        window_size_samples = 1280
         stream = sd.InputStream(
             samplerate=self.sample_rate,
             channels=1,
@@ -163,9 +253,7 @@ class ASRNode(Node):
             blocksize=window_size_samples,
         )
         stream.start()
-        self.get_logger().info(
-            "Voice Activity Detection enabled. Waiting for speech..."
-        )
+        self.get_logger().info("Stream started. Waiting for speech...")  # type: ignore
         while True:
             audio_data, _ = stream.read(window_size_samples)
             audio_data = audio_data.flatten()
@@ -177,36 +265,32 @@ class ASRNode(Node):
             if asr_lock or self.hmi_lock or self.tts_lock:
                 continue
 
-            speech_dict = self.vad_iterator(audio_data, return_seconds=True)
-            if speech_dict:
+            if self.should_listen(audio_data):
                 if not self.is_recording:
                     self.start_recording()
-                self.audio_buffer.append(audio_data)
-                self.silence_start_time = None
-                if "end" in speech_dict.keys():
-                    self.silence_start_time = datetime.now()
+                    self.audio_buffer.append(audio_data)
             elif self.is_recording:
                 self.audio_buffer.append(audio_data)
-                if self.silence_start_time is not None:
-                    if datetime.now() - self.silence_start_time > self.grace_period:
-                        self.stop_recording_and_transcribe()
+                self.silence_start_time = datetime.now()
+                if datetime.now() - self.silence_start_time > self.grace_period:
+                    self.stop_recording_and_transcribe()
 
     def start_recording(self):
-        self.get_logger().info("Recording...")
+        self.get_logger().info("Recording...")  # type: ignore
         self.publish_status("recording")
         self.is_recording = True
-        self.audio_buffer = []
+        self.audio_buffer: List[NDArray[np.int16]] = []
         self.silence_start_time = None
 
     def stop_recording_and_transcribe(self):
-        self.get_logger().info("Stopped recording. Transcribing...")
+        self.get_logger().info("Stopped recording. Transcribing...")  # type: ignore
         self.is_recording = False
         self.publish_status("transcribing")
         self.transcribe_audio()
         self.publish_status("waiting")
+        self.get_logger().info("Done transcribing.")  # type: ignore
 
     def transcribe_audio(self):
-        self.get_logger().info("Calling ASR model")
         combined_audio = np.concatenate(self.audio_buffer)
 
         with io.BytesIO() as temp_wav_buffer:
@@ -214,14 +298,10 @@ class ASRNode(Node):
             temp_wav_buffer.seek(0)
             temp_wav_buffer.name = "temp.wav"
 
-            response = self.model(file=temp_wav_buffer, language=self.language)
+            response = self.asr_model(file=temp_wav_buffer, language=self.language)
             transcription = response.text
-            if transcription.lower() in ["you", ""]:
-                self.get_logger().info(f"Dropping transcription: '{transcription}'")
-                self.publish_status("dropping")
-            else:
-                self.get_logger().info(f"Transcription: {transcription}")
-                self.publish_transcription(transcription)
+            self.get_logger().debug(f"Transcription: {transcription}")  # type: ignore
+            self.publish_transcription(transcription)
 
         self.last_transcription_time = time.time()
 
