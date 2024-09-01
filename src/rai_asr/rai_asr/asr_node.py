@@ -14,6 +14,7 @@
 #
 
 import io
+import os
 import threading
 import time
 from datetime import datetime, timedelta
@@ -68,6 +69,14 @@ class ASRNode(Node):
             descriptor=ParameterDescriptor(
                 type=ParameterType.PARAMETER_BOOL,
                 description=("Whether to use wake word for starting conversation"),
+            ),
+        )
+        self.declare_parameter(
+            "wake_word_model",
+            "",
+            descriptor=ParameterDescriptor(
+                type=ParameterType.PARAMETER_STRING,
+                description=("Wake word model onnx file"),
             ),
         )
         self.declare_parameter(
@@ -127,7 +136,7 @@ class ASRNode(Node):
             download_models()
             oww_model = OWWModel(
                 wakeword_models=[
-                    "/home/husarion/projects/openwakeword/hey_rosbott.onnx"
+                    self.wake_word_model,
                 ],
                 inference_framework="onnx",
             )
@@ -170,6 +179,10 @@ class ASRNode(Node):
             bool,
             self.get_parameter("use_wake_word").get_parameter_value().bool_value,
         )
+        self.wake_word_model = cast(
+            str,
+            self.get_parameter("wake_word_model").get_parameter_value().string_value,
+        )
         self.wake_word_threshold = cast(
             float,
             self.get_parameter("wake_word_threshold")
@@ -180,6 +193,11 @@ class ASRNode(Node):
             int,
             self.get_parameter("recording_device").get_parameter_value().integer_value,
         )
+
+        if self.use_wake_word:
+            if not os.path.exists(self.wake_word_model):
+                raise FileNotFoundError(f"Model file {self.wake_word_model} not found")
+
         self.get_logger().info("Parameters have been initialized")  # type: ignore
 
     def _setup_publishers_and_subscribers(self):
