@@ -199,7 +199,7 @@ class HMINode(Node):
         Always reply in first person. When you use the tool and get the output, always present it in first person.
         """
 
-        self.get_logger().info(f"System prompt initialized.")
+        self.get_logger().info("System prompt initialized.")
         self.get_logger().debug(f"System prompt: {system_prompt}")
         return system_prompt
 
