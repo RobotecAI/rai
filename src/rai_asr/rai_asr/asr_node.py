@@ -18,7 +18,7 @@ import threading
 import time
 from datetime import datetime, timedelta
 from functools import partial
-from typing import List, Literal, Optional, cast
+from typing import Literal, Optional, cast
 
 import numpy as np
 import rclpy
@@ -80,7 +80,7 @@ class ASRNode(Node):
         )
         self.declare_parameter(
             "vad_threshold",
-            0.1,
+            0.5,
             descriptor=ParameterDescriptor(
                 type=ParameterType.PARAMETER_DOUBLE,
                 description=("VAD threshold"),
@@ -265,22 +265,24 @@ class ASRNode(Node):
             if asr_lock or self.hmi_lock or self.tts_lock:
                 continue
 
+            self.audio_buffer.append(audio_data)
             if self.should_listen(audio_data):
+                self.silence_start_time = datetime.now()
                 if not self.is_recording:
                     self.start_recording()
-                    self.audio_buffer.append(audio_data)
+                    self.reset_buffer()
             elif self.is_recording:
-                self.audio_buffer.append(audio_data)
-                self.silence_start_time = datetime.now()
                 if datetime.now() - self.silence_start_time > self.grace_period:
                     self.stop_recording_and_transcribe()
+                    self.reset_buffer()
+
+    def reset_buffer(self):
+        self.audio_buffer = []
 
     def start_recording(self):
         self.get_logger().info("Recording...")  # type: ignore
         self.publish_status("recording")
         self.is_recording = True
-        self.audio_buffer: List[NDArray[np.int16]] = []
-        self.silence_start_time = None
 
     def stop_recording_and_transcribe(self):
         self.get_logger().info("Stopped recording. Transcribing...")  # type: ignore
