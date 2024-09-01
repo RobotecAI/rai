@@ -2929,22 +2929,25 @@ version = "0.6.0"
 description = "An open-source audio wake word (or phrase) detection framework with a focus on performance and simplicity"
 optional = false
 python-versions = ">=3.7"
-files = [
-    {file = "openwakeword-0.6.0-py3-none-any.whl", hash = "sha256:6f423a4e3ae9dd0e3cd12b50ff8abf69679f687b4ab349d7c82c021c0e2abc9d"},
-    {file = "openwakeword-0.6.0.tar.gz", hash = "sha256:36858d90f1183e307485597a912a4e3c3384b14ea9923f83feaffae7c1565565"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 onnxruntime = ">=1.10.0,<2"
 requests = ">=2.0,<3"
 scikit-learn = ">=1,<2"
 scipy = ">=1.3,<2"
-tflite-runtime = {version = ">=2.8.0,<3", markers = "platform_system == \"Linux\""}
 tqdm = ">=4.0,<5.0"
 
 [package.extras]
-full = ["acoustics (>=0.2.6,<1)", "audiomentations (>=0.30.0,<1)", "datasets (>=2.14.4,<3)", "deep-phonemizer (==0.0.19)", "mutagen (>=1.46.0,<2)", "onnx (==1.14.0)", "onnx-tf (==1.10.0)", "pronouncing (>=0.2.0,<1)", "protobuf (>=3.20,<4)", "pytest (>=7.2.0,<8)", "pytest-cov (>=2.10.1,<3)", "pytest-flake8 (>=1.1.1,<2)", "pytest-mypy (>=0.10.0,<1)", "pyyaml (>=6.0,<7)", "speechbrain (>=0.5.14,<1)", "tensorflow-cpu (==2.8.1)", "tensorflow-probability (==0.16.0)", "torch (>=1.13.1,<3)", "torch-audiomentations (>=0.11.0,<1)", "torchaudio (>=0.13.1,<1)", "torchinfo (>=1.8.0,<2)", "torchmetrics (>=0.11.4,<1)", "tqdm (>=4.64.0,<5)"]
+full = ["acoustics (>=0.2.6,<1)", "audiomentations (>=0.30.0,<1)", "datasets (>=2.14.4,<3)", "deep-phonemizer (==0.0.19)", "mutagen (>=1.46.0,<2)", "onnx (==1.14.0)", "onnx_tf (==1.10.0)", "pronouncing (>=0.2.0,<1)", "protobuf (>=3.20,<4)", "pytest (>=7.2.0,<8)", "pytest-cov (>=2.10.1,<3)", "pytest-flake8 (>=1.1.1,<2)", "pytest-mypy (>=0.10.0,<1)", "pyyaml (>=6.0,<7)", "speechbrain (>=0.5.14,<1)", "tensorflow-cpu (==2.8.1)", "tensorflow_probability (==0.16.0)", "torch (>=1.13.1,<3)", "torch-audiomentations (>=0.11.0,<1)", "torchaudio (>=0.13.1,<1)", "torchinfo (>=1.8.0,<2)", "torchmetrics (>=0.11.4,<1)", "tqdm (>=4.64.0,<5)"]
 test = ["flake8 (>=4.0,<4.1)", "mock (>=5.1,<6)", "pytest (>=7.2.0,<8)", "pytest-cov (>=2.10.1,<3)", "pytest-flake8 (>=1.1.1,<2)", "pytest-mypy (>=0.10.0,<1)", "types-PyYAML", "types-mock (>=5.1,<6)", "types-requests", "types-requests (>=2.0,<3)"]
+
+[package.source]
+type = "git"
+url = "https://github.com/maciejmajek/openWakeWord.git"
+reference = "chore/remove-tflite-backend"
+resolved_reference = "f2340d82a39fe7bfb972c8c4114642fa87e5dc59"
 
 [[package]]
 name = "optuna"
@@ -4747,30 +4750,6 @@ doc = ["reno", "sphinx"]
 test = ["pytest", "tornado (>=4.5)", "typeguard"]
 
 [[package]]
-name = "tflite-runtime"
-version = "2.14.0"
-description = "TensorFlow Lite is for mobile and embedded devices."
-optional = false
-python-versions = "*"
-files = [
-    {file = "tflite_runtime-2.14.0-cp310-cp310-manylinux2014_x86_64.whl", hash = "sha256:bb11df4283e281cd609c621ac9470ad0cb5674408593272d7593a2c6bde8a808"},
-    {file = "tflite_runtime-2.14.0-cp310-cp310-manylinux_2_34_aarch64.whl", hash = "sha256:d38c6885f5e9673c11a61ccec5cad7c032ab97340718d26b17794137f398b780"},
-    {file = "tflite_runtime-2.14.0-cp310-cp310-manylinux_2_34_armv7l.whl", hash = "sha256:7fe33f763263d1ff2733a09945a7547ab063d8bc311fd2a1be8144d850016ad3"},
-    {file = "tflite_runtime-2.14.0-cp311-cp311-manylinux2014_x86_64.whl", hash = "sha256:195ab752e7e57329a68e54dd3dd5439fad888b9bff1be0f0dc042a3237a90e4d"},
-    {file = "tflite_runtime-2.14.0-cp311-cp311-manylinux_2_34_aarch64.whl", hash = "sha256:ce9fa5d770a9725c746dcbf6f59f3178233b3759f09982e8b2db8d2234c333b0"},
-    {file = "tflite_runtime-2.14.0-cp311-cp311-manylinux_2_34_armv7l.whl", hash = "sha256:c4e66a74165b18089c86788400af19fa551768ac782d231a9beae2f6434f7949"},
-    {file = "tflite_runtime-2.14.0-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:9f965054467f7890e678943858c6ac76a5197b17f61b48dcbaaba0af41d541a7"},
-    {file = "tflite_runtime-2.14.0-cp38-cp38-manylinux_2_34_aarch64.whl", hash = "sha256:437167fe3d8b12f50f5d694da8f45d268ab84a495e24c3dd810e02e1012125de"},
-    {file = "tflite_runtime-2.14.0-cp38-cp38-manylinux_2_34_armv7l.whl", hash = "sha256:79d8e17f68cc940df7e68a177b22dda60fcffba195fb9dd908d03724d65fd118"},
-    {file = "tflite_runtime-2.14.0-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:4aa740210a0fd9e4db4a46e9778914846b136e161525681b41575ca4896158fb"},
-    {file = "tflite_runtime-2.14.0-cp39-cp39-manylinux_2_34_aarch64.whl", hash = "sha256:be198b7dc4401204be54a15884d9e336389790eb707439524540f5a9329fdd02"},
-    {file = "tflite_runtime-2.14.0-cp39-cp39-manylinux_2_34_armv7l.whl", hash = "sha256:eca7672adca32727bbf5c0f1caf398fc17bbe222f2a684c7a2caea6fc6767203"},
-]
-
-[package.dependencies]
-numpy = ">=1.23.2"
-
-[[package]]
 name = "threadpoolctl"
 version = "3.5.0"
 description = "threadpoolctl"
@@ -5848,4 +5827,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10, <3.13"
-content-hash = "7867bf991e02f6fa1df6a96d857449ab7035b02a06c8286e384378fefd67a0b7"
+content-hash = "5806c22f2583b223804652142c57816e293dc6eb7e8f636e0d706f6452b2c2e7"
