@@ -294,13 +294,12 @@ class ASRNode(Node):
                     self.start_recording()
                     self.reset_buffer()
                     self.audio_buffer.append(audio_data)
-            else:
-                if self.is_recording:
-                    self.audio_buffer.append(audio_data)
-                    if datetime.now() - self.silence_start_time > timedelta(seconds=self.silence_grace_period):
-                        self.stop_recording_and_transcribe()
-                        self.reset_buffer()
-                        self.oww_model.reset()
+            elif self.is_recording:
+                self.audio_buffer.append(audio_data)
+                if datetime.now() - self.silence_start_time > timedelta(seconds=self.silence_grace_period):
+                    self.stop_recording_and_transcribe()
+                    self.reset_buffer()
+                    self.oww_model.reset()
 
     def reset_buffer(self):
         self.audio_buffer = []
