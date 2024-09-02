@@ -238,13 +238,6 @@ class ASRNode(Node):
             self.hmi_lock = False
 
     def should_listen(self, audio_data: NDArray[np.int16]) -> bool:
-        if self.oww_model and not self.is_recording:  # use only for detecting wake word
-            predictions = self.oww_model.predict(audio_data[-512:])
-            for key, value in predictions.items():
-                if value > self.wake_word_threshold:
-                    self.get_logger().debug(f"Detected wake word: {key}")  # type: ignore
-                    return True
-
         def int2float(sound: NDArray[np.int16]):
             abs_max = np.abs(sound).max()
             sound = sound.astype("float32")
@@ -253,12 +246,23 @@ class ASRNode(Node):
             sound = sound.squeeze()
             return sound
 
-        confidence = self.vad_model(
+        vad_confidence = self.vad_model(
             torch.tensor(int2float(audio_data[-512:])), self.sample_rate
         ).item()
-        if confidence > self.vad_threshold:
-            self.get_logger().debug(f"Detected speech with confidence: {confidence:.2f}")  # type: ignore
-            return True
+
+        if self.oww_model:
+            if self.is_recording:
+                self.get_logger().info(f"VAD confidence: {vad_confidence}")  # type: ignore
+                return vad_confidence > self.vad_threshold
+            else:
+                predictions = self.oww_model.predict(audio_data)
+                for key, value in predictions.items():
+                    if value > self.wake_word_threshold:
+                        self.get_logger().debug(f"Detected wake word: {key}")  # type: ignore
+                        return True
+        else:
+            return vad_confidence > self.vad_threshold
+
         return False
 
     def capture_sound(self):
@@ -282,17 +286,21 @@ class ASRNode(Node):
             )
             if asr_lock or self.hmi_lock or self.tts_lock:
                 continue
+                
 
-            self.audio_buffer.append(audio_data)
             if self.should_listen(audio_data):
                 self.silence_start_time = datetime.now()
                 if not self.is_recording:
                     self.start_recording()
                     self.reset_buffer()
-            elif self.is_recording:
-                if datetime.now() - self.silence_start_time > self.grace_period:
-                    self.stop_recording_and_transcribe()
-                    self.reset_buffer()
+                    self.audio_buffer.append(audio_data)
+            else:
+                if self.is_recording:
+                    self.audio_buffer.append(audio_data)
+                    if datetime.now() - self.silence_start_time > timedelta(seconds=self.silence_grace_period):
+                        self.stop_recording_and_transcribe()
+                        self.reset_buffer()
+                        self.oww_model.reset()
 
     def reset_buffer(self):
         self.audio_buffer = []
