@@ -259,6 +259,7 @@ class ASRNode(Node):
                 for key, value in predictions.items():
                     if value > self.wake_word_threshold:
                         self.get_logger().debug(f"Detected wake word: {key}")  # type: ignore
+                        self.oww_model.reset()
                         return True
         else:
             return vad_confidence > self.vad_threshold
@@ -299,7 +300,6 @@ class ASRNode(Node):
                 if datetime.now() - self.silence_start_time > timedelta(seconds=self.silence_grace_period):
                     self.stop_recording_and_transcribe()
                     self.reset_buffer()
-                    self.oww_model.reset()
 
     def reset_buffer(self):
         self.audio_buffer = []
