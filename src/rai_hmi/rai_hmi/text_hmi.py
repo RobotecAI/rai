@@ -16,6 +16,7 @@ import base64
 import io
 import logging
 import sys
+from pprint import pformat
 from typing import Dict, Optional, cast
 
 import rclpy
@@ -84,6 +85,15 @@ def initialize_ros_node(robot_description_package: Optional[str]):
     return node
 
 
+class EMOJIS:
+    human = "🧑‍💻"
+    bot = "🤖"
+    tool = "🛠️"
+    unknown = "❓"
+    success = "✅"
+    failure = "❌"
+
+
 # ---------- Helpers ----------
 def display_agent_message(message: BaseMessage):
     message.content = cast(str, message.content)  # type: ignore
@@ -92,17 +102,17 @@ def display_agent_message(message: BaseMessage):
             message, HumanMultimodalMessage
         ):  # we do not handle user's images
             return
-        st.chat_message("user", avatar="🧑‍💻").markdown(message.content)
+        st.chat_message("user", avatar=EMOJIS.human).markdown(message.content)
     elif isinstance(message, AIMessage):
         if message.content == "":
             return
-        st.chat_message("bot", avatar="🤖").markdown(message.content)
+        st.chat_message("bot", avatar=EMOJIS.bot).markdown(message.content)
     elif isinstance(message, ToolMessage):
         tool_call = st.session_state.tool_calls[message.tool_call_id]
         label = tool_call.name + " status: "
-        status = "✅" if message.status == "success" else "❌"
+        status = EMOJIS.success if message.status == "success" else EMOJIS.failure
         tool_chat_obj = st.expander(label=label + status).chat_message(
-            "bot", avatar="🛠️"
+            "bot", avatar=EMOJIS.tool
         )
         with tool_chat_obj:
             st.markdown(message.content)
@@ -161,8 +171,10 @@ class Memory:
     def __init__(self) -> None:
         if "mission_memory" not in st.session_state:
             st.session_state.mission_memory = []
+
         if "chat_memory" not in st.session_state:
             st.session_state.chat_memory = []
+
         if "tool_calls" not in st.session_state:
             st.session_state.tool_calls = {}
 
@@ -178,6 +190,9 @@ class Memory:
     def tool_calls(self):
         return st.session_state.tool_calls
 
+    def __repr__(self) -> str:
+        return f"===> Chat <===\n{pformat(self.chat_memory)}\n\n===> Mission <===\n{pformat(self.mission_memory)}\n\n===> Tool calls <===\n{pformat(self.tool_calls)}"
+
 
 class Chat:
     def __init__(self, memory: Memory, layout: StreamlitAppLayout) -> None:
@@ -185,7 +200,13 @@ class Chat:
         self.layout = layout
 
     def user(self, txt):
+        logger.info(f'User said: "{txt}"')
         msg = HumanMessage(content=txt)
+        self.memory.chat_memory.append(msg)
+        self.layout.write_chat_msg(msg)
+
+    def bot(self, msg):
+        logger.info(f'Bot said: "{msg}"')
         self.memory.chat_memory.append(msg)
         self.layout.write_chat_msg(msg)
 
@@ -258,14 +279,7 @@ class StreamlitApp:
                         if node_name == "thinker":
                             last_message = state[node_name]["messages"][-1]
                             if last_message.content:
-                                st_message = (
-                                    convert_langchain_message_to_streamlit_message(
-                                        last_message
-                                    )
-                                )
-                                st.chat_message(
-                                    st_message["type"], avatar=st_message["avatar"]
-                                ).markdown(st_message["content"])
+                                self.chat.bot(last_message)
 
                             called_tools = last_message.tool_calls
                             for tool_call in called_tools:
