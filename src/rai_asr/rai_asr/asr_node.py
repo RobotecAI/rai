@@ -252,7 +252,7 @@ class ASRNode(Node):
 
         if self.oww_model:
             if self.is_recording:
-                self.get_logger().info(f"VAD confidence: {vad_confidence}")  # type: ignore
+                self.get_logger().debug(f"VAD confidence: {vad_confidence}")  # type: ignore
                 return vad_confidence > self.vad_threshold
             else:
                 predictions = self.oww_model.predict(audio_data)
