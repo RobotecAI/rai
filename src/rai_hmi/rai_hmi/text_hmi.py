@@ -16,7 +16,11 @@ import base64
 import io
 import logging
 import sys
+import threading
+import time
+import uuid
 from pprint import pformat
+from queue import Queue
 from typing import List, Optional, cast
 
 import rclpy
@@ -39,7 +43,7 @@ from rai.agents.conversational_agent import create_conversational_agent
 from rai.agents.state_based import get_stored_artifacts
 from rai.messages import HumanMultimodalMessage
 from rai_hmi.base import BaseHMINode
-from rai_hmi.task import Task
+from rai_hmi.task import Task, TaskInput
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -49,6 +53,7 @@ logger = logging.getLogger(__name__)
 st.set_page_config(page_title="LangChain Chat App", page_icon="🦜")
 
 MODEL = "gpt-4o-mini"
+MAX_DISPLAY = 5
 
 
 # ---------- Cached Resources ----------
@@ -67,9 +72,16 @@ def initialize_agent(_node: BaseHMINode):
     )
 
     @tool
-    def add_task_to_queue(task: Task):
+    def add_task_to_queue(task: TaskInput):
         """Use this tool to add a task to the queue. The task will be handled by the executor part of your system."""
-        _node.add_task_to_queue(task)
+        _node.add_task_to_queue(
+            Task(
+                name=task.name,
+                description=task.description,
+                priority=task.priority,
+                uid=uuid.uuid4(),
+            )
+        )
         return f"Task added to the queue: {task.json()}"
 
     tools = [add_task_to_queue]
@@ -80,13 +92,22 @@ def initialize_agent(_node: BaseHMINode):
 
 
 @st.cache_resource
-def initialize_ros_node(robot_description_package: Optional[str]):
+def initialize_mission_queue() -> Queue:
+    return Queue()
+
+
+@st.cache_resource
+def initialize_ros_node(
+    _feedbacks_queue: Queue, robot_description_package: Optional[str]
+):
     rclpy.init()
 
     node = BaseHMINode(
         f"{robot_description_package}_hmi_node",
+        queue=_feedbacks_queue,
         robot_description_package=robot_description_package,
     )
+    threading.Thread(target=rclpy.spin, args=(node,), daemon=True).start()
 
     return node
 
@@ -102,7 +123,9 @@ class EMOJIS:
 
 
 def display_agent_message(
-    message: BaseMessage, tool_chat_obj: Optional[DeltaGenerator] = None
+    message: BaseMessage,
+    tool_chat_obj: Optional[DeltaGenerator] = None,
+    no_expand: bool = False,
 ):
     """
     Display LLM message in streamlit UI.
@@ -110,6 +133,7 @@ def display_agent_message(
     Args:
         message: The message to display
         tool_chat_obj: Pre-existing Streamlit object for the tool message.
+        no_expand: Skip expanders due - Streamlit does not support nested expanders.
 
     """
     message.content = cast(str, message.content)  # type: ignore
@@ -130,9 +154,12 @@ def display_agent_message(
         label = tool_call.name + " status: "
         status = EMOJIS.success if message.status == "success" else EMOJIS.failure
         if not tool_chat_obj:
-            tool_chat_obj = st.expander(label=label + status).chat_message(
-                "bot", avatar=EMOJIS.tool
-            )
+            if not no_expand:
+                tool_chat_obj = st.expander(label=label + status).chat_message(
+                    "bot", avatar=EMOJIS.tool
+                )
+            else:
+                tool_chat_obj = st.chat_message("bot", avatar=EMOJIS.tool)
         with tool_chat_obj:
             st.markdown(message.content)
             artifacts = get_stored_artifacts(message.tool_call_id)
@@ -156,7 +183,10 @@ class SystemStatus(BaseModel):
 class Layout:
     """App has two columns: chat + robot state"""
 
-    def __init__(self, robot_description_package) -> None:
+    def __init__(
+        self, robot_description_package, max_display: int = MAX_DISPLAY
+    ) -> None:
+        self.max_display = max_display
         if robot_description_package:
             st.title(f"{robot_description_package.replace('_whoami', '')} chat app")
         else:
@@ -196,6 +226,32 @@ class Layout:
     def write_mission_msg(self, msg: BaseMessage):
         with self.mission_column:
             display_agent_message(msg)
+
+    def show_chat(self, history):
+        with self.chat_column:
+            self.__show_history(history)
+
+    def show_mission(self, history):
+        with self.mission_column:
+            self.__show_history(history)
+
+    def __show_history(self, history):
+        show, hide = self.__split_history(history, self.max_display)
+        with st.expander("Untoggle to see full chat history"):
+            for message in hide:
+                display_agent_message(message, no_expand=True)
+
+        for message in show:
+            display_agent_message(message)
+
+    @staticmethod
+    def __split_history(history, max_display):
+        n_messages = len(history)
+        if n_messages > max_display:
+            n_hide = n_messages - max_display
+            return history[:max_display], history[-n_hide:]
+        else:
+            return history, []
 
 
 class Memory:
@@ -252,6 +308,13 @@ class Chat:
         self.memory.chat_memory.append(msg)
         self.layout.write_chat_msg(msg)
 
+    def mission(self, msg):
+        logger.info(f'Mission said: "{msg}"')
+        msg = msg[1].current_status
+        msg = AIMessage(content=str(msg))
+        self.memory.mission_memory.append(msg)
+        self.layout.write_mission_msg(msg)
+
 
 class Agent:
     def __init__(self, node, memory) -> None:
@@ -278,15 +341,32 @@ class StreamlitApp:
         self.memory = Memory()
         self.chat = Chat(self.memory, self.layout)
 
-        self.ros_node = self.initialize_node(robot_description_package)
+        self.mission_queue = initialize_mission_queue()
+        self.ros_node = self.initialize_node(
+            self.mission_queue, robot_description_package
+        )
         self.agent = Agent(self.ros_node, self.memory)
+
+    def update_mission(self):
+        while True:
+            if self.mission_queue.empty():
+                time.sleep(0.5)
+                continue
+
+            msg = self.mission_queue.get()
+            self.chat.mission(msg)
 
     def run(self):
         system_status = self.get_system_status()
         self.layout.draw(system_status)
 
         self.recreate_from_memory()
-        self.interact()
+
+        st.chat_input(
+            "What is your question?", on_submit=self.prompt_callback, key="prompt"
+        )
+
+        self.update_mission()
 
     def get_system_status(self) -> SystemStatus:
         return SystemStatus(
@@ -294,13 +374,14 @@ class StreamlitApp:
             system_prompt=self.ros_node.system_prompt == "",
         )
 
-    def initialize_node(self, robot_description_package):
+    def initialize_node(self, feedbacks_queue, robot_description_package):
+        self.logger.info("Initializing ROS 2 node...")
         with st.spinner("Initializing ROS 2 node..."):
-            node = initialize_ros_node(robot_description_package)
+            node = initialize_ros_node(feedbacks_queue, robot_description_package)
             self.logger.info("ROS 2 node initialized")
         return node
 
-    def recreate_from_memory(self, max_display: int = 5):
+    def recreate_from_memory(self):
         """
         Recreates the page from the memory. It is because Streamlit reloads entire page every widget action.
         See: https://docs.streamlit.io/get-started/fundamentals/main-concepts
@@ -309,28 +390,11 @@ class StreamlitApp:
             max_display (int, optional): Max number of messages to display. Rest will be hidden in a toggle. Defaults to 5.
 
         """
-        with self.layout.chat_column:
-            if len(self.memory.chat_memory) > max_display:
-                n_hide = len(self.memory.chat_memory) - max_display
-                hidden_history = self.memory.chat_memory[:n_hide]
-                with st.expander("Untoggle to see full chat history"):
-                    for message in hidden_history:
-                        display_agent_message(message)
-                for message in self.memory.chat_memory[-max_display:]:
-                    display_agent_message(message)
-            else:
-                for message in self.memory.chat_memory:
-                    display_agent_message(message)
+        self.layout.show_chat(self.memory.chat_memory)
+        self.layout.show_mission(self.memory.mission_memory)
 
-        with self.layout.mission_column:
-            for message in self.memory.mission_memory:
-                display_agent_message(message)
-
-    def interact(self):
-        prompt = st.chat_input("What is your question?")
-        if not prompt:
-            return
-
+    def prompt_callback(self):
+        prompt = st.session_state.prompt
         self.chat.user(prompt)
 
         message_placeholder = st.container()

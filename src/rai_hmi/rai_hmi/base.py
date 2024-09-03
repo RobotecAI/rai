@@ -74,7 +74,9 @@ class BaseHMINode(TaskActionMixin):
         _load_documentation: Loads the FAISS index from the robot description package.
     """
 
-    def __init__(self, node_name: str, robot_description_package: Optional[str] = None):
+    def __init__(
+        self, node_name: str, queue, robot_description_package: Optional[str] = None
+    ):
         super().__init__(node_name=node_name)
 
         if robot_description_package is None:
@@ -112,7 +114,12 @@ class BaseHMINode(TaskActionMixin):
         self.system_prompt = self._initialize_system_prompt()
         self.faiss_index = self._load_documentation()
         self.tools = self._initialize_available_tools()
+
+        # TODO(boczekbartek): refactor, becuase mixin needs state
         self.initialize_task_action_client_and_server()
+        self.task_running = dict()
+        self.task_feedbacks = queue
+        self.task_results = dict()
 
         self.get_logger().info("HMI Node has been started")
 
