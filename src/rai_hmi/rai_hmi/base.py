@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+import functools
 from enum import Enum
 from typing import List, Optional, Tuple, cast
 
@@ -22,11 +22,20 @@ from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 from langchain_core.tools import BaseTool
 from langchain_openai import OpenAIEmbeddings
+from pydantic import UUID4
+from rclpy.action import ActionClient
+from rclpy.node import Node
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
-from rai_hmi.action_handler_mixin import TaskActionMixin
+from rai_hmi.chat_msgs import (
+    MissionAcceptanceMessage,
+    MissionDoneMessage,
+    MissionFeedbackMessage,
+)
+from rai_hmi.task import Task
 from rai_hmi.tools import QueryDatabaseTool, QueueTaskTool
+from rai_interfaces.action import Task as TaskAction
 
 SYSTEM_PROMPT = """
 Constitution:
@@ -51,7 +60,7 @@ class HMIStatus(Enum):
     PROCESSING = "processing"
 
 
-class BaseHMINode(TaskActionMixin):
+class BaseHMINode(Node):
     """
     Base class for Human-Machine Interface (HMI) nodes in a robotic system.
 
@@ -191,3 +200,86 @@ class BaseHMINode(TaskActionMixin):
             )
             return None
         return faiss_index
+
+    def initialize_task_action_client_and_server(self):
+        """Initialize the action client and server for task handling."""
+        self.task_action_client = ActionClient(self, TaskAction, "perform_task")
+        # self.task_feedback_action_server = ActionServer(
+        #     self, TaskFeedback, "provide_task_feedback", self.handle_task_feedback
+        # )
+
+    def add_task_to_queue(self, task: Task):
+        """Sends a task to the action server to be handled by the rai node."""
+
+        if not self.task_action_client.wait_for_server(timeout_sec=10.0):
+            self.get_logger().error("Task action server not available!")
+            raise Exception("Task action server not available!")
+
+        # Register task
+        self.task_results[task.uid] = None
+        self.task_running[task.uid] = False
+
+        # Create ros2 action goal
+        goal_msg = TaskAction.Goal()
+        goal_msg.task = task.name
+        goal_msg.description = task.description
+        goal_msg.priority = task.priority
+
+        self.get_logger().info(f"Sending task to action server: {goal_msg.task}")
+
+        feedback_callback = functools.partial(self.task_feedback_callback, uid=task.uid)
+        self._send_goal_future = self.task_action_client.send_goal_async(
+            goal_msg, feedback_callback=feedback_callback
+        )
+
+        goal_response_callback = functools.partial(
+            self.task_goal_response_callback, uid=task.uid
+        )
+        self._send_goal_future.add_done_callback(goal_response_callback)
+
+    def task_goal_response_callback(self, future, uid: UUID4):
+        """Callback for handling the response from the action server when the goal is sent."""
+        goal_handle = future.result()
+        if not goal_handle.accepted:
+            self.get_logger().error("Task goal rejected by action server.")
+            self.task_running[uid] = False
+            self.task_feedbacks.put(
+                MissionAcceptanceMessage(
+                    uid=uid, content=f"Task rejected by action server."
+                )
+            )
+            return
+
+        self.task_running[uid] = True
+        self.task_feedbacks.put(
+            MissionAcceptanceMessage(
+                uid=uid, content=f"Task accepted by action server."
+            )
+        )
+        self.get_logger().info("Task goal accepted by action server.")
+        self._get_result_future = goal_handle.get_result_async()
+
+        done_callback = functools.partial(self.task_result_callback, uid=uid)
+        self._get_result_future.add_done_callback(done_callback)
+
+    def task_feedback_callback(self, feedback_msg, uid: UUID4):
+        """Callback for receiving feedback from the action server."""
+        self.get_logger().info(f"Task feedback received: {feedback_msg.feedback}")
+
+        self.task_feedbacks.put(
+            MissionFeedbackMessage(
+                uid=uid, content=str(feedback_msg.feedback.current_status)
+            )
+        )
+
+    def task_result_callback(self, future, uid: UUID4):
+        """Callback for handling the result from the action server."""
+        result = future.result().result
+        self.task_running[uid] = False
+        self.task_feedbacks.put(MissionDoneMessage(uid=uid, result=result))
+        if result.success:
+            self.get_logger().info(f"Task completed successfully: {result.report}")
+            self.task_results[uid] = result
+        else:
+            self.get_logger().error(f"Task failed: {result.result_message}")
+            self.task_results[uid] = "ERROR"

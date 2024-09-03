@@ -9,7 +9,7 @@
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
+# See the License for the specific language goveself.rning permissions and
 # limitations under the License.
 #
 import base64
@@ -43,6 +43,7 @@ from rai.agents.conversational_agent import create_conversational_agent
 from rai.agents.state_based import get_stored_artifacts
 from rai.messages import HumanMultimodalMessage
 from rai_hmi.base import BaseHMINode
+from rai_hmi.chat_msgs import EMOJIS, MissionMessage
 from rai_hmi.task import Task, TaskInput
 
 logging.basicConfig(
@@ -52,8 +53,62 @@ logger = logging.getLogger(__name__)
 
 st.set_page_config(page_title="LangChain Chat App", page_icon="🦜")
 
-MODEL = "gpt-4o-mini"
+MODEL = "gpt-4o"
 MAX_DISPLAY = 5
+
+
+class Memory:
+    def __init__(self) -> None:
+        if "mission_memory" not in st.session_state:
+            st.session_state.mission_memory = []
+
+        if "chat_memory" not in st.session_state:
+            st.session_state.chat_memory = []
+
+        if "tool_calls" not in st.session_state:
+            st.session_state.tool_calls = {}
+
+        if "missions_uids" not in st.session_state:
+            st.session_state.missions_uids = set()
+
+    @property
+    def mission_memory(self):
+        return st.session_state.mission_memory
+
+    @property
+    def missions_uids(self):
+        return st.session_state.missions_uids
+
+    @property
+    def chat_memory(self):
+        return st.session_state.chat_memory
+
+    @property
+    def tool_calls(self):
+        return st.session_state.tool_calls
+
+    def register_tool_calls(self, tool_calls: List[ToolCall]):
+        for tool_call in tool_calls:
+            tool_call = cast(ToolCall, tool_call)
+            tool_id = tool_call["id"]
+            self.tool_calls[tool_id] = tool_call
+
+    def add_mission(self, msg: MissionMessage):
+        self.mission_memory.append(msg)
+        self.missions_uids.add(msg.uid)
+
+    def get_mission_memory(self, uid: Optional[str] = None) -> List[MissionMessage]:
+        logger.info(f"Mission memory: {self.mission_memory}")
+        if not uid:
+            return self.mission_memory
+
+        if uid not in self.missions_uids:
+            raise AssertionError(f"Mission with {uid} not found")
+
+        return [m for m in self.mission_memory if m["uid"] == uid]
+
+    def __repr__(self) -> str:
+        return f"===> Chat <===\n{pformat(self.chat_memory)}\n\n===> Mission <===\n{pformat(self.mission_memory)}\n\n===> Tool calls <===\n{pformat(self.tool_calls)}"
 
 
 # ---------- Cached Resources ----------
@@ -64,7 +119,7 @@ def parse_args():
 
 
 @st.cache_resource
-def initialize_agent(_node: BaseHMINode):
+def initialize_agent(_node: BaseHMINode, _memory: Memory):
     llm = ChatOpenAI(
         temperature=0.5,
         model=MODEL,
@@ -72,19 +127,26 @@ def initialize_agent(_node: BaseHMINode):
     )
 
     @tool
+    def get_mission_memory(uid: Optional[str] = None) -> List[MissionMessage]:
+        """List mission memory. Pass uid if memory for specific mission is required."""
+        return _memory.get_mission_memory(uid)
+
+    @tool
     def add_task_to_queue(task: TaskInput):
         """Use this tool to add a task to the queue. The task will be handled by the executor part of your system."""
+
+        uid = uuid.uuid4()
         _node.add_task_to_queue(
             Task(
                 name=task.name,
                 description=task.description,
                 priority=task.priority,
-                uid=uuid.uuid4(),
+                uid=uid,
             )
         )
         return f"Task added to the queue: {task.json()}"
 
-    tools = [add_task_to_queue]
+    tools = [add_task_to_queue, get_mission_memory]
     agent = create_conversational_agent(
         llm, _node.tools + tools, _node.system_prompt, logger=_node.get_logger()
     )
@@ -112,18 +174,8 @@ def initialize_ros_node(
     return node
 
 
-# ---------- Helpers ----------
-class EMOJIS:
-    human = "🧑‍💻"
-    bot = "🤖"
-    tool = "🛠️"
-    unknown = "❓"
-    success = "✅"
-    failure = "❌"
-
-
 def display_agent_message(
-    message: BaseMessage,
+    message,  # TODO(boczekbartek): add typhint
     tool_chat_obj: Optional[DeltaGenerator] = None,
     no_expand: bool = False,
 ):
@@ -146,8 +198,6 @@ def display_agent_message(
             return
         st.chat_message("user", avatar=EMOJIS.human).markdown(message.content)
     elif isinstance(message, AIMessage):
-        if message.content == "":
-            return
         st.chat_message("bot", avatar=EMOJIS.bot).markdown(message.content)
     elif isinstance(message, ToolMessage):
         tool_call = st.session_state.tool_calls[message.tool_call_id]
@@ -170,6 +220,9 @@ def display_agent_message(
                     st.image(image)
     elif isinstance(message, SystemMessage):
         return  # we do not handle system messages
+    elif isinstance(message, MissionMessage):
+        avatar, content = message.render_steamlit()
+        st.chat_message("bot", avatar=avatar).markdown(content)
     else:
         raise ValueError("Unknown message type")
 
@@ -223,8 +276,9 @@ class Layout:
             else:
                 display_agent_message(msg)
 
-    def write_mission_msg(self, msg: BaseMessage):
+    def write_mission_msg(self, msg: MissionMessage):
         with self.mission_column:
+            logger.info(f'Mission said: "{msg}"')
             display_agent_message(msg)
 
     def show_chat(self, history):
@@ -254,39 +308,6 @@ class Layout:
             return history, []
 
 
-class Memory:
-    def __init__(self) -> None:
-        if "mission_memory" not in st.session_state:
-            st.session_state.mission_memory = []
-
-        if "chat_memory" not in st.session_state:
-            st.session_state.chat_memory = []
-
-        if "tool_calls" not in st.session_state:
-            st.session_state.tool_calls = {}
-
-    @property
-    def mission_memory(self):
-        return st.session_state.mission_memory
-
-    @property
-    def chat_memory(self):
-        return st.session_state.chat_memory
-
-    @property
-    def tool_calls(self):
-        return st.session_state.tool_calls
-
-    def register_tool_calls(self, tool_calls: List[ToolCall]):
-        for tool_call in tool_calls:
-            tool_call = cast(ToolCall, tool_call)
-            tool_id = tool_call["id"]
-            self.tool_calls[tool_id] = tool_call
-
-    def __repr__(self) -> str:
-        return f"===> Chat <===\n{pformat(self.chat_memory)}\n\n===> Mission <===\n{pformat(self.mission_memory)}\n\n===> Tool calls <===\n{pformat(self.tool_calls)}"
-
-
 class Chat:
     def __init__(self, memory: Memory, layout: Layout) -> None:
         self.memory = memory
@@ -308,18 +329,16 @@ class Chat:
         self.memory.chat_memory.append(msg)
         self.layout.write_chat_msg(msg)
 
-    def mission(self, msg):
+    def mission(self, msg: MissionMessage):
         logger.info(f'Mission said: "{msg}"')
-        msg = msg[1].current_status
-        msg = AIMessage(content=str(msg))
-        self.memory.mission_memory.append(msg)
+        self.memory.add_mission(msg)
         self.layout.write_mission_msg(msg)
 
 
 class Agent:
     def __init__(self, node, memory) -> None:
-        self.agent = initialize_agent(node)
         self.memory = memory
+        self.agent = initialize_agent(node, self.memory)
 
     def stream(self):
         # Copy, because agent's memory != streamlit app memory. App memory is used to
@@ -351,8 +370,6 @@ class StreamlitApp:
         while True:
             if self.mission_queue.empty():
                 time.sleep(0.5)
-                continue
-
             msg = self.mission_queue.get()
             self.chat.mission(msg)
 
@@ -398,32 +415,36 @@ class StreamlitApp:
         self.chat.user(prompt)
 
         message_placeholder = st.container()
-        with message_placeholder, st.spinner("Thinking..."):
-            for state in self.agent.stream():
-                logger.info(f"State:\n{pformat(state)}")
-                node_name = list(state.keys())[0]
-                if node_name == "thinker":
-                    last_message = state[node_name]["messages"][-1]
-                    self.chat.bot(last_message)
-                    self.memory.register_tool_calls(last_message.tool_calls)
-                    self.layout.create_tool_expanders(last_message.tool_calls)
+        with self.layout.chat_column:
+            with message_placeholder:
+                with st.spinner("Thinking..."):
+                    for state in self.agent.stream():
+                        # logger.info(f"State:\n{pformat(state)}")
+                        node_name = list(state.keys())[0]
+                        if node_name == "thinker":
+                            last_message = state[node_name]["messages"][-1]
+                            self.chat.bot(last_message)
+                            self.memory.register_tool_calls(last_message.tool_calls)
+                            self.layout.create_tool_expanders(last_message.tool_calls)
 
-                elif node_name == "tools":
-                    last_ai_msg_idx = 0
-                    for message in state[node_name]["messages"]:
-                        if isinstance(message, AIMessage):
-                            last_ai_msg_idx = state[node_name]["messages"].index(
-                                message
-                            )
+                        elif node_name == "tools":
+                            last_ai_msg_idx = 0
+                            for message in state[node_name]["messages"]:
+                                if isinstance(message, AIMessage):
+                                    last_ai_msg_idx = state[node_name][
+                                        "messages"
+                                    ].index(message)
 
-                    for message in state[node_name]["messages"][
-                        last_ai_msg_idx + 1 :  # noqa: E203
-                    ]:
-                        if message.type == "tool":
-                            self.memory.tool_calls[message.tool_call_id] = message
-                            self.chat.tool(message)
-                        else:
-                            break
+                            for message in state[node_name]["messages"][
+                                last_ai_msg_idx + 1 :  # noqa: E203
+                            ]:
+                                if message.type == "tool":
+                                    self.memory.tool_calls[message.tool_call_id] = (
+                                        message
+                                    )
+                                    self.chat.tool(message)
+                                else:
+                                    break
 
 
 def decode_base64_into_image(base64_image: str):
