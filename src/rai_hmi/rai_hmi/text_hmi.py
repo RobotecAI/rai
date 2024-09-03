@@ -196,7 +196,12 @@ class Agent:
         self.memory = memory
 
     def stream(self):
-        return self.agent.stream({"messages": self.memory.chat_memory})
+        # Copy, because agent's memory != streamlit app memory. App memory is used to
+        # recreate the page, agent might manipulate it's history to perform the task.
+        # In simplest case it adds thinker message to the state.
+        messages = self.memory.chat_memory.copy()
+
+        return self.agent.stream({"messages": messages})
 
 
 class StreamlitApp:
