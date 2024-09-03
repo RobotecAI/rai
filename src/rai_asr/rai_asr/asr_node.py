@@ -287,7 +287,6 @@ class ASRNode(Node):
             )
             if asr_lock or self.hmi_lock or self.tts_lock:
                 continue
-                
 
             if self.should_listen(audio_data):
                 self.silence_start_time = datetime.now()
@@ -297,7 +296,9 @@ class ASRNode(Node):
                     self.audio_buffer.append(audio_data)
             elif self.is_recording:
                 self.audio_buffer.append(audio_data)
-                if datetime.now() - self.silence_start_time > timedelta(seconds=self.silence_grace_period):
+                if datetime.now() - self.silence_start_time > timedelta(
+                    seconds=self.silence_grace_period
+                ):
                     self.stop_recording_and_transcribe()
                     self.reset_buffer()
 
