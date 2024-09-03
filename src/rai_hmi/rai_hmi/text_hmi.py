@@ -278,8 +278,8 @@ class StreamlitApp:
         self.memory = Memory()
         self.chat = Chat(self.memory, self.layout)
 
-        self.node = self.initialize_node(robot_description_package)
-        self.agent = Agent(self.node, self.memory)
+        self.ros_node = self.initialize_node(robot_description_package)
+        self.agent = Agent(self.ros_node, self.memory)
 
     def run(self):
         system_status = self.get_system_status()
@@ -290,8 +290,8 @@ class StreamlitApp:
 
     def get_system_status(self) -> SystemStatus:
         return SystemStatus(
-            robot_database=self.node.faiss_index is not None,
-            system_prompt=self.node.system_prompt == "",
+            robot_database=self.ros_node.faiss_index is not None,
+            system_prompt=self.ros_node.system_prompt == "",
         )
 
     def initialize_node(self, robot_description_package):
