@@ -36,6 +36,7 @@ jobs:
       - name: Install ROS 2 package dependencies
         shell: bash
         run: |
+          apt-get update
           rosdep install --from-paths src --ignore-src -r -y
 
       - name: Build the workspace
