@@ -92,24 +92,21 @@ def parse_whoami_package():
     documentation = str([doc.page_content for doc in docs])
     n_tokens = len(documentation) // 4.0
     logger.info(
+        "Building the robot docs vector store... "
         f"The documentation's length is {len(documentation)} chars, "
         f"approximately {n_tokens} tokens"
     )
-    logger.warn(
-        f"Building the robot docs vector store will cost "
-        f"approximately {n_tokens / 1_000_000 * 0.1:.4f}$. "
-        "Do you want to continue? (y/n)"
-    )
+    logger.warn("Do you want to continue? (y/n)")
     if input() == "y":
         build_docs_vector_store()
     else:
         logger.info("Skipping the robot docs vector store creation.")
 
-    logger.warn(
-        f"Building the robot identity will cost "
-        f"approximately {n_tokens / 1_000_000 * 0.15:.4f}$. "
-        "Do you want to continue? (y/n)"
+    logger.info(
+        "Building the robot identity... "
+        "You can do it manually by creating {save_dir}/robot_identity.txt "
     )
+    logger.warn("Do you want to continue? (y/n)")
     if input() == "y":
         build_robot_identity()
     else:
