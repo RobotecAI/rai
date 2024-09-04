@@ -22,11 +22,11 @@ from pathlib import Path
 import coloredlogs
 from langchain_community.vectorstores import FAISS
 from langchain_core.messages import SystemMessage
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from rai.apps.talk_to_docs import ingest_documentation
 from rai.messages import preprocess_image
 from rai.messages.multimodal import HumanMultimodalMessage
+from rai.utils.model_initialization import get_embeddings_model, get_llm_model
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -50,9 +50,12 @@ def parse_whoami_package():
     args = parser.parse_args()
     save_dir = args.output if args.output is not None else args.documentation_root
 
+    llm = get_llm_model(model_type="simple_model")
+    embeddings_model = get_embeddings_model()
+
     def build_docs_vector_store():
         logger.info("Building the robot docs vector store...")
-        faiss_index = FAISS.from_documents(docs, OpenAIEmbeddings())
+        faiss_index = FAISS.from_documents(docs, embeddings_model)
         faiss_index.add_documents(docs)
         faiss_index.save_local(save_dir)
 
@@ -67,7 +70,6 @@ def parse_whoami_package():
             "Your description should be thorough and detailed."
             "Your reply should start with I am a ..."
         )
-        llm = ChatOpenAI(model="gpt-4o-mini")
 
         images = glob.glob(args.documentation_root + "/images/*")
 
