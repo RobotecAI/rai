@@ -27,12 +27,15 @@ def decode_image(base64_string: str) -> Image.Image:
     return image
 
 
-def test_preprocess_image():
-    link = "https://upload.wikimedia.org/wikipedia/commons/6/63/Wikipedia-logo.png"
-    numpy_image = np.zeros((300, 300, 3))
-    local_image = "tests/resources/image.png"
+@pytest.mark.parametrize(
+    "test_image",
+    [
+        "https://upload.wikimedia.org/wikipedia/commons/6/63/Wikipedia-logo.png",
+        np.zeros((300, 300, 3)),
+        "tests/resources/image.png",
+    ],
+)
+def test_preprocess_image(test_image):
+    base64_image = preprocess_image(test_image)
+    _ = decode_image(base64_image)  # noqa: F841
 
-    test_images = [link, numpy_image, local_image]
-    for test_image in test_images:
-        base64_image = preprocess_image(test_image)
-        image = decode_image(base64_image)  # noqa: F841

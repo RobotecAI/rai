@@ -23,24 +23,25 @@ from rai.cli.rai_cli import create_rai_ws
 
 
 @pytest.fixture
-def rai_ws():
-    directory = Path("/tmp/" + str(uuid.uuid4()))
-    os.mkdir(directory)
+def rai_ws(tmp_path: Path):
+    # `tmp_path` is a built-in pytest fixture.
+    # see: https://docs.pytest.org/en/stable/how-to/tmp_path.html#the-tmp-path-fixture
+
     mock_parser = MagicMock()
     mock_args = MagicMock()
     mock_args.name = "test_package"
-    mock_args.destination_directory = directory
+    mock_args.destination_directory = tmp_path
     mock_parser.parse_args.return_value = mock_args
 
     # Patch argparse.ArgumentParser to return our mock
     with patch("argparse.ArgumentParser", return_value=mock_parser):
         create_rai_ws()
 
-    return directory
+    return tmp_path
 
 
 def test_create_rai_ws(rai_ws: Path):
-    whoami_directory = Path(rai_ws) / "test_package_whoami"
+    whoami_directory = rai_ws / "test_package_whoami"
 
     assert os.path.exists(whoami_directory), "Description folder is missing"
 
