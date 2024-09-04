@@ -1,14 +1,19 @@
-[llm]
-# Choose the LLM provider: openai, aws, or ollama
-vendor = "openai"
-simple_model = "gpt-4o-mini" # Faster, less expensive model for straightforward tasks
-complex_model = "gpt-4o" # More powerful model for complex reasoning or generation
-region_name = "us-east-1" # AWS region (only applicable when vendor is "aws")
-base_url = "http://localhost:11434" # Ollama API endpoint (only applicable when vendor is "ollama")
+[vendor]
+name = "openai" # openai, aws, ollama
 
-[embeddings]
-# Choose the embeddings provider: openai, aws, or ollama
-vendor = "openai"
-model = "text-embedding-ada-002" # Embedding model to use
-region_name = "us-east-1" # AWS region (only applicable when vendor is "aws")
-base_url = "http://localhost:11434" # Ollama API endpoint (only applicable when vendor is "ollama")
+[aws]
+simple_model = "anthropic.claude-3-haiku-20240307-v1:0"
+complex_model = "anthropic.claude-3-5-sonnet-20240620-v1:0"
+embeddings_model = "amazon.titan-embed-text-v1"
+region_name = "us-east-1"
+
+[openai]
+simple_model = "gpt-4o-mini"
+complex_model = "gpt-4o"
+embeddings_model = "text-embedding-ada-002"
+
+[ollama]
+simple_model = "llama3.1"
+complex_model = "llama3.1:70b"
+embeddings_model = "llama3.1"
+base_url = "http://localhost:11434"

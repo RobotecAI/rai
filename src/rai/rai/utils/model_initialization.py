@@ -12,62 +12,99 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Literal, TypedDict
+from dataclasses import dataclass
+from typing import Literal
 
 import tomli
 
 
-class LLMConfig(TypedDict):
-    vendor: str
+@dataclass
+class VendorConfig:
+    name: str
+
+
+@dataclass
+class ModelConfig:
     simple_model: str
     complex_model: str
+    embeddings_model: str
+
+
+@dataclass
+class AWSConfig(ModelConfig):
     region_name: str
+
+
+@dataclass
+class OllamaConfig(ModelConfig):
     base_url: str
 
 
-class EmbeddingsConfig(TypedDict):
-    vendor: str
-    model: str
-    region_name: str
-    base_url: str
+@dataclass
+class RAIConfig:
+    vendor: VendorConfig
+    aws: AWSConfig
+    openai: ModelConfig
+    ollama: OllamaConfig
+
+
+def load_config() -> RAIConfig:
+    with open("config.toml", "rb") as f:
+        config_dict = tomli.load(f)
+    return RAIConfig(
+        vendor=VendorConfig(**config_dict["vendor"]),
+        aws=AWSConfig(**config_dict["aws"]),
+        openai=ModelConfig(**config_dict["openai"]),
+        ollama=OllamaConfig(**config_dict["ollama"]),
+    )
 
 
 def get_llm_model(model_type: Literal["simple_model", "complex_model"]):
-    rai_config = tomli.load(open("config.toml", "rb"))
-    llm_config = LLMConfig(**rai_config["llm"])
-    if llm_config["vendor"] == "openai":
+    config = load_config()
+    vendor = config.vendor.name
+    model_config = getattr(config, vendor)
+
+    if vendor == "openai":
         from langchain_openai import ChatOpenAI
 
-        return ChatOpenAI(model=llm_config[model_type])
-    elif llm_config["vendor"] == "aws":
+        return ChatOpenAI(model=getattr(model_config, model_type))
+    elif vendor == "aws":
         from langchain_aws import ChatBedrock
 
-        return ChatBedrock(model_id=llm_config[model_type], region_name=llm_config["region_name"])  # type: ignore
-    elif llm_config["vendor"] == "ollama":
+        return ChatBedrock(
+            model_id=getattr(model_config, model_type),
+            region_name=model_config.region_name,
+        )
+    elif vendor == "ollama":
         from langchain_ollama import ChatOllama
 
-        return ChatOllama(model=llm_config[model_type], base_url=llm_config["base_url"])
+        return ChatOllama(
+            model=getattr(model_config, model_type), base_url=model_config.base_url
+        )
     else:
-        raise ValueError(f"Unknown LLM vendor: {llm_config['vendor']}")
+        raise ValueError(f"Unknown LLM vendor: {vendor}")
 
 
 def get_embeddings_model():
-    rai_config = tomli.load(open("config.toml", "rb"))
-    embeddings_config = EmbeddingsConfig(**rai_config["embeddings"])
+    config = load_config()
+    vendor = config.vendor.name
+    model_config = getattr(config, vendor)
 
-    if embeddings_config["vendor"] == "openai":
+    if vendor == "openai":
         from langchain_openai import OpenAIEmbeddings
 
-        return OpenAIEmbeddings()
-    elif embeddings_config["vendor"] == "aws":
+        return OpenAIEmbeddings(model=model_config.embeddings_model)
+    elif vendor == "aws":
         from langchain_aws import BedrockEmbeddings
 
-        return BedrockEmbeddings(model_id=embeddings_config["model"], region_name=embeddings_config["region_name"])  # type: ignore
-    elif embeddings_config["vendor"] == "ollama":
+        return BedrockEmbeddings(
+            model_id=model_config.embeddings_model, region_name=model_config.region_name
+        )
+    elif vendor == "ollama":
         from langchain_ollama import OllamaEmbeddings
 
         return OllamaEmbeddings(
-            model=embeddings_config["model"], base_url=embeddings_config["base_url"]
+            model=model_config.embeddings_model, base_url=model_config.base_url
         )
     else:
-        raise ValueError(f"Unknown embeddings vendor: {embeddings_config['vendor']}")
+        raise ValueError(f"Unknown embeddings vendor: {vendor}")
