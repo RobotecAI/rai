@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import os
-import uuid
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 

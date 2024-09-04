@@ -16,6 +16,7 @@ import base64
 from io import BytesIO
 
 import numpy as np
+import pytest
 from PIL import Image
 
 from rai.messages.utils import preprocess_image
@@ -38,4 +39,3 @@ def decode_image(base64_string: str) -> Image.Image:
 def test_preprocess_image(test_image):
     base64_image = preprocess_image(test_image)
     _ = decode_image(base64_image)  # noqa: F841
-
