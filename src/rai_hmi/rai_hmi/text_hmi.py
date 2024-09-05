@@ -42,6 +42,8 @@ from streamlit.delta_generator import DeltaGenerator
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.agents.state_based import get_stored_artifacts
 from rai.messages import HumanMultimodalMessage
+from rai.node import RaiBaseNode
+from rai.tools.ros.native import GetCameraImage, Ros2GetRobotInterfaces
 from rai_hmi.base import BaseHMINode
 from rai_hmi.chat_msgs import EMOJIS, MissionMessage
 from rai_hmi.task import Task, TaskInput
@@ -130,9 +132,17 @@ def initialize_agent(_node: BaseHMINode, _memory: Memory):
         )
         return f"UID={uid} | Task added to the queue: {task.json()}"
 
-    tools = [add_task_to_queue, get_mission_memory]
+    rai_node = RaiBaseNode(node_name="__rai_node__")  # this is so wrong
+
+    node_tools = tools = [
+        Ros2GetRobotInterfaces(node=_node),
+        GetCameraImage(node=rai_node),
+    ]
+    task_tools = [add_task_to_queue, get_mission_memory]
+    tools = _node.tools + node_tools + task_tools
+
     agent = create_conversational_agent(
-        llm, _node.tools + tools, _node.system_prompt, logger=_node.get_logger()
+        llm, tools, _node.system_prompt, logger=_node.get_logger()
     )
     return agent
 
