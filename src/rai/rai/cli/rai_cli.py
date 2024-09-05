@@ -104,7 +104,7 @@ def parse_whoami_package():
 
     logger.info(
         "Building the robot identity... "
-        "You can do it manually by creating {save_dir}/robot_identity.txt "
+        f"You can do it manually by creating {save_dir}/robot_identity.txt "
     )
     logger.warn("Do you want to continue? (y/n)")
     if input() == "y":
