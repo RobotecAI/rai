@@ -37,6 +37,8 @@ from langchain_core.messages import (
 from langchain_openai.chat_models import ChatOpenAI
 from PIL import Image
 from pydantic import UUID1, BaseModel
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.node import Node
 from streamlit.delta_generator import DeltaGenerator
 
 from rai.agents.conversational_agent import create_conversational_agent
@@ -105,7 +107,7 @@ def initialize_memory() -> Memory:
 
 
 @st.cache_resource
-def initialize_agent(_node: BaseHMINode, _memory: Memory):
+def initialize_agent(_hmi_node: BaseHMINode, _rai_node: RaiBaseNode, _memory: Memory):
     llm = ChatOpenAI(
         temperature=0.5,
         model=MODEL,
@@ -122,7 +124,7 @@ def initialize_agent(_node: BaseHMINode, _memory: Memory):
         """Use this tool to add a task to the queue. The task will be handled by the executor part of your system."""
 
         uid = uuid.uuid1()
-        _node.add_task_to_queue(
+        _hmi_node.add_task_to_queue(
             Task(
                 name=task.name,
                 description=task.description,
@@ -132,17 +134,15 @@ def initialize_agent(_node: BaseHMINode, _memory: Memory):
         )
         return f"UID={uid} | Task added to the queue: {task.json()}"
 
-    rai_node = RaiBaseNode(node_name="__rai_node__")  # this is so wrong
-
     node_tools = tools = [
-        Ros2GetRobotInterfaces(node=_node),
-        GetCameraImage(node=rai_node),
+        Ros2GetRobotInterfaces(node=_rai_node),
+        GetCameraImage(node=_rai_node),
     ]
     task_tools = [add_task_to_queue, get_mission_memory]
-    tools = _node.tools + node_tools + task_tools
+    tools = _hmi_node.tools + node_tools + task_tools
 
     agent = create_conversational_agent(
-        llm, tools, _node.system_prompt, logger=_node.get_logger()
+        llm, tools, _hmi_node.system_prompt, logger=_hmi_node.get_logger()
     )
     return agent
 
@@ -153,19 +153,27 @@ def initialize_mission_queue() -> Queue:
 
 
 @st.cache_resource
-def initialize_ros_node(
+def initialize_ros_nodes(
     _feedbacks_queue: Queue, robot_description_package: Optional[str]
 ):
     rclpy.init()
 
-    node = BaseHMINode(
+    hmi_node = BaseHMINode(
         f"{robot_description_package}_hmi_node",
         queue=_feedbacks_queue,
         robot_description_package=robot_description_package,
     )
-    threading.Thread(target=rclpy.spin, args=(node,), daemon=True).start()
 
-    return node
+    # TODO(boczekbartek): this node shouldn't be required to initialize simple ros2 tools
+    rai_node = RaiBaseNode(node_name="__rai_node__")
+
+    executor = MultiThreadedExecutor()
+    executor.add_node(hmi_node)
+    executor.add_node(rai_node)
+
+    threading.Thread(target=executor.spin, daemon=True).start()
+
+    return hmi_node, rai_node
 
 
 def display_agent_message(
@@ -355,9 +363,9 @@ class Chat:
 
 
 class Agent:
-    def __init__(self, node, memory) -> None:
+    def __init__(self, hmi_node: Node, rai_node: Node, memory) -> None:
         self.memory = memory
-        self.agent = initialize_agent(node, self.memory)
+        self.agent = initialize_agent(hmi_node, rai_node, self.memory)
 
     def stream(self):
         # Copy, because agent's memory != streamlit app memory. App memory is used to
@@ -380,10 +388,10 @@ class StreamlitApp:
         self.chat = Chat(self.memory, self.layout)
 
         self.mission_queue = initialize_mission_queue()
-        self.ros_node = self.initialize_node(
+        self.hmi_ros_node, self.rai_ros_node = self.initialize_node(
             self.mission_queue, robot_description_package
         )
-        self.agent = Agent(self.ros_node, self.memory)
+        self.agent = Agent(self.hmi_ros_node, self.rai_ros_node, self.memory)
 
     def update_mission(self):
         while True:
@@ -408,16 +416,18 @@ class StreamlitApp:
 
     def get_system_status(self) -> SystemStatus:
         return SystemStatus(
-            robot_database=self.ros_node.faiss_index is not None,
-            system_prompt=self.ros_node.system_prompt == "",
+            robot_database=self.hmi_ros_node.faiss_index is not None,
+            system_prompt=self.hmi_ros_node.system_prompt == "",
         )
 
     def initialize_node(self, feedbacks_queue, robot_description_package):
         self.logger.info("Initializing ROS 2 node...")
-        with st.spinner("Initializing ROS 2 node..."):
-            node = initialize_ros_node(feedbacks_queue, robot_description_package)
+        with st.spinner("Initializing ROS 2 nodes..."):
+            hmi_node, rai_node = initialize_ros_nodes(
+                feedbacks_queue, robot_description_package
+            )
             self.logger.info("ROS 2 node initialized")
-        return node
+        return hmi_node, rai_node
 
     def recreate_from_memory(self):
         """
