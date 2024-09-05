@@ -13,7 +13,6 @@
 # limitations under the License.
 #
 
-import logging
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
@@ -44,10 +43,10 @@ class MissionMessage:
         return f"{self.uid} | {self.content}"
 
     def render_steamlit(self) -> Tuple[str, str]:
-        logging.getLogger().info(f"Rendering: {self} with avatar: {self.avatar}")
         return self.avatar, str(self)
 
 
+# TODO(boczekbartek): fix avatars
 class MissionAcceptanceMessage(MissionMessage):
     avatar: Optional[str] = EMOJIS.accepted
 

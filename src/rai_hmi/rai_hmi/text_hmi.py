@@ -21,7 +21,7 @@ import time
 import uuid
 from pprint import pformat
 from queue import Queue
-from typing import List, Optional, cast
+from typing import Dict, List, Optional, cast
 
 import rclpy
 import streamlit as st
@@ -59,33 +59,11 @@ MAX_DISPLAY = 5
 
 class Memory:
     def __init__(self) -> None:
-        if "mission_memory" not in st.session_state:
-            st.session_state.mission_memory = []
-
-        if "chat_memory" not in st.session_state:
-            st.session_state.chat_memory = []
-
-        if "tool_calls" not in st.session_state:
-            st.session_state.tool_calls = {}
-
-        if "missions_uids" not in st.session_state:
-            st.session_state.missions_uids = set()
-
-    @property
-    def mission_memory(self):
-        return st.session_state.mission_memory
-
-    @property
-    def missions_uids(self):
-        return st.session_state.missions_uids
-
-    @property
-    def chat_memory(self):
-        return st.session_state.chat_memory
-
-    @property
-    def tool_calls(self):
-        return st.session_state.tool_calls
+        # TODO(boczekbartek): add typehints
+        self.mission_memory = []
+        self.chat_memory = []
+        self.tool_calls = {}
+        self.missions_uids = set()
 
     def register_tool_calls(self, tool_calls: List[ToolCall]):
         for tool_call in tool_calls:
@@ -116,6 +94,11 @@ class Memory:
 def parse_args():
     robot_description_package = sys.argv[1] if len(sys.argv) > 1 else None
     return robot_description_package
+
+
+@st.cache_resource
+def initialize_memory() -> Memory:
+    return Memory()
 
 
 @st.cache_resource
@@ -178,6 +161,7 @@ def display_agent_message(
     message,  # TODO(boczekbartek): add typhint
     tool_chat_obj: Optional[DeltaGenerator] = None,
     no_expand: bool = False,
+    tool_call: Optional[ToolCall] = None,
 ):
     """
     Display LLM message in streamlit UI.
@@ -186,6 +170,7 @@ def display_agent_message(
         message: The message to display
         tool_chat_obj: Pre-existing Streamlit object for the tool message.
         no_expand: Skip expanders due - Streamlit does not support nested expanders.
+        tool_call: The tool call associated with the ToolMessage.
 
     """
     message.content = cast(str, message.content)  # type: ignore
@@ -200,7 +185,9 @@ def display_agent_message(
     elif isinstance(message, AIMessage):
         st.chat_message("bot", avatar=EMOJIS.bot).markdown(message.content)
     elif isinstance(message, ToolMessage):
-        tool_call = st.session_state.tool_calls[message.tool_call_id]
+        if tool_call is None:
+            raise ValueError("`tool_call` argument is required for ToolMessage.")
+
         label = tool_call.name + " status: "
         status = EMOJIS.success if message.status == "success" else EMOJIS.failure
         if not tool_chat_obj:
@@ -221,6 +208,7 @@ def display_agent_message(
     elif isinstance(message, SystemMessage):
         return  # we do not handle system messages
     elif isinstance(message, MissionMessage):
+        logger.info("Displaying mission message")
         avatar, content = message.render_steamlit()
         st.chat_message("bot", avatar=avatar).markdown(content)
     else:
@@ -269,34 +257,53 @@ class Layout:
                     st.markdown(f"Arguments: {tool_call['args']}")
                     self.tool_placeholders[tool_call["id"]] = st.empty()
 
+    def write_tool_message(self, msg: ToolMessage, tool_call: ToolCall):
+        with self.chat_column:
+            display_agent_message(
+                msg, self.tool_placeholders[msg.tool_call_id], tool_call=tool_call
+            )
+
     def write_chat_msg(self, msg: BaseMessage):
         with self.chat_column:
-            if isinstance(msg, ToolMessage):
-                display_agent_message(msg, self.tool_placeholders[msg.tool_call_id])
-            else:
-                display_agent_message(msg)
+            display_agent_message(msg)
 
     def write_mission_msg(self, msg: MissionMessage):
         with self.mission_column:
             logger.info(f'Mission said: "{msg}"')
             display_agent_message(msg)
 
-    def show_chat(self, history):
+    def show_chat(self, history, tool_calls: Dict[str, ToolCall]):
         with self.chat_column:
-            self.__show_history(history)
+            self.__show_history(history, tool_calls)
 
-    def show_mission(self, history):
+    def show_mission(self, history, tool_calls: Dict[str, ToolCall]):
         with self.mission_column:
-            self.__show_history(history)
+            self.__show_history(history, tool_calls)
 
-    def __show_history(self, history):
-        show, hide = self.__split_history(history, self.max_display)
-        with st.expander("Untoggle to see full chat history"):
-            for message in hide:
-                display_agent_message(message, no_expand=True)
+    def __show_history(self, history, tool_calls):
+        def display(message, no_expand=False):
+            if isinstance(message, ToolMessage):
+                display_agent_message(
+                    message,
+                    no_expand=no_expand,
+                    tool_call=tool_calls[message.tool_call_id],
+                )
+            else:
+                display_agent_message(message, no_expand=no_expand)
 
-        for message in show:
-            display_agent_message(message)
+        for message in history:
+            display(message)
+
+        # show, hide = self.__split_history(history, self.max_display)
+
+        # TODO(boczekbartek): fix exapndes
+        # error: streamlit.errors.StreamlitAPIException: Expanders may not be nested inside other expanders.
+        # with st.expander("Untoggle to see full chat history"):
+        # for message in hide:
+        #     display(message)
+        #
+        # for message in show:
+        #     display(message)
 
     @staticmethod
     def __split_history(history, max_display):
@@ -327,7 +334,8 @@ class Chat:
     def tool(self, msg):
         logger.info(f'Tool said: "{msg}"')
         self.memory.chat_memory.append(msg)
-        self.layout.write_chat_msg(msg)
+        tool_call = self.memory.tool_calls[msg.tool_call_id]
+        self.layout.write_tool_message(msg, tool_call)
 
     def mission(self, msg: MissionMessage):
         logger.info(f'Mission said: "{msg}"')
@@ -357,7 +365,7 @@ class StreamlitApp:
         self.robot_description_package = robot_description_package
 
         self.layout = Layout(self.robot_description_package)
-        self.memory = Memory()
+        self.memory = initialize_memory()
         self.chat = Chat(self.memory, self.layout)
 
         self.mission_queue = initialize_mission_queue()
@@ -370,6 +378,8 @@ class StreamlitApp:
         while True:
             if self.mission_queue.empty():
                 time.sleep(0.5)
+                continue
+            logger.info("Got new mission update!")
             msg = self.mission_queue.get()
             self.chat.mission(msg)
 
@@ -407,8 +417,8 @@ class StreamlitApp:
             max_display (int, optional): Max number of messages to display. Rest will be hidden in a toggle. Defaults to 5.
 
         """
-        self.layout.show_chat(self.memory.chat_memory)
-        self.layout.show_mission(self.memory.mission_memory)
+        self.layout.show_chat(self.memory.chat_memory, self.memory.tool_calls)
+        self.layout.show_mission(self.memory.mission_memory, self.memory.tool_calls)
 
     def prompt_callback(self):
         prompt = st.session_state.prompt
