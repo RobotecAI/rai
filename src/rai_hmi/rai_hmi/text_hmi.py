@@ -310,26 +310,21 @@ class Layout:
             else:
                 display_agent_message(message, no_expand=no_expand)
 
-        for message in history:
+        show, hide = self.__split_history(history, self.max_display)
+
+        with st.expander("Untoggle to see full chat history"):
+            for message in hide:
+                display(message, no_expand=True)
+
+        for message in show:
             display(message)
-
-        # show, hide = self.__split_history(history, self.max_display)
-
-        # TODO(boczekbartek): fix exapndes
-        # error: streamlit.errors.StreamlitAPIException: Expanders may not be nested inside other expanders.
-        # with st.expander("Untoggle to see full chat history"):
-        # for message in hide:
-        #     display(message)
-        #
-        # for message in show:
-        #     display(message)
 
     @staticmethod
     def __split_history(history, max_display):
         n_messages = len(history)
         if n_messages > max_display:
             n_hide = n_messages - max_display
-            return history[:max_display], history[-n_hide:]
+            return history[-n_hide:], history[:max_display]
         else:
             return history, []
 
