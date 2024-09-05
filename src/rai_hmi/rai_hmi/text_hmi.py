@@ -21,7 +21,7 @@ import time
 import uuid
 from pprint import pformat
 from queue import Queue
-from typing import Dict, List, Optional, cast
+from typing import Dict, List, Optional, Set, cast
 
 import rclpy
 import streamlit as st
@@ -36,7 +36,7 @@ from langchain_core.messages import (
 )
 from langchain_openai.chat_models import ChatOpenAI
 from PIL import Image
-from pydantic import BaseModel
+from pydantic import UUID4, BaseModel
 from streamlit.delta_generator import DeltaGenerator
 
 from rai.agents.conversational_agent import create_conversational_agent
@@ -60,10 +60,10 @@ MAX_DISPLAY = 5
 class Memory:
     def __init__(self) -> None:
         # TODO(boczekbartek): add typehints
-        self.mission_memory = []
+        self.mission_memory: List[MissionMessage] = []
         self.chat_memory = []
         self.tool_calls = {}
-        self.missions_uids = set()
+        self.missions_uids: Set[UUID4] = set()
 
     def register_tool_calls(self, tool_calls: List[ToolCall]):
         for tool_call in tool_calls:
@@ -76,14 +76,15 @@ class Memory:
         self.missions_uids.add(msg.uid)
 
     def get_mission_memory(self, uid: Optional[str] = None) -> List[MissionMessage]:
-        logger.info(f"Mission memory: {self.mission_memory}")
         if not uid:
             return self.mission_memory
 
-        if uid not in self.missions_uids:
-            raise AssertionError(f"Mission with {uid} not found")
+        _uid = uuid.UUID(uid)
+        print(f"{self.missions_uids=}")
+        if _uid not in self.missions_uids:
+            raise AssertionError(f"Mission with {_uid=} not found")
 
-        return [m for m in self.mission_memory if m["uid"] == uid]
+        return [m for m in self.mission_memory if m.uid == _uid]
 
     def __repr__(self) -> str:
         return f"===> Chat <===\n{pformat(self.chat_memory)}\n\n===> Mission <===\n{pformat(self.mission_memory)}\n\n===> Tool calls <===\n{pformat(self.tool_calls)}"
@@ -110,8 +111,8 @@ def initialize_agent(_node: BaseHMINode, _memory: Memory):
     )
 
     @tool
-    def get_mission_memory(uid: Optional[str] = None) -> List[MissionMessage]:
-        """List mission memory. Pass uid if memory for specific mission is required."""
+    def get_mission_memory(uid: str) -> List[MissionMessage]:
+        """List mission memory. Mission uid is required."""
         return _memory.get_mission_memory(uid)
 
     @tool
@@ -127,7 +128,7 @@ def initialize_agent(_node: BaseHMINode, _memory: Memory):
                 uid=uid,
             )
         )
-        return f"Task added to the queue: {task.json()}"
+        return f"UID={uid} | Task added to the queue: {task.json()}"
 
     tools = [add_task_to_queue, get_mission_memory]
     agent = create_conversational_agent(
