@@ -14,7 +14,7 @@
 #
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import ClassVar, Optional, Tuple
 
 from pydantic import UUID4
 
@@ -35,37 +35,38 @@ class EMOJIS:
 
 @dataclass
 class MissionMessage:
+    AVATAR: ClassVar[str] = EMOJIS.unknown
+    STATUS: ClassVar[str] = "Status unknown"
+
     uid: UUID4
     content: Optional[str] = ""
-    avatar: Optional[str] = EMOJIS.unknown
 
     def __repr__(self):
-        return f"{self.uid} | {self.content}"
+        return f"{self.STATUS}({self.uid})\n{self.content}"
 
     def render_steamlit(self) -> Tuple[str, str]:
-        return self.avatar, str(self)
+        return self.AVATAR, str(self)
 
 
-# TODO(boczekbartek): fix avatars
 class MissionAcceptanceMessage(MissionMessage):
-    avatar: Optional[str] = EMOJIS.accepted
-
-    def __repr__(self):
-        return f"Acceptance: {self.uid} | {self.content}"
+    AVATAR: ClassVar[str] = EMOJIS.accepted
+    STATUS: ClassVar[str] = "Accepted"
 
 
 class MissionFeedbackMessage(MissionMessage):
-    avatar: Optional[str] = EMOJIS.in_progress
-
-    def __repr__(self):
-        return f"Feedback: {self.uid} | {self.content}"
+    AVATAR: ClassVar[str] = EMOJIS.in_progress
+    STATUS: ClassVar[str] = "Feedback"
 
 
 class MissionDoneMessage(MissionMessage):
+    AVATAR: ClassVar[str] = EMOJIS.success
+    STATUS: ClassVar[str] = "Done"
+
     def __init__(self, uid: UUID4, result: Task.Result):
         self.success = result.success
         self.report = result.report
         super().__init__(uid=uid, content=self.report)
 
     def __repr__(self):
-        return f"{self.uid} | Success={self.success}\nReport={self.report}"
+        repr = super().__repr__()
+        return f"{repr}. Success={self.success}\nReport={self.report}"

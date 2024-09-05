@@ -36,7 +36,7 @@ from langchain_core.messages import (
 )
 from langchain_openai.chat_models import ChatOpenAI
 from PIL import Image
-from pydantic import UUID4, BaseModel
+from pydantic import UUID1, BaseModel
 from streamlit.delta_generator import DeltaGenerator
 
 from rai.agents.conversational_agent import create_conversational_agent
@@ -63,7 +63,7 @@ class Memory:
         self.mission_memory: List[MissionMessage] = []
         self.chat_memory = []
         self.tool_calls = {}
-        self.missions_uids: Set[UUID4] = set()
+        self.missions_uids: Set[UUID1] = set()
 
     def register_tool_calls(self, tool_calls: List[ToolCall]):
         for tool_call in tool_calls:
@@ -119,7 +119,7 @@ def initialize_agent(_node: BaseHMINode, _memory: Memory):
     def add_task_to_queue(task: TaskInput):
         """Use this tool to add a task to the queue. The task will be handled by the executor part of your system."""
 
-        uid = uuid.uuid4()
+        uid = uuid.uuid1()
         _node.add_task_to_queue(
             Task(
                 name=task.name,
