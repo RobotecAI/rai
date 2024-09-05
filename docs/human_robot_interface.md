@@ -4,8 +4,8 @@ You can utilize RAI Human-Robot Interaction (HRI) package to converse with your 
 This package allows you to simply chat with your robot, or to give it tasks and receive feedback and reports.
 You have the following options:
 
-- [Voice communication](human_robot_interface/voice_interface.md) using ASR and TTS models (OpenAI Whisper)
-- [Text communication](human_robot_interface/text_interface.md) using Streamlit
+- [Voice communication](human_robot_interface/voice_interface.md) using ASR and TTS models ([OpenAI Whisper](https://openai.com/index/whisper/))
+- [Text communication](human_robot_interface/text_interface.md) using [Streamlit](https://streamlit.io)
 
 If your environment is noisy, voice communication might be tricky. 
 In noisy environments, it is better to use text channel.
