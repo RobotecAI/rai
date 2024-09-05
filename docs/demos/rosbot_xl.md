@@ -23,7 +23,7 @@ This demo utilizes Open 3D Engine simulation and allows you to work with RAI on 
 
 4. Start navigation stack:
    ```bash
-   ./src/examples/rosbot-xl-demo/run-nav.sh
+   ./src/examples/rai-rosbot-xl-demo/run-nav.sh
    ```
 
 You are now ready to [run RAI](#running-rai)!
