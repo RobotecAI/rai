@@ -1,6 +1,6 @@
 # Your robot identity in RAI
 
-RAI Agent needs to understand what kind of robot it is running on. 
+RAI Agent needs to understand what kind of robot it is running on.
 This includes its looks, purpose, ethical code, equipment, capabilities and documentation.
 To configure RAI for your robot, provide contents for your robot's so called `whoami` package.
 
@@ -29,7 +29,7 @@ poetry run parse_whoami_package src/examples/panda_whoami/description src/exampl
 
 ## Testing
 
-You can test your new `panda_whoami` package by calling `rai_whoami` services: 
+You can test your new `panda_whoami` package by calling `rai_whoami` services:
 
 2. Building and sourcing the install
 

@@ -13,6 +13,7 @@ vcs import < demos.repos
 ```
 
 Once you have all the demos pulled, see dedicated docs to proceed:
+
 - [Husarion ROSBot XL in an apartment](demos/rosbot_xl.md)
 - Coming soon - autonomous tractor in an orchard.
 - Coming soon - inspection with ANYmal robot dog.

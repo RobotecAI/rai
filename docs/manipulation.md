@@ -2,8 +2,8 @@
 
 ## Overview
 
-Vision-Language-Action (VLA) models represent a novel approach to controlling robots, 
-offering significant potential to automate and generalize robotic operations. 
+Vision-Language-Action (VLA) models represent a novel approach to controlling robots,
+offering significant potential to automate and generalize robotic operations.
 We are working on integrating this approach with RAI to further extend RAI's versatility.
 
 The upcoming manipulation demo will showcase a practical use case where a single prompt can be used to instruct a robotic arm to perform a series of specific tasks.

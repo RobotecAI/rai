@@ -1,6 +1,6 @@
-# Husarion Robot XL demo 
+# Husarion Robot XL demo
 
-This demo utilizes Open 3D Engine simulation and allows you to work with RAI on a small mobile platform in a nice apartment. 
+This demo utilizes Open 3D Engine simulation and allows you to work with RAI on a small mobile platform in a nice apartment.
 
 ![Screenshot1](../imgs/o3deSimulation.png)
 
@@ -80,7 +80,6 @@ ros2 topic pub --once /task_addition_requests std_msgs/msg/String "data: 'Drive 
 
 > **NOTE**: For now agent is capable of performing only 1 task at once.
 > Human-Robot Interaction module is not yet included in the demo (coming soon!).
-
 
 ### What is happening?
 

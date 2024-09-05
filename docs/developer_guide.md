@@ -1,6 +1,6 @@
 # Developer Guide
 
-RAI is a flexible AI agent framework designed to handle tasks in generalized manner. 
+RAI is a flexible AI agent framework designed to handle tasks in generalized manner.
 It is easily extendable, allowing developers to adapt and integrate new functionalities and tools to meet their needs.
 
 ## Try out RAI
@@ -24,7 +24,7 @@ Follow instructions to [configure RAI identity for your robot](create_robots_who
 
 RAI has general capabilities to interact through ROS interfaces such as actions and topics.
 However, you can extend RAI with tools dedicated to what your robot needs to do.
-These functions should be decorated with @tool and should interact with your robot's API. 
+These functions should be decorated with @tool and should interact with your robot's API.
 See the example below.
 
 ```python
@@ -89,7 +89,6 @@ Additional resources:
 - Available ROS 2 packages: [ros packages](ros_packages.md).
 - [Human-Robot Interface](human_robot_interface.md) through voice and text.
 - [Manipulation](manipulation.md) with OpenVLA.
-
 
 ## Architecture diagram
 

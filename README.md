@@ -112,6 +112,7 @@ If you do not have a key, see how to generate one [here](https://platform.openai
 ```
 export OPENAI_API_KEY=""
 ```
+
 It is best to put this command into your `~/.bashrc` file for convenience, so it is effective for each new console.
 
 Congratulations, your installation is now completed!
@@ -149,11 +150,11 @@ Follow this guide: [husarion-rosbot-xl-demo](docs/demos.md)
 
 Once you know your way around RAI, try the following challenges, with the aid the [developer guide](developer_guide.md):
 
-- Run RAI on your own robot and talk to it, asking questions about what is in its documentation (and others!). 
+- Run RAI on your own robot and talk to it, asking questions about what is in its documentation (and others!).
 - Implement additional tools and use them in your interaction.
 - Try a complex, multi-step task for your robot, such as going to several points to perform observations!
 
-Soon you will have an opportunity to work with new RAI demos across several domains. 
+Soon you will have an opportunity to work with new RAI demos across several domains.
 
 ### Planned demos
 
