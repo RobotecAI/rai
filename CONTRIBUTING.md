@@ -31,7 +31,7 @@ Some of the easiest ways to contribute to RAI involve engaging in community disc
 
 ### Setting up the development environment
 
-To get started install RAI from source code using these [instructions](/README.md).
+To get started install RAI from source code using these [instructions](docs/developer_guide.md#developer-environment-setup).
 
 ### Starting the discussion
 
