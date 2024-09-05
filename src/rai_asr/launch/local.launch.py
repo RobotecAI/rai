@@ -33,9 +33,14 @@ def generate_launch_description():
                 description="Language code for the ASR model",
             ),
             DeclareLaunchArgument(
-                "model",
-                default_value="whisper-1",
-                description="Model type for the ASR model",
+                "model_name",
+                default_value="base",
+                description="Model name for the ASR model",
+            ),
+            DeclareLaunchArgument(
+                "model_vendor",
+                default_value="whisper",
+                description="Model vendor of the ASR",
             ),
             DeclareLaunchArgument(
                 "silence_grace_period",

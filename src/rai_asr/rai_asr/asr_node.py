@@ -13,23 +13,19 @@
 # limitations under the License.
 #
 
-import io
 import threading
 import time
 from datetime import datetime, timedelta
-from functools import partial
 from typing import Literal
 
 import numpy as np
 import rclpy
 import sounddevice as sd
 import torch
-from openai import OpenAI
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
-from scipy.io import wavfile
 from std_msgs.msg import String
 
 SAMPLING_RATE = 16000
@@ -43,7 +39,7 @@ class ASRNode(Node):
         self._setup_node_components()
         self._initialize_variables()
         self._setup_publishers_and_subscribers()
-        self._load_whisper_model()
+        self._initialize_asr_model()
 
     def _declare_parameters(self):
         self.declare_parameter(
@@ -58,6 +54,14 @@ class ASRNode(Node):
             ),
         )
         self.declare_parameter(
+            "model_vendor",
+            "whisper",  # openai, whisper
+            ParameterDescriptor(
+                type=ParameterType.PARAMETER_STRING,
+                description="Vendor of the ASR model",
+            ),
+        )
+        self.declare_parameter(
             "language",
             "en",
             ParameterDescriptor(
@@ -66,8 +70,8 @@ class ASRNode(Node):
             ),
         )
         self.declare_parameter(
-            "model",
-            "whisper-1",
+            "model_name",
+            "base",
             ParameterDescriptor(
                 type=ParameterType.PARAMETER_STRING,
                 description="Model type for the ASR model",
@@ -106,8 +110,11 @@ class ASRNode(Node):
             .get_parameter_value()
             .double_value
         )  # type: ignore
-        self.whisper_model = (
-            self.get_parameter("model").get_parameter_value().string_value
+        self.model_name = (
+            self.get_parameter("model_name").get_parameter_value().string_value
+        )  # type: ignore
+        self.model_vendor = (
+            self.get_parameter("model_vendor").get_parameter_value().string_value
         )  # type: ignore
         self.language = (
             self.get_parameter("language").get_parameter_value().string_value
@@ -135,11 +142,17 @@ class ASRNode(Node):
             callback_group=self.callback_group,
         )
 
-    def _load_whisper_model(self):
-        self.openai_client = OpenAI()
-        self.model = partial(
-            self.openai_client.audio.transcriptions.create, model=self.whisper_model
-        )
+    def _initialize_asr_model(self):
+        if self.model_vendor == "openai":
+            from rai_asr.asr_clients import OpenAIWhisper
+
+            self.model = OpenAIWhisper(self.model_name, self.sample_rate, self.language)
+        elif self.model_vendor == "whisper":
+            from rai_asr.asr_clients import LocalWhisper
+
+            self.model = LocalWhisper(self.model_name, self.sample_rate, self.language)
+        else:
+            raise ValueError(f"Unknown model vendor: {self.model_vendor}")
 
     def tts_status_callback(self, msg: String):
         if msg.data == "processing":
@@ -209,19 +222,14 @@ class ASRNode(Node):
         self.get_logger().info("Calling ASR model")
         combined_audio = np.concatenate(self.audio_buffer)
 
-        with io.BytesIO() as temp_wav_buffer:
-            wavfile.write(temp_wav_buffer, self.sample_rate, combined_audio)
-            temp_wav_buffer.seek(0)
-            temp_wav_buffer.name = "temp.wav"
+        transcription = self.model(data=combined_audio)
 
-            response = self.model(file=temp_wav_buffer, language=self.language)
-            transcription = response.text
-            if transcription.lower() in ["you", ""]:
-                self.get_logger().info(f"Dropping transcription: '{transcription}'")
-                self.publish_status("dropping")
-            else:
-                self.get_logger().info(f"Transcription: {transcription}")
-                self.publish_transcription(transcription)
+        if transcription.lower() in ["you", ""]:
+            self.get_logger().info(f"Dropping transcription: '{transcription}'")
+            self.publish_status("dropping")
+        else:
+            self.get_logger().info(f"Transcription: {transcription}")
+            self.publish_transcription(transcription)
 
         self.last_transcription_time = time.time()
 
