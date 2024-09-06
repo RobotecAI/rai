@@ -17,7 +17,6 @@ import io
 import os
 import threading
 import time
-import wave
 from datetime import datetime, timedelta
 from functools import partial
 from typing import Literal, Optional, cast
@@ -292,11 +291,15 @@ class ASRNode(Node):
             if self.should_listen(audio_data):
                 self.silence_start_time = datetime.now()
                 if not self.is_recording:
-                    self.reset_buffer()
                     self.start_recording()
                 self.audio_buffer.append(audio_data)
             elif self.is_recording:
                 self.audio_buffer.append(audio_data)
+                if not isinstance(self.silence_start_time, datetime):
+                    raise ValueError(
+                        "Silence start time is not set, this should not happen"
+                    )
+
                 if datetime.now() - self.silence_start_time > timedelta(
                     seconds=self.silence_grace_period
                 ):
@@ -320,6 +323,7 @@ class ASRNode(Node):
 
     def transcribe_audio(self):
         combined_audio = np.concatenate(self.audio_buffer)
+        self.reset_buffer()  # consume the buffer, so we don't transcribe the same audio twice
 
         with io.BytesIO() as temp_wav_buffer:
             wavfile.write(temp_wav_buffer, self.sample_rate, combined_audio)
@@ -332,8 +336,6 @@ class ASRNode(Node):
             self.publish_transcription(transcription)
 
         self.last_transcription_time = time.time()
-
-        # self.audio_buffer = []
 
     def publish_transcription(self, transcription: str):
         msg = String()
