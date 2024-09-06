@@ -30,9 +30,10 @@ from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
+from scipy.signal import resample
 from std_msgs.msg import String
 
-SAMPLING_RATE = 16000
+DEFAULT_SAMPLING_RATE = 16000
 
 
 class ASRNode(Node):
@@ -55,7 +56,7 @@ class ASRNode(Node):
         self.tts_lock = False
 
         self.grace_period = timedelta(seconds=self.silence_grace_period)
-        self.transcription_recording_timeout = 5
+        self.transcription_recording_timeout = 1
         self.get_logger().info("ASR Node has been initialized")  # type: ignore
 
     def _declare_parameters(self):
@@ -157,7 +158,6 @@ class ASRNode(Node):
 
     def _setup_node_components(self):
         self.callback_group = ReentrantCallbackGroup()
-        self.sample_rate = SAMPLING_RATE
 
     def _initialize_parameters(self):
         self.silence_grace_period = cast(
@@ -227,11 +227,15 @@ class ASRNode(Node):
         if self.model_vendor == "openai":
             from rai_asr.asr_clients import OpenAIWhisper
 
-            self.model = OpenAIWhisper(self.model_name, self.sample_rate, self.language)
+            self.model = OpenAIWhisper(
+                self.model_name, DEFAULT_SAMPLING_RATE, self.language
+            )
         elif self.model_vendor == "whisper":
             from rai_asr.asr_clients import LocalWhisper
 
-            self.model = LocalWhisper(self.model_name, self.sample_rate, self.language)
+            self.model = LocalWhisper(
+                self.model_name, DEFAULT_SAMPLING_RATE, self.language
+            )
         else:
             raise ValueError(f"Unknown model vendor: {self.model_vendor}")
 
@@ -257,7 +261,7 @@ class ASRNode(Node):
             return sound
 
         vad_confidence = self.vad_model(
-            torch.tensor(int2float(audio_data[-512:])), self.sample_rate
+            torch.tensor(int2float(audio_data[-512:])), DEFAULT_SAMPLING_RATE
         ).item()
 
         if self.oww_model:
@@ -277,13 +281,17 @@ class ASRNode(Node):
         return False
 
     def capture_sound(self):
-        window_size_samples = 1280
+        device_sample_rate = sd.query_devices(
+            device=self.recording_device_number, kind="input"
+        )[
+            "default_samplerate"
+        ]  # type: ignore
+        window_size_samples = int(1280 * device_sample_rate / DEFAULT_SAMPLING_RATE)
         stream = sd.InputStream(
-            samplerate=self.sample_rate,
+            samplerate=device_sample_rate,
             channels=1,
             device=self.recording_device_number,
             dtype="int16",
-            blocksize=window_size_samples,
         )
         stream.start()
         self.get_logger().info("Stream started. Waiting for speech...")  # type: ignore
@@ -297,6 +305,12 @@ class ASRNode(Node):
             )
             if asr_lock or self.hmi_lock or self.tts_lock:
                 continue
+
+            sample_time_length = len(audio_data) / device_sample_rate
+            if device_sample_rate != DEFAULT_SAMPLING_RATE:
+                audio_data = resample(
+                    audio_data, int(sample_time_length * DEFAULT_SAMPLING_RATE)
+                )
 
             if self.should_listen(audio_data):
                 self.silence_start_time = datetime.now()
