@@ -60,12 +60,17 @@ def generate_launch_description():
         name="asr_node",
         output="screen",
         parameters=[
-            {"recording_device": LaunchConfiguration("recording_device", default=0),
-             "use_wake_word": LaunchConfiguration("use_wake_word", default=False),
-             "wake_word_treshold": LaunchConfiguration("wake_word_treshold", default=0.1),
-             "wake_word_model": LaunchConfiguration("wake_word_model", default=""),
-             "vad_treshold": LaunchConfiguration("vad_treshold", default=0.5),
-             "silence_grace_period": LaunchConfiguration("silence_grace_period", default=1.0)
+            {
+                "recording_device": LaunchConfiguration("recording_device", default=0),
+                "use_wake_word": LaunchConfiguration("use_wake_word", default=False),
+                "wake_word_treshold": LaunchConfiguration(
+                    "wake_word_treshold", default=0.1
+                ),
+                "wake_word_model": LaunchConfiguration("wake_word_model", default=""),
+                "vad_treshold": LaunchConfiguration("vad_treshold", default=0.5),
+                "silence_grace_period": LaunchConfiguration(
+                    "silence_grace_period", default=1.0
+                ),
             }
         ],
     )
