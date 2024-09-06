@@ -14,6 +14,7 @@
 #
 
 from .cli import Ros2InterfaceTool, Ros2ServiceTool, Ros2TopicTool
+from .native import Ros2BaseInput, Ros2BaseTool
 from .tools import (
     AddDescribedWaypointToDatabaseTool,
     GetCurrentPositionTool,
@@ -24,6 +25,8 @@ __all__ = [
     "Ros2TopicTool",
     "Ros2InterfaceTool",
     "Ros2ServiceTool",
+    "Ros2BaseTool",
+    "Ros2BaseInput",
     "AddDescribedWaypointToDatabaseTool",
     "GetOccupancyGridTool",
     "GetCurrentPositionTool",
