@@ -298,6 +298,11 @@ class ASRNode(Node):
         if asr_lock or self.hmi_lock or self.tts_lock:
             return
 
+        if not self.is_recording:  # keep last 5 indata of audio ~ 400ms
+            self.audio_buffer.append(indata)
+            if len(self.audio_buffer) > 5:
+                self.audio_buffer.pop(0)
+
         if self.should_listen(indata):
             self.silence_start_time = time.time()
             if not self.is_recording:
