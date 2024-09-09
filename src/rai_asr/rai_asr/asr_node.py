@@ -31,7 +31,7 @@ from rclpy.node import Node
 from scipy.signal import resample
 from std_msgs.msg import String
 
-DEFAULT_SAMPLING_RATE = 16000
+VAD_SAMPLING_RATE = 16000  # default value used by silero vad
 DEFAULT_BLOCKSIZE = 1280
 
 
@@ -231,14 +231,12 @@ class ASRNode(Node):
             from rai_asr.asr_clients import OpenAIWhisper
 
             self.model = OpenAIWhisper(
-                self.model_name, DEFAULT_SAMPLING_RATE, self.language
+                self.model_name, VAD_SAMPLING_RATE, self.language
             )
         elif self.model_vendor == "whisper":
             from rai_asr.asr_clients import LocalWhisper
 
-            self.model = LocalWhisper(
-                self.model_name, DEFAULT_SAMPLING_RATE, self.language
-            )
+            self.model = LocalWhisper(self.model_name, VAD_SAMPLING_RATE, self.language)
         else:
             raise ValueError(f"Unknown model vendor: {self.model_vendor}")
 
@@ -264,7 +262,7 @@ class ASRNode(Node):
             return sound
 
         vad_confidence = self.vad_model(
-            torch.tensor(int2float(audio_data[-512:])), DEFAULT_SAMPLING_RATE
+            torch.tensor(int2float(audio_data[-512:])), VAD_SAMPLING_RATE
         ).item()
 
         if self.oww_model:
@@ -288,8 +286,8 @@ class ASRNode(Node):
             self.get_logger().warning(f"Stream status: {status}")  # type: ignore
         indata = indata.flatten()
         sample_time_length = len(indata) / self.device_sample_rate
-        if self.device_sample_rate != DEFAULT_SAMPLING_RATE:
-            indata = resample(indata, int(sample_time_length * DEFAULT_SAMPLING_RATE))
+        if self.device_sample_rate != VAD_SAMPLING_RATE:
+            indata = resample(indata, int(sample_time_length * VAD_SAMPLING_RATE))
 
         asr_lock = (
             time.time()
@@ -325,7 +323,7 @@ class ASRNode(Node):
             "default_samplerate"
         ]  # type: ignore
         self.window_size_samples = int(
-            DEFAULT_BLOCKSIZE * self.device_sample_rate / DEFAULT_SAMPLING_RATE
+            DEFAULT_BLOCKSIZE * self.device_sample_rate / VAD_SAMPLING_RATE
         )
         self.stream = sd.InputStream(
             samplerate=self.device_sample_rate,
