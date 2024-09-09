@@ -34,6 +34,16 @@ def import_message_from_str(msg_type: str) -> Type[object]:
     return import_message_from_namespaced_type(msg_namespaced_type)
 
 
+def convert_ros_img_to_cv2mat(msg: sensor_msgs.msg.Image) -> cv2.typing.MatLike:
+    bridge = CvBridge()
+    cv_image = cast(cv2.Mat, bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"))  # type: ignore
+    if cv_image.shape[-1] == 4:
+        cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGRA2RGB)
+    else:
+        cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+    return cv_image
+
+
 def convert_ros_img_to_base64(msg: sensor_msgs.msg.Image) -> str:
     bridge = CvBridge()
     cv_image = cast(cv2.Mat, bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"))  # type: ignore
