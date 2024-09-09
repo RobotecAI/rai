@@ -81,8 +81,11 @@ class HMINode(Node):
             String, "to_human", 10, callback_group=self.callback_group
         )
 
+        status_publisher_timer_period_sec = 0.25
         self.create_timer(
-            0.25, self.status_callback, callback_group=self.callback_group
+            status_publisher_timer_period_sec,
+            self.status_callback,
+            callback_group=self.callback_group,
         )
 
         self.status_publisher = self.create_publisher(String, "hmi_status", 10)  # type: ignore
