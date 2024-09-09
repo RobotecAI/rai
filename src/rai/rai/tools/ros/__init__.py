@@ -26,7 +26,6 @@ __all__ = [
     "Ros2InterfaceTool",
     "Ros2ServiceTool",
     "Ros2BaseTool",
-    "Ros2BaseInput",
     "AddDescribedWaypointToDatabaseTool",
     "GetOccupancyGridTool",
     "GetCurrentPositionTool",
