@@ -37,7 +37,9 @@ class Ros2GetDetectionInput(Ros2BaseInput):
 
 class GetDetectionTool(Ros2BaseTool):
     name: str = "GetDetectionTool"
-    description: str = "A tool for detecting to a specified object using a ros2 action. The tool call might take some time to execute and is blocking - you will not be able to check their feedback, only will be informed about the result."
+    description: str = (
+        "A tool for detecting to a specified object using a ros2 action. The tool call might take some time to execute and is blocking - you will not be able to check their feedback, only will be informed about the result."
+    )
 
     args_schema: Type[Ros2GetDetectionInput] = Ros2GetDetectionInput
 
