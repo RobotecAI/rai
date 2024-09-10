@@ -16,12 +16,12 @@ case "$SHELL" in
         . install/setup.zsh
         echo "Sourced zsh install"
         ;;
+    *fish)
+        echo "fish is not supported"
+        ;;
     *sh)
         . install/setup.sh
         echo "Sourced sh install."
-        ;;
-    *fish)
-        echo "fish is not supported"
         ;;
     *)
         echo "Unknown shell: $0"
