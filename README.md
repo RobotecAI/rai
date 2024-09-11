@@ -111,8 +111,7 @@ source ./setup_shell.sh
 
 ### 3. Setting up vendors
 
-RAI is fully vendor-agnostic, however the beta development work currently utilizes OpenAI models (mostly).
-Most of the RAI modules, will use the configuration from [config.toml](./config.toml) file in which you can set up your vendor of choice.
+RAI aims to be vendor-agnostic. You can use the configuration in [config.toml](./config.toml) to set up your vendor of choice for most RAI modules.
 
 > [!NOTE]  
 > Some of the RAI modules still are hardcoded to OpenAI models. An effort is underway to make them configurable via [config.toml](./config.toml) file.
