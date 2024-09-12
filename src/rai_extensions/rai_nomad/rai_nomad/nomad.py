@@ -40,7 +40,9 @@ class NomadNode(Node):
         self.create_subscription(Empty, "/rai_nomad/stop", self.stop_callback, 10)
 
         self.image_subscription = None
-        self.publisher = self.create_publisher(Twist, "/cmd_vel", 10)
+
+        cmd_vel_topic = self.get_parameter("cmd_vel_topic").get_parameter_value().string_value
+        self.publisher = self.create_publisher(Twist, cmd_vel_topic, 10)
 
     def _initialize_parameters(self):
         self.declare_parameter(
@@ -65,6 +67,14 @@ class NomadNode(Node):
             descriptor=ParameterDescriptor(
                 type=ParameterType.PARAMETER_STRING,
                 description=("The topic to subscribe to for image data"),
+            ),
+        )
+        self.declare_parameter(
+            "cmd_vel_topic",
+            "/cmd_vel",
+            descriptor=ParameterDescriptor(
+                type=ParameterType.PARAMETER_STRING,
+                description=("The topic to publish velocity commands to"),
             ),
         )
         self.declare_parameter(
