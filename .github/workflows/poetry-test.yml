@@ -25,6 +25,14 @@ jobs:
       - name: Install Poetry
         uses: snok/install-poetry@v1
 
+      - name: Cache Poetry dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pypoetry
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
+
       - name: Install python dependencies
         run: poetry install --with gdino
 
@@ -32,6 +40,12 @@ jobs:
         shell: bash
         run: |
           rosdep update
+
+      - name: Cache rosdep packages
+        uses: actions/cache@v3
+        with:
+          path: /var/lib/apt/lists
+          key: ${{ runner.os }}-rosdep-${{ matrix.ros_distro }}-${{ hashFiles('**/package.xml') }}
 
       - name: Install ROS 2 package dependencies
         shell: bash
