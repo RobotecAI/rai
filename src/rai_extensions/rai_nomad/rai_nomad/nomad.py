@@ -9,6 +9,7 @@ import yaml
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from rclpy.node import Node
 from rclpy.executors import SingleThreadedExecutor
+from ament_index_python.packages import get_package_share_directory
 
 # ROS
 from sensor_msgs.msg import Image
@@ -52,7 +53,7 @@ class NomadNode(Node):
         )
         self.declare_parameter(
             "model_config_path",
-            "",
+            os.path.join(get_package_share_directory("rai_nomad"), "nomad_params.yaml"),
             descriptor=ParameterDescriptor(
                 type=ParameterType.PARAMETER_STRING,
                 description=("Path to the .yaml file containing the nomad model configuration"),
