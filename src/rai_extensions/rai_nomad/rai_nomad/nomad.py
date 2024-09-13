@@ -63,7 +63,7 @@ class NomadNode(Node):
         )
         self.declare_parameter(
             "image_topic",
-            "/camera/camera/color/image_raw",
+            "/camera/color/image_raw",
             descriptor=ParameterDescriptor(
                 type=ParameterType.PARAMETER_STRING,
                 description=("The topic to subscribe to for image data"),
