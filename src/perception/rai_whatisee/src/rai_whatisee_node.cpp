@@ -12,12 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <cv_bridge/cv_bridge.h>
 #include <rcl/validate_topic_name.h>
 
+#include <mutex>
+#include <opencv2/opencv.hpp>
+#include <opencv2/quality/qualityssim.hpp>
 #include <rai_interfaces/srv/what_i_see.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <std_srvs/srv/trigger.hpp>
+#include <string>
 
 class WhatISeeNode : public rclcpp::Node
 {
@@ -73,6 +78,7 @@ private:
     [[maybe_unused]] const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
     const std::shared_ptr<std_srvs::srv::Trigger::Response> response)
   {
+    std::lock_guard<std::mutex> lock(mutex_);
     if (!fresh_color_camera_image_) {
       response->success = false;
       return;
@@ -91,6 +97,7 @@ private:
     [[maybe_unused]] const std::shared_ptr<rai_interfaces::srv::WhatISee::Request> request,
     const std::shared_ptr<rai_interfaces::srv::WhatISee::Response> response)
   {
+    std::lock_guard<std::mutex> lock(mutex_);
     response->observations.push_back("nothing to add");
     response->perception_source = camera_color_topic_;
     response->image = *fresh_color_camera_image_;
@@ -102,6 +109,7 @@ private:
     auto time_now = get_clock()->now();
     if (time_now - last_observation_timestamp_ > observation_interval_) {
       if (is_image_novel(msg)) {
+        std::lock_guard<std::mutex> lock(mutex_);
         fresh_color_camera_image_ = msg;
       }
       last_observation_timestamp_ = time_now;
@@ -114,21 +122,35 @@ private:
     if (!last_color_camera_image_) {
       return true;
     }
-    //TODO - implement a similarity measure
-    return true;
+    cv::Mat new_img_opencv;
+    cv::Mat old_img_opencv;
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      try {
+        new_img_opencv = cv_bridge::toCvCopy(msg, "mono8")->image;
+        // TODO - save the old conversion
+        old_img_opencv = cv_bridge::toCvCopy(last_color_camera_image_, "mono8")->image;
+      } catch (cv_bridge::Exception & e) {
+        RCLCPP_ERROR(this->get_logger(), "Failed to convert image: %s", e.what());
+        return false;
+      }
+    }
+    const cv::Scalar ssim =
+      cv::quality::QualitySSIM::compute(new_img_opencv, old_img_opencv, cv::noArray());
+    return ssim[0] < image_similarity_threshold_;
   }
 
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr camera_color_image_subscription_;
   rclcpp::Service<rai_interfaces::srv::WhatISee>::SharedPtr whatisee_srv_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr anything_new_srv_;
 
-  rclcpp::Duration observation_interval_{
-    0, 0};  // Zero is allowed value, means no interval filtering
+  rclcpp::Duration observation_interval_{0, 0};  // Zero is allowed, means no interval filtering
   float image_similarity_threshold_;
   std::string camera_color_topic_;
   rclcpp::Time last_observation_timestamp_;
   sensor_msgs::msg::Image::SharedPtr fresh_color_camera_image_;
   sensor_msgs::msg::Image::SharedPtr last_color_camera_image_;
+  std::mutex mutex_;
 };
 
 int main(int argc, char ** argv)
