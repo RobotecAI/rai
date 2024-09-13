@@ -46,7 +46,6 @@ The model will be loaded and ready, but it will not run until you send a message
 
 - `model_path`: Path to the .pth model weights file.
 - `image_topic`: The topic where the camera images are being published.
-- `action_topic`: The topic where the action messages are being published.
 - `cmd_vel_topic`: The topic where the velocity commands are being published. Default: `/cmd_vel`.
 - `linear_vel`: Linear velocity scaling of the model output.
 - `angular_vel`: Angular velocity scaling of the model output.
