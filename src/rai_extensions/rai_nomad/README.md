@@ -38,7 +38,6 @@ Run the ROS2 node using `ros2 run`:
 ros2 run rai_nomad nomad --ros-args -p image_topic:=<your_image_topic>
 ```
 
-The model
 The model will be loaded and ready, but it will not run until you send a message to the `/rai_nomad/start` topic. Then it will start outputting velocity commands and your robot should start moving. You can then stop the model by sending a message to the `/rai_nomad/stop` topic.
 
 ### Parameters
