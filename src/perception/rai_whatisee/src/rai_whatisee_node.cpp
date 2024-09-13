@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include <cv_bridge/cv_bridge.h>
-#include <rcl/validate_topic_name.h>
 
 #include <mutex>
 #include <opencv2/opencv.hpp>
@@ -31,17 +30,16 @@ public:
   {
     constexpr float observation_interval_seconds_default = 0.5;  // Look only every X seconds
     constexpr float image_similarity_threshold_default = 0.9f;   // Below threshold are considered
-    const std::string camera_color_topic_default = "camera/color/image_raw";
+    const std::string camera_color_topic_default = "/camera/color/image_raw";
     this->declare_parameter("camera_color_topic", camera_color_topic_default);
     this->declare_parameter("observation_interval_seconds", observation_interval_seconds_default);
     this->declare_parameter("image_similarity_threshold", image_similarity_threshold_default);
 
     camera_color_topic_ = get_parameter("camera_color_topic").as_string();
-    if (
-      RCL_RET_OK != rcl_validate_topic_name_with_size(
-                      camera_color_topic_.c_str(), camera_color_topic_.size(), nullptr, nullptr)) {
-      RCLCPP_ERROR(get_logger(), "Invalid topic name: %s", camera_color_topic_.c_str());
-      return;
+    try {
+      rclcpp::expand_topic_or_service_name(camera_color_topic_, get_name(), get_namespace());
+    } catch (const rclcpp::exceptions::InvalidTopicNameError & e) {
+      std::cerr << "Invalid topic name: " << e.what() << std::endl;
     }
 
     image_similarity_threshold_ = get_parameter("image_similarity_threshold").as_double();
@@ -57,9 +55,8 @@ public:
     }
     observation_interval_ = rclcpp::Duration::from_seconds(interval_seconds);
 
-    const size_t history_depth = 1;
     camera_color_image_subscription_ = create_subscription<sensor_msgs::msg::Image>(
-      camera_color_topic_, history_depth,
+      camera_color_topic_, rclcpp::SensorDataQoS(),
       std::bind(&WhatISeeNode::image_callback, this, std::placeholders::_1));
 
     anything_new_srv_ = create_service<std_srvs::srv::Trigger>(
@@ -98,6 +95,11 @@ private:
     const std::shared_ptr<rai_interfaces::srv::WhatISee::Response> response)
   {
     std::lock_guard<std::mutex> lock(mutex_);
+    if (!fresh_color_camera_image_) {
+      response->observations.push_back("no image");
+      return;
+    }
+
     response->observations.push_back("nothing to add");
     response->perception_source = camera_color_topic_;
     response->image = *fresh_color_camera_image_;
