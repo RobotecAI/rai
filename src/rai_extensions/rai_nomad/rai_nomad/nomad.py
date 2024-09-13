@@ -211,6 +211,7 @@ class NomadNode(Node):
     def stop_callback(self, msg):
         if self.image_subscription is not None:
             self.get_logger().info("Received stop signal")
+            self.destroy_subscription(self.image_subscription)
             self.image_subscription = None
             self.timer.cancel()
             self.timer = None
