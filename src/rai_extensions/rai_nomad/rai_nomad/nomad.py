@@ -26,12 +26,8 @@ from geometry_msgs.msg import Twist
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
-
-# ROS
 from sensor_msgs.msg import Image
 from std_msgs.msg import Empty, Float32MultiArray
-
-# UTILS
 from visualnav_transformer.deployment.src.utils import (
     load_model,
     msg_to_pil,
