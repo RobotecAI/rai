@@ -30,7 +30,7 @@ setup(
     zip_safe=True,
     maintainer="kdabrowski",
     maintainer_email="kacper.dabrowski@robotec.ai",
-    description="TODO: Package description",
+    description="Package enabling exploration using NoMaD model in RAI",
     license="Apache-2.0",
     tests_require=["pytest"],
     entry_points={
