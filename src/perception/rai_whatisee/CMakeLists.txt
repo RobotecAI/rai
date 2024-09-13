@@ -10,13 +10,15 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rai_interfaces REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(cv_bridge REQUIRED)
+find_package(OpenCV REQUIRED)
 
 add_executable(rai_whatisee_node src/rai_whatisee_node.cpp)
 target_include_directories(rai_whatisee_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 target_compile_features(rai_whatisee_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
-ament_target_dependencies(rai_whatisee_node rclcpp std_srvs rai_interfaces)
+ament_target_dependencies(rai_whatisee_node rclcpp std_srvs rai_interfaces cv_bridge OpenCV)
 
 install(TARGETS rai_whatisee_node
   DESTINATION lib/${PROJECT_NAME})
