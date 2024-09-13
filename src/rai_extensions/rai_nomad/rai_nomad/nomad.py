@@ -16,6 +16,7 @@
 import os
 from typing import Tuple
 
+import gdown
 import numpy as np
 import rclpy
 import torch
@@ -57,11 +58,11 @@ class NomadNode(Node):
     def _initialize_parameters(self):
         self.declare_parameter(
             "model_path",
-            "",
+            os.path.join(get_package_share_directory("rai_nomad"), "nomad.pth"),
             descriptor=ParameterDescriptor(
                 type=ParameterType.PARAMETER_STRING,
                 description=(
-                    "Path to the .pth file containing the nomad model weights"
+                    "Path to the .pth file containing the nomad model weights (will be downloaded if not present)"
                 ),
             ),
         )
@@ -140,6 +141,9 @@ class NomadNode(Node):
             ),
         )
 
+    def _download_model(self, ckpth_path):
+        gdown.download(id="1YJhkkMJAYOiKNyCaelbS_alpUpAJsOUb", output=ckpth_path)
+
     def _initialize_nomad(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.get_logger().info(f"Using device: {self.device}")
@@ -168,7 +172,7 @@ class NomadNode(Node):
         if os.path.exists(ckpth_path):
             self.get_logger().info(f"Loading model from {ckpth_path}")
         else:
-            raise FileNotFoundError(f"Model weights not found at {ckpth_path}")
+            self._download_model(ckpth_path)
         self.model = load_model(
             ckpth_path,
             self.model_params,
