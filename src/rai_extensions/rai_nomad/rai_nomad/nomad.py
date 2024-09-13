@@ -13,27 +13,23 @@
 # limitations under the License.
 #
 
-import argparse
 import os
-import time
+from typing import Tuple
 
 import numpy as np
 import rclpy
 import torch
 import yaml
-from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
-from rclpy.node import Node
-from rclpy.executors import SingleThreadedExecutor
 from ament_index_python.packages import get_package_share_directory
+from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
+from geometry_msgs.msg import Twist
+from rcl_interfaces.msg import ParameterDescriptor, ParameterType
+from rclpy.executors import SingleThreadedExecutor
+from rclpy.node import Node
 
 # ROS
 from sensor_msgs.msg import Image
-from std_msgs.msg import Float32MultiArray
-from std_msgs.msg import Empty
-from rcl_interfaces.msg import ParameterDescriptor, ParameterType
-from geometry_msgs.msg import Twist
-
-from typing import Tuple
+from std_msgs.msg import Empty, Float32MultiArray
 
 # UTILS
 from visualnav_transformer.deployment.src.utils import (
@@ -43,6 +39,7 @@ from visualnav_transformer.deployment.src.utils import (
     transform_images,
 )
 from visualnav_transformer.train.vint_train.training.train_utils import get_action
+
 
 class NomadNode(Node):
     def __init__(self):
@@ -56,7 +53,9 @@ class NomadNode(Node):
 
         self.image_subscription = None
 
-        cmd_vel_topic = self.get_parameter("cmd_vel_topic").get_parameter_value().string_value
+        cmd_vel_topic = (
+            self.get_parameter("cmd_vel_topic").get_parameter_value().string_value
+        )
         self.publisher = self.create_publisher(Twist, cmd_vel_topic, 10)
 
     def _initialize_parameters(self):
@@ -65,7 +64,9 @@ class NomadNode(Node):
             "",
             descriptor=ParameterDescriptor(
                 type=ParameterType.PARAMETER_STRING,
-                description=("Path to the .pth file containing the nomad model weights"),
+                description=(
+                    "Path to the .pth file containing the nomad model weights"
+                ),
             ),
         )
         self.declare_parameter(
@@ -73,7 +74,9 @@ class NomadNode(Node):
             os.path.join(get_package_share_directory("rai_nomad"), "nomad_params.yaml"),
             descriptor=ParameterDescriptor(
                 type=ParameterType.PARAMETER_STRING,
-                description=("Path to the .yaml file containing the nomad model configuration"),
+                description=(
+                    "Path to the .yaml file containing the nomad model configuration"
+                ),
             ),
         )
         self.declare_parameter(
@@ -146,13 +149,19 @@ class NomadNode(Node):
         self.get_logger().info(f"Using device: {self.device}")
 
         self.sampled_actions_pub = self.create_publisher(
-            Float32MultiArray, self.get_parameter("sampled_actions_topic").get_parameter_value().string_value, 1
+            Float32MultiArray,
+            self.get_parameter("sampled_actions_topic")
+            .get_parameter_value()
+            .string_value,
+            1,
         )
 
         self.context_queue = []
         self.timer = None
 
-        model_config_path = self.get_parameter("model_config_path").get_parameter_value().string_value
+        model_config_path = (
+            self.get_parameter("model_config_path").get_parameter_value().string_value
+        )
         with open(model_config_path, "r") as f:
             self.model_params = yaml.safe_load(f)
 
@@ -179,21 +188,26 @@ class NomadNode(Node):
             clip_sample=True,
             prediction_type="epsilon",
         )
-    
+
     def start_callback(self, msg):
         if self.image_subscription is None:
             self.get_logger().info("Received start signal")
             rate = self.get_parameter("rate").get_parameter_value().integer_value
             self.timer = self.create_timer(1.0 / rate, self.timer_callback)
             qos_profile = rclpy.qos.QoSProfile(
-                reliability=rclpy.qos.ReliabilityPolicy.BEST_EFFORT,
-                depth=10
+                reliability=rclpy.qos.ReliabilityPolicy.BEST_EFFORT, depth=10
             )
-            image_topic = self.get_parameter("image_topic").get_parameter_value().string_value
-            self.image_subscription = self.create_subscription(Image, image_topic, self.image_callback, qos_profile)
+            image_topic = (
+                self.get_parameter("image_topic").get_parameter_value().string_value
+            )
+            self.image_subscription = self.create_subscription(
+                Image, image_topic, self.image_callback, qos_profile
+            )
         else:
-            self.get_logger().warn("Received start signal but the model is already running!")
-    
+            self.get_logger().warn(
+                "Received start signal but the model is already running!"
+            )
+
     def stop_callback(self, msg):
         if self.image_subscription is not None:
             self.get_logger().info("Received stop signal")
@@ -220,7 +234,9 @@ class NomadNode(Node):
                 self.context_queue, self.model_params["image_size"], center_crop=False
             )
             obs_images = obs_images.to(self.device)
-            fake_goal = torch.randn((1, 3, *self.model_params["image_size"])).to(self.device)
+            fake_goal = torch.randn((1, 3, *self.model_params["image_size"])).to(
+                self.device
+            )
             mask = torch.ones(1).long().to(self.device)  # ignore the goal
 
             # infer action
@@ -242,14 +258,14 @@ class NomadNode(Node):
 
                 # initialize action from Gaussian noise
                 noisy_action = torch.randn(
-                    (NUM_SAMPLES, self.model_params["len_traj_pred"], 2), device=self.device
+                    (NUM_SAMPLES, self.model_params["len_traj_pred"], 2),
+                    device=self.device,
                 )
                 naction = noisy_action
 
                 # init scheduler
                 self.noise_scheduler.set_timesteps(self.num_diffusion_iters)
 
-                start_time = time.time()
                 for k in self.noise_scheduler.timesteps[:]:
                     # predict noise
                     noise_pred = self.model(
@@ -291,7 +307,9 @@ class NomadNode(Node):
         """PD controller for the robot"""
         EPS = 1e-8
         linear_vel = self.get_parameter("linear_vel").get_parameter_value().double_value
-        angular_vel = self.get_parameter("angular_vel").get_parameter_value().double_value
+        angular_vel = (
+            self.get_parameter("angular_vel").get_parameter_value().double_value
+        )
         assert (
             len(waypoint) == 2 or len(waypoint) == 4
         ), "waypoint must be a 2D or 4D vector"
@@ -300,12 +318,9 @@ class NomadNode(Node):
         else:
             dx, dy, hx, hy = waypoint
         # this controller only uses the predicted heading if dx and dy near zero
-        if len(waypoint) == 4 and np.abs(dx) < EPS and np.abs(dy) < EPS:
+        if np.abs(dx) < EPS:
             v = 0
-            w = clip_angle(np.arctan2(hy, hx)) / DT
-        elif np.abs(dx) < EPS:
-            v = 0
-            w = np.sign(dy) * np.pi / (2 * DT)
+            w = np.sign(dy) * np.pi
         else:
             v = linear_vel * dx / np.abs(dy)
             w = angular_vel * np.arctan(dy / dx)
@@ -316,6 +331,7 @@ class NomadNode(Node):
         return v, w
 
         print("Published waypoint")
+
 
 def main(args=None):
     rclpy.init(args=args)
