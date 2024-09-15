@@ -5,6 +5,19 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+# Determine ROS 2 distribution
+if(DEFINED ENV{ROS_DISTRO})
+  if($ENV{ROS_DISTRO} STREQUAL "humble")
+    add_definitions(-DROS_DISTRO_HUMBLE)
+  elseif($ENV{ROS_DISTRO} STREQUAL "jazzy")
+    add_definitions(-DROS_DISTRO_JAZZY)
+  else()
+    message(WARNING "Unknown ROS 2 distribution: $ENV{ROS_DISTRO}. Defaulting to .hpp include.")
+  endif()
+else()
+  message(WARNING "ROS_DISTRO environment variable not set. Defaulting to .hpp include.")
+endif()
+
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
