@@ -60,7 +60,6 @@ The RAI framework aims to:
 - [x] Integration with LangChain to abstract vendors and access convenient AI tools.
 - [x] Tasks in natural language to nav2 goals.
 - [x] NoMaD integration.
-- [ ] OpenVLA integration.
 - [ ] Grounded SAM 2 integration.
 - [ ] Improved Human-Robot Interaction with voice and text.
 - [ ] SDK for RAI developers.
