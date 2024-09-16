@@ -12,10 +12,10 @@ if(DEFINED ENV{ROS_DISTRO})
   elseif($ENV{ROS_DISTRO} STREQUAL "jazzy")
     add_definitions(-DROS_DISTRO_JAZZY)
   else()
-    message(WARNING "Unknown ROS 2 distribution: $ENV{ROS_DISTRO}. Defaulting to .hpp include.")
+    message(WARNING "Unsupported ROS 2 distribution: $ENV{ROS_DISTRO}. Defaulting to .hpp include.")
   endif()
 else()
-  message(WARNING "ROS_DISTRO environment variable not set. Defaulting to .hpp include.")
+  message(FATAL_ERROR "ROS_DISTRO environment variable not set. Make sure to source your ROS 2 distribution before compiling").
 endif()
 
 # find dependencies
