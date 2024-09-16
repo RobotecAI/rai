@@ -28,7 +28,8 @@ from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
 from sensor_msgs.msg import Image
-from std_msgs.msg import Empty, Float32MultiArray
+from std_msgs.msg import Float32MultiArray
+from std_srvs.srv import Empty
 from visualnav_transformer.deployment.src.utils import (
     load_model,
     msg_to_pil,
@@ -45,8 +46,8 @@ class NomadNode(Node):
         self._initialize_parameters()
         self._initialize_nomad()
 
-        self.create_subscription(Empty, "/rai_nomad/start", self.start_callback, 10)
-        self.create_subscription(Empty, "/rai_nomad/stop", self.stop_callback, 10)
+        self.create_service(Empty, "/rai_nomad/start", self.start_callback)
+        self.create_service(Empty, "/rai_nomad/stop", self.stop_callback)
 
         self.image_subscription = None
 
@@ -189,35 +190,39 @@ class NomadNode(Node):
             prediction_type="epsilon",
         )
 
-    def start_callback(self, msg):
-        if self.image_subscription is None:
-            self.get_logger().info("Received start signal")
-            rate = self.get_parameter("rate").get_parameter_value().integer_value
-            self.timer = self.create_timer(1.0 / rate, self.timer_callback)
-            qos_profile = rclpy.qos.QoSProfile(
-                reliability=rclpy.qos.ReliabilityPolicy.BEST_EFFORT, depth=10
-            )
-            image_topic = (
-                self.get_parameter("image_topic").get_parameter_value().string_value
-            )
-            self.image_subscription = self.create_subscription(
-                Image, image_topic, self.image_callback, qos_profile
-            )
-        else:
-            self.get_logger().warn(
-                "Received start signal but the model is already running!"
-            )
-
-    def stop_callback(self, msg):
+    def start_callback(self, request, response):
         if self.image_subscription is not None:
-            self.get_logger().info("Received stop signal")
-            self.destroy_subscription(self.image_subscription)
-            self.image_subscription = None
-            self.timer.cancel()
-            self.timer = None
-            self.context_queue = []
-        else:
-            self.get_logger().warn("Received stop signal but the model is not running!")
+            self.get_logger().warn(
+                "Start service called, but the model is already running!"
+            )
+            return response
+
+        self.get_logger().info("Start service called")
+        rate = self.get_parameter("rate").get_parameter_value().integer_value
+        self.timer = self.create_timer(1.0 / rate, self.timer_callback)
+        qos_profile = rclpy.qos.QoSProfile(
+            reliability=rclpy.qos.ReliabilityPolicy.BEST_EFFORT, depth=10
+        )
+        image_topic = (
+            self.get_parameter("image_topic").get_parameter_value().string_value
+        )
+        self.image_subscription = self.create_subscription(
+            Image, image_topic, self.image_callback, qos_profile
+        )
+        return response
+
+    def stop_callback(self, request, response):
+        if self.image_subscription is None:
+            self.get_logger().warn("Stop service called, but the model is not running!")
+            return response
+
+        self.get_logger().info("Stop service called")
+        self.destroy_subscription(self.image_subscription)
+        self.image_subscription = None
+        self.timer.cancel()
+        self.timer = None
+        self.context_queue = []
+        return response
 
     def image_callback(self, msg):
         obs_img = msg_to_pil(msg)
