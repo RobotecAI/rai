@@ -15,7 +15,7 @@ if(DEFINED ENV{ROS_DISTRO})
     message(WARNING "Unsupported ROS 2 distribution: $ENV{ROS_DISTRO}. Defaulting to .hpp include.")
   endif()
 else()
-  message(FATAL_ERROR "ROS_DISTRO environment variable not set. Make sure to source your ROS 2 distribution before compiling").
+  message(FATAL_ERROR "ROS_DISTRO environment variable not set. Make sure to source your ROS 2 distribution before compiling.")
 endif()
 
 # find dependencies
