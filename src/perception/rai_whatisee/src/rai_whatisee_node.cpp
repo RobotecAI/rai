@@ -12,7 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#if defined(ROS_DISTRO_HUMBLE)
 #include <cv_bridge/cv_bridge.h>
+#elif defined(ROS_DISTRO_JAZZY)
+#include <cv_bridge/cv_bridge.hpp>
+#else
+#include <cv_bridge/cv_bridge.hpp>  // Default to .hpp for future distributions
+#endif
 
 #include <mutex>
 #include <opencv2/opencv.hpp>
