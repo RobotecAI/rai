@@ -42,7 +42,6 @@ from langchain_core.messages import (
     ToolCall,
     ToolMessage,
 )
-from langchain_core.pydantic_v1 import BaseModel, Field, ValidationError
 from langchain_core.runnables import Runnable, RunnableConfig
 from langchain_core.runnables.config import get_executor_for_config
 from langchain_core.tools import BaseTool
@@ -50,7 +49,8 @@ from langchain_core.tools import tool as create_tool
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.graph import CompiledGraph
 from langgraph.prebuilt.tool_node import str_output
-from langgraph.utils import RunnableCallable
+from langgraph.utils.runnable import RunnableCallable
+from pydantic import BaseModel, Field, ValidationError
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai.messages import (
