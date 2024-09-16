@@ -1,5 +1,16 @@
 # Robot arm manipulation
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Currently planned and developed pipeline](#currently-planned-and-developed-pipeline)
+  - [Automated Dataset Generation](#automated-dataset-generation)
+  - [OpenVLA fine-tuning and inference](#openvla-fine-tuning-and-inference)
+- [Summary of Fine-Tuning Experiments](#summary-of-fine-tuning-experiments)
+  - [Experiments](#experiments)
+  - [Challenges and Limitations](#challenges-and-limitations)
+  - [Conclusion](#conclusion)
+
 ## Overview
 
 Vision-Language-Action (VLA) models represent a novel approach to controlling robots,
@@ -28,11 +39,6 @@ We use the most efficient [Claude models](https://www.anthropic.com/claude) (cur
 We integrated [openVLA](https://openvla.github.io/) model with O3DE and ROS 2.
 Our work on Robotic Arm Manipulation Demo is public and available [here](https://github.com/RobotecAI/rai-manipulation-demo).
 Instructions on how to run the demo will be released soon.
-
-## Issues and challenges
-
-We are investigating optimal dataset size and diversity to generalize the model for our needs.
-As VLA models are quite novel approach, intuitions regarding the fine-tuning of such models are only just being developed.
 
 ## Summary of Fine-Tuning Experiments
 
@@ -67,6 +73,6 @@ During the experiments we encountered several obstacles and challanges:
 3. **Novelty of Approach**:
    - OpenVLA represents a cutting-edge technique in the field, requiring extensive experimentation to develop the necessary intuitions for successful fine-tuning.
 
-## Conclusion
+### Conclusion
 
 While our experiments with openVLA did not yield the desired results or significant progress at this stage, they have provided valuable insights into the challenges and potential of this approach. The complexity of the task and the novelty of the method underscore the need for continued research and development in this area.
