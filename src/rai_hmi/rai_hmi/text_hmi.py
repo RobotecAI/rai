@@ -18,14 +18,12 @@ import logging
 import sys
 import threading
 import time
-import uuid
 from pprint import pformat
 from queue import Queue
-from typing import Dict, List, Optional, Set, cast
+from typing import Dict, List, Optional, cast
 
 import rclpy
 import streamlit as st
-from langchain.tools import tool
 from langchain_core.messages import (
     AIMessage,
     BaseMessage,
@@ -34,21 +32,19 @@ from langchain_core.messages import (
     ToolCall,
     ToolMessage,
 )
-from langchain_openai.chat_models import ChatOpenAI
 from PIL import Image
-from pydantic import UUID1, BaseModel
+from pydantic import BaseModel
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from streamlit.delta_generator import DeltaGenerator
 
-from rai.agents.conversational_agent import create_conversational_agent
 from rai.agents.state_based import get_stored_artifacts
 from rai.messages import HumanMultimodalMessage
 from rai.node import RaiBaseNode
-from rai.tools.ros.native import GetCameraImage, Ros2GetRobotInterfaces
+from rai_hmi.agent import initlialize_agent
 from rai_hmi.base import BaseHMINode
 from rai_hmi.chat_msgs import EMOJIS, MissionMessage
-from rai_hmi.task import Task, TaskInput
+from rai_hmi.text_hmi_utils import Memory
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -59,39 +55,6 @@ st.set_page_config(page_title="LangChain Chat App", page_icon="🦜")
 
 MODEL = "gpt-4o"
 MAX_DISPLAY = 5
-
-
-class Memory:
-    def __init__(self) -> None:
-        # TODO(boczekbartek): add typehints
-        self.mission_memory: List[MissionMessage] = []
-        self.chat_memory = []
-        self.tool_calls = {}
-        self.missions_uids: Set[UUID1] = set()
-
-    def register_tool_calls(self, tool_calls: List[ToolCall]):
-        for tool_call in tool_calls:
-            tool_call = cast(ToolCall, tool_call)
-            tool_id = tool_call["id"]
-            self.tool_calls[tool_id] = tool_call
-
-    def add_mission(self, msg: MissionMessage):
-        self.mission_memory.append(msg)
-        self.missions_uids.add(msg.uid)
-
-    def get_mission_memory(self, uid: Optional[str] = None) -> List[MissionMessage]:
-        if not uid:
-            return self.mission_memory
-
-        _uid = uuid.UUID(uid)
-        print(f"{self.missions_uids=}")
-        if _uid not in self.missions_uids:
-            raise AssertionError(f"Mission with {_uid=} not found")
-
-        return [m for m in self.mission_memory if m.uid == _uid]
-
-    def __repr__(self) -> str:
-        return f"===> Chat <===\n{pformat(self.chat_memory)}\n\n===> Mission <===\n{pformat(self.mission_memory)}\n\n===> Tool calls <===\n{pformat(self.tool_calls)}"
 
 
 # ---------- Cached Resources ----------
@@ -107,44 +70,10 @@ def initialize_memory() -> Memory:
 
 
 @st.cache_resource
-def initialize_agent(_hmi_node: BaseHMINode, _rai_node: RaiBaseNode, _memory: Memory):
-    llm = ChatOpenAI(
-        temperature=0.5,
-        model=MODEL,
-        streaming=True,
-    )
-
-    @tool
-    def get_mission_memory(uid: str) -> List[MissionMessage]:
-        """List mission memory. Mission uid is required."""
-        return _memory.get_mission_memory(uid)
-
-    @tool
-    def add_task_to_queue(task: TaskInput):
-        """Use this tool to add a task to the queue. The task will be handled by the executor part of your system."""
-
-        uid = uuid.uuid1()
-        _hmi_node.add_task_to_queue(
-            Task(
-                name=task.name,
-                description=task.description,
-                priority=task.priority,
-                uid=uid,
-            )
-        )
-        return f"UID={uid} | Task added to the queue: {task.json()}"
-
-    node_tools = tools = [
-        Ros2GetRobotInterfaces(node=_rai_node),
-        GetCameraImage(node=_rai_node),
-    ]
-    task_tools = [add_task_to_queue, get_mission_memory]
-    tools = _hmi_node.tools + node_tools + task_tools
-
-    agent = create_conversational_agent(
-        llm, tools, _hmi_node.system_prompt, logger=_hmi_node.get_logger()
-    )
-    return agent
+def initialize_agent_streamlit(
+    _hmi_node: BaseHMINode, _rai_node: RaiBaseNode, _memory: Memory
+):
+    return initlialize_agent(_hmi_node, _rai_node, _memory)
 
 
 @st.cache_resource
@@ -366,7 +295,7 @@ class Chat:
 class Agent:
     def __init__(self, hmi_node: Node, rai_node: Node, memory) -> None:
         self.memory = memory
-        self.agent = initialize_agent(hmi_node, rai_node, self.memory)
+        self.agent = initialize_agent_streamlit(hmi_node, rai_node, self.memory)
 
     def stream(self):
         # Copy, because agent's memory != streamlit app memory. App memory is used to
