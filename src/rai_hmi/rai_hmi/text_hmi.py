@@ -16,13 +16,11 @@ import base64
 import io
 import logging
 import sys
-import threading
 import time
 from pprint import pformat
 from queue import Queue
 from typing import Dict, List, Optional, cast
 
-import rclpy
 import streamlit as st
 from langchain_core.messages import (
     AIMessage,
@@ -34,7 +32,6 @@ from langchain_core.messages import (
 )
 from PIL import Image
 from pydantic import BaseModel
-from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from streamlit.delta_generator import DeltaGenerator
 
@@ -44,6 +41,7 @@ from rai.node import RaiBaseNode
 from rai_hmi.agent import initlialize_agent
 from rai_hmi.base import BaseHMINode
 from rai_hmi.chat_msgs import EMOJIS, MissionMessage
+from rai_hmi.ros import initialize_ros_nodes
 from rai_hmi.text_hmi_utils import Memory
 
 logging.basicConfig(
@@ -82,27 +80,10 @@ def initialize_mission_queue() -> Queue:
 
 
 @st.cache_resource
-def initialize_ros_nodes(
+def initialize_ros_nodes_streamlit(
     _feedbacks_queue: Queue, robot_description_package: Optional[str]
 ):
-    rclpy.init()
-
-    hmi_node = BaseHMINode(
-        f"{robot_description_package}_hmi_node",
-        queue=_feedbacks_queue,
-        robot_description_package=robot_description_package,
-    )
-
-    # TODO(boczekbartek): this node shouldn't be required to initialize simple ros2 tools
-    rai_node = RaiBaseNode(node_name="__rai_node__")
-
-    executor = MultiThreadedExecutor()
-    executor.add_node(hmi_node)
-    executor.add_node(rai_node)
-
-    threading.Thread(target=executor.spin, daemon=True).start()
-
-    return hmi_node, rai_node
+    return initialize_ros_nodes(_feedbacks_queue, robot_description_package)
 
 
 def display_agent_message(
@@ -353,7 +334,7 @@ class StreamlitApp:
     def initialize_node(self, feedbacks_queue, robot_description_package):
         self.logger.info("Initializing ROS 2 node...")
         with st.spinner("Initializing ROS 2 nodes..."):
-            hmi_node, rai_node = initialize_ros_nodes(
+            hmi_node, rai_node = initialize_ros_nodes_streamlit(
                 feedbacks_queue, robot_description_package
             )
             self.logger.info("ROS 2 node initialized")

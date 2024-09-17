@@ -28,20 +28,20 @@ from rai_hmi.task import Task, TaskInput
 from rai_hmi.text_hmi_utils import Memory
 
 
-def initialize_agent(_hmi_node: BaseHMINode, _rai_node: RaiBaseNode, _memory: Memory):
+def initialize_agent(hmi_node: BaseHMINode, rai_node: RaiBaseNode, memory: Memory):
     llm = get_llm_model(model_type="complex_model")
 
     @tool
     def get_mission_memory(uid: str) -> List[MissionMessage]:
         """List mission memory. Mission uid is required."""
-        return _memory.get_mission_memory(uid)
+        return memory.get_mission_memory(uid)
 
     @tool
     def add_task_to_queue(task: TaskInput):
         """Use this tool to add a task to the queue. The task will be handled by the executor part of your system."""
 
         uid = uuid.uuid1()
-        _hmi_node.add_task_to_queue(
+        hmi_node.add_task_to_queue(
             Task(
                 name=task.name,
                 description=task.description,
@@ -52,13 +52,13 @@ def initialize_agent(_hmi_node: BaseHMINode, _rai_node: RaiBaseNode, _memory: Me
         return f"UID={uid} | Task added to the queue: {task.json()}"
 
     node_tools = tools = [
-        Ros2GetRobotInterfaces(node=_rai_node),
-        GetCameraImage(node=_rai_node),
+        Ros2GetRobotInterfaces(node=rai_node),
+        GetCameraImage(node=rai_node),
     ]
     task_tools = [add_task_to_queue, get_mission_memory]
-    tools = _hmi_node.tools + node_tools + task_tools
+    tools = hmi_node.tools + node_tools + task_tools
 
     agent = create_conversational_agent(
-        llm, tools, _hmi_node.system_prompt, logger=_hmi_node.get_logger()
+        llm, tools, hmi_node.system_prompt, logger=hmi_node.get_logger()
     )
     return agent
