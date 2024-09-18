@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+
+import json
 import logging
 import pickle
 import time
@@ -159,11 +161,22 @@ class ToolRunner(RunnableCallable):
                     "Tool output (max 100 chars): " + str(output.content[0:100])
                 )
             except ValidationError as e:
-                self.logger.info(
-                    f'Args validation error in "{call["name"]}", error: {e}'
-                )
+                errors = e.errors()
+                for error in errors:
+                    error.pop(
+                        "url"
+                    )  # get rid of the  https://errors.pydantic.dev/... url
+
+                error_message = f"""
+                                    Validation error in tool {call["name"]}:
+                                    {e.title}
+                                    Number of errors: {e.error_count()}
+                                    Errors:
+                                    {json.dumps(errors, indent=2)}
+                                """
+                self.logger.info(error_message)
                 output = ToolMessage(
-                    content=f"Failed to run tool. Error: {e}",
+                    content=error_message,
                     name=call["name"],
                     tool_call_id=call["id"],
                     status="error",
