@@ -19,6 +19,7 @@ import sensor_msgs.msg
 from langchain_core.pydantic_v1 import Field
 from rclpy import Future
 
+from rai.node import RaiBaseNode
 from rai.tools.ros import Ros2BaseInput, Ros2BaseTool
 from rai_interfaces.msg import RAIDetectionArray
 from rai_interfaces.srv import RAIGroundingDino
@@ -30,18 +31,14 @@ class Ros2GetDetectionInput(Ros2BaseInput):
         ...,
         description="Ros2 topic for the camera image containing image to run detection on.",
     )
-    object_name: list[str] = Field(
+    object_names: list[str] = Field(
         ..., description="Natural language name of the objects to detect"
     )
 
 
-class GetDetectionTool(Ros2BaseTool):
-    name: str = "GetDetectionTool"
-    description: str = (
-        "A tool for detecting to a specified object using a ros2 action. The tool call might take some time to execute and is blocking - you will not be able to check their feedback, only will be informed about the result."
-    )
-
-    args_schema: Type[Ros2GetDetectionInput] = Ros2GetDetectionInput
+# --------------------- Tools ---------------------
+class GroundingDinoBaseTool(Ros2BaseTool):
+    node: RaiBaseNode = Field(..., exclude=True, required=True)
 
     def _spin(self, future: Future) -> Optional[RAIDetectionArray]:
         rclpy.spin_once(self.node)
@@ -57,29 +54,44 @@ class GetDetectionTool(Ros2BaseTool):
                 return response
         return None
 
-    def _run(
-        self,
-        camera_topic: str,
-        object_names: list[str],
-    ):
-        assert hasattr(self.node, "get_raw_message_from_topic")
-        msg = self.node.get_raw_message_from_topic(camera_topic)
-        camera_img_message = None
-        if type(msg) is sensor_msgs.msg.Image:
-            camera_img_message = msg
-        else:
-            raise Exception("Received wrong message")
-
+    def _call_gdino_node(
+        self, camera_img_message: sensor_msgs.msg.Image, object_names: list[str]
+    ) -> Future:
         cli = self.node.create_client(RAIGroundingDino, "grounding_dino_classify")
         while not cli.wait_for_service(timeout_sec=1.0):
             self.node.get_logger().info("service not available, waiting again...")
         req = RAIGroundingDino.Request()
         req.source_img = camera_img_message
         req.classes = " , ".join(object_names)
-        req.box_threshold = 0.4
+        req.box_threshold = 0.4  # TODO make this somehow configurable
         req.text_threshold = 0.4
 
         future = cli.call_async(req)
+        return future
+
+    def _get_image_message(self, topic: str) -> sensor_msgs.msg.Image:
+        msg = self.node.get_raw_message_from_topic(topic)
+        if type(msg) is sensor_msgs.msg.Image:
+            return msg
+        else:
+            raise Exception("Received wrong message")
+
+
+class GetDetectionTool(GroundingDinoBaseTool):
+    name: str = "GetDetectionTool"
+    description: str = (
+        "A tool for detecting to a specified object using a ros2 action. The tool call might take some time to execute and is blocking - you will not be able to check their feedback, only will be informed about the result."
+    )
+
+    args_schema: Type[Ros2GetDetectionInput] = Ros2GetDetectionInput
+
+    def _run(
+        self,
+        camera_topic: str,
+        object_names: list[str],
+    ):
+        camera_img_msg = self._get_image_message(camera_topic)
+        future = self._call_gdino_node(camera_img_msg, object_names)
 
         while rclpy.ok():
             resolved = self._spin(future)
