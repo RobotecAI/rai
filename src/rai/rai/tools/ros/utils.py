@@ -17,6 +17,7 @@ import base64
 from typing import Type, Union, cast
 
 import cv2
+import numpy as np
 import sensor_msgs.msg
 from cv_bridge import CvBridge
 from rclpy.impl.implementation_singleton import rclpy_implementation as _rclpy
@@ -32,6 +33,28 @@ from rosidl_runtime_py.utilities import get_namespaced_type
 def import_message_from_str(msg_type: str) -> Type[object]:
     msg_namespaced_type: NamespacedType = get_namespaced_type(msg_type)
     return import_message_from_namespaced_type(msg_namespaced_type)
+
+
+def convert_ros_img_to_ndarray(msg: sensor_msgs.msg.Image) -> np.ndarray:
+    encoding = msg.encoding.lower()
+
+    if encoding == "rgb8":
+        image_data = np.frombuffer(msg.data, np.uint8)
+        image = image_data.reshape((msg.height, msg.width, 3))
+    elif encoding == "bgr8":
+        image_data = np.frombuffer(msg.data, np.uint8)
+        image = image_data.reshape((msg.height, msg.width, 3))
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    elif encoding == "mono8":
+        image_data = np.frombuffer(msg.data, np.uint8)
+        image = image_data.reshape((msg.height, msg.width))
+    elif encoding == "16uc1":
+        image_data = np.frombuffer(msg.data, np.uint16)
+        image = image_data.reshape((msg.height, msg.width))
+    else:
+        raise ValueError(f"Unsupported encoding: {msg.encoding}")
+
+    return image
 
 
 def convert_ros_img_to_cv2mat(msg: sensor_msgs.msg.Image) -> cv2.typing.MatLike:
@@ -65,7 +88,7 @@ def wait_for_message(
     topic: str,
     *,
     qos_profile: Union[QoSProfile, int] = 1,
-    time_to_wait=-1
+    time_to_wait=-1,
 ):
     """
     Wait for the next incoming message.

@@ -16,6 +16,7 @@
 from os import PathLike
 from typing import Dict
 
+import cv2
 from cv_bridge import CvBridge
 from groundingdino.util.inference import Model
 from rclpy.time import Time
@@ -83,6 +84,7 @@ class GDBoxer:
         image = self.bridge.imgmsg_to_cv2(
             image_msg, desired_encoding=image_msg.encoding
         )
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         predictions = self.model.predict_with_classes(
             image=image,
