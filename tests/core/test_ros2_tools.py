@@ -13,18 +13,17 @@
 # limitations under the License.
 #
 
-import json
 import threading
 
 import pytest
 import rclpy
-from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai.chat_models import ChatOpenAI
-from pydantic import ValidationError
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from std_msgs.msg import String
 
+from rai.agents.state_based import create_state_based_agent
 from rai.tools.ros.native import Ros2PubMessageTool
 
 
@@ -68,70 +67,32 @@ def test_ros2_pub_message_tool_llm(
     rclpy.init()
     ros_node = RosNode()
     pub_ros2_message_tool = Ros2PubMessageTool(node=ros_node)
-    tools_by_name = {pub_ros2_message_tool.name: pub_ros2_message_tool}
     tools = [pub_ros2_message_tool]
     subscriber = Subscriber()
 
-    llm_with_tools = chat_openai_text.bind_tools(
-        tools, tool_choice=pub_ros2_message_tool.name
+    llm_with_tools = create_state_based_agent(
+        llm=chat_openai_text,
+        tools=tools,
+        state_retriever=lambda: {},
+        logger=ros_node.get_logger(),
     )
 
     executor = MultiThreadedExecutor()
     executor.add_node(ros_node)
     executor.add_node(subscriber)
     t = threading.Thread(target=executor.spin)
+
+    system = SystemMessage(
+        "You are a ros2 agent that can run tools: {render_text_description_and_args(tools)}"
+    )
+    query = HumanMessage(
+        f"Publish a std_msgs/msg/String '{test_message}' to the topic '{topic}'"
+    )
+
+    messages = [system, query]
     try:
         t.start()
-
-        system = SystemMessage(
-            "You are a ros2 agent that can run tools: {render_text_description_and_args(tools)}"
-        )
-        query = HumanMessage(
-            f"Publish a std_msgs/msg/String '{test_message}' to the topic '{topic}'"
-        )
-
-        messages = [system, query]
-
-        while True:
-            output = None
-            ai_msg = llm_with_tools.invoke(messages)
-            messages.append(ai_msg)
-            call = ai_msg.tool_calls[0]
-            tool = tools_by_name[call["name"]]
-            try:
-                output = tool.invoke(call)
-                break
-            except ValidationError as e:
-                # TODO(boczekbartek): refactor this to pydantic utils module
-                errors = e.errors()
-                for error in errors:
-                    error.pop(
-                        "url"
-                    )  # get rid of the  https://errors.pydantic.dev/... url
-
-                error_message = f"""
-                                    Validation error in tool {call["name"]}:
-                                    {e.title}
-                                    Number of errors: {e.error_count()}
-                                    Errors:
-                                    {json.dumps(errors, indent=2)}
-                                """
-                output = ToolMessage(
-                    content=error_message,
-                    name=call["name"],
-                    tool_call_id=call["id"],
-                    status="error",
-                )
-
-            except Exception as e:
-                output = ToolMessage(
-                    content=f"Failed to run tool. Error: {e}",
-                    name=call["name"],
-                    tool_call_id=call["id"],
-                    status="error",
-                )
-
-            messages.append(output)
+        llm_with_tools.invoke(dict(messages=messages))
 
         while not subscriber.callback_called:
             pass
