@@ -328,7 +328,7 @@ class StreamlitApp:
     def get_system_status(self) -> SystemStatus:
         return SystemStatus(
             robot_database=self.hmi_ros_node.faiss_index is not None,
-            system_prompt=self.hmi_ros_node.system_prompt == "",
+            system_prompt=self.hmi_ros_node.system_prompt != "",
         )
 
     def initialize_node(self, feedbacks_queue, robot_description_package):
