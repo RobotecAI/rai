@@ -34,11 +34,15 @@ class GDRequest(TypedDict):
     source_img: Image
 
 
+GDINO_NODE_NAME = "grounding_dino"
+GDINO_SERVICE_NAME = "grounding_dino_classify"
+
+
 class GDinoService(Node):
     def __init__(self):
-        super().__init__(node_name="grounding_dino", parameter_overrides=[])
+        super().__init__(node_name=GDINO_NODE_NAME, parameter_overrides=[])
         self.srv = self.create_service(
-            RAIGroundingDino, "grounding_dino_classify", self.classify_callback
+            RAIGroundingDino, GDINO_SERVICE_NAME, self.classify_callback
         )
         self.declare_parameter("weights_path", "")
         try:

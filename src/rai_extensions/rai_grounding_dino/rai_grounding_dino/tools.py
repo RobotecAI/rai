@@ -19,6 +19,7 @@ import rclpy
 import sensor_msgs.msg
 from langchain_core.pydantic_v1 import Field
 from pydantic import BaseModel
+from rai_grounding_dino import GDINO_SERVICE_NAME
 from rclpy import Future
 from rclpy.exceptions import (
     ParameterNotDeclaredException,
@@ -98,7 +99,7 @@ class GroundingDinoBaseTool(Ros2BaseTool):
     def _call_gdino_node(
         self, camera_img_message: sensor_msgs.msg.Image, object_names: list[str]
     ) -> Future:
-        cli = self.node.create_client(RAIGroundingDino, "grounding_dino_classify")
+        cli = self.node.create_client(RAIGroundingDino, GDINO_SERVICE_NAME)
         while not cli.wait_for_service(timeout_sec=1.0):
             self.node.get_logger().info("service not available, waiting again...")
         req = RAIGroundingDino.Request()
@@ -156,7 +157,7 @@ class GetDetectionTool(GroundingDinoBaseTool):
             resolved = self._spin(future)
             if resolved is not None:
                 detected = self._parse_detection_array(resolved)
-                names = [det.class_name for det in detected]
+                names = ", ".join([det.class_name for det in detected])
                 return f"I have detected the following items in the picture {names}"
 
         return "Failed to get detection"
@@ -241,7 +242,7 @@ class GetDistanceToObjectsTool(GroundingDinoBaseTool):
                 measurements = self._get_distance_from_detections(
                     depth_img_msg, detected, threshold, conversion_ratio
                 )
-                measurement_string = " ".join(
+                measurement_string = ", ".join(
                     [
                         f"{measurement[0]}: {measurement[1]:.2f}m away"
                         for measurement in measurements

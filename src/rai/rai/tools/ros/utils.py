@@ -35,8 +35,11 @@ def import_message_from_str(msg_type: str) -> Type[object]:
     return import_message_from_namespaced_type(msg_namespaced_type)
 
 
-def convert_ros_img_to_ndarray(msg: sensor_msgs.msg.Image) -> np.ndarray:
-    encoding = msg.encoding.lower()
+def convert_ros_img_to_ndarray(
+    msg: sensor_msgs.msg.Image, encoding: str = ""
+) -> np.ndarray:
+    if encoding == "":
+        encoding = msg.encoding.lower()
 
     if encoding == "rgb8":
         image_data = np.frombuffer(msg.data, np.uint8)
@@ -52,7 +55,7 @@ def convert_ros_img_to_ndarray(msg: sensor_msgs.msg.Image) -> np.ndarray:
         image_data = np.frombuffer(msg.data, np.uint16)
         image = image_data.reshape((msg.height, msg.width))
     else:
-        raise ValueError(f"Unsupported encoding: {msg.encoding}")
+        raise ValueError(f"Unsupported encoding: {encoding}")
 
     return image
 
