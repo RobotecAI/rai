@@ -248,5 +248,5 @@ class GetDistanceToObjectsTool(GroundingDinoBaseTool):
                         for measurement in measurements
                     ]
                 )
-                return f"I have detected the following items in the picture {measurement_string}"
+                return f"I have detected the following items in the picture {measurement_string or 'no objects'}"
         return "Failed"
