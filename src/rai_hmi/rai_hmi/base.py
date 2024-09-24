@@ -157,6 +157,14 @@ class BaseHMINode(Node):
         return output
 
     def _initialize_system_prompt(self):
+        if self.robot_description_package == "":
+            self.get_logger().warning(
+                "Robot description package not set, using empty identity and constitution."
+            )
+            return SYSTEM_PROMPT.format(
+                constitution="",
+                identity="",
+            )
         while not self.constitution_service.wait_for_service(timeout_sec=1.0):
             self.get_logger().info(
                 "Constitution service of rai_whoami not available, waiting..."
