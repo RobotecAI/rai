@@ -137,7 +137,7 @@ You can start by running the following examples:
 Chat seamlessly with your ROS 2 environment, retrieve images from cameras, adjust parameters, and get information about your ROS interfaces.
 
 ```bash
-streamlit run src/rai_hmi/rai_hmi/streamlit_hmi_node.py
+streamlit run src/rai_hmi/rai_hmi/text_hmi.py
 ```
 
 Remember to run this command in a sourced shell.
