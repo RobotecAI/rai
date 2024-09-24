@@ -14,6 +14,7 @@
 #
 
 import json
+import time
 from typing import Any, Dict, OrderedDict, Tuple, Type
 
 import rclpy
@@ -64,6 +65,8 @@ class PubRos2MessageToolInput(BaseModel):
     msg_args: Dict[str, Any] = Field(
         ..., description="The arguments of the service call."
     )
+    rate: int = Field(1, description="The rate at which to publish the message.")
+    timeout_seconds: int = Field(1, description="The timeout in seconds.")
 
 
 # --------------------- Tools ---------------------
@@ -136,6 +139,8 @@ class Ros2ShowMsgInterfaceTool(BaseTool):
 class Ros2PubMessageTool(Ros2BaseTool):
     name: str = "PubRos2MessageTool"
     description: str = """A tool for publishing a message to a ros2 topic
+
+    By default only 1 message is published. If you want to publish multiple messages, you can specify 'rate' and 'timeout_sec'.
     Example usage:
 
     ```python
@@ -145,6 +150,8 @@ class Ros2PubMessageTool(Ros2BaseTool):
             "topic_name": "/some_topic",
             "msg_type": "geometry_msgs/Point",
             "msg_args": {"x": 0.0, "y": 0.0, "z": 0.0},
+            "rate" : 1,
+            "timeout_sec" : 1
         }
     )
 
@@ -161,7 +168,14 @@ class Ros2PubMessageTool(Ros2BaseTool):
         rosidl_runtime_py.set_message.set_message_fields(msg, msg_args)
         return msg, msg_cls
 
-    def _run(self, topic_name: str, msg_type: str, msg_args: Dict[str, Any]):
+    def _run(
+        self,
+        topic_name: str,
+        msg_type: str,
+        msg_args: Dict[str, Any],
+        rate: int = 1,
+        timeout_seconds: int = 1,
+    ):
         """Publishes a message to the specified topic."""
         if "/msg/" not in msg_type:
             raise ValueError("msg_name must contain 'msg' in the name.")
@@ -171,10 +185,23 @@ class Ros2PubMessageTool(Ros2BaseTool):
             msg_cls, topic_name, 10
         )  # TODO(boczekbartek): infer qos profile from topic info
 
-        if hasattr(msg, "header"):
-            msg.header.stamp = self.node.get_clock().now().to_msg()
-        publisher.publish(msg)
-        self.logger.info(f"Published message '{msg}' to topic '{topic_name}'")
+        def callback():
+            publisher.publish(msg)
+            self.logger.info(f"Published message '{msg}' to topic '{topic_name}'")
+
+        ts = time.perf_counter()
+        timer = self.node.create_timer(1.0 / rate, callback)
+
+        while time.perf_counter() - ts < timeout_seconds:
+            time.sleep(0.1)
+
+        timer.cancel()
+        timer.destroy()
+
+        self.logger.info(
+            f"Published messages for {timeout_seconds}s to topic '{topic_name}' with rate {rate}"
+        )
+        return
 
 
 class TopicInput(Ros2BaseInput):
