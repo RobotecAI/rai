@@ -158,7 +158,7 @@ class GetDetectionTool(GroundingDinoBaseTool):
             if resolved is not None:
                 detected = self._parse_detection_array(resolved)
                 names = ", ".join([det.class_name for det in detected])
-                return f"I have detected the following items in the picture {names}"
+                return f"I have detected the following items in the picture {names or 'None'}"
 
         return "Failed to get detection"
 
