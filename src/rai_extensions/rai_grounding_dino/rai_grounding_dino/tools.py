@@ -17,8 +17,7 @@ from typing import List, NamedTuple, Optional, Type
 import numpy as np
 import rclpy
 import sensor_msgs.msg
-from pydantic import Field
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from rai_grounding_dino import GDINO_SERVICE_NAME
 from rclpy import Future
 from rclpy.exceptions import (
