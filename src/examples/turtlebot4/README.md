@@ -52,9 +52,8 @@ TBD
 5. Run rai agent:
 
    ```bash
-   ros launch ./src/examples/turtlebot.launch.xml \
-       game_launcher:=/path/to/simulation_binary/Turtlebot4.GameLauncher \
-       robot_description_package:=turtlebot4_whoami
+   ros launch ./src/examples/turtlebot4/turtlebot.launch.xml \
+       game_launcher:=/path/to/simulation_binary/Turtlebot4.GameLauncher
    ```
 
 6. Open you internet browser and go to `localhost:8501`
