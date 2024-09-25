@@ -20,7 +20,7 @@ rosdep install --from-paths src --ignore-src -r
 In the base directory of the `RAI` package install dependencies:
 
 ```
-poetry install --with gdino
+poetry install --with openset
 ```
 
 Source the ros installation

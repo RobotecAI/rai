@@ -54,14 +54,16 @@ openwakeword = { git = "https://github.com/maciejmajek/openWakeWord.git", branch
 ipykernel = "^6.29.4"
 
 
-[tool.poetry.group.gdino]
+[tool.poetry.group.openset]
 optional = true
 
-[tool.poetry.group.gdino.dependencies]
+[tool.poetry.group.openset.dependencies]
 pip = "^24.1.2"
 torch = "^2.3.1"
 torchvision = "^0.18.1"
 rf-groundingdino = "^0.2.0"
+sam2 = { git = "https://github.com/RobotecAI/Grounded-SAM-2", branch = "main" }
+
 
 [tool.poetry.group.nomad]
 optional = true
