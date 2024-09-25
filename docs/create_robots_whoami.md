@@ -23,7 +23,7 @@ poetry run create_rai_ws --name panda --destination-directory src/examples
 4. Run the `parse_whoami_package`. This will process the documentation, building it into a vector database, which is used by RAI agent to reason about its identity.
 
 ```shell
-poetry run parse_whoami_package src/examples/panda_whoami/description src/examples/panda_whoami/description
+poetry run parse_whoami_package src/examples/panda_whoami/description
 ```
 
 > [!IMPORTANT]  
