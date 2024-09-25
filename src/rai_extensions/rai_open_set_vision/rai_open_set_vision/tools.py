@@ -18,7 +18,7 @@ import numpy as np
 import rclpy
 import sensor_msgs.msg
 from pydantic import BaseModel, Field
-from rai_grounding_dino import GDINO_SERVICE_NAME
+from rai_open_set_vision import GDINO_SERVICE_NAME
 from rclpy import Future
 from rclpy.exceptions import (
     ParameterNotDeclaredException,

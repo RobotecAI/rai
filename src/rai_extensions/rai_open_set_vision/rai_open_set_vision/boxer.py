@@ -63,7 +63,7 @@ class GDBoxer:
         self,
         weight_path: (
             str | PathLike
-        ) = "./src/rai_extensions/rai_grounding_dino/GroundingDINO/weights/groundingdino_swint_ogc.pth",
+        ) = "./src/rai_extensions/rai_open_set_vision/GroundingDINO/weights/groundingdino_swint_ogc.pth",
         use_cuda: bool = True,
     ):
         self.cfg_path = __file__.replace("boxer.py", "config.py")

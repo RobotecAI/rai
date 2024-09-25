@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import TypedDict
 
 import rclpy
-from rai_grounding_dino.boxer import GDBoxer
+from rai_open_set_vision.boxer import GDBoxer
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 
@@ -58,7 +58,7 @@ class GDinoService(Node):
     def _init_weight_path(self) -> Path:
         try:
             found_path = subprocess.check_output(
-                ["ros2", "pkg", "prefix", "rai_grounding_dino"]
+                ["ros2", "pkg", "prefix", "rai_open_set_vision"]
             ).decode("utf-8")
             install_path = (
                 Path(found_path.strip())
