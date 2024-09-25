@@ -140,7 +140,7 @@ class Ros2PubMessageTool(Ros2BaseTool):
     name: str = "PubRos2MessageTool"
     description: str = """A tool for publishing a message to a ros2 topic
 
-    By default only 1 message is published. If you want to publish multiple messages, you can specify 'rate' and 'timeout_sec'.
+    By default 10 messages are published for 1 second. If you want to publish multiple messages, you can specify 'rate' and 'timeout_sec'.
     Example usage:
 
     ```python
@@ -150,7 +150,7 @@ class Ros2PubMessageTool(Ros2BaseTool):
             "topic_name": "/some_topic",
             "msg_type": "geometry_msgs/Point",
             "msg_args": {"x": 0.0, "y": 0.0, "z": 0.0},
-            "rate" : 1,
+            "rate" : 10,
             "timeout_sec" : 1
         }
     )
@@ -173,7 +173,7 @@ class Ros2PubMessageTool(Ros2BaseTool):
         topic_name: str,
         msg_type: str,
         msg_args: Dict[str, Any],
-        rate: int = 1,
+        rate: int = 10,
         timeout_seconds: int = 1,
     ):
         """Publishes a message to the specified topic."""
