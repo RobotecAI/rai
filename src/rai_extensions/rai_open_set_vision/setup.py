@@ -18,11 +18,11 @@ from glob import glob
 
 from setuptools import find_packages, setup
 
-package_name = "rai_grounding_dino"
+package_name = "rai_open_set_vision"
 
 setup(
     name=package_name,
-    version="0.0.0",
+    version="0.1.0",
     packages=find_packages(exclude=["test"]),
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
@@ -36,13 +36,13 @@ setup(
     zip_safe=True,
     maintainer="Kajetan Rachwał",
     maintainer_email="kajetan.rachwal@robotec.ai",
-    description="Package enabling grounding dino open set detection for RAI",
+    description="Package enabling open set vision for RAI",
     license="Apache License 2.0",
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "grounding_dino = rai_grounding_dino.grounding_dino:main",
-            "talker = rai_grounding_dino.talker:main",
+            "grounding_dino = rai_open_set_vision.grounding_dino:main",
+            "talker = rai_open_set_vision.talker:main",
         ],
     },
 )
