@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>rai_grounding_dino</name>
-  <version>0.0.0</version>
-  <description>Package enabling grounding dino open set detection for RAI</description>
+  <name>rai_open_set_vision</name>
+  <version>0.1.0</version>
+  <description>Package enabling open set vision for RAI</description>
   <maintainer email="kajetan.rachwal@robotec.ai">Kajetan Rachwał</maintainer>
   <license>Apache-2.0</license>
 
