@@ -8,6 +8,7 @@ on:
 
 jobs:
   upgrade-dependencies:
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-24.04
 
     steps:
