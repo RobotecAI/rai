@@ -40,8 +40,6 @@ You can test your new `panda_whoami` package by calling `rai_whoami` services:
 
 ```shell
 colcon build
-source install/setup.sh
-export PYTHONPATH="$(dirname $(dirname $(poetry run which python)))/lib/python$(poetry run python --version | awk '{print $2}' | cut -d. -f1,2)/site-packages:$PYTHONPATH"
 ros2 run rai_whoami rai_whoami_node --ros-args -p robot_description_package:="panda_whoami"
 ```
 
