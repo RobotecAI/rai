@@ -17,9 +17,10 @@ import io
 import logging
 import sys
 import time
+from pathlib import Path
 from pprint import pformat
 from queue import Queue
-from typing import Dict, List, Optional, cast
+from typing import Dict, List, Optional, Tuple, cast
 
 import streamlit as st
 from langchain_core.messages import (
@@ -57,9 +58,10 @@ MAX_DISPLAY = 5
 
 # ---------- Cached Resources ----------
 @st.cache_resource
-def parse_args():
+def parse_args() -> Tuple[Optional[str], Optional[Path]]:
     robot_description_package = sys.argv[1] if len(sys.argv) > 1 else None
-    return robot_description_package
+    whitelist = Path(sys.argv[2]) if len(sys.argv) > 2 else None
+    return robot_description_package, whitelist
 
 
 @st.cache_resource
@@ -81,9 +83,13 @@ def initialize_mission_queue() -> Queue:
 
 @st.cache_resource
 def initialize_ros_nodes_streamlit(
-    _feedbacks_queue: Queue, robot_description_package: Optional[str]
+    _feedbacks_queue: Queue,
+    robot_description_package: Optional[str],
+    ros2_whitelist: Optional[Path],
 ):
-    return initialize_ros_nodes(_feedbacks_queue, robot_description_package)
+    return initialize_ros_nodes(
+        _feedbacks_queue, robot_description_package, ros2_whitelist
+    )
 
 
 def display_agent_message(
@@ -266,7 +272,7 @@ class Agent:
 
 
 class StreamlitApp:
-    def __init__(self, robot_description_package) -> None:
+    def __init__(self, robot_description_package, ros2_whitelist: Path) -> None:
         self.logger = logging.getLogger(self.__class__.__name__)
 
         self.robot_description_package = robot_description_package
@@ -277,7 +283,7 @@ class StreamlitApp:
 
         self.mission_queue = initialize_mission_queue()
         self.hmi_ros_node, self.rai_ros_node = self.initialize_node(
-            self.mission_queue, robot_description_package
+            self.mission_queue, robot_description_package, ros2_whitelist
         )
         self.agent = Agent(self.hmi_ros_node, self.rai_ros_node, self.memory)
 
@@ -308,11 +314,13 @@ class StreamlitApp:
             system_prompt=self.hmi_ros_node.system_prompt != "",
         )
 
-    def initialize_node(self, feedbacks_queue, robot_description_package):
+    def initialize_node(
+        self, feedbacks_queue, robot_description_package, ros2_whitelist
+    ):
         self.logger.info("Initializing ROS 2 node...")
         with st.spinner("Initializing ROS 2 nodes..."):
             hmi_node, rai_node = initialize_ros_nodes_streamlit(
-                feedbacks_queue, robot_description_package
+                feedbacks_queue, robot_description_package, ros2_whitelist
             )
             self.logger.info("ROS 2 node initialized")
         return hmi_node, rai_node
@@ -368,6 +376,6 @@ def decode_base64_into_image(base64_image: str):
 
 
 if __name__ == "__main__":
-    robot_description_package = parse_args()
-    app = StreamlitApp(robot_description_package)
+    robot_description_package, ros2_whitelist = parse_args()
+    app = StreamlitApp(robot_description_package, ros2_whitelist)
     app.run()
