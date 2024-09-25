@@ -40,16 +40,16 @@ def initialize_agent(hmi_node: BaseHMINode, rai_node: RaiBaseNode, memory: Memor
     def add_task_to_queue(task: TaskInput):
         """Use this tool to add a task to the queue. The task will be handled by the executor part of your system."""
 
-        uid = uuid.uuid1()
+        uid = uuid.uuid4()
         hmi_node.add_task_to_queue(
             Task(
                 name=task.name,
                 description=task.description,
                 priority=task.priority,
-                uid=uid,
+                uid=str(uid),
             )
         )
-        return f"UID={uid} | Task added to the queue: {task.json()}"
+        return f"UID={uid} | Task added to the queue: {task.model_dump_json()}"
 
     node_tools = tools = [
         Ros2GetRobotInterfaces(node=rai_node),

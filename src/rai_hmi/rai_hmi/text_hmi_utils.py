@@ -13,7 +13,6 @@
 # limitations under the License.
 #
 
-import uuid
 from pprint import pformat
 from typing import List, Optional, Set, cast
 
@@ -45,12 +44,11 @@ class Memory:
         if not uid:
             return self.mission_memory
 
-        _uid = uuid.UUID(uid)
         print(f"{self.missions_uids=}")
-        if _uid not in self.missions_uids:
-            raise AssertionError(f"Mission with {_uid=} not found")
+        if uid not in self.missions_uids:
+            raise AssertionError(f"Mission with {uid=} not found")
 
-        return [m for m in self.mission_memory if m.uid == _uid]
+        return [m for m in self.mission_memory if m.uid == uid]
 
     def __repr__(self) -> str:
         return f"===> Chat <===\n{pformat(self.chat_memory)}\n\n===> Mission <===\n{pformat(self.mission_memory)}\n\n===> Tool calls <===\n{pformat(self.tool_calls)}"
