@@ -12,15 +12,18 @@ Your robot's `whoami` package serves as a configuration package for the `rai_who
 
 2. Create a whoami package for Panda
 
-```shell
-poetry run create_rai_ws --name panda --destination-directory src/examples
-```
+   ```shell
+   poetry run create_rai_ws --name panda --destination-directory src/examples
+   ```
 
 3. Fill in the `src/examples/panda_whoami/description` folder with data:\
    2.1 Save [this image](https://robodk.com/robot/img/Franka-Emika-Panda-robot.png) into `src/examples/panda_whoami/description/images`\
    2.2 Save [this document](https://github.com/user-attachments/files/16417196/Franka.Emika.Panda.robot.-.RoboDK.pdf) in `src/examples/panda_whoami/description/documentation`
 
 4. Run the `parse_whoami_package`. This will process the documentation, building it into a vector database, which is used by RAI agent to reason about its identity.
+
+> **NOTE**: Vector database is created using the OpenAI API. Parsing bigger documents
+> might lead to costs. Embedding model can be configured in [config.toml](../config.toml).
 
 ```shell
 poetry run parse_whoami_package src/examples/panda_whoami/description
