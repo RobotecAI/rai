@@ -2,6 +2,8 @@
 
 ## Ollama
 
+For installation see: https://ollama.com/
+
 ```python
 from langchain_community.chat_models import ChatOllama
 
