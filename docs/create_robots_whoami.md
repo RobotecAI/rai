@@ -22,8 +22,9 @@ Your robot's `whoami` package serves as a configuration package for the `rai_who
 
 4. Run the `parse_whoami_package`. This will process the documentation, building it into a vector database, which is used by RAI agent to reason about its identity.
 
-> **NOTE**: Vector database is created using the OpenAI API. Parsing bigger documents
-> might lead to costs. Embedding model can be configured in [config.toml](../config.toml).
+> **NOTE**: By default the vector database is created using the OpenAI API. Parsing
+> bigger documents might lead to costs. Embedding model can be configured in
+> [config.toml](../config.toml) (`ollama` works locally, see [docs/vendors.md](./vendors.md#ollama)).
 
 ```shell
 poetry run parse_whoami_package src/examples/panda_whoami/description
@@ -36,10 +37,10 @@ poetry run parse_whoami_package src/examples/panda_whoami/description
 
 You can test your new `panda_whoami` package by calling `rai_whoami` services:
 
-2. Building and sourcing the install
+2. Building the `rai_whoami` package and running the `rai_whoami_node` for your `Panda` robot:
 
 ```shell
-colcon build
+colcon build --symlink-install
 ros2 run rai_whoami rai_whoami_node --ros-args -p robot_description_package:="panda_whoami"
 ```
 
