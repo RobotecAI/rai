@@ -15,7 +15,7 @@
 
 from enum import Enum
 
-from pydantic import UUID4, BaseModel
+from pydantic import BaseModel
 
 
 class Priority(str, Enum):
@@ -33,4 +33,4 @@ class TaskInput(BaseModel):
 
 
 class Task(TaskInput):
-    uid: UUID4
+    uid: str
