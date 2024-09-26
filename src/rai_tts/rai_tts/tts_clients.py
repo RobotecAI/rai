@@ -21,6 +21,8 @@ from typing import Optional
 
 import requests
 from elevenlabs.client import ElevenLabs
+from elevenlabs.types import Voice
+from elevenlabs.types.voice_settings import VoiceSettings
 
 logger = logging.getLogger(__name__)
 
@@ -46,9 +48,18 @@ class TTSClient:
 class ElevenLabsClient(TTSClient):
     def __init__(self, voice: str, base_url: Optional[str] = None):
         self.base_url = base_url
-        self.voice = voice
         api_key = os.getenv(key="ELEVENLABS_API_KEY")
         self.client = ElevenLabs(base_url=None, api_key=api_key)
+
+        self.voice_settings = VoiceSettings(
+            stability=0.7,
+            similarity_boost=0.5,
+        )
+        voices = self.client.voices.get_all().voices
+        voice_id = next((v.voice_id for v in voices if v.name == voice), None)
+        if voice_id is None:
+            raise ValueError(f"Voice {voice} not found")
+        self.voice = Voice(voice_id=voice_id, settings=self.voice_settings)
 
     def synthesize_speech_to_file(self, text: str) -> str:
         tries = 0
@@ -62,7 +73,7 @@ class ElevenLabsClient(TTSClient):
                 audio_data = b"".join(response)
                 return self.save_audio_to_file(audio_data, suffix=".mp3")
             except Exception as e:
-                logger.warn(f"Error occurred during sythesizing speech: {e}.")  # type: ignore
+                logger.warn(f"Error occurred during synthesizing speech: {e}.")  # type: ignore
                 tries += 1
         audio_data = b"".join(response)
         return self.save_audio_to_file(audio_data, suffix=".mp3")
