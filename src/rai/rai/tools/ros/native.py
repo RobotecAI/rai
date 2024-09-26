@@ -65,7 +65,7 @@ class PubRos2MessageToolInput(BaseModel):
     msg_args: Dict[str, Any] = Field(
         ..., description="The arguments of the service call."
     )
-    rate: int = Field(1, description="The rate at which to publish the message.")
+    rate: int = Field(10, description="The rate at which to publish the message.")
     timeout_seconds: int = Field(1, description="The timeout in seconds.")
 
 
