@@ -14,6 +14,7 @@
 #
 
 import logging
+import re
 import threading
 import time
 from queue import Queue
@@ -103,6 +104,12 @@ class VoiceHMINode(BaseHMINode):
     def set_agent(self, agent):
         self.agent = agent
 
+    def split_and_publish(self, message: str):
+        sentences = re.split(r"(?<=\.)\s|[:!]", message)
+        for sentence in sentences:
+            if sentence:
+                self.hmi_publisher.publish(String(data=sentence))
+
     def handle_human_message(self, msg: String):
         self.processing = True
         self.get_logger().info("Processing started")
@@ -118,7 +125,7 @@ class VoiceHMINode(BaseHMINode):
                     self.get_logger().info(
                         f'Sending message to human: "{last_message}"'
                     )
-                    self.hmi_publisher.publish(String(data=last_message))
+                    self.split_and_publish(last_message)
 
         self.get_logger().info("Processing finished")
         self.processing = False
