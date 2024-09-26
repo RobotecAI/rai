@@ -171,8 +171,10 @@ class Ros2PubMessageTool(Ros2BaseTool):
             msg_cls, topic_name, 10
         )  # TODO(boczekbartek): infer qos profile from topic info
 
-        msg.header.stamp = self.node.get_clock().now().to_msg()
+        if hasattr(msg, "header"):
+            msg.header.stamp = self.node.get_clock().now().to_msg()
         publisher.publish(msg)
+        self.logger.info(f"Published message '{msg}' to topic '{topic_name}'")
 
 
 class TopicInput(Ros2BaseInput):
