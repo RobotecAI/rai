@@ -76,8 +76,8 @@ def generate_launch_description():
 
     hmi_node = Node(
         package="rai_hmi",
-        executable="hmi_node",
-        name="hmi_node",
+        executable="voice_hmi_node",
+        name="voice_hmi_node",
         parameters=[
             {
                 "robot_description_package": LaunchConfiguration(
