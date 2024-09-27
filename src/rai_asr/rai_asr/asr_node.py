@@ -28,6 +28,7 @@ from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from scipy.signal import resample
 from std_msgs.msg import String
 
@@ -208,8 +209,14 @@ class ASRNode(Node):
         self.get_logger().info("Parameters have been initialized")  # type: ignore
 
     def _setup_publishers_and_subscribers(self):
-
-        self.transcription_publisher = self.create_publisher(String, "/from_human", 10)
+        reliable_qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            history=HistoryPolicy.KEEP_ALL,
+        )
+        self.transcription_publisher = self.create_publisher(
+            String, "/from_human", qos_profile=reliable_qos
+        )
         self.status_publisher = self.create_publisher(String, "/asr_status", 10)
         self.tts_status_subscriber = self.create_subscription(
             String,

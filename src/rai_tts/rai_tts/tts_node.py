@@ -22,6 +22,7 @@ from typing import NamedTuple, cast
 
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import String
 
 from .tts_clients import ElevenLabsClient, OpenTTSClient, TTSClient
@@ -42,9 +43,13 @@ class TTSNode(Node):
         self.declare_parameter("topic", "to_human")
 
         topic_param = self.get_parameter("topic").get_parameter_value().string_value  # type: ignore
-
+        reliable_qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            history=HistoryPolicy.KEEP_ALL,
+        )
         self.subscription = self.create_subscription(  # type: ignore
-            String, topic_param, self.listener_callback, 10  # type: ignore
+            String, topic_param, self.listener_callback, qos_profile=reliable_qos  # type: ignore
         )
         self.playing = False
         self.status_publisher = self.create_publisher(String, "tts_status", 10)  # type: ignore
@@ -73,6 +78,7 @@ class TTSNode(Node):
         self.get_logger().info(  # type: ignore
             f"Registering new TTS job: {self.job_id} length: {len(msg.data)} chars."  # type: ignore
         )
+        self.get_logger().debug(f"The job: {msg.data}")  # type: ignore
 
         threading.Thread(
             target=self.start_synthesize_thread, args=(msg, self.job_id)  # type: ignore
@@ -130,7 +136,6 @@ class TTSNode(Node):
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        self.get_logger().debug(f"Playing audio: {filepath}")  # type: ignore
         self.playing = False
 
     def _initialize_client(self) -> TTSClient:
