@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from dataclasses import dataclass
-from typing import Literal
+from typing import List, Literal
 
 import tomli
+from langchain_core.callbacks.base import BaseCallbackHandler
 
 
 @dataclass
@@ -41,11 +43,30 @@ class OllamaConfig(ModelConfig):
 
 
 @dataclass
+class LangfuseConfig:
+    use_langfuse: bool
+    host: str
+
+
+@dataclass
+class LangsmithConfig:
+    use_langsmith: bool
+
+
+@dataclass
+class TracingConfig:
+    project: str
+    langfuse: LangfuseConfig
+    langsmith: LangsmithConfig
+
+
+@dataclass
 class RAIConfig:
     vendor: VendorConfig
     aws: AWSConfig
     openai: ModelConfig
     ollama: OllamaConfig
+    tracing: TracingConfig
 
 
 def load_config() -> RAIConfig:
@@ -56,6 +77,11 @@ def load_config() -> RAIConfig:
         aws=AWSConfig(**config_dict["aws"]),
         openai=ModelConfig(**config_dict["openai"]),
         ollama=OllamaConfig(**config_dict["ollama"]),
+        tracing=TracingConfig(
+            project=config_dict["tracing"]["project"],
+            langfuse=LangfuseConfig(**config_dict["tracing"]["langfuse"]),
+            langsmith=LangsmithConfig(**config_dict["tracing"]["langsmith"]),
+        ),
     )
 
 
@@ -108,3 +134,30 @@ def get_embeddings_model():
         )
     else:
         raise ValueError(f"Unknown embeddings vendor: {vendor}")
+
+
+def get_tracing_callbacks() -> List[BaseCallbackHandler]:
+    config = load_config()
+    callbacks: List[BaseCallbackHandler] = []
+    if config.tracing.langfuse.use_langfuse:
+        from langfuse.callback import CallbackHandler  # type: ignore
+
+        public_key = os.getenv("LANGFUSE_PUBLIC_KEY", None)
+        secret_key = os.getenv("LANGFUSE_SECRET_KEY", None)
+        if public_key is None or secret_key is None:
+            raise ValueError("LANGFUSE_PUBLIC_KEY or LANGFUSE_SECRET_KEY is not set")
+
+        callback = CallbackHandler(
+            public_key=public_key,
+            secret_key=secret_key,
+            host=config.tracing.langfuse.host,
+        )
+        callbacks.append(callback)
+
+    if config.tracing.langsmith.use_langsmith:
+        os.environ["LANGCHAIN_TRACING_V2"] = "true"
+        os.environ["LANGCHAIN_PROJECT"] = config.tracing.project
+        api_key = os.getenv("LANGCHAIN_API_KEY", None)
+        if api_key is None:
+            raise ValueError("LANGCHAIN_API_KEY is not set")
+    return callbacks
