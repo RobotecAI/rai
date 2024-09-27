@@ -64,7 +64,7 @@ class GDBoxer:
         weight_path: str | PathLike,
         use_cuda: bool = True,
     ):
-        self.cfg_path = __file__.replace("boxer.py", "config.py")
+        self.cfg_path = __file__.replace("boxer.py", "configs/gdino_config.py")
         self.weight_path = str(weight_path)
         if not use_cuda:
             self.model = Model(self.cfg_path, self.weight_path, device="cpu")
