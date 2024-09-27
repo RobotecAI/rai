@@ -24,6 +24,7 @@ import rclpy
 from langchain_core.messages import HumanMessage
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import String
 
 from rai.node import RaiBaseNode
@@ -87,15 +88,22 @@ class VoiceHMINode(BaseHMINode):
         super().__init__(node_name, queue, robot_description_package)
 
         self.callback_group = ReentrantCallbackGroup()
+        reliable_qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            history=HistoryPolicy.KEEP_ALL,
+        )
         self.hmi_subscription = self.create_subscription(
             String,
             "from_human",
             self.handle_human_message,
-            10,
+            qos_profile=reliable_qos,
         )
-
         self.hmi_publisher = self.create_publisher(
-            String, "to_human", 10, callback_group=self.callback_group
+            String,
+            "to_human",
+            qos_profile=reliable_qos,
+            callback_group=self.callback_group,
         )
         self.history = []
 
