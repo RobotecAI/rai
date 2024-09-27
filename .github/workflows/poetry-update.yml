@@ -8,7 +8,12 @@ on:
 
 jobs:
   upgrade-dependencies:
-    runs-on: ubuntu-24.04
+    runs-on:
+      - self-hosted
+      - robo-pc-066
+
+    container:
+      image: ubuntu:24.04
 
     steps:
       - uses: fuzzylabs/gha-poetry-update@v1
