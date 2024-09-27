@@ -5,16 +5,12 @@ on:
     branches:
       - main
       - development
+
   workflow_dispatch:
 
 jobs:
   pre-commit:
-    runs-on:
-      - self-hosted
-      - robo-pc-066
-
-    container:
-      image: ubuntu:22.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code

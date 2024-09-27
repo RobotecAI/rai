@@ -1,12 +1,10 @@
 name: Check License Lines
+
 on: [pull_request]
+
 jobs:
   check-license-lines:
-    runs-on:
-      - self-hosted
-      - robo-pc-066
-    container:
-      image: ubuntu:24.04
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@master
