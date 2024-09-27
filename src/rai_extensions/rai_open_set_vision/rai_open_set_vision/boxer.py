@@ -61,9 +61,7 @@ class Box:
 class GDBoxer:
     def __init__(
         self,
-        weight_path: (
-            str | PathLike
-        ) = "./src/rai_extensions/rai_open_set_vision/GroundingDINO/weights/groundingdino_swint_ogc.pth",
+        weight_path: str | PathLike,
         use_cuda: bool = True,
     ):
         self.cfg_path = __file__.replace("boxer.py", "config.py")
@@ -81,6 +79,7 @@ class GDBoxer:
         box_threshold: float,
         text_threshold: float,
     ) -> list[Box]:
+        # TODO: move this to method, or use RAI canonical one
         image = self.bridge.imgmsg_to_cv2(
             image_msg, desired_encoding=image_msg.encoding
         )
