@@ -35,11 +35,15 @@ class State(TypedDict):
 
 def agent(llm: BaseChatModel, logger: loggers_type, system_prompt: str, state: State):
     logger.info("Running thinker")
-    prompt = (
-        system_prompt
-        + "\nYour main task is to converse with the user and fulfill their requests using available tooling. "
-    )
-    ai_msg = llm.invoke([SystemMessage(content=prompt)] + state["messages"])
+
+    # If there are no messages, do nothing
+    if len(state["messages"]) == 0:
+        return state
+
+    # Insert system message if not already present
+    if not isinstance(state["messages"][0], SystemMessage):
+        state["messages"].insert(0, SystemMessage(content=system_prompt))
+    ai_msg = llm.invoke(state["messages"])
     state["messages"].append(ai_msg)
     return state
 
