@@ -27,11 +27,12 @@ jobs:
           rm -rf $GITHUB_WORKSPACE/../../_temp/_github_home/.??* || true
           ls -la $GITHUB_WORKSPACE/../../_temp/_github_home
     
-      - name: Update CA certificates
+      - name: Update CA certificates & gcc
         run: |
           apt-get update
           apt-get install ca-certificates -y
           update-ca-certificates --fresh
+          apt-get -y install gcc
 
       - uses: fuzzylabs/gha-poetry-update@v1
         with:
