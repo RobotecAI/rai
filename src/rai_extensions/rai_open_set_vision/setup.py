@@ -41,8 +41,8 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "grounding_dino = rai_open_set_vision.grounding_dino:main",
-            "talker = rai_open_set_vision.talker:main",
+            "grounding_dino = rai_open_set_vision.services.grounding_dino:main",
+            "talker = rai_open_set_vision.examples.talker:main",
         ],
     },
 )
