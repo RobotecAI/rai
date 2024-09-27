@@ -16,6 +16,17 @@ jobs:
       image: ubuntu:24.04
 
     steps:
+      - name: Clean up build space
+        run: |
+          ls -la $GITHUB_WORKSPACE
+          rm -rf $GITHUB_WORKSPACE/* || true
+          rm -rf $GITHUB_WORKSPACE/.??* || true
+          ls -la $GITHUB_WORKSPACE
+          ls -la $GITHUB_WORKSPACE/../../_temp/_github_home
+          rm -rf $GITHUB_WORKSPACE/../../_temp/_github_home/* || true
+          rm -rf $GITHUB_WORKSPACE/../../_temp/_github_home/.??* || true
+          ls -la $GITHUB_WORKSPACE/../../_temp/_github_home
+
       - uses: fuzzylabs/gha-poetry-update@v1
         with:
           python-version: 3.12
