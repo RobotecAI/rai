@@ -18,11 +18,11 @@ Example:
 
 ```python
 from rai.messages import HumanMultimodalMessage, preprocess_image
-from langchain_openai.chat_models import ChatOpenAI
+from rai.utils.model_initialization import get_llm_model
 
 base64_image = preprocess_image('https://raw.githubusercontent.com/RobotecAI/RobotecGPULidar/develop/docs/image/rgl-logo.png')
 
-llm = ChatOpenAI(model="gpt-4o")
+llm = get_llm_model(model_type='complex_model') # initialize your vendor of choice in config.toml
 msg = [HumanMultimodalMessage(content='This is an example', images=[base64_image])]
 llm.invoke(msg)
 

@@ -22,7 +22,7 @@ The general architecture follows the diagram above. Text is captured from the in
 
 ![Voice interface](./imgs/HRI_voice_interface.png)
 
-In the voice interface, the input source is a microphone, while the output source is a speaker. The input is processed using the OpenAI [Whisper](https://platform.openai.com/docs/guides/speech-to-text/quickstart) model (cloud-based, paid), while the output can be produced using [OpenTTS](https://github.com/synesthesiam/opentts) (Apache-2.0, depending on the model used) or [ElevenLabs](https://github.com/elevenlabs/elevenlabs-python) (cloud-based, paid).
+In the voice interface, the input source is a microphone, while the output source is a speaker. The input is processed using the OpenAI [Whisper](https://platform.openai.com/docs/guides/speech-to-text/quickstart) model (cloud-based, paid) or with the local model, while the output can be produced using [OpenTTS](https://github.com/synesthesiam/opentts) (Apache-2.0, depending on the model used) or [ElevenLabs](https://github.com/elevenlabs/elevenlabs-python) (cloud-based, paid).
 
 ### Text Interface
 
