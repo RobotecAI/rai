@@ -29,8 +29,7 @@ jobs:
     
       - name: Update CA certificates
         run: |
-          update-ca-certificates --fresh
-          export SSL_CERT_DIR=/etc/ssl/certs
+          apt-get install ca-certificates -y
 
       - uses: fuzzylabs/gha-poetry-update@v1
         with:
