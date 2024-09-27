@@ -22,13 +22,13 @@ from ament_index_python.packages import get_package_share_directory
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 from langchain_core.tools import BaseTool
-from langchain_openai import OpenAIEmbeddings
 from pydantic import UUID4
 from rclpy.action import ActionClient
 from rclpy.node import Node
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
+from rai.utils.model_initialization import get_embeddings_model
 from rai_hmi.chat_msgs import (
     MissionAcceptanceMessage,
     MissionDoneMessage,
@@ -200,7 +200,7 @@ class BaseHMINode(Node):
             faiss_index = FAISS.load_local(
                 get_package_share_directory(self.robot_description_package)
                 + "/description",
-                OpenAIEmbeddings(),
+                get_embeddings_model(),
                 allow_dangerous_deserialization=True,
             )
             self.get_logger().info(

@@ -21,7 +21,6 @@ import rclpy.qos
 import rclpy.subscription
 import rclpy.task
 from langchain.tools.render import render_text_description_and_args
-from langchain_openai import ChatOpenAI
 
 from rai.agents.state_based import create_state_based_agent
 from rai.node import RaiNode, describe_ros_image
@@ -33,11 +32,12 @@ from rai.tools.ros.native import (
 from rai.tools.ros.native_actions import Ros2RunActionSync
 from rai.tools.ros.tools import GetOccupancyGridTool
 from rai.tools.time import WaitForSecondsTool
+from rai.utils.model_initialization import get_llm_model
 
 
 def main():
     rclpy.init()
-    llm = ChatOpenAI(model="gpt-4o")
+    llm = get_llm_model(model_type="complex_model")
 
     observe_topics = [
         "/camera/camera/color/image_raw",
@@ -75,8 +75,8 @@ def main():
     SYSTEM_PROMPT = ""
 
     node = RaiNode(
-        llm=ChatOpenAI(
-            model="gpt-4o-mini"
+        llm=get_llm_model(
+            model_type="simple_model"
         ),  # smaller model used to describe the environment
         observe_topics=observe_topics,
         observe_postprocessors=observe_postprocessors,
