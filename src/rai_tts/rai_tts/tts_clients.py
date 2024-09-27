@@ -16,6 +16,7 @@
 import logging
 import os
 import tempfile
+import time
 from abc import abstractmethod
 from typing import Optional
 
@@ -26,7 +27,8 @@ from elevenlabs.types.voice_settings import VoiceSettings
 
 logger = logging.getLogger(__name__)
 
-TTS_TRIES = 2
+TTS_TRIES = 5
+TTS_RETRY_DELAY = 0.5
 
 
 class TTSClient:
@@ -75,7 +77,13 @@ class ElevenLabsClient(TTSClient):
             except Exception as e:
                 logger.warn(f"Error occurred during synthesizing speech: {e}.")  # type: ignore
                 tries += 1
-        audio_data = b"".join(response)
+                if tries == TTS_TRIES:
+                    logger.error(
+                        f"Failed to synthesize speech after {TTS_TRIES} tries. Creating empty audio file instead."
+                    )
+                time.sleep(TTS_RETRY_DELAY)
+
+        audio_data = b""
         return self.save_audio_to_file(audio_data, suffix=".mp3")
 
 
