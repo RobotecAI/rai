@@ -22,16 +22,12 @@ Your robot's `whoami` package serves as a configuration package for the `rai_who
 
 4. Run the `parse_whoami_package`. This will process the documentation, building it into a vector database, which is used by RAI agent to reason about its identity.
 
-> **NOTE**: By default the vector database is created using the OpenAI API. Parsing
-> bigger documents might lead to costs. Embedding model can be configured in
+> **NOTE**: Parsing bigger documents might lead to costs. Embedding model can be configured in
 > [config.toml](../config.toml) (`ollama` works locally, see [docs/vendors.md](./vendors.md#ollama)).
 
 ```shell
 poetry run parse_whoami_package src/examples/panda_whoami/description
 ```
-
-> [!IMPORTANT]  
-> For now, this works only if you have OPENAI_API_KEY variable exported.
 
 ## Testing
 

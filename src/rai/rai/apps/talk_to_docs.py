@@ -26,11 +26,11 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.tools import BaseTool
 from langchain_core.vectorstores import VectorStore
-from langchain_openai import OpenAIEmbeddings
 from langgraph.graph import StateGraph
 from pydantic import BaseModel, Field
 
 from rai.apps.document_loader import ingest_documentation
+from rai.utils.model_initialization import get_embeddings_model
 
 logging.basicConfig(level=logging.WARN)
 
@@ -62,7 +62,7 @@ class State(TypedDict):
 
 def talk_to_docs(documentation_root: str, llm: BaseChatModel):
     docs = ingest_documentation(documentation_root)
-    vector_store = FAISS.from_documents(docs, OpenAIEmbeddings())
+    vector_store = FAISS.from_documents(docs, get_embeddings_model())
 
     query_docs = QueryDocsTool(vector_store=vector_store, k=3)
 

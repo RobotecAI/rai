@@ -13,35 +13,29 @@
 # limitations under the License.
 #
 
-from typing import List, Literal
+from typing import List
 
-from langchain_aws import ChatBedrock
 from langchain_core.messages import BaseMessage, HumanMessage
-from langchain_openai import ChatOpenAI
 
 from rai.agents.conversational_agent import create_conversational_agent
-from rai.config.models import BEDROCK_MULTIMODAL, OPENAI_MULTIMODAL
 from rai.tools.ros.cli import (
     Ros2ActionTool,
     Ros2InterfaceTool,
     Ros2ServiceTool,
     Ros2TopicTool,
 )
+from rai.utils.model_initialization import get_llm_model
 
 
 class Agent:
-    def __init__(self, vendor: Literal["openai", "bedrock"]):
-        self.vendor = vendor
+    def __init__(self):
         self.history: List[BaseMessage] = []
-        if vendor == "openai":
-            self.llm = ChatOpenAI(**OPENAI_MULTIMODAL)
-        else:
-            self.llm = ChatBedrock(**BEDROCK_MULTIMODAL)
+        self.llm = get_llm_model(model_type="complex_model")
 
 
 class ROS2Agent(Agent):
-    def __init__(self, vendor: Literal["openai", "bedrock"]):
-        super().__init__(vendor)
+    def __init__(self):
+        super().__init__()
         self.tools = [
             Ros2TopicTool(),
             Ros2InterfaceTool(),

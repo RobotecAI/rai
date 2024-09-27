@@ -1,7 +1,7 @@
 # Human Robot Interface via Voice
 
 > [!IMPORTANT]
-> RAI_ASR is based on OpenAI Whisper model. It is expected to have OPENAI_API_KEY environment variable populated.
+> RAI_ASR supports both local Whisper models and OpenAI Whisper (cloud). When using the cloud version, the OPENAI_API_KEY environment variable must be set with a valid API key.
 
 ## Running example
 
@@ -17,12 +17,12 @@ recording_device: The device you want to record with. Check available with:
 python -c 'import sounddevice as sd; print(sd.query_devices())'
 ```
 
-keep_speaker_busy: some speaker may go into low power mode, which may result in truncated speech beginnings. Set to true to play low frequency, low volume noise.
+keep_speaker_busy: some speakers may go into low power mode, which may result in truncated speech beginnings. Set to true to play low frequency, low volume noise to prevent sleep mode.
 
 ### OpenTTS
 
 ```bash
-ros2 launch rai_bringup hri.launch.py tts_vendor:=opentts robot_description_package:=<robot_description_package> recording_device:=0 keep_speaker_busy:=(true|false)
+ros2 launch rai_bringup hri.launch.py tts_vendor:=opentts robot_description_package:=<robot_description_package> recording_device:=0 keep_speaker_busy:=(true|false) asr_vendor:=(whisper|openai)
 
 ```
 
@@ -32,5 +32,5 @@ ros2 launch rai_bringup hri.launch.py tts_vendor:=opentts robot_description_pack
 ### ElevenLabs
 
 ```bash
-ros2 launch rai_bringup hri.launch.py robot_description_package:=<robot_description_package> recording_device:=0 keep_speaker_busy:=(true|false)
+ros2 launch rai_bringup hri.launch.py robot_description_package:=<robot_description_package> recording_device:=0 keep_speaker_busy:=(true|false) asr_vendor:=(whisper|openai)
 ```

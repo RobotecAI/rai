@@ -1,14 +1,11 @@
 # Human Robot Interface via Streamlit
 
-> [!IMPORTANT]
-> Streamlit interface is based on OpenAI models. It is expected to have OPENAI_API_KEY environment variable populated.
-
 ## Running example
 
 When your robot's whoami package is ready, run the following:
 
 ```bash
-streamlit run src/rai_hmi/rai_hmi/streamlit_hmi_node.py <my_robot_whoami> # eg rosbot_xl_whoami
+streamlit run src/rai_hmi/rai_hmi/text_hmi.py <my_robot_whoami> # eg rosbot_xl_whoami
 ```
 
 > [!NOTE]

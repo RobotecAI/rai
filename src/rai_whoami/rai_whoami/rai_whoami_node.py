@@ -18,7 +18,6 @@ import os
 import rclpy
 from ament_index_python.packages import get_package_share_directory
 from langchain_community.vectorstores import FAISS
-from langchain_openai import OpenAIEmbeddings
 from rai_interfaces.srv._vector_store_retrieval import (
     VectorStoreRetrieval_Request,
     VectorStoreRetrieval_Response,
@@ -28,6 +27,7 @@ from rclpy.parameter import Parameter
 from std_srvs.srv import Trigger
 from std_srvs.srv._trigger import Trigger_Request, Trigger_Response
 
+from rai.utils.model_initialization import get_embeddings_model
 from rai_interfaces.srv import VectorStoreRetrieval
 
 
@@ -79,7 +79,7 @@ class WhoAmI(Node):
         faiss_index = FAISS.load_local(
             get_package_share_directory(self.robot_description_package)
             + "/description",
-            OpenAIEmbeddings(),
+            get_embeddings_model(),
             allow_dangerous_deserialization=True,
         )
         return faiss_index

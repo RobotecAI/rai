@@ -26,7 +26,6 @@ import rclpy.subscription
 import rclpy.task
 import sensor_msgs.msg
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
 from langgraph.graph.graph import CompiledGraph
 from rclpy.action.graph import get_action_names_and_types
 from rclpy.action.server import ActionServer, GoalResponse, ServerGoalHandle
@@ -44,6 +43,7 @@ from rai.agents.state_based import Report, State
 from rai.messages.multimodal import HumanMultimodalMessage, MultimodalMessage
 from rai.tools.ros.utils import convert_ros_img_to_base64, import_message_from_str
 from rai.tools.utils import wait_for_message
+from rai.utils.model_initialization import get_llm_model
 from rai.utils.ros import NodeDiscovery, RosoutBuffer
 from rai_interfaces.action import Task as TaskAction
 
@@ -396,7 +396,7 @@ def describe_ros_image(
     msg: sensor_msgs.msg.Image,
 ) -> Dict[Literal["camera_image_summary"], str]:
     PROMPT = """Please describe the image in 2 sentences max 150 chars."""
-    small_llm = ChatOpenAI(model="gpt-4o-mini")
+    small_llm = get_llm_model(model_type="simple_model")
     base64_image = convert_ros_img_to_base64(msg)
     llm_msg = HumanMultimodalMessage(content=PROMPT, images=[base64_image])
     output = small_llm.invoke([llm_msg])

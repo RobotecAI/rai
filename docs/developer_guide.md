@@ -83,10 +83,10 @@ Once you have implemented your tools, you can run the agent with these new tools
 
 ```python
 from rai.agents.state_based import create_state_based_agent
-from langchain_openai import ChatOpenAI
+from rai.utils.model_initialization import get_llm_model
 from myrobot import robot
 
-llm = ChatOpenAI(model='gpt-4o') # initialize your vendor of choice
+llm = get_llm_model(model_type='complex_model') # initialize your vendor of choice in config.toml
 tools = [pick_up_object, scan_object, SayTool(robot=robot)]
 agent = create_state_based_agent(llm=llm, state_retriever=state_retriever, tools=tools)
 agent.invoke({"messages": ["Please pick up an object and scan it."]})
