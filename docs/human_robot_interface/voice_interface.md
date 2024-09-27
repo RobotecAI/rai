@@ -1,7 +1,7 @@
 # Human Robot Interface via Voice
 
 > [!IMPORTANT]
-> RAI_ASR supports both OpenAI Whisper (cloud) and local Whisper models. When using the cloud version, the OPENAI_API_KEY environment variable must be set with a valid API key.
+> RAI_ASR supports both local Whisper models and OpenAI Whisper (cloud). When using the cloud version, the OPENAI_API_KEY environment variable must be set with a valid API key.
 
 ## Running example
 
@@ -22,7 +22,7 @@ keep_speaker_busy: some speakers may go into low power mode, which may result in
 ### OpenTTS
 
 ```bash
-ros2 launch rai_bringup hri.launch.py tts_vendor:=opentts robot_description_package:=<robot_description_package> recording_device:=0 keep_speaker_busy:=(true|false) asr_vendor:=(openai|whisper)
+ros2 launch rai_bringup hri.launch.py tts_vendor:=opentts robot_description_package:=<robot_description_package> recording_device:=0 keep_speaker_busy:=(true|false) asr_vendor:=(whisper|openai)
 
 ```
 
@@ -32,5 +32,5 @@ ros2 launch rai_bringup hri.launch.py tts_vendor:=opentts robot_description_pack
 ### ElevenLabs
 
 ```bash
-ros2 launch rai_bringup hri.launch.py robot_description_package:=<robot_description_package> recording_device:=0 keep_speaker_busy:=(true|false) asr_vendor:=(openai|whisper)
+ros2 launch rai_bringup hri.launch.py robot_description_package:=<robot_description_package> recording_device:=0 keep_speaker_busy:=(true|false) asr_vendor:=(whisper|openai)
 ```
