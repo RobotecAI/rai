@@ -21,6 +21,10 @@ jobs:
       image: osrf/ros:${{ matrix.ros_distro }}-desktop-full
 
     steps:
+      - name: Clean up build space
+        run: |
+          ls -la /__w
+
       - uses: actions/checkout@v4
 
       - name: Install Poetry
