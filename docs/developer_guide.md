@@ -94,6 +94,7 @@ agent.invoke({"messages": ["Please pick up an object and scan it."]})
 
 Additional resources:
 
+- [Tracing](tracing.md) configuration for genAI models and agents.
 - [Beta demos](demos.md).
 - [Multimodal Messages](multimodal_messages.md) definition.
 - Available ROS 2 packages: [ros packages](ros_packages.md).
