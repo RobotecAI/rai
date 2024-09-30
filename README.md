@@ -74,7 +74,7 @@ The RAI framework aims to:
 
 #### 1.1 Install poetry
 
-Install poetry (1.8+) with the following line:
+RAI uses [Poetry](https://python-poetry.org/) for python packaging and dependency management. Install poetry (1.8+) with the following line:
 
 ```bash
 curl -sSL https://install.python-poetry.org | python3 -
@@ -113,24 +113,26 @@ source ./setup_shell.sh
 ### 3. Setting up vendors
 
 RAI is vendor-agnostic. Use the configuration in [config.toml](./config.toml) to set up your vendor of choice for RAI modules.
+Vendor choices for RAI and our recommendations are summarized in [Vendors Overview](docs/vendors_overview.md).
 
-If you do not have a vendor's key, follow the instructions below:
+> We strongly recommend you to use of best-performing AI models to get the most out of RAI!
 
-**OpenAI:** [link](https://platform.openai.com/docs/quickstart).
-**AWS Bedrock:** [link](https://console.aws.amazon.com/bedrock/home?#/overview).
+Pick your local solution or service provider and follow one of these guides:
 
-Or use a local solution such as Ollama [link](https://ollama.com/download).
-
-Congratulations, your installation is now completed!
+- **[Ollama](https://ollama.com/download)**
+- **[OpenAI](https://platform.openai.com/docs/quickstart)**
+- **[AWS Bedrock](https://console.aws.amazon.com/bedrock/home?#/overview)**
 
 ## Running RAI
+
+You are now ready to run RAI!
 
 ![rosbot-xl-example](./docs/imgs/rosbot-xl-example.gif)
 
 You can start by running the following examples:
 
-1. Hello RAI: Interact directly with your ROS 2 environment through an intuitive Streamlit chat interface.
-2. Explore the O3DE Husarion ROSbot XL demo and have your robot do tasks defined with natural language.
+1. **Hello RAI:** Interact directly with your ROS 2 environment through an intuitive Streamlit chat interface.
+2. **O3DE Husarion ROSbot XL demo"** give tasks to a simulated robot using natural language.
 
 ### Hello RAI
 
