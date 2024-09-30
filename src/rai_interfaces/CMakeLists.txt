@@ -21,6 +21,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/StringList.srv"
   "msg/RAIDetectionArray.msg"
   "srv/RAIGroundingDino.srv"
+  "srv/RAIGroundedSam.srv"
   "action/Task.action"
   "action/TaskFeedback.action"
   "srv/WhatISee.srv"
