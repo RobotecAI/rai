@@ -109,7 +109,10 @@ class ToolRunner(RunnableCallable):
                 artifact = cast(MultimodalArtifact, artifact)
                 store_artifacts(output.tool_call_id, [artifact])
 
-            if artifact is not None:  # multimodal case
+            if artifact is not None and (
+                len(artifact.get("images", [])) > 0
+                or len(artifact.get("audios", [])) > 0
+            ):  # multimodal case, we currently support images and audios artifacts
                 return ToolMultimodalMessage(
                     content=str_output(output.content),
                     name=call["name"],
