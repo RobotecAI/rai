@@ -35,9 +35,9 @@ from pydantic import BaseModel
 from rclpy.node import Node
 from streamlit.delta_generator import DeltaGenerator
 
-from rai.agents.state_based import get_stored_artifacts
 from rai.messages import HumanMultimodalMessage
 from rai.node import RaiBaseNode
+from rai.utils.artifacts import get_stored_artifacts
 from rai_hmi.agent import initialize_agent
 from rai_hmi.base import BaseHMINode
 from rai_hmi.chat_msgs import EMOJIS, MissionMessage
