@@ -108,7 +108,7 @@ An example client is provided with the package as `rai_open_set_vision/talker.py
 You can see it working by running:
 
 ```
-ros2 launch rai_open_set_vision example_communication_launch.xml image_path:=src/rai_extensions/rai_open_set_vision/images/sample.jpg [weights_path:=PATH/TO/WEIGHTS]
+ros2 launch rai_open_set_vision example_communication_launch.xml image_path:=src/rai_extensions/rai_open_set_vision/images/sample.jpg [dino_weights_path:=PATH/TO/DINO/WEIGHTS] [sam_weights_path:=PATH/TO/SAM/WEIGHTS]
 ```
 
 If everything was set up properly you should see a couple of detections with classes `dinosaur`, `dragon`, and `lizard`.

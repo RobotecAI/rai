@@ -16,6 +16,7 @@
 from os import PathLike
 from typing import List
 
+import hydra
 import numpy as np
 import torch
 from cv_bridge import CvBridge
@@ -33,7 +34,10 @@ class GDSegmenter:
         weight_path: str | PathLike,
         use_cuda: bool = True,
     ):
-        self.cfg_path = __file__.replace("segmenter.py", "seg_config.yml")
+        self.cfg_path = "seg_config.yml"
+        hydra.core.global_hydra.GlobalHydra.instance().clear()
+        hydra.initialize_config_module("rai_open_set_vision.configs")
+
         self.weight_path = str(weight_path)
         if use_cuda:
             self.device = "cuda" if torch.cuda.is_available() else "cpu"

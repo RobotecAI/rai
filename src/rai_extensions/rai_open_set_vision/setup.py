@@ -24,6 +24,8 @@ setup(
     name=package_name,
     version="0.1.0",
     packages=find_packages(exclude=["test"]),
+    include_package_data=True,
+    package_data={"": ["seg_config.yml"]},
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml"]),
@@ -42,6 +44,7 @@ setup(
     entry_points={
         "console_scripts": [
             "grounding_dino = rai_open_set_vision.services.grounding_dino:main",
+            "grounded_sam = rai_open_set_vision.services.grounded_sam:main",
             "talker = rai_open_set_vision.examples.talker:main",
         ],
     },
