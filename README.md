@@ -113,13 +113,15 @@ source ./setup_shell.sh
 ### 3. Setting up vendors
 
 RAI is vendor-agnostic. Use the configuration in [config.toml](./config.toml) to set up your vendor of choice for RAI modules.
-Vendor choices for RAI are summarized in [Vendors Overview](docs/vendors_overview.md).
+Vendor choices for RAI and our recommendations are summarized in [Vendors Overview](docs/vendors_overview.md).
 
-For the core AI service, follow these instructions for a locally hosted Ollama [link](https://ollama.com/download).
+> We strongly recommend you to use of best-performing AI models to get the most out of RAI!
 
-#### Optional: Paid vendor key
+Pick your local solution or service provider and follow one of these guides:
 
-Alternatively, to get keys for the vendor of your choice, follow these guides: - **OpenAI:** [link](https://platform.openai.com/docs/quickstart). - **AWS Bedrock:** [link](https://console.aws.amazon.com/bedrock/home?#/overview).
+- **[Ollama](https://ollama.com/download)**
+- **[OpenAI](https://platform.openai.com/docs/quickstart)**
+- **[AWS Bedrock](https://console.aws.amazon.com/bedrock/home?#/overview)**
 
 ## Running RAI
 
