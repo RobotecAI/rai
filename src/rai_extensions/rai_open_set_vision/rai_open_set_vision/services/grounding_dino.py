@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import TypedDict
 
 import rclpy
+from ament_index_python.packages import get_package_share_directory
 from rai_open_set_vision.vision_markup.boxer import GDBoxer
 from rclpy.node import Node
 from sensor_msgs.msg import Image
@@ -58,9 +59,7 @@ class GDinoService(Node):
 
     def _init_weight_path(self) -> Path:
         try:
-            found_path = subprocess.check_output(
-                ["ros2", "pkg", "prefix", "rai_open_set_vision"]
-            ).decode("utf-8")
+            found_path = get_package_share_directory("rai_open_set_vision")
             install_path = (
                 Path(found_path.strip())
                 / "share"

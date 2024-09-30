@@ -14,17 +14,24 @@
 #
 
 from os import PathLike
-from typing import List
+from typing import List, NamedTuple
 
+import hydra
 import numpy as np
 import torch
 from cv_bridge import CvBridge
 from sam2.build_sam import build_sam2
 from sam2.sam2_image_predictor import SAM2ImagePredictor
 from sensor_msgs.msg import Image
-from vision_msgs.msg import Detection2D
+from vision_msgs.msg import BoundingBox2D
 
 from rai.tools.ros.utils import convert_ros_img_to_ndarray
+
+
+class SegmentationResult(NamedTuple):
+    masks: List[np.ndarray]
+    scores: List[np.ndarray]
+    logits: List[np.ndarray]
 
 
 class GDSegmenter:
@@ -33,7 +40,10 @@ class GDSegmenter:
         weight_path: str | PathLike,
         use_cuda: bool = True,
     ):
-        self.cfg_path = __file__.replace("segmenter.py", "seg_config.yml")
+        self.cfg_path = "seg_config.yml"
+        hydra.core.global_hydra.GlobalHydra.instance().clear()
+        hydra.initialize_config_module("rai_open_set_vision.configs")
+
         self.weight_path = str(weight_path)
         if use_cuda:
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -45,32 +55,42 @@ class GDSegmenter:
         self.sam2_predictor = SAM2ImagePredictor(self.sam2_model)
         self.bridge = CvBridge()
 
-    def _get_boxes_xyxy(self, detections: List[Detection2D]) -> List[np.ndarray]:
+    def _get_boxes_xyxy(self, bboxes: List[BoundingBox2D]) -> List[np.ndarray]:
         data = []
-        for detection in detections:
-            center_x = detection.bbox.center.position.x
-            center_y = detection.bbox.center.position.y
+        for bbox in bboxes:
+            center_x = bbox.center.position.x
+            center_y = bbox.center.position.y
             data.append(
                 np.array(
                     [
-                        center_x - detection.bbox.size_x / 2,
-                        center_y - detection.bbox.size_y / 2,
-                        center_x + detection.bbox.size_x / 2,
-                        center_y + detection.bbox.size_y / 2,
+                        center_x - bbox.size_x / 2,
+                        center_y - bbox.size_y / 2,
+                        center_x + bbox.size_x / 2,
+                        center_y + bbox.size_y / 2,
                     ]
                 )
             )
         return data
 
-    def get_segmentation(self, image_msg: Image, detections: List[Detection2D]):
+    def get_segmentation(
+        self, image_msg: Image, ros_bboxes: List[BoundingBox2D]
+    ) -> SegmentationResult:
         img_array = convert_ros_img_to_ndarray(image_msg, image_msg.encoding)
         self.sam2_predictor.set_image(img_array)
-        bboxes = self._get_boxes_xyxy(detections)
+        bboxes = self._get_boxes_xyxy(ros_bboxes)
 
-        masks, scores, logits = self.sam2_predictor.predict_batch(
-            point_coords_batch=[],
-            point_labels_batch=[],
-            box_batch=bboxes,
-            multimask_output=False,
-        )
-        return masks, scores, logits
+        all_masks: List[np.ndarray] = []
+        all_scores: List[np.ndarray] = []
+        all_logits: List[np.ndarray] = []
+        for box in bboxes:
+            mask, score, logit = self.sam2_predictor.predict(
+                point_coords=None,
+                point_labels=None,
+                box=box,
+                multimask_output=False,
+            )
+            all_masks.append(mask)
+            all_scores.append(score)
+            all_logits.append(logit)
+
+        return SegmentationResult(all_masks, all_scores, all_logits)

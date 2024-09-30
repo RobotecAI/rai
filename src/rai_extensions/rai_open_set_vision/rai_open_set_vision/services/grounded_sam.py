@@ -18,6 +18,7 @@ import subprocess
 from pathlib import Path
 
 import rclpy
+from ament_index_python.packages import get_package_share_directory
 from rai_open_set_vision.vision_markup.segmenter import GDSegmenter
 from rclpy.node import Node
 
@@ -48,9 +49,7 @@ class GSamService(Node):
 
     def _init_weight_path(self):
         try:
-            found_path = subprocess.check_output(
-                ["ros2", "pkg", "prefix", "rai_open_set_vision"]
-            ).decode("utf-8")
+            found_path = get_package_share_directory("rai_open_set_vision")
             install_path = (
                 Path(found_path.strip()) / "share" / "weights" / "sam2_hiera_large.pt"
             )
@@ -71,7 +70,7 @@ class GSamService(Node):
             subprocess.run(
                 [
                     "wget",
-                    "https://dl.fbaipublicfiles.com/segment_anything_2/072824/sam2_hiera_large.pt"
+                    "https://dl.fbaipublicfiles.com/segment_anything_2/072824/sam2_hiera_large.pt",
                     "-O",
                     path,
                 ]
@@ -81,12 +80,15 @@ class GSamService(Node):
             raise Exception("Could not download weights")
 
     def segment_callback(self, request, response: str) -> str:
-        received_boxes = request.detections.detections.bboxes
+        received_boxes = []
+        for detection in request.detections.detections:
+            received_boxes.append(detection.bbox)
+
         image = request.source_img
 
         assert self.segmenter is not None
-        seg = self.segmenter.get_segmentation(image, received_boxes)
-        self.get_logger().info(seg)
+        masks, scores, logits = self.segmenter.get_segmentation(image, received_boxes)
+        self.get_logger().debug(str(masks))
         response = ""
 
         return response
