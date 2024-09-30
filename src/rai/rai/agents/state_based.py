@@ -26,7 +26,7 @@ from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.graph import CompiledGraph
-from langgraph.prebuilt.tool_node import str_output
+from langgraph.prebuilt.tool_node import msg_content_output
 from pydantic import BaseModel, Field, ValidationError
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
@@ -142,7 +142,7 @@ def retriever_wrapper(
     images = retrieved_info.pop("images", [])
     audios = retrieved_info.pop("audios", [])
 
-    info = str_output(retrieved_info)
+    info = msg_content_output(retrieved_info)
     state["messages"].append(
         HumanMultimodalMessage(
             content=f"Retrieved state: {info}", images=images, audios=audios

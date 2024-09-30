@@ -22,7 +22,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.runnables.config import get_executor_for_config
 from langchain_core.tools import BaseTool
 from langchain_core.tools import tool as create_tool
-from langgraph.prebuilt.tool_node import str_output
+from langgraph.prebuilt.tool_node import msg_content_output
 from langgraph.utils.runnable import RunnableCallable
 from pydantic import ValidationError
 from rclpy.impl.rcutils_logger import RcutilsLogger
@@ -114,7 +114,7 @@ class ToolRunner(RunnableCallable):
                 or len(artifact.get("audios", [])) > 0
             ):  # multimodal case, we currently support images and audios artifacts
                 return ToolMultimodalMessage(
-                    content=str_output(output.content),
+                    content=msg_content_output(output.content),
                     name=call["name"],
                     tool_call_id=call["id"],
                     images=artifact.get("images", []),
