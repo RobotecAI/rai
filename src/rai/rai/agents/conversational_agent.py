@@ -24,7 +24,7 @@ from langgraph.graph import START, StateGraph
 from langgraph.prebuilt.tool_node import tools_condition
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from rai.agents.state_based import ToolRunner
+from rai.agents.tool_runner import ToolRunner
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
 
