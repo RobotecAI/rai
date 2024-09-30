@@ -113,14 +113,7 @@ source ./setup_shell.sh
 ### 3. Setting up vendors
 
 RAI is vendor-agnostic. Use the configuration in [config.toml](./config.toml) to set up your vendor of choice for RAI modules.
-You can skip the setup of optional modules for now. It is covered in the [Developer Guide](docs/developers_guide.md).
-
-| Module                     | Open source | Alternative             | Why to consider alternative?                                           | More information                                                                                                              |
-| -------------------------- | ----------- | ----------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| AI service                 | Ollama      | OpenAI, Bedrock         | Overall performance of the AI model, supported modalities and features | [LangChain models](https://docs.langchain4j.dev/integrations/language-models/)                                                |
-| _Optional:_ Tracing tool   | Langfuse    | LangSmith               | Better integration with LangChain                                      | [Comparison](https://langfuse.com/faq/all/langsmith-alternative)                                                              |
-| _Optional:_ Text to speech | OpenTTS     | ElevenLabs              | Arguably, significantly better voice synthesis                         | <li> [OpenTTS GitHub](https://github.com/synesthesiam/opentts) </li><li> [RAI voice interface](docs/voice_interface.md) </li> |
-| _Optional:_ Speech to text | Whisper     | OpenAI Whisper (hosted) | Larger (stronger) models are available                                 | <li> [Whisper GitHub](https://github.com/openai/whisper) </li><li> [RAI voice interface](docs/voice_interface.md) </li>       |
+Vendor choices for RAI are summarized in [Vendors Overview](docs/vendors_overview.md).
 
 For the core AI service, follow these instructions for a locally hosted Ollama [link](https://ollama.com/download).
 
