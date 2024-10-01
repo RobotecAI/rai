@@ -45,6 +45,7 @@ faiss-cpu = "^1.8.0.post1"
 rich = "^13.7.1"
 docx2txt = "^0.8"
 pypdf = "^4.2.0"
+googlemaps = "^4.0"
 
 streamlit = "^1.37.1"
 deprecated = "^1.2.14"
