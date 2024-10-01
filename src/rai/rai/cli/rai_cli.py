@@ -21,7 +21,7 @@ from pathlib import Path
 
 import coloredlogs
 from langchain_community.vectorstores import FAISS
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 
 from rai.apps.talk_to_docs import ingest_documentation
 from rai.messages import preprocess_image
@@ -35,7 +35,7 @@ coloredlogs.install(level="INFO")  # type: ignore
 
 def parse_whoami_package():
     parser = argparse.ArgumentParser(
-        description="Parse robot whoami package. Script builds a vector store and creates a robot identity."
+        description="Parse robot whoami package. Script builds a vector store, creates a robot identity and a URDF description."
     )
     parser.add_argument(
         "documentation_root", type=str, help="Path to the root of the documentation"
@@ -52,6 +52,33 @@ def parse_whoami_package():
 
     llm = get_llm_model(model_type="simple_model")
     embeddings_model = get_embeddings_model()
+
+    def calculate_urdf_tokens():
+        combined_urdf = ""
+        xacro_files = glob.glob(args.documentation_root + "/urdf/*.xacro")
+        for xacro_file in xacro_files:
+            combined_urdf += f"# {xacro_file}\n"
+            combined_urdf += open(xacro_file, "r").read()
+            combined_urdf += "\n\n"
+        return len(combined_urdf) / 4
+
+    def build_urdf_description():
+        logger.info("Building the URDF description...")
+        combined_urdf = ""
+        xacro_files = glob.glob(args.documentation_root + "/urdf/*.xacro")
+        for xacro_file in xacro_files:
+            combined_urdf += f"# {xacro_file}\n"
+            combined_urdf += open(xacro_file, "r").read()
+            combined_urdf += "\n\n"
+
+        prompt = "You will be given a URDF file. Your task is to create a short and detailed description of links and joints. "
+        parsed_urdf = llm.invoke(
+            [SystemMessage(content=prompt), HumanMessage(content=str(combined_urdf))]
+        ).content
+
+        with open(save_dir + "/robot_description.urdf.txt", "w") as f:
+            f.write(parsed_urdf)
+        logger.info("Done")
 
     def build_docs_vector_store():
         logger.info("Building the robot docs vector store...")
@@ -113,6 +140,18 @@ def parse_whoami_package():
         logger.info(
             f"Skipping the robot identity creation. "
             f"You can do it manually by creating {save_dir}/robot_identity.txt"
+        )
+
+    logger.info(
+        f"Building the URDF description. The urdf's length is {calculate_urdf_tokens()} tokens"
+    )
+    logger.warn("Do you want to continue? (y/n)")
+    if input() == "y":
+        build_urdf_description()
+    else:
+        logger.info(
+            f"Skipping the URDF description creation. "
+            f"You can do it manually by creating {save_dir}/robot_description.urdf.txt"
         )
 
 
