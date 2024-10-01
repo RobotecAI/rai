@@ -53,6 +53,11 @@ class WhoAmI(Node):
             "rai_whoami_identity_service",
             self.get_identity_callback,
         )
+        self.srv = self.create_service(
+            Trigger,
+            "rai_whoami_urdf_service",
+            self.get_urdf_callback,
+        )
 
         # parse robot_description_package path
         self.robot_description_package = (
@@ -83,6 +88,21 @@ class WhoAmI(Node):
             allow_dangerous_deserialization=True,
         )
         return faiss_index
+
+    def get_urdf_callback(
+        self, request: Trigger_Request, response: Trigger_Response
+    ) -> Trigger_Response:
+        """Return URDF description"""
+        urdf_path = (
+            get_package_share_directory(self.robot_description_package)
+            + "/description/robot_description.urdf.txt"
+        )
+        with open(urdf_path, "r") as f:
+            urdf = f.read()
+        response.message = urdf
+        response.success = True
+        self.get_logger().info("Incoming request for URDF description, responding")
+        return response
 
     def get_constitution_callback(
         self, request: Trigger_Request, response: Trigger_Response
