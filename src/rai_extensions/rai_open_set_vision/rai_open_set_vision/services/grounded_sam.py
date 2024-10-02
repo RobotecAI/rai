@@ -81,12 +81,15 @@ class GSamService(Node):
             raise Exception("Could not download weights")
 
     def segment_callback(self, request, response: str) -> str:
-        received_boxes = request.detections.detections.bboxes
+        received_boxes = []
+        for detection in request.detections.detections:
+            received_boxes.append(detection.bbox)
+
         image = request.source_img
 
         assert self.segmenter is not None
-        seg = self.segmenter.get_segmentation(image, received_boxes)
-        self.get_logger().info(seg)
+        masks, scores, logits = self.segmenter.get_segmentation(image, received_boxes)
+        self.get_logger().info(masks)
         response = ""
 
         return response
