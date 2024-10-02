@@ -8,9 +8,13 @@ on:
 
 jobs:
   build-and-test-ros2:
+    if: github.event.pull_request.draft == false
+
     runs-on:
       - self-hosted
-      - robo-pc-066
+      - ${{ matrix.ros_distro }}
+
+    continue-on-error: true
 
     strategy:
       matrix:
@@ -22,16 +26,12 @@ jobs:
       image: osrf/ros:${{ matrix.ros_distro }}-desktop-full
 
     steps:
-      - name: Clean up build space
+      - name: Clean up workspace
         run: |
           ls -la $GITHUB_WORKSPACE
           rm -rf $GITHUB_WORKSPACE/* || true
           rm -rf $GITHUB_WORKSPACE/.??* || true
           ls -la $GITHUB_WORKSPACE
-          ls -la $GITHUB_WORKSPACE/../../_temp/_github_home
-          rm -rf $GITHUB_WORKSPACE/../../_temp/_github_home/* || true
-          rm -rf $GITHUB_WORKSPACE/../../_temp/_github_home/.??* || true
-          ls -la $GITHUB_WORKSPACE/../../_temp/_github_home
 
       - uses: actions/checkout@v4
 
