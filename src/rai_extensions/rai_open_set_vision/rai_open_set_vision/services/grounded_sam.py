@@ -16,11 +16,18 @@
 import os
 import subprocess
 from pathlib import Path
+from typing import List
 
+import numpy as np
 import rclpy
+<<<<<<< HEAD
 from ament_index_python.packages import get_package_share_directory
+=======
+from cv_bridge import CvBridge
+>>>>>>> 1b5c03b (feat: basic implementation stub of grabbing point tool)
 from rai_open_set_vision.vision_markup.segmenter import GDSegmenter
 from rclpy.node import Node
+from sensor_msgs.msg import Image
 
 from rai_interfaces.srv import RAIGroundedSam
 
@@ -79,7 +86,7 @@ class GSamService(Node):
             self.get_logger().error("Could not download weights")
             raise Exception("Could not download weights")
 
-    def segment_callback(self, request, response: str) -> str:
+    def segment_callback(self, request, response: str) -> List[Image]:
         received_boxes = []
         for detection in request.detections.detections:
             received_boxes.append(detection.bbox)
@@ -87,11 +94,15 @@ class GSamService(Node):
         image = request.source_img
 
         assert self.segmenter is not None
-        masks, scores, logits = self.segmenter.get_segmentation(image, received_boxes)
-        self.get_logger().debug(str(masks))
-        response = ""
+        masks = self.segmenter.get_segmentation(image, received_boxes)
+        self.get_logger().info(masks)
+        bridge = CvBridge()
+        img_arr = []
+        for mask in masks:
+            arr = (mask * 255).astype(np.uint8)  # Convert binary 0/1 to 0/255
+            img_arr.append(bridge.cv2_to_imgmsg(arr, encoding="mono8"))
 
-        return response
+        return img_arr
 
 
 def main(args=None):
