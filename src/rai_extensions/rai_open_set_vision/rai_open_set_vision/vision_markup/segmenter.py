@@ -14,7 +14,7 @@
 #
 
 from os import PathLike
-from typing import List, NamedTuple
+from typing import List
 
 import hydra
 import numpy as np
@@ -26,12 +26,6 @@ from sensor_msgs.msg import Image
 from vision_msgs.msg import BoundingBox2D
 
 from rai.tools.ros.utils import convert_ros_img_to_ndarray
-
-
-class SegmentationResult(NamedTuple):
-    masks: List[np.ndarray]
-    scores: List[np.ndarray]
-    logits: List[np.ndarray]
 
 
 class GDSegmenter:
@@ -74,23 +68,19 @@ class GDSegmenter:
 
     def get_segmentation(
         self, image_msg: Image, ros_bboxes: List[BoundingBox2D]
-    ) -> SegmentationResult:
+    ) -> List[np.ndarray]:
         img_array = convert_ros_img_to_ndarray(image_msg, image_msg.encoding)
         self.sam2_predictor.set_image(img_array)
         bboxes = self._get_boxes_xyxy(ros_bboxes)
 
         all_masks: List[np.ndarray] = []
-        all_scores: List[np.ndarray] = []
-        all_logits: List[np.ndarray] = []
         for box in bboxes:
-            mask, score, logit = self.sam2_predictor.predict(
+            mask, _, _ = self.sam2_predictor.predict(
                 point_coords=None,
                 point_labels=None,
                 box=box,
                 multimask_output=False,
             )
             all_masks.append(mask)
-            all_scores.append(score)
-            all_logits.append(logit)
 
-        return SegmentationResult(all_masks, all_scores, all_logits)
+        return all_masks
