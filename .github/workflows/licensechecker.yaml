@@ -1,11 +1,8 @@
 name: Check License Lines
-
 on: [pull_request]
-
 jobs:
   check-license-lines:
     runs-on: ubuntu-24.04
-
     steps:
       - uses: actions/checkout@master
       - name: Check License Lines
