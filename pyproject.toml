@@ -50,6 +50,7 @@ streamlit = "^1.37.1"
 deprecated = "^1.2.14"
 tomli = "^2.0.1"
 openwakeword = { git = "https://github.com/maciejmajek/openWakeWord.git", branch = "chore/remove-tflite-backend" }
+open3d = "^0.18.0"
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.4"
 
