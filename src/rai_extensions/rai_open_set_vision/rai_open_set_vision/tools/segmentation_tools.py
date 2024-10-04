@@ -14,6 +14,9 @@
 
 from typing import Optional, Type
 
+import cv2
+import numpy as np
+import open3d as o3d
 import rclpy
 import sensor_msgs.msg
 from pydantic import Field
@@ -26,7 +29,7 @@ from rclpy.exceptions import (
 
 from rai.node import RaiBaseNode
 from rai.tools.ros import Ros2BaseInput, Ros2BaseTool
-from rai.tools.ros.utils import convert_ros_img_to_base64
+from rai.tools.ros.utils import convert_ros_img_to_base64, convert_ros_img_to_ndarray
 from rai_interfaces.srv import RAIGroundedSam, RAIGroundingDino
 
 # --------------------- Inputs ---------------------
@@ -50,6 +53,10 @@ class GetGrabbingPointInput(Ros2BaseInput):
     depth_topic: str = Field(
         ...,
         description="Ros2 topic for the depth image containing data to run distance calculations on",
+    )
+    camera_info_topic: str = Field(
+        ...,
+        description="Ros2 topic for the camera info to get the camera intrinsic from",
     )
     object_name: str = Field(
         ..., description="Natural language names of the object to grab"
@@ -166,3 +173,125 @@ class GetSegmentationTool(Ros2BaseTool):
                     ret.append(convert_ros_img_to_base64(img_msg))
                 break
         return "", {"segmentations": ret}
+
+
+class GetGrabbingPointTool(GetSegmentationTool):
+
+    name: str = ""
+    description: str = ""
+
+    args_schema: Type[GetGrabbingPointInput] = GetGrabbingPointInput
+
+    def _get_camera_info_message(self, topic: str) -> sensor_msgs.msg.CameraInfo:
+        msg = self.node.get_raw_message_from_topic(topic)
+        if type(msg) is sensor_msgs.msg.CameraInfo:
+            return msg
+        else:
+            raise Exception("Received wrong message")
+
+    def _get_intrinsic_from_camera_info(self, camera_info: sensor_msgs.msg.CameraInfo):
+        """Extract camera intrinsic parameters from the CameraInfo message."""
+
+        width = camera_info.width
+        height = camera_info.height
+        fx = camera_info.k[0]  # Focal length in x-axis
+        fy = camera_info.k[4]  # Focal length in y-axis
+        cx = camera_info.k[2]  # Principal point x
+        cy = camera_info.k[5]  # Principal point y
+
+        return o3d.camera.PinholeCameraIntrinsic(width, height, fx, fy, cx, cy)
+
+    def _process_mask(
+        self,
+        mask_msg: sensor_msgs.msg.Image,
+        depth_msg: sensor_msgs.msg.Image,
+        intrinsic: o3d.camera.PinholeCameraIntrinsic,
+    ):
+        mask = convert_ros_img_to_ndarray(mask_msg)
+        binary_mask = np.where(mask == 255, 1, 0)
+        print(binary_mask.shape)
+        depth = convert_ros_img_to_ndarray(depth_msg)
+        masked_depth_image = np.zeros_like(depth, dtype=np.float32)
+        masked_depth_image[binary_mask] = depth[binary_mask]
+
+        pcd = o3d.geometry.PointCloud.create_from_depth_image(
+            o3d.geometry.Image(masked_depth_image), intrinsic
+        )
+
+        # Remove outliers
+        _, ind = pcd.remove_statistical_outlier(nb_neighbors=5, std_ratio=2.0)
+        filtered_pcd = pcd.select_by_index(ind)
+
+        points = np.asarray(filtered_pcd.points)
+
+        grasp_z = points[:, 2].max()
+        near_grasp_z_points = points[points[:, 2] > grasp_z - 0.008]
+        xy_points = near_grasp_z_points[:, :2]
+        xy_points = xy_points.astype(np.float32)
+        _, dimensions, theta = cv2.minAreaRect(xy_points)
+
+        gripper_rotation = theta
+        # NOTE  - estimated dimentsion from the RGBDCamera5 not very precise, what may cause not desired rotation
+        if dimensions[0] > dimensions[1]:
+            gripper_rotation -= 90
+        if gripper_rotation < -90:
+            gripper_rotation += 180
+        elif gripper_rotation > 90:
+            gripper_rotation -= 180
+
+        # Calculate full 3D centroid for OBJECT
+        centroid = np.mean(points, axis=0)
+        # TODO : change offset to be dependant on the height of the object
+        centroid[2] += 0.1  # Added a small offset to prevent gripper collision
+        self.node.get_logger().info(f"Calculated 3D centroid for OBJECT: {centroid}")
+        return centroid, gripper_rotation
+
+    def _run(
+        self,
+        camera_topic: str,
+        depth_topic: str,
+        camera_info_topic: str,
+        object_name: str,
+    ):
+        camera_img_msg = self._get_image_message(camera_topic)
+        depth_msg = self._get_image_message(depth_topic)
+        camera_info = self._get_camera_info_message(camera_info_topic)
+
+        intrinsic = self._get_intrinsic_from_camera_info(camera_info)
+
+        future = self._call_gdino_node(camera_img_msg, object_name)
+        logger = self.node.get_logger()
+        try:
+            conversion_ratio = self.node.get_parameter("conversion_ratio").value
+            if not isinstance(conversion_ratio, float):
+                logger.error(
+                    f"Parametr conversion_ratio was set badly: {type(conversion_ratio)}: {conversion_ratio} expected float. Using default value 0.001"
+                )
+                conversion_ratio = 0.001
+        except (ParameterUninitializedException, ParameterNotDeclaredException):
+            logger.warning(
+                "Parameter conversion_ratio not found in node, using default value: 0.001"
+            )
+            conversion_ratio = 0.001
+        resolved = None
+        while rclpy.ok():
+            resolved = self._get_gdino_response(future)
+            if resolved is not None:
+                break
+
+        assert resolved is not None
+        future = self._call_gsam_node(camera_img_msg, resolved)
+
+        ret = []
+        while rclpy.ok():
+            resolved = self._get_gsam_response(future)
+            if resolved is not None:
+                for img_msg in resolved.masks:
+                    ret.append(convert_ros_img_to_base64(img_msg))
+                break
+        assert resolved is not None
+        rets = []
+        for mask_msg in resolved.masks:
+            rets.append(self._process_mask(mask_msg, depth_msg, intrinsic))
+
+        return "Grabbing point and rotation:" + ", ".join([str(ret) for ret in rets])
