@@ -16,7 +16,6 @@
 import os
 import subprocess
 from pathlib import Path
-from typing import List
 
 import numpy as np
 import rclpy
@@ -27,7 +26,6 @@ from cv_bridge import CvBridge
 >>>>>>> 1b5c03b (feat: basic implementation stub of grabbing point tool)
 from rai_open_set_vision.vision_markup.segmenter import GDSegmenter
 from rclpy.node import Node
-from sensor_msgs.msg import Image
 
 from rai_interfaces.srv import RAIGroundedSam
 
