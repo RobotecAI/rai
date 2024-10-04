@@ -26,9 +26,20 @@ from rclpy.exceptions import (
 
 from rai.node import RaiBaseNode
 from rai.tools.ros import Ros2BaseInput, Ros2BaseTool
+from rai.tools.ros.utils import convert_ros_img_to_base64
 from rai_interfaces.srv import RAIGroundedSam, RAIGroundingDino
 
 # --------------------- Inputs ---------------------
+
+
+class GetSegmentationInput(Ros2BaseInput):
+    camera_topic: str = Field(
+        ...,
+        description="Ros2 topic for the camera image containing image to run detection on.",
+    )
+    object_name: str = Field(
+        ..., description="Natural language names of the object to grab"
+    )
 
 
 class GetGrabbingPointInput(Ros2BaseInput):
@@ -46,13 +57,13 @@ class GetGrabbingPointInput(Ros2BaseInput):
 
 
 # --------------------- Tools ---------------------
-class GetGrabbingPointTool(Ros2BaseTool):
+class GetSegmentationTool(Ros2BaseTool):
     node: RaiBaseNode = Field(..., exclude=True)
 
     name: str = ""
     description: str = ""
 
-    args_schema: Type[GetGrabbingPointInput] = GetGrabbingPointInput
+    args_schema: Type[GetSegmentationInput] = GetSegmentationInput
 
     def _get_gdino_response(
         self, future: Future
@@ -66,7 +77,6 @@ class GetGrabbingPointTool(Ros2BaseTool):
                 raise Exception("Service call failed %r" % (e,))
             else:
                 assert response is not None
-                self.node.get_logger().info(f"{response.detections}")
                 return response
         return None
 
@@ -80,7 +90,6 @@ class GetGrabbingPointTool(Ros2BaseTool):
                 raise Exception("Service call failed %r" % (e,))
             else:
                 assert response is not None
-                self.node.get_logger().debug(f"{response}")
                 return response
         return None
 
@@ -122,12 +131,9 @@ class GetGrabbingPointTool(Ros2BaseTool):
     def _run(
         self,
         camera_topic: str,
-        depth_topic: str,
         object_name: str,
     ):
         camera_img_msg = self._get_image_message(camera_topic)
-        # depth_img_msg = self._get_image_message(depth_topic)
-        _ = self._get_image_message(depth_topic)
 
         future = self._call_gdino_node(camera_img_msg, object_name)
         logger = self.node.get_logger()
@@ -152,5 +158,11 @@ class GetGrabbingPointTool(Ros2BaseTool):
         assert resolved is not None
         future = self._call_gsam_node(camera_img_msg, resolved)
 
+        ret = []
         while rclpy.ok():
             resolved = self._get_gsam_response(future)
+            if resolved is not None:
+                for img_msg in resolved.masks:
+                    ret.append(convert_ros_img_to_base64(img_msg))
+                break
+        return "", {"segmentations": ret}
