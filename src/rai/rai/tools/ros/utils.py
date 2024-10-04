@@ -58,6 +58,9 @@ def convert_ros_img_to_ndarray(
     elif encoding == "16uc1":
         image_data = np.frombuffer(msg.data, np.uint16)
         image = image_data.reshape((msg.height, msg.width))
+    elif encoding == "32fc1":
+        image_data = np.frombuffer(msg.data, np.float32)  # Handle 32-bit float
+        image = image_data.reshape((msg.height, msg.width))
     else:
         raise ValueError(f"Unsupported encoding: {encoding}")
 
