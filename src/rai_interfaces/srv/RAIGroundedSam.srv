@@ -16,4 +16,4 @@
 RAIDetectionArray detections
 sensor_msgs/Image source_img
 ---
-sensor_msgs/Image[] source_img
+sensor_msgs/Image[] masks

@@ -48,6 +48,10 @@ def convert_ros_img_to_ndarray(
         image_data = np.frombuffer(msg.data, np.uint8)
         image = image_data.reshape((msg.height, msg.width, 3))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    elif encoding == "rgba8":
+        image_data = np.frombuffer(msg.data, np.uint8)
+        image = image_data.reshape((msg.height, msg.width, 4))
+        image = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
     elif encoding == "mono8":
         image_data = np.frombuffer(msg.data, np.uint8)
         image = image_data.reshape((msg.height, msg.width))
@@ -78,6 +82,12 @@ def convert_ros_img_to_base64(msg: sensor_msgs.msg.Image) -> str:
         return base64.b64encode(bytes(cv2.imencode(".png", cv_image)[1])).decode(
             "utf-8"
         )
+    elif cv_image.shape[-1] == 1:
+        cv_image = cv2.cvtColor(cv_image, cv2.GRAY2RGB)
+        return base64.b64encode(bytes(cv2.imencode(".png", cv_image)[1])).decode(
+            "utf-8"
+        )
+
     else:
         cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
         image_data = cv2.imencode(".png", cv_image)[1].tostring()  # type: ignore

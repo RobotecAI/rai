@@ -84,7 +84,7 @@ class GSamService(Node):
             self.get_logger().error("Could not download weights")
             raise Exception("Could not download weights")
 
-    def segment_callback(self, request, response: str) -> List[Image]:
+    def segment_callback(self, request, response: RAIGroundedSam.Response):
         received_boxes = []
         for detection in request.detections.detections:
             received_boxes.append(detection.bbox)
@@ -93,14 +93,16 @@ class GSamService(Node):
 
         assert self.segmenter is not None
         masks = self.segmenter.get_segmentation(image, received_boxes)
-        self.get_logger().info(masks)
         bridge = CvBridge()
         img_arr = []
         for mask in masks:
+            if len(mask.shape) > 2:  # Check if the mask has multiple channels
+                mask = np.squeeze(mask)
             arr = (mask * 255).astype(np.uint8)  # Convert binary 0/1 to 0/255
             img_arr.append(bridge.cv2_to_imgmsg(arr, encoding="mono8"))
 
-        return img_arr
+        response.masks = img_arr
+        return response
 
 
 def main(args=None):
