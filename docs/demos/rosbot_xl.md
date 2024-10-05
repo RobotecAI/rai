@@ -73,14 +73,14 @@ python examples/rosbot-xl-generic-node-demo.py
 
 ```bash
 # Ask robot where it is. RAI will use camera to describe the environment
-ros2 topic pub --once /task_addition_requests std_msgs/msg/String "data: 'Where are you now?'"
+ros2 action send_goal -f /perform_task rai_interfaces/action/Task "{priority: 10, description: '', task: 'Where are you?'}"
 
 # See integration with the navigation stack
-ros2 topic pub --once /task_addition_requests std_msgs/msg/String "data: 'Drive 1 meter forward'"
-ros2 topic pub --once /task_addition_requests std_msgs/msg/String "data: 'Spin 90 degrees'"
+ros2 action send_goal -f /perform_task rai_interfaces/action/Task "{priority: 10, description: '', task: 'Drive 1 meter forward'}"
+ros2 action send_goal -f /perform_task rai_interfaces/action/Task "{priority: 10, description: '', task: 'Spin 90 degrees'}"
 
 # Try out more complicated tasks
-ros2 topic pub --once /task_addition_requests std_msgs/msg/String "data: 'Drive forward if the path is clear, otherwise backward'"
+ros2 action send_goal -f /perform_task rai_interfaces/action/Task "{priority: 10, description: '', task: ' Drive forward if the path is clear, otherwise backward'}"
 ```
 
 > **NOTE**: For now agent is capable of performing only 1 task at once.
