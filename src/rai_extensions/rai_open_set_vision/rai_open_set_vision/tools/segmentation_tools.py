@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Type
+from typing import Any, List, Optional, Type
 
 import cv2
 import numpy as np
-import open3d as o3d
 import rclpy
 import sensor_msgs.msg
 from pydantic import Field
@@ -116,8 +115,8 @@ class GetSegmentationTool(Ros2BaseTool):
         req = RAIGroundingDino.Request()
         req.source_img = camera_img_message
         req.classes = object_name
-        req.box_threshold = 0.4  # TODO make this somehow configurable
-        req.text_threshold = 0.4
+        req.box_threshold = 0.25  # TODO make this somehow configurable
+        req.text_threshold = 0.25
 
         future = cli.call_async(req)
         return future
@@ -175,10 +174,36 @@ class GetSegmentationTool(Ros2BaseTool):
         return "", {"segmentations": ret}
 
 
+def depth_to_point_cloud(depth_image, fx, fy, cx, cy):
+    height, width = depth_image.shape
+
+    # Create grid of pixel coordinates
+    x = np.arange(width)
+    y = np.arange(height)
+    x_grid, y_grid = np.meshgrid(x, y)
+
+    # Calculate 3D coordinates
+    z = depth_image
+    x = (x_grid - cx) * z / fx
+    y = (y_grid - cy) * z / fy
+
+    # Stack the coordinates
+    points = np.stack((x, y, z), axis=-1)
+
+    # Reshape to a list of points
+    points = points.reshape(-1, 3)
+
+    # Remove points with zero depth
+    points = points[points[:, 2] > 0]
+
+    return points
+
+
 class GetGrabbingPointTool(GetSegmentationTool):
 
-    name: str = ""
-    description: str = ""
+    name: str = "GetGrabbingPointTool"
+    description: str = "Get the grabbing point of an object"
+    pcd: List[Any] = []
 
     args_schema: Type[GetGrabbingPointInput] = GetGrabbingPointInput
 
@@ -192,37 +217,32 @@ class GetGrabbingPointTool(GetSegmentationTool):
     def _get_intrinsic_from_camera_info(self, camera_info: sensor_msgs.msg.CameraInfo):
         """Extract camera intrinsic parameters from the CameraInfo message."""
 
-        width = camera_info.width
-        height = camera_info.height
         fx = camera_info.k[0]  # Focal length in x-axis
         fy = camera_info.k[4]  # Focal length in y-axis
         cx = camera_info.k[2]  # Principal point x
         cy = camera_info.k[5]  # Principal point y
 
-        return o3d.camera.PinholeCameraIntrinsic(width, height, fx, fy, cx, cy)
+        return fx, fy, cx, cy
 
     def _process_mask(
         self,
         mask_msg: sensor_msgs.msg.Image,
         depth_msg: sensor_msgs.msg.Image,
-        intrinsic: o3d.camera.PinholeCameraIntrinsic,
+        intrinsic,
     ):
         mask = convert_ros_img_to_ndarray(mask_msg)
         binary_mask = np.where(mask == 255, 1, 0)
         print(binary_mask.shape)
         depth = convert_ros_img_to_ndarray(depth_msg)
         masked_depth_image = np.zeros_like(depth, dtype=np.float32)
-        masked_depth_image[binary_mask] = depth[binary_mask]
+        masked_depth_image[binary_mask == 1] = depth[binary_mask == 1]
 
-        pcd = o3d.geometry.PointCloud.create_from_depth_image(
-            o3d.geometry.Image(masked_depth_image), intrinsic
+        pcd = depth_to_point_cloud(
+            masked_depth_image, intrinsic[0], intrinsic[1], intrinsic[2], intrinsic[3]
         )
 
-        # Remove outliers
-        _, ind = pcd.remove_statistical_outlier(nb_neighbors=5, std_ratio=2.0)
-        filtered_pcd = pcd.select_by_index(ind)
-
-        points = np.asarray(filtered_pcd.points)
+        # TODO: Filter out outliers
+        points = pcd
 
         grasp_z = points[:, 2].max()
         near_grasp_z_points = points[points[:, 2] > grasp_z - 0.008]
@@ -240,7 +260,7 @@ class GetGrabbingPointTool(GetSegmentationTool):
             gripper_rotation -= 180
 
         # Calculate full 3D centroid for OBJECT
-        centroid = np.mean(points, axis=0)
+        centroid = np.mean(near_grasp_z_points, axis=0)
         # TODO : change offset to be dependant on the height of the object
         centroid[2] += 0.1  # Added a small offset to prevent gripper collision
         self.node.get_logger().info(f"Calculated 3D centroid for OBJECT: {centroid}")
@@ -294,4 +314,4 @@ class GetGrabbingPointTool(GetSegmentationTool):
         for mask_msg in resolved.masks:
             rets.append(self._process_mask(mask_msg, depth_msg, intrinsic))
 
-        return "Grabbing point and rotation:" + ", ".join([str(ret) for ret in rets])
+        return rets
