@@ -318,8 +318,10 @@ class ReadAvailableActions:
 
 
 class TF2Listener(Node):
-    def __init__(self):
+    def __init__(self, target_frame: str, source_frame: str):
         super().__init__("tf2_listener")
+        self.target_frame = target_frame
+        self.source_frame = source_frame
 
         # Create a buffer and listener
         self.tf_buffer = Buffer()
@@ -332,14 +334,20 @@ class TF2Listener(Node):
         try:
             # Lookup transform between base_link and map
             now = rclpy.time.Time()
-            self.transform = self.tf_buffer.lookup_transform("map", "base_link", now)
+            self.transform = self.tf_buffer.lookup_transform(
+                self.target_frame, self.source_frame, now
+            )
         except Exception as ex:
             self.get_logger().debug(f"Could not transform: {ex}")
 
 
 class TF2TransformFetcher:
+    def __init__(self, target_frame: str, source_frame: str):
+        self.target_frame = target_frame
+        self.source_frame = source_frame
+
     def get_data(self):
-        node = TF2Listener()
+        node = TF2Listener(self.target_frame, self.source_frame)
         executor = rclpy.executors.SingleThreadedExecutor()
         executor.add_node(node)
 
