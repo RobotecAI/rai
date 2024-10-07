@@ -20,11 +20,11 @@ Your robot's `whoami` package serves as a configuration package for the `rai_who
    ```
 
 3. Fill in the `src/examples/panda_whoami/description` folder with data:
-   
+
    3.1. Save [this image](https://robodk.com/robot/img/Franka-Emika-Panda-robot.png) into `src/examples/panda_whoami/description/images`
-   
+
    3.2. Save [this document](https://github.com/user-attachments/files/16417196/Franka.Emika.Panda.robot.-.RoboDK.pdf) in `src/examples/panda_whoami/description/documentation`
-   
+
    3.3. Save [this urdf](https://github.com/frankaemika/franka_ros/blob/develop/franka_description/robots/panda/panda.urdf.xacro) in `src/examples/panda_whoami/description/urdf`
 
 4. Run the `parse_whoami_package`. This will process the documentation, building it into a vector database, which is used by RAI agent to reason about its identity.
