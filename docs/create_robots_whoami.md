@@ -6,6 +6,8 @@ To configure RAI for your robot, provide contents for your robot's so called `wh
 
 Your robot's `whoami` package serves as a configuration package for the `rai_whoami` node.
 
+> **TIP**: The Human-Machine Interface (HMI), both text and voice versions, relies heavily on the whoami package. It uses the robot's identity, constitution, and documentation to provide context-aware responses and ensure the robot behaves according to its defined characteristics.
+
 ## Example (Franka Emika Panda arm)
 
 1. Setup the repository using 1st and 2nd step from [Setup](../README.md#setup)
@@ -16,10 +18,10 @@ Your robot's `whoami` package serves as a configuration package for the `rai_who
    poetry run create_rai_ws --name panda --destination-directory src/examples
    ```
 
-3. Fill in the `src/examples/panda_whoami/description` folder with data:\
-   2.1 Save [this image](https://robodk.com/robot/img/Franka-Emika-Panda-robot.png) into `src/examples/panda_whoami/description/images`\
-   2.2 Save [this document](https://github.com/user-attachments/files/16417196/Franka.Emika.Panda.robot.-.RoboDK.pdf) in `src/examples/panda_whoami/description/documentation`
-   2.3 Save [this urdf](https://github.com/frankaemika/franka_ros/blob/develop/franka_description/robots/panda/panda.urdf.xacro) in `src/examples/panda_whoami/description/urdf`
+3. Fill in the `src/examples/panda_whoami/description` folder with data:
+   3.1 Save [this image](https://robodk.com/robot/img/Franka-Emika-Panda-robot.png) into `src/examples/panda_whoami/description/images`
+   3.2 Save [this document](https://github.com/user-attachments/files/16417196/Franka.Emika.Panda.robot.-.RoboDK.pdf) in `src/examples/panda_whoami/description/documentation`
+   3.3 Save [this urdf](https://github.com/frankaemika/franka_ros/blob/develop/franka_description/robots/panda/panda.urdf.xacro) in `src/examples/panda_whoami/description/urdf`
 
 4. Run the `parse_whoami_package`. This will process the documentation, building it into a vector database, which is used by RAI agent to reason about its identity.
 
@@ -27,14 +29,23 @@ Your robot's `whoami` package serves as a configuration package for the `rai_who
 > [config.toml](../config.toml) (`ollama` works locally, see [docs/vendors.md](./vendors.md#ollama)).
 
 ```shell
-poetry run parse_whoami_package src/examples/panda_whoami/description
+poetry run parse_whoami_package src/examples/panda_whoami
 ```
+
+5. Optional: Examine the generated files
+
+After running the `parse_whoami_package` command, you can inspect the generated files in the `src/examples/panda_whoami/description/generated` directory. These files contain important information about your robot:
+
+- `robot_identity.txt`: Contains a detailed description of the robot's identity, capabilities, and characteristics.
+- `robot_description.urdf.txt`: Provides a summary of the robot's URDF (Unified Robot Description Format), describing its physical structure.
+- `robot_constitution.txt`: Outlines the ethical guidelines and operational rules for the robot.
+- `faiss_index`: A directory containing the vector store of the robot's documentation, used for efficient information retrieval.
 
 ## Testing
 
 You can test your new `panda_whoami` package by calling `rai_whoami` services:
 
-2. Building the `rai_whoami` package and running the `rai_whoami_node` for your `Panda` robot:
+1. Building the `rai_whoami` package and running the `rai_whoami_node` for your `Panda` robot:
 
 ```shell
 colcon build --symlink-install

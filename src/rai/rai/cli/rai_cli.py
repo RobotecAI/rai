@@ -38,24 +38,20 @@ def parse_whoami_package():
         description="Parse robot whoami package. Script builds a vector store, creates a robot identity and a URDF description."
     )
     parser.add_argument(
-        "documentation_root", type=str, help="Path to the root of the documentation"
+        "whoami_package_root", type=str, help="Path to the root of the whoami package"
     )
-    parser.add_argument(
-        "--output",
-        type=str,
-        required=False,
-        default=None,
-        help="Path to the output directory",
-    )
+
     args = parser.parse_args()
-    save_dir = args.output if args.output is not None else args.documentation_root
+    save_dir = Path(args.whoami_package_root) / "description" / "generated"
+    description_path = Path(args.whoami_package_root) / "description"
+    save_dir.mkdir(parents=True, exist_ok=True)
 
     llm = get_llm_model(model_type="simple_model")
     embeddings_model = get_embeddings_model()
 
     def calculate_urdf_tokens():
         combined_urdf = ""
-        xacro_files = glob.glob(args.documentation_root + "/urdf/*.xacro")
+        xacro_files = glob.glob(str(description_path / "urdf" / "*.xacro"))
         for xacro_file in xacro_files:
             combined_urdf += f"# {xacro_file}\n"
             combined_urdf += open(xacro_file, "r").read()
@@ -65,18 +61,23 @@ def parse_whoami_package():
     def build_urdf_description():
         logger.info("Building the URDF description...")
         combined_urdf = ""
-        xacro_files = glob.glob(args.documentation_root + "/urdf/*.xacro")
+        xacro_files = glob.glob(str(description_path / "urdf" / "*.xacro"))
         for xacro_file in xacro_files:
             combined_urdf += f"# {xacro_file}\n"
             combined_urdf += open(xacro_file, "r").read()
             combined_urdf += "\n\n"
 
         prompt = "You will be given a URDF file. Your task is to create a short and detailed description of links and joints. "
-        parsed_urdf = llm.invoke(
-            [SystemMessage(content=prompt), HumanMessage(content=str(combined_urdf))]
-        ).content
+        parsed_urdf = ""
+        if len(combined_urdf):
+            parsed_urdf = llm.invoke(
+                [
+                    SystemMessage(content=prompt),
+                    HumanMessage(content=str(combined_urdf)),
+                ]
+            ).content
 
-        with open(save_dir + "/robot_description.urdf.txt", "w") as f:
+        with open(str(save_dir / "robot_description.urdf.txt"), "w") as f:
             f.write(parsed_urdf)
         logger.info("Done")
 
@@ -84,7 +85,7 @@ def parse_whoami_package():
         logger.info("Building the robot docs vector store...")
         faiss_index = FAISS.from_documents(docs, embeddings_model)
         faiss_index.add_documents(docs)
-        faiss_index.save_local(save_dir)
+        faiss_index.save_local(str(save_dir))
 
     def build_robot_identity():
         logger.info("Building the robot identity...")
@@ -98,7 +99,7 @@ def parse_whoami_package():
             "Your reply should start with I am a ..."
         )
 
-        images = glob.glob(args.documentation_root + "/images/*")
+        images = glob.glob(str(description_path / "images" / "*"))
 
         messages = [SystemMessage(content=prompt)] + [
             HumanMultimodalMessage(
@@ -109,12 +110,12 @@ def parse_whoami_package():
         output = llm.invoke(messages)
         assert isinstance(output.content, str), "Malformed output"
 
-        with open(save_dir + "/robot_identity.txt", "w") as f:
+        with open(str(save_dir / "robot_identity.txt"), "w") as f:
             f.write(output.content)
         logger.info("Done")
 
     docs = ingest_documentation(
-        documentation_root=args.documentation_root + "/documentation"
+        documentation_root=str(description_path / "documentation")
     )
     documentation = str([doc.page_content for doc in docs])
     n_tokens = len(documentation) // 4.0
@@ -189,7 +190,8 @@ def create_rai_ws():
 
     (package_path / "documentation").mkdir(exist_ok=True)
     (package_path / "images").mkdir(exist_ok=True)
-    (package_path / "robot_constitution.txt").touch()
+    (package_path / "generated").mkdir(exist_ok=True)
+    (package_path / "generated" / "robot_constitution.txt").touch()
 
     default_constitution_path = (
         "src/rai/rai/cli/resources/default_robot_constitution.txt"
@@ -197,7 +199,7 @@ def create_rai_ws():
     with open(default_constitution_path, "r") as file:
         default_constitution = file.read()
 
-    with open(f"{package_path}/robot_constitution.txt", "w") as file:
+    with open(f"{package_path}/generated/robot_constitution.txt", "w") as file:
         file.write(default_constitution)
 
     # Modify setup.py file
