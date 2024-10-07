@@ -6,7 +6,8 @@ To configure RAI for your robot, provide contents for your robot's so called `wh
 
 Your robot's `whoami` package serves as a configuration package for the `rai_whoami` node.
 
-> **TIP**: The Human-Machine Interface (HMI), both text and voice versions, relies heavily on the whoami package. It uses the robot's identity, constitution, and documentation to provide context-aware responses and ensure the robot behaves according to its defined characteristics.
+> [!TIP]
+> The Human-Machine Interface (HMI), both text and voice versions, relies heavily on the whoami package. It uses the robot's identity, constitution, and documentation to provide context-aware responses and ensure the robot behaves according to its defined characteristics.
 
 ## Example (Franka Emika Panda arm)
 
@@ -25,7 +26,8 @@ Your robot's `whoami` package serves as a configuration package for the `rai_who
 
 4. Run the `parse_whoami_package`. This will process the documentation, building it into a vector database, which is used by RAI agent to reason about its identity.
 
-> **NOTE**: Parsing bigger documents might lead to costs. Embedding model can be configured in
+> [!IMPORTANT]
+> Parsing bigger documents might lead to costs. Embedding model can be configured in
 > [config.toml](../config.toml) (`ollama` works locally, see [docs/vendors.md](./vendors.md#ollama)).
 
 ```shell
