@@ -47,7 +47,7 @@ The RAI framework aims to:
 - [Features](#features)
 - [Setup](#setup)
 - [Usage examples (demos)](#planned-demos)
-- [Further documentation](#further-documentation)
+- [Developer resources](#developer-resources)
 - [ROSCon 2024 Talk](#roscon-2024)
 
 ## Features
@@ -180,7 +180,7 @@ Please take a look at [Q&A](https://github.com/RobotecAI/rai/discussions/categor
 
 ### Developer Resources
 
-See our [Developer Guide](docs/developer_guide.md).
+See our [Developer Guide](docs/developer_guide.md) for a deeper dive into RAI, including instructions on creating a configuration specifically for your robot.
 
 ### Contributing
 
