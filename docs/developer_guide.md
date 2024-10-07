@@ -18,7 +18,7 @@ It is easily extendable, allowing developers to adapt and integrate new function
 ```python
 from rai import ROS2Agent
 
-agent = ROS2Agent(vendor='openai') # openai or bedrock
+agent = ROS2Agent() # vendor will be automatically initialized based on the config.toml
 print(agent("What topics, services, and actions are available?"))
 print(agent("Please describe the interfaces of two of the existing topics."))
 print(agent("Please publish 'Hello RAI' to /chatter topic only once")) # make sure to listen first ros2 topic echo /chatter
