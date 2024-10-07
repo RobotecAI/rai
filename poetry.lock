@@ -833,21 +833,6 @@ traitlets = ">=4"
 test = ["pytest"]
 
 [[package]]
-name = "configargparse"
-version = "1.7"
-description = "A drop-in replacement for argparse that allows options to also be set via config files and/or environment variables."
-optional = false
-python-versions = ">=3.5"
-files = [
-    {file = "ConfigArgParse-1.7-py3-none-any.whl", hash = "sha256:d249da6591465c6c26df64a9f73d2536e743be2f244eb3ebe61114af2f94f86b"},
-    {file = "ConfigArgParse-1.7.tar.gz", hash = "sha256:e7067471884de5478c58a511e529f0f9bd1c66bfef1dea90935438d6c23306d1"},
-]
-
-[package.extras]
-test = ["PyYAML", "mock", "pytest"]
-yaml = ["PyYAML"]
-
-[[package]]
 name = "contourpy"
 version = "1.3.0"
 description = "Python library for calculating contours of 2D quadrilateral grids"
@@ -1019,72 +1004,6 @@ files = [
     {file = "Cython-3.0.11-cp39-cp39-win_amd64.whl", hash = "sha256:8948802e1f5677a673ea5d22a1e7e273ca5f83e7a452786ca286eebf97cee67c"},
     {file = "Cython-3.0.11-py2.py3-none-any.whl", hash = "sha256:0e25f6425ad4a700d7f77cd468da9161e63658837d1bc34861a9861a4ef6346d"},
     {file = "cython-3.0.11.tar.gz", hash = "sha256:7146dd2af8682b4ca61331851e6aebce9fe5158e75300343f80c07ca80b1faff"},
-]
-
-[[package]]
-name = "dash"
-version = "2.18.1"
-description = "A Python framework for building reactive web-apps. Developed by Plotly."
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "dash-2.18.1-py3-none-any.whl", hash = "sha256:07c4513bb5f79a4b936847a0b49afc21dbd4b001ff77ea78d4d836043e211a07"},
-    {file = "dash-2.18.1.tar.gz", hash = "sha256:ffdf89690d734f6851ef1cb344222826ffb11ad2214ab9172668bf8aadd75d12"},
-]
-
-[package.dependencies]
-dash-core-components = "2.0.0"
-dash-html-components = "2.0.0"
-dash-table = "5.0.0"
-Flask = ">=1.0.4,<3.1"
-importlib-metadata = "*"
-nest-asyncio = "*"
-plotly = ">=5.0.0"
-requests = "*"
-retrying = "*"
-setuptools = "*"
-typing-extensions = ">=4.1.1"
-Werkzeug = "<3.1"
-
-[package.extras]
-celery = ["celery[redis] (>=5.1.2)", "redis (>=3.5.3)"]
-ci = ["black (==22.3.0)", "dash-dangerously-set-inner-html", "dash-flow-example (==0.0.5)", "flake8 (==7.0.0)", "flaky (==3.8.1)", "flask-talisman (==1.0.0)", "jupyterlab (<4.0.0)", "mimesis (<=11.1.0)", "mock (==4.0.3)", "numpy (<=1.26.3)", "openpyxl", "orjson (==3.10.3)", "pandas (>=1.4.0)", "pyarrow", "pylint (==3.0.3)", "pytest-mock", "pytest-rerunfailures", "pytest-sugar (==0.9.6)", "pyzmq (==25.1.2)", "xlrd (>=2.0.1)"]
-compress = ["flask-compress"]
-dev = ["PyYAML (>=5.4.1)", "coloredlogs (>=15.0.1)", "fire (>=0.4.0)"]
-diskcache = ["diskcache (>=5.2.1)", "multiprocess (>=0.70.12)", "psutil (>=5.8.0)"]
-testing = ["beautifulsoup4 (>=4.8.2)", "cryptography", "dash-testing-stub (>=0.0.2)", "lxml (>=4.6.2)", "multiprocess (>=0.70.12)", "percy (>=2.0.2)", "psutil (>=5.8.0)", "pytest (>=6.0.2)", "requests[security] (>=2.21.0)", "selenium (>=3.141.0,<=4.2.0)", "waitress (>=1.4.4)"]
-
-[[package]]
-name = "dash-core-components"
-version = "2.0.0"
-description = "Core component suite for Dash"
-optional = false
-python-versions = "*"
-files = [
-    {file = "dash_core_components-2.0.0-py3-none-any.whl", hash = "sha256:52b8e8cce13b18d0802ee3acbc5e888cb1248a04968f962d63d070400af2e346"},
-    {file = "dash_core_components-2.0.0.tar.gz", hash = "sha256:c6733874af975e552f95a1398a16c2ee7df14ce43fa60bb3718a3c6e0b63ffee"},
-]
-
-[[package]]
-name = "dash-html-components"
-version = "2.0.0"
-description = "Vanilla HTML components for Dash"
-optional = false
-python-versions = "*"
-files = [
-    {file = "dash_html_components-2.0.0-py3-none-any.whl", hash = "sha256:b42cc903713c9706af03b3f2548bda4be7307a7cf89b7d6eae3da872717d1b63"},
-    {file = "dash_html_components-2.0.0.tar.gz", hash = "sha256:8703a601080f02619a6390998e0b3da4a5daabe97a1fd7a9cebc09d015f26e50"},
-]
-
-[[package]]
-name = "dash-table"
-version = "5.0.0"
-description = "Dash table"
-optional = false
-python-versions = "*"
-files = [
-    {file = "dash_table-5.0.0-py3-none-any.whl", hash = "sha256:19036fa352bb1c11baf38068ec62d172f0515f73ca3276c79dee49b95ddc16c9"},
-    {file = "dash_table-5.0.0.tar.gz", hash = "sha256:18624d693d4c8ef2ddec99a6f167593437a7ea0bf153aa20f318c170c5bc7308"},
 ]
 
 [[package]]
@@ -1484,20 +1403,6 @@ files = [
 ]
 
 [[package]]
-name = "fastjsonschema"
-version = "2.20.0"
-description = "Fastest Python implementation of JSON schema"
-optional = false
-python-versions = "*"
-files = [
-    {file = "fastjsonschema-2.20.0-py3-none-any.whl", hash = "sha256:5875f0b0fa7a0043a91e93a9b8f793bcbbba9691e7fd83dca95c28ba26d21f0a"},
-    {file = "fastjsonschema-2.20.0.tar.gz", hash = "sha256:3d48fc5300ee96f5d116f10fe6f28d938e6008f59a6a025c2649475b87f76a23"},
-]
-
-[package.extras]
-devel = ["colorama", "json-spec", "jsonschema", "pylint", "pytest", "pytest-benchmark", "pytest-cache", "validictory"]
-
-[[package]]
 name = "filelock"
 version = "3.16.1"
 description = "A platform independent file lock."
@@ -1512,28 +1417,6 @@ files = [
 docs = ["furo (>=2024.8.6)", "sphinx (>=8.0.2)", "sphinx-autodoc-typehints (>=2.4.1)"]
 testing = ["covdefaults (>=2.3)", "coverage (>=7.6.1)", "diff-cover (>=9.2)", "pytest (>=8.3.3)", "pytest-asyncio (>=0.24)", "pytest-cov (>=5)", "pytest-mock (>=3.14)", "pytest-timeout (>=2.3.1)", "virtualenv (>=20.26.4)"]
 typing = ["typing-extensions (>=4.12.2)"]
-
-[[package]]
-name = "flask"
-version = "3.0.3"
-description = "A simple framework for building complex web applications."
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "flask-3.0.3-py3-none-any.whl", hash = "sha256:34e815dfaa43340d1d15a5c3a02b8476004037eb4840b34910c6e21679d288f3"},
-    {file = "flask-3.0.3.tar.gz", hash = "sha256:ceb27b0af3823ea2737928a4d99d125a06175b8512c445cbd9a9ce200ef76842"},
-]
-
-[package.dependencies]
-blinker = ">=1.6.2"
-click = ">=8.1.3"
-itsdangerous = ">=2.1.2"
-Jinja2 = ">=3.1.2"
-Werkzeug = ">=3.0.0"
-
-[package.extras]
-async = ["asgiref (>=3.2)"]
-dotenv = ["python-dotenv"]
 
 [[package]]
 name = "flatbuffers"
@@ -2512,17 +2395,6 @@ parallel = ["ipyparallel"]
 qtconsole = ["qtconsole"]
 test = ["packaging", "pickleshare", "pytest", "pytest-asyncio (<0.22)", "testpath"]
 test-extra = ["curio", "ipython[test]", "matplotlib (!=3.2.0)", "nbformat", "numpy (>=1.23)", "pandas", "trio"]
-
-[[package]]
-name = "itsdangerous"
-version = "2.2.0"
-description = "Safely pass data to untrusted environments and back."
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "itsdangerous-2.2.0-py3-none-any.whl", hash = "sha256:c6242fc49e35958c8b15141343aa660db5fc54d4f13a1db01a3f5891b98700ef"},
-    {file = "itsdangerous-2.2.0.tar.gz", hash = "sha256:e0050c0b7da1eea53ffaf149c0cfbb5c6e2e2b69c4bef22c81fa6eb73e5f6173"},
-]
 
 [[package]]
 name = "jedi"
@@ -3777,27 +3649,6 @@ polars = ["polars (>=0.20.3)"]
 pyarrow = ["pyarrow (>=11.0.0)"]
 
 [[package]]
-name = "nbformat"
-version = "5.10.4"
-description = "The Jupyter Notebook format"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "nbformat-5.10.4-py3-none-any.whl", hash = "sha256:3b48d6c8fbca4b299bf3982ea7db1af21580e4fec269ad087b9e81588891200b"},
-    {file = "nbformat-5.10.4.tar.gz", hash = "sha256:322168b14f937a5d11362988ecac2a4952d3d8e3a2cbeb2319584631226d5b3a"},
-]
-
-[package.dependencies]
-fastjsonschema = ">=2.15"
-jsonschema = ">=2.6"
-jupyter-core = ">=4.12,<5.0.dev0 || >=5.1.dev0"
-traitlets = ">=5.1"
-
-[package.extras]
-docs = ["myst-parser", "pydata-sphinx-theme", "sphinx", "sphinxcontrib-github-alt", "sphinxcontrib-spelling"]
-test = ["pep440", "pre-commit", "pytest", "testpath"]
-
-[[package]]
 name = "nest-asyncio"
 version = "1.6.0"
 description = "Patch asyncio to allow nested event loops"
@@ -4201,42 +4052,6 @@ numpy = ">=1.21.6"
 packaging = "*"
 protobuf = "*"
 sympy = "*"
-
-[[package]]
-name = "open3d"
-version = "0.18.0"
-description = "Open3D: A Modern Library for 3D Data Processing."
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "open3d-0.18.0-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:48ee627a142a5453c4a2869b529310acb6f6b2507989cb9199c56e75796c575e"},
-    {file = "open3d-0.18.0-cp310-cp310-macosx_13_0_arm64.whl", hash = "sha256:9f3df5e8e8fe514b8285d05e43a4a3d57243d42d5c1dc9212adf8f18b6ab59b4"},
-    {file = "open3d-0.18.0-cp310-cp310-manylinux_2_27_aarch64.whl", hash = "sha256:b9c8c8059cb92cd8b73c287385eeddf46195f2609ac7052302d6ac844a373dbf"},
-    {file = "open3d-0.18.0-cp310-cp310-manylinux_2_27_x86_64.whl", hash = "sha256:f649d5d58090f73a337895fb0022c7b05c00f47f704b5722b103cceba04cc870"},
-    {file = "open3d-0.18.0-cp310-cp310-win_amd64.whl", hash = "sha256:48cdf2af3051320140d198f5d3ea3a85eeb3355e7a989a835b611b16589b9646"},
-    {file = "open3d-0.18.0-cp311-cp311-macosx_10_15_universal2.whl", hash = "sha256:b35a68b9fef3e963266db3bb15fbfef20e05787bc61192f61725fde5215f3560"},
-    {file = "open3d-0.18.0-cp311-cp311-macosx_13_0_arm64.whl", hash = "sha256:2182b818dcd3290dd2ddb0021ad0453bfda99098c931d5b2fc636a341cb3ca70"},
-    {file = "open3d-0.18.0-cp311-cp311-manylinux_2_27_aarch64.whl", hash = "sha256:882f1e5039a3c1c5ec05183eb650537fd7431238b7ccb2b742ca5479f02f705b"},
-    {file = "open3d-0.18.0-cp311-cp311-manylinux_2_27_x86_64.whl", hash = "sha256:8e3d1d1900a8f4d956f6819c246c78081725b9b0888f8549d2a7a49c8daa1303"},
-    {file = "open3d-0.18.0-cp311-cp311-win_amd64.whl", hash = "sha256:2da5da6c9eb9227baee6fe98baa992233aca36b83ec9e7d4093c77e762db60e6"},
-    {file = "open3d-0.18.0-cp38-cp38-macosx_11_0_x86_64.whl", hash = "sha256:877e67237f2a97f8219870108eecf1ff447a81b0fcf1d2eacea246c9619fc55c"},
-    {file = "open3d-0.18.0-cp38-cp38-macosx_13_0_arm64.whl", hash = "sha256:0ec03fcd48a939ec105896e0d02a9d006e8328c60491a0647b9a4fe5d9e4117d"},
-    {file = "open3d-0.18.0-cp38-cp38-manylinux_2_27_aarch64.whl", hash = "sha256:477ed692bafd0ed591676d78bcb898bb2b684dcaa2886befe29e1b19d38a7c6d"},
-    {file = "open3d-0.18.0-cp38-cp38-manylinux_2_27_x86_64.whl", hash = "sha256:46b9c1b900716771827b78006cfd18489b5327eabda8cd3d01e028b8173f4301"},
-    {file = "open3d-0.18.0-cp38-cp38-win_amd64.whl", hash = "sha256:d745affd0c7c765ed30ae9010abc4cfa80980b2c9f39a4f8678e8a9ef41ce089"},
-    {file = "open3d-0.18.0-cp39-cp39-macosx_11_0_x86_64.whl", hash = "sha256:cce30304dfde3b9c0fbfca21687cf0e5280bcbabe2920d2c804ab352bfe610a5"},
-    {file = "open3d-0.18.0-cp39-cp39-macosx_13_0_universal2.whl", hash = "sha256:ba5e07ca9a3ec6c70393bd2c5c707455a2e9c54209ccccca15ecf03834efd353"},
-    {file = "open3d-0.18.0-cp39-cp39-manylinux_2_27_aarch64.whl", hash = "sha256:23a3bf135c7e69d4116f54b1ff78f58846245b5e70640b291981cee9e49a53d7"},
-    {file = "open3d-0.18.0-cp39-cp39-manylinux_2_27_x86_64.whl", hash = "sha256:7d05fd6eedf75136cfbed24983da30bdfd08a6c4b1f968bf80ab84efc1fac861"},
-    {file = "open3d-0.18.0-cp39-cp39-win_amd64.whl", hash = "sha256:41be2d652f1b9feed9efb8775b29368ece0b4328ba6e90278486ff7643c6d480"},
-]
-
-[package.dependencies]
-configargparse = "*"
-dash = ">=2.6.0"
-nbformat = ">=5.7.0"
-numpy = ">=1.18.0"
-werkzeug = ">=2.2.3"
 
 [[package]]
 name = "openai"
@@ -4741,21 +4556,6 @@ files = [
 docs = ["furo (>=2024.8.6)", "proselint (>=0.14)", "sphinx (>=8.0.2)", "sphinx-autodoc-typehints (>=2.4)"]
 test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest (>=8.3.2)", "pytest-cov (>=5)", "pytest-mock (>=3.14)"]
 type = ["mypy (>=1.11.2)"]
-
-[[package]]
-name = "plotly"
-version = "5.24.1"
-description = "An open-source, interactive data visualization library for Python"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "plotly-5.24.1-py3-none-any.whl", hash = "sha256:f67073a1e637eb0dc3e46324d9d51e2fe76e9727c892dde64ddf1e1b51f29089"},
-    {file = "plotly-5.24.1.tar.gz", hash = "sha256:dbc8ac8339d248a4bcc36e08a5659bacfe1b079390b8953533f4eb22169b4bae"},
-]
-
-[package.dependencies]
-packaging = "*"
-tenacity = ">=6.2.0"
 
 [[package]]
 name = "pluggy"
@@ -5916,20 +5716,6 @@ urllib3 = ">=1.21.1,<3"
 [package.extras]
 socks = ["PySocks (>=1.5.6,!=1.5.7)"]
 use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
-
-[[package]]
-name = "retrying"
-version = "1.3.4"
-description = "Retrying"
-optional = false
-python-versions = "*"
-files = [
-    {file = "retrying-1.3.4-py3-none-any.whl", hash = "sha256:8cc4d43cb8e1125e0ff3344e9de678fefd85db3b750b81b2240dc0183af37b35"},
-    {file = "retrying-1.3.4.tar.gz", hash = "sha256:345da8c5765bd982b1d1915deb9102fd3d1f7ad16bd84a9700b85f64d24e8f3e"},
-]
-
-[package.dependencies]
-six = ">=1.7.0"
 
 [[package]]
 name = "rf-groundingdino"
@@ -8345,4 +8131,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10, <3.13"
-content-hash = "a554761e71066f06256569b26640030e8d05c3056de4eea8f066df6e839b8bed"
+content-hash = "843743640e27a424e579bf52fe31586a25b62b8ced53501f7ae9f8c527d5f4f0"
