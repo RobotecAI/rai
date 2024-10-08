@@ -44,5 +44,5 @@ def test_create_rai_ws(rai_ws: Path):
 
     assert os.path.exists(whoami_directory), "Description folder is missing"
 
-    description_files = os.listdir(whoami_directory / "description")
+    description_files = os.listdir(whoami_directory / "description" / "generated")
     assert "robot_constitution.txt" in description_files

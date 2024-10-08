@@ -47,7 +47,7 @@ The RAI framework aims to:
 - [Features](#features)
 - [Setup](#setup)
 - [Usage examples (demos)](#planned-demos)
-- [Further documentation](#further-documentation)
+- [Developer resources](#developer-resources)
 - [ROSCon 2024 Talk](#roscon-2024)
 
 ## Features
@@ -156,7 +156,7 @@ Follow this guide: [husarion-rosbot-xl-demo](docs/demos.md)
 
 ## What's next?
 
-Once you know your way around RAI, try the following challenges, with the aid the [developer guide](developer_guide.md):
+Once you know your way around RAI, try the following challenges, with the aid the [developer guide](docs/developer_guide.md):
 
 - Run RAI on your own robot and talk to it, asking questions about what is in its documentation (and others!).
 - Implement additional tools and use them in your interaction.
@@ -180,7 +180,7 @@ Please take a look at [Q&A](https://github.com/RobotecAI/rai/discussions/categor
 
 ### Developer Resources
 
-See our [Developer Guide](docs/developer_guide.md).
+See our [Developer Guide](docs/developer_guide.md) for a deeper dive into RAI, including instructions on creating a configuration specifically for your robot.
 
 ### Contributing
 

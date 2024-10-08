@@ -18,7 +18,7 @@ It is easily extendable, allowing developers to adapt and integrate new function
 ```python
 from rai import ROS2Agent
 
-agent = ROS2Agent(vendor='openai') # openai or bedrock
+agent = ROS2Agent() # vendor will be automatically initialized based on the config.toml
 print(agent("What topics, services, and actions are available?"))
 print(agent("Please describe the interfaces of two of the existing topics."))
 print(agent("Please publish 'Hello RAI' to /chatter topic only once")) # make sure to listen first ros2 topic echo /chatter
@@ -30,7 +30,33 @@ print(agent("Please publish 'Hello RAI' to /chatter topic only once")) # make su
 
 Follow instructions to [configure RAI identity for your robot](create_robots_whoami.md).
 
-### 2. Implement new tools specific to your robot
+### 2. Test Your Robot Using the Text HMI
+
+To run the fully initialized Streamlit HMI, use the following command, replacing `my_robot_whoami` with the name of the package you created:
+
+```bash
+streamlit run src/rai_hmi/rai_hmi/text_hmi.py my_robot_whoami
+```
+
+To verify if Streamlit successfully loaded the configuration:
+
+1. Expand the "System status" menu in the Streamlit interface.
+
+2. Check for the following indicators:
+   - "robot_database": true
+   - "system_prompt": true
+
+If both indicators are present and set to true, your configuration has been loaded correctly. You can now interact with your robot by:
+
+1. Asking about its identity and purpose
+
+2. Inquiring about its capabilities
+
+3. Requesting information on the ROS topics it can access
+
+This interaction will help you verify that the robot's 'whoami' package is functioning as intended and providing accurate information about your robot's configuration.
+
+### 3. Implement new tools specific to your robot
 
 RAI has general capabilities to interact through ROS interfaces such as actions and topics.
 However, you can extend RAI with tools dedicated to what your robot needs to do.
@@ -77,7 +103,7 @@ def state_retriever():
 
 ```
 
-### 3. Run the agent with new tools
+### 4. Run the agent with new tools
 
 Once you have implemented your tools, you can run the agent with these new tools as follows:
 

@@ -67,7 +67,7 @@ class WhoAmI(Node):
         )  # type: ignore
         self.robot_constitution_path = os.path.join(
             get_package_share_directory(self.robot_description_package),
-            "description/robot_constitution.txt",
+            "description/generated/robot_constitution.txt",
         )
 
         with open(self.robot_constitution_path, "r") as file:
@@ -83,7 +83,7 @@ class WhoAmI(Node):
     def _load_documentation(self) -> FAISS:
         faiss_index = FAISS.load_local(
             get_package_share_directory(self.robot_description_package)
-            + "/description",
+            + "/description/generated",
             get_embeddings_model(),
             allow_dangerous_deserialization=True,
         )
@@ -95,7 +95,7 @@ class WhoAmI(Node):
         """Return URDF description"""
         urdf_path = (
             get_package_share_directory(self.robot_description_package)
-            + "/description/robot_description.urdf.txt"
+            + "/description/generated/robot_description.urdf.txt"
         )
         with open(urdf_path, "r") as f:
             urdf = f.read()
@@ -175,7 +175,7 @@ class WhoAmI(Node):
         """Return robot identity"""
         identity_path = (
             get_package_share_directory(self.robot_description_package)
-            + "/description/robot_identity.txt"
+            + "/description/generated/robot_identity.txt"
         )
         with open(identity_path, "r") as f:
             identity = f.read()
