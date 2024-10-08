@@ -156,7 +156,7 @@ Follow this guide: [husarion-rosbot-xl-demo](docs/demos.md)
 
 ## What's next?
 
-Once you know your way around RAI, try the following challenges, with the aid the [developer guide](developer_guide.md):
+Once you know your way around RAI, try the following challenges, with the aid the [developer guide](docs/developer_guide.md):
 
 - Run RAI on your own robot and talk to it, asking questions about what is in its documentation (and others!).
 - Implement additional tools and use them in your interaction.
