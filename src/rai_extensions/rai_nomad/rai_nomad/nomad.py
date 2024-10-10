@@ -93,7 +93,7 @@ class NomadNode(Node):
         )
         self.declare_parameter(
             "image_topic",
-            "/camera/color/image_raw",
+            "/basa/camera_image_color",
             descriptor=ParameterDescriptor(
                 type=ParameterType.PARAMETER_STRING,
                 description=("The topic to subscribe to for image data"),
@@ -125,7 +125,7 @@ class NomadNode(Node):
         )
         self.declare_parameter(
             "angular_vel",
-            3.0,
+            4.0,
             descriptor=ParameterDescriptor(
                 type=ParameterType.PARAMETER_DOUBLE,
                 description=("Angular velocity scaling of the robot"),
@@ -133,7 +133,7 @@ class NomadNode(Node):
         )
         self.declare_parameter(
             "max_v",
-            0.2,
+            0.3,
             descriptor=ParameterDescriptor(
                 type=ParameterType.PARAMETER_DOUBLE,
                 description=("Maximum linear velocity of the robot"),
@@ -249,7 +249,10 @@ class NomadNode(Node):
 
     def timer_callback(self):
         waypoint_msg = Float32MultiArray()
+        self.get_logger().info("Timer callback")
         if len(self.context_queue) > self.model_params["context_size"]:
+
+            self.get_logger().info("Getting images")
             obs_images = transform_images(
                 self.context_queue, self.model_params["image_size"], center_crop=False
             )
