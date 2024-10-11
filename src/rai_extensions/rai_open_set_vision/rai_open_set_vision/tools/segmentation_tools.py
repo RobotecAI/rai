@@ -115,8 +115,8 @@ class GetSegmentationTool(Ros2BaseTool):
         req = RAIGroundingDino.Request()
         req.source_img = camera_img_message
         req.classes = object_name
-        req.box_threshold = 0.25  # TODO make this somehow configurable
-        req.text_threshold = 0.25
+        req.box_threshold = 0.35  # TODO make this somehow configurable
+        req.text_threshold = 0.45
 
         future = cli.call_async(req)
         return future
@@ -208,11 +208,13 @@ class GetGrabbingPointTool(GetSegmentationTool):
     args_schema: Type[GetGrabbingPointInput] = GetGrabbingPointInput
 
     def _get_camera_info_message(self, topic: str) -> sensor_msgs.msg.CameraInfo:
-        msg = self.node.get_raw_message_from_topic(topic)
-        if type(msg) is sensor_msgs.msg.CameraInfo:
-            return msg
-        else:
-            raise Exception("Received wrong message")
+        for _ in range(3):
+            msg = self.node.get_raw_message_from_topic(topic, timeout_sec=3.0)
+            if isinstance(msg, sensor_msgs.msg.CameraInfo):
+                return msg
+            self.node.get_logger().warn("Received wrong message type. Retrying...")
+
+        raise Exception("Failed to receive correct CameraInfo message after 3 attempts")
 
     def _get_intrinsic_from_camera_info(self, camera_info: sensor_msgs.msg.CameraInfo):
         """Extract camera intrinsic parameters from the CameraInfo message."""
@@ -260,10 +262,9 @@ class GetGrabbingPointTool(GetSegmentationTool):
             gripper_rotation -= 180
 
         # Calculate full 3D centroid for OBJECT
-        centroid = np.mean(near_grasp_z_points, axis=0)
+        centroid = np.mean(points, axis=0)
         # TODO : change offset to be dependant on the height of the object
         centroid[2] += 0.1  # Added a small offset to prevent gripper collision
-        self.node.get_logger().info(f"Calculated 3D centroid for OBJECT: {centroid}")
         return centroid, gripper_rotation
 
     def _run(
