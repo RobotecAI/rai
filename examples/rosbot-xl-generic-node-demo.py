@@ -15,15 +15,9 @@
 
 
 import rclpy
-import rclpy.callback_groups
 import rclpy.executors
-import rclpy.qos
-import rclpy.subscription
-import rclpy.task
-from langchain.tools.render import render_text_description_and_args
 
-from rai.agents.state_based import create_state_based_agent
-from rai.node import RaiNode, describe_ros_image
+from rai.node import RaiStateBasedNode, describe_ros_image
 from rai.tools.ros.native import (
     GetCameraImage,
     GetMsgFromTopic,
@@ -32,12 +26,10 @@ from rai.tools.ros.native import (
 from rai.tools.ros.native_actions import Ros2RunActionSync
 from rai.tools.ros.tools import GetOccupancyGridTool
 from rai.tools.time import WaitForSecondsTool
-from rai.utils.model_initialization import get_llm_model
 
 
 def main():
     rclpy.init()
-    llm = get_llm_model(model_type="complex_model")
 
     observe_topics = [
         "/camera/camera/color/image_raw",
@@ -70,51 +62,24 @@ def main():
         "/wait",
     ]
 
-    # TODO(boczekbartek): refactor system prompt
+    SYSTEM_PROMPT = f"""You are an autonomous robot connected to ros2 environment. Your main goal is to fulfill the user's requests.
+    Do not make assumptions about the environment you are currently in.
+    You can use ros2 topics, services and actions to operate. """
 
-    SYSTEM_PROMPT = ""
-
-    node = RaiNode(
-        llm=get_llm_model(
-            model_type="simple_model"
-        ),  # smaller model used to describe the environment
+    node = RaiStateBasedNode(
         observe_topics=observe_topics,
         observe_postprocessors=observe_postprocessors,
         whitelist=topics_whitelist + actions_whitelist,
         system_prompt=SYSTEM_PROMPT,
+        tools=[
+            WaitForSecondsTool,
+            GetMsgFromTopic,
+            Ros2RunActionSync,
+            GetCameraImage,
+            Ros2ShowMsgInterfaceTool,
+            GetOccupancyGridTool,
+        ],
     )
-
-    tools = [
-        WaitForSecondsTool(),
-        GetMsgFromTopic(node=node),
-        Ros2RunActionSync(node=node),
-        GetCameraImage(node=node),
-        Ros2ShowMsgInterfaceTool(),
-        GetOccupancyGridTool(),
-    ]
-
-    state_retriever = node.get_robot_state
-
-    SYSTEM_PROMPT = f"""You are an autonomous robot connected to ros2 environment. Your main goal is to fulfill the user's requests.
-    Do not make assumptions about the environment you are currently in.
-    Use the tooling provided to gather information about the environment:
-
-    {render_text_description_and_args(tools)}
-
-    You can use ros2 topics, services and actions to operate. """
-
-    node.get_logger().info(f"{SYSTEM_PROMPT=}")
-
-    node.system_prompt = node.initialize_system_prompt(SYSTEM_PROMPT)
-
-    app = create_state_based_agent(
-        llm=llm,
-        tools=tools,
-        state_retriever=state_retriever,
-        logger=node.get_logger(),
-    )
-
-    node.set_app(app)
 
     executor = rclpy.executors.MultiThreadedExecutor()
     executor.add_node(node)
@@ -122,4 +87,5 @@ def main():
     rclpy.shutdown()
 
 
-main()
+if __name__ == "__main__":
+    main()
