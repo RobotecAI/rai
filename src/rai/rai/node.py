@@ -85,7 +85,7 @@ class RaiBaseNode(Node):
         )
 
     def get_raw_message_from_topic(self, topic: str, timeout_sec: int = 1) -> Any:
-        self.get_logger().info(f"Getting msg from topic: {topic}")
+        self.get_logger().debug(f"Getting msg from topic: {topic}")
         if topic in self.state_subscribers and topic in self.robot_state:
             self.get_logger().info("Returning cached message")
             return self.robot_state[topic]
@@ -100,7 +100,7 @@ class RaiBaseNode(Node):
             )
 
             if success:
-                self.get_logger().info(
+                self.get_logger().debug(
                     f"Received message of type {msg_type.__class__.__name__} from topic {topic}"
                 )
                 return msg
@@ -190,7 +190,7 @@ class RaiGenericBaseNode(RaiBaseNode):
         {prompt}
         """
 
-        self.get_logger().info(f"System prompt initialized: {system_prompt}")
+        self.get_logger().debug(f"System prompt initialized: {system_prompt}")
         return system_prompt
 
     def generic_state_subscriber_callback(self, topic_name: str, msg: Any):
