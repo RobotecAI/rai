@@ -1,0 +1,16 @@
+The provided URDF file describes a robot named "panda," which is based on the Franka Emika Panda robot. This robot configuration is defined using XACRO, a macro language for generating XML files.
+
+### Links
+1. **Base Link**: The robot's base link serves as the foundational structure, providing stability and support for the entire arm.
+2. **Arm Links**: The Panda robot consists of several links that represent the segments of the robotic arm. Each link connects to the next through joints, allowing for a wide range of motion.
+3. **End Effector Link**: If the `hand` argument is set to true, an end effector link (the gripper) can be included. This link is positioned at the end of the robotic arm, facilitating interactions with objects.
+
+### Joints
+1. **Revolute Joints**: The arm includes multiple revolute joints that enable rotational motion. Each joint connects two adjacent links, allowing for the articulation necessary for complex tasks.
+2. **Joint Limits**: The robot's joints have defined limits for movement, specified in a separate YAML file. These limits ensure the joints operate within safe and functional ranges, preventing mechanical failure.
+3. **TCP Configuration**: If a gripper is attached, the TCP (Tool Center Point) can be offset in position and orientation relative to the hand, defined by the `tcp_xyz` and `tcp_rpy` arguments.
+
+### Simulation Parameters
+- The robot can be configured for simulation in Gazebo, where it can be parented to a world frame. The position and orientation offsets for this setup are specified by the `xyz` and `rpy` arguments.
+
+This URDF file provides a comprehensive configuration for the Panda robot, allowing for flexibility in defining its physical structure and operational parameters.
