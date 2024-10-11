@@ -19,11 +19,8 @@ from pathlib import Path
 
 import numpy as np
 import rclpy
-<<<<<<< HEAD
 from ament_index_python.packages import get_package_share_directory
-=======
 from cv_bridge import CvBridge
->>>>>>> 1b5c03b (feat: basic implementation stub of grabbing point tool)
 from rai_open_set_vision.vision_markup.segmenter import GDSegmenter
 from rclpy.node import Node
 
