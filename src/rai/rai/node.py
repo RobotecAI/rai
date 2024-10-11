@@ -15,7 +15,7 @@
 
 import functools
 import time
-from typing import Any, Callable, Dict, List, Literal, Optional
+from typing import Any, Callable, Dict, List, Literal, Optional, Type
 
 import rcl_interfaces.msg
 import rclpy
@@ -25,6 +25,8 @@ import rclpy.qos
 import rclpy.subscription
 import rclpy.task
 import sensor_msgs.msg
+from langchain.tools import BaseTool
+from langchain.tools.render import render_text_description_and_args
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph.graph import CompiledGraph
 from rclpy.action.graph import get_action_names_and_types
@@ -39,13 +41,81 @@ from rclpy.qos import (
 )
 from std_srvs.srv import Trigger
 
-from rai.agents.state_based import Report, State
-from rai.messages.multimodal import HumanMultimodalMessage, MultimodalMessage
-from rai.tools.ros.utils import convert_ros_img_to_base64, import_message_from_str
+from rai.tools.ros.native import Ros2BaseTool
+from rai.tools.ros.utils import import_message_from_str
 from rai.tools.utils import wait_for_message
 from rai.utils.model_initialization import get_llm_model
 from rai.utils.ros import NodeDiscovery, RosoutBuffer
 from rai_interfaces.action import Task as TaskAction
+
+WHOAMI_SYSTEM_PROMPT_TEMPATE = """
+    Constitution:
+    {constitution}
+
+    Identity:
+    {identity}
+
+    {prompt}
+"""
+
+
+def append_whoami_info_to_prompt(
+    node: Node, prompt: str, robot_description_package: Optional[str] = None
+) -> str:
+    if robot_description_package is None:
+        node.get_logger().warning(
+            "Robot description package not set, using empty identity and constitution."
+        )
+        return WHOAMI_SYSTEM_PROMPT_TEMPATE.format(
+            constitution="",
+            identity="",
+            prompt=prompt,
+        )
+
+    constitution_service = node.create_client(
+        Trigger,
+        "rai_whoami_constitution_service",
+    )
+    identity_service = node.create_client(Trigger, "rai_whoami_identity_service")
+
+    while not constitution_service.wait_for_service(timeout_sec=1.0):
+        node.get_logger().info("Constitution service not available, waiting again...")
+
+    while not identity_service.wait_for_service(timeout_sec=1.0):
+        node.get_logger().info("Identity service not available, waiting again...")
+
+    constitution_future = constitution_service.call_async(Trigger.Request())
+    rclpy.spin_until_future_complete(node, constitution_future)
+    constitution_response = constitution_future.result()
+    constitution_message = (
+        "" if constitution_response is None else constitution_response.message
+    )
+
+    identity_future = identity_service.call_async(Trigger.Request())
+    rclpy.spin_until_future_complete(node, identity_future)
+    identity_response = identity_future.result()
+    identity_message = "" if identity_response is None else identity_response.message
+
+    system_prompt = WHOAMI_SYSTEM_PROMPT_TEMPATE.format(
+        constitution=constitution_message,
+        identity=identity_message,
+        prompt=prompt,
+    )
+
+    node.get_logger().info(f"System prompt initialized: {system_prompt}")
+    return system_prompt
+
+
+def append_tools_text_description_to_prompt(prompt: str, tools: List[BaseTool]) -> str:
+    if len(tools) == 0:
+        return prompt
+
+    return f"""{prompt}
+
+    Use the tooling provided to gather information about the environment:
+
+    {render_text_description_and_args(tools)}
+    """
 
 
 class RaiBaseNode(Node):
@@ -124,100 +194,6 @@ class RaiBaseNode(Node):
         raise KeyError(f"Topic {topic} not found")
 
 
-class RaiGenericBaseNode(RaiBaseNode):
-    def __init__(
-        self,
-        node_name: str,
-        system_prompt: str,
-        llm,
-        observe_topics: Optional[List[str]] = None,
-        observe_postprocessors: Optional[Dict[str, Callable]] = None,
-        whitelist: Optional[List[str]] = None,
-        *args,
-        **kwargs,
-    ):
-        super().__init__(node_name=node_name, whitelist=whitelist, *args, **kwargs)
-        self.llm = llm
-
-        self.robot_state = dict()
-        self.state_topics = observe_topics if observe_topics is not None else []
-        self.state_postprocessors = (
-            observe_postprocessors if observe_postprocessors is not None else dict()
-        )
-
-        self.constitution_service = self.create_client(
-            Trigger,
-            "rai_whoami_constitution_service",
-        )
-        self.identity_service = self.create_client(
-            Trigger, "rai_whoami_identity_service"
-        )
-
-        self.callback_group = rclpy.callback_groups.MutuallyExclusiveCallbackGroup()
-
-        self.initialize_robot_state_interfaces(self.state_topics)
-
-        self.system_prompt = self.initialize_system_prompt(system_prompt)
-
-    def initialize_system_prompt(self, prompt: str):
-        while not self.constitution_service.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info(
-                "Constitution service not available, waiting again..."
-            )
-
-        while not self.identity_service.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info("Identity service not available, waiting again...")
-
-        constitution_request = Trigger.Request()
-
-        constitution_future = self.constitution_service.call_async(constitution_request)
-        rclpy.spin_until_future_complete(self, constitution_future)
-        constitution_response = constitution_future.result()
-
-        identity_request = Trigger.Request()
-
-        identity_future = self.identity_service.call_async(identity_request)
-        rclpy.spin_until_future_complete(self, identity_future)
-        identity_response = identity_future.result()
-
-        system_prompt = f"""
-        Constitution:
-        {constitution_response.message}
-
-        Identity:
-        {identity_response.message}
-
-        {prompt}
-        """
-
-        self.get_logger().info(f"System prompt initialized: {system_prompt}")
-        return system_prompt
-
-    def generic_state_subscriber_callback(self, topic_name: str, msg: Any):
-        self.get_logger().debug(
-            f"Received message of type {type(msg)} from topic {topic_name}"
-        )
-        self.robot_state[topic_name] = msg
-
-    def initialize_robot_state_interfaces(self, topics):
-        self.rosout_buffer = RosoutBuffer(self.llm)
-
-        for topic in topics:
-            msg_type = self.get_msg_type(topic)
-            topic_callback = functools.partial(
-                self.generic_state_subscriber_callback, topic
-            )
-            subscriber = self.create_subscription(
-                msg_type,
-                topic,
-                callback=topic_callback,
-                callback_group=self.callback_group,
-                qos_profile=self.qos_profile,
-            )
-
-            self.state_subscribers[topic] = subscriber
-
-
 def parse_task_goal(ros_action_goal: TaskAction.Goal) -> Dict[str, Any]:
     return dict(
         task=ros_action_goal.task,
@@ -226,7 +202,9 @@ def parse_task_goal(ros_action_goal: TaskAction.Goal) -> Dict[str, Any]:
     )
 
 
-class RaiNode(RaiGenericBaseNode):
+class RaiStateBasedLlmNode(RaiBaseNode):
+    AGENT_RECURSION_LIMIT = 100
+
     def __init__(
         self,
         system_prompt: str,
@@ -249,6 +227,7 @@ class RaiNode(RaiGenericBaseNode):
         )
 
         # ---------- ROS configuration ----------
+        self.callback_group = rclpy.callback_groups.MutuallyExclusiveCallbackGroup()
         self.rosout_sub = self.create_subscription(
             rcl_interfaces.msg.Log,
             "/rosout",
@@ -256,6 +235,14 @@ class RaiNode(RaiGenericBaseNode):
             callback_group=self.callback_group,
             qos_profile=self.qos_profile,
         )
+
+        # ---------- Robot State ----------
+        self.robot_state = dict()
+        self.state_topics = observe_topics if observe_topics is not None else []
+        self.state_postprocessors = (
+            observe_postprocessors if observe_postprocessors is not None else dict()
+        )
+        self._initialize_robot_state_interfaces(self.state_topics)
 
         # ---------- Task Queue ----------
         self.task_action_server = ActionServer(
@@ -269,12 +256,56 @@ class RaiNode(RaiGenericBaseNode):
         self.busy = False
 
         # ---------- LLM Agents ----------
-        self.AGENT_RECURSION_LIMIT = 100
-        self.llm_app: CompiledGraph = None
+        self.system_prompt = self._initialize_system_prompt(system_prompt)
+        self.tools = self._initialize_tools(tools) if tools is not None else []
+        self.llm_app: CompiledGraph = create_state_based_agent(
+            llm=get_llm_model(model_type="complex_model"),
+            tools=self.tools,
+            state_retriever=self.get_robot_state,
+            logger=self.get_logger(),
+        )
 
-        # self.task_queue = Queue()
-        # self.agent_loop_thread = Thread(target=self.agent_loop)
-        # self.agent_loop_thread.start()
+    def _initialize_tools(self, tools: List[Type[BaseTool]]):
+        initialized_tools = list()
+        for tool_cls in tools:
+            if issubclass(tool_cls, Ros2BaseTool):
+                tool = tool_cls(node=self)
+            else:
+                tool = tool_cls()
+
+            initialized_tools.append(tool)
+        return initialized_tools
+
+    def _initialize_system_prompt(self, prompt: str):
+        system_prompt = append_whoami_info_to_prompt(self, prompt)
+        system_prompt = append_tools_text_description_to_prompt(
+            system_prompt, self.tools
+        )
+        return system_prompt
+
+    def _initialize_robot_state_interfaces(self, topics):
+        self.rosout_buffer = RosoutBuffer(get_llm_model(model_type="simple_model"))
+
+        for topic in topics:
+            msg_type = self.get_msg_type(topic)
+            topic_callback = functools.partial(
+                self.generic_state_subscriber_callback, topic
+            )
+            subscriber = self.create_subscription(
+                msg_type,
+                topic,
+                callback=topic_callback,
+                callback_group=self.callback_group,
+                qos_profile=self.qos_profile,
+            )
+
+            self.state_subscribers[topic] = subscriber
+
+    def generic_state_subscriber_callback(self, topic_name: str, msg: Any):
+        self.get_logger().debug(
+            f"Received message of type {type(msg)} from topic {topic_name}"
+        )
+        self.robot_state[topic_name] = msg
 
     def goal_callback(self, _) -> GoalResponse:
         """Accept or reject a client request to begin an action."""
@@ -354,9 +385,6 @@ class RaiNode(RaiGenericBaseNode):
         finally:
             self.busy = False
 
-    def set_app(self, app: CompiledGraph):
-        self.llm_app = app
-
     def get_robot_state(self) -> Dict[str, str]:
         state_dict = dict()
 
@@ -372,6 +400,7 @@ class RaiNode(RaiGenericBaseNode):
             if t in self.state_postprocessors:
                 msg = self.state_postprocessors[t](msg)
             state_dict[t] = msg
+
         state_dict.update(
             {
                 "robot_interfaces": self.ros_discovery_info.dict(),
