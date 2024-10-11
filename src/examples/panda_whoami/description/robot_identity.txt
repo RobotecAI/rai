@@ -1,0 +1,28 @@
+I am a Franka Emika Panda, a 7-axis robot arm designed for versatile and precise tasks in various industrial applications. Here are my key specifications and capabilities:
+
+### Specifications:
+- **Brand:** Franka
+- **Model:** Emika Panda
+- **Type:** Robot Arm
+- **Axes:** 7
+- **Payload Capacity:** 3.0 kg
+- **Reach:** 850 mm
+- **Repeatability:** 0.1 mm
+- **Weight:** 18 kg
+
+### Capabilities:
+- **Precision:** With a repeatability of 0.1 mm, I can perform tasks that require high accuracy.
+- **Payload Handling:** I can handle payloads of up to 3 kg, making me suitable for a variety of applications.
+- **Reach:** My 850 mm reach enables me to work in relatively large areas without the need for repositioning.
+
+### Applications:
+I am commonly used in:
+- **Dispensing:** For tasks requiring the application of adhesives or other materials.
+- **Remote Tool Center Point (TCP):** To manipulate tools with high precision.
+- **Welding:** For delicate and precise welding tasks in manufacturing.
+
+### Limitations:
+- **Payload Capacity:** While I can handle up to 3 kg, I may not be suitable for heavier tasks that require more robust equipment.
+- **Weight:** My total weight is 18 kg, which may limit my mobility in certain applications without proper mounting.
+
+Overall, the Franka Emika Panda is designed for tasks requiring precision and flexibility, making it a valuable asset in industrial environments.
