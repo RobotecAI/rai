@@ -81,6 +81,9 @@ class DistanceMeasurement(NamedTuple):
 class GroundingDinoBaseTool(Ros2BaseTool):
     node: RaiBaseNode = Field(..., exclude=True, required=True)
 
+    box_threshold: float = Field(default=0.35, description="Box threshold for GDINO")
+    text_threshold: float = Field(default=0.35, description="Text threshold for GDINO")
+
     def _spin(self, future: Future) -> Optional[RAIGroundingDino.Response]:
         rclpy.spin_once(self.node)
         if future.done():
@@ -104,8 +107,8 @@ class GroundingDinoBaseTool(Ros2BaseTool):
         req = RAIGroundingDino.Request()
         req.source_img = camera_img_message
         req.classes = " , ".join(object_names)
-        req.box_threshold = 0.4  # TODO make this somehow configurable
-        req.text_threshold = 0.4
+        req.box_threshold = self.box_threshold
+        req.text_threshold = self.text_threshold
 
         future = cli.call_async(req)
         return future
