@@ -69,6 +69,9 @@ class GetSegmentationTool(Ros2BaseTool):
     name: str = ""
     description: str = ""
 
+    box_threshold: float = Field(default=0.35, description="Box threshold for GDINO")
+    text_threshold: float = Field(default=0.35, description="Text threshold for GDINO")
+
     args_schema: Type[GetSegmentationInput] = GetSegmentationInput
 
     def _get_gdino_response(
@@ -115,8 +118,8 @@ class GetSegmentationTool(Ros2BaseTool):
         req = RAIGroundingDino.Request()
         req.source_img = camera_img_message
         req.classes = object_name
-        req.box_threshold = 0.35  # TODO make this somehow configurable
-        req.text_threshold = 0.45
+        req.box_threshold = self.box_threshold
+        req.text_threshold = self.text_threshold
 
         future = cli.call_async(req)
         return future
@@ -234,7 +237,6 @@ class GetGrabbingPointTool(GetSegmentationTool):
     ):
         mask = convert_ros_img_to_ndarray(mask_msg)
         binary_mask = np.where(mask == 255, 1, 0)
-        print(binary_mask.shape)
         depth = convert_ros_img_to_ndarray(depth_msg)
         masked_depth_image = np.zeros_like(depth, dtype=np.float32)
         masked_depth_image[binary_mask == 1] = depth[binary_mask == 1]
