@@ -1,0 +1,37 @@
+<!--
+  ~ Copyright 2024 Robotec.ai
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<launch>
+    <arg name="robot_description_package" default = "quadruped_whoami"/>
+    <arg name="inspection_freq" default = "2.0"/>
+
+    <arg name="game_launcher" default = "src/examples/rai_quadruped_inspection/sim/QuadrupedInspectionDemo.GameLauncher"/>
+
+    <!-- <node pkg="rai_nomad" exec="nomad" name="nomad" output="screen"> -->
+    <!-- </node> -->
+    <node pkg="rai_whoami" exec="rai_whoami_node" name="rai_whoami_node" output="screen">
+        <param name="robot_description_package" value="$(var robot_description_package)" />
+    </node>
+    <node pkg="rai_quadruped_inspection" exec="rai_quadruped_inspection_node" name="rai_quadruped_inspection_node" output="screen">
+        <param name="inspection_freq" value="$(var inspection_freq)" />
+    </node>
+    <node name="rviz2" pkg="rviz2" exec="rviz2" args="-d src/examples/rai_quadruped_inspection/config.rviz" output="screen">
+    </node>
+    <executable
+        cmd="$(var game_launcher) -bg_ConnectToAssetProcessor=0"
+        output="screen">
+    </executable>
+</launch>

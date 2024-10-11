@@ -33,6 +33,7 @@ from typing import Tuple
 import gdown
 import numpy as np
 import rclpy
+import rclpy.qos
 import torch
 import yaml
 from ament_index_python.packages import get_package_share_directory
