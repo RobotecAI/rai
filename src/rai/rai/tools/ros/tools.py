@@ -240,7 +240,7 @@ class GetCurrentPositionToolInput(BaseModel):
 
 
 class GetCurrentPositionTool(BaseTool):
-    """Get the current position of the robot."""
+    """Get the current position and rotation of the robot."""
 
     name: str = "GetCurrentPositionTool"
     description: str = "A tool for getting the current position of the robot."

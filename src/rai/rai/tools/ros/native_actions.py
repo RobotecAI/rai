@@ -19,9 +19,9 @@ import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
 from action_msgs.msg import GoalStatus
 from pydantic import BaseModel, Field
-from rclpy.action import ActionClient
+from rclpy.action.client import ActionClient
 
-from .native import Ros2BaseTool
+from .native import Ros2BaseInput, Ros2BaseTool
 
 
 # --------------------- Inputs ---------------------
@@ -126,41 +126,54 @@ class Ros2RunActionSync(Ros2BaseTool):
         return res
 
 
-class Ros2GetRegisteredActions(Ros2BaseTool):
-    name: str = "Ros2GetRegisteredAction"
-    description: str = "A tool for checking the results of submitted ros2 actions"
+class Ros2RunActionAsync(Ros2BaseTool):
+    name: str = "Ros2RunAction"
+    description: str = """A tool for running a ros2 action.
+        <rule>Always check action interface before setting action_goal_args.</rule>"""
 
-    def _run(self):
-        return str(self.node.get_running_actions())
+    args_schema: Type[Ros2ActionRunnerInput] = Ros2ActionRunnerInput
+
+    def _run(
+        self, action_name: str, action_type: str, action_goal_args: Dict[str, Any]
+    ):
+        return self.node._run_action(action_name, action_type, action_goal_args)
 
 
-class Ros2CheckActionResults(Ros2BaseTool):
-    name: str = "Ros2CheckActionResults"
-    description: str = "A tool for checking the results of submitted ros2 actions"
+class Ros2IsActionComplete(Ros2BaseTool):
+    name: str = "Ros2IsActionComplete"
+    description: str = "A tool for checking if submitted ros2 actions is complete"
 
-    args_schema: Type[OptionalActionUidInput] = OptionalActionUidInput
+    args_schema: Type[Ros2BaseInput] = Ros2BaseInput
 
-    def _run(self, uid: Optional[str] = None):
-        return str(self.node.get_results(uid))
+    def _run(self) -> bool:
+        return self.node._is_task_complete()
+
+
+class Ros2GetActionResult(Ros2BaseTool):
+    name: str = "Ros2GetActionResult"
+    description: str = "A tool for checking the result of submitted ros2 action"
+
+    args_schema: Type[Ros2BaseInput] = Ros2BaseInput
+
+    def _run(self) -> bool:
+        return self.node._get_task_result()
 
 
 class Ros2CancelAction(Ros2BaseTool):
     name: str = "Ros2CancelAction"
     description: str = "Cancel submitted action"
 
-    args_schema: Type[ActionUidInput] = ActionUidInput
+    args_schema: Type[Ros2BaseInput] = Ros2BaseInput
 
-    def _run(self, uid: str):
-        return str(self.node.cancel_action(uid))
+    def _run(self) -> bool:
+        return self.node._cancel_task()
 
 
-class Ros2ListActionFeedbacks(Ros2BaseTool):
-    name: str = "Ros2ListActionFeedbacks"
-    description: str = (
-        "List intermediate feedbacks received during ros2 action. Feedbacks are sent before the action is completed."
-    )
+class Ros2GetLastActionFeedback(Ros2BaseTool):
+    name: str = "Ros2GetLastActionFeedback"
+    description: str = "Get last action feedback."
 
-    args_schema: Type[OptionalActionUidInput] = OptionalActionUidInput
+    args_schema: Type[Ros2BaseInput] = Ros2BaseInput
 
-    def _run(self, uid: Optional[str] = None):
-        return str(self.node.get_feedbacks(uid))
+    def _run(self) -> str:
+        return str(self.node.action_feedback)
