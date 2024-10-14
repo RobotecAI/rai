@@ -142,7 +142,7 @@ def ros2_build_msg(msg_type: str, msg_args: Dict[str, Any]) -> Tuple[object, Typ
     return msg, msg_cls
 
 
-class RaiToolsNode(Node):
+class RaiActionsNode(Node):
     def __init__(self):
         super().__init__("rai_internal_action_node")
 
@@ -271,7 +271,7 @@ class RaiBaseNode(Node):
         self.state_subscribers = dict()
 
         # ------- ROS2 actions handling -------
-        self.action_node = RaiToolsNode()
+        self.action_node = RaiActionsNode()
 
     def spin(self):
         executor = rclpy.executors.MultiThreadedExecutor()
@@ -372,6 +372,12 @@ class RaiStateBasedLlmNode(RaiBaseNode):
             observe_postprocessors if observe_postprocessors is not None else dict()
         )
         self._initialize_robot_state_interfaces(self.state_topics)
+        self.state_update_timer = self.create_timer(
+            3.0,
+            self.state_update_callback,
+            callback_group=rclpy.callback_groups.MutuallyExclusiveCallbackGroup(),
+        )
+        self.state_dict = dict()
 
         # ---------- Task Queue ----------
         self.task_action_server = ActionServer(
@@ -456,8 +462,13 @@ class RaiStateBasedLlmNode(RaiBaseNode):
             self.get_logger().info(f"Received task: {task}")
 
             # ---- LLM Task Handling ----
+            self.get_logger().info(f'This is system prompt: "{self.system_prompt}"')
+
             messages = [
                 SystemMessage(content=self.system_prompt),
+                HumanMessage(
+                    content=f"Robot intefaces: {self.ros_discovery_info.dict()}"
+                ),
                 HumanMessage(content=f"Task: {task}"),
             ]
 
@@ -517,7 +528,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         finally:
             self.busy = False
 
-    def get_robot_state(self) -> Dict[str, str]:
+    def state_update_callback(self):
         state_dict = dict()
 
         if self.robot_state is None:
@@ -528,20 +539,23 @@ class RaiStateBasedLlmNode(RaiBaseNode):
                 msg = "No message yet"
                 state_dict[t] = msg
                 continue
+            ts = time.perf_counter()
             msg = self.robot_state[t]
             if t in self.state_postprocessors:
                 msg = self.state_postprocessors[t](msg)
+            te = time.perf_counter() - ts
+            self.get_logger().info(f"Topic '{t}' postprocessed in: {te:.2f}")
             state_dict[t] = msg
 
-        state_dict.update(
-            {
-                "robot_interfaces": self.ros_discovery_info.dict(),
-            }
-        )
-
+        ts = time.perf_counter()
         state_dict["logs_summary"] = self.rosout_buffer.summarize()
+        te = time.perf_counter() - ts
+        self.get_logger().info(f"Logs summary retrieved in: {te:.2f}")
         self.get_logger().info(f"{state_dict=}")
-        return state_dict
+        self.state_dict = state_dict
+
+    def get_robot_state(self) -> Dict[str, str]:
+        return self.state_dict
 
     def clear_state(self):
         self.rosout_buffer.clear()
