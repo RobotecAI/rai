@@ -49,9 +49,9 @@ def main():
     topics_whitelist = [
         "/rosout",
         "/camera/camera/color/image_raw",
-        "/map",
-        "/scan",
-        "/diagnostics",
+        # "/map",
+        # "/scan",
+        # "/diagnostics",
         # "/cmd_vel",
         "/led_strip",
     ]
@@ -133,9 +133,7 @@ def main():
     (0.79, 5.73, 0.0),
     (0.92, 1.01, 0.0)
     """
-    executor = rclpy.executors.MultiThreadedExecutor()
-    executor.add_node(node)
-    executor.spin()
+    node.spin()
     rclpy.shutdown()
 
 
