@@ -53,6 +53,10 @@ class Ros2GetActionNamesAndTypesTool(Ros2BaseTool):
         return self.node.ros_discovery_info.actions_and_types
 
 
+class Ros2BaseActionTool(Ros2BaseTool):
+    pass
+
+
 class Ros2RunActionSync(Ros2BaseTool):
     name: str = "Ros2RunAction"
     description: str = (
@@ -126,7 +130,7 @@ class Ros2RunActionSync(Ros2BaseTool):
         return res
 
 
-class Ros2RunActionAsync(Ros2BaseTool):
+class Ros2RunActionAsync(Ros2BaseActionTool):
     name: str = "Ros2RunAction"
     description: str = """A tool for running a ros2 action.
         <rule>Always check action interface before setting action_goal_args.</rule>"""
@@ -139,7 +143,7 @@ class Ros2RunActionAsync(Ros2BaseTool):
         return self.node._run_action(action_name, action_type, action_goal_args)
 
 
-class Ros2IsActionComplete(Ros2BaseTool):
+class Ros2IsActionComplete(Ros2BaseActionTool):
     name: str = "Ros2IsActionComplete"
     description: str = "A tool for checking if submitted ros2 actions is complete"
 
@@ -149,7 +153,7 @@ class Ros2IsActionComplete(Ros2BaseTool):
         return self.node._is_task_complete()
 
 
-class Ros2GetActionResult(Ros2BaseTool):
+class Ros2GetActionResult(Ros2BaseActionTool):
     name: str = "Ros2GetActionResult"
     description: str = "A tool for checking the result of submitted ros2 action"
 
@@ -159,7 +163,7 @@ class Ros2GetActionResult(Ros2BaseTool):
         return self.node._get_task_result()
 
 
-class Ros2CancelAction(Ros2BaseTool):
+class Ros2CancelAction(Ros2BaseActionTool):
     name: str = "Ros2CancelAction"
     description: str = "Cancel submitted action"
 
@@ -169,7 +173,7 @@ class Ros2CancelAction(Ros2BaseTool):
         return self.node._cancel_task()
 
 
-class Ros2GetLastActionFeedback(Ros2BaseTool):
+class Ros2GetLastActionFeedback(Ros2BaseActionTool):
     name: str = "Ros2GetLastActionFeedback"
     description: str = "Get last action feedback."
 

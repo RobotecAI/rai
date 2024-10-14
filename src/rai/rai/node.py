@@ -48,6 +48,7 @@ from std_srvs.srv import Trigger
 from rai.agents.state_based import Report, State, create_state_based_agent
 from rai.messages import HumanMultimodalMessage
 from rai.tools.ros.native import Ros2BaseTool
+from rai.tools.ros.native_actions import Ros2BaseActionTool
 from rai.tools.ros.utils import convert_ros_img_to_base64, import_message_from_str
 from rai.tools.utils import wait_for_message
 from rai.utils.model_initialization import get_llm_model
@@ -141,86 +142,14 @@ def ros2_build_msg(msg_type: str, msg_args: Dict[str, Any]) -> Tuple[object, Typ
     return msg, msg_cls
 
 
-class RaiBaseNode(Node):
-    def __init__(
-        self,
-        whitelist: Optional[List[str]] = None,
-        *args,
-        **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
+class RaiToolsNode(Node):
+    def __init__(self):
+        super().__init__("rai_internal_action_node")
 
-        self.robot_state = dict()
-
-        self.DISCOVERY_FREQ = 2.0
-        self.DISCOVERY_DEPTH = 5
-        self.timer = self.create_timer(
-            self.DISCOVERY_FREQ,
-            self.discovery,
-        )
-        self.ros_discovery_info = NodeDiscovery(whitelist=whitelist)
-        self.discovery()
-        self.qos_profile = QoSProfile(
-            history=HistoryPolicy.KEEP_LAST,
-            depth=1,
-            reliability=ReliabilityPolicy.BEST_EFFORT,
-            durability=DurabilityPolicy.VOLATILE,
-            liveliness=LivelinessPolicy.AUTOMATIC,
-        )
-
-        self.state_subscribers = dict()
-
-        # ------- ROS2 actions handling -------
         self.goal_handle = None
         self.result_future = None
         self.feedback = None
         self.status = None
-
-    def discovery(self):
-        self.ros_discovery_info.set(
-            self.get_topic_names_and_types(),
-            self.get_service_names_and_types(),
-            get_action_names_and_types(self),
-        )
-
-    def get_raw_message_from_topic(self, topic: str, timeout_sec: int = 1) -> Any:
-        self.get_logger().info(f"Getting msg from topic: {topic}")
-        if topic in self.state_subscribers and topic in self.robot_state:
-            self.get_logger().info("Returning cached message")
-            return self.robot_state[topic]
-        else:
-            msg_type = self.get_msg_type(topic)
-            success, msg = wait_for_message(
-                msg_type,
-                self,
-                topic,
-                qos_profile=self.qos_profile,
-                time_to_wait=timeout_sec,
-            )
-
-            if success:
-                self.get_logger().info(
-                    f"Received message of type {msg_type.__class__.__name__} from topic {topic}"
-                )
-                return msg
-            else:
-                error = (
-                    f"No message received in {timeout_sec} seconds from topic {topic}"
-                )
-                self.get_logger().error(error)
-                return error
-
-    def get_msg_type(self, topic: str, n_tries: int = 5) -> Any:
-        """Sometimes node fails to do full discovery, therefore we need to retry"""
-        for _ in range(n_tries):
-            if topic in self.ros_discovery_info.topics_and_types:
-                msg_type = self.ros_discovery_info.topics_and_types[topic]
-                return import_message_from_str(msg_type)
-            else:
-                self.get_logger().info(f"Waiting for topic: {topic}")
-                self.discovery()
-                time.sleep(self.DISCOVERY_FREQ)
-        raise KeyError(f"Topic {topic} not found")
 
     def _run_action(self, action_name, action_type, action_goal_args):
         if not self._is_task_complete():
@@ -312,6 +241,92 @@ class RaiBaseNode(Node):
         return True
 
 
+class RaiBaseNode(Node):
+    def __init__(
+        self,
+        whitelist: Optional[List[str]] = None,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+
+        self.robot_state = dict()
+
+        self.DISCOVERY_FREQ = 2.0
+        self.DISCOVERY_DEPTH = 5
+        self.timer = self.create_timer(
+            self.DISCOVERY_FREQ,
+            self.discovery,
+        )
+        self.ros_discovery_info = NodeDiscovery(whitelist=whitelist)
+        self.discovery()
+        self.qos_profile = QoSProfile(
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            durability=DurabilityPolicy.VOLATILE,
+            liveliness=LivelinessPolicy.AUTOMATIC,
+        )
+
+        self.state_subscribers = dict()
+
+        # ------- ROS2 actions handling -------
+        self.action_node = RaiToolsNode()
+
+    def spin(self):
+        executor = rclpy.executors.MultiThreadedExecutor()
+        executor.add_node(self)
+        executor.add_node(self.action_node)
+        executor.spin()
+        rclpy.shutdown()
+
+    def discovery(self):
+        self.ros_discovery_info.set(
+            self.get_topic_names_and_types(),
+            self.get_service_names_and_types(),
+            get_action_names_and_types(self),
+        )
+
+    def get_raw_message_from_topic(self, topic: str, timeout_sec: int = 1) -> Any:
+        self.get_logger().info(f"Getting msg from topic: {topic}")
+        if topic in self.state_subscribers and topic in self.robot_state:
+            self.get_logger().info("Returning cached message")
+            return self.robot_state[topic]
+        else:
+            msg_type = self.get_msg_type(topic)
+            success, msg = wait_for_message(
+                msg_type,
+                self,
+                topic,
+                qos_profile=self.qos_profile,
+                time_to_wait=timeout_sec,
+            )
+
+            if success:
+                self.get_logger().info(
+                    f"Received message of type {msg_type.__class__.__name__} from topic {topic}"
+                )
+                return msg
+            else:
+                error = (
+                    f"No message received in {timeout_sec} seconds from topic {topic}"
+                )
+                self.get_logger().error(error)
+                return error
+
+    def get_msg_type(self, topic: str, n_tries: int = 5) -> Any:
+        """Sometimes node fails to do full discovery, therefore we need to retry"""
+        for _ in range(n_tries):
+            if topic in self.ros_discovery_info.topics_and_types:
+                msg_type = self.ros_discovery_info.topics_and_types[topic]
+                return import_message_from_str(msg_type)
+            else:
+                self.get_logger().info(f"Waiting for topic: {topic}")
+                self.discovery()
+                time.sleep(self.DISCOVERY_FREQ)
+        raise KeyError(f"Topic {topic} not found")
+
+
 def parse_task_goal(ros_action_goal: TaskAction.Goal) -> Dict[str, Any]:
     return dict(
         task=ros_action_goal.task,
@@ -341,7 +356,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         )
 
         # ---------- ROS configuration ----------
-        self.callback_group = rclpy.callback_groups.MutuallyExclusiveCallbackGroup()
+        self.callback_group = rclpy.callback_groups.ReentrantCallbackGroup()
         self.rosout_sub = self.create_subscription(
             rcl_interfaces.msg.Log,
             "/rosout",
@@ -383,7 +398,10 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         initialized_tools = list()
         for tool_cls in tools:
             if issubclass(tool_cls, Ros2BaseTool):
-                tool = tool_cls(node=self)
+                if issubclass(tool_cls, Ros2BaseActionTool):
+                    tool = tool_cls(node=self.action_node)
+                else:
+                    tool = tool_cls(node=self)
             else:
                 tool = tool_cls()
 
