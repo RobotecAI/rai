@@ -175,7 +175,9 @@ class Ros2CancelAction(Ros2BaseActionTool):
 
 class Ros2GetLastActionFeedback(Ros2BaseActionTool):
     name: str = "Ros2GetLastActionFeedback"
-    description: str = "Get last action feedback."
+    description: str = (
+        "Action feedback is an optional intermediate information from ros2 action. With this tool you can get the last feedback of running action."
+    )
 
     args_schema: Type[Ros2BaseInput] = Ros2BaseInput
 
