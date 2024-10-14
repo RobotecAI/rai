@@ -15,7 +15,7 @@
 
 import functools
 import time
-from typing import Any, Callable, Dict, List, Literal, Optional, Type
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Type
 
 import rcl_interfaces.msg
 import rclpy
@@ -24,11 +24,15 @@ import rclpy.executors
 import rclpy.qos
 import rclpy.subscription
 import rclpy.task
+import rosidl_runtime_py.set_message
+import rosidl_runtime_py.utilities
 import sensor_msgs.msg
+from action_msgs.msg import GoalStatus
 from langchain.tools import BaseTool
 from langchain.tools.render import render_text_description_and_args
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph.graph import CompiledGraph
+from rclpy.action.client import ActionClient
 from rclpy.action.graph import get_action_names_and_types
 from rclpy.action.server import ActionServer, GoalResponse, ServerGoalHandle
 from rclpy.node import Node
@@ -41,8 +45,10 @@ from rclpy.qos import (
 )
 from std_srvs.srv import Trigger
 
+from rai.agents.state_based import Report, State, create_state_based_agent
+from rai.messages import HumanMultimodalMessage
 from rai.tools.ros.native import Ros2BaseTool
-from rai.tools.ros.utils import import_message_from_str
+from rai.tools.ros.utils import convert_ros_img_to_base64, import_message_from_str
 from rai.tools.utils import wait_for_message
 from rai.utils.model_initialization import get_llm_model
 from rai.utils.ros import NodeDiscovery, RosoutBuffer
@@ -118,6 +124,23 @@ def append_tools_text_description_to_prompt(prompt: str, tools: List[BaseTool]) 
     """
 
 
+def ros2_build_msg(msg_type: str, msg_args: Dict[str, Any]) -> Tuple[object, Type]:
+    """
+    Import message and create it. Return both ready message and message class.
+
+    msgs args can have two formats:
+    { "goal" : {arg 1 : xyz, ... } or {arg 1 : xyz, ... }
+    """
+
+    msg_cls: Type = rosidl_runtime_py.utilities.get_interface(msg_type)
+    msg = msg_cls.Goal()
+
+    if "goal" in msg_args:
+        msg_args = msg_args["goal"]
+    rosidl_runtime_py.set_message.set_message_fields(msg, msg_args)
+    return msg, msg_cls
+
+
 class RaiBaseNode(Node):
     def __init__(
         self,
@@ -146,6 +169,12 @@ class RaiBaseNode(Node):
         )
 
         self.state_subscribers = dict()
+
+        # ------- ROS2 actions handling -------
+        self.goal_handle = None
+        self.result_future = None
+        self.feedback = None
+        self.status = None
 
     def discovery(self):
         self.ros_discovery_info.set(
@@ -193,6 +222,95 @@ class RaiBaseNode(Node):
                 time.sleep(self.DISCOVERY_FREQ)
         raise KeyError(f"Topic {topic} not found")
 
+    def _run_action(self, action_name, action_type, action_goal_args):
+        if not self._is_task_complete():
+            raise AssertionError(
+                "Another ros2 action is currently running and parallel actions are not supported. Please wait until the previous action is complete before starting a new one. You can also cancel the current one."
+            )
+
+        if action_name[0] != "/":
+            action_name = "/" + action_name
+            self.get_logger().info(f"Action name corrected to: {action_name}")
+
+        try:
+            goal_msg, msg_cls = ros2_build_msg(action_type, action_goal_args)
+        except Exception as e:
+            return f"Failed to build message: {e}"
+
+        client = ActionClient(self, msg_cls, action_name)
+
+        retries = 0
+        while not client.wait_for_server(timeout_sec=1.0):
+            retries += 1
+            if retries > 5:
+                raise Exception(
+                    f"Action server '{action_name}' is not available. Make sure `action_name` is correct..."
+                )
+            self.get_logger().info(
+                f"'{action_name}' action server not available, waiting..."
+            )
+
+        self.get_logger().info(f"Sending action message: {goal_msg}")
+
+        send_goal_future = client.send_goal_async(goal_msg, self._feedback_callback)
+        self.get_logger().info("Action goal sent!")
+        rclpy.spin_until_future_complete(self, send_goal_future)
+        self.goal_handle = send_goal_future.result()
+
+        if not self.goal_handle:
+            raise Exception(f"Action '{action_name}' not sent to server")
+
+        if not self.goal_handle.accepted:
+            raise Exception(f"Action '{action_name}' not accepted by server")
+
+        self.result_future = self.goal_handle.get_result_async()
+        self.get_logger().info("Action sent!")
+        return f"{action_name} started successfully with args: {action_goal_args}"
+
+    def _get_task_result(self):
+        if not self._is_task_complete():
+            return "Task is not complete yet"
+
+        if self.status == GoalStatus.STATUS_SUCCEEDED:
+            return "Succeeded"
+        elif self.status == GoalStatus.STATUS_ABORTED:
+            return "Failed"
+        elif self.status == GoalStatus.STATUS_CANCELED:
+            return "Cancelled"
+        else:
+            return "Failed"
+
+    def _feedback_callback(self, msg):
+        self.get_logger().info(f"Received ros2 action feedback: {msg}")
+        self.action_feedback = msg
+
+    def _is_task_complete(self):
+        if not self.result_future:
+            # task was cancelled or completed
+            return True
+        rclpy.spin_until_future_complete(self, self.result_future, timeout_sec=0.10)
+        if self.result_future.result():
+            self.status = self.result_future.result().status
+            if self.status != GoalStatus.STATUS_SUCCEEDED:
+                self.get_logger().debug(
+                    f"Task with failed with status code: {self.status}"
+                )
+                return True
+        else:
+            self.get_logger().info("There is not result")
+            # Timed out, still processing, not complete yet
+            return False
+
+        self.get_logger().info("Task succeeded!")
+        return True
+
+    def _cancel_task(self):
+        self.get_logger().info("Canceling current task.")
+        if self.result_future and self.goal_handle:
+            future = self.goal_handle.cancel_goal_async()
+            rclpy.spin_until_future_complete(self, future)
+        return True
+
 
 def parse_task_goal(ros_action_goal: TaskAction.Goal) -> Dict[str, Any]:
     return dict(
@@ -208,19 +326,15 @@ class RaiStateBasedLlmNode(RaiBaseNode):
     def __init__(
         self,
         system_prompt: str,
-        llm,
         observe_topics: Optional[List[str]] = None,
         observe_postprocessors: Optional[Dict[str, Callable]] = None,
         whitelist: Optional[List[str]] = None,
+        tools: Optional[List[Type[BaseTool]]] = None,
         *args,
         **kwargs,
     ):
         super().__init__(
-            "rai_node",
-            llm=llm,
-            system_prompt=system_prompt,
-            observe_topics=observe_topics,
-            observe_postprocessors=observe_postprocessors,
+            node_name="rai_node",
             whitelist=whitelist,
             *args,
             **kwargs,
@@ -256,8 +370,8 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         self.busy = False
 
         # ---------- LLM Agents ----------
-        self.system_prompt = self._initialize_system_prompt(system_prompt)
         self.tools = self._initialize_tools(tools) if tools is not None else []
+        self.system_prompt = self._initialize_system_prompt(system_prompt)
         self.llm_app: CompiledGraph = create_state_based_agent(
             llm=get_llm_model(model_type="complex_model"),
             tools=self.tools,
@@ -343,7 +457,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
 
                 msg = state[graph_node_name]["messages"][-1]
 
-                if isinstance(msg, MultimodalMessage):
+                if isinstance(msg, HumanMultimodalMessage):
                     last_msg = msg.text
                 else:
                     last_msg = msg.content
