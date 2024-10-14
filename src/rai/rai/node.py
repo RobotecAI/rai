@@ -142,7 +142,7 @@ def ros2_build_msg(msg_type: str, msg_args: Dict[str, Any]) -> Tuple[object, Typ
     return msg, msg_cls
 
 
-class RaiActionsNode(Node):
+class RaiAsyncToolsNode(Node):
     def __init__(self):
         super().__init__("rai_internal_action_node")
 
@@ -271,12 +271,12 @@ class RaiBaseNode(Node):
         self.state_subscribers = dict()
 
         # ------- ROS2 actions handling -------
-        self.action_node = RaiActionsNode()
+        self._async_tool_node = RaiAsyncToolsNode()
 
     def spin(self):
         executor = rclpy.executors.MultiThreadedExecutor()
         executor.add_node(self)
-        executor.add_node(self.action_node)
+        executor.add_node(self._async_tool_node)
         executor.spin()
         rclpy.shutdown()
 
@@ -336,7 +336,7 @@ def parse_task_goal(ros_action_goal: TaskAction.Goal) -> Dict[str, Any]:
 
 
 class RaiStateBasedLlmNode(RaiBaseNode):
-    AGENT_RECURSION_LIMIT = 100
+    AGENT_RECURSION_LIMIT = 500
 
     def __init__(
         self,
@@ -404,8 +404,12 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         initialized_tools = list()
         for tool_cls in tools:
             if issubclass(tool_cls, Ros2BaseTool):
-                if issubclass(tool_cls, Ros2BaseActionTool):
-                    tool = tool_cls(node=self.action_node)
+                if (
+                    issubclass(tool_cls, Ros2BaseActionTool)
+                    or "DetectionTool" in tool_cls.__name__
+                    or "GetDistance" in tool_cls.__name__
+                ):  # TODO(boczekbartek): develop a way to handle all mutially
+                    tool = tool_cls(node=self._async_tool_node)
                 else:
                     tool = tool_cls(node=self)
             else:
