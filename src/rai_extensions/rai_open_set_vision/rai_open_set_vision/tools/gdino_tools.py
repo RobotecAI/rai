@@ -82,7 +82,7 @@ class GroundingDinoBaseTool(Ros2BaseTool):
     node: RaiBaseNode = Field(..., exclude=True, required=True)
 
     box_threshold: float = Field(default=0.35, description="Box threshold for GDINO")
-    text_threshold: float = Field(default=0.35, description="Text threshold for GDINO")
+    text_threshold: float = Field(default=0.45, description="Text threshold for GDINO")
 
     def _spin(self, future: Future) -> Optional[RAIGroundingDino.Response]:
         rclpy.spin_once(self.node)
