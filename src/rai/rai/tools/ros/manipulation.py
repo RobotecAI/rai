@@ -37,15 +37,19 @@ class MoveToPointToolInput(BaseModel):
     x: float = Field(description="The x coordinate of the point to move to")
     y: float = Field(description="The y coordinate of the point to move to")
     z: float = Field(description="The z coordinate of the point to move to")
-    task: Literal["grab", "place"] = Field(
-        description="The task to be performed. If you want to pick up an object, use grab, if you want to place it, use place."
+    task: Literal["grab", "drop"] = Field(
+        description="Specify the intended action: use 'grab' to pick up an object, or 'drop' to release it. "
+        "This determines the gripper's behavior during the movement."
     )
 
 
 class MoveToPointTool(BaseTool):
     name: str = "move_to_point"
     description: str = (
-        "Move the robot's end effector to a point in the manipulator frame."
+        "Guide the robot's end effector to a specific point within the manipulator's operational space. "
+        "This tool ensures precise movement to the desired location. "
+        "While it confirms successful positioning, please note that it doesn't provide feedback on the "
+        "success of grabbing or releasing objects. Use additional sensors or tools for that information."
     )
 
     node: Node
@@ -124,11 +128,11 @@ class MoveToPointTool(BaseTool):
         if future.result() is not None:
             response = future.result()
             if response.success:
-                return f"Successfully moved to point ({x}, {y}, {z})"
+                return f"End effector successfully positioned at coordinates ({x:.2f}, {y:.2f}, {z:.2f}). Note: The status of object interaction (grab/drop) is not confirmed by this movement."
             else:
-                return f"Failed to move to point ({x}, {y}, {z})"
+                return f"Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
         else:
-            return f"Service call failed for point ({x}, {y}, {z})"
+            return f"Service call failed for point ({x:.2f}, {y:.2f}, {z:.2f})."
 
 
 class GetObjectPositionsToolInput(BaseModel):
@@ -140,7 +144,9 @@ class GetObjectPositionsToolInput(BaseModel):
 class GetObjectPositionsTool(BaseTool):
     name: str = "get_object_positions"
     description: str = (
-        "Get the positions of all objects of a given type in manipulator frame"
+        "Retrieve the positions of all objects of a specified type within the manipulator's frame of reference. "
+        "This tool provides accurate positional data but does not distinguish between different colors of the same object type. "
+        "While position detection is reliable, please note that object classification may occasionally be inaccurate."
     )
 
     target_frame: str  # frame of the manipulator
