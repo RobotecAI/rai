@@ -20,8 +20,6 @@
 
     <arg name="game_launcher" default = "src/examples/rai_quadruped_inspection/sim/QuadrupedInspectionDemo.GameLauncher"/>
 
-    <!-- <node pkg="rai_nomad" exec="nomad" name="nomad" output="screen"> -->
-    <!-- </node> -->
     <node pkg="rai_whoami" exec="rai_whoami_node" name="rai_whoami_node" output="screen">
         <param name="robot_description_package" value="$(var robot_description_package)" />
     </node>
