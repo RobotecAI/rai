@@ -70,7 +70,7 @@ class GetSegmentationTool(Ros2BaseTool):
     description: str = ""
 
     box_threshold: float = Field(default=0.35, description="Box threshold for GDINO")
-    text_threshold: float = Field(default=0.35, description="Text threshold for GDINO")
+    text_threshold: float = Field(default=0.45, description="Text threshold for GDINO")
 
     args_schema: Type[GetSegmentationInput] = GetSegmentationInput
 
