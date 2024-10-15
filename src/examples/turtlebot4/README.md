@@ -66,9 +66,17 @@ TBD
       ```
 
    5. Build the workspace which now includes the new package
+
       ```bash
       colcon build --symlink-install
       ```
+
+   6. Ensure `turtlebot4_whoami` package has been built:
+
+   ```bash
+   . ./setup_shell.sh
+   ros2 pkg list | grep turtlebot4
+   ```
 
    Congratulations! Your `rai_whoami_node` is configured. In the following steps
    your RAI agent will assume a turtlebot4 "personality".
