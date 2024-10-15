@@ -104,7 +104,9 @@ class GDBoxer:
             assert confidences is not None
 
         for i in range(len(xyxy)):
-            x1, y1, x2, y2 = xyxy[i]
+            if class_ids[i] is None:
+                continue
+            x1, y1, x2, y2 = map(int, xyxy[i])
             phrase = classes[class_ids[i]]
             confidence = confidences[i]
             center = ((x1 + x2) / 2, (y1 + y2) / 2)

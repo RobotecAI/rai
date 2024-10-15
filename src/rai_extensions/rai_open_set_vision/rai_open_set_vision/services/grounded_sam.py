@@ -17,8 +17,10 @@ import os
 import subprocess
 from pathlib import Path
 
+import numpy as np
 import rclpy
 from ament_index_python.packages import get_package_share_directory
+from cv_bridge import CvBridge
 from rai_open_set_vision.vision_markup.segmenter import GDSegmenter
 from rclpy.node import Node
 
@@ -79,7 +81,7 @@ class GSamService(Node):
             self.get_logger().error("Could not download weights")
             raise Exception("Could not download weights")
 
-    def segment_callback(self, request, response: str) -> str:
+    def segment_callback(self, request, response: RAIGroundedSam.Response):
         received_boxes = []
         for detection in request.detections.detections:
             received_boxes.append(detection.bbox)
@@ -87,10 +89,16 @@ class GSamService(Node):
         image = request.source_img
 
         assert self.segmenter is not None
-        masks, scores, logits = self.segmenter.get_segmentation(image, received_boxes)
-        self.get_logger().debug(str(masks))
-        response = ""
+        masks = self.segmenter.get_segmentation(image, received_boxes)
+        bridge = CvBridge()
+        img_arr = []
+        for mask in masks:
+            if len(mask.shape) > 2:  # Check if the mask has multiple channels
+                mask = np.squeeze(mask)
+            arr = (mask * 255).astype(np.uint8)  # Convert binary 0/1 to 0/255
+            img_arr.append(bridge.cv2_to_imgmsg(arr, encoding="mono8"))
 
+        response.masks = img_arr
         return response
 
 
