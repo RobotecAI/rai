@@ -32,7 +32,7 @@ TBD
 
 2. Clone and install [rai](https://github.com/RobotecAI/rai)
 
-   1. Follow setps from [1. Setting up the workspace](https://github.com/RobotecAI/rai?tab=readme-ov-file#1-setting-up-the-workspace)
+   1. Follow steps from [1. Setting up the workspace](https://github.com/RobotecAI/rai?tab=readme-ov-file#1-setting-up-the-workspace)
    2. Then follow steps from [2. Build the project](https://github.com/RobotecAI/rai?tab=readme-ov-file#2-build-the-project)
 
 3. Setup your [OpenAI API](https://openai.com/index/openai-api/). Make sure you have set `OPENAI_API_KEY` variable.
@@ -61,13 +61,13 @@ TBD
       # you will be asked to press `y` to continue
       ```
 
-   5. Rebuild the workspace
+   5. Build the workspace which now includes the new package
       ```bash
       colcon build --symlink-install
       ```
 
-   Congratulations! Your `rai_whoami_node` is configured. In the follwing steps
-   your RAI agent will have turtlebot4 personality.
+   Congratulations! Your `rai_whoami_node` is configured. In the following steps
+   your RAI agent will assume a turtlebot4 "personality".
 
 5. Run rai agent:
 
@@ -77,14 +77,14 @@ TBD
    ```
 
 6. Open you internet browser and go to `localhost:8501`
-7. You can interact with your RAI agent through the chat. On the left you can interact
+7. Open your internet browser with the address `localhost:8501` to can interact with your RAI agent through the chat. On the left you can communicate
    with the RAI HMI Agent. On the right you will see status of missions that were send
    to the RAI Node and are executed on your robot.
 
    - `HMI Agent` is responsible for human-robot interaction.
    - `RAI Node` is responsible for executing tasks on the robot.
 
-   For example you can try such prompt:
+   For example you can try such prompts:
 
    - Are you able to bring you something from the kitchen? (testing robot's identity)
    - What are your ros2 interfaces? (discovery of ros2 interfaces)
@@ -93,11 +93,10 @@ TBD
    - Spin yourself left by 45 degrees (interaction with the robot using ros2 interfaces) - table with the robotic are shoud be visible in the camera
    - Use robotic arm to pick up a box from the table (identity and intefaces doesn't allow it)
    - Drive towards the table (when table is visible, testing ability to interpret camera image and perform actions based on the knowledge)
-   - Drive behind the table (likely will fail in current `rai` version due to limitations in spatial reasoning)
 
 ### Troubleshooting
 
-_My robot doesn't have the identity._
+_My robot doesn't have an identity._
 
 1. Query `rai_whoami_node` for the identity manually
 
@@ -105,7 +104,7 @@ _My robot doesn't have the identity._
    ros2 service call /rai_whoami_identity_service std_srvs/srv/Trigger
    ```
 
-2. Make sure you have all required files were generated correctly in the `turtlebot4_whoami` package and have simillar sizes.
+2. Make sure all required files were generated correctly in the `turtlebot4_whoami` package and have similar sizes to those listed below.
 
    ```bash
    ls -sh src/examples/turtlebot4_whoami/description/
