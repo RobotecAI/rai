@@ -38,7 +38,5 @@
         cwd="src/examples/turtlebot4"
         output="screen">
     </executable>
-    <node name="rviz2" pkg="rviz2" exec="rviz2" args="-d src/examples/turtlebot4/config.rviz" output="screen">
-    </node>
 
 </launch>
