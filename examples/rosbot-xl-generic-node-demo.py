@@ -16,7 +16,7 @@
 
 import rclpy
 import rclpy.executors
-from rai_open_set_vision.tools import GetDetectionTool, GetDistanceToObjectsTool
+from rai_open_set_vision.tools import GetDetectionTool, GetGrabbingPointTool
 
 from rai.node import RaiStateBasedLlmNode
 from rai.tools.ros.native import (
@@ -51,6 +51,8 @@ def main():
         "/rosout",
         "/camera/camera/color/image_raw",
         "/camera/camera/depth/image_rect_raw",
+        "/camera/camera/color/camera_info",
+        "/camera/camera/depth/camera_info",
         "/map",
         "/scan",
         "/diagnostics",
@@ -103,6 +105,9 @@ def main():
     - you will be given your camera image description. Based on this information you can reason about positions of objects.
     - be careful and aboid obstacles
 
+
+    - use GetGrabbingPointTool to detect objects and get their location in camera frame
+
     Here are the corners of your environment:
     (-2.76,9.04, 0.0),
     (4.62, 9.07, 0.0),
@@ -141,7 +146,7 @@ def main():
             GetMsgFromTopic,
             GetCameraImage,
             GetDetectionTool,
-            GetDistanceToObjectsTool,
+            GetGrabbingPointTool,
         ],
     )
 
