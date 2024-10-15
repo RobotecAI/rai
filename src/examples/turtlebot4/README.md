@@ -1,7 +1,7 @@
 # Turtlebot4 tutorial
 
-The following tutorial will be presented during [ROSCon 2024](https://roscon.ros.org/2024/)
-talk about RAI.
+The following tutorial will help you get started with [rai](https://github.com/RobotecAI/rai)
+using Turtlebot4 simulation.
 
 ## Recording
 
@@ -77,7 +77,8 @@ TBD
    ```
 
 6. Open you internet browser and go to `localhost:8501`
-7. Open your internet browser with the address `localhost:8501` to can interact with your RAI agent through the chat. On the left you can communicate
+
+7. You can interact with your RAI agent through the chat. On the left you can communicate
    with the RAI HMI Agent. On the right you will see status of missions that were send
    to the RAI Node and are executed on your robot.
 
@@ -130,8 +131,60 @@ _My robot doesn't have an identity._
 
 _Robot doesn't move in the simulation._
 
-1. Make sure you can see ros2 topic when simulation binary is running
+1. Make sure you can see ros2 topic simulation binary is running
 
-   ```bash
-   ros2 topic list
-   ```
+   1. Run the binary manually:
+
+      ```bash
+      cd src/examples/turtlebot4/simulation/
+      ./TurtleBot4DemoGamePackage/TurtleBot4Demo.GameLauncher -bg_ConnectToAssetProcessor=0
+      ```
+
+   2. Check ros2 topics:
+
+      ```bash
+      ros2 topic list
+      ```
+
+   3. Verify if Turtlebot simulation binary publishes such topics:
+
+      ```
+      /camera_color_info
+      /camera_image_color
+      /clock
+      /cmd_vel
+      /parameter_events
+      /rosout
+      /scan
+      /tf
+      ```
+
+2. Make sure navigation stack actions work correctly:
+
+   1. Run binary as in the step above.
+   2. Run navigation stack:
+
+      ```bash
+      cd src/examples/turtlebot4
+      ./run-nav.bash
+      ```
+
+   3. Check available actions:
+
+      ```bash
+      ros2 action list
+      ```
+
+   4. Verify if such actions are available:
+
+      ```
+      /backup
+      /navigate_to_pose
+      /spin
+      ```
+
+   5. Try to run one of them from command line:
+
+      ```bash
+      ros2 action send_goal /spin nav2_msgs/action/Spin "{target_yaw: 3.14}"
+      ```
