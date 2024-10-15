@@ -52,12 +52,15 @@ TBD
    4. Create robot's identity. Run the `parse_whoami_package`. This will process the documentation, building
       it into a vector database, which is used by RAI agent to reason about its identity.
 
+      > **NOTE**: generated files can be downloaded from [here](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/EbPZSEdXYaRGoeecu6oJg6QBsI4ZOe_mrU3uOtOflnIjQg?e=HX8ZHB)
+      > unzip them to `src/examples/turtlebot4_whoami/description/generated` > `unzip -d src/examples/turtlebot4_whoami/description turtlebot4_whoami_generated.zip`
+
       > **NOTE**: Vector database is created using the OpenAI API. Parsing bigger documents
       > might lead to costs. Embedding model can be configured in
       > [config.toml](https://github.com/RobotecAI/rai/blob/development/config.toml#L13)
 
       ```bash
-      poetry run parse_whoami_package src/examples/turtlebot4_whoami/description
+      poetry run parse_whoami_package src/examples/turtlebot4_whoami
       # you will be asked to press `y` to continue
       ```
 
