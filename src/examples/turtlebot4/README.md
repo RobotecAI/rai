@@ -53,7 +53,8 @@ TBD
       it into a vector database, which is used by RAI agent to reason about its identity.
 
       > **NOTE**: generated files can be downloaded from [here](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/EbPZSEdXYaRGoeecu6oJg6QBsI4ZOe_mrU3uOtOflnIjQg?e=HX8ZHB)
-      > unzip them to `src/examples/turtlebot4_whoami/description/generated` > `unzip -d src/examples/turtlebot4_whoami/description turtlebot4_whoami_generated.zip`
+      > unzip them to `src/examples/turtlebot4_whoami/description/generated` with a command:
+      > `unzip -d src/examples/turtlebot4_whoami/description turtlebot4_whoami_generated.zip`
 
       > **NOTE**: Vector database is created using the OpenAI API. Parsing bigger documents
       > might lead to costs. Embedding model can be configured in
