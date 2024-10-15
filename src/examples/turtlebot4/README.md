@@ -14,7 +14,7 @@ TBD
    1. Download turtlebot4 simulation binary matching your platform from :
 
       - Ubuntu 22.04 & ros2 humble: [link](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/EZLmGtPNgl9Kiu4royJJnVgB5tjS2Vze0myXDyVJtNcnRw?e=L42Z4z)
-      - Ubuntu 24.04 & ros2 jazzy: [link](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/Ebi0O3eWAtRAl3GL8LuEBqIB0-5fnHDCm7yOtcTucpNfzA?e=G6eJKP)
+      - Ubuntu 24.04 & ros2 jazzy: [link](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/ETkT-jvozlpBtuG1piDeqggBRmWl5eylIChc_g0v_EetpA?e=ina8Dt)
 
       > **NOTE** If you would like to make changes to the simulation and create your
       > own binary please follow this [README.md](https://github.com/RobotecAI/ROSCon2024Tutorial/README.md)
@@ -35,7 +35,7 @@ TBD
    1. Follow steps from [1. Setting up the workspace](https://github.com/RobotecAI/rai?tab=readme-ov-file#1-setting-up-the-workspace)
    2. Then follow steps from [2. Build the project](https://github.com/RobotecAI/rai?tab=readme-ov-file#2-build-the-project)
 
-3. Setup your [OpenAI API](https://openai.com/index/openai-api/). Make sure you have set `OPENAI_API_KEY` variable.
+3. Setup your LLM vendor: [docs/vendors.md](../../../docs/vendors.md). OpenAI or AWS Bedrock are recommended for now.
 
 4. Configure `rai_whoami_node` (based on ["Your robot identity in RAI"](https://github.com/RobotecAI/rai/blob/development/docs/create_robots_whoami.md) tutorial):
 
