@@ -9,7 +9,12 @@ TBD
 
 ## Step by step instructions
 
-1. O3DE simulation setup
+1. Clone and install [rai](https://github.com/RobotecAI/rai)
+
+   1. Follow steps from [1. Setting up the workspace](https://github.com/RobotecAI/rai?tab=readme-ov-file#1-setting-up-the-workspace)
+   2. Then follow steps from [2. Build the project](https://github.com/RobotecAI/rai?tab=readme-ov-file#2-build-the-project)
+
+2. O3DE simulation setup
 
    1. Download turtlebot4 simulation binary matching your platform from :
 
@@ -29,11 +34,6 @@ TBD
       # for Ubuntu 24.04 noble and ros2 jazzy
       unzip -d src/examples/turtlebot4/simulation Turtlebot4_noblejazzy_0.0.1.zip
       ```
-
-2. Clone and install [rai](https://github.com/RobotecAI/rai)
-
-   1. Follow steps from [1. Setting up the workspace](https://github.com/RobotecAI/rai?tab=readme-ov-file#1-setting-up-the-workspace)
-   2. Then follow steps from [2. Build the project](https://github.com/RobotecAI/rai?tab=readme-ov-file#2-build-the-project)
 
 3. Setup your LLM vendor: [docs/vendors.md](../../../docs/vendors.md). OpenAI or AWS Bedrock are recommended for now.
 
