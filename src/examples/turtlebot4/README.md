@@ -1,6 +1,7 @@
 # Turtlebot4 tutorial
 
-Following tutorial will be presented during [ROSCon 2024](https://roscon.ros.org/2024/) talk about RAI.
+The following tutorial will be presented during [ROSCon 2024](https://roscon.ros.org/2024/)
+talk about RAI.
 
 ## Recording
 
@@ -10,19 +11,23 @@ TBD
 
 1. O3DE simulation setup
 
-   1. Download turtlebot4 simulation binary matching your platform from here (TODO link).
+   1. Download turtlebot4 simulation binary matching your platform from :
 
-      > **NOTE** If you would like to make changes to the simulation and create your own binary please follow this [README.md](https://github.com/RobotecAI/ROSCon2024Tutorial/README.md)
+      - Ubuntu 22.04 & ros2 humble: [link](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/EZLmGtPNgl9Kiu4royJJnVgB5tjS2Vze0myXDyVJtNcnRw?e=L42Z4z)
+      - Ubuntu 24.04 & ros2 jazzy: [link](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/Ebi0O3eWAtRAl3GL8LuEBqIB0-5fnHDCm7yOtcTucpNfzA?e=G6eJKP)
+
+      > **NOTE** If you would like to make changes to the simulation and create your
+      > own binary please follow this [README.md](https://github.com/RobotecAI/ROSCon2024Tutorial/README.md)
 
    2. Unzip it:
 
       ```bash
       cd rai
       # for Ubuntu 22.04 jammy and ros2 humlbe
-      unzip -d src/examples/turtlebot4/simulation Turtlebot4_PR1_jammyhumlbe.zip
+      unzip -d src/examples/turtlebot4/simulation Turtlebot4_jammyhumble_0.0.1.zip
 
       # for Ubuntu 24.04 noble and ros2 jazzy
-      unzip -d src/examples/turtlebot4/simulation Turtlebot4_PR1_noblejazzy.zip
+      unzip -d src/examples/turtlebot4/simulation Turtlebot4_noblejazzy_0.0.1.zip
       ```
 
 2. Clone and install [rai](https://github.com/RobotecAI/rai)
@@ -37,13 +42,14 @@ TBD
    1. Create `whoami` package for turtlebot4 in `src/examples/turtlebot4`
 
       ```bash
+      . ./setup_shell.sh
       poetry run create_rai_ws --name turtlebot4 --destination-directory src/examples
       ```
 
    2. Download official turtlebot4 [data sheet](https://bit.ly/3KCp3Du) into
       `src/examples/turtlebot4_whoami/description/documentation`
    3. Download [image](https://s3.amazonaws.com/assets.clearpathrobotics.com/wp-content/uploads/2022/03/16113604/Turtlebot-4-20220207.44.png) of turtlebot4 into `src/examples/turtlebot4_whoami/description/images`
-   4. Run the `parse_whoami_package`. This will process the documentation, building
+   4. Create robot's identity. Run the `parse_whoami_package`. This will process the documentation, building
       it into a vector database, which is used by RAI agent to reason about its identity.
 
       > **NOTE**: Vector database is created using the OpenAI API. Parsing bigger documents
@@ -52,6 +58,7 @@ TBD
 
       ```bash
       poetry run parse_whoami_package src/examples/turtlebot4_whoami/description
+      # you will be asked to press `y` to continue
       ```
 
    5. Rebuild the workspace
@@ -65,8 +72,8 @@ TBD
 5. Run rai agent:
 
    ```bash
-   ros launch ./src/examples/turtlebot4/turtlebot.launch.xml \
-       game_launcher:=./src/examples/turtlebot4/simulation/Turtlebot4.GameLauncher
+   ros2 launch ./src/examples/turtlebot4/turtlebot.launch.xml \
+       game_launcher:=./src/examples/turtlebot4/simulation/TurtleBot4DemoGamePackage/TurtleBot4Demo.GameLauncher
    ```
 
 6. Open you internet browser and go to `localhost:8501`
@@ -74,13 +81,16 @@ TBD
    with the RAI HMI Agent. On the right you will see status of missions that were send
    to the RAI Node and are executed on your robot.
 
-   For example you can try:
+   - `HMI Agent` is responsible for human-robot interaction.
+   - `RAI Node` is responsible for executing tasks on the robot.
 
-   - Is it able to bring you something from the kitchen? (testing robot's identity)
-   - What are its ros2 interfaces (discovery of ros2 interfaces)
+   For example you can try such prompt:
+
+   - Are you able to bring you something from the kitchen? (testing robot's identity)
+   - What are your ros2 interfaces? (discovery of ros2 interfaces)
    - tell me what you see (interpretation of camera image)
-   - Drive towards the table (when table is not visible, robot rejects task that it cannot do)
-   - Spin left by 90 degrees (interaction with the robot using ros2 interfaces) - table with the robotic are shoud be visible in the camera
+   - Drive towards the chair (when table is not visible, robot rejects task that it cannot do)
+   - Spin yourself left by 45 degrees (interaction with the robot using ros2 interfaces) - table with the robotic are shoud be visible in the camera
    - Use robotic arm to pick up a box from the table (identity and intefaces doesn't allow it)
    - Drive towards the table (when table is visible, testing ability to interpret camera image and perform actions based on the knowledge)
    - Drive behind the table (likely will fail in current `rai` version due to limitations in spatial reasoning)
