@@ -136,8 +136,8 @@ _My robot doesn't have an identity._
    ...
    ```
 
-   If files above are incorrect please check your `OPENAI_API_KEY` and rerun point 4
-   of this tutorial.
+   If files above are incorrect please check your vendor configuration is as described
+   in [docs/vendors.md](../../../docs/vendors.md) and rerun point 4 of this tutorial.
 
 ---
 
