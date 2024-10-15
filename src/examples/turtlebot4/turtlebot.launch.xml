@@ -26,7 +26,7 @@
         output="screen">
     </executable>
     <executable
-        cmd="python examples/turtlebot_demo.py"
+        cmd="python src/examples/turtlebot4/turtlebot_demo.py"
         output="screen">
     </executable>
     <executable
