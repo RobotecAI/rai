@@ -16,7 +16,7 @@
 
 import rclpy
 import rclpy.executors
-from rai_open_set_vision.tools import GetDetectionTool, GetGrabbingPointTool
+from rai_open_set_vision.tools import GetDetectionTool
 
 from rai.node import RaiStateBasedLlmNode
 from rai.tools.ros.native import (
@@ -50,9 +50,9 @@ def main():
     topics_whitelist = [
         "/rosout",
         "/camera/camera/color/image_raw",
-        "/camera/camera/depth/image_rect_raw",
+        # "/camera/camera/depth/image_rect_raw",
         "/camera/camera/color/camera_info",
-        "/camera/camera/depth/camera_info",
+        # "/camera/camera/depth/camera_info",
         "/map",
         "/scan",
         "/diagnostics",
@@ -62,19 +62,19 @@ def main():
 
     actions_whitelist = [
         "/backup",
-        "/compute_path_through_poses",
-        "/compute_path_to_pose",
-        "/dock_robot",
+        # "/compute_path_through_poses",
+        # "/compute_path_to_pose",
+        # "/dock_robot",
         "/drive_on_heading",
-        "/follow_gps_waypoints",
-        "/follow_path",
-        "/follow_waypoints",
+        # "/follow_gps_waypoints",
+        # "/follow_path",
+        # "/follow_waypoints",
         "/navigate_through_poses",
         "/navigate_to_pose",
-        "/smooth_path",
+        # "/smooth_path",
         "/spin",
-        "/undock_robot",
-        "/wait",
+        # "/undock_robot",
+        # "/wait",
     ]
 
     SYSTEM_PROMPT = """You are an autonomous robot connected to ros2 environment. Your main goal is to fulfill the user's requests.
@@ -87,6 +87,8 @@ def main():
     Navigation tips:
     - it's good to start finding objects by rotating, then navigating to some diverse location with occasional rotations. Remember to frequency detect objects.
     - for driving forward/backward or to some coordinates, ros2 actions are better.
+    - drive on heading for driving straight
+    - navigate to pose for driving to some specific location if you are sure about target coordinates
     - for driving for some specific time or in specific manner (like shaper or turns) it good to use /cmd_vel topic
     - you are currently unable to read map or point-cloud, so please avoid subscribing to such topics.
     - if you are asked to drive towards some object, it's good to:
@@ -104,9 +106,8 @@ def main():
 
     - you will be given your camera image description. Based on this information you can reason about positions of objects.
     - be careful and aboid obstacles
-
-
-    - use GetGrabbingPointTool to detect objects and get their location in camera frame
+    - /led_strip has 54 uint8 values
+    - use general knowledge about placement of objects in the house
 
     Here are the corners of your environment:
     (-2.76,9.04, 0.0),
@@ -146,7 +147,7 @@ def main():
             GetMsgFromTopic,
             GetCameraImage,
             GetDetectionTool,
-            GetGrabbingPointTool,
+            # GetGrabbingPointTool,
         ],
     )
 
