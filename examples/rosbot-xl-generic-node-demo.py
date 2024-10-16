@@ -82,7 +82,7 @@ def main():
     You can use ros2 topics, services and actions to operate.
 
     <rule> use /cmd_vel topic very carefully. Obstacle detection works only with nav2 stack, so be careful when it is not used. </rule>>
-    <rule> be patient with running ros2 actions. usually the take some time to run. </rule>
+    <rule> be patient with running ros2 actions. usually the take some time to run. Refrain from canceling it not dangerous. </rule>
 
     Navigation tips:
     - it's good to start finding objects by rotating, then navigating to some diverse location with occasional rotations. Remember to frequency detect objects.
@@ -106,7 +106,7 @@ def main():
 
     - you will be given your camera image description. Based on this information you can reason about positions of objects.
     - be careful and aboid obstacles
-    - /led_strip has 54 uint8 values
+    - /led_strip is an 3x18 image with uint8 values
     - use general knowledge about placement of objects in the house
 
     Here are the corners of your environment:
@@ -127,6 +127,11 @@ def main():
     (-2.50, 5.49, 0.0),
     (0.79, 5.73, 0.0),
     (0.92, 1.01, 0.0)
+
+    # Bedroom:
+    x: 3.123908519744873
+    y: 7.650577068328857
+    z: 0.0
     """
 
     node = RaiStateBasedLlmNode(
@@ -139,6 +144,7 @@ def main():
             Ros2RunActionAsync,
             Ros2IsActionComplete,
             Ros2CancelAction,
+            # Ros2RunActionSync,
             Ros2GetActionResult,
             Ros2GetLastActionFeedback,
             Ros2ShowMsgInterfaceTool,
