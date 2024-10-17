@@ -69,4 +69,4 @@ class MissionDoneMessage(MissionMessage):
 
     def __repr__(self):
         repr = super().__repr__()
-        return f"{repr}. Success={self.success}\nReport={self.report}"
+        return f"{repr}. Success={self.success}"
