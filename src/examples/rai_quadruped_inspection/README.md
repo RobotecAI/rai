@@ -48,6 +48,9 @@ ros2 launch src/examples/rai_quadruped_inspection/launch/quadruped.launch.xml
 
 Run `NoMaD`:
 
+> **NOTE** NoMaD is a visual navigation model therefore the generated movement might
+> not be optimal/might not be uniformly distributed across whole warehouse area.
+
 ```bash
 cd rai
 . ./setup_shell.sh
