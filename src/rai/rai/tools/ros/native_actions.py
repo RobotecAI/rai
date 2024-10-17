@@ -184,14 +184,14 @@ class Ros2GetLastActionFeedback(Ros2BaseActionTool):
     args_schema: Type[Ros2BaseInput] = Ros2BaseInput
 
     def _run(self) -> str:
-        return str(self.node.action_feedback)
+        return str(self.node.feedback)
 
 
 class GetTransformTool(Ros2BaseActionTool):
     name: str = "GetTransform"
     description: str = "Get transform between two frames"
 
-    def _run(self, target_frame="map", source_frame="body_link") -> dict:
+    def _run(self, target_frame="odom", source_frame="body_link") -> dict:
         return message_to_ordereddict(
             get_transform(self.node, target_frame, source_frame)
         )

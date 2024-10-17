@@ -16,25 +16,24 @@
 
 import rclpy
 import rclpy.executors
-from rai_open_set_vision.tools import GetDetectionTool, GetDistanceToObjectsTool
 
 from rai.node import RaiStateBasedLlmNode
+from rai.tools.ros.manipulation import GetObjectPositionsTool
 from rai.tools.ros.native import (
     GetCameraImage,
-    GetMsgFromTopic,
     Ros2PubMessageTool,
     Ros2ShowMsgInterfaceTool,
 )
 
 # from rai.tools.ros.native_actions import Ros2RunActionSync
 from rai.tools.ros.native_actions import (
+    GetTransformTool,
     Ros2CancelAction,
     Ros2GetActionResult,
     Ros2GetLastActionFeedback,
     Ros2IsActionComplete,
     Ros2RunActionAsync,
 )
-from rai.tools.ros.tools import GetCurrentPositionTool
 from rai.tools.time import WaitForSecondsTool
 
 
@@ -50,7 +49,9 @@ def main():
     topics_whitelist = [
         "/rosout",
         "/camera/camera/color/image_raw",
+        "/camera/camera/color/camera_info",
         "/camera/camera/depth/image_rect_raw",
+        "/camera/camera/depth/camera_info",
         "/map",
         "/scan",
         "/diagnostics",
@@ -137,12 +138,21 @@ def main():
             Ros2GetActionResult,
             Ros2GetLastActionFeedback,
             Ros2ShowMsgInterfaceTool,
-            GetCurrentPositionTool,
             WaitForSecondsTool,
-            GetMsgFromTopic,
+            # GetMsgFromTopic,
             GetCameraImage,
-            GetDetectionTool,
-            GetDistanceToObjectsTool,
+            # GetDetectionTool,
+            GetTransformTool,
+            (
+                GetObjectPositionsTool,
+                dict(
+                    target_frame="odom",
+                    source_frame="sensor_frame",
+                    camera_topic="/camera/camera/color/image_raw",
+                    depth_topic="/camera/camera/depth/image_rect_raw",
+                    camera_info_topic="/camera/camera/color/camera_info",
+                ),
+            ),
         ],
     )
 

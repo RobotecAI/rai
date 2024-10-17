@@ -14,6 +14,7 @@
 #
 
 import base64
+import time
 from typing import Type, Union, cast
 
 import cv2
@@ -155,17 +156,24 @@ def wait_for_message(
 
 
 def get_transform(
-    node: rclpy.node.Node, target_frame: str, source_frame: str
+    node: rclpy.node.Node, target_frame: str, source_frame: str, timeout=30
 ) -> TransformStamped:
+    node.get_logger().info(
+        "Waiting for transform from {} to {}".format(source_frame, target_frame)
+    )
     tf_buffer = Buffer(node=node)
     tf_listener = TransformListener(tf_buffer, node)
 
     transform = None
-    while transform is None:
-        rclpy.spin_once(node)
+    for _ in range(timeout * 10):
+        rclpy.spin_once(node, timeout_sec=0.1)
         if tf_buffer.can_transform(target_frame, source_frame, rclpy.time.Time()):
             transform = tf_buffer.lookup_transform(
                 target_frame, source_frame, rclpy.time.Time()
             )
+            break
+        else:
+            time.sleep(0.1)
+
     tf_listener.unregister()
     return transform
