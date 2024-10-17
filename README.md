@@ -1,8 +1,7 @@
 # RAI
 
 > [!IMPORTANT]  
-> **RAI is in beta phase now, expect friction. Early contributors are the most welcome!** \
-> **RAI is developing fast towards a glorious release in time for ROSCon 2024.**
+> **RAI is in beta phase now, expect friction. Early contributors are the most welcome!**
 
 RAI is a flexible AI agent framework to develop and deploy Gen AI features for your robots.
 
@@ -48,6 +47,7 @@ The RAI framework aims to:
 - [Setup](#setup)
 - [Usage examples (demos)](#planned-demos)
 - [Developer resources](#developer-resources)
+- [Roadmap](#roadmap) # TODO
 - [ROSCon 2024 Talk](#roscon-2024)
 
 ## Features
@@ -61,11 +61,11 @@ The RAI framework aims to:
 - [x] Tasks in natural language to nav2 goals.
 - [x] NoMaD integration.
 - [x] Tracing.
-- [ ] Grounded SAM 2 integration.
-- [ ] Improved Human-Robot Interaction with voice and text.
+- [x] Grounded SAM 2 integration.
+- [x] Improved Human-Robot Interaction with voice and text.
+- [x] Additional tooling such as GroundingDino.
 - [ ] SDK for RAI developers.
 - [ ] Support for at least 3 different AI vendors.
-- [ ] Additional tooling such as GroundingDino.
 - [ ] UI for configuration to select features and tools relevant for your deployment.
 
 ## Setup
@@ -95,6 +95,13 @@ cd rai
 poetry install
 rosdep install --from-paths src --ignore-src -r -y
 ```
+
+> [!TIP]  
+> If you want to use features such as Grounded SAM 2 or NoMaD install additional dependencies:
+>
+> ```bash
+> poetry install --with openset,nomad
+> ```
 
 ### 2. Build the project:
 
