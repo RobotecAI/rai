@@ -5,7 +5,7 @@ using Turtlebot4 simulation.
 
 ## Recording
 
-TBD
+[link](https://robotecai-my.sharepoint.com/:v:/g/personal/bartlomiej_boczek_robotec_ai/EfPTiZscCTROtmtoyHv_ykIBFKN5qh1pecxfLmLI6I4QeA?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=0QJnGk)
 
 ## Step by step instructions
 
