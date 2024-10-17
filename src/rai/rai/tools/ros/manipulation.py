@@ -123,7 +123,7 @@ class MoveToPointTool(BaseTool):
             f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
         )
 
-        rclpy.spin_until_future_complete(self.node, future)
+        rclpy.spin_until_future_complete(self.node, future, timeout_sec=5.0)
 
         if future.result() is not None:
             response = future.result()
