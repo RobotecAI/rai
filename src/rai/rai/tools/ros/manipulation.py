@@ -164,6 +164,10 @@ class GetObjectPositionsTool(BaseTool):
 
     args_schema: Type[GetObjectPositionsToolInput] = GetObjectPositionsToolInput
 
+    @staticmethod
+    def format_pose(pose: Pose):
+        return f"Centroid(x={pose.position.x:.2f}, y={pose.position.y:2f}, z={pose.position.z:2f})"
+
     def _run(self, object_name: str):
         transform = TF2TransformFetcher(
             target_frame=self.target_frame, source_frame=self.source_frame
@@ -188,4 +192,7 @@ class GetObjectPositionsTool(BaseTool):
             mani_frame_pose = do_transform_pose(pose, transform)
             mani_frame_poses.append(mani_frame_pose)
 
-        return mani_frame_poses
+        if len(mani_frame_poses) == 0:
+            return f"No {object_name}s detected."
+        else:
+            return f"Centroids of detected {object_name}s in manipulator frame: [{', '.join(map(self.format_pose, mani_frame_poses))}]. Sizes of the detected objects are unknown."
