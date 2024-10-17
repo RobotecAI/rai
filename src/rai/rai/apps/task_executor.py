@@ -124,7 +124,7 @@ def structured_task_executor(
     it = 0
     logger.info("Entering the task execution loop.")
     while it < max_iters:
-        logger.info(f"Task execution loop iteration: {it+1}/{max_iters}")
+        logger.info(f"Task execution loop iteration: {it + 1}/{max_iters}")
         it += 1
         loop_start = time.time()
         state = get_latest_data()
