@@ -17,6 +17,7 @@ from typing import Any, List, Optional, Type
 import cv2
 import numpy as np
 import rclpy
+import rclpy.qos
 import sensor_msgs.msg
 from pydantic import Field
 from rai_open_set_vision import GDINO_SERVICE_NAME
@@ -26,8 +27,11 @@ from rclpy.exceptions import (
     ParameterUninitializedException,
 )
 
-from rai.node import RaiBaseNode
-from rai.tools.ros import Ros2BaseInput, Ros2BaseTool
+# from rai.tools.utils import wait_for_message
+from rclpy.wait_for_message import wait_for_message
+
+from rai.tools.ros import Ros2BaseInput
+from rai.tools.ros.native_actions import Ros2BaseActionTool
 from rai.tools.ros.utils import convert_ros_img_to_base64, convert_ros_img_to_ndarray
 from rai_interfaces.srv import RAIGroundedSam, RAIGroundingDino
 
@@ -63,9 +67,7 @@ class GetGrabbingPointInput(Ros2BaseInput):
 
 
 # --------------------- Tools ---------------------
-class GetSegmentationTool(Ros2BaseTool):
-    node: RaiBaseNode = Field(..., exclude=True)
-
+class GetSegmentationTool(Ros2BaseActionTool):
     name: str = ""
     description: str = ""
 
@@ -102,12 +104,29 @@ class GetSegmentationTool(Ros2BaseTool):
                 return response
         return None
 
+    def get_img_from_topic(self, topic: str, timeout_sec: int = 10):
+        success, msg = wait_for_message(
+            sensor_msgs.msg.Image,
+            self.node,
+            topic,
+            qos_profile=rclpy.qos.qos_profile_sensor_data,
+            time_to_wait=timeout_sec,
+        )
+
+        if success:
+            self.node.get_logger().info(f"Received message of type from topic {topic}")
+            return msg
+        else:
+            error = f"No message received in {timeout_sec} seconds from topic {topic}"
+            self.node.get_logger().error(error)
+            return error
+
     def _get_image_message(self, topic: str) -> sensor_msgs.msg.Image:
-        msg = self.node.get_raw_message_from_topic(topic)
+        msg = self.get_img_from_topic(topic)
         if type(msg) is sensor_msgs.msg.Image:
             return msg
         else:
-            raise Exception("Received wrong message")
+            raise Exception(f"Received wrong message: {type(msg)}")
 
     def _call_gdino_node(
         self, camera_img_message: sensor_msgs.msg.Image, object_name: str
@@ -211,13 +230,25 @@ class GetGrabbingPointTool(GetSegmentationTool):
     args_schema: Type[GetGrabbingPointInput] = GetGrabbingPointInput
 
     def _get_camera_info_message(self, topic: str) -> sensor_msgs.msg.CameraInfo:
-        for _ in range(3):
-            msg = self.node.get_raw_message_from_topic(topic, timeout_sec=3.0)
-            if isinstance(msg, sensor_msgs.msg.CameraInfo):
-                return msg
-            self.node.get_logger().warn("Received wrong message type. Retrying...")
+        self.node.get_logger().info(f"Waiting for CameraInfo from topic {topic}")
+        success, msg = wait_for_message(
+            sensor_msgs.msg.CameraInfo,
+            self.node,
+            topic,
+            qos_profile=rclpy.qos.qos_profile_sensor_data,
+            time_to_wait=3,
+        )
+        print(msg)
 
-        raise Exception("Failed to receive correct CameraInfo message after 3 attempts")
+        if success:
+            self.node.get_logger().info(f"Received message of type from topic {topic}")
+            return msg
+        else:
+            error = f"No message received in 3 seconds from topic {topic}"
+            self.node.get_logger().error(error)
+            raise Exception(
+                "Failed to receive correct CameraInfo message after 3 attempts"
+            )
 
     def _get_intrinsic_from_camera_info(self, camera_info: sensor_msgs.msg.CameraInfo):
         """Extract camera intrinsic parameters from the CameraInfo message."""
@@ -276,11 +307,14 @@ class GetGrabbingPointTool(GetSegmentationTool):
         camera_info_topic: str,
         object_name: str,
     ):
-        camera_img_msg = self._get_image_message(camera_topic)
-        depth_msg = self._get_image_message(depth_topic)
         camera_info = self._get_camera_info_message(camera_info_topic)
-
+        self.logger.info("Received camera info")
+        camera_img_msg = self.get_img_from_topic(camera_topic)
+        self.logger.info("Received camera image")
+        depth_msg = self.get_img_from_topic(depth_topic)
+        self.logger.info("Received depth image")
         intrinsic = self._get_intrinsic_from_camera_info(camera_info)
+        self.logger.info("Received camera intrinsic")
 
         future = self._call_gdino_node(camera_img_msg, object_name)
         logger = self.node.get_logger()
@@ -297,13 +331,16 @@ class GetGrabbingPointTool(GetSegmentationTool):
             )
             conversion_ratio = 0.001
         resolved = None
+        self.logger.info("Waiting gdino response")
         while rclpy.ok():
             resolved = self._get_gdino_response(future)
             if resolved is not None:
                 break
 
         assert resolved is not None
+        self.logger.info("Got gdino response")
         future = self._call_gsam_node(camera_img_msg, resolved)
+        self.logger.info("Waiting gsam response")
 
         ret = []
         while rclpy.ok():
@@ -313,6 +350,8 @@ class GetGrabbingPointTool(GetSegmentationTool):
                     ret.append(convert_ros_img_to_base64(img_msg))
                 break
         assert resolved is not None
+
+        self.logger.info("Got gsam response")
         rets = []
         for mask_msg in resolved.masks:
             rets.append(self._process_mask(mask_msg, depth_msg, intrinsic))

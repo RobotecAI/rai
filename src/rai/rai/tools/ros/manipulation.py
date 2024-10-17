@@ -29,7 +29,8 @@ from rclpy.client import Client
 from rclpy.node import Node
 from tf2_geometry_msgs import do_transform_pose
 
-from rai.tools.utils import TF2TransformFetcher
+from rai.tools.ros.native_actions import Ros2BaseActionTool
+from rai.tools.ros.utils import get_transform
 from rai_interfaces.srv import ManipulatorMoveTo
 
 
@@ -141,7 +142,7 @@ class GetObjectPositionsToolInput(BaseModel):
     )
 
 
-class GetObjectPositionsTool(BaseTool):
+class GetObjectPositionsTool(Ros2BaseActionTool):
     name: str = "get_object_positions"
     description: str = (
         "Retrieve the positions of all objects of a specified type within the manipulator's frame of reference. "
@@ -154,7 +155,6 @@ class GetObjectPositionsTool(BaseTool):
     camera_topic: str  # rgb camera topic
     depth_topic: str
     camera_info_topic: str  # rgb camera info topic
-    node: Node
     get_grabbing_point_tool: GetGrabbingPointTool
 
     def __init__(self, node: Node, **kwargs):
@@ -169,9 +169,8 @@ class GetObjectPositionsTool(BaseTool):
         return f"Centroid(x={pose.position.x:.2f}, y={pose.position.y:2f}, z={pose.position.z:2f})"
 
     def _run(self, object_name: str):
-        transform = TF2TransformFetcher(
-            target_frame=self.target_frame, source_frame=self.source_frame
-        ).get_data()
+        transform = get_transform(self.node, self.source_frame, self.target_frame)
+        self.logger.info("Got transform: {transform}")
 
         results = self.get_grabbing_point_tool._run(
             camera_topic=self.camera_topic,
@@ -179,6 +178,7 @@ class GetObjectPositionsTool(BaseTool):
             camera_info_topic=self.camera_info_topic,
             object_name=object_name,
         )
+        self.logger.info("Got result: {results}")
 
         poses = []
         for result in results:
