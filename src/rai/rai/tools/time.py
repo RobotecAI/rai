@@ -34,14 +34,14 @@ class WaitForSecondsTool(BaseTool):
         "A tool for waiting. "
         "Useful for pausing execution for a specified number of seconds. "
         "Input should be the number of seconds to wait."
-        "Maximum allowed time is 5 seconds"
+        "Maximum allowed time is 10 seconds"
     )
 
     args_schema: Type[WaitForSecondsToolInput] = WaitForSecondsToolInput
 
     def _run(self, seconds: int):
         """Waits for the specified number of seconds."""
-        if seconds > 5:
-            seconds = 5
+        if seconds > 10:
+            seconds = 10
         time.sleep(seconds)
         return f"Waited for {seconds} seconds."

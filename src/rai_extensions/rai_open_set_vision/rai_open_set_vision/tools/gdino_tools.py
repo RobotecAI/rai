@@ -16,18 +16,20 @@ from typing import List, NamedTuple, Optional, Type
 
 import numpy as np
 import rclpy
+import rclpy.qos
 import sensor_msgs.msg
 from pydantic import BaseModel, Field
 from rai_open_set_vision import GDINO_SERVICE_NAME
-from rclpy import Future
 from rclpy.exceptions import (
     ParameterNotDeclaredException,
     ParameterUninitializedException,
 )
+from rclpy.task import Future
 
-from rai.node import RaiBaseNode
+from rai.node import RaiAsyncToolsNode
 from rai.tools.ros import Ros2BaseInput, Ros2BaseTool
 from rai.tools.ros.utils import convert_ros_img_to_ndarray
+from rai.tools.utils import wait_for_message
 from rai_interfaces.srv import RAIGroundingDino
 
 
@@ -79,7 +81,10 @@ class DistanceMeasurement(NamedTuple):
 
 # --------------------- Tools ---------------------
 class GroundingDinoBaseTool(Ros2BaseTool):
-    node: RaiBaseNode = Field(..., exclude=True, required=True)
+    node: RaiAsyncToolsNode = Field(..., exclude=True, required=True)
+
+    box_threshold: float = Field(default=0.35, description="Box threshold for GDINO")
+    text_threshold: float = Field(default=0.45, description="Text threshold for GDINO")
 
     def _spin(self, future: Future) -> Optional[RAIGroundingDino.Response]:
         rclpy.spin_once(self.node)
@@ -104,14 +109,31 @@ class GroundingDinoBaseTool(Ros2BaseTool):
         req = RAIGroundingDino.Request()
         req.source_img = camera_img_message
         req.classes = " , ".join(object_names)
-        req.box_threshold = 0.4  # TODO make this somehow configurable
-        req.text_threshold = 0.4
+        req.box_threshold = self.box_threshold
+        req.text_threshold = self.text_threshold
 
         future = cli.call_async(req)
         return future
 
+    def get_img_from_topic(self, topic: str, timeout_sec: int = 2):
+        success, msg = wait_for_message(
+            sensor_msgs.msg.Image,
+            self.node,
+            topic,
+            qos_profile=rclpy.qos.qos_profile_sensor_data,
+            time_to_wait=timeout_sec,
+        )
+
+        if success:
+            self.node.get_logger().info(f"Received message of type from topic {topic}")
+            return msg
+        else:
+            error = f"No message received in {timeout_sec} seconds from topic {topic}"
+            self.node.get_logger().error(error)
+            return error
+
     def _get_image_message(self, topic: str) -> sensor_msgs.msg.Image:
-        msg = self.node.get_raw_message_from_topic(topic)
+        msg = self.get_img_from_topic(topic)
         if type(msg) is sensor_msgs.msg.Image:
             return msg
         else:
@@ -226,7 +248,7 @@ class GetDistanceToObjectsTool(GroundingDinoBaseTool):
             conversion_ratio = self.node.get_parameter("conversion_ratio").value
             if not isinstance(conversion_ratio, float):
                 logger.error(
-                    f"Parametr conversion_ratio was set badly: {type(threshold)}: {threshold} expected float. Using default value 0.001"
+                    f"Parametr conversion_ratio was set badly: {type(conversion_ratio)}: {conversion_ratio} expected float. Using default value 0.001"
                 )
                 conversion_ratio = 0.001
         except (ParameterUninitializedException, ParameterNotDeclaredException):

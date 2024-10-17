@@ -18,6 +18,9 @@ from typing import Type, Union, cast
 
 import cv2
 import numpy as np
+import rclpy
+import rclpy.node
+import rclpy.time
 import sensor_msgs.msg
 from cv_bridge import CvBridge
 from rclpy.impl.implementation_singleton import rclpy_implementation as _rclpy
@@ -28,6 +31,7 @@ from rclpy.utilities import timeout_sec_to_nsec
 from rosidl_parser.definition import NamespacedType
 from rosidl_runtime_py.import_message import import_message_from_namespaced_type
 from rosidl_runtime_py.utilities import get_namespaced_type
+from tf2_ros import Buffer, TransformListener, TransformStamped
 
 
 def import_message_from_str(msg_type: str) -> Type[object]:
@@ -48,11 +52,18 @@ def convert_ros_img_to_ndarray(
         image_data = np.frombuffer(msg.data, np.uint8)
         image = image_data.reshape((msg.height, msg.width, 3))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    elif encoding == "rgba8":
+        image_data = np.frombuffer(msg.data, np.uint8)
+        image = image_data.reshape((msg.height, msg.width, 4))
+        image = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
     elif encoding == "mono8":
         image_data = np.frombuffer(msg.data, np.uint8)
         image = image_data.reshape((msg.height, msg.width))
     elif encoding == "16uc1":
         image_data = np.frombuffer(msg.data, np.uint16)
+        image = image_data.reshape((msg.height, msg.width))
+    elif encoding == "32fc1":
+        image_data = np.frombuffer(msg.data, np.float32)  # Handle 32-bit float
         image = image_data.reshape((msg.height, msg.width))
     else:
         raise ValueError(f"Unsupported encoding: {encoding}")
@@ -78,6 +89,12 @@ def convert_ros_img_to_base64(msg: sensor_msgs.msg.Image) -> str:
         return base64.b64encode(bytes(cv2.imencode(".png", cv_image)[1])).decode(
             "utf-8"
         )
+    elif cv_image.shape[-1] == 1:
+        cv_image = cv2.cvtColor(cv_image, cv2.GRAY2RGB)
+        return base64.b64encode(bytes(cv2.imencode(".png", cv_image)[1])).decode(
+            "utf-8"
+        )
+
     else:
         cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
         image_data = cv2.imencode(".png", cv_image)[1].tostring()  # type: ignore
@@ -135,3 +152,20 @@ def wait_for_message(
         node.destroy_subscription(sub)
 
     return False, None
+
+
+def get_transform(
+    node: rclpy.node.Node, target_frame: str = "map", source_frame: str = "body_link"
+) -> TransformStamped:
+    tf_buffer = Buffer(node=node)
+    tf_listener = TransformListener(tf_buffer, node)
+
+    transform = None
+    while transform is None:
+        rclpy.spin_once(node)
+        if tf_buffer.can_transform(target_frame, source_frame, rclpy.time.Time()):
+            transform = tf_buffer.lookup_transform(
+                target_frame, source_frame, rclpy.time.Time()
+            )
+    tf_listener.unregister()
+    return transform

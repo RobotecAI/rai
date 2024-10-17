@@ -223,7 +223,7 @@ class GetOccupancyGridTool(BaseTool):
     def _run(self, topic_name: str):
         """Gets the current map from the specified topic."""
         map_grabber = SingleMessageGrabber(topic_name, OccupancyGrid, timeout_sec=10)
-        tf_grabber = TF2TransformFetcher()
+        tf_grabber = TF2TransformFetcher(target_frame="map", source_frame="base_link")
 
         map_msg = map_grabber.get_data()
         transform = tf_grabber.get_data()
@@ -240,7 +240,7 @@ class GetCurrentPositionToolInput(BaseModel):
 
 
 class GetCurrentPositionTool(BaseTool):
-    """Get the current position of the robot."""
+    """Get the current position and rotation of the robot."""
 
     name: str = "GetCurrentPositionTool"
     description: str = "A tool for getting the current position of the robot."
@@ -249,7 +249,7 @@ class GetCurrentPositionTool(BaseTool):
 
     def _run(self):
         """Gets the current position from the specified topic."""
-        tf_grabber = TF2TransformFetcher()
+        tf_grabber = TF2TransformFetcher(target_frame="map", source_frame="base_link")
         transform_stamped = tf_grabber.get_data()
         position = transform_stamped.transform.translation  # type: ignore
         orientation = transform_stamped.transform.rotation  # type: ignore

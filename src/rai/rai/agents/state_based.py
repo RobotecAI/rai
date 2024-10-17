@@ -42,20 +42,16 @@ class State(TypedDict):
 
 class Report(BaseModel):
     problem: str = Field(..., title="Problem", description="The problem that occurred")
-    solution: str = Field(
-        ..., title="Solution", description="The solution to the problem"
-    )
-    outcome: str = Field(
-        ..., title="Outcome", description="The outcome of the solution"
-    )
     steps: List[str] = Field(
         ..., title="Steps", description="The steps taken to solve the problem"
     )
     success: bool = Field(
         ..., title="Success", description="Whether the problem was solved"
     )
-    response_to_user: str = Field(
-        ..., title="Response", description="The response to the user"
+    outcome: str = Field(
+        ...,
+        title="Response",
+        description="Detailed outcome of the task, the response to the user",
     )
 
 
