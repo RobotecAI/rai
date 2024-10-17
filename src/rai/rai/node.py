@@ -403,14 +403,21 @@ class RaiStateBasedLlmNode(RaiBaseNode):
     def _initialize_tools(self, tools: List[Type[BaseTool]]):
         initialized_tools = list()
         for tool_cls in tools:
+            args = None
+            if type(tool_cls) is tuple:
+                tool_cls, args = tool_cls
             if issubclass(tool_cls, Ros2BaseTool):
                 if (
                     issubclass(tool_cls, Ros2BaseActionTool)
                     or "DetectionTool" in tool_cls.__name__
                     or "GetDistance" in tool_cls.__name__
                     or "GetTransformTool" in tool_cls.__name__
+                    or "GetObjectPositionsTool" in tool_cls.__name__
                 ):  # TODO(boczekbartek): develop a way to handle all mutially
-                    tool = tool_cls(node=self._async_tool_node)
+                    if args:
+                        tool = tool_cls(node=self._async_tool_node, **args)
+                    else:
+                        tool = tool_cls(node=self._async_tool_node)
                 else:
                     tool = tool_cls(node=self)
             else:
@@ -496,11 +503,10 @@ class RaiStateBasedLlmNode(RaiBaseNode):
                 else:
                     last_msg = msg.content
 
-                if len(str(last_msg)) > 0 and "Retrieved state: {}" not in last_msg:
-                    feedback_msg = TaskAction.Feedback()
-                    feedback_msg.current_status = f"{graph_node_name}: {last_msg}"
+                feedback_msg = TaskAction.Feedback()
+                feedback_msg.current_status = f"{graph_node_name}: {last_msg}"
 
-                    goal_handle.publish_feedback(feedback_msg)
+                goal_handle.publish_feedback(feedback_msg)
 
             # ---- Share Action Result ----
             if state is None:
