@@ -55,9 +55,7 @@ class MoveToPointTool(BaseTool):
     node: Node
     client: Client
 
-    manipulator_frame: str = Field(
-        default="panda_link0", description="Manipulator frame"
-    )
+    manipulator_frame: str = Field(..., description="Manipulator frame")
     min_z: float = Field(default=0.135, description="Minimum z coordinate [m]")
     calibration_x: float = Field(default=0.071, description="Calibration x [m]")
     calibration_y: float = Field(default=-0.025, description="Calibration y [m]")
@@ -74,13 +72,14 @@ class MoveToPointTool(BaseTool):
 
     args_schema: Type[MoveToPointToolInput] = MoveToPointToolInput
 
-    def __init__(self, node: Node):
+    def __init__(self, node: Node, **kwargs):
         super().__init__(
             node=node,
             client=node.create_client(
                 ManipulatorMoveTo,
                 "/manipulator_move_to",
             ),
+            **kwargs,
         )
 
     def _run(
@@ -106,7 +105,7 @@ class MoveToPointTool(BaseTool):
 
         pose_stamped.pose.position.z = np.max(
             [pose_stamped.pose.position.z, self.min_z]
-        )  # avoid hitting the table
+        )
 
         request = ManipulatorMoveTo.Request()
         request.target_pose = pose_stamped
