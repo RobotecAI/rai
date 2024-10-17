@@ -89,6 +89,11 @@ TBD
        game_launcher:=./src/examples/turtlebot4/simulation/TurtleBot4DemoGamePackage/TurtleBot4Demo.GameLauncher
    ```
 
+   You should be able to see a simulation scene.
+
+   > **Tip**: Press 1, 2 or 3 on the keyboard when simulation window to change the
+   > camera. Use W,A,S,D to move the camera.
+
 6. Open you internet browser and go to `localhost:8501`
 
 7. You can interact with your RAI agent through the chat. On the left you can communicate
