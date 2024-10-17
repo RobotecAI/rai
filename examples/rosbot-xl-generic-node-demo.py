@@ -18,7 +18,7 @@ import rclpy
 import rclpy.executors
 from rai_open_set_vision.tools import GetDetectionTool
 
-from rai.node import RaiStateBasedLlmNode
+from rai.node import RaiStateBasedLlmNode, describe_ros_image
 from rai.tools.ros.native import (
     GetCameraImage,
     GetMsgFromTopic,
@@ -41,11 +41,11 @@ from rai.tools.time import WaitForSecondsTool
 def main():
     rclpy.init()
 
-    # observe_topics = [
-    #     "/camera/camera/color/image_raw",
-    # ]
-    #
-    # observe_postprocessors = {"/camera/camera/color/image_raw": describe_ros_image}
+    observe_topics = [
+        "/camera/camera/color/image_raw",
+    ]
+
+    observe_postprocessors = {"/camera/camera/color/image_raw": describe_ros_image}
 
     topics_whitelist = [
         "/rosout",
@@ -65,7 +65,7 @@ def main():
         # "/compute_path_through_poses",
         # "/compute_path_to_pose",
         # "/dock_robot",
-        "/drive_on_heading",
+        # "/drive_on_heading",
         # "/follow_gps_waypoints",
         # "/follow_path",
         # "/follow_waypoints",
@@ -106,37 +106,77 @@ def main():
 
     - you will be given your camera image description. Based on this information you can reason about positions of objects.
     - be careful and aboid obstacles
-    - /led_strip is an 3x18 image with uint8 values
+    - /led_strip is an 3x18 image with uint8 values. 56 values in total are required!
     - use general knowledge about placement of objects in the house
 
-    Here are the corners of your environment:
-    (-2.76,9.04, 0.0),
-    (4.62, 9.07, 0.0),
-    (-2.79, -3.83, 0.0),
-    (4.59, -3.81, 0.0)
+    Example:
+    -- Task: Turning led strip to green: ---
+    '{header: {stamp: {sec: 0, nanosec: 0}, frame_id: "0"}, height: 1, width: 18, step: 56, encoding: "rgb8", is_bigendian: false, data: [0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255]}'
 
-    This is location of places:
+    -- Task: Navigate to the living room. Tell be if you have seen the tv " --
+    - tool: Ros2RunAction', 'args': {'action_name': '/navigate_to_pose', 'action_type': 'nav2_msgs/action/NavigateToPose', 'action_goal_args': {'pose': {'header': {'frame_id': 'map'}, 'pose': {'position': {'x': 2.06, 'y': -0.23, 'z': 0.0}, 'orientation': {'x': 0.0, 'y': 0.0, 'z': 0.0, 'w': 1.0}}}, 'behavior_tree': ''}
+    - 'state_retriever: Retrieved state: {"/camera/camera/color/image_raw": {"camera_image_summary" : The room shows the kitchen... }}
+    - tool: Ros2IsActionComplete: -> return false
+    - 'state_retriever: Retrieved state: {"/camera/camera/color/image_raw": {"camera_image_summary" : The room shows the bedroom with a lot of plants...}}
+    - 'state_retriever: Retrieved state: {"/camera/camera/color/image_raw": {"camera_image_summary" : The room shows the living room with a sofa and 2 people...}}
+    - tool: Ros2IsActionComplete: -> return false
+    - 'state_retriever: Retrieved state: {"/camera/camera/color/image_raw": {"camera_image_summary" : The room shows the door...}}
+    - tool: Ros2IsActionComplete: -> return false
+    - tool: Ros2IsActionComplete: -> return true
+    - agent response: navigated successfully. No tv was noticed on the way.
+
+    -- Task: Navigate to the living room. Tell be if you have seen the tv  --
+    - tool: Ros2RunAction', 'args': {'action_name': '/navigate_to_pose', 'action_type': 'nav2_msgs/action/NavigateToPose', 'action_goal_args': {'pose': {'header': {'frame_id': 'map'}, 'pose': {'position': {'x': 2.06, 'y': -0.23, 'z': 0.0}, 'orientation': {'x': 0.0, 'y': 0.0, 'z': 0.0, 'w': 1.0}}}, 'behavior_tree': ''}
+    - 'state_retriever: Retrieved state: {"/camera/camera/color/image_raw": {"camera_image_summary" : The room shows the kitchen... }}
+    - tool: Ros2IsActionComplete: -> return false
+    - 'state_retriever: Retrieved state: {"/camera/camera/color/image_raw": {"camera_image_summary" : The room shows the bedroom with a lot of plants...}}
+    - 'state_retriever: Retrieved state: {"/camera/camera/color/image_raw": {"camera_image_summary" : The room shows the living room with a 2 poeple. There is a tv in the background...}}
+    - tool: Ros2IsActionComplete: -> return false
+    - 'state_retriever: Retrieved state: {"/camera/camera/color/image_raw": {"camera_image_summary" : The room shows the living room with a sofa and 2 people...}}
+    - tool: Ros2IsActionComplete: -> return false
+    - 'state_retriever: Retrieved state: {"/camera/camera/color/image_raw": {"camera_image_summary" : The room shows the door...}}
+    - tool: Ros2IsActionComplete: -> return false
+    - tool: Ros2IsActionComplete: -> return true
+    - agent response: navigated successfully. Tv was noticed in the living room.
+
+    This os your locations database:
     Kitchen:
-    (2.06, -0.23, 0.0),
-    (2.07, -1.43, 0.0),
-    (-2.44, -0.38, 0.0),
-    (-2.56, -1.47, 0.0)
+    position:
+    x: -0.06767308712005615
+    y: -0.8381754159927368
+    z: 0.0
+    orientation:
+    x: 0.0
+    y: 0.0
+    z: 0.0024492188233537805
+    w: 0.9999970006590796
 
     # Living room:
-    (-2.49, 1.87, 0.0),
-    (-2.50, 5.49, 0.0),
-    (0.79, 5.73, 0.0),
-    (0.92, 1.01, 0.0)
+    position
+    x: -1.4494316577911377
+    y: 4.2252984046936035
+    z: 0.0
+    orientation:
+    x: 0.0
+    y: 0.0
+    z: -0.7074458321966236
+    w: 0.7067675675267129
 
     # Bedroom:
-    x: 3.123908519744873
-    y: 7.650577068328857
+    position:
+    x: 1.580871820449829
+    y: 6.966611385345459
     z: 0.0
+    orientation:
+    x: 0.0
+    y: 0.0
+    z: 0.3865577225905555
+    w: 0.922265215166225
     """
 
     node = RaiStateBasedLlmNode(
-        observe_topics=None,
-        observe_postprocessors=None,
+        observe_topics=observe_topics,
+        observe_postprocessors=observe_postprocessors,
         whitelist=topics_whitelist + actions_whitelist,
         system_prompt=SYSTEM_PROMPT,
         tools=[
