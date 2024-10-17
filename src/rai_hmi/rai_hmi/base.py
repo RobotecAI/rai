@@ -17,7 +17,6 @@ from enum import Enum
 from queue import Queue
 from typing import List, Optional, Tuple, cast
 
-import rclpy
 from ament_index_python.packages import get_package_share_directory
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
@@ -28,6 +27,7 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
+from rai.node import append_whoami_info_to_prompt
 from rai.utils.model_initialization import get_embeddings_model
 from rai_hmi.chat_msgs import (
     MissionAcceptanceMessage,
@@ -37,23 +37,6 @@ from rai_hmi.chat_msgs import (
 from rai_hmi.task import Task
 from rai_hmi.tools import QueryDatabaseTool, QueueTaskTool
 from rai_interfaces.action import Task as TaskAction
-
-SYSTEM_PROMPT = """
-Constitution:
-{constitution}
-
-Identity:
-{identity}
-
-You are a helpful assistant. You converse with users.
-Assume the conversation is carried over a voice interface, so try not to overwhelm the user.
-If you have multiple questions, please ask them one by one allowing user to respond before
-moving forward to the next question. Keep the conversation short and to the point.
-If you are requested tasks that you are capable of perfoming as a robot, not as a
-conversational agent, please use tools to submit them to the task queue.
-They will be done by another agent resposible for communication with the robotic's
-stack.
-"""
 
 
 class HMIStatus(Enum):
@@ -82,6 +65,16 @@ class BaseHMINode(Node):
     Initialization:
         _initialize_system_prompt: Sets up the system prompt based on the robot's identity and constitution.
         _load_documentation: Loads the FAISS index from the robot description package.
+    """
+
+    SYSTEM_PROMPT = """You are a helpful assistant. You converse with users.
+    Assume the conversation is carried over a voice interface, so try not to overwhelm the user.
+    If you have multiple questions, please ask them one by one allowing user to respond before
+    moving forward to the next question. Keep the conversation short and to the point.
+    If you are requested tasks that you are capable of perfoming as a robot, not as a
+    conversational agent, please use tools to submit them to the task queue.
+    They will be done by another agent resposible for communication with the robotic's
+    stack.
     """
 
     def __init__(
@@ -157,43 +150,11 @@ class BaseHMINode(Node):
         return output
 
     def _initialize_system_prompt(self):
-        if self.robot_description_package == "":
-            self.get_logger().warning(
-                "Robot description package not set, using empty identity and constitution."
-            )
-            return SYSTEM_PROMPT.format(
-                constitution="",
-                identity="",
-            )
-        while not self.constitution_service.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info(
-                "Constitution service of rai_whoami not available, waiting..."
-            )
-
-        while not self.identity_service.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info(
-                "Identity service of rai_whoami not available, waiting..."
-            )
-
-        constitution_request = Trigger.Request()
-
-        constitution_future = self.constitution_service.call_async(constitution_request)
-        rclpy.spin_until_future_complete(self, constitution_future)
-        constitution_response = constitution_future.result()
-
-        identity_request = Trigger.Request()
-
-        identity_future = self.identity_service.call_async(identity_request)
-        rclpy.spin_until_future_complete(self, identity_future)
-        identity_response = identity_future.result()
-
-        system_prompt = SYSTEM_PROMPT.format(
-            constitution=constitution_response.message,
-            identity=identity_response.message,
+        return append_whoami_info_to_prompt(
+            self,
+            self.SYSTEM_PROMPT,
+            robot_description_package=self.robot_description_package,
         )
-
-        self.get_logger().info("System prompt initialized!")
-        return system_prompt
 
     def _load_documentation(self) -> Optional[FAISS]:
         try:

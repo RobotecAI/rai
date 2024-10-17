@@ -15,42 +15,47 @@
 
 
 import rclpy
-import rclpy.callback_groups
 import rclpy.executors
-import rclpy.qos
-import rclpy.subscription
-import rclpy.task
-from langchain.tools.render import render_text_description_and_args
+from rai_open_set_vision.tools import GetDetectionTool, GetDistanceToObjectsTool
 
-from rai.agents.state_based import create_state_based_agent
-from rai.node import RaiNode, describe_ros_image
+from rai.node import RaiStateBasedLlmNode
 from rai.tools.ros.native import (
     GetCameraImage,
     GetMsgFromTopic,
+    Ros2PubMessageTool,
     Ros2ShowMsgInterfaceTool,
 )
-from rai.tools.ros.native_actions import Ros2RunActionSync
-from rai.tools.ros.tools import GetOccupancyGridTool
+
+# from rai.tools.ros.native_actions import Ros2RunActionSync
+from rai.tools.ros.native_actions import (
+    Ros2CancelAction,
+    Ros2GetActionResult,
+    Ros2GetLastActionFeedback,
+    Ros2IsActionComplete,
+    Ros2RunActionAsync,
+)
+from rai.tools.ros.tools import GetCurrentPositionTool
 from rai.tools.time import WaitForSecondsTool
-from rai.utils.model_initialization import get_llm_model
 
 
 def main():
     rclpy.init()
-    llm = get_llm_model(model_type="complex_model")
 
-    observe_topics = [
-        "/camera/camera/color/image_raw",
-    ]
-
-    observe_postprocessors = {"/camera/camera/color/image_raw": describe_ros_image}
+    # observe_topics = [
+    #     "/camera/camera/color/image_raw",
+    # ]
+    #
+    # observe_postprocessors = {"/camera/camera/color/image_raw": describe_ros_image}
 
     topics_whitelist = [
         "/rosout",
         "/camera/camera/color/image_raw",
+        "/camera/camera/depth/image_rect_raw",
         "/map",
         "/scan",
         "/diagnostics",
+        "/cmd_vel",
+        "/led_strip",
     ]
 
     actions_whitelist = [
@@ -70,56 +75,79 @@ def main():
         "/wait",
     ]
 
-    # TODO(boczekbartek): refactor system prompt
+    SYSTEM_PROMPT = """You are an autonomous robot connected to ros2 environment. Your main goal is to fulfill the user's requests.
+    Do not make assumptions about the environment you are currently in.
+    You can use ros2 topics, services and actions to operate.
 
-    SYSTEM_PROMPT = ""
+    <rule> use /cmd_vel topic very carefully. Obstacle detection works only with nav2 stack, so be careful when it is not used. </rule>>
+    <rule> be patient with running ros2 actions. usually the take some time to run. </rule>
 
-    node = RaiNode(
-        llm=get_llm_model(
-            model_type="simple_model"
-        ),  # smaller model used to describe the environment
-        observe_topics=observe_topics,
-        observe_postprocessors=observe_postprocessors,
+    Navigation tips:
+    - it's good to start finding objects by rotating, then navigating to some diverse location with occasional rotations. Remember to frequency detect objects.
+    - for driving forward/backward or to some coordinates, ros2 actions are better.
+    - for driving for some specific time or in specific manner (like shaper or turns) it good to use /cmd_vel topic
+    - you are currently unable to read map or point-cloud, so please avoid subscribing to such topics.
+    - if you are asked to drive towards some object, it's good to:
+        1. check the camera image and verify if objects can be seen
+        2. if only driving forward is required, do it
+        3. if obstacle avoidance might be required, use ros2 actions navigate_*, but first check your currect position, then very accurately estimate the goal pose.
+    - it is good to verify using given information if the robot is not stuck
+    - navigation actions sometimes fail. Their output can be read from rosout. You can also tell if they partially worked by checking the robot position and rotation.
+    - before using any ros2 interfaces, always make sure to check you are usig the right interface
+    - processing camera image takes 5-10s. Take it into account that if the robot is moving, the information can be outdated. Handle it by good planning of your movements.
+    - you are encouraged to use wait tool in between checking the status of actions
+    - to find some object navigate around and check the surrounding area
+    - when the goal is accomplished please make sure to cancel running actions
+    - when you reach the navigation goal - double check if you reached it by checking the current position
+
+    - you will be given your camera image description. Based on this information you can reason about positions of objects.
+    - be careful and aboid obstacles
+
+    Here are the corners of your environment:
+    (-2.76,9.04, 0.0),
+    (4.62, 9.07, 0.0),
+    (-2.79, -3.83, 0.0),
+    (4.59, -3.81, 0.0)
+
+    This is location of places:
+    Kitchen:
+    (2.06, -0.23, 0.0),
+    (2.07, -1.43, 0.0),
+    (-2.44, -0.38, 0.0),
+    (-2.56, -1.47, 0.0)
+
+    # Living room:
+    (-2.49, 1.87, 0.0),
+    (-2.50, 5.49, 0.0),
+    (0.79, 5.73, 0.0),
+    (0.92, 1.01, 0.0)
+    """
+
+    node = RaiStateBasedLlmNode(
+        observe_topics=None,
+        observe_postprocessors=None,
         whitelist=topics_whitelist + actions_whitelist,
         system_prompt=SYSTEM_PROMPT,
+        tools=[
+            Ros2PubMessageTool,
+            Ros2RunActionAsync,
+            Ros2IsActionComplete,
+            Ros2CancelAction,
+            Ros2GetActionResult,
+            Ros2GetLastActionFeedback,
+            Ros2ShowMsgInterfaceTool,
+            GetCurrentPositionTool,
+            WaitForSecondsTool,
+            GetMsgFromTopic,
+            GetCameraImage,
+            GetDetectionTool,
+            GetDistanceToObjectsTool,
+        ],
     )
 
-    tools = [
-        WaitForSecondsTool(),
-        GetMsgFromTopic(node=node),
-        Ros2RunActionSync(node=node),
-        GetCameraImage(node=node),
-        Ros2ShowMsgInterfaceTool(),
-        GetOccupancyGridTool(),
-    ]
-
-    state_retriever = node.get_robot_state
-
-    SYSTEM_PROMPT = f"""You are an autonomous robot connected to ros2 environment. Your main goal is to fulfill the user's requests.
-    Do not make assumptions about the environment you are currently in.
-    Use the tooling provided to gather information about the environment:
-
-    {render_text_description_and_args(tools)}
-
-    You can use ros2 topics, services and actions to operate. """
-
-    node.get_logger().info(f"{SYSTEM_PROMPT=}")
-
-    node.system_prompt = node.initialize_system_prompt(SYSTEM_PROMPT)
-
-    app = create_state_based_agent(
-        llm=llm,
-        tools=tools,
-        state_retriever=state_retriever,
-        logger=node.get_logger(),
-    )
-
-    node.set_app(app)
-
-    executor = rclpy.executors.MultiThreadedExecutor()
-    executor.add_node(node)
-    executor.spin()
+    node.spin()
     rclpy.shutdown()
 
 
-main()
+if __name__ == "__main__":
+    main()
