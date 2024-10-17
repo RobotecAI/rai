@@ -30,7 +30,7 @@ import sensor_msgs.msg
 from action_msgs.msg import GoalStatus
 from langchain.tools import BaseTool
 from langchain.tools.render import render_text_description_and_args
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langgraph.graph.graph import CompiledGraph
 from rclpy.action.client import ActionClient
 from rclpy.action.graph import get_action_names_and_types
@@ -226,7 +226,7 @@ class RaiAsyncToolsNode(Node):
                 )
                 return True
         else:
-            self.get_logger().info("There is not result")
+            self.get_logger().info("There is no result")
             # Timed out, still processing, not complete yet
             return False
 
@@ -250,7 +250,7 @@ class RaiBaseNode(Node):
     ):
         super().__init__(*args, **kwargs)
 
-        self.robot_state = dict()
+        self.robot_state: Dict[str, Any] = dict()  # where Any is ROS 2 message type
 
         self.DISCOVERY_FREQ = 2.0
         self.DISCOVERY_DEPTH = 5
@@ -288,9 +288,9 @@ class RaiBaseNode(Node):
         )
 
     def get_raw_message_from_topic(self, topic: str, timeout_sec: int = 1) -> Any:
-        self.get_logger().info(f"Getting msg from topic: {topic}")
+        self.get_logger().debug(f"Getting msg from topic: {topic}")
         if topic in self.state_subscribers and topic in self.robot_state:
-            self.get_logger().info("Returning cached message")
+            self.get_logger().debug("Returning cached message")
             return self.robot_state[topic]
         else:
             msg_type = self.get_msg_type(topic)
@@ -303,7 +303,7 @@ class RaiBaseNode(Node):
             )
 
             if success:
-                self.get_logger().info(
+                self.get_logger().debug(
                     f"Received message of type {msg_type.__class__.__name__} from topic {topic}"
                 )
                 return msg
@@ -342,7 +342,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         self,
         system_prompt: str,
         observe_topics: Optional[List[str]] = None,
-        observe_postprocessors: Optional[Dict[str, Callable]] = None,
+        observe_postprocessors: Optional[Dict[str, Callable[[Any], Any]]] = None,
         whitelist: Optional[List[str]] = None,
         tools: Optional[List[Type[BaseTool]]] = None,
         *args,
@@ -399,9 +399,10 @@ class RaiStateBasedLlmNode(RaiBaseNode):
             state_retriever=self.get_robot_state,
             logger=self.get_logger(),
         )
+        self.simple_llm = get_llm_model(model_type="simple_model")
 
     def _initialize_tools(self, tools: List[Type[BaseTool]]):
-        initialized_tools = list()
+        initialized_tools: List[BaseTool] = list()
         for tool_cls in tools:
             if issubclass(tool_cls, Ros2BaseTool):
                 if (
@@ -426,7 +427,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         )
         return system_prompt
 
-    def _initialize_robot_state_interfaces(self, topics):
+    def _initialize_robot_state_interfaces(self, topics: List[str]):
         self.rosout_buffer = RosoutBuffer(get_llm_model(model_type="simple_model"))
 
         for topic in topics:
@@ -467,7 +468,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
             self.get_logger().info(f"Received task: {task}")
 
             # ---- LLM Task Handling ----
-            self.get_logger().info(f'This is system prompt: "{self.system_prompt}"')
+            self.get_logger().debug(f'This is system prompt: "{self.system_prompt}"')
 
             messages = [
                 SystemMessage(content=self.system_prompt),
@@ -484,19 +485,36 @@ class RaiStateBasedLlmNode(RaiBaseNode):
                 payload, {"recursion_limit": self.AGENT_RECURSION_LIMIT}
             ):
 
-                print(state.keys())
                 graph_node_name = list(state.keys())[0]
                 if graph_node_name == "reporter":
                     continue
 
                 msg = state[graph_node_name]["messages"][-1]
-
                 if isinstance(msg, HumanMultimodalMessage):
                     last_msg = msg.text
+                elif isinstance(msg, BaseMessage):
+                    if isinstance(msg.content, list):
+                        assert len(msg.content) == 1
+                        last_msg = msg.content[0].get("text", "")
+                    else:
+                        last_msg = msg.content
                 else:
-                    last_msg = msg.content
+                    raise ValueError(f"Unexpected type of message: {type(msg)}")
 
-                if len(str(last_msg)) > 0 and "Retrieved state: {}" not in last_msg:
+                last_msg = self.simple_llm.invoke(
+                    [
+                        SystemMessage(
+                            content=(
+                                "You are an experienced reporter deployed on a autonomous robot. "  # type: ignore
+                                "Your task is to summarize the message in a way that is easy for other agents to understand. "
+                                "Do not use markdown formatting. Keep it short and concise. If the message is empty, please return empty string."
+                            )
+                        ),
+                        HumanMessage(content=last_msg),
+                    ]
+                ).content
+
+                if len(str(last_msg)) > 0 and graph_node_name != "state_retriever":
                     feedback_msg = TaskAction.Feedback()
                     feedback_msg.current_status = f"{graph_node_name}: {last_msg}"
 
@@ -505,7 +523,6 @@ class RaiStateBasedLlmNode(RaiBaseNode):
             # ---- Share Action Result ----
             if state is None:
                 raise ValueError("No output from LLM")
-            print(state)
 
             graph_node_name = list(state.keys())[0]
             if graph_node_name != "reporter":
