@@ -63,5 +63,5 @@ ros2 service call /rai_nomad/start std_srvs/srv/Empty
 Anomalies will be published to `/anomalies` topic:
 
 ```shell
-ros2 topic echo /anomalies
+ros2 topic echo /anomalies -f
 ```
