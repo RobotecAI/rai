@@ -1,0 +1,10 @@
+/cmd_vel
+/rosout
+/map
+/odom
+/camera_image_color
+/backup
+/drive_on_heading
+/navigate_through_poses
+/navigate_to_pose
+/spin
