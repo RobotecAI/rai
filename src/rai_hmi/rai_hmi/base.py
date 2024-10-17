@@ -27,7 +27,7 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
-from rai.rai.node import append_whoami_info_to_prompt
+from rai.node import append_whoami_info_to_prompt
 from rai.utils.model_initialization import get_embeddings_model
 from rai_hmi.chat_msgs import (
     MissionAcceptanceMessage,
