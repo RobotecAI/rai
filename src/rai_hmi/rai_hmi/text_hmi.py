@@ -49,7 +49,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-st.set_page_config(page_title="LangChain Chat App", page_icon="🦜")
+st.set_page_config(page_title="LangChain Chat App", page_icon="🦜", layout="wide")
 
 MODEL = "gpt-4o"
 MAX_DISPLAY = 5
@@ -154,10 +154,7 @@ class SystemStatus(BaseModel):
 class Layout:
     """App has two columns: chat + robot state"""
 
-    def __init__(
-        self, robot_description_package, max_display: int = MAX_DISPLAY
-    ) -> None:
-        self.max_display = max_display
+    def __init__(self, robot_description_package) -> None:
         if robot_description_package:
             st.title(f"{robot_description_package.replace('_whoami', '')} chat app")
         else:
@@ -223,26 +220,6 @@ class Layout:
 
         for message in history:
             display(message)
-
-        # show, hide = self.__split_history(history, self.max_display)
-
-        # TODO(boczekbartek): fix exapndes
-        # error: streamlit.errors.StreamlitAPIException: Expanders may not be nested inside other expanders.
-        # with st.expander("Untoggle to see full chat history"):
-        # for message in hide:
-        #     display(message)
-        #
-        # for message in show:
-        #     display(message)
-
-    @staticmethod
-    def __split_history(history, max_display):
-        n_messages = len(history)
-        if n_messages > max_display:
-            n_hide = n_messages - max_display
-            return history[:max_display], history[-n_hide:]
-        else:
-            return history, []
 
 
 class Chat:
@@ -344,10 +321,6 @@ class StreamlitApp:
         """
         Recreates the page from the memory. It is because Streamlit reloads entire page every widget action.
         See: https://docs.streamlit.io/get-started/fundamentals/main-concepts
-
-        Args:
-            max_display (int, optional): Max number of messages to display. Rest will be hidden in a toggle. Defaults to 5.
-
         """
         self.layout.show_chat(self.memory.chat_memory, self.memory.tool_calls)
         self.layout.show_mission(self.memory.mission_memory, self.memory.tool_calls)
