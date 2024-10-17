@@ -155,7 +155,7 @@ def wait_for_message(
 
 
 def get_transform(
-    node: rclpy.node.Node, target_frame: str = "map", source_frame: str = "body_link"
+    node: rclpy.node.Node, target_frame: str, source_frame: str
 ) -> TransformStamped:
     tf_buffer = Buffer(node=node)
     tf_listener = TransformListener(tf_buffer, node)
