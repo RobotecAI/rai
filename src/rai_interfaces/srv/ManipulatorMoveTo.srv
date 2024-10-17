@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+# A simplified approach with binary states for the gripper
 bool initial_gripper_state
 bool final_gripper_state
 geometry_msgs/PoseStamped target_pose
