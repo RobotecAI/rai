@@ -269,8 +269,6 @@ class GetGrabbingPointTool(GetSegmentationTool):
 
         # Calculate full 3D centroid for OBJECT
         centroid = np.mean(points, axis=0)
-        # TODO : change offset to be dependant on the height of the object
-        centroid[2] += 0.1  # Added a small offset to prevent gripper collision
         return centroid, gripper_rotation
 
     def _run(
