@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, List, Optional, Type
+from typing import Any, List, Optional, Sequence, Type
 
 import cv2
 import numpy as np
@@ -177,7 +177,9 @@ class GetSegmentationTool(Ros2BaseTool):
         return "", {"segmentations": ret}
 
 
-def depth_to_point_cloud(depth_image, fx, fy, cx, cy):
+def depth_to_point_cloud(
+    depth_image: np.ndarray, fx: float, fy: float, cx: float, cy: float
+):
     height, width = depth_image.shape
 
     # Create grid of pixel coordinates
@@ -233,13 +235,15 @@ class GetGrabbingPointTool(GetSegmentationTool):
         self,
         mask_msg: sensor_msgs.msg.Image,
         depth_msg: sensor_msgs.msg.Image,
-        intrinsic,
+        intrinsic: Sequence[float],
+        depth_to_meters_ratio: float,
     ):
         mask = convert_ros_img_to_ndarray(mask_msg)
         binary_mask = np.where(mask == 255, 1, 0)
         depth = convert_ros_img_to_ndarray(depth_msg)
         masked_depth_image = np.zeros_like(depth, dtype=np.float32)
         masked_depth_image[binary_mask == 1] = depth[binary_mask == 1]
+        masked_depth_image = masked_depth_image * depth_to_meters_ratio
 
         pcd = depth_to_point_cloud(
             masked_depth_image, intrinsic[0], intrinsic[1], intrinsic[2], intrinsic[3]
@@ -315,6 +319,13 @@ class GetGrabbingPointTool(GetSegmentationTool):
         assert resolved is not None
         rets = []
         for mask_msg in resolved.masks:
-            rets.append(self._process_mask(mask_msg, depth_msg, intrinsic))
+            rets.append(
+                self._process_mask(
+                    mask_msg,
+                    depth_msg,
+                    intrinsic,
+                    depth_to_meters_ratio=conversion_ratio,
+                )
+            )
 
         return rets
