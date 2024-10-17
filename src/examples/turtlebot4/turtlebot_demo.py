@@ -14,76 +14,50 @@
 #
 
 
+import argparse
+from pathlib import Path
+from typing import Optional
+
 import rclpy
 import rclpy.callback_groups
 import rclpy.executors
 import rclpy.qos
 import rclpy.subscription
 import rclpy.task
-from langchain.tools.render import render_text_description_and_args
-from langchain_openai import ChatOpenAI
+from rai_open_set_vision.tools import GetDetectionTool
 
-from rai.agents.state_based import create_state_based_agent
-from rai.node import RaiNode
+from rai.node import RaiStateBasedLlmNode
 from rai.tools.ros.native import (
     GetCameraImage,
     GetMsgFromTopic,
     Ros2PubMessageTool,
     Ros2ShowMsgInterfaceTool,
 )
-from rai.tools.ros.native_actions import Ros2RunActionSync
+from rai.tools.ros.native_actions import (
+    GetTransformTool,
+    Ros2CancelAction,
+    Ros2GetActionResult,
+    Ros2GetLastActionFeedback,
+    Ros2IsActionComplete,
+    Ros2RunActionAsync,
+)
 from rai.tools.ros.tools import GetCurrentPositionTool
 from rai.tools.time import WaitForSecondsTool
 
+p = argparse.ArgumentParser()
+p.add_argument("--whitelist", type=Path, required=False, default=None)
 
-def main():
+
+def main(whitelist: Optional[Path] = None):
     rclpy.init()
-    llm = ChatOpenAI(model="gpt-4o")
+    ros2_whitelist = whitelist.read_text().splitlines() if whitelist is not None else []
 
-    # TODO(boczekbartek): refactor system prompt
-
-    SYSTEM_PROMPT = ""
-
-    ros2_whitelist = [
-        "/cmd_vel",
-        "/rosout",
-        "/map",
-        "/odom",
-        "/camera_image_color",
-        "/backup",
-        "/drive_on_heading",
-        "/navigate_through_poses",
-        "/navigate_to_pose",
-        "/spin",
-    ]
-
-    node = RaiNode(
-        llm=ChatOpenAI(
-            model="gpt-4o-mini"
-        ),  # smaller model used to describe the environment
-        whitelist=ros2_whitelist,
-        system_prompt=SYSTEM_PROMPT,
-    )
-
-    tools = [
-        WaitForSecondsTool(),
-        GetMsgFromTopic(node=node),
-        GetCameraImage(node=node),
-        Ros2ShowMsgInterfaceTool(),
-        Ros2PubMessageTool(node=node),
-        Ros2RunActionSync(node=node),
-        GetCurrentPositionTool(),
-    ]
-
-    state_retriever = node.get_robot_state
-
-    SYSTEM_PROMPT = f"""You are an autonomous robot connected to ros2 environment. Your main goal is to fulfill the user's requests.
+    SYSTEM_PROMPT = """You are an autonomous robot connected to ros2 environment. Your main goal is to fulfill the user's requests.
     Do not make assumptions about the environment you are currently in.
 
-    Here are your tools:
-    {render_text_description_and_args(tools)}
-
     You can use ros2 topics, services and actions to operate.
+
+    Avoid canceling ros2 actions if they don't cause a big danger
 
     Navigation tips:
     - for driving forward/backward, if specified, ros2 actions are better.
@@ -93,25 +67,34 @@ def main():
         1. check the camera image and verify if objects can be seen
         2. if only driving forward is required, do it
         3. if obstacle avoidance might be required, use ros2 actions navigate_*, but first check your currect position, then very accurately estimate the goal pose.
+    - to spin right use negative yaw, to spin left use positive yaw
     """
 
-    node.get_logger().info(f"{SYSTEM_PROMPT=}")
-
-    node.system_prompt = node.initialize_system_prompt(SYSTEM_PROMPT)
-
-    app = create_state_based_agent(
-        llm=llm,
-        tools=tools,
-        state_retriever=state_retriever,
-        logger=node.get_logger(),
+    node = RaiStateBasedLlmNode(
+        observe_topics=None,
+        observe_postprocessors=None,
+        whitelist=ros2_whitelist,
+        system_prompt=SYSTEM_PROMPT,
+        tools=[
+            Ros2PubMessageTool,
+            Ros2RunActionAsync,
+            Ros2IsActionComplete,
+            Ros2CancelAction,
+            Ros2GetActionResult,
+            Ros2GetLastActionFeedback,
+            Ros2ShowMsgInterfaceTool,
+            GetCurrentPositionTool,
+            WaitForSecondsTool,
+            GetMsgFromTopic,
+            GetCameraImage,
+            GetTransformTool,
+            GetDetectionTool,
+        ],
     )
-
-    node.set_app(app)
-
-    executor = rclpy.executors.MultiThreadedExecutor()
-    executor.add_node(node)
-    executor.spin()
+    node.spin()
     rclpy.shutdown()
 
 
-main()
+if __name__ == "__main__":
+    args = p.parse_args()
+    main(**vars(args))

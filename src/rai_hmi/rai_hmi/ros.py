@@ -14,6 +14,7 @@
 #
 
 import threading
+from pathlib import Path
 from queue import Queue
 from typing import Optional, Tuple
 
@@ -25,7 +26,9 @@ from rai_hmi.base import BaseHMINode
 
 
 def initialize_ros_nodes(
-    _feedbacks_queue: Queue, robot_description_package: Optional[str]
+    _feedbacks_queue: Queue,
+    robot_description_package: Optional[str],
+    ros2_whitelist: Optional[Path],
 ) -> Tuple[BaseHMINode, RaiBaseNode]:
     rclpy.init()
 
@@ -34,22 +37,9 @@ def initialize_ros_nodes(
         queue=_feedbacks_queue,
         robot_description_package=robot_description_package,
     )
+    whitelist = ros2_whitelist.read_text().splitlines() if ros2_whitelist else []
 
-    # TODO(boczekbartek): this node shouldn't be required to initialize simple ros2 tools
-    ros2_whitelist = [
-        "/cmd_vel",
-        "/rosout",
-        "/map",
-        "/odom",
-        "/camera_image_color",
-        "/backup",
-        "/drive_on_heading",
-        "/navigate_through_poses",
-        "/navigate_to_pose",
-        "/spin",
-    ]
-
-    rai_node = RaiBaseNode(node_name="__rai_node__", whitelist=ros2_whitelist)
+    rai_node = RaiBaseNode(node_name="__rai_node__", whitelist=whitelist)
 
     executor = MultiThreadedExecutor()
     executor.add_node(hmi_node)
