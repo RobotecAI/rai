@@ -18,6 +18,9 @@ from typing import Type, Union, cast
 
 import cv2
 import numpy as np
+import rclpy
+import rclpy.node
+import rclpy.time
 import sensor_msgs.msg
 from cv_bridge import CvBridge
 from rclpy.impl.implementation_singleton import rclpy_implementation as _rclpy
@@ -28,6 +31,7 @@ from rclpy.utilities import timeout_sec_to_nsec
 from rosidl_parser.definition import NamespacedType
 from rosidl_runtime_py.import_message import import_message_from_namespaced_type
 from rosidl_runtime_py.utilities import get_namespaced_type
+from tf2_ros import Buffer, TransformListener, TransformStamped
 
 
 def import_message_from_str(msg_type: str) -> Type[object]:
@@ -148,3 +152,20 @@ def wait_for_message(
         node.destroy_subscription(sub)
 
     return False, None
+
+
+def get_transform(
+    node: rclpy.node.Node, target_frame: str = "map", source_frame: str = "body_link"
+) -> TransformStamped:
+    tf_buffer = Buffer(node=node)
+    tf_listener = TransformListener(tf_buffer, node)
+
+    transform = None
+    while transform is None:
+        rclpy.spin_once(node)
+        if tf_buffer.can_transform(target_frame, source_frame, rclpy.time.Time()):
+            transform = tf_buffer.lookup_transform(
+                target_frame, source_frame, rclpy.time.Time()
+            )
+    tf_listener.unregister()
+    return transform
