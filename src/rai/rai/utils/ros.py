@@ -45,13 +45,14 @@ class RosoutBuffer:
         if len(self._buffer) > self.bufsize:
             self._buffer.popleft()
 
-    def get_raw_logs(self, last_n: int = 30) -> str:
+    def get_raw_logs(self, last_n: int = 10) -> str:
         return "\n".join(list(self._buffer)[-last_n:])
 
     def summarize(self):
         if len(self._buffer) == 0:
             return "No logs"
         buffer = self.get_raw_logs()
+        return str(buffer)
         response = self.llm.invoke({"rosout": buffer})
         return str(response.content)
 
