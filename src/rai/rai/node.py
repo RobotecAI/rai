@@ -496,10 +496,11 @@ class RaiStateBasedLlmNode(RaiBaseNode):
                 else:
                     last_msg = msg.content
 
-                feedback_msg = TaskAction.Feedback()
-                feedback_msg.current_status = f"{graph_node_name}: {last_msg}"
+                if len(str(last_msg)) > 0 and "Retrieved state: {}" not in last_msg:
+                    feedback_msg = TaskAction.Feedback()
+                    feedback_msg.current_status = f"{graph_node_name}: {last_msg}"
 
-                goal_handle.publish_feedback(feedback_msg)
+                    goal_handle.publish_feedback(feedback_msg)
 
             # ---- Share Action Result ----
             if state is None:

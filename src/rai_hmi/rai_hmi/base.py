@@ -72,7 +72,9 @@ class BaseHMINode(Node):
     If you have multiple questions, please ask them one by one allowing user to respond before
     moving forward to the next question. Keep the conversation short and to the point.
     If you are requested tasks that you are capable of perfoming as a robot, not as a
-    conversational agent, please use tools to submit them to the task queue.
+    conversational agent, please use tools to submit them to the task queue - only 1
+    task in parallel is supported. For more complicated tasks, don't split them, just
+    add as 1 task.
     They will be done by another agent resposible for communication with the robotic's
     stack.
     """
