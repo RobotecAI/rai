@@ -52,7 +52,7 @@ class AnomalyReport(BaseModel):
     )
 
 
-class Node(rclpy.node.Node):
+class InspectionNode(rclpy.node.Node):
     SYSTEM_PROMPT = """You are the inspection robot. You will be given 1 or 2 camera images.
     Your task is to analyze the camera image and report dangerous and unexpected situations.
     Take into account the robot and sourrounding environment.
@@ -210,7 +210,7 @@ class Node(rclpy.node.Node):
 
 def main():
     rclpy.init()
-    node = Node()
+    node = InspectionNode()
     rclpy.spin(node)
 
     node.destroy_node()
