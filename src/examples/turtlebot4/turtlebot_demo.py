@@ -24,7 +24,6 @@ import rclpy.executors
 import rclpy.qos
 import rclpy.subscription
 import rclpy.task
-from rai_open_set_vision.tools import GetDetectionTool
 
 from rai.node import RaiStateBasedLlmNode
 from rai.tools.ros.native import (
@@ -88,7 +87,6 @@ def main(whitelist: Optional[Path] = None):
             GetMsgFromTopic,
             GetCameraImage,
             GetTransformTool,
-            GetDetectionTool,
         ],
     )
     node.spin()
