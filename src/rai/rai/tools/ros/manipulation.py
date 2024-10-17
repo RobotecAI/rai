@@ -144,13 +144,13 @@ class GetObjectPositionsToolInput(BaseModel):
 class GetObjectPositionsTool(BaseTool):
     name: str = "get_object_positions"
     description: str = (
-        "Retrieve the positions of all objects of a specified type within the manipulator's frame of reference. "
+        "Retrieve the positions of all objects of a specified type in the target frame. "
         "This tool provides accurate positional data but does not distinguish between different colors of the same object type. "
         "While position detection is reliable, please note that object classification may occasionally be inaccurate."
     )
 
-    target_frame: str  # frame of the manipulator
-    source_frame: str  # frame of the camera
+    target_frame: str
+    source_frame: str
     camera_topic: str  # rgb camera topic
     depth_topic: str
     camera_info_topic: str  # rgb camera info topic
