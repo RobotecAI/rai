@@ -16,7 +16,7 @@
 
 import rclpy
 import rclpy.executors
-from rai_open_set_vision.tools import GetDetectionTool, GetDistanceToObjectsTool
+from rai_open_set_vision.tools import GetDetectionTool
 
 from rai.node import RaiStateBasedLlmNode
 from rai.tools.ros.native import (
@@ -141,7 +141,6 @@ def main():
             GetMsgFromTopic,
             GetCameraImage,
             GetDetectionTool,
-            GetDistanceToObjectsTool,
         ],
     )
 
