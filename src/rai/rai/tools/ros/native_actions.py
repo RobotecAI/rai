@@ -20,8 +20,10 @@ import rosidl_runtime_py.utilities
 from action_msgs.msg import GoalStatus
 from pydantic import BaseModel, Field
 from rclpy.action.client import ActionClient
+from rosidl_runtime_py import message_to_ordereddict
 
 from .native import Ros2BaseInput, Ros2BaseTool
+from .utils import get_transform
 
 
 # --------------------- Inputs ---------------------
@@ -183,3 +185,13 @@ class Ros2GetLastActionFeedback(Ros2BaseActionTool):
 
     def _run(self) -> str:
         return str(self.node.action_feedback)
+
+
+class GetTransformTool(Ros2BaseActionTool):
+    name: str = "GetTransform"
+    description: str = "Get transform between two frames"
+
+    def _run(self, target_frame="map", source_frame="body_link") -> dict:
+        return message_to_ordereddict(
+            get_transform(self.node, target_frame, source_frame)
+        )

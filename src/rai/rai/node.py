@@ -373,7 +373,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         )
         self._initialize_robot_state_interfaces(self.state_topics)
         self.state_update_timer = self.create_timer(
-            3.0,
+            7.0,
             self.state_update_callback,
             callback_group=rclpy.callback_groups.MutuallyExclusiveCallbackGroup(),
         )
@@ -408,6 +408,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
                     issubclass(tool_cls, Ros2BaseActionTool)
                     or "DetectionTool" in tool_cls.__name__
                     or "GetDistance" in tool_cls.__name__
+                    or "GetTransformTool" in tool_cls.__name__
                 ):  # TODO(boczekbartek): develop a way to handle all mutially
                     tool = tool_cls(node=self._async_tool_node)
                 else:
@@ -523,7 +524,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
 
             result = TaskAction.Result()
             result.success = report.success
-            result.report = report.response_to_user
+            result.report = report.outcome
 
             self.get_logger().info(f"Finished task:\n{result}")
             self.clear_state()
