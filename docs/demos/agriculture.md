@@ -2,9 +2,7 @@
 
 This demo showcases autonomous tractors operating in an agricultural field using ROS 2. The tractor is controlled using a conventional navigation stack. Sometimes, due to the ever-changing environment, the tractor may encounter unexpected situations. The conventional stack is not designed to handle these situations and usually ends up replanning the path. The tractor can handle this optimally by calling the RAI agent to decide what to do.
 
-<p align="center">
-  <img src="../imgs/agriculture_demo.gif" alt="Tractor in field meets an obstacle" />
-</p>
+![Tractor in field meets an obstacle](../imgs/agriculture_demo.gif)
 
 ## Quick Start
 
@@ -16,7 +14,7 @@ This demo showcases autonomous tractors operating in an agricultural field using
 
    ```bash
    sudo apt install ros-${ROS_DISTRO}-ackermann-msgs ros-${ROS_DISTRO}-gazebo-msgs ros-${ROS_DISTRO}-control-toolbox ros-${ROS_DISTRO}-nav2-bringup
-    ```
+   ```
 
 3. **Unpack the Binary and Run the Simulation**
 
@@ -39,6 +37,7 @@ You are now ready to run the demo and see the tractor in action!
 The demo simulates a scenario where the tractor stops due to an unexpected situation. The RAI Agent decides the next action based on the current state.
 
 ### RAI Agent decisions
+
 RAI Agent's mission is to decide the next action based on the current state of the anomaly. There are three exposed services to control the tractor:
 
 - continue
@@ -52,7 +51,6 @@ Used to flash the lights on the tractor to e.g. get the attention of the animals
 - replan
 
 Used to replan the path/skip the alley.
-
 
 ### What Happens in the Demo?
 
