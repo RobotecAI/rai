@@ -13,17 +13,17 @@ complex_model = "gpt-4o-2024-08-06"
 embeddings_model = "text-embedding-ada-002"
 
 [ollama]
-simple_model = "llama3.1"
+simple_model = "llama3.2"
 complex_model = "llama3.1:70b"
-embeddings_model = "llama3.1"
+embeddings_model = "llama3.2"
 base_url = "http://localhost:11434"
 
 [tracing]
 project = "rai"
 
 [tracing.langfuse]
-use_langfuse = false
-host = "https://cloud.langfuse.com"
+use_langfuse = true
+host = "http://localhost:3000"
 
 [tracing.langsmith]
 use_langsmith = false
