@@ -72,7 +72,7 @@ class BaseHMINode(Node):
     If you have multiple questions, please ask them one by one allowing user to respond before
     moving forward to the next question. Keep the conversation short and to the point.
     If you are requested tasks that you are capable of perfoming as a robot, not as a
-    conversational agent, please use tools to submit them to the task queue - only 1
+    conversational agent, please use tools to submit them to the robot - only 1
     task in parallel is supported. For more complicated tasks, don't split them, just
     add as 1 task.
     They will be done by another agent resposible for communication with the robotic's
@@ -182,7 +182,7 @@ class BaseHMINode(Node):
         #     self, TaskFeedback, "provide_task_feedback", self.handle_task_feedback
         # )
 
-    def add_task_to_queue(self, task: Task):
+    def execute_mission(self, task: Task):
         """Sends a task to the action server to be handled by the rai node."""
 
         if not self.task_action_client.wait_for_server(timeout_sec=10.0):
