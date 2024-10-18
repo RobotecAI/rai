@@ -77,6 +77,7 @@ class BaseHMINode(Node):
     add as 1 task.
     They will be done by another agent resposible for communication with the robotic's
     stack.
+    If you are asked about logs, or what was write or wrong about the mission, use get_mission_memory tool to get such information.
     """
 
     def __init__(

@@ -25,13 +25,11 @@ from rclpy.exceptions import (
     ParameterUninitializedException,
 )
 from rclpy.task import Future
-from rclpy.wait_for_message import wait_for_message
 
 from rai.node import RaiAsyncToolsNode
 from rai.tools.ros import Ros2BaseInput, Ros2BaseTool
 from rai.tools.ros.utils import convert_ros_img_to_ndarray
-
-# from rai.tools.utils import wait_for_message
+from rai.tools.utils import wait_for_message
 from rai_interfaces.srv import RAIGroundingDino
 
 

@@ -416,6 +416,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
                     or "GetDistance" in tool_cls.__name__
                     or "GetTransformTool" in tool_cls.__name__
                     or "GetObjectPositionsTool" in tool_cls.__name__
+                    or "GetDetectionTool" in tool_cls.__name__
                 ):  # TODO(boczekbartek): develop a way to handle all mutially
                     if args:
                         tool = tool_cls(node=self._async_tool_node, **args)
