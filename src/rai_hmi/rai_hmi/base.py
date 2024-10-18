@@ -78,12 +78,14 @@ class BaseHMINode(Node):
     They will be done by another agent resposible for communication with the robotic's
     stack.
     If you are asked about logs, or what was write or wrong about the mission, use get_mission_memory tool to get such information.
+    If you are asked about interpration about camera image, add such mission as well
     """
 
     def __init__(
         self,
         node_name: str,
         queue: Queue,
+        load_vector_database: bool = False,
         robot_description_package: Optional[str] = None,
     ):
         super().__init__(node_name=node_name)
@@ -121,10 +123,12 @@ class BaseHMINode(Node):
         self.agent = None
         # order of the initialization is important
         self.system_prompt = self._initialize_system_prompt()
-        self.faiss_index = self._load_documentation()
+        if load_vector_database:
+            self.faiss_index = self._load_documentation()
+        else:
+            self.faiss_index = None
         self.tools = self._initialize_available_tools()
 
-        # TODO(boczekbartek): refactor, becuase mixin needs state
         self.initialize_task_action_client_and_server()
         self.task_running = dict()
         self.task_feedbacks = queue
@@ -179,9 +183,6 @@ class BaseHMINode(Node):
     def initialize_task_action_client_and_server(self):
         """Initialize the action client and server for task handling."""
         self.task_action_client = ActionClient(self, TaskAction, "perform_task")
-        # self.task_feedback_action_server = ActionServer(
-        #     self, TaskFeedback, "provide_task_feedback", self.handle_task_feedback
-        # )
 
     def execute_mission(self, task: Task):
         """Sends a task to the action server to be handled by the rai node."""
