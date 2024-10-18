@@ -16,16 +16,15 @@
 
 import rclpy
 import rclpy.executors
+from rai_open_set_vision import GetDetectionTool
 
-from rai.node import RaiStateBasedLlmNode
+from rai.node import RaiStateBasedLlmNode, describe_ros_image
 from rai.tools.ros.manipulation import GetObjectPositionsTool
 from rai.tools.ros.native import (
     GetCameraImage,
     Ros2PubMessageTool,
     Ros2ShowMsgInterfaceTool,
 )
-
-# from rai.tools.ros.native_actions import Ros2RunActionSync
 from rai.tools.ros.native_actions import (
     GetTransformTool,
     Ros2CancelAction,
@@ -40,11 +39,11 @@ from rai.tools.time import WaitForSecondsTool
 def main():
     rclpy.init()
 
-    # observe_topics = [
-    #     "/camera/camera/color/image_raw",
-    # ]
-    #
-    # observe_postprocessors = {"/camera/camera/color/image_raw": describe_ros_image}
+    observe_topics = [
+        "/camera/camera/color/image_raw",
+    ]
+
+    observe_postprocessors = {"/camera/camera/color/image_raw": describe_ros_image}
 
     topics_whitelist = [
         "/rosout",
@@ -126,8 +125,8 @@ def main():
     """
 
     node = RaiStateBasedLlmNode(
-        observe_topics=None,
-        observe_postprocessors=None,
+        observe_topics=observe_topics,
+        observe_postprocessors=observe_postprocessors,
         whitelist=topics_whitelist + actions_whitelist,
         system_prompt=SYSTEM_PROMPT,
         tools=[
@@ -139,9 +138,8 @@ def main():
             Ros2GetLastActionFeedback,
             Ros2ShowMsgInterfaceTool,
             WaitForSecondsTool,
-            # GetMsgFromTopic,
             GetCameraImage,
-            # GetDetectionTool,
+            GetDetectionTool,
             GetTransformTool,
             (
                 GetObjectPositionsTool,
