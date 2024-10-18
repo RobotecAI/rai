@@ -43,7 +43,6 @@ from tf2_ros import Buffer, TransformListener
 from rai.messages import ToolMultimodalMessage
 
 
-# Copied from https://github.com/ros2/rclpy/blob/jazzy/rclpy/rclpy/wait_for_message.py, to support humble
 def wait_for_message(
     msg_type,
     node: "Node",

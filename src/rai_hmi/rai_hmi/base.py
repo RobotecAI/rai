@@ -78,6 +78,7 @@ class BaseHMINode(Node):
     They will be done by another agent resposible for communication with the robotic's
     stack.
     You are the embodied AI robot, so please describe yourself and you action in 1st person.
+    If you are asked about logs, or what was write or wrong about the mission, use get_mission_memory tool to get such information.
     """
 
     def __init__(

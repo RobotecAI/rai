@@ -27,13 +27,14 @@ from rclpy.exceptions import (
     ParameterUninitializedException,
 )
 
-# from rai.tools.utils import wait_for_message
-from rclpy.wait_for_message import wait_for_message
-
 from rai.tools.ros import Ros2BaseInput
 from rai.tools.ros.native_actions import Ros2BaseActionTool
 from rai.tools.ros.utils import convert_ros_img_to_base64, convert_ros_img_to_ndarray
+from rai.tools.utils import wait_for_message
 from rai_interfaces.srv import RAIGroundedSam, RAIGroundingDino
+
+# from rclpy.wait_for_message import wait_for_message
+
 
 # --------------------- Inputs ---------------------
 

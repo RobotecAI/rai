@@ -36,11 +36,15 @@ class RosoutBuffer:
         )
         llm = llm
         self.llm = self.template | llm
+        self.filter_out = ["rviz", "rai"]
 
     def clear(self):
         self._buffer.clear()
 
     def append(self, line: str):
+        for w in self.filter_out:
+            if w in line:
+                return
         self._buffer.append(line)
         if len(self._buffer) > self.bufsize:
             self._buffer.popleft()
