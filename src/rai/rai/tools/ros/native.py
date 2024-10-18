@@ -13,6 +13,7 @@
 # limitations under the License.
 #
 
+import importlib
 import json
 import time
 from typing import Any, Dict, OrderedDict, Tuple, Type
@@ -30,6 +31,7 @@ import sensor_msgs.msg
 from langchain.tools import BaseTool
 from pydantic import BaseModel, Field
 from rclpy.impl.rcutils_logger import RcutilsLogger
+from rosidl_runtime_py.utilities import get_namespaced_type
 
 from .utils import convert_ros_img_to_base64, import_message_from_str
 
@@ -221,6 +223,57 @@ class GetMsgFromTopic(Ros2BaseTool):
             return "Got image", {"images": [img]}
         else:
             return str(msg), {}
+
+
+class Ros2GenericServiceCallerInput(BaseModel):
+    service_name: str = Field(..., description="Name of the ROS2 service to call")
+    service_type: str = Field(
+        ..., description="Type of the ROS2 service in typical ros2 format"
+    )
+    request_args: Dict[str, Any] = Field(
+        ..., description="Arguments for the service request"
+    )
+
+
+class Ros2GenericServiceCaller(Ros2BaseTool):
+    name: str = "Ros2GenericServiceCaller"
+    description: str = "A tool for calling any ROS2 service dynamically."
+
+    args_schema: Type[Ros2GenericServiceCallerInput] = Ros2GenericServiceCallerInput
+
+    def _build_request(self, service_type: str, request_args: Dict[str, Any]) -> Any:
+        srv_module, _, srv_name = service_type.split("/")
+        srv_class = getattr(importlib.import_module(f"{srv_module}.srv"), srv_name)
+        request = srv_class.Request()
+        rosidl_runtime_py.set_message.set_message_fields(request, request_args)
+        return request
+
+    def _run(self, service_name: str, service_type: str, request_args: Dict[str, Any]):
+        if not service_name.startswith("/"):
+            service_name = f"/{service_name}"
+
+        try:
+            request = self._build_request(service_type, request_args)
+        except Exception as e:
+            return f"Failed to build service request: {e}"
+        namespaced_type = get_namespaced_type(service_type)
+        client = self.node.create_client(
+            rosidl_runtime_py.import_message.import_message_from_namespaced_type(
+                namespaced_type
+            ),
+            service_name,
+        )
+
+        if not client.wait_for_service(timeout_sec=1.0):
+            return f"Service '{service_name}' is not available"
+
+        future = client.call_async(request)
+        rclpy.spin_until_future_complete(self.node, future)
+
+        if future.result() is not None:
+            return str(future.result())
+        else:
+            return f"Service call to '{service_name}' failed"
 
 
 class GetCameraImage(Ros2BaseTool):
