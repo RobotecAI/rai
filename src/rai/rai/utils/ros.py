@@ -52,6 +52,7 @@ class RosoutBuffer:
         if len(self._buffer) == 0:
             return "No logs"
         buffer = self.get_raw_logs()
+        self.clear()
         response = self.llm.invoke({"rosout": buffer})
         return str(response.content)
 
