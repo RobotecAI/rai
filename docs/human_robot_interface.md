@@ -1,14 +1,11 @@
 # RAI: Human-Robot Interaction
 
-You can utilize RAI Human-Robot Interaction (HRI) package to converse with your robots.
-This package allows you to simply chat with your robot, or to give it tasks and receive feedback and reports.
-You have the following options:
+RAI provides a Human-Robot Interaction (HRI) package that enables communication with your robots. This package allows you to chat with your robot, give it tasks, and receive feedback and reports. You have the following options for interaction:
 
-- [Voice communication](human_robot_interface/voice_interface.md) using ASR and TTS models ([OpenAI Whisper](https://openai.com/index/whisper/))
+- [Voice communication](human_robot_interface/voice_interface.md) using Automatic Speech Recognition (ASR) and Text-to-Speech (TTS) models
 - [Text communication](human_robot_interface/text_interface.md) using [Streamlit](https://streamlit.io)
 
-If your environment is noisy, voice communication might be tricky.
-In noisy environments, it is better to use text channel.
+Voice communication might be challenging in noisy environments. In such cases, it's recommended to use the text channel.
 
 ## How it works?
 
@@ -16,7 +13,7 @@ In noisy environments, it is better to use text channel.
 
 ![General HRI interface](./imgs/HRI_interface.png)
 
-The general architecture follows the diagram above. Text is captured from the input source, transported to the HMI, processed according to the given tools and robot's rules, and then sent to the output source.
+The general architecture follows the diagram above. Text is captured from the input source, transported to the Human-Machine Interface (HMI), processed according to the given tools and robot's rules, and then sent to the output source.
 
 ### Voice Interface
 
