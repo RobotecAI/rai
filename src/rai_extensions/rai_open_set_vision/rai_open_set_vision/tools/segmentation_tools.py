@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, List, Optional, Type
+from typing import Any, List, Optional, Sequence, Type
 
 import cv2
 import numpy as np
@@ -177,7 +177,9 @@ class GetSegmentationTool(Ros2BaseTool):
         return "", {"segmentations": ret}
 
 
-def depth_to_point_cloud(depth_image, fx, fy, cx, cy):
+def depth_to_point_cloud(
+    depth_image: np.ndarray, fx: float, fy: float, cx: float, cy: float
+):
     height, width = depth_image.shape
 
     # Create grid of pixel coordinates
@@ -233,13 +235,15 @@ class GetGrabbingPointTool(GetSegmentationTool):
         self,
         mask_msg: sensor_msgs.msg.Image,
         depth_msg: sensor_msgs.msg.Image,
-        intrinsic,
+        intrinsic: Sequence[float],
+        depth_to_meters_ratio: float,
     ):
         mask = convert_ros_img_to_ndarray(mask_msg)
         binary_mask = np.where(mask == 255, 1, 0)
         depth = convert_ros_img_to_ndarray(depth_msg)
         masked_depth_image = np.zeros_like(depth, dtype=np.float32)
         masked_depth_image[binary_mask == 1] = depth[binary_mask == 1]
+        masked_depth_image = masked_depth_image * depth_to_meters_ratio
 
         pcd = depth_to_point_cloud(
             masked_depth_image, intrinsic[0], intrinsic[1], intrinsic[2], intrinsic[3]
@@ -248,6 +252,7 @@ class GetGrabbingPointTool(GetSegmentationTool):
         # TODO: Filter out outliers
         points = pcd
 
+        # https://github.com/ycheng517/tabletop-handybot/blob/6d401e577e41ea86529d091b406fbfc936f37a8d/tabletop_handybot/tabletop_handybot/tabletop_handybot_node.py#L413-L424
         grasp_z = points[:, 2].max()
         near_grasp_z_points = points[points[:, 2] > grasp_z - 0.008]
         xy_points = near_grasp_z_points[:, :2]
@@ -265,8 +270,6 @@ class GetGrabbingPointTool(GetSegmentationTool):
 
         # Calculate full 3D centroid for OBJECT
         centroid = np.mean(points, axis=0)
-        # TODO : change offset to be dependant on the height of the object
-        centroid[2] += 0.1  # Added a small offset to prevent gripper collision
         return centroid, gripper_rotation
 
     def _run(
@@ -315,6 +318,13 @@ class GetGrabbingPointTool(GetSegmentationTool):
         assert resolved is not None
         rets = []
         for mask_msg in resolved.masks:
-            rets.append(self._process_mask(mask_msg, depth_msg, intrinsic))
+            rets.append(
+                self._process_mask(
+                    mask_msg,
+                    depth_msg,
+                    intrinsic,
+                    depth_to_meters_ratio=conversion_ratio,
+                )
+            )
 
         return rets
