@@ -512,7 +512,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
                             content=(
                                 "You are an experienced reporter deployed on a autonomous robot. "  # type: ignore
                                 "Your task is to summarize the message in a way that is easy for other agents to understand. "
-                                "Do not use markdown formatting. Keep it short and concise. If the message is empty, please return empty string."
+                                "Do not use markdown formatting. Keep it short and concise. If the message is empty, please return empty string ('')."
                             )
                         ),
                         HumanMessage(content=last_msg),
