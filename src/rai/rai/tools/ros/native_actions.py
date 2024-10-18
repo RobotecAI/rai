@@ -17,13 +17,14 @@ from typing import Any, Dict, Optional, Tuple, Type
 
 import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
+import sensor_msgs.msg
 from action_msgs.msg import GoalStatus
 from pydantic import BaseModel, Field
 from rclpy.action.client import ActionClient
 from rosidl_runtime_py import message_to_ordereddict
 
 from .native import Ros2BaseInput, Ros2BaseTool
-from .utils import get_transform
+from .utils import convert_ros_img_to_base64, get_transform
 
 
 # --------------------- Inputs ---------------------
@@ -195,3 +196,34 @@ class GetTransformTool(Ros2BaseActionTool):
         return message_to_ordereddict(
             get_transform(self.node, target_frame, source_frame)
         )
+
+
+class TopicInput(Ros2BaseInput):
+    topic_name: str = Field(..., description="Ros2 topic name")
+
+
+class GetMsgFromTopic(Ros2BaseActionTool):
+    name: str = "get_msg_from_topic"
+    description: str = "Get message from topic"
+    args_schema: Type[TopicInput] = TopicInput
+    response_format: str = "content_and_artifact"
+
+    def _run(self, topic_name: str):
+        msg = self.node.get_raw_message_from_topic(topic_name, timeout_sec=3.0)
+        if type(msg) is sensor_msgs.msg.Image:
+            img = convert_ros_img_to_base64(msg)
+            return "Got image", {"images": [img]}
+        else:
+            return str(msg), {}
+
+
+class GetCameraImage(Ros2BaseActionTool):
+    name: str = "get_camera_image"
+    description: str = "get image from robots camera"
+    response_format: str = "content_and_artifact"
+    args_schema: Type[TopicInput] = TopicInput
+
+    def _run(self, topic_name: str):
+        msg = self.node.get_raw_message_from_topic(topic_name, timeout_sec=3.0)
+        img = convert_ros_img_to_base64(msg)
+        return "Got image", {"images": [img]}

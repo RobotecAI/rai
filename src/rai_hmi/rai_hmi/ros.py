@@ -20,13 +20,13 @@ from typing import Optional, Tuple
 import rclpy
 from rclpy.executors import MultiThreadedExecutor
 
-from rai.node import RaiBaseNode
+from rai.node import RaiAsyncToolsNode
 from rai_hmi.base import BaseHMINode
 
 
 def initialize_ros_nodes(
     _feedbacks_queue: Queue, robot_description_package: Optional[str]
-) -> Tuple[BaseHMINode, RaiBaseNode]:
+) -> Tuple[BaseHMINode, RaiAsyncToolsNode]:
     rclpy.init()
 
     hmi_node = BaseHMINode(
@@ -35,12 +35,10 @@ def initialize_ros_nodes(
         robot_description_package=robot_description_package,
     )
 
-    # TODO(boczekbartek): this node shouldn't be required to initialize simple ros2 tools
-    rai_node = RaiBaseNode(node_name="__rai_node__")
+    rai_node = RaiAsyncToolsNode(node_name="__rai_node__")
 
     executor = MultiThreadedExecutor()
     executor.add_node(hmi_node)
-    executor.add_node(rai_node)
 
     threading.Thread(target=executor.spin, daemon=True).start()
 
