@@ -35,7 +35,7 @@ from rai_hmi.chat_msgs import (
     MissionFeedbackMessage,
 )
 from rai_hmi.task import Task
-from rai_hmi.tools import QueryDatabaseTool, QueueTaskTool
+from rai_hmi.tools import QueryDatabaseTool
 from rai_interfaces.action import Task as TaskAction
 
 
@@ -138,7 +138,6 @@ class BaseHMINode(Node):
             tools.append(
                 QueryDatabaseTool(get_response=self.query_faiss_index_with_scores)
             )
-        tools.append(QueueTaskTool(add_task=self.add_task_to_queue))
         return tools
 
     def status_callback(self):
