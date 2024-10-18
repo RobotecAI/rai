@@ -3,7 +3,7 @@
 > [!IMPORTANT]  
 > **RAI is in beta phase now, expect friction. Early contributors are the most welcome!**
 
-RAI is a flexible AI agent framework to develop and deploy Gen AI features for your robots.
+RAI is a flexible AI agent framework to develop and deploy Gen AI features for your robots using ROS 2.
 
 ---
 
@@ -69,6 +69,8 @@ The RAI framework aims to:
 - [ ] UI for configuration to select features and tools relevant for your deployment.
 
 ## Setup
+
+Before going further, make sure you have ROS 2 (Jazzy or Humble) installed and sourced on your system.
 
 ### 1. Setting up the workspace:
 
