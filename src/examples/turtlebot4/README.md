@@ -28,7 +28,7 @@ using Turtlebot4 simulation.
 
       ```bash
       cd rai
-      # for Ubuntu 22.04 jammy and ros2 humlbe
+      # for Ubuntu 22.04 jammy and ros2 humble
       unzip -d src/examples/turtlebot4/simulation Turtlebot4_jammyhumble_0.0.1.zip
 
       # for Ubuntu 24.04 noble and ros2 jazzy
