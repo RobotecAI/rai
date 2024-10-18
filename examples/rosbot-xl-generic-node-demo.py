@@ -18,7 +18,7 @@ import rclpy
 import rclpy.executors
 from rai_open_set_vision import GetDetectionTool
 
-from rai.node import RaiStateBasedLlmNode, describe_ros_image
+from rai.node import RaiStateBasedLlmNode
 from rai.tools.ros.manipulation import GetObjectPositionsTool
 from rai.tools.ros.native import (
     GetCameraImage,
@@ -39,11 +39,11 @@ from rai.tools.time import WaitForSecondsTool
 def main():
     rclpy.init()
 
-    observe_topics = [
-        "/camera/camera/color/image_raw",
-    ]
-
-    observe_postprocessors = {"/camera/camera/color/image_raw": describe_ros_image}
+    # observe_topics = [
+    #     "/camera/camera/color/image_raw",
+    # ]
+    #
+    # observe_postprocessors = {"/camera/camera/color/image_raw": describe_ros_image}
 
     topics_whitelist = [
         "/rosout",
@@ -54,7 +54,7 @@ def main():
         "/map",
         "/scan",
         "/diagnostics",
-        "/cmd_vel",
+        # "/cmd_vel",
         "/led_strip",
     ]
 
@@ -125,8 +125,8 @@ def main():
     """
 
     node = RaiStateBasedLlmNode(
-        observe_topics=observe_topics,
-        observe_postprocessors=observe_postprocessors,
+        observe_topics=None,
+        observe_postprocessors=None,
         whitelist=topics_whitelist + actions_whitelist,
         system_prompt=SYSTEM_PROMPT,
         tools=[
