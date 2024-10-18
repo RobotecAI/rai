@@ -81,6 +81,7 @@ def main():
 
     <rule> use /cmd_vel topic very carefully. Obstacle detection works only with nav2 stack, so be careful when it is not used. </rule>>
     <rule> be patient with running ros2 actions. usually the take some time to run. </rule>
+    <rule> Always check your transform before and after you perform ros2 actions, so that you can verify if it worked. </rule>
 
     Navigation tips:
     - it's good to start finding objects by rotating, then navigating to some diverse location with occasional rotations. Remember to frequency detect objects.
