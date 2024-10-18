@@ -8,7 +8,10 @@ This demo showcases autonomous tractors operating in an agricultural field using
 
 1. **Download the Latest Release**
 
-   Download the latest binary release (`release.zip`) from [rai-agriculture-demo -> releases](https://github.com/RobotecAI/rai-agriculture-demo/releases)
+   Download the latest binary release for your ROS 2 distribution.
+
+   - [ros2-humble-agriculture-demo](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/RAIAgricultureDemo_1.0.0_jammyhumble.zip)
+   - [ros2-jazzy-agriculture-demo](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/RAIAgricultureDemo_1.0.0_noblejazzy.zip)
 
 2. **Install Required Packages**
 
@@ -17,11 +20,23 @@ This demo showcases autonomous tractors operating in an agricultural field using
    ```
 
 3. **Unpack the Binary and Run the Simulation**
+   Unpack the binary
+
+   - For Jazzy:
 
    ```bash
-   unzip release.zip
+   unzip RAIAgricultureDemo_1.0.0_noblejazzy.zip
+   ```
+
+   - For Humble:
+
+   ```bash
+   unzip RAIAgricultureDemo_1.0.0_jammyhumble.zip
+   ```
+
+   ```bash
    . /opt/ros/${ROS_DISTRO}/setup.bash
-   ./release/RAIAgricultureDemo.GameLauncher -bg_ConnectToAssetProcessor=0
+   ./RAIAgricultureDemoGamePackage/RAIAgricultureDemo.GameLauncher -bg_ConnectToAssetProcessor=0
    ```
 
 4. **Start the Tractor Node**
