@@ -26,12 +26,11 @@ import rclpy.subscription
 import rclpy.task
 import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
-import sensor_msgs.msg
 from langchain.tools import BaseTool
 from pydantic import BaseModel, Field
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from .utils import convert_ros_img_to_base64, import_message_from_str
+from .utils import import_message_from_str
 
 
 # --------------------- Inputs ---------------------
@@ -202,34 +201,3 @@ class Ros2PubMessageTool(Ros2BaseTool):
             f"Published messages for {timeout_seconds}s to topic '{topic_name}' with rate {rate}"
         )
         return
-
-
-class TopicInput(Ros2BaseInput):
-    topic_name: str = Field(..., description="Ros2 topic name")
-
-
-class GetMsgFromTopic(Ros2BaseTool):
-    name: str = "get_msg_from_topic"
-    description: str = "Get message from topic"
-    args_schema: Type[TopicInput] = TopicInput
-    response_format: str = "content_and_artifact"
-
-    def _run(self, topic_name: str):
-        msg = self.node.get_raw_message_from_topic(topic_name)
-        if type(msg) is sensor_msgs.msg.Image:
-            img = convert_ros_img_to_base64(msg)
-            return "Got image", {"images": [img]}
-        else:
-            return str(msg), {}
-
-
-class GetCameraImage(Ros2BaseTool):
-    name: str = "get_camera_image"
-    description: str = "get image from robots camera"
-    response_format: str = "content_and_artifact"
-    args_schema: Type[TopicInput] = TopicInput
-
-    def _run(self, topic_name: str):
-        msg = self.node.get_raw_message_from_topic(topic_name, timeout_sec=3.0)
-        img = convert_ros_img_to_base64(msg)
-        return "Got image", {"images": [img]}

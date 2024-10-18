@@ -142,9 +142,62 @@ def ros2_build_msg(msg_type: str, msg_args: Dict[str, Any]) -> Tuple[object, Typ
     return msg, msg_cls
 
 
-class RaiAsyncToolsNode(Node):
-    def __init__(self):
-        super().__init__("rai_internal_action_node")
+class RaiBaseNode(Node):
+    def __init__(
+        self,
+        whitelist: Optional[List[str]] = None,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+
+        self.robot_state: Dict[str, Any] = dict()  # where Any is ROS 2 message type
+
+        self.DISCOVERY_FREQ = 2.0
+        self.timer = self.create_timer(
+            self.DISCOVERY_FREQ,
+            self.discovery,
+        )
+        self.ros_discovery_info = NodeDiscovery(whitelist=whitelist)
+        self.discovery()
+        self.qos_profile = QoSProfile(
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            durability=DurabilityPolicy.VOLATILE,
+            liveliness=LivelinessPolicy.AUTOMATIC,
+        )
+
+        self.state_subscribers = dict()
+
+    def spin(self):
+        executor = rclpy.executors.MultiThreadedExecutor()
+        executor.add_node(self)
+        executor.spin()
+
+    def get_msg_type(self, topic: str, n_tries: int = 5) -> Any:
+        """Sometimes node fails to do full discovery, therefore we need to retry"""
+        for _ in range(n_tries):
+            if topic in self.ros_discovery_info.topics_and_types:
+                msg_type = self.ros_discovery_info.topics_and_types[topic]
+                return import_message_from_str(msg_type)
+            else:
+                self.get_logger().info(f"Waiting for topic: {topic}")
+                self.discovery()
+                time.sleep(self.DISCOVERY_FREQ)
+        raise KeyError(f"Topic {topic} not found")
+
+    def discovery(self):
+        self.ros_discovery_info.set(
+            self.get_topic_names_and_types(),
+            self.get_service_names_and_types(),
+            get_action_names_and_types(self),
+        )
+
+
+class RaiAsyncToolsNode(RaiBaseNode):
+    def __init__(self, node_name="rai_internal_action_node"):
+        super().__init__(node_name=node_name)
 
         self.goal_handle = None
         self.result_future = None
@@ -240,6 +293,7 @@ class RaiAsyncToolsNode(Node):
             rclpy.spin_until_future_complete(self, future)
         return True
 
+<<<<<<< HEAD
 
 class RaiBaseNode(Node):
     def __init__(
@@ -287,32 +341,26 @@ class RaiBaseNode(Node):
             get_action_names_and_types(self),
         )
 
-    def get_raw_message_from_topic(self, topic: str, timeout_sec: int = 1) -> Any:
+    def get_raw_message_from_topic(self, topic: str, timeout_sec: int = 3) -> Any:
         self.get_logger().debug(f"Getting msg from topic: {topic}")
-        if topic in self.state_subscribers and topic in self.robot_state:
-            self.get_logger().debug("Returning cached message")
-            return self.robot_state[topic]
-        else:
-            msg_type = self.get_msg_type(topic)
-            success, msg = wait_for_message(
-                msg_type,
-                self,
-                topic,
-                qos_profile=self.qos_profile,
-                time_to_wait=timeout_sec,
-            )
+        msg_type = self.get_msg_type(topic)
+        success, msg = wait_for_message(
+            msg_type,
+            self,
+            topic,
+            qos_profile=self.qos_profile,
+            time_to_wait=timeout_sec,
+        )
 
-            if success:
-                self.get_logger().debug(
-                    f"Received message of type {msg_type.__class__.__name__} from topic {topic}"
-                )
-                return msg
-            else:
-                error = (
-                    f"No message received in {timeout_sec} seconds from topic {topic}"
-                )
-                self.get_logger().error(error)
-                return error
+        if success:
+            self.get_logger().debug(
+                f"Received message of type {msg_type.__class__.__name__} from topic {topic}"
+            )
+            return msg
+        else:
+            error = f"No message received in {timeout_sec} seconds from topic {topic}"
+            self.get_logger().error(error)
+            return error
 
     def get_msg_type(self, topic: str, n_tries: int = 5) -> Any:
         """Sometimes node fails to do full discovery, therefore we need to retry"""
@@ -323,7 +371,7 @@ class RaiBaseNode(Node):
             else:
                 self.get_logger().info(f"Waiting for topic: {topic}")
                 self.discovery()
-                time.sleep(self.DISCOVERY_FREQ)
+                rclpy.spin_once(self, timeout_sec=self.DISCOVERY_FREQ)
         raise KeyError(f"Topic {topic} not found")
 
 
@@ -364,6 +412,9 @@ class RaiStateBasedLlmNode(RaiBaseNode):
             callback_group=self.callback_group,
             qos_profile=self.qos_profile,
         )
+
+        # ------- additional ROS2 node that can be spinned by tools -------
+        self._spinnable_tool_node = RaiAsyncToolsNode()
 
         # ---------- Robot State ----------
         self.robot_state = dict()
@@ -417,9 +468,9 @@ class RaiStateBasedLlmNode(RaiBaseNode):
                     or "GetDetectionTool" in tool_cls.__name__
                 ):  # TODO(boczekbartek): develop a way to handle all mutially
                     if args:
-                        tool = tool_cls(node=self._async_tool_node, **args)
+                        tool = tool_cls(node=self._spinnable_tool_node, **args)
                     else:
-                        tool = tool_cls(node=self._async_tool_node)
+                        tool = tool_cls(node=self._spinnable_tool_node)
                 else:
                     tool = tool_cls(node=self)
             else:

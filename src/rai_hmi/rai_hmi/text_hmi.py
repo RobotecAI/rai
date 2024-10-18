@@ -38,7 +38,7 @@ from rclpy.node import Node
 from streamlit.delta_generator import DeltaGenerator
 
 from rai.messages import HumanMultimodalMessage
-from rai.node import RaiBaseNode
+from rai.node import RaiAsyncToolsNode
 from rai.utils.artifacts import get_stored_artifacts
 from rai_hmi.agent import initialize_agent
 from rai_hmi.base import BaseHMINode
@@ -62,7 +62,8 @@ class AppLayout(enum.Enum):
     TWO_COLUMNS = 2
 
 
-LAYOUT = AppLayout.ONE_COLUMN
+# NOTE(boczekbartek): ONE_COLUMN is not stable yet
+LAYOUT = AppLayout.TWO_COLUMNS
 
 
 # ---------- Cached Resources ----------
@@ -80,7 +81,7 @@ def initialize_memory() -> Memory:
 
 @st.cache_resource
 def initialize_agent_streamlit(
-    _hmi_node: BaseHMINode, _rai_node: RaiBaseNode, _memory: Memory
+    _hmi_node: BaseHMINode, _rai_node: RaiAsyncToolsNode, _memory: Memory
 ):
     return initialize_agent(_hmi_node, _rai_node, _memory)
 
@@ -166,6 +167,14 @@ class SystemStatus(BaseModel):
     system_prompt: bool
 
 
+class Empty(object):
+    def __enter__(self):
+        pass
+
+    def __exit__(self, *args):
+        pass
+
+
 class Layout:
     def __init__(self, robot_description_package) -> None:
         if robot_description_package:
@@ -177,6 +186,7 @@ class Layout:
             )
         self.n_columns = 1
         self.tool_placeholders = dict()
+        self.chat_column = Empty
 
     def draw_app_status_expander(self, system_status: SystemStatus):
         with st.expander("System status", expanded=False):

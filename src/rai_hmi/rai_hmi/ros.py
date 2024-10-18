@@ -21,7 +21,7 @@ from typing import Optional, Tuple
 import rclpy
 from rclpy.executors import MultiThreadedExecutor
 
-from rai.node import RaiBaseNode
+from rai.node import RaiAsyncToolsNode
 from rai_hmi.base import BaseHMINode
 
 
@@ -43,7 +43,6 @@ def initialize_ros_nodes(
 
     executor = MultiThreadedExecutor()
     executor.add_node(hmi_node)
-    executor.add_node(rai_node)
 
     threading.Thread(target=executor.spin, daemon=True).start()
 

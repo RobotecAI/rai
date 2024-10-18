@@ -19,8 +19,9 @@ from typing import List
 from langchain.tools import tool
 
 from rai.agents.conversational_agent import create_conversational_agent
-from rai.node import RaiBaseNode
-from rai.tools.ros.native import GetCameraImage, Ros2GetRobotInterfaces
+from rai.node import RaiAsyncToolsNode
+from rai.tools.ros.native import Ros2GetRobotInterfaces
+from rai.tools.ros.native_actions import GetCameraImage
 from rai.utils.model_initialization import get_llm_model
 from rai_hmi.base import BaseHMINode
 from rai_hmi.chat_msgs import MissionMessage
@@ -28,7 +29,9 @@ from rai_hmi.task import Task, TaskInput
 from rai_hmi.text_hmi_utils import Memory
 
 
-def initialize_agent(hmi_node: BaseHMINode, rai_node: RaiBaseNode, memory: Memory):
+def initialize_agent(
+    hmi_node: BaseHMINode, rai_node: RaiAsyncToolsNode, memory: Memory
+):
     llm = get_llm_model(model_type="complex_model")
 
     @tool
