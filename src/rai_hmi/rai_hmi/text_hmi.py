@@ -13,6 +13,7 @@
 # limitations under the License.
 #
 import base64
+import enum
 import io
 import logging
 import sys
@@ -54,6 +55,14 @@ st.set_page_config(page_title="LangChain Chat App", page_icon="🦜", layout="wi
 
 MODEL = "gpt-4o"
 MAX_DISPLAY = 5
+
+
+class AppLayout(enum.Enum):
+    ONE_COLUMN = 1
+    TWO_COLUMNS = 2
+
+
+LAYOUT = AppLayout.ONE_COLUMN
 
 
 # ---------- Cached Resources ----------
@@ -158,8 +167,6 @@ class SystemStatus(BaseModel):
 
 
 class Layout:
-    """App has two columns: chat + robot state"""
-
     def __init__(self, robot_description_package) -> None:
         if robot_description_package:
             st.title(f"{robot_description_package.replace('_whoami', '')} chat app")
@@ -168,52 +175,35 @@ class Layout:
             logging.warning(
                 "No robot_description_package provided. Some functionalities may not work."
             )
-        self.n_columns = 2
+        self.n_columns = 1
         self.tool_placeholders = dict()
-
-    def draw(self, system_status: SystemStatus):
-        self.draw_app_status_expander(system_status)
-        self.draw_columns()
 
     def draw_app_status_expander(self, system_status: SystemStatus):
         with st.expander("System status", expanded=False):
             st.json(system_status.model_dump())
 
-    def draw_columns(self):
-        self.chat_column, self.mission_column = st.columns(self.n_columns)
+    def draw(self, system_status: SystemStatus):
+        self.draw_app_status_expander(system_status)
 
     def create_tool_expanders(self, tool_calls: List[ToolCall]):
-        with self.chat_column:
-            for tool_call in tool_calls:
-                tool_call = cast(ToolCall, tool_call)
-                with st.expander(f"Tool call: {tool_call['name']}"):
-                    st.markdown(f"Arguments: {tool_call['args']}")
-                    self.tool_placeholders[tool_call["id"]] = st.empty()
+        for tool_call in tool_calls:
+            tool_call = cast(ToolCall, tool_call)
+            with st.expander(f"Tool call: {tool_call['name']}"):
+                st.markdown(f"Arguments: {tool_call['args']}")
+                self.tool_placeholders[tool_call["id"]] = st.empty()
 
     def write_tool_message(self, msg: ToolMessage, tool_call: ToolCall):
-        with self.chat_column:
-            display_agent_message(
-                msg, self.tool_placeholders[msg.tool_call_id], tool_call=tool_call
-            )
+        display_agent_message(
+            msg, self.tool_placeholders[msg.tool_call_id], tool_call=tool_call
+        )
 
     def write_chat_msg(self, msg: BaseMessage):
-        with self.chat_column:
-            display_agent_message(msg)
-
-    def write_mission_msg(self, msg: MissionMessage):
-        with self.mission_column:
-            logger.info(f'Mission said: "{msg}"')
-            display_agent_message(msg)
+        display_agent_message(msg)
 
     def show_chat(self, history, tool_calls: Dict[str, ToolCall]):
-        with self.chat_column:
-            self.__show_history(history, tool_calls)
+        self.show_history(history, tool_calls)
 
-    def show_mission(self, history, tool_calls: Dict[str, ToolCall]):
-        with self.mission_column:
-            self.__show_history(history, tool_calls)
-
-    def __show_history(self, history, tool_calls):
+    def show_history(self, history, tool_calls):
         def display(message, no_expand=False):
             if isinstance(message, ToolMessage):
                 display_agent_message(
@@ -226,6 +216,53 @@ class Layout:
 
         for message in history:
             display(message)
+
+
+class TwoColLayout(Layout):
+    """App has two columns: chat + robot state"""
+
+    def __init__(self, robot_description_package) -> None:
+        super().__init__(robot_description_package)
+        self.n_columns = 2
+
+    def draw(self, system_status: SystemStatus):
+        self.draw_app_status_expander(system_status)
+        self.draw_columns()
+
+    def draw_columns(self):
+        self.chat_column, self.mission_column = st.columns(self.n_columns)
+
+    def create_tool_expanders(self, tool_calls: List[ToolCall]):
+        with self.chat_column:
+            super().create_tool_expanders(tool_calls)
+
+    def write_tool_message(self, msg: ToolMessage, tool_call: ToolCall):
+        with self.chat_column:
+            super().write_tool_message(msg, tool_call)
+
+    def write_chat_msg(self, msg: BaseMessage):
+        with self.chat_column:
+            super().write_chat_msg(msg)
+
+    def write_mission_msg(self, msg: MissionMessage):
+        with self.mission_column:
+            logger.info(f'Mission said: "{msg}"')
+            display_agent_message(msg)
+
+    def show_chat(self, history, tool_calls: Dict[str, ToolCall]):
+        with self.chat_column:
+            super().show_chat(history, tool_calls)
+
+    def show_mission(self, history, tool_calls: Dict[str, ToolCall]):
+        with self.mission_column:
+            self.show_history(history, tool_calls)
+
+
+def get_layout(robot_description_package) -> Layout:
+    if LAYOUT == AppLayout.TWO_COLUMNS:
+        return TwoColLayout(robot_description_package)
+    else:
+        return Layout(robot_description_package)
 
 
 class Chat:
@@ -253,7 +290,8 @@ class Chat:
     def mission(self, msg: MissionMessage):
         logger.info(f'Mission said: "{msg}"')
         self.memory.add_mission(msg)
-        self.layout.write_mission_msg(msg)
+        if isinstance(self.layout, TwoColLayout):
+            self.layout.write_mission_msg(msg)
 
 
 class Agent:
@@ -277,7 +315,7 @@ class StreamlitApp:
 
         self.robot_description_package = robot_description_package
 
-        self.layout = Layout(self.robot_description_package)
+        self.layout = get_layout(self.robot_description_package)
         self.memory = initialize_memory()
         self.chat = Chat(self.memory, self.layout)
 
@@ -331,7 +369,8 @@ class StreamlitApp:
         See: https://docs.streamlit.io/get-started/fundamentals/main-concepts
         """
         self.layout.show_chat(self.memory.chat_memory, self.memory.tool_calls)
-        self.layout.show_mission(self.memory.mission_memory, self.memory.tool_calls)
+        if isinstance(self.layout, TwoColLayout):
+            self.layout.show_mission(self.memory.mission_memory, self.memory.tool_calls)
 
     def prompt_callback(self):
         prompt = st.session_state.prompt
