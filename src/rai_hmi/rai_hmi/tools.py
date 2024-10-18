@@ -18,8 +18,6 @@ from typing import Any, Type
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from .task import Task
-
 
 class QueryDatabaseInput(BaseModel):
     query: str = Field(
@@ -42,21 +40,3 @@ class QueryDatabaseTool(BaseTool):
     def _run(self, query: str):
         retrieval_response = self.get_response(query)
         return str(retrieval_response)
-
-
-class QueueTaskInput(BaseModel):
-    task: Task = Field(..., description="The task to queue")
-
-
-class QueueTaskTool(BaseTool):
-    name: str = "queue_task"
-    description: str = "Queue a task for the platform"
-    input_type: Type[QueueTaskInput] = QueueTaskInput
-
-    args_schema: Type[QueueTaskInput] = QueueTaskInput
-
-    add_task: Any
-
-    def _run(self, task: Task):
-        self.add_task(task)
-        return f"Task {task} has been queued for the LLM"
