@@ -59,6 +59,7 @@ def main(whitelist: Optional[Path] = None):
     Avoid canceling ros2 actions if they don't cause a big danger
 
     Navigation tips:
+    - Always check your transform before and after you perform ros2 actions, so that you can verify if it worked.
     - for driving forward/backward, if specified, ros2 actions are better.
     - for driving for some specific time or in specific manner (like in circle) it good to use /cmd_vel topic
     - you are currently unable to read map or point-cloud, so please avoid subscribing to such topics.
