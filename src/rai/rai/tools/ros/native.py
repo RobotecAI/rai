@@ -230,6 +230,6 @@ class GetCameraImage(Ros2BaseTool):
     args_schema: Type[TopicInput] = TopicInput
 
     def _run(self, topic_name: str):
-        msg = self.node.get_raw_message_from_topic(topic_name)
+        msg = self.node.get_raw_message_from_topic(topic_name, timeout_sec=3.0)
         img = convert_ros_img_to_base64(msg)
         return "Got image", {"images": [img]}
