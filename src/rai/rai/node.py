@@ -501,6 +501,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
                 else:
                     raise ValueError(f"Unexpected type of message: {type(msg)}")
 
+                # TODO: Find a better way to create meaninful feedback
                 last_msg = self.simple_llm.invoke(
                     [
                         SystemMessage(
