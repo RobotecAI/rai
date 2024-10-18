@@ -40,14 +40,21 @@ def parse_whoami_package():
     parser.add_argument(
         "whoami_package_root", type=str, help="Path to the root of the whoami package"
     )
+    parser.add_argument(
+        "--vendor",
+        type=str,
+        required=False,
+        default=None,
+        help="LLM and embeddings vendor. See config.toml for details",
+    )
 
     args = parser.parse_args()
     save_dir = Path(args.whoami_package_root) / "description" / "generated"
     description_path = Path(args.whoami_package_root) / "description"
     save_dir.mkdir(parents=True, exist_ok=True)
 
-    llm = get_llm_model(model_type="simple_model")
-    embeddings_model = get_embeddings_model()
+    llm = get_llm_model(model_type="simple_model", vendor=args.vendor)
+    embeddings_model = get_embeddings_model(vendor=args.vendor)
 
     def calculate_urdf_tokens():
         combined_urdf = ""

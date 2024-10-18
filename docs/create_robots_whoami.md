@@ -16,7 +16,7 @@ Your robot's `whoami` package serves as a configuration package for the `rai_who
 2. Create a whoami package for Panda
 
    ```shell
-   poetry run create_rai_ws --name panda --destination-directory src/examples
+   ./scripts/create_rai_ws.sh --name panda --destination-directory src/examples
    ```
 
 3. Fill in the `src/examples/panda_whoami/description` folder with data:
@@ -30,11 +30,12 @@ Your robot's `whoami` package serves as a configuration package for the `rai_who
 4. Run the `parse_whoami_package`. This will process the documentation, building it into a vector database, which is used by RAI agent to reason about its identity.
 
 > [!IMPORTANT]
-> Parsing bigger documents might lead to costs. Embedding model can be configured in
+> Parsing bigger documents with Cloud vendors might lead to costs. Consider using the
+> local `ollama` provider for this task. Embedding model can be configured in
 > [config.toml](../config.toml) (`ollama` works locally, see [docs/vendors.md](./vendors.md#ollama)).
 
 ```shell
-poetry run parse_whoami_package src/examples/panda_whoami
+./scripts/parse_whoami_package.sh src/examples/panda_whoami --vendor ollama
 ```
 
 5. Optional: Examine the generated files

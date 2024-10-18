@@ -28,22 +28,21 @@ using Turtlebot4 simulation.
 
       ```bash
       cd rai
-      # for Ubuntu 22.04 jammy and ros2 humlbe
+      # for Ubuntu 22.04 jammy and ros2 humble
       unzip -d src/examples/turtlebot4/simulation Turtlebot4_jammyhumble_0.0.1.zip
 
       # for Ubuntu 24.04 noble and ros2 jazzy
       unzip -d src/examples/turtlebot4/simulation Turtlebot4_noblejazzy_0.0.1.zip
       ```
 
-3. Setup your LLM vendor: [docs/vendors.md](../../../docs/vendors.md). OpenAI or AWS Bedrock are recommended for now.
+3. Setup your LLM vendor: [docs/vendors.md](../../../docs/vendors.md). OpenAI or AWS Bedrock are recommended for now, since current local `ollama` models don't support vision & tool calling.
 
 4. Configure `rai_whoami_node` (based on ["Your robot identity in RAI"](https://github.com/RobotecAI/rai/blob/development/docs/create_robots_whoami.md) tutorial):
 
    1. Create `whoami` package for turtlebot4 in `src/examples/turtlebot4`
 
       ```bash
-      . ./setup_shell.sh
-      poetry run create_rai_ws --name turtlebot4 --destination-directory src/examples
+      ./scripts/create_rai_ws.sh --name turtlebot4 --destination-directory src/examples
       ```
 
    2. Download official turtlebot4 [data sheet](https://bit.ly/3KCp3Du) into
@@ -56,12 +55,16 @@ using Turtlebot4 simulation.
       > unzip them to `src/examples/turtlebot4_whoami/description/generated` with a command:
       > `unzip -d src/examples/turtlebot4_whoami/description turtlebot4_whoami_generated.zip`
 
-      > **NOTE**: Vector database is created using the OpenAI API. Parsing bigger documents
-      > might lead to costs. Embedding model can be configured in
+      > **NOTE**: Vector database is can be created using local models like `llama3:2`
+      > as well as using the OpenAI API. With OpenAI Parsing bigger documents might lead
+      > to costs. Embedding model can be configured in
       > [config.toml](https://github.com/RobotecAI/rai/blob/development/config.toml#L13)
+      >
+      > You can also overwrite the vendor from config.toml with a `--vendor` argument like
+      > below:
 
       ```bash
-      poetry run parse_whoami_package src/examples/turtlebot4_whoami
+      ./scripts/parse_whoami_package.sh src/examples/turtlebot4_whoami --vendor ollama
       # you will be asked to press `y` to continue
       ```
 
