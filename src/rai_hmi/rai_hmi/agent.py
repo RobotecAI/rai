@@ -33,15 +33,15 @@ def initialize_agent(hmi_node: BaseHMINode, rai_node: RaiBaseNode, memory: Memor
 
     @tool
     def get_mission_memory(uid: str) -> List[MissionMessage]:
-        """List mission memory. Mission uid is required."""
+        """List mission memory. It contains the information about running tasks. Mission uid is required."""
         return memory.get_mission_memory(uid)
 
     @tool
-    def add_task_to_queue(task: TaskInput):
-        """Use this tool to add a task to the queue. The task will be handled by the executor part of your system."""
+    def submit_mission_to_the_robot(task: TaskInput):
+        """Use this tool submit the task to the robot. The task will be handled by the executor part of your system."""
 
         uid = uuid.uuid4()
-        hmi_node.add_task_to_queue(
+        hmi_node.execute_mission(
             Task(
                 name=task.name,
                 description=task.description,
@@ -55,7 +55,7 @@ def initialize_agent(hmi_node: BaseHMINode, rai_node: RaiBaseNode, memory: Memor
         Ros2GetRobotInterfaces(node=rai_node),
         GetCameraImage(node=rai_node),
     ]
-    task_tools = [add_task_to_queue, get_mission_memory]
+    task_tools = [submit_mission_to_the_robot, get_mission_memory]
     tools = hmi_node.tools + node_tools + task_tools
 
     agent = create_conversational_agent(
