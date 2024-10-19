@@ -145,7 +145,7 @@ def ros2_build_msg(msg_type: str, msg_args: Dict[str, Any]) -> Tuple[object, Typ
 class RaiBaseNode(Node):
     def __init__(
         self,
-        whitelist: Optional[List[str]] = None,
+        allow_list: Optional[List[str]] = None,
         *args,
         **kwargs,
     ):
@@ -158,7 +158,7 @@ class RaiBaseNode(Node):
             self.DISCOVERY_FREQ,
             self.discovery,
         )
-        self.ros_discovery_info = NodeDiscovery(whitelist=whitelist)
+        self.ros_discovery_info = NodeDiscovery(allow_list=allow_list)
         self.discovery()
         self.qos_profile = QoSProfile(
             history=HistoryPolicy.KEEP_LAST,
@@ -391,14 +391,14 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         system_prompt: str,
         observe_topics: Optional[List[str]] = None,
         observe_postprocessors: Optional[Dict[str, Callable[[Any], Any]]] = None,
-        whitelist: Optional[List[str]] = None,
+        allow_list: Optional[List[str]] = None,
         tools: Optional[List[Type[BaseTool]]] = None,
         *args,
         **kwargs,
     ):
         super().__init__(
             node_name="rai_node",
-            whitelist=whitelist,
+            allow_list=allow_list,
             *args,
             **kwargs,
         )
