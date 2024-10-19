@@ -135,6 +135,16 @@ class Ros2ShowMsgInterfaceTool(BaseTool):
             )
 
 
+def publish_msg_to_topic(node, topic, msg):
+    reliable_qos = rclpy.qos.QoSProfile(
+        reliability=rclpy.qos.ReliabilityPolicy.RELIABLE,
+        history=rclpy.qos.HistoryPolicy.KEEP_LAST,
+        depth=1,
+    )
+    publisher = node.create_publisher(msg, topic, reliable_qos)
+    publisher.publish(msg)
+
+
 class Ros2PubMessageTool(Ros2BaseTool):
     name: str = "PubRos2MessageTool"
     description: str = """A tool for publishing a message to a ros2 topic

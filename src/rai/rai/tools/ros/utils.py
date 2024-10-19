@@ -166,7 +166,7 @@ def get_transform(
 
     transform = None
     for _ in range(timeout * 10):
-        rclpy.spin_once(node, timeout_sec=0.1)
+        rclpy.spin_once(node, timeout_sec=0.2)
         if tf_buffer.can_transform(target_frame, source_frame, rclpy.time.Time()):
             transform = tf_buffer.lookup_transform(
                 target_frame, source_frame, rclpy.time.Time()

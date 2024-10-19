@@ -79,6 +79,7 @@ class BaseHMINode(Node):
     stack.
     If you are asked about logs, or what was write or wrong about the mission, use get_mission_memory tool to get such information.
     If you are asked about interpration about camera image, add such mission as well
+    You are the emobdied AI. You are the robot. Say everything in 1st person.
     """
 
     def __init__(

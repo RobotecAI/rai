@@ -9,19 +9,18 @@
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language goveself.rning permissions and
+# See the License for the specific language governing permissions and
 # limitations under the License.
 #
 import base64
-import enum
 import io
 import logging
 import sys
-import time
-from pprint import pformat
 from queue import Queue
-from typing import Dict, List, Optional, cast
+from typing import Dict, Optional, cast
 
+import rclpy
+import std_msgs.msg
 import streamlit as st
 from langchain_core.messages import (
     AIMessage,
@@ -31,111 +30,157 @@ from langchain_core.messages import (
     ToolCall,
     ToolMessage,
 )
+from langchain_core.tools import render_text_description_and_args
+from langchain_openai.chat_models import ChatOpenAI
 from PIL import Image
-from pydantic import BaseModel
 from rclpy.node import Node
-from streamlit.delta_generator import DeltaGenerator
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 
+from rai.agents.conversational_agent import create_conversational_agent
 from rai.messages import HumanMultimodalMessage
 from rai.node import RaiAsyncToolsNode
+from rai.tools.ros.native_actions import GetCameraImage
 from rai.utils.artifacts import get_stored_artifacts
-from rai_hmi.agent import initialize_agent
+from rai.utils.model_initialization import get_llm_model
 from rai_hmi.base import BaseHMINode
-from rai_hmi.chat_msgs import EMOJIS, MissionMessage
-from rai_hmi.ros import initialize_ros_nodes
-from rai_hmi.text_hmi_utils import Memory
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+# from rai_hmi.basic_nav import get_ros2_interfaces, drive_on_heading, backup, spin, go_to_pose, get_location, led_strip, led_strip_array, wait_n_sec_tool
+from rai_hmi.basic_nav_async import (
+    backup,
+    cancel_task,
+    describe_camera_image,
+    drive_on_heading,
+    get_last_task_feedback,
+    get_location,
+    get_ros2_interfaces_tool,
+    get_ros2_interfaces,
+    go_to_pose,
+    is_nav_task_complete,
+    led_strip,
+    led_strip_array,
+    spin,
+    wait_n_sec_tool,
 )
+
 logger = logging.getLogger(__name__)
 
-st.set_page_config(page_title="LangChain Chat App", page_icon="🦜", layout="wide")
+st.set_page_config(page_title="LangChain Chat App", page_icon="🦜")
+robot_description_package = sys.argv[1] if len(sys.argv) > 1 else None
 
-MODEL = "gpt-4o"
-MAX_DISPLAY = 5
-
-
-class AppLayout(enum.Enum):
-    ONE_COLUMN = 1
-    TWO_COLUMNS = 2
-
-
-# NOTE(boczekbartek): ONE_COLUMN is not stable yet
-LAYOUT = AppLayout.TWO_COLUMNS
-
-
-# ---------- Cached Resources ----------
-@st.cache_resource
-def parse_args():
-    robot_description_package = sys.argv[1] if len(sys.argv) > 1 else None
-    return robot_description_package
+if robot_description_package:
+    st.title(f"{robot_description_package.replace('_whoami', '')} chat app")
+else:
+    st.title("ROS 2 Chat App")
+    logging.warning(
+        "No robot_description_package provided. Some functionalities may not work."
+    )
 
 
 @st.cache_resource
-def initialize_memory() -> Memory:
-    return Memory()
+def initialize_ros_node(robot_description_package: Optional[str]):
+    node = BaseHMINode(
+        f"{robot_description_package}_hmi_node",
+        robot_description_package=robot_description_package,
+        queue=Queue(),
+    )
+
+    return node
+
+
+def decode_base64_into_image(base64_image: str):
+    image = Image.open(io.BytesIO(base64.b64decode(base64_image)))
+    return image
 
 
 @st.cache_resource
-def initialize_agent_streamlit(
-    _hmi_node: BaseHMINode, _rai_node: RaiAsyncToolsNode, _memory: Memory
-):
-    return initialize_agent(_hmi_node, _rai_node, _memory)
-
-
-@st.cache_resource
-def initialize_mission_queue() -> Queue:
-    return Queue()
-
-
-@st.cache_resource
-def initialize_ros_nodes_streamlit(
-    _feedbacks_queue: Queue, robot_description_package: Optional[str]
-):
-    return initialize_ros_nodes(_feedbacks_queue, robot_description_package)
-
-
-def display_agent_message(
-    message,  # TODO(boczekbartek): add typhint
-    tool_chat_obj: Optional[DeltaGenerator] = None,
-    no_expand: bool = False,
-    tool_call: Optional[ToolCall] = None,
-):
+def initialize_agent(_node: BaseHMINode):
+    llm = ChatOpenAI(
+        temperature=0.5,
+        model="gpt-4o",
+        streaming=True,
+    )
+    rai_node = RaiAsyncToolsNode(node_name="rai_tool_node")
+    rclpy.spin_once(rai_node, timeout_sec=1.0)
+    tools = [
+        get_ros2_interfaces_tool,
+        drive_on_heading,
+        backup,
+        spin,
+        go_to_pose,
+        get_location,
+        led_strip,
+        led_strip_array,
+        wait_n_sec_tool,
+        is_nav_task_complete,
+        cancel_task,
+        get_last_task_feedback,
+        describe_camera_image,
+        GetCameraImage(node=rai_node),
+    ]
+    tools_desc = (
+        f"\nThese are available tools:\n{render_text_description_and_args(tools)}"
+    )
+    interfaces_desc = f"\nThese are available interfaces:\n{get_ros2_interfaces()}"
+    rules = """
+        <rule> Before every navigation action check you location, to verify if nav2 action took expected result. Actions might fail, but make navigation progress. You need to check that and adapt </rule>
+        While the navigation task is running you can do other things. You can also check the task status.
+        When you are asked to perform a task carefully, you can split navigation tasks into a couple of smaller ones.
+        < rule> don't decide to respond to the user until you are sure that the navigation task is completed </rule>
     """
-    Display LLM message in streamlit UI.
+    system_prompt = _node.system_prompt + tools_desc + interfaces_desc + rules
+    _node.system_prompt = system_prompt
+    print(f"Agents system prompt: {system_prompt=}")
+    agent = create_conversational_agent(
+        llm,
+        _node.tools + tools,
+        system_prompt,
+        logger=_node.get_logger(),
+    )
+    return agent
 
-    Args:
-        message: The message to display
-        tool_chat_obj: Pre-existing Streamlit object for the tool message.
-        no_expand: Skip expanders due - Streamlit does not support nested expanders.
-        tool_call: The tool call associated with the ToolMessage.
 
-    """
+def initialize_session_memory(system_prompt: str = ""):
+    if "memory" not in st.session_state:
+        st.session_state.memory = [SystemMessage(content=system_prompt)]
+    if "tool_calls" not in st.session_state:
+        st.session_state.tool_calls = {}
+
+
+def convert_langchain_message_to_streamlit_message(
+    message: BaseMessage,
+) -> Dict[str, str]:
     message.content = cast(str, message.content)  # type: ignore
-    if not message.content:
-        return  # Tool messages might not have any content, skip displying them
+    if isinstance(message, HumanMessage):
+        return {"type": "user", "avatar": "🧑‍💻", "content": message.content}
+    elif isinstance(message, AIMessage):
+        return {"type": "bot", "avatar": "🤖", "content": message.content}
+    elif isinstance(message, ToolMessage):
+        return {"type": "bot", "avatar": "🛠️", "content": message.content}
+    else:
+        return {"type": "unknown", "avatar": "❓", "content": message.content}
+
+
+def handle_history_message(message: BaseMessage):
+    message.content = cast(str, message.content)  # type: ignore
     if isinstance(message, HumanMessage):
         if isinstance(
             message, HumanMultimodalMessage
         ):  # we do not handle user's images
             return
-        st.chat_message("user", avatar=EMOJIS.human).markdown(message.content)
+        user_chat_obj = st.chat_message("user", avatar="🧑‍💻")
+        user_chat_obj.markdown(message.content)
     elif isinstance(message, AIMessage):
-        st.chat_message("bot", avatar=EMOJIS.bot).markdown(message.content)
+        if message.content == "":
+            return
+        bot_chat_obj = st.chat_message("bot", avatar="🤖")
+        bot_chat_obj.markdown(message.content)
     elif isinstance(message, ToolMessage):
-        if tool_call is None:
-            raise ValueError("`tool_call` argument is required for ToolMessage.")
-
+        tool_call = st.session_state.tool_calls[message.tool_call_id]
         label = tool_call.name + " status: "
-        status = EMOJIS.success if message.status == "success" else EMOJIS.failure
-        if not tool_chat_obj:
-            if not no_expand:
-                tool_chat_obj = st.expander(label=label + status).chat_message(
-                    "bot", avatar=EMOJIS.tool
-                )
-            else:
-                tool_chat_obj = st.chat_message("bot", avatar=EMOJIS.tool)
+        status = "✅" if message.status == "success" else "❌"
+        tool_chat_obj = st.expander(label=label + status).chat_message(
+            "bot", avatar="🛠️"
+        )
         with tool_chat_obj:
             st.markdown(message.content)
             artifacts = get_stored_artifacts(message.tool_call_id)
@@ -146,277 +191,125 @@ def display_agent_message(
                     st.image(image)
     elif isinstance(message, SystemMessage):
         return  # we do not handle system messages
-    elif isinstance(message, MissionMessage):
-        logger.info("Displaying mission message")
-        with st.expander(label=message.STATUS):
-            avatar, content = message.render_steamlit()
-            st.chat_message("bot", avatar=avatar).markdown(content)
     else:
         raise ValueError("Unknown message type")
 
 
-# ---------- Streamlit Application ----------
-class SystemStatus(BaseModel):
-    robot_database: bool
-    system_prompt: bool
-
-
-class Empty(object):
-    def __enter__(self):
-        pass
-
-    def __exit__(self, *args):
-        pass
-
-
-class Layout:
-    def __init__(self, robot_description_package) -> None:
-        if robot_description_package:
-            st.title(f"{robot_description_package.replace('_whoami', '')} chat app")
-        else:
-            st.title("ROS 2 Chat App")
-            logging.warning(
-                "No robot_description_package provided. Some functionalities may not work."
-            )
-        self.n_columns = 1
-        self.tool_placeholders = dict()
-        self.chat_column = Empty
-
-    def draw_app_status_expander(self, system_status: SystemStatus):
-        with st.expander("System status", expanded=False):
-            st.json(system_status.model_dump())
-
-    def draw(self, system_status: SystemStatus):
-        self.draw_app_status_expander(system_status)
-
-    def create_tool_expanders(self, tool_calls: List[ToolCall]):
-        for tool_call in tool_calls:
-            tool_call = cast(ToolCall, tool_call)
-            with st.expander(f"Tool call: {tool_call['name']}"):
-                st.markdown(f"Arguments: {tool_call['args']}")
-                self.tool_placeholders[tool_call["id"]] = st.empty()
-
-    def write_tool_message(self, msg: ToolMessage, tool_call: ToolCall):
-        display_agent_message(
-            msg, self.tool_placeholders[msg.tool_call_id], tool_call=tool_call
-        )
-
-    def write_chat_msg(self, msg: BaseMessage):
-        display_agent_message(msg)
-
-    def show_chat(self, history, tool_calls: Dict[str, ToolCall]):
-        self.show_history(history, tool_calls)
-
-    def show_history(self, history, tool_calls):
-        def display(message, no_expand=False):
-            if isinstance(message, ToolMessage):
-                display_agent_message(
-                    message,
-                    no_expand=no_expand,
-                    tool_call=tool_calls[message.tool_call_id],
+def publish_response_to_ros(node: Node, response: str):
+    llm = get_llm_model("simple_model")
+    response = llm.invoke(
+        [
+            SystemMessage(
+                content=(
+                    "You are an experienced reporter deployed on a autonomous robot. "  # type: ignore
+                    "Your task is to summarize the message in a way that is very easy to understand"
+                    "for the user. Also the message will be played using tts, so please make it concise "
+                    "and don't include any special characters."
+                    "Do not use markdown formatting. Keep it short and concise. If the message is empty, please return empty string."
                 )
-            else:
-                display_agent_message(message, no_expand=no_expand)
+            ),
+            HumanMessage(content=response),
+        ]
+    ).content
+    node.get_logger().info(f"LLM shortened the response to:\n{response}")
 
-        for message in history:
-            display(message)
-
-
-class TwoColLayout(Layout):
-    """App has two columns: chat + robot state"""
-
-    def __init__(self, robot_description_package) -> None:
-        super().__init__(robot_description_package)
-        self.n_columns = 2
-
-    def draw(self, system_status: SystemStatus):
-        self.draw_app_status_expander(system_status)
-        self.draw_columns()
-
-    def draw_columns(self):
-        self.chat_column, self.mission_column = st.columns(self.n_columns)
-
-    def create_tool_expanders(self, tool_calls: List[ToolCall]):
-        with self.chat_column:
-            super().create_tool_expanders(tool_calls)
-
-    def write_tool_message(self, msg: ToolMessage, tool_call: ToolCall):
-        with self.chat_column:
-            super().write_tool_message(msg, tool_call)
-
-    def write_chat_msg(self, msg: BaseMessage):
-        with self.chat_column:
-            super().write_chat_msg(msg)
-
-    def write_mission_msg(self, msg: MissionMessage):
-        with self.mission_column:
-            logger.info(f'Mission said: "{msg}"')
-            display_agent_message(msg)
-
-    def show_chat(self, history, tool_calls: Dict[str, ToolCall]):
-        with self.chat_column:
-            super().show_chat(history, tool_calls)
-
-    def show_mission(self, history, tool_calls: Dict[str, ToolCall]):
-        with self.mission_column:
-            self.show_history(history, tool_calls)
-
-
-def get_layout(robot_description_package) -> Layout:
-    if LAYOUT == AppLayout.TWO_COLUMNS:
-        return TwoColLayout(robot_description_package)
-    else:
-        return Layout(robot_description_package)
-
-
-class Chat:
-    def __init__(self, memory: Memory, layout: Layout) -> None:
-        self.memory = memory
-        self.layout = layout
-
-    def user(self, txt):
-        logger.info(f'User said: "{txt}"')
-        msg = HumanMessage(content=txt)
-        self.memory.chat_memory.append(msg)
-        self.layout.write_chat_msg(msg)
-
-    def bot(self, msg):
-        logger.info(f'Bot said: "{msg}"')
-        self.memory.chat_memory.append(msg)
-        self.layout.write_chat_msg(msg)
-
-    def tool(self, msg):
-        logger.info(f'Tool said: "{msg}"')
-        self.memory.chat_memory.append(msg)
-        tool_call = self.memory.tool_calls[msg.tool_call_id]
-        self.layout.write_tool_message(msg, tool_call)
-
-    def mission(self, msg: MissionMessage):
-        logger.info(f'Mission said: "{msg}"')
-        self.memory.add_mission(msg)
-        if isinstance(self.layout, TwoColLayout):
-            self.layout.write_mission_msg(msg)
-
-
-class Agent:
-    def __init__(self, hmi_node: Node, rai_node: Node, memory) -> None:
-        self.memory = memory
-        self.agent = initialize_agent_streamlit(hmi_node, rai_node, self.memory)
-
-    def stream(self):
-        # Copy, because agent's memory != streamlit app memory. App memory is used to
-        # recreate the page, agent might manipulate it's history to perform the task.
-        # In simplest case it adds thinker message to the state.
-        messages = self.memory.chat_memory.copy()
-        logger.info(f"Sending messages:\n{pformat(messages)}")
-
-        return self.agent.stream({"messages": messages})
-
-
-class StreamlitApp:
-    def __init__(self, robot_description_package) -> None:
-        self.logger = logging.getLogger(self.__class__.__name__)
-
-        self.robot_description_package = robot_description_package
-
-        self.layout = get_layout(self.robot_description_package)
-        self.memory = initialize_memory()
-        self.chat = Chat(self.memory, self.layout)
-
-        self.mission_queue = initialize_mission_queue()
-        self.hmi_ros_node, self.rai_ros_node = self.initialize_node(
-            self.mission_queue, robot_description_package
-        )
-        self.agent = Agent(self.hmi_ros_node, self.rai_ros_node, self.memory)
-
-    def update_mission(self):
-        while True:
-            if self.mission_queue.empty():
-                time.sleep(0.5)
-                continue
-            logger.info("Got new mission update!")
-            msg = self.mission_queue.get()
-            self.chat.mission(msg)
-
-    def run(self):
-        system_status = self.get_system_status()
-        self.layout.draw(system_status)
-
-        self.recreate_from_memory()
-
-        st.chat_input(
-            "What is your question?", on_submit=self.prompt_callback, key="prompt"
-        )
-
-        self.update_mission()
-
-    def get_system_status(self) -> SystemStatus:
-        return SystemStatus(
-            robot_database=self.hmi_ros_node.faiss_index is not None,
-            system_prompt=self.hmi_ros_node.system_prompt != "",
-        )
-
-    def initialize_node(self, feedbacks_queue, robot_description_package):
-        self.logger.info("Initializing ROS 2 node...")
-        with st.spinner("Initializing ROS 2 nodes..."):
-            hmi_node, rai_node = initialize_ros_nodes_streamlit(
-                feedbacks_queue, robot_description_package
-            )
-            self.logger.info("ROS 2 node initialized")
-        return hmi_node, rai_node
-
-    def recreate_from_memory(self):
-        """
-        Recreates the page from the memory. It is because Streamlit reloads entire page every widget action.
-        See: https://docs.streamlit.io/get-started/fundamentals/main-concepts
-        """
-        self.layout.show_chat(self.memory.chat_memory, self.memory.tool_calls)
-        if isinstance(self.layout, TwoColLayout):
-            self.layout.show_mission(self.memory.mission_memory, self.memory.tool_calls)
-
-    def prompt_callback(self):
-        prompt = st.session_state.prompt
-        self.chat.user(prompt)
-
-        message_placeholder = st.container()
-        with self.layout.chat_column:
-            with message_placeholder:
-                with st.spinner("Thinking..."):
-                    for state in self.agent.stream():
-                        # logger.info(f"State:\n{pformat(state)}")
-                        node_name = list(state.keys())[0]
-                        if node_name == "thinker":
-                            last_message = state[node_name]["messages"][-1]
-                            self.chat.bot(last_message)
-                            self.memory.register_tool_calls(last_message.tool_calls)
-                            self.layout.create_tool_expanders(last_message.tool_calls)
-
-                        elif node_name == "tools":
-                            last_ai_msg_idx = 0
-                            for message in state[node_name]["messages"]:
-                                if isinstance(message, AIMessage):
-                                    last_ai_msg_idx = state[node_name][
-                                        "messages"
-                                    ].index(message)
-
-                            for message in state[node_name]["messages"][
-                                last_ai_msg_idx + 1 :  # noqa: E203
-                            ]:
-                                if message.type == "tool":
-                                    self.memory.tool_calls[message.tool_call_id] = (
-                                        message
-                                    )
-                                    self.chat.tool(message)
-                                else:
-                                    break
-
-
-def decode_base64_into_image(base64_image: str):
-    image = Image.open(io.BytesIO(base64.b64decode(base64_image)))
-    return image
+    reliable_qos = QoSProfile(
+        reliability=ReliabilityPolicy.RELIABLE,
+        durability=DurabilityPolicy.TRANSIENT_LOCAL,
+        history=HistoryPolicy.KEEP_ALL,
+    )
+    publisher = node.create_publisher(std_msgs.msg.String, "/to_human", reliable_qos)
+    msg = std_msgs.msg.String()
+    msg.data = response
+    publisher.publish(msg)
+    publisher.destroy()
 
 
 if __name__ == "__main__":
-    robot_description_package = parse_args()
-    app = StreamlitApp(robot_description_package)
-    app.run()
+    with st.spinner("Initializing ROS 2 node..."):
+        node = initialize_ros_node(robot_description_package)
+    agent = initialize_agent(_node=node)
+    initialize_session_memory(system_prompt=node.system_prompt)
+
+    status = {
+        "robot_database": node.faiss_index is not None,
+        "system_prompt": node.system_prompt == "",
+    }
+    with st.expander("System status", expanded=False):
+        st.json(status)
+
+    for message in st.session_state.memory:
+        handle_history_message(message)
+
+    if prompt := st.chat_input("What is your question?"):
+        user_chat_obj = st.chat_message("user", avatar="🧑‍💻")
+        user_chat_obj.markdown(prompt)
+        st.session_state.memory.append(HumanMessage(content=prompt))
+
+        message_placeholder = st.container()
+        with message_placeholder:
+            with st.spinner("Thinking..."):
+                tool_placeholders = {}
+                for state in agent.stream(
+                    {"messages": st.session_state.memory},
+                    config={"recursion_limit": 500},
+                ):
+                    node_name = list(state.keys())[0]
+                    if node_name == "thinker":
+                        last_message = state[node_name]["messages"][-1]
+                        if last_message.content:
+                            st_message = convert_langchain_message_to_streamlit_message(
+                                last_message
+                            )
+                            st.chat_message(
+                                st_message["type"], avatar=st_message["avatar"]
+                            ).markdown(st_message["content"])
+                            publish_response_to_ros(node, st_message["content"])
+
+                        called_tools = last_message.tool_calls
+                        for tool_call in called_tools:
+                            tool_call = cast(ToolCall, tool_call)
+                            st.session_state.tool_calls[tool_call["id"]] = tool_call
+                            with st.expander(f"Tool call: {tool_call['name']}"):
+                                st.markdown(f"Arguments: {tool_call['args']}")
+                                tool_placeholders[tool_call["id"]] = st.empty()
+
+                    elif node_name == "tools":
+                        tool_messages = []
+                        last_ai_msg_idx = 0
+                        for message in state[node_name]["messages"]:
+                            if isinstance(message, AIMessage):
+                                last_ai_msg_idx = state[node_name]["messages"].index(
+                                    message
+                                )
+
+                        for message in state[node_name]["messages"][
+                            last_ai_msg_idx + 1 :  # noqa: E203
+                        ]:
+                            if message.type == "tool":
+                                st.session_state.tool_calls[message.tool_call_id] = (
+                                    message
+                                )
+                                if message.tool_call_id in tool_placeholders:
+                                    st_message = (
+                                        convert_langchain_message_to_streamlit_message(
+                                            message
+                                        )
+                                    )
+                                    with tool_placeholders[message.tool_call_id]:
+                                        st.chat_message(
+                                            st_message["type"],
+                                            avatar=st_message["avatar"],
+                                        ).markdown(st_message["content"])
+                                        artifacts = get_stored_artifacts(
+                                            message.tool_call_id
+                                        )
+                                        for artifact in artifacts:
+                                            if "images" in artifact:
+                                                base_64_image = artifact["images"][0]
+                                                image = decode_base64_into_image(
+                                                    base_64_image
+                                                )
+                                                st.image(image)
+                            else:
+                                break
