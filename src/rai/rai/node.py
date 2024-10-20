@@ -482,11 +482,11 @@ class RaiStateBasedLlmNode(RaiBaseNode):
 
             state = None
             for state in self.llm_app.stream(
-                payload, 
+                payload,
                 {
-                    "recursion_limit": self.AGENT_RECURSION_LIMIT, 
-                    "callbacks": get_tracing_callbacks()
-                }
+                    "recursion_limit": self.AGENT_RECURSION_LIMIT,
+                    "callbacks": get_tracing_callbacks(),
+                },
             ):
 
                 graph_node_name = list(state.keys())[0]
