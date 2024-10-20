@@ -51,7 +51,7 @@ from rai.tools.ros.native import Ros2BaseTool
 from rai.tools.ros.native_actions import Ros2BaseActionTool
 from rai.tools.ros.utils import convert_ros_img_to_base64, import_message_from_str
 from rai.tools.utils import wait_for_message
-from rai.utils.model_initialization import get_llm_model
+from rai.utils.model_initialization import get_llm_model, get_tracing_callbacks
 from rai.utils.ros import NodeDiscovery, RosoutBuffer
 from rai_interfaces.action import Task as TaskAction
 
@@ -482,7 +482,11 @@ class RaiStateBasedLlmNode(RaiBaseNode):
 
             state = None
             for state in self.llm_app.stream(
-                payload, {"recursion_limit": self.AGENT_RECURSION_LIMIT}
+                payload, 
+                {
+                    "recursion_limit": self.AGENT_RECURSION_LIMIT, 
+                    "callbacks": get_tracing_callbacks()
+                }
             ):
 
                 graph_node_name = list(state.keys())[0]
