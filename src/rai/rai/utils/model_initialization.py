@@ -85,9 +85,12 @@ def load_config() -> RAIConfig:
     )
 
 
-def get_llm_model(model_type: Literal["simple_model", "complex_model"]):
+def get_llm_model(
+    model_type: Literal["simple_model", "complex_model"], vendor: str = None
+):
     config = load_config()
-    vendor = config.vendor.name
+    if vendor is None:
+        vendor = config.vendor.name
     model_config = getattr(config, vendor)
 
     if vendor == "openai":
@@ -111,9 +114,11 @@ def get_llm_model(model_type: Literal["simple_model", "complex_model"]):
         raise ValueError(f"Unknown LLM vendor: {vendor}")
 
 
-def get_embeddings_model():
+def get_embeddings_model(vendor: str = None):
     config = load_config()
-    vendor = config.vendor.name
+    if vendor is None:
+        vendor = config.vendor.name
+
     model_config = getattr(config, vendor)
 
     if vendor == "openai":
