@@ -1,10 +1,9 @@
 # RAI
 
 > [!IMPORTANT]  
-> **RAI is in beta phase now, expect friction. Early contributors are the most welcome!** \
-> **RAI is developing fast towards a glorious release in time for ROSCon 2024.**
+> **RAI is meant for R&D. Make sure to understand its limitations.   
 
-RAI is a flexible AI agent framework to develop and deploy Gen AI features for your robots.
+RAI is a flexible AI agent framework to develop and deploy Embodied AI features for your robots.
 
 ---
 
@@ -38,15 +37,18 @@ The RAI framework aims to:
 - Supply a general multi-agent system, bringing Gen AI features to your robots.
 - Add human interactivity, flexibility in problem-solving, and out-of-box AI features to existing robot stacks.
 - Provide first-class support for multi-modalities, enabling interaction with various data types.
-- Incorporate an advanced database for persistent agent memory.
-- Include ROS 2-oriented tooling for agents.
-- Support a comprehensive task/mission orchestrator.
+
+## Limitations
+
+- Limitations of LLMs and VLMs in use apply: poor spatial reasoning, hallucinations, jailbreaks, latencies, costs, ...
+- Resource use (memory, CPU) is not addressed yet.​
+- Requires connectivity and / or an edge platform.​
 
 ## Table of Contents
 
 - [Features](#features)
 - [Setup](#setup)
-- [Usage examples (demos)](#planned-demos)
+- [Examples and demos](#planned-demos)
 - [Developer resources](#developer-resources)
 - [ROSCon 2024 Talk](#roscon-2024)
 
@@ -54,12 +56,12 @@ The RAI framework aims to:
 
 - [x] Voice interaction (both ways).
 - [x] Customizable robot identity, including constitution (ethical code) and documentation (understanding own capabilities).
-- [x] Accessing camera ("What do you see?") sensor, utilizing VLMs.
-- [x] Reasoning about its own state through ROS logs.
+- [x] Accessing camera ("What do you see?"), utilizing VLMs.
+- [x] Summarizing own state through ROS logs.
 - [x] ROS 2 action calling and other interfaces. The Agent can dynamically list interfaces, check their message type, and publish.
 - [x] Integration with LangChain to abstract vendors and access convenient AI tools.
 - [x] Tasks in natural language to nav2 goals.
-- [x] NoMaD integration.
+- [x] [NoMaD](https://general-navigation-models.github.io/nomad/) integration.
 - [x] Tracing.
 - [ ] Grounded SAM 2 integration.
 - [ ] Improved Human-Robot Interaction with voice and text.
