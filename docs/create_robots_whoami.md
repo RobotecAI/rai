@@ -35,7 +35,7 @@ Your robot's `whoami` package serves as a configuration package for the `rai_who
 > [config.toml](../config.toml) (`ollama` works locally, see [docs/vendors.md](./vendors.md#ollama)).
 
 ```shell
-./scripts/parse_whoami_package.sh src/examples/panda_whoami --vendor ollama
+./scripts/parse_whoami_package.sh src/examples/panda_whoami
 ```
 
 5. Optional: Examine the generated files
