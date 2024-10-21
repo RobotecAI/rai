@@ -24,8 +24,8 @@ base_url = "http://localhost:11434"
 project = "rai"
 
 [tracing.langfuse]
-use_langfuse = true
-host = "http://localhost:3000"
+use_langfuse = false
+host = "https://cloud.langfuse.com"
 
 [tracing.langsmith]
 use_langsmith = false
