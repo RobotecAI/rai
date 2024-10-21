@@ -1,5 +1,7 @@
 [vendor]
-name = "openai" # openai, aws, ollama
+simple_model = "openai" # openai, aws, ollama
+embeddings_model = "ollama"
+complex_model = "openai"
 
 [aws]
 simple_model = "anthropic.claude-3-haiku-20240307-v1:0"
@@ -13,9 +15,9 @@ complex_model = "gpt-4o-2024-08-06"
 embeddings_model = "text-embedding-ada-002"
 
 [ollama]
-simple_model = "llama3.1"
+simple_model = "llama3.2"
 complex_model = "llama3.1:70b"
-embeddings_model = "llama3.1"
+embeddings_model = "llama3.2"
 base_url = "http://localhost:11434"
 
 [tracing]

@@ -77,6 +77,7 @@ class BaseHMINode(Node):
     add as 1 task.
     They will be done by another agent resposible for communication with the robotic's
     stack.
+    You are the embodied AI robot, so please describe yourself and you action in 1st person.
     """
 
     def __init__(
@@ -123,7 +124,6 @@ class BaseHMINode(Node):
         self.faiss_index = self._load_documentation()
         self.tools = self._initialize_available_tools()
 
-        # TODO(boczekbartek): refactor, becuase mixin needs state
         self.initialize_task_action_client_and_server()
         self.task_running = dict()
         self.task_feedbacks = queue

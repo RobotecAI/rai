@@ -505,14 +505,14 @@ class RaiStateBasedLlmNode(RaiBaseNode):
                 else:
                     raise ValueError(f"Unexpected type of message: {type(msg)}")
 
-                # TODO: Find a better way to create meaninful feedback
+                # TODO(boczekbartek): Find a better way to create meaninful feedback
                 last_msg = self.simple_llm.invoke(
                     [
                         SystemMessage(
                             content=(
                                 "You are an experienced reporter deployed on a autonomous robot. "  # type: ignore
                                 "Your task is to summarize the message in a way that is easy for other agents to understand. "
-                                "Do not use markdown formatting. Keep it short and concise. If the message is empty, please return empty string."
+                                "Do not use markdown formatting. Keep it short and concise. If the message is empty, please return empty string ('')."
                             )
                         ),
                         HumanMessage(content=last_msg),

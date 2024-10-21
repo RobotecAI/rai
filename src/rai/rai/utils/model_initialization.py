@@ -12,17 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import os
 from dataclasses import dataclass
 from typing import List, Literal
 
+import coloredlogs
 import tomli
 from langchain_core.callbacks.base import BaseCallbackHandler
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+coloredlogs.install(level="INFO")  # type: ignore
 
 
 @dataclass
 class VendorConfig:
-    name: str
+    simple_model: str
+    complex_model: str
+    embeddings_model: str
 
 
 @dataclass
@@ -85,37 +93,47 @@ def load_config() -> RAIConfig:
     )
 
 
-def get_llm_model(model_type: Literal["simple_model", "complex_model"]):
+def get_llm_model(
+    model_type: Literal["simple_model", "complex_model"], vendor: str = None
+):
     config = load_config()
-    vendor = config.vendor.name
+    if vendor is None:
+        if model_type == "simple_model":
+            vendor = config.vendor.simple_model
+        else:
+            vendor = config.vendor.complex_model
+
     model_config = getattr(config, vendor)
 
+    model = getattr(model_config, model_type)
+    logger.info(f"Using LLM model: {vendor}-{model}")
     if vendor == "openai":
         from langchain_openai import ChatOpenAI
 
-        return ChatOpenAI(model=getattr(model_config, model_type))
+        return ChatOpenAI(model=model)
     elif vendor == "aws":
         from langchain_aws import ChatBedrock
 
         return ChatBedrock(
-            model_id=getattr(model_config, model_type),
+            model_id=model,
             region_name=model_config.region_name,
         )
     elif vendor == "ollama":
         from langchain_ollama import ChatOllama
 
-        return ChatOllama(
-            model=getattr(model_config, model_type), base_url=model_config.base_url
-        )
+        return ChatOllama(model=model, base_url=model_config.base_url)
     else:
         raise ValueError(f"Unknown LLM vendor: {vendor}")
 
 
-def get_embeddings_model():
+def get_embeddings_model(vendor: str = None):
     config = load_config()
-    vendor = config.vendor.name
+    if vendor is None:
+        vendor = config.vendor.embeddings_model
+
     model_config = getattr(config, vendor)
 
+    logger.info(f"Using embeddings model: {vendor}-{model_config.embeddings_model}")
     if vendor == "openai":
         from langchain_openai import OpenAIEmbeddings
 
