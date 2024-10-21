@@ -1,13 +1,15 @@
 # Turtlebot4 tutorial
 
 The following tutorial will help you get started with [rai](https://github.com/RobotecAI/rai)
-using Turtlebot4 simulation.
-
-## Recording
-
-[link](https://robotecai-my.sharepoint.com/:v:/g/personal/bartlomiej_boczek_robotec_ai/EfPTiZscCTROtmtoyHv_ykIBFKN5qh1pecxfLmLI6I4QeA?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=0QJnGk)
+using Turtlebot4 simulation. The step by step video tutorial is available [here](https://robotecai-my.sharepoint.com/:v:/g/personal/bartlomiej_boczek_robotec_ai/EfPTiZscCTROtmtoyHv_ykIBFKN5qh1pecxfLmLI6I4QeA?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=0QJnGk).
 
 ## Step by step instructions
+
+0. Install nav2 packages
+
+   ```shell
+      sudo apt install "ros-${ROS_DISTRO}-nav2-*"
+   ```
 
 1. Clone and install [rai](https://github.com/RobotecAI/rai)
 
@@ -18,11 +20,11 @@ using Turtlebot4 simulation.
 
    1. Download turtlebot4 simulation binary matching your platform from :
 
-      - Ubuntu 22.04 & ros2 humble: [link](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/EZLmGtPNgl9Kiu4royJJnVgB5tjS2Vze0myXDyVJtNcnRw?e=L42Z4z)
-      - Ubuntu 24.04 & ros2 jazzy: [link](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/ETkT-jvozlpBtuG1piDeqggBRmWl5eylIChc_g0v_EetpA?e=EjcJqe)
+      - Ubuntu 22.04 & ros2 humble: [link](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/ETpG5LvlSEJPoiDEARme1gcBjWtFgDqsmVfJEXy8BgMoSw?e=x7fQlw)
+      - Ubuntu 24.04 & ros2 jazzy: [link](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/EVy0ebDtsKdAsAMa6Q3AKuUBrMIeFUln5CP2t7shqMcMxA?e=EiK0DJ)
 
-      > **NOTE** If you would like to make changes to the simulation and create your
-      > own binary please follow this [README.md](https://github.com/RobotecAI/ROSCon2024Tutorial/README.md)
+   > **NOTE**  
+   > If you would like to make changes to the simulation and create your own binary please follow this [README.md](https://github.com/RobotecAI/ROSCon2024Tutorial/README.md)
 
    2. Unzip it:
 
@@ -35,7 +37,9 @@ using Turtlebot4 simulation.
       unzip -d src/examples/turtlebot4/simulation Turtlebot4_noblejazzy_0.0.1.zip
       ```
 
-3. Setup your LLM vendor: [docs/vendors.md](../../../docs/vendors.md). OpenAI or AWS Bedrock are recommended for now, since current local `ollama` models don't support vision & tool calling.
+3. Setup your LLM vendor: [docs/vendors.md](../../../docs/vendors.md). OpenAI or
+   AWS Bedrock are recommended for models, since current local `ollama` models don't
+   support vision & tool calling.
 
 4. Configure `rai_whoami_node` (based on ["Your robot identity in RAI"](https://github.com/RobotecAI/rai/blob/development/docs/create_robots_whoami.md) tutorial):
 
@@ -45,26 +49,18 @@ using Turtlebot4 simulation.
       ./scripts/create_rai_ws.sh --name turtlebot4 --destination-directory src/examples
       ```
 
+   > **TIP**  
+   > Skip steps 2-4 by downlading generated files [here](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/EbPZSEdXYaRGoeecu6oJg6QBsI4ZOe_mrU3uOtOflnIjQg?e=HX8ZHB) unzip them to `src/examples/turtlebot4_whoami/description/generated` with a command:
+   > `unzip -d src/examples/turtlebot4_whoami/description turtlebot4_whoami_generated.zip`
+
    2. Download official turtlebot4 [data sheet](https://bit.ly/3KCp3Du) into
       `src/examples/turtlebot4_whoami/description/documentation`
    3. Download [image](https://s3.amazonaws.com/assets.clearpathrobotics.com/wp-content/uploads/2022/03/16113604/Turtlebot-4-20220207.44.png) of turtlebot4 into `src/examples/turtlebot4_whoami/description/images`
    4. Create robot's identity. Run the `parse_whoami_package`. This will process the documentation, building
       it into a vector database, which is used by RAI agent to reason about its identity.
 
-      > **NOTE**: generated files can be downloaded from [here](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/EbPZSEdXYaRGoeecu6oJg6QBsI4ZOe_mrU3uOtOflnIjQg?e=HX8ZHB)
-      > unzip them to `src/examples/turtlebot4_whoami/description/generated` with a command:
-      > `unzip -d src/examples/turtlebot4_whoami/description turtlebot4_whoami_generated.zip`
-
-      > **NOTE**: Vector database is can be created using local models like `llama3:2`
-      > as well as using the OpenAI API. With OpenAI Parsing bigger documents might lead
-      > to costs. Embedding model can be configured in
-      > [config.toml](https://github.com/RobotecAI/rai/blob/development/config.toml#L13)
-      >
-      > You can also overwrite the vendor from config.toml with a `--vendor` argument like
-      > below:
-
       ```bash
-      ./scripts/parse_whoami_package.sh src/examples/turtlebot4_whoami --vendor ollama
+      ./scripts/parse_whoami_package.sh src/examples/turtlebot4_whoami
       # you will be asked to press `y` to continue
       ```
 
@@ -83,7 +79,7 @@ using Turtlebot4 simulation.
       ```
 
    Congratulations! Your `rai_whoami_node` is configured. In the following steps
-   your RAI agent will assume a turtlebot4 "personality".
+   your RAI agent will assume a turtlebot4 personality.
 
 5. Run rai agent:
 
@@ -94,7 +90,8 @@ using Turtlebot4 simulation.
 
    You should be able to see a simulation scene.
 
-   > **Tip**: Press 1, 2 or 3 on the keyboard when simulation window to change the
+   > **TIP**  
+   > Press 1, 2 or 3 on the keyboard when simulation window to change the
    > camera. Use W,A,S,D to move the camera.
 
 6. Open you internet browser and go to `localhost:8501`
@@ -106,14 +103,17 @@ using Turtlebot4 simulation.
    - `HMI Agent` is responsible for human-robot interaction.
    - `RAI Node` is responsible for executing tasks on the robot.
 
-   For example you can try such prompts:
+   For example you can try the following prompts:
 
-   - Could you bring me something from the kitchen? (testing robot's identity)
-   - What are your ros2 interfaces? (discovery of ros2 interfaces)
-   - tell me what you see (interpretation of camera image)
-   - Spin yourself left by 45 degrees (interaction with the robot using ros2 interfaces) - table with the robotic are shoud be visible in the camera
-   - Use robotic arm to pick up a box from the table (identity and intefaces doesn't allow it)
-   - Drive towards the table (when table is visible, testing ability to interpret camera image and perform actions based on the knowledge)
+   - Testing robot's identity & RAG:
+     - who are you?
+     - could you bring me something from the kitchen?
+     - what is the voltage of the battery?
+   - Testing ROS 2 connection:
+     - What are your ros2 interfaces
+     - What do you see?
+     - Spin yourself left by 45 degrees
+     - Drive towards the table
 
 ### Troubleshooting
 

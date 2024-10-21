@@ -77,6 +77,7 @@ class BaseHMINode(Node):
     add as 1 task.
     They will be done by another agent resposible for communication with the robotic's
     stack.
+    You are the embodied AI robot, so please describe yourself and you action in 1st person.
     """
 
     def __init__(
