@@ -1,28 +1,29 @@
-from langchain_core.tools import render_text_description_and_args, tool
-
+import itertools
 import time
-from nav2_msgs.action import DriveOnHeading
 from typing import List
-from rai.utils.ros import NodeDiscovery
+
+import builtin_interfaces.msg
+import geometry_msgs.msg
+import numpy as np
 import rclpy
-import rclpy.node
 import rclpy.action.client
+import rclpy.node
+import sensor_msgs
 import sensor_msgs.msg
+from langchain_core.tools import tool
+from nav2_msgs.action import DriveOnHeading
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from rclpy.action.graph import get_action_names_and_types
-import geometry_msgs.msg 
-import builtin_interfaces.msg
-from rai.tools.ros.utils import get_transform
-import sensor_msgs
-import numpy as np
 
-import itertools
+from rai.tools.ros.utils import get_transform
+from rai.utils.ros import NodeDiscovery
+
 
 class RosbotBasicNavigator(BasicNavigator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.drive_on_heading_client = rclpy.action.client.ActionClient(
-            self, DriveOnHeading, 'drive_on_heading'
+            self, DriveOnHeading, "drive_on_heading"
         )
 
     def drive_on_heading(self, target: float, speed: float, time_allowance: int):
@@ -34,21 +35,25 @@ class RosbotBasicNavigator(BasicNavigator):
         goal_msg.speed = speed
         goal_msg.time_allowance = builtin_interfaces.msg.Duration(sec=time_allowance)
 
-        self.info(f'DriveOnHeading {goal_msg.target.x} m at {goal_msg.speed} m/s....')
-        send_goal_future = self.drive_on_heading_client.send_goal_async(goal_msg, self._feedbackCallback)
+        self.info(f"DriveOnHeading {goal_msg.target.x} m at {goal_msg.speed} m/s....")
+        send_goal_future = self.drive_on_heading_client.send_goal_async(
+            goal_msg, self._feedbackCallback
+        )
         rclpy.spin_until_future_complete(self, send_goal_future)
         self.goal_handle = send_goal_future.result()
 
         if not self.goal_handle.accepted:
-            self.error('DriveOnHeading request was rejected!')
+            self.error("DriveOnHeading request was rejected!")
             return False
 
         self.result_future = self.goal_handle.get_result_async()
         return True
+
+
 if not rclpy.ok():
     rclpy.init()
 navigator = RosbotBasicNavigator()
-navigator._waitForNodeToActivate('/bt_navigator')
+navigator._waitForNodeToActivate("/bt_navigator")
 
 tool_node = rclpy.create_node(node_name="test")
 rclpy.spin_once(tool_node, timeout_sec=5.0)
@@ -68,39 +73,39 @@ allowed_interfaces = [
 ]
 
 
-MAP_FRAME = 'map'
+MAP_FRAME = "map"
+
 
 def wait_for_finish(navigator: BasicNavigator) -> TaskResult:
     while not navigator.isTaskComplete():
         time.sleep(1.0)
 
-    return navigator.getResult() 
-
-
-# @tool
-# def python_interpreter_tool(code: str):
-#     f""" 
-#     Tool to generate the code using other tools in python 
-#     """
-#     return eval(code)
+    return navigator.getResult()
 
 
 @tool
+def get_ros2_interfaces_tool() -> dict:
+    """Get ros2 interfaces"""
+    return get_ros2_interfaces()
+
+
 def get_ros2_interfaces() -> dict:
-    """ Get ros2 interfaces """
+    """Get ros2 interfaces"""
     return NodeDiscovery(
         topics_and_types=tool_node.get_topic_names_and_types(),
         services_and_types=tool_node.get_service_names_and_types(),
         actions_and_types=get_action_names_and_types(tool_node),
-        allow_list=allowed_interfaces
+        allow_list=allowed_interfaces,
     ).dict()
+
 
 @tool
 def wait_n_sec_tool(n_sec: int):
-    """ Wait for given amount of seconds """
+    """Wait for given amount of seconds"""
     time.sleep(n_sec)
 
     return "done"
+
 
 @tool
 def drive_on_heading(dist_to_travel: float, speed: float, time_allowance: int):
@@ -113,6 +118,7 @@ def drive_on_heading(dist_to_travel: float, speed: float, time_allowance: int):
 
     return str(wait_for_finish(navigator))
 
+
 @tool
 def backup(dist_to_travel: float, speed: float, time_allowance: int):
     """
@@ -121,6 +127,7 @@ def backup(dist_to_travel: float, speed: float, time_allowance: int):
     navigator.backup(dist_to_travel, speed, time_allowance)
 
     return str(wait_for_finish(navigator))
+
 
 @tool
 def spin(angle_to_spin: float, time_allowance: int):
@@ -133,11 +140,12 @@ def spin(angle_to_spin: float, time_allowance: int):
 
     return str(wait_for_finish(navigator))
 
+
 @tool
-def go_to_pose(x: float ,y: float ,qx: float , qy: float, qz: float , qw: float):
-    """ 
+def go_to_pose(x: float, y: float, qx: float, qy: float, qz: float, qw: float):
+    """
     Navigate to specific pose in the /map variable
-    x, y - position 
+    x, y - position
     qx, qy, qz, qw - orientation
     """
     pose = geometry_msgs.msg.PoseStamped()
@@ -152,18 +160,22 @@ def go_to_pose(x: float ,y: float ,qx: float , qy: float, qz: float , qw: float)
     navigator.goToPose(pose)
     return str(wait_for_finish(navigator))
 
-@tool
-def get_location():
-    """ Returns robot's transform in the map frame """
-    tf: geometry_msgs.msg.TransformStamped= get_transform(tool_node, "base_link", MAP_FRAME)
-    return str(tf)
 
 @tool
-def led_strip(r: int,g: int,b: int):
-    """ Sets led strip to specific color """
-    color = (r,g,b)
+def get_location():
+    """Returns robot's transform in the map frame"""
+    tf: geometry_msgs.msg.TransformStamped = get_transform(
+        tool_node, "base_link", MAP_FRAME
+    )
+    return str(tf)
+
+
+@tool
+def led_strip(r: int, g: int, b: int):
+    """Sets led strip to specific color"""
+    color = (r, g, b)
     led_colors = np.full((1, 18, 3), color, dtype=np.uint8)
-    publisher = tool_node.create_publisher(sensor_msgs.msg.Image,  "/led_strip", 10)
+    publisher = tool_node.create_publisher(sensor_msgs.msg.Image, "/led_strip", 10)
     msg = sensor_msgs.msg.Image()
     msg.header.stamp = tool_node.get_clock().now().to_msg()
     msg.height = 1
@@ -174,13 +186,14 @@ def led_strip(r: int,g: int,b: int):
     msg.data = led_colors.flatten().tolist()
     publisher.publish(msg)
 
+
 @tool
 def led_strip_array(colors: List[int]):
-    """ Sets entire led strip to specific pattern. Colors are in RGB order. Exactly 54 values are needed """
+    """Sets entire led strip to specific pattern. Colors are in RGB order. Exactly 54 values are needed"""
 
-    colors = list(itertools.islice(itertools.cycle(colors),54))
+    colors = list(itertools.islice(itertools.cycle(colors), 54))
 
-    publisher = tool_node.create_publisher(sensor_msgs.msg.Image,  "/led_strip", 10)
+    publisher = tool_node.create_publisher(sensor_msgs.msg.Image, "/led_strip", 10)
     msg = sensor_msgs.msg.Image()
     msg.header.stamp = tool_node.get_clock().now().to_msg()
     msg.height = 1
@@ -188,6 +201,5 @@ def led_strip_array(colors: List[int]):
     msg.encoding = "rgb8"
     msg.is_bigendian = False
     msg.step = 18 * 3
-    msg.data = colors 
+    msg.data = colors
     publisher.publish(msg)
-
