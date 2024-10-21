@@ -35,7 +35,10 @@ using Turtlebot4 simulation.
       unzip -d src/examples/turtlebot4/simulation Turtlebot4_noblejazzy_0.0.1.zip
       ```
 
-3. Setup your LLM vendor: [docs/vendors.md](../../../docs/vendors.md). OpenAI or AWS Bedrock are recommended for now, since current local `ollama` models don't support vision & tool calling.
+3. Setup your LLM vendor: [docs/vendors.md](../../../docs/vendors.md). OpenAI or
+   AWS Bedrock are recommended for models, since current local `ollama` models don't
+   support vision & tool calling.
+   For `embeddings_model` `ollama` vendor works well.
 
 4. Configure `rai_whoami_node` (based on ["Your robot identity in RAI"](https://github.com/RobotecAI/rai/blob/development/docs/create_robots_whoami.md) tutorial):
 
@@ -51,20 +54,15 @@ using Turtlebot4 simulation.
    4. Create robot's identity. Run the `parse_whoami_package`. This will process the documentation, building
       it into a vector database, which is used by RAI agent to reason about its identity.
 
+      > **NOTE**: Be cautious if Cloud vendor was chosen step 3 as `embeddings_model`,
+      > because parsing bigger documents might lead to costs.
+
       > **NOTE**: generated files can be downloaded from [here](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/EbPZSEdXYaRGoeecu6oJg6QBsI4ZOe_mrU3uOtOflnIjQg?e=HX8ZHB)
       > unzip them to `src/examples/turtlebot4_whoami/description/generated` with a command:
       > `unzip -d src/examples/turtlebot4_whoami/description turtlebot4_whoami_generated.zip`
 
-      > **NOTE**: Vector database is can be created using local models like `llama3:2`
-      > as well as using the OpenAI API. With OpenAI Parsing bigger documents might lead
-      > to costs. Embedding model can be configured in
-      > [config.toml](https://github.com/RobotecAI/rai/blob/development/config.toml#L13)
-      >
-      > You can also overwrite the vendor from config.toml with a `--vendor` argument like
-      > below:
-
       ```bash
-      ./scripts/parse_whoami_package.sh src/examples/turtlebot4_whoami --vendor ollama
+      ./scripts/parse_whoami_package.sh src/examples/turtlebot4_whoami
       # you will be asked to press `y` to continue
       ```
 

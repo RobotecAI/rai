@@ -1,5 +1,7 @@
 [vendor]
-name = "openai" # openai, aws, ollama
+simple_model = "openai" # openai, aws, ollama
+embeddings_model = "ollama"
+complex_model = "openai"
 
 [aws]
 simple_model = "anthropic.claude-3-haiku-20240307-v1:0"
