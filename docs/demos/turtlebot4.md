@@ -48,7 +48,7 @@ using Turtlebot4 simulation.
       unzip -d src/examples/turtlebot4/simulation Turtlebot4_noblejazzy_0.0.1.zip
       ```
 
-3. Setup your LLM vendor: [docs/vendors.md](../../../docs/vendors.md). OpenAI or
+3. Setup your LLM vendor: [docs/vendors.md](./docs/vendors.md). OpenAI or
    AWS Bedrock are recommended for models, since current local `ollama` models don't
    support vision & tool calling.
    For `embeddings_model` `ollama` vendor works well.
