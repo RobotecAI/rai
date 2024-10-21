@@ -145,10 +145,14 @@ class BaseHMINode(Node):
         self.status_publisher.publish(String(data=status.value))
 
     def query_faiss_index_with_scores(
-        self, query: str, k: int = 4
+        self, query: str, k: int = 20
     ) -> List[Tuple[Document, float]]:
         output = self.faiss_index.similarity_search_with_score(query, k)
-        return output
+        formatted_output = ""
+        for doc, score in output:
+            source = doc.metadata.get("source", "Unknown source")
+            formatted_output += f"Document source: {source}\nScore: {score}\nContent: \n{doc.page_content}\n\n"
+        return formatted_output
 
     def _initialize_system_prompt(self):
         return append_whoami_info_to_prompt(
