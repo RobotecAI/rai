@@ -133,7 +133,7 @@ def backup(dist_to_travel: float, speed: float, time_allowance: int):
 def spin(angle_to_spin: float, time_allowance: int):
     """
     Invokes the Spin ROS 2 action server, which is implemented by the nav2_behaviors module. It performs an in-place rotation by a given angle.
-    For spinning left use negative angle, for spinning right use positive angle.
+    For spinning left use positive angle, for spinning right use negative angle.
     Angle is in radians.
     """
     navigator.spin(angle_to_spin, time_allowance)
