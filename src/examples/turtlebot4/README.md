@@ -54,7 +54,9 @@ using Turtlebot4 simulation.
    For `embeddings_model` `ollama` vendor works well.
 
 4. Configure `rai_whoami_node` (based on ["Your robot identity in RAI"](https://github.com/RobotecAI/rai/blob/development/docs/create_robots_whoami.md) tutorial):
-
+> [!TIP]
+> Generated files can be downloaded from [here](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/EbPZSEdXYaRGoeecu6oJg6QBsI4ZOe_mrU3uOtOflnIjQg?e=HX8ZHB) unzip them to `src/examples/turtlebot4_whoami/description/generated` with a command:
+> `unzip -d src/examples/turtlebot4_whoami/description turtlebot4_whoami_generated.zip`
    1. Create `whoami` package for turtlebot4 in `src/examples/turtlebot4`
 
       ```bash
@@ -66,14 +68,6 @@ using Turtlebot4 simulation.
    3. Download [image](https://s3.amazonaws.com/assets.clearpathrobotics.com/wp-content/uploads/2022/03/16113604/Turtlebot-4-20220207.44.png) of turtlebot4 into `src/examples/turtlebot4_whoami/description/images`
    4. Create robot's identity. Run the `parse_whoami_package`. This will process the documentation, building
       it into a vector database, which is used by RAI agent to reason about its identity.
-
-      > **NOTE**: Be cautious if Cloud vendor was chosen step 3 as `embeddings_model`,
-      > because parsing bigger documents might lead to costs.
-
-      > **NOTE**: generated files can be downloaded from [here](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/EbPZSEdXYaRGoeecu6oJg6QBsI4ZOe_mrU3uOtOflnIjQg?e=HX8ZHB)
-      > unzip them to `src/examples/turtlebot4_whoami/description/generated` with a command:
-      > `unzip -d src/examples/turtlebot4_whoami/description turtlebot4_whoami_generated.zip`
-
       ```bash
       ./scripts/parse_whoami_package.sh src/examples/turtlebot4_whoami
       # you will be asked to press `y` to continue
