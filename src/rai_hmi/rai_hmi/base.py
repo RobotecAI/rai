@@ -145,7 +145,7 @@ class BaseHMINode(Node):
         self.status_publisher.publish(String(data=status.value))
 
     def query_faiss_index_with_scores(
-        self, query: str, k: int = 20
+        self, query: str, k: int = 4
     ) -> List[Tuple[Document, float]]:
         output = self.faiss_index.similarity_search_with_score(query, k)
         formatted_output = ""
