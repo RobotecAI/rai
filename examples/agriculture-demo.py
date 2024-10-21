@@ -1,25 +1,11 @@
-# Copyright (C) 2024 Robotec.AI
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#         http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-
-
 import argparse
-import subprocess
-import threading
-import time
 
 import rclpy
+from rclpy.action import ActionClient
+from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.node import Node
+from std_srvs.srv import Trigger
 
 from rai.node import RaiStateBasedLlmNode, describe_ros_image
 from rai.tools.ros.native import (
@@ -30,41 +16,67 @@ from rai.tools.ros.native import (
     Ros2ShowMsgInterfaceTool,
 )
 from rai.tools.time import WaitForSecondsTool
+from rai_interfaces.action import Task
 
 
-def mock_behavior_tree(tractor_number: int):
-    """
-    This is a mock of behavior tree that simulates scenario where the tractor stops
-    due to an unexpected situation and calls the RaiNode to decide what to do.
-    """
+class MockBehaviorTreeNode(Node):
+    def __init__(self, tractor_number: int):
+        super().__init__(f"mock_behavior_tree_node_{tractor_number}")
+        self.tractor_number = tractor_number
 
-    while True:
-        output = subprocess.check_output(
-            [
-                "ros2",
-                "service",
-                "call",
-                f"/tractor{tractor_number}/current_state",
-                "std_srvs/srv/Trigger",
-                "{}",
-            ]
+        # Create a callback group for concurrent execution
+        self.callback_group = ReentrantCallbackGroup()
+
+        # Create service client
+        self.current_state_client = self.create_client(
+            Trigger,
+            f"/tractor{tractor_number}/current_state",
+            callback_group=self.callback_group,
         )
-        print(output.decode("utf-8"))
-        if "STOPPED" in output.decode("utf-8"):
-            print("The tractor has stopped. Calling RaiNode to decide what to do.")
-            action_output = subprocess.check_output(
-                [
-                    "ros2",
-                    "action",
-                    "send_goal",
-                    "-f",
-                    "/perform_task",
-                    "rai_interfaces/action/Task",
-                    "{priority: 10, description: '', task: 'Anomaly detected. Please decide what to do.'}",
-                ]
+
+        # Create action client
+        self.perform_task_client = ActionClient(
+            self, Task, "/perform_task", callback_group=self.callback_group
+        )
+
+        # Create timer for periodic checks
+        self.create_timer(
+            5.0, self.check_tractor_state, callback_group=self.callback_group
+        )
+
+        self.get_logger().info(
+            f"Mock Behavior Tree Node for Tractor {tractor_number} initialized"
+        )
+
+    async def check_tractor_state(self):
+        # Call the current_state service
+        response = await self.current_state_client.call_async(Trigger.Request())
+
+        self.get_logger().info(f"Current state: {response.message}")
+
+        if "STOPPED" in response.message:
+            self.get_logger().info(
+                "The tractor has stopped. Calling RaiNode to decide what to do."
             )
-            print(action_output.decode("utf-8"))
-        time.sleep(5)
+
+            # Send goal to perform_task action server
+            goal_msg = Task.Goal()
+            goal_msg.priority = 10
+            goal_msg.description = ""
+            goal_msg.task = "Anomaly detected. Please decide what to do."
+
+            self.perform_task_client.wait_for_server()
+
+            future = self.perform_task_client.send_goal_async(goal_msg)
+            await future
+
+            goal_handle = future.result()
+            if goal_handle.accepted:
+                self.get_logger().info("Goal accepted by perform_task action server")
+                result = await goal_handle.get_result_async()
+                self.get_logger().info(f"Result: {result.result}")
+            else:
+                self.get_logger().warn("Goal rejected by perform_task action server")
 
 
 def main():
@@ -117,7 +129,7 @@ def main():
     Important: You must call only one service. The tractor can only handle one service call.
     """
 
-    node = RaiStateBasedLlmNode(
+    rai_node = RaiStateBasedLlmNode(
         observe_topics=observe_topics,
         observe_postprocessors=observe_postprocessors,
         whitelist=topics_whitelist + actions_whitelist,
@@ -132,11 +144,21 @@ def main():
         ],
     )
 
-    thread = threading.Thread(target=mock_behavior_tree, args=(tractor_number,))
-    thread.start()
+    mock_node = MockBehaviorTreeNode(tractor_number)
 
-    node.spin()
-    rclpy.shutdown()
+    # Use a MultiThreadedExecutor to allow for concurrent execution
+    executor = MultiThreadedExecutor()
+    executor.add_node(rai_node)
+    executor.add_node(mock_node)
+
+    try:
+        executor.spin()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        rai_node.destroy_node()
+        mock_node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":
