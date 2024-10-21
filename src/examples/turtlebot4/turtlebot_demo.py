@@ -44,12 +44,12 @@ from rai.tools.ros.tools import GetCurrentPositionTool
 from rai.tools.time import WaitForSecondsTool
 
 p = argparse.ArgumentParser()
-p.add_argument("--whitelist", type=Path, required=False, default=None)
+p.add_argument("--allowlist", type=Path, required=False, default=None)
 
 
-def main(whitelist: Optional[Path] = None):
+def main(allowlist: Optional[Path] = None):
     rclpy.init()
-    ros2_whitelist = whitelist.read_text().splitlines() if whitelist is not None else []
+    ros2_allowlist = allowlist.read_text().splitlines() if allowlist is not None else []
 
     SYSTEM_PROMPT = """You are an autonomous robot connected to ros2 environment. Your main goal is to fulfill the user's requests.
     Do not make assumptions about the environment you are currently in.
@@ -73,7 +73,7 @@ def main(whitelist: Optional[Path] = None):
     node = RaiStateBasedLlmNode(
         observe_topics=None,
         observe_postprocessors=None,
-        whitelist=ros2_whitelist,
+        whitelist=ros2_allowlist,
         system_prompt=SYSTEM_PROMPT,
         tools=[
             Ros2PubMessageTool,
