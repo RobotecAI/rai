@@ -6,32 +6,26 @@ This demo utilizes Open 3D Engine simulation and allows you to work with RAI on 
 
 ## Quick start
 
-1. Download the newest binary release (`release.zip` file) from [rai-rosbot-xl-demo -> releases](https://github.com/RobotecAI/rai-rosbot-xl-demo/releases)
+1. Download the newest binary release:
 
-> [!NOTE]
-> The release contains monolithic build of the O3DE project and is compatible with **Ubuntu 24.04** and with ROS 2 jazzy.
-> Build compatible with Ubuntu 22.04 and ROS 2 Humble will be released soon.
+- Ubuntu 22.04 & ros2 humble: [link](TODO)
+- Ubuntu 24.04 & ros2 jazzy: [link](TODO)
 
 2. Install required packages
 
    ```bash
    sudo apt install ros-${ROS_DISTRO}-ackermann-msgs ros-${ROS_DISTRO}-gazebo-msgs ros-${ROS_DISTRO}-control-toolbox ros-${ROS_DISTRO}-nav2-bringup
+   poetry install --with openset
    ```
 
-3. Unpack the binary and run the simulation:
+3. Unpack the binary with the simulation:
 
    ```bash
-   unzip release.zip
-   . /opt/ros/${ROS_DISTRO}/setup.bash
-   ./release/RAIRosbotXLDemo.GameLauncher -bg_ConnectToAssetProcessor=0
+   # u24
+   unzip RAIROSBotDemo_1.0.0_noblejazzy.zip
+   # u22
+   unzip RAIROSBotDemo_1.0.0_jammyhumble.zip
    ```
-
-4. Start navigation stack:
-   ```bash
-   ./src/examples/rai-rosbot-xl-demo/run-nav.sh
-   ```
-
-You are now ready to [run RAI](#running-rai)!
 
 ## Alternative: Demo source build
 
@@ -42,46 +36,36 @@ Please refer to [rai husarion rosbot xl demo][rai rosbot demo] for more details.
 
 # Running RAI
 
-You can set the task for the agent in the `examples/nav2_example_ros_actions.py` file.
+1. Robot identity
 
-1. Prepare the robot description.
+   Process of setting up the robot identity is described in [create_robots_whoami](../create_robots_whoami.md).
+   We provide ready whoami for RosBotXL in the package.
 
-```bash
-colcon build --symlink-install --packages-select rosbot_xl_whoami
+   ```bash
+   cd rai
+   vcs import < demos.repos
+   colcon build --symlink-install --packages-select rosbot_xl_whoami
+   ```
 
-. install/setup.bash
-```
+2. Running rai nodes and agents, navigation stack and O3DE simulation.
 
-2. Start `rai_whoami_node`
-   who_am_i node. It loads files from robot [description](https://github.com/RobotecAI/rai-rosbot-xl-demo/tree/development/src/rosbot_xl_whoami/description) folder to create robot identity.
+   ```bash
+   ros2 launch ./examples/rosbotxl.launch.xml game_lanucher:=path/to/RARAIROSBotXLDemo.GameLauncher
+   ```
 
-```bash
-source setup_shell.sh
+3. Play with the demo, adding tasks to the RAI agent. Here are some examples:
 
-ros2 run rai_whoami rai_whoami_node --ros-args -p robot_description_package:="rosbot_xl_whoami"
-```
+   ```bash
+   # Ask robot where it is. RAI will use camera to describe the environment
+   ros2 action send_goal -f /perform_task rai_interfaces/action/Task "{priority: 10, description: '', task: 'Where are you?'}"
 
-3. Start `rai_node`.
+   # See integration with the navigation stack
+   ros2 action send_goal -f /perform_task rai_interfaces/action/Task "{priority: 10, description: '', task: 'Drive 1 meter forward'}"
+   ros2 action send_goal -f /perform_task rai_interfaces/action/Task "{priority: 10, description: '', task: 'Spin 90 degrees'}"
 
-```bash
-source setup_shell.sh
-
-python examples/rosbot-xl-generic-node-demo.py
-```
-
-5. Play with the demo, adding tasks to the RAI agent. Here are some examples:
-
-```bash
-# Ask robot where it is. RAI will use camera to describe the environment
-ros2 action send_goal -f /perform_task rai_interfaces/action/Task "{priority: 10, description: '', task: 'Where are you?'}"
-
-# See integration with the navigation stack
-ros2 action send_goal -f /perform_task rai_interfaces/action/Task "{priority: 10, description: '', task: 'Drive 1 meter forward'}"
-ros2 action send_goal -f /perform_task rai_interfaces/action/Task "{priority: 10, description: '', task: 'Spin 90 degrees'}"
-
-# Try out more complicated tasks
-ros2 action send_goal -f /perform_task rai_interfaces/action/Task "{priority: 10, description: '', task: ' Drive forward if the path is clear, otherwise backward'}"
-```
+   # Try out more complicated tasks
+   ros2 action send_goal -f /perform_task rai_interfaces/action/Task "{priority: 10, description: '', task: ' Drive forward if the path is clear, otherwise backward'}"
+   ```
 
 > **NOTE**: For now agent is capable of performing only 1 task at once.
 > Human-Robot Interaction module is not yet included in the demo (coming soon!).
