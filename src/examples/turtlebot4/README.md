@@ -34,8 +34,8 @@ using Turtlebot4 simulation.
       - Ubuntu 22.04 & ros2 humble: [link](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/EZLmGtPNgl9Kiu4royJJnVgB5tjS2Vze0myXDyVJtNcnRw?e=L42Z4z)
       - Ubuntu 24.04 & ros2 jazzy: [link](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/ETkT-jvozlpBtuG1piDeqggBRmWl5eylIChc_g0v_EetpA?e=EjcJqe)
 
-      > **NOTE** If you would like to make changes to the simulation and create your
-      > own binary please follow this [README.md](https://github.com/RobotecAI/ROSCon2024Tutorial/README.md)
+      > [!NOTE]  
+      > If you would like to make changes to the simulation and create your own binary please follow this [README.md](https://github.com/RobotecAI/ROSCon2024Tutorial/README.md)
 
    2. Unzip it:
 
