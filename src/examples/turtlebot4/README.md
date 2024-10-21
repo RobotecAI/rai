@@ -9,6 +9,19 @@ using Turtlebot4 simulation.
 
 ## Step by step instructions
 
+0. Install nav2 packates
+
+   ```shell
+   sudo apt install "ros-${ROS_DISTRO}-nav2-*"
+
+   # add to ~/.bashrc
+   . /opt/ros/humble/setup.bash
+   # or
+   . ./opt/ros/jazzy/setup.bash
+   export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+
+   ```
+
 1. Clone and install [rai](https://github.com/RobotecAI/rai)
 
    1. Follow steps from [1. Setting up the workspace](https://github.com/RobotecAI/rai?tab=readme-ov-file#1-setting-up-the-workspace)
@@ -106,12 +119,14 @@ using Turtlebot4 simulation.
 
    For example you can try such prompts:
 
-   - Could you bring me something from the kitchen? (testing robot's identity)
-   - What are your ros2 interfaces? (discovery of ros2 interfaces)
+   - who are you? (testing robot's identity)
+   - what is the voltage of the batery? (use RAG: query vector database for the answer)
+   - could you bring me something from the kitchen? (testing robot's identity)
+   - what are your ros2 interfaces? (discovery of ros2 interfaces)
    - tell me what you see (interpretation of camera image)
-   - Spin yourself left by 45 degrees (interaction with the robot using ros2 interfaces) - table with the robotic are shoud be visible in the camera
-   - Use robotic arm to pick up a box from the table (identity and intefaces doesn't allow it)
-   - Drive towards the table (when table is visible, testing ability to interpret camera image and perform actions based on the knowledge)
+   - spin yourself left by 45 degrees (interaction with the robot using ros2 interfaces) - table with the robotic are shoud be visible in the camera
+   - use robotic arm to pick up a box from the table (identity and intefaces doesn't allow it)
+   - drive towards the table (when table is visible, testing ability to interpret camera image and perform actions based on the knowledge)
 
 ### Troubleshooting
 
