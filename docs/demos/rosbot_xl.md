@@ -8,8 +8,8 @@ This demo utilizes Open 3D Engine simulation and allows you to work with RAI on 
 
 1. Download the newest binary release:
 
-- Ubuntu 22.04 & ros2 humble: [link](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/EU4kUlXRLShMo3PBYnyYFP0B-_pw1Vv6FcmqSQHiUbrhfw?e=qo2T9K)
-- Ubuntu 24.04 & ros2 jazzy: [link](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/EaCcsJXzxqZFvOzmHnEAFQwBV89pRQ9yKQmSrVC-JYv2ug?e=s4ryDO)
+- Ubuntu 22.04 & ros2 humble: [link](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIROSBotDemo_1.0.0_jammyhumble.zip)
+- Ubuntu 24.04 & ros2 jazzy: [link](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIROSBotDemo_1.0.0_noblejazzy.zip)
 
 2. Install required packages
 

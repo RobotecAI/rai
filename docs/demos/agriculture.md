@@ -10,16 +10,10 @@ This demo showcases autonomous tractors operating in an agricultural field using
 
    Download the latest binary release for your ROS 2 distribution.
 
-   - [ros2-humble-agriculture-demo](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/RAIAgricultureDemo_1.0.0_jammyhumble.zip)
-   - [ros2-jazzy-agriculture-demo](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/RAIAgricultureDemo_1.0.0_noblejazzy.zip)
+   - [ros2-humble-agriculture-demo](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIAgricultureDemo_1.0.0_jammyhumble.zip)
+   - [ros2-jazzy-agriculture-demo](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIAgricultureDemo_1.0.0_noblejazzy.zip)
 
-2. **Install Required Packages**
-
-   ```bash
-   sudo apt install ros-${ROS_DISTRO}-ackermann-msgs ros-${ROS_DISTRO}-gazebo-msgs ros-${ROS_DISTRO}-control-toolbox ros-${ROS_DISTRO}-nav2-bringup
-   ```
-
-3. **Unpack the Binary and Run the Simulation**
+2. **Unpack the Binary and Run the Simulation**
    Unpack the binary
 
    - For Jazzy:
@@ -39,7 +33,7 @@ This demo showcases autonomous tractors operating in an agricultural field using
    ./RAIAgricultureDemoGamePackage/RAIAgricultureDemo.GameLauncher -bg_ConnectToAssetProcessor=0
    ```
 
-4. **Start the Tractor Node**
+3. **Start the Tractor Node**
 
    ```bash
    python examples/agriculture-demo.py --tractor_number 1
