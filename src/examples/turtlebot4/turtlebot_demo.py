@@ -66,7 +66,7 @@ def main(allowlist: Optional[Path] = None):
     - if you are asked to drive towards some object, it's good to:
         1. check the camera image and verify if objects can be seen
         2. if only driving forward is required, do it
-        3. if obstacle avoidance might be required, use ros2 actions navigate_*, but first check your currect position, then very accurately estimate the goal pose.
+        3. if obstacle avoidance might be required, use ros2 actions navigate_*, but first check your current position, then very accurately estimate the goal pose.
     - to spin right use negative yaw, to spin left use positive yaw
     """
 

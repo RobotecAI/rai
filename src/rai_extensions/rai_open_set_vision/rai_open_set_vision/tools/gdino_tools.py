@@ -235,7 +235,7 @@ class GetDistanceToObjectsTool(GroundingDinoBaseTool):
             threshold = self.node.get_parameter("outlier_sigma_threshold").value
             if not isinstance(threshold, float):
                 logger.error(
-                    f"Parametr outlier_sigma_threshold was set badly: {type(threshold)}: {threshold} expected float. Using default value 1.0"
+                    f"Parameter outlier_sigma_threshold was set badly: {type(threshold)}: {threshold} expected float. Using default value 1.0"
                 )
                 threshold = 1.0
         except (ParameterUninitializedException, ParameterNotDeclaredException):
@@ -248,7 +248,7 @@ class GetDistanceToObjectsTool(GroundingDinoBaseTool):
             conversion_ratio = self.node.get_parameter("conversion_ratio").value
             if not isinstance(conversion_ratio, float):
                 logger.error(
-                    f"Parametr conversion_ratio was set badly: {type(conversion_ratio)}: {conversion_ratio} expected float. Using default value 0.001"
+                    f"Parameter conversion_ratio was set badly: {type(conversion_ratio)}: {conversion_ratio} expected float. Using default value 0.001"
                 )
                 conversion_ratio = 0.001
         except (ParameterUninitializedException, ParameterNotDeclaredException):

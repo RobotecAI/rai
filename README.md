@@ -1,10 +1,9 @@
 # RAI
 
 > [!IMPORTANT]  
-> **RAI is in beta phase now, expect friction. Early contributors are the most welcome!** \
-> **RAI is developing fast towards a glorious release in time for ROSCon 2024.**
+> **RAI is meant for R&D. Make sure to understand its limitations.**
 
-RAI is a flexible AI agent framework to develop and deploy Gen AI features for your robots.
+RAI is a flexible AI agent framework to develop and deploy Embodied AI features for your robots.
 
 ---
 
@@ -38,15 +37,18 @@ The RAI framework aims to:
 - Supply a general multi-agent system, bringing Gen AI features to your robots.
 - Add human interactivity, flexibility in problem-solving, and out-of-box AI features to existing robot stacks.
 - Provide first-class support for multi-modalities, enabling interaction with various data types.
-- Incorporate an advanced database for persistent agent memory.
-- Include ROS 2-oriented tooling for agents.
-- Support a comprehensive task/mission orchestrator.
+
+## Limitations
+
+- Limitations of LLMs and VLMs in use apply: poor spatial reasoning, hallucinations, jailbreaks, latencies, costs, ...
+- Resource use (memory, CPU) is not addressed yet.​
+- Requires connectivity and / or an edge platform.​
 
 ## Table of Contents
 
 - [Features](#features)
 - [Setup](#setup)
-- [Usage examples (demos)](#planned-demos)
+- [Usage examples (demos)](#simulation-demos)
 - [Developer resources](#developer-resources)
 - [ROSCon 2024 Talk](#roscon-2024)
 
@@ -54,21 +56,23 @@ The RAI framework aims to:
 
 - [x] Voice interaction (both ways).
 - [x] Customizable robot identity, including constitution (ethical code) and documentation (understanding own capabilities).
-- [x] Accessing camera ("What do you see?") sensor, utilizing VLMs.
-- [x] Reasoning about its own state through ROS logs.
+- [x] Accessing camera ("What do you see?"), utilizing VLMs.
+- [x] Summarizing own state through ROS logs.
 - [x] ROS 2 action calling and other interfaces. The Agent can dynamically list interfaces, check their message type, and publish.
 - [x] Integration with LangChain to abstract vendors and access convenient AI tools.
 - [x] Tasks in natural language to nav2 goals.
-- [x] NoMaD integration.
+- [x] [NoMaD](https://general-navigation-models.github.io/nomad/) integration.
 - [x] Tracing.
-- [ ] Grounded SAM 2 integration.
-- [ ] Improved Human-Robot Interaction with voice and text.
+- [x] Grounded SAM 2 integration.
+- [x] Improved Human-Robot Interaction with voice and text.
+- [x] Additional tooling such as GroundingDino.
+- [x] Support for at least 3 different AI vendors.
 - [ ] SDK for RAI developers.
-- [ ] Support for at least 3 different AI vendors.
-- [ ] Additional tooling such as GroundingDino.
 - [ ] UI for configuration to select features and tools relevant for your deployment.
 
 ## Setup
+
+Before going further, make sure you have ROS 2 (Jazzy or Humble) installed and sourced on your system.
 
 ### 1. Setting up the workspace:
 
@@ -95,6 +99,13 @@ cd rai
 poetry install
 rosdep install --from-paths src --ignore-src -r -y
 ```
+
+> [!TIP]  
+> If you want to use features such as Grounded SAM 2 or NoMaD install additional dependencies:
+>
+> ```bash
+> poetry install --with openset,nomad
+> ```
 
 ### 2. Build the project:
 
@@ -123,37 +134,6 @@ Pick your local solution or service provider and follow one of these guides:
 - **[OpenAI](https://platform.openai.com/docs/quickstart)**
 - **[AWS Bedrock](https://console.aws.amazon.com/bedrock/home?#/overview)**
 
-## Running RAI
-
-You are now ready to run RAI!
-
-![rosbot-xl-example](./docs/imgs/rosbot-xl-example.gif)
-
-You can start by running the following examples:
-
-1. **Hello RAI:** Interact directly with your ROS 2 environment through an intuitive Streamlit chat interface.
-2. **O3DE Husarion ROSbot XL demo"** give tasks to a simulated robot using natural language.
-
-### Hello RAI
-
-Chat seamlessly with your ROS 2 environment, retrieve images from cameras, adjust parameters, and get information about your ROS interfaces.
-
-```bash
-streamlit run src/rai_hmi/rai_hmi/text_hmi.py
-```
-
-Remember to run this command in a sourced shell.
-
-### O3DE Rosbot XL Demo
-
-This demo provides a practical way to interact with and control a virtual Husarion ROSbot XL within a simulated environment.
-Using natural language commands, you can assign tasks to the robot, allowing it to perform a variety of actions.
-
-Given that this is a beta release, consider this demo as an opportunity to explore the framework's capabilities, provide feedback, and contribute.
-Try different commands, see how the robot responds, and use this experience to understand the potential and limitations of the system.
-
-Follow this guide: [husarion-rosbot-xl-demo](docs/demos.md)
-
 ## What's next?
 
 Once you know your way around RAI, try the following challenges, with the aid the [developer guide](docs/developer_guide.md):
@@ -162,15 +142,16 @@ Once you know your way around RAI, try the following challenges, with the aid th
 - Implement additional tools and use them in your interaction.
 - Try a complex, multi-step task for your robot, such as going to several points to perform observations!
 
-Soon you will have an opportunity to work with new RAI demos across several domains.
+### Simulation demos
 
-### Planned demos
-
-| Application                                | Robot                          | Description                                                                                                                                      | Link                                                          |
-| ------------------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
-| Mission and obstacle reasoning in orchards | Autonomous tractor             | In a beautiful scene of a virtual orchard, RAI goes beyond obstacle detection to analyze best course of action for a given unexpected situation. | [🌾 demo](https://github.com/RobotecAI/rai-agriculture-demo)  |
-| Manipulation tasks with natural language   | Robot Arm (Franka Panda)       | Complete flexible manipulation tasks thanks to RAI and Grounded SAM 2                                                                            | [🦾 demo](https://github.com/RobotecAI/rai-manipulation-demo) |
-| Quadruped inspection demo                  | A robot dog (ANYbotics ANYmal) | Perform inspection in a warehouse environment, find and report anomalies                                                                         | link TBD                                                      |
+Try RAI yourself with these demos:
+| Application | Robot | Description | Demo Link | Docs Link |
+| ------------------------------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- | -------------------------------- |
+| Mission and obstacle reasoning in orchards | Autonomous tractor | In a beautiful scene of a virtual orchard, RAI goes beyond obstacle detection to analyze best course of action for a given unexpected situation. | [🌾 demo](https://github.com/RobotecAI/rai-rosbot-xl-demo) | [📚](docs/demos/agriculture.md) |
+| Manipulation tasks with natural language | Robot Arm (Franka Panda) | Complete flexible manipulation tasks thanks to RAI and Grounded SAM 2 | [🦾 demo](https://github.com/RobotecAI/rai-manipulation-demo) | [📚](docs/demos/manipulation.md) |
+| Autonomous mobile robot demo | Husarion ROSbot XL | Demonstrate RAI's interaction with an autonomous mobile robot platform for navigation and control | [🤖 demo](https://github.com/RobotecAI/rai-rosbot-xl-demo) | [📚](docs/demos/rosbot_xl.md) |
+| Turtlebot demo | Turtlebot | Showcase RAI's capabilities with the popular Turtlebot platform | [🐢 demo](docs/demos/turtlebot.md) | [📚](docs/demos/turtlebot.md) |
+| Speech-to-speech interaction with autonomous taxi | Simulated car | Demonstrate RAI's speech-to-speech interaction capabilities for specifying destinations to an autonomous taxi in awsim with autoware environment | [🚕 demo](docs/demos/taxi.md) | [📚](docs/demos/taxi.md) |
 
 ## Community
 
@@ -185,12 +166,3 @@ See our [Developer Guide](docs/developer_guide.md) for a deeper dive into RAI, i
 ### Contributing
 
 You are welcome to contribute to RAI! Please see our [Contribution Guide](CONTRIBUTING.md).
-
-### RAI release and talk
-
-RAI will be released on **October 15th**, right before [ROSCon 2024](https://roscon.ros.org/2024/).
-If you are going to the conference, come join us at RAI talk on October 23rd.
-
-<p align="center">
-<img width="400" src="./docs/imgs/talk.png" />
-</p>

@@ -110,7 +110,7 @@ def display_agent_message(
     """
     message.content = cast(str, message.content)  # type: ignore
     if not message.content:
-        return  # Tool messages might not have any content, skip displying them
+        return  # Tool messages might not have any content, skip displaying them
     if isinstance(message, HumanMessage):
         if isinstance(
             message, HumanMultimodalMessage

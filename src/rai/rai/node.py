@@ -55,7 +55,7 @@ from rai.utils.model_initialization import get_llm_model, get_tracing_callbacks
 from rai.utils.ros import NodeDiscovery, RosoutBuffer
 from rai_interfaces.action import Task as TaskAction
 
-WHOAMI_SYSTEM_PROMPT_TEMPATE = """
+WHOAMI_SYSTEM_PROMPT_TEMPLATE = """
     Constitution:
     {constitution}
 
@@ -73,7 +73,7 @@ def append_whoami_info_to_prompt(
         node.get_logger().warning(
             "Robot description package not set, using empty identity and constitution."
         )
-        return WHOAMI_SYSTEM_PROMPT_TEMPATE.format(
+        return WHOAMI_SYSTEM_PROMPT_TEMPLATE.format(
             constitution="",
             identity="",
             prompt=prompt,
@@ -103,7 +103,7 @@ def append_whoami_info_to_prompt(
     identity_response = identity_future.result()
     identity_message = "" if identity_response is None else identity_response.message
 
-    system_prompt = WHOAMI_SYSTEM_PROMPT_TEMPATE.format(
+    system_prompt = WHOAMI_SYSTEM_PROMPT_TEMPLATE.format(
         constitution=constitution_message,
         identity=identity_message,
         prompt=prompt,
@@ -505,7 +505,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
                 else:
                     raise ValueError(f"Unexpected type of message: {type(msg)}")
 
-                # TODO(boczekbartek): Find a better way to create meaninful feedback
+                # TODO(boczekbartek): Find a better way to create meaningful feedback
                 last_msg = self.simple_llm.invoke(
                     [
                         SystemMessage(

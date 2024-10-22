@@ -9,7 +9,7 @@ Your robot's `whoami` package serves as a configuration package for the `rai_who
 > [!TIP]
 > The Human-Machine Interface (HMI), both text and voice versions, relies heavily on the whoami package. It uses the robot's identity, constitution, and documentation to provide context-aware responses and ensure the robot behaves according to its defined characteristics.
 
-## Example (Franka Emika Panda arm)
+## Configuration example - Franka Emika Panda arm
 
 1. Setup the repository using 1st and 2nd step from [Setup](../README.md#setup)
 

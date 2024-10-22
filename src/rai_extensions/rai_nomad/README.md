@@ -6,7 +6,7 @@ This package provides a ROS2 Node which loads and runs the [NoMaD](https://gener
 
 ### 1. Setup the ROS2 workspace
 
-In the base directory of the `RAI` package install dependancies:
+In the base directory of the `RAI` package install dependencies:
 
 ```
 poetry install --with nomad
