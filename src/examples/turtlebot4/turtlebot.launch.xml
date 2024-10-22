@@ -38,5 +38,9 @@
         cwd="src/examples/turtlebot4"
         output="screen">
     </executable>
-
+    <executable
+        cmd="rviz2 -d config.rviz"
+        cwd="src/examples/turtlebot4"
+        output="screen">
+    </executable>
 </launch>
