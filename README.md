@@ -48,7 +48,7 @@ The RAI framework aims to:
 
 - [Features](#features)
 - [Setup](#setup)
-- [Usage examples (demos)](#roscon-2024-demos)
+- [Usage examples (demos)](#simulation-demos)
 - [Developer resources](#developer-resources)
 - [ROSCon 2024 Talk](#roscon-2024)
 
@@ -142,7 +142,7 @@ Once you know your way around RAI, try the following challenges, with the aid th
 - Implement additional tools and use them in your interaction.
 - Try a complex, multi-step task for your robot, such as going to several points to perform observations!
 
-### ROSCon 2024 demos
+### Simulation demos
 
 Try RAI yourself with these demos:
 | Application | Robot | Description | Demo Link | Docs Link |
