@@ -1,9 +1,9 @@
 # RAI
 
 > [!IMPORTANT]  
-> **RAI is in beta phase now, expect friction. Early contributors are the most welcome!**
+> **RAI is meant for R&D. Make sure to understand its limitations.**
 
-RAI is a flexible AI agent framework to develop and deploy Gen AI features for your robots using ROS 2.
+RAI is a flexible AI agent framework to develop and deploy Embodied AI features for your robots.
 
 ---
 
@@ -37,9 +37,12 @@ The RAI framework aims to:
 - Supply a general multi-agent system, bringing Gen AI features to your robots.
 - Add human interactivity, flexibility in problem-solving, and out-of-box AI features to existing robot stacks.
 - Provide first-class support for multi-modalities, enabling interaction with various data types.
-- Incorporate an advanced database for persistent agent memory.
-- Include ROS 2-oriented tooling for agents.
-- Support a comprehensive task/mission orchestrator.
+
+## Limitations
+
+- Limitations of LLMs and VLMs in use apply: poor spatial reasoning, hallucinations, jailbreaks, latencies, costs, ...
+- Resource use (memory, CPU) is not addressed yet.​
+- Requires connectivity and / or an edge platform.​
 
 ## Table of Contents
 
@@ -54,18 +57,18 @@ The RAI framework aims to:
 
 - [x] Voice interaction (both ways).
 - [x] Customizable robot identity, including constitution (ethical code) and documentation (understanding own capabilities).
-- [x] Accessing camera ("What do you see?") sensor, utilizing VLMs.
-- [x] Reasoning about its own state through ROS logs.
+- [x] Accessing camera ("What do you see?"), utilizing VLMs.
+- [x] Summarizing own state through ROS logs.
 - [x] ROS 2 action calling and other interfaces. The Agent can dynamically list interfaces, check their message type, and publish.
 - [x] Integration with LangChain to abstract vendors and access convenient AI tools.
 - [x] Tasks in natural language to nav2 goals.
-- [x] NoMaD integration.
+- [x] [NoMaD](https://general-navigation-models.github.io/nomad/) integration.
 - [x] Tracing.
 - [x] Grounded SAM 2 integration.
 - [x] Improved Human-Robot Interaction with voice and text.
 - [x] Additional tooling such as GroundingDino.
+- [x] Support for at least 3 different AI vendors.
 - [ ] SDK for RAI developers.
-- [ ] Support for at least 3 different AI vendors.
 - [ ] UI for configuration to select features and tools relevant for your deployment.
 
 ## Setup
@@ -194,12 +197,3 @@ See our [Developer Guide](docs/developer_guide.md) for a deeper dive into RAI, i
 ### Contributing
 
 You are welcome to contribute to RAI! Please see our [Contribution Guide](CONTRIBUTING.md).
-
-### RAI release and talk
-
-RAI will be released on **October 15th**, right before [ROSCon 2024](https://roscon.ros.org/2024/).
-If you are going to the conference, come join us at RAI talk on October 23rd.
-
-<p align="center">
-<img width="400" src="./docs/imgs/talk.png" />
-</p>
