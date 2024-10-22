@@ -114,13 +114,11 @@ using Turtlebot4 simulation. The step by step video tutorial is available [here]
 
    - Testing robot's identity & RAG:
      - who are you?
-     - could you bring me something from the kitchen?
-     - what is the voltage of the battery?
+     - what is the voltage of the battery and the diameter of the wheels?
    - Testing ROS 2 connection:
-     - What are your ros2 interfaces
+     - What are your ros2 interfaces?
      - What do you see?
-     - Spin yourself left by 45 degrees
-     - Drive towards the table
+     - Spin yourself left by 45 degrees and drive 1 meter forward
 
 ### Troubleshooting
 
