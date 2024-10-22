@@ -20,21 +20,26 @@ using Turtlebot4 simulation. The step by step video tutorial is available [here]
 
    1. Download turtlebot4 simulation binary matching your platform from :
 
-      - Ubuntu 22.04 & ros2 humble: [link](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/ETpG5LvlSEJPoiDEARme1gcBjWtFgDqsmVfJEXy8BgMoSw?e=x7fQlw)
-      - Ubuntu 24.04 & ros2 jazzy: [link](https://robotecai-my.sharepoint.com/:u:/g/personal/bartlomiej_boczek_robotec_ai/EVy0ebDtsKdAsAMa6Q3AKuUBrMIeFUln5CP2t7shqMcMxA?e=EiK0DJ)
+      - Ubuntu 22.04 & ros2 humble: [link](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/Turtlebot4Tutorial_1.0.0_jammyhumble.zip)
+      - Ubuntu 24.04 & ros2 jazzy: [link](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/Turtlebot4Tutorial_1.0.0_noblejazzy.zip)
 
-   > **NOTE**  
-   > If you would like to make changes to the simulation and create your own binary please follow this [README.md](https://github.com/RobotecAI/ROSCon2024Tutorial/README.md)
+      ```bash
+      cd rai
+      # ubuntu 22.04 ~ humble
+      wget https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/Turtlebot4Tutorial_1.0.0_jammyhumble.zip
+
+      # ubuntu 24.04 ~ jazzy
+      wget https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/Turtlebot4Tutorial_1.0.0_noblejazzy.zip
+      ```
 
    2. Unzip it:
 
       ```bash
-      cd rai
       # for Ubuntu 22.04 jammy and ros2 humble
-      unzip -d src/examples/turtlebot4/simulation Turtlebot4_jammyhumble_0.0.1.zip
+      unzip -d src/examples/turtlebot4/simulation Turtlebot4Tutorial_1.0.0_jammyhumble.zip
 
       # for Ubuntu 24.04 noble and ros2 jazzy
-      unzip -d src/examples/turtlebot4/simulation Turtlebot4_noblejazzy_0.0.1.zip
+      unzip -d src/examples/turtlebot4/simulation Turtlebot4Tutorial_1.0.0_noblejazzy.zip
       ```
 
 3. Setup your LLM vendor: [docs/vendors.md](../../../docs/vendors.md). OpenAI or
