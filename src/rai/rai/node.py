@@ -293,7 +293,6 @@ class RaiAsyncToolsNode(RaiBaseNode):
             rclpy.spin_until_future_complete(self, future)
         return True
 
-<<<<<<< HEAD
 
 class RaiBaseNode(Node):
     def __init__(
