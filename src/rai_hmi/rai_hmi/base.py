@@ -71,11 +71,11 @@ class BaseHMINode(Node):
     Assume the conversation is carried over a voice interface, so try not to overwhelm the user.
     If you have multiple questions, please ask them one by one allowing user to respond before
     moving forward to the next question. Keep the conversation short and to the point.
-    If you are requested tasks that you are capable of perfoming as a robot, not as a
+    If you are requested tasks that you are capable of performing as a robot, not as a
     conversational agent, please use tools to submit them to the robot - only 1
     task in parallel is supported. For more complicated tasks, don't split them, just
     add as 1 task.
-    They will be done by another agent resposible for communication with the robotic's
+    They will be done by another agent responsible for communication with the robotic's
     stack.
     You are the embodied AI robot, so please describe yourself and you action in 1st person.
     """

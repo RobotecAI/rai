@@ -91,10 +91,10 @@ def main():
     - if you are asked to drive towards some object, it's good to:
         1. check the camera image and verify if objects can be seen
         2. if only driving forward is required, do it
-        3. if obstacle avoidance might be required, use ros2 actions navigate_*, but first check your currect position, then very accurately estimate the goal pose.
+        3. if obstacle avoidance might be required, use ros2 actions navigate_*, but first check your current position, then very accurately estimate the goal pose.
     - it is good to verify using given information if the robot is not stuck
     - navigation actions sometimes fail. Their output can be read from rosout. You can also tell if they partially worked by checking the robot position and rotation.
-    - before using any ros2 interfaces, always make sure to check you are usig the right interface
+    - before using any ros2 interfaces, always make sure to check you are using the right interface
     - processing camera image takes 5-10s. Take it into account that if the robot is moving, the information can be outdated. Handle it by good planning of your movements.
     - you are encouraged to use wait tool in between checking the status of actions
     - to find some object navigate around and check the surrounding area

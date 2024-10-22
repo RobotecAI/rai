@@ -56,7 +56,7 @@ We explored various aspects of the dataset and training process, including:
 
 ### Challenges and Limitations
 
-During the experiments we encountered several obstacles and challanges:
+During the experiments we encountered several obstacles and challenges:
 
 1. **Computational Requirements**:
 

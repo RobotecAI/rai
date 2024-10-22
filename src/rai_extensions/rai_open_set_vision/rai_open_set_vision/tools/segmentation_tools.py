@@ -150,7 +150,7 @@ class GetSegmentationTool(Ros2BaseTool):
             conversion_ratio = self.node.get_parameter("conversion_ratio").value
             if not isinstance(conversion_ratio, float):
                 logger.error(
-                    f"Parametr conversion_ratio was set badly: {type(conversion_ratio)}: {conversion_ratio} expected float. Using default value 0.001"
+                    f"Parameter conversion_ratio was set badly: {type(conversion_ratio)}: {conversion_ratio} expected float. Using default value 0.001"
                 )
                 conversion_ratio = 0.001
         except (ParameterUninitializedException, ParameterNotDeclaredException):
@@ -291,7 +291,7 @@ class GetGrabbingPointTool(GetSegmentationTool):
             conversion_ratio = self.node.get_parameter("conversion_ratio").value
             if not isinstance(conversion_ratio, float):
                 logger.error(
-                    f"Parametr conversion_ratio was set badly: {type(conversion_ratio)}: {conversion_ratio} expected float. Using default value 0.001"
+                    f"Parameter conversion_ratio was set badly: {type(conversion_ratio)}: {conversion_ratio} expected float. Using default value 0.001"
                 )
                 conversion_ratio = 0.001
         except (ParameterUninitializedException, ParameterNotDeclaredException):

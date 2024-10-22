@@ -29,7 +29,7 @@ class RosoutBuffer:
             [
                 (
                     "system",
-                    "Shorten the following log keeping its format - for example merge simillar or repeating lines",
+                    "Shorten the following log keeping its format - for example merge similar or repeating lines",
                 ),
                 ("human", "{rosout}"),
             ]
