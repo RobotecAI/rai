@@ -38,7 +38,7 @@ from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPo
 
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.messages import HumanMultimodalMessage
-from rai.node import RaiAsyncToolsNode
+from rai.node import RaiBaseNode
 from rai.tools.ros.native_actions import GetCameraImage
 from rai.utils.artifacts import get_stored_artifacts
 from rai.utils.model_initialization import get_llm_model
@@ -93,7 +93,7 @@ def initialize_agent(_node: BaseHMINode):
         model="gpt-4o",
         streaming=True,
     )
-    rai_node = RaiAsyncToolsNode(node_name="rai_tool_node")
+    rai_node = RaiBaseNode(node_name="rai_tool_node")
     rclpy.spin_once(rai_node, timeout_sec=1.0)
     tools = [
         get_ros2_interfaces_tool,

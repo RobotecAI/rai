@@ -311,7 +311,7 @@ class RaiBaseNode(Node):
             self.DISCOVERY_FREQ,
             self.discovery,
         )
-        self.ros_discovery_info = NodeDiscovery(whitelist=whitelist)
+        self.ros_discovery_info = NodeDiscovery(allow_list=whitelist)
         self.discovery()
         self.qos_profile = QoSProfile(
             history=HistoryPolicy.KEEP_LAST,
