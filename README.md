@@ -151,6 +151,7 @@ Try RAI yourself with these demos:
 | Manipulation tasks with natural language | Robot Arm (Franka Panda) | Complete flexible manipulation tasks thanks to RAI and Grounded SAM 2 | [🦾 demo](https://github.com/RobotecAI/rai-manipulation-demo) | [📚](docs/demos/manipulation.md) |
 | Autonomous mobile robot demo | Husarion ROSbot XL | Demonstrate RAI's interaction with an autonomous mobile robot platform for navigation and control | [🤖 demo](https://github.com/RobotecAI/rai-rosbot-xl-demo) | [📚](docs/demos/rosbot_xl.md) |
 | Turtlebot demo | Turtlebot | Showcase RAI's capabilities with the popular Turtlebot platform | [🐢 demo](docs/demos/turtlebot.md) | [📚](docs/demos/turtlebot.md) |
+| Speech-to-speech interaction with autonomous taxi | Simulated car | Demonstrate RAI's speech-to-speech interaction capabilities for specifying destinations to an autonomous taxi in awsim with autoware environment | [🚕 demo](docs/demos/taxi.md) | [📚](docs/demos/taxi.md) |
 
 ## Community
 
