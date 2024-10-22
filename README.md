@@ -48,9 +48,8 @@ The RAI framework aims to:
 
 - [Features](#features)
 - [Setup](#setup)
-- [Usage examples (demos)](#planned-demos)
+- [Usage examples (demos)](#roscon-2024-demos)
 - [Developer resources](#developer-resources)
-- [Roadmap](#roadmap) # TODO
 - [ROSCon 2024 Talk](#roscon-2024)
 
 ## Features
@@ -135,37 +134,6 @@ Pick your local solution or service provider and follow one of these guides:
 - **[OpenAI](https://platform.openai.com/docs/quickstart)**
 - **[AWS Bedrock](https://console.aws.amazon.com/bedrock/home?#/overview)**
 
-## Running RAI
-
-You are now ready to run RAI!
-
-![rosbot-xl-example](./docs/imgs/rosbot-xl-example.gif)
-
-You can start by running the following examples:
-
-1. **Hello RAI:** Interact directly with your ROS 2 environment through an intuitive Streamlit chat interface.
-2. **O3DE Husarion ROSbot XL demo"** give tasks to a simulated robot using natural language.
-
-### Hello RAI
-
-Chat seamlessly with your ROS 2 environment, retrieve images from cameras, adjust parameters, and get information about your ROS interfaces.
-
-```bash
-streamlit run src/rai_hmi/rai_hmi/text_hmi.py
-```
-
-Remember to run this command in a sourced shell.
-
-### O3DE Rosbot XL Demo
-
-This demo provides a practical way to interact with and control a virtual Husarion ROSbot XL within a simulated environment.
-Using natural language commands, you can assign tasks to the robot, allowing it to perform a variety of actions.
-
-Given that this is a beta release, consider this demo as an opportunity to explore the framework's capabilities, provide feedback, and contribute.
-Try different commands, see how the robot responds, and use this experience to understand the potential and limitations of the system.
-
-Follow this guide: [husarion-rosbot-xl-demo](docs/demos.md)
-
 ## What's next?
 
 Once you know your way around RAI, try the following challenges, with the aid the [developer guide](docs/developer_guide.md):
@@ -174,15 +142,15 @@ Once you know your way around RAI, try the following challenges, with the aid th
 - Implement additional tools and use them in your interaction.
 - Try a complex, multi-step task for your robot, such as going to several points to perform observations!
 
-Soon you will have an opportunity to work with new RAI demos across several domains.
+### ROSCon 2024 demos
 
-### Planned demos
-
-| Application                                | Robot                          | Description                                                                                                                                      | Link                                                          |
-| ------------------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
-| Mission and obstacle reasoning in orchards | Autonomous tractor             | In a beautiful scene of a virtual orchard, RAI goes beyond obstacle detection to analyze best course of action for a given unexpected situation. | [🌾 demo](https://github.com/RobotecAI/rai-agriculture-demo)  |
-| Manipulation tasks with natural language   | Robot Arm (Franka Panda)       | Complete flexible manipulation tasks thanks to RAI and Grounded SAM 2                                                                            | [🦾 demo](https://github.com/RobotecAI/rai-manipulation-demo) |
-| Quadruped inspection demo                  | A robot dog (ANYbotics ANYmal) | Perform inspection in a warehouse environment, find and report anomalies                                                                         | link TBD                                                      |
+Try RAI yourself with these demos:
+| Application | Robot | Description | Demo Link | Docs Link |
+| ------------------------------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- | -------------------------------- |
+| Mission and obstacle reasoning in orchards | Autonomous tractor | In a beautiful scene of a virtual orchard, RAI goes beyond obstacle detection to analyze best course of action for a given unexpected situation. | [🌾 demo](https://github.com/RobotecAI/rai-rosbot-xl-demo) | [📚](docs/demos/agriculture.md) |
+| Manipulation tasks with natural language | Robot Arm (Franka Panda) | Complete flexible manipulation tasks thanks to RAI and Grounded SAM 2 | [🦾 demo](https://github.com/RobotecAI/rai-manipulation-demo) | [📚](docs/demos/manipulation.md) |
+| Autonomous mobile robot demo | Husarion ROSbot XL | Demonstrate RAI's interaction with an autonomous mobile robot platform for navigation and control | [🤖 demo](https://github.com/RobotecAI/rai-rosbot-xl-demo) | [📚](docs/demos/rosbot_xl.md) |
+| Turtlebot demo | Turtlebot | Showcase RAI's capabilities with the popular Turtlebot platform | [🐢 demo](docs/demos/turtlebot.md) | [📚](docs/demos/turtlebot.md) |
 
 ## Community
 
