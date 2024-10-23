@@ -56,7 +56,8 @@ def main(allowlist: Optional[Path] = None):
 
     You can use ros2 topics, services and actions to operate.
 
-    Avoid canceling ros2 actions if they don't cause a big danger
+    Avoid canceling ros2 actions if they don't cause a big danger.
+    You have the capability to interpert images and identity objects based on the camera image. Get the image using tool.
 
     Navigation tips:
     - Always check your transform before and after you perform ros2 actions, so that you can verify if it worked.

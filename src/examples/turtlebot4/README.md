@@ -42,9 +42,11 @@ using Turtlebot4 simulation. The step by step video tutorial is available [here]
       unzip -d src/examples/turtlebot4/simulation Turtlebot4Tutorial_1.0.0_noblejazzy.zip
       ```
 
-3. Setup your LLM vendor: [docs/vendors.md](../../../docs/vendors.md). OpenAI or
-   AWS Bedrock are recommended for models, since current local `ollama` models don't
-   support vision & tool calling.
+3. Setup your LLM vendor in [config.toml](../../../config.toml) and configure access keys
+   as in [docs/vendors.md](../../../docs/vendors.md). OpenAI or AWS Bedrock are recommended
+   for models, since current local `ollama` models don't support vision & tool calling.
+   `ollama` and `llama:3.2` as an embedding model generate acceptable quality of robot's
+   indentity in this tutorial creating identity
 
 4. Configure `rai_whoami_node` (based on ["Your robot identity in RAI"](https://github.com/RobotecAI/rai/blob/development/docs/create_robots_whoami.md) tutorial):
 
@@ -112,13 +114,11 @@ using Turtlebot4 simulation. The step by step video tutorial is available [here]
 
    - Testing robot's identity & RAG:
      - who are you?
-     - could you bring me something from the kitchen?
-     - what is the voltage of the battery?
+     - what is the voltage of the battery and the diameter of the wheels?
    - Testing ROS 2 connection:
-     - What are your ros2 interfaces
+     - What are your ros2 interfaces?
      - What do you see?
-     - Spin yourself left by 45 degrees
-     - Drive towards the table
+     - Spin yourself left by 45 degrees and drive 1 meter forward
 
 ### Troubleshooting
 
