@@ -50,7 +50,6 @@ The RAI framework aims to:
 - [Setup](#setup)
 - [Usage examples (demos)](#simulation-demos)
 - [Developer resources](#developer-resources)
-- [ROSCon 2024 Talk](#roscon-2024)
 
 ## Features
 
@@ -154,6 +153,14 @@ Try RAI yourself with these demos:
 | Speech-to-speech interaction with autonomous taxi | Simulated car | Demonstrate RAI's speech-to-speech interaction capabilities for specifying destinations to an autonomous taxi in awsim with autoware environment | [🚕 demo](docs/demos/taxi.md) | [📚](docs/demos/taxi.md) |
 
 ## Community
+
+### Embodied AI Community Group
+
+RAI is one of the main projects in focus of the Embodied AI Community Group. Find out more and register at [ROS Discourse](https://discourse.ros.org/t/embodied-ai-community-group-call-of-interest/39990).
+
+### Publicity
+
+- A talk about [RAI at ROSCon 2024](https://vimeo.com/1022195000#t=8h20m16s).
 
 ### RAI Q&A
 
