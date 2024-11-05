@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+from typing import Dict, List
 
 import sounddevice as sd
 import streamlit as st
@@ -77,9 +78,11 @@ if st.session_state.current_step == 1:
         """
     This wizard will help you set up your RAI environment step by step:
     1. Configure your AI models and vendor
-    2. Set up speech recognition
-    3. Configure text-to-speech
-    4. Review and save your configuration
+    2. Set up model tracing and monitoring
+    3. Configure speech recognition (ASR)
+    4. Set up text-to-speech (TTS)
+    5. Enable additional features
+    6. Review and save your configuration
 
     Let's get started!
     """
@@ -151,52 +154,54 @@ elif st.session_state.current_step == 2:
             )
             embeddings_model = st.text_input("Embeddings model", value="llama3.2")
 
-        advanced_config = st.container()
-        advanced_config.subheader("Multivendor configuration (Advanced)")
+        st.subheader("Multivendor configuration (Advanced)")
 
-        use_advanced_config = False
-        with advanced_config:
-            st.write(
-                "If you have access to multiple vendors, you can configure the models to use different vendors."
-            )
-            use_advanced_config = st.checkbox("Use advanced configuration", value=False)
-            models_col, vendor_col = st.columns(2)
-            current_simple_model_vendor = st.session_state.config["vendor"][
-                "simple_model"
-            ]
-            current_simple_model = st.session_state.config[current_simple_model_vendor][
-                "simple_model"
-            ]
-            current_complex_model_vendor = st.session_state.config["vendor"][
-                "complex_model"
-            ]
-            current_complex_model = st.session_state.config[
-                current_complex_model_vendor
-            ]["complex_model"]
-            current_embeddings_model_vendor = st.session_state.config["vendor"][
-                "embeddings_model"
-            ]
-            current_embeddings_model = st.session_state.config[
-                current_embeddings_model_vendor
-            ]["embeddings_model"]
-            with models_col:
-                simple_model = st.text_input("Simple model", value=current_simple_model)
-                complex_model = st.text_input(
-                    "Complex model", value=current_complex_model
-                )
-                embeddings_model = st.text_input(
-                    "Embeddings model", value=current_embeddings_model
-                )
-            with vendor_col:
-                simple_model_vendor = st.text_input(
-                    "Simple model vendor", value=current_simple_model_vendor
-                )
-                complex_model_vendor = st.text_input(
-                    "Complex model vendor", value=current_complex_model_vendor
-                )
-                embeddings_model_vendor = st.text_input(
-                    "Embeddings model vendor", value=current_embeddings_model_vendor
-                )
+        st.write(
+            "If you have access to multiple vendors, you can configure the models to use different vendors."
+        )
+        use_advanced_config = st.checkbox("Use advanced configuration", value=False)
+        advanced_config = st.container()
+        if use_advanced_config:
+            with advanced_config:
+                models_col, vendor_col = st.columns(2)
+                current_simple_model_vendor = st.session_state.config["vendor"][
+                    "simple_model"
+                ]
+                current_simple_model = st.session_state.config[
+                    current_simple_model_vendor
+                ]["simple_model"]
+                current_complex_model_vendor = st.session_state.config["vendor"][
+                    "complex_model"
+                ]
+                current_complex_model = st.session_state.config[
+                    current_complex_model_vendor
+                ]["complex_model"]
+                current_embeddings_model_vendor = st.session_state.config["vendor"][
+                    "embeddings_model"
+                ]
+                current_embeddings_model = st.session_state.config[
+                    current_embeddings_model_vendor
+                ]["embeddings_model"]
+                with models_col:
+                    simple_model = st.text_input(
+                        "Simple model", value=current_simple_model
+                    )
+                    complex_model = st.text_input(
+                        "Complex model", value=current_complex_model
+                    )
+                    embeddings_model = st.text_input(
+                        "Embeddings model", value=current_embeddings_model
+                    )
+                with vendor_col:
+                    simple_model_vendor = st.text_input(
+                        "Simple model vendor", value=current_simple_model_vendor
+                    )
+                    complex_model_vendor = st.text_input(
+                        "Complex model vendor", value=current_complex_model_vendor
+                    )
+                    embeddings_model_vendor = st.text_input(
+                        "Embeddings model vendor", value=current_embeddings_model_vendor
+                    )
         if use_advanced_config:
             st.session_state.config["vendor"] = {
                 "simple_model": simple_model_vendor,
@@ -306,14 +311,56 @@ elif st.session_state.current_step == 4:
     """
     )
 
-    # ... ASR configuration ...
-    with st.expander("View available recording devices"):
-        st.markdown(f"```python\n{sd.query_devices()}\n```")
+    def get_recording_devices(reinitialize: bool = False) -> List[Dict[str, str | int]]:
+        if reinitialize:
+            sd._terminate()
+            sd._initialize()
+        devices: List[Dict[str, str | int]] = sd.query_devices()
+        recording_devices = [
+            device for device in devices if device.get("max_input_channels", 0) > 0
+        ]
+        return recording_devices
 
-    default_recording_device = st.number_input("Default recording device", value=0)
-    local_asr = st.checkbox(
-        "Enable local ASR (Whisper). Recommended when Nvidia GPU is available."
+    recording_devices = get_recording_devices()
+    currently_selected_device_name = st.session_state.config.get("asr", {}).get(
+        "recording_device_name", ""
     )
+    try:
+        device_index = [device["name"] for device in recording_devices].index(
+            currently_selected_device_name
+        )
+    except ValueError:
+        device_index = None
+    recording_device_name = st.selectbox(
+        "Default recording device",
+        [device["name"] for device in recording_devices],
+        placeholder="Select device",
+        index=device_index,
+    )
+    refresh_devices = st.button("Refresh devices")
+    if refresh_devices:
+        recording_devices = get_recording_devices(reinitialize=True)
+
+    st.session_state.config["asr"]["recording_device_name"] = recording_device_name
+    asr_vendor = st.selectbox(
+        "Choose your ASR vendor",
+        ["Local Whisper (Free)", "OpenAI (Cloud)"],
+        placeholder="Select vendor",
+    )
+    if asr_vendor == "Local Whisper (Free)":
+        st.info(
+            """
+        Recommended to use when Nvidia GPU is available.
+        """
+        )
+        st.session_state.config["asr"]["vendor"] = "whisper"
+    elif asr_vendor == "OpenAI (Cloud)":
+        st.info(
+            """
+        OpenAI ASR uses the OpenAI API. Make sure to set `OPENAI_API_KEY` environment variable.
+        """
+        )
+        st.session_state.config["asr"]["vendor"] = "openai"
 
     col1, col2 = st.columns([1, 1])
     with col1:
@@ -333,26 +380,35 @@ elif st.session_state.current_step == 5:
 
     tts_vendor = st.selectbox(
         "Choose your TTS vendor",
-        ["ElevenLabs", "OpenTTS (Local)"],
+        ["ElevenLabs (Cloud)", "OpenTTS (Local)"],
         placeholder="Select vendor",
     )
 
-    if tts_vendor == "ElevenLabs":
+    if tts_vendor == "ElevenLabs (Cloud)":
         st.info(
             """
         Please ensure you have the following environment variable set:
-        - `ELEVENLABS_API_KEY`
+        ```sh
+        export ELEVENLABS_API_KEY="..."
+        ```
+
+        To get your API key, follow the instructions [here](https://elevenlabs.io/docs/api-reference/getting-started)
         """
         )
+        st.session_state.config["tts"]["vendor"] = "elevenlabs"
+
     elif tts_vendor == "OpenTTS (Local)":
         st.info(
             """
         Please ensure you have the Docker container running:
-        ```
+        ```sh
         docker run -it -p 5500:5500 synesthesiam/opentts:en
         ```
+
+        To learn more about OpenTTS, visit [here](https://github.com/synesthesiam/opentts)
         """
         )
+        st.session_state.config["tts"]["vendor"] = "opentts"
 
     col1, col2 = st.columns([1, 1])
     with col1:
@@ -417,13 +473,16 @@ elif st.session_state.current_step == 6:
 
 elif st.session_state.current_step == 7:
     st.title("Review & Save Configuration")
-    st.info(
+    st.write(
         """
     This is the final step where you can:
     - Review all your configuration settings
     - Test the configuration to ensure everything works
     - Save the settings to a file that your assistant will use
     """
+    )
+    st.info(
+        "The configuration contains default values for each setting, even if you didn't set them."
     )
 
     # Display current configuration
@@ -444,50 +503,63 @@ elif st.session_state.current_step == 7:
 
         # create simple model
         progress.progress(0.1)
-        if simple_model_vendor_name == "openai":
-            simple_model = ChatOpenAI(
-                model=st.session_state.config["openai"]["simple_model"]
-            )
-        elif simple_model_vendor_name == "aws":
-            simple_model = ChatBedrock(
-                model_id=st.session_state.config["aws"]["simple_model"]
-            )
-        elif simple_model_vendor_name == "ollama":
-            simple_model = ChatOllama(
-                model=st.session_state.config["ollama"]["simple_model"],
-                base_url=st.session_state.config["ollama"]["base_url"],
-            )
+        try:
+            if simple_model_vendor_name == "openai":
+                simple_model = ChatOpenAI(
+                    model=st.session_state.config["openai"]["simple_model"]
+                )
+            elif simple_model_vendor_name == "aws":
+                simple_model = ChatBedrock(
+                    model_id=st.session_state.config["aws"]["simple_model"]
+                )
+            elif simple_model_vendor_name == "ollama":
+                simple_model = ChatOllama(
+                    model=st.session_state.config["ollama"]["simple_model"],
+                    base_url=st.session_state.config["ollama"]["base_url"],
+                )
+        except Exception as e:
+            success = False
+            st.error(f"Failed to initialize simple model: {e}")
+
         # create complex model
         progress.progress(0.2)
-        if complex_model_vendor_name == "openai":
-            complex_model = ChatOpenAI(
-                model=st.session_state.config["openai"]["complex_model"]
-            )
-        elif complex_model_vendor_name == "aws":
-            complex_model = ChatBedrock(
-                model_id=st.session_state.config["aws"]["complex_model"]
-            )
-        elif complex_model_vendor_name == "ollama":
-            complex_model = ChatOllama(
-                model=st.session_state.config["ollama"]["complex_model"],
-                base_url=st.session_state.config["ollama"]["base_url"],
-            )
+        try:
+            if complex_model_vendor_name == "openai":
+                complex_model = ChatOpenAI(
+                    model=st.session_state.config["openai"]["complex_model"]
+                )
+            elif complex_model_vendor_name == "aws":
+                complex_model = ChatBedrock(
+                    model_id=st.session_state.config["aws"]["complex_model"]
+                )
+            elif complex_model_vendor_name == "ollama":
+                complex_model = ChatOllama(
+                    model=st.session_state.config["ollama"]["complex_model"],
+                    base_url=st.session_state.config["ollama"]["base_url"],
+                )
+        except Exception as e:
+            success = False
+            st.error(f"Failed to initialize complex model: {e}")
 
         # create embeddings model
         progress.progress(0.3)
-        if embeddings_model_vendor_name == "openai":
-            embeddings_model = OpenAIEmbeddings(
-                model=st.session_state.config["openai"]["embeddings_model"]
-            )
-        elif embeddings_model_vendor_name == "aws":
-            embeddings_model = BedrockEmbeddings(
-                model_id=st.session_state.config["aws"]["embeddings_model"]
-            )
-        elif embeddings_model_vendor_name == "ollama":
-            embeddings_model = OllamaEmbeddings(
-                model=st.session_state.config["ollama"]["embeddings_model"],
-                base_url=st.session_state.config["ollama"]["base_url"],
-            )
+        try:
+            if embeddings_model_vendor_name == "openai":
+                embeddings_model = OpenAIEmbeddings(
+                    model=st.session_state.config["openai"]["embeddings_model"]
+                )
+            elif embeddings_model_vendor_name == "aws":
+                embeddings_model = BedrockEmbeddings(
+                    model_id=st.session_state.config["aws"]["embeddings_model"]
+                )
+            elif embeddings_model_vendor_name == "ollama":
+                embeddings_model = OllamaEmbeddings(
+                    model=st.session_state.config["ollama"]["embeddings_model"],
+                    base_url=st.session_state.config["ollama"]["base_url"],
+                )
+        except Exception as e:
+            success = False
+            st.error(f"Failed to initialize embeddings model: {e}")
 
         progress.progress(0.4)
         use_langfuse = st.session_state.config["tracing"]["langfuse"]["use_langfuse"]

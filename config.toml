@@ -1,7 +1,7 @@
 [vendor]
-simple_model = "openai" # openai, aws, ollama
-embeddings_model = "ollama"
+simple_model = "openai"
 complex_model = "openai"
+embeddings_model = "openai"
 
 [aws]
 simple_model = "anthropic.claude-3-haiku-20240307-v1:0"
@@ -29,3 +29,10 @@ host = "https://cloud.langfuse.com"
 
 [tracing.langsmith]
 use_langsmith = false
+
+[asr]
+recording_device_name = "default"
+vendor = "whisper"
+
+[tts]
+vendor = "elevenlabs"
