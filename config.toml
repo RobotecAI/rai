@@ -33,6 +33,13 @@ use_langsmith = false
 [asr]
 recording_device_name = "default"
 vendor = "whisper"
+language = "en"
+silence_grace_period = 0.3
+use_wake_word = false
+vad_threshold = 0.3
+wake_word_model = ""
+wake_word_threshold = 0.5
 
 [tts]
 vendor = "elevenlabs"
+keep_speaker_busy = false

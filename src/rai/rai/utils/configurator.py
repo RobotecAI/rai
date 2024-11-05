@@ -362,6 +362,73 @@ elif st.session_state.current_step == 4:
         )
         st.session_state.config["asr"]["vendor"] = "openai"
 
+    # Add ASR parameters
+    st.subheader("ASR Parameters")
+
+    language = st.text_input(
+        "Language code",
+        value=st.session_state.config.get("asr", {}).get("language", "en"),
+        help="Language code for the ASR model (e.g., 'en' for English)",
+    )
+
+    silence_grace_period = st.number_input(
+        "Silence grace period (seconds)",
+        value=float(
+            st.session_state.config.get("asr", {}).get("silence_grace_period", 1.0)
+        ),
+        min_value=0.1,
+        help="Grace period in seconds after silence to stop recording",
+    )
+
+    vad_threshold = st.slider(
+        "VAD threshold",
+        min_value=0.0,
+        max_value=1.0,
+        value=float(st.session_state.config.get("asr", {}).get("vad_threshold", 0.5)),
+        help="Threshold for voice activity detection",
+    )
+
+    use_wake_word = st.checkbox(
+        "Use wake word detection",
+        value=st.session_state.config.get("asr", {}).get("use_wake_word", False),
+    )
+    if use_wake_word:
+        wake_word_model = st.text_input(
+            "Wake word model",
+            value=st.session_state.config.get("asr", {}).get("wake_word_model", ""),
+            help="Wake word model to use",
+        )
+        wake_word_threshold = st.slider(
+            "Wake word threshold",
+            min_value=0.0,
+            max_value=1.0,
+            value=float(
+                st.session_state.config.get("asr", {}).get("wake_word_threshold", 0.5)
+            ),
+            help="Threshold for wake word detection",
+        )
+
+    # Update config
+    if "asr" not in st.session_state.config:
+        st.session_state.config["asr"] = {}
+
+    st.session_state.config["asr"].update(
+        {
+            "language": language,
+            "silence_grace_period": silence_grace_period,
+            "use_wake_word": use_wake_word,
+            "vad_threshold": vad_threshold,
+        }
+    )
+
+    if use_wake_word:
+        st.session_state.config["asr"].update(
+            {
+                "wake_word_model": wake_word_model,
+                "wake_word_threshold": wake_word_threshold,
+            }
+        )
+
     col1, col2 = st.columns([1, 1])
     with col1:
         st.button("← Back", on_click=prev_step)
@@ -409,7 +476,14 @@ elif st.session_state.current_step == 5:
         """
         )
         st.session_state.config["tts"]["vendor"] = "opentts"
-
+    keep_speaker_busy = st.checkbox("Keep speaker busy", value=False)
+    st.info(
+        """
+    Some speakers enter power-saving mode when inactive.
+    Enabling this option will keep the speaker active, reducing audio playback latency.
+    """
+    )
+    st.session_state.config["tts"]["keep_speaker_busy"] = keep_speaker_busy
     col1, col2 = st.columns([1, 1])
     with col1:
         st.button("← Back", on_click=prev_step)
