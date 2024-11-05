@@ -15,6 +15,7 @@
 import os
 from typing import Dict, List
 
+import numpy as np
 import sounddevice as sd
 import streamlit as st
 import tomli
@@ -565,117 +566,143 @@ elif st.session_state.current_step == 7:
     st.code(toml_string, language="toml")
 
     if st.button("Test Configuration"):
-        success = True
         progress = st.progress(0.0)
+        test_results = {}
 
-        vendor = st.session_state.config["vendor"]
-        simple_model_vendor_name = st.session_state.config["vendor"]["simple_model"]
-        complex_model_vendor_name = st.session_state.config["vendor"]["complex_model"]
-        embeddings_model_vendor_name = st.session_state.config["vendor"][
-            "embeddings_model"
-        ]
+        def create_chat_model(model_type: str):
+            vendor_name = st.session_state.config["vendor"][f"{model_type}_model"]
+            model_name = st.session_state.config[vendor_name][f"{model_type}_model"]
 
-        # create simple model
-        progress.progress(0.1)
-        try:
-            if simple_model_vendor_name == "openai":
-                simple_model = ChatOpenAI(
-                    model=st.session_state.config["openai"]["simple_model"]
-                )
-            elif simple_model_vendor_name == "aws":
-                simple_model = ChatBedrock(
-                    model_id=st.session_state.config["aws"]["simple_model"]
-                )
-            elif simple_model_vendor_name == "ollama":
-                simple_model = ChatOllama(
-                    model=st.session_state.config["ollama"]["simple_model"],
+            if vendor_name == "openai":
+                return ChatOpenAI(model=model_name)
+            elif vendor_name == "aws":
+                return ChatBedrock(model_id=model_name)
+            elif vendor_name == "ollama":
+                return ChatOllama(
+                    model=model_name,
                     base_url=st.session_state.config["ollama"]["base_url"],
                 )
-        except Exception as e:
-            success = False
-            st.error(f"Failed to initialize simple model: {e}")
+            raise ValueError(f"Unknown vendor: {vendor_name}")
 
-        # create complex model
-        progress.progress(0.2)
-        try:
-            if complex_model_vendor_name == "openai":
-                complex_model = ChatOpenAI(
-                    model=st.session_state.config["openai"]["complex_model"]
+        def test_chat_model(model_type: str) -> bool:
+            try:
+                model = create_chat_model(model_type)
+                answer = model.invoke("Say hello!")
+                return answer.content is not None
+            except Exception as e:
+                st.error(f"{model_type.title()} model error: {e}")
+                return False
+
+        def test_simple_model() -> bool:
+            return test_chat_model("simple")
+
+        def test_complex_model() -> bool:
+            return test_chat_model("complex")
+
+        def test_embeddings_model():
+            try:
+                embeddings_model_vendor_name = st.session_state.config["vendor"][
+                    "embeddings_model"
+                ]
+                if embeddings_model_vendor_name == "openai":
+                    embeddings_model = OpenAIEmbeddings(
+                        model=st.session_state.config["openai"]["embeddings_model"]
+                    )
+                elif embeddings_model_vendor_name == "aws":
+                    embeddings_model = BedrockEmbeddings(
+                        model_id=st.session_state.config["aws"]["embeddings_model"]
+                    )
+                elif embeddings_model_vendor_name == "ollama":
+                    embeddings_model = OllamaEmbeddings(
+                        model=st.session_state.config["ollama"]["embeddings_model"],
+                        base_url=st.session_state.config["ollama"]["base_url"],
+                    )
+                embeddings_answer = embeddings_model.embed_query("Say hello!")
+                return embeddings_answer is not None
+            except Exception as e:
+                st.error(f"Embeddings model error: {e}")
+                return False
+
+        def test_langfuse():
+            use_langfuse = st.session_state.config["tracing"]["langfuse"][
+                "use_langfuse"
+            ]
+            if not use_langfuse:
+                return True
+            return bool(os.getenv("LANGFUSE_SECRET_KEY")) and bool(
+                os.getenv("LANGFUSE_PUBLIC_KEY")
+            )
+
+        def test_langsmith():
+            use_langsmith = st.session_state.config["tracing"]["langsmith"][
+                "use_langsmith"
+            ]
+            if not use_langsmith:
+                return True
+            return bool(os.getenv("LANGCHAIN_API_KEY"))
+
+        def test_recording_device(index: int, sample_rate: int):
+            try:
+                recording = sd.rec(
+                    device=index,
+                    frames=sample_rate,
+                    samplerate=sample_rate,
+                    channels=1,
+                    dtype="int16",
                 )
-            elif complex_model_vendor_name == "aws":
-                complex_model = ChatBedrock(
-                    model_id=st.session_state.config["aws"]["complex_model"]
-                )
-            elif complex_model_vendor_name == "ollama":
-                complex_model = ChatOllama(
-                    model=st.session_state.config["ollama"]["complex_model"],
-                    base_url=st.session_state.config["ollama"]["base_url"],
-                )
-        except Exception as e:
-            success = False
-            st.error(f"Failed to initialize complex model: {e}")
+                sd.wait()
+                if np.sum(np.abs(recording)) == 0:
+                    return False
+                return True
+            except Exception as e:
+                st.error(f"Recording device error: {e}")
+                return False
 
-        # create embeddings model
-        progress.progress(0.3)
-        try:
-            if embeddings_model_vendor_name == "openai":
-                embeddings_model = OpenAIEmbeddings(
-                    model=st.session_state.config["openai"]["embeddings_model"]
-                )
-            elif embeddings_model_vendor_name == "aws":
-                embeddings_model = BedrockEmbeddings(
-                    model_id=st.session_state.config["aws"]["embeddings_model"]
-                )
-            elif embeddings_model_vendor_name == "ollama":
-                embeddings_model = OllamaEmbeddings(
-                    model=st.session_state.config["ollama"]["embeddings_model"],
-                    base_url=st.session_state.config["ollama"]["base_url"],
-                )
-        except Exception as e:
-            success = False
-            st.error(f"Failed to initialize embeddings model: {e}")
+        # Run tests
+        progress.progress(0.2, "Testing simple model...")
+        test_results["Simple Model"] = test_simple_model()
 
-        progress.progress(0.4)
-        use_langfuse = st.session_state.config["tracing"]["langfuse"]["use_langfuse"]
-        if use_langfuse:
-            if not os.getenv("LANGFUSE_SECRET_KEY", "") or not os.getenv(
-                "LANGFUSE_PUBLIC_KEY", ""
-            ):
-                success = False
-                st.error(
-                    "Langfuse is enabled but LANGFUSE_SECRET_KEY or LANGFUSE_PUBLIC_KEY is not set"
-                )
+        progress.progress(0.4, "Testing complex model...")
+        test_results["Complex Model"] = test_complex_model()
 
-        progress.progress(0.5)
-        use_langsmith = st.session_state.config["tracing"]["langsmith"]["use_langsmith"]
-        if use_langsmith:
-            if not os.getenv("LANGCHAIN_API_KEY", ""):
-                success = False
-                st.error("Langsmith is enabled but LANGCHAIN_API_KEY is not set")
+        progress.progress(0.6, "Testing embeddings model...")
+        test_results["Embeddings Model"] = test_embeddings_model()
 
-        progress.progress(0.6, text="Testing simple model")
-        simple_answer = simple_model.invoke("Say hello!")
-        if simple_answer.content is None:
-            success = False
-            st.error("Simple model is not working")
+        progress.progress(0.8, "Testing tracing...")
+        test_results["Langfuse"] = test_langfuse()
+        test_results["LangSmith"] = test_langsmith()
 
-        progress.progress(0.7, text="Testing complex model")
-        complex_answer = complex_model.invoke("Say hello!")
-        if complex_answer.content is None:
-            success = False
-            st.error("Complex model is not working")
+        progress.progress(0.9, "Testing recording device...")
+        devices = sd.query_devices()
+        device_index = [device["name"] for device in devices].index(
+            st.session_state.config["asr"]["recording_device_name"]
+        )
+        sample_rate = int(devices[device_index]["default_samplerate"])
+        test_results["Recording Device"] = test_recording_device(
+            device_index, sample_rate
+        )
 
-        progress.progress(0.8, text="Testing embeddings model")
-        embeddings_answer = embeddings_model.embed_query("Say hello!")
-        if embeddings_answer is None:
-            success = False
-            st.error("Embeddings model is not working")
+        progress.progress(1.0)
 
-        progress.progress(1.0, text="Done!")
-        if success:
-            st.success("Configuration is correct. You can save it now.")
+        # Display results in a table
+        st.subheader("Test Results")
+
+        # Create a two-column table using streamlit columns
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Component**")
+            for component in test_results.keys():
+                st.write(component)
+        with col2:
+            st.markdown("**Status**")
+            for result in test_results.values():
+                st.write("✅ Pass" if result else "❌ Fail")
+
+        # Overall success message
+        if all(test_results.values()):
+            st.success("All tests passed! You can save the configuration now.")
         else:
-            st.error("Configuration is incorrect")
+            st.error("Some tests failed. Please check the errors above.")
 
     col1, col2 = st.columns([1, 1])
     with col1:
