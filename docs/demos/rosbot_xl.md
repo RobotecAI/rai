@@ -72,7 +72,7 @@ Please refer to [rai husarion rosbot xl demo][rai rosbot demo] for more details.
 
 ### What is happening?
 
-By looking at the example code in `src/examples/rosbot-xl-generic-node-demo.py` you can see that:
+By looking at the example code in [rai/examples/rosbot-xl-demo.py](../../examples/rosbot-xl-demo.py) `examples` you can see that:
 
 - This node has no information about the robot besides what it can get from `rai_whoami_node`.
 - Topics can be whitelisted to only receive information about the robot.
