@@ -13,13 +13,16 @@
 # limitations under the License.
 
 import os
+from functools import partial
 from typing import Dict, List
 
 import numpy as np
+import requests
 import sounddevice as sd
 import streamlit as st
 import tomli
 import tomli_w
+from elevenlabs import ElevenLabs
 from langchain_aws import BedrockEmbeddings, ChatBedrock
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
@@ -203,18 +206,34 @@ elif st.session_state.current_step == 2:
                     embeddings_model_vendor = st.text_input(
                         "Embeddings model vendor", value=current_embeddings_model_vendor
                     )
-        if use_advanced_config:
-            st.session_state.config["vendor"] = {
-                "simple_model": simple_model_vendor,
-                "complex_model": complex_model_vendor,
-                "embeddings_model": embeddings_model_vendor,
-            }
+
+                st.session_state.config["vendor"] = {
+                    "simple_model": simple_model_vendor,
+                    "complex_model": complex_model_vendor,
+                    "embeddings_model": embeddings_model_vendor,
+                }
         else:
             st.session_state.config["vendor"] = {
                 "simple_model": vendor,
                 "complex_model": vendor,
                 "embeddings_model": vendor,
             }
+        st.session_state.config["openai"] = {
+            "simple_model": simple_model,
+            "complex_model": complex_model,
+            "embeddings_model": embeddings_model,
+        }
+        st.session_state.config["aws"] = {
+            "simple_model": simple_model,
+            "complex_model": complex_model,
+            "embeddings_model": embeddings_model,
+        }
+        st.session_state.config["ollama"] = {
+            "simple_model": simple_model,
+            "complex_model": complex_model,
+            "embeddings_model": embeddings_model,
+        }
+
         # Navigation buttons
         col1, col2 = st.columns([1, 1])
         with col1:
@@ -641,6 +660,32 @@ elif st.session_state.current_step == 7:
                 return True
             return bool(os.getenv("LANGCHAIN_API_KEY"))
 
+        def test_tts():
+            vendor = st.session_state.config["tts"]["vendor"]
+            if vendor == "elevenlabs":
+                try:
+                    client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
+                    output = client.generate(text="Hello, world!")
+                    output = list(output)
+                    return True
+                except Exception as e:
+                    st.error(f"TTS error: {e}")
+                return False
+            elif vendor == "opentts":
+                try:
+                    params = {
+                        "voice": "glow-speak:en-us_mary_ann",
+                        "text": "Hello, world!",
+                    }
+                    response = requests.get(
+                        "http://localhost:5500/api/tts", params=params
+                    )
+                    if response.status_code == 200:
+                        return True
+                except Exception as e:
+                    st.error(f"TTS error: {e}")
+                return False
+
         def test_recording_device(index: int, sample_rate: int):
             try:
                 recording = sd.rec(
@@ -658,31 +703,32 @@ elif st.session_state.current_step == 7:
                 st.error(f"Recording device error: {e}")
                 return False
 
+        # TODO: Add ASR test
+        # TODO: Move tests to a separate file in tests/
+
         # Run tests
-        progress.progress(0.2, "Testing simple model...")
-        test_results["Simple Model"] = test_simple_model()
 
-        progress.progress(0.4, "Testing complex model...")
-        test_results["Complex Model"] = test_complex_model()
-
-        progress.progress(0.6, "Testing embeddings model...")
-        test_results["Embeddings Model"] = test_embeddings_model()
-
-        progress.progress(0.8, "Testing tracing...")
-        test_results["Langfuse"] = test_langfuse()
-        test_results["LangSmith"] = test_langsmith()
-
-        progress.progress(0.9, "Testing recording device...")
         devices = sd.query_devices()
         device_index = [device["name"] for device in devices].index(
             st.session_state.config["asr"]["recording_device_name"]
         )
         sample_rate = int(devices[device_index]["default_samplerate"])
-        test_results["Recording Device"] = test_recording_device(
-            device_index, sample_rate
-        )
-
-        progress.progress(1.0)
+        tests = [
+            (test_simple_model, "Simple Model"),
+            (test_complex_model, "Complex Model"),
+            (test_embeddings_model, "Embeddings Model"),
+            (test_langfuse, "Langfuse"),
+            (test_langsmith, "LangSmith"),
+            (test_tts, "TTS"),
+            (
+                partial(test_recording_device, device_index, sample_rate),
+                "Recording Device",
+            ),
+        ]
+        progress.progress(0.0, "Running tests...")
+        for i, (test, name) in enumerate(tests):
+            test_results[name] = test()
+            progress.progress((1 + i) / len(tests), f"Testing {name}...")
 
         # Display results in a table
         st.subheader("Test Results")
