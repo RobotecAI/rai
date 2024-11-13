@@ -23,7 +23,6 @@ import sounddevice as sd
 import torch
 from numpy.typing import NDArray
 from openwakeword.model import Model as OWWModel
-from openwakeword.utils import download_models
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import SingleThreadedExecutor
@@ -31,6 +30,12 @@ from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from scipy.signal import resample
 from std_msgs.msg import String
+
+from rai.hri.voice.asr import (
+    instantiate_oww_model,
+    instantiate_stream,
+    instantiate_vad_model,
+)
 
 VAD_SAMPLING_RATE = 16000  # default value used by silero vad
 DEFAULT_BLOCKSIZE = 1280
@@ -141,23 +146,13 @@ class ASRNode(Node):
 
     def _initialize_open_wake_word(self) -> Optional[OWWModel]:
         if self.use_wake_word:
-            download_models()
-            oww_model = OWWModel(
-                wakeword_models=[
-                    self.wake_word_model,
-                ],
-                inference_framework="onnx",
-            )
+            oww_model = instantiate_oww_model(self.wake_word_model)
             self.get_logger().info("Wake word model has been initialized")  # type: ignore
             return oww_model
         return None
 
     def _initialize_vad_model(self):
-        model, _ = torch.hub.load(
-            repo_or_dir="snakers4/silero-vad",
-            model="silero_vad",
-        )
-        return model
+        return instantiate_vad_model()
 
     def _setup_node_components(self):
         self.callback_group = ReentrantCallbackGroup()
@@ -182,7 +177,6 @@ class ASRNode(Node):
         self.language = (
             self.get_parameter("language").get_parameter_value().string_value
         )  # type: ignore
-
         self.use_wake_word = cast(
             bool,
             self.get_parameter("use_wake_word").get_parameter_value().bool_value,
@@ -235,13 +229,13 @@ class ASRNode(Node):
 
     def _initialize_asr_model(self):
         if self.model_vendor == "openai":
-            from rai_asr.asr_clients import OpenAIWhisper
+            from rai.hri.voice.asr_clients import OpenAIWhisper
 
             self.model = OpenAIWhisper(
                 self.model_name, VAD_SAMPLING_RATE, self.language
             )
         elif self.model_vendor == "whisper":
-            from rai_asr.asr_clients import LocalWhisper
+            from rai.hri.voice.asr_clients import LocalWhisper
 
             self.model = LocalWhisper(self.model_name, VAD_SAMPLING_RATE, self.language)
         else:
@@ -288,7 +282,7 @@ class ASRNode(Node):
 
         return False
 
-    def sd_callback(self, indata, frames, _, status):
+    def sd_callback(self, indata: NDArray[np.int16], frames: int, _, status: str):
         if status:
             self.get_logger().warning(f"Stream status: {status}")  # type: ignore
         indata = indata.flatten()
@@ -323,23 +317,12 @@ class ASRNode(Node):
                 self.stop_recording_and_transcribe()
 
     def initialize_sounddevice_stream(self):
-        sd.default.latency = ("low", "low")
         self.device_sample_rate = sd.query_devices(
             device=self.recording_device_number, kind="input"
         )[
             "default_samplerate"
         ]  # type: ignore
-        self.window_size_samples = int(
-            DEFAULT_BLOCKSIZE * self.device_sample_rate / VAD_SAMPLING_RATE
-        )
-        self.stream = sd.InputStream(
-            samplerate=self.device_sample_rate,
-            channels=1,
-            device=self.recording_device_number,
-            dtype="int16",
-            blocksize=self.window_size_samples,
-            callback=self.sd_callback,
-        )
+        self.stream = instantiate_stream(self.recording_device_number, self.sd_callback)
         self.stream.start()
 
     def reset_buffer(self):
