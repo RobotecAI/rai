@@ -36,7 +36,7 @@ if "config" not in st.session_state:
         with open("config.toml", "rb") as f:
             st.session_state.config = tomli.load(f)
     except FileNotFoundError:
-        st.session_state.config = {}
+        raise FileNotFoundError("config.toml not found. Please recreate it.")
 
 # Sidebar progress tracker
 st.sidebar.title("Configuration Progress")
@@ -98,155 +98,180 @@ elif st.session_state.current_step == 2:
     st.title("Model Configuration")
     st.info(
         """
-    This step configures which AI models will be used by your assistant. Different models have different capabilities and costs:
+    This step configures which AI models will be used by RAI's agents. Different models have different capabilities and costs:
     - Simple models are faster and cheaper, used for basic tasks
     - Complex models are more capable but slower, used for complex reasoning
     - Embedding models convert text into numerical representations for memory and search
     """
     )
 
+    def on_vendor_change():
+        st.session_state.vendor_index = ["openai", "aws", "ollama"].index(
+            st.session_state.vendor
+        )
+
     vendor = st.selectbox(
         "Which AI vendor would you like to use?",
         ["openai", "aws", "ollama"],
         placeholder="Select vendor",
         key="vendor",
+        index=st.session_state.get("vendor_index", 0),
+        on_change=on_vendor_change,
     )
 
     if vendor:
-        # Store vendor in config
         if vendor == "openai":
+            st.write(
+                f"Check out available {vendor} models [here](https://platform.openai.com/docs/models)"
+            )
             simple_model = st.text_input(
-                "Model for simple tasks", value="gpt-4o-mini", key="simple_model"
+                "Model for simple tasks",
+                value=st.session_state["config"]["openai"]["simple_model"],
+                key="simple_model",
             )
             complex_model = st.text_input(
                 "Model for complex tasks",
-                value="gpt-4o-2024-08-06",
+                value=st.session_state["config"]["openai"]["complex_model"],
                 key="complex_model",
             )
             embeddings_model = st.text_input(
                 "Embeddings model",
-                value="text-embedding-ada-002",
+                value=st.session_state["config"]["openai"]["embeddings_model"],
                 key="embeddings_model",
             )
-
-        elif vendor == "aws":
-            col1, col2 = st.columns(2)
-
-            with col1:
-                simple_model = st.text_input(
-                    "Model for simple tasks",
-                    value="anthropic.claude-3-haiku-20240307-v1:0",
-                )
-                complex_model = st.text_input(
-                    "Model for complex tasks",
-                    value="anthropic.claude-3-5-sonnet-20240620-v1:0",
-                )
-                embeddings_model = st.text_input(
-                    "Embeddings model", value="amazon.titan-embed-text-v1"
-                )
-
-            with col2:
-                aws_bedrock_region = st.text_input(
-                    "AWS Bedrock region", value="us-east-1"
-                )
-
-        elif vendor == "ollama":
-            base_url = st.text_input("Ollama base URL", value="http://localhost:11434")
-            simple_model = st.text_input("Model for simple tasks", value="llama3.2")
-            complex_model = st.text_input(
-                "Model for complex tasks", value="llama3.1:70b"
-            )
-            embeddings_model = st.text_input("Embeddings model", value="llama3.2")
-
-        st.subheader("Multivendor configuration (Advanced)")
-
-        st.write(
-            "If you have access to multiple vendors, you can configure the models to use different vendors."
-        )
-        use_advanced_config = st.checkbox(
-            "Use advanced configuration",
-            value=st.session_state.get("use_advanced_config", False),
-        )
-        st.session_state.use_advanced_config = use_advanced_config
-        advanced_config = st.container()
-        if use_advanced_config:
-            with advanced_config:
-                models_col, vendor_col = st.columns(2)
-                current_simple_model_vendor = st.session_state.config["vendor"][
-                    "simple_model"
-                ]
-                current_simple_model = st.session_state.config[
-                    current_simple_model_vendor
-                ]["simple_model"]
-                current_complex_model_vendor = st.session_state.config["vendor"][
-                    "complex_model"
-                ]
-                current_complex_model = st.session_state.config[
-                    current_complex_model_vendor
-                ]["complex_model"]
-                current_embeddings_model_vendor = st.session_state.config["vendor"][
-                    "embeddings_model"
-                ]
-                current_embeddings_model = st.session_state.config[
-                    current_embeddings_model_vendor
-                ]["embeddings_model"]
-                with models_col:
-                    simple_model = st.text_input(
-                        "Simple model", value=current_simple_model
-                    )
-                    complex_model = st.text_input(
-                        "Complex model", value=current_complex_model
-                    )
-                    embeddings_model = st.text_input(
-                        "Embeddings model", value=current_embeddings_model
-                    )
-                with vendor_col:
-                    simple_model_vendor = st.text_input(
-                        "Simple model vendor", value=current_simple_model_vendor
-                    )
-                    complex_model_vendor = st.text_input(
-                        "Complex model vendor", value=current_complex_model_vendor
-                    )
-                    embeddings_model_vendor = st.text_input(
-                        "Embeddings model vendor", value=current_embeddings_model_vendor
-                    )
-
-                st.session_state.config["vendor"] = {
-                    "simple_model": simple_model_vendor,
-                    "complex_model": complex_model_vendor,
-                    "embeddings_model": embeddings_model_vendor,
-                }
-        else:
-            st.session_state.config["vendor"] = {
-                "simple_model": vendor,
-                "complex_model": vendor,
-                "embeddings_model": vendor,
-            }
-        if vendor == "openai":
             st.session_state.config["openai"] = {
                 "simple_model": simple_model,
                 "complex_model": complex_model,
                 "embeddings_model": embeddings_model,
             }
+
         elif vendor == "aws":
-            st.session_state.config["aws"] = {
-                "simple_model": simple_model,
-                "complex_model": complex_model,
-                "embeddings_model": embeddings_model,
-            }
+            st.write(
+                f"Check out available {vendor} models [here](https://docs.aws.amazon.com/bedrock/latest/userguide/model-ids.html)"
+            )
+            col1, col2 = st.columns(2)
+
+            with col1:
+                simple_model = st.text_input(
+                    "Model for simple tasks",
+                    value=st.session_state["config"]["aws"]["simple_model"],
+                )
+                complex_model = st.text_input(
+                    "Model for complex tasks",
+                    value=st.session_state["config"]["aws"]["complex_model"],
+                )
+                embeddings_model = st.text_input(
+                    "Embeddings model",
+                    value=st.session_state["config"]["aws"]["embeddings_model"],
+                )
+                st.session_state.config["aws"]["simple_model"] = simple_model
+                st.session_state.config["aws"]["complex_model"] = complex_model
+                st.session_state.config["aws"]["embeddings_model"] = embeddings_model
+
+            with col2:
+                aws_bedrock_region = st.text_input(
+                    "AWS Bedrock region",
+                    value=st.session_state["config"]["aws"]["region_name"],
+                )
+                st.session_state.config["aws"]["region_name"] = aws_bedrock_region
+
         elif vendor == "ollama":
+            st.write(
+                f"Check out available {vendor} models [here](https://ollama.com/models)"
+            )
+            base_url = st.text_input(
+                "Ollama base URL",
+                value=st.session_state["config"]["ollama"]["base_url"],
+            )
+            simple_model = st.text_input(
+                "Model for simple tasks",
+                value=st.session_state["config"]["ollama"]["simple_model"],
+            )
+            complex_model = st.text_input(
+                "Model for complex tasks",
+                value=st.session_state["config"]["ollama"]["complex_model"],
+            )
+            embeddings_model = st.text_input(
+                "Embeddings model",
+                value=st.session_state["config"]["ollama"]["embeddings_model"],
+            )
             st.session_state.config["ollama"] = {
+                "base_url": base_url,
                 "simple_model": simple_model,
                 "complex_model": complex_model,
                 "embeddings_model": embeddings_model,
             }
 
-        # Navigation buttons
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            st.button("← Back", on_click=prev_step)
-        with col2:
-            st.button("Next →", on_click=next_step)
+    st.subheader("Multivendor configuration (Advanced)")
+    st.write(
+        "If you have access to multiple vendors, you can configure the models to use different vendors."
+    )
+
+    def on_advanced_config_change():
+        st.session_state.use_advanced_config = st.session_state.advanced_config_checkbox
+
+    if "use_advanced_config" not in st.session_state:
+        st.session_state.use_advanced_config = False
+
+    use_advanced_config = st.checkbox(
+        "Use advanced configuration",
+        value=st.session_state.use_advanced_config,
+        key="advanced_config_checkbox",
+        on_change=on_advanced_config_change,
+    )
+    st.session_state.use_advanced_config = use_advanced_config
+
+    advanced_config = st.container()
+    if use_advanced_config:
+        with advanced_config:
+
+            def on_model_vendor_change(model_type: str):
+                st.session_state.config["vendor"][f"{model_type}_model"] = (
+                    st.session_state[f"{model_type}_vendor_select"]
+                )
+
+            simple_model_vendor = st.selectbox(
+                "Simple model vendor",
+                options=["openai", "aws", "ollama"],
+                index=["openai", "aws", "ollama"].index(
+                    st.session_state.config["vendor"]["simple_model"]
+                ),
+                key="simple_vendor_select",
+                on_change=lambda: on_model_vendor_change("simple"),
+            )
+
+            complex_model_vendor = st.selectbox(
+                "Complex model vendor",
+                options=["openai", "aws", "ollama"],
+                index=["openai", "aws", "ollama"].index(
+                    st.session_state.config["vendor"]["complex_model"]
+                ),
+                key="complex_vendor_select",
+                on_change=lambda: on_model_vendor_change("complex"),
+            )
+
+            embeddings_model_vendor = st.selectbox(
+                "Embeddings model vendor",
+                options=["openai", "aws", "ollama"],
+                index=["openai", "aws", "ollama"].index(
+                    st.session_state.config["vendor"]["embeddings_model"]
+                ),
+                key="embeddings_vendor_select",
+                on_change=lambda: on_model_vendor_change("embeddings"),
+            )
+    else:
+        st.session_state.config["vendor"] = {
+            "simple_model": vendor,
+            "complex_model": vendor,
+            "embeddings_model": vendor,
+        }
+
+    # Navigation buttons
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        st.button("← Back", on_click=prev_step)
+    with col2:
+        st.button("Next →", on_click=next_step)
 
 elif st.session_state.current_step == 3:
     st.title("Tracing Configuration")
@@ -261,13 +286,32 @@ elif st.session_state.current_step == 3:
     """
     )
 
+    def on_langfuse_change():
+        st.session_state.config["tracing"]["langfuse"][
+            "use_langfuse"
+        ] = st.session_state.langfuse_checkbox
+
+    def on_langfuse_host_change():
+        st.session_state.config["tracing"]["langfuse"][
+            "host"
+        ] = st.session_state.langfuse_host_input
+
+    def on_langsmith_change():
+        st.session_state.config["tracing"]["langsmith"][
+            "use_langsmith"
+        ] = st.session_state.langsmith_checkbox
+
+    # Ensure tracing config exists
+    if "tracing" not in st.session_state.config:
+        st.session_state.config["tracing"] = {}
+
     # Langfuse configuration
     st.subheader("Langfuse Configuration")
     langfuse_enabled = st.checkbox(
         "Enable Langfuse",
-        value=st.session_state.config.get("tracing", {})
-        .get("langfuse", {})
-        .get("use_langfuse", False),
+        value=st.session_state.config["tracing"]["langfuse"]["use_langfuse"],
+        key="langfuse_checkbox",
+        on_change=on_langfuse_change,
     )
 
     if langfuse_enabled:
@@ -277,31 +321,24 @@ elif st.session_state.current_step == 3:
         - `LANGFUSE_SECRET_KEY="sk-lf-..."`
         - `LANGFUSE_PUBLIC_KEY="pk-lf-..."`
 
-        Find setup instructions [here](https://langfuse.com/docs/deployment/self-host)
+        Find setup instructions [here](https://langfuse.com/docs/deployment/local)
         """
         )
 
         langfuse_host = st.text_input(
             "Langfuse Host",
-            value=st.session_state.config.get("tracing", {})
-            .get("langfuse", {})
-            .get("host", "https://cloud.langfuse.com"),
+            value=st.session_state.config["tracing"]["langfuse"]["host"],
+            key="langfuse_host_input",
+            on_change=on_langfuse_host_change,
         )
-        # Store in config
-        if "tracing" not in st.session_state.config:
-            st.session_state.config["tracing"] = {}
-        st.session_state.config["tracing"]["langfuse"] = {
-            "use_langfuse": langfuse_enabled,
-            "host": langfuse_host,
-        }
 
     # Langsmith configuration
     st.subheader("LangSmith Configuration")
     langsmith_enabled = st.checkbox(
         "Enable LangSmith",
-        value=st.session_state.config.get("tracing", {})
-        .get("langsmith", {})
-        .get("use_langsmith", False),
+        value=st.session_state.config["tracing"]["langsmith"]["use_langsmith"],
+        key="langsmith_checkbox",
+        on_change=on_langsmith_change,
     )
 
     if langsmith_enabled:
@@ -329,6 +366,52 @@ elif st.session_state.current_step == 3:
         st.button("Next →", on_click=next_step)
 
 elif st.session_state.current_step == 4:
+
+    def on_recording_device_change():
+        st.session_state.config["asr"][
+            "recording_device_name"
+        ] = st.session_state.recording_device_select
+
+    def on_asr_vendor_change():
+        vendor = (
+            "whisper"
+            if st.session_state.asr_vendor_select == "Local Whisper (Free)"
+            else "openai"
+        )
+        st.session_state.config["asr"]["vendor"] = vendor
+
+    def on_language_change():
+        st.session_state.config["asr"]["language"] = st.session_state.language_input
+
+    def on_silence_grace_change():
+        st.session_state.config["asr"][
+            "silence_grace_period"
+        ] = st.session_state.silence_grace_input
+
+    def on_vad_threshold_change():
+        st.session_state.config["asr"][
+            "vad_threshold"
+        ] = st.session_state.vad_threshold_input
+
+    def on_wake_word_change():
+        st.session_state.config["asr"][
+            "use_wake_word"
+        ] = st.session_state.wake_word_checkbox
+
+    def on_wake_word_model_change():
+        st.session_state.config["asr"][
+            "wake_word_model"
+        ] = st.session_state.wake_word_model_input
+
+    def on_wake_word_threshold_change():
+        st.session_state.config["asr"][
+            "wake_word_threshold"
+        ] = st.session_state.wake_word_threshold_input
+
+    # Ensure asr config exists
+    if "asr" not in st.session_state.config:
+        st.session_state.config["asr"] = {}
+
     st.title("Speech Recognition Configuration")
     st.info(
         """
@@ -358,36 +441,47 @@ elif st.session_state.current_step == 4:
         )
     except ValueError:
         device_index = None
+
     recording_device_name = st.selectbox(
         "Default recording device",
         [device["name"] for device in recording_devices],
         placeholder="Select device",
         index=device_index,
+        key="recording_device_select",
+        on_change=on_recording_device_change,
     )
+
     refresh_devices = st.button("Refresh devices")
     if refresh_devices:
         recording_devices = get_recording_devices(reinitialize=True)
 
-    st.session_state.config["asr"]["recording_device_name"] = recording_device_name
+    # Get the current vendor from config and convert to display name
+    current_vendor = st.session_state.config.get("asr", {}).get("vendor", "whisper")
+    vendor_display_name = (
+        "Local Whisper (Free)" if current_vendor == "whisper" else "OpenAI (Cloud)"
+    )
+
     asr_vendor = st.selectbox(
         "Choose your ASR vendor",
         ["Local Whisper (Free)", "OpenAI (Cloud)"],
         placeholder="Select vendor",
+        index=["Local Whisper (Free)", "OpenAI (Cloud)"].index(vendor_display_name),
+        key="asr_vendor_select",
+        on_change=on_asr_vendor_change,
     )
+
     if asr_vendor == "Local Whisper (Free)":
         st.info(
             """
         Local Whisper is recommended to use when Nvidia GPU is available.
         """
         )
-        st.session_state.config["asr"]["vendor"] = "whisper"
     elif asr_vendor == "OpenAI (Cloud)":
         st.info(
             """
         OpenAI ASR uses the OpenAI API. Make sure to set `OPENAI_API_KEY` environment variable.
         """
         )
-        st.session_state.config["asr"]["vendor"] = "openai"
 
     # Add ASR parameters
     st.subheader("ASR Parameters")
@@ -396,6 +490,8 @@ elif st.session_state.current_step == 4:
         "Language code",
         value=st.session_state.config.get("asr", {}).get("language", "en"),
         help="Language code for the ASR model (e.g., 'en' for English)",
+        key="language_input",
+        on_change=on_language_change,
     )
 
     silence_grace_period = st.number_input(
@@ -405,6 +501,8 @@ elif st.session_state.current_step == 4:
         ),
         min_value=0.1,
         help="Grace period in seconds after silence to stop recording",
+        key="silence_grace_input",
+        on_change=on_silence_grace_change,
     )
 
     vad_threshold = st.slider(
@@ -413,17 +511,24 @@ elif st.session_state.current_step == 4:
         max_value=1.0,
         value=float(st.session_state.config.get("asr", {}).get("vad_threshold", 0.5)),
         help="Threshold for voice activity detection",
+        key="vad_threshold_input",
+        on_change=on_vad_threshold_change,
     )
 
     use_wake_word = st.checkbox(
         "Use wake word detection",
         value=st.session_state.config.get("asr", {}).get("use_wake_word", False),
+        key="wake_word_checkbox",
+        on_change=on_wake_word_change,
     )
+
     if use_wake_word:
         wake_word_model = st.text_input(
             "Wake word model",
             value=st.session_state.config.get("asr", {}).get("wake_word_model", ""),
             help="Wake word model to use",
+            key="wake_word_model_input",
+            on_change=on_wake_word_model_change,
         )
         wake_word_threshold = st.slider(
             "Wake word threshold",
@@ -433,27 +538,8 @@ elif st.session_state.current_step == 4:
                 st.session_state.config.get("asr", {}).get("wake_word_threshold", 0.5)
             ),
             help="Threshold for wake word detection",
-        )
-
-    # Update config
-    if "asr" not in st.session_state.config:
-        st.session_state.config["asr"] = {}
-
-    st.session_state.config["asr"].update(
-        {
-            "language": language,
-            "silence_grace_period": silence_grace_period,
-            "use_wake_word": use_wake_word,
-            "vad_threshold": vad_threshold,
-        }
-    )
-
-    if use_wake_word:
-        st.session_state.config["asr"].update(
-            {
-                "wake_word_model": wake_word_model,
-                "wake_word_threshold": wake_word_threshold,
-            }
+            key="wake_word_threshold_input",
+            on_change=on_wake_word_threshold_change,
         )
 
     col1, col2 = st.columns([1, 1])
@@ -463,6 +549,24 @@ elif st.session_state.current_step == 4:
         st.button("Next →", on_click=next_step)
 
 elif st.session_state.current_step == 5:
+
+    def on_tts_vendor_change():
+        vendor = (
+            "elevenlabs"
+            if st.session_state.tts_vendor_select == "ElevenLabs (Cloud)"
+            else "opentts"
+        )
+        st.session_state.config["tts"]["vendor"] = vendor
+
+    def on_keep_speaker_busy_change():
+        st.session_state.config["tts"][
+            "keep_speaker_busy"
+        ] = st.session_state.keep_speaker_busy_checkbox
+
+    # Ensure tts config exists
+    if "tts" not in st.session_state.config:
+        st.session_state.config["tts"] = {}
+
     st.title("Text to Speech Configuration")
     st.info(
         """
@@ -472,10 +576,19 @@ elif st.session_state.current_step == 5:
     """
     )
 
+    # Get the current vendor from config and convert to display name
+    current_vendor = st.session_state.config.get("tts", {}).get("vendor", "elevenlabs")
+    vendor_display_name = (
+        "ElevenLabs (Cloud)" if current_vendor == "elevenlabs" else "OpenTTS (Local)"
+    )
+
     tts_vendor = st.selectbox(
         "Choose your TTS vendor",
         ["ElevenLabs (Cloud)", "OpenTTS (Local)"],
         placeholder="Select vendor",
+        index=["ElevenLabs (Cloud)", "OpenTTS (Local)"].index(vendor_display_name),
+        key="tts_vendor_select",
+        on_change=on_tts_vendor_change,
     )
 
     if tts_vendor == "ElevenLabs (Cloud)":
@@ -489,8 +602,6 @@ elif st.session_state.current_step == 5:
         To get your API key, follow the instructions [here](https://elevenlabs.io/docs/api-reference/getting-started)
         """
         )
-        st.session_state.config["tts"]["vendor"] = "elevenlabs"
-
     elif tts_vendor == "OpenTTS (Local)":
         st.info(
             """
@@ -502,15 +613,21 @@ elif st.session_state.current_step == 5:
         To learn more about OpenTTS, visit [here](https://github.com/synesthesiam/opentts)
         """
         )
-        st.session_state.config["tts"]["vendor"] = "opentts"
-    keep_speaker_busy = st.checkbox("Keep speaker busy", value=False)
+
+    keep_speaker_busy = st.checkbox(
+        "Keep speaker busy",
+        value=st.session_state.config.get("tts", {}).get("keep_speaker_busy", False),
+        key="keep_speaker_busy_checkbox",
+        on_change=on_keep_speaker_busy_change,
+    )
+
     st.info(
         """
     Some speakers enter power-saving mode when inactive.
     Enabling this option will keep the speaker active, reducing audio playback latency.
     """
     )
-    st.session_state.config["tts"]["keep_speaker_busy"] = keep_speaker_busy
+
     col1, col2 = st.columns([1, 1])
     with col1:
         st.button("← Back", on_click=prev_step)

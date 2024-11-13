@@ -25,7 +25,7 @@ project = "rai"
 
 [tracing.langfuse]
 use_langfuse = false
-host = "https://cloud.langfuse.com"
+host = "http://localhost:3000"
 
 [tracing.langsmith]
 use_langsmith = false
