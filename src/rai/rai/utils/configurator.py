@@ -370,7 +370,7 @@ elif st.session_state.current_step == 4:
     if asr_vendor == "Local Whisper (Free)":
         st.info(
             """
-        Recommended to use when Nvidia GPU is available.
+        Local Whisper is recommended to use when Nvidia GPU is available.
         """
         )
         st.session_state.config["asr"]["vendor"] = "whisper"

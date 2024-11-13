@@ -111,6 +111,7 @@ rosdep install --from-paths src --ignore-src -r -y
 Run the configuration tool to set up your vendor and other settings:
 
 ```bash
+poetry shell
 streamlit run src/rai/rai/utils/configurator.py
 ```
 
