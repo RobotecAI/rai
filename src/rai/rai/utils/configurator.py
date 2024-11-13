@@ -163,7 +163,11 @@ elif st.session_state.current_step == 2:
         st.write(
             "If you have access to multiple vendors, you can configure the models to use different vendors."
         )
-        use_advanced_config = st.checkbox("Use advanced configuration", value=False)
+        use_advanced_config = st.checkbox(
+            "Use advanced configuration",
+            value=st.session_state.get("use_advanced_config", False),
+        )
+        st.session_state.use_advanced_config = use_advanced_config
         advanced_config = st.container()
         if use_advanced_config:
             with advanced_config:
@@ -218,21 +222,24 @@ elif st.session_state.current_step == 2:
                 "complex_model": vendor,
                 "embeddings_model": vendor,
             }
-        st.session_state.config["openai"] = {
-            "simple_model": simple_model,
-            "complex_model": complex_model,
-            "embeddings_model": embeddings_model,
-        }
-        st.session_state.config["aws"] = {
-            "simple_model": simple_model,
-            "complex_model": complex_model,
-            "embeddings_model": embeddings_model,
-        }
-        st.session_state.config["ollama"] = {
-            "simple_model": simple_model,
-            "complex_model": complex_model,
-            "embeddings_model": embeddings_model,
-        }
+        if vendor == "openai":
+            st.session_state.config["openai"] = {
+                "simple_model": simple_model,
+                "complex_model": complex_model,
+                "embeddings_model": embeddings_model,
+            }
+        elif vendor == "aws":
+            st.session_state.config["aws"] = {
+                "simple_model": simple_model,
+                "complex_model": complex_model,
+                "embeddings_model": embeddings_model,
+            }
+        elif vendor == "ollama":
+            st.session_state.config["ollama"] = {
+                "simple_model": simple_model,
+                "complex_model": complex_model,
+                "embeddings_model": embeddings_model,
+            }
 
         # Navigation buttons
         col1, col2 = st.columns([1, 1])
