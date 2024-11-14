@@ -106,6 +106,18 @@ rosdep install --from-paths src --ignore-src -r -y
 > poetry install --with openset,nomad
 > ```
 
+#### 1.4 Configure RAI
+
+Run the configuration tool to set up your vendor and other settings:
+
+```bash
+poetry shell
+streamlit run src/rai/rai/utils/configurator.py
+```
+
+> [!TIP]  
+> If the web browser does not open automatically, open the URL displayed in the terminal manually.
+
 ### 2. Build the project:
 
 #### 2.1 Build RAI workspace
