@@ -172,7 +172,7 @@ RAI is one of the main projects in focus of the [Embodied AI Community Group](ht
 
 ### Publicity
 
-- A talk about [RAI at ROSCon 2024](https://vimeo.com/1022195000#t=8h20m16s).
+- A talk about [RAI at ROSCon 2024](https://vimeo.com/1026029511).
 
 ### RAI Q&A
 
