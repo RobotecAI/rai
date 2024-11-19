@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
+
 # The contents of this file include code from (https://github.com/robodhruv/visualnav-transformer) as well as fork (https://github.com/RobotecAI/visualnav-transformer-ros2) with the following license:
 # MIT License
 
