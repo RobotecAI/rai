@@ -35,11 +35,14 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Create uv venv
+        run: uv venv --system-site-packages --allow-existing .venv
 
       - name: Install python dependencies
-        run: poetry install --with openset,nomad
+        run: uv sync --all-extras
 
       - name: Update rosdep
         shell: bash
@@ -63,4 +66,4 @@ jobs:
         run: |
           source /opt/ros/${{ matrix.ros_distro }}/setup.bash
           source install/setup.bash
-          poetry run pytest
+          uv run pytest
