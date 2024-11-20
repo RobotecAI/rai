@@ -8,14 +8,8 @@ on:
 
 jobs:
   build-and-test-ros2:
-    if: github.event.pull_request.draft == false
-
     runs-on:
-      - self-hosted
-      - ${{ matrix.ros_distro }}
-
-    continue-on-error: true
-
+      - ubuntu-22.04
     strategy:
       matrix:
         ros_distro:
@@ -26,12 +20,12 @@ jobs:
       image: osrf/ros:${{ matrix.ros_distro }}-desktop-full
 
     steps:
-      - name: Clean up workspace
-        run: |
-          ls -la $GITHUB_WORKSPACE
-          rm -rf $GITHUB_WORKSPACE/* || true
-          rm -rf $GITHUB_WORKSPACE/.??* || true
-          ls -la $GITHUB_WORKSPACE
+      # - name: Clean up workspace
+      #   run: |
+      #     ls -la $GITHUB_WORKSPACE
+      #     rm -rf $GITHUB_WORKSPACE/* || true
+      #     rm -rf $GITHUB_WORKSPACE/.??* || true
+      #     ls -la $GITHUB_WORKSPACE
 
       - uses: actions/checkout@v4
 
