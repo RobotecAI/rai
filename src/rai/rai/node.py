@@ -580,7 +580,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         state_dict["logs_summary"] = self.rosout_buffer.summarize()
         te = time.perf_counter() - ts
         self.get_logger().info(f"Logs summary retrieved in: {te:.2f}")
-        self.get_logger().info(f"{state_dict=}")
+        self.get_logger().debug(f"{state_dict=}")
         self.state_dict = state_dict
 
     def get_robot_state(self) -> Dict[str, str]:
