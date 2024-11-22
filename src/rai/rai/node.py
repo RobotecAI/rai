@@ -109,7 +109,8 @@ def append_whoami_info_to_prompt(
         prompt=prompt,
     )
 
-    node.get_logger().info(f"System prompt initialized: {system_prompt}")
+    node.get_logger().info("System prompt initialized")
+    node.get_logger().debug(system_prompt)
     return system_prompt
 
 
