@@ -37,7 +37,16 @@ def initialize_ros_nodes(
         queue=_feedbacks_queue,
         robot_description_package=robot_description_package,
     )
-    whitelist = ros2_whitelist.read_text().splitlines() if ros2_whitelist else None
+    whitelist = None
+    if ros2_whitelist:
+        try:
+            if not ros2_whitelist.is_file():
+                raise ValueError(f"Whitelist path {ros2_whitelist} is not a file")
+            whitelist = ros2_whitelist.read_text().splitlines()
+            if not all(line.strip() for line in whitelist):
+                raise ValueError("Whitelist contains empty lines")
+        except Exception as e:
+            raise RuntimeError(f"Failed to load whitelist from {ros2_whitelist}: {str(e)}")
 
     rai_node = RaiBaseNode(node_name="__rai_node__", whitelist=whitelist)
 
