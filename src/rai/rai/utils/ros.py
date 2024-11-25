@@ -62,7 +62,7 @@ class NodeDiscovery:
     topics_and_types: Dict[str, str] = field(default_factory=dict)
     services_and_types: Dict[str, str] = field(default_factory=dict)
     actions_and_types: Dict[str, str] = field(default_factory=dict)
-    whitelist: Optional[List[str]] = field(default_factory=list)
+    allowlist: Optional[List[str]] = field(default_factory=list)
 
     def set(self, topics, services, actions):
         def to_dict(info: List[Tuple[str, List[str]]]) -> Dict[str, str]:
@@ -71,16 +71,16 @@ class NodeDiscovery:
         self.topics_and_types = to_dict(topics)
         self.services_and_types = to_dict(services)
         self.actions_and_types = to_dict(actions)
-        if self.whitelist is not None:
-            self.__filter(self.whitelist)
+        if self.allowlist is not None:
+            self.__filter(self.allowlist)
 
-    def __filter(self, whitelist: List[str]):
+    def __filter(self, allowlist: List[str]):
         for d in [
             self.topics_and_types,
             self.services_and_types,
             self.actions_and_types,
         ]:
-            to_remove = [k for k in d if k not in whitelist]
+            to_remove = [k for k in d if k not in allowlist]
             for k in to_remove:
                 d.pop(k)
 

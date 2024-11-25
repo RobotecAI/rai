@@ -28,7 +28,7 @@ from rai_hmi.base import BaseHMINode
 def initialize_ros_nodes(
     _feedbacks_queue: Queue,
     robot_description_package: Optional[str],
-    ros2_whitelist: Optional[Path],
+    ros2_allowlist: Optional[Path],
 ) -> Tuple[BaseHMINode, RaiBaseNode]:
     rclpy.init()
 
@@ -37,9 +37,20 @@ def initialize_ros_nodes(
         queue=_feedbacks_queue,
         robot_description_package=robot_description_package,
     )
-    whitelist = ros2_whitelist.read_text().splitlines() if ros2_whitelist else []
+    allowlist = None
+    if ros2_allowlist:
+        try:
+            if not ros2_allowlist.is_file():
+                raise ValueError(f"Allowlist path {ros2_allowlist} is not a file")
+            allowlist = ros2_allowlist.read_text().splitlines()
+            if not all(line.strip() for line in allowlist):
+                raise ValueError("Allowlist contains empty lines")
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to load allowlist from {ros2_allowlist}: {str(e)}"
+            )
 
-    rai_node = RaiBaseNode(node_name="__rai_node__", whitelist=whitelist)
+    rai_node = RaiBaseNode(node_name="__rai_node__", allowlist=allowlist)
 
     executor = MultiThreadedExecutor()
     executor.add_node(hmi_node)

@@ -109,7 +109,8 @@ def append_whoami_info_to_prompt(
         prompt=prompt,
     )
 
-    node.get_logger().info(f"System prompt initialized: {system_prompt}")
+    node.get_logger().info("System prompt initialized")
+    node.get_logger().debug(f"System prompt:\n{system_prompt}")
     return system_prompt
 
 
@@ -244,7 +245,7 @@ class RaiAsyncToolsNode(Node):
 class RaiBaseNode(Node):
     def __init__(
         self,
-        whitelist: Optional[List[str]] = None,
+        allowlist: Optional[List[str]] = None,
         *args,
         **kwargs,
     ):
@@ -258,7 +259,7 @@ class RaiBaseNode(Node):
             self.DISCOVERY_FREQ,
             self.discovery,
         )
-        self.ros_discovery_info = NodeDiscovery(whitelist=whitelist)
+        self.ros_discovery_info = NodeDiscovery(allowlist=allowlist)
         self.discovery()
         self.qos_profile = QoSProfile(
             history=HistoryPolicy.KEEP_LAST,
@@ -343,14 +344,14 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         system_prompt: str,
         observe_topics: Optional[List[str]] = None,
         observe_postprocessors: Optional[Dict[str, Callable[[Any], Any]]] = None,
-        whitelist: Optional[List[str]] = None,
+        allowlist: Optional[List[str]] = None,
         tools: Optional[List[Type[BaseTool]]] = None,
         *args,
         **kwargs,
     ):
         super().__init__(
             node_name="rai_node",
-            whitelist=whitelist,
+            allowlist=allowlist,
             *args,
             **kwargs,
         )
@@ -579,7 +580,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         state_dict["logs_summary"] = self.rosout_buffer.summarize()
         te = time.perf_counter() - ts
         self.get_logger().info(f"Logs summary retrieved in: {te:.2f}")
-        self.get_logger().info(f"{state_dict=}")
+        self.get_logger().debug(f"{state_dict=}")
         self.state_dict = state_dict
 
     def get_robot_state(self) -> Dict[str, str]:

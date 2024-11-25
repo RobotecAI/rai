@@ -73,7 +73,7 @@ def main(allowlist: Optional[Path] = None):
     node = RaiStateBasedLlmNode(
         observe_topics=None,
         observe_postprocessors=None,
-        whitelist=ros2_allowlist,
+        allowlist=ros2_allowlist,
         system_prompt=SYSTEM_PROMPT,
         tools=[
             Ros2PubMessageTool,
