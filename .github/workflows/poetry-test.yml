@@ -11,8 +11,7 @@ jobs:
     if: github.event.pull_request.draft == false
 
     runs-on:
-      - self-hosted
-      - ${{ matrix.ros_distro }}
+      - ubuntu-22.04
 
     continue-on-error: true
 
@@ -26,13 +25,6 @@ jobs:
       image: osrf/ros:${{ matrix.ros_distro }}-desktop-full
 
     steps:
-      - name: Clean up workspace
-        run: |
-          ls -la $GITHUB_WORKSPACE
-          rm -rf $GITHUB_WORKSPACE/* || true
-          rm -rf $GITHUB_WORKSPACE/.??* || true
-          ls -la $GITHUB_WORKSPACE
-
       - uses: actions/checkout@v4
 
       - name: Install Poetry
