@@ -244,7 +244,7 @@ class RaiAsyncToolsNode(Node):
 class RaiBaseNode(Node):
     def __init__(
         self,
-        whitelist: Optional[List[str]] = None,
+        allowlist: Optional[List[str]] = None,
         *args,
         **kwargs,
     ):
@@ -258,7 +258,7 @@ class RaiBaseNode(Node):
             self.DISCOVERY_FREQ,
             self.discovery,
         )
-        self.ros_discovery_info = NodeDiscovery(whitelist=whitelist)
+        self.ros_discovery_info = NodeDiscovery(allowlist=allowlist)
         self.discovery()
         self.qos_profile = QoSProfile(
             history=HistoryPolicy.KEEP_LAST,
@@ -343,14 +343,14 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         system_prompt: str,
         observe_topics: Optional[List[str]] = None,
         observe_postprocessors: Optional[Dict[str, Callable[[Any], Any]]] = None,
-        whitelist: Optional[List[str]] = None,
+        allowlist: Optional[List[str]] = None,
         tools: Optional[List[Type[BaseTool]]] = None,
         *args,
         **kwargs,
     ):
         super().__init__(
             node_name="rai_node",
-            whitelist=whitelist,
+            allowlist=allowlist,
             *args,
             **kwargs,
         )
