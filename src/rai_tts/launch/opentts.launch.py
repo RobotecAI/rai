@@ -56,7 +56,9 @@ def generate_launch_description():
                 ],
                 name="ffplay_sine_wave",
                 output="screen",
-                condition=IfCondition(LaunchConfiguration("keep_speaker_busy")),
+                condition=IfCondition(
+                    LaunchConfiguration("keep_speaker_busy", default=False)
+                ),
             ),
         ]
     )
