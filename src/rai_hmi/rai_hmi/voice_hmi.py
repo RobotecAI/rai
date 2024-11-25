@@ -130,9 +130,8 @@ class VoiceHMINode(BaseHMINode):
             if node_name == "thinker":
                 last_message = state[node_name]["messages"][-1].content
                 if last_message != "":
-                    self.get_logger().info(
-                        f'Sending message to human: "{last_message}"'
-                    )
+                    self.get_logger().info("Sending reply to human")
+                    self.get_logger().debug(f'Message: "{last_message}"')
                     self.split_and_publish(last_message)
 
         self.get_logger().info("Processing finished")
