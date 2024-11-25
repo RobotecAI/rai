@@ -37,7 +37,7 @@ def initialize_ros_nodes(
         queue=_feedbacks_queue,
         robot_description_package=robot_description_package,
     )
-    whitelist = ros2_whitelist.read_text().splitlines() if ros2_whitelist else []
+    whitelist = ros2_whitelist.read_text().splitlines() if ros2_whitelist else None
 
     rai_node = RaiBaseNode(node_name="__rai_node__", whitelist=whitelist)
 
