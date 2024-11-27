@@ -400,6 +400,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         self.logs_parser = create_logs_parser(
             logs_parser_type, logs_parser_node, callback_group=self.callback_group
         )
+        self.simple_llm = get_llm_model(model_type="simple_model")
 
     def summarize_logs(self) -> str:
         return self.logs_parser.summarize()
