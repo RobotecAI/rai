@@ -42,6 +42,7 @@ public:
     max_lines_ = static_cast<uint16_t>(get_parameter("max_lines").as_int());
     include_meta_ = get_parameter("include_meta").as_bool();
     clear_on_retrieval_ = get_parameter("clear_on_retrieval").as_bool();
+    RCLCPP_INFO(get_logger(), "filters: %s", std::to_string(filters_.size()).c_str());
 
     if (max_lines_ < 1) {
       RCLCPP_WARN(get_logger(), "Invalid value of max_lines_ parameter, reverting to default");

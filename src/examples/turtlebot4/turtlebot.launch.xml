@@ -18,13 +18,18 @@
     <arg name="robot_description_package" default = "turtlebot4_whoami"/>
     <arg name="game_launcher" default = ""/>
 
+    <arg name="max_lines" default = "100"/>
+    <arg name="include_meta" default = "true"/>
+    <arg name="clear_on_retrieval" default = "true"/>
+
     <node pkg="rai_whoami" exec="rai_whoami_node" name="rai_whoami_node" output="screen">
         <param name="robot_description_package" value="$(var robot_description_package)" />
     </node>
-    <executable
-        cmd="streamlit run src/rai_hmi/rai_hmi/text_hmi.py --server.headless true $(var robot_description_package) src/examples/turtlebot4/allowlist.txt"
-        output="screen">
-    </executable>
+    <node pkg="rai_state_logs" exec="rai_state_logs_node" name="rai_state_logs_node" output="screen">
+        <param name="max_lines" value="$(var max_lines)" />
+        <param name="include_meta" value="$(var include_meta)" />
+        <param name="clear_on_retrieval" value="$(var clear_on_retrieval)" />
+    </node>
     <executable
         cmd="python src/examples/turtlebot4/turtlebot_demo.py --allowlist src/examples/turtlebot4/allowlist.txt"
         output="screen">
