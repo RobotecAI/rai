@@ -24,7 +24,7 @@ def generate_launch_description() -> LaunchDescription:
         [
             DeclareLaunchArgument(
                 "max_lines",
-                default_value="100",
+                default_value="512",
                 description="Maximum number of lines to store in rai_state_logs (integer)",
             ),
             DeclareLaunchArgument(
