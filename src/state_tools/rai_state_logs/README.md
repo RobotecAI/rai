@@ -5,7 +5,8 @@ Runtime log digests for LLM-driven debugging, summaries and state updates.
 ## How it works?
 
 The node collects logs in the system based on severity and, optionally, a user-set filter, up to a certain line count, keeping a rolling window.
--  By default logs with level >= WARN are collected.
+
+- By default logs with level >= WARN are collected.
 
 ### Parameters
 
