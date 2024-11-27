@@ -2,7 +2,7 @@
 
 Runtime log digests for LLM-driven debugging, summaries and state updates.
 
-## How it works?
+## How does it work?
 
 The node collects logs in the system based on severity and, optionally, a user-set filter, up to a certain line count, keeping a rolling window.
 
