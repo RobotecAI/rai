@@ -35,7 +35,7 @@ def run_with_timeout(cmd: List[str], timeout_sec: int):
 def run_command(cmd: List[str], timeout: int = 5):
     # Validate command safety by checking for shell operators
     # Block potentially dangerous characters
-    if any(char in cmd for char in FORBIDDEN_CHARACTERS):
+    if any(char in " ".join(cmd) for char in FORBIDDEN_CHARACTERS):
         raise ValueError(
             "Command is not safe to run. The command contains forbidden characters."
         )
