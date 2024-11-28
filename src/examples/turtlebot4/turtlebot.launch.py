@@ -26,7 +26,10 @@ def generate_launch_description():
         [
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
-                    [FindPackageShare("rai_bringup"), "/launch/sim_demo.launch.py"]
+                    [
+                        FindPackageShare("rai_bringup"),
+                        "/launch/sim_whoami_demo.launch.py",
+                    ]
                 ),
                 launch_arguments={
                     "allowlist": "src/examples/turtlebot4/allowlist.txt",
