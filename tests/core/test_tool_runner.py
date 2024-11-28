@@ -31,6 +31,20 @@ def get_image():
     }
 
 
+def test_tool_runner_invalid_call():
+    runner = ToolRunner(tools=[ros2_topic], logger=logging.getLogger(__name__))
+    tool_call = ToolCall(name="bad_fn", args={"command": "list"}, id="12345")
+    state = {"messages": [AIMessage(content="", tool_calls=[tool_call])]}
+    output = runner.invoke(state)
+    assert isinstance(
+        output["messages"][0], AIMessage
+    ), "First message is not an AIMessage"
+    assert isinstance(
+        output["messages"][1], ToolMessage
+    ), "Tool output is not a tool message"
+    assert output["messages"][1].status == "error"
+
+
 def test_tool_runner():
     runner = ToolRunner(tools=[ros2_topic], logger=logging.getLogger(__name__))
 
