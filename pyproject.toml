@@ -87,3 +87,5 @@ markers = [
     "billable: marks test as billable  (deselect with '-m \"not billable\"')",
 ]
 addopts = "-m 'not billable' --ignore=src"
+log_cli = true
+log_cli_level = "DEBUG"
