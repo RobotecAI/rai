@@ -75,7 +75,7 @@ class MockBehaviorTreeNode(Node):
 
             # Send goal to perform_task action server
             goal_msg = Task.Goal()
-            goal_msg.priority = 10
+            goal_msg.priority = "high"
             goal_msg.description = ""
             goal_msg.task = "Anomaly detected. Please decide what to do."
 
