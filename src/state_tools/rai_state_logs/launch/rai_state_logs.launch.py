@@ -48,6 +48,8 @@ def generate_launch_description() -> LaunchDescription:
                     {"max_lines": LaunchConfiguration("max_lines")},
                     {"include_meta": LaunchConfiguration("include_meta")},
                     {"clear_on_retrieval": LaunchConfiguration("clear_on_retrieval")},
+                    # NOTE(`boczekbartek`): `filters` parameter is skipped for now due
+                    # to issues with setting the default value properly
                 ],
             ),
         ]
