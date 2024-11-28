@@ -28,39 +28,43 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     robot_description_package = LaunchConfiguration("robot_description_package")
     game_launcher = LaunchConfiguration("game_launcher")
+    allowlist = LaunchConfiguration("allowlist")
+    demo_script = LaunchConfiguration("demo_script")
 
     return LaunchDescription(
         [
             DeclareLaunchArgument(
+                "demo_script",
+                description="Path to the demo script",
+            ),
+            DeclareLaunchArgument(
                 "game_launcher",
                 description="Path to the O3DE game launcher executable",
+            ),
+            DeclareLaunchArgument(
+                "allowlist",
+                default_value="src/examples/turtlebot4/allowlist.txt",
+                description="A list of ros interfaces that are exposed to rai agent.",
             ),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     [FindPackageShare("rai_whoami"), "/launch/rai_whoami.launch.py"]
-                )
+                ),
+                launch_arguments={
+                    "robot_description_package": robot_description_package,
+                }.items(),
             ),
             ExecuteProcess(
-                cmd=[
-                    "python",
-                    "examples/rosbot-xl-demo.py",
-                    "--allowlist",
-                    "examples/rosbotxl_allowlist.txt",
-                ],
+                cmd=["python", demo_script, "--allowlist", allowlist],
                 output="screen",
             ),
             ExecuteProcess(
                 cmd=shlex.split("streamlit run src/rai_hmi/rai_hmi/text_hmi.py")
-                + [robot_description_package, "examples/rosbotxl_allowlist.txt"],
+                + [robot_description_package, allowlist],
                 output="screen",
             ),
             ExecuteProcess(
                 cmd=[game_launcher, "-bg_ConnectToAssetProcessor=0"],
-                output="screen",
-            ),
-            ExecuteProcess(
-                cmd=["bash", "run-nav.bash"],
-                cwd="src/examples/rai-rosbot-xl-demo",
                 output="screen",
             ),
         ]
