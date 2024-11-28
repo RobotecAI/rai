@@ -41,12 +41,17 @@ def generate_launch_description():
                 )
             ),
             ExecuteProcess(
-                cmd=["python", "examples/rosbot-xl-demo.py"],
+                cmd=[
+                    "python",
+                    "examples/rosbot-xl-demo.py",
+                    "--allowlist",
+                    "examples/rosbotxl_allowlist.txt",
+                ],
                 output="screen",
             ),
             ExecuteProcess(
                 cmd=shlex.split("streamlit run src/rai_hmi/rai_hmi/text_hmi.py")
-                + [robot_description_package, "src/examples/turtlebot4/allowlist.txt"],
+                + [robot_description_package, "examples/rosbotxl_allowlist.txt"],
                 output="screen",
             ),
             ExecuteProcess(

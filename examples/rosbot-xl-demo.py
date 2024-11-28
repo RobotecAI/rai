@@ -11,7 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import argparse
+from pathlib import Path
+from typing import Optional
 
 import rclpy
 import rclpy.executors
@@ -24,8 +26,6 @@ from rai.tools.ros.native import (
     Ros2PubMessageTool,
     Ros2ShowMsgInterfaceTool,
 )
-
-# from rai.tools.ros.native_actions import Ros2RunActionSync
 from rai.tools.ros.native_actions import (
     Ros2CancelAction,
     Ros2GetActionResult,
@@ -36,43 +36,18 @@ from rai.tools.ros.native_actions import (
 from rai.tools.ros.tools import GetCurrentPositionTool
 from rai.tools.time import WaitForSecondsTool
 
+p = argparse.ArgumentParser()
+p.add_argument("--allowlist", type=Path, required=False, default=None)
 
-def main():
+
+def main(allowlist: Optional[Path] = None):
     rclpy.init()
-
     # observe_topics = [
     #     "/camera/camera/color/image_raw",
     # ]
     #
     # observe_postprocessors = {"/camera/camera/color/image_raw": describe_ros_image}
-
-    topics_allowlist = [
-        "/rosout",
-        "/camera/camera/color/image_raw",
-        "/camera/camera/depth/image_rect_raw",
-        "/map",
-        "/scan",
-        "/diagnostics",
-        "/cmd_vel",
-        "/led_strip",
-    ]
-
-    actions_allowlist = [
-        "/backup",
-        "/compute_path_through_poses",
-        "/compute_path_to_pose",
-        "/dock_robot",
-        "/drive_on_heading",
-        "/follow_gps_waypoints",
-        "/follow_path",
-        "/follow_waypoints",
-        "/navigate_through_poses",
-        "/navigate_to_pose",
-        "/smooth_path",
-        "/spin",
-        "/undock_robot",
-        "/wait",
-    ]
+    ros2_allowlist = allowlist.read_text().splitlines() if allowlist is not None else []
 
     SYSTEM_PROMPT = """You are an autonomous robot connected to ros2 environment. Your main goal is to fulfill the user's requests.
     Do not make assumptions about the environment you are currently in.
@@ -126,7 +101,7 @@ def main():
     node = RaiStateBasedLlmNode(
         observe_topics=None,
         observe_postprocessors=None,
-        allowlist=topics_allowlist + actions_allowlist,
+        allowlist=ros2_allowlist,
         system_prompt=SYSTEM_PROMPT,
         tools=[
             Ros2PubMessageTool,
@@ -150,4 +125,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    args = p.parse_args()
+    main(**vars(args))
