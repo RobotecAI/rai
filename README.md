@@ -49,6 +49,7 @@ The RAI framework aims to:
 - [Features](#features)
 - [Setup](#setup)
 - [Usage examples (demos)](#simulation-demos)
+- [Debugging Assistant](#debugging-assistant)
 - [Developer resources](#developer-resources)
 
 ## Features
@@ -66,6 +67,7 @@ The RAI framework aims to:
 - [x] Improved Human-Robot Interaction with voice and text.
 - [x] Additional tooling such as GroundingDino.
 - [x] Support for at least 3 different AI vendors.
+- [x] Debugging assistant for ROS 2.
 - [ ] SDK for RAI developers.
 - [ ] UI for configuration to select features and tools relevant for your deployment.
 
@@ -152,6 +154,10 @@ Once you know your way around RAI, try the following challenges, with the aid th
 - Run RAI on your own robot and talk to it, asking questions about what is in its documentation (and others!).
 - Implement additional tools and use them in your interaction.
 - Try a complex, multi-step task for your robot, such as going to several points to perform observations!
+
+## Debugging Assistant
+
+Use the [debugging assistant](./docs/debugging_assistant.md) to inspect ROS 2 network state and troubleshoot issues.
 
 ### Simulation demos
 
