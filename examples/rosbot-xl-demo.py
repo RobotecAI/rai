@@ -47,7 +47,16 @@ def main(allowlist: Optional[Path] = None):
     # ]
     #
     # observe_postprocessors = {"/camera/camera/color/image_raw": describe_ros_image}
-    ros2_allowlist = allowlist.read_text().splitlines() if allowlist is not None else []
+    ros2_allowlist = []
+    if allowlist is not None:
+        try:
+            content = allowlist.read_text().strip()
+            if content:
+                ros2_allowlist = content.splitlines()
+            else:
+                rclpy.logging.get_logger("rosbot_xl_demo").warning("Allowlist file is empty")
+        except Exception as e:
+            rclpy.logging.get_logger("rosbot_xl_demo").error(f"Failed to read allowlist: {e}")
 
     SYSTEM_PROMPT = """You are an autonomous robot connected to ros2 environment. Your main goal is to fulfill the user's requests.
     Do not make assumptions about the environment you are currently in.
