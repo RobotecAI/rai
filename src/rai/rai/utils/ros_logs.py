@@ -43,9 +43,7 @@ def create_logs_parser(
         return RaiStateLogsParser(node)
     elif parser_type == "llm":
         if any([v is None for v in [llm, callback_group, bufsize]]):
-            raise ValueError(
-                "Must provide llm, callback_group, qos_profile, and bufsize"
-            )
+            raise ValueError("Must provide llm, callback_group, and bufsize")
         return LlmRosoutParser(llm, node, callback_group, bufsize)
     else:
         raise ValueError(f"Unknown summarizer type: {parser_type}")
