@@ -577,7 +577,11 @@ class RaiStateBasedLlmNode(RaiBaseNode):
             state_dict[t] = msg
 
         ts = time.perf_counter()
-        state_dict["logs_summary"] = self.summarize_logs()
+        try:
+            state_dict["logs_summary"] = self.summarize_logs()
+        except Exception as e:
+            self.get_logger().error(f"Error summarizing logs: {e}")
+            state_dict["logs_summary"] = ""
         te = time.perf_counter() - ts
         self.get_logger().info(f"Logs summary retrieved in: {te:.2f}")
         self.get_logger().debug(f"{state_dict=}")
