@@ -117,7 +117,7 @@ def main():
         f"{tractor_prefix}/camera_image_color": describe_ros_image
     }
 
-    topics_whitelist = [
+    topics_allowlist = [
         "/rosout",
         f"{tractor_prefix}/camera_image_color",
         # Services
@@ -127,7 +127,7 @@ def main():
         f"{tractor_prefix}/replan",
     ]
 
-    actions_whitelist = []
+    actions_allowlist = []
 
     SYSTEM_PROMPT = f"""
     You are autonomous tractor {tractor_number} operating in an agricultural field. You are activated whenever the tractor stops due to an unexpected situation. Your task is to call a service based on your assessment of the situation.
@@ -146,7 +146,7 @@ def main():
     rai_node = RaiStateBasedLlmNode(
         observe_topics=observe_topics,
         observe_postprocessors=observe_postprocessors,
-        whitelist=topics_whitelist + actions_whitelist,
+        allowlist=topics_allowlist + actions_allowlist,
         system_prompt=SYSTEM_PROMPT,
         tools=[
             Ros2ShowMsgInterfaceTool,
