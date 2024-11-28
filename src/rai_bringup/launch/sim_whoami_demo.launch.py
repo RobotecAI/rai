@@ -48,6 +48,14 @@ def generate_launch_description():
             ),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
+                    [
+                        FindPackageShare("rai_state_logs"),
+                        "/launch/rai_state_logs.launch.py",
+                    ]
+                ),
+            ),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
                     [FindPackageShare("rai_whoami"), "/launch/rai_whoami.launch.py"]
                 ),
                 launch_arguments={
