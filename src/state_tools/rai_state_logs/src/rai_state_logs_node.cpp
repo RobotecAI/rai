@@ -42,6 +42,12 @@ public:
     max_lines_ = static_cast<uint16_t>(get_parameter("max_lines").as_int());
     include_meta_ = get_parameter("include_meta").as_bool();
     clear_on_retrieval_ = get_parameter("clear_on_retrieval").as_bool();
+
+    // Hack to overcome https://github.com/ros2/rclcpp/issues/1955
+    if (filters_.size() == 1 && filters_[0].empty()) {
+      filters_.clear();
+    }
+
     RCLCPP_INFO(get_logger(), "filters: %s", std::to_string(filters_.size()).c_str());
 
     if (max_lines_ < 1) {
