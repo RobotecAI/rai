@@ -46,7 +46,7 @@ def main():
     #
     # observe_postprocessors = {"/camera/camera/color/image_raw": describe_ros_image}
 
-    topics_whitelist = [
+    topics_allowlist = [
         "/rosout",
         "/camera/camera/color/image_raw",
         "/camera/camera/depth/image_rect_raw",
@@ -57,7 +57,7 @@ def main():
         "/led_strip",
     ]
 
-    actions_whitelist = [
+    actions_allowlist = [
         "/backup",
         "/compute_path_through_poses",
         "/compute_path_to_pose",
@@ -126,7 +126,7 @@ def main():
     node = RaiStateBasedLlmNode(
         observe_topics=None,
         observe_postprocessors=None,
-        whitelist=topics_whitelist + actions_whitelist,
+        allowlist=topics_allowlist + actions_allowlist,
         system_prompt=SYSTEM_PROMPT,
         tools=[
             Ros2PubMessageTool,
