@@ -39,11 +39,6 @@ def generate_launch_description() -> LaunchDescription:
                 description="Clear logs on retrieval",
                 choices=["true", "false"],
             ),
-            DeclareLaunchArgument(
-                "filters",
-                default_value=None,
-                description="Filters for logs",
-            ),
             Node(
                 package="rai_state_logs",
                 executable="rai_state_logs_node",
@@ -53,7 +48,6 @@ def generate_launch_description() -> LaunchDescription:
                     {"max_lines": LaunchConfiguration("max_lines")},
                     {"include_meta": LaunchConfiguration("include_meta")},
                     {"clear_on_retrieval": LaunchConfiguration("clear_on_retrieval")},
-                    {"filters": LaunchConfiguration("filters")},
                 ],
             ),
         ]
