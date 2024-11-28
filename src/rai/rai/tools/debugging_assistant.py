@@ -37,37 +37,45 @@ def initialize_graph():
     return agent
 
 
-st.title("ROS 2 Debugging Assistant")
-st.markdown("---")
+def main():
+    st.set_page_config(
+        page_title="ROS 2 Debugging Assistant",
+        page_icon=":robot:",
+    )
+    st.title("ROS 2 Debugging Assistant")
+    st.markdown("---")
 
-st.sidebar.header("Tool Calls History")
+    st.sidebar.header("Tool Calls History")
 
-if "graph" not in st.session_state:
-    graph = initialize_graph()
-    st.session_state["graph"] = graph
+    if "graph" not in st.session_state:
+        graph = initialize_graph()
+        st.session_state["graph"] = graph
 
-if "messages" not in st.session_state:
-    st.session_state["messages"] = [
-        AIMessage(content="Hi! I am a ROS 2 assistant. How can I help you?")
-    ]
+    if "messages" not in st.session_state:
+        st.session_state["messages"] = [
+            AIMessage(content="Hi! I am a ROS 2 assistant. How can I help you?")
+        ]
 
-prompt = st.chat_input()
-for msg in st.session_state.messages:
-    if isinstance(msg, AIMessage):
-        if msg.content:
-            st.chat_message("assistant").write(msg.content)
-    elif isinstance(msg, HumanMessage):
-        st.chat_message("user").write(msg.content)
-    elif isinstance(msg, ToolMessage):
-        with st.sidebar.expander(f"Tool: {msg.name}", expanded=False):
-            st.code(msg.content, language="json")
+    prompt = st.chat_input()
+    for msg in st.session_state.messages:
+        if isinstance(msg, AIMessage):
+            if msg.content:
+                st.chat_message("assistant").write(msg.content)
+        elif isinstance(msg, HumanMessage):
+            st.chat_message("user").write(msg.content)
+        elif isinstance(msg, ToolMessage):
+            with st.sidebar.expander(f"Tool: {msg.name}", expanded=False):
+                st.code(msg.content, language="json")
+
+    if prompt:
+        st.session_state.messages.append(HumanMessage(content=prompt))
+        st.chat_message("user").write(prompt)
+        with st.chat_message("assistant"):
+            st_callback = get_streamlit_cb(st.container())
+            streamlit_invoke(
+                st.session_state["graph"], st.session_state.messages, [st_callback]
+            )
 
 
-if prompt:
-    st.session_state.messages.append(HumanMessage(content=prompt))
-    st.chat_message("user").write(prompt)
-    with st.chat_message("assistant"):
-        st_callback = get_streamlit_cb(st.container())
-        response = streamlit_invoke(
-            st.session_state["graph"], st.session_state.messages, [st_callback]
-        )
+if __name__ == "__main__":
+    main()
