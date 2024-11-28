@@ -12,51 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import shlex
-
 from launch import LaunchDescription
-from launch.actions import (
-    DeclareLaunchArgument,
-    ExecuteProcess,
-    IncludeLaunchDescription,
-)
+from launch.actions import ExecuteProcess, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    robot_description_package = LaunchConfiguration("robot_description_package")
     game_launcher = LaunchConfiguration("game_launcher")
-
     return LaunchDescription(
         [
-            DeclareLaunchArgument(
-                "game_launcher",
-                description="Path to the O3DE game launcher executable",
-            ),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
-                    [FindPackageShare("rai_whoami"), "/launch/rai_whoami.launch.py"]
-                )
-            ),
-            ExecuteProcess(
-                cmd=[
-                    "python",
-                    "examples/rosbot-xl-demo.py",
-                    "--allowlist",
-                    "examples/rosbotxl_allowlist.txt",
-                ],
-                output="screen",
-            ),
-            ExecuteProcess(
-                cmd=shlex.split("streamlit run src/rai_hmi/rai_hmi/text_hmi.py")
-                + [robot_description_package, "examples/rosbotxl_allowlist.txt"],
-                output="screen",
-            ),
-            ExecuteProcess(
-                cmd=[game_launcher, "-bg_ConnectToAssetProcessor=0"],
-                output="screen",
+                    [FindPackageShare("rai_bringup"), "/launch/sim_demo.launch.py"]
+                ),
+                launch_arguments={
+                    "allowlist": "examples/rosbot-xl_allowlist.txt",
+                    "demo_script": "examples/rosbot-xl-demo.py",
+                    "robot_description_package": "rosbot_xl_whoami",
+                    "game_launcher": game_launcher,
+                }.items(),
             ),
             ExecuteProcess(
                 cmd=["bash", "run-nav.bash"],
