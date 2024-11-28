@@ -17,6 +17,7 @@ from typing import Optional
 
 import rclpy
 import rclpy.executors
+import rclpy.logging
 from rai_open_set_vision.tools import GetDetectionTool, GetDistanceToObjectsTool
 
 from rai.node import RaiStateBasedLlmNode
