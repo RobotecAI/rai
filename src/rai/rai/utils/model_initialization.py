@@ -15,11 +15,12 @@
 import logging
 import os
 from dataclasses import dataclass
-from typing import List, Literal
+from typing import List, Literal, cast
 
 import coloredlogs
 import tomli
 from langchain_core.callbacks.base import BaseCallbackHandler
+from pydantic import SecretStr
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -51,6 +52,12 @@ class OllamaConfig(ModelConfig):
 
 
 @dataclass
+class OpenAIConfig(ModelConfig):
+    base_url: str
+    api_key: str
+
+
+@dataclass
 class LangfuseConfig:
     use_langfuse: bool
     host: str
@@ -72,7 +79,7 @@ class TracingConfig:
 class RAIConfig:
     vendor: VendorConfig
     aws: AWSConfig
-    openai: ModelConfig
+    openai: OpenAIConfig
     ollama: OllamaConfig
     tracing: TracingConfig
 
@@ -83,7 +90,7 @@ def load_config() -> RAIConfig:
     return RAIConfig(
         vendor=VendorConfig(**config_dict["vendor"]),
         aws=AWSConfig(**config_dict["aws"]),
-        openai=ModelConfig(**config_dict["openai"]),
+        openai=OpenAIConfig(**config_dict["openai"]),
         ollama=OllamaConfig(**config_dict["ollama"]),
         tracing=TracingConfig(
             project=config_dict["tracing"]["project"],
@@ -110,9 +117,22 @@ def get_llm_model(
     if vendor == "openai":
         from langchain_openai import ChatOpenAI
 
-        return ChatOpenAI(model=model)
+        model_config = cast(OpenAIConfig, model_config)
+        api_key = (
+            model_config.api_key
+            if model_config.api_key != ""
+            else os.getenv("OPENAI_API_KEY", None)
+        )
+        if api_key is None:
+            raise ValueError("OPENAI_API_KEY is not set")
+
+        return ChatOpenAI(
+            model=model, base_url=model_config.base_url, api_key=SecretStr(api_key)
+        )
     elif vendor == "aws":
         from langchain_aws import ChatBedrock
+
+        model_config = cast(AWSConfig, model_config)
 
         return ChatBedrock(
             model_id=model,
@@ -121,6 +141,7 @@ def get_llm_model(
     elif vendor == "ollama":
         from langchain_ollama import ChatOllama
 
+        model_config = cast(OllamaConfig, model_config)
         return ChatOllama(model=model, base_url=model_config.base_url)
     else:
         raise ValueError(f"Unknown LLM vendor: {vendor}")
