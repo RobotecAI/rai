@@ -15,7 +15,7 @@
 import logging
 import os
 from dataclasses import dataclass
-from typing import List, Literal, cast
+from typing import List, Literal, Optional, cast
 
 import coloredlogs
 import tomli
@@ -101,7 +101,7 @@ def load_config() -> RAIConfig:
 
 
 def get_llm_model(
-    model_type: Literal["simple_model", "complex_model"], vendor: str = None
+    model_type: Literal["simple_model", "complex_model"], vendor: Optional[str] = None
 ):
     config = load_config()
     if vendor is None:
@@ -113,7 +113,7 @@ def get_llm_model(
     model_config = getattr(config, vendor)
 
     model = getattr(model_config, model_type)
-    logger.info(f"Using LLM model: {vendor}-{model}")
+    logger.info(f"Initializing {model_type}: Vendor: {vendor}, Model: {model}")
     if vendor == "openai":
         from langchain_openai import ChatOpenAI
 
@@ -124,7 +124,10 @@ def get_llm_model(
             else os.getenv("OPENAI_API_KEY", None)
         )
         if api_key is None:
-            raise ValueError("OPENAI_API_KEY is not set")
+            raise ValueError(
+                "OPENAI_API_KEY is not set. Set it either in config.toml "
+                "(for openai compatible apis) or as an environment variable."
+            )
 
         return ChatOpenAI(
             model=model, base_url=model_config.base_url, api_key=SecretStr(api_key)
