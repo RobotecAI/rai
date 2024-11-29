@@ -156,7 +156,7 @@ def parse_whoami_package():
         )
 
 
-def create_rai_ws():
+def create_rai_whoami_package():
     parser = argparse.ArgumentParser(description="Creation of a robot package.")
     parser.add_argument("--name", type=str, required=True, help="Package's name")
     parser.add_argument(

@@ -16,7 +16,7 @@ Your robot's `whoami` package serves as a configuration package for the `rai_who
 2. Create a whoami package for Panda
 
    ```shell
-   ./scripts/create_rai_ws.sh --name panda --destination-directory src/examples
+   ./scripts/create_rai_whoami_package.sh --name panda --destination-directory src/examples
    ```
 
 3. Fill in the `src/examples/panda_whoami/description` folder with data:

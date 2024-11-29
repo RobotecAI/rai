@@ -53,7 +53,7 @@ using Turtlebot4 simulation. The step by step video tutorial is available [here]
    1. Create `whoami` package for turtlebot4 in `src/examples/turtlebot4`
 
       ```bash
-      ./scripts/create_rai_ws.sh --name turtlebot4 --destination-directory src/examples
+      ./scripts/create_rai_whoami_package.sh --name turtlebot4 --destination-directory src/examples
       ```
 
    > **TIP**  

@@ -18,7 +18,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from rai.cli.rai_cli import create_rai_ws
+from rai.cli.rai_cli import create_rai_whoami_package
 
 
 @pytest.fixture
@@ -34,12 +34,12 @@ def rai_ws(tmp_path: Path):
 
     # Patch argparse.ArgumentParser to return our mock
     with patch("argparse.ArgumentParser", return_value=mock_parser):
-        create_rai_ws()
+        create_rai_whoami_package()
 
     return tmp_path
 
 
-def test_create_rai_ws(rai_ws: Path):
+def test_create_rai_whoami_package(rai_ws: Path):
     whoami_directory = rai_ws / "test_package_whoami"
 
     assert os.path.exists(whoami_directory), "Description folder is missing"
