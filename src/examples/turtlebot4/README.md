@@ -91,7 +91,7 @@ using Turtlebot4 simulation. The step by step video tutorial is available [here]
 5. Run rai agent:
 
    ```bash
-   ros2 launch ./src/examples/turtlebot4/turtlebot.launch.xml \
+   ros2 launch ./src/examples/turtlebot4/turtlebot.launch.py \
        game_launcher:=./src/examples/turtlebot4/simulation/TurtleBot4DemoGamePackage/TurtleBot4Demo.GameLauncher
    ```
 
