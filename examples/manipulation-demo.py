@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import rclpy
+from rclpy.parameter import Parameter
 from langchain_core.messages import HumanMessage
 
 from rai.agents.conversational_agent import create_conversational_agent
@@ -23,6 +24,7 @@ from rai.utils.model_initialization import get_llm_model
 
 rclpy.init()
 node = RaiBaseNode(node_name="manipulation_demo")
+node.declare_parameter("conversion_ratio", 1.0)
 
 tools = [
     GetObjectPositionsTool(

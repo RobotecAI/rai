@@ -57,9 +57,9 @@ class MoveToPointTool(BaseTool):
 
     manipulator_frame: str = Field(..., description="Manipulator frame")
     min_z: float = Field(default=0.135, description="Minimum z coordinate [m]")
-    calibration_x: float = Field(default=0.071, description="Calibration x [m]")
-    calibration_y: float = Field(default=-0.025, description="Calibration y [m]")
-    calibration_z: float = Field(default=0.148, description="Calibration z [m]")
+    calibration_x: float = Field(default=0.0, description="Calibration x [m]")
+    calibration_y: float = Field(default=0.0, description="Calibration y [m]")
+    calibration_z: float = Field(default=0.0, description="Calibration z [m]")
     additional_height: float = Field(
         default=0.05, description="Additional height for the place task [m]"
     )
