@@ -50,7 +50,7 @@ Please refer to [rai husarion rosbot xl demo][rai rosbot demo] for more details.
 2. Running rai nodes and agents, navigation stack and O3DE simulation.
 
    ```bash
-   ros2 launch ./examples/rosbot-xl.launch.py game_launcher:=path/to/RARAIROSBotXLDemo.GameLauncher
+   ros2 launch ./examples/rosbot-xl.launch.py game_launcher:=path/to/RAIROSBotXLDemo.GameLauncher
    ```
 
 3. Play with the demo, adding tasks to the RAI agent. Here are some examples:
