@@ -13,9 +13,15 @@
 # limitations under the License.
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess
+from launch.actions import (
+    DeclareLaunchArgument,
+    ExecuteProcess,
+    IncludeLaunchDescription,
+)
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node
+from launch_ros.actions import Node, RosTimer
+from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
@@ -30,16 +36,33 @@ def generate_launch_description():
         [
             # Include the game_launcher argument
             game_launcher_arg,
-            # Launch the manipulation demo Python script
-            ExecuteProcess(
-                cmd=["python3", "examples/manipulation-demo.py"], output="screen"
+            # Launch the openset nodes
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    [
+                        FindPackageShare("rai_bringup"),
+                        "/launch/openset.launch.py",
+                    ]
+                ),
             ),
-            # Launch the robotic_manipulation node
-            Node(
-                package="robotic_manipulation",
-                executable="robotic_manipulation",
-                name="robotic_manipulation_node",
-                output="screen",
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    [
+                        "src/examples/rai-manipulation-demo/Project/Examples/panda_moveit_config_demo.launch.py",
+                    ]
+                ),
+            ),
+            # Launch the robotic_manipulation node after 3 seconds, to ensure the moveit node is ready
+            RosTimer(
+                period=3.0,
+                actions=[
+                    Node(
+                        package="robotic_manipulation",
+                        executable="robotic_manipulation",
+                        name="robotic_manipulation_node",
+                        output="screen",
+                    ),
+                ],
             ),
             # Launch the game launcher
             ExecuteProcess(
