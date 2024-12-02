@@ -51,4 +51,5 @@ messages = []
 while True:
     prompt = input("Enter a prompt: ")
     messages.append(HumanMessage(content=prompt))
-    print(agent.invoke({"messages": messages}))
+    output = agent.invoke({"messages": messages})
+    output["messages"][-1].pretty_print()
