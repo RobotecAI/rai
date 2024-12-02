@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import rclpy
-from rclpy.parameter import Parameter
 from langchain_core.messages import HumanMessage
 
 from rai.agents.conversational_agent import create_conversational_agent
