@@ -13,6 +13,9 @@
 # limitations under the License.
 
 
+import os
+from glob import glob
+
 from setuptools import find_packages, setup
 
 package_name = "rai_whoami"
@@ -25,6 +28,10 @@ setup(
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml"]),
         ("share/" + package_name, ["resource/default_robot_constitution.txt"]),
+        (
+            os.path.join("share", package_name, "launch"),
+            glob(os.path.join("launch", "*launch.[pxy][yma]*")),
+        ),
     ],
     install_requires=["setuptools"],
     zip_safe=True,
