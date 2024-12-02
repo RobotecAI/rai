@@ -14,8 +14,11 @@
 
 from launch import LaunchDescription
 from launch.actions import ExecuteProcess, IncludeLaunchDescription
-from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.launch_description_sources import (
+    AnyLaunchDescriptionSource,
+    PythonLaunchDescriptionSource,
+)
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -41,6 +44,17 @@ def generate_launch_description():
                 cmd=["bash", "run-nav.bash"],
                 cwd="src/examples/rai-rosbot-xl-demo",
                 output="screen",
+            ),
+            IncludeLaunchDescription(
+                AnyLaunchDescriptionSource(
+                    PathJoinSubstitution(
+                        [
+                            FindPackageShare("rai_bringup"),
+                            "launch",
+                            "openset.launch.py",
+                        ]
+                    )
+                )
             ),
         ]
     )
