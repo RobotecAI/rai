@@ -13,7 +13,6 @@ This demo showcases the capabilities of RAI (Robotec AI) in performing manipulat
    poetry install --with openset
    vcs import < demos.repos
    rosdep install --from-paths src/examples/rai-manipulation-demo/ros2_ws/src --ignore-src -r -y
-   sudo apt install ros-jazzy-moveit-configs-utils ros-jazzy-moveit-resources-panda-moveit-config
    ```
 
 3. Download the latest binary release for your ROS 2 distribution:
