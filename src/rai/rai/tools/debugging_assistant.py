@@ -21,6 +21,7 @@ from rai.tools.ros.debugging import (
     ros2_action,
     ros2_interface,
     ros2_node,
+    ros2_param,
     ros2_service,
     ros2_topic,
 )
@@ -32,8 +33,10 @@ def initialize_graph():
     llm = get_llm_model(model_type="complex_model", streaming=True)
     agent = create_conversational_agent(
         llm,
-        [ros2_topic, ros2_interface, ros2_node, ros2_service, ros2_action],
-        system_prompt="You are a helpful assistant that can answer questions about ROS 2.",
+        [ros2_topic, ros2_interface, ros2_node, ros2_service, ros2_action, ros2_param],
+        system_prompt="""You are a ROS 2 expert helping a user with their ROS 2 questions. You have access to various tools that allow you to query the ROS 2 system.
+                Be proactive and use the tools to answer questions. Retrieve as much information from the ROS 2 system as possible.
+                """,
     )
     return agent
 
