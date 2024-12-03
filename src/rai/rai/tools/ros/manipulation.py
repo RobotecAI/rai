@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Literal, Type
+from typing import Callable, Literal, Type
 
 import numpy as np
 import rclpy
@@ -54,6 +54,10 @@ class MoveToPointTool(BaseTool):
 
     node: Node
     client: Client
+
+    finger_state: Callable[[], Literal["open", "closed", "holding", "unknown"]] = (
+        lambda: "unknown"
+    )
 
     manipulator_frame: str = Field(..., description="Manipulator frame")
     min_z: float = Field(default=0.135, description="Minimum z coordinate [m]")
@@ -122,14 +126,32 @@ class MoveToPointTool(BaseTool):
             f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
         )
 
-        rclpy.spin_until_future_complete(self.node, future, timeout_sec=5.0)
+        rclpy.spin_until_future_complete(self.node, future, timeout_sec=10.0)
 
         if future.result() is not None:
             response = future.result()
-            if response.success:
-                return f"End effector successfully positioned at coordinates ({x:.2f}, {y:.2f}, {z:.2f}). Note: The status of object interaction (grab/drop) is not confirmed by this movement."
+            finger_state = self.finger_state()
+            finger_status = None
+
+            if task == "grab":
+                if finger_state == "holding":
+                    finger_status = "The gripper properly grabbed the object."
+                elif finger_state in ["open", "closed"]:
+                    finger_status = "The gripper failed to grab the object."
+                else:
+                    finger_status = "The gripper is in an unknown state."
             else:
-                return f"Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
+                if finger_state == "open":
+                    finger_status = "The gripper properly released the object."
+                elif finger_state in ["closed", "holding"]:
+                    finger_status = "The gripper failed to release the object."
+                else:
+                    finger_status = "The gripper is in an unknown state."
+
+            if response.success:
+                return f"End effector successfully positioned at coordinates ({x:.2f}, {y:.2f}, {z:.2f}). {finger_status}"
+            else:
+                return f"Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f}). {finger_status}"
         else:
             return f"Service call failed for point ({x:.2f}, {y:.2f}, {z:.2f})."
 
