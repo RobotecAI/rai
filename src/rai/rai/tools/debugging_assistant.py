@@ -27,6 +27,7 @@ from rai.tools.ros.debugging import (
 from rai.utils.model_initialization import get_llm_model
 
 
+@st.cache_resource
 def initialize_graph():
     llm = get_llm_model(model_type="complex_model", streaming=True)
     agent = create_conversational_agent(
