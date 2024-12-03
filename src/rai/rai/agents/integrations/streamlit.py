@@ -20,7 +20,8 @@ from langchain_core.callbacks.base import BaseCallbackHandler
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 
-# code from https://github.com/shiv248/Streamlit-x-LangGraph-Cookbooks/tree/master/tool_calling_via_events
+# code inspired by (mostly copied, some changes were applied and might be updated in the future)
+# https://github.com/shiv248/Streamlit-x-LangGraph-Cookbooks/tree/b8e623bdc9821fc1cf581607454dae1afc054df2/tool_calling_via_callback
 
 
 # Define a function to create a callback handler for Streamlit that updates the UI dynamically
