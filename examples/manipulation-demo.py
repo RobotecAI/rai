@@ -41,14 +41,25 @@ tools = [
 
 llm = get_llm_model(model_type="complex_model")
 
+system_prompt = """
+You are a robotic arm with interfaces to detect and manipulate objects.
+Here are the coordinates information:
+x - front to back (positive is forward)
+y - left to right (positive is right)
+z - up to down (positive is up)
+
+Before starting the task, make sure to grab the camera image to understand the environment.
+"""
+
 agent = create_conversational_agent(
     llm=llm,
     tools=tools,
-    system_prompt="You are a robotic arm with interfaces to detect and manipulate objects.",
+    system_prompt=system_prompt,
 )
 
 messages = []
 while True:
     prompt = input("Enter a prompt: ")
     messages.append(HumanMessage(content=prompt))
-    print(agent.invoke({"messages": messages}))
+    output = agent.invoke({"messages": messages})
+    output["messages"][-1].pretty_print()
