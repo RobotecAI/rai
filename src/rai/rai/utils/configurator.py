@@ -139,10 +139,39 @@ elif st.session_state.current_step == 2:
                 value=st.session_state["config"]["openai"]["embeddings_model"],
                 key="embeddings_model",
             )
+
+            def on_openai_compatible_api_change():
+                st.session_state.use_openai_compatible_api = (
+                    st.session_state.openai_compatible_api_checkbox
+                )
+
+            if "use_openai_compatible_api" not in st.session_state:
+                st.session_state.use_openai_compatible_api = False
+
+            use_openai_compatible_api = st.checkbox(
+                "Use OpenAI compatible API",
+                value=st.session_state.use_openai_compatible_api,
+                key="openai_compatible_api_checkbox",
+                on_change=on_openai_compatible_api_change,
+            )
+            st.session_state.use_openai_compatible_api = use_openai_compatible_api
+
+            if use_openai_compatible_api:
+                st.info(
+                    "Used for OpenAI compatible endpoints, e.g. Ollama, vLLM... Make sure to specify `OPENAI_API_KEY` environment variable based on vendor's specification."
+                )
+                openai_api_base_url = st.text_input(
+                    "OpenAI API base URL",
+                    value=st.session_state["config"]["openai"]["base_url"],
+                    key="openai_api_base_url",
+                )
+            else:
+                openai_api_base_url = st.session_state["config"]["openai"]["base_url"]
             st.session_state.config["openai"] = {
                 "simple_model": simple_model,
                 "complex_model": complex_model,
                 "embeddings_model": embeddings_model,
+                "base_url": openai_api_base_url,
             }
 
         elif vendor == "aws":

@@ -15,7 +15,7 @@
 import logging
 import os
 from dataclasses import dataclass
-from typing import List, Literal
+from typing import List, Literal, Optional, cast
 
 import coloredlogs
 import tomli
@@ -51,6 +51,11 @@ class OllamaConfig(ModelConfig):
 
 
 @dataclass
+class OpenAIConfig(ModelConfig):
+    base_url: str
+
+
+@dataclass
 class LangfuseConfig:
     use_langfuse: bool
     host: str
@@ -72,7 +77,7 @@ class TracingConfig:
 class RAIConfig:
     vendor: VendorConfig
     aws: AWSConfig
-    openai: ModelConfig
+    openai: OpenAIConfig
     ollama: OllamaConfig
     tracing: TracingConfig
 
@@ -83,7 +88,7 @@ def load_config() -> RAIConfig:
     return RAIConfig(
         vendor=VendorConfig(**config_dict["vendor"]),
         aws=AWSConfig(**config_dict["aws"]),
-        openai=ModelConfig(**config_dict["openai"]),
+        openai=OpenAIConfig(**config_dict["openai"]),
         ollama=OllamaConfig(**config_dict["ollama"]),
         tracing=TracingConfig(
             project=config_dict["tracing"]["project"],
@@ -94,7 +99,9 @@ def load_config() -> RAIConfig:
 
 
 def get_llm_model(
-    model_type: Literal["simple_model", "complex_model"], vendor: str = None, **kwargs
+    model_type: Literal["simple_model", "complex_model"],
+    vendor: Optional[str] = None,
+    **kwargs,
 ):
     config = load_config()
     if vendor is None:
@@ -106,13 +113,17 @@ def get_llm_model(
     model_config = getattr(config, vendor)
 
     model = getattr(model_config, model_type)
-    logger.info(f"Using LLM model: {vendor}-{model}")
+    logger.info(f"Initializing {model_type}: Vendor: {vendor}, Model: {model}")
     if vendor == "openai":
         from langchain_openai import ChatOpenAI
 
-        return ChatOpenAI(model=model, **kwargs)
+        model_config = cast(OpenAIConfig, model_config)
+
+        return ChatOpenAI(model=model, base_url=model_config.base_url, **kwargs)
     elif vendor == "aws":
         from langchain_aws import ChatBedrock
+
+        model_config = cast(AWSConfig, model_config)
 
         return ChatBedrock(
             model_id=model,
@@ -122,6 +133,7 @@ def get_llm_model(
     elif vendor == "ollama":
         from langchain_ollama import ChatOllama
 
+        model_config = cast(OllamaConfig, model_config)
         return ChatOllama(model=model, base_url=model_config.base_url, **kwargs)
     else:
         raise ValueError(f"Unknown LLM vendor: {vendor}")
