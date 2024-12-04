@@ -15,6 +15,7 @@
 
 import json
 import logging
+import time
 from typing import Any, Callable, Dict, List, Optional, Sequence, Union, cast
 
 from langchain_core.messages import AIMessage, ToolCall, ToolMessage
@@ -65,9 +66,14 @@ class ToolRunner(RunnableCallable):
             artifact = None
 
             try:
+                ts = time.perf_counter()
                 output = self.tools_by_name[call["name"]].invoke(call, config)  # type: ignore
+                te = time.perf_counter() - ts
                 self.logger.info(
-                    "Tool output (max 100 chars): " + str(output.content[0:100])
+                    f"Tool {call['name']} completed in {te:.2f} seconds. Tool output: {str(output.content)[:100]}{'...' if len(str(output.content)) > 100 else ''}"
+                )
+                self.logger.debug(
+                    f"Tool {call['name']} output: \n\n{str(output.content)}"
                 )
             except ValidationError as e:
                 errors = e.errors()
