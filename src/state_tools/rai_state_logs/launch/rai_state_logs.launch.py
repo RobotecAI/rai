@@ -41,7 +41,7 @@ def generate_launch_description() -> LaunchDescription:
             ),
             DeclareLaunchArgument(
                 "filters",
-                default_value=None,
+                default_value='[""]',  # this means that no filters will be applied
                 description="Filters for logs",
             ),
             Node(

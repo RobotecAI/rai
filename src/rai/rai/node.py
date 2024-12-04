@@ -17,7 +17,6 @@ import functools
 import time
 from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Type
 
-import rcl_interfaces.msg
 import rclpy
 import rclpy.callback_groups
 import rclpy.executors
@@ -52,7 +51,8 @@ from rai.tools.ros.native_actions import Ros2BaseActionTool
 from rai.tools.ros.utils import convert_ros_img_to_base64, import_message_from_str
 from rai.tools.utils import wait_for_message
 from rai.utils.model_initialization import get_llm_model, get_tracing_callbacks
-from rai.utils.ros import NodeDiscovery, RosoutBuffer
+from rai.utils.ros import NodeDiscovery
+from rai.utils.ros_logs import create_logs_parser
 from rai_interfaces.action import Task as TaskAction
 
 WHOAMI_SYSTEM_PROMPT_TEMPLATE = """
@@ -277,7 +277,6 @@ class RaiBaseNode(Node):
     def spin(self):
         executor = rclpy.executors.MultiThreadedExecutor()
         executor.add_node(self)
-        executor.add_node(self._async_tool_node)
         executor.spin()
         rclpy.shutdown()
 
@@ -346,6 +345,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         observe_postprocessors: Optional[Dict[str, Callable[[Any], Any]]] = None,
         allowlist: Optional[List[str]] = None,
         tools: Optional[List[Type[BaseTool]]] = None,
+        logs_parser_type: Literal["llm", "rai_state_logs"] = "rai_state_logs",
         *args,
         **kwargs,
     ):
@@ -358,13 +358,6 @@ class RaiStateBasedLlmNode(RaiBaseNode):
 
         # ---------- ROS configuration ----------
         self.callback_group = rclpy.callback_groups.ReentrantCallbackGroup()
-        self.rosout_sub = self.create_subscription(
-            rcl_interfaces.msg.Log,
-            "/rosout",
-            callback=self.rosout_callback,
-            callback_group=self.callback_group,
-            qos_profile=self.qos_profile,
-        )
 
         # ---------- Robot State ----------
         self.robot_state = dict()
@@ -400,7 +393,17 @@ class RaiStateBasedLlmNode(RaiBaseNode):
             state_retriever=self.get_robot_state,
             logger=self.get_logger(),
         )
+
+        # We have to use a separate node that we can manually spin for ros-service based
+        # parser and this node ros-subscriber based parser
+        logs_parser_node = self if logs_parser_type == "llm" else self._async_tool_node
+        self.logs_parser = create_logs_parser(
+            logs_parser_type, logs_parser_node, callback_group=self.callback_group
+        )
         self.simple_llm = get_llm_model(model_type="simple_model")
+
+    def summarize_logs(self) -> str:
+        return self.logs_parser.summarize()
 
     def _initialize_tools(self, tools: List[Type[BaseTool]]):
         initialized_tools: List[BaseTool] = list()
@@ -429,8 +432,6 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         return system_prompt
 
     def _initialize_robot_state_interfaces(self, topics: List[str]):
-        self.rosout_buffer = RosoutBuffer(get_llm_model(model_type="simple_model"))
-
         for topic in topics:
             msg_type = self.get_msg_type(topic)
             topic_callback = functools.partial(
@@ -551,7 +552,6 @@ class RaiStateBasedLlmNode(RaiBaseNode):
             result.report = report.outcome
 
             self.get_logger().info(f"Finished task:\n{result}")
-            self.clear_state()
 
             return result
         finally:
@@ -577,7 +577,11 @@ class RaiStateBasedLlmNode(RaiBaseNode):
             state_dict[t] = msg
 
         ts = time.perf_counter()
-        state_dict["logs_summary"] = self.rosout_buffer.summarize()
+        try:
+            state_dict["logs_summary"] = self.summarize_logs()
+        except Exception as e:
+            self.get_logger().error(f"Error summarizing logs: {e}")
+            state_dict["logs_summary"] = ""
         te = time.perf_counter() - ts
         self.get_logger().info(f"Logs summary retrieved in: {te:.2f}")
         self.get_logger().debug(f"{state_dict=}")
@@ -585,15 +589,6 @@ class RaiStateBasedLlmNode(RaiBaseNode):
 
     def get_robot_state(self) -> Dict[str, str]:
         return self.state_dict
-
-    def clear_state(self):
-        self.rosout_buffer.clear()
-
-    def rosout_callback(self, msg: rcl_interfaces.msg.Log):
-        self.get_logger().debug(f"Received rosout: {msg}")
-        if "rai_node" in msg.name:
-            return
-        self.rosout_buffer.append(f"[{msg.stamp.sec}][{msg.name}]:{msg.msg}")
 
 
 def describe_ros_image(
