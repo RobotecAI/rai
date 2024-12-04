@@ -20,7 +20,6 @@ from typing import List, Literal, Optional, cast
 import coloredlogs
 import tomli
 from langchain_core.callbacks.base import BaseCallbackHandler
-from pydantic import SecretStr
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -54,7 +53,6 @@ class OllamaConfig(ModelConfig):
 @dataclass
 class OpenAIConfig(ModelConfig):
     base_url: str
-    api_key: str
 
 
 @dataclass
@@ -118,20 +116,8 @@ def get_llm_model(
         from langchain_openai import ChatOpenAI
 
         model_config = cast(OpenAIConfig, model_config)
-        api_key = (
-            model_config.api_key
-            if model_config.api_key != ""
-            else os.getenv("OPENAI_API_KEY", None)
-        )
-        if api_key is None:
-            raise ValueError(
-                "OPENAI_API_KEY is not set. Set it either in config.toml "
-                "(for openai compatible apis) or as an environment variable."
-            )
 
-        return ChatOpenAI(
-            model=model, base_url=model_config.base_url, api_key=SecretStr(api_key)
-        )
+        return ChatOpenAI(model=model, base_url=model_config.base_url)
     elif vendor == "aws":
         from langchain_aws import ChatBedrock
 
