@@ -14,7 +14,6 @@ simple_model = "gpt-4o-mini"
 complex_model = "gpt-4o-2024-08-06"
 embeddings_model = "text-embedding-ada-002"
 base_url = "https://api.openai.com/v1/" # for openai compatible apis
-api_key = "" # for openai compatible apis, overrides the environment variable OPENAI_API_KEY
 
 [ollama]
 simple_model = "llama3.2"

@@ -157,11 +157,8 @@ elif st.session_state.current_step == 2:
             st.session_state.use_openai_compatible_api = use_openai_compatible_api
 
             if use_openai_compatible_api:
-                st.info("Used for OpenAI compatible endpoints, e.g. Ollama, vLLM...")
-                openai_api_key = st.text_input(
-                    "OpenAI API key for compatible APIs",
-                    value=st.session_state["config"]["openai"]["api_key"],
-                    key="openai_api_key",
+                st.info(
+                    "Used for OpenAI compatible endpoints, e.g. Ollama, vLLM... Make sure to specify `OPENAI_API_KEY` environment variable based on vendor's specification."
                 )
                 openai_api_base_url = st.text_input(
                     "OpenAI API base URL",
@@ -169,13 +166,11 @@ elif st.session_state.current_step == 2:
                     key="openai_api_base_url",
                 )
             else:
-                openai_api_key = st.session_state["config"]["openai"]["api_key"]
                 openai_api_base_url = st.session_state["config"]["openai"]["base_url"]
             st.session_state.config["openai"] = {
                 "simple_model": simple_model,
                 "complex_model": complex_model,
                 "embeddings_model": embeddings_model,
-                "api_key": openai_api_key,
                 "base_url": openai_api_base_url,
             }
 
