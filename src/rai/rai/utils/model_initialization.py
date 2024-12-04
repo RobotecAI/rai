@@ -94,7 +94,7 @@ def load_config() -> RAIConfig:
 
 
 def get_llm_model(
-    model_type: Literal["simple_model", "complex_model"], vendor: str = None
+    model_type: Literal["simple_model", "complex_model"], vendor: str = None, **kwargs
 ):
     config = load_config()
     if vendor is None:
@@ -110,18 +110,19 @@ def get_llm_model(
     if vendor == "openai":
         from langchain_openai import ChatOpenAI
 
-        return ChatOpenAI(model=model)
+        return ChatOpenAI(model=model, **kwargs)
     elif vendor == "aws":
         from langchain_aws import ChatBedrock
 
         return ChatBedrock(
             model_id=model,
             region_name=model_config.region_name,
+            **kwargs,
         )
     elif vendor == "ollama":
         from langchain_ollama import ChatOllama
 
-        return ChatOllama(model=model, base_url=model_config.base_url)
+        return ChatOllama(model=model, base_url=model_config.base_url, **kwargs)
     else:
         raise ValueError(f"Unknown LLM vendor: {vendor}")
 
