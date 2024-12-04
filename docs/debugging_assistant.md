@@ -7,11 +7,12 @@ The ROS 2 Debugging Assistant is an interactive tool that helps developers inspe
 - Interactive chat interface for debugging ROS 2 systems
 - Real-time streaming of responses and tool executions
 - Support for common ROS 2 debugging commands:
-  - Topic inspection and manipulation
-  - Service inspection
-  - Node information
-  - Action server details
-  - Interface inspection
+  - `ros2 topic`: topic inspection and manipulation
+  - `ros2 service`: service inspection and calling
+  - `ros2 node`: node information
+  - `ros2 action`: action server details and goal sending
+  - `ros2 interface`: interface inspection
+  - `ros2 param`: checking and setting parameters
 
 ## Running the Assistant
 

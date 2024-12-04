@@ -54,7 +54,7 @@ def run_command(cmd: List[str], timeout: int = 5):
 
 @tool
 def ros2_action(
-    command: Literal["info", "list", "type"],
+    command: Literal["info", "list", "type", "send_goal"],
     arguments: Optional[List[str]] = None,
     timeout: int = 5,
 ):
