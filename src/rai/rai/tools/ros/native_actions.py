@@ -1,5 +1,4 @@
 # Copyright (C) 2024 Robotec.AI
-#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -187,9 +186,16 @@ class Ros2GetLastActionFeedback(Ros2BaseActionTool):
         return str(self.node.action_feedback)
 
 
+class GetTransformInput(BaseModel):
+    target_frame: str = Field(default="map", description="Target frame")
+    source_frame: str = Field(default="body_link", description="Source frame")
+
+
 class GetTransformTool(Ros2BaseActionTool):
     name: str = "GetTransform"
     description: str = "Get transform between two frames"
+
+    args_schema: Type[GetTransformInput] = GetTransformInput
 
     def _run(self, target_frame="map", source_frame="body_link") -> dict:
         return message_to_ordereddict(
