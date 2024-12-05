@@ -186,10 +186,11 @@ class RaiBaseNode(Node):
         except Exception as e:
             return f"Failed to build message: {e}"
 
-        client = ActionClient(self, msg_cls, action_name)
+        self.client = ActionClient(self, msg_cls, action_name)
+        self.msg_cls = msg_cls
 
         retries = 0
-        while not client.wait_for_server(timeout_sec=1.0):
+        while not self.client.wait_for_server(timeout_sec=1.0):
             retries += 1
             if retries > 5:
                 raise Exception(
@@ -201,7 +202,9 @@ class RaiBaseNode(Node):
 
         self.get_logger().info(f"Sending action message: {goal_msg}")
 
-        send_goal_future = client.send_goal_async(goal_msg, self._feedback_callback)
+        send_goal_future = self.client.send_goal_async(
+            goal_msg, self._feedback_callback
+        )
         self.get_logger().info("Action goal sent!")
         rclpy.spin_until_future_complete(self, send_goal_future)
         self.goal_handle = send_goal_future.result()
@@ -216,18 +219,42 @@ class RaiBaseNode(Node):
         self.get_logger().info("Action sent!")
         return f"{action_name} started successfully with args: {action_goal_args}"
 
-    def _get_task_result(self):
+    def _get_task_result(self) -> str:
         if not self._is_task_complete():
             return "Task is not complete yet"
 
-        if self.status == GoalStatus.STATUS_SUCCEEDED:
-            return "Succeeded"
-        elif self.status == GoalStatus.STATUS_ABORTED:
-            return "Failed"
-        elif self.status == GoalStatus.STATUS_CANCELED:
-            return "Cancelled"
+        def parse_status(status: int) -> str:
+            return {
+                GoalStatus.STATUS_SUCCEEDED: "succeeded",
+                GoalStatus.STATUS_ABORTED: "aborted",
+                GoalStatus.STATUS_CANCELED: "canceled",
+                GoalStatus.STATUS_ACCEPTED: "accepted",
+                GoalStatus.STATUS_CANCELING: "canceling",
+                GoalStatus.STATUS_EXECUTING: "executing",
+                GoalStatus.STATUS_UNKNOWN: "unknown",
+            }.get(status, "unknown")
+
+        result = self.result_future.result()
+
+        self.destroy_client(self.client)
+
+        if result.status == GoalStatus.STATUS_SUCCEEDED:
+            msg = f"Result succeeded: {result.result}"
+            self.get_logger().info(msg)
+            return msg
         else:
-            return "Failed"
+            str_status = parse_status(result.status)
+            error_code_str = self.parse_error_code(result.result.error_code)
+            msg = f"Result {str_status}, because of: error_code={result.result.error_code}({error_code_str}), error_msg={result.result.error_msg}"
+            self.get_logger().info(msg)
+            return msg
+
+    def parse_error_code(self, code: int) -> str:
+        name_to_code = self.msg_cls.Result.__prepare__(
+            name="", bases=""
+        )  # arguments are not used
+        code_to_name = {v: k for k, v in name_to_code.items()}
+        return code_to_name.get(code, "UNKNOWN")
 
     def _feedback_callback(self, msg):
         self.get_logger().info(f"Received ros2 action feedback: {msg}")
@@ -258,6 +285,7 @@ class RaiBaseNode(Node):
         if self.result_future and self.goal_handle:
             future = self.goal_handle.cancel_goal_async()
             rclpy.spin_until_future_complete(self, future)
+        self.destroy_client(self.client)
         return True
 
     def spin(self):
@@ -340,6 +368,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         )
         # Node is busy when task is executed. Only 1 task is allowed
         self.busy = False
+        self.current_task = None
 
         # ---------- LLM Agents ----------
         self.tools = self._initialize_tools(tools) if tools is not None else []
@@ -403,6 +432,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
                 msg = self.last_subscription_msgs_buffer.get(topic, None)
                 while msg is None and time.perf_counter() - ts < timeout_sec:
                     msg = self.last_subscription_msgs_buffer.get(topic, None)
+                    rclpy.spin_once(self, timeout_sec=0.1)
                     self.get_logger().info("Waiting for message...")
                     time.sleep(0.1)
 
@@ -546,6 +576,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
                 ),
                 HumanMessage(content=f"Task: {task}"),
             ]
+            self.current_task = task
 
             payload = State(messages=messages)
 
@@ -623,9 +654,11 @@ class RaiStateBasedLlmNode(RaiBaseNode):
             return result
         finally:
             self.busy = False
+            self.current_task = None
 
     def state_update_callback(self):
         state_dict = dict()
+        state_dict["current_task"] = self.current_task
 
         ts = time.perf_counter()
         try:

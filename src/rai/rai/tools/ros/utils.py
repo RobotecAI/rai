@@ -169,7 +169,7 @@ def get_transform(
         target_frame, source_frame, rclpy.time.Time()
     )
 
-    node.ros_executor.spin_until_future_complete(future, timeout_sec=timeout_sec)
+    rclpy.spin_until_future_complete(node, future, timeout_sec=timeout_sec)
 
     transform = future.result()
 
