@@ -143,9 +143,28 @@ def ros2_build_msg(msg_type: str, msg_args: Dict[str, Any]) -> Tuple[object, Typ
     return msg, msg_cls
 
 
-class RaiAsyncToolsNode(Node):
-    def __init__(self):
-        super().__init__("rai_internal_action_node")
+class RaiBaseNode(Node):
+    def __init__(
+        self,
+        allowlist: Optional[List[str]] = None,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+
+        self.DISCOVERY_FREQ = 2.0
+        self.DISCOVERY_DEPTH = 5
+        self.timer = self.create_timer(
+            self.DISCOVERY_FREQ,
+            self.discovery,
+        )
+        self.ros_discovery_info = NodeDiscovery(allowlist=allowlist)
+        self.discovery()
+        self.qos_profile_cache: Dict[str, QoSProfile] = dict()
+
+        executor = rai.utils.ros.MultiThreadedExecutorFixed()
+        executor.add_node(self)
+        self.ros_executor = executor
 
         self.goal_handle = None
         self.result_future = None
@@ -240,30 +259,6 @@ class RaiAsyncToolsNode(Node):
             future = self.goal_handle.cancel_goal_async()
             rclpy.spin_until_future_complete(self, future)
         return True
-
-
-class RaiBaseNode(Node):
-    def __init__(
-        self,
-        allowlist: Optional[List[str]] = None,
-        *args,
-        **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-
-        self.DISCOVERY_FREQ = 2.0
-        self.DISCOVERY_DEPTH = 5
-        self.timer = self.create_timer(
-            self.DISCOVERY_FREQ,
-            self.discovery,
-        )
-        self.ros_discovery_info = NodeDiscovery(allowlist=allowlist)
-        self.discovery()
-        self.qos_profile_cache: Dict[str, QoSProfile] = dict()
-
-        executor = rai.utils.ros.MultiThreadedExecutorFixed()
-        executor.add_node(self)
-        self.ros_executor = executor
 
     def spin(self):
         self.ros_executor.spin()
