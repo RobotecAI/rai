@@ -19,6 +19,7 @@ from typing import Type, Union, cast
 import cv2
 import numpy as np
 import rclpy
+import rclpy.executors
 import rclpy.node
 import rclpy.time
 import sensor_msgs.msg
@@ -31,7 +32,7 @@ from rclpy.utilities import timeout_sec_to_nsec
 from rosidl_parser.definition import NamespacedType
 from rosidl_runtime_py.import_message import import_message_from_namespaced_type
 from rosidl_runtime_py.utilities import get_namespaced_type
-from tf2_ros import Buffer, TransformListener, TransformStamped
+from tf2_ros import Buffer, LookupException, TransformListener, TransformStamped
 
 
 def import_message_from_str(msg_type: str) -> Type[object]:
@@ -155,17 +156,27 @@ def wait_for_message(
 
 
 def get_transform(
-    node: rclpy.node.Node, target_frame: str, source_frame: str
+    node: rclpy.node.Node,
+    target_frame: str,
+    source_frame: str,
+    timeout_sec: float = 5.0,
 ) -> TransformStamped:
     tf_buffer = Buffer(node=node)
     tf_listener = TransformListener(tf_buffer, node)
 
     transform = None
-    while transform is None:
-        rclpy.spin_once(node, timeout=0.5)
-        if tf_buffer.can_transform(target_frame, source_frame, rclpy.time.Time()):
-            transform = tf_buffer.lookup_transform(
-                target_frame, source_frame, rclpy.time.Time()
-            )
+    future = tf_buffer.wait_for_transform_async(
+        target_frame, source_frame, rclpy.time.Time()
+    )
+
+    node.ros_executor.spin_until_future_complete(future, timeout_sec=timeout_sec)
+
+    transform = future.result()
+
     tf_listener.unregister()
+    if not future.done() or transform is None:
+        raise LookupException(
+            f"Could not find transform from {source_frame} to {target_frame} in {timeout_sec} seconds"
+        )
+
     return transform
