@@ -141,7 +141,7 @@ class Ros2RunActionAsync(Ros2BaseActionTool):
     def _run(
         self, action_name: str, action_type: str, action_goal_args: Dict[str, Any]
     ):
-        return self.node._run_action(action_name, action_type, action_goal_args)
+        return self.node.run_action(action_name, action_type, action_goal_args)
 
 
 class Ros2IsActionComplete(Ros2BaseActionTool):
@@ -151,7 +151,7 @@ class Ros2IsActionComplete(Ros2BaseActionTool):
     args_schema: Type[Ros2BaseInput] = Ros2BaseInput
 
     def _run(self) -> bool:
-        return self.node._is_task_complete()
+        return self.node.is_task_complete()
 
 
 class Ros2GetActionResult(Ros2BaseActionTool):
@@ -161,7 +161,7 @@ class Ros2GetActionResult(Ros2BaseActionTool):
     args_schema: Type[Ros2BaseInput] = Ros2BaseInput
 
     def _run(self) -> bool:
-        return self.node._get_task_result()
+        return self.node.get_task_result()
 
 
 class Ros2CancelAction(Ros2BaseActionTool):
@@ -171,7 +171,7 @@ class Ros2CancelAction(Ros2BaseActionTool):
     args_schema: Type[Ros2BaseInput] = Ros2BaseInput
 
     def _run(self) -> bool:
-        return self.node._cancel_task()
+        return self.node.cancel_task()
 
 
 class Ros2GetLastActionFeedback(Ros2BaseActionTool):
@@ -197,7 +197,7 @@ class GetTransformTool(Ros2BaseActionTool):
 
     args_schema: Type[GetTransformInput] = GetTransformInput
 
-    def _run(self, target_frame="map", source_frame="body_link") -> dict:
+    def _run(self, target_frame="odom", source_frame="body_link") -> dict:
         return message_to_ordereddict(
             get_transform(self.node, target_frame, source_frame)
         )

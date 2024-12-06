@@ -18,6 +18,7 @@ from typing import Deque, Literal, Optional
 
 import rcl_interfaces.msg
 import rclpy.callback_groups
+import rclpy.executors
 import rclpy.node
 import rclpy.qos
 import rclpy.subscription
@@ -25,6 +26,7 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
 
 import rai_interfaces.srv
+from rai.utils.ros_async import get_future_result
 
 
 class BaseLogsParser:
@@ -40,7 +42,7 @@ def create_logs_parser(
     bufsize: Optional[int] = 100,
 ) -> BaseLogsParser:
     if parser_type == "rai_state_logs":
-        return RaiStateLogsParser(node)
+        return RaiStateLogsParser(node, callback_group)
     elif parser_type == "llm":
         if any([v is None for v in [llm, callback_group, bufsize]]):
             raise ValueError("Must provide llm, callback_group, and bufsize")
@@ -54,11 +56,15 @@ class RaiStateLogsParser(BaseLogsParser):
 
     SERVICE_NAME = "/get_log_digest"
 
-    def __init__(self, node: rclpy.node.Node) -> None:
+    def __init__(
+        self, node: rclpy.node.Node, callback_group: rclpy.callback_groups.CallbackGroup
+    ) -> None:
         self.node = node
 
         self.rai_state_logs_client = node.create_client(
-            rai_interfaces.srv.StringList, self.SERVICE_NAME
+            rai_interfaces.srv.StringList,
+            self.SERVICE_NAME,
+            callback_group=callback_group,
         )
         while not self.rai_state_logs_client.wait_for_service(timeout_sec=1.0):
             node.get_logger().info(
@@ -68,8 +74,11 @@ class RaiStateLogsParser(BaseLogsParser):
     def summarize(self) -> str:
         request = rai_interfaces.srv.StringList.Request()
         future = self.rai_state_logs_client.call_async(request)
-        rclpy.spin_until_future_complete(self.node, future)
-        response: Optional[rai_interfaces.srv.StringList.Response] = future.result()
+
+        response: Optional[rai_interfaces.srv.StringList.Response] = get_future_result(
+            future
+        )
+
         if response is None or not response.success:
             self.node.get_logger().error(f"'{self.SERVICE_NAME}' service call failed")
             return ""

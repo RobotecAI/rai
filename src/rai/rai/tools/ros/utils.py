@@ -14,7 +14,7 @@
 
 
 import base64
-from typing import Type, Union, cast
+from typing import Optional, Type, Union, cast
 
 import cv2
 import numpy as np
@@ -33,6 +33,8 @@ from rosidl_parser.definition import NamespacedType
 from rosidl_runtime_py.import_message import import_message_from_namespaced_type
 from rosidl_runtime_py.utilities import get_namespaced_type
 from tf2_ros import Buffer, LookupException, TransformListener, TransformStamped
+
+from rai.utils.ros_async import get_future_result
 
 
 def import_message_from_str(msg_type: str) -> Type[object]:
@@ -164,17 +166,14 @@ def get_transform(
     tf_buffer = Buffer(node=node)
     tf_listener = TransformListener(tf_buffer, node)
 
-    transform = None
     future = tf_buffer.wait_for_transform_async(
         target_frame, source_frame, rclpy.time.Time()
     )
-
-    rclpy.spin_until_future_complete(node, future, timeout_sec=timeout_sec)
-
-    transform = future.result()
-
+    transform: Optional[TransformStamped] = get_future_result(
+        future, timeout_sec=timeout_sec
+    )
     tf_listener.unregister()
-    if not future.done() or transform is None:
+    if transform is None:
         raise LookupException(
             f"Could not find transform from {source_frame} to {target_frame} in {timeout_sec} seconds"
         )

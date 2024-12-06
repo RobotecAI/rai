@@ -16,10 +16,10 @@ embeddings_model = "text-embedding-ada-002"
 base_url = "https://api.openai.com/v1/" # for openai compatible apis
 
 [ollama]
-simple_model = "llama3.2"
-complex_model = "llama3.1:70b"
+simple_model = "qwq"
+complex_model = "qwen2.5:7b"
 embeddings_model = "llama3.2"
-base_url = "http://localhost:11434"
+base_url = "http://via-ip-robo-srv-004.robotec.tm.pl:11434"
 
 [tracing]
 project = "rai"

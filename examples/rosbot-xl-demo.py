@@ -18,23 +18,22 @@ from typing import Optional
 import rclpy
 import rclpy.executors
 import rclpy.logging
-from rai_open_set_vision.tools import GetDetectionTool, GetDistanceToObjectsTool
 
 from rai.node import RaiStateBasedLlmNode
 from rai.tools.ros.native import (
     GetCameraImage,
     GetMsgFromTopic,
+    Ros2GetRobotInterfaces,
     Ros2PubMessageTool,
     Ros2ShowMsgInterfaceTool,
 )
 from rai.tools.ros.native_actions import (
+    GetTransformTool,
     Ros2CancelAction,
     Ros2GetActionResult,
     Ros2GetLastActionFeedback,
-    Ros2IsActionComplete,
     Ros2RunActionAsync,
 )
-from rai.tools.ros.tools import GetCurrentPositionTool
 from rai.tools.time import WaitForSecondsTool
 
 p = argparse.ArgumentParser()
@@ -62,11 +61,14 @@ def main(allowlist: Optional[Path] = None):
             rclpy.logging.get_logger("rosbot_xl_demo").error(
                 f"Failed to read allowlist: {e}"
             )
+    else:
+        ros2_allowlist = None
 
     SYSTEM_PROMPT = """You are an autonomous robot connected to ros2 environment. Your main goal is to fulfill the user's requests.
     Do not make assumptions about the environment you are currently in.
     You can use ros2 topics, services and actions to operate.
 
+    <rule> As a first step check transforms by getting 1 message from /tf topic </rule>
     <rule> use /cmd_vel topic very carefully. Obstacle detection works only with nav2 stack, so be careful when it is not used. </rule>>
     <rule> be patient with running ros2 actions. usually the take some time to run. </rule>
     <rule> Always check your transform before and after you perform ros2 actions, so that you can verify if it worked. </rule>
@@ -88,6 +90,7 @@ def main(allowlist: Optional[Path] = None):
     - to find some object navigate around and check the surrounding area
     - when the goal is accomplished please make sure to cancel running actions
     - when you reach the navigation goal - double check if you reached it by checking the current position
+    - if you detect collision, please stop operation
 
     - you will be given your camera image description. Based on this information you can reason about positions of objects.
     - be careful and aboid obstacles
@@ -118,19 +121,17 @@ def main(allowlist: Optional[Path] = None):
         allowlist=ros2_allowlist,
         system_prompt=SYSTEM_PROMPT,
         tools=[
+            Ros2GetRobotInterfaces,
             Ros2PubMessageTool,
             Ros2RunActionAsync,
-            Ros2IsActionComplete,
             Ros2CancelAction,
             Ros2GetActionResult,
             Ros2GetLastActionFeedback,
             Ros2ShowMsgInterfaceTool,
-            GetCurrentPositionTool,
+            GetTransformTool,
             WaitForSecondsTool,
             GetMsgFromTopic,
             GetCameraImage,
-            GetDetectionTool,
-            GetDistanceToObjectsTool,
         ],
     )
 
