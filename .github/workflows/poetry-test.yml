@@ -45,6 +45,8 @@ jobs:
           echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
           apt-get update
           apt-get install -y ros-${{ matrix.ros_distro }}-ros-base python3-pip
+          echo "source /opt/ros/${{ matrix.ros_distro }}/setup.bash" >> /root/.bashrc
+          source /root/.bashrc && rosdep init && rosdep update
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
