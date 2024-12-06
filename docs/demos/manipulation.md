@@ -50,10 +50,14 @@ This demo showcases the capabilities of RAI in performing manipulation tasks usi
    ros2 launch examples/manipulation-demo.launch.py game_launcher:=path/to/RAIManipulationDemo.GameLauncher
    ```
 
-2. In the second terminal, run the interactive prompt:
+2. In the second terminal, run the cli prompt or streamlit interface:
 
    ```shell
    python examples/manipulation-demo.py
+   ```
+
+   ```shell
+   streamlit run examples/manipulation-demo-streamlit.py
    ```
 
 3. Interact with the robot arm using natural language commands. For example:
