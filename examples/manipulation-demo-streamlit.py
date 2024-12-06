@@ -12,17 +12,18 @@
 # See the License for the specific language goveself.rning permissions and
 # limitations under the License.
 
+import rclpy
+import rclpy.qos
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
-import rclpy
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.agents.integrations.streamlit import get_streamlit_cb, streamlit_invoke
 from rai.node import RaiBaseNode
 from rai.tools.ros.manipulation import GetObjectPositionsTool, MoveToPointTool
 from rai.tools.ros.native import GetCameraImage, Ros2GetTopicsNamesAndTypesTool
 from rai.utils.model_initialization import get_llm_model
-import rclpy.qos
+
 
 @st.cache_resource
 def initialize_graph():
@@ -63,6 +64,7 @@ def initialize_graph():
     )
     return agent
 
+
 def main():
     st.set_page_config(
         page_title="RAI Manipulation Demo",
@@ -76,12 +78,12 @@ def main():
     if "graph" not in st.session_state:
         graph = initialize_graph()
         st.session_state["graph"] = graph
-    
+
     if "messages" not in st.session_state:
         st.session_state["messages"] = [
             AIMessage(content="Hi! I am a robotic arm. What can I do for you?")
         ]
-    
+
     prompt = st.chat_input()
     for msg in st.session_state.messages:
         if isinstance(msg, AIMessage):
@@ -101,6 +103,7 @@ def main():
             streamlit_invoke(
                 st.session_state["graph"], st.session_state.messages, [st_callback]
             )
+
 
 if __name__ == "__main__":
     main()
