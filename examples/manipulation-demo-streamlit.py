@@ -19,6 +19,7 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.agents.integrations.streamlit import get_streamlit_cb, streamlit_invoke
+from rai.messages import HumanMultimodalMessage
 from rai.node import RaiBaseNode
 from rai.tools.ros.manipulation import GetObjectPositionsTool, MoveToPointTool
 from rai.tools.ros.native import GetCameraImage, Ros2GetTopicsNamesAndTypesTool
@@ -89,6 +90,8 @@ def main():
         if isinstance(msg, AIMessage):
             if msg.content:
                 st.chat_message("assistant").write(msg.content)
+        elif isinstance(msg, HumanMultimodalMessage):
+            continue
         elif isinstance(msg, HumanMessage):
             st.chat_message("user").write(msg.content)
         elif isinstance(msg, ToolMessage):
