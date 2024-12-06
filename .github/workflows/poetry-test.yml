@@ -23,7 +23,7 @@ jobs:
           - humble
 
     container:
-      image: osrf/ros:${{ matrix.ros_distro }}-desktop-full
+      image: osrf/ros:${{ matrix.ros_distro }}-desktop
 
     steps:
       - name: Clean up workspace
