@@ -4,30 +4,23 @@ This demo showcases the capabilities of RAI (Robotec AI) in performing manipulat
 
 ![Manipulation Demo](../imgs/manipulation_demo.gif)
 
-> [!NOTE]  
-> This readme is a work in progress.
-
 ## Setup
 
 1. Follow the RAI setup instructions in the [main README](../../README.md#setup).
 2. Download additional dependencies:
 
-```shell
-poetry install --with openset
-```
-
-3. Clone the manipulation demo repository:
-
-   ```bash
-   git clone https://github.com/RobotecAI/rai-manipulation-demo.git src/examples/rai-manipulation-demo
+   ```shell
+   poetry install --with openset
+   vcs import < demos.repos
+   rosdep install --from-paths src/examples/rai-manipulation-demo/ros2_ws/src --ignore-src -r -y
    ```
 
-4. Download the latest binary release for your ROS 2 distribution:
+3. Download the latest binary release for your ROS 2 distribution:
 
    - [ros2-humble-manipulation-demo](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIManipulationDemo_1.0.0_jammyhumble.zip)
    - [ros2-jazzy-manipulation-demo](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIManipulationDemo_1.0.0_noblejazzy.zip)
 
-5. Unpack the binary:
+4. Unpack the binary:
 
    For Humble:
 
@@ -41,7 +34,7 @@ poetry install --with openset
    unzip RAIManipulationDemo_1.0.0_noblejazzy.zip
    ```
 
-6. Build the ROS 2 workspace:
+5. Build the ROS 2 workspace:
 
    ```bash
    colcon build --symlink-install
@@ -52,10 +45,19 @@ poetry install --with openset
 > **Note**: Ensure that every command is run in a sourced shell using `source setup_shell.sh`
 
 1. Start the demo
+
    ```shell
-   ros2 launch examples/manipulation-demo.launch.py
+   ros2 launch examples/manipulation-demo.launch.py game_launcher:=path/to/RAIManipulationDemo.GameLauncher
    ```
-2. Interact with the robot arm using natural language commands. For example:
+
+2. In the second terminal, run the interactive prompt:
+
+   ```shell
+   python examples/manipulation-demo.py
+   ```
+
+3. Interact with the robot arm using natural language commands. For example:
+
    ```
    Enter a prompt: Pick up the red cube and drop it on other cube
    ```
