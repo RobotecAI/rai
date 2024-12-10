@@ -1,6 +1,6 @@
 # Manipulation tasks with natural language
 
-This demo showcases the capabilities of RAI (Robotec AI) in performing manipulation tasks using natural language commands. The demo utilizes a robot arm (Franka Emika Panda) in a simulated environment, demonstrating how RAI can interpret complex instructions and execute them using advanced vision and manipulation techniques.
+This demo showcases the capabilities of RAI in performing manipulation tasks using natural language commands. The demo utilizes a robot arm (Franka Emika Panda) in a simulated environment, demonstrating how RAI can interpret complex instructions and execute them using advanced vision and manipulation techniques.
 
 ![Manipulation Demo](../imgs/manipulation_demo.gif)
 
