@@ -56,6 +56,10 @@ This demo showcases the capabilities of RAI in performing manipulation tasks usi
    python examples/manipulation-demo.py
    ```
 
+   This script will prompt you to enter a natural language command in the terminal. It also serves as an example of how to use the RAI API for your own applications.
+
+   If you just want to try the demo on its own with a more user-friendly interface, you can use the Streamlit version:
+
    ```shell
    streamlit run examples/manipulation-demo-streamlit.py
    ```
