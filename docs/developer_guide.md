@@ -35,7 +35,9 @@ Follow instructions to [configure RAI identity for your robot](create_robots_who
 To run the fully initialized Streamlit HMI, use the following command, replacing `my_robot_whoami` with the name of the package you created:
 
 ```bash
-streamlit run src/rai_hmi/rai_hmi/text_hmi.py my_robot_whoami
+export ROBOT_NAME=my_robot_whoami # set the name of created whoami package
+ros2 launch rai_whoami rai_whoami.launch.py robot_description_package:=$ROBOT_NAME &
+streamlit run src/rai_hmi/rai_hmi/text_hmi.py $ROBOT_NAME
 ```
 
 To verify if Streamlit successfully loaded the configuration:
@@ -58,7 +60,7 @@ This interaction will help you verify that the robot's 'whoami' package is funct
 
 ### 3. Implement new tools specific to your robot
 
-RAI has general capabilities to interact through ROS interfaces such as actions and topics.
+RAI has general capabilities to interact through ROS interfaces such as actions, services and topics.
 However, you can extend RAI with tools dedicated to what your robot needs to do.
 These functions should be decorated with @tool and should interact with your robot's API.
 See the example below.
@@ -103,19 +105,51 @@ def state_retriever():
 
 ```
 
-### 4. Run the agent with new tools
+### 4. Run the agent of choice with new tools
 
-Once you have implemented your tools, you can run the agent with these new tools as follows:
+Once you have implemented your tools, you can run the agent of choice with these new tools.
+Currently, the following agents are available:
+
+- **state_based_agent**
+  A more advanced agent that provides:
+
+  - Automatic environment parsing via state retriever
+  - Support for asynchronous ROS 2 actions
+  - Continuous state monitoring and reasoning
+  - System prompt retrieval from the rai_whoami node
+
+- **conversational_agent**
+  A simpler agent ideal for getting started, offering:
+  - Human-robot conversation capabilities
+  - Synchronous ROS 2 tool execution
+  - Straightforward implementation and usage
+  - Inline system prompt declaration
+
+Choose the conversational_agent when beginning with RAI, and consider upgrading to state_based_agent for more complex applications requiring state awareness.
 
 ```python
-from rai.agents.state_based import create_state_based_agent
-from rai.utils.model_initialization import get_llm_model
 from myrobot import robot
 
-llm = get_llm_model(model_type='complex_model') # initialize your vendor of choice in config.toml
+from rai.agents.conversational_agent import create_conversational_agent
+from rai.agents.state_based import create_state_based_agent
+from rai.utils.model_initialization import get_llm_model
+
+SYSTEM_PROMPT = "You are a robot with interfaces..."
+
+llm = get_llm_model(
+    model_type="complex_model"
+)  # initialize your vendor of choice in config.toml
 tools = [pick_up_object, scan_object, SayTool(robot=robot)]
-agent = create_state_based_agent(llm=llm, state_retriever=state_retriever, tools=tools)
-agent.invoke({"messages": ["Please pick up an object and scan it."]})
+conversational_agent = create_conversational_agent(
+    llm=llm, tools=tools, system_prompt=SYSTEM_PROMPT
+)
+state_based_agent = create_state_based_agent(
+    llm=llm, state_retriever=state_retriever, tools=tools
+)
+
+# run the agent of choice
+conversational_agent.invoke({"messages": ["Please pick up an object and scan it."]})
+state_based_agent.invoke({"messages": ["Please pick up an object and scan it."]})
 ```
 
 Additional resources:
@@ -126,7 +160,3 @@ Additional resources:
 - Available ROS 2 packages: [ros packages](ros_packages.md).
 - [Human-Robot Interface](human_robot_interface.md) through voice and text.
 - [Manipulation](manipulation.md) with Grounded SAM 2.
-
-## Architecture diagram
-
-![rai_arch.png](imgs%2Frai_arch.png)
