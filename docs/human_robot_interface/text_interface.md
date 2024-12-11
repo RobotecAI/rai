@@ -17,4 +17,4 @@ Currently, customization capabilities are limited due to the internal API design
 
 If you want to customize the available tools, you can do so by editing the `src/rai_hmi/rai_hmi/agent.py` file.
 
-If you have a RaiStateBasedLlmNode running (see e.g., [examples/rosbot-xl-demo.py](examples/rosbot-xl-demo.py)), the Streamlit GUI will communicate with the running node via task_tools defined in the `rai_hmi/rai_hmi/agent.py` file.
+If you have a RaiStateBasedLlmNode running (see e.g., [examples/rosbot-xl-demo.py](../../examples/rosbot-xl-demo.py)), the Streamlit GUI will communicate with the running node via task_tools defined in the `rai_hmi/rai_hmi/agent.py` file.
