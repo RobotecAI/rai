@@ -96,7 +96,7 @@ def parse_whoami_package():
             "as well as the robot's capabilities and limitations including sensor and actuator information. "
             "If there are any images provided, make sure to take them into account by thoroughly analyzing them. "
             "Your description should be thorough and detailed."
-            "Your reply should start with I am a ..."
+            "Your reply should start with You are ..."
         )
 
         images = glob.glob(str(description_path / "images" / "*"))
