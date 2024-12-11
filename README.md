@@ -24,7 +24,7 @@ RAI is a flexible AI agent framework to develop and deploy Embodied AI features 
 ![Static Badge](https://img.shields.io/badge/ROS2-jazzy-blue)
 ![Static Badge](https://img.shields.io/badge/ROS2-humble-blue)
 
-[![](https://dcbadge.limes.pink/api/server/https://discord.gg/GZGfejUSjt)](https://discord.gg/GZGfejUSjt)
+[![](https://dcbadge.limes.pink/api/server/https://discord.gg/3PGHgTaJSB)](https://discord.gg/3PGHgTaJSB)
 
 </div>
 
