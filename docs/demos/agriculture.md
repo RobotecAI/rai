@@ -68,3 +68,6 @@ Used to replan the path/skip the alley.
 - The tractor performs the action and the demo continues.
 
 For more details on configuring RAI for specific robots, refer to the [RAI documentation](../create_robots_whoami.md).
+
+> [!TIP]
+> If you are having trouble running the binary, you can build it from source [here](https://github.com/RobotecAI/rai-agriculture-demo).
