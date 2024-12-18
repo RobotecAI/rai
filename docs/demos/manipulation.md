@@ -75,3 +75,6 @@ The main logic of the demo is implemented in the `ManipulationDemo` class, which
 ```python
 examples/manipulation-demo.py
 ```
+
+> [!TIP]
+> If you are having trouble running the binary, you can build it from source [here](https://github.com/RobotecAI/rai-manipulation-demo).
