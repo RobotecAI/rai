@@ -45,7 +45,6 @@ from rclpy.qos import (
 from rclpy.topic_endpoint_info import TopicEndpointInfo
 from std_srvs.srv import Trigger
 
-import rai.utils.ros
 from rai.agents.state_based import Report, State, create_state_based_agent
 from rai.messages import HumanMultimodalMessage
 from rai.tools.ros.native import Ros2BaseTool
@@ -144,7 +143,7 @@ def ros2_build_msg(msg_type: str, msg_args: Dict[str, Any]) -> Tuple[object, Typ
     return msg, msg_cls
 
 
-class AsyncRos2ActionClient:
+class Ros2ActionsHelper:
     def __init__(self, node: rclpy.node.Node):
         self.node = node
 
@@ -475,7 +474,7 @@ class RaiBaseNode(Node):
 
         # ---------- ROS helpers ----------
         self.ros_discovery_info = NodeDiscovery(self, allowlist=allowlist)
-        self.async_action_client = AsyncRos2ActionClient(self)
+        self.async_action_client = Ros2ActionsHelper(self)
         self.topics_handler = Ros2TopicsHandler(
             self, self.callback_group, self.ros_discovery_info
         )
@@ -508,7 +507,7 @@ class RaiBaseNode(Node):
 
     # ------------- other methods -------------
     def spin(self):
-        executor = rai.utils.ros.MultiThreadedExecutorFixed()
+        executor = rclpy.executors.MultiThreadedExecutor()
         executor.add_node(self)
         executor.spin()
         rclpy.shutdown()

@@ -12,19 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple
 
 import rclpy.callback_groups
 import rclpy.node
 from rclpy.action.graph import get_action_names_and_types
-from rclpy.executors import (
-    ConditionReachedException,
-    ExternalShutdownException,
-    MultiThreadedExecutor,
-    ShutdownException,
-    TimeoutException,
-    TimeoutObject,
-)
 
 
 class NodeDiscovery:
@@ -50,8 +42,9 @@ class NodeDiscovery:
             callback_group=rclpy.callback_groups.MutuallyExclusiveCallbackGroup(),
         )
 
-        # callables (e.g. fun(x: NodeDiscovery)) that will receive the discovery info on every timer callback
-        # allows to register other entities that needs up-to-date discovery info
+        # callables (e.g. fun(x: NodeDiscovery)) that will receive the discovery
+        # info on every timer callback. This allows to register other entities that
+        # needs up-to-date discovery info
         if setters is None:
             self.setters = list()
         else:
@@ -99,41 +92,3 @@ class NodeDiscovery:
             "services_and_types": self.services_and_types,
             "actions_and_types": self.actions_and_types,
         }
-
-
-class MultiThreadedExecutorFixed(MultiThreadedExecutor):
-    """
-    Adresses a comment:
-    ```python
-    # make a copy of the list that we iterate over while modifying it
-    # (https://stackoverflow.com/q/1207406/3753684)
-    ```
-    from the rclpy implementation
-    """
-
-    def _spin_once_impl(
-        self,
-        timeout_sec: Optional[Union[float, TimeoutObject]] = None,
-        wait_condition: Callable[[], bool] = lambda: False,
-    ) -> None:
-        try:
-            handler, entity, node = self.wait_for_ready_callbacks(
-                timeout_sec, None, wait_condition
-            )
-        except ExternalShutdownException:
-            pass
-        except ShutdownException:
-            pass
-        except TimeoutException:
-            pass
-        except ConditionReachedException:
-            pass
-        else:
-            self._executor.submit(handler)
-            self._futures.append(handler)
-            futures = self._futures.copy()
-            for future in futures[:]:
-                if future.done():
-                    futures.remove(future)
-                    future.result()  # raise any exceptions
-            self._futures = futures
