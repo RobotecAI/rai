@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 from abc import ABC, abstractmethod
 from typing import Callable
 from uuid import uuid4
 
+
 class BaseMessage(ABC):
-    ...
+    pass
+
 
 class BaseConnector(ABC):
 
@@ -27,20 +28,22 @@ class BaseConnector(ABC):
 
     @abstractmethod
     def send_message(self, msg: BaseMessage, target: str) -> None:
-        ...
+        pass
 
     @abstractmethod
     def receive_message(self, source: str) -> BaseMessage:
-        ...
+        pass
 
     @abstractmethod
     def send_and_wait(self, target: str) -> BaseMessage:
-        ...
-    
+        pass
+
     @abstractmethod
-    def start_action(self, target: str, on_feedback: Callable, on_finish: Callable = lambda _: None)  -> str:
-        ...
-    
+    def start_action(
+        self, target: str, on_feedback: Callable, on_finish: Callable = lambda _: None
+    ) -> str:
+        pass
+
     @abstractmethod
     def terminate_action(self, action_handle: str):
-        ...
+        pass

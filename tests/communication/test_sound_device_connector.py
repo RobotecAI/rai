@@ -64,7 +64,7 @@ def test_start_action_failed_init(
 
     recording_device = 0
     with pytest.raises(SoundDeviceError, match="Device 0 has not been configured"):
-        stream_handle = audio_input_device.start_action(
+        _ = audio_input_device.start_action(
             str(recording_device), feedback_callback, finish_callback
         )
 
