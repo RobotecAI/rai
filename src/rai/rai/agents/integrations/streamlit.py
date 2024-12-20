@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import base64
 import inspect
 from typing import Any, Callable, Dict, TypeVar
 
+import cv2
+import numpy as np
 import streamlit as st
 from langchain_core.callbacks.base import BaseCallbackHandler
 from streamlit.delta_generator import DeltaGenerator
@@ -102,9 +105,19 @@ def get_streamlit_cb(parent_container: DeltaGenerator) -> BaseCallbackHandler:
             """
             # We assume that `on_tool_end` comes after `on_tool_start`, meaning output_placeholder exists
             if self.tool_output_placeholder:
-                self.tool_output_placeholder.code(
-                    output.content
-                )  # Display the tool's output
+                with self.tool_output_placeholder.container():
+                    st.code(output.content)  # Display the tool's output
+
+                    if output.artifact is not None:
+                        if "images" in output.artifact:  # Display available images
+                            for image in output.artifact["images"]:
+                                image_cv2 = cv2.imdecode(
+                                    np.frombuffer(base64.b64decode(image), np.uint8),
+                                    cv2.IMREAD_COLOR,
+                                )
+                                st.image(
+                                    image_cv2, channels="BGR", use_container_width=True
+                                )
 
     # Define a type variable for generic type hinting in the decorator, to maintain
     # input function and wrapped function return type
