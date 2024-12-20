@@ -43,7 +43,7 @@ def create_agent():
         Ros2GetTopicsNamesAndTypesTool(node=node),
     ]
 
-    llm = get_llm_model(model_type="complex_model")
+    llm = get_llm_model(model_type="complex_model", streaming=True)
 
     system_prompt = """
     You are a robotic arm with interfaces to detect and manipulate objects.
