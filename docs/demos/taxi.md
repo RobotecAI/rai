@@ -1,8 +1,6 @@
 # Speech-to-speech interaction with autonomous taxi
 
-This demo showcases a speech-to-speech interaction with an autonomous taxi using RAI (Robotec AI) in an AWSIM environment with Autoware. Users can specify destinations verbally, and the system will process the request, plan the route, and navigate the taxi accordingly.
-
-![Autonomous Taxi Demo](../imgs/taxi_demo.gif)
+This demo showcases a speech-to-speech interaction with an autonomous taxi using RAI in an AWSIM environment with Autoware. Users can specify destinations verbally, and the system will process the request, plan the route, and navigate the taxi accordingly.
 
 > [!NOTE]  
 > This readme is a work in progress.

@@ -82,3 +82,6 @@ By looking at the example code in [rai/examples/rosbot-xl-demo.py](../../example
 If you wish, you can learn more about [configuring RAI for a specific robot](../create_robots_whoami.md).
 
 [rai rosbot demo]: https://github.com/RobotecAI/rai-rosbot-xl-demo
+
+> [!TIP]
+> If you are having trouble running the binary, you can build it from source [here](https://github.com/RobotecAI/rai-rosbot-xl-demo).
