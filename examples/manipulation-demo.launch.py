@@ -79,19 +79,19 @@ def generate_launch_description():
         ],
     )
 
+    launch_openset = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            [
+                FindPackageShare("rai_bringup"),
+                "/launch/openset.launch.py",
+            ]
+        ),
+    )
+
     return LaunchDescription(
         [
             # Include the game_launcher argument
             game_launcher_arg,
-            # Launch the openset nodes
-            IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(
-                    [
-                        FindPackageShare("rai_bringup"),
-                        "/launch/openset.launch.py",
-                    ]
-                ),
-            ),
             # Launch the game launcher and wait for it to load
             launch_game_launcher,
             RegisterEventHandler(
@@ -107,6 +107,7 @@ def generate_launch_description():
                 event_handler=OnExecutionComplete(
                     target_action=wait_for_game_launcher,
                     on_completion=[
+                        launch_openset,
                         launch_moveit,
                         launch_robotic_manipulation,
                     ],
