@@ -50,7 +50,13 @@ This demo showcases the capabilities of RAI in performing manipulation tasks usi
    ros2 launch examples/manipulation-demo.launch.py game_launcher:=path/to/RAIManipulationDemo.GameLauncher
    ```
 
-2. In the second terminal, run the interactive prompt:
+2. In the second terminal, run the streamlit interface:
+
+   ```shell
+   streamlit run examples/manipulation-demo-streamlit.py
+   ```
+
+   Alternatively, you can run the simpler command-line version, which also serves as an example of how to use the RAI API for you own applications:
 
    ```shell
    python examples/manipulation-demo.py
