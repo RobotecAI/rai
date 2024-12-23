@@ -57,7 +57,6 @@ class NodeDiscovery:
         self.setters.append(setter)
 
     def discovery_callback(self):
-        self.node.get_logger().info("Discovery callback")
         self.__set(
             self.node.get_topic_names_and_types(),
             self.node.get_service_names_and_types(),
