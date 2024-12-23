@@ -26,7 +26,7 @@ from rclpy.exceptions import (
 )
 from rclpy.task import Future
 
-from rai.node import RaiAsyncToolsNode
+from rai.node import RaiBaseNode
 from rai.tools.ros import Ros2BaseInput, Ros2BaseTool
 from rai.tools.ros.utils import convert_ros_img_to_ndarray
 from rai.tools.utils import wait_for_message
@@ -81,7 +81,7 @@ class DistanceMeasurement(NamedTuple):
 
 # --------------------- Tools ---------------------
 class GroundingDinoBaseTool(Ros2BaseTool):
-    node: RaiAsyncToolsNode = Field(..., exclude=True, required=True)
+    node: RaiBaseNode = Field(..., exclude=True, required=True)
 
     box_threshold: float = Field(default=0.35, description="Box threshold for GDINO")
     text_threshold: float = Field(default=0.45, description="Text threshold for GDINO")
