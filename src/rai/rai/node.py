@@ -268,6 +268,7 @@ class RaiBaseNode(Node):
             durability=DurabilityPolicy.VOLATILE,
             liveliness=LivelinessPolicy.AUTOMATIC,
         )
+        self.qos_profile_cache: Dict[str, QoSProfile] = dict()
 
         self.state_subscribers = dict()
 
@@ -294,11 +295,21 @@ class RaiBaseNode(Node):
             return self.robot_state[topic]
         else:
             msg_type = self.get_msg_type(topic)
+            if topic not in self.qos_profile_cache:
+                self.get_logger().debug(f"Getting qos profile for topic: {topic}")
+                qos_profile = self.get_publishers_info_by_topic(topic)[0].qos_profile
+                if qos_profile.history == HistoryPolicy.UNKNOWN:
+                    qos_profile.history = HistoryPolicy.SYSTEM_DEFAULT
+                self.qos_profile_cache[topic] = qos_profile
+            else:
+                self.get_logger().debug(f"Using cached qos profile for topic: {topic}")
+                qos_profile = self.qos_profile_cache[topic]
+
             success, msg = wait_for_message(
                 msg_type,
                 self,
                 topic,
-                qos_profile=self.qos_profile,
+                qos_profile=qos_profile,
                 time_to_wait=timeout_sec,
             )
 
