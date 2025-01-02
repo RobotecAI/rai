@@ -39,7 +39,9 @@ jobs:
         uses: snok/install-poetry@v1
 
       - name: Create virtual audio device
-        run: jackd -d dummy &
+        run: |
+          DEBIAN_FRONTEND=noninteractive apt-get install jackd
+          jackd -d dummy &
 
       - name: Install python dependencies
         run: poetry install --with openset,nomad
