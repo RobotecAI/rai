@@ -41,7 +41,7 @@ jobs:
       - name: Create virtual audio device
         run: |
           apt-get update
-          DEBIAN_FRONTEND=noninteractive sudo apt-get --yes install jackd
+          DEBIAN_FRONTEND=noninteractive apt-get --yes install jackd
           jackd -d dummy -r 44100 &
 
       - name: Install python dependencies

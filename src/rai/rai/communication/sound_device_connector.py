@@ -30,7 +30,7 @@ class SoundDeviceError(Exception):
 class AudioInputDeviceConfig(TypedDict):
     block_size: int
     consumer_sampling_rate: int
-    target_smpling_rate: int
+    target_sampling_rate: int
     dtype: str
     device_number: Optional[int]
 
@@ -58,7 +58,7 @@ class ConfiguredAudioInputDevice:
         self.window_size_samples = int(
             config["block_size"] * self.sample_rate / config["consumer_sampling_rate"]
         )
-        self.target_sampling_rate = int(config["target_smpling_rate"])
+        self.target_sampling_rate = int(config["target_sampling_rate"])
         self.dtype = config["dtype"]
 
 
@@ -110,7 +110,7 @@ class StreamingAudioInputDevice(BaseConnector):
             indata = indata.flatten()
             sample_time_length = len(indata) / target_device.target_sampling_rate
             if target_device.sample_rate != target_device.target_sampling_rate:
-                indata = resample(indata, int(sample_time_length * target_device.target_samping_rate))  # type: ignore
+                indata = resample(indata, int(sample_time_length * target_device.target_sampling_rate))  # type: ignore
             flag_dict = {
                 "input_overflow": status.input_overflow,
                 "input_underflow": status.input_underflow,
