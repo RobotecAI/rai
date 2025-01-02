@@ -498,12 +498,15 @@ class RaiStateBasedLlmNode(RaiBaseNode):
             topic_callback = functools.partial(
                 self.generic_state_subscriber_callback, topic
             )
+            qos_profile = self.adapt_requests_to_offers(
+                self.get_publishers_info_by_topic(topic)
+            )
             subscriber = self.create_subscription(
                 msg_type,
                 topic,
                 callback=topic_callback,
                 callback_group=self.callback_group,
-                qos_profile=self.qos_profile,
+                qos_profile=qos_profile,
             )
 
             self.state_subscribers[topic] = subscriber
