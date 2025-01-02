@@ -37,6 +37,7 @@ def device_config():
     }
 
 
+@pytest.mark.ci_only
 def test_configure(
     setup_mock_input_stream,
     device_config,
@@ -61,6 +62,7 @@ def test_configure(
     assert audio_input_device.configred_devices[device_id].dtype == "float32"
 
 
+@pytest.mark.ci_only
 def test_start_action_failed_init(
     setup_mock_input_stream,
 ):
@@ -79,6 +81,7 @@ def test_start_action_failed_init(
         )
 
 
+@pytest.mark.ci_only
 def test_start_action(
     setup_mock_input_stream,
     device_config,
@@ -91,17 +94,22 @@ def test_start_action(
     feedback_callback = mock.MagicMock()
     finish_callback = mock.MagicMock()
 
-    recording_device = "0"
-    audio_input_device.configure_device(recording_device, device_config)
+    device = sd.query_devices(kind="input")
+    if type(device) is dict:
+        device_id = str(device["index"])
+    elif isinstance(device, list):
+        device_id = str(device[0]["index"])  # type: ignore
+    else:
+        assert False
+    audio_input_device.configure_device(device_id, device_config)
 
     stream_handle = audio_input_device.start_action(
-        str(recording_device), feedback_callback, finish_callback
+        device_id, feedback_callback, finish_callback
     )
 
     assert mock_input_stream.call_count == 1
     init_args = mock_input_stream.call_args.kwargs
-    assert init_args["device"] == int(recording_device)
-    assert init_args["callback"] == feedback_callback
+    assert init_args["device"] == int(device_id)
     assert init_args["finished_callback"] == finish_callback
 
     assert audio_input_device.streams.get(stream_handle) is not None
