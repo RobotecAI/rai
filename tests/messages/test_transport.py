@@ -20,6 +20,7 @@ from typing import List
 import numpy as np
 import pytest
 import rclpy
+from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import QoSPresetProfiles, QoSProfile
 from sensor_msgs.msg import Image
@@ -90,7 +91,9 @@ def test_transport(qos_profile: str):
     if not rclpy.ok():
         rclpy.init()
     publisher = TestPublisher(QoSPresetProfiles.get_from_short_key(qos_profile))
-    thread = threading.Thread(target=rclpy.spin, args=(publisher,))
+    executor = SingleThreadedExecutor()
+    executor.add_node(publisher)
+    thread = threading.Thread(target=executor.spin)
     thread.start()
 
     rai_base_node = RaiBaseNode(
@@ -102,7 +105,7 @@ def test_transport(qos_profile: str):
             output = rai_base_node.get_raw_message_from_topic(topic, timeout_sec=5.0)
             assert not isinstance(output, Exception), f"Exception: {output}"
     finally:
-        # TODO: Fix errors regarding node destruction in thread
+        executor.shutdown()
         publisher.destroy_node()
         rclpy.shutdown()
-        thread.join()
+        thread.join(timeout=1.0)
