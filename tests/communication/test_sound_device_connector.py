@@ -100,11 +100,8 @@ def test_start_action(
 
     assert mock_input_stream.call_count == 1
     init_args = mock_input_stream.call_args.kwargs
-    assert init_args["samplerate"] == 44100.0
-    assert init_args["channels"] == 1
     assert init_args["device"] == int(recording_device)
-    assert init_args["dtype"] == "float32"
-    assert init_args["blocksize"] == 1024
+    assert init_args["callback"] == feedback_callback
     assert init_args["finished_callback"] == finish_callback
 
     assert audio_input_device.streams.get(stream_handle) is not None

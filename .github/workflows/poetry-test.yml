@@ -42,7 +42,7 @@ jobs:
         run: |
           apt-get update
           DEBIAN_FRONTEND=noninteractive sudo apt-get --yes install jackd
-          jackd -d dummy &
+          jackd -d dummy -r 44100 &
 
       - name: Install python dependencies
         run: poetry install --with openset,nomad
