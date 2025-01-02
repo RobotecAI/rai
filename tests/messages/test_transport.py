@@ -12,25 +12,55 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import threading
+import uuid
+from typing import List
 
 import numpy as np
+import pytest
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import QoSPresetProfiles, QoSProfile
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
 
 from rai.node import RaiBaseNode
 
 
+def get_qos_profiles() -> List[str]:
+    ros_distro = os.environ.get("ROS_DISTRO")
+    match ros_distro:
+        case "humble":
+            return [
+                QoSPresetProfiles.SYSTEM_DEFAULT.name,
+                QoSPresetProfiles.SENSOR_DATA.name,
+                QoSPresetProfiles.SERVICES_DEFAULT.name,
+                QoSPresetProfiles.PARAMETERS.name,
+                QoSPresetProfiles.PARAMETER_EVENTS.name,
+                QoSPresetProfiles.ACTION_STATUS_DEFAULT.name,
+            ]
+        case "jazzy":
+            return [
+                QoSPresetProfiles.DEFAULT.name,
+                QoSPresetProfiles.SYSTEM_DEFAULT.name,
+                QoSPresetProfiles.SENSOR_DATA.name,
+                QoSPresetProfiles.SERVICES_DEFAULT.name,
+                QoSPresetProfiles.PARAMETERS.name,
+                QoSPresetProfiles.PARAMETER_EVENTS.name,
+                QoSPresetProfiles.ACTION_STATUS_DEFAULT.name,
+                QoSPresetProfiles.BEST_AVAILABLE.name,
+            ]
+        case _:
+            raise ValueError(f"Invalid ROS_DISTRO: {ros_distro}")
+
+
 class TestPublisher(Node):
-    def __init__(self):
-        super().__init__("test_publisher")
-        self.image_publisher = self.create_publisher(
-            Image, "image", qos_profile_sensor_data
-        )
-        self.text_publisher = self.create_publisher(String, "text", 10)
+    def __init__(self, qos_profile: QoSProfile):
+        super().__init__("test_publisher_" + str(uuid.uuid4()).replace("-", ""))
+
+        self.image_publisher = self.create_publisher(Image, "image", qos_profile)
+        self.text_publisher = self.create_publisher(String, "text", qos_profile)
 
         self.image_timer = self.create_timer(0.1, self.image_callback)
         self.text_timer = self.create_timer(0.1, self.text_callback)
@@ -52,18 +82,27 @@ class TestPublisher(Node):
         self.text_publisher.publish(msg)
 
 
-def test_transport():
-    rclpy.init()
-    publisher = TestPublisher()
+@pytest.mark.parametrize(
+    "qos_profile",
+    get_qos_profiles(),
+)
+def test_transport(qos_profile: str):
+    if not rclpy.ok():
+        rclpy.init()
+    publisher = TestPublisher(QoSPresetProfiles.get_from_short_key(qos_profile))
     thread = threading.Thread(target=rclpy.spin, args=(publisher,))
     thread.start()
 
-    rai_base_node = RaiBaseNode(node_name="test_transport")
+    rai_base_node = RaiBaseNode(
+        node_name="test_transport_" + str(uuid.uuid4()).replace("-", "")
+    )
     topics = ["/image", "/text"]
-    for topic in topics:
-        output = rai_base_node.get_raw_message_from_topic(topic)
-        assert output is not None
-
-    publisher.destroy_node()
-    rclpy.shutdown()
-    thread.join()
+    try:
+        for topic in topics:
+            output = rai_base_node.get_raw_message_from_topic(topic, timeout_sec=5.0)
+            assert not isinstance(output, Exception), f"Exception: {output}"
+    finally:
+        # TODO: Fix errors regarding node destruction in thread
+        publisher.destroy_node()
+        rclpy.shutdown()
+        thread.join()

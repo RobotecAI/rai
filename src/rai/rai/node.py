@@ -262,13 +262,6 @@ class RaiBaseNode(Node):
         )
         self.ros_discovery_info = NodeDiscovery(allowlist=allowlist)
         self.discovery()
-        self.qos_profile = QoSProfile(
-            history=HistoryPolicy.KEEP_LAST,
-            depth=1,
-            reliability=ReliabilityPolicy.BEST_EFFORT,
-            durability=DurabilityPolicy.VOLATILE,
-            liveliness=LivelinessPolicy.AUTOMATIC,
-        )
         self.qos_profile_cache: Dict[str, QoSProfile] = dict()
 
         self.state_subscribers = dict()
@@ -373,7 +366,7 @@ class RaiBaseNode(Node):
                     f"No message received in {timeout_sec} seconds from topic {topic}"
                 )
                 self.get_logger().error(error)
-                return error
+                return Exception(error)
 
     def get_msg_type(self, topic: str, n_tries: int = 5) -> Any:
         """Sometimes node fails to do full discovery, therefore we need to retry"""
