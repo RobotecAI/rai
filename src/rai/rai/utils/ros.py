@@ -31,7 +31,7 @@ class NodeDiscovery:
         self.node = node
         self.allowlist = allowlist
 
-        self.topcies_and_types: Dict[str, str] = dict()
+        self.topics_and_types: Dict[str, str] = dict()
         self.services_and_types: Dict[str, str] = dict()
         self.actions_and_types: Dict[str, str] = dict()
         self.allowlist: Optional[List[str]] = allowlist
