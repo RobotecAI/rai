@@ -27,8 +27,7 @@ class SoundDeviceError(Exception):
         super().__init__(msg)
 
 
-class DeviceConfig(TypedDict):
-    kind: str
+class AudioInputDeviceConfig(TypedDict):
     block_size: int
     consumer_sampling_rate: int
     target_smpling_rate: int
@@ -36,7 +35,7 @@ class DeviceConfig(TypedDict):
     device_number: Optional[int]
 
 
-class ConfiguredDevice:
+class ConfiguredAudioInputDevice:
     """
     A class to store the configuration of an audio device
 
@@ -49,9 +48,9 @@ class ConfiguredDevice:
     dtype (str): The data type of the audio samples
     """
 
-    def __init__(self, config: DeviceConfig):
+    def __init__(self, config: AudioInputDeviceConfig):
         self.sample_rate = sd.query_devices(
-            device=config["device_number"], kind=config["kind"]
+            device=config["device_number"], kind="input"
         )[
             "default_samplerate"
         ]  # type: ignore
@@ -67,9 +66,9 @@ class StreamingAudioInputDevice(BaseConnector):
     def __init__(self):
         self.streams = {}
         sd.default.latency = ("low", "low")
-        self.configred_devices: dict[str, ConfiguredDevice] = {}
+        self.configred_devices: dict[str, ConfiguredAudioInputDevice] = {}
 
-    def configure_device(self, target: str, config: DeviceConfig):
+    def configure_device(self, target: str, config: AudioInputDeviceConfig):
         if target.isdigit():
             if config.get("device_number") is None:
                 config["device_number"] = int(target)
@@ -77,7 +76,7 @@ class StreamingAudioInputDevice(BaseConnector):
                 raise SoundDeviceError(
                     "device_number in config must be the same as target"
                 )
-            self.configred_devices[target] = ConfiguredDevice(config)
+            self.configred_devices[target] = ConfiguredAudioInputDevice(config)
         else:
             raise SoundDeviceError("target must be a device number!")
 

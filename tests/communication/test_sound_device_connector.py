@@ -29,7 +29,6 @@ def setup_mock_input_stream():
 @pytest.fixture
 def device_config():
     return {
-        "kind": "input",
         "block_size": 1024,
         "consumer_sampling_rate": 44100,
         "target_smpling_rate": 16000,
