@@ -12,13 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .conversational_agent import create_conversational_agent
-from .state_based import create_state_based_agent
-from .tool_runner import ToolRunner
-from .voice_agent import VoiceRecognitionAgent
+from rai.agents.conversational_agent import create_conversational_agent
+from rai.agents.state_based import create_state_based_agent
+from rai.agents.tool_runner import ToolRunner
 
 __all__ = [
-    "VoiceRecognitionAgent",
     "ToolRunner",
     "create_conversational_agent",
     "create_state_based_agent",
