@@ -39,7 +39,7 @@ jobs:
         uses: snok/install-poetry@v1
 
       - name: Create virtual audio device
-        runs: jackd -d dummy &
+        run: jackd -d dummy &
 
       - name: Install python dependencies
         run: poetry install --with openset,nomad
