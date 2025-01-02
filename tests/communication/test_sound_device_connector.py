@@ -15,6 +15,7 @@
 from unittest import mock
 
 import pytest
+import sounddevice as sd
 
 from rai.communication import SoundDeviceError, StreamingAudioInputDevice
 
@@ -30,7 +31,7 @@ def device_config():
     return {
         "kind": "input",
         "block_size": 1024,
-        "sampling_rate": 44100,
+        "consumer_sampling_rate": 44100,
         "target_smpling_rate": 16000,
         "dtype": "float32",
     }
@@ -44,11 +45,20 @@ def test_configure(
     mock_instance = mock.MagicMock()
     mock_input_stream.return_value = mock_instance
     audio_input_device = StreamingAudioInputDevice()
-    audio_input_device.configure_device("0", device_config)
-    assert audio_input_device.configred_devices["0"].sample_rate == 44100
-    assert audio_input_device.configred_devices["0"].window_size_samples == 1024
-    assert audio_input_device.configred_devices["0"].target_samping_rate == 16000
-    assert audio_input_device.configred_devices["0"].dtype == "float32"
+    device = sd.query_devices(kind="input")
+    if type(device) is dict:
+        device_id = str(device["index"])
+    elif isinstance(device, list):
+        device_id = str(device[0]["index"])  # type: ignore
+    else:
+        assert False
+    audio_input_device.configure_device(device_id, device_config)
+    assert (
+        audio_input_device.configred_devices[device_id].consumer_sampling_rate == 44100
+    )
+    assert audio_input_device.configred_devices[device_id].window_size_samples == 1024
+    assert audio_input_device.configred_devices[device_id].target_sampling_rate == 16000
+    assert audio_input_device.configred_devices[device_id].dtype == "float32"
 
 
 def test_start_action_failed_init(

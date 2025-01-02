@@ -30,23 +30,36 @@ class SoundDeviceError(Exception):
 class DeviceConfig(TypedDict):
     kind: str
     block_size: int
-    sampling_rate: int
+    consumer_sampling_rate: int
     target_smpling_rate: int
     dtype: str
     device_number: Optional[int]
 
 
 class ConfiguredDevice:
+    """
+    A class to store the configuration of an audio device
+
+    Attributes
+    ----------
+    sample_rate (int): Device sample rate
+    consumer_sampling_rate (int): The sampling rate of the consumer
+    window_size_samples (int): The size of the window in samples
+    target_sampling_rate (int): The target sampling rate
+    dtype (str): The data type of the audio samples
+    """
+
     def __init__(self, config: DeviceConfig):
         self.sample_rate = sd.query_devices(
             device=config["device_number"], kind=config["kind"]
         )[
             "default_samplerate"
         ]  # type: ignore
+        self.consumer_sampling_rate = config["consumer_sampling_rate"]
         self.window_size_samples = int(
-            config["block_size"] * self.sample_rate / config["sampling_rate"]
+            config["block_size"] * self.sample_rate / config["consumer_sampling_rate"]
         )
-        self.target_samping_rate = int(config["target_smpling_rate"])
+        self.target_sampling_rate = int(config["target_smpling_rate"])
         self.dtype = config["dtype"]
 
 
@@ -96,8 +109,8 @@ class StreamingAudioInputDevice(BaseConnector):
 
         def callback(indata: np.ndarray, frames: int, _, status: CallbackFlags):
             indata = indata.flatten()
-            sample_time_length = len(indata) / target_device.target_samping_rate
-            if target_device.sample_rate != target_device.target_samping_rate:
+            sample_time_length = len(indata) / target_device.target_sampling_rate
+            if target_device.sample_rate != target_device.target_sampling_rate:
                 indata = resample(indata, int(sample_time_length * target_device.target_samping_rate))  # type: ignore
             flag_dict = {
                 "input_overflow": status.input_overflow,
