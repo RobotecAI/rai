@@ -51,7 +51,7 @@ def test_configure(
     elif isinstance(device, list):
         device_id = str(device[0]["index"])  # type: ignore
     else:
-        assert False
+        raise AssertionError("No input device found")
     audio_input_device.configure_device(device_id, device_config)
     assert (
         audio_input_device.configred_devices[device_id].consumer_sampling_rate == 44100
@@ -99,7 +99,7 @@ def test_start_action(
     elif isinstance(device, list):
         device_id = str(device[0]["index"])  # type: ignore
     else:
-        assert False
+        raise AssertionError("No input device found")
     audio_input_device.configure_device(device_id, device_config)
 
     stream_handle = audio_input_device.start_action(
