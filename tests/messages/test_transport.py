@@ -103,7 +103,7 @@ def test_transport(qos_profile: str):
     try:
         for topic in topics:
             output = rai_base_node.get_raw_message_from_topic(topic, timeout_sec=5.0)
-            assert not isinstance(output, Exception), f"Exception: {output}"
+            assert not isinstance(output, str), "No message received"
     finally:
         executor.shutdown()
         publisher.destroy_node()

@@ -15,7 +15,7 @@
 
 import functools
 import time
-from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Type
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Type, Union
 
 import rclpy
 import rclpy.callback_groups
@@ -331,7 +331,9 @@ class RaiBaseNode(Node):
 
         return request_qos
 
-    def get_raw_message_from_topic(self, topic: str, timeout_sec: int = 1) -> Any:
+    def get_raw_message_from_topic(
+        self, topic: str, timeout_sec: int = 1
+    ) -> Union[Any, str]:  # ROS 2 topic or error string
         self.get_logger().debug(f"Getting msg from topic: {topic}")
         if topic in self.state_subscribers and topic in self.robot_state:
             self.get_logger().debug("Returning cached message")
@@ -366,7 +368,7 @@ class RaiBaseNode(Node):
                     f"No message received in {timeout_sec} seconds from topic {topic}"
                 )
                 self.get_logger().error(error)
-                return Exception(error)
+                return error
 
     def get_msg_type(self, topic: str, n_tries: int = 5) -> Any:
         """Sometimes node fails to do full discovery, therefore we need to retry"""
