@@ -21,11 +21,10 @@ from .spatial_temporal_navigation import (
     Pose,
     PositionStamped,
     Scene,
-    run,
+    run_spatial_temporal_data_collection,
 )
 
 __all__ = [
-    "run",
     "Pose",
     "Orientation",
     "PositionStamped",
@@ -33,4 +32,5 @@ __all__ = [
     "Scene",
     "Description",
     "Observation",
+    "run_spatial_temporal_data_collection",
 ]
