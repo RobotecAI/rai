@@ -16,7 +16,7 @@
 import logging
 import threading
 import time
-from typing import Dict, List
+from typing import Any, Dict, List
 from uuid import uuid4
 
 import cv2
@@ -89,18 +89,18 @@ def ros2_transform_stamped_to_position(
     transform_stamped: TransformStamped,
 ) -> PositionStamped:
     return PositionStamped(
-        timestamp=transform_stamped.header.stamp.sec
-        + transform_stamped.header.stamp.nanosec / 1e9,
+        timestamp=transform_stamped.header.stamp.sec  # type: ignore
+        + transform_stamped.header.stamp.nanosec / 1e9,  # type: ignore
         position=Pose(
-            x=transform_stamped.transform.translation.x,
-            y=transform_stamped.transform.translation.y,
-            z=transform_stamped.transform.translation.z,
+            x=transform_stamped.transform.translation.x,  # type: ignore
+            y=transform_stamped.transform.translation.y,  # type: ignore
+            z=transform_stamped.transform.translation.z,  # type: ignore
         ),
         orientation=Orientation(
-            x=transform_stamped.transform.rotation.x,
-            y=transform_stamped.transform.rotation.y,
-            z=transform_stamped.transform.rotation.z,
-            w=transform_stamped.transform.rotation.w,
+            x=transform_stamped.transform.rotation.x,  # type: ignore
+            y=transform_stamped.transform.rotation.y,  # type: ignore
+            z=transform_stamped.transform.rotation.z,  # type: ignore
+            w=transform_stamped.transform.rotation.w,  # type: ignore
         ),
     )
 
@@ -108,11 +108,12 @@ def ros2_transform_stamped_to_position(
 def ros2_image_to_image(ros2_image: Image) -> ImageStamped:
     logger.info("Converting ROS2 image to base64 image")
     bridge = CvBridge()
-    cv2_image = bridge.imgmsg_to_cv2(ros2_image)
-    cv2_image = cv2.cvtColor(cv2_image, cv2.COLOR_BGR2RGB)
-    image_data = preprocess_image(cv2_image)
+    cv2_image = bridge.imgmsg_to_cv2(ros2_image)  # type: ignore
+    cv2_image = cv2.cvtColor(cv2_image, cv2.COLOR_BGR2RGB)  # type: ignore
+    image_data = preprocess_image(cv2_image)  # type: ignore
     return ImageStamped(
-        timestamp=ros2_image.header.stamp.sec + ros2_image.header.stamp.nanosec / 1e9,
+        timestamp=ros2_image.header.stamp.sec  # type: ignore
+        + ros2_image.header.stamp.nanosec / 1e9,  # type: ignore
         image=image_data,
     )
 
@@ -126,7 +127,7 @@ def generate_description(image: ImageStamped) -> Description:
         )
     ]
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-    description = llm.with_structured_output(Description).invoke(prompt)
+    description = llm.with_structured_output(Description).invoke(prompt)  # type: ignore
     if not isinstance(description, Description):
         raise ValueError("Description is not a valid Description")
     return description
@@ -155,9 +156,9 @@ def observation_to_vector_database_entry(observation: Observation):
     )
 
 
-def pipeline(
+def data_collection_pipeline(
     vectorstore: VectorStore,
-    observations_collection: Collection,
+    observations_collection: Collection[Dict[str, Any]],
     image: Image,
     transform: TransformStamped,
 ):
@@ -199,12 +200,12 @@ class ImageGrabber(Node):
         self.image = msg
 
 
-def run(
+def run_spatial_temporal_data_collection(
     image_topic: str,
     source_frame: str,
     target_frame: str,
     vectorstore: VectorStore,
-    observations_collection: Collection,
+    observations_collection: Collection[Dict[str, Any]],
     time_between_observations: float = 5.0,
 ) -> None:
     transform_fetcher = TransformGrabber(
@@ -223,7 +224,7 @@ def run(
             time.sleep(0.1)
             continue
         threading.Thread(
-            target=pipeline,
+            target=data_collection_pipeline,
             args=(vectorstore, observations_collection, image, transform),
         ).start()
         time.sleep(time_between_observations)

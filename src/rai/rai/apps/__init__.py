@@ -11,3 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from .spatial_temporal_navigation.spatial_temporal_navigation import (
+    run_spatial_temporal_data_collection,
+)
+
+__all__ = ["run_spatial_temporal_data_collection"]
