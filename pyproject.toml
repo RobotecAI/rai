@@ -85,7 +85,8 @@ profile = "black"
 [tool.pytest.ini_options]
 markers = [
     "billable: marks test as billable  (deselect with '-m \"not billable\"')",
+    "ci_only: marks test as cli only (deselect with '-m \"not ci_only\"')",
 ]
-addopts = "-m 'not billable' --ignore=src"
+addopts = "-m 'not billable and not ci_only' --ignore=src"
 log_cli = true
 log_cli_level = "DEBUG"
