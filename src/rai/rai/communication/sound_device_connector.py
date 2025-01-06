@@ -99,7 +99,7 @@ class StreamingAudioInputDevice(BaseConnector):
         self,
         target: str,
         on_feedback: Callable[[np.ndarray, dict[str, Any]], None],
-        on_finish: Callable = lambda _: None,
+        on_finish: Callable = lambda: None,
     ) -> str:
 
         target_device = self.configred_devices.get(target)

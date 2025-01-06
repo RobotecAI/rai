@@ -13,11 +13,16 @@
 # limitations under the License.
 
 from .base_connector import BaseConnector, BaseMessage
-from .sound_device_connector import SoundDeviceError, StreamingAudioInputDevice
+from .sound_device_connector import (
+    AudioInputDeviceConfig,
+    SoundDeviceError,
+    StreamingAudioInputDevice,
+)
 
 __all__ = [
     "BaseMessage",
     "BaseConnector",
     "StreamingAudioInputDevice",
     "SoundDeviceError",
+    "AudioInputDeviceConfig",
 ]
