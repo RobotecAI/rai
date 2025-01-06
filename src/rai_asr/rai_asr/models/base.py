@@ -12,14 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai.agents.conversational_agent import create_conversational_agent
-from rai.agents.state_based import create_state_based_agent
-from rai.agents.tool_runner import ToolRunner
-from rai.agents.voice_agent import VoiceRecognitionAgent
 
-__all__ = [
-    "ToolRunner",
-    "create_conversational_agent",
-    "create_state_based_agent",
-    "VoiceRecognitionAgent",
-]
+from abc import ABC, abstractmethod
+from typing import Any, Tuple
+
+from numpy._typing import NDArray
+
+
+class BaseVoiceDetectionModel(ABC):
+
+    @abstractmethod
+    def detected(
+        self, audio_data: NDArray, input_parameters: dict[str, Any]
+    ) -> Tuple[bool, dict[str, Any]]:
+        pass
