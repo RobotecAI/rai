@@ -57,14 +57,14 @@ def get_memories_near_timestamp(
     observations_collection: Collection,
     timestamp: float,
     k: int = 10,
-    range: float = 300.0,
+    time_range: float = 300.0,
 ) -> List[Observation]:
     """Get memories near a specific timestamp"""
     cursor = observations_collection.find(
         {
             "timestamp": {
-                "$gte": timestamp - range,
-                "$lte": timestamp + range,
+                "$gte": timestamp - time_range,
+                "$lte": timestamp + time_range,
             }
         }
     ).limit(k)
