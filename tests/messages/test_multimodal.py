@@ -26,8 +26,8 @@ from langchain_community.callbacks.manager import (
 )
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage
-from langchain_core.pydantic_v1 import BaseModel, Field
 from langfuse.callback import CallbackHandler
+from pydantic import BaseModel, Field
 from pytest import FixtureRequest
 
 from rai.messages import HumanMultimodalMessage
