@@ -406,10 +406,19 @@ class Ros2TopicsHandler:
     def set_ros_discovery_info(self, new_ros_discovery_info: NodeDiscovery):
         self.ros_discovery_info = new_ros_discovery_info
 
-    def get_raw_message_from_topic(self, topic: str, timeout_sec: int = 5) -> Any:
+    def get_raw_message_from_topic(
+        self, topic: str, timeout_sec: int = 5, topic_wait_sec: int = 2
+    ) -> Any:
         self.get_logger().debug(f"Getting msg from topic: {topic}")
 
         ts = time.perf_counter()
+
+        for _ in range(topic_wait_sec * 10):
+            if topic not in self.ros_discovery_info.topics_and_types:
+                time.sleep(0.1)
+                continue
+            else:
+                break
 
         if topic not in self.ros_discovery_info.topics_and_types:
             raise KeyError(

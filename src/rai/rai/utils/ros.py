@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
 from typing import Callable, Dict, List, Optional, Tuple
 
 import rclpy.callback_groups
@@ -24,7 +25,7 @@ class NodeDiscovery:
         self,
         node: rclpy.node.Node,
         allowlist: Optional[List[str]] = None,
-        period_sec: float = 2.0,
+        period_sec: float = 0.5,
         setters: Optional[List[Callable]] = None,
     ) -> None:
         self.period_sec = period_sec
@@ -51,6 +52,8 @@ class NodeDiscovery:
             self.setters = setters
 
         # make first callback as fast as possible
+        # sleep before first callback due ros discovery issue: https://github.com/ros2/ros2/issues/1057
+        time.sleep(0.5)
         self.discovery_callback()
 
     def add_setter(self, setter: Callable):
