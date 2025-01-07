@@ -53,6 +53,10 @@ tomli = "^2.0.1"
 openwakeword = { git = "https://github.com/maciejmajek/openWakeWord.git", branch = "chore/remove-tflite-backend" }
 pytest-timeout = "^2.3.1"
 tomli-w = "^1.1.0"
+pyquaternion = "^0.9.9"
+pymongo = "^4.10.1"
+weaviate-client = "^4.10.2"
+langchain-weaviate = "^0.0.3"
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.4"
 
