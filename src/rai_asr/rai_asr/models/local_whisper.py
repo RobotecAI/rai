@@ -12,32 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-from abc import ABC, abstractmethod
-from typing import Any, Tuple
-
 import numpy as np
+import whisper
 from numpy._typing import NDArray
 
-
-class BaseVoiceDetectionModel(ABC):
-
-    @abstractmethod
-    def detected(
-        self, audio_data: NDArray, input_parameters: dict[str, Any]
-    ) -> Tuple[bool, dict[str, Any]]:
-        pass
+from rai_asr.models.base import BaseTranscriptionModel
 
 
-class BaseTranscriptionModel(ABC):
+class LocalWhisper(BaseTranscriptionModel):
     def __init__(self, model_name: str, sample_rate: int, language: str = "en"):
-        self.model_name = model_name
-        self.sample_rate = sample_rate
-        self.language = language
+        super().__init__(model_name, sample_rate, language)
+        self.whisper = whisper.load_model(self.model_name)
 
-    @abstractmethod
     def transcribe(self, data: NDArray[np.int16]) -> str:
-        pass
-
-    def __call__(self, data: NDArray[np.int16]) -> str:
-        return self.transcribe(data)
+        result = whisper.transcribe(self.whisper, data.astype(np.float32) / 32768.0)
+        transcription = result["text"]
+        # NOTE: this is only for type enforcement, doesn't need to work on runtime
+        assert isinstance(transcription, str)
+        return transcription

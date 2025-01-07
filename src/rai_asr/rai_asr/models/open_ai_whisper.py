@@ -14,34 +14,17 @@
 
 import io
 import os
-from abc import abstractmethod
 from functools import partial
 
 import numpy as np
-import whisper
 from numpy.typing import NDArray
 from openai import OpenAI
 from scipy.io import wavfile
-from whisper.transcribe import transcribe
 
-# WARN: This file is going to be removed in favour of rai_asr.models
-
-
-class ASRModel:
-    def __init__(self, model_name: str, sample_rate: int, language: str = "en"):
-        self.model_name = model_name
-        self.sample_rate = sample_rate
-        self.language = language
-
-    @abstractmethod
-    def transcribe(self, data: NDArray[np.int16]) -> str:
-        pass
-
-    def __call__(self, data: NDArray[np.int16]) -> str:
-        return self.transcribe(data)
+from rai_asr.models.base import BaseTranscriptionModel
 
 
-class OpenAIWhisper(ASRModel):
+class OpenAIWhisper(BaseTranscriptionModel):
     def __init__(self, model_name: str, sample_rate: int, language: str = "en"):
         super().__init__(model_name, sample_rate, language)
         api_key = os.getenv("OPENAI_API_KEY")
@@ -61,15 +44,4 @@ class OpenAIWhisper(ASRModel):
             temp_wav_buffer.name = "temp.wav"
             response = self.model(file=temp_wav_buffer, language=self.language)
         transcription = response.text
-        return transcription
-
-
-class LocalWhisper(ASRModel):
-    def __init__(self, model_name: str, sample_rate: int, language: str = "en"):
-        super().__init__(model_name, sample_rate, language)
-        self.whisper = whisper.load_model(self.model_name)
-
-    def transcribe(self, data: NDArray[np.int16]) -> str:
-        result = transcribe(self.whisper, data.astype(np.float32) / 32768.0)
-        transcription = result["text"]
         return transcription
