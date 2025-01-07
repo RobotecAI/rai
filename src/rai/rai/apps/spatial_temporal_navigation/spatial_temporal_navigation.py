@@ -22,8 +22,7 @@ from uuid import uuid4
 import cv2
 from cv_bridge import CvBridge
 from geometry_msgs.msg import TransformStamped
-from langchain_core.vectorstores.base import VectorStore
-from langchain_openai import ChatOpenAI
+from langchain_community.vectorstores import VectorStore
 from pydantic import BaseModel, Field
 from pymongo.collection import Collection
 from rclpy.executors import SingleThreadedExecutor
@@ -33,6 +32,7 @@ from sensor_msgs.msg import Image
 from rai.messages.multimodal import HumanMultimodalMessage
 from rai.messages.utils import preprocess_image
 from rai.tools.ros.tools import TF2TransformFetcher
+from rai.utils.model_initialization import get_llm_model
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +126,7 @@ def generate_description(image: ImageStamped) -> Description:
             images=[image.image],
         )
     ]
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    llm = get_llm_model(model_type="simple_model")
     description = llm.with_structured_output(Description).invoke(prompt)  # type: ignore
     if not isinstance(description, Description):
         raise ValueError("Description is not a valid Description")
@@ -162,11 +162,11 @@ def data_collection_pipeline(
     image: Image,
     transform: TransformStamped,
 ):
-    logger.info("Running pipeline")
+    logger.info("Running data collection pipeline")
     observation = build_observation(str(uuid4()), transform, image)
     vector_database_entry = observation_to_vector_database_entry(observation)
 
-    logger.info("Adding to vectorstore")
+    logger.info(f"Adding to {vectorstore.__class__.__name__}")
     vectorstore.add_texts(
         texts=[vector_database_entry.text],
         metadatas=[vector_database_entry.metadata],

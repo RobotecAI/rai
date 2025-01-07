@@ -82,14 +82,15 @@ def get_memories_near_text(
     results = vectorstore.similarity_search_with_relevance_scores(text, k=k)
 
     uuids = [result[0].metadata["uuid"] for result in results]
+    uuids = list(map(str, uuids))
 
     cursor = observations_collection.find({"uuid": {"$in": uuids}})
     return [Observation(**doc) for doc in cursor]
 
 
 class GetMemoriesNearPositionTool(BaseTool):
-    name = "get_memories_near_position"
-    description = (
+    name: str = "get_memories_near_position"
+    description: str = (
         "Get memories near a specific position using regular coordinate comparison"
     )
     args_schema: Type[Pose] = Pose
@@ -107,8 +108,8 @@ class GetMemoriesNearTimestampToolInput(BaseModel):
 
 
 class GetMemoriesNearTimestampTool(BaseTool):
-    name = "get_memories_near_timestamp"
-    description = "Get memories near a specific timestamp"
+    name: str = "get_memories_near_timestamp"
+    description: str = "Get memories near a specific timestamp"
     args_schema: Type[GetMemoriesNearTimestampToolInput] = (
         GetMemoriesNearTimestampToolInput
     )
@@ -124,8 +125,8 @@ class GetMemoriesNearTextToolInput(BaseModel):
 
 
 class GetMemoriesNearTextTool(BaseTool):
-    name = "get_memories_near_text"
-    description = "Get memories near a specific text"
+    name: str = "get_memories_near_text"
+    description: str = "Get memories near a specific text"
     args_schema: Type[GetMemoriesNearTextToolInput] = GetMemoriesNearTextToolInput
 
     vectorstore: VectorStore
