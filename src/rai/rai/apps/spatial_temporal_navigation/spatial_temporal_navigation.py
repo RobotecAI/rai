@@ -182,10 +182,12 @@ class TransformGrabber:
             target_frame=target_frame, source_frame=source_frame
         )
         self.transform = None
+        self.lock = threading.Lock()
 
     def run(self):
         while True:
-            self.transform = self.transform_fetcher.get_data()
+            with self.lock:
+                self.transform = self.transform_fetcher.get_data()
 
 
 class ImageGrabber(Node):
