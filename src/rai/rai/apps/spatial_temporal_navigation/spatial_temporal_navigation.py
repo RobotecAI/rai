@@ -16,7 +16,7 @@
 import logging
 import threading
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 from uuid import uuid4
 
 import cv2
@@ -127,9 +127,7 @@ def generate_description(image: ImageStamped) -> Description:
         )
     ]
     llm = get_llm_model(model_type="simple_model")
-    description = llm.with_structured_output(Description).invoke(prompt)  # type: ignore
-    if not isinstance(description, Description):
-        raise ValueError("Description is not a valid Description")
+    description = cast(Description, llm.with_structured_output(Description).invoke(prompt))  # type: ignore
     return description
 
 
