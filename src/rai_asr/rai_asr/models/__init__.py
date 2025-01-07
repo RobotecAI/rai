@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .base import BaseVoiceDetectionModel
+from rai_asr.models.base import BaseVoiceDetectionModel
+from rai_asr.models.open_wake_word import OpenWakeWord
+from rai_asr.models.silero_vad import SileroVAD
 
-__all__ = ["BaseVoiceDetectionModel"]
+__all__ = ["BaseVoiceDetectionModel", "SileroVAD", "OpenWakeWord"]
