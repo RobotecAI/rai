@@ -18,10 +18,10 @@ from typing import Optional
 import rclpy
 import rclpy.executors
 import rclpy.logging
+from rai_open_set_vision.tools import GetDetectionTool, GetDistanceToObjectsTool
 
 from rai.node import RaiStateBasedLlmNode
 from rai.tools.ros.native import (
-    GetCameraImage,
     GetMsgFromTopic,
     Ros2GetRobotInterfaces,
     Ros2PubMessageTool,
@@ -131,9 +131,11 @@ def main(allowlist: Optional[Path] = None):
             GetTransformTool,
             WaitForSecondsTool,
             GetMsgFromTopic,
-            GetCameraImage,
+            GetDetectionTool,
+            GetDistanceToObjectsTool,
         ],
     )
+    node.declare_parameter("conversion_ratio", 1.0)
 
     node.spin()
     rclpy.shutdown()
