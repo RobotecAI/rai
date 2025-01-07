@@ -97,8 +97,9 @@ class GetMemoriesNearPositionTool(BaseTool):
 
     observations_collection: Collection
 
-    def _run(self, pose: Pose) -> List[Observation]:
-        return get_memories_near_position(self.observations_collection, pose)
+    def _run(self, pose: Pose) -> str:
+        observations = get_memories_near_position(self.observations_collection, pose)
+        return str(observations)
 
 
 class GetMemoriesNearTimestampToolInput(BaseModel):
@@ -116,8 +117,11 @@ class GetMemoriesNearTimestampTool(BaseTool):
 
     observations_collection: Collection
 
-    def _run(self, timestamp: float) -> List[Observation]:
-        return get_memories_near_timestamp(self.observations_collection, timestamp)
+    def _run(self, timestamp: float) -> str:
+        observations = get_memories_near_timestamp(
+            self.observations_collection, timestamp
+        )
+        return str(observations)
 
 
 class GetMemoriesNearTextToolInput(BaseModel):
@@ -132,7 +136,8 @@ class GetMemoriesNearTextTool(BaseTool):
     vectorstore: VectorStore
     observations_collection: Collection
 
-    def _run(self, text: str) -> List[Observation]:
-        return get_memories_near_text(
+    def _run(self, text: str) -> str:
+        observations = get_memories_near_text(
             self.vectorstore, self.observations_collection, text
         )
+        return str(observations)
