@@ -199,6 +199,9 @@ class ImageGrabber(Node):
     def image_callback(self, msg: Image):
         self.image = msg
 
+    def shutdown(self):
+        self.destroy_node()
+
 
 def run_spatial_temporal_data_collection(
     image_topic: str,
