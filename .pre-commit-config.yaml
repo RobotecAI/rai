@@ -44,4 +44,4 @@ repos:
     rev: 7.1.0
     hooks:
       - id: flake8
-        args: ["--ignore=E501,E731,W503,W504"]
+        args: ["--ignore=E501,E731,W503,W504,E203"]
