@@ -65,8 +65,8 @@ class NodeDiscovery:
             self.node.get_service_names_and_types(),
             get_action_names_and_types(self.node),
         )
-        for callable in self.setters:
-            callable(self)
+        for setter in self.setters:
+            setter(self)
 
     def __set(self, topics, services, actions):
         def to_dict(info: List[Tuple[str, List[str]]]) -> Dict[str, str]:
