@@ -36,8 +36,9 @@ class BaseTranscriptionModel(ABC):
         self.language = language
 
     @abstractmethod
-    def transcribe(self, data: NDArray[np.int16]) -> str:
+    def add_samples(self, data: NDArray[np.int16]):
         pass
 
-    def __call__(self, data: NDArray[np.int16]) -> str:
-        return self.transcribe(data)
+    @abstractmethod
+    def transcribe(self) -> str:
+        pass

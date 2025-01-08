@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import cast
+
 import numpy as np
 import whisper
 from numpy._typing import NDArray
@@ -24,9 +26,22 @@ class LocalWhisper(BaseTranscriptionModel):
         super().__init__(model_name, sample_rate, language)
         self.whisper = whisper.load_model(self.model_name)
 
-    def transcribe(self, data: NDArray[np.int16]) -> str:
-        result = whisper.transcribe(self.whisper, data.astype(np.float32) / 32768.0)
+        self.samples = None
+
+    def add_samples(self, data: NDArray[np.int16]):
+        normalized_data = data.astype(np.float32) / 32768.0
+        self.samples = (
+            np.concatenate([self.samples, normalized_data])
+            if self.samples is not None
+            else data
+        )
+
+    def transcribe(self) -> str:
+        if self.samples is None:
+            raise ValueError("No samples to transcribe")
+        result = whisper.transcribe(
+            self.whisper, self.samples
+        )  # TODO: handling of additional transcribe arguments (perhaps in model init)
         transcription = result["text"]
-        # NOTE: this is only for type enforcement, doesn't need to work on runtime
-        assert isinstance(transcription, str)
+        transcription = cast(str, transcription)
         return transcription
