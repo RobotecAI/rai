@@ -237,10 +237,9 @@ class Ros2ActionsHelper:
             return msg
 
     def parse_error_code(self, code: int) -> str:
-        name_to_code = self.msg_cls.Result.__prepare__(
-            name="", bases=""
-        )  # arguments are not used
-        code_to_name = {v: k for k, v in name_to_code.items()}
+        code_to_name = {
+            v: k for k, v in vars(self.msg_cls.Result).items() if isinstance(v, int)
+        }
         return code_to_name.get(code, "UNKNOWN")
 
     def _feedback_callback(self, msg):
