@@ -24,6 +24,7 @@ import rclpy.node
 import rclpy.time
 import sensor_msgs.msg
 from cv_bridge import CvBridge
+from rclpy.duration import Duration
 from rclpy.impl.implementation_singleton import rclpy_implementation as _rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
@@ -33,8 +34,6 @@ from rosidl_parser.definition import NamespacedType
 from rosidl_runtime_py.import_message import import_message_from_namespaced_type
 from rosidl_runtime_py.utilities import get_namespaced_type
 from tf2_ros import Buffer, LookupException, TransformListener, TransformStamped
-
-from rai.utils.ros_async import get_future_result
 
 
 def import_message_from_str(msg_type: str) -> Type[object]:
@@ -166,13 +165,12 @@ def get_transform(
     tf_buffer = Buffer(node=node)
     tf_listener = TransformListener(tf_buffer, node)
 
-    future = tf_buffer.wait_for_transform_async(
-        target_frame, source_frame, rclpy.time.Time()
+    transform: Optional[TransformStamped] = tf_buffer.lookup_transform(
+        target_frame, source_frame, rclpy.time.Time(), timeout=Duration(seconds=3)
     )
-    transform: Optional[TransformStamped] = get_future_result(
-        future, timeout_sec=timeout_sec
-    )
+
     tf_listener.unregister()
+
     if transform is None:
         raise LookupException(
             f"Could not find transform from {source_frame} to {target_frame} in {timeout_sec} seconds"
