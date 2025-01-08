@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Tuple
+from typing import Any, Literal, Tuple
 
 import numpy as np
 import torch
@@ -22,7 +22,7 @@ from rai_asr.models import BaseVoiceDetectionModel
 
 
 class SileroVAD(BaseVoiceDetectionModel):
-    def __init__(self, sampling_rate=16000, threshold=0.5):
+    def __init__(self, sampling_rate: Literal[8000, 16000] = 16000, threshold=0.5):
         super(SileroVAD, self).__init__()
         self.model_name = "silero_vad"
         self.model, _ = torch.hub.load(

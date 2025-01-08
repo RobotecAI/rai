@@ -13,15 +13,16 @@
 # limitations under the License.
 
 
+import time
 from threading import Lock, Thread
-from typing import Any, List, Tuple
+from typing import Any, List, cast
 
 import numpy as np
 from numpy.typing import NDArray
 
 from rai.agents.base import BaseAgent
 from rai.communication import AudioInputDeviceConfig, StreamingAudioInputDevice
-from rai_asr.models.base import BaseVoiceDetectionModel
+from rai_asr.models.base import BaseTranscriptionModel, BaseVoiceDetectionModel
 
 
 class VoiceRecognitionAgent(BaseAgent):
@@ -38,16 +39,34 @@ class VoiceRecognitionAgent(BaseAgent):
         self.run()
 
     def setup(
-        self, microphone_device_id: int, microphone_config: AudioInputDeviceConfig
+        self,
+        microphone_device_id: int,  # TODO: Change to name based instead of id based identification
+        microphone_config: AudioInputDeviceConfig,
+        transcription_model: BaseTranscriptionModel,
     ):
-        assert isinstance(self.connectors["microphone"], StreamingAudioInputDevice)
+        self.connectors["microphone"] = cast(
+            StreamingAudioInputDevice, self.connectors["microphone"]
+        )
         self.microphone_device_id = str(microphone_device_id)
         self.connectors["microphone"].configure_device(
             target=self.microphone_device_id, config=microphone_config
         )
+        self.transcription_model = transcription_model
         self.ran_setup = True
+        self.running = False
+
+    def add_detection_model(
+        self, model: BaseVoiceDetectionModel, pipeline: str = "record"
+    ):
+        if pipeline == "record":
+            self.should_record_pipeline.append(model)
+        elif pipeline == "stop":
+            self.should_stop_pipeline.append(model)
+        else:
+            raise ValueError("Pipeline should be either 'record' or 'stop'")
 
     def run(self):
+        self.running = True
         self.listener_handle = self.connectors["microphone"].start_action(
             self.microphone_device_id, self.on_new_sample
         )
@@ -55,17 +74,15 @@ class VoiceRecognitionAgent(BaseAgent):
         self.transcription_thread.start()
 
     def stop(self):
+        self.running = False
         self.connectors["microphone"].terminate_action(self.listener_handle)
         self.transcription_thread.join()
 
     def on_new_sample(self, indata: np.ndarray, status_flags: dict[str, Any]):
-        should_stop, should_cancel = self.should_stop_recording(indata)
-        print(indata)
-        if should_cancel:
-            self.cancel_task()
-        if (self.recording_started and not should_stop) or (
-            self.should_start_recording(indata)
-        ):
+        should_stop = self.should_stop_recording(indata)
+        if self.should_start_recording(indata):
+            self.recording_started = True
+        if self.recording_started and not should_stop:
             with self.transcription_lock:
                 self.shared_samples.extend(indata)
 
@@ -75,23 +92,27 @@ class VoiceRecognitionAgent(BaseAgent):
             should_listen, output_parameters = model.detected(
                 audio_data, output_parameters
             )
+            print(should_listen, output_parameters)
             if not should_listen:
                 return False
         return True
 
-    def should_stop_recording(self, audio_data: NDArray[np.int16]) -> Tuple[bool, bool]:
+    def should_stop_recording(self, audio_data: NDArray[np.int16]) -> bool:
         output_parameters = {}
         for model in self.should_stop_pipeline:
             should_listen, output_parameters = model.detected(
                 audio_data, output_parameters
             )
-            # TODO: Add handling output parametrs for checking if should cancel
             if should_listen:
-                return False, False
-        return True, False
+                return True
+        return False
 
     def _transcription_function(self):
-        with self.transcription_lock:
-            samples = np.array(self.shared_samples)
-            print(samples)
-            self.shared_samples = []
+        while self.running:
+            time.sleep(0.1)
+            # critical section for samples
+            with self.transcription_lock:
+                samples = np.array(self.shared_samples)
+                self.shared_samples = []
+            # end critical section for samples
+            self.transcription_model.add_samples(samples)
