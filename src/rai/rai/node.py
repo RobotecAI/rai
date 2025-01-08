@@ -52,6 +52,7 @@ from rai.tools.ros.utils import convert_ros_img_to_base64, import_message_from_s
 from rai.utils.model_initialization import get_llm_model, get_tracing_callbacks
 from rai.utils.ros import NodeDiscovery
 from rai.utils.ros_async import get_future_result
+from rai.utils.ros_executors import MultiThreadedExecutorFixed
 from rai.utils.ros_logs import create_logs_parser
 from rai_interfaces.action import Task as TaskAction
 
@@ -515,7 +516,7 @@ class RaiBaseNode(Node):
 
     # ------------- other methods -------------
     def spin(self):
-        executor = rclpy.executors.MultiThreadedExecutor()
+        executor = MultiThreadedExecutorFixed()
         executor.add_node(self)
         executor.spin()
         rclpy.shutdown()
