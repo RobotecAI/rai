@@ -13,16 +13,30 @@
 # limitations under the License.
 
 
+import logging
 from abc import ABC, abstractmethod
 from typing import Optional
+
+from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai.communication import BaseConnector
 
 
 class BaseAgent(ABC):
     def __init__(
-        self, connectors: Optional[dict[str, BaseConnector]] = None, *args, **kwargs
+        self,
+        connectors: Optional[dict[str, BaseConnector]] = None,
+        logger: Optional[RcutilsLogger | logging.Logger] = None,
+        *args,
+        **kwargs,
     ):
+        self._logger = None
+        if isinstance(logger, RcutilsLogger):
+            self._logger = logger
+        else:
+            self._logger = logging.getLogger(__name__)
+        if self._logger is not None:
+            self._logger.info(f"Creating agent {self.__class__.__name__}")
         if connectors is None:
             connectors = {}
         self.connectors: dict[str, BaseConnector] = connectors

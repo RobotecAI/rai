@@ -33,12 +33,14 @@ class LocalWhisper(BaseTranscriptionModel):
         self.samples = (
             np.concatenate([self.samples, normalized_data])
             if self.samples is not None
-            else data
+            else normalized_data
         )
+        self.samples = self.samples.astype(np.float32)
 
     def transcribe(self) -> str:
         if self.samples is None:
             raise ValueError("No samples to transcribe")
+        print(f"Transcribing {len(self.samples)} samples")
         result = whisper.transcribe(
             self.whisper, self.samples
         )  # TODO: handling of additional transcribe arguments (perhaps in model init)

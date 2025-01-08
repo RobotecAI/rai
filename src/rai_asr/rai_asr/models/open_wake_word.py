@@ -37,7 +37,6 @@ class OpenWakeWord(BaseVoiceDetectionModel):
     def detected(
         self, audio_data: NDArray, input_parameters: dict[str, Any]
     ) -> Tuple[bool, dict[str, Any]]:
-        print(len(audio_data))
         predictions = self.model.predict(audio_data)
         ret = input_parameters.copy()
         ret.update({self.model_name: {"predictions": predictions}})
