@@ -30,7 +30,6 @@ class NodeDiscovery:
     ) -> None:
         self.period_sec = period_sec
         self.node = node
-        self.allowlist = allowlist
 
         self.topics_and_types: Dict[str, str] = dict()
         self.services_and_types: Dict[str, str] = dict()
