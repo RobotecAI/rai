@@ -15,7 +15,7 @@
 
 import functools
 import time
-from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Type
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Type, Union
 
 import rclpy
 import rclpy.callback_groups
@@ -42,6 +42,7 @@ from rclpy.qos import (
     QoSProfile,
     ReliabilityPolicy,
 )
+from rclpy.topic_endpoint_info import TopicEndpointInfo
 from std_srvs.srv import Trigger
 
 from rai.agents.state_based import Report, State, create_state_based_agent
@@ -261,13 +262,7 @@ class RaiBaseNode(Node):
         )
         self.ros_discovery_info = NodeDiscovery(allowlist=allowlist)
         self.discovery()
-        self.qos_profile = QoSProfile(
-            history=HistoryPolicy.KEEP_LAST,
-            depth=1,
-            reliability=ReliabilityPolicy.BEST_EFFORT,
-            durability=DurabilityPolicy.VOLATILE,
-            liveliness=LivelinessPolicy.AUTOMATIC,
-        )
+        self.qos_profile_cache: Dict[str, QoSProfile] = dict()
 
         self.state_subscribers = dict()
 
@@ -287,18 +282,79 @@ class RaiBaseNode(Node):
             get_action_names_and_types(self),
         )
 
-    def get_raw_message_from_topic(self, topic: str, timeout_sec: int = 1) -> Any:
+    def adapt_requests_to_offers(
+        self, publisher_info: List[TopicEndpointInfo]
+    ) -> QoSProfile:
+        if not publisher_info:
+            return QoSProfile(depth=1)
+
+        num_endpoints = len(publisher_info)
+        reliability_reliable_count = 0
+        durability_transient_local_count = 0
+
+        for endpoint in publisher_info:
+            profile = endpoint.qos_profile
+            if profile.reliability == ReliabilityPolicy.RELIABLE:
+                reliability_reliable_count += 1
+            if profile.durability == DurabilityPolicy.TRANSIENT_LOCAL:
+                durability_transient_local_count += 1
+
+        request_qos = QoSProfile(
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+            liveliness=LivelinessPolicy.AUTOMATIC,
+        )
+
+        # Set reliability based on publisher offers
+        if reliability_reliable_count == num_endpoints:
+            request_qos.reliability = ReliabilityPolicy.RELIABLE
+        else:
+            if reliability_reliable_count > 0:
+                self.get_logger().warning(
+                    "Some, but not all, publishers are offering RELIABLE reliability. "
+                    "Falling back to BEST_EFFORT as it will connect to all publishers. "
+                    "Some messages from Reliable publishers could be dropped."
+                )
+            request_qos.reliability = ReliabilityPolicy.BEST_EFFORT
+
+        # Set durability based on publisher offers
+        if durability_transient_local_count == num_endpoints:
+            request_qos.durability = DurabilityPolicy.TRANSIENT_LOCAL
+        else:
+            if durability_transient_local_count > 0:
+                self.get_logger().warning(
+                    "Some, but not all, publishers are offering TRANSIENT_LOCAL durability. "
+                    "Falling back to VOLATILE as it will connect to all publishers. "
+                    "Previously-published latched messages will not be retrieved."
+                )
+            request_qos.durability = DurabilityPolicy.VOLATILE
+
+        return request_qos
+
+    def get_raw_message_from_topic(
+        self, topic: str, timeout_sec: int = 1
+    ) -> Union[Any, str]:  # ROS 2 topic or error string
         self.get_logger().debug(f"Getting msg from topic: {topic}")
         if topic in self.state_subscribers and topic in self.robot_state:
             self.get_logger().debug("Returning cached message")
             return self.robot_state[topic]
         else:
             msg_type = self.get_msg_type(topic)
+            if topic not in self.qos_profile_cache:
+                self.get_logger().debug(f"Getting qos profile for topic: {topic}")
+                qos_profile = self.adapt_requests_to_offers(
+                    self.get_publishers_info_by_topic(topic)
+                )
+                self.qos_profile_cache[topic] = qos_profile
+            else:
+                self.get_logger().debug(f"Using cached qos profile for topic: {topic}")
+                qos_profile = self.qos_profile_cache[topic]
+
             success, msg = wait_for_message(
                 msg_type,
                 self,
                 topic,
-                qos_profile=self.qos_profile,
+                qos_profile=qos_profile,
                 time_to_wait=timeout_sec,
             )
 
@@ -437,12 +493,15 @@ class RaiStateBasedLlmNode(RaiBaseNode):
             topic_callback = functools.partial(
                 self.generic_state_subscriber_callback, topic
             )
+            qos_profile = self.adapt_requests_to_offers(
+                self.get_publishers_info_by_topic(topic)
+            )
             subscriber = self.create_subscription(
                 msg_type,
                 topic,
                 callback=topic_callback,
                 callback_group=self.callback_group,
-                qos_profile=self.qos_profile,
+                qos_profile=qos_profile,
             )
 
             self.state_subscribers[topic] = subscriber
