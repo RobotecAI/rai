@@ -126,6 +126,20 @@ def test_send_and_wait():
     pass
 
 
+def test_connector_publisher_reuse():
+    rclpy.init()
+    connector = ROS2Connector()
+    connector.send_message(BaseMessage(String(data="Test")), "/text")
+    connector.send_message(BaseMessage(Image()), "/image")
+
+    assert len(connector.publishers) == 2
+
+    connector.send_message(BaseMessage(String(data="Test")), "/text")
+    assert len(connector.publishers) == 2
+    connector.cleanup()
+    rclpy.shutdown()
+
+
 def test_connector_cleanup():
     rclpy.init()
     connector = ROS2Connector()
@@ -135,11 +149,6 @@ def test_connector_cleanup():
 
     initial_publisher_count = len(connector.publishers)
     assert initial_publisher_count == 2
-
-    connector.send_message(BaseMessage(String(data="Test")), "/text")
-    assert (
-        len(connector.publishers) == initial_publisher_count
-    )  # reuses existing publishers
 
     connector.cleanup()
     assert not connector.executor_thread.is_alive()
