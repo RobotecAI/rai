@@ -13,9 +13,10 @@
 # limitations under the License.
 
 
+import logging
 import time
 from threading import Event, Lock, Thread
-from typing import Any, List, TypedDict
+from typing import Any, List, Optional, TypedDict
 from uuid import uuid4
 
 import numpy as np
@@ -40,7 +41,12 @@ class VoiceRecognitionAgent(BaseAgent):
         transcription_model: BaseTranscriptionModel,
         vad: BaseVoiceDetectionModel,
         grace_period: float = 1.0,
+        logger: Optional[logging.Logger] = None,
     ):
+        if logger is None:
+            self.logger = logging.getLogger(__name__)
+        else:
+            self.logger = logger
         microphone = StreamingAudioInputDevice()
         microphone.configure_device(
             target=str(microphone_device_id), config=microphone_config
@@ -87,16 +93,20 @@ class VoiceRecognitionAgent(BaseAgent):
         )
 
     def stop(self):
+        self.logger.info("Stopping voice agent")
         self.running = False
         self.connectors["microphone"].terminate_action(self.listener_handle)
-        to_finish = list(self.transcription_threads.keys())
-        while len(to_finish) > 0:
+        to_finish = len(list(self.transcription_threads.keys()))
+        while to_finish > 0:
             for thread_id in self.transcription_threads:
                 if self.transcription_threads[thread_id]["event"].is_set():
                     self.transcription_threads[thread_id]["thread"].join()
-                    to_finish.remove(thread_id)
+                    to_finish -= 1
                 else:
-                    print(f"Waiting for transcription of {thread_id} to finish")
+                    self.logger.info(
+                        f"Waiting for transcription of {thread_id} to finish..."
+                    )
+        self.logger.info("Voice agent stopped")
 
     def on_new_sample(self, indata: np.ndarray, status_flags: dict[str, Any]):
         sample_time = time.time()
@@ -112,7 +122,7 @@ class VoiceRecognitionAgent(BaseAgent):
             should_record = self.should_record(indata, output_parameters)
 
         if should_record:
-            print("Start recording")
+            self.logger.info("starting recording...")
             self.recording_started = True
             thread_id = str(uuid4())[0:8]
             transcription_thread = Thread(
@@ -129,13 +139,14 @@ class VoiceRecognitionAgent(BaseAgent):
             }
 
         if voice_detected:
+            self.logger.debug("Voice detected... resetting grace period")
             self.grace_period_start = sample_time
 
         if (
             self.recording_started
             and sample_time - self.grace_period_start > self.grace_period
         ):
-            print("Stop recording")
+            self.logger.info("Grace period ended... stopping recording")
             self.recording_started = False
             self.grace_period_start = 0
             with self.sample_buffer_lock:
@@ -148,12 +159,12 @@ class VoiceRecognitionAgent(BaseAgent):
     ) -> bool:
         for model in self.should_record_pipeline:
             detected, output = model.detected(audio_data, input_parameters)
-            print(f"Detected: {detected}: {output}")
             if detected:
                 return True
         return False
 
     def transcription_thread(self, identifier: str):
+        self.logger.info(f"transcription thread {identifier} started")
         with self.transcription_lock:
             while self.active_thread == identifier:
                 with self.sample_buffer_lock:
@@ -171,7 +182,10 @@ class VoiceRecognitionAgent(BaseAgent):
                     audio_data = np.concatenate(audio_data)
                     self.transcription_model.transcribe(audio_data)
                     del self.buffer_reminders[identifier]
+            # self.transcription_model.save_wav(f"{identifier}.wav")
             transcription = self.transcription_model.consume_transcription()
             self.transcription_threads[identifier]["transcription"] = transcription
             self.transcription_threads[identifier]["event"].set()
-        # TODO: sending the transcription
+        # TODO: sending the transcription once https://github.com/RobotecAI/rai/pull/360 is merged
+        self.logger.info(f"transcription thread {identifier} finished")
+        print(transcription)
