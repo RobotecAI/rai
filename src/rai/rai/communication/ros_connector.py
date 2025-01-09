@@ -14,7 +14,7 @@
 
 import atexit
 import threading
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 import rclpy
 from rclpy.executors import MultiThreadedExecutor
@@ -33,13 +33,17 @@ from rai.tools.utils import wait_for_message
 
 
 class ROS2Connector(BaseConnector):
-    def __init__(self):
+    def __init__(
+        self,
+        node_name: str = "rai_ros2_connector",
+        qos_profile: Optional[QoSProfile] = None,
+    ):
         if not rclpy.ok():
             rclpy.init()
 
-        self.node = Node(node_name="rai_ros2_connector")
+        self.node = Node(node_name=node_name)
         self.publishers: Dict[str, Publisher] = {}
-        self.default_qos_profile = QoSProfile(
+        self.qos_profile = qos_profile or QoSProfile(
             depth=10,
             history=QoSHistoryPolicy.KEEP_LAST,
             durability=QoSDurabilityPolicy.SYSTEM_DEFAULT,
@@ -56,7 +60,7 @@ class ROS2Connector(BaseConnector):
         publisher = self.publishers.get(target)
         if publisher is None:
             self.publishers[target] = self.node.create_publisher(
-                msg.msg_type, target, qos_profile=self.default_qos_profile
+                msg.msg_type, target, qos_profile=self.qos_profile
             )
         self.publishers[target].publish(msg.content)
 
@@ -78,7 +82,7 @@ class ROS2Connector(BaseConnector):
             import_message_from_str(msg_type),
             self.node,
             source,
-            qos_profile=self.default_qos_profile,
+            qos_profile=self.qos_profile,
         )
 
         if status:
