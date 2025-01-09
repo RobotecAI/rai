@@ -15,6 +15,7 @@
 from typing import cast
 
 import numpy as np
+import torch
 import whisper
 from numpy._typing import NDArray
 
@@ -24,24 +25,21 @@ from rai_asr.models.base import BaseTranscriptionModel
 class LocalWhisper(BaseTranscriptionModel):
     def __init__(self, model_name: str, sample_rate: int, language: str = "en"):
         super().__init__(model_name, sample_rate, language)
-        self.whisper = whisper.load_model(self.model_name)
+        if torch.cuda.is_available():
+            print("Using CUDA")
+            self.whisper = whisper.load_model(self.model_name, device="cuda")
+        else:
+            self.whisper = whisper.load_model(self.model_name)
 
         self.samples = None
 
-    def add_samples(self, data: NDArray[np.int16]):
+    def transcribe(self, data: NDArray[np.int16]):
         normalized_data = data.astype(np.float32) / 32768.0
-        self.samples = (
-            np.concatenate([self.samples, normalized_data])
-            if self.samples is not None
-            else data
-        )
-
-    def transcribe(self) -> str:
-        if self.samples is None:
-            raise ValueError("No samples to transcribe")
+        print("Starting transcription")
         result = whisper.transcribe(
-            self.whisper, self.samples
+            self.whisper, normalized_data
         )  # TODO: handling of additional transcribe arguments (perhaps in model init)
+        print("Finished transcription")
         transcription = result["text"]
         transcription = cast(str, transcription)
-        return transcription
+        self.latest_transcription += transcription

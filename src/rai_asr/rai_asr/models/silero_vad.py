@@ -57,6 +57,5 @@ class SileroVAD(BaseVoiceDetectionModel):
         ).item()
         ret = input_parameters.copy()
         ret.update({self.model_name: {"vad_confidence": vad_confidence}})
-        self.model.reset_states()  # NOTE: see streaming example at the bottom https://github.com/snakers4/silero-vad/wiki/Examples-and-Dependencies#dependencies
 
         return vad_confidence > self.threshold, ret

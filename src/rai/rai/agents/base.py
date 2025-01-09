@@ -28,9 +28,5 @@ class BaseAgent(ABC):
         self.connectors: dict[str, BaseConnector] = connectors
 
     @abstractmethod
-    def setup(self, *args, **kwargs):
-        pass
-
-    @abstractmethod
     def run(self, *args, **kwargs):
         pass

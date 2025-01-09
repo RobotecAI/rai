@@ -35,10 +35,13 @@ class BaseTranscriptionModel(ABC):
         self.sample_rate = sample_rate
         self.language = language
 
-    @abstractmethod
-    def add_samples(self, data: NDArray[np.int16]):
-        pass
+        self.latest_transcription = ""
+
+    def consume_transcription(self) -> str:
+        ret = self.latest_transcription
+        self.latest_transcription = ""
+        return ret
 
     @abstractmethod
-    def transcribe(self) -> str:
+    def transcribe(self, data: NDArray[np.int16]):
         pass
