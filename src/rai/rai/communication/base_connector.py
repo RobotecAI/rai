@@ -13,12 +13,20 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import Callable
+from typing import Any, Callable
 from uuid import uuid4
 
 
 class BaseMessage(ABC):
-    pass
+    def __init__(self, content: Any):
+        self.content = content
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.content=})"
+
+    @property
+    def msg_type(self) -> Any:
+        return type(self.content)
 
 
 class BaseConnector(ABC):
