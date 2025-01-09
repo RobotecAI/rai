@@ -33,9 +33,7 @@ def get_qos_profiles() -> List[str]:
     ros_distro = os.environ.get("ROS_DISTRO")
     match ros_distro:
         case "humble":
-            pytest.xfail(
-                "Humble fails in CI, while it works locally on a clean ubuntu 22.04."
-            )
+            # TODO: Humble fails in CI, while it works locally on a clean ubuntu 22.04.
             return [
                 # QoSPresetProfiles.SYSTEM_DEFAULT.name,
                 # QoSPresetProfiles.SENSOR_DATA.name,
