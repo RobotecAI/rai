@@ -519,7 +519,6 @@ class RaiBaseNode(Node):
         executor = MultiThreadedExecutorFixed()
         executor.add_node(self)
         executor.spin()
-        rclpy.shutdown()
 
 
 def parse_task_goal(ros_action_goal: TaskAction.Goal) -> Dict[str, Any]:
