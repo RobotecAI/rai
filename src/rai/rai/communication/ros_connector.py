@@ -107,6 +107,14 @@ class ROS2Connector(BaseConnector):
             f"{self.__class__.__name__} does not suport sending messages"
         )
 
+    def destroy_publisher(self, target: str):
+        publisher = self.publishers.get(target)
+        if publisher is not None:
+            publisher.destroy()
+            self.publishers.pop(target)
+        else:
+            raise ValueError(f"Publisher for {target} not found")
+
     def cleanup(self):
         self.executor.shutdown()
         self.executor_thread.join()
