@@ -307,7 +307,7 @@ class Ros2TopicsHandler:
 
     def get_logger(self):
         return self.node.get_logger()
-    
+
     def adapt_requests_to_offers(
         self, publisher_info: List[TopicEndpointInfo]
     ) -> QoSProfile:
@@ -363,9 +363,9 @@ class Ros2TopicsHandler:
                 f"Subscription to {topic} already exists. To override use destroy_subscription_by_topic_name first"
             )
             return
-       
+
         msg_type = self.get_msg_type(topic)
-        
+
         if topic not in self.qos_profile_cache:
             self.get_logger().debug(f"Getting qos profile for topic: {topic}")
             qos_profile = self.adapt_requests_to_offers(
@@ -387,7 +387,7 @@ class Ros2TopicsHandler:
             callback_group=self.callback_group,
             qos_profile=qos_profile,
         )
-    
+
     def get_msg_type(self, topic: str, n_tries: int = 5) -> Any:
         """Sometimes node fails to do full discovery, therefore we need to retry"""
         for _ in range(n_tries):
