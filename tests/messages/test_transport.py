@@ -57,38 +57,43 @@ def get_qos_profiles() -> List[str]:
             raise ValueError(f"Invalid ROS_DISTRO: {ros_distro}")
 
 
-class TestPublisher(Node):
-    def __init__(self, qos_profile: QoSProfile):
-        super().__init__("test_publisher_" + str(uuid.uuid4()).replace("-", ""))
-
-        self.image_publisher = self.create_publisher(Image, "image", qos_profile)
-        self.text_publisher = self.create_publisher(String, "text", qos_profile)
-
-        self.image_timer = self.create_timer(0.1, self.image_callback)
-        self.text_timer = self.create_timer(0.1, self.text_callback)
-
-    def image_callback(self):
-        msg = Image()
-        msg.header.stamp = self.get_clock().now().to_msg()
-        msg.height = 540
-        msg.width = 960
-        msg.encoding = "bgr8"
-        msg.is_bigendian = 0
-        msg.step = msg.width * 3
-        msg.data = np.random.randint(0, 255, size=msg.height * msg.width * 3).tobytes()
-        self.image_publisher.publish(msg)
-
-    def text_callback(self):
-        msg = String()
-        msg.data = "Hello, world!"
-        self.text_publisher.publish(msg)
-
-
 @pytest.mark.parametrize(
     "qos_profile",
     get_qos_profiles(),
 )
 def test_transport(qos_profile: str):
+    class TestPublisher(Node):
+        def __init__(self, qos_profile: QoSProfile):
+            super().__init__("test_publisher_" + str(uuid.uuid4()).replace("-", ""))
+
+            self.image_publisher = self.create_publisher(
+                Image, "/test_transport/image", qos_profile
+            )
+            self.text_publisher = self.create_publisher(
+                String, "/test_transport/text", qos_profile
+            )
+
+            self.image_timer = self.create_timer(0.1, self.image_callback)
+            self.text_timer = self.create_timer(0.1, self.text_callback)
+
+        def image_callback(self):
+            msg = Image()
+            msg.header.stamp = self.get_clock().now().to_msg()
+            msg.height = 540
+            msg.width = 960
+            msg.encoding = "bgr8"
+            msg.is_bigendian = 0
+            msg.step = msg.width * 3
+            msg.data = np.random.randint(
+                0, 255, size=msg.height * msg.width * 3
+            ).tobytes()
+            self.image_publisher.publish(msg)
+
+        def text_callback(self):
+            msg = String()
+            msg.data = "Hello, world!"
+            self.text_publisher.publish(msg)
+
     if not rclpy.ok():
         rclpy.init()
     publisher = TestPublisher(QoSPresetProfiles.get_from_short_key(qos_profile))
@@ -103,10 +108,10 @@ def test_transport(qos_profile: str):
 
     thread2 = threading.Thread(target=rai_base_node.spin)
     thread2.start()
-    topics = ["/image", "/text"]
+    topics = ["/test_transport/image", "/test_transport/text"]
     try:
         for topic in topics:
-            output = rai_base_node.get_raw_message_from_topic(topic, timeout_sec=5.0)
+            output = rai_base_node.get_raw_message_from_topic(topic, timeout_sec=5)
             assert not isinstance(output, str), "No message received"
     finally:
         executor.shutdown()
