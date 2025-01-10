@@ -28,49 +28,36 @@ from rai.communication.base_connector import BaseMessage
 from rai.communication.ros_connector import ROS2Connector
 
 
-class ReceiverNode(Node):
-    def __init__(self):
-        super().__init__("receiver")
-        self.received_images: List[Image] = []
-        self.received_strings: List[String] = []
-        self.group = ReentrantCallbackGroup()
-        self.string_sub = self.create_subscription(  # type: ignore
-            String, "/text", self.on_message, 10, callback_group=self.group
-        )
-        self.image_sub = self.create_subscription(  # type: ignore
-            Image, "/image", self.on_message, 10, callback_group=self.group
-        )
-
-    def on_message(self, msg: Optional[String | Image]):
-        if isinstance(msg, String):
-            self.received_strings.append(msg)
-        elif isinstance(msg, Image):
-            self.received_images.append(msg)
-        else:
-            raise ValueError(f"Unknown message type: {type(msg)}")
-
-
-class SenderNode(Node):
-    def __init__(self):
-        super().__init__("sender")
-        self.text_pub = self.create_publisher(  # type: ignore
-            String,
-            "/text",
-            10,
-        )
-        self.image_pub = self.create_publisher(  # type: ignore
-            Image,
-            "/image",
-            10,
-        )
-        self.timer = self.create_timer(0.1, self.on_timer)  # type: ignore
-
-    def on_timer(self):
-        self.text_pub.publish(String(data="Hello, world!"))
-        self.image_pub.publish(Image())
-
-
 def test_send_message():
+    class ReceiverNode(Node):
+        def __init__(self):
+            super().__init__("receiver")
+            self.received_images: List[Image] = []
+            self.received_strings: List[String] = []
+            self.group = ReentrantCallbackGroup()
+            self.string_sub = self.create_subscription(  # type: ignore
+                String,
+                "/test_send_message/text",
+                self.on_message,
+                10,
+                callback_group=self.group,
+            )
+            self.image_sub = self.create_subscription(  # type: ignore
+                Image,
+                "/test_send_message/image",
+                self.on_message,
+                10,
+                callback_group=self.group,
+            )
+
+        def on_message(self, msg: Optional[String | Image]):
+            if isinstance(msg, String):
+                self.received_strings.append(msg)
+            elif isinstance(msg, Image):
+                self.received_images.append(msg)
+            else:
+                raise ValueError(f"Unknown message type: {type(msg)}")
+
     rclpy.init()
     receiver = ReceiverNode()
     receiver_executor = MultiThreadedExecutor()
@@ -79,8 +66,10 @@ def test_send_message():
     receiver_thread.start()
 
     connector = ROS2Connector()
-    connector.send_message(BaseMessage(String(data="Hello, world!")), "/text")
-    connector.send_message(BaseMessage(Image()), "/image")
+    connector.send_message(
+        BaseMessage(String(data="Hello, world!")), "/test_send_message/text"
+    )
+    connector.send_message(BaseMessage(Image()), "/test_send_message/image")
 
     time.sleep(1.0)
     assert len(receiver.received_strings) == 1
@@ -91,6 +80,25 @@ def test_send_message():
 
 
 def test_receive_message():
+    class SenderNode(Node):
+        def __init__(self):
+            super().__init__("sender")
+            self.text_pub = self.create_publisher(  # type: ignore
+                String,
+                "/test_receive_message/text",
+                10,
+            )
+            self.image_pub = self.create_publisher(  # type: ignore
+                Image,
+                "/test_receive_message/image",
+                10,
+            )
+            self.timer = self.create_timer(0.1, self.on_timer)  # type: ignore
+
+        def on_timer(self):
+            self.text_pub.publish(String(data="Hello, world!"))
+            self.image_pub.publish(Image())
+
     rclpy.init()
     sender = SenderNode()
     sender_executor = MultiThreadedExecutor()
@@ -99,11 +107,11 @@ def test_receive_message():
     sender_thread.start()
 
     connector = ROS2Connector()
-    message = connector.receive_message("/text")
+    message = connector.receive_message("/test_receive_message/text")
     assert isinstance(message, BaseMessage)
     assert isinstance(message.content, String)
 
-    message = connector.receive_message("/image")
+    message = connector.receive_message("/test_receive_message/image")
     assert isinstance(message, BaseMessage)
     assert isinstance(message.content, Image)
 
@@ -129,12 +137,18 @@ def test_send_and_wait():
 def test_connector_publisher_reuse():
     rclpy.init()
     connector = ROS2Connector()
-    connector.send_message(BaseMessage(String(data="Test")), "/text")
-    connector.send_message(BaseMessage(Image()), "/image")
+    connector.send_message(
+        BaseMessage(String(data="Test")), "/test_connector_publisher_reuse/text"
+    )
+    connector.send_message(
+        BaseMessage(Image()), "/test_connector_publisher_reuse/image"
+    )
 
     assert len(connector.publishers) == 2
 
-    connector.send_message(BaseMessage(String(data="Test")), "/text")
+    connector.send_message(
+        BaseMessage(String(data="Test")), "/test_connector_publisher_reuse/text"
+    )
     assert len(connector.publishers) == 2
     connector.cleanup()
     rclpy.shutdown()
@@ -144,8 +158,10 @@ def test_connector_cleanup():
     rclpy.init()
     connector = ROS2Connector()
 
-    connector.send_message(BaseMessage(String(data="Test")), "/text")
-    connector.send_message(BaseMessage(Image()), "/image")
+    connector.send_message(
+        BaseMessage(String(data="Test")), "/test_connector_cleanup/text"
+    )
+    connector.send_message(BaseMessage(Image()), "/test_connector_cleanup/image")
 
     initial_publisher_count = len(connector.publishers)
     assert initial_publisher_count == 2
