@@ -100,6 +100,9 @@ def test_transport(qos_profile: str):
     rai_base_node = RaiBaseNode(
         node_name="test_transport_" + str(uuid.uuid4()).replace("-", "")
     )
+
+    thread2 = threading.Thread(target=rai_base_node.spin)
+    thread2.start()
     topics = ["/image", "/text"]
     try:
         for topic in topics:
@@ -107,6 +110,9 @@ def test_transport(qos_profile: str):
             assert not isinstance(output, str), "No message received"
     finally:
         executor.shutdown()
+        rai_base_node.executor.shutdown()
+        rai_base_node.destroy_node()
         publisher.destroy_node()
         rclpy.shutdown()
         thread.join(timeout=1.0)
+        thread2.join(timeout=1.0)
