@@ -18,11 +18,11 @@ from typing import List
 from langchain_core.messages import BaseMessage, HumanMessage
 
 from rai.agents.conversational_agent import create_conversational_agent
-from rai.tools.ros.cli import (
-    Ros2ActionTool,
-    Ros2InterfaceTool,
-    Ros2ServiceTool,
-    Ros2TopicTool,
+from rai.tools.ros.debugging import (
+    ros2_action,
+    ros2_interface,
+    ros2_service,
+    ros2_topic,
 )
 from rai.utils.model_initialization import get_llm_model
 
@@ -37,10 +37,10 @@ class ROS2Agent(Agent):
     def __init__(self):
         super().__init__()
         self.tools = [
-            Ros2TopicTool(),
-            Ros2InterfaceTool(),
-            Ros2ServiceTool(),
-            Ros2ActionTool(),
+            ros2_topic,
+            ros2_interface,
+            ros2_service,
+            ros2_action,
         ]
         self.agent = create_conversational_agent(
             self.llm, self.tools, "You are a ROS2 expert."
