@@ -30,8 +30,6 @@ from tf_transformations import euler_from_quaternion
 from rai.tools.ros.deprecated import SingleMessageGrabber
 from rai.tools.utils import TF2TransformFetcher
 
-from .native import TopicInput
-
 logger = logging.getLogger(__name__)
 
 
@@ -45,6 +43,12 @@ class AddDescribedWaypointToDatabaseToolInput(BaseModel):
         ...,
         description="Text to display on the waypoint (very short, one or two words)",
     )
+
+
+class TopicInput(BaseModel):
+    """Input for the topic tool."""
+
+    topic_name: str = Field(..., description="The name of the topic")
 
 
 class AddDescribedWaypointToDatabaseTool(BaseTool):
@@ -220,10 +224,17 @@ class GetOccupancyGridTool(BaseTool):
             cv2.imwrite("map.png", image)
         return base64.b64encode(buffer.tobytes()).decode("utf-8")
 
-    def _run(self, topic_name: str):
+    def _run(
+        self,
+        topic_name: str,
+        source_frame: str = "base_link",
+        target_frame: str = "map",
+    ):
         """Gets the current map from the specified topic."""
         map_grabber = SingleMessageGrabber(topic_name, OccupancyGrid, timeout_sec=10)
-        tf_grabber = TF2TransformFetcher(target_frame="map", source_frame="base_link")
+        tf_grabber = TF2TransformFetcher(
+            target_frame=target_frame, source_frame=source_frame
+        )
 
         map_msg = map_grabber.get_data()
         transform = tf_grabber.get_data()

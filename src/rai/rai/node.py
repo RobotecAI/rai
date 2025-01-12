@@ -14,7 +14,7 @@
 
 
 import time
-from typing import Any, Callable, Dict, List, Literal, Optional, Type, Union
+from typing import Any, Callable, Dict, List, Literal, Optional
 
 import rclpy
 import rclpy.callback_groups
@@ -34,15 +34,13 @@ from std_srvs.srv import Trigger
 
 from rai.agents.state_based import Report, State, create_state_based_agent
 from rai.messages import HumanMultimodalMessage
-from rai.ros2_apis import Ros2ActionsAPI, Ros2TopicsAPI
-from rai.tools.ros.native import Ros2BaseTool
 from rai.tools.ros.utils import convert_ros_img_to_base64
 from rai.utils.model_initialization import get_llm_model, get_tracing_callbacks
-from rai.utils.ros import NodeDiscovery
 from rai.utils.ros_async import get_future_result
-from rai.utils.ros_executors import MultiThreadedExecutorFixed
 from rai.utils.ros_logs import create_logs_parser
 from rai_interfaces.action import Task as TaskAction
+
+from .base_node import RaiBaseNode
 
 WHOAMI_SYSTEM_PROMPT_TEMPLATE = """
     Constitution:
@@ -115,57 +113,6 @@ def append_tools_text_description_to_prompt(prompt: str, tools: List[BaseTool]) 
     """
 
 
-class RaiBaseNode(Node):
-    def __init__(
-        self,
-        allowlist: Optional[List[str]] = None,
-        *args,
-        **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        # ---------- ROS configuration ----------
-        self.callback_group = rclpy.callback_groups.ReentrantCallbackGroup()
-
-        # ---------- ROS helpers ----------
-        self.ros_discovery_info = NodeDiscovery(self, allowlist=allowlist)
-        self.async_action_client = Ros2ActionsAPI(self)
-        self.topics_handler = Ros2TopicsAPI(
-            self, self.callback_group, self.ros_discovery_info
-        )
-        self.ros_discovery_info.add_setter(self.topics_handler.set_ros_discovery_info)
-
-    # ------------- ros2 topics interface -------------
-    def get_raw_message_from_topic(self, topic: str, timeout_sec: int = 5) -> Any:
-        return self.topics_handler.get_raw_message_from_topic(topic, timeout_sec)
-
-    # ------------- ros2 actions interface -------------
-    def run_action(
-        self, action_name: str, action_type: str, action_goal_args: Dict[str, Any]
-    ):
-        return self.async_action_client.run_action(
-            action_name, action_type, action_goal_args
-        )
-
-    def get_task_result(self) -> str:
-        return self.async_action_client.get_task_result()
-
-    def is_task_complete(self) -> bool:
-        return self.async_action_client.is_task_complete()
-
-    @property
-    def action_feedback(self) -> Any:
-        return self.async_action_client.action_feedback
-
-    def cancel_task(self) -> Union[str, bool]:
-        return self.async_action_client.cancel_task()
-
-    # ------------- other methods -------------
-    def spin(self):
-        executor = MultiThreadedExecutorFixed()
-        executor.add_node(self)
-        executor.spin()
-
-
 def parse_task_goal(ros_action_goal: TaskAction.Goal) -> Dict[str, Any]:
     return dict(
         task=ros_action_goal.task,
@@ -184,7 +131,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         observe_topics: Optional[List[str]] = None,
         observe_postprocessors: Optional[Dict[str, Callable[[Any], Any]]] = None,
         allowlist: Optional[List[str]] = None,
-        tools: Optional[List[Type[BaseTool]]] = None,
+        tools: Optional[List[BaseTool]] = None,
         logs_parser_type: Literal["llm", "rai_state_logs"] = "rai_state_logs",
         *args,
         **kwargs,
@@ -223,7 +170,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         self.current_task = None
 
         # ---------- LLM Agents ----------
-        self.tools = self._initialize_tools(tools) if tools is not None else []
+        self.tools = tools if tools is not None else []
         self.system_prompt = self._initialize_system_prompt(system_prompt)
         self.llm_app: CompiledGraph = create_state_based_agent(
             llm=get_llm_model(model_type="complex_model"),
@@ -242,17 +189,6 @@ class RaiStateBasedLlmNode(RaiBaseNode):
 
     def summarize_logs(self) -> str:
         return self.logs_parser.summarize()
-
-    def _initialize_tools(self, tools: List[Type[BaseTool]]):
-        initialized_tools: List[BaseTool] = list()
-        for tool_cls in tools:
-            if issubclass(tool_cls, Ros2BaseTool):
-                tool = tool_cls(node=self)
-            else:
-                tool = tool_cls()
-
-            initialized_tools.append(tool)
-        return initialized_tools
 
     def _initialize_system_prompt(self, prompt: str):
         system_prompt = append_whoami_info_to_prompt(self, prompt)

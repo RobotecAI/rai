@@ -18,23 +18,26 @@ from typing import Optional
 import rclpy
 import rclpy.executors
 import rclpy.logging
-from rai_open_set_vision.tools import GetDetectionTool, GetDistanceToObjectsTool
 
+from rai.base_node import (
+    ros2_cancel_action,
+    ros2_get_action_feedback,
+    ros2_get_action_result,
+    ros2_is_action_complete,
+    ros2_run_action_async,
+)
 from rai.node import RaiStateBasedLlmNode
 from rai.tools.ros.native import (
-    GetMsgFromTopic,
-    Ros2GetRobotInterfaces,
-    Ros2PubMessageTool,
-    Ros2ShowMsgInterfaceTool,
+    ros2_get_msg_from_topic,
+    ros2_get_robot_interfaces,
+    ros2_get_transform,
+    ros2_pub_msg,
+    ros2_show_msg_interface,
 )
-from rai.tools.ros.native_actions import (
-    GetTransformTool,
-    Ros2CancelAction,
-    Ros2GetActionResult,
-    Ros2GetLastActionFeedback,
-    Ros2RunActionAsync,
-)
-from rai.tools.time import WaitForSecondsTool
+from rai.tools.time import wait_for_seconds
+
+# from rai_open_set_vision.tools import GetDetectionTool, GetDistanceToObjectsTool
+
 
 p = argparse.ArgumentParser()
 p.add_argument("--allowlist", type=Path, required=False, default=None)
@@ -121,18 +124,17 @@ def main(allowlist: Optional[Path] = None):
         allowlist=ros2_allowlist,
         system_prompt=SYSTEM_PROMPT,
         tools=[
-            Ros2GetRobotInterfaces,
-            Ros2PubMessageTool,
-            Ros2RunActionAsync,
-            Ros2CancelAction,
-            Ros2GetActionResult,
-            Ros2GetLastActionFeedback,
-            Ros2ShowMsgInterfaceTool,
-            GetTransformTool,
-            WaitForSecondsTool,
-            GetMsgFromTopic,
-            GetDetectionTool,
-            GetDistanceToObjectsTool,
+            ros2_cancel_action,
+            ros2_get_action_feedback,
+            ros2_get_action_result,
+            ros2_is_action_complete,
+            ros2_run_action_async,
+            ros2_get_msg_from_topic,
+            ros2_get_robot_interfaces,
+            ros2_pub_msg,
+            ros2_show_msg_interface,
+            ros2_get_transform,
+            wait_for_seconds,
         ],
     )
     node.declare_parameter("conversion_ratio", 1.0)

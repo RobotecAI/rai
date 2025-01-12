@@ -12,192 +12,84 @@
 # limitations under the License.
 
 
-from typing import Any, Dict, Optional, Tuple, Type
+from typing import Annotated, Any, Dict, Type
 
+import rclpy.node
 import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
 from action_msgs.msg import GoalStatus
-from pydantic import BaseModel, Field
+from langchain.tools import tool
+from langchain_core.tools import InjectedToolArg
 from rclpy.action.client import ActionClient
-from rosidl_runtime_py import message_to_ordereddict
 
-from .native import Ros2BaseInput, Ros2BaseTool
-from .utils import get_transform
+from rai.node import RaiBaseNode
 
 
-# --------------------- Inputs ---------------------
-class Ros2ActionRunnerInput(BaseModel):
-    action_name: str = Field(..., description="Name of the action")
-    action_type: str = Field(..., description="Type of the action")
-    action_goal_args: Dict[str, Any] = Field(
-        ..., description="Dictionary with arguments for the action goal message"
-    )
+@tool
+def ros2_get_action_names_and_types(
+    node: Annotated[RaiBaseNode, InjectedToolArg]
+) -> Dict[str, str]:
+    """A tool for getting all ros2 actions names and types"""
+    return node.ros_discovery_info.actions_and_types
 
 
-class ActionUidInput(BaseModel):
-    uid: str = Field(..., description="Action uid.")
+def ros2_run_action_sync(
+    node: Annotated[rclpy.node.Node, InjectedToolArg],
+    action_name: str,
+    action_type: str,
+    action_goal_args: Dict[str, Any],
+) -> str:
+    """
+    A tool for running a ros2 action. Make sure you know the action interface first!!! Actions might take some time to execute and are blocking - you will not be able to check their feedback, only will be informed about the result
 
+    msgs args can have two formats:
+    { "goal" : {arg 1 : xyz, ... } or {arg 1 : xyz, ... }
+    """
 
-class OptionalActionUidInput(BaseModel):
-    uid: Optional[str] = Field(
-        None,
-        description="Optional action uid. If None - results from all submitted actions will be returned.",
-    )
+    try:
+        msg_cls: Type = rosidl_runtime_py.utilities.get_interface(action_type)
+        goal_msg = msg_cls.Goal()
 
+        if "goal" in action_goal_args:
+            action_goal_args = action_goal_args["goal"]
+        rosidl_runtime_py.set_message.set_message_fields(goal_msg, action_goal_args)
 
-# --------------------- Tools ---------------------
-class Ros2GetActionNamesAndTypesTool(Ros2BaseTool):
-    name: str = "Ros2GetActionNamesAndTypes"
-    description: str = "A tool for getting all ros2 actions names and types"
-
-    def _run(self):
-        return self.node.ros_discovery_info.actions_and_types
-
-
-class Ros2BaseActionTool(Ros2BaseTool):
-    pass
-
-
-class Ros2RunActionSync(Ros2BaseTool):
-    name: str = "Ros2RunAction"
-    description: str = (
-        "A tool for running a ros2 action. Make sure you know the action interface first!!! Actions might take some time to execute and are blocking - you will not be able to check their feedback, only will be informed about the result"
-    )
-
-    args_schema: Type[Ros2ActionRunnerInput] = Ros2ActionRunnerInput
-
-    def _build_msg(
-        self, msg_type: str, msg_args: Dict[str, Any]
-    ) -> Tuple[object, Type]:
-        """
-        Import message and create it. Return both ready message and message class.
-
-        msgs args can have two formats:
-        { "goal" : {arg 1 : xyz, ... } or {arg 1 : xyz, ... }
-        """
-
-        msg_cls: Type = rosidl_runtime_py.utilities.get_interface(msg_type)
-        msg = msg_cls.Goal()
-
-        if "goal" in msg_args:
-            msg_args = msg_args["goal"]
-        rosidl_runtime_py.set_message.set_message_fields(msg, msg_args)
-        return msg, msg_cls
-
-    def _run(
-        self, action_name: str, action_type: str, action_goal_args: Dict[str, Any]
-    ):
         if action_name[0] != "/":
             action_name = "/" + action_name
-            self.node.get_logger().info(f"Action name corrected to: {action_name}")
+            node.get_logger().info(f"Action name corrected to: {action_name}")
+    except Exception as e:
+        return f"Failed to build message: {e}"
 
-        try:
-            goal_msg, msg_cls = self._build_msg(action_type, action_goal_args)
-        except Exception as e:
-            return f"Failed to build message: {e}"
+    client = ActionClient(node, msg_cls, action_name)
 
-        client = ActionClient(self.node, msg_cls, action_name)
-
-        retries = 0
-        while not client.wait_for_server(timeout_sec=1.0):
-            retries += 1
-            if retries > 5:
-                raise Exception(
-                    f"Action server '{action_name}' is not available. Make sure `action_name` is correct..."
-                )
-            self.node.get_logger().info(
-                f"'{action_name}' action server not available, waiting..."
+    retries = 0
+    while not client.wait_for_server(timeout_sec=1.0):
+        retries += 1
+        if retries > 5:
+            raise Exception(
+                f"Action server '{action_name}' is not available. Make sure `action_name` is correct..."
             )
-
-        self.node.get_logger().info(f"Sending action message: {goal_msg}")
-        result = client.send_goal(goal_msg)
-        self.node.get_logger().info("Action finished and result received!")
-
-        if result is not None:
-            status = result.status
-        else:
-            status = GoalStatus.STATUS_UNKNOWN
-
-        if status == GoalStatus.STATUS_SUCCEEDED:
-            res = f"Action succeeded, {result.result}"
-        elif status == GoalStatus.STATUS_ABORTED:
-            res = f"Action aborted, {result.result}"
-        elif status == GoalStatus.STATUS_CANCELED:
-            res = f"Action canceled: {result.result}"
-        else:
-            res = "Action failed"
-
-        self.node.get_logger().info(res)
-        return res
-
-
-class Ros2RunActionAsync(Ros2BaseActionTool):
-    name: str = "Ros2RunAction"
-    description: str = """A tool for running a ros2 action.
-        <rule>Always check action interface before setting action_goal_args.</rule>"""
-
-    args_schema: Type[Ros2ActionRunnerInput] = Ros2ActionRunnerInput
-
-    def _run(
-        self, action_name: str, action_type: str, action_goal_args: Dict[str, Any]
-    ):
-        return self.node.run_action(action_name, action_type, action_goal_args)
-
-
-class Ros2IsActionComplete(Ros2BaseActionTool):
-    name: str = "Ros2IsActionComplete"
-    description: str = "A tool for checking if submitted ros2 actions is complete"
-
-    args_schema: Type[Ros2BaseInput] = Ros2BaseInput
-
-    def _run(self) -> bool:
-        return self.node.is_task_complete()
-
-
-class Ros2GetActionResult(Ros2BaseActionTool):
-    name: str = "Ros2GetActionResult"
-    description: str = "A tool for checking the result of submitted ros2 action"
-
-    args_schema: Type[Ros2BaseInput] = Ros2BaseInput
-
-    def _run(self) -> bool:
-        return self.node.get_task_result()
-
-
-class Ros2CancelAction(Ros2BaseActionTool):
-    name: str = "Ros2CancelAction"
-    description: str = "Cancel submitted action"
-
-    args_schema: Type[Ros2BaseInput] = Ros2BaseInput
-
-    def _run(self) -> bool:
-        return self.node.cancel_task()
-
-
-class Ros2GetLastActionFeedback(Ros2BaseActionTool):
-    name: str = "Ros2GetLastActionFeedback"
-    description: str = (
-        "Action feedback is an optional intermediate information from ros2 action. With this tool you can get the last feedback of running action."
-    )
-
-    args_schema: Type[Ros2BaseInput] = Ros2BaseInput
-
-    def _run(self) -> str:
-        return str(self.node.action_feedback)
-
-
-class GetTransformInput(BaseModel):
-    target_frame: str = Field(default="map", description="Target frame")
-    source_frame: str = Field(default="body_link", description="Source frame")
-
-
-class GetTransformTool(Ros2BaseActionTool):
-    name: str = "GetTransform"
-    description: str = "Get transform between two frames"
-
-    args_schema: Type[GetTransformInput] = GetTransformInput
-
-    def _run(self, target_frame="map", source_frame="body_link") -> dict:
-        return message_to_ordereddict(
-            get_transform(self.node, target_frame, source_frame)
+        node.get_logger().info(
+            f"'{action_name}' action server not available, waiting..."
         )
+
+    node.get_logger().info(f"Sending action message: {goal_msg}")
+    result = client.send_goal(goal_msg)
+    node.get_logger().info("Action finished and result received!")
+
+    if result is not None:
+        status = result.status
+    else:
+        status = GoalStatus.STATUS_UNKNOWN
+
+    if status == GoalStatus.STATUS_SUCCEEDED:
+        res = f"Action succeeded, {result.result}"
+    elif status == GoalStatus.STATUS_ABORTED:
+        res = f"Action aborted, {result.result}"
+    elif status == GoalStatus.STATUS_CANCELED:
+        res = f"Action canceled: {result.result}"
+    else:
+        res = "Action failed"
+
+    node.get_logger().info(res)
+    return res
