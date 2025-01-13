@@ -232,9 +232,9 @@ class ROS2HRIConnector(HRIConnector, TopicSubscriber, TopicPublisher):
         for target in self.targets:
             hri_message = HRIMessage.from_langchain(message)
             ros2rri_message = ROS2RRIMessage(
-                payload=hri_message.text,  # TODO: Only string topics
-                ros_message_type=type(hri_message).__name__,
-                python_message_class=type(hri_message),
+                payload={"data": hri_message.text},  # TODO: Only string topics
+                ros_message_type="std_msgs/msg/String",
+                python_message_class=String,
             )
             self._publish(ros2rri_message, target)
 
