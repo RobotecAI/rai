@@ -12,12 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .base_connector import BaseConnector, BaseMessage
-from .sound_device_connector import SoundDeviceError, StreamingAudioInputDevice
+from .ros_connectors import ROS2HRIConnector, ROS2RRIConnector
 
 __all__ = [
-    "BaseMessage",
-    "BaseConnector",
-    "StreamingAudioInputDevice",
-    "SoundDeviceError",
+    "ROS2HRIConnector",
+    "ROS2RRIConnector",
 ]
+
+# from .base_connector import BaseConnector, BaseMessage
+# from .sound_device_connector import SoundDeviceError, StreamingAudioInputDevice
+
+# __all__ = [
+#     "BaseMessage",
+#     "BaseConnector",
+#     "StreamingAudioInputDevice",
+#     "SoundDeviceError",
+# ]
