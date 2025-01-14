@@ -12,156 +12,160 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from subprocess import PIPE, Popen
+from threading import Timer
+from typing import List, Literal, Optional
 
-import subprocess
-from typing import Type
+from langchain_core.tools import tool
 
-from langchain.tools import BaseTool
-from pydantic import BaseModel, Field
-
-
-class Ros2TopicToolInput(BaseModel):
-    """Input for the ros2_topic tool."""
-
-    command: str = Field(..., description="The command to run")
+FORBIDDEN_CHARACTERS = ["&", ";", "|", "&&", "||", "(", ")", "<", ">", ">>", "<<"]
 
 
-class Ros2TopicTool(BaseTool):
-    """Tool for interacting with ROS2 topics."""
+def run_with_timeout(cmd: List[str], timeout_sec: int):
+    proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
+    timer = Timer(timeout_sec, proc.kill)
+    try:
+        timer.start()
+        stdout, stderr = proc.communicate()
+        return stdout, stderr
+    finally:
+        timer.cancel()
 
-    name: str = "Ros2TopicTool"
-    description: str = """
-        usage: ros2 topic [-h] [--include-hidden-topics] Call `ros2 topic <command> -h` for more detailed usage. ...
 
-    Various topic related sub-commands
-
-    options:
-      -h, --help            show this help message and exit
-      --include-hidden-topics
-                            Consider hidden topics as well
-
-    Commands:
-      bw     Display bandwidth used by topic
-      delay  Display delay of topic from timestamp in header
-      echo   Output messages from a topic
-      find   Output a list of available topics of a given type
-      hz     Print the average publishing rate to screen
-      info   Print information about a topic
-      list   Output a list of available topics
-      pub    Publish a message to a topic
-      type   Print a topic's type
-
-      Call `ros2 topic <command> -h` for more detailed usage.
-    """
-    args_schema: Type[Ros2TopicToolInput] = Ros2TopicToolInput
-
-    def _run(self, command: str):
-        """Executes the specified ROS2 topic command."""
-        result = subprocess.run(
-            f"ros2 topic {command}", shell=True, capture_output=True, timeout=2
+def run_command(cmd: List[str], timeout: int = 5):
+    # Validate command safety by checking for shell operators
+    # Block potentially dangerous characters
+    if any(char in " ".join(cmd) for char in FORBIDDEN_CHARACTERS):
+        raise ValueError(
+            "Command is not safe to run. The command contains forbidden characters."
         )
-        return result
+    stdout, stderr = run_with_timeout(cmd, timeout)
+    output = {}
+    if stdout:
+        output["stdout"] = stdout.decode("utf-8")
+    else:
+        output["stdout"] = "Command returned no stdout output"
+    if stderr:
+        output["stderr"] = stderr.decode("utf-8")
+    else:
+        output["stderr"] = "Command returned no stderr output"
+    return str(output)
 
 
-class Ros2InterafaceToolInput(BaseModel):
-    """Input for the ros2_interface tool."""
-
-    command: str = Field(..., description="The command to run")
-
-
-class Ros2InterfaceTool(BaseTool):
-
-    name: str = "Ros2InterfaceTool"
-
-    description: str = """
-    usage: ros2 interface [-h] Call `ros2 interface <command> -h` for more detailed usage. ...
-
-    Show information about ROS interfaces
-
-    options:
-      -h, --help            show this help message and exit
-
-    Commands:
-      list      List all interface types available
-      package   Output a list of available interface types within one package
-      packages  Output a list of packages that provide interfaces
-      proto     Output an interface prototype
-      show      Output the interface definition
-
-      Call `ros2 interface <command> -h` for more detailed usage.
+@tool
+def ros2_action(
+    command: Literal["info", "list", "type", "send_goal"],
+    arguments: Optional[List[str]] = None,
+    timeout: int = 5,
+):
+    """Run a ROS2 action command
+    Args:
+        command: The action command to run (info/list/type)
+        arguments: Additional arguments for the command as a list of strings
+        timeout: Command timeout in seconds
     """
-
-    args_schema: Type[Ros2InterafaceToolInput] = Ros2InterafaceToolInput
-
-    def _run(self, command: str):
-        command = f"ros2 interface {command}"
-        result = subprocess.run(command, shell=True, capture_output=True, timeout=2)
-        return result
+    cmd = ["ros2", "action", command]
+    if arguments:
+        cmd.extend(arguments)
+    return run_command(cmd, timeout)
 
 
-class Ros2ServiceToolInput(BaseModel):
-    """Input for the ros2_service tool."""
-
-    command: str = Field(..., description="The command to run")
-
-
-class Ros2ServiceTool(BaseTool):
-    name: str = "Ros2ServiceTool"
-
-    description: str = """
-    usage: ros2 service [-h] [--include-hidden-services] Call `ros2 service <command> -h` for more detailed usage. ...
-
-    Various service related sub-commands
-
-    options:
-      -h, --help            show this help message and exit
-      --include-hidden-services
-                            Consider hidden services as well
-
-    Commands:
-      call  Call a service
-      find  Output a list of available services of a given type
-      list  Output a list of available services
-      type  Output a service's type
+@tool
+def ros2_service(
+    command: Literal["call", "find", "info", "list", "type"],
+    arguments: Optional[List[str]] = None,
+    timeout: int = 5,
+):
+    """Run a ROS2 service command
+    Args:
+        command: The service command to run
+        arguments: Additional arguments for the command as a list of strings
+        timeout: Command timeout in seconds
     """
-
-    args_schema: Type[Ros2ServiceToolInput] = Ros2ServiceToolInput
-
-    def _run(self, command: str):
-        command = f"ros2 service {command}"
-        result = subprocess.run(command, shell=True, capture_output=True, timeout=2)
-        return result
+    cmd = ["ros2", "service", command]
+    if arguments:
+        cmd.extend(arguments)
+    return run_command(cmd, timeout)
 
 
-class Ros2ActionToolInput(BaseModel):
-    """Input for the ros2_action tool."""
-
-    command: str = Field(..., description="The command to run")
-
-
-class Ros2ActionTool(BaseTool):
-    name: str = "Ros2ActionTool"
-
-    description: str = """
-    usage: ros2 action [-h] Call `ros2 action <command> -h` for more detailed usage. ...
-
-    Various action related sub-commands
-
-    options:
-      -h, --help            show this help message and exit
-
-    Commands:
-      info       Print information about an action
-      list       Output a list of action names
-      send_goal  Send an action goal
-      type       Print a action's type
-
-      Call `ros2 action <command> -h` for more detailed usage.
+@tool
+def ros2_node(
+    command: Literal["info", "list"],
+    arguments: Optional[List[str]] = None,
+    timeout: int = 5,
+):
+    """Run a ROS2 node command
+    Args:
+        command: The node command to run
+        arguments: Additional arguments for the command as a list of strings
+        timeout: Command timeout in seconds
     """
+    cmd = ["ros2", "node", command]
+    if arguments:
+        cmd.extend(arguments)
+    return run_command(cmd, timeout)
 
-    args_schema: Type[Ros2ActionToolInput] = Ros2ActionToolInput
 
-    def _run(self, command: str):
-        command = f"ros2 action {command}"
-        result = subprocess.run(command, shell=True, capture_output=True)
-        return result
+@tool
+def ros2_param(
+    command: Literal["delete", "describe", "dump", "get", "list", "set"],
+    arguments: Optional[List[str]] = None,
+    timeout: int = 5,
+):
+    """Run a ROS2 parameter command
+    Args:
+        command: The parameter command to run
+        arguments: Additional arguments for the command as a list of strings
+        timeout: Command timeout in seconds
+    """
+    cmd = ["ros2", "param", command]
+    if arguments:
+        cmd.extend(arguments)
+    return run_command(cmd, timeout)
+
+
+@tool
+def ros2_interface(
+    command: Literal["list", "package", "packages", "proto", "show"],
+    arguments: Optional[List[str]] = None,
+    timeout: int = 5,
+):
+    """Run a ROS2 interface command
+    Args:
+        command: The interface command to run
+        arguments: Additional arguments for the command as a list of strings
+        timeout: Command timeout in seconds
+    """
+    cmd = ["ros2", "interface", command]
+    if arguments:
+        cmd.extend(arguments)
+    return run_command(cmd, timeout)
+
+
+@tool
+def ros2_topic(
+    command: Literal[
+        "bw", "delay", "echo", "find", "hz", "info", "list", "pub", "type"
+    ],
+    arguments: Optional[List[str]] = None,
+    timeout: int = 5,
+):
+    """Run a ROS2 topic command
+    Args:
+        command: The topic command to run:
+            - bw: Display bandwidth used by topic
+            - delay: Display delay of topic from timestamp in header
+            - echo: Output messages from a topic
+            - find: Output a list of available topics of a given type
+            - hz: Print the average publishing rate to screen
+            - info: Print information about a topic
+            - list: Output a list of available topics
+            - pub: Publish a message to a topic
+            - type: Print a topic's type
+        arguments: Additional arguments for the command as a list of strings
+        timeout: Command timeout in seconds
+    """
+    cmd = ["ros2", "topic", command]
+    if arguments:
+        cmd.extend(arguments)
+    return run_command(cmd, timeout)
