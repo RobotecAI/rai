@@ -25,7 +25,6 @@ import rclpy.subscription
 import rclpy.task
 import sensor_msgs.msg
 from langchain.tools import BaseTool
-from langchain.tools.render import render_text_description_and_args
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langgraph.graph.graph import CompiledGraph
 from rclpy.action.server import ActionServer, GoalResponse, ServerGoalHandle
@@ -34,6 +33,7 @@ from std_srvs.srv import Trigger
 
 from rai.agents.state_based import Report, State, create_state_based_agent
 from rai.messages import HumanMultimodalMessage
+from rai.tools.render import render_text_description_with_args_from_tools
 from rai.tools.ros.utils import convert_ros_img_to_base64
 from rai.utils.model_initialization import get_llm_model, get_tracing_callbacks
 from rai.utils.ros_async import get_future_result
@@ -109,7 +109,7 @@ def append_tools_text_description_to_prompt(prompt: str, tools: List[BaseTool]) 
 
     Use the tooling provided to gather information about the environment:
 
-    {render_text_description_and_args(tools)}
+    {render_text_description_with_args_from_tools(tools)}
     """
 
 

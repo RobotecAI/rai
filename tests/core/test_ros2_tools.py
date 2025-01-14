@@ -24,6 +24,7 @@ from rclpy.node import Node
 from std_msgs.msg import String
 
 from rai.agents.state_based import create_state_based_agent
+from rai.tools.render import render_text_description_with_args_from_tools
 from rai.tools.ros.native import Ros2PubMessageTool
 
 
@@ -83,7 +84,7 @@ def test_ros2_pub_message_tool_llm(
     t = threading.Thread(target=executor.spin)
 
     system = SystemMessage(
-        "You are a ros2 agent that can run tools: {render_text_description_and_args(tools)}"
+        f"You are a ros2 agent that can run tools: {render_text_description_with_args_from_tools(tools)}"
     )
     query = HumanMessage(
         f"Publish a std_msgs/msg/String '{test_message}' to the topic '{topic}'"
