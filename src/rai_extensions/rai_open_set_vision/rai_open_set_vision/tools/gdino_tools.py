@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, NamedTuple, Optional, Type
+from typing import List, NamedTuple, Type
 
 import numpy as np
 import rclpy
@@ -26,10 +26,11 @@ from rclpy.exceptions import (
 )
 from rclpy.task import Future
 
-from rai.node import RaiAsyncToolsNode
+from rai.node import RaiBaseNode
 from rai.tools.ros import Ros2BaseInput, Ros2BaseTool
 from rai.tools.ros.utils import convert_ros_img_to_ndarray
 from rai.tools.utils import wait_for_message
+from rai.utils.ros_async import get_future_result
 from rai_interfaces.srv import RAIGroundingDino
 
 
@@ -81,24 +82,10 @@ class DistanceMeasurement(NamedTuple):
 
 # --------------------- Tools ---------------------
 class GroundingDinoBaseTool(Ros2BaseTool):
-    node: RaiAsyncToolsNode = Field(..., exclude=True, required=True)
+    node: RaiBaseNode = Field(..., exclude=True, required=True)
 
     box_threshold: float = Field(default=0.35, description="Box threshold for GDINO")
     text_threshold: float = Field(default=0.45, description="Text threshold for GDINO")
-
-    def _spin(self, future: Future) -> Optional[RAIGroundingDino.Response]:
-        rclpy.spin_once(self.node)
-        if future.done():
-            try:
-                response = future.result()
-            except Exception as e:
-                self.node.get_logger().info("Service call failed %r" % (e,))
-                raise Exception("Service call failed %r" % (e,))
-            else:
-                assert response is not None
-                self.node.get_logger().info(f"{response.detections}")
-                return response
-        return None
 
     def _call_gdino_node(
         self, camera_img_message: sensor_msgs.msg.Image, object_names: list[str]
@@ -174,12 +161,16 @@ class GetDetectionTool(GroundingDinoBaseTool):
         camera_img_msg = self._get_image_message(camera_topic)
         future = self._call_gdino_node(camera_img_msg, object_names)
 
-        while rclpy.ok():
-            resolved = self._spin(future)
-            if resolved is not None:
-                detected = self._parse_detection_array(resolved)
-                names = ", ".join([det.class_name for det in detected])
-                return f"I have detected the following items in the picture {names or 'None'}"
+        resolved = get_future_result(future)
+
+        if resolved is not None:
+            detected = self._parse_detection_array(resolved)
+            names = ", ".join([det.class_name for det in detected])
+            return (
+                f"I have detected the following items in the picture {names or 'None'}"
+            )
+        else:
+            return "Service call failed. Can't get detections."
 
         return "Failed to get detection"
 
@@ -256,18 +247,17 @@ class GetDistanceToObjectsTool(GroundingDinoBaseTool):
                 "Parameter conversion_ratio not found in node, using default value: 0.001"
             )
             conversion_ratio = 0.001
-        while rclpy.ok():
-            resolved = self._spin(future)
-            if resolved is not None:
-                detected = self._parse_detection_array(resolved)
-                measurements = self._get_distance_from_detections(
-                    depth_img_msg, detected, threshold, conversion_ratio
-                )
-                measurement_string = ", ".join(
-                    [
-                        f"{measurement[0]}: {measurement[1]:.2f}m away"
-                        for measurement in measurements
-                    ]
-                )
-                return f"I have detected the following items in the picture {measurement_string or 'no objects'}"
+        resolved = get_future_result(future)
+        if resolved is not None:
+            detected = self._parse_detection_array(resolved)
+            measurements = self._get_distance_from_detections(
+                depth_img_msg, detected, threshold, conversion_ratio
+            )
+            measurement_string = ", ".join(
+                [
+                    f"{measurement[0]}: {measurement[1]:.2f}m away"
+                    for measurement in measurements
+                ]
+            )
+            return f"I have detected the following items in the picture {measurement_string or 'no objects'}"
         return "Failed"

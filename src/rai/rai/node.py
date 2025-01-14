@@ -13,46 +13,34 @@
 # limitations under the License.
 
 
-import functools
 import time
-from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Type, Union
 
 import rclpy
 import rclpy.callback_groups
 import rclpy.executors
+import rclpy.node
 import rclpy.qos
 import rclpy.subscription
 import rclpy.task
-import rosidl_runtime_py.set_message
-import rosidl_runtime_py.utilities
 import sensor_msgs.msg
-from action_msgs.msg import GoalStatus
 from langchain.tools import BaseTool
 from langchain.tools.render import render_text_description_and_args
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langgraph.graph.graph import CompiledGraph
-from rclpy.action.client import ActionClient
-from rclpy.action.graph import get_action_names_and_types
 from rclpy.action.server import ActionServer, GoalResponse, ServerGoalHandle
 from rclpy.node import Node
-from rclpy.qos import (
-    DurabilityPolicy,
-    HistoryPolicy,
-    LivelinessPolicy,
-    QoSProfile,
-    ReliabilityPolicy,
-)
-from rclpy.topic_endpoint_info import TopicEndpointInfo
 from std_srvs.srv import Trigger
 
 from rai.agents.state_based import Report, State, create_state_based_agent
 from rai.messages import HumanMultimodalMessage
+from rai.ros2_apis import Ros2ActionsAPI, Ros2TopicsAPI
 from rai.tools.ros.native import Ros2BaseTool
-from rai.tools.ros.native_actions import Ros2BaseActionTool
-from rai.tools.ros.utils import convert_ros_img_to_base64, import_message_from_str
-from rai.tools.utils import wait_for_message
+from rai.tools.ros.utils import convert_ros_img_to_base64
 from rai.utils.model_initialization import get_llm_model, get_tracing_callbacks
 from rai.utils.ros import NodeDiscovery
+from rai.utils.ros_async import get_future_result
+from rai.utils.ros_executors import MultiThreadedExecutorFixed
 from rai.utils.ros_logs import create_logs_parser
 from rai_interfaces.action import Task as TaskAction
 
@@ -93,15 +81,15 @@ def append_whoami_info_to_prompt(
         node.get_logger().info("Identity service not available, waiting again...")
 
     constitution_future = constitution_service.call_async(Trigger.Request())
-    rclpy.spin_until_future_complete(node, constitution_future)
-    constitution_response = constitution_future.result()
+    constitution_response: Optional[Trigger.Response] = get_future_result(
+        constitution_future
+    )
     constitution_message = (
         "" if constitution_response is None else constitution_response.message
     )
 
     identity_future = identity_service.call_async(Trigger.Request())
-    rclpy.spin_until_future_complete(node, identity_future)
-    identity_response = identity_future.result()
+    identity_response: Optional[Trigger.Response] = get_future_result(identity_future)
     identity_message = "" if identity_response is None else identity_response.message
 
     system_prompt = WHOAMI_SYSTEM_PROMPT_TEMPLATE.format(
@@ -127,122 +115,6 @@ def append_tools_text_description_to_prompt(prompt: str, tools: List[BaseTool]) 
     """
 
 
-def ros2_build_msg(msg_type: str, msg_args: Dict[str, Any]) -> Tuple[object, Type]:
-    """
-    Import message and create it. Return both ready message and message class.
-
-    msgs args can have two formats:
-    { "goal" : {arg 1 : xyz, ... } or {arg 1 : xyz, ... }
-    """
-
-    msg_cls: Type = rosidl_runtime_py.utilities.get_interface(msg_type)
-    msg = msg_cls.Goal()
-
-    if "goal" in msg_args:
-        msg_args = msg_args["goal"]
-    rosidl_runtime_py.set_message.set_message_fields(msg, msg_args)
-    return msg, msg_cls
-
-
-class RaiAsyncToolsNode(Node):
-    def __init__(self):
-        super().__init__("rai_internal_action_node")
-
-        self.goal_handle = None
-        self.result_future = None
-        self.feedback = None
-        self.status = None
-
-    def _run_action(self, action_name, action_type, action_goal_args):
-        if not self._is_task_complete():
-            raise AssertionError(
-                "Another ros2 action is currently running and parallel actions are not supported. Please wait until the previous action is complete before starting a new one. You can also cancel the current one."
-            )
-
-        if action_name[0] != "/":
-            action_name = "/" + action_name
-            self.get_logger().info(f"Action name corrected to: {action_name}")
-
-        try:
-            goal_msg, msg_cls = ros2_build_msg(action_type, action_goal_args)
-        except Exception as e:
-            return f"Failed to build message: {e}"
-
-        client = ActionClient(self, msg_cls, action_name)
-
-        retries = 0
-        while not client.wait_for_server(timeout_sec=1.0):
-            retries += 1
-            if retries > 5:
-                raise Exception(
-                    f"Action server '{action_name}' is not available. Make sure `action_name` is correct..."
-                )
-            self.get_logger().info(
-                f"'{action_name}' action server not available, waiting..."
-            )
-
-        self.get_logger().info(f"Sending action message: {goal_msg}")
-
-        send_goal_future = client.send_goal_async(goal_msg, self._feedback_callback)
-        self.get_logger().info("Action goal sent!")
-        rclpy.spin_until_future_complete(self, send_goal_future)
-        self.goal_handle = send_goal_future.result()
-
-        if not self.goal_handle:
-            raise Exception(f"Action '{action_name}' not sent to server")
-
-        if not self.goal_handle.accepted:
-            raise Exception(f"Action '{action_name}' not accepted by server")
-
-        self.result_future = self.goal_handle.get_result_async()
-        self.get_logger().info("Action sent!")
-        return f"{action_name} started successfully with args: {action_goal_args}"
-
-    def _get_task_result(self):
-        if not self._is_task_complete():
-            return "Task is not complete yet"
-
-        if self.status == GoalStatus.STATUS_SUCCEEDED:
-            return "Succeeded"
-        elif self.status == GoalStatus.STATUS_ABORTED:
-            return "Failed"
-        elif self.status == GoalStatus.STATUS_CANCELED:
-            return "Cancelled"
-        else:
-            return "Failed"
-
-    def _feedback_callback(self, msg):
-        self.get_logger().info(f"Received ros2 action feedback: {msg}")
-        self.action_feedback = msg
-
-    def _is_task_complete(self):
-        if not self.result_future:
-            # task was cancelled or completed
-            return True
-        rclpy.spin_until_future_complete(self, self.result_future, timeout_sec=0.10)
-        if self.result_future.result():
-            self.status = self.result_future.result().status
-            if self.status != GoalStatus.STATUS_SUCCEEDED:
-                self.get_logger().debug(
-                    f"Task with failed with status code: {self.status}"
-                )
-                return True
-        else:
-            self.get_logger().info("There is no result")
-            # Timed out, still processing, not complete yet
-            return False
-
-        self.get_logger().info("Task succeeded!")
-        return True
-
-    def _cancel_task(self):
-        self.get_logger().info("Canceling current task.")
-        if self.result_future and self.goal_handle:
-            future = self.goal_handle.cancel_goal_async()
-            rclpy.spin_until_future_complete(self, future)
-        return True
-
-
 class RaiBaseNode(Node):
     def __init__(
         self,
@@ -251,136 +123,47 @@ class RaiBaseNode(Node):
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
+        # ---------- ROS configuration ----------
+        self.callback_group = rclpy.callback_groups.ReentrantCallbackGroup()
 
-        self.robot_state: Dict[str, Any] = dict()  # where Any is ROS 2 message type
-
-        self.DISCOVERY_FREQ = 2.0
-        self.DISCOVERY_DEPTH = 5
-        self.timer = self.create_timer(
-            self.DISCOVERY_FREQ,
-            self.discovery,
+        # ---------- ROS helpers ----------
+        self.ros_discovery_info = NodeDiscovery(self, allowlist=allowlist)
+        self.async_action_client = Ros2ActionsAPI(self)
+        self.topics_handler = Ros2TopicsAPI(
+            self, self.callback_group, self.ros_discovery_info
         )
-        self.ros_discovery_info = NodeDiscovery(allowlist=allowlist)
-        self.discovery()
-        self.qos_profile_cache: Dict[str, QoSProfile] = dict()
+        self.ros_discovery_info.add_setter(self.topics_handler.set_ros_discovery_info)
 
-        self.state_subscribers = dict()
+    # ------------- ros2 topics interface -------------
+    def get_raw_message_from_topic(self, topic: str, timeout_sec: int = 5) -> Any:
+        return self.topics_handler.get_raw_message_from_topic(topic, timeout_sec)
 
-        # ------- ROS2 actions handling -------
-        self._async_tool_node = RaiAsyncToolsNode()
+    # ------------- ros2 actions interface -------------
+    def run_action(
+        self, action_name: str, action_type: str, action_goal_args: Dict[str, Any]
+    ):
+        return self.async_action_client.run_action(
+            action_name, action_type, action_goal_args
+        )
 
+    def get_task_result(self) -> str:
+        return self.async_action_client.get_task_result()
+
+    def is_task_complete(self) -> bool:
+        return self.async_action_client.is_task_complete()
+
+    @property
+    def action_feedback(self) -> Any:
+        return self.async_action_client.action_feedback
+
+    def cancel_task(self) -> Union[str, bool]:
+        return self.async_action_client.cancel_task()
+
+    # ------------- other methods -------------
     def spin(self):
-        executor = rclpy.executors.MultiThreadedExecutor()
+        executor = MultiThreadedExecutorFixed()
         executor.add_node(self)
         executor.spin()
-        rclpy.shutdown()
-
-    def discovery(self):
-        self.ros_discovery_info.set(
-            self.get_topic_names_and_types(),
-            self.get_service_names_and_types(),
-            get_action_names_and_types(self),
-        )
-
-    def adapt_requests_to_offers(
-        self, publisher_info: List[TopicEndpointInfo]
-    ) -> QoSProfile:
-        if not publisher_info:
-            return QoSProfile(depth=1)
-
-        num_endpoints = len(publisher_info)
-        reliability_reliable_count = 0
-        durability_transient_local_count = 0
-
-        for endpoint in publisher_info:
-            profile = endpoint.qos_profile
-            if profile.reliability == ReliabilityPolicy.RELIABLE:
-                reliability_reliable_count += 1
-            if profile.durability == DurabilityPolicy.TRANSIENT_LOCAL:
-                durability_transient_local_count += 1
-
-        request_qos = QoSProfile(
-            history=HistoryPolicy.KEEP_LAST,
-            depth=1,
-            liveliness=LivelinessPolicy.AUTOMATIC,
-        )
-
-        # Set reliability based on publisher offers
-        if reliability_reliable_count == num_endpoints:
-            request_qos.reliability = ReliabilityPolicy.RELIABLE
-        else:
-            if reliability_reliable_count > 0:
-                self.get_logger().warning(
-                    "Some, but not all, publishers are offering RELIABLE reliability. "
-                    "Falling back to BEST_EFFORT as it will connect to all publishers. "
-                    "Some messages from Reliable publishers could be dropped."
-                )
-            request_qos.reliability = ReliabilityPolicy.BEST_EFFORT
-
-        # Set durability based on publisher offers
-        if durability_transient_local_count == num_endpoints:
-            request_qos.durability = DurabilityPolicy.TRANSIENT_LOCAL
-        else:
-            if durability_transient_local_count > 0:
-                self.get_logger().warning(
-                    "Some, but not all, publishers are offering TRANSIENT_LOCAL durability. "
-                    "Falling back to VOLATILE as it will connect to all publishers. "
-                    "Previously-published latched messages will not be retrieved."
-                )
-            request_qos.durability = DurabilityPolicy.VOLATILE
-
-        return request_qos
-
-    def get_raw_message_from_topic(
-        self, topic: str, timeout_sec: int = 1
-    ) -> Union[Any, str]:  # ROS 2 topic or error string
-        self.get_logger().debug(f"Getting msg from topic: {topic}")
-        if topic in self.state_subscribers and topic in self.robot_state:
-            self.get_logger().debug("Returning cached message")
-            return self.robot_state[topic]
-        else:
-            msg_type = self.get_msg_type(topic)
-            if topic not in self.qos_profile_cache:
-                self.get_logger().debug(f"Getting qos profile for topic: {topic}")
-                qos_profile = self.adapt_requests_to_offers(
-                    self.get_publishers_info_by_topic(topic)
-                )
-                self.qos_profile_cache[topic] = qos_profile
-            else:
-                self.get_logger().debug(f"Using cached qos profile for topic: {topic}")
-                qos_profile = self.qos_profile_cache[topic]
-
-            success, msg = wait_for_message(
-                msg_type,
-                self,
-                topic,
-                qos_profile=qos_profile,
-                time_to_wait=timeout_sec,
-            )
-
-            if success:
-                self.get_logger().debug(
-                    f"Received message of type {msg_type.__class__.__name__} from topic {topic}"
-                )
-                return msg
-            else:
-                error = (
-                    f"No message received in {timeout_sec} seconds from topic {topic}"
-                )
-                self.get_logger().error(error)
-                return error
-
-    def get_msg_type(self, topic: str, n_tries: int = 5) -> Any:
-        """Sometimes node fails to do full discovery, therefore we need to retry"""
-        for _ in range(n_tries):
-            if topic in self.ros_discovery_info.topics_and_types:
-                msg_type = self.ros_discovery_info.topics_and_types[topic]
-                return import_message_from_str(msg_type)
-            else:
-                self.get_logger().info(f"Waiting for topic: {topic}")
-                self.discovery()
-                time.sleep(self.DISCOVERY_FREQ)
-        raise KeyError(f"Topic {topic} not found")
 
 
 def parse_task_goal(ros_action_goal: TaskAction.Goal) -> Dict[str, Any]:
@@ -393,6 +176,7 @@ def parse_task_goal(ros_action_goal: TaskAction.Goal) -> Dict[str, Any]:
 
 class RaiStateBasedLlmNode(RaiBaseNode):
     AGENT_RECURSION_LIMIT = 500
+    STATE_UPDATE_PERIOD = 5.0
 
     def __init__(
         self,
@@ -412,18 +196,14 @@ class RaiStateBasedLlmNode(RaiBaseNode):
             **kwargs,
         )
 
-        # ---------- ROS configuration ----------
-        self.callback_group = rclpy.callback_groups.ReentrantCallbackGroup()
-
         # ---------- Robot State ----------
-        self.robot_state = dict()
         self.state_topics = observe_topics if observe_topics is not None else []
         self.state_postprocessors = (
             observe_postprocessors if observe_postprocessors is not None else dict()
         )
         self._initialize_robot_state_interfaces(self.state_topics)
         self.state_update_timer = self.create_timer(
-            7.0,
+            self.STATE_UPDATE_PERIOD,
             self.state_update_callback,
             callback_group=rclpy.callback_groups.MutuallyExclusiveCallbackGroup(),
         )
@@ -435,10 +215,12 @@ class RaiStateBasedLlmNode(RaiBaseNode):
             TaskAction,
             "perform_task",
             execute_callback=self.agent_loop,
+            callback_group=self.callback_group,
             goal_callback=self.goal_callback,
         )
         # Node is busy when task is executed. Only 1 task is allowed
         self.busy = False
+        self.current_task = None
 
         # ---------- LLM Agents ----------
         self.tools = self._initialize_tools(tools) if tools is not None else []
@@ -450,13 +232,13 @@ class RaiStateBasedLlmNode(RaiBaseNode):
             logger=self.get_logger(),
         )
 
-        # We have to use a separate node that we can manually spin for ros-service based
-        # parser and this node ros-subscriber based parser
-        logs_parser_node = self if logs_parser_type == "llm" else self._async_tool_node
-        self.logs_parser = create_logs_parser(
-            logs_parser_type, logs_parser_node, callback_group=self.callback_group
-        )
         self.simple_llm = get_llm_model(model_type="simple_model")
+        self.logs_parser = create_logs_parser(
+            logs_parser_type,
+            self,
+            callback_group=self.callback_group,
+            llm=self.simple_llm,
+        )
 
     def summarize_logs(self) -> str:
         return self.logs_parser.summarize()
@@ -465,15 +247,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         initialized_tools: List[BaseTool] = list()
         for tool_cls in tools:
             if issubclass(tool_cls, Ros2BaseTool):
-                if (
-                    issubclass(tool_cls, Ros2BaseActionTool)
-                    or "DetectionTool" in tool_cls.__name__
-                    or "GetDistance" in tool_cls.__name__
-                    or "GetTransformTool" in tool_cls.__name__
-                ):  # TODO(boczekbartek): develop a way to handle all mutially
-                    tool = tool_cls(node=self._async_tool_node)
-                else:
-                    tool = tool_cls(node=self)
+                tool = tool_cls(node=self)
             else:
                 tool = tool_cls()
 
@@ -489,28 +263,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
 
     def _initialize_robot_state_interfaces(self, topics: List[str]):
         for topic in topics:
-            msg_type = self.get_msg_type(topic)
-            topic_callback = functools.partial(
-                self.generic_state_subscriber_callback, topic
-            )
-            qos_profile = self.adapt_requests_to_offers(
-                self.get_publishers_info_by_topic(topic)
-            )
-            subscriber = self.create_subscription(
-                msg_type,
-                topic,
-                callback=topic_callback,
-                callback_group=self.callback_group,
-                qos_profile=qos_profile,
-            )
-
-            self.state_subscribers[topic] = subscriber
-
-    def generic_state_subscriber_callback(self, topic_name: str, msg: Any):
-        self.get_logger().debug(
-            f"Received message of type {type(msg)} from topic {topic_name}"
-        )
-        self.robot_state[topic_name] = msg
+            self.topics_handler.create_subscription_by_topic_name(topic)
 
     def goal_callback(self, _) -> GoalResponse:
         """Accept or reject a client request to begin an action."""
@@ -538,6 +291,7 @@ class RaiStateBasedLlmNode(RaiBaseNode):
                 ),
                 HumanMessage(content=f"Task: {task}"),
             ]
+            self.current_task = task
 
             payload = State(messages=messages)
 
@@ -615,25 +369,12 @@ class RaiStateBasedLlmNode(RaiBaseNode):
             return result
         finally:
             self.busy = False
+            self.current_task = None
 
     def state_update_callback(self):
+        self.get_logger().info("Updating state.")
         state_dict = dict()
-
-        if self.robot_state is None:
-            return state_dict
-
-        for t in self.state_subscribers:
-            if t not in self.robot_state:
-                msg = "No message yet"
-                state_dict[t] = msg
-                continue
-            ts = time.perf_counter()
-            msg = self.robot_state[t]
-            if t in self.state_postprocessors:
-                msg = self.state_postprocessors[t](msg)
-            te = time.perf_counter() - ts
-            self.get_logger().info(f"Topic '{t}' postprocessed in: {te:.2f}")
-            state_dict[t] = msg
+        state_dict["current_task"] = self.current_task
 
         ts = time.perf_counter()
         try:
@@ -644,7 +385,28 @@ class RaiStateBasedLlmNode(RaiBaseNode):
         te = time.perf_counter() - ts
         self.get_logger().info(f"Logs summary retrieved in: {te:.2f}")
         self.get_logger().debug(f"{state_dict=}")
+
+        if self.topics_handler.last_subscription_msgs_buffer is None:
+            self.state_dict = state_dict
+            return
+
+        for t in self.state_topics:
+            if t not in self.topics_handler.last_subscription_msgs_buffer:
+                msg = "No message yet"
+                state_dict[t] = msg
+                continue
+
+            ts = time.perf_counter()
+            msg = self.topics_handler.last_subscription_msgs_buffer[t]
+            if t in self.state_postprocessors:
+                msg = self.state_postprocessors[t](msg)
+            te = time.perf_counter() - ts
+            self.get_logger().info(f"Topic '{t}' postprocessed in: {te:.2f}")
+
+            state_dict[t] = msg
+
         self.state_dict = state_dict
+        self.get_logger().info("State updated.")
 
     def get_robot_state(self) -> Dict[str, str]:
         return self.state_dict

@@ -29,6 +29,7 @@ from rclpy.exceptions import (
 from rai.node import RaiBaseNode
 from rai.tools.ros import Ros2BaseInput, Ros2BaseTool
 from rai.tools.ros.utils import convert_ros_img_to_base64, convert_ros_img_to_ndarray
+from rai.utils.ros_async import get_future_result
 from rai_interfaces.srv import RAIGroundedSam, RAIGroundingDino
 
 # --------------------- Inputs ---------------------
@@ -77,30 +78,10 @@ class GetSegmentationTool(Ros2BaseTool):
     def _get_gdino_response(
         self, future: Future
     ) -> Optional[RAIGroundingDino.Response]:
-        rclpy.spin_once(self.node)
-        if future.done():
-            try:
-                response = future.result()
-            except Exception as e:
-                self.node.get_logger().info("Service call failed %r" % (e,))
-                raise Exception("Service call failed %r" % (e,))
-            else:
-                assert response is not None
-                return response
-        return None
+        return get_future_result(future)
 
     def _get_gsam_response(self, future: Future) -> Optional[RAIGroundedSam.Response]:
-        rclpy.spin_once(self.node)
-        if future.done():
-            try:
-                response = future.result()
-            except Exception as e:
-                self.node.get_logger().info("Service call failed %r" % (e,))
-                raise Exception("Service call failed %r" % (e,))
-            else:
-                assert response is not None
-                return response
-        return None
+        return get_future_result(future)
 
     def _get_image_message(self, topic: str) -> sensor_msgs.msg.Image:
         msg = self.node.get_raw_message_from_topic(topic)

@@ -184,7 +184,7 @@ class Ros2PubMessageTool(Ros2BaseTool):
         msg, msg_cls = self._build_msg(msg_type, msg_args)
 
         publisher = self.node.create_publisher(
-            msg_cls, topic_name, 10
+            msg_cls, topic_name, 10, callback_group=self.node.callback_group
         )  # TODO(boczekbartek): infer qos profile from topic info
 
         def callback():
@@ -192,7 +192,9 @@ class Ros2PubMessageTool(Ros2BaseTool):
             self.logger.info(f"Published message '{msg}' to topic '{topic_name}'")
 
         ts = time.perf_counter()
-        timer = self.node.create_timer(1.0 / rate, callback)
+        timer = self.node.create_timer(
+            1.0 / rate, callback, callback_group=self.node.callback_group
+        )
 
         while time.perf_counter() - ts < timeout_seconds:
             time.sleep(0.1)

@@ -250,12 +250,12 @@ class BaseHMINode(Node):
 
     def task_result_callback(self, future, uid: UUID4):
         """Callback for handling the result from the action server."""
-        result = future.result().result
+        result: TaskAction.Result = future.result().result
         self.task_running[uid] = False
         self.task_feedbacks.put(MissionDoneMessage(uid=uid, result=result))
         if result.success:
             self.get_logger().info(f"Task completed successfully: {result.report}")
             self.task_results[uid] = result
         else:
-            self.get_logger().error(f"Task failed: {result.result_message}")
+            self.get_logger().error(f"Task failed: {result.report}")
             self.task_results[uid] = "ERROR"
