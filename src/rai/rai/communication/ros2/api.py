@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import functools
-import time
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+import logging
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 import rclpy
 import rclpy.callback_groups
@@ -25,8 +24,7 @@ import rclpy.subscription
 import rclpy.task
 import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
-from action_msgs.msg import GoalStatus
-from rclpy.action.client import ActionClient
+from rclpy.publisher import Publisher
 from rclpy.qos import (
     DurabilityPolicy,
     HistoryPolicy,
@@ -36,342 +34,224 @@ from rclpy.qos import (
 )
 from rclpy.topic_endpoint_info import TopicEndpointInfo
 
-from rai.tools.ros.utils import import_message_from_str
-from rai.utils.ros import NodeDiscovery
-from rai.utils.ros_async import get_future_result
+from rai.tools.ros.utils import import_message_from_str, wait_for_message
 
 
-def ros2_build_msg(msg_type: str, msg_args: Dict[str, Any]) -> Tuple[object, Type]:
-    """
-    Import message and create it. Return both ready message and message class.
+def adapt_requests_to_offers(publisher_info: List[TopicEndpointInfo]) -> QoSProfile:
+    if not publisher_info:
+        return QoSProfile(depth=1)
 
-    msgs args can have two formats:
-    { "goal" : {arg 1 : xyz, ... } or {arg 1 : xyz, ... }
-    """
+    num_endpoints = len(publisher_info)
+    reliability_reliable_count = 0
+    durability_transient_local_count = 0
 
-    msg_cls: Type = rosidl_runtime_py.utilities.get_interface(msg_type)
-    msg = msg_cls.Goal()
+    for endpoint in publisher_info:
+        profile = endpoint.qos_profile
+        if profile.reliability == ReliabilityPolicy.RELIABLE:
+            reliability_reliable_count += 1
+        if profile.durability == DurabilityPolicy.TRANSIENT_LOCAL:
+            durability_transient_local_count += 1
 
-    if "goal" in msg_args:
-        msg_args = msg_args["goal"]
+    request_qos = QoSProfile(
+        history=HistoryPolicy.KEEP_LAST,
+        depth=1,
+        liveliness=LivelinessPolicy.AUTOMATIC,
+    )
+
+    # Set reliability based on publisher offers
+    if reliability_reliable_count == num_endpoints:
+        request_qos.reliability = ReliabilityPolicy.RELIABLE
+    else:
+        if reliability_reliable_count > 0:
+            logging.warning(
+                "Some, but not all, publishers are offering RELIABLE reliability. "
+                "Falling back to BEST_EFFORT as it will connect to all publishers. "
+                "Some messages from Reliable publishers could be dropped."
+            )
+        request_qos.reliability = ReliabilityPolicy.BEST_EFFORT
+
+    # Set durability based on publisher offers
+    if durability_transient_local_count == num_endpoints:
+        request_qos.durability = DurabilityPolicy.TRANSIENT_LOCAL
+    else:
+        if durability_transient_local_count > 0:
+            logging.warning(
+                "Some, but not all, publishers are offering TRANSIENT_LOCAL durability. "
+                "Falling back to VOLATILE as it will connect to all publishers. "
+                "Previously-published latched messages will not be retrieved."
+            )
+        request_qos.durability = DurabilityPolicy.VOLATILE
+
+    return request_qos
+
+
+def build_ros2_msg(msg_type: str, msg_args: Dict[str, Any]) -> object:
+    """Build a ROS2 message instance from type string and content dictionary."""
+    msg_cls = import_message_from_str(msg_type)
+    msg = msg_cls()
     rosidl_runtime_py.set_message.set_message_fields(msg, msg_args)
-    return msg, msg_cls
+    return msg
 
 
-class Ros2TopicsAPI:
-    def __init__(
+class ROS2TopicAPI:
+    """Handles ROS2 topic operations including publishing and subscribing to messages.
+
+    This class provides a high-level interface for ROS2 topic operations with automatic
+    QoS profile matching and proper resource management.
+
+    Attributes:
+        node: The ROS2 node instance
+        logger: Logger instance for this class
+        _publishers: Dictionary mapping topic names to their publisher instances
+    """
+
+    def __init__(self, node: rclpy.node.Node) -> None:
+        """Initialize the ROS2 topic API.
+
+        Args:
+            node: ROS2 node instance to use for communication
+        """
+        self._node = node
+        self._logger = node.get_logger()
+        self._publishers: Dict[str, Publisher] = {}
+
+    def list_topics(self) -> List[Tuple[str, List[str]]]:
+        """Get list of available topics and their types.
+
+        Returns:
+            List of tuples containing (topic_name, list_of_types)
+        """
+        return self._node.get_topic_names_and_types()
+
+    def publish(
         self,
-        node: rclpy.node.Node,
-        callback_group: rclpy.callback_groups.CallbackGroup,
-        ros_discovery_info: NodeDiscovery,
+        topic: str,
+        msg_content: Dict[str, Any],
+        msg_type: str,
+        *,  # Force keyword arguments
+        auto_qos_matching: bool = True,
+        qos_profile: Optional[QoSProfile] = None,
     ) -> None:
-        self.node = node
-        self.callback_group = callback_group
-        self.last_subscription_msgs_buffer = dict()
-        self.qos_profile_cache: Dict[str, QoSProfile] = dict()
+        """Publish a message to a ROS2 topic.
 
-        self.ros_discovery_info = ros_discovery_info
+        Args:
+            topic: Name of the topic to publish to
+            msg_content: Dictionary containing the message content
+            msg_type: ROS2 message type as string (e.g. 'std_msgs/msg/String')
+            auto_qos_matching: Whether to automatically match QoS with subscribers
+            qos_profile: Optional custom QoS profile to use
 
-    def get_logger(self):
-        return self.node.get_logger()
-
-    def adapt_requests_to_offers(
-        self, publisher_info: List[TopicEndpointInfo]
-    ) -> QoSProfile:
-        if not publisher_info:
-            return QoSProfile(depth=1)
-
-        num_endpoints = len(publisher_info)
-        reliability_reliable_count = 0
-        durability_transient_local_count = 0
-
-        for endpoint in publisher_info:
-            profile = endpoint.qos_profile
-            if profile.reliability == ReliabilityPolicy.RELIABLE:
-                reliability_reliable_count += 1
-            if profile.durability == DurabilityPolicy.TRANSIENT_LOCAL:
-                durability_transient_local_count += 1
-
-        request_qos = QoSProfile(
-            history=HistoryPolicy.KEEP_LAST,
-            depth=1,
-            liveliness=LivelinessPolicy.AUTOMATIC,
+        Raises:
+            ValueError: If neither auto_qos_matching is True nor qos_profile is provided
+        """
+        qos_profile = self._resolve_qos_profile(
+            topic, auto_qos_matching, qos_profile, for_publisher=True
         )
 
-        # Set reliability based on publisher offers
-        if reliability_reliable_count == num_endpoints:
-            request_qos.reliability = ReliabilityPolicy.RELIABLE
-        else:
-            if reliability_reliable_count > 0:
-                self.get_logger().warning(
-                    "Some, but not all, publishers are offering RELIABLE reliability. "
-                    "Falling back to BEST_EFFORT as it will connect to all publishers. "
-                    "Some messages from Reliable publishers could be dropped."
-                )
-            request_qos.reliability = ReliabilityPolicy.BEST_EFFORT
+        msg = build_ros2_msg(msg_type, msg_content)
+        publisher = self._get_or_create_publisher(topic, type(msg), qos_profile)
+        publisher.publish(msg)
 
-        # Set durability based on publisher offers
-        if durability_transient_local_count == num_endpoints:
-            request_qos.durability = DurabilityPolicy.TRANSIENT_LOCAL
-        else:
-            if durability_transient_local_count > 0:
-                self.get_logger().warning(
-                    "Some, but not all, publishers are offering TRANSIENT_LOCAL durability. "
-                    "Falling back to VOLATILE as it will connect to all publishers. "
-                    "Previously-published latched messages will not be retrieved."
-                )
-            request_qos.durability = DurabilityPolicy.VOLATILE
-
-        return request_qos
-
-    def create_subscription_by_topic_name(self, topic):
-        if self.has_subscription(topic):
-            self.get_logger().warning(
-                f"Subscription to {topic} already exists. To override use destroy_subscription_by_topic_name first"
-            )
-            return
-
-        msg_type = self.get_msg_type(topic)
-
-        if topic not in self.qos_profile_cache:
-            self.get_logger().debug(f"Getting qos profile for topic: {topic}")
-            qos_profile = self.adapt_requests_to_offers(
-                self.node.get_publishers_info_by_topic(topic)
-            )
-            self.qos_profile_cache[topic] = qos_profile
-        else:
-            self.get_logger().debug(f"Using cached qos profile for topic: {topic}")
-            qos_profile = self.qos_profile_cache[topic]
-
-        topic_callback = functools.partial(
-            self.generic_state_subscriber_callback, topic
-        )
-
-        self.node.create_subscription(
-            msg_type,
-            topic,
-            callback=topic_callback,
-            callback_group=self.callback_group,
-            qos_profile=qos_profile,
-        )
-
-    def get_msg_type(self, topic: str, n_tries: int = 5) -> Any:
-        """Sometimes node fails to do full discovery, therefore we need to retry"""
-        for _ in range(n_tries):
-            if topic in self.ros_discovery_info.topics_and_types:
-                msg_type = self.ros_discovery_info.topics_and_types[topic]
-                return import_message_from_str(msg_type)
-            else:
-                # Wait for next discovery cycle
-                self.get_logger().info(f"Waiting for topic: {topic}")
-                if self.ros_discovery_info:
-                    time.sleep(self.ros_discovery_info.period_sec)
-                else:
-                    time.sleep(1.0)
-        raise KeyError(f"Topic {topic} not found")
-
-    def set_ros_discovery_info(self, new_ros_discovery_info: NodeDiscovery):
-        self.ros_discovery_info = new_ros_discovery_info
-
-    def get_raw_message_from_topic(
-        self, topic: str, timeout_sec: int = 5, topic_wait_sec: int = 2
+    def receive(
+        self,
+        topic: str,
+        msg_type: str,
+        *,  # Force keyword arguments
+        timeout_sec: float = 1.0,
+        auto_qos_matching: bool = True,
+        qos_profile: Optional[QoSProfile] = None,
     ) -> Any:
-        self.get_logger().debug(f"Getting msg from topic: {topic}")
+        """Receive a single message from a ROS2 topic.
 
-        ts = time.perf_counter()
+        Args:
+            topic: Name of the topic to receive from
+            msg_type: ROS2 message type as string
+            timeout_sec: How long to wait for a message
+            auto_qos_matching: Whether to automatically match QoS with publishers
+            qos_profile: Optional custom QoS profile to use
 
-        for _ in range(topic_wait_sec * 10):
-            if topic not in self.ros_discovery_info.topics_and_types:
-                time.sleep(0.1)
-                continue
-            else:
-                break
+        Returns:
+            The received message
 
-        if topic not in self.ros_discovery_info.topics_and_types:
-            raise KeyError(
-                f"Topic {topic} not found. Available topics: {self.ros_discovery_info.topics_and_types.keys()}"
-            )
+        Raises:
+            ValueError: If no publisher exists or no message is received within timeout
+        """
+        self._verify_publisher_exists(topic)
 
-        if topic in self.last_subscription_msgs_buffer:
-            self.get_logger().info("Returning cached message")
-            return self.last_subscription_msgs_buffer[topic]
-        else:
-            self.create_subscription_by_topic_name(topic)
-            try:
-                msg = self.last_subscription_msgs_buffer.get(topic, None)
-                while msg is None and time.perf_counter() - ts < timeout_sec:
-                    msg = self.last_subscription_msgs_buffer.get(topic, None)
-                    self.get_logger().info("Waiting for message...")
-                    time.sleep(0.1)
-
-                success = msg is not None
-
-                if success:
-                    self.get_logger().debug(
-                        f"Received message of type {type(msg)} from topic {topic}"
-                    )
-                    return msg
-                else:
-                    error = f"No message received in {timeout_sec} seconds from topic {topic}"
-                    self.get_logger().error(error)
-                    return error
-            finally:
-                self.destroy_subscription_by_topic_name(topic)
-
-    def generic_state_subscriber_callback(self, topic_name: str, msg: Any):
-        self.get_logger().debug(
-            f"Received message of type {type(msg)} from topic {topic_name}"
+        qos_profile = self._resolve_qos_profile(
+            topic, auto_qos_matching, qos_profile, for_publisher=False
         )
-        self.last_subscription_msgs_buffer[topic_name] = msg
 
-    def has_subscription(self, topic: str) -> bool:
-        for sub in self.node._subscriptions:
-            if sub.topic == topic:
-                return True
-        return False
-
-    def destroy_subscription_by_topic_name(self, topic: str):
-        self.last_subscription_msgs_buffer.clear()
-        for sub in self.node._subscriptions:
-            if sub.topic == topic:
-                self.node.destroy_subscription(sub)
-
-
-class Ros2ActionsAPI:
-    def __init__(self, node: rclpy.node.Node):
-        self.node = node
-
-        self.goal_handle = None
-        self.result_future = None
-        self.feedback = None
-        self.status: Optional[int] = None
-        self.client: Optional[ActionClient] = None
-        self.action_feedback: Optional[Any] = None
-
-    def get_logger(self):
-        return self.node.get_logger()
-
-    def run_action(
-        self, action_name: str, action_type: str, action_goal_args: Dict[str, Any]
-    ):
-        if not self.is_task_complete():
-            raise AssertionError(
-                "Another ros2 action is currently running and parallel actions are not supported. Please wait until the previous action is complete before starting a new one. You can also cancel the current one."
-            )
-
-        if action_name[0] != "/":
-            action_name = "/" + action_name
-            self.get_logger().info(f"Action name corrected to: {action_name}")
-
-        try:
-            goal_msg, msg_cls = ros2_build_msg(action_type, action_goal_args)
-        except Exception as e:
-            return f"Failed to build message: {e}"
-
-        self.client = ActionClient(self.node, msg_cls, action_name)
-        self.msg_cls = msg_cls
-
-        retries = 0
-        while not self.client.wait_for_server(timeout_sec=1.0):
-            retries += 1
-            if retries > 5:
-                raise Exception(
-                    f"Action server '{action_name}' is not available. Make sure `action_name` is correct..."
-                )
-            self.get_logger().info(
-                f"'{action_name}' action server not available, waiting..."
-            )
-
-        self.get_logger().info(f"Sending action message: {goal_msg}")
-
-        send_goal_future = self.client.send_goal_async(
-            goal_msg, self._feedback_callback
+        msg_cls = self._get_message_class(msg_type)
+        success, msg = wait_for_message(
+            msg_cls,
+            self._node,
+            topic,
+            qos_profile=qos_profile,
+            time_to_wait=int(timeout_sec),
         )
-        self.get_logger().info("Action goal sent!")
 
-        self.goal_handle = get_future_result(send_goal_future)
+        if not success:
+            raise ValueError(
+                f"No message received from topic: {topic} within {timeout_sec} seconds"
+            )
+        return msg
 
-        if not self.goal_handle:
-            raise Exception(f"Action '{action_name}' not sent to server")
+    def _get_or_create_publisher(
+        self, topic: str, msg_cls: Type[Any], qos_profile: QoSProfile
+    ) -> Publisher:
+        """Get existing publisher or create a new one if it doesn't exist."""
+        if topic not in self._publishers:
+            self._publishers[topic] = self._node.create_publisher(  # type: ignore
+                msg_cls, topic, qos_profile=qos_profile
+            )
+        return self._publishers[topic]
 
-        if not self.goal_handle.accepted:
-            raise Exception(f"Action '{action_name}' not accepted by server")
+    def _resolve_qos_profile(
+        self,
+        topic: str,
+        auto_qos_matching: bool,
+        qos_profile: Optional[QoSProfile],
+        for_publisher: bool,
+    ) -> QoSProfile:
+        """Resolve which QoS profile to use based on settings and existing endpoints."""
+        if auto_qos_matching and qos_profile is not None:
+            self._logger.warning(  # type: ignore
+                "Auto QoS matching is enabled, but qos_profile is provided. "
+                "Using provided qos_profile."
+            )
+            return qos_profile
 
-        self.result_future = self.goal_handle.get_result_async()
-        self.get_logger().info("Action sent!")
-        return f"{action_name} started successfully with args: {action_goal_args}"
+        if auto_qos_matching:
+            endpoint_info = (
+                self._node.get_subscriptions_info_by_topic(topic)
+                if for_publisher
+                else self._node.get_publishers_info_by_topic(topic)
+            )
+            return adapt_requests_to_offers(endpoint_info)
 
-    def get_task_result(self) -> str:
-        if not self.is_task_complete():
-            return "Task is not complete yet"
+        if qos_profile is not None:
+            return qos_profile
 
-        def parse_status(status: int) -> str:
-            return {
-                GoalStatus.STATUS_SUCCEEDED: "succeeded",
-                GoalStatus.STATUS_ABORTED: "aborted",
-                GoalStatus.STATUS_CANCELED: "canceled",
-                GoalStatus.STATUS_ACCEPTED: "accepted",
-                GoalStatus.STATUS_CANCELING: "canceling",
-                GoalStatus.STATUS_EXECUTING: "executing",
-                GoalStatus.STATUS_UNKNOWN: "unknown",
-            }.get(status, "unknown")
+        raise ValueError(
+            "Either auto_qos_matching must be True or qos_profile must be provided"
+        )
 
-        result = self.result_future.result()
+    @staticmethod
+    def _get_message_class(msg_type: str) -> Type[Any]:
+        """Convert message type string to actual message class."""
+        return import_message_from_str(msg_type)
 
-        self.destroy_client()
-        if result.status == GoalStatus.STATUS_SUCCEEDED:
-            msg = f"Result succeeded: {result.result}"
-            self.get_logger().info(msg)
-            return msg
-        else:
-            str_status = parse_status(result.status)
-            error_code_str = self.parse_error_code(result.result.error_code)
-            msg = f"Result {str_status}, because of: error_code={result.result.error_code}({error_code_str}), error_msg={result.result.error_msg}"
-            self.get_logger().info(msg)
-            return msg
+    def _verify_publisher_exists(self, topic: str) -> None:
+        """Verify that at least one publisher exists for the given topic.
 
-    def parse_error_code(self, code: int) -> str:
-        code_to_name = {
-            v: k for k, v in vars(self.msg_cls.Result).items() if isinstance(v, int)
-        }
-        return code_to_name.get(code, "UNKNOWN")
+        Raises:
+            ValueError: If no publisher exists for the topic
+        """
+        if not self._node.get_publishers_info_by_topic(topic):
+            raise ValueError(f"No publisher found for topic: {topic}")
 
-    def _feedback_callback(self, msg):
-        self.get_logger().info(f"Received ros2 action feedback: {msg}")
-        self.action_feedback = msg
-
-    def is_task_complete(self):
-        if not self.result_future:
-            # task was cancelled or completed
-            return True
-
-        result = get_future_result(self.result_future, timeout_sec=0.10)
-        if result is not None:
-            self.status = result.status
-            if self.status != GoalStatus.STATUS_SUCCEEDED:
-                self.get_logger().debug(
-                    f"Task with failed with status code: {self.status}"
-                )
-                return True
-        else:
-            self.get_logger().info("There is no result")
-            # Timed out, still processing, not complete yet
-            return False
-
-        self.get_logger().info("Task succeeded!")
-        return True
-
-    def cancel_task(self) -> Union[str, bool]:
-        self.get_logger().info("Canceling current task.")
-        try:
-            if self.result_future and self.goal_handle:
-                future = self.goal_handle.cancel_goal_async()
-                result = get_future_result(future, timeout_sec=1.0)
-                return "Failed to cancel result" if result is None else True
-            return True
-        finally:
-            self.destroy_client()
-
-    def destroy_client(self):
-        if self.client:
-            self.client.destroy()
+    def __del__(self) -> None:
+        """Cleanup publishers when object is destroyed."""
+        for publisher in self._publishers.values():
+            publisher.destroy()

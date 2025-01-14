@@ -14,7 +14,7 @@
 
 
 import base64
-from typing import Optional, Type, Union, cast
+from typing import Optional, Tuple, Type, Union, cast
 
 import cv2
 import numpy as np
@@ -111,7 +111,7 @@ def wait_for_message(
     *,
     qos_profile: Union[QoSProfile, int] = 1,
     time_to_wait=-1,
-):
+) -> Tuple[bool, Optional[object]]:
     """
     Wait for the next incoming message.
 
