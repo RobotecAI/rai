@@ -13,6 +13,14 @@
 # limitations under the License.
 
 
+from .cli import (
+    ros2_action,
+    ros2_interface,
+    ros2_node,
+    ros2_param,
+    ros2_service,
+    ros2_topic,
+)
 from .native import Ros2BaseInput, Ros2BaseTool
 from .tools import (
     AddDescribedWaypointToDatabaseTool,
@@ -21,6 +29,12 @@ from .tools import (
 )
 
 __all__ = [
+    "ros2_action",
+    "ros2_interface",
+    "ros2_node",
+    "ros2_topic",
+    "ros2_param",
+    "ros2_service",
     "Ros2BaseTool",
     "Ros2BaseInput",
     "AddDescribedWaypointToDatabaseTool",
