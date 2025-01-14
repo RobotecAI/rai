@@ -93,6 +93,15 @@ def build_ros2_msg(msg_type: str, msg_args: Dict[str, Any]) -> object:
     return msg
 
 
+def build_ros2_service_request(
+    service_type: str, service_request_args: Dict[str, Any]
+) -> Tuple[object, Type[Any]]:
+    msg_cls = import_message_from_str(service_type)
+    msg = msg_cls.Request()
+    rosidl_runtime_py.set_message.set_message_fields(msg, service_request_args)
+    return msg, msg_cls  # type: ignore
+
+
 class ROS2TopicAPI:
     """Handles ROS2 topic operations including publishing and subscribing to messages.
 
@@ -255,3 +264,39 @@ class ROS2TopicAPI:
         """Cleanup publishers when object is destroyed."""
         for publisher in self._publishers.values():
             publisher.destroy()
+
+
+class ROS2ServiceAPI:
+    """Handles ROS2 service operations including calling services."""
+
+    def __init__(self, node: rclpy.node.Node) -> None:
+        self.node = node
+        self._logger = node.get_logger()
+
+    def call_service(
+        self,
+        service_name: str,
+        service_type: str,
+        request: Any,
+        timeout_sec: float = 1.0,
+    ) -> Any:
+        """
+        Call a ROS2 service.
+
+        Args:
+            service_name: Name of the service to call
+            service_type: ROS2 service type as string
+            request: Request message content
+
+        Returns:
+            The response message
+        """
+        srv_msg, srv_cls = build_ros2_service_request(service_type, request)
+        service_client = self.node.create_client(srv_cls, service_name)  # type: ignore
+        client_ready = service_client.wait_for_service(timeout_sec=timeout_sec)
+        if not client_ready:
+            raise ValueError(
+                f"Service {service_name} not ready within {timeout_sec} seconds. "
+                "Try increasing the timeout or check if the service is running."
+            )
+        return service_client.call(srv_msg)
