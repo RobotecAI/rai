@@ -34,7 +34,7 @@ from std_srvs.srv import Trigger
 
 from rai.agents.state_based import Report, State, create_state_based_agent
 from rai.messages import HumanMultimodalMessage
-from rai.ros2_apis import Ros2ActionsAPI, Ros2TopicsAPI
+from rai.communication.ros2.api import Ros2ActionsAPI, Ros2TopicsAPI
 from rai.tools.ros.native import Ros2BaseTool
 from rai.tools.ros.utils import convert_ros_img_to_base64
 from rai.utils.model_initialization import get_llm_model, get_tracing_callbacks
