@@ -93,6 +93,15 @@ def build_ros2_msg(msg_type: str, msg_args: Dict[str, Any]) -> object:
     return msg
 
 
+def build_ros2_service_request(
+    service_type: str, service_request_args: Dict[str, Any]
+) -> Tuple[object, Type[Any]]:
+    msg_cls = import_message_from_str(service_type)
+    msg = msg_cls.Request()
+    rosidl_runtime_py.set_message.set_message_fields(msg, service_request_args)
+    return msg, msg_cls  # type: ignore
+
+
 class ROS2TopicAPI:
     """Handles ROS2 topic operations including publishing and subscribing to messages.
 
@@ -255,3 +264,13 @@ class ROS2TopicAPI:
         """Cleanup publishers when object is destroyed."""
         for publisher in self._publishers.values():
             publisher.destroy()
+
+
+class ROS2ServiceAPI:
+    def __init__(self, node: rclpy.node.Node) -> None:
+        self.node = node
+
+    def call_service(self, service_name: str, service_type: str, request: Any) -> Any:
+        srv_msg, srv_cls = build_ros2_service_request(service_type, request)
+        service_client = self.node.create_client(srv_cls, service_name)  # type: ignore
+        return service_client.call(srv_msg)
