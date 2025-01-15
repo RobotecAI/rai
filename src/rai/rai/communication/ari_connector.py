@@ -26,7 +26,7 @@ class ARIMessage(BaseMessage):
 # TODO: Move this to ros2 module
 class ROS2RRIMessage(ARIMessage):
     ros_message_type: str = Field(
-        description="The string representation of the ROS message type (e.g. 'std_msgs/String')"
+        description="The string representation of the ROS message type (e.g. 'std_msgs/msg/String')"
     )
     python_message_class: Optional[type] = Field(
         description="The Python class of the ROS message type", default=None
