@@ -76,7 +76,7 @@ def test_start_action_failed_init(
     recording_device = 0
     with pytest.raises(SoundDeviceError, match="Device 0 has not been configured"):
         _ = audio_input_device.start_action(
-            str(recording_device), feedback_callback, finish_callback
+            None, str(recording_device), feedback_callback, finish_callback
         )
 
 
@@ -103,7 +103,7 @@ def test_start_action(
     audio_input_device.configure_device(device_id, device_config)
 
     stream_handle = audio_input_device.start_action(
-        device_id, feedback_callback, finish_callback
+        None, device_id, feedback_callback, finish_callback
     )
 
     assert mock_input_stream.call_count == 1

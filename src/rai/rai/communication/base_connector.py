@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, TypeVar
+from typing import Any, Callable, Generic, Optional, TypeVar
 from uuid import uuid4
 
 
@@ -45,7 +45,7 @@ class BaseConnector(Generic[T]):
     @abstractmethod
     def start_action(
         self,
-        action_data: T,
+        action_data: Optional[T],
         target: str,
         on_feedback: Callable,
         on_done: Callable,
