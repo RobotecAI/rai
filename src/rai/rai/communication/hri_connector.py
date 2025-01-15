@@ -19,9 +19,10 @@ from langchain_core.messages import BaseMessage as LangchainBaseMessage
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
 
-from rai.communication import BaseConnector, BaseMessage
 from rai.messages import AiMultimodalMessage, HumanMultimodalMessage
 from rai.messages.multimodal import MultimodalMessage as RAIMultimodalMessage
+
+from .base_connector import BaseConnector, BaseMessage
 
 
 class HRIPayload(BaseModel):

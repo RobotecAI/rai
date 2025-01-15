@@ -16,7 +16,7 @@ from typing import Optional
 
 from pydantic import Field
 
-from rai.communication import BaseConnector, BaseMessage
+from .base_connector import BaseConnector, BaseMessage
 
 
 class ARIMessage(BaseMessage):

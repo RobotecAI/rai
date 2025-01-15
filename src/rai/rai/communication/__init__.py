@@ -12,13 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai.communication.ari_connector import ARIConnector, ARIMessage
-from rai.communication.base_connector import BaseConnector, BaseMessage
-from rai.communication.hri_connector import HRIConnector, HRIMessage
-from rai.communication.sound_device_connector import (
-    SoundDeviceError,
-    StreamingAudioInputDevice,
-)
+from .ari_connector import ARIConnector, ARIMessage
+from .base_connector import BaseConnector, BaseMessage
+from .hri_connector import HRIConnector, HRIMessage
+from .sound_device_connector import SoundDeviceError, StreamingAudioInputDevice
 
 __all__ = [
     "ARIConnector",

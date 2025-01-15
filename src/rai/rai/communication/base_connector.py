@@ -14,6 +14,7 @@
 
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Generic, TypeVar
+from uuid import uuid4
 
 
 class BaseMessage(ABC):
@@ -25,6 +26,10 @@ T = TypeVar("T", bound=BaseMessage)
 
 
 class BaseConnector(Generic[T]):
+
+    def _generate_handle(self) -> str:
+        return str(uuid4())
+
     @abstractmethod
     def send_message(self, message: T, target: str):
         pass
@@ -42,8 +47,12 @@ class BaseConnector(Generic[T]):
         self,
         action_data: T,
         target: str,
-        on_feedback: Callable[[Any], None],
-        on_done: Callable[[Any], None],
+        on_feedback: Callable,
+        on_done: Callable,
         timeout_sec: float = 1.0,
     ) -> str:
+        pass
+
+    @abstractmethod
+    def terminate_action(self, action_handle: str):
         pass
