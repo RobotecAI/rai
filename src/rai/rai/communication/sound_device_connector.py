@@ -97,7 +97,7 @@ class StreamingAudioInputDevice(HRIConnector):
 
     def start_action(
         self,
-        action_data: HRIMessage,
+        action_data: Optional[HRIMessage],
         target: str,
         on_feedback: Callable[[np.ndarray, dict[str, Any]], None],
         on_done: Callable = lambda _: None,
