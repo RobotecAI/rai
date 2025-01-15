@@ -13,37 +13,37 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import Callable
-from uuid import uuid4
+from typing import Any, Callable, Generic, TypeVar
 
 
 class BaseMessage(ABC):
-    pass
+    def __init__(self, payload: Any, *args, **kwargs):
+        self.payload = payload
 
 
-class BaseConnector(ABC):
+T = TypeVar("T", bound=BaseMessage)
 
-    def _generate_handle(self) -> str:
-        return str(uuid4())
 
+class BaseConnector(Generic[T]):
     @abstractmethod
-    def send_message(self, msg: BaseMessage, target: str) -> None:
+    def send_message(self, message: T, target: str):
         pass
 
     @abstractmethod
-    def receive_message(self, source: str) -> BaseMessage:
+    def receive_message(self, source: str, timeout_sec: float = 1.0) -> T:
         pass
 
     @abstractmethod
-    def send_and_wait(self, target: str) -> BaseMessage:
+    def service_call(self, message: T, target: str, timeout_sec: float = 1.0) -> T:
         pass
 
     @abstractmethod
     def start_action(
-        self, target: str, on_feedback: Callable, on_finish: Callable = lambda _: None
+        self,
+        action_data: T,
+        target: str,
+        on_feedback: Callable[[Any], None],
+        on_done: Callable[[Any], None],
+        timeout_sec: float = 1.0,
     ) -> str:
-        pass
-
-    @abstractmethod
-    def terminate_action(self, action_handle: str):
         pass
