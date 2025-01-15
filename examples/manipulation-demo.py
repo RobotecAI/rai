@@ -12,6 +12,8 @@
 # See the License for the specific language goveself.rning permissions and
 # limitations under the License.
 
+import threading
+
 import rclpy
 import rclpy.qos
 from langchain_core.messages import HumanMessage
@@ -27,7 +29,8 @@ def create_agent():
     rclpy.init()
     node = RaiBaseNode(node_name="manipulation_demo")
     node.declare_parameter("conversion_ratio", 1.0)
-    node.qos_profile.reliability = rclpy.qos.ReliabilityPolicy.RELIABLE
+
+    threading.Thread(target=node.spin).start()
 
     tools = [
         GetObjectPositionsTool(
