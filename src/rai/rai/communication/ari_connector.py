@@ -19,12 +19,12 @@ from pydantic import Field
 from rai.communication import BaseConnector, BaseMessage
 
 
-class RRIMessage(BaseMessage):
+class ARIMessage(BaseMessage):
     pass
 
 
 # TODO: Move this to ros2 module
-class ROS2RRIMessage(RRIMessage):
+class ROS2RRIMessage(ARIMessage):
     ros_message_type: str = Field(
         description="The string representation of the ROS message type (e.g. 'std_msgs/String')"
     )
@@ -33,7 +33,7 @@ class ROS2RRIMessage(RRIMessage):
     )
 
 
-class RRIConnector(BaseConnector[RRIMessage]):
+class ARIConnector(BaseConnector[ARIMessage]):
     """
     Base class for Robot-Robot Interaction (RRI) connectors.
     """
