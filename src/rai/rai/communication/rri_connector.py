@@ -12,16 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import ABC, abstractmethod
-from typing import Any, Callable, Optional
+from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
-
-class RRIMessage(BaseModel):
-    payload: Any = Field(description="The payload of the message")
+from rai.communication import BaseConnector, BaseMessage
 
 
+class RRIMessage(BaseMessage):
+    pass
+
+
+# TODO: Move this to ros2 module
 class ROS2RRIMessage(RRIMessage):
     ros_message_type: str = Field(
         description="The string representation of the ROS message type (e.g. 'std_msgs/String')"
@@ -31,32 +33,7 @@ class ROS2RRIMessage(RRIMessage):
     )
 
 
-class RRIConnector(ABC):
+class RRIConnector(BaseConnector[RRIMessage]):
     """
     Base class for Robot-Robot Interaction (RRI) connectors.
     """
-
-    @abstractmethod
-    def send_message(self, message: Any, target: str):
-        pass
-
-    @abstractmethod
-    def receive_message(self, source: str, timeout_sec: float = 1.0) -> RRIMessage:
-        pass
-
-    @abstractmethod
-    def service_call(
-        self, message: RRIMessage, target: str, timeout_sec: float = 1.0
-    ) -> RRIMessage:
-        pass
-
-    @abstractmethod
-    def start_action(
-        self,
-        action: RRIMessage,
-        target: str,
-        on_feedback: Callable[[Any], None],
-        on_done: Callable[[Any], None],
-        timeout_sec: float = 1.0,
-    ) -> str:
-        pass

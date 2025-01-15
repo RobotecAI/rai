@@ -12,37 +12,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import ABC, abstractmethod
 from typing import Annotated, List, Literal, Optional, Sequence
 
 from langchain_core.messages import AIMessage
 from langchain_core.messages import BaseMessage as LangchainBaseMessage
 from langchain_core.messages import HumanMessage
+from pydantic import BaseModel
 
+from rai.communication import BaseConnector, BaseMessage
 from rai.messages import AiMultimodalMessage, HumanMultimodalMessage
 from rai.messages.multimodal import MultimodalMessage as RAIMultimodalMessage
 
 
-class HRIMessage:
-    type: Literal["ai", "human"]
+class HRIPayload(BaseModel):
     text: str
     images: Optional[Annotated[List[str], "base64 encoded png images"]]
     audios: Optional[Annotated[List[str], "base64 encoded wav audio"]]
 
-    def __repr__(self):
-        return f"HRIMessage(type={self.type}, text={self.text}, images={self.images}, audios={self.audios})"
 
+class HRIMessage(BaseMessage):
     def __init__(
         self,
-        type: Literal["ai", "human"],
-        text: str,
-        images: Optional[List[str]] = None,
-        audios: Optional[List[str]] = None,
+        payload: HRIPayload,
+        message_author: Literal["ai", "human"],
     ):
-        self.type = type
-        self.text = text
-        self.images = images
-        self.audios = audios
+        self.type = message_author
+        self.text = payload.text
+        self.images = payload.images
+        self.audios = payload.audios
+
+    # type: Literal["ai", "human"]
+
+    def __repr__(self):
+        return f"HRIMessage(type={self.type}, text={self.text}, images={self.images}, audios={self.audios})"
 
     def to_langchain(self) -> LangchainBaseMessage:
         match self.type:
@@ -79,14 +81,16 @@ class HRIMessage:
         if message.type not in ["ai", "human"]:
             raise ValueError(f"Invalid message type: {message.type} for {cls.__name__}")
         return cls(
+            payload=HRIPayload(
+                text=text,
+                images=images,
+                audios=audios,
+            ),
             type=message.type,  # type: ignore
-            text=text,
-            images=images,
-            audios=audios,
         )
 
 
-class HRIConnector(ABC):
+class HRIConnector(BaseConnector[HRIMessage]):
     """
     Base class for Human-Robot Interaction (HRI) connectors.
     Used for sending and receiving messages between human and robot from various sources.
@@ -101,10 +105,14 @@ class HRIConnector(ABC):
     ) -> HRIMessage:
         return HRIMessage.from_langchain(message)
 
-    @abstractmethod
-    def send_message(self, message: LangchainBaseMessage | RAIMultimodalMessage):
-        pass
+    def send_all_targets(self, message: LangchainBaseMessage | RAIMultimodalMessage):
+        for target in self.configured_targets:
+            to_send = self.build_message(message)
+            self.send_message(to_send, target)
 
-    @abstractmethod
-    def receive_message(self) -> LangchainBaseMessage | RAIMultimodalMessage:
-        pass
+    def receive_all_sources(self, timeout_sec: float = 1.0) -> dict[str, HRIMessage]:
+        ret = {}
+        for source in self.configured_sources:
+            received = self.receive_message(source, timeout_sec)
+            ret[source] = received
+        return ret

@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from rai.communication.base_connector import BaseConnector, BaseMessage
+
 from .ros_connectors import ROS2HRIConnector, ROS2RRIConnector
 
-__all__ = [
-    "ROS2HRIConnector",
-    "ROS2RRIConnector",
-]
+__all__ = ["ROS2HRIConnector", "ROS2RRIConnector", "BaseMessage", "BaseConnector"]
 
 # from .base_connector import BaseConnector, BaseMessage
 # from .sound_device_connector import SoundDeviceError, StreamingAudioInputDevice
