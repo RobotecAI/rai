@@ -13,7 +13,10 @@
 # limitations under the License.
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Type
+import time
+import uuid
+from functools import partial
+from typing import Annotated, Any, Dict, List, Optional, Tuple, Type, TypedDict, cast
 
 import rclpy
 import rclpy.callback_groups
@@ -24,6 +27,9 @@ import rclpy.subscription
 import rclpy.task
 import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
+from action_msgs.srv import CancelGoal
+from rclpy.action import ActionClient
+from rclpy.action.client import ClientGoalHandle
 from rclpy.publisher import Publisher
 from rclpy.qos import (
     DurabilityPolicy,
@@ -32,6 +38,7 @@ from rclpy.qos import (
     QoSProfile,
     ReliabilityPolicy,
 )
+from rclpy.task import Future
 from rclpy.topic_endpoint_info import TopicEndpointInfo
 
 from rai.tools.ros.utils import import_message_from_str, wait_for_message
@@ -300,3 +307,80 @@ class ROS2ServiceAPI:
                 "Try increasing the timeout or check if the service is running."
             )
         return service_client.call(srv_msg)
+
+
+class ROS2ActionData(TypedDict):
+    action_client: Optional[ActionClient]
+    goal_future: Optional[rclpy.task.Future]
+    result_future: Optional[rclpy.task.Future]
+    client_goal_handle: Optional[ClientGoalHandle]
+    feedbacks: List[Any]
+
+
+class ROS2ActionAPI:
+    def __init__(self, node: rclpy.node.Node) -> None:
+        self.node = node
+        self._logger = node.get_logger()
+        self.actions: Dict[str, ROS2ActionData] = {}
+
+    def _generate_handle(self):
+        return str(uuid.uuid4())
+
+    def _generic_callback(self, handle: str, feedback_msg: Any) -> None:
+        self.actions[handle]["feedbacks"].append(feedback_msg.feedback)
+
+    def send_goal(
+        self,
+        action_name: str,
+        action_type: str,
+        goal: Dict[str, Any],
+        timeout_sec: float = 1.0,
+    ) -> Tuple[bool, Annotated[str, "action handle"]]:
+        handle = self._generate_handle()
+        self.actions[handle] = ROS2ActionData(
+            action_client=None,
+            goal_future=None,
+            result_future=None,
+            client_goal_handle=None,
+            feedbacks=[],
+        )
+
+        action_cls = import_message_from_str(action_type)
+        action_goal = action_cls.Goal()  # type: ignore
+        rosidl_runtime_py.set_message.set_message_fields(action_goal, goal)
+
+        action_client = ActionClient(self.node, action_cls, action_name)
+        if not action_client.wait_for_server(timeout_sec=timeout_sec):  # type: ignore
+            return False, ""
+
+        send_goal_future: Future = action_client.send_goal_async(
+            goal=action_goal, feedback_callback=partial(self._generic_callback, handle)
+        )
+        time.sleep(0.1)
+
+        goal_handle = cast(Optional[ClientGoalHandle], send_goal_future.result())
+        if goal_handle is None:
+            return False, ""
+
+        get_result_future = cast(Future, goal_handle.get_result_async())  # type: ignore
+
+        self.actions[handle]["action_client"] = action_client
+        self.actions[handle]["goal_future"] = send_goal_future
+        self.actions[handle]["result_future"] = get_result_future
+        self.actions[handle]["client_goal_handle"] = goal_handle
+
+        return goal_handle.accepted, handle  # type: ignore
+
+    def terminate_goal(self, handle: str) -> CancelGoal.Response:
+        return self.actions[handle]["client_goal_handle"].cancel_goal()
+
+    def get_feedback(self, handle: str) -> List[Any]:
+        return self.actions[handle]["feedbacks"]
+
+    def is_goal_done(self, handle: str) -> bool:
+        return self.actions[handle]["result_future"].done()
+
+    def get_result(self, handle: str) -> Any:
+        if not self.is_goal_done(handle):
+            raise ValueError(f"Goal {handle} is not done")
+        return self.actions[handle]["result_future"].result()
