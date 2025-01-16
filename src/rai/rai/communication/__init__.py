@@ -14,7 +14,7 @@
 
 from .ari_connector import ARIConnector, ARIMessage
 from .base_connector import BaseConnector, BaseMessage
-from .hri_connector import HRIConnector, HRIMessage
+from .hri_connector import HRIConnector, HRIMessage, HRIPayload
 from .sound_device_connector import SoundDeviceError, StreamingAudioInputDevice
 
 __all__ = [
@@ -24,6 +24,7 @@ __all__ = [
     "BaseConnector",
     "HRIConnector",
     "HRIMessage",
+    "HRIPayload",
     "StreamingAudioInputDevice",
     "SoundDeviceError",
 ]

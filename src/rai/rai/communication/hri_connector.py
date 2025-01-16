@@ -27,8 +27,8 @@ from .base_connector import BaseConnector, BaseMessage
 
 class HRIPayload(BaseModel):
     text: str
-    images: Optional[Annotated[List[str], "base64 encoded png images"]]
-    audios: Optional[Annotated[List[str], "base64 encoded wav audio"]]
+    images: Optional[Annotated[List[str], "base64 encoded png images"]] = None
+    audios: Optional[Annotated[List[str], "base64 encoded wav audio"]] = None
 
 
 class HRIMessage(BaseMessage):
@@ -87,7 +87,7 @@ class HRIMessage(BaseMessage):
                 images=images,
                 audios=audios,
             ),
-            type=message.type,  # type: ignore
+            message_author=message.type,  # type: ignore
         )
 
 

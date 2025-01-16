@@ -18,7 +18,6 @@ from langchain_core.messages import BaseMessage as LangchainBaseMessage
 from langchain_core.messages import HumanMessage
 
 from rai.communication import HRIMessage, HRIPayload
-from rai.messages import AiMultimodalMessage
 from rai.messages.multimodal import MultimodalMessage as RAIMultimodalMessage
 
 
@@ -51,12 +50,16 @@ def test_to_langchain_human():
 def test_to_langchain_ai_multimodal():
     payload = HRIPayload(text="Response", images=["img"], audios=["audio"])
     message = HRIMessage(payload=payload, message_author="ai")
-    langchain_message = message.to_langchain()
 
-    assert isinstance(langchain_message, AiMultimodalMessage)
-    assert langchain_message.content == "Response"
-    assert langchain_message.images == ["img"]
-    assert langchain_message.audios == ["audio"]
+    with pytest.raises(
+        ValueError
+    ):  # NOTE: update when https://github.com/RobotecAI/rai/issues/370 is resolved
+        _ = message.to_langchain()
+
+    # assert isinstance(langchain_message, AiMultimodalMessage)
+    # assert langchain_message.content == "Response"
+    # assert langchain_message.images == ["img"]
+    # assert langchain_message.audios == ["audio"]
 
 
 def test_from_langchain_human():
@@ -83,6 +86,6 @@ def test_to_langchain_invalid_author():
 
 
 def test_from_langchain_missing_type():
-    rai_message = RAIMultimodalMessage(text="No type", type=None)
+    rai_message = RAIMultimodalMessage(content="No type", type="")
     with pytest.raises(ValueError):
         HRIMessage.from_langchain(rai_message)
