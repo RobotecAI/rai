@@ -19,7 +19,7 @@ import sounddevice as sd
 from scipy.signal import resample
 from sounddevice import CallbackFlags
 
-from rai.communication.base_connector import BaseConnector, BaseMessage
+from rai.communication import HRIConnector, HRIMessage
 
 
 class SoundDeviceError(Exception):
@@ -62,7 +62,14 @@ class ConfiguredAudioInputDevice:
         self.dtype = config["dtype"]
 
 
-class StreamingAudioInputDevice(BaseConnector):
+class StreamingAudioInputDevice(HRIConnector):
+    """Audio input device connector implementing the Human-Robot Interface.
+
+    This class provides audio streaming capabilities while conforming to the
+    HRIConnector interface. It supports starting and stopping audio streams
+    but does not implement message passing or service calls.
+    """
+
     def __init__(self):
         self.streams = {}
         sd.default.latency = ("low", "low")
@@ -80,27 +87,44 @@ class StreamingAudioInputDevice(BaseConnector):
         else:
             raise SoundDeviceError("target must be a device number!")
 
-    def send_message(self, msg: BaseMessage, target: str) -> None:
+    def send_message(self, message: HRIMessage, target: str) -> None:
         raise SoundDeviceError(
-            "StreamingAudioInputDevice does not suport sending messages"
+            "StreamingAudioInputDevice does not support sending messages"
         )
 
-    def receive_message(self, source: str) -> BaseMessage:
+    def receive_message(self, source: str, timeout_sec: float = 1.0) -> HRIMessage:
         raise SoundDeviceError(
-            "StreamingAudioInputDevice does not suport receiving messages messages"
+            "StreamingAudioInputDevice does not support receiving messages"
         )
 
-    def send_and_wait(self, target: str) -> BaseMessage:
-        raise SoundDeviceError(
-            "StreamingAudioInputDevice does not suport sending messages"
-        )
+    def service_call(
+        self, message: HRIMessage, target: str, timeout_sec: float = 1.0
+    ) -> HRIMessage:
+        raise SoundDeviceError("StreamingAudioInputDevice does not support services")
 
     def start_action(
         self,
+        action_data: Optional[HRIMessage],
         target: str,
         on_feedback: Callable[[np.ndarray, dict[str, Any]], None],
-        on_finish: Callable = lambda _: None,
+        on_done: Callable = lambda _: None,
+        timeout_sec: float = 1.0,
     ) -> str:
+        """Start streaming audio from the specified device.
+
+        Args:
+            action_data: Optional message containing action parameters
+            target: Device ID to stream from
+            on_feedback: Callback for processing audio data
+            on_done: Callback invoked when streaming ends
+            timeout_sec: Timeout in seconds for starting the stream
+
+        Returns:
+            str: Handle for managing the stream
+
+        Raises:
+            SoundDeviceError: If device is not configured or initialization fails
+        """
 
         target_device = self.configred_devices.get(target)
         if target_device is None:
@@ -129,7 +153,7 @@ class StreamingAudioInputDevice(BaseConnector):
                 dtype=target_device.dtype,
                 blocksize=target_device.window_size_samples,
                 callback=callback,
-                finished_callback=on_finish,
+                finished_callback=on_done,
             )
         except AttributeError:
             raise SoundDeviceError(f"Device {target} has not been correctly configured")
