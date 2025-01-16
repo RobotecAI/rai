@@ -131,13 +131,15 @@ class ROS2TopicAPI:
         self._logger = node.get_logger()
         self._publishers: Dict[str, Publisher] = {}
 
-    def list_topics(self) -> List[Tuple[str, List[str]]]:
+    def get_topic_names_and_types(
+        self, no_demangle: bool = False
+    ) -> List[Tuple[str, List[str]]]:
         """Get list of available topics and their types.
 
         Returns:
             List of tuples containing (topic_name, list_of_types)
         """
-        return self._node.get_topic_names_and_types()
+        return self._node.get_topic_names_and_types(no_demangle=no_demangle)
 
     def publish(
         self,
