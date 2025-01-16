@@ -426,10 +426,12 @@ def test_ros2_action_send_goal_wrong_action_type(
 
     try:
         action_api = ROS2ActionAPI(node)
-        with pytest.raises(Exception):
+        with pytest.raises(ModuleNotFoundError):
             action_api.send_goal(
                 action_name, "nav2_msgs/action/NavigateToPose/WrongActionType", {}
             )
+        with pytest.raises(AttributeError):
+            action_api.send_goal(action_name, "nav2_msgs/action/NavigateToPoses", {})
     finally:
         shutdown_executors_and_threads(executors, threads)
 

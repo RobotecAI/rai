@@ -372,15 +372,27 @@ class ROS2ActionAPI:
         return goal_handle.accepted, handle  # type: ignore
 
     def terminate_goal(self, handle: str) -> CancelGoal.Response:
+        if self.actions[handle]["client_goal_handle"] is None:
+            raise ValueError(
+                f"Cannot terminate goal {handle} as it was not accepted or has no goal handle."
+            )
         return self.actions[handle]["client_goal_handle"].cancel_goal()
 
     def get_feedback(self, handle: str) -> List[Any]:
         return self.actions[handle]["feedbacks"]
 
     def is_goal_done(self, handle: str) -> bool:
+        if handle not in self.actions:
+            raise ValueError(f"Invalid action handle: {handle}")
+        if self.actions[handle]["result_future"] is None:
+            raise ValueError(
+                f"Result future is None for handle: {handle}. " "Was the goal accepted?"
+            )
         return self.actions[handle]["result_future"].done()
 
     def get_result(self, handle: str) -> Any:
         if not self.is_goal_done(handle):
             raise ValueError(f"Goal {handle} is not done")
+        if self.actions[handle]["result_future"] is None:
+            raise ValueError(f"No result available for goal {handle}")
         return self.actions[handle]["result_future"].result()
