@@ -20,7 +20,11 @@ from .base_connector import BaseConnector, BaseMessage
 
 
 class ARIMessage(BaseMessage):
-    pass
+    """Base message type for Agent-Robot Interface (ARI) communication.
+
+    This class serves as a marker class and defines the contract for all ARI messages.
+    Inherit from this class to create specific ARI message types.
+    """
 
 
 # TODO: Move this to ros2 module
@@ -35,5 +39,13 @@ class ROS2RRIMessage(ARIMessage):
 
 class ARIConnector(BaseConnector[ARIMessage]):
     """
-    Base class for Robot-Robot Interaction (RRI) connectors.
+    Base class for Agent-Robot Interface (ARI) connectors.
+
+    This class provides the foundation for implementing connectors that facilitate
+    communication between software agents and robots. It ensures type safety by
+    accepting only ARIMessage-based messages.
+
+    Usage:
+        Inherit from this class to implement specific ARI connectors, such as
+        ROS2-based or custom protocol-based connectors.   Base class for Robot-Robot Interaction (RRI) connectors.
     """

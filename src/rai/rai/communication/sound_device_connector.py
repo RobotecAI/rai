@@ -63,6 +63,13 @@ class ConfiguredAudioInputDevice:
 
 
 class StreamingAudioInputDevice(HRIConnector):
+    """Audio input device connector implementing the Human-Robot Interface.
+
+    This class provides audio streaming capabilities while conforming to the
+    HRIConnector interface. It supports starting and stopping audio streams
+    but does not implement message passing or service calls.
+    """
+
     def __init__(self):
         self.streams = {}
         sd.default.latency = ("low", "low")
@@ -87,7 +94,7 @@ class StreamingAudioInputDevice(HRIConnector):
 
     def receive_message(self, source: str, timeout_sec: float = 1.0) -> HRIMessage:
         raise SoundDeviceError(
-            "StreamingAudioInputDevice does not support receiving messages messages"
+            "StreamingAudioInputDevice does not support receiving messages"
         )
 
     def service_call(
@@ -103,6 +110,21 @@ class StreamingAudioInputDevice(HRIConnector):
         on_done: Callable = lambda _: None,
         timeout_sec: float = 1.0,
     ) -> str:
+        """Start streaming audio from the specified device.
+
+        Args:
+            action_data: Optional message containing action parameters
+            target: Device ID to stream from
+            on_feedback: Callback for processing audio data
+            on_done: Callback invoked when streaming ends
+            timeout_sec: Timeout in seconds for starting the stream
+
+        Returns:
+            str: Handle for managing the stream
+
+        Raises:
+            SoundDeviceError: If device is not configured or initialization fails
+        """
 
         target_device = self.configred_devices.get(target)
         if target_device is None:
