@@ -356,7 +356,14 @@ class ROS2ActionAPI:
         send_goal_future: Future = action_client.send_goal_async(
             goal=action_goal, feedback_callback=partial(self._generic_callback, handle)
         )
-        time.sleep(0.1)
+        self.actions[handle]["action_client"] = action_client
+        self.actions[handle]["goal_future"] = send_goal_future
+
+        start_time = time.time()
+        while time.time() - start_time < timeout_sec:
+            if send_goal_future.done():
+                break
+            time.sleep(0.01)
 
         goal_handle = cast(Optional[ClientGoalHandle], send_goal_future.result())
         if goal_handle is None:
@@ -364,8 +371,6 @@ class ROS2ActionAPI:
 
         get_result_future = cast(Future, goal_handle.get_result_async())  # type: ignore
 
-        self.actions[handle]["action_client"] = action_client
-        self.actions[handle]["goal_future"] = send_goal_future
         self.actions[handle]["result_future"] = get_result_future
         self.actions[handle]["client_goal_handle"] = goal_handle
 
