@@ -37,7 +37,7 @@ class HRIMessage(BaseMessage):
         payload: HRIPayload,
         message_author: Literal["ai", "human"],
     ):
-        self.type = message_author
+        self.message_author = message_author
         self.text = payload.text
         self.images = payload.images
         self.audios = payload.audios
@@ -45,10 +45,10 @@ class HRIMessage(BaseMessage):
     # type: Literal["ai", "human"]
 
     def __repr__(self):
-        return f"HRIMessage(type={self.type}, text={self.text}, images={self.images}, audios={self.audios})"
+        return f"HRIMessage(type={self.message_author}, text={self.text}, images={self.images}, audios={self.audios})"
 
     def to_langchain(self) -> LangchainBaseMessage:
-        match self.type:
+        match self.message_author:
             case "human":
                 if self.images is None and self.audios is None:
                     return HumanMessage(content=self.text)
@@ -63,7 +63,7 @@ class HRIMessage(BaseMessage):
                 )
             case _:
                 raise ValueError(
-                    f"Invalid message type: {self.type} for {self.__class__.__name__}"
+                    f"Invalid message type: {self.message_author} for {self.__class__.__name__}"
                 )
 
     @classmethod
@@ -99,6 +99,12 @@ class HRIConnector(BaseConnector[HRIMessage]):
 
     configured_targets: Sequence[str]
     configured_sources: Sequence[str]
+
+    def __init__(
+        self, configured_targets: Sequence[str], configured_sources: Sequence[str]
+    ):
+        self.configured_targets = configured_targets
+        self.configured_sources = configured_sources
 
     def _build_message(
         self,
