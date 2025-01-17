@@ -13,15 +13,19 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import Any, Callable, Generic, Optional, Protocol, TypeVar
+from typing import Any, Callable, Dict, Generic, Optional, Protocol, TypeVar
 from uuid import uuid4
 
 
 class BaseMessage(Protocol):
     payload: Any
+    metadata: Optional[Dict[str, Any]]
 
-    def __init__(self, payload: Any, *args, **kwargs):
+    def __init__(
+        self, payload: Any, metadata: Optional[Dict[str, Any]] = None, *args, **kwargs
+    ):
         self.payload = payload
+        self.metadata = metadata
 
 
 T = TypeVar("T", bound=BaseMessage)
