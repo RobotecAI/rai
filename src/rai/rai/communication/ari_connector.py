@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from typing import Generic, Optional, TypeVar
 
 from pydantic import Field
 
@@ -37,7 +37,10 @@ class ROS2RRIMessage(ARIMessage):
     )
 
 
-class ARIConnector(BaseConnector[ARIMessage]):
+T = TypeVar("T", bound=ARIMessage)
+
+
+class ARIConnector(Generic[T], BaseConnector[T]):
     """
     Base class for Agent-Robot Interface (ARI) connectors.
 

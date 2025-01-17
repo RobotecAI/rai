@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, Optional, TypeVar
+from abc import abstractmethod
+from typing import Any, Callable, Generic, Optional, Protocol, TypeVar
 from uuid import uuid4
 
 
-class BaseMessage(ABC):
+class BaseMessage(Protocol):
+    payload: Any
+
     def __init__(self, payload: Any, *args, **kwargs):
         self.payload = payload
 

@@ -62,7 +62,7 @@ class ConfiguredAudioInputDevice:
         self.dtype = config["dtype"]
 
 
-class StreamingAudioInputDevice(HRIConnector):
+class StreamingAudioInputDevice(HRIConnector[HRIMessage]):
     """Audio input device connector implementing the Human-Robot Interface.
 
     This class provides audio streaming capabilities while conforming to the

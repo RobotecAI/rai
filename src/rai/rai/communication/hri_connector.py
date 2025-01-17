@@ -12,7 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Annotated, List, Literal, Optional, Sequence
+from typing import (
+    Annotated,
+    Generic,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    TypeVar,
+    get_args,
+)
 
 from langchain_core.messages import AIMessage
 from langchain_core.messages import BaseMessage as LangchainBaseMessage
@@ -23,6 +32,11 @@ from rai.messages import AiMultimodalMessage, HumanMultimodalMessage
 from rai.messages.multimodal import MultimodalMessage as RAIMultimodalMessage
 
 from .base_connector import BaseConnector, BaseMessage
+
+
+class HRIException(Exception):
+    def __init__(self, msg):
+        super().__init__(msg)
 
 
 class HRIPayload(BaseModel):
@@ -41,8 +55,6 @@ class HRIMessage(BaseMessage):
         self.text = payload.text
         self.images = payload.images
         self.audios = payload.audios
-
-    # type: Literal["ai", "human"]
 
     def __repr__(self):
         return f"HRIMessage(type={self.message_author}, text={self.text}, images={self.images}, audios={self.audios})"
@@ -91,7 +103,10 @@ class HRIMessage(BaseMessage):
         )
 
 
-class HRIConnector(BaseConnector[HRIMessage]):
+T = TypeVar("T", bound=HRIMessage)
+
+
+class HRIConnector(Generic[T], BaseConnector[T]):
     """
     Base class for Human-Robot Interaction (HRI) connectors.
     Used for sending and receiving messages between human and robot from various sources.
@@ -105,19 +120,26 @@ class HRIConnector(BaseConnector[HRIMessage]):
     ):
         self.configured_targets = configured_targets
         self.configured_sources = configured_sources
+        if not hasattr(self, "__orig_bases__"):
+            self.__orig_bases__ = {}
+            raise HRIException(
+                f"Error while instantiating {str(self.__class__)}: Message type T derived from HRIMessage needs to be provided e.g. Connector[MessageType]()"
+            )
+        self.T_class = get_args(self.__orig_bases__[0])[0]
 
     def _build_message(
         self,
         message: LangchainBaseMessage | RAIMultimodalMessage,
-    ) -> HRIMessage:
-        return HRIMessage.from_langchain(message)
+    ) -> T:
+
+        return self.T_class.from_langchain(message)
 
     def send_all_targets(self, message: LangchainBaseMessage | RAIMultimodalMessage):
         for target in self.configured_targets:
             to_send = self._build_message(message)
             self.send_message(to_send, target)
 
-    def receive_all_sources(self, timeout_sec: float = 1.0) -> dict[str, HRIMessage]:
+    def receive_all_sources(self, timeout_sec: float = 1.0) -> dict[str, T]:
         ret = {}
         for source in self.configured_sources:
             received = self.receive_message(source, timeout_sec)
