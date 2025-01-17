@@ -16,13 +16,13 @@ from .helpers import (
     ActionServer,
     MessagePublisher,
     MessageReceiver,
+    multi_threaded_spinner,
     shutdown_executors_and_threads,
-    single_threaded_spinner,
 )
 
 __all__ = [
     "shutdown_executors_and_threads",
-    "single_threaded_spinner",
+    "multi_threaded_spinner",
     "MessagePublisher",
     "ActionServer",
     "MessageReceiver",

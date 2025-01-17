@@ -28,9 +28,9 @@ from .helpers import (
     MessagePublisher,
     MessageReceiver,
     ServiceServer,
+    multi_threaded_spinner,
     ros_setup,
     shutdown_executors_and_threads,
-    single_threaded_spinner,
 )
 
 ros_setup  # type: ignore prevents pytest from complaining about unused fixture
@@ -43,7 +43,7 @@ def test_ros2_single_message_publish(
     node_name = f"{request.node.originalname}_node"  # type: ignore
     message_receiver = MessageReceiver(topic_name)
     node = Node(node_name)
-    executors, threads = single_threaded_spinner([message_receiver, node])
+    executors, threads = multi_threaded_spinner([message_receiver, node])
 
     try:
         topic_api = ROS2TopicAPI(node)
@@ -66,7 +66,7 @@ def test_ros2_single_message_publish_wrong_msg_type(
     node_name = f"{request.node.originalname}_node"  # type: ignore
     message_receiver = MessageReceiver(topic_name)
     node = Node(node_name)
-    executors, threads = single_threaded_spinner([message_receiver, node])
+    executors, threads = multi_threaded_spinner([message_receiver, node])
 
     try:
         topic_api = ROS2TopicAPI(node)
@@ -87,7 +87,7 @@ def test_ros2_single_message_publish_wrong_msg_content(
     node_name = f"{request.node.originalname}_node"  # type: ignore
     message_receiver = MessageReceiver(topic_name)
     node = Node(node_name)
-    executors, threads = single_threaded_spinner([message_receiver, node])
+    executors, threads = multi_threaded_spinner([message_receiver, node])
 
     try:
         topic_api = ROS2TopicAPI(node)
@@ -108,7 +108,7 @@ def test_ros2_single_message_publish_wrong_qos_setup(
     node_name = f"{request.node.originalname}_node"  # type: ignore
     message_receiver = MessageReceiver(topic_name)
     node = Node(node_name)
-    executors, threads = single_threaded_spinner([message_receiver, node])
+    executors, threads = multi_threaded_spinner([message_receiver, node])
 
     try:
         topic_api = ROS2TopicAPI(node)
@@ -137,7 +137,7 @@ def test_ros2_single_message_receive_no_discovery_time(
     node_name = f"{request.node.originalname}_node"  # type: ignore
     message_publisher = MessagePublisher(topic_name)
     node = Node(node_name)
-    executors, threads = single_threaded_spinner([message_publisher, node])
+    executors, threads = multi_threaded_spinner([message_publisher, node])
 
     try:
         topic_api = ROS2TopicAPI(node)
@@ -159,7 +159,7 @@ def test_ros2_single_message_receive_wrong_msg_type(
     node_name = f"{request.node.originalname}_node"  # type: ignore
     message_publisher = MessagePublisher(topic_name)
     node = Node(node_name)
-    executors, threads = single_threaded_spinner([message_publisher, node])
+    executors, threads = multi_threaded_spinner([message_publisher, node])
 
     try:
         topic_api = ROS2TopicAPI(node)
@@ -180,7 +180,7 @@ def test_ros2_single_message_receive_wrong_topic_name(
     node_name = f"{request.node.originalname}_node"  # type: ignore
     message_publisher = MessagePublisher(topic_name)
     node = Node(node_name)
-    executors, threads = single_threaded_spinner([message_publisher, node])
+    executors, threads = multi_threaded_spinner([message_publisher, node])
 
     try:
         topic_api = ROS2TopicAPI(node)
@@ -201,7 +201,7 @@ def test_ros2_service_single_call(
     node_name = f"{request.node.originalname}_node"  # type: ignore
     service_server = ServiceServer(service_name)
     node = Node(node_name)
-    executors, threads = single_threaded_spinner([service_server, node])
+    executors, threads = multi_threaded_spinner([service_server, node])
 
     try:
         service_api = ROS2ServiceAPI(node)
@@ -223,7 +223,7 @@ def test_ros2_service_single_call_wrong_service_type(
     node_name = f"{request.node.originalname}_node"  # type: ignore
     service_server = ServiceServer(service_name)
     node = Node(node_name)
-    executors, threads = single_threaded_spinner([service_server, node])
+    executors, threads = multi_threaded_spinner([service_server, node])
 
     try:
         service_api = ROS2ServiceAPI(node)
@@ -244,7 +244,7 @@ def test_ros2_service_single_call_wrong_service_content(
     node_name = f"{request.node.originalname}_node"  # type: ignore
     service_server = ServiceServer(service_name)
     node = Node(node_name)
-    executors, threads = single_threaded_spinner([service_server, node])
+    executors, threads = multi_threaded_spinner([service_server, node])
 
     try:
         service_api = ROS2ServiceAPI(node)
@@ -265,7 +265,7 @@ def test_ros2_service_single_call_wrong_service_name(
     node_name = f"{request.node.originalname}_node"  # type: ignore
     service_server = ServiceServer(service_name)
     node = Node(node_name)
-    executors, threads = single_threaded_spinner([service_server, node])
+    executors, threads = multi_threaded_spinner([service_server, node])
 
     try:
         service_api = ROS2ServiceAPI(node)
@@ -284,7 +284,7 @@ def test_ros2_action_send_goal(ros_setup: None, request: pytest.FixtureRequest) 
     node_name = f"{request.node.originalname}_node"  # type: ignore
     action_server = ActionServer(action_name)
     node = Node(node_name)
-    executors, threads = single_threaded_spinner([action_server, node])
+    executors, threads = multi_threaded_spinner([action_server, node])
 
     try:
         action_api = ROS2ActionAPI(node)
@@ -305,7 +305,7 @@ def test_ros2_action_send_goal_get_result(
     node_name = f"{request.node.originalname}_node"  # type: ignore
     action_server = ActionServer(action_name)
     node = Node(node_name)
-    executors, threads = single_threaded_spinner([action_server, node])
+    executors, threads = multi_threaded_spinner([action_server, node])
 
     try:
         action_api = ROS2ActionAPI(node)
@@ -336,7 +336,7 @@ def test_ros2_action_send_goal_wrong_action_type(
     node_name = f"{request.node.originalname}_node"  # type: ignore
     action_server = ActionServer(action_name)
     node = Node(node_name)
-    executors, threads = single_threaded_spinner([action_server, node])
+    executors, threads = multi_threaded_spinner([action_server, node])
 
     try:
         action_api = ROS2ActionAPI(node)
@@ -357,7 +357,7 @@ def test_ros2_action_send_goal_wrong_action_name(
     node_name = f"{request.node.originalname}_node"  # type: ignore
     action_server = ActionServer(action_name)
     node = Node(node_name)
-    executors, threads = single_threaded_spinner([action_server, node])
+    executors, threads = multi_threaded_spinner([action_server, node])
 
     try:
         action_api = ROS2ActionAPI(node)
@@ -377,7 +377,7 @@ def test_ros2_action_send_goal_get_feedback(
     node_name = f"{request.node.originalname}_node"  # type: ignore
     action_server = ActionServer(action_name)
     node = Node(node_name)
-    executors, threads = single_threaded_spinner([action_server])
+    executors, threads = multi_threaded_spinner([action_server])
     executor = MultiThreadedExecutor()
     executor.add_node(node)
     thread = threading.Thread(target=executor.spin)
@@ -405,7 +405,7 @@ def test_ros2_action_send_goal_terminate_goal(
     node_name = f"{request.node.originalname}_node"  # type: ignore
     action_server = ActionServer(action_name)
     node = Node(node_name)
-    executors, threads = single_threaded_spinner([action_server])
+    executors, threads = multi_threaded_spinner([action_server])
     executor = MultiThreadedExecutor()
     executor.add_node(node)
     thread = threading.Thread(target=executor.spin)
@@ -419,7 +419,8 @@ def test_ros2_action_send_goal_terminate_goal(
         assert handle != ""
         feedbacks_before = action_api.get_feedback(handle)
         response = action_api.terminate_goal(handle)
-        assert response.return_code == CancelGoal.Response.ERROR_GOAL_TERMINATED  # type: ignore
+        assert response.return_code == CancelGoal.Response.ERROR_NONE  # type: ignore
+        time.sleep(0.1)
         assert action_api.is_goal_done(handle)
         feedbacks_after = action_api.get_feedback(handle)
         assert len(feedbacks_before) == len(feedbacks_after)

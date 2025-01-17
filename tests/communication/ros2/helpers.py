@@ -19,9 +19,10 @@ from typing import Generator, List, Tuple
 import pytest
 import rclpy
 from nav2_msgs.action import NavigateToPose
-from rclpy.action import ActionServer
-from rclpy.action.client import ClientGoalHandle
-from rclpy.executors import SingleThreadedExecutor
+from rclpy.action import ActionServer, CancelResponse, GoalResponse
+from rclpy.action.server import ServerGoalHandle
+from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from std_msgs.msg import String
 from std_srvs.srv import SetBool
@@ -60,13 +61,21 @@ class ActionServer_(Node):
             action_type=NavigateToPose,
             action_name=action_name,
             execute_callback=self.handle_test_action,
+            goal_callback=self.goal_accepted,
+            cancel_callback=self.cancel_callback,
+            callback_group=ReentrantCallbackGroup(),
         )
 
     def handle_test_action(
-        self, goal_handle: ClientGoalHandle
+        self, goal_handle: ServerGoalHandle
     ) -> NavigateToPose.Result:
-
         for i in range(1, 11):
+            if goal_handle.is_cancel_requested:
+                print("Cancel detected in execute callback")
+                goal_handle.canceled()
+                result = NavigateToPose.Result()
+                result.error_code = 3
+                return result
             feedback_msg = NavigateToPose.Feedback(distance_remaining=10.0 / i)
             goal_handle.publish_feedback(feedback_msg)
             time.sleep(0.01)
@@ -76,6 +85,14 @@ class ActionServer_(Node):
         result = NavigateToPose.Result()
         result.error_code = NavigateToPose.Result.NONE
         return result
+
+    def goal_accepted(self, goal_handle: ServerGoalHandle) -> GoalResponse:
+        self.get_logger().info("Got goal, accepting")
+        return GoalResponse.ACCEPT
+
+    def cancel_callback(self, cancel_request) -> CancelResponse:
+        self.get_logger().info("Got cancel request")
+        return CancelResponse.ACCEPT
 
 
 class MessagePublisher(Node):
@@ -90,13 +107,13 @@ class MessagePublisher(Node):
         self.publisher.publish(msg)
 
 
-def single_threaded_spinner(
+def multi_threaded_spinner(
     nodes: List[Node],
-) -> Tuple[List[SingleThreadedExecutor], List[threading.Thread]]:
-    executors: List[SingleThreadedExecutor] = []
+) -> Tuple[List[MultiThreadedExecutor], List[threading.Thread]]:
+    executors: List[MultiThreadedExecutor] = []
     executor_threads: List[threading.Thread] = []
     for node in nodes:
-        executor = SingleThreadedExecutor()
+        executor = MultiThreadedExecutor()
         executor.add_node(node)
         executors.append(executor)
     for executor in executors:
@@ -108,7 +125,7 @@ def single_threaded_spinner(
 
 
 def shutdown_executors_and_threads(
-    executors: List[SingleThreadedExecutor], threads: List[threading.Thread]
+    executors: List[MultiThreadedExecutor], threads: List[threading.Thread]
 ) -> None:
     # First shutdown executors
     for executor in executors:
