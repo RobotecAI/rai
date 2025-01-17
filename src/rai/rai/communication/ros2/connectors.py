@@ -33,7 +33,7 @@ class ROS2ARIMessage(ARIMessage):
     metadata: ROS2ARIMessageMetadata
 
 
-class ROS2ARIConnector(ARIConnector):
+class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
     def __init__(self, node_name: str = "rai_ros2_ari_connector"):
         super().__init__()
         self._node = Node(node_name)
@@ -46,39 +46,33 @@ class ROS2ARIConnector(ARIConnector):
         self._thread = threading.Thread(target=self._executor.spin)
         self._thread.start()
 
-    def send_message(self, message: ARIMessage, target: str):
-        if not isinstance(message, ROS2ARIMessage):
-            raise ValueError("Message must be of type ROS2ARIMessage")
-
+    def send_message(self, message: ROS2ARIMessage, target: str):
         self._topic_api.publish(
             topic=target, msg_content=message.payload, **message.metadata
         )
 
-    def receive_message(self, source: str, timeout_sec: float = 1.0) -> ARIMessage:
+    def receive_message(self, source: str, timeout_sec: float = 1.0) -> ROS2ARIMessage:
         msg = self._topic_api.receive(topic=source, timeout_sec=timeout_sec)
-        return ARIMessage(
+        return ROS2ARIMessage(
             payload=msg, metadata={"msg_type": str(type(msg)), "topic": source}
         )
 
     def service_call(
-        self, message: ARIMessage, target: str, timeout_sec: float = 1.0
-    ) -> ARIMessage:
-        if not isinstance(message, ROS2ARIMessage):
-            raise ValueError("Message must be of type ROS2ARIMessage")
-
+        self, message: ROS2ARIMessage, target: str, timeout_sec: float = 1.0
+    ) -> ROS2ARIMessage:
         msg = self._service_api.call_service(
             service_name=target,
             service_type=message.metadata["msg_type"],
             request=message.payload,
             timeout_sec=timeout_sec,
         )
-        return ARIMessage(
+        return ROS2ARIMessage(
             payload=msg, metadata={"msg_type": str(type(msg)), "service": target}
         )
 
     def start_action(
         self,
-        action_data: Optional[ARIMessage],
+        action_data: Optional[ROS2ARIMessage],
         target: str,
         on_feedback: Callable[[Any], None] = lambda _: None,
         on_done: Callable[[Any], None] = lambda _: None,
