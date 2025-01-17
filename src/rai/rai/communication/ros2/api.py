@@ -146,7 +146,7 @@ class ROS2TopicAPI:
         topic: str,
         msg_content: Dict[str, Any],
         msg_type: str,
-        *,  # Force keyword arguments
+        *,
         auto_qos_matching: bool = True,
         qos_profile: Optional[QoSProfile] = None,
     ) -> None:
@@ -170,11 +170,20 @@ class ROS2TopicAPI:
         publisher = self._get_or_create_publisher(topic, type(msg), qos_profile)
         publisher.publish(msg)
 
+    def _verify_receive_args(
+        self, topic: str, auto_topic_type: bool, msg_type: Optional[str]
+    ) -> None:
+        if auto_topic_type and msg_type is not None:
+            raise ValueError("Cannot provide both auto_topic_type and msg_type")
+        if not auto_topic_type and msg_type is None:
+            raise ValueError("msg_type must be provided if auto_topic_type is False")
+
     def receive(
         self,
         topic: str,
-        msg_type: str,
-        *,  # Force keyword arguments
+        *,
+        auto_topic_type: bool = True,
+        msg_type: Optional[str] = None,
         timeout_sec: float = 1.0,
         auto_qos_matching: bool = True,
         qos_profile: Optional[QoSProfile] = None,
@@ -193,8 +202,20 @@ class ROS2TopicAPI:
 
         Raises:
             ValueError: If no publisher exists or no message is received within timeout
+            ValueError: If auto_topic_type is False and msg_type is not provided
+            ValueError: If auto_topic_type is True and msg_type is provided
         """
-        self._verify_publisher_exists(topic)
+        self._verify_receive_args(topic, auto_topic_type, msg_type)
+        topic_endpoints = self._verify_publisher_exists(topic)
+
+        # TODO: Verify publishers topic type consistency
+        if auto_topic_type:
+            msg_type = topic_endpoints[0].topic_type
+        else:
+            if msg_type is None:
+                raise ValueError(
+                    "msg_type must be provided if auto_topic_type is False"
+                )
 
         qos_profile = self._resolve_qos_profile(
             topic, auto_qos_matching, qos_profile, for_publisher=False
@@ -260,14 +281,16 @@ class ROS2TopicAPI:
         """Convert message type string to actual message class."""
         return import_message_from_str(msg_type)
 
-    def _verify_publisher_exists(self, topic: str) -> None:
+    def _verify_publisher_exists(self, topic: str) -> List[TopicEndpointInfo]:
         """Verify that at least one publisher exists for the given topic.
 
         Raises:
             ValueError: If no publisher exists for the topic
         """
-        if not self._node.get_publishers_info_by_topic(topic):
+        topic_endpoints = self._node.get_publishers_info_by_topic(topic)
+        if not topic_endpoints:
             raise ValueError(f"No publisher found for topic: {topic}")
+        return topic_endpoints
 
     def __del__(self) -> None:
         """Cleanup publishers when object is destroyed."""

@@ -237,7 +237,10 @@ def test_ros2_single_message_receive_no_discovery_time(
     try:
         topic_api = ROS2TopicAPI(node)
         msg = topic_api.receive(
-            topic_name, msg_type="std_msgs/msg/String", timeout_sec=3.0
+            topic_name,
+            msg_type="std_msgs/msg/String",
+            timeout_sec=3.0,
+            auto_topic_type=False,
         )
         assert msg.data == "Hello, ROS2!"
     finally:
@@ -256,7 +259,11 @@ def test_ros2_single_message_receive_wrong_msg_type(
     try:
         topic_api = ROS2TopicAPI(node)
         with pytest.raises(AttributeError):
-            topic_api.receive(topic_name, msg_type="std_msgs/msg/NotExistingMessage")
+            topic_api.receive(
+                topic_name,
+                msg_type="std_msgs/msg/NotExistingMessage",
+                auto_topic_type=False,
+            )
     finally:
         shutdown_executors_and_threads(executors, threads)
 
@@ -274,7 +281,9 @@ def test_ros2_single_message_receive_wrong_topic_name(
         topic_api = ROS2TopicAPI(node)
         with pytest.raises(ValueError):
             topic_api.receive(
-                f"{topic_name}/wrong_topic_name", msg_type="std_msgs/msg/String"
+                f"{topic_name}/wrong_topic_name",
+                msg_type="std_msgs/msg/String",
+                auto_topic_type=False,
             )
     finally:
         shutdown_executors_and_threads(executors, threads)
