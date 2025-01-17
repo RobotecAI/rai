@@ -12,11 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import logging
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
-from typing import Annotated, Any, Dict, List, Optional, Tuple, Type, TypedDict, cast
+from typing import (
+    Annotated,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypedDict,
+    cast,
+)
 
 import rclpy
 import rclpy.callback_groups
@@ -347,6 +360,7 @@ class ROS2ActionAPI:
         self.node = node
         self._logger = node.get_logger()
         self.actions: Dict[str, ROS2ActionData] = {}
+        self._callback_executor = ThreadPoolExecutor(max_workers=10)
 
     def _generate_handle(self):
         return str(uuid.uuid4())
@@ -354,11 +368,44 @@ class ROS2ActionAPI:
     def _generic_callback(self, handle: str, feedback_msg: Any) -> None:
         self.actions[handle]["feedbacks"].append(feedback_msg.feedback)
 
+    def _fan_out_feedback(
+        self, callbacks: List[Callable[[Any], None]], feedback_msg: Any
+    ) -> None:
+        """Fan out feedback message to multiple callbacks concurrently.
+
+        Args:
+            callbacks: List of callback functions to execute
+            feedback_msg: The feedback message to pass to each callback
+        """
+        for callback in callbacks:
+            self._callback_executor.submit(
+                self._safe_callback_wrapper, callback, feedback_msg
+            )
+
+    def _safe_callback_wrapper(
+        self, callback: Callable[[Any], None], feedback_msg: Any
+    ) -> None:
+        """Safely execute a callback with error handling.
+
+        Args:
+            callback: The callback function to execute
+            feedback_msg: The feedback message to pass to the callback
+        """
+        try:
+            callback(copy.deepcopy(feedback_msg))
+        except Exception as e:
+            self._logger.error(f"Error in feedback callback: {str(e)}")
+
     def send_goal(
         self,
         action_name: str,
         action_type: str,
         goal: Dict[str, Any],
+        *,
+        feedback_callback: Callable[[Any], None] = lambda _: None,
+        done_callback: Callable[
+            [Any], None
+        ] = lambda _: None,  # TODO: handle done callback
         timeout_sec: float = 1.0,
     ) -> Tuple[bool, Annotated[str, "action handle"]]:
         handle = self._generate_handle()
@@ -378,8 +425,13 @@ class ROS2ActionAPI:
         if not action_client.wait_for_server(timeout_sec=timeout_sec):  # type: ignore
             return False, ""
 
+        feedback_callbacks = [
+            partial(self._generic_callback, handle),
+            feedback_callback,
+        ]
         send_goal_future: Future = action_client.send_goal_async(
-            goal=action_goal, feedback_callback=partial(self._generic_callback, handle)
+            goal=action_goal,
+            feedback_callback=partial(self._fan_out_feedback, feedback_callbacks),
         )
         self.actions[handle]["action_client"] = action_client
         self.actions[handle]["goal_future"] = send_goal_future
@@ -426,3 +478,8 @@ class ROS2ActionAPI:
         if self.actions[handle]["result_future"] is None:
             raise ValueError(f"No result available for goal {handle}")
         return self.actions[handle]["result_future"].result()
+
+    def __del__(self) -> None:
+        """Cleanup thread pool when object is destroyed."""
+        if hasattr(self, "_callback_executor"):
+            self._callback_executor.shutdown(wait=False)
