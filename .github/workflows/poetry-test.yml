@@ -69,4 +69,13 @@ jobs:
         run: |
           source /opt/ros/${{ matrix.ros_distro }}/setup.bash
           source install/setup.bash
-          poetry run pytest -m "not billable"
+          poetry run pytest -m "not billable" --cov=./src/rai --cov-report=xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
