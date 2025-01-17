@@ -447,6 +447,7 @@ class ROS2ActionAPI:
             return False, ""
 
         get_result_future = cast(Future, goal_handle.get_result_async())  # type: ignore
+        get_result_future.add_done_callback(done_callback)  # type: ignore
 
         self.actions[handle]["result_future"] = get_result_future
         self.actions[handle]["client_goal_handle"] = goal_handle
