@@ -47,7 +47,8 @@ The RAI framework aims to:
 ## Table of Contents
 
 - [Features](#features)
-- [Setup](#setup)
+- [Setup (docker)](#setup-docker)
+- [Setup (local)](#setup)
 - [Usage examples (demos)](#simulation-demos)
 - [Debugging Assistant](#debugging-assistant)
 - [Developer resources](#developer-resources)
@@ -71,7 +72,11 @@ The RAI framework aims to:
 - [ ] SDK for RAI developers.
 - [ ] UI for configuration to select features and tools relevant for your deployment.
 
-## Setup
+## Setup (docker)
+
+Currently, docker images are experimental. See the [docker](docs/setup_docker.md) for instructions.
+
+## Setup (local)
 
 Before going further, make sure you have ROS 2 (Jazzy or Humble) installed and sourced on your system.
 
