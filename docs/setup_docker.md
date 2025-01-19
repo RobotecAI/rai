@@ -24,13 +24,13 @@ docker build -t rai:jazzy -f docker/Dockerfile.jazzy .
 ### 2.1. Humble
 
 ```bash
-docker run -it rai:humble -v $(pwd):/rai
+docker run -it -v $(pwd):/rai rai:humble
 ```
 
 ### 2.2. Jazzy
 
 ```bash
-docker run -it rai:jazzy -v $(pwd):/rai
+docker run -it -v $(pwd):/rai rai:jazzy
 ```
 
 ## 3. Run the tests to confirm the setup
