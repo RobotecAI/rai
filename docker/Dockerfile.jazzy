@@ -24,6 +24,11 @@ RUN apt-get update && apt-get install -y software-properties-common && \
     apt-get update && apt-get upgrade -y && \
     apt-get install -y ros-jazzy-desktop ros-dev-tools
 
+
+# Initialize and update rosdep
+RUN /bin/bash -c '. /opt/ros/jazzy/setup.bash && \
+    rosdep init && rosdep update'
+
 # Add ROS 2 source to .bashrc
 RUN echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
 

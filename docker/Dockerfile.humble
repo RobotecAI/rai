@@ -24,6 +24,11 @@ RUN apt-get update && apt-get install -y software-properties-common && \
     apt-get update && apt-get upgrade -y && \
     apt-get install -y ros-humble-desktop ros-dev-tools
 
+
+# Initialize and update rosdep
+RUN /bin/bash -c '. /opt/ros/humble/setup.bash && \
+    rosdep init && rosdep update'
+
 # Add ROS 2 source to .bashrc
 RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
 
