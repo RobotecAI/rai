@@ -10,13 +10,13 @@ Choose the docker image based on your preferred ROS 2 version.
 ### 1.1. Humble
 
 ```bash
-docker build -t rai:humble -f docker/Dockerfile.humble .
+docker build -t rai:humble --build-arg ROS_DISTRO=humble -f docker/Dockerfile .
 ```
 
 ### 1.2. Jazzy
 
 ```bash
-docker build -t rai:jazzy -f docker/Dockerfile.jazzy .
+docker build -t rai:jazzy --build-arg ROS_DISTRO=jazzy -f docker/Dockerfile .
 ```
 
 ## 2. Run the docker container
