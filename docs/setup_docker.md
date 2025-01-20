@@ -29,13 +29,13 @@ docker build -t rai:jazzy --build-arg ROS_DISTRO=jazzy -f docker/Dockerfile .
 ### 2.1. Humble
 
 ```bash
-docker run -it -v $(pwd):/rai rai:humble
+docker run --net=host --ipc=host --pid=host -it -v $(pwd):/rai rai:humble
 ```
 
 ### 2.2. Jazzy
 
 ```bash
-docker run -it -v $(pwd):/rai rai:jazzy
+docker run --net=host --ipc=host --pid=host -it -v $(pwd):/rai rai:jazzy
 ```
 
 ## 3. Run the tests to confirm the setup
