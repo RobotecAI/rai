@@ -12,8 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .spatial_temporal_navigation.spatial_temporal_navigation import (
+
+from .spatial_temporal_navigation import (
+    Description,
+    ImageStamped,
+    Observation,
+    Orientation,
+    Pose,
+    PositionStamped,
+    Scene,
     run_spatial_temporal_data_collection,
 )
 
-__all__ = ["run_spatial_temporal_data_collection"]
+__all__ = [
+    "Pose",
+    "Orientation",
+    "PositionStamped",
+    "ImageStamped",
+    "Scene",
+    "Description",
+    "Observation",
+    "run_spatial_temporal_data_collection",
+]
