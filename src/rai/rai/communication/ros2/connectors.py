@@ -30,6 +30,7 @@ class ROS2ARIMessageMetadata(TypedDict):
 
 
 class ROS2ARIMessage(ARIMessage):
+    # TODO: Resolve reportIncompatibleVariableOverride
     metadata: ROS2ARIMessageMetadata
 
 

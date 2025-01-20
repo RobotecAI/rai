@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Generic, Optional, TypeVar
-
-from pydantic import Field
+from typing import Generic, TypeVar
 
 from .base_connector import BaseConnector, BaseMessage
 
@@ -25,16 +23,6 @@ class ARIMessage(BaseMessage):
     This class serves as a marker class and defines the contract for all ARI messages.
     Inherit from this class to create specific ARI message types.
     """
-
-
-# TODO: Move this to ros2 module
-class ROS2RRIMessage(ARIMessage):
-    ros_message_type: str = Field(
-        description="The string representation of the ROS message type (e.g. 'std_msgs/msg/String')"
-    )
-    python_message_class: Optional[type] = Field(
-        description="The Python class of the ROS message type", default=None
-    )
 
 
 T = TypeVar("T", bound=ARIMessage)
