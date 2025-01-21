@@ -21,7 +21,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
-    git
+    git \
+    wget
 
 # Install Poetry
 RUN curl -sSL https://install.python-poetry.org | python3 - --version 1.8.4
