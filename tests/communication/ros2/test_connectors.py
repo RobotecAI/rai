@@ -31,7 +31,7 @@ from .helpers import (
     shutdown_executors_and_threads,
 )
 
-ros_setup  # type: ignore prevents pytest from complaining about unused fixture
+_ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
 
 
 def test_ros2ari_connector_send_message(
