@@ -23,7 +23,12 @@ import numpy as np
 from numpy.typing import NDArray
 
 from rai.agents.base import BaseAgent
-from rai.communication import AudioInputDeviceConfig, StreamingAudioInputDevice
+from rai.communication import (
+    AudioInputDeviceConfig,
+    ROS2ARIConnector,
+    ROS2ARIMessage,
+    StreamingAudioInputDevice,
+)
 from rai_asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
 
 
@@ -38,6 +43,7 @@ class VoiceRecognitionAgent(BaseAgent):
         self,
         microphone_device_id: int,  # TODO: Change to name based instead of id based identification
         microphone_config: AudioInputDeviceConfig,
+        ros2_name: str,
         transcription_model: BaseTranscriptionModel,
         vad: BaseVoiceDetectionModel,
         grace_period: float = 1.0,
@@ -51,7 +57,8 @@ class VoiceRecognitionAgent(BaseAgent):
         microphone.configure_device(
             target=str(microphone_device_id), config=microphone_config
         )
-        super().__init__(connectors={"microphone": microphone})
+        ros2_connector = ROS2ARIConnector(ros2_name)
+        super().__init__(connectors={"microphone": microphone, "ros2": ros2_connector})
         self.microphone_device_id = str(microphone_device_id)
         self.should_record_pipeline: List[BaseVoiceDetectionModel] = []
         self.should_stop_pipeline: List[BaseVoiceDetectionModel] = []
@@ -89,7 +96,10 @@ class VoiceRecognitionAgent(BaseAgent):
     def run(self):
         self.running = True
         self.listener_handle = self.connectors["microphone"].start_action(
-            self.microphone_device_id, self.on_new_sample
+            action_data=None,
+            target=self.microphone_device_id,
+            on_feedback=self.on_new_sample,
+            on_done=lambda: None,
         )
 
     def stop(self):
@@ -184,8 +194,12 @@ class VoiceRecognitionAgent(BaseAgent):
                     del self.buffer_reminders[identifier]
             # self.transcription_model.save_wav(f"{identifier}.wav")
             transcription = self.transcription_model.consume_transcription()
+            print("Transcription: ", transcription)
+            self.connectors["ros2"].send_message(
+                ROS2ARIMessage(
+                    {"data": transcription}, {"msg_type": "std_msgs/msg/String"}
+                ),
+                "/from_human",
+            )
             self.transcription_threads[identifier]["transcription"] = transcription
             self.transcription_threads[identifier]["event"].set()
-        # TODO: sending the transcription once https://github.com/RobotecAI/rai/pull/360 is merged
-        self.logger.info(f"transcription thread {identifier} finished")
-        print(transcription)

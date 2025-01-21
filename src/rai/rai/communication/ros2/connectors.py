@@ -14,7 +14,7 @@
 
 import threading
 import uuid
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, TypedDict
 
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
@@ -23,8 +23,14 @@ from rai.communication.ari_connector import ARIConnector, ARIMessage
 from rai.communication.ros2.api import ROS2ActionAPI, ROS2ServiceAPI, ROS2TopicAPI
 
 
+class ROS2ARIPayload(TypedDict):
+    data: Any
+
+
 class ROS2ARIMessage(ARIMessage):
-    def __init__(self, payload: Any, metadata: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self, payload: ROS2ARIPayload, metadata: Optional[Dict[str, Any]] = None
+    ):
         super().__init__(payload, metadata)
 
 
