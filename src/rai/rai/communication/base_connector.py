@@ -19,13 +19,20 @@ from uuid import uuid4
 
 class BaseMessage(Protocol):
     payload: Any
-    metadata: Optional[Dict[str, Any]]
+    metadata: Dict[str, Any]
 
     def __init__(
-        self, payload: Any, metadata: Optional[Dict[str, Any]] = None, *args, **kwargs
+        self,
+        payload: Any,
+        metadata: Optional[Dict[str, Any]] = None,
+        *args: Any,
+        **kwargs: Any,
     ):
         self.payload = payload
-        self.metadata = metadata
+        if metadata is None:
+            self.metadata = {}
+        else:
+            self.metadata = metadata
 
 
 T = TypeVar("T", bound=BaseMessage)

@@ -13,25 +13,18 @@
 # limitations under the License.
 
 import threading
-from typing import Any, Callable, Optional, TypedDict
+from typing import Any, Callable, Dict, Optional
 
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
-from rclpy.qos import QoSProfile
 
 from rai.communication.ari_connector import ARIConnector, ARIMessage
 from rai.communication.ros2.api import ROS2ActionAPI, ROS2ServiceAPI, ROS2TopicAPI
 
 
-class ROS2ARIMessageMetadata(TypedDict):
-    msg_type: str
-    qos_profile: Optional[QoSProfile]
-    auto_qos_matching: bool
-
-
 class ROS2ARIMessage(ARIMessage):
-    # TODO: Resolve reportIncompatibleVariableOverride
-    metadata: ROS2ARIMessageMetadata
+    def __init__(self, payload: Any, metadata: Optional[Dict[str, Any]] = None):
+        super().__init__(payload, metadata)
 
 
 class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
@@ -48,12 +41,35 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         self._thread.start()
 
     def send_message(self, message: ROS2ARIMessage, target: str):
+        auto_qos_matching = message.metadata.get("auto_qos_matching", True)
+        qos_profile = message.metadata.get("qos_profile", None)
+        msg_type = message.metadata.get("msg_type", None)
+
+        # TODO: allow msg_type to be None, add auto topic type detection
+        if msg_type is None:
+            raise ValueError("msg_type is required")
+
         self._topic_api.publish(
-            topic=target, msg_content=message.payload, **message.metadata
+            topic=target,
+            msg_content=message.payload,
+            msg_type=message.metadata["msg_type"],
+            auto_qos_matching=auto_qos_matching,
+            qos_profile=qos_profile,
         )
 
-    def receive_message(self, source: str, timeout_sec: float = 1.0) -> ROS2ARIMessage:
-        msg = self._topic_api.receive(topic=source, timeout_sec=timeout_sec)
+    def receive_message(
+        self,
+        source: str,
+        timeout_sec: float = 1.0,
+        msg_type: Optional[str] = None,
+        auto_topic_type: bool = True,
+    ) -> ROS2ARIMessage:
+        msg = self._topic_api.receive(
+            topic=source,
+            timeout_sec=timeout_sec,
+            msg_type=msg_type,
+            auto_topic_type=auto_topic_type,
+        )
         return ROS2ARIMessage(
             payload=msg, metadata={"msg_type": str(type(msg)), "topic": source}
         )
