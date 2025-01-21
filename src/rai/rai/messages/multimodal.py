@@ -27,7 +27,7 @@ class MultimodalArtifact(TypedDict):
 
 class MultimodalMessage(BaseMessage):
     images: Optional[List[str]] = None
-    audios: Optional[Any] = None
+    audios: Optional[List[str]] = None
 
     def __init__(
         self,
@@ -35,8 +35,9 @@ class MultimodalMessage(BaseMessage):
     ):
         super().__init__(**kwargs)  # type: ignore
 
-        if self.audios not in [None, []]:
-            raise ValueError("Audio is not yet supported")
+        # remove the audio blocking check
+        # if self.audios not in [None, []]:
+        #     raise ValueError("Audio is not yet supported")
 
         _content: List[Union[str, Dict[str, Union[Dict[str, str], str]]]] = []
 
@@ -56,6 +57,19 @@ class MultimodalMessage(BaseMessage):
                 for image in self.images
             ]
             _content.extend(_image_content)
+
+        # aduio content handling (used audio/wav as MIME type)
+        if isinstance(self.audios, list):
+            _audio_content = [
+                {
+                    "type": "audio_url",
+                    "audio_url": {
+                        "url": f"data:audio/wav;base64,{audio}",
+                    },
+                }
+                for audio in self.audios
+            ]
+            _content.extend(_audio_content)
         self.content = _content
 
     @property
