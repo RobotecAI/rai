@@ -100,10 +100,12 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
     ) -> str:
         if not isinstance(action_data, ROS2ARIMessage):
             raise ValueError("Action data must be of type ROS2ARIMessage")
-
+        msg_type = action_data.metadata.get("msg_type", None)
+        if msg_type is None:
+            raise ValueError("msg_type is required")
         accepted, handle = self._actions_api.send_goal(
             action_name=target,
-            action_type=action_data.metadata["msg_type"],
+            action_type=msg_type,
             goal=action_data.payload,
             timeout_sec=timeout_sec,
             feedback_callback=on_feedback,
