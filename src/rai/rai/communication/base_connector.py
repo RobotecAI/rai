@@ -13,11 +13,11 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import Any, Callable, Dict, Generic, Optional, Protocol, TypeVar
+from typing import Any, Callable, Dict, Generic, Optional, TypeVar
 from uuid import uuid4
 
 
-class BaseMessage(Protocol):
+class BaseMessage:
     payload: Any
     metadata: Dict[str, Any]
 
