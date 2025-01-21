@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import threading
+import uuid
 from typing import Any, Callable, Dict, Optional
 
 from rclpy.executors import MultiThreadedExecutor
@@ -28,7 +29,9 @@ class ROS2ARIMessage(ARIMessage):
 
 
 class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
-    def __init__(self, node_name: str = "rai_ros2_ari_connector"):
+    def __init__(
+        self, node_name: str = f"rai_ros2_ari_connector_{str(uuid.uuid4())[-12:]}"
+    ):
         super().__init__()
         self._node = Node(node_name)
         self._topic_api = ROS2TopicAPI(self._node)
