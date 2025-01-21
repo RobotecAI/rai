@@ -134,6 +134,7 @@ def test_ros2ari_connector_send_goal_and_terminate_action(
         assert handle is not None
         feedbacks_before = feedbacks
         connector.terminate_action(handle)
+        time.sleep(0.2)
         feedbacks_after = feedbacks
         assert len(feedbacks_after) == len(feedbacks_before)
     finally:
