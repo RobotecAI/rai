@@ -52,7 +52,7 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         self._topic_api.publish(
             topic=target,
             msg_content=message.payload,
-            msg_type=message.metadata["msg_type"],
+            msg_type=msg_type,
             auto_qos_matching=auto_qos_matching,
             qos_profile=qos_profile,
         )
