@@ -114,9 +114,6 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         self._actions_api.terminate_goal(action_handle)
 
     def shutdown(self):
-        self._cleanup()
-
-    def _cleanup(self):
         self._executor.shutdown()
         self._thread.join()
         self._actions_api.shutdown()
