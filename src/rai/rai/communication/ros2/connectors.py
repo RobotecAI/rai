@@ -119,4 +119,6 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
     def _cleanup(self):
         self._executor.shutdown()
         self._thread.join()
+        self._actions_api.shutdown()
+        self._topic_api.shutdown()
         self._node.destroy_node()

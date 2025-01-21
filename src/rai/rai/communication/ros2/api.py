@@ -305,7 +305,7 @@ class ROS2TopicAPI:
             raise ValueError(f"No publisher found for topic: {topic}")
         return topic_endpoints
 
-    def __del__(self) -> None:
+    def shutdown(self) -> None:
         """Cleanup publishers when object is destroyed."""
         for publisher in self._publishers.values():
             publisher.destroy()
@@ -480,7 +480,7 @@ class ROS2ActionAPI:
             raise ValueError(f"No result available for goal {handle}")
         return self.actions[handle]["result_future"].result()
 
-    def __del__(self) -> None:
+    def shutdown(self) -> None:
         """Cleanup thread pool when object is destroyed."""
         if hasattr(self, "_callback_executor"):
             self._callback_executor.shutdown(wait=False)
