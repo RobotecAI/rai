@@ -58,7 +58,7 @@ class MultimodalMessage(BaseMessage):
             ]
             _content.extend(_image_content)
 
-        # aduio content handling (used audio/wav as MIME type)
+        # audio content handling (used audio/wav as MIME type)
         if isinstance(self.audios, list):
             _audio_content = [
                 {
