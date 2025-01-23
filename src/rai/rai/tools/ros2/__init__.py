@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .actions import StartActionTool
+from .actions import CancelActionTool, StartActionTool
 from .services import ServiceCallTool
 from .topics import GetImageTool, PublishMessageTool, ReceiveMessageTool
 
@@ -22,4 +22,5 @@ __all__ = [
     "PublishMessageTool",
     "ReceiveMessageTool",
     "ServiceCallTool",
+    "CancelActionTool",
 ]
