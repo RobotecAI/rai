@@ -16,14 +16,17 @@ import threading
 import time
 from typing import Generator, List, Tuple
 
+import numpy as np
 import pytest
 import rclpy
+from cv_bridge import CvBridge
 from nav2_msgs.action import NavigateToPose
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.action.server import ServerGoalHandle
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
+from sensor_msgs.msg import Image
 from std_msgs.msg import String
 from std_srvs.srv import SetBool
 
@@ -39,6 +42,26 @@ class ServiceServer(Node):
         response.success = True
         response.message = "Test service called"
         return response
+
+
+class ImagePublisher(Node):
+    def __init__(self, topic: str):
+        super().__init__("test_image_publisher")
+        self.publisher = self.create_publisher(Image, topic, 10)  # type: ignore
+        self.timer = self.create_timer(0.1, self.publish_image)  # type: ignore
+        self.bridge = CvBridge()
+
+    def publish_image(self) -> None:
+        msg = Image()
+        msg.header.stamp = self.get_clock().now().to_msg()  # type: ignore
+        msg.header.frame_id = "test_frame"  # type: ignore
+        msg.height = 100
+        msg.width = 100
+        msg.encoding = "rgb8"
+        msg.is_bigendian = False
+        msg.step = 300
+        msg.data = np.zeros((100, 100, 3), dtype=np.uint8).tobytes()  # type: ignore
+        self.publisher.publish(msg)
 
 
 class MessageReceiver(Node):

@@ -20,11 +20,16 @@ try:
 except ImportError:
     pytest.skip("ROS2 is not installed", allow_module_level=True)
 
+import base64
+import io
 import time
 
+from PIL import Image
+
 from rai.communication.ros2.connectors import ROS2ARIConnector
-from rai.tools.ros2 import PublishMessageTool, ReceiveMessageTool
+from rai.tools.ros2 import GetImageTool, PublishMessageTool, ReceiveMessageTool
 from tests.communication.ros2.helpers import (
+    ImagePublisher,
     MessagePublisher,
     MessageReceiver,
     multi_threaded_spinner,
@@ -71,5 +76,29 @@ def test_receive_message_tool(ros_setup: None, request: pytest.FixtureRequest) -
         response = tool._run(topic=topic_name)  # type: ignore
         time.sleep(0.2)
         assert "Hello, ROS2!" in response
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+@pytest.mark.xfail(
+    reason="Test expected to fail: ROS2 node discovery is asynchronous and the current implementation "
+    "doesn't wait for topic discovery. "
+    "TODO: Implement a proper discovery mechanism with timeout "
+    "to ensure reliable topic communication."
+)
+def test_receive_image_tool(ros_setup: None, request: pytest.FixtureRequest) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    connector = ROS2ARIConnector()
+    publisher = ImagePublisher(topic=topic_name)
+    executors, threads = multi_threaded_spinner([publisher])
+    tool = GetImageTool(connector=connector)
+    time.sleep(1)
+    try:
+        _, artifact_dict = tool._run(topic=topic_name)  # type: ignore
+        images = artifact_dict["images"]
+        assert len(images) == 1
+        image = images[0]
+        image = Image.open(io.BytesIO(base64.b64decode(image)))
+        assert image.size == (100, 100)
     finally:
         shutdown_executors_and_threads(executors, threads)
