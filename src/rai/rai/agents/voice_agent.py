@@ -197,35 +197,3 @@ class VoiceRecognitionAgent(BaseAgent):
         )
         self.transcription_threads[identifier]["transcription"] = transcription
         self.transcription_threads[identifier]["event"].set()
-
-        # with self.transcription_lock:
-        # while self.active_thread == identifier:
-        #     with self.sample_buffer_lock:
-        #         if len(self.sample_buffer) == 0:
-        #             continue
-        #         audio_data = self.sample_buffer.copy()
-        #         self.sample_buffer = []
-        #     audio_data = np.concatenate(audio_data)
-        #     with self.transcription_lock:
-        #         self.transcription_model.transcribe(audio_data)
-
-        # # transciption of the reminder of the buffer
-        # with self.sample_buffer_lock:
-        #     if identifier in self.transcription_buffers:
-        #         audio_data = self.transcription_buffers[identifier]
-        #         audio_data = np.concatenate(audio_data)
-        #         with self.transcription_lock:
-        #             self.transcription_model.transcribe(audio_data)
-        #         del self.transcription_buffers[identifier]
-        # # self.transcription_model.save_wav(f"{identifier}.wav")
-        # with self.transcription_lock:
-        #     transcription = self.transcription_model.consume_transcription()
-        # self.logger.info(f"Transcription: {transcription}")
-        # self.connectors["ros2"].send_message(
-        #     ROS2ARIMessage(
-        #         {"data": transcription}, {"msg_type": "std_msgs/msg/String"}
-        #     ),
-        #     "/from_human",
-        # )
-        # self.transcription_threads[identifier]["transcription"] = transcription
-        # self.transcription_threads[identifier]["event"].set()

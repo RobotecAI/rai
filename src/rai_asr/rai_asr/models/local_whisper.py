@@ -32,25 +32,6 @@ class LocalWhisper(BaseTranscriptionModel):
             self.whisper = whisper.load_model(self.model_name)
 
         self.logger = logging.getLogger(__name__)
-        # TODO: remove sample storage before PR is merged, this is just to enable saving wav files for debugging
-        # self.samples = None
-
-    # def save_wav(self, output_filename: str):
-    #     assert self.samples is not None, "No samples to save"
-    #     combined_samples = self.samples
-    #     if combined_samples.dtype.kind == "f":
-    #         combined_samples = np.clip(combined_samples, -1.0, 1.0)
-    #         combined_samples = (combined_samples * 32767).astype(np.int16)
-    #     elif combined_samples.dtype != np.int16:
-    #         combined_samples = combined_samples.astype(np.int16)
-
-    #     with wave.open(output_filename, "wb") as wav_file:
-    #         n_channels = 1
-    #         sampwidth = 2
-    #         wav_file.setnchannels(n_channels)
-    #         wav_file.setsampwidth(sampwidth)
-    #         wav_file.setframerate(self.sample_rate)
-    #         wav_file.writeframes(combined_samples.tobytes())
 
     def transcribe(self, data: NDArray[np.int16]) -> str:
         normalized_data = data.astype(np.float32) / 32768.0
