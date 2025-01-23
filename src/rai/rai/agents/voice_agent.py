@@ -36,6 +36,7 @@ class ThreadData(TypedDict):
     thread: Thread
     event: Event
     transcription: str
+    joined: bool
 
 
 class VoiceRecognitionAgent(BaseAgent):
@@ -78,7 +79,7 @@ class VoiceRecognitionAgent(BaseAgent):
         self.sample_buffer_lock = Lock()
         self.active_thread = ""
         self.transcription_threads: dict[str, ThreadData] = {}
-        self.buffer_reminders: dict[str, list[NDArray]] = {}
+        self.transcription_buffers: dict[str, list[NDArray]] = {}
 
     def __call__(self):
         self.run()
@@ -106,12 +107,13 @@ class VoiceRecognitionAgent(BaseAgent):
         self.logger.info("Stopping voice agent")
         self.running = False
         self.connectors["microphone"].terminate_action(self.listener_handle)
-        to_finish = len(list(self.transcription_threads.keys()))
-        while to_finish > 0:
+        while not all(
+            [thread["joined"] for thread in self.transcription_threads.values()]
+        ):
             for thread_id in self.transcription_threads:
                 if self.transcription_threads[thread_id]["event"].is_set():
                     self.transcription_threads[thread_id]["thread"].join()
-                    to_finish -= 1
+                    self.transcription_threads[thread_id]["joined"] = True
                 else:
                     self.logger.info(
                         f"Waiting for transcription of {thread_id} to finish..."
@@ -124,6 +126,12 @@ class VoiceRecognitionAgent(BaseAgent):
             self.sample_buffer.append(indata)
             if not self.recording_started and len(self.sample_buffer) > 5:
                 self.sample_buffer = self.sample_buffer[-5:]
+
+        # attempt to join finished threads:
+        for thread_id in self.transcription_threads:
+            if self.transcription_threads[thread_id]["event"].is_set():
+                self.transcription_threads[thread_id]["thread"].join()
+                self.transcription_threads[thread_id]["joined"] = True
 
         voice_detected, output_parameters = self.vad.detected(indata, {})
         should_record = False
@@ -141,11 +149,11 @@ class VoiceRecognitionAgent(BaseAgent):
             )
             transcription_finished = Event()
             self.active_thread = thread_id
-            transcription_thread.start()
             self.transcription_threads[thread_id] = {
                 "thread": transcription_thread,
                 "event": transcription_finished,
                 "transcription": "",
+                "joined": False,
             }
 
         if voice_detected:
@@ -156,12 +164,15 @@ class VoiceRecognitionAgent(BaseAgent):
             self.recording_started
             and sample_time - self.grace_period_start > self.grace_period
         ):
-            self.logger.info("Grace period ended... stopping recording")
+            self.logger.info(
+                "Grace period ended... stopping recording, starting transcription"
+            )
             self.recording_started = False
             self.grace_period_start = 0
             with self.sample_buffer_lock:
-                self.buffer_reminders[self.active_thread] = self.sample_buffer
+                self.transcription_buffers[self.active_thread] = self.sample_buffer
                 self.sample_buffer = []
+            self.transcription_threads[self.active_thread]["thread"].start()
             self.active_thread = ""
 
     def should_record(
@@ -175,31 +186,46 @@ class VoiceRecognitionAgent(BaseAgent):
 
     def transcription_thread(self, identifier: str):
         self.logger.info(f"transcription thread {identifier} started")
-        with self.transcription_lock:
-            while self.active_thread == identifier:
-                with self.sample_buffer_lock:
-                    if len(self.sample_buffer) == 0:
-                        continue
-                    audio_data = self.sample_buffer.copy()
-                    self.sample_buffer = []
-                audio_data = np.concatenate(audio_data)
-                self.transcription_model.transcribe(audio_data)
+        audio_data = np.concatenate(self.transcription_buffers[identifier])
+        with self.transcription_lock:  # this is only necessary for the local model... TODO: fix this somehow
+            transcription = self.transcription_model.transcribe(audio_data)
+        self.connectors["ros2"].send_message(
+            ROS2ARIMessage(
+                {"data": transcription}, {"msg_type": "std_msgs/msg/String"}
+            ),
+            "/from_human",
+        )
+        self.transcription_threads[identifier]["transcription"] = transcription
+        self.transcription_threads[identifier]["event"].set()
 
-            # transciption of the reminder of the buffer
-            with self.sample_buffer_lock:
-                if identifier in self.buffer_reminders:
-                    audio_data = self.buffer_reminders[identifier]
-                    audio_data = np.concatenate(audio_data)
-                    self.transcription_model.transcribe(audio_data)
-                    del self.buffer_reminders[identifier]
-            # self.transcription_model.save_wav(f"{identifier}.wav")
-            transcription = self.transcription_model.consume_transcription()
-            print("Transcription: ", transcription)
-            self.connectors["ros2"].send_message(
-                ROS2ARIMessage(
-                    {"data": transcription}, {"msg_type": "std_msgs/msg/String"}
-                ),
-                "/from_human",
-            )
-            self.transcription_threads[identifier]["transcription"] = transcription
-            self.transcription_threads[identifier]["event"].set()
+        # with self.transcription_lock:
+        # while self.active_thread == identifier:
+        #     with self.sample_buffer_lock:
+        #         if len(self.sample_buffer) == 0:
+        #             continue
+        #         audio_data = self.sample_buffer.copy()
+        #         self.sample_buffer = []
+        #     audio_data = np.concatenate(audio_data)
+        #     with self.transcription_lock:
+        #         self.transcription_model.transcribe(audio_data)
+
+        # # transciption of the reminder of the buffer
+        # with self.sample_buffer_lock:
+        #     if identifier in self.transcription_buffers:
+        #         audio_data = self.transcription_buffers[identifier]
+        #         audio_data = np.concatenate(audio_data)
+        #         with self.transcription_lock:
+        #             self.transcription_model.transcribe(audio_data)
+        #         del self.transcription_buffers[identifier]
+        # # self.transcription_model.save_wav(f"{identifier}.wav")
+        # with self.transcription_lock:
+        #     transcription = self.transcription_model.consume_transcription()
+        # self.logger.info(f"Transcription: {transcription}")
+        # self.connectors["ros2"].send_message(
+        #     ROS2ARIMessage(
+        #         {"data": transcription}, {"msg_type": "std_msgs/msg/String"}
+        #     ),
+        #     "/from_human",
+        # )
+        # self.transcription_threads[identifier]["transcription"] = transcription
+        # self.transcription_threads[identifier]["event"].set()

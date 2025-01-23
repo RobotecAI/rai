@@ -37,11 +37,6 @@ class BaseTranscriptionModel(ABC):
 
         self.latest_transcription = ""
 
-    def consume_transcription(self) -> str:
-        ret = self.latest_transcription
-        self.latest_transcription = ""
-        return ret
-
     @abstractmethod
-    def transcribe(self, data: NDArray[np.int16]):
+    def transcribe(self, data: NDArray[np.int16]) -> str:
         pass

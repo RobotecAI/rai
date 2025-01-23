@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import io
+import logging
 import os
 from functools import partial
 
@@ -36,21 +37,16 @@ class OpenAIWhisper(BaseTranscriptionModel):
             self.openai_client.audio.transcriptions.create,
             model=self.model_name,
         )
+        self.logger = logging.getLogger(__name__)
         self.samples = []
 
-    def add_samples(self, data: NDArray[np.int16]):
+    def transcribe(self, data: NDArray[np.int16]) -> str:
         normalized_data = data.astype(np.float32) / 32768.0
-        self.samples = (
-            np.concatenate([self.samples, normalized_data])
-            if self.samples is not None
-            else data
-        )
-
-    def transcribe(self) -> str:
         with io.BytesIO() as temp_wav_buffer:
-            wavfile.write(temp_wav_buffer, self.sample_rate, self.samples)
+            wavfile.write(temp_wav_buffer, self.sample_rate, normalized_data)
             temp_wav_buffer.seek(0)
             temp_wav_buffer.name = "temp.wav"
             response = self.model(file=temp_wav_buffer, language=self.language)
         transcription = response.text
+        self.logger.info("transcription: %s", transcription)
         return transcription

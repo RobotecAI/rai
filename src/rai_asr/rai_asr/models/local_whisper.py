@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from typing import cast
 
 import numpy as np
@@ -30,13 +31,9 @@ class LocalWhisper(BaseTranscriptionModel):
         else:
             self.whisper = whisper.load_model(self.model_name)
 
+        self.logger = logging.getLogger(__name__)
         # TODO: remove sample storage before PR is merged, this is just to enable saving wav files for debugging
         # self.samples = None
-
-    def consume_transcription(self) -> str:
-        ret = super().consume_transcription()
-        # self.samples = None
-        return ret
 
     # def save_wav(self, output_filename: str):
     #     assert self.samples is not None, "No samples to save"
@@ -55,14 +52,13 @@ class LocalWhisper(BaseTranscriptionModel):
     #         wav_file.setframerate(self.sample_rate)
     #         wav_file.writeframes(combined_samples.tobytes())
 
-    def transcribe(self, data: NDArray[np.int16]):
-        # self.samples = (
-        #     np.concatenate((self.samples, data)) if self.samples is not None else data
-        # )
+    def transcribe(self, data: NDArray[np.int16]) -> str:
         normalized_data = data.astype(np.float32) / 32768.0
         result = whisper.transcribe(
             self.whisper, normalized_data
         )  # TODO: handling of additional transcribe arguments (perhaps in model init)
         transcription = result["text"]
+        self.logger.info("transcription: %s", transcription)
         transcription = cast(str, transcription)
-        self.latest_transcription += transcription
+        self.latest_transcription = transcription
+        return transcription
