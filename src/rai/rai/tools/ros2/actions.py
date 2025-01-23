@@ -43,8 +43,28 @@ class StartActionTool(BaseTool):
 
     def _run(self, action_name: str, action_type: str, args: Dict[str, Any]) -> str:
         message = ROS2ARIMessage(payload=args, metadata={"msg_type": action_type})
-        response = self.connector.start_action(message, action_name)
+        response = self.connector.start_action(
+            message,
+            action_name,
+            on_feedback=self.feedback_callback,
+            on_done=self.on_done_callback,
+        )
         return "Action started with ID: " + response
+
+
+class CancelActionToolInput(BaseModel):
+    action_id: str = Field(..., description="The ID of the action to cancel")
+
+
+class CancelActionTool(BaseTool):
+    connector: ROS2ARIConnector
+    name: str = "cancel_action"
+    description: str = "Cancel a ROS2 action"
+    args_schema: Type[CancelActionToolInput] = CancelActionToolInput
+
+    def _run(self, action_id: str) -> str:
+        self.connector.terminate_action(action_id)
+        return f"Action {action_id} cancelled"
 
 
 @tool
