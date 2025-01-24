@@ -30,7 +30,6 @@ class SoundDeviceError(Exception):
 class AudioInputDeviceConfig(TypedDict):
     block_size: int
     consumer_sampling_rate: int
-    target_sampling_rate: int
     dtype: str
     device_number: Optional[int]
 
@@ -44,7 +43,6 @@ class ConfiguredAudioInputDevice:
     sample_rate (int): Device sample rate
     consumer_sampling_rate (int): The sampling rate of the consumer
     window_size_samples (int): The size of the window in samples
-    target_sampling_rate (int): The target sampling rate
     dtype (str): The data type of the audio samples
     """
 
@@ -58,7 +56,6 @@ class ConfiguredAudioInputDevice:
         self.window_size_samples = int(
             config["block_size"] * self.sample_rate / config["consumer_sampling_rate"]
         )
-        self.target_sampling_rate = int(config["target_sampling_rate"])
         self.dtype = config["dtype"]
 
 
@@ -132,9 +129,9 @@ class StreamingAudioInputDevice(HRIConnector[HRIMessage]):
 
         def callback(indata: np.ndarray, frames: int, _, status: CallbackFlags):
             indata = indata.flatten()
-            sample_time_length = len(indata) / target_device.target_sampling_rate
-            if target_device.sample_rate != target_device.target_sampling_rate:
-                indata = resample(indata, int(sample_time_length * target_device.target_sampling_rate))  # type: ignore
+            sample_time_length = len(indata) / target_device.sample_rate
+            if target_device.sample_rate != target_device.consumer_sampling_rate:
+                indata = resample(indata, int(sample_time_length * target_device.consumer_sampling_rate))  # type: ignore
             flag_dict = {
                 "input_overflow": status.input_overflow,
                 "input_underflow": status.input_underflow,

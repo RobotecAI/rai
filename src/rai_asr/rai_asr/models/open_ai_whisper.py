@@ -13,36 +13,22 @@
 # limitations under the License.
 
 import io
+import logging
 import os
-from abc import abstractmethod
 from functools import partial
 
 import numpy as np
-import whisper
 from numpy.typing import NDArray
 from openai import OpenAI
 from scipy.io import wavfile
-from whisper.transcribe import transcribe
 
-# WARN: This file is going to be removed in favour of rai_asr.models
-
-
-class ASRModel:
-    def __init__(self, model_name: str, sample_rate: int, language: str = "en"):
-        self.model_name = model_name
-        self.sample_rate = sample_rate
-        self.language = language
-
-    @abstractmethod
-    def transcribe(self, data: NDArray[np.int16]) -> str:
-        pass
-
-    def __call__(self, data: NDArray[np.int16]) -> str:
-        return self.transcribe(data)
+from rai_asr.models.base import BaseTranscriptionModel
 
 
-class OpenAIWhisper(ASRModel):
-    def __init__(self, model_name: str, sample_rate: int, language: str = "en"):
+class OpenAIWhisper(BaseTranscriptionModel):
+    def __init__(
+        self, model_name: str, sample_rate: int, language: str = "en", **kwargs
+    ):
         super().__init__(model_name, sample_rate, language)
         api_key = os.getenv("OPENAI_API_KEY")
         if api_key is None:
@@ -52,24 +38,18 @@ class OpenAIWhisper(ASRModel):
         self.model = partial(
             self.openai_client.audio.transcriptions.create,
             model=self.model_name,
+            **kwargs,
         )
+        self.logger = logging.getLogger(__name__)
+        self.samples = []
 
     def transcribe(self, data: NDArray[np.int16]) -> str:
+        normalized_data = data.astype(np.float32) / 32768.0
         with io.BytesIO() as temp_wav_buffer:
-            wavfile.write(temp_wav_buffer, self.sample_rate, data)
+            wavfile.write(temp_wav_buffer, self.sample_rate, normalized_data)
             temp_wav_buffer.seek(0)
             temp_wav_buffer.name = "temp.wav"
             response = self.model(file=temp_wav_buffer, language=self.language)
         transcription = response.text
-        return transcription
-
-
-class LocalWhisper(ASRModel):
-    def __init__(self, model_name: str, sample_rate: int, language: str = "en"):
-        super().__init__(model_name, sample_rate, language)
-        self.whisper = whisper.load_model(self.model_name)
-
-    def transcribe(self, data: NDArray[np.int16]) -> str:
-        result = transcribe(self.whisper, data.astype(np.float32) / 32768.0)
-        transcription = result["text"]
+        self.logger.info("transcription: %s", transcription)
         return transcription

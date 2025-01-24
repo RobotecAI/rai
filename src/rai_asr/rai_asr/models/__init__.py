@@ -12,14 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai.agents.conversational_agent import create_conversational_agent
-from rai.agents.state_based import create_state_based_agent
-from rai.agents.tool_runner import ToolRunner
-from rai.agents.voice_agent import VoiceRecognitionAgent
+from rai_asr.models.base import BaseTranscriptionModel, BaseVoiceDetectionModel
+from rai_asr.models.local_whisper import LocalWhisper
+from rai_asr.models.open_ai_whisper import OpenAIWhisper
+from rai_asr.models.open_wake_word import OpenWakeWord
+from rai_asr.models.silero_vad import SileroVAD
 
 __all__ = [
-    "ToolRunner",
-    "create_conversational_agent",
-    "create_state_based_agent",
-    "VoiceRecognitionAgent",
+    "BaseVoiceDetectionModel",
+    "SileroVAD",
+    "OpenWakeWord",
+    "BaseTranscriptionModel",
+    "LocalWhisper",
+    "OpenAIWhisper",
 ]

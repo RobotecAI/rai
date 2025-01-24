@@ -31,7 +31,6 @@ def device_config():
     return {
         "block_size": 1024,
         "consumer_sampling_rate": 44100,
-        "target_sampling_rate": 16000,
         "dtype": "float32",
     }
 
@@ -57,7 +56,6 @@ def test_configure(
         audio_input_device.configred_devices[device_id].consumer_sampling_rate == 44100
     )
     assert audio_input_device.configred_devices[device_id].window_size_samples == 1024
-    assert audio_input_device.configred_devices[device_id].target_sampling_rate == 16000
     assert audio_input_device.configred_devices[device_id].dtype == "float32"
 
 
