@@ -19,7 +19,6 @@ from typing import Generator, List, Tuple
 import numpy as np
 import pytest
 import rclpy
-from cv_bridge import CvBridge
 from nav2_msgs.action import NavigateToPose
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.action.server import ServerGoalHandle
@@ -49,7 +48,6 @@ class ImagePublisher(Node):
         super().__init__("test_image_publisher")
         self.publisher = self.create_publisher(Image, topic, 10)  # type: ignore
         self.timer = self.create_timer(0.1, self.publish_image)  # type: ignore
-        self.bridge = CvBridge()
 
     def publish_image(self) -> None:
         msg = Image()
