@@ -32,6 +32,7 @@ from rai.tools.ros2 import (
     GetROS2ImageTool,
     GetROS2MessageInterfaceTool,
     GetROS2TopicsNamesAndTypesTool,
+    GetROS2TransformTool,
     PublishROS2MessageTool,
     ReceiveROS2MessageTool,
 )
@@ -39,6 +40,7 @@ from tests.communication.ros2.helpers import (
     ImagePublisher,
     MessagePublisher,
     MessageReceiver,
+    TransformPublisher,
     multi_threaded_spinner,
     ros_setup,
     shutdown_executors_and_threads,
@@ -131,3 +133,22 @@ def test_get_message_interface_tool(
     assert "feedback" in response
     response = tool._run(msg_type="std_msgs/msg/String")  # type: ignore
     assert "data" in response
+
+
+def test_get_transform_tool(ros_setup: None, request: pytest.FixtureRequest) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    connector = ROS2ARIConnector()
+    publisher = TransformPublisher(topic=topic_name)
+    executors, threads = multi_threaded_spinner([publisher])
+    tool = GetROS2TransformTool(connector=connector)
+    time.sleep(1.0)
+    try:
+        response = tool._run(
+            target_frame=publisher.frame_id,
+            source_frame=publisher.child_frame_id,
+            timeout_sec=1.0,
+        )  # type: ignore
+        assert "translation" in response
+        assert "rotation" in response
+    finally:
+        shutdown_executors_and_threads(executors, threads)

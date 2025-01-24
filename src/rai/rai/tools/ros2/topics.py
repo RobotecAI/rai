@@ -167,3 +167,25 @@ class GetROS2MessageInterfaceTool(BaseTool):
             return json.dumps(
                 {"goal": goal_dict, "result": result_dict, "feedback": feedback_dict}
             )
+
+
+class GetROS2TransformToolInput(BaseModel):
+    target_frame: str = Field(..., description="The target frame")
+    source_frame: str = Field(..., description="The source frame")
+    timeout_sec: float = Field(default=5.0, description="The timeout in seconds")
+
+
+class GetROS2TransformTool(BaseTool):
+    connector: ROS2ARIConnector
+    name: str = "get_ros2_transform"
+    description: str = "Get the transform between two frames"
+    args_schema: Type[GetROS2TransformToolInput] = GetROS2TransformToolInput
+
+    @wrap_tool_input
+    def _run(self, tool_input: GetROS2TransformToolInput) -> str:
+        transform = self.connector.get_transform(
+            target_frame=tool_input.target_frame,
+            source_frame=tool_input.source_frame,
+            timeout_sec=tool_input.timeout_sec,
+        )
+        return str(transform)
