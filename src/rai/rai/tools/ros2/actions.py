@@ -28,22 +28,22 @@ from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from rai.tools.utils import wrap_tool_input  # type: ignore
 
 
-class StartActionToolInput(BaseModel):
+class StartROS2ActionToolInput(BaseModel):
     action_name: str = Field(..., description="The name of the action to start")
     action_type: str = Field(..., description="The type of the action")
     args: Dict[str, Any] = Field(..., description="The arguments to pass to the action")
 
 
-class StartActionTool(BaseTool):
+class StartROS2ActionTool(BaseTool):
     connector: ROS2ARIConnector
     feedback_callback: Callable[[Any], None] = lambda _: None
     on_done_callback: Callable[[Any], None] = lambda _: None
-    name: str = "start_action"
+    name: str = "start_ros2_action"
     description: str = "Start a ROS2 action"
-    args_schema: Type[StartActionToolInput] = StartActionToolInput
+    args_schema: Type[StartROS2ActionToolInput] = StartROS2ActionToolInput
 
     @wrap_tool_input
-    def _run(self, tool_input: StartActionToolInput) -> str:
+    def _run(self, tool_input: StartROS2ActionToolInput) -> str:
         message = ROS2ARIMessage(
             payload=tool_input.args, metadata={"msg_type": tool_input.action_type}
         )
@@ -56,23 +56,23 @@ class StartActionTool(BaseTool):
         return "Action started with ID: " + response
 
 
-class CancelActionToolInput(BaseModel):
+class CancelROS2ActionToolInput(BaseModel):
     action_id: str = Field(..., description="The ID of the action to cancel")
 
 
-class CancelActionTool(BaseTool):
+class CancelROS2ActionTool(BaseTool):
     connector: ROS2ARIConnector
-    name: str = "cancel_action"
+    name: str = "cancel_ros2_action"
     description: str = "Cancel a ROS2 action"
-    args_schema: Type[CancelActionToolInput] = CancelActionToolInput
+    args_schema: Type[CancelROS2ActionToolInput] = CancelROS2ActionToolInput
 
     @wrap_tool_input
-    def _run(self, tool_input: CancelActionToolInput) -> str:
+    def _run(self, tool_input: CancelROS2ActionToolInput) -> str:
         self.connector.terminate_action(tool_input.action_id)
         return f"Action {tool_input.action_id} cancelled"
 
 
 @tool
-def get_action_feedback(action_id: str) -> str:
+def get_ros2_action_feedback(action_id: str) -> str:
     """Get the feedback of a ROS2 action by its action ID"""
     raise NotImplementedError("Not implemented")

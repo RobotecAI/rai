@@ -23,7 +23,7 @@ except ImportError:
 
 
 from rai.communication.ros2.connectors import ROS2ARIConnector
-from rai.tools.ros2 import ServiceCallTool
+from rai.tools.ros2 import CallROS2ServiceTool
 from tests.communication.ros2.helpers import (
     ServiceServer,
     multi_threaded_spinner,
@@ -39,7 +39,7 @@ def test_service_call_tool(ros_setup: None, request: pytest.FixtureRequest) -> N
     connector = ROS2ARIConnector()
     server = ServiceServer(service_name=service_name)
     executors, threads = multi_threaded_spinner([server])
-    tool = ServiceCallTool(connector=connector)
+    tool = CallROS2ServiceTool(connector=connector)
     try:
         response = tool._run(  # type: ignore
             service_name=service_name,

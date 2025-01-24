@@ -28,7 +28,7 @@ from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from rai.tools.utils import wrap_tool_input  # type: ignore
 
 
-class ServiceCallToolInput(BaseModel):
+class CallROS2ServiceToolInput(BaseModel):
     service_name: str = Field(..., description="The service to call")
     service_type: str = Field(..., description="The type of the service")
     args: Dict[str, Any] = Field(
@@ -36,14 +36,14 @@ class ServiceCallToolInput(BaseModel):
     )
 
 
-class ServiceCallTool(BaseTool):
+class CallROS2ServiceTool(BaseTool):
     connector: ROS2ARIConnector
-    name: str = "service_call"
+    name: str = "call_ros2_service"
     description: str = "Call a ROS2 service"
-    args_schema: Type[ServiceCallToolInput] = ServiceCallToolInput
+    args_schema: Type[CallROS2ServiceToolInput] = CallROS2ServiceToolInput
 
     @wrap_tool_input
-    def _run(self, tool_input: ServiceCallToolInput) -> str:
+    def _run(self, tool_input: CallROS2ServiceToolInput) -> str:
         message = ROS2ARIMessage(
             payload=tool_input.args, metadata={"msg_type": tool_input.service_type}
         )

@@ -32,20 +32,20 @@ from rai.messages.utils import preprocess_image
 from rai.tools.utils import wrap_tool_input  # type: ignore
 
 
-class PublishMessageToolInput(BaseModel):
+class PublishROS2MessageToolInput(BaseModel):
     topic: str = Field(..., description="The topic to publish the message to")
     message: Dict[str, Any] = Field(..., description="The message to publish")
     message_type: str = Field(..., description="The type of the message")
 
 
-class PublishMessageTool(BaseTool):
+class PublishROS2MessageTool(BaseTool):
     connector: ROS2ARIConnector
-    name: str = "publish_message"
+    name: str = "publish_ros2_message"
     description: str = "Publish a message to a ROS2 topic"
-    args_schema: Type[PublishMessageToolInput] = PublishMessageToolInput
+    args_schema: Type[PublishROS2MessageToolInput] = PublishROS2MessageToolInput
 
     @wrap_tool_input
-    def _run(self, tool_input: PublishMessageToolInput) -> str:
+    def _run(self, tool_input: PublishROS2MessageToolInput) -> str:
         ros_message = ROS2ARIMessage(
             payload=tool_input.message,
             metadata={"topic": tool_input.topic, "msg_type": tool_input.message_type},
@@ -54,18 +54,18 @@ class PublishMessageTool(BaseTool):
         return "Message published successfully"
 
 
-class ReceiveMessageToolInput(BaseModel):
+class ReceiveROS2MessageToolInput(BaseModel):
     topic: str = Field(..., description="The topic to receive the message from")
 
 
-class ReceiveMessageTool(BaseTool):
+class ReceiveROS2MessageTool(BaseTool):
     connector: ROS2ARIConnector
-    name: str = "receive_message"
+    name: str = "receive_ros2_message"
     description: str = "Receive a message from a ROS2 topic"
-    args_schema: Type[ReceiveMessageToolInput] = ReceiveMessageToolInput
+    args_schema: Type[ReceiveROS2MessageToolInput] = ReceiveROS2MessageToolInput
 
     @wrap_tool_input
-    def _run(self, tool_input: ReceiveMessageToolInput) -> str:
+    def _run(self, tool_input: ReceiveROS2MessageToolInput) -> str:
         message = self.connector.receive_message(tool_input.topic)
         return str({"payload": message.payload, "metadata": message.metadata})
 
@@ -76,7 +76,7 @@ class GetImageToolInput(BaseModel):
 
 class GetImageTool(BaseTool):
     connector: ROS2ARIConnector
-    name: str = "get_image"
+    name: str = "get_ros2_image"
     description: str = "Get an image from a ROS2 topic"
     args_schema: Type[GetImageToolInput] = GetImageToolInput
     response_format: Literal["content", "content_and_artifact"] = "content_and_artifact"

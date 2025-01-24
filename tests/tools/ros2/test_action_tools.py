@@ -23,7 +23,7 @@ except ImportError:
 
 
 from rai.communication.ros2.connectors import ROS2ARIConnector
-from rai.tools.ros2 import StartActionTool
+from rai.tools.ros2 import StartROS2ActionTool
 from tests.communication.ros2.helpers import ActionServer_ as ActionServer
 from tests.communication.ros2.helpers import (
     multi_threaded_spinner,
@@ -39,7 +39,7 @@ def test_action_call_tool(ros_setup: None, request: pytest.FixtureRequest) -> No
     connector = ROS2ARIConnector()
     server = ActionServer(action_name=action_name)
     executors, threads = multi_threaded_spinner([server])
-    tool = StartActionTool(connector=connector)
+    tool = StartROS2ActionTool(connector=connector)
     try:
         response = tool._run(  # type: ignore
             action_name=action_name,
