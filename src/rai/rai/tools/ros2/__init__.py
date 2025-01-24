@@ -14,7 +14,12 @@
 
 from .actions import CancelROS2ActionTool, StartROS2ActionTool
 from .services import CallROS2ServiceTool
-from .topics import GetROS2ImageTool, PublishROS2MessageTool, ReceiveROS2MessageTool
+from .topics import (
+    GetROS2ImageTool,
+    GetROS2TopicsNamesAndTypesTool,
+    PublishROS2MessageTool,
+    ReceiveROS2MessageTool,
+)
 
 __all__ = [
     "StartROS2ActionTool",
@@ -23,4 +28,5 @@ __all__ = [
     "ReceiveROS2MessageTool",
     "CallROS2ServiceTool",
     "CancelROS2ActionTool",
+    "GetROS2TopicsNamesAndTypesTool",
 ]

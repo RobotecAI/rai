@@ -14,7 +14,7 @@
 
 import threading
 import uuid
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
@@ -42,6 +42,9 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         self._executor.add_node(self._node)
         self._thread = threading.Thread(target=self._executor.spin)
         self._thread.start()
+
+    def get_topics_names_and_types(self) -> List[Tuple[str, List[str]]]:
+        return self._topic_api.get_topic_names_and_types()
 
     def send_message(self, message: ROS2ARIMessage, target: str):
         auto_qos_matching = message.metadata.get("auto_qos_matching", True)

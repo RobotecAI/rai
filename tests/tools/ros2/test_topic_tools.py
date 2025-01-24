@@ -30,6 +30,7 @@ from PIL import Image
 from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.ros2 import (
     GetROS2ImageTool,
+    GetROS2TopicsNamesAndTypesTool,
     PublishROS2MessageTool,
     ReceiveROS2MessageTool,
 )
@@ -107,3 +108,12 @@ def test_receive_image_tool(ros_setup: None, request: pytest.FixtureRequest) -> 
         assert image.size == (100, 100)
     finally:
         shutdown_executors_and_threads(executors, threads)
+
+
+def test_get_topics_names_and_types_tool(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    connector = ROS2ARIConnector()
+    tool = GetROS2TopicsNamesAndTypesTool(connector=connector)
+    response = tool._run()
+    assert response != ""

@@ -23,6 +23,7 @@ from typing import Any, Dict, Literal, Tuple, Type
 
 from cv_bridge import CvBridge
 from langchain_core.tools import BaseTool
+from langchain_core.utils import stringify_dict
 from pydantic import BaseModel, Field
 from sensor_msgs.msg import CompressedImage, Image
 
@@ -98,3 +99,25 @@ class GetROS2ImageTool(BaseTool):
                 f"Unsupported message type: {message.metadata['msg_type']}"
             )
         return "Image received successfully", MultimodalArtifact(images=[preprocess_image(image)])  # type: ignore
+
+
+class GetROS2TopicsNamesAndTypesToolInput(BaseModel):
+    pass
+
+
+class GetROS2TopicsNamesAndTypesTool(BaseTool):
+    connector: ROS2ARIConnector
+    name: str = "get_ros2_topics_names_and_types"
+    description: str = "Get the names and types of all ROS2 topics"
+    args_schema: Type[GetROS2TopicsNamesAndTypesToolInput] = (
+        GetROS2TopicsNamesAndTypesToolInput
+    )
+
+    @wrap_tool_input
+    def _run(self, tool_input: GetROS2TopicsNamesAndTypesToolInput) -> str:
+        topics_and_types = self.connector.get_topics_names_and_types()
+        response = [
+            stringify_dict({"topic": topic, "type": type})
+            for topic, type in topics_and_types
+        ]
+        return "\n".join(response)
