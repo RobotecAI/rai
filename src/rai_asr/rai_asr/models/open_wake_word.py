@@ -42,6 +42,6 @@ class OpenWakeWord(BaseVoiceDetectionModel):
         ret.update({self.model_name: {"predictions": predictions}})
         for key, value in predictions.items():
             if value > self.threshold:
-                # self.model.reset()
+                self.model.reset()
                 return True, ret
         return False, ret
