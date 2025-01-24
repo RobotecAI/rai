@@ -26,7 +26,9 @@ from rai_asr.models.base import BaseTranscriptionModel
 
 
 class OpenAIWhisper(BaseTranscriptionModel):
-    def __init__(self, model_name: str, sample_rate: int, language: str = "en"):
+    def __init__(
+        self, model_name: str, sample_rate: int, language: str = "en", **kwargs
+    ):
         super().__init__(model_name, sample_rate, language)
         api_key = os.getenv("OPENAI_API_KEY")
         if api_key is None:
@@ -36,6 +38,7 @@ class OpenAIWhisper(BaseTranscriptionModel):
         self.model = partial(
             self.openai_client.audio.transcriptions.create,
             model=self.model_name,
+            **kwargs,
         )
         self.logger = logging.getLogger(__name__)
         self.samples = []

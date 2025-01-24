@@ -25,12 +25,14 @@ from rai_asr.models.base import BaseTranscriptionModel
 
 
 class LocalWhisper(BaseTranscriptionModel):
-    def __init__(self, model_name: str, sample_rate: int, language: str = "en"):
+    def __init__(
+        self, model_name: str, sample_rate: int, language: str = "en", **kwargs
+    ):
         super().__init__(model_name, sample_rate, language)
         if torch.cuda.is_available():
-            self.whisper = whisper.load_model(self.model_name, device="cuda")
+            self.whisper = whisper.load_model(self.model_name, device="cuda", **kwargs)
         else:
-            self.whisper = whisper.load_model(self.model_name)
+            self.whisper = whisper.load_model(self.model_name, **kwargs)
 
         self.logger = logging.getLogger(__name__)
 
