@@ -20,7 +20,7 @@ except ImportError:
     )
 
 import json
-from typing import Any, Dict, Literal, OrderedDict, Tuple, Type
+from typing import Any, Dict, Literal, Tuple, Type
 
 import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
@@ -33,6 +33,7 @@ from sensor_msgs.msg import CompressedImage, Image
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from rai.messages.multimodal import MultimodalArtifact
 from rai.messages.utils import preprocess_image
+from rai.tools.ros2.utils import ros2_message_to_dict
 from rai.tools.utils import wrap_tool_input  # type: ignore
 
 
@@ -147,23 +148,15 @@ class GetROS2MessageInterfaceTool(BaseTool):
             tool_input.msg_type
         )
         try:
-            msg_dict: OrderedDict[str, Any] = (
-                rosidl_runtime_py.convert.message_to_ordereddict(msg_cls())  # type: ignore
-            )
+            msg_dict = ros2_message_to_dict(msg_cls())  # type: ignore
             return json.dumps(msg_dict)
         except NotImplementedError:
             # For action classes that can't be instantiated
-            goal_dict: OrderedDict[str, Any] = (
-                rosidl_runtime_py.convert.message_to_ordereddict(msg_cls.Goal())  # type: ignore
-            )
+            goal_dict = ros2_message_to_dict(msg_cls.Goal())  # type: ignore
 
-            result_dict: OrderedDict[str, Any] = (
-                rosidl_runtime_py.convert.message_to_ordereddict(msg_cls.Result())  # type: ignore
-            )
+            result_dict = ros2_message_to_dict(msg_cls.Result())  # type: ignore
 
-            feedback_dict: OrderedDict[str, Any] = (
-                rosidl_runtime_py.convert.message_to_ordereddict(msg_cls.Feedback())  # type: ignore
-            )
+            feedback_dict = ros2_message_to_dict(msg_cls.Feedback())  # type: ignore
             return json.dumps(
                 {"goal": goal_dict, "result": result_dict, "feedback": feedback_dict}
             )
