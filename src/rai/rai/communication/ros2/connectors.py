@@ -80,9 +80,12 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
     def service_call(
         self, message: ROS2ARIMessage, target: str, timeout_sec: float = 1.0
     ) -> ROS2ARIMessage:
+        msg_type = message.metadata.get("msg_type", None)
+        if msg_type is None:
+            raise ValueError("msg_type is required")
         msg = self._service_api.call_service(
             service_name=target,
-            service_type=message.metadata["msg_type"],
+            service_type=msg_type,
             request=message.payload,
             timeout_sec=timeout_sec,
         )

@@ -16,6 +16,7 @@
 import base64
 import logging
 import subprocess
+from functools import wraps
 from typing import Any, Callable, Dict, List, Literal, Sequence, Union, cast
 
 import cv2
@@ -41,6 +42,14 @@ from sensor_msgs.msg import Image
 from tf2_ros import Buffer, TransformListener
 
 from rai.messages import ToolMultimodalMessage
+
+
+def wrap_tool_input(func):  # type: ignore
+    @wraps(func)  # type: ignore
+    def wrapped(self: BaseTool, **kwargs):  # type: ignore
+        return func(self, self.args_schema(**kwargs))  # type: ignore
+
+    return wrapped  # type: ignore
 
 
 # Copied from https://github.com/ros2/rclpy/blob/jazzy/rclpy/rclpy/wait_for_message.py, to support humble
