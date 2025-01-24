@@ -34,7 +34,7 @@ class OpenWakeWord(BaseVoiceDetectionModel):
         )
         self.threshold = threshold
 
-    def detected(
+    def detect(
         self, audio_data: NDArray, input_parameters: dict[str, Any]
     ) -> Tuple[bool, dict[str, Any]]:
         predictions = self.model.predict(audio_data)

@@ -48,7 +48,7 @@ class SileroVAD(BaseVoiceDetectionModel):
         converted_sound = converted_sound.squeeze()
         return converted_sound
 
-    def detected(
+    def detect(
         self, audio_data: NDArray, input_parameters: dict[str, Any]
     ) -> Tuple[bool, dict[str, Any]]:
         vad_confidence = self.model(

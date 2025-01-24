@@ -133,7 +133,7 @@ class VoiceRecognitionAgent(BaseAgent):
                 self.transcription_threads[thread_id]["thread"].join()
                 self.transcription_threads[thread_id]["joined"] = True
 
-        voice_detected, output_parameters = self.vad.detected(indata, {})
+        voice_detected, output_parameters = self.vad(indata, {})
         should_record = False
         # TODO: second condition is temporary
         if voice_detected and not self.recording_started:
@@ -179,7 +179,7 @@ class VoiceRecognitionAgent(BaseAgent):
         self, audio_data: NDArray, input_parameters: dict[str, Any]
     ) -> bool:
         for model in self.should_record_pipeline:
-            detected, output = model.detected(audio_data, input_parameters)
+            detected, output = model(audio_data, input_parameters)
             if detected:
                 return True
         return False
