@@ -30,6 +30,7 @@ from PIL import Image
 from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.ros2 import (
     GetROS2ImageTool,
+    GetROS2MessageInterfaceTool,
     GetROS2TopicsNamesAndTypesTool,
     PublishROS2MessageTool,
     ReceiveROS2MessageTool,
@@ -117,3 +118,16 @@ def test_get_topics_names_and_types_tool(
     tool = GetROS2TopicsNamesAndTypesTool(connector=connector)
     response = tool._run()
     assert response != ""
+
+
+def test_get_message_interface_tool(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    connector = ROS2ARIConnector()
+    tool = GetROS2MessageInterfaceTool(connector=connector)
+    response = tool._run(msg_type="nav2_msgs/action/NavigateToPose")  # type: ignore
+    assert "goal" in response
+    assert "result" in response
+    assert "feedback" in response
+    response = tool._run(msg_type="std_msgs/msg/String")  # type: ignore
+    assert "data" in response

@@ -19,10 +19,13 @@ except ImportError:
         "This is a ROS2 feature. Make sure ROS2 is installed and sourced."
     )
 
-from typing import Any, Dict, Literal, Tuple, Type
+import json
+from typing import Any, Dict, Literal, OrderedDict, Tuple, Type
 
+import rosidl_runtime_py.set_message
+import rosidl_runtime_py.utilities
 from cv_bridge import CvBridge
-from langchain_core.tools import BaseTool
+from langchain.tools import BaseTool
 from langchain_core.utils import stringify_dict
 from pydantic import BaseModel, Field
 from sensor_msgs.msg import CompressedImage, Image
@@ -121,3 +124,46 @@ class GetROS2TopicsNamesAndTypesTool(BaseTool):
             for topic, type in topics_and_types
         ]
         return "\n".join(response)
+
+
+class GetROS2MessageInterfaceToolInput(BaseModel):
+    msg_type: str = Field(
+        ..., description="The type of the message e.g. std_msgs/msg/String"
+    )
+
+
+class GetROS2MessageInterfaceTool(BaseTool):
+    connector: ROS2ARIConnector
+    name: str = "get_ros2_message_interface"
+    description: str = "Get the interface of a ROS2 message"
+    args_schema: Type[GetROS2MessageInterfaceToolInput] = (
+        GetROS2MessageInterfaceToolInput
+    )
+
+    @wrap_tool_input
+    def _run(self, tool_input: GetROS2MessageInterfaceToolInput) -> str:
+        """Show ros2 message interface in json format."""
+        msg_cls: Type[object] = rosidl_runtime_py.utilities.get_interface(
+            tool_input.msg_type
+        )
+        try:
+            msg_dict: OrderedDict[str, Any] = (
+                rosidl_runtime_py.convert.message_to_ordereddict(msg_cls())  # type: ignore
+            )
+            return json.dumps(msg_dict)
+        except NotImplementedError:
+            # For action classes that can't be instantiated
+            goal_dict: OrderedDict[str, Any] = (
+                rosidl_runtime_py.convert.message_to_ordereddict(msg_cls.Goal())  # type: ignore
+            )
+
+            result_dict: OrderedDict[str, Any] = (
+                rosidl_runtime_py.convert.message_to_ordereddict(msg_cls.Result())  # type: ignore
+            )
+
+            feedback_dict: OrderedDict[str, Any] = (
+                rosidl_runtime_py.convert.message_to_ordereddict(msg_cls.Feedback())  # type: ignore
+            )
+            return json.dumps(
+                {"goal": goal_dict, "result": result_dict, "feedback": feedback_dict}
+            )
