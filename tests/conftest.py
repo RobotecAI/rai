@@ -21,9 +21,8 @@ from typing import Dict
 
 import pytest
 from _pytest.terminal import TerminalReporter
-from tabulate import tabulate
-
 from rai.config.models import BEDROCK_CLAUDE_HAIKU, OPENAI_MINI
+from tabulate import tabulate
 
 
 @pytest.fixture

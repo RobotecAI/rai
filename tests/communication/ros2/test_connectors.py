@@ -16,10 +16,9 @@ import time
 from typing import Any, List
 
 import pytest
+from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from std_msgs.msg import String
 from std_srvs.srv import SetBool
-
-from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 
 from .helpers import ActionServer_ as ActionServer
 from .helpers import (

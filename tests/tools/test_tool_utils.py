@@ -18,7 +18,6 @@ from typing import Any, Dict, List, Type
 from langchain_core.messages import AIMessage, ToolCall
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
-
 from rai.agents.tool_runner import ToolRunner
 from rai.tools.utils import wrap_tool_input
 

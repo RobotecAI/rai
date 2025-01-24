@@ -16,7 +16,6 @@ from unittest import mock
 
 import pytest
 import sounddevice as sd
-
 from rai.communication import SoundDeviceError, StreamingAudioInputDevice
 
 
