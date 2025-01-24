@@ -181,4 +181,4 @@ class GetROS2TransformTool(BaseTool):
             source_frame=tool_input.source_frame,
             timeout_sec=tool_input.timeout_sec,
         )
-        return str(transform)
+        return stringify_dict(ros2_message_to_dict(transform))

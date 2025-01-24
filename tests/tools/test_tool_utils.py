@@ -16,7 +16,7 @@ import logging
 from typing import Any, Dict, List, Type
 
 import pytest
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, TransformStamped
 from langchain_core.messages import AIMessage, ToolCall
 from langchain_core.tools import BaseTool
 from nav2_msgs.action import NavigateToPose
@@ -72,6 +72,7 @@ def test_wrap_tool_input():
         Point(),
         Image(),
         TFMessage(),
+        TransformStamped(),
         NavigateToPose.Goal(),
         NavigateToPose.Result(),
         NavigateToPose.Feedback(),
