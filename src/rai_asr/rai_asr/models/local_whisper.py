@@ -18,6 +18,7 @@ from typing import cast
 import numpy as np
 import torch
 import whisper
+from faster_whisper import WhisperModel
 from numpy._typing import NDArray
 
 from rai_asr.models.base import BaseTranscriptionModel
@@ -42,4 +43,20 @@ class LocalWhisper(BaseTranscriptionModel):
         self.logger.info("transcription: %s", transcription)
         transcription = cast(str, transcription)
         self.latest_transcription = transcription
+        return transcription
+
+
+class FasterWhisper(BaseTranscriptionModel):
+    def __init__(
+        self, model_name: str, sample_rate: int, language: str = "en", **kwargs
+    ):
+        super().__init__(model_name, sample_rate, language)
+        self.model = WhisperModel(model_name, **kwargs)
+        self.logger = logging.getLogger(__name__)
+
+    def transcribe(self, data: NDArray[np.int16]) -> str:
+        normalized_data = data.astype(np.float32) / 32768.0
+        segments, _ = self.model.transcribe(normalized_data)
+        transcription = " ".join(segment.text for segment in segments)
+        self.logger.info("transcription: %s", transcription)
         return transcription
