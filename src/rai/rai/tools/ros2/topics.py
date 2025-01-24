@@ -29,6 +29,7 @@ from sensor_msgs.msg import CompressedImage, Image
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from rai.messages.multimodal import MultimodalArtifact
 from rai.messages.utils import preprocess_image
+from rai.tools.utils import wrap_tool_input  # type: ignore
 
 
 class PublishMessageToolInput(BaseModel):
@@ -43,11 +44,13 @@ class PublishMessageTool(BaseTool):
     description: str = "Publish a message to a ROS2 topic"
     args_schema: Type[PublishMessageToolInput] = PublishMessageToolInput
 
-    def _run(self, topic: str, message: Dict[str, Any], message_type: str) -> str:
+    @wrap_tool_input
+    def _run(self, tool_input: PublishMessageToolInput) -> str:
         ros_message = ROS2ARIMessage(
-            payload=message, metadata={"topic": topic, "msg_type": message_type}
+            payload=tool_input.message,
+            metadata={"topic": tool_input.topic, "msg_type": tool_input.message_type},
         )
-        self.connector.send_message(ros_message, target=topic)
+        self.connector.send_message(ros_message, target=tool_input.topic)
         return "Message published successfully"
 
 
@@ -61,8 +64,9 @@ class ReceiveMessageTool(BaseTool):
     description: str = "Receive a message from a ROS2 topic"
     args_schema: Type[ReceiveMessageToolInput] = ReceiveMessageToolInput
 
-    def _run(self, topic: str) -> str:
-        message = self.connector.receive_message(topic)
+    @wrap_tool_input
+    def _run(self, tool_input: ReceiveMessageToolInput) -> str:
+        message = self.connector.receive_message(tool_input.topic)
         return str({"payload": message.payload, "metadata": message.metadata})
 
 
@@ -77,8 +81,9 @@ class GetImageTool(BaseTool):
     args_schema: Type[GetImageToolInput] = GetImageToolInput
     response_format: Literal["content", "content_and_artifact"] = "content_and_artifact"
 
-    def _run(self, topic: str) -> Tuple[str, MultimodalArtifact]:
-        message = self.connector.receive_message(topic)
+    @wrap_tool_input
+    def _run(self, tool_input: GetImageToolInput) -> Tuple[str, MultimodalArtifact]:
+        message = self.connector.receive_message(tool_input.topic)
         msg_type = type(message.payload)
         if msg_type == Image:
             image = CvBridge().imgmsg_to_cv2(  # type: ignore

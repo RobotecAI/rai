@@ -25,6 +25,7 @@ from langchain_core.tools import BaseTool, tool  # type: ignore
 from pydantic import BaseModel, Field
 
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
+from rai.tools.utils import wrap_tool_input  # type: ignore
 
 
 class StartActionToolInput(BaseModel):
@@ -41,11 +42,14 @@ class StartActionTool(BaseTool):
     description: str = "Start a ROS2 action"
     args_schema: Type[StartActionToolInput] = StartActionToolInput
 
-    def _run(self, action_name: str, action_type: str, args: Dict[str, Any]) -> str:
-        message = ROS2ARIMessage(payload=args, metadata={"msg_type": action_type})
+    @wrap_tool_input
+    def _run(self, tool_input: StartActionToolInput) -> str:
+        message = ROS2ARIMessage(
+            payload=tool_input.args, metadata={"msg_type": tool_input.action_type}
+        )
         response = self.connector.start_action(
             message,
-            action_name,
+            tool_input.action_name,
             on_feedback=self.feedback_callback,
             on_done=self.on_done_callback,
         )
@@ -62,9 +66,10 @@ class CancelActionTool(BaseTool):
     description: str = "Cancel a ROS2 action"
     args_schema: Type[CancelActionToolInput] = CancelActionToolInput
 
-    def _run(self, action_id: str) -> str:
-        self.connector.terminate_action(action_id)
-        return f"Action {action_id} cancelled"
+    @wrap_tool_input
+    def _run(self, tool_input: CancelActionToolInput) -> str:
+        self.connector.terminate_action(tool_input.action_id)
+        return f"Action {tool_input.action_id} cancelled"
 
 
 @tool
