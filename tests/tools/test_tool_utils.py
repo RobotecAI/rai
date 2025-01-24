@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from typing import Any, Dict, List, Type
 
+from langchain_core.messages import AIMessage, ToolCall
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
+from rai.agents.tool_runner import ToolRunner
 from rai.tools.utils import wrap_tool_input
 
 
@@ -43,13 +46,14 @@ def test_wrap_tool_input():
             return "done"
 
     tool = TestTool()
-    result = tool.invoke(
-        {
-            "a": 1,
-            "b": "test",
-            "c": {"a": 1, "b": 2},
-            "d": [1, 2, 3],
-            "e": b"test",
-        }
+    logger = logging.getLogger(__name__)
+    runner = ToolRunner(tools=[tool], logger=logger)
+    tool_call = ToolCall(
+        name="test_tool",
+        args={"a": 1, "b": "test", "c": {"a": 1, "b": 2}, "d": [1, 2, 3], "e": b"test"},
+        id="123",
     )
-    assert result == "done"
+
+    _ = runner.invoke(
+        {"messages": [AIMessage(content="Hello, how are you?", tool_calls=[tool_call])]}
+    )
