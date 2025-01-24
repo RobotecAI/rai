@@ -14,11 +14,11 @@
 
 from .actions import CancelROS2ActionTool, StartROS2ActionTool
 from .services import CallROS2ServiceTool
-from .topics import GetImageTool, PublishROS2MessageTool, ReceiveROS2MessageTool
+from .topics import GetROS2ImageTool, PublishROS2MessageTool, ReceiveROS2MessageTool
 
 __all__ = [
     "StartROS2ActionTool",
-    "GetImageTool",
+    "GetROS2ImageTool",
     "PublishROS2MessageTool",
     "ReceiveROS2MessageTool",
     "CallROS2ServiceTool",

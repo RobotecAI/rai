@@ -70,19 +70,19 @@ class ReceiveROS2MessageTool(BaseTool):
         return str({"payload": message.payload, "metadata": message.metadata})
 
 
-class GetImageToolInput(BaseModel):
+class GetROS2ImageToolInput(BaseModel):
     topic: str = Field(..., description="The topic to receive the image from")
 
 
-class GetImageTool(BaseTool):
+class GetROS2ImageTool(BaseTool):
     connector: ROS2ARIConnector
     name: str = "get_ros2_image"
     description: str = "Get an image from a ROS2 topic"
-    args_schema: Type[GetImageToolInput] = GetImageToolInput
+    args_schema: Type[GetROS2ImageToolInput] = GetROS2ImageToolInput
     response_format: Literal["content", "content_and_artifact"] = "content_and_artifact"
 
     @wrap_tool_input
-    def _run(self, tool_input: GetImageToolInput) -> Tuple[str, MultimodalArtifact]:
+    def _run(self, tool_input: GetROS2ImageToolInput) -> Tuple[str, MultimodalArtifact]:
         message = self.connector.receive_message(tool_input.topic)
         msg_type = type(message.payload)
         if msg_type == Image:

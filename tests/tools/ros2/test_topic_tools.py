@@ -28,7 +28,11 @@ import time
 from PIL import Image
 
 from rai.communication.ros2.connectors import ROS2ARIConnector
-from rai.tools.ros2 import GetImageTool, PublishROS2MessageTool, ReceiveROS2MessageTool
+from rai.tools.ros2 import (
+    GetROS2ImageTool,
+    PublishROS2MessageTool,
+    ReceiveROS2MessageTool,
+)
 from tests.communication.ros2.helpers import (
     ImagePublisher,
     MessagePublisher,
@@ -92,7 +96,7 @@ def test_receive_image_tool(ros_setup: None, request: pytest.FixtureRequest) -> 
     connector = ROS2ARIConnector()
     publisher = ImagePublisher(topic=topic_name)
     executors, threads = multi_threaded_spinner([publisher])
-    tool = GetImageTool(connector=connector)
+    tool = GetROS2ImageTool(connector=connector)
     time.sleep(1)
     try:
         _, artifact_dict = tool._run(topic=topic_name)  # type: ignore
