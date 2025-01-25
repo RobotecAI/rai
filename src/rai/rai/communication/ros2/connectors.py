@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import threading
+import time
 import uuid
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -127,6 +128,20 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
             raise RuntimeError("Action goal was not accepted")
         return handle
 
+    @staticmethod
+    def wait_for_transform(
+        tf_buffer: Buffer,
+        target_frame: str,
+        source_frame: str,
+        timeout_sec: float = 1.0,
+    ) -> bool:
+        start_time = time.time()
+        while time.time() - start_time < timeout_sec:
+            if tf_buffer.can_transform(target_frame, source_frame, rclpy.time.Time()):
+                return True
+            time.sleep(0.1)
+        return False
+
     def get_transform(
         self,
         target_frame: str,
@@ -135,21 +150,20 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
     ) -> TransformStamped:
         tf_buffer = Buffer(node=self._node)
         tf_listener = TransformListener(tf_buffer, self._node)
-
-        transform: Optional[TransformStamped] = tf_buffer.lookup_transform(
+        transform_available = self.wait_for_transform(
+            tf_buffer, target_frame, source_frame, timeout_sec
+        )
+        if not transform_available:
+            raise LookupException(
+                f"Could not find transform from {source_frame} to {target_frame} in {timeout_sec} seconds"
+            )
+        transform: TransformStamped = tf_buffer.lookup_transform(
             target_frame,
             source_frame,
             rclpy.time.Time(),
             timeout=Duration(seconds=timeout_sec),
         )
-
         tf_listener.unregister()
-
-        if transform is None:
-            raise LookupException(
-                f"Could not find transform from {source_frame} to {target_frame} in {timeout_sec} seconds"
-            )
-
         return transform
 
     def terminate_action(self, action_handle: str):
