@@ -104,11 +104,49 @@ class SoundDeviceAPI:
         if not self.write_flag:
             raise SoundDeviceError(f"{self.device_name} does not support writing!")
 
-    def open_write_stream(self, **kwargs):
+    def open_write_stream(
+        self,
+        feed_data: Callable[[np.ndarray, int, Any, Any], None],
+        on_done: Callable = lambda _: None,
+    ):
         if not self.write_flag or not self.stream_flag:
             raise SoundDeviceError(
                 f"{self.device_name} does not support streaming writing!"
             )
+
+        assert isinstance(self.config, OutputSoundDeviceConfig)
+
+        # def callback(indata: np.ndarray, frames: int, _, status: CallbackFlags):
+        #     _ = frames
+        #     flag_dict = {
+        #         "input_overflow": status.input_overflow,
+        #         "input_underflow": status.input_underflow,
+        #         "output_overflow": status.output_overflow,
+        #         "output_underflow": status.output_underflow,
+        #         "priming_output": status.priming_output,
+        #     }
+        #     feed_data(indata, frames, flag_dict)
+
+        try:
+            assert sd is not None
+            print(self.sample_rate)
+            print(self.config.channels)
+            print(self.config.dtype)
+            print(self.device_number)
+            self.out_stream = sd.OutputStream(
+                samplerate=self.sample_rate,
+                channels=self.config.channels,
+                device=self.device_number,
+                dtype=self.config.dtype,
+                callback=feed_data,
+                finished_callback=on_done,
+                # TODO: add callbacks
+            )
+        except AttributeError:
+            raise SoundDeviceError(
+                f"Device {self.device_name} has not been correctly configured"
+            )
+        self.out_stream.start()
 
     def read(self, **kwargs):
         if not self.read_flag:

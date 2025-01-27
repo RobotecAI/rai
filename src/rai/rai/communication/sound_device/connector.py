@@ -93,17 +93,16 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
         on_done: Callable,
         timeout_sec: float = 1.0,
     ) -> str:
+        handle = self._generate_handle()
         if action_data is None:
             raise ValueError("action_data must be provided")
         elif action_data.read:
             self.devices[target].open_read_stream(on_feedback, on_done)
+            self.action_handles[handle] = (target, True)
         else:
-            raise ValueError(
-                "SoundDeviceConnector does not support writing"
-            )  # TODO: Implement writing
+            self.devices[target].open_write_stream(on_feedback, on_done)
+            self.action_handles[handle] = (target, False)
 
-        handle = self._generate_handle()
-        self.action_handles[handle] = (target, True)
         return handle
 
     def terminate_action(self, action_handle: str):
