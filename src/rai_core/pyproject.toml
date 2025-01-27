@@ -1,0 +1,11 @@
+[tool.poetry]
+name = "rai"
+version = "1.1.0"
+description = "RAI is a framework for building general multi-agent systems, bringing Gen AI features to ROS enabled robots."
+readme = "README.md"
+authors = ["Maciej Majek <maciej.majek@robotec.ai>", "Bartłomiej Boczek <bartlomiej.boczek@robotec.ai>"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+]

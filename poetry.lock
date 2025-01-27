@@ -5745,6 +5745,19 @@ files = [
 cffi = {version = "*", markers = "implementation_name == \"pypy\""}
 
 [[package]]
+name = "rai"
+version = "1.1.0"
+description = "RAI is a framework for building general multi-agent systems, bringing Gen AI features to ROS enabled robots."
+optional = false
+python-versions = "*"
+files = []
+develop = true
+
+[package.source]
+type = "directory"
+url = "src/rai_core"
+
+[[package]]
 name = "ray"
 version = "2.40.0"
 description = "Ray provides a simple, universal API for building distributed applications."
@@ -8232,4 +8245,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10, <3.13"
-content-hash = "da1a7720082bf43b4efc7cd972b63f39882fc7e0d69340bbc436f18e889e55b2"
+content-hash = "9a0384ef9b25aa35af0b86c38e86a54bf0bd5171bed4eff22ec26c8bb59e857b"
