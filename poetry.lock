@@ -5758,6 +5758,19 @@ type = "directory"
 url = "src/rai_core"
 
 [[package]]
+name = "rai-asr"
+version = "1.1.0"
+description = "An Automatic Speech Recognition package, leveraging transcription, voice activity detections and wake words models."
+optional = false
+python-versions = "*"
+files = []
+develop = true
+
+[package.source]
+type = "directory"
+url = "src/rai_asr"
+
+[[package]]
 name = "ray"
 version = "2.40.0"
 description = "Ray provides a simple, universal API for building distributed applications."
@@ -8245,4 +8258,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10, <3.13"
-content-hash = "9a0384ef9b25aa35af0b86c38e86a54bf0bd5171bed4eff22ec26c8bb59e857b"
+content-hash = "aac005be9fae9ef44a7eb778d4b8e5cb2a2453b03db3f4170818ba5c586a296e"
