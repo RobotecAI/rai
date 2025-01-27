@@ -23,6 +23,7 @@
   <exec_depend>nav2_simple_commander</exec_depend>
   <exec_depend>tf_transformations</exec_depend>
   <exec_depend>rosidl_default_runtime</exec_depend>
+  <exec_depend>portaudio19-dev</exec_depend>
   <member_of_group>rosidl_interface_packages</member_of_group>
   <export>
     <build_type>ament_cmake</build_type>

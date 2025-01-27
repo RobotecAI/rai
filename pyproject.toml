@@ -13,6 +13,7 @@ package-mode = false
 [tool.poetry.dependencies]
 python = "^3.10, <3.13"
 rai = { path = "src/rai_core", develop = true}
+rai-asr = { path = "src/rai_asr", develop = true}
 langchain-core = "^0.3"
 langchain = "*"
 langgraph = "*"
