@@ -65,7 +65,7 @@ def test_wrap_tool_input():
     )
 
 
-# TODO: Add custom RAI messages?
+# TODO(`maciejmajek`): Add custom RAI messages?
 @pytest.mark.parametrize(
     "message",
     [
