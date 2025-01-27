@@ -50,6 +50,7 @@ class HRIMessage(BaseMessage):
         self,
         payload: HRIPayload,
         message_author: Literal["ai", "human"],
+        **kwargs,
     ):
         self.message_author = message_author
         self.text = payload.text
