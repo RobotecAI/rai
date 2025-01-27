@@ -17,6 +17,7 @@ import threading
 import rclpy
 import rclpy.qos
 from langchain_core.messages import HumanMessage
+
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.node import RaiBaseNode
 from rai.tools.ros.manipulation import GetObjectPositionsTool, MoveToPointTool

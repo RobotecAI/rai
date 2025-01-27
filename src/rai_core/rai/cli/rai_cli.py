@@ -22,6 +22,7 @@ from pathlib import Path
 import coloredlogs
 from langchain_community.vectorstores import FAISS
 from langchain_core.messages import HumanMessage, SystemMessage
+
 from rai.apps.talk_to_docs import ingest_documentation
 from rai.messages import preprocess_image
 from rai.messages.multimodal import HumanMultimodalMessage

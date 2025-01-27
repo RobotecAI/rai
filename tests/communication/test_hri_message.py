@@ -16,6 +16,7 @@
 import pytest
 from langchain_core.messages import BaseMessage as LangchainBaseMessage
 from langchain_core.messages import HumanMessage
+
 from rai.communication import HRIMessage, HRIPayload
 from rai.messages.multimodal import MultimodalMessage as RAIMultimodalMessage
 

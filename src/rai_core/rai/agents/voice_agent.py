@@ -21,6 +21,7 @@ from uuid import uuid4
 
 import numpy as np
 from numpy.typing import NDArray
+
 from rai.agents.base import BaseAgent
 from rai.communication import (
     AudioInputDeviceConfig,
@@ -28,7 +29,6 @@ from rai.communication import (
     ROS2ARIMessage,
     StreamingAudioInputDevice,
 )
-
 from rai_asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
 
 

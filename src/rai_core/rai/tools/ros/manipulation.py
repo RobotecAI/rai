@@ -24,12 +24,12 @@ import rclpy.task
 from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
-from rai.tools.utils import TF2TransformFetcher
 from rai_open_set_vision.tools import GetGrabbingPointTool
 from rclpy.client import Client
 from rclpy.node import Node
 from tf2_geometry_msgs import do_transform_pose
 
+from rai.tools.utils import TF2TransformFetcher
 from rai_interfaces.srv import ManipulatorMoveTo
 
 

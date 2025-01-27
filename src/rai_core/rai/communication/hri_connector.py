@@ -27,6 +27,7 @@ from langchain_core.messages import AIMessage
 from langchain_core.messages import BaseMessage as LangchainBaseMessage
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
+
 from rai.messages import AiMultimodalMessage, HumanMultimodalMessage
 from rai.messages.multimodal import MultimodalMessage as RAIMultimodalMessage
 

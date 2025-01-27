@@ -24,9 +24,9 @@ import rclpy.qos
 import rclpy.subscription
 from langchain_core.language_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
-from rai.utils.ros_async import get_future_result
 
 import rai_interfaces.srv
+from rai.utils.ros_async import get_future_result
 
 
 class BaseLogsParser:

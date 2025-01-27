@@ -24,11 +24,12 @@ from typing import Any, Dict, Literal, Tuple, Type
 from cv_bridge import CvBridge
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
+from sensor_msgs.msg import CompressedImage, Image
+
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from rai.messages.multimodal import MultimodalArtifact
 from rai.messages.utils import preprocess_image
 from rai.tools.utils import wrap_tool_input  # type: ignore
-from sensor_msgs.msg import CompressedImage, Image
 
 
 class PublishROS2MessageToolInput(BaseModel):

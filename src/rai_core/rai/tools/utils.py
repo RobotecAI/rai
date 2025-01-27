@@ -26,7 +26,6 @@ from cv_bridge import CvBridge
 from deprecated import deprecated
 from langchain.tools import BaseTool
 from langchain_core.messages import AIMessage, BaseMessage, ToolCall, ToolMessage
-from rai.messages import ToolMultimodalMessage
 from rclpy.duration import Duration
 from rclpy.impl.implementation_singleton import rclpy_implementation as _rclpy
 from rclpy.node import Node
@@ -41,6 +40,8 @@ from rclpy.signals import SignalHandlerGuardCondition
 from rclpy.utilities import timeout_sec_to_nsec
 from sensor_msgs.msg import Image
 from tf2_ros import Buffer, TransformListener
+
+from rai.messages import ToolMultimodalMessage
 
 
 def wrap_tool_input(func):  # type: ignore

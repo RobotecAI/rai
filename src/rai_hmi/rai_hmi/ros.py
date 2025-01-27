@@ -19,9 +19,9 @@ from queue import Queue
 from typing import Optional, Tuple
 
 import rclpy
-from rai.node import RaiBaseNode
 from rclpy.executors import MultiThreadedExecutor
 
+from rai.node import RaiBaseNode
 from rai_hmi.base import BaseHMINode
 
 

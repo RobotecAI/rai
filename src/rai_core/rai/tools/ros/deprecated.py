@@ -21,7 +21,6 @@ import cv2
 import rclpy
 import rclpy.qos
 from cv_bridge import CvBridge
-from rai.tools.ros.utils import wait_for_message
 from rclpy.duration import Duration
 from rclpy.qos import (
     QoSDurabilityPolicy,
@@ -31,6 +30,8 @@ from rclpy.qos import (
     QoSReliabilityPolicy,
 )
 from sensor_msgs.msg import Image
+
+from rai.tools.ros.utils import wait_for_message
 
 
 class SingleMessageGrabber:

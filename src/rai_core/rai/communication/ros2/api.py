@@ -41,7 +41,6 @@ import rclpy.task
 import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
 from action_msgs.srv import CancelGoal
-from rai.tools.ros.utils import import_message_from_str, wait_for_message
 from rclpy.action import ActionClient
 from rclpy.action.client import ClientGoalHandle
 from rclpy.publisher import Publisher
@@ -54,6 +53,8 @@ from rclpy.qos import (
 )
 from rclpy.task import Future
 from rclpy.topic_endpoint_info import TopicEndpointInfo
+
+from rai.tools.ros.utils import import_message_from_str, wait_for_message
 
 
 def adapt_requests_to_offers(publisher_info: List[TopicEndpointInfo]) -> QoSProfile:

@@ -16,10 +16,11 @@ import threading
 import uuid
 from typing import Any, Callable, Dict, Optional
 
-from rai.communication.ari_connector import ARIConnector, ARIMessage
-from rai.communication.ros2.api import ROS2ActionAPI, ROS2ServiceAPI, ROS2TopicAPI
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
+
+from rai.communication.ari_connector import ARIConnector, ARIMessage
+from rai.communication.ros2.api import ROS2ActionAPI, ROS2ServiceAPI, ROS2TopicAPI
 
 
 class ROS2ARIMessage(ARIMessage):

@@ -26,9 +26,10 @@ from langchain_core.tools import tool as create_tool
 from langgraph.prebuilt.tool_node import msg_content_output
 from langgraph.utils.runnable import RunnableCallable
 from pydantic import ValidationError
+from rclpy.impl.rcutils_logger import RcutilsLogger
+
 from rai.messages import MultimodalArtifact, ToolMultimodalMessage
 from rai.utils.artifacts import store_artifacts
-from rclpy.impl.rcutils_logger import RcutilsLogger
 
 
 class ToolRunner(RunnableCallable):

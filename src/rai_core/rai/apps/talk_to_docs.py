@@ -28,6 +28,7 @@ from langchain_core.tools import BaseTool
 from langchain_core.vectorstores import VectorStore
 from langgraph.graph import StateGraph
 from pydantic import BaseModel, Field
+
 from rai.apps.document_loader import ingest_documentation
 from rai.utils.model_initialization import get_embeddings_model
 

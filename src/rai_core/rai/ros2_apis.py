@@ -26,9 +26,6 @@ import rclpy.task
 import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
 from action_msgs.msg import GoalStatus
-from rai.tools.ros.utils import import_message_from_str
-from rai.utils.ros import NodeDiscovery
-from rai.utils.ros_async import get_future_result
 from rclpy.action.client import ActionClient
 from rclpy.qos import (
     DurabilityPolicy,
@@ -38,6 +35,10 @@ from rclpy.qos import (
     ReliabilityPolicy,
 )
 from rclpy.topic_endpoint_info import TopicEndpointInfo
+
+from rai.tools.ros.utils import import_message_from_str
+from rai.utils.ros import NodeDiscovery
+from rai.utils.ros_async import get_future_result
 
 
 def ros2_build_msg(msg_type: str, msg_args: Dict[str, Any]) -> Tuple[object, Type]:

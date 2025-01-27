@@ -22,8 +22,9 @@ from langchain_core.messages import BaseMessage, SystemMessage
 from langchain_core.tools import BaseTool
 from langgraph.graph import START, StateGraph
 from langgraph.prebuilt.tool_node import tools_condition
-from rai.agents.tool_runner import ToolRunner
 from rclpy.impl.rcutils_logger import RcutilsLogger
+
+from rai.agents.tool_runner import ToolRunner
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
 

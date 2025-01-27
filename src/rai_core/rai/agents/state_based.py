@@ -27,9 +27,10 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.graph import CompiledGraph
 from langgraph.prebuilt.tool_node import msg_content_output
 from pydantic import BaseModel, Field, ValidationError
+from rclpy.impl.rcutils_logger import RcutilsLogger
+
 from rai.agents.tool_runner import ToolRunner
 from rai.messages import HumanMultimodalMessage
-from rclpy.impl.rcutils_logger import RcutilsLogger
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
 

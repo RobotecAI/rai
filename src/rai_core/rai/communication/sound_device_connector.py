@@ -16,9 +16,10 @@ from typing import Any, Callable, Optional, TypedDict
 
 import numpy as np
 import sounddevice as sd
-from rai.communication import HRIConnector, HRIMessage
 from scipy.signal import resample
 from sounddevice import CallbackFlags
+
+from rai.communication import HRIConnector, HRIMessage
 
 
 class SoundDeviceError(Exception):
