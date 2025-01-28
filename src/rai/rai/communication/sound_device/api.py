@@ -100,9 +100,17 @@ class SoundDeviceAPI:
         self.in_stream = None
         self.out_stream = None
 
-    def write(self, **kwargs):
+    def write(self, data: np.ndarray, loop: bool = False):
         if not self.write_flag:
             raise SoundDeviceError(f"{self.device_name} does not support writing!")
+        assert sd is not None
+        sd.play(
+            data,
+            samplerate=self.sample_rate,
+            blocking=False,
+            loop=loop,
+            device=self.device_number,
+        )
 
     def open_write_stream(
         self,
@@ -115,32 +123,30 @@ class SoundDeviceAPI:
             )
 
         assert isinstance(self.config, OutputSoundDeviceConfig)
+        assert sd is not None
+        from sounddevice import CallbackFlags
 
-        # def callback(indata: np.ndarray, frames: int, _, status: CallbackFlags):
-        #     _ = frames
-        #     flag_dict = {
-        #         "input_overflow": status.input_overflow,
-        #         "input_underflow": status.input_underflow,
-        #         "output_overflow": status.output_overflow,
-        #         "output_underflow": status.output_underflow,
-        #         "priming_output": status.priming_output,
-        #     }
-        #     feed_data(indata, frames, flag_dict)
+        def callback(indata: np.ndarray, frames: int, time: Any, status: CallbackFlags):
+            _ = frames
+            print(str(time))
+            flag_dict = {
+                "input_overflow": status.input_overflow,
+                "input_underflow": status.input_underflow,
+                "output_overflow": status.output_overflow,
+                "output_underflow": status.output_underflow,
+                "priming_output": status.priming_output,
+            }
+            feed_data(indata, frames, time, flag_dict)
 
         try:
             assert sd is not None
-            print(self.sample_rate)
-            print(self.config.channels)
-            print(self.config.dtype)
-            print(self.device_number)
             self.out_stream = sd.OutputStream(
                 samplerate=self.sample_rate,
                 channels=self.config.channels,
                 device=self.device_number,
                 dtype=self.config.dtype,
-                callback=feed_data,
+                callback=callback,
                 finished_callback=on_done,
-                # TODO: add callbacks
             )
         except AttributeError:
             raise SoundDeviceError(
