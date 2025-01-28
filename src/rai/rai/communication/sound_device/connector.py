@@ -34,17 +34,23 @@ from .api import (
 
 class SoundDeviceMessage(HRIMessage):
     read: bool = False
+    stop: bool = False
+    duration: Optional[float] = None
 
     def __init__(
         self,
         payload: Optional[HRIPayload] = None,
         message_author: Literal["ai", "human"] = "human",
         read: bool = False,
+        stop: bool = False,
+        duration: Optional[float] = None,
     ):
         if payload is None:
             payload = HRIPayload(text="")
         super().__init__(payload, message_author)
         self.read = read
+        self.stop = stop
+        self.duration = duration
 
 
 class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
@@ -78,19 +84,38 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
         self.devices[target] = SoundDeviceAPI(config)
 
     def send_message(self, message: SoundDeviceMessage, target: str):
-        raise SoundDeviceError("SoundDeviceConnector does not support sending messages")
+        if message.stop:
+            self.devices[target].stop()
+        elif message.read:
+            raise SoundDeviceError(
+                "For recording use start_action or service_call with read=True."
+            )
+        else:
+            self.devices[target].play(message.payload.audios[0])
 
     def receive_message(
         self, source: str, timeout_sec: float = 1.0
     ) -> SoundDeviceMessage:
         raise SoundDeviceError(
-            "SoundDeviceConnector does not support receiving messages"
+            "SoundDeviceConnector does not support receiving messages. For recording use start_action or service_call with read=True."
         )
 
     def service_call(
         self, message: SoundDeviceMessage, target: str, timeout_sec: float = 1.0
     ) -> SoundDeviceMessage:
-        raise SoundDeviceError("SoundDeviceConnector does not support service calls")
+        if message.stop:
+            raise SoundDeviceError("For stopping use send_message with stop=True.")
+        elif message.read:
+            recording = self.devices[target].record(message.duration, blocking=True)
+            payload = HRIPayload(
+                text="",
+                audios=[recording],
+            )
+            ret = SoundDeviceMessage(payload)
+        else:
+            self.devices[target].play(message.payload.audio, blocking=True)
+            ret = SoundDeviceMessage()
+        return ret
 
     def start_action(
         self,
