@@ -28,11 +28,19 @@ import time
 from PIL import Image
 
 from rai.communication.ros2.connectors import ROS2ARIConnector
-from rai.tools.ros2 import GetImageTool, PublishROS2MessageTool, ReceiveROS2MessageTool
+from rai.tools.ros2 import (
+    GetROS2ImageTool,
+    GetROS2MessageInterfaceTool,
+    GetROS2TopicsNamesAndTypesTool,
+    GetROS2TransformTool,
+    PublishROS2MessageTool,
+    ReceiveROS2MessageTool,
+)
 from tests.communication.ros2.helpers import (
     ImagePublisher,
     MessagePublisher,
     MessageReceiver,
+    TransformPublisher,
     multi_threaded_spinner,
     ros_setup,
     shutdown_executors_and_threads,
@@ -92,7 +100,7 @@ def test_receive_image_tool(ros_setup: None, request: pytest.FixtureRequest) -> 
     connector = ROS2ARIConnector()
     publisher = ImagePublisher(topic=topic_name)
     executors, threads = multi_threaded_spinner([publisher])
-    tool = GetImageTool(connector=connector)
+    tool = GetROS2ImageTool(connector=connector)
     time.sleep(1)
     try:
         _, artifact_dict = tool._run(topic=topic_name)  # type: ignore
@@ -101,5 +109,46 @@ def test_receive_image_tool(ros_setup: None, request: pytest.FixtureRequest) -> 
         image = images[0]
         image = Image.open(io.BytesIO(base64.b64decode(image)))
         assert image.size == (100, 100)
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_get_topics_names_and_types_tool(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    connector = ROS2ARIConnector()
+    tool = GetROS2TopicsNamesAndTypesTool(connector=connector)
+    response = tool._run()
+    assert response != ""
+
+
+def test_get_message_interface_tool(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    connector = ROS2ARIConnector()
+    tool = GetROS2MessageInterfaceTool(connector=connector)
+    response = tool._run(msg_type="nav2_msgs/action/NavigateToPose")  # type: ignore
+    assert "goal" in response
+    assert "result" in response
+    assert "feedback" in response
+    response = tool._run(msg_type="std_msgs/msg/String")  # type: ignore
+    assert "data" in response
+
+
+def test_get_transform_tool(ros_setup: None, request: pytest.FixtureRequest) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    connector = ROS2ARIConnector()
+    publisher = TransformPublisher(topic=topic_name)
+    executors, threads = multi_threaded_spinner([publisher])
+    tool = GetROS2TransformTool(connector=connector)
+    time.sleep(1.0)
+    try:
+        response = tool._run(
+            target_frame=publisher.frame_id,
+            source_frame=publisher.child_frame_id,
+            timeout_sec=1.0,
+        )  # type: ignore
+        assert "translation" in response
+        assert "rotation" in response
     finally:
         shutdown_executors_and_threads(executors, threads)

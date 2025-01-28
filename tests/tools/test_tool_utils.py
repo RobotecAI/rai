@@ -15,11 +15,17 @@
 import logging
 from typing import Any, Dict, List, Type
 
+import pytest
+from geometry_msgs.msg import Point, TransformStamped
 from langchain_core.messages import AIMessage, ToolCall
 from langchain_core.tools import BaseTool
+from nav2_msgs.action import NavigateToPose
 from pydantic import BaseModel, Field
+from sensor_msgs.msg import Image
+from tf2_msgs.msg import TFMessage
 
 from rai.agents.tool_runner import ToolRunner
+from rai.tools.ros2.utils import ros2_message_to_dict
 from rai.tools.utils import wrap_tool_input
 
 
@@ -57,3 +63,21 @@ def test_wrap_tool_input():
     _ = runner.invoke(
         {"messages": [AIMessage(content="Hello, how are you?", tool_calls=[tool_call])]}
     )
+
+
+# TODO(`maciejmajek`): Add custom RAI messages?
+@pytest.mark.parametrize(
+    "message",
+    [
+        Point(),
+        Image(),
+        TFMessage(),
+        TransformStamped(),
+        NavigateToPose.Goal(),
+        NavigateToPose.Result(),
+        NavigateToPose.Feedback(),
+    ],
+    ids=lambda x: x.__class__.__name__,
+)
+def test_ros2_message_to_dict(message):
+    assert ros2_message_to_dict(message)
