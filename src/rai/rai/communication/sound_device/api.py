@@ -100,17 +100,103 @@ class SoundDeviceAPI:
         self.in_stream = None
         self.out_stream = None
 
-    def write(self, data: np.ndarray, loop: bool = False):
+    def write(self, data: np.ndarray, blocking: bool = False, loop: bool = False):
+        """
+        Write data to the sound device.
+
+        Parameters
+        ----------
+        data : np.ndarray
+            Data to be written.
+        blocking : bool, optional
+            If True, the function will block until the sound is played. Defaults to False.
+        loop : bool, optional
+            If True, the data will loop continuously. Defaults to False.
+
+        Notes
+        -----
+        - If `blocking` is True, the function will block until the sound is played.
+        - If both `blocking` and `loop` are True, the function will block indefinitely.
+        - Calling this function will stop any sound that is currently playing and any
+          recording currently happening.
+        - Call `stop()` or `read()` to stop the sound.
+        """
         if not self.write_flag:
             raise SoundDeviceError(f"{self.device_name} does not support writing!")
         assert sd is not None
         sd.play(
             data,
             samplerate=self.sample_rate,
-            blocking=False,
+            blocking=blocking,
             loop=loop,
             device=self.device_number,
         )
+
+    def read(self, time: float, blocking: bool = False) -> np.ndarray:
+        """
+        Read data from the sound device.
+
+        Parameters
+        ----------
+        time : float
+            Time in seconds to read.
+        blocking : bool, optional
+            If True, the function will block until the sound is read. If False,
+            the function will return immediately with an unpopulated ndarray.
+            Defaults to False.
+
+        Returns
+        -------
+        np.ndarray
+            Data read from the sound device.
+
+        Notes
+        -----
+        - If `blocking` is True, the function will block until the sound is read.
+        - If `blocking` is False, the function will return immediately with an
+          unpopulated ndarray. The array will be populated with the sound data
+          after the read is complete.
+        - Calling this function will stop any sound that is currently playing
+          and any recording currently happening.
+        - Call `stop()` or `write()` to stop the recording.
+        """
+
+        if not self.read_flag:
+            raise SoundDeviceError(f"{self.device_name} does not support reading!")
+        assert sd is not None
+        frames = int(time * self.sample_rate)
+        return sd.rec(
+            frames=frames,
+            samplerate=self.sample_rate,
+            channels=self.config.channels,
+            device=self.device_number,
+            blocking=blocking,
+            dtype=self.config.dtype,
+        )
+
+    def stop(self):
+        """
+        Stop the sound device from playing or recording.
+
+        Notes
+        -----
+        - This is a convenience function to stop the sound device from playing or recording.
+        - It will stop any sound that is currently playing and any recording currently happening.
+        """
+        assert sd is not None
+        sd.stop()
+
+    def wait(self):
+        """
+        Wait for the sound device to finish playing or recording.
+
+        Notes
+        -----
+        - This is a convenience function to wait for the sound device to finish playing or recording.
+        - It will block until the sound is played or recorded.
+        """
+        assert sd is not None
+        sd.wait()
 
     def open_write_stream(
         self,
@@ -153,10 +239,6 @@ class SoundDeviceAPI:
                 f"Device {self.device_name} has not been correctly configured"
             )
         self.out_stream.start()
-
-    def read(self, **kwargs):
-        if not self.read_flag:
-            raise SoundDeviceError(f"{self.device_name} does not support reading!")
 
     def open_read_stream(
         self,
