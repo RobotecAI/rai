@@ -29,11 +29,11 @@ repos:
       - id: autoflake
         args: ["--remove-all-unused-imports", "--in-place"]
 
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        args: ["--profile", "black", "--filter-files"]
+  # - repo: https://github.com/pycqa/isort
+  #   rev: 5.13.2
+  #   hooks:
+  #     - id: isort
+  #       args: ["--profile", "black", "--filter-files"]
 
   - repo: https://github.com/psf/black
     rev: 24.4.2

@@ -5,10 +5,11 @@ on:
     types: [opened, synchronize, reopened, edited, ready_for_review]
     branches:
       - development
+      - rc/rai-2.0.0
 
 jobs:
   build-and-test-ros2:
-    if: github.event.pull_request.draft == false
+    # if: github.event.pull_request.draft == false
 
     runs-on:
       - self-hosted

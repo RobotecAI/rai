@@ -1,0 +1,11 @@
+[tool.poetry]
+name = "rai_asr"
+version = "1.1.0"
+description = "An Automatic Speech Recognition package, leveraging transcription, voice activity detections and wake words models."
+readme = "README.md"
+authors = ["Maciej Majek <maciej.majek@robotec.ai>", "Bartłomiej Boczek <bartlomiej.boczek@robotec.ai>"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+]

@@ -5745,6 +5745,32 @@ files = [
 cffi = {version = "*", markers = "implementation_name == \"pypy\""}
 
 [[package]]
+name = "rai"
+version = "1.1.0"
+description = "RAI is a framework for building general multi-agent systems, bringing Gen AI features to ROS enabled robots."
+optional = false
+python-versions = "*"
+files = []
+develop = true
+
+[package.source]
+type = "directory"
+url = "src/rai_core"
+
+[[package]]
+name = "rai-asr"
+version = "1.1.0"
+description = "An Automatic Speech Recognition package, leveraging transcription, voice activity detections and wake words models."
+optional = false
+python-versions = "*"
+files = []
+develop = true
+
+[package.source]
+type = "directory"
+url = "src/rai_asr"
+
+[[package]]
 name = "ray"
 version = "2.40.0"
 description = "Ray provides a simple, universal API for building distributed applications."
@@ -8232,4 +8258,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10, <3.13"
-content-hash = "da1a7720082bf43b4efc7cd972b63f39882fc7e0d69340bbc436f18e889e55b2"
+content-hash = "aac005be9fae9ef44a7eb778d4b8e5cb2a2453b03db3f4170818ba5c586a296e"
