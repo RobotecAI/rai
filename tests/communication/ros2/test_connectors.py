@@ -163,32 +163,3 @@ def test_ros2ari_connector_send_goal_erronous_callback(
     finally:
         connector.shutdown()
         shutdown_executors_and_threads(executors, threads)
-
-
-@pytest.mark.skip(
-    reason="""
-                  This test does not allow pytest to exit.
-                  TODO: Decide whether still working callbacks should
-                  be cancelled when shutting down"""
-)
-def test_ros2ari_connector_send_goal_blocking_callback(
-    ros_setup: None, request: pytest.FixtureRequest
-):
-    action_name = f"{request.node.originalname}_action"  # type: ignore
-    action_server = ActionServer(action_name)
-    executors, threads = multi_threaded_spinner([action_server])
-    connector = ROS2ARIConnector()
-    try:
-        message = ROS2ARIMessage(
-            payload={},
-            metadata={"msg_type": "nav2_msgs/action/NavigateToPose"},
-        )
-        handle = connector.start_action(
-            action_data=message,
-            target=action_name,
-            on_feedback=lambda feedback: time.sleep(100),
-        )
-        assert handle is not None
-    finally:
-        connector.shutdown()
-        shutdown_executors_and_threads(executors, threads)
