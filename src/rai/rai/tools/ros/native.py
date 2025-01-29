@@ -33,7 +33,7 @@ from pydantic import BaseModel, Field
 from rclpy.impl.rcutils_logger import RcutilsLogger
 from rosidl_runtime_py.utilities import get_namespaced_type
 
-from .utils import convert_ros_img_to_base64, import_message_from_str
+from rai.tools.ros.utils import convert_ros_img_to_base64, import_message_from_str
 
 
 # --------------------- Inputs ---------------------

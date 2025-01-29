@@ -44,7 +44,7 @@ def test_action_call_tool(ros_setup: None, request: pytest.FixtureRequest) -> No
         response = tool._run(  # type: ignore
             action_name=action_name,
             action_type="nav2_msgs/action/NavigateToPose",
-            args={},
+            action_args={},
         )
         assert "Action started with ID:" in response
 

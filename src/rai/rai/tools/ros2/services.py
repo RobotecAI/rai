@@ -25,13 +25,12 @@ from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
-from rai.tools.utils import wrap_tool_input  # type: ignore
 
 
 class CallROS2ServiceToolInput(BaseModel):
     service_name: str = Field(..., description="The service to call")
     service_type: str = Field(..., description="The type of the service")
-    args: Dict[str, Any] = Field(
+    service_args: Dict[str, Any] = Field(
         ..., description="The arguments to pass to the service"
     )
 
@@ -42,11 +41,12 @@ class CallROS2ServiceTool(BaseTool):
     description: str = "Call a ROS2 service"
     args_schema: Type[CallROS2ServiceToolInput] = CallROS2ServiceToolInput
 
-    @wrap_tool_input
-    def _run(self, tool_input: CallROS2ServiceToolInput) -> str:
-        message = ROS2ARIMessage(payload=tool_input.args)
+    def _run(
+        self, service_name: str, service_type: str, service_args: Dict[str, Any]
+    ) -> str:
+        message = ROS2ARIMessage(payload=service_args)
         response = self.connector.service_call(
-            message, tool_input.service_name, msg_type=tool_input.service_type
+            message, service_name, msg_type=service_type
         )
         return str(
             {

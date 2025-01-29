@@ -21,8 +21,8 @@ from pydantic import BaseModel, Field
 from rclpy.action.client import ActionClient
 from rosidl_runtime_py import message_to_ordereddict
 
-from .native import Ros2BaseInput, Ros2BaseTool
-from .utils import get_transform
+from rai.tools.ros.native import Ros2BaseInput, Ros2BaseTool
+from rai.tools.ros.utils import get_transform
 
 
 # --------------------- Inputs ---------------------
@@ -197,7 +197,7 @@ class GetTransformTool(Ros2BaseActionTool):
 
     args_schema: Type[GetTransformInput] = GetTransformInput
 
-    def _run(self, target_frame="map", source_frame="body_link") -> dict:
+    def _run(self, target_frame: str = "map", source_frame: str = "body_link") -> dict:
         return message_to_ordereddict(
             get_transform(self.node, target_frame, source_frame)
         )

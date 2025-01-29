@@ -28,9 +28,8 @@ from pydantic import BaseModel, Field
 from tf_transformations import euler_from_quaternion
 
 from rai.tools.ros.deprecated import SingleMessageGrabber
+from rai.tools.ros.native import TopicInput
 from rai.tools.utils import TF2TransformFetcher
-
-from .native import TopicInput
 
 logger = logging.getLogger(__name__)
 
