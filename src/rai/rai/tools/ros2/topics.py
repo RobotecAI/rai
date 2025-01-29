@@ -34,7 +34,6 @@ from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from rai.messages.multimodal import MultimodalArtifact
 from rai.messages.utils import preprocess_image
 from rai.tools.ros2.utils import ros2_message_to_dict
-from rai.tools.utils import wrap_tool_input  # type: ignore
 
 
 class PublishROS2MessageToolInput(BaseModel):
@@ -49,15 +48,12 @@ class PublishROS2MessageTool(BaseTool):
     description: str = "Publish a message to a ROS2 topic"
     args_schema: Type[PublishROS2MessageToolInput] = PublishROS2MessageToolInput
 
-    @wrap_tool_input
-    def _run(self, tool_input: PublishROS2MessageToolInput) -> str:
+    def _run(self, topic: str, message: Dict[str, Any], message_type: str) -> str:
         ros_message = ROS2ARIMessage(
-            payload=tool_input.message,
-            metadata={"topic": tool_input.topic},
+            payload=message,
+            metadata={"topic": topic},
         )
-        self.connector.send_message(
-            ros_message, target=tool_input.topic, msg_type=tool_input.message_type
-        )
+        self.connector.send_message(ros_message, target=topic, msg_type=message_type)
         return "Message published successfully"
 
 
@@ -71,9 +67,8 @@ class ReceiveROS2MessageTool(BaseTool):
     description: str = "Receive a message from a ROS2 topic"
     args_schema: Type[ReceiveROS2MessageToolInput] = ReceiveROS2MessageToolInput
 
-    @wrap_tool_input
-    def _run(self, tool_input: ReceiveROS2MessageToolInput) -> str:
-        message = self.connector.receive_message(tool_input.topic)
+    def _run(self, topic: str) -> str:
+        message = self.connector.receive_message(topic)
         return str({"payload": message.payload, "metadata": message.metadata})
 
 
@@ -88,9 +83,8 @@ class GetROS2ImageTool(BaseTool):
     args_schema: Type[GetROS2ImageToolInput] = GetROS2ImageToolInput
     response_format: Literal["content", "content_and_artifact"] = "content_and_artifact"
 
-    @wrap_tool_input
-    def _run(self, tool_input: GetROS2ImageToolInput) -> Tuple[str, MultimodalArtifact]:
-        message = self.connector.receive_message(tool_input.topic)
+    def _run(self, topic: str) -> Tuple[str, MultimodalArtifact]:
+        message = self.connector.receive_message(topic)
         msg_type = type(message.payload)
         if msg_type == Image:
             image = CvBridge().imgmsg_to_cv2(  # type: ignore
@@ -107,20 +101,12 @@ class GetROS2ImageTool(BaseTool):
         return "Image received successfully", MultimodalArtifact(images=[preprocess_image(image)])  # type: ignore
 
 
-class GetROS2TopicsNamesAndTypesToolInput(BaseModel):
-    pass
-
-
 class GetROS2TopicsNamesAndTypesTool(BaseTool):
     connector: ROS2ARIConnector
     name: str = "get_ros2_topics_names_and_types"
     description: str = "Get the names and types of all ROS2 topics"
-    args_schema: Type[GetROS2TopicsNamesAndTypesToolInput] = (
-        GetROS2TopicsNamesAndTypesToolInput
-    )
 
-    @wrap_tool_input
-    def _run(self, tool_input: GetROS2TopicsNamesAndTypesToolInput) -> str:
+    def _run(self) -> str:
         topics_and_types = self.connector.get_topics_names_and_types()
         response = [
             stringify_dict({"topic": topic, "type": type})
@@ -143,12 +129,9 @@ class GetROS2MessageInterfaceTool(BaseTool):
         GetROS2MessageInterfaceToolInput
     )
 
-    @wrap_tool_input
-    def _run(self, tool_input: GetROS2MessageInterfaceToolInput) -> str:
+    def _run(self, msg_type: str) -> str:
         """Show ros2 message interface in json format."""
-        msg_cls: Type[object] = rosidl_runtime_py.utilities.get_interface(
-            tool_input.msg_type
-        )
+        msg_cls: Type[object] = rosidl_runtime_py.utilities.get_interface(msg_type)
         try:
             msg_dict = ros2_message_to_dict(msg_cls())  # type: ignore
             return json.dumps(msg_dict)
@@ -176,11 +159,10 @@ class GetROS2TransformTool(BaseTool):
     description: str = "Get the transform between two frames"
     args_schema: Type[GetROS2TransformToolInput] = GetROS2TransformToolInput
 
-    @wrap_tool_input
-    def _run(self, tool_input: GetROS2TransformToolInput) -> str:
+    def _run(self, target_frame: str, source_frame: str, timeout_sec: float) -> str:
         transform = self.connector.get_transform(
-            target_frame=tool_input.target_frame,
-            source_frame=tool_input.source_frame,
-            timeout_sec=tool_input.timeout_sec,
+            target_frame=target_frame,
+            source_frame=source_frame,
+            timeout_sec=timeout_sec,
         )
         return stringify_dict(ros2_message_to_dict(transform))

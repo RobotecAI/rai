@@ -87,7 +87,7 @@ class MoveToPointTool(BaseTool):
         x: float,
         y: float,
         z: float,
-        task: Literal["grab", "place"],
+        task: Literal["grab", "drop"],
     ) -> str:
         pose_stamped = PoseStamped()
         pose_stamped.header.frame_id = self.manipulator_frame
@@ -96,7 +96,7 @@ class MoveToPointTool(BaseTool):
             orientation=self.quaternion,
         )
 
-        if task == "place":
+        if task == "drop":
             pose_stamped.pose.position.z += self.additional_height
 
         pose_stamped.pose.position.x += self.calibration_x

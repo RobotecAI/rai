@@ -44,7 +44,7 @@ def test_service_call_tool(ros_setup: None, request: pytest.FixtureRequest) -> N
         response = tool._run(  # type: ignore
             service_name=service_name,
             service_type="std_srvs/srv/SetBool",
-            args={},
+            service_args={},
         )
         assert "Test service called" in response
         assert "success=True" in response
