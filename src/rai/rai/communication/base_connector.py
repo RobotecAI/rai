@@ -44,15 +44,17 @@ class BaseConnector(Generic[T]):
         return str(uuid4())
 
     @abstractmethod
-    def send_message(self, message: T, target: str):
+    def send_message(self, message: T, target: str, **kwargs: Any):
         pass
 
     @abstractmethod
-    def receive_message(self, source: str, timeout_sec: float = 1.0) -> T:
+    def receive_message(self, source: str, timeout_sec: float, **kwargs: Any) -> T:
         pass
 
     @abstractmethod
-    def service_call(self, message: T, target: str, timeout_sec: float = 1.0) -> T:
+    def service_call(
+        self, message: T, target: str, timeout_sec: float, **kwargs: Any
+    ) -> T:
         pass
 
     @abstractmethod
@@ -62,10 +64,11 @@ class BaseConnector(Generic[T]):
         target: str,
         on_feedback: Callable,
         on_done: Callable,
-        timeout_sec: float = 1.0,
+        timeout_sec: float,
+        **kwargs: Any,
     ) -> str:
         pass
 
     @abstractmethod
-    def terminate_action(self, action_handle: str):
+    def terminate_action(self, action_handle: str, **kwargs: Any):
         pass

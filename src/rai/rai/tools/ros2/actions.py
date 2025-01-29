@@ -44,14 +44,13 @@ class StartROS2ActionTool(BaseTool):
 
     @wrap_tool_input
     def _run(self, tool_input: StartROS2ActionToolInput) -> str:
-        message = ROS2ARIMessage(
-            payload=tool_input.args, metadata={"msg_type": tool_input.action_type}
-        )
+        message = ROS2ARIMessage(payload=tool_input.args)
         response = self.connector.start_action(
             message,
             tool_input.action_name,
             on_feedback=self.feedback_callback,
             on_done=self.on_done_callback,
+            msg_type=tool_input.action_type,
         )
         return "Action started with ID: " + response
 

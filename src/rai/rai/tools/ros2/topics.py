@@ -53,9 +53,11 @@ class PublishROS2MessageTool(BaseTool):
     def _run(self, tool_input: PublishROS2MessageToolInput) -> str:
         ros_message = ROS2ARIMessage(
             payload=tool_input.message,
-            metadata={"topic": tool_input.topic, "msg_type": tool_input.message_type},
+            metadata={"topic": tool_input.topic},
         )
-        self.connector.send_message(ros_message, target=tool_input.topic)
+        self.connector.send_message(
+            ros_message, target=tool_input.topic, msg_type=tool_input.message_type
+        )
         return "Message published successfully"
 
 

@@ -44,10 +44,10 @@ class CallROS2ServiceTool(BaseTool):
 
     @wrap_tool_input
     def _run(self, tool_input: CallROS2ServiceToolInput) -> str:
-        message = ROS2ARIMessage(
-            payload=tool_input.args, metadata={"msg_type": tool_input.service_type}
+        message = ROS2ARIMessage(payload=tool_input.args)
+        response = self.connector.service_call(
+            message, tool_input.service_name, msg_type=tool_input.service_type
         )
-        response = self.connector.service_call(message, tool_input.service_name)
         return str(
             {
                 "payload": response.payload,
