@@ -46,7 +46,9 @@ def test_ros2ari_connector_send_message(
             payload={"data": "Hello, world!"},
             metadata={"msg_type": "std_msgs/msg/String"},
         )
-        connector.send_message(message, target=topic_name)
+        connector.send_message(
+            message=message, target=topic_name, msg_type="std_msgs/msg/String"
+        )
         time.sleep(1)  # wait for the message to be received
         assert message_receiver.received_messages == [String(data="Hello, world!")]
     finally:
@@ -83,11 +85,10 @@ def test_ros2ari_connector_service_call(
     executors, threads = multi_threaded_spinner([message_receiver])
     connector = ROS2ARIConnector()
     try:
-        message = ROS2ARIMessage(
-            payload={"data": True},
-            metadata={"msg_type": "std_srvs/srv/SetBool"},
+        message = ROS2ARIMessage(payload={"data": True})
+        response = connector.service_call(
+            message, target=service_name, msg_type="std_srvs/srv/SetBool"
         )
-        response = connector.service_call(message, target=service_name)
         assert response.payload == SetBool.Response(
             success=True, message="Test service called"
         )
@@ -104,9 +105,12 @@ def test_ros2ari_connector_send_goal(ros_setup: None, request: pytest.FixtureReq
     try:
         message = ROS2ARIMessage(
             payload={},
-            metadata={"msg_type": "nav2_msgs/action/NavigateToPose"},
         )
-        handle = connector.start_action(action_data=message, target=action_name)
+        handle = connector.start_action(
+            action_data=message,
+            target=action_name,
+            msg_type="nav2_msgs/action/NavigateToPose",
+        )
         assert handle is not None
     finally:
         connector.shutdown()
@@ -122,14 +126,12 @@ def test_ros2ari_connector_send_goal_and_terminate_action(
     connector = ROS2ARIConnector()
     feedbacks: List[Any] = []
     try:
-        message = ROS2ARIMessage(
-            payload={},
-            metadata={"msg_type": "nav2_msgs/action/NavigateToPose"},
-        )
+        message = ROS2ARIMessage(payload={})
         handle = connector.start_action(
             action_data=message,
             target=action_name,
             on_feedback=lambda feedback: feedbacks.append(feedback),
+            msg_type="nav2_msgs/action/NavigateToPose",
         )
         assert handle is not None
         feedbacks_before = feedbacks
@@ -150,14 +152,12 @@ def test_ros2ari_connector_send_goal_erronous_callback(
     executors, threads = multi_threaded_spinner([action_server])
     connector = ROS2ARIConnector()
     try:
-        message = ROS2ARIMessage(
-            payload={},
-            metadata={"msg_type": "nav2_msgs/action/NavigateToPose"},
-        )
+        message = ROS2ARIMessage(payload={})
         handle = connector.start_action(
             action_data=message,
             target=action_name,
             on_feedback=lambda feedback: 1 / 0,
+            msg_type="nav2_msgs/action/NavigateToPose",
         )
         assert handle is not None
     finally:

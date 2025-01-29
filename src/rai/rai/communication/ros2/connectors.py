@@ -24,6 +24,7 @@ import rclpy.time
 from rclpy.duration import Duration
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
+from rclpy.qos import QoSProfile
 from tf2_ros import Buffer, LookupException, TransformListener, TransformStamped
 
 from rai.communication.ari_connector import ARIConnector, ARIMessage
@@ -53,14 +54,16 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
     def get_topics_names_and_types(self) -> List[Tuple[str, List[str]]]:
         return self._topic_api.get_topic_names_and_types()
 
-    def send_message(self, message: ROS2ARIMessage, target: str):
-        auto_qos_matching = message.metadata.get("auto_qos_matching", True)
-        qos_profile = message.metadata.get("qos_profile", None)
-        msg_type = message.metadata.get("msg_type", None)
-
-        # TODO: allow msg_type to be None, add auto topic type detection
-        if msg_type is None:
-            raise ValueError("msg_type is required")
+    def send_message(
+        self,
+        message: ROS2ARIMessage,
+        target: str,
+        *,
+        msg_type: str,  # TODO: allow msg_type to be None, add auto topic type detection
+        auto_qos_matching: bool = True,
+        qos_profile: Optional[QoSProfile] = None,
+        **kwargs,  # type: ignore
+    ):
 
         self._topic_api.publish(
             topic=target,
@@ -74,8 +77,10 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         self,
         source: str,
         timeout_sec: float = 1.0,
+        *,
         msg_type: Optional[str] = None,
         auto_topic_type: bool = True,
+        **kwargs,  # type: ignore
     ) -> ROS2ARIMessage:
         msg = self._topic_api.receive(
             topic=source,
@@ -88,11 +93,14 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         )
 
     def service_call(
-        self, message: ROS2ARIMessage, target: str, timeout_sec: float = 1.0
+        self,
+        message: ROS2ARIMessage,
+        target: str,
+        timeout_sec: float = 1.0,
+        *,
+        msg_type: str,
+        **kwargs,
     ) -> ROS2ARIMessage:
-        msg_type = message.metadata.get("msg_type", None)
-        if msg_type is None:
-            raise ValueError("msg_type is required")
         msg = self._service_api.call_service(
             service_name=target,
             service_type=msg_type,
@@ -110,12 +118,12 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         on_feedback: Callable[[Any], None] = lambda _: None,
         on_done: Callable[[Any], None] = lambda _: None,
         timeout_sec: float = 1.0,
+        *,
+        msg_type: str,
+        **kwargs,  # type: ignore
     ) -> str:
         if not isinstance(action_data, ROS2ARIMessage):
             raise ValueError("Action data must be of type ROS2ARIMessage")
-        msg_type = action_data.metadata.get("msg_type", None)
-        if msg_type is None:
-            raise ValueError("msg_type is required")
         accepted, handle = self._actions_api.send_goal(
             action_name=target,
             action_type=msg_type,
@@ -166,7 +174,7 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         tf_listener.unregister()
         return transform
 
-    def terminate_action(self, action_handle: str):
+    def terminate_action(self, action_handle: str, **kwargs):  # type: ignore
         self._actions_api.terminate_goal(action_handle)
 
     def shutdown(self):
