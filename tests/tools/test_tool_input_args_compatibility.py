@@ -53,25 +53,24 @@ def get_all_tool_classes() -> set[BaseTool]:
     return set(tools)
 
 
-@pytest.mark.parametrize("tool_class", get_all_tool_classes())
-def test_tool_input_args_compatibility(tool_class: BaseTool):
-    tool = tool_class
+@pytest.mark.parametrize("tool", get_all_tool_classes())
+def test_tool_input_args_compatibility(tool: BaseTool):
     tool_run_annotations = tool._run.__annotations__
     if "return" in tool_run_annotations:
         tool_run_annotations.pop("return")
     if "args" in tool_run_annotations and "kwargs" in tool_run_annotations:
         print(
-            f"Tool {tool_class} has *args or **kwargs, the _run method is most likely still an abstractmethod"
+            f"Tool {tool} has *args or **kwargs, the _run method is most likely still an abstractmethod"
         )
         pytest.xfail(
             reason="Tool has *args or **kwargs, the _run method is most likely still an abstractmethod"
         )
     if "args_schema" not in tool.__annotations__:
-        print(f"Tool {tool_class} has no args_schema")
+        print(f"Tool {tool} has no args_schema")
         pytest.xfail(reason="Tool has no args_schema")
 
     if len(tool.__annotations__["args_schema"].__args__) != 1:
-        raise NotImplementedError(f"Tool {tool_class} has ambiguous args_schema")
+        raise NotImplementedError(f"Tool {tool} has ambiguous args_schema")
 
     tool_input_annotations = (
         tool.__annotations__["args_schema"].__args__[0].__annotations__
