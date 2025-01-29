@@ -62,7 +62,7 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         msg_type: str,  # TODO: allow msg_type to be None, add auto topic type detection
         auto_qos_matching: bool = True,
         qos_profile: Optional[QoSProfile] = None,
-        **kwargs,  # type: ignore
+        **kwargs: Any,
     ):
 
         self._topic_api.publish(
@@ -80,7 +80,7 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         *,
         msg_type: Optional[str] = None,
         auto_topic_type: bool = True,
-        **kwargs,  # type: ignore
+        **kwargs: Any,
     ) -> ROS2ARIMessage:
         msg = self._topic_api.receive(
             topic=source,
@@ -99,7 +99,7 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         timeout_sec: float = 1.0,
         *,
         msg_type: str,
-        **kwargs,
+        **kwargs: Any,
     ) -> ROS2ARIMessage:
         msg = self._service_api.call_service(
             service_name=target,
@@ -120,7 +120,7 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         timeout_sec: float = 1.0,
         *,
         msg_type: str,
-        **kwargs,  # type: ignore
+        **kwargs: Any,
     ) -> str:
         if not isinstance(action_data, ROS2ARIMessage):
             raise ValueError("Action data must be of type ROS2ARIMessage")
@@ -174,7 +174,7 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         tf_listener.unregister()
         return transform
 
-    def terminate_action(self, action_handle: str, **kwargs):  # type: ignore
+    def terminate_action(self, action_handle: str, **kwargs: Any):
         self._actions_api.terminate_goal(action_handle)
 
     def shutdown(self):
