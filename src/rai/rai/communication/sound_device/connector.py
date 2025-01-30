@@ -13,7 +13,11 @@
 # limitations under the License.
 
 
+import base64
+import io
 from typing import Callable, Literal, Optional, Sequence, Tuple
+
+from scipy.io import wavfile
 
 try:
     import sounddevice as sd
@@ -90,7 +94,10 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
             )
         else:
             if message.audios is not None:
-                self.devices[target].write(message.audios[0])
+                wav_bytes = base64.b64decode(message.audios[0])
+                wav_buffer = io.BytesIO(wav_bytes)
+                _, audio_data = wavfile.read(wav_buffer)
+                self.devices[target].write(audio_data)
             else:
                 raise SoundDeviceError("Failed to provice audios in message to play")
 
@@ -118,7 +125,10 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
             )
             ret = SoundDeviceMessage(payload)
         else:
-            self.devices[target].write(message.payload.audio, blocking=True)
+            if message.audios is not None:
+                self.devices[target].write(message.audios[0], blocking=True)
+            else:
+                raise SoundDeviceError("Failed to provice audios in message to play")
             ret = SoundDeviceMessage()
         return ret
 
