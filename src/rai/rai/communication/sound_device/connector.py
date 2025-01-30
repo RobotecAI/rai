@@ -89,7 +89,10 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
                 "For recording use start_action or service_call with read=True."
             )
         else:
-            self.devices[target].play(message.payload.audios[0])
+            if message.audios is not None:
+                self.devices[target].write(message.audios[0])
+            else:
+                raise SoundDeviceError("Failed to provice audios in message to play")
 
     def receive_message(
         self, source: str, timeout_sec: float = 1.0, **kwargs
@@ -115,7 +118,7 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
             )
             ret = SoundDeviceMessage(payload)
         else:
-            self.devices[target].play(message.payload.audio, blocking=True)
+            self.devices[target].write(message.payload.audio, blocking=True)
             ret = SoundDeviceMessage()
         return ret
 
@@ -140,7 +143,7 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
 
         return handle
 
-    def terminate_action(self, action_handle: str):
+    def terminate_action(self, action_handle: str, **kwargs):
         target, read = self.action_handles[action_handle]
         if read:
             self.devices[target].in_stream.stop()
