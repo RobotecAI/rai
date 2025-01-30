@@ -14,7 +14,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional
 
 from scipy.signal import resample
 
@@ -39,38 +39,20 @@ class SoundDeviceConfig:
     block_size: int
     dtype: str
     channels: int
+    consumer_sampling_rate: Optional[int]
     device_number: Optional[int]
     device_name: Optional[str]
+    is_input: bool
+    is_output: bool
 
     def __post_init__(self):
         if self.device_number is None and self.device_name is None:
             raise ValueError("Either 'device_number' or 'device_name' must be set.")
 
 
-@dataclass
-class InputSoundDeviceConfig(SoundDeviceConfig):
-    consumer_sampling_rate: int
-
-
-# TODO: add fields
-@dataclass
-class OutputSoundDeviceConfig(SoundDeviceConfig):
-    pass
-
-
-@dataclass
-class IOSoundDeviceConfig(InputSoundDeviceConfig, OutputSoundDeviceConfig):
-    pass
-
-
 class SoundDeviceAPI:
 
-    def __init__(
-        self,
-        config: Union[
-            InputSoundDeviceConfig, OutputSoundDeviceConfig, IOSoundDeviceConfig
-        ],
-    ):
+    def __init__(self, config: SoundDeviceConfig):
         self.device_name = ""
 
         if not sd:
@@ -89,12 +71,8 @@ class SoundDeviceAPI:
             "default_samplerate"
         ]  # type: ignore
 
-        self.read_flag = False
-        self.write_flag = False
-        if isinstance(config, InputSoundDeviceConfig):
-            self.read_flag = True
-        if isinstance(config, OutputSoundDeviceConfig):
-            self.write_flag = True
+        self.read_flag = config.is_input
+        self.write_flag = config.is_output
         self.stream_flag = config.stream
         self.config = config
         self.in_stream = None
@@ -208,7 +186,6 @@ class SoundDeviceAPI:
                 f"{self.device_name} does not support streaming writing!"
             )
 
-        assert isinstance(self.config, OutputSoundDeviceConfig)
         assert sd is not None
         from sounddevice import CallbackFlags
 
@@ -255,12 +232,7 @@ class SoundDeviceAPI:
             )
         from sounddevice import CallbackFlags
 
-        assert isinstance(self.config, InputSoundDeviceConfig)
-
         def callback(indata: np.ndarray, frames: int, _, status: CallbackFlags):
-            assert isinstance(
-                self.config, InputSoundDeviceConfig
-            )  # NOTE: need to do this twice, pyright doesn't understand the higher scope assert
             _ = frames
             indata = indata.flatten()
             sample_time_length = len(indata) / self.sample_rate
