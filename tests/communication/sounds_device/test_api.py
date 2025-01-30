@@ -51,6 +51,16 @@ def mock_sd():
         }
 
 
+@pytest.fixture
+def input_device_id():
+    device = sounddevice.query_devices(kind="input")
+    if type(device) is dict:
+        return int(device["index"])
+    elif isinstance(device, list):
+        return int(device[0]["index"])  # type: ignore
+    raise AssertionError("No input device found")
+
+
 @pytest.mark.parametrize(
     "stream, block_size, dtype, channels, consumer_sampling_rate, is_input, is_output",
     [
@@ -84,6 +94,7 @@ def mock_sd():
     ],
 )
 def test_init(
+    input_device_id,
     mock_sd,
     stream,
     block_size,
@@ -94,20 +105,13 @@ def test_init(
     is_output,
 ):
     """Test different configurations of SoundDeviceAPI"""
-    device = sounddevice.query_devices(kind="input")
-    if type(device) is dict:
-        device_id = int(device["index"])
-    elif isinstance(device, list):
-        device_id = int(device[0]["index"])  # type: ignore
-    else:
-        raise AssertionError("No input device found")
     config = SoundDeviceConfig(
         stream=stream,
         block_size=block_size,
         dtype=dtype,
         channels=channels,
         consumer_sampling_rate=consumer_sampling_rate,
-        device_number=device_id,
+        device_number=input_device_id,
         device_name=None,
         is_input=is_input,
         is_output=is_output,
@@ -124,22 +128,15 @@ def test_init(
 
 
 @pytest.mark.parametrize("is_output", [True, False])
-def test_write_unsupported(mock_sd, is_output):
+def test_write_unsupported(input_device_id, mock_sd, is_output):
     """Ensure writing raises an error if output is not supported."""
-    device = sounddevice.query_devices(kind="input")
-    if type(device) is dict:
-        device_id = int(device["index"])
-    elif isinstance(device, list):
-        device_id = int(device[0]["index"])  # type: ignore
-    else:
-        raise AssertionError("No input device found")
     config = SoundDeviceConfig(
         stream=True,
         block_size=1024,
         dtype="float32",
         channels=2,
         consumer_sampling_rate=44100,
-        device_number=device_id,
+        device_number=input_device_id,
         device_name=None,
         is_input=True,
         is_output=is_output,
@@ -155,22 +152,15 @@ def test_write_unsupported(mock_sd, is_output):
 
 
 @pytest.mark.parametrize("is_input", [True, False])
-def test_read_unsupported(mock_sd, is_input):
+def test_read_unsupported(input_device_id, mock_sd, is_input):
     """Ensure reading raises an error if input is not supported."""
-    device = sounddevice.query_devices(kind="input")
-    if type(device) is dict:
-        device_id = int(device["index"])
-    elif isinstance(device, list):
-        device_id = int(device[0]["index"])  # type: ignore
-    else:
-        raise AssertionError("No input device found")
     config = SoundDeviceConfig(
         stream=True,
         block_size=1024,
         dtype="float32",
         channels=2,
         consumer_sampling_rate=44100,
-        device_number=device_id,
+        device_number=input_device_id,
         device_name=None,
         is_input=is_input,
         is_output=True,
@@ -187,14 +177,7 @@ def test_read_unsupported(mock_sd, is_input):
 
 
 @pytest.mark.parametrize("method", ["stop", "wait"])
-def test_control_methods(mock_sd, method):
-    device = sounddevice.query_devices(kind="input")
-    if type(device) is dict:
-        device_id = int(device["index"])
-    elif isinstance(device, list):
-        device_id = int(device[0]["index"])  # type: ignore
-    else:
-        raise AssertionError("No input device found")
+def test_control_methods(input_device_id, mock_sd, method):
     """Test stop and wait methods."""
     config = SoundDeviceConfig(
         stream=True,
@@ -202,7 +185,7 @@ def test_control_methods(mock_sd, method):
         dtype="float32",
         channels=2,
         consumer_sampling_rate=44100,
-        device_number=device_id,
+        device_number=input_device_id,
         device_name=None,
         is_input=True,
         is_output=True,
@@ -214,22 +197,15 @@ def test_control_methods(mock_sd, method):
 
 
 @pytest.mark.parametrize("is_output", [True, False])
-def test_open_write_stream_unsupported(mock_sd, is_output):
+def test_open_write_stream_unsupported(input_device_id, mock_sd, is_output):
     """Ensure opening a write stream raises an error if not supported."""
-    device = sounddevice.query_devices(kind="input")
-    if type(device) is dict:
-        device_id = int(device["index"])
-    elif isinstance(device, list):
-        device_id = int(device[0]["index"])  # type: ignore
-    else:
-        raise AssertionError("No input device found")
     config = SoundDeviceConfig(
         stream=True,
         block_size=1024,
         dtype="float32",
         channels=2,
         consumer_sampling_rate=44100,
-        device_number=device_id,
+        device_number=input_device_id,
         device_name=None,
         is_input=True,
         is_output=is_output,
@@ -244,22 +220,15 @@ def test_open_write_stream_unsupported(mock_sd, is_output):
 
 
 @pytest.mark.parametrize("is_input", [True, False])
-def test_open_read_stream_unsupported(mock_sd, is_input):
+def test_open_read_stream_unsupported(input_device_id, mock_sd, is_input):
     """Ensure opening a read stream raises an error if not supported."""
-    device = sounddevice.query_devices(kind="input")
-    if type(device) is dict:
-        device_id = int(device["index"])
-    elif isinstance(device, list):
-        device_id = int(device[0]["index"])  # type: ignore
-    else:
-        raise AssertionError("No input device found")
     config = SoundDeviceConfig(
         stream=True,
         block_size=1024,
         dtype="float32",
         channels=2,
         consumer_sampling_rate=44100,
-        device_number=device_id,
+        device_number=input_device_id,
         device_name=None,
         is_input=is_input,
         is_output=True,
@@ -274,14 +243,7 @@ def test_open_read_stream_unsupported(mock_sd, is_input):
 
 
 @pytest.mark.parametrize("has_stream", [True, False])
-def test_close_read_stream(mock_sd, has_stream):
-    device = sounddevice.query_devices(kind="input")
-    if type(device) is dict:
-        device_id = int(device["index"])
-    elif isinstance(device, list):
-        device_id = int(device[0]["index"])  # type: ignore
-    else:
-        raise AssertionError("No input device found")
+def test_close_read_stream(input_device_id, mock_sd, has_stream):
     """Test closing an active read stream."""
     config = SoundDeviceConfig(
         stream=True,
@@ -289,7 +251,7 @@ def test_close_read_stream(mock_sd, has_stream):
         dtype="float32",
         channels=2,
         consumer_sampling_rate=44100,
-        device_number=device_id,
+        device_number=input_device_id,
         device_name=None,
         is_input=True,
         is_output=True,
