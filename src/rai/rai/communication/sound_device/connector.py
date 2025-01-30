@@ -15,7 +15,7 @@
 
 import base64
 import io
-from typing import Callable, Literal, Optional, Sequence, Tuple
+from typing import Callable, Literal, Optional, Tuple
 
 from scipy.io import wavfile
 
@@ -65,14 +65,20 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
 
     def __init__(
         self,
-        targets: Sequence[Tuple[str, SoundDeviceConfig]],
-        sources: Sequence[Tuple[str, SoundDeviceConfig]],
+        targets: list[Tuple[str, SoundDeviceConfig]],
+        sources: list[Tuple[str, SoundDeviceConfig]],
     ):
         configured_targets = [target[0] for target in targets]
         configured_sources = [source[0] for source in sources]
         self.devices = {}
         self.action_handles = {}
-        for dev_target, dev_config in [*targets, *sources]:
+
+        tmp_devs = targets + sources
+        all_names = [dev[0] for dev in tmp_devs]
+        all_configs = [dev[1] for dev in tmp_devs]
+
+        for dev_target, dev_config in zip(all_names, all_configs):
+            print(f"Configuring device {dev_target} with {dev_config}")
             self.configure_device(dev_target, dev_config)
 
         super().__init__(configured_targets, configured_sources)
