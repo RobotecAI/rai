@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from typing import Callable, Literal, Optional, Sequence, Tuple, Union
+from typing import Callable, Literal, Optional, Sequence, Tuple
 
 try:
     import sounddevice as sd
@@ -23,11 +23,9 @@ except ImportError as e:
     ) from e
 
 from rai.communication import HRIConnector, HRIMessage, HRIPayload
-
-from .api import (
-    InputSoundDeviceConfig,
-    OutputSoundDeviceConfig,
+from rai.communication.sound_device import (
     SoundDeviceAPI,
+    SoundDeviceConfig,
     SoundDeviceError,
 )
 
@@ -63,8 +61,8 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
 
     def __init__(
         self,
-        targets: Sequence[Tuple[str, OutputSoundDeviceConfig]],
-        sources: Sequence[Tuple[str, InputSoundDeviceConfig]],
+        targets: Sequence[Tuple[str, SoundDeviceConfig]],
+        sources: Sequence[Tuple[str, SoundDeviceConfig]],
     ):
         configured_targets = [target[0] for target in targets]
         configured_sources = [source[0] for source in sources]
@@ -79,11 +77,11 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
     def configure_device(
         self,
         target: str,
-        config: Union[InputSoundDeviceConfig, OutputSoundDeviceConfig],
+        config: SoundDeviceConfig,
     ):
         self.devices[target] = SoundDeviceAPI(config)
 
-    def send_message(self, message: SoundDeviceMessage, target: str):
+    def send_message(self, message: SoundDeviceMessage, target: str, **kwargs) -> None:
         if message.stop:
             self.devices[target].stop()
         elif message.read:
@@ -94,14 +92,18 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
             self.devices[target].play(message.payload.audios[0])
 
     def receive_message(
-        self, source: str, timeout_sec: float = 1.0
+        self, source: str, timeout_sec: float = 1.0, **kwargs
     ) -> SoundDeviceMessage:
         raise SoundDeviceError(
             "SoundDeviceConnector does not support receiving messages. For recording use start_action or service_call with read=True."
         )
 
     def service_call(
-        self, message: SoundDeviceMessage, target: str, timeout_sec: float = 1.0
+        self,
+        message: SoundDeviceMessage,
+        target: str,
+        timeout_sec: float = 1.0,
+        **kwargs,
     ) -> SoundDeviceMessage:
         if message.stop:
             raise SoundDeviceError("For stopping use send_message with stop=True.")
@@ -124,6 +126,7 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
         on_feedback: Callable,
         on_done: Callable,
         timeout_sec: float = 1.0,
+        **kwargs,
     ) -> str:
         handle = self._generate_handle()
         if action_data is None:

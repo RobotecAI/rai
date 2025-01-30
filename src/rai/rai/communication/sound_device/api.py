@@ -222,7 +222,7 @@ class SoundDeviceAPI:
         on_feedback: Callable[[np.ndarray, dict[str, Any]], None],
         on_done: Callable = lambda _: None,
     ):
-        if not self.write_flag or not self.stream_flag:
+        if not self.read_flag or not self.stream_flag:
             raise SoundDeviceError(
                 f"{self.device_name} does not support streaming reading!"
             )
