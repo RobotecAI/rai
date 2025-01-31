@@ -17,6 +17,7 @@ import base64
 import io
 from typing import Callable, Literal, Optional, Tuple
 
+import numpy as np
 from scipy.io import wavfile
 
 try:
@@ -70,15 +71,14 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
     ):
         configured_targets = [target[0] for target in targets]
         configured_sources = [source[0] for source in sources]
-        self.devices = {}
-        self.action_handles = {}
+        self.devices: dict[str, SoundDeviceAPI] = {}
+        self.action_handles: dict[str, Tuple[str, bool]] = {}
 
         tmp_devs = targets + sources
         all_names = [dev[0] for dev in tmp_devs]
         all_configs = [dev[1] for dev in tmp_devs]
 
         for dev_target, dev_config in zip(all_names, all_configs):
-            print(f"Configuring device {dev_target} with {dev_config}")
             self.configure_device(dev_target, dev_config)
 
         super().__init__(configured_targets, configured_sources)
@@ -119,20 +119,30 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
         message: SoundDeviceMessage,
         target: str,
         timeout_sec: float = 1.0,
+        *,
+        duration: float = 1.0,
         **kwargs,
     ) -> SoundDeviceMessage:
         if message.stop:
             raise SoundDeviceError("For stopping use send_message with stop=True.")
         elif message.read:
-            recording = self.devices[target].record(message.duration, blocking=True)
+            recording = self.devices[target].read(duration, blocking=True)
             payload = HRIPayload(
                 text="",
-                audios=[recording],
+                audios=[
+                    base64.b64encode(recording).decode("utf-8")
+                ],  # TODO: refactor once utility functions for encoding/decoding are available
             )
             ret = SoundDeviceMessage(payload)
         else:
             if message.audios is not None:
-                self.devices[target].write(message.audios[0], blocking=True)
+                wav_bytes = base64.b64decode(
+                    message.audios[0]
+                )  # TODO: refactor once utility functions for encoding/decoding are available
+                wav_buffer = io.BytesIO(wav_bytes)
+                _, audio_data = wavfile.read(wav_buffer)
+                audio_data = np.array(audio_data)
+                self.devices[target].write(audio_data, blocking=True)
             else:
                 raise SoundDeviceError("Failed to provice audios in message to play")
             ret = SoundDeviceMessage()
@@ -162,7 +172,7 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
     def terminate_action(self, action_handle: str, **kwargs):
         target, read = self.action_handles[action_handle]
         if read:
-            self.devices[target].in_stream.stop()
+            self.devices[target].close_read_stream()
         else:
-            self.devices[target].out_stream.stop()
+            self.devices[target].close_write_stream()
         del self.action_handles[action_handle]

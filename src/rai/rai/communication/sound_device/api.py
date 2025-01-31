@@ -16,6 +16,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
+from numpy._typing import NDArray
 from scipy.signal import resample
 
 try:
@@ -25,9 +26,6 @@ except ImportError:
     sd = None
 
 
-import numpy as np
-
-
 class SoundDeviceError(Exception):
     def __init__(self, msg: str):
         super().__init__(msg)
@@ -35,15 +33,15 @@ class SoundDeviceError(Exception):
 
 @dataclass
 class SoundDeviceConfig:
-    stream: bool
-    block_size: int
-    dtype: str
-    channels: int
-    consumer_sampling_rate: Optional[int]
-    device_number: Optional[int]
-    device_name: Optional[str]
-    is_input: bool
-    is_output: bool
+    stream: bool = False
+    block_size: int = 1024
+    dtype: str = "int16"
+    channels: int = 1
+    consumer_sampling_rate: Optional[int] = None
+    device_number: Optional[int] = None
+    device_name: Optional[str] = None
+    is_input: bool = False
+    is_output: bool = False
 
     def __post_init__(self):
         if self.device_number is None and self.device_name is None:
@@ -63,13 +61,15 @@ class SoundDeviceAPI:
             devices = list(devices) if isinstance(devices, sd.DeviceList) else [devices]
             for device in devices:
                 if device["name"] == config.device_name:  # type: ignore
-                    self.device_number = device["index"]  # type: ignore
+                    self.device_number = int(device["index"])  # type: ignore
                     break
         else:
             self.device_number = config.device_number
-        self.sample_rate = sd.query_devices(device=self.device_number, kind="input")[
-            "default_samplerate"
-        ]  # type: ignore
+        self.sample_rate = int(
+            sd.query_devices(device=self.device_number, kind="input")[
+                "default_samplerate"
+            ]  # type: ignore
+        )
 
         self.read_flag = config.is_input
         self.write_flag = config.is_output
@@ -78,13 +78,13 @@ class SoundDeviceAPI:
         self.in_stream = None
         self.out_stream = None
 
-    def write(self, data: np.ndarray, blocking: bool = False, loop: bool = False):
+    def write(self, data: NDArray, blocking: bool = False, loop: bool = False):
         """
         Write data to the sound device.
 
         Parameters
         ----------
-        data : np.ndarray
+        data : NDArray
             Data to be written.
         blocking : bool, optional
             If True, the function will block until the sound is played. Defaults to False.
@@ -110,7 +110,7 @@ class SoundDeviceAPI:
             device=self.device_number,
         )
 
-    def read(self, time: float, blocking: bool = False) -> np.ndarray:
+    def read(self, time: float, blocking: bool = False) -> NDArray:
         """
         Read data from the sound device.
 
@@ -125,7 +125,7 @@ class SoundDeviceAPI:
 
         Returns
         -------
-        np.ndarray
+        NDArray
             Data read from the sound device.
 
         Notes
@@ -178,7 +178,7 @@ class SoundDeviceAPI:
 
     def open_write_stream(
         self,
-        feed_data: Callable[[np.ndarray, int, Any, Any], None],
+        feed_data: Callable[[NDArray, int, Any, Any], None],
         on_done: Callable = lambda _: None,
     ):
         if not self.write_flag or not self.stream_flag:
@@ -189,9 +189,8 @@ class SoundDeviceAPI:
         assert sd is not None
         from sounddevice import CallbackFlags
 
-        def callback(indata: np.ndarray, frames: int, time: Any, status: CallbackFlags):
+        def callback(indata: NDArray, frames: int, time: Any, status: CallbackFlags):
             _ = frames
-            print(str(time))
             flag_dict = {
                 "input_overflow": status.input_overflow,
                 "input_underflow": status.input_underflow,
@@ -219,7 +218,7 @@ class SoundDeviceAPI:
 
     def open_read_stream(
         self,
-        on_feedback: Callable[[np.ndarray, dict[str, Any]], None],
+        on_feedback: Callable[[NDArray, dict[str, Any]], None],
         on_done: Callable = lambda _: None,
     ):
         if not self.read_flag or not self.stream_flag:
@@ -232,11 +231,14 @@ class SoundDeviceAPI:
             )
         from sounddevice import CallbackFlags
 
-        def callback(indata: np.ndarray, frames: int, _, status: CallbackFlags):
+        def callback(indata: NDArray, frames: int, _, status: CallbackFlags):
             _ = frames
             indata = indata.flatten()
             sample_time_length = len(indata) / self.sample_rate
-            if self.sample_rate != self.config.consumer_sampling_rate:
+            if (
+                self.sample_rate != self.config.consumer_sampling_rate
+                and self.config.consumer_sampling_rate is not None
+            ):
                 indata = resample(
                     indata, int(sample_time_length * self.config.consumer_sampling_rate)
                 )  # type: ignore
@@ -251,11 +253,14 @@ class SoundDeviceAPI:
 
         try:
             assert sd is not None
-            window_size_samples = int(
-                self.config.block_size
-                * self.sample_rate
-                / self.config.consumer_sampling_rate
-            )
+            if self.config.consumer_sampling_rate is None:
+                window_size_samples = self.config.block_size * self.sample_rate
+            else:
+                window_size_samples = int(
+                    self.config.block_size
+                    * self.sample_rate
+                    / self.config.consumer_sampling_rate
+                )
 
             self.in_stream = sd.InputStream(
                 samplerate=self.sample_rate,
@@ -277,3 +282,9 @@ class SoundDeviceAPI:
             self.in_stream.stop()
             self.in_stream.close()
             self.in_stream = None
+
+    def close_write_stream(self):
+        if self.out_stream is not None:
+            self.out_stream.stop()
+            self.out_stream.close()
+            self.out_stream = None
