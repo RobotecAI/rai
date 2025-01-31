@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import base64
+import io
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 import sounddevice
+from scipy.io import wavfile
 
 from rai.communication import HRIPayload
 from rai.communication.sound_device import SoundDeviceConfig, SoundDeviceError
@@ -32,6 +35,7 @@ def mock_sound_device_api():
         mock_instance.write = MagicMock()
         mock_instance.rec = MagicMock()
         mock_instance.stop = MagicMock()
+        mock_instance.close_write_stream = MagicMock()
         mock.return_value = mock_instance
     return mock_instance
 
@@ -67,14 +71,36 @@ def connector(mock_sound_device_api):
 
 @pytest.fixture
 def base64_audio():
-    # load audio file
-    audio_file = "tests/resources/sine_wave.wav"
-    with open(audio_file, "rb") as wav_file:
-        wav_bytes = wav_file.read()
-        base64_string = base64.b64encode(wav_bytes).decode(
-            "utf-8"
-        )  # Encode and convert to string
+    frequency = 440
+    duration = 2.0
+    sample_rate = 44100
+    amplitude = 0.5
+    t = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
+    wave = amplitude * np.sin(2 * np.pi * frequency * t)
+    wave_int16 = np.int16(wave * 32767)
+    wav_buffer = io.BytesIO()
+    wavfile.write(wav_buffer, sample_rate, wave_int16)
+
+    wav_binary = wav_buffer.getvalue()
+
+    base64_string = base64.b64encode(wav_binary).decode("utf-8")
     return base64_string
+
+
+@pytest.fixture
+def binary_audio():
+    frequency = 440
+    duration = 2.0
+    sample_rate = 44100
+    amplitude = 0.5
+    t = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
+    wave = amplitude * np.sin(2 * np.pi * frequency * t)
+    wave_int16 = np.int16(wave * 32767)
+    wav_buffer = io.BytesIO()
+    wavfile.write(wav_buffer, sample_rate, wave_int16)
+
+    wav_binary = wav_buffer.getvalue()
+    return wav_binary
 
 
 def test_send_message_play_audio(connector, mock_sound_device_api, base64_audio):
@@ -110,11 +136,13 @@ def test_service_call_play_audio(connector, mock_sound_device_api, base64_audio)
     assert isinstance(result, SoundDeviceMessage)
 
 
-def test_service_call_read_audio(connector, mock_sound_device_api, base64_audio):
-    mock_sound_device_api.record.return_value = base64_audio
-    message = SoundDeviceMessage(read=True, duration=2.0)
+def test_service_call_read_audio(
+    connector, mock_sound_device_api, binary_audio, base64_audio
+):
+    mock_sound_device_api.read.return_value = binary_audio
+    message = SoundDeviceMessage(read=True)
     result = connector.service_call(message, "microphone")
-    mock_sound_device_api.record.assert_called_once_with(2.0, blocking=True)
+    mock_sound_device_api.read.assert_called_once_with(1.0, blocking=True)
     assert result.audios == [base64_audio]
 
 
@@ -143,5 +171,5 @@ def test_start_action_write(connector, mock_sound_device_api):
 def test_terminate_action(connector, mock_sound_device_api):
     connector.action_handles["test_handle"] = ("speaker", False)
     connector.terminate_action("test_handle")
-    mock_sound_device_api.out_stream.stop.assert_called_once()
+    mock_sound_device_api.close_write_stream.assert_called_once()
     assert "test_handle" not in connector.action_handles
