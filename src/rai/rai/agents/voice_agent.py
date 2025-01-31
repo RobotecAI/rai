@@ -24,11 +24,12 @@ from numpy.typing import NDArray
 
 from rai.agents.base import BaseAgent
 from rai.communication import (
-    AudioInputDeviceConfig,
     ROS2ARIConnector,
     ROS2ARIMessage,
-    StreamingAudioInputDevice,
+    SoundDeviceConnector,
+    SoundDeviceMessage,
 )
+from rai.communication.sound_device.api import SoundDeviceConfig
 from rai_asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
 
 
@@ -42,8 +43,7 @@ class ThreadData(TypedDict):
 class VoiceRecognitionAgent(BaseAgent):
     def __init__(
         self,
-        microphone_device_id: int,  # TODO: Change to name based instead of id based identification
-        microphone_config: AudioInputDeviceConfig,
+        microphone_config: SoundDeviceConfig,
         ros2_name: str,
         transcription_model: BaseTranscriptionModel,
         vad: BaseVoiceDetectionModel,
@@ -54,13 +54,11 @@ class VoiceRecognitionAgent(BaseAgent):
             self.logger = logging.getLogger(__name__)
         else:
             self.logger = logger
-        microphone = StreamingAudioInputDevice()
-        microphone.configure_device(
-            target=str(microphone_device_id), config=microphone_config
+        microphone = SoundDeviceConnector(
+            targets=[], sources=[("microphone", microphone_config)]
         )
         ros2_connector = ROS2ARIConnector(ros2_name)
         super().__init__(connectors={"microphone": microphone, "ros2": ros2_connector})
-        self.microphone_device_id = str(microphone_device_id)
         self.should_record_pipeline: List[BaseVoiceDetectionModel] = []
         self.should_stop_pipeline: List[BaseVoiceDetectionModel] = []
 
@@ -96,9 +94,11 @@ class VoiceRecognitionAgent(BaseAgent):
 
     def run(self):
         self.running = True
+        assert isinstance(self.connectors["microphone"], SoundDeviceConnector)
+        msg = SoundDeviceMessage(read=True)
         self.listener_handle = self.connectors["microphone"].start_action(
-            action_data=None,
-            target=self.microphone_device_id,
+            action_data=msg,
+            target="microphone",
             on_feedback=self.on_new_sample,
             on_done=lambda: None,
         )
@@ -189,11 +189,13 @@ class VoiceRecognitionAgent(BaseAgent):
         audio_data = np.concatenate(self.transcription_buffers[identifier])
         with self.transcription_lock:  # this is only necessary for the local model... TODO: fix this somehow
             transcription = self.transcription_model.transcribe(audio_data)
+        assert isinstance(self.connectors["ros2"], ROS2ARIConnector)
         self.connectors["ros2"].send_message(
             ROS2ARIMessage(
                 {"data": transcription}, {"msg_type": "std_msgs/msg/String"}
             ),
             "/from_human",
+            msg_type="std_msgs/msg/String",
         )
         self.transcription_threads[identifier]["transcription"] = transcription
         self.transcription_threads[identifier]["event"].set()

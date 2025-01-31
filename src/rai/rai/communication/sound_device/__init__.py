@@ -12,27 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .ari_connector import ARIConnector, ARIMessage
-from .base_connector import BaseConnector, BaseMessage
-from .hri_connector import HRIConnector, HRIMessage, HRIPayload
-from .ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
-from .sound_device.connector import (
-    SoundDeviceConnector,
-    SoundDeviceError,
-    SoundDeviceMessage,
-)
+from .api import SoundDeviceAPI, SoundDeviceConfig, SoundDeviceError
+from .connector import SoundDeviceConnector
 
 __all__ = [
-    "ARIConnector",
-    "ARIMessage",
-    "BaseMessage",
-    "BaseConnector",
-    "HRIConnector",
-    "HRIMessage",
-    "HRIPayload",
-    "ROS2ARIConnector",
-    "ROS2ARIMessage",
-    "SoundDeviceConnector",
+    "SoundDeviceAPI",
+    "SoundDeviceConfig",
     "SoundDeviceError",
-    "SoundDeviceMessage",
+    "SoundDeviceConnector",
 ]
