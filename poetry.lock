@@ -2805,8 +2805,8 @@ langchain-core = ">=0.3.33,<0.4.0"
 langchain-text-splitters = ">=0.3.3,<0.4.0"
 langsmith = ">=0.1.17,<0.4"
 numpy = [
-    {version = ">=1.22.4,<2", markers = "python_version < \"3.12\""},
     {version = ">=1.26.2,<3", markers = "python_version >= \"3.12\""},
+    {version = ">=1.22.4,<2", markers = "python_version < \"3.12\""},
 ]
 pydantic = ">=2.7.4,<3.0.0"
 PyYAML = ">=5.3"
@@ -2829,8 +2829,8 @@ files = [
 boto3 = ">=1.35.74"
 langchain-core = ">=0.3.27,<0.4.0"
 numpy = [
-    {version = ">=1,<2", markers = "python_version < \"3.12\""},
     {version = ">=1.26.0,<3", markers = "python_version >= \"3.12\""},
+    {version = ">=1,<2", markers = "python_version < \"3.12\""},
 ]
 pydantic = ">=2,<3"
 
@@ -2853,8 +2853,8 @@ langchain = ">=0.3.16,<0.4.0"
 langchain-core = ">=0.3.32,<0.4.0"
 langsmith = ">=0.1.125,<0.4"
 numpy = [
-    {version = ">=1.22.4,<2", markers = "python_version < \"3.12\""},
     {version = ">=1.26.2,<3", markers = "python_version >= \"3.12\""},
+    {version = ">=1.22.4,<2", markers = "python_version < \"3.12\""},
 ]
 pydantic-settings = ">=2.4.0,<3.0.0"
 PyYAML = ">=5.3"
@@ -4106,10 +4106,10 @@ files = [
 
 [package.dependencies]
 numpy = [
+    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
     {version = ">=1.23.5", markers = "python_version >= \"3.11\" and python_version < \"3.12\""},
     {version = ">=1.21.4", markers = "python_version >= \"3.10\" and platform_system == \"Darwin\" and python_version < \"3.11\""},
     {version = ">=1.21.2", markers = "platform_system != \"Darwin\" and python_version >= \"3.10\" and python_version < \"3.11\""},
-    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
 ]
 
 [[package]]
@@ -4130,10 +4130,10 @@ files = [
 
 [package.dependencies]
 numpy = [
+    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
     {version = ">=1.23.5", markers = "python_version >= \"3.11\" and python_version < \"3.12\""},
     {version = ">=1.21.4", markers = "python_version >= \"3.10\" and platform_system == \"Darwin\" and python_version < \"3.11\""},
     {version = ">=1.21.2", markers = "platform_system != \"Darwin\" and python_version >= \"3.10\" and python_version < \"3.11\""},
-    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
 ]
 
 [[package]]
@@ -4341,9 +4341,9 @@ files = [
 
 [package.dependencies]
 numpy = [
+    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
     {version = ">=1.23.2", markers = "python_version == \"3.11\""},
     {version = ">=1.22.4", markers = "python_version < \"3.11\""},
-    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
 ]
 python-dateutil = ">=2.8.2"
 pytz = ">=2020.1"
@@ -5184,6 +5184,17 @@ carto = ["pydeck-carto"]
 jupyter = ["ipykernel (>=5.1.2)", "ipython (>=5.8.0)", "ipywidgets (>=7,<8)", "traitlets (>=4.3.2)"]
 
 [[package]]
+name = "pydub"
+version = "0.25.1"
+description = "Manipulate audio with an simple and easy high level interface"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pydub-0.25.1-py2.py3-none-any.whl", hash = "sha256:65617e33033874b59d87db603aa1ed450633288aefead953b30bded59cb599a6"},
+    {file = "pydub-0.25.1.tar.gz", hash = "sha256:980a33ce9949cab2a569606b65674d748ecbca4f0796887fd6f46173a7b0d30f"},
+]
+
+[[package]]
 name = "pygments"
 version = "2.19.1"
 description = "Pygments is a syntax highlighting package written in Python."
@@ -5689,8 +5700,8 @@ pandas = {version = "*", optional = true, markers = "extra == \"tune\""}
 prometheus-client = {version = ">=0.7.1", optional = true, markers = "extra == \"default\""}
 protobuf = ">=3.15.3,<3.19.5 || >3.19.5"
 py-spy = [
-    {version = ">=0.2.0", optional = true, markers = "python_version < \"3.12\" and extra == \"default\""},
     {version = ">=0.4.0", optional = true, markers = "python_version >= \"3.12\" and extra == \"default\""},
+    {version = ">=0.2.0", optional = true, markers = "python_version < \"3.12\" and extra == \"default\""},
 ]
 pyarrow = [
     {version = ">=9.0.0,<18", optional = true, markers = "sys_platform == \"darwin\" and platform_machine == \"x86_64\" and extra == \"tune\""},
@@ -6801,8 +6812,8 @@ files = [
 contourpy = {version = ">=1.0.7", markers = "python_version >= \"3.8\" and python_version < \"3.13\""}
 defusedxml = ">=0.7.1,<0.8.0"
 matplotlib = [
-    {version = ">=3.6.0", markers = "python_version >= \"3.9\" and python_version < \"3.12\""},
     {version = ">=3.7.3", markers = "python_version >= \"3.12\""},
+    {version = ">=3.6.0", markers = "python_version >= \"3.9\" and python_version < \"3.12\""},
 ]
 numpy = {version = ">=1.21.2", markers = "python_version < \"3.13\""}
 opencv-python = ">=4.5.5.64"
@@ -8227,4 +8238,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10, <3.13"
-content-hash = "da1a7720082bf43b4efc7cd972b63f39882fc7e0d69340bbc436f18e889e55b2"
+content-hash = "158877f96c27f3c9beb75aff8a9608a41b83740afe17ceda2a471378c4bb3545"

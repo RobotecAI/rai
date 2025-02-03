@@ -12,21 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (
-    Annotated,
-    Generic,
-    List,
-    Literal,
-    Optional,
-    Sequence,
-    TypeVar,
-    get_args,
-)
+import base64
+from dataclasses import dataclass, field
+from io import BytesIO
+from typing import Generic, Literal, Sequence, TypeVar, get_args
 
 from langchain_core.messages import AIMessage
 from langchain_core.messages import BaseMessage as LangchainBaseMessage
 from langchain_core.messages import HumanMessage
-from pydantic import BaseModel
+from PIL import Image
+from PIL.Image import Image as ImageType
+from pydub import AudioSegment
 
 from rai.messages import AiMultimodalMessage, HumanMultimodalMessage
 from rai.messages.multimodal import MultimodalMessage as RAIMultimodalMessage
@@ -39,10 +35,19 @@ class HRIException(Exception):
         super().__init__(msg)
 
 
-class HRIPayload(BaseModel):
+@dataclass
+class HRIPayload:
     text: str
-    images: Optional[Annotated[List[str], "base64 encoded png images"]] = None
-    audios: Optional[Annotated[List[str], "base64 encoded wav audio"]] = None
+    images: list[ImageType] = field(default_factory=list)
+    audios: list[AudioSegment] = field(default_factory=list)
+
+    def __post_init__(self):
+        if not isinstance(self.text, str):
+            raise TypeError(f"Text should be of type str, got {type(self.text)}")
+        if not isinstance(self.images, list):
+            raise TypeError(f"Images should be of type list, got {type(self.images)}")
+        if not isinstance(self.audios, list):
+            raise TypeError(f"Audios should be of type list, got {type(self.audios)}")
 
 
 class HRIMessage(BaseMessage):
@@ -60,19 +65,42 @@ class HRIMessage(BaseMessage):
     def __repr__(self):
         return f"HRIMessage(type={self.message_author}, text={self.text}, images={self.images}, audios={self.audios})"
 
+    def _image_to_base64(self, image: ImageType) -> str:
+        buffered = BytesIO()
+        image.save(buffered, "PNG")
+        return base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+    def _audio_to_base64(self, audio: AudioSegment) -> str:
+        buffered = BytesIO()
+        audio.export(buffered, format="wav")
+        return base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+    @classmethod
+    def _base64_to_image(cls, base64_str: str) -> ImageType:
+        img_data = base64.b64decode(base64_str)
+        return Image.open(BytesIO(img_data))
+
+    @classmethod
+    def _base64_to_audio(cls, base64_str: str) -> AudioSegment:
+        audio_data = base64.b64decode(base64_str)
+        return AudioSegment.from_file(BytesIO(audio_data), format="wav")
+
     def to_langchain(self) -> LangchainBaseMessage:
+        base64_images = [self._image_to_base64(image) for image in self.images]
+        base64_audios = [self._audio_to_base64(audio) for audio in self.audios]
         match self.message_author:
             case "human":
-                if self.images is None and self.audios is None:
+                if self.images == [] and self.audios == []:
                     return HumanMessage(content=self.text)
+
                 return HumanMultimodalMessage(
-                    content=self.text, images=self.images, audios=self.audios
+                    content=self.text, images=base64_images, audios=base64_audios
                 )
             case "ai":
-                if self.images is None and self.audios is None:
+                if self.images == [] and self.audios == []:
                     return AIMessage(content=self.text)
                 return AiMultimodalMessage(
-                    content=self.text, images=self.images, audios=self.audios
+                    content=self.text, images=base64_images, audios=base64_images
                 )
             case _:
                 raise ValueError(
@@ -97,8 +125,12 @@ class HRIMessage(BaseMessage):
         return cls(
             payload=HRIPayload(
                 text=text,
-                images=images,
-                audios=audios,
+                images=(
+                    [cls._base64_to_image(image) for image in images] if images else []
+                ),
+                audios=(
+                    [cls._base64_to_audio(audio) for audio in audios] if audios else []
+                ),
             ),
             message_author=message.type,  # type: ignore
         )
