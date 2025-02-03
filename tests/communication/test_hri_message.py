@@ -16,30 +16,44 @@
 import pytest
 from langchain_core.messages import BaseMessage as LangchainBaseMessage
 from langchain_core.messages import HumanMessage
+from PIL import Image
+from pydub import AudioSegment
 
 from rai.communication import HRIMessage, HRIPayload
 from rai.messages.multimodal import MultimodalMessage as RAIMultimodalMessage
 
 
-def test_initialization():
-    payload = HRIPayload(text="Hello", images=["image1"], audios=["audio1"])
+@pytest.fixture
+def image():
+    img = Image.new("RGB", (100, 100), color="red")
+    return img
+
+
+@pytest.fixture
+def audio():
+    audio = AudioSegment.silent(duration=1000)
+    return audio
+
+
+def test_initialization(image, audio):
+    payload = HRIPayload(text="Hello", images=[image], audios=[audio])
     message = HRIMessage(payload=payload, message_author="human")
 
     assert message.text == "Hello"
-    assert message.images == ["image1"]
-    assert message.audios == ["audio1"]
+    assert message.images == [image]
+    assert message.audios == [audio]
     assert message.message_author == "human"
 
 
 def test_repr():
-    payload = HRIPayload(text="Hello", images=None, audios=None)
+    payload = HRIPayload(text="Hello")
     message = HRIMessage(payload=payload, message_author="ai")
 
-    assert repr(message) == "HRIMessage(type=ai, text=Hello, images=None, audios=None)"
+    assert repr(message) == "HRIMessage(type=ai, text=Hello, images=[], audios=[])"
 
 
 def test_to_langchain_human():
-    payload = HRIPayload(text="Hi there", images=None, audios=None)
+    payload = HRIPayload(text="Hi there", images=[], audios=[])
     message = HRIMessage(payload=payload, message_author="human")
     langchain_message = message.to_langchain()
 
@@ -47,8 +61,8 @@ def test_to_langchain_human():
     assert langchain_message.content == "Hi there"
 
 
-def test_to_langchain_ai_multimodal():
-    payload = HRIPayload(text="Response", images=["img"], audios=["audio"])
+def test_to_langchain_ai_multimodal(image, audio):
+    payload = HRIPayload(text="Response", images=[image], audios=[audio])
     message = HRIMessage(payload=payload, message_author="ai")
 
     with pytest.raises(
@@ -67,8 +81,8 @@ def test_from_langchain_human():
     hri_message = HRIMessage.from_langchain(langchain_message)
 
     assert hri_message.text == "Hello"
-    assert hri_message.images is None
-    assert hri_message.audios is None
+    assert hri_message.images == []
+    assert hri_message.audios == []
     assert hri_message.message_author == "human"
 
 
