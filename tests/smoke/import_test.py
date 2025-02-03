@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+import glob
 import importlib
 import os
 import pathlib
@@ -21,7 +22,19 @@ from types import ModuleType
 import pytest
 
 
-def test_can_import_all_modules_pathlib(rai_python_modules) -> None:
+def rai_python_modules():
+    packages = glob.glob("src/rai*") + glob.glob("src/*/rai*")
+    package_names = [os.path.basename(p) for p in packages]
+    ros2_python_packages = []
+    for package_path, package_name in zip(packages, package_names):
+        if os.path.isdir(f"{package_path}/{package_name}"):
+            ros2_python_packages.append(package_name)
+
+    return [importlib.import_module(p) for p in ros2_python_packages]
+
+
+@pytest.mark.parametrize("module", rai_python_modules())
+def test_can_import_all_modules_pathlib(module: ModuleType) -> None:
 
     def import_submodules(package: ModuleType) -> None:
 
@@ -51,6 +64,4 @@ def test_can_import_all_modules_pathlib(rai_python_modules) -> None:
                 print("FAIL")
                 pytest.fail(f"Failed to import {full_name}: {str(e)}")
 
-    for module in rai_python_modules:
-        print(f"Checking {module}")
-        import_submodules(module)
+    import_submodules(module)
