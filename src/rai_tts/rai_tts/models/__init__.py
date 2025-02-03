@@ -12,13 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .api import SoundDeviceAPI, SoundDeviceConfig, SoundDeviceError
-from .connector import SoundDeviceConnector, SoundDeviceMessage
+from .base import SpeechResult, TTSModel, TTSModelError
+from .open_tts import OpenTTS
 
-__all__ = [
-    "SoundDeviceAPI",
-    "SoundDeviceConfig",
-    "SoundDeviceConnector",
-    "SoundDeviceError",
-    "SoundDeviceMessage",
-]
+__all__ = ["TTSModel", "SpeechResult", "TTSModelError", "OpenTTS"]
