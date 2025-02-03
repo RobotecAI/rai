@@ -26,10 +26,10 @@ from rai.agents.base import BaseAgent
 from rai.communication import (
     ROS2ARIConnector,
     ROS2ARIMessage,
+    SoundDeviceConfig,
     SoundDeviceConnector,
     SoundDeviceMessage,
 )
-from rai.communication.sound_device.api import SoundDeviceConfig
 from rai_asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
 
 

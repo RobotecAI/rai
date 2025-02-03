@@ -12,13 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .api import SoundDeviceAPI, SoundDeviceConfig, SoundDeviceError
-from .connector import SoundDeviceConnector, SoundDeviceMessage
+from abc import ABC, abstractmethod
+from typing import NamedTuple
 
-__all__ = [
-    "SoundDeviceAPI",
-    "SoundDeviceConfig",
-    "SoundDeviceError",
-    "SoundDeviceConnector",
-    "SoundDeviceMessage",
-]
+from numpy.typing import NDArray
+
+
+class SpeechResult(NamedTuple):
+    speech: NDArray
+    sample_rate: int
+
+
+class TTSModelError(Exception):
+    pass
+
+
+class TTSModel(ABC):
+    @abstractmethod
+    def get_speech(self, text: str) -> SpeechResult:
+        pass
