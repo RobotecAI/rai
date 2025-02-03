@@ -17,6 +17,7 @@ from .base_connector import BaseConnector, BaseMessage
 from .hri_connector import HRIConnector, HRIMessage, HRIPayload
 from .ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from .sound_device.connector import (
+    SoundDeviceConfig,
     SoundDeviceConnector,
     SoundDeviceError,
     SoundDeviceMessage,
@@ -35,4 +36,5 @@ __all__ = [
     "SoundDeviceConnector",
     "SoundDeviceError",
     "SoundDeviceMessage",
+    "SoundDeviceConfig",
 ]
