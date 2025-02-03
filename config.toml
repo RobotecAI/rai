@@ -11,7 +11,7 @@ region_name = "us-east-1"
 
 [openai]
 simple_model = "gpt-4o-mini"
-complex_model = "gpt-4o-2024-08-06"
+complex_model = "gpt-4o"
 embeddings_model = "text-embedding-ada-002"
 base_url = "https://api.openai.com/v1/" # for openai compatible apis
 
