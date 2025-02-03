@@ -67,8 +67,7 @@ class HRIMessage(BaseMessage):
 
     def _image_to_base64(self, image: ImageType) -> str:
         buffered = BytesIO()
-        img_format = image.format if image.format else "PNG"
-        image.save(buffered, img_format)
+        image.save(buffered, "PNG")
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
     def _audio_to_base64(self, audio: AudioSegment) -> str:
