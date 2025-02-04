@@ -13,12 +13,7 @@
 # limitations under the License.
 
 
-import base64
-import io
 from typing import Callable, Literal, Optional, Tuple
-
-import numpy as np
-from scipy.io import wavfile
 
 try:
     import sounddevice as sd
@@ -100,10 +95,7 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
             )
         else:
             if message.audios is not None:
-                wav_bytes = base64.b64decode(message.audios[0])
-                wav_buffer = io.BytesIO(wav_bytes)
-                _, audio_data = wavfile.read(wav_buffer)
-                self.devices[target].write(audio_data)
+                self.devices[target].write(message.audios[0])
             else:
                 raise SoundDeviceError("Failed to provice audios in message to play")
 
@@ -127,22 +119,15 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
             raise SoundDeviceError("For stopping use send_message with stop=True.")
         elif message.read:
             recording = self.devices[target].read(duration, blocking=True)
+
             payload = HRIPayload(
                 text="",
-                audios=[
-                    base64.b64encode(recording).decode("utf-8")
-                ],  # TODO: refactor once utility functions for encoding/decoding are available
+                audios=[recording],
             )
             ret = SoundDeviceMessage(payload)
         else:
             if message.audios is not None:
-                wav_bytes = base64.b64decode(
-                    message.audios[0]
-                )  # TODO: refactor once utility functions for encoding/decoding are available
-                wav_buffer = io.BytesIO(wav_bytes)
-                _, audio_data = wavfile.read(wav_buffer)
-                audio_data = np.array(audio_data)
-                self.devices[target].write(audio_data, blocking=True)
+                self.devices[target].write(message.audios[0], blocking=True)
             else:
                 raise SoundDeviceError("Failed to provice audios in message to play")
             ret = SoundDeviceMessage()

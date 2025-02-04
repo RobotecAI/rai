@@ -16,7 +16,9 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
+import numpy as np
 from numpy._typing import NDArray
+from pydub import AudioSegment
 from scipy.signal import resample
 
 try:
@@ -77,7 +79,7 @@ class SoundDeviceAPI:
         self.in_stream = None
         self.out_stream = None
 
-    def write(self, data: NDArray, blocking: bool = False, loop: bool = False):
+    def write(self, data: AudioSegment, blocking: bool = False, loop: bool = False):
         """
         Write data to the sound device.
 
@@ -101,15 +103,16 @@ class SoundDeviceAPI:
         if not self.write_flag:
             raise SoundDeviceError(f"{self.device_name} does not support writing!")
         assert sd is not None
+        audio = np.array(data.get_array_of_samples())
         sd.play(
-            data,
-            samplerate=self.sample_rate,
+            audio,
+            samplerate=data.frame_rate,
             blocking=blocking,
             loop=loop,
             device=self.device_number,
         )
 
-    def read(self, time: float, blocking: bool = False) -> NDArray:
+    def read(self, time: float, blocking: bool = False) -> AudioSegment:
         """
         Read data from the sound device.
 
@@ -142,13 +145,20 @@ class SoundDeviceAPI:
             raise SoundDeviceError(f"{self.device_name} does not support reading!")
         assert sd is not None
         frames = int(time * self.sample_rate)
-        return sd.rec(
+        recording = sd.rec(
             frames=frames,
             samplerate=self.sample_rate,
             channels=self.config.channels,
             device=self.device_number,
             blocking=blocking,
             dtype=self.config.dtype,
+        )
+
+        return AudioSegment(
+            data=recording.flatten(),
+            sample_width=recording.dtype.itemsize,
+            frame_rate=self.sample_rate,
+            channels=self.config.channels,
         )
 
     def stop(self):
@@ -179,6 +189,7 @@ class SoundDeviceAPI:
         self,
         feed_data: Callable[[NDArray, int, Any, Any], None],
         on_done: Callable = lambda _: None,
+        sample_rate: Optional[int] = None,
     ):
         if not self.write_flag or not self.stream_flag:
             raise SoundDeviceError(
@@ -201,8 +212,9 @@ class SoundDeviceAPI:
 
         try:
             assert sd is not None
+            sample_rate = self.sample_rate if sample_rate is None else sample_rate
             self.out_stream = sd.OutputStream(
-                samplerate=self.sample_rate,
+                samplerate=sample_rate,
                 channels=self.config.channels,
                 device=self.device_number,
                 dtype=self.config.dtype,
