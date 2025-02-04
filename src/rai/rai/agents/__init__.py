@@ -19,7 +19,7 @@ from rai.agents.voice_agent import VoiceRecognitionAgent
 
 __all__ = [
     "ToolRunner",
+    "VoiceRecognitionAgent",
     "create_conversational_agent",
     "create_state_based_agent",
-    "VoiceRecognitionAgent",
 ]

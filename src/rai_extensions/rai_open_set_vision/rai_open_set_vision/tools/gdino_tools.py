@@ -19,7 +19,6 @@ import rclpy
 import rclpy.qos
 import sensor_msgs.msg
 from pydantic import BaseModel, Field
-from rai_open_set_vision import GDINO_SERVICE_NAME
 from rclpy.exceptions import (
     ParameterNotDeclaredException,
     ParameterUninitializedException,
@@ -32,6 +31,7 @@ from rai.tools.ros.utils import convert_ros_img_to_ndarray
 from rai.tools.utils import wait_for_message
 from rai.utils.ros_async import get_future_result
 from rai_interfaces.srv import RAIGroundingDino
+from rai_open_set_vision import GDINO_SERVICE_NAME
 
 
 # --------------------- Inputs ---------------------
@@ -147,9 +147,7 @@ class GroundingDinoBaseTool(Ros2BaseTool):
 
 class GetDetectionTool(GroundingDinoBaseTool):
     name: str = "GetDetectionTool"
-    description: str = (
-        "A tool for detecting specified objects using a ros2 action. The tool call might take some time to execute and is blocking - you will not be able to check their feedback, only will be informed about the result."
-    )
+    description: str = "A tool for detecting specified objects using a ros2 action. The tool call might take some time to execute and is blocking - you will not be able to check their feedback, only will be informed about the result."
 
     args_schema: Type[Ros2GetDetectionInput] = Ros2GetDetectionInput
 
@@ -177,9 +175,7 @@ class GetDetectionTool(GroundingDinoBaseTool):
 
 class GetDistanceToObjectsTool(GroundingDinoBaseTool):
     name: str = "GetDistanceToObjectsTool"
-    description: str = (
-        "A tool for calculating distance to specified objects using a ros2 action. The tool call might take some time to execute and is blocking - you will not be able to check their feedback, only will be informed about the result."
-    )
+    description: str = "A tool for calculating distance to specified objects using a ros2 action. The tool call might take some time to execute and is blocking - you will not be able to check their feedback, only will be informed about the result."
 
     args_schema: Type[GetDistanceToObjectsInput] = GetDistanceToObjectsInput
 

@@ -326,9 +326,7 @@ class ASRNode(Node):
         sd.default.latency = ("low", "low")
         self.device_sample_rate = sd.query_devices(
             device=self.recording_device_number, kind="input"
-        )[
-            "default_samplerate"
-        ]  # type: ignore
+        )["default_samplerate"]  # type: ignore
         self.window_size_samples = int(
             DEFAULT_BLOCKSIZE * self.device_sample_rate / VAD_SAMPLING_RATE
         )

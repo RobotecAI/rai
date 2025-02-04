@@ -78,7 +78,9 @@ def talk_to_docs(documentation_root: str, llm: BaseChatModel):
 
     agent = create_tool_calling_agent(llm, [query_docs], prompt)  # type: ignore
     agent_executor = AgentExecutor(
-        agent=agent, tools=[query_docs], return_intermediate_steps=True  # type: ignore
+        agent=agent,
+        tools=[query_docs],
+        return_intermediate_steps=True,  # type: ignore
     )
 
     def input_node(state: State) -> State:

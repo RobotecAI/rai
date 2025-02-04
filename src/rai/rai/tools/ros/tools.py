@@ -98,9 +98,7 @@ class GetOccupancyGridTool(BaseTool):
     """Get the current map as an image with the robot's position marked on it (red dot)."""
 
     name: str = "GetOccupancyGridTool"
-    description: str = (
-        "A tool for getting the current map as an image with the robot's position marked on it."
-    )
+    description: str = "A tool for getting the current map as an image with the robot's position marked on it."
 
     args_schema: Type[TopicInput] = TopicInput
 

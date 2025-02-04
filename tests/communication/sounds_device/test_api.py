@@ -34,14 +34,13 @@ def mock_sd():
     mock_stop = MagicMock()
     mock_wait = MagicMock()
 
-    with patch.object(sounddevice, "play", mock_play), patch.object(
-        sounddevice, "rec", mock_rec
-    ), patch.object(sounddevice, "open", mock_open), patch.object(
-        sounddevice, "stop", mock_stop
-    ), patch.object(
-        sounddevice, "wait", mock_wait
+    with (
+        patch.object(sounddevice, "play", mock_play),
+        patch.object(sounddevice, "rec", mock_rec),
+        patch.object(sounddevice, "open", mock_open),
+        patch.object(sounddevice, "stop", mock_stop),
+        patch.object(sounddevice, "wait", mock_wait),
     ):
-
         yield {
             "play": mock_play,
             "rec": mock_rec,

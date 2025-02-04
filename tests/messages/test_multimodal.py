@@ -39,7 +39,6 @@ class GetImageToolInput(BaseModel):
 
 
 class GetImageTool(BaseTool):
-
     name: str = "GetImageTool"
     description: str = "Get an image from the user"
 

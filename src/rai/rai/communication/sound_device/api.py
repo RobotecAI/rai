@@ -49,7 +49,6 @@ class SoundDeviceConfig:
 
 
 class SoundDeviceAPI:
-
     def __init__(self, config: SoundDeviceConfig):
         self.device_name = ""
 

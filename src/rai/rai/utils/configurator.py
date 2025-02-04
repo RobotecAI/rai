@@ -316,19 +316,19 @@ elif st.session_state.current_step == 3:
     )
 
     def on_langfuse_change():
-        st.session_state.config["tracing"]["langfuse"][
-            "use_langfuse"
-        ] = st.session_state.langfuse_checkbox
+        st.session_state.config["tracing"]["langfuse"]["use_langfuse"] = (
+            st.session_state.langfuse_checkbox
+        )
 
     def on_langfuse_host_change():
-        st.session_state.config["tracing"]["langfuse"][
-            "host"
-        ] = st.session_state.langfuse_host_input
+        st.session_state.config["tracing"]["langfuse"]["host"] = (
+            st.session_state.langfuse_host_input
+        )
 
     def on_langsmith_change():
-        st.session_state.config["tracing"]["langsmith"][
-            "use_langsmith"
-        ] = st.session_state.langsmith_checkbox
+        st.session_state.config["tracing"]["langsmith"]["use_langsmith"] = (
+            st.session_state.langsmith_checkbox
+        )
 
     # Ensure tracing config exists
     if "tracing" not in st.session_state.config:
@@ -397,9 +397,9 @@ elif st.session_state.current_step == 3:
 elif st.session_state.current_step == 4:
 
     def on_recording_device_change():
-        st.session_state.config["asr"][
-            "recording_device_name"
-        ] = st.session_state.recording_device_select
+        st.session_state.config["asr"]["recording_device_name"] = (
+            st.session_state.recording_device_select
+        )
 
     def on_asr_vendor_change():
         vendor = (
@@ -413,29 +413,29 @@ elif st.session_state.current_step == 4:
         st.session_state.config["asr"]["language"] = st.session_state.language_input
 
     def on_silence_grace_change():
-        st.session_state.config["asr"][
-            "silence_grace_period"
-        ] = st.session_state.silence_grace_input
+        st.session_state.config["asr"]["silence_grace_period"] = (
+            st.session_state.silence_grace_input
+        )
 
     def on_vad_threshold_change():
-        st.session_state.config["asr"][
-            "vad_threshold"
-        ] = st.session_state.vad_threshold_input
+        st.session_state.config["asr"]["vad_threshold"] = (
+            st.session_state.vad_threshold_input
+        )
 
     def on_wake_word_change():
-        st.session_state.config["asr"][
-            "use_wake_word"
-        ] = st.session_state.wake_word_checkbox
+        st.session_state.config["asr"]["use_wake_word"] = (
+            st.session_state.wake_word_checkbox
+        )
 
     def on_wake_word_model_change():
-        st.session_state.config["asr"][
-            "wake_word_model"
-        ] = st.session_state.wake_word_model_input
+        st.session_state.config["asr"]["wake_word_model"] = (
+            st.session_state.wake_word_model_input
+        )
 
     def on_wake_word_threshold_change():
-        st.session_state.config["asr"][
-            "wake_word_threshold"
-        ] = st.session_state.wake_word_threshold_input
+        st.session_state.config["asr"]["wake_word_threshold"] = (
+            st.session_state.wake_word_threshold_input
+        )
 
     # Ensure asr config exists
     if "asr" not in st.session_state.config:
@@ -588,9 +588,9 @@ elif st.session_state.current_step == 5:
         st.session_state.config["tts"]["vendor"] = vendor
 
     def on_keep_speaker_busy_change():
-        st.session_state.config["tts"][
-            "keep_speaker_busy"
-        ] = st.session_state.keep_speaker_busy_checkbox
+        st.session_state.config["tts"]["keep_speaker_busy"] = (
+            st.session_state.keep_speaker_busy_checkbox
+        )
 
     # Ensure tts config exists
     if "tts" not in st.session_state.config:

@@ -64,7 +64,6 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         qos_profile: Optional[QoSProfile] = None,
         **kwargs: Any,
     ):
-
         self._topic_api.publish(
             topic=target,
             msg_content=message.payload,

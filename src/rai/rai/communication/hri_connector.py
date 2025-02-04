@@ -17,9 +17,8 @@ from dataclasses import dataclass, field
 from io import BytesIO
 from typing import Generic, Literal, Sequence, TypeVar, get_args
 
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.messages import BaseMessage as LangchainBaseMessage
-from langchain_core.messages import HumanMessage
 from PIL import Image
 from PIL.Image import Image as ImageType
 from pydub import AudioSegment
@@ -164,7 +163,6 @@ class HRIConnector(Generic[T], BaseConnector[T]):
         self,
         message: LangchainBaseMessage | RAIMultimodalMessage,
     ) -> T:
-
         return self.T_class.from_langchain(message)
 
     def send_all_targets(self, message: LangchainBaseMessage | RAIMultimodalMessage):

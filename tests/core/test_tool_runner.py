@@ -36,12 +36,12 @@ def test_tool_runner_invalid_call():
     tool_call = ToolCall(name="bad_fn", args={"command": "list"}, id="12345")
     state = {"messages": [AIMessage(content="", tool_calls=[tool_call])]}
     output = runner.invoke(state)
-    assert isinstance(
-        output["messages"][0], AIMessage
-    ), "First message is not an AIMessage"
-    assert isinstance(
-        output["messages"][1], ToolMessage
-    ), "Tool output is not a tool message"
+    assert isinstance(output["messages"][0], AIMessage), (
+        "First message is not an AIMessage"
+    )
+    assert isinstance(output["messages"][1], ToolMessage), (
+        "Tool output is not a tool message"
+    )
     assert output["messages"][1].status == "error"
 
 
@@ -51,15 +51,15 @@ def test_tool_runner():
     tool_call = ToolCall(name="ros2_topic", args={"command": "list"}, id="12345")
     state = {"messages": [AIMessage(content="", tool_calls=[tool_call])]}
     output = runner.invoke(state)
-    assert isinstance(
-        output["messages"][0], AIMessage
-    ), "First message is not an AIMessage"
-    assert isinstance(
-        output["messages"][1], ToolMessage
-    ), "Tool output is not a tool message"
-    assert (
-        len(output["messages"][-1].content) > 0
-    ), "Tool output is empty. At least rosout should be visible."
+    assert isinstance(output["messages"][0], AIMessage), (
+        "First message is not an AIMessage"
+    )
+    assert isinstance(output["messages"][1], ToolMessage), (
+        "Tool output is not a tool message"
+    )
+    assert len(output["messages"][-1].content) > 0, (
+        "Tool output is empty. At least rosout should be visible."
+    )
 
 
 def test_tool_runner_multimodal():
@@ -71,12 +71,12 @@ def test_tool_runner_multimodal():
     state = {"messages": [AIMessage(content="", tool_calls=[tool_call])]}
     output = runner.invoke(state)
 
-    assert isinstance(
-        output["messages"][0], AIMessage
-    ), "First message is not an AIMessage"
-    assert isinstance(
-        output["messages"][1], ToolMultimodalMessage
-    ), "Tool output is not a multimodal message"
-    assert isinstance(
-        output["messages"][2], HumanMultimodalMessage
-    ), "Human output is not a multimodal message"
+    assert isinstance(output["messages"][0], AIMessage), (
+        "First message is not an AIMessage"
+    )
+    assert isinstance(output["messages"][1], ToolMultimodalMessage), (
+        "Tool output is not a multimodal message"
+    )
+    assert isinstance(output["messages"][2], HumanMultimodalMessage), (
+        "Human output is not a multimodal message"
+    )
