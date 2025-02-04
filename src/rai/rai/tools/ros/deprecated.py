@@ -104,7 +104,9 @@ class SingleImageGrabber(SingleMessageGrabber):
 
     def postprocess(self, msg: Image) -> str:
         bridge = CvBridge()
-        cv_image = cast(cv2.Mat, bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"))  # type: ignore
+        cv_image = cast(
+            cv2.Mat, bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
+        )  # type: ignore
         if cv_image.shape[-1] == 4:
             cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGRA2RGB)
             base64_image = base64.b64encode(

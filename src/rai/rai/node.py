@@ -303,7 +303,6 @@ class RaiStateBasedLlmNode(RaiBaseNode):
                     "callbacks": get_tracing_callbacks(),
                 },
             ):
-
                 graph_node_name = list(state.keys())[0]
                 if graph_node_name == "reporter":
                     continue

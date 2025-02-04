@@ -35,9 +35,7 @@ def rai_python_modules():
 
 @pytest.mark.parametrize("module", rai_python_modules())
 def test_can_import_all_modules_pathlib(module: ModuleType) -> None:
-
     def import_submodules(package: ModuleType) -> None:
-
         package_path = pathlib.Path(package.__file__).parent  # type: ignore
 
         importables = set()

@@ -187,7 +187,9 @@ class VoiceRecognitionAgent(BaseAgent):
     def transcription_thread(self, identifier: str):
         self.logger.info(f"transcription thread {identifier} started")
         audio_data = np.concatenate(self.transcription_buffers[identifier])
-        with self.transcription_lock:  # this is only necessary for the local model... TODO: fix this somehow
+        with (
+            self.transcription_lock
+        ):  # this is only necessary for the local model... TODO: fix this somehow
             transcription = self.transcription_model.transcribe(audio_data)
         assert isinstance(self.connectors["ros2"], ROS2ARIConnector)
         self.connectors["ros2"].send_message(

@@ -23,25 +23,12 @@ repos:
     hooks:
       - id: shellcheck
 
-  - repo: https://github.com/pycqa/autoflake
-    rev: v2.3.1
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.9.4
     hooks:
-      - id: autoflake
-        args: ["--remove-all-unused-imports", "--in-place"]
-
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        args: ["--profile", "black", "--filter-files"]
-
-  - repo: https://github.com/psf/black
-    rev: 24.4.2
-    hooks:
-      - id: black
-
-  - repo: https://github.com/pycqa/flake8
-    rev: 7.1.0
-    hooks:
-      - id: flake8
-        args: ["--ignore=E501,E731,W503,W504,E203"]
+      # Run the linter.
+      - id: ruff
+        args: [--extend-select, "I,RUF022", --fix, --ignore, E731]
+      # Run the formatter.
+      - id: ruff-format

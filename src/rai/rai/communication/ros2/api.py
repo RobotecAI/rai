@@ -469,7 +469,7 @@ class ROS2ActionAPI:
             raise ValueError(f"Invalid action handle: {handle}")
         if self.actions[handle]["result_future"] is None:
             raise ValueError(
-                f"Result future is None for handle: {handle}. " "Was the goal accepted?"
+                f"Result future is None for handle: {handle}. Was the goal accepted?"
             )
         return self.actions[handle]["result_future"].done()
 

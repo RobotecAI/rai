@@ -330,9 +330,9 @@ class NomadNode(Node):
         angular_vel = (
             self.get_parameter("angular_vel").get_parameter_value().double_value
         )
-        assert (
-            len(waypoint) == 2 or len(waypoint) == 4
-        ), "waypoint must be a 2D or 4D vector"
+        assert len(waypoint) == 2 or len(waypoint) == 4, (
+            "waypoint must be a 2D or 4D vector"
+        )
         if len(waypoint) == 2:
             dx, dy = waypoint
         else:

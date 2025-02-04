@@ -39,7 +39,6 @@ def robot_state_analyzer(
     state: str,
     state_analyzer_prompt: str = STATE_ANALYZER_PROMPT,
 ) -> State:
-
     template = ChatPromptTemplate.from_messages(
         [
             ("system", state_analyzer_prompt),

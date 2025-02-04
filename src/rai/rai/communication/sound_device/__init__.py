@@ -18,6 +18,6 @@ from .connector import SoundDeviceConnector
 __all__ = [
     "SoundDeviceAPI",
     "SoundDeviceConfig",
-    "SoundDeviceError",
     "SoundDeviceConnector",
+    "SoundDeviceError",
 ]

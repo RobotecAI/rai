@@ -16,8 +16,8 @@ from .gdino_tools import GetDetectionTool, GetDistanceToObjectsTool
 from .segmentation_tools import GetGrabbingPointTool, GetSegmentationTool
 
 __all__ = [
-    "GetDistanceToObjectsTool",
     "GetDetectionTool",
-    "GetSegmentationTool",
+    "GetDistanceToObjectsTool",
     "GetGrabbingPointTool",
+    "GetSegmentationTool",
 ]

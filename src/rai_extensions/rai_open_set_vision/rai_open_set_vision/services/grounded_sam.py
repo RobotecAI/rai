@@ -21,10 +21,10 @@ import numpy as np
 import rclpy
 from ament_index_python.packages import get_package_share_directory
 from cv_bridge import CvBridge
-from rai_open_set_vision.vision_markup.segmenter import GDSegmenter
 from rclpy.node import Node
 
 from rai_interfaces.srv import RAIGroundedSam
+from rai_open_set_vision.vision_markup.segmenter import GDSegmenter
 
 GSAM_NODE_NAME = "grounded_sam"
 GSAM_SERVICE_NAME = "grounded_sam_segment"

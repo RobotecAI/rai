@@ -19,10 +19,10 @@ from rai_asr.models.open_wake_word import OpenWakeWord
 from rai_asr.models.silero_vad import SileroVAD
 
 __all__ = [
-    "BaseVoiceDetectionModel",
-    "SileroVAD",
-    "OpenWakeWord",
     "BaseTranscriptionModel",
+    "BaseVoiceDetectionModel",
     "LocalWhisper",
     "OpenAIWhisper",
+    "OpenWakeWord",
+    "SileroVAD",
 ]

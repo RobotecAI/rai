@@ -125,7 +125,7 @@ def get_streamlit_cb(parent_container: DeltaGenerator) -> BaseCallbackHandler:
 
     # Decorator function to add the Streamlit execution context to a function
     def add_streamlit_context(
-        fn: Callable[..., fn_return_type]
+        fn: Callable[..., fn_return_type],
     ) -> Callable[..., fn_return_type]:
         """
         Decorator to ensure that the decorated function runs within the Streamlit execution context.

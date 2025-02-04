@@ -49,7 +49,10 @@ class TTSNode(Node):
             history=HistoryPolicy.KEEP_ALL,
         )
         self.subscription = self.create_subscription(  # type: ignore
-            String, topic_param, self.listener_callback, qos_profile=reliable_qos  # type: ignore
+            String,
+            topic_param,
+            self.listener_callback,
+            qos_profile=reliable_qos,  # type: ignore
         )
         self.playing = False
         self.status_publisher = self.create_publisher(String, "tts_status", 10)  # type: ignore
@@ -81,7 +84,8 @@ class TTSNode(Node):
         self.get_logger().debug(f"The job: {msg.data}")  # type: ignore
 
         threading.Thread(
-            target=self.start_synthesize_thread, args=(msg, self.job_id)  # type: ignore
+            target=self.start_synthesize_thread,
+            args=(msg, self.job_id),  # type: ignore
         ).start()
         self.job_id += 1
 
@@ -93,7 +97,8 @@ class TTSNode(Node):
                     and self.queued_job_id == job_id
                 ):
                     threading.Thread(
-                        target=self.synthesize_speech, args=(job_id, msg.data)  # type: ignore
+                        target=self.synthesize_speech,
+                        args=(job_id, msg.data),  # type: ignore
                     ).start()
                     self.threads_number += 1
                     self.queued_job_id += 1
@@ -139,9 +144,15 @@ class TTSNode(Node):
         self.playing = False
 
     def _initialize_client(self) -> TTSClient:
-        tts_client_param = cast(str, self.get_parameter("tts_client").get_parameter_value().string_value)  # type: ignore
-        voice_param = cast(str, self.get_parameter("voice").get_parameter_value().string_value)  # type: ignore
-        base_url_param = cast(str, self.get_parameter("base_url").get_parameter_value().string_value)  # type: ignore
+        tts_client_param = cast(
+            str, self.get_parameter("tts_client").get_parameter_value().string_value
+        )  # type: ignore
+        voice_param = cast(
+            str, self.get_parameter("voice").get_parameter_value().string_value
+        )  # type: ignore
+        base_url_param = cast(
+            str, self.get_parameter("base_url").get_parameter_value().string_value
+        )  # type: ignore
 
         if tts_client_param == "opentts":
             return OpenTTSClient(
@@ -160,10 +171,10 @@ class TTSNode(Node):
         """Remove emojis from text."""
         emoji_pattern = re.compile(
             "["
-            "\U0001F600-\U0001F64F"  # emoticons
-            "\U0001F300-\U0001F5FF"  # symbols & pictographs
-            "\U0001F680-\U0001F6FF"  # transport & map symbols
-            "\U0001F1E0-\U0001F1FF"  # flags (iOS)
+            "\U0001f600-\U0001f64f"  # emoticons
+            "\U0001f300-\U0001f5ff"  # symbols & pictographs
+            "\U0001f680-\U0001f6ff"  # transport & map symbols
+            "\U0001f1e0-\U0001f1ff"  # flags (iOS)
             "]+",
             flags=re.UNICODE,
         )
