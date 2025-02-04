@@ -26,6 +26,7 @@ from rclpy.exceptions import (
     ParameterUninitializedException,
 )
 
+from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.node import RaiBaseNode
 from rai.tools.ros import Ros2BaseInput, Ros2BaseTool
 from rai.tools.ros.utils import convert_ros_img_to_base64, convert_ros_img_to_ndarray
@@ -65,6 +66,7 @@ class GetGrabbingPointInput(Ros2BaseInput):
 
 # --------------------- Tools ---------------------
 class GetSegmentationTool(Ros2BaseTool):
+    connector: ROS2ARIConnector
     node: RaiBaseNode = Field(..., exclude=True)
 
     name: str = ""
@@ -84,7 +86,7 @@ class GetSegmentationTool(Ros2BaseTool):
         return get_future_result(future)
 
     def _get_image_message(self, topic: str) -> sensor_msgs.msg.Image:
-        msg = self.node.get_raw_message_from_topic(topic)
+        msg = self.connector.receive_message(topic).payload
         if type(msg) is sensor_msgs.msg.Image:
             return msg
         else:
@@ -186,7 +188,6 @@ def depth_to_point_cloud(
 
 
 class GetGrabbingPointTool(GetSegmentationTool):
-
     name: str = "GetGrabbingPointTool"
     description: str = "Get the grabbing point of an object"
     pcd: List[Any] = []
@@ -195,7 +196,7 @@ class GetGrabbingPointTool(GetSegmentationTool):
 
     def _get_camera_info_message(self, topic: str) -> sensor_msgs.msg.CameraInfo:
         for _ in range(3):
-            msg = self.node.get_raw_message_from_topic(topic, timeout_sec=3.0)
+            msg = self.connector.receive_message(topic, timeout_sec=3.0).payload
             if isinstance(msg, sensor_msgs.msg.CameraInfo):
                 return msg
             self.node.get_logger().warn("Received wrong message type. Retrying...")
