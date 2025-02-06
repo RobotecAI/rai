@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "rai"
+name = "rai_framework"
 version = "1.0.0"
 description = "RAI is a framework for building general multi-agent systems, bringing Gen AI features to ROS enabled robots."
 readme = "README.md"
@@ -9,7 +9,10 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: Apache Software License",
 ]
-package-mode = false
+
+packages = [
+    { include = "rai_core", from = "src" },
+]
 [tool.poetry.dependencies]
 python = "^3.10, <3.13"
 langchain-core = "^0.3"
