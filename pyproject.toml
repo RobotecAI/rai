@@ -12,7 +12,9 @@ classifiers = [
 
 packages = [
     { include = "rai_core", from = "src" },
+    { include = "rai_asr", from = "src" },
 ]
+
 [tool.poetry.dependencies]
 python = "^3.10, <3.13"
 langchain-core = "^0.3"
