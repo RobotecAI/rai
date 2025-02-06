@@ -323,6 +323,8 @@ class TopicConfig:
     msg_type: str
     auto_qos_matching: bool = True
     qos_profile: Optional[QoSProfile] = None
+    is_subscriber: bool = False
+    subscriber_callback: Optional[Callable[[Any], None]] = None
 
     def __post_init__(self):
         if not self.auto_qos_matching and self.qos_profile is None:
@@ -338,6 +340,10 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
         self._subscribtions: dict[str, rclpy.node.Subscription] = {}
 
     def configure_publisher(self, topic: str, config: TopicConfig):
+        if config.is_subscriber:
+            raise ValueError(
+                "Can't reconfigure publisher with subscriber config! Set config.is_subscriber to False"
+            )
         qos_profile = self._resolve_qos_profile(
             topic, config.auto_qos_matching, config.qos_profile, for_publisher=True
         )
@@ -356,8 +362,11 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
         self,
         topic: str,
         config: TopicConfig,
-        callback: Callable[[rclpy.node.MsgType], None] = lambda _: None,
     ):
+        if not config.is_subscriber:
+            raise ValueError(
+                "Can't reconfigure subscriber with publisher config! Set config.is_subscriber to True"
+            )
         qos_profile = self._resolve_qos_profile(
             topic, config.auto_qos_matching, config.qos_profile, for_publisher=False
         )
@@ -368,10 +377,11 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
                     f"Failed to reconfigure existing subscriber to {topic}"
                 )
 
+        assert config.subscriber_callback is not None
         self._subscribtions[topic] = self._node.create_subscription(
             msg_type=import_message_from_str(config.msg_type),
             topic=topic,
-            callback=callback,
+            callback=config.subscriber_callback,
             qos_profile=qos_profile,
         )
 

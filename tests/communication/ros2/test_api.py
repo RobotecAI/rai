@@ -86,7 +86,12 @@ def test_ros2_configre_subscriber(ros_setup, request: pytest.FixtureRequest):
     executors, threads = multi_threaded_spinner([node])
     try:
         topic_api = ConfigurableROS2TopicAPI(node)
-        cfg = TopicConfig(topic_name, "std_msgs/msg/String")
+        cfg = TopicConfig(
+            topic_name,
+            "std_msgs/msg/String",
+            is_subscriber=True,
+            subscriber_callback=lambda _: None,
+        )
         topic_api.configure_subscriber(topic_name, cfg)
         assert topic_api._subscribtions[topic_name] is not None
     finally:
@@ -104,7 +109,11 @@ def test_ros2_single_message_publish_configured(
 
     try:
         topic_api = ConfigurableROS2TopicAPI(node)
-        cfg = TopicConfig(topic_name, "std_msgs/msg/String")
+        cfg = TopicConfig(
+            topic_name,
+            "std_msgs/msg/String",
+            is_subscriber=False,
+        )
         topic_api.configure_publisher(topic_name, cfg)
         topic_api.publish_configured(
             topic_name,

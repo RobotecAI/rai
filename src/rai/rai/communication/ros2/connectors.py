@@ -39,6 +39,7 @@ from rai.communication.ros2.api import (
     ROS2ActionAPI,
     ROS2ServiceAPI,
     ROS2TopicAPI,
+    TopicConfig,
 )
 
 
@@ -205,10 +206,16 @@ class ROS2HRIConnector(HRIConnector[ROS2HRIMessage]):
     def __init__(
         self,
         node_name: str = f"rai_ros2_hri_connector_{str(uuid.uuid4())[-12:]}",
-        targets: List[str] = [],
-        sources: List[str] = [],
+        targets: List[Tuple[str, TopicConfig]] = [],
+        sources: List[Tuple[str, TopicConfig]] = [],
     ):
-        super().__init__(targets, sources)
+        configured_targets = [target[0] for target in targets]
+        configured_sources = [source[0] for source in sources]
+
+        self._configure_publishers(targets)
+        self._configure_subscribers(sources)
+
+        super().__init__(configured_targets, configured_sources)
         self._node = Node(node_name)
         self._topic_api = ConfigurableROS2TopicAPI(self._node)
         self._service_api = ROS2ServiceAPI(self._node)
@@ -218,6 +225,14 @@ class ROS2HRIConnector(HRIConnector[ROS2HRIMessage]):
         self._executor.add_node(self._node)
         self._thread = threading.Thread(target=self._executor.spin)
         self._thread.start()
+
+    def _configure_publishers(self, targets: List[Tuple[str, TopicConfig]]):
+        for target in targets:
+            self._topic_api.configure_publisher(target[0], target[1])
+
+    def _configure_subscribers(self, sources: List[Tuple[str, TopicConfig]]):
+        for source in sources:
+            self._topic_api.configure_subscriber(source[0], source[1])
 
     def send_message(self, message: ROS2HRIMessage, target: str, **kwargs):
         self._topic_api.publish_configured(
