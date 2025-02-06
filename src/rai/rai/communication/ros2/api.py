@@ -17,6 +17,7 @@ import logging
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from functools import partial
 from typing import (
     Annotated,
@@ -105,9 +106,14 @@ def adapt_requests_to_offers(publisher_info: List[TopicEndpointInfo]) -> QoSProf
     return request_qos
 
 
-def build_ros2_msg(msg_type: str, msg_args: Dict[str, Any]) -> object:
-    """Build a ROS2 message instance from type string and content dictionary."""
-    msg_cls = import_message_from_str(msg_type)
+def build_ros2_msg(
+    msg_type: str | type[rclpy.node.MsgType], msg_args: Dict[str, Any]
+) -> object:
+    """Build a ROS2 message instance from string or MsgType and content dictionary."""
+    if isinstance(msg_type, str):
+        msg_cls = import_message_from_str(msg_type)
+    else:
+        msg_cls = msg_type
     msg = msg_cls()
     rosidl_runtime_py.set_message.set_message_fields(msg, msg_args)
     return msg
@@ -309,6 +315,93 @@ class ROS2TopicAPI:
         """Cleanup publishers when object is destroyed."""
         for publisher in self._publishers.values():
             publisher.destroy()
+
+
+@dataclass
+class TopicConfig:
+    name: str
+    msg_type: str
+    auto_qos_matching: bool = True
+    qos_profile: Optional[QoSProfile] = None
+    is_subscriber: bool = False
+    subscriber_callback: Optional[Callable[[Any], None]] = None
+
+    def __post_init__(self):
+        if not self.auto_qos_matching and self.qos_profile is None:
+            raise ValueError(
+                "Either 'auto_qos_matching' must be True or 'qos_profile' must be set."
+            )
+
+
+class ConfigurableROS2TopicAPI(ROS2TopicAPI):
+
+    def __init__(self, node: rclpy.node.Node):
+        super().__init__(node)
+        self._subscribtions: dict[str, rclpy.node.Subscription] = {}
+
+    def configure_publisher(self, topic: str, config: TopicConfig):
+        if config.is_subscriber:
+            raise ValueError(
+                "Can't reconfigure publisher with subscriber config! Set config.is_subscriber to False"
+            )
+        qos_profile = self._resolve_qos_profile(
+            topic, config.auto_qos_matching, config.qos_profile, for_publisher=True
+        )
+        if topic in self._publishers:
+            flag = self._node.destroy_publisher(self._publishers[topic].handle)
+            if not flag:
+                raise ValueError(f"Failed to reconfigure existing publisher to {topic}")
+
+        self._publishers[topic] = self._node.create_publisher(
+            import_message_from_str(config.msg_type),
+            topic=topic,
+            qos_profile=qos_profile,
+        )
+
+    def configure_subscriber(
+        self,
+        topic: str,
+        config: TopicConfig,
+    ):
+        if not config.is_subscriber:
+            raise ValueError(
+                "Can't reconfigure subscriber with publisher config! Set config.is_subscriber to True"
+            )
+        qos_profile = self._resolve_qos_profile(
+            topic, config.auto_qos_matching, config.qos_profile, for_publisher=False
+        )
+        if topic in self._subscribtions:
+            flag = self._node.destroy_subscription(self._subscribtions[topic])
+            if not flag:
+                raise ValueError(
+                    f"Failed to reconfigure existing subscriber to {topic}"
+                )
+
+        assert config.subscriber_callback is not None
+        self._subscribtions[topic] = self._node.create_subscription(
+            msg_type=import_message_from_str(config.msg_type),
+            topic=topic,
+            callback=config.subscriber_callback,
+            qos_profile=qos_profile,
+        )
+
+    def publish_configured(self, topic: str, msg_content: dict[str, Any]) -> None:
+        """Publish a message to a ROS2 topic.
+
+        Args:
+            topic: Name of the topic to publish to
+            msg_content: Dictionary containing the message content
+
+        Raises:
+            ValueError: If topic has not been configured for publishing
+        """
+        try:
+            publisher = self._publishers[topic]
+        except Exception as e:
+            raise ValueError(f"{topic} has not been configured for publishing") from e
+        msg_type = publisher.msg_type
+        msg = build_ros2_msg(msg_type, msg_content)  # type: ignore
+        publisher.publish(msg)
 
 
 class ROS2ServiceAPI:

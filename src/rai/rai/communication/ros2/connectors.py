@@ -15,7 +15,7 @@
 import threading
 import time
 import uuid
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple
 
 import rclpy
 import rclpy.executors
@@ -27,8 +27,20 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile
 from tf2_ros import Buffer, LookupException, TransformListener, TransformStamped
 
-from rai.communication.ari_connector import ARIConnector, ARIMessage
-from rai.communication.ros2.api import ROS2ActionAPI, ROS2ServiceAPI, ROS2TopicAPI
+from rai.communication import (
+    ARIConnector,
+    ARIMessage,
+    HRIConnector,
+    HRIMessage,
+    HRIPayload,
+)
+from rai.communication.ros2.api import (
+    ConfigurableROS2TopicAPI,
+    ROS2ActionAPI,
+    ROS2ServiceAPI,
+    ROS2TopicAPI,
+    TopicConfig,
+)
 
 
 class ROS2ARIMessage(ARIMessage):
@@ -183,3 +195,93 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         self._actions_api.shutdown()
         self._topic_api.shutdown()
         self._node.destroy_node()
+
+
+class ROS2HRIMessage(HRIMessage):
+    def __init__(self, payload: HRIPayload, message_author: Literal["ai", "human"]):
+        super().__init__(payload, message_author)
+
+
+class ROS2HRIConnector(HRIConnector[ROS2HRIMessage]):
+    def __init__(
+        self,
+        node_name: str = f"rai_ros2_hri_connector_{str(uuid.uuid4())[-12:]}",
+        targets: List[Tuple[str, TopicConfig]] = [],
+        sources: List[Tuple[str, TopicConfig]] = [],
+    ):
+        configured_targets = [target[0] for target in targets]
+        configured_sources = [source[0] for source in sources]
+
+        self._configure_publishers(targets)
+        self._configure_subscribers(sources)
+
+        super().__init__(configured_targets, configured_sources)
+        self._node = Node(node_name)
+        self._topic_api = ConfigurableROS2TopicAPI(self._node)
+        self._service_api = ROS2ServiceAPI(self._node)
+        self._actions_api = ROS2ActionAPI(self._node)
+
+        self._executor = MultiThreadedExecutor()
+        self._executor.add_node(self._node)
+        self._thread = threading.Thread(target=self._executor.spin)
+        self._thread.start()
+
+    def _configure_publishers(self, targets: List[Tuple[str, TopicConfig]]):
+        for target in targets:
+            self._topic_api.configure_publisher(target[0], target[1])
+
+    def _configure_subscribers(self, sources: List[Tuple[str, TopicConfig]]):
+        for source in sources:
+            self._topic_api.configure_subscriber(source[0], source[1])
+
+    def send_message(self, message: ROS2HRIMessage, target: str, **kwargs):
+        self._topic_api.publish_configured(
+            topic=target,
+            msg_content=message.payload,
+        )
+
+    def receive_message(
+        self,
+        source: str,
+        timeout_sec: float = 1.0,
+        *,
+        message_author: Literal["human", "ai"],
+        msg_type: Optional[str] = None,
+        auto_topic_type: bool = True,
+        **kwargs: Any,
+    ) -> ROS2HRIMessage:
+        if msg_type != "std_msgs/msg/String":
+            raise ValueError("ROS2HRIConnector only supports receiving sting messages")
+        msg = self._topic_api.receive(
+            topic=source,
+            timeout_sec=timeout_sec,
+            msg_type=msg_type,
+            auto_topic_type=auto_topic_type,
+        )
+        payload = HRIPayload(msg.data)
+        return ROS2HRIMessage(payload=payload, message_author=message_author)
+
+    def service_call(
+        self, message: ROS2HRIMessage, target: str, timeout_sec: float, **kwargs: Any
+    ) -> ROS2HRIMessage:
+        raise NotImplementedError(
+            f"{self.__class__.__name__} doesn't support service calls"
+        )
+
+    def start_action(
+        self,
+        action_data: Optional[ROS2HRIMessage],
+        target: str,
+        on_feedback: Callable,
+        on_done: Callable,
+        timeout_sec: float,
+        **kwargs: Any,
+    ) -> str:
+        raise NotImplementedError(
+            f"{self.__class__.__name__} doesn't support action calls"
+        )
+
+    def terminate_action(self, action_handle: str, **kwargs: Any):
+        raise NotImplementedError(
+            f"{self.__class__.__name__} doesn't support action calls"
+        )

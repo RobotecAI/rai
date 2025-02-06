@@ -15,7 +15,7 @@
 import base64
 from dataclasses import dataclass, field
 from io import BytesIO
-from typing import Generic, Literal, Sequence, TypeVar, get_args
+from typing import Any, Dict, Generic, Literal, Optional, Sequence, TypeVar, get_args
 
 from langchain_core.messages import AIMessage
 from langchain_core.messages import BaseMessage as LangchainBaseMessage
@@ -54,9 +54,11 @@ class HRIMessage(BaseMessage):
     def __init__(
         self,
         payload: HRIPayload,
-        message_author: Literal["ai", "human"],
+        metadata: Optional[Dict[str, Any]] = None,
+        message_author: Literal["ai", "human"] = "ai",
         **kwargs,
     ):
+        super().__init__(payload, metadata)
         self.message_author = message_author
         self.text = payload.text
         self.images = payload.images
