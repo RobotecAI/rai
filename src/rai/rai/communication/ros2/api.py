@@ -385,7 +385,10 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
         Raises:
             ValueError: If topic has not been configured for publishing
         """
-        publisher = self._publishers[topic]
+        try:
+            publisher = self._publishers[topic]
+        except Exception as e:
+            raise ValueError(f"{topic} has not been configured for publishing") from e
         msg_type = publisher.msg_type
         msg = build_ros2_msg(msg_type, msg_content)  # type: ignore
         publisher.publish(msg)
