@@ -39,7 +39,6 @@ T = TypeVar("T", bound=BaseMessage)
 
 
 class BaseConnector(Generic[T]):
-
     def _generate_handle(self) -> str:
         return str(uuid4())
 

@@ -18,7 +18,6 @@ from langchain_core.messages import BaseMessage as LangchainBaseMessage
 from langchain_core.messages import HumanMessage
 from PIL import Image
 from pydub import AudioSegment
-
 from rai.communication import HRIMessage, HRIPayload
 from rai.messages.multimodal import MultimodalMessage as RAIMultimodalMessage
 

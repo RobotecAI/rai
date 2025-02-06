@@ -98,7 +98,9 @@ class GetROS2ImageTool(BaseTool):
             raise ValueError(
                 f"Unsupported message type: {message.metadata['msg_type']}"
             )
-        return "Image received successfully", MultimodalArtifact(images=[preprocess_image(image)])  # type: ignore
+        return "Image received successfully", MultimodalArtifact(
+            images=[preprocess_image(image)]
+        )  # type: ignore
 
 
 class GetROS2TopicsNamesAndTypesTool(BaseTool):

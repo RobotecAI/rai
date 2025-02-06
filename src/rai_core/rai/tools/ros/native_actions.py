@@ -60,9 +60,7 @@ class Ros2BaseActionTool(Ros2BaseTool):
 
 class Ros2RunActionSync(Ros2BaseTool):
     name: str = "Ros2RunAction"
-    description: str = (
-        "A tool for running a ros2 action. Make sure you know the action interface first!!! Actions might take some time to execute and are blocking - you will not be able to check their feedback, only will be informed about the result"
-    )
+    description: str = "A tool for running a ros2 action. Make sure you know the action interface first!!! Actions might take some time to execute and are blocking - you will not be able to check their feedback, only will be informed about the result"
 
     args_schema: Type[Ros2ActionRunnerInput] = Ros2ActionRunnerInput
 
@@ -176,9 +174,7 @@ class Ros2CancelAction(Ros2BaseActionTool):
 
 class Ros2GetLastActionFeedback(Ros2BaseActionTool):
     name: str = "Ros2GetLastActionFeedback"
-    description: str = (
-        "Action feedback is an optional intermediate information from ros2 action. With this tool you can get the last feedback of running action."
-    )
+    description: str = "Action feedback is an optional intermediate information from ros2 action. With this tool you can get the last feedback of running action."
 
     args_schema: Type[Ros2BaseInput] = Ros2BaseInput
 

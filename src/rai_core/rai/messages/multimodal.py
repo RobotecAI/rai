@@ -72,7 +72,7 @@ class HumanMultimodalMessage(HumanMessage, MultimodalMessage):
                 v = [c for c in v if c["type"] != "image_url"]
             elif k == "images":
                 imgs_summary = [image[0:10] + "..." for image in v]
-                v = f'{len(v)} base64 encoded images: [{", ".join(imgs_summary)}]'
+                v = f"{len(v)} base64 encoded images: [{', '.join(imgs_summary)}]"
             new_args.append((k, v))
         return new_args
 

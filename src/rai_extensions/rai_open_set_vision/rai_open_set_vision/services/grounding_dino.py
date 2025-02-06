@@ -20,12 +20,12 @@ from typing import TypedDict
 
 import rclpy
 from ament_index_python.packages import get_package_share_directory
-from rai_open_set_vision.vision_markup.boxer import GDBoxer
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 
 from rai_interfaces.msg import RAIDetectionArray
 from rai_interfaces.srv import RAIGroundingDino
+from rai_open_set_vision.vision_markup.boxer import GDBoxer
 
 
 class GDRequest(TypedDict):

@@ -17,8 +17,8 @@ from .services.grounding_dino import GDINO_NODE_NAME, GDINO_SERVICE_NAME
 from .tools import GetDetectionTool, GetDistanceToObjectsTool
 
 __all__ = [
-    "GetDistanceToObjectsTool",
-    "GetDetectionTool",
     "GDINO_NODE_NAME",
     "GDINO_SERVICE_NAME",
+    "GetDetectionTool",
+    "GetDistanceToObjectsTool",
 ]

@@ -25,8 +25,8 @@ from .sound_device.connector import (
 __all__ = [
     "ARIConnector",
     "ARIMessage",
-    "BaseMessage",
     "BaseConnector",
+    "BaseMessage",
     "HRIConnector",
     "HRIMessage",
     "HRIPayload",

@@ -20,13 +20,12 @@ from typing import List
 import numpy as np
 import pytest
 import rclpy
+from rai.node import RaiBaseNode
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import QoSPresetProfiles, QoSProfile
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
-
-from rai.node import RaiBaseNode
 
 
 def get_qos_profiles() -> List[str]:

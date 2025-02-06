@@ -21,7 +21,6 @@ from numpy._typing import NDArray
 
 
 class BaseVoiceDetectionModel(ABC):
-
     def __call__(
         self, audio_data: NDArray, input_parameters: dict[str, Any]
     ) -> Tuple[bool, dict[str, Any]]:

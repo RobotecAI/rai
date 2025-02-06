@@ -23,4 +23,4 @@ elevenlabs = "^1.4.1"
 sounddevice = "^0.4.7"
 
 [tool.isort]
-profile = "black" 
+profile = "black"
