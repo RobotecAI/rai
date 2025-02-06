@@ -194,7 +194,7 @@ def create_rai_ws():
     (package_path / "generated" / "robot_constitution.txt").touch()
 
     default_constitution_path = (
-        "src/rai/rai/cli/resources/default_robot_constitution.txt"
+        "src/rai_core/rai/cli/resources/default_robot_constitution.txt"
     )
     with open(default_constitution_path, "r") as file:
         default_constitution = file.read()

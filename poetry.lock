@@ -5654,6 +5654,70 @@ files = [
 cffi = {version = "*", markers = "implementation_name == \"pypy\""}
 
 [[package]]
+name = "rai"
+version = "1.0.0"
+description = "Core functionality for RAI framework"
+optional = false
+python-versions = "^3.10, <3.13"
+files = []
+develop = true
+
+[package.dependencies]
+coloredlogs = "^15.0.1"
+deprecated = "^1.2.14"
+langchain = "*"
+langchain-core = "^0.3"
+langgraph = "*"
+markdown = "^3.6"
+requests = "^2.32.2"
+rich = "^13.7.1"
+tomli = "^2.0.1"
+tomli-w = "^1.1.0"
+tqdm = "^4.66.4"
+
+[package.source]
+type = "directory"
+url = "src/rai_core"
+
+[[package]]
+name = "rai-asr"
+version = "1.0.0"
+description = "Automatic Speech Recognition module for RAI framework"
+optional = false
+python-versions = "^3.10, <3.13"
+files = []
+develop = true
+
+[package.dependencies]
+faster-whisper = "^1.1.1"
+openai-whisper = "^20231117"
+pydub = "^0.25.1"
+scipy = "^1.14.0"
+sounddevice = "^0.4.7"
+torchaudio = "^2.3.1"
+
+[package.source]
+type = "directory"
+url = "src/rai_asr"
+
+[[package]]
+name = "rai-tts"
+version = "1.0.0"
+description = "Text-to-Speech module for RAI framework"
+optional = false
+python-versions = "^3.10, <3.13"
+files = []
+develop = true
+
+[package.dependencies]
+elevenlabs = "^1.4.1"
+sounddevice = "^0.4.7"
+
+[package.source]
+type = "directory"
+url = "src/rai_tts"
+
+[[package]]
 name = "ray"
 version = "2.41.0"
 description = "Ray provides a simple, universal API for building distributed applications."
@@ -8238,4 +8302,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10, <3.13"
-content-hash = "158877f96c27f3c9beb75aff8a9608a41b83740afe17ceda2a471378c4bb3545"
+content-hash = "242e440c4ce4b31fa629d198a3d79b0854e84284d013d819a4b7a24e633a1706"
