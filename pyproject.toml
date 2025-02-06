@@ -13,6 +13,7 @@ classifiers = [
 packages = [
     { include = "rai_core", from = "src" },
     { include = "rai_asr", from = "src" },
+    { include = "rai_tts", from = "src" },
 ]
 
 [tool.poetry.dependencies]

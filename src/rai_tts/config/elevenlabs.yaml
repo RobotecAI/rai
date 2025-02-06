@@ -1,6 +1,0 @@
-tts_node:
-  ros__parameters:
-    tts_client: elevenlabs
-    voice: Jessica
-    base_url: ""
-    topic: to_human
