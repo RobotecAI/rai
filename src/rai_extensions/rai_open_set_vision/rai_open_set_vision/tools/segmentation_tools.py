@@ -96,8 +96,8 @@ class GetSegmentationTool:
     ) -> Future:
         cli = self.connector.node.create_client(RAIGroundingDino, GDINO_SERVICE_NAME)
         while not cli.wait_for_service(timeout_sec=1.0):
-            self.connector.node.get_logger().info(
-                "service not available, waiting again..."
+            self.node.get_logger().info(
+                f"service {GDINO_SERVICE_NAME} not available, waiting again..."
             )
         req = RAIGroundingDino.Request()
         req.source_img = camera_img_message
@@ -113,8 +113,8 @@ class GetSegmentationTool:
     ):
         cli = self.connector.node.create_client(RAIGroundedSam, "grounded_sam_segment")
         while not cli.wait_for_service(timeout_sec=1.0):
-            self.connector.node.get_logger().info(
-                "service not available, waiting again..."
+            self.node.get_logger().info(
+                "service grounded_sam_segment not available, waiting again..."
             )
         req = RAIGroundedSam.Request()
         req.detections = data.detections

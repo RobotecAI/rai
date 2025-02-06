@@ -96,9 +96,24 @@ def generate_launch_description():
             game_launcher_arg,
             # Launch the game launcher and wait for it to load
             launch_game_launcher,
+            RegisterEventHandler(
+                event_handler=OnProcessStart(
+                    target_action=launch_game_launcher,
+                    on_start=[
+                        wait_for_game_launcher,
+                    ],
+                )
+            ),
+            # Launch the MoveIt node after loading the simulation
+            # RegisterEventHandler(
+            #     event_handler=OnExecutionComplete(
+            #         target_action=wait_for_game_launcher,
+            #         on_completion=[
             launch_openset,
             launch_moveit,
             launch_robotic_manipulation,
-        # Launch the MoveIt node after loading the simulation
+            #         ],
+            #     )
+            # ),
         ]
     )
