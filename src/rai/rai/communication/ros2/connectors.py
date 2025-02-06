@@ -13,22 +13,21 @@
 # limitations under the License.
 
 import threading
-import time
 import uuid
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-import rclpy
-import rclpy.executors
-import rclpy.node
-import rclpy.time
-from rclpy.duration import Duration
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
-from tf2_ros import Buffer, LookupException, TransformListener, TransformStamped
+from tf2_ros import TransformStamped
 
 from rai.communication.ari_connector import ARIConnector, ARIMessage
-from rai.communication.ros2.api import ROS2ActionAPI, ROS2ServiceAPI, ROS2TopicAPI
+from rai.communication.ros2.api import (
+    ROS2TF2API,
+    ROS2ActionAPI,
+    ROS2ServiceAPI,
+    ROS2TopicAPI,
+)
 
 
 class ROS2ARIMessage(ARIMessage):
@@ -45,6 +44,7 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         self._topic_api = ROS2TopicAPI(self._node)
         self._service_api = ROS2ServiceAPI(self._node)
         self._actions_api = ROS2ActionAPI(self._node)
+        self._tf2_api = ROS2TF2API(self._node)
 
         self._executor = MultiThreadedExecutor()
         self._executor.add_node(self._node)
@@ -136,43 +136,13 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
             raise RuntimeError("Action goal was not accepted")
         return handle
 
-    @staticmethod
-    def wait_for_transform(
-        tf_buffer: Buffer,
-        target_frame: str,
-        source_frame: str,
-        timeout_sec: float = 1.0,
-    ) -> bool:
-        start_time = time.time()
-        while time.time() - start_time < timeout_sec:
-            if tf_buffer.can_transform(target_frame, source_frame, rclpy.time.Time()):
-                return True
-            time.sleep(0.1)
-        return False
-
     def get_transform(
         self,
         target_frame: str,
         source_frame: str,
         timeout_sec: float = 5.0,
     ) -> TransformStamped:
-        tf_buffer = Buffer(node=self._node)
-        tf_listener = TransformListener(tf_buffer, self._node)
-        transform_available = self.wait_for_transform(
-            tf_buffer, target_frame, source_frame, timeout_sec
-        )
-        if not transform_available:
-            raise LookupException(
-                f"Could not find transform from {source_frame} to {target_frame} in {timeout_sec} seconds"
-            )
-        transform: TransformStamped = tf_buffer.lookup_transform(
-            target_frame,
-            source_frame,
-            rclpy.time.Time(),
-            timeout=Duration(seconds=timeout_sec),
-        )
-        tf_listener.unregister()
-        return transform
+        return self._tf2_api.get_transform(target_frame, source_frame, timeout_sec)
 
     def terminate_action(self, action_handle: str, **kwargs: Any):
         self._actions_api.terminate_goal(action_handle)

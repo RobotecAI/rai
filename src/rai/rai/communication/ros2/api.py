@@ -43,6 +43,7 @@ import rosidl_runtime_py.utilities
 from action_msgs.srv import CancelGoal
 from rclpy.action import ActionClient
 from rclpy.action.client import ClientGoalHandle
+from rclpy.duration import Duration
 from rclpy.publisher import Publisher
 from rclpy.qos import (
     DurabilityPolicy,
@@ -52,7 +53,9 @@ from rclpy.qos import (
     ReliabilityPolicy,
 )
 from rclpy.task import Future
+from rclpy.time import Time
 from rclpy.topic_endpoint_info import TopicEndpointInfo
+from tf2_ros import Buffer, LookupException, TransformListener, TransformStamped
 
 from rai.tools.ros.utils import import_message_from_str, wait_for_message
 
@@ -484,3 +487,46 @@ class ROS2ActionAPI:
         """Cleanup thread pool when object is destroyed."""
         if hasattr(self, "_callback_executor"):
             self._callback_executor.shutdown(wait=False)
+
+
+class ROS2TF2API:
+    def __init__(self, node: rclpy.node.Node) -> None:
+        self.node = node
+        self._logger = node.get_logger()
+        self.tf_buffer = Buffer(node=node)
+        self.tf_listener = TransformListener(self.tf_buffer, node)
+
+    def wait_for_transform(
+        self,
+        target_frame: str,
+        source_frame: str,
+        timeout_sec: float = 1.0,
+    ) -> bool:
+        start_time = time.time()
+        while time.time() - start_time < timeout_sec:
+            if self.tf_buffer.can_transform(target_frame, source_frame, Time()):
+                return True
+            time.sleep(0.1)
+        return False
+
+    def get_transform(
+        self,
+        target_frame: str,
+        source_frame: str,
+        timeout_sec: float = 5.0,
+    ) -> TransformStamped:
+        transform_available = self.wait_for_transform(
+            target_frame, source_frame, timeout_sec
+        )
+        if not transform_available:
+            raise LookupException(
+                f"Could not find transform from {source_frame} to {target_frame} in {timeout_sec} seconds"
+            )
+        transform: TransformStamped = self.tf_buffer.lookup_transform(
+            target_frame,
+            source_frame,
+            Time(),
+            timeout=Duration(seconds=timeout_sec),
+        )
+        self.tf_listener.unregister()
+        return transform
