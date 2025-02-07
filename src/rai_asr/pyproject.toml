@@ -25,6 +25,3 @@ scipy = "^1.14.0"
 torchaudio = "^2.3.1"
 faster-whisper = "^1.1.1"
 pydub = "^0.25.1"
-
-[tool.isort]
-profile = "black"

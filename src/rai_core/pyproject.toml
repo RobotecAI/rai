@@ -30,6 +30,3 @@ rich = "^13.7.1"
 deprecated = "^1.2.14"
 tomli = "^2.0.1"
 tomli-w = "^1.1.0"
-
-[tool.isort]
-profile = "black"
