@@ -12,7 +12,7 @@ class SceneConfig(ABC):
         pass
 
 
-class Interface(ABC):
+class EngineConnector(ABC):
     """
     Responsible for communication with simulation.
     """
@@ -20,23 +20,23 @@ class Interface(ABC):
         pass
 
     @abstractmethod
-    def load_scenario(self, scenario_config: SceneConfig) -> None:
+    def setup_scene(self, scene_config: SceneConfig) -> None:
         pass
 
     @abstractmethod
-    def spawn_entity(self, prefab_name: str, name: str, pose: Pose) -> None:
+    def __spawn_entity(self, prefab_name: str, name: str, pose: Pose) -> None:
         pass
 
     @abstractmethod
-    def delete_entity(self, name: str) -> None:
+    def __delete_entity(self, name: str) -> None:
         pass
 
     @abstractmethod
-    def get_entity_pose(self, name: str) -> Pose:
+    def __get_entity_pose(self, name: str) -> Pose:
         pass
 
     @abstractmethod
-    def move_entity(self, name: str, target_pose: Pose) -> None:
+    def __move_entity(self, name: str, target_pose: Pose) -> None:
         pass
 
 
@@ -44,7 +44,7 @@ class Scene(ABC):
     """
     Responsible for simualtion control.
     """
-    def __init__(self, interface: Interface):
+    def __init__(self, interface: EngineConnector):
         self.interface = interface
 
 
@@ -57,7 +57,7 @@ class Scene(ABC):
         pass
 
     def init_scene_config(self, scenario_config: SceneConfig):
-        self.interface.load_scenario(scenario_config)
+        self.interface.setup_scene(scenario_config)
 
 
     def execute_task(self, llm_model: str, prompt: str, system_prompt: str):
@@ -125,7 +125,7 @@ class Benchmark(ABC):
 
 ########### EXAMPLE USAGE ###########
     
-class O3DEInterface(Interface):
+class O3DEInterface(EngineConnector):
     def __init__(self) -> None:
         pass
 
@@ -151,7 +151,7 @@ class FiveGreenCubesSceneConfig(SceneConfig):
 
 
 class ManipulationScene(Scene):
-    def __init__(self, interface: Interface):
+    def __init__(self, interface: EngineConnector):
         super().__init__(interface)
     
 
