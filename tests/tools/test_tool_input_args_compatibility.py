@@ -23,7 +23,7 @@ from langchain_core.tools import BaseTool
 def get_all_tool_classes() -> set[BaseTool]:
     """Recursively find all classes that inherit from pydantic.BaseModel in src/rai/rai/tools"""
     tools = []
-    tools_path = Path("src/rai/rai/tools")
+    tools_path = Path("src/rai_core/rai/tools")
 
     # Recursively find all .py files
     for py_file in tools_path.rglob("*.py"):
