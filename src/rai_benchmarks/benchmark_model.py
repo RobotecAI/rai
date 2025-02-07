@@ -5,12 +5,11 @@ from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 
 
-class SceneConfig(ABC):
+class SceneConfig(BaseModel):
     """
     Setup of scene - arrangmenet of objects, interactions, environment etc.
     """
-    def __init__(self) -> None:
-        pass
+    pass
 
 
 class Entity:
@@ -117,9 +116,8 @@ class O3DEInterface(EngineConnector):
         pass
 
 class O3DESceneConfig(SceneConfig):
-    def __init__(self, binary_path: str, objects_positions: dict[str, Pose]) -> None:
-        self.binary_path = binary_path
-        self.objects_positions = objects_positions
+    binary_path: str
+    objects_positions: dict[str, Pose]
 
 class BuildTowerTask(Task):
     def get_prompt(self) -> str:
