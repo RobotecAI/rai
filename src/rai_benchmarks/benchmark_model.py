@@ -23,22 +23,6 @@ class EngineConnector(ABC):
     def setup_scene(self, scene_config: SceneConfig) -> None:
         pass
 
-    @abstractmethod
-    def __spawn_entity(self, prefab_name: str, name: str, pose: Pose) -> None:
-        pass
-
-    @abstractmethod
-    def __delete_entity(self, name: str) -> None:
-        pass
-
-    @abstractmethod
-    def __get_entity_pose(self, name: str) -> Pose:
-        pass
-
-    @abstractmethod
-    def __move_entity(self, name: str, target_pose: Pose) -> None:
-        pass
-
 
 class Scene(ABC):
     """
@@ -56,8 +40,8 @@ class Scene(ABC):
     def stop(self):
         pass
 
-    def init_scene_config(self, scenario_config: SceneConfig):
-        self.interface.setup_scene(scenario_config)
+    def init_scene_config(self, scene_config: SceneConfig):
+        self.interface.setup_scene(scene_config)
 
 
     def execute_task(self, llm_model: str, prompt: str, system_prompt: str):
