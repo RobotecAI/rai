@@ -1,0 +1,32 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "rai"
+version = "1.0.0"
+description = "Core functionality for RAI framework"
+authors = ["Maciej Majek <maciej.majek@robotec.ai>", "Bartłomiej Boczek <bartlomiej.boczek@robotec.ai>", "Kajetan Rachwał <kajetan.rachwal@robotec.ai>"]
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+]
+packages = [
+    { include = "rai", from = "." },
+]
+
+[tool.poetry.dependencies]
+python = "^3.10, <3.13"
+langchain-core = "^0.3"
+langchain = "*"
+langgraph = "*"
+requests = "^2.32.2"
+coloredlogs = "^15.0.1"
+markdown = "^3.6"
+tqdm = "^4.66.4"
+rich = "^13.7.1"
+deprecated = "^1.2.14"
+tomli = "^2.0.1"
+tomli-w = "^1.1.0"

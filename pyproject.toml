@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "rai"
+name = "rai_framework"
 version = "1.0.0"
 description = "RAI is a framework for building general multi-agent systems, bringing Gen AI features to ROS enabled robots."
 readme = "README.md"
@@ -10,8 +10,14 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
 ]
 package-mode = false
+
 [tool.poetry.dependencies]
 python = "^3.10, <3.13"
+
+rai = {path = "src/rai_core", develop = true}
+rai_asr = {path = "src/rai_asr", develop = true}
+rai_tts = {path = "src/rai_tts", develop = true}
+
 langchain-core = "^0.3"
 langchain = "*"
 langgraph = "*"
@@ -78,11 +84,9 @@ visualnav_transformer = { git = "https://github.com/RobotecAI/visualnav-transfor
 gdown = "^5.2.0"
 
 [build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
-[tool.isort]
-profile = "black"
 
 [tool.pytest.ini_options]
 markers = [

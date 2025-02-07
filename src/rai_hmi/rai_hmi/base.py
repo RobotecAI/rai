@@ -22,13 +22,13 @@ from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 from langchain_core.tools import BaseTool
 from pydantic import UUID4
+from rai.node import append_whoami_info_to_prompt
+from rai.utils.model_initialization import get_embeddings_model
 from rclpy.action import ActionClient
 from rclpy.node import Node
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
-from rai.node import append_whoami_info_to_prompt
-from rai.utils.model_initialization import get_embeddings_model
 from rai_hmi.chat_msgs import (
     MissionAcceptanceMessage,
     MissionDoneMessage,

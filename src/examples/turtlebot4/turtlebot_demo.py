@@ -23,7 +23,6 @@ import rclpy.executors
 import rclpy.qos
 import rclpy.subscription
 import rclpy.task
-
 from rai.node import RaiStateBasedLlmNode
 from rai.tools.ros.native import (
     GetCameraImage,

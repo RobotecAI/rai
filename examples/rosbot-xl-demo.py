@@ -18,8 +18,6 @@ from typing import Optional
 import rclpy
 import rclpy.executors
 import rclpy.logging
-from rai_open_set_vision.tools import GetDetectionTool, GetDistanceToObjectsTool
-
 from rai.node import RaiStateBasedLlmNode
 from rai.tools.ros.native import (
     GetMsgFromTopic,
@@ -35,6 +33,7 @@ from rai.tools.ros.native_actions import (
     Ros2RunActionAsync,
 )
 from rai.tools.time import WaitForSecondsTool
+from rai_open_set_vision.tools import GetDetectionTool, GetDistanceToObjectsTool
 
 p = argparse.ArgumentParser()
 p.add_argument("--allowlist", type=Path, required=False, default=None)

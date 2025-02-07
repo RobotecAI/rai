@@ -29,7 +29,6 @@ from langchain_core.messages import AIMessage, BaseMessage
 from langfuse.callback import CallbackHandler
 from pydantic import BaseModel, Field
 from pytest import FixtureRequest
-
 from rai.messages import HumanMultimodalMessage
 from rai.tools.utils import run_requested_tools
 
@@ -39,7 +38,6 @@ class GetImageToolInput(BaseModel):
 
 
 class GetImageTool(BaseTool):
-
     name: str = "GetImageTool"
     description: str = "Get an image from the user"
 
