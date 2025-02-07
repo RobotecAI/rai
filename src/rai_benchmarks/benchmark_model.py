@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from geometry_msgs.msg import Pose
 from rai.agents.conversational_agent import create_conversational_agent
 from langchain_core.tools import BaseTool
+from pydantic import BaseModel
 
 
 class SceneConfig(ABC):
@@ -11,6 +12,12 @@ class SceneConfig(ABC):
     def __init__(self) -> None:
         pass
 
+
+class Entity:
+    # name: str
+    # prefab_name: str
+    # pose: Pose
+    pass
 
 class EngineConnector(ABC):
     """
@@ -23,89 +30,74 @@ class EngineConnector(ABC):
     def setup_scene(self, scene_config: SceneConfig) -> None:
         pass
 
-
-class Scene(ABC):
-    """
-    Responsible for simualtion control.
-    """
-    def __init__(self, interface: EngineConnector):
-        self.interface = interface
-
-
     @abstractmethod
-    def run(self):
+    def _spawn_entity(self, entity: Entity):
+        pass
+    @abstractmethod
+    def despawn_entity(self, entity: Entity):
         pass
 
     @abstractmethod
-    def stop(self):
+    def get_object_position(self, object_name: str) -> Pose:
         pass
 
-    def init_scene_config(self, scene_config: SceneConfig):
-        self.interface.setup_scene(scene_config)
-
-
-    def execute_task(self, llm_model: str, prompt: str, system_prompt: str):
-        """
-        Crete llm agent with the tools and system prompt
-        """
-        agent = create_conversational_agent(llm_model, self.get_tools(), system_prompt)
-        agent.invoke({"messages": [prompt]})
-
-
-    @abstractmethod
-    def get_tools(self) -> list[BaseTool]:
-        """
-        Return list of tools used in the scene
-        """
+class O3DEEngineConnector(EngineConnector):
+    def _spawn_entity(self, entity: Entity):
+        # connector.service_call('spawn', entity)
         pass
 
+    def _despawn_entity(self, entity: Entity):
+        pass
+
+    def setup_scene(self, scene_config: SceneConfig):
+        pass
+        # 8 times despawn_entity
+        # 10 times spawn_entity
 
 class Task(ABC):
     """"
     Specific task to perform with different scene setups.
     """
-    def __init__(self, prompt: str, scene: Scene, scene_configs: list[SceneConfig], llm_model: str, system_prompt: str) -> None:
-        self.system_prompt = system_prompt
-        self.prompt = prompt
-        self.scene = scene
-        # TODO consider passing just one config
-        self.scene_configs = scene_configs
-        self.llm_model = llm_model
-
-
-    def run(self):
-        for scene_config in self.scene_configs:
-            self.scene.init_scene_config(scene_config)
-            self.scene.execute_task(self.llm_model, self.prompt, self.system_prompt)
-            #TODO calculate progress
-            #TODO calculate final result
+    def __init__(self) -> None:
+        pass
 
     @abstractmethod
-    def calculate_progress(self):
+    def get_prompt(self) -> str:
+        pass
+
+    @abstractmethod
+    def calculate_progress(self, engine_connector: EngineConnector) -> float:
         """
         Calculate progress of the task
         """
         pass
 
 
-    @abstractmethod
-    def final_result(self):
-        """
-        Return final result of the task
-        """
-        pass
+class Scenario(BaseModel):
+    task: Task
+    scene_config: SceneConfig
 
-
-class Benchmark(ABC):
+class Benchmark():
     """
     Set of tasks to be done.
     """
-    def __init__(self, llm: str) -> None:
-        self.llm = llm
+    def __init__(self, agent, scenarios: list[Scenario]) -> None:
+        self.engine_connector: EngineConnector
         self.tasks: list[Task] = []
-    def run_tasks(self):
-        for task in self.tasks:
-            task.run()
+        self.agent = agent
+        self.scenarios = scenarios
+        self.results = []
+
+    def run(self):
+        """
+        Run benchmark
+        """
+        for scenario in self.scenarios:
+            self.engine_connector.setup_scene(scenario.scene_config)
+            task = scenario.task
+            self.agent.invoke({"messages": [task.get_prompt()]})
+            result = task.calculate_progress(self.engine_connector)
+            self.results.append(result)
 
 ########### EXAMPLE USAGE ###########
     
@@ -124,47 +116,29 @@ class O3DEInterface(EngineConnector):
         """
         pass
 
-
-class FiveRedCubesSceneConfig(SceneConfig):
-    def __init__(self) -> None:
-        pass
-
-class FiveGreenCubesSceneConfig(SceneConfig):
-    def __init__(self) -> None:
-        pass
-
-
-class ManipulationScene(Scene):
-    def __init__(self, interface: EngineConnector):
-        super().__init__(interface)
-    
+class O3DESceneConfig(SceneConfig):
+    def __init__(self, binary_path: str, objects_positions: dict[str, Pose]) -> None:
+        self.binary_path = binary_path
+        self.objects_positions = objects_positions
 
 class BuildTowerTask(Task):
-    def __init__(self, llm_model: str) -> None:
-        system_prompt = """
-        You are a robotic arm with interfaces to detect and manipulate objects.
-        Here are the coordinates information:
-        x - front to back (positive is forward)
-        y - left to right (positive is right)
-        z - up to down (positive is up)
-
-        Before starting the task, make sure to grab the camera image to understand the environment.
-        """
-        prompt = "build tower from cubes"
-        scene = ManipulationScene(O3DEInterface())
-        scene_configs: list[SceneConfig] = [FiveRedCubesSceneConfig(), FiveGreenCubesSceneConfig()]
-        super().__init__(prompt, scene, scene_configs, llm_model, system_prompt)
+    def get_prompt(self) -> str:
+        return "Build tower"
+    
+    def calculate_progress(self, engine_connector: EngineConnector) -> float:
+        return engine_connector.get_object_position("cube1") - engine_connector.get_object_position("cube2")
 
 
-class ExampleBenchmark(Benchmark):
-    def __init__(self, model: str) -> None:
-        super().__init__(model)
-        self.tasks = [BuildTowerTask(model)]
+agent = create_conversational_agent(
+    llm, tools, "You are Bob Budowniczy."
+)
 
-benchmark = ExampleBenchmark(model = "model")
-benchmark.run_tasks()
+scene_config = O3DESceneConfig(binary_path="/path/to/scene", objects_positions={})
+task = BuildTowerTask()
+scenarios = [Scenario(task=BuildTowerTask(), scene_config=scene_config)]
 
-
+benchmark = Benchmark(agent, scenarios)
+benchmark.run()
 
 
 
