@@ -29,6 +29,7 @@ from rclpy.client import Client
 from rclpy.node import Node
 from tf2_geometry_msgs import do_transform_pose
 
+from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.utils import TF2TransformFetcher
 from rai_interfaces.srv import ManipulatorMoveTo
 
@@ -156,9 +157,13 @@ class GetObjectPositionsTool(BaseTool):
     node: Node
     get_grabbing_point_tool: GetGrabbingPointTool
 
-    def __init__(self, node: Node, **kwargs):
+    def __init__(self, connector: ROS2ARIConnector, node: Node, **kwargs):
         super(GetObjectPositionsTool, self).__init__(
-            node=node, get_grabbing_point_tool=GetGrabbingPointTool(node=node), **kwargs
+            node=node,
+            get_grabbing_point_tool=GetGrabbingPointTool(
+                connector=connector, node=node
+            ),
+            **kwargs,
         )
 
     args_schema: Type[GetObjectPositionsToolInput] = GetObjectPositionsToolInput
