@@ -149,7 +149,12 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
             self.devices[target].open_read_stream(on_feedback, on_done)
             self.action_handles[handle] = (target, True)
         else:
-            self.devices[target].open_write_stream(on_feedback, on_done)
+            sample_rate = kwargs.get("sample_rate", None)
+            channels = kwargs.get("channels", None)
+
+            self.devices[target].open_write_stream(
+                on_feedback, on_done, sample_rate, channels
+            )
             self.action_handles[handle] = (target, False)
 
         return handle

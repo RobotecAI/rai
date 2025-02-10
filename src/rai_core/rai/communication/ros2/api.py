@@ -25,6 +25,7 @@ from typing import (
     Callable,
     Dict,
     List,
+    Literal,
     Optional,
     Tuple,
     Type,
@@ -55,7 +56,9 @@ from rclpy.qos import (
 from rclpy.task import Future
 from rclpy.topic_endpoint_info import TopicEndpointInfo
 
-from rai.tools.ros.utils import import_message_from_str
+from rai.communication.hri_connector import HRIPayload
+from rai.communication.ros2.messages import ROS2HRIMessage
+from rai.tools.ros.utils import import_message_from_str, wait_for_message
 
 
 def adapt_requests_to_offers(publisher_info: List[TopicEndpointInfo]) -> QoSProfile:
@@ -369,7 +372,7 @@ class TopicConfig:
     auto_qos_matching: bool = True
     qos_profile: Optional[QoSProfile] = None
     is_subscriber: bool = False
-    subscriber_callback: Optional[Callable[[Any], None]] = None
+    subscriber_callback: Optional[Callable[[ROS2HRIMessage], None]] = None
 
     def __post_init__(self):
         if not self.auto_qos_matching and self.qos_profile is None:
@@ -421,11 +424,22 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
                     f"Failed to reconfigure existing subscriber to {topic}"
                 )
 
-        assert config.subscriber_callback is not None
+        msg_type = import_message_from_str(config.msg_type)
+
+        def callback_wrapper(message):
+            text = message.data
+            print(text)
+            assert config.subscriber_callback is not None
+            config.subscriber_callback(
+                ROS2HRIMessage(
+                    HRIPayload(text=text), message_author=config.source_author
+                )
+            )
+
         self._subscribtions[topic] = self._node.create_subscription(
-            msg_type=import_message_from_str(config.msg_type),
+            msg_type=msg_type,
             topic=topic,
-            callback=config.subscriber_callback,
+            callback=callback_wrapper,
             qos_profile=qos_profile,
         )
 
@@ -444,7 +458,7 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
         except Exception as e:
             raise ValueError(f"{topic} has not been configured for publishing") from e
         msg_type = publisher.msg_type
-        msg = build_ros2_msg(msg_type, msg_content)  # type: ignore
+        msg = build_ros2_msg(msg_type, {"data": msg_content.text})  # type: ignore
         publisher.publish(msg)
 
 

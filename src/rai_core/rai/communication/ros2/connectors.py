@@ -19,6 +19,7 @@ from collections import OrderedDict
 from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union, cast
 
 import numpy as np
+import rai_interfaces.msg
 import rclpy
 import rclpy.executors
 import rclpy.node
@@ -27,6 +28,8 @@ import rosidl_runtime_py.convert
 from cv_bridge import CvBridge
 from PIL import Image
 from pydub import AudioSegment
+from rai_interfaces.msg import HRIMessage as ROS2HRIMessage_
+from rai_interfaces.msg._audio_message import AudioMessage as ROS2HRIMessage__Audio
 from rclpy.duration import Duration
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
@@ -34,7 +37,6 @@ from rclpy.qos import QoSProfile
 from sensor_msgs.msg import Image as ROS2Image
 from tf2_ros import Buffer, LookupException, TransformListener, TransformStamped
 
-import rai_interfaces.msg
 from rai.communication import (
     ARIConnector,
     ARIMessage,
@@ -45,13 +47,10 @@ from rai.communication import (
 from rai.communication.ros2.api import (
     ConfigurableROS2TopicAPI,
     ROS2ActionAPI,
+    ROS2ARIMessage,
+    ROS2HRIMessage,
     ROS2ServiceAPI,
     ROS2TopicAPI,
-    TopicConfig,
-)
-from rai_interfaces.msg import HRIMessage as ROS2HRIMessage_
-from rai_interfaces.msg._audio_message import (
-    AudioMessage as ROS2HRIMessage__Audio,
 )
 
 
@@ -314,6 +313,9 @@ class ROS2HRIConnector(HRIConnector[ROS2HRIMessage]):
         self._executor.add_node(self._node)
         self._thread = threading.Thread(target=self._executor.spin)
         self._thread.start()
+
+    # def run(self):
+    #     self._executor.spin()
 
     def _configure_publishers(self, targets: List[Tuple[str, TopicConfig]]):
         for target in targets:

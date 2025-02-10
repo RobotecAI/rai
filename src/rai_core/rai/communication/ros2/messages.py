@@ -12,14 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .api import ConfigurableROS2TopicAPI, ROS2ActionAPI, ROS2ServiceAPI, ROS2TopicAPI
-from .messages import ROS2ARIMessage, ROS2HRIMessage
+from typing import Any, Dict, Literal, Optional
 
-__all__ = [
-    "ConfigurableROS2TopicAPI",
-    "ROS2ARIMessage",
-    "ROS2ActionAPI",
-    "ROS2HRIMessage",
-    "ROS2ServiceAPI",
-    "ROS2TopicAPI",
-]
+from rai.communication import ARIMessage, HRIMessage, HRIPayload
+
+
+class ROS2ARIMessage(ARIMessage):
+    def __init__(self, payload: Any, metadata: Optional[Dict[str, Any]] = None):
+        super().__init__(payload, metadata)
+
+
+class ROS2HRIMessage(HRIMessage):
+    def __init__(self, payload: HRIPayload, message_author: Literal["ai", "human"]):
+        super().__init__(payload, message_author)

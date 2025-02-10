@@ -13,12 +13,14 @@
 # limitations under the License.
 
 from io import BytesIO
+from typing import Tuple
 
 import numpy as np
 import requests
+from pydub import AudioSegment
 from scipy.io.wavfile import read
 
-from rai_tts.models import SpeechResult, TTSModel, TTSModelError
+from rai_tts.models import TTSModel, TTSModelError
 
 
 class OpenTTS(TTSModel):
@@ -30,13 +32,13 @@ class OpenTTS(TTSModel):
         self.url = url
         self.voice = voice
 
-    def get_speech(self, text: str) -> SpeechResult:
+    def get_speech(self, text: str) -> AudioSegment:
         params = {
             "voice": self.voice,
             "text": text,
         }
         try:
-            response = requests.get("http://localhost:5500/api/tts", params=params)
+            response = requests.get(self.url, params=params)
         except requests.exceptions.RequestException as e:
             raise TTSModelError(
                 f"Error occurred while fetching audio: {e}, check if OpenTTS server is running correctly."
@@ -59,4 +61,9 @@ class OpenTTS(TTSModel):
                 (data * 32768).clip(-32768, 32767).astype(np.int16)
             )  # Convert float32 to int16
 
-        return SpeechResult(data, sample_rate)
+        return AudioSegment(data, frame_rate=sample_rate, sample_width=2, channels=1)
+
+    def get_tts_params(self) -> Tuple[int, int]:
+        data = self.get_speech("A")
+        print(data.frame_rate)
+        return data.frame_rate, 1
