@@ -71,7 +71,7 @@ def test_ros2_configure_publisher(ros_setup: None, request: pytest.FixtureReques
     executors, threads = multi_threaded_spinner([node])
     try:
         topic_api = ConfigurableROS2TopicAPI(node)
-        cfg = TopicConfig(topic_name, "std_msgs/msg/String")
+        cfg = TopicConfig(msg_type="std_msgs/msg/String")
         topic_api.configure_publisher(topic_name, cfg)
         assert topic_api._publishers[topic_name] is not None
     finally:
@@ -86,8 +86,7 @@ def test_ros2_configre_subscriber(ros_setup, request: pytest.FixtureRequest):
     try:
         topic_api = ConfigurableROS2TopicAPI(node)
         cfg = TopicConfig(
-            topic_name,
-            "std_msgs/msg/String",
+            msg_type="std_msgs/msg/String",
             is_subscriber=True,
             subscriber_callback=lambda _: None,
         )
@@ -109,8 +108,7 @@ def test_ros2_single_message_publish_configured(
     try:
         topic_api = ConfigurableROS2TopicAPI(node)
         cfg = TopicConfig(
-            topic_name,
-            "std_msgs/msg/String",
+            msg_type="std_msgs/msg/String",
             is_subscriber=False,
         )
         topic_api.configure_publisher(topic_name, cfg)

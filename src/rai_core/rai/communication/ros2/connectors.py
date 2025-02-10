@@ -15,16 +15,21 @@
 import threading
 import time
 import uuid
-from typing import Any, Callable, Dict, List, Literal, Optional, Tuple
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union, cast
 
+import numpy as np
 import rclpy
 import rclpy.executors
 import rclpy.node
 import rclpy.time
+from cv_bridge import CvBridge
+from PIL import Image
+from pydub import AudioSegment
 from rclpy.duration import Duration
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
+from sensor_msgs.msg import Image as ROS2Image
 from tf2_ros import Buffer, LookupException, TransformListener, TransformStamped
 
 from rai.communication import (
@@ -40,6 +45,10 @@ from rai.communication.ros2.api import (
     ROS2ServiceAPI,
     ROS2TopicAPI,
     TopicConfig,
+)
+from rai_interfaces.msg import HRIMessage as ROS2HRIMessage_
+from rai_interfaces.msg._audio_message import (
+    AudioMessage as ROS2HRIMessage__Audio,
 )
 
 
@@ -200,25 +209,99 @@ class ROS2HRIMessage(HRIMessage):
     def __init__(self, payload: HRIPayload, message_author: Literal["ai", "human"]):
         super().__init__(payload, message_author)
 
+    @classmethod
+    def from_ros2(cls, msg: Any, message_author: Literal["ai", "human"]):
+        from rai_interfaces.msg import HRIMessage as ROS2HRIMessage_
+
+        if not isinstance(msg, ROS2HRIMessage_):
+            raise ValueError(
+                "ROS2HRIMessage can only be created from rai_interfaces/msg/HRIMessage"
+            )
+
+        cv_bridge = CvBridge()
+        images = [
+            cv_bridge.imgmsg_to_cv2(img_msg, "rgb8")
+            for img_msg in cast(List[ROS2Image], msg.images)
+        ]
+        pil_images = [Image.fromarray(img) for img in images]
+        audio_segments = [
+            AudioSegment(
+                data=audio_msg.audio,
+                frame_rate=audio_msg.sample_rate,
+                sample_width=2,  # bytes, int16
+                channels=audio_msg.channels,
+            )
+            for audio_msg in msg.audios
+        ]
+        return ROS2HRIMessage(
+            payload=HRIPayload(text=msg.text, images=pil_images, audios=audio_segments),
+            message_author=message_author,
+        )
+
+    def to_ros2_dict(self):
+        # TODO: This import causes circular import. Fix it.
+        from rai.tools.ros2.utils import ros2_message_to_dict
+
+        cv_bridge = CvBridge()
+        assert isinstance(self.payload, HRIPayload)
+        img_msgs = [
+            cv_bridge.cv2_to_imgmsg(np.array(img), "rgb8")
+            for img in self.payload.images
+        ]
+        audio_msgs = [
+            ROS2HRIMessage__Audio(
+                audio=audio.raw_data,
+                sample_rate=audio.frame_rate,
+                channels=audio.channels,
+            )
+            for audio in self.payload.audios
+        ]
+
+        return ros2_message_to_dict(
+            ROS2HRIMessage_(
+                text=self.payload.text,
+                images=img_msgs,
+                audios=audio_msgs,
+            )
+        )
+
 
 class ROS2HRIConnector(HRIConnector[ROS2HRIMessage]):
     def __init__(
         self,
         node_name: str = f"rai_ros2_hri_connector_{str(uuid.uuid4())[-12:]}",
-        targets: List[Tuple[str, TopicConfig]] = [],
-        sources: List[Tuple[str, TopicConfig]] = [],
+        targets: List[Union[str, Tuple[str, TopicConfig]]] = [],
+        sources: List[Union[str, Tuple[str, TopicConfig]]] = [],
     ):
-        configured_targets = [target[0] for target in targets]
-        configured_sources = [source[0] for source in sources]
+        configured_targets = [
+            target[0] if isinstance(target, tuple) else target for target in targets
+        ]
+        configured_sources = [
+            source[0] if isinstance(source, tuple) else source for source in sources
+        ]
 
-        self._configure_publishers(targets)
-        self._configure_subscribers(sources)
+        _targets = [
+            target
+            if isinstance(target, tuple)
+            else (target, TopicConfig(is_subscriber=False))
+            for target in targets
+        ]
+        _sources = [
+            source
+            if isinstance(source, tuple)
+            else (source, TopicConfig(is_subscriber=True))
+            for source in sources
+        ]
 
-        super().__init__(configured_targets, configured_sources)
         self._node = Node(node_name)
         self._topic_api = ConfigurableROS2TopicAPI(self._node)
         self._service_api = ROS2ServiceAPI(self._node)
         self._actions_api = ROS2ActionAPI(self._node)
+
+        self._configure_publishers(_targets)
+        self._configure_subscribers(_sources)
+
+        super().__init__(configured_targets, configured_sources)
 
         self._executor = MultiThreadedExecutor()
         self._executor.add_node(self._node)
@@ -236,7 +319,7 @@ class ROS2HRIConnector(HRIConnector[ROS2HRIMessage]):
     def send_message(self, message: ROS2HRIMessage, target: str, **kwargs):
         self._topic_api.publish_configured(
             topic=target,
-            msg_content=message.payload,
+            msg_content=message.to_ros2_dict(),
         )
 
     def receive_message(
@@ -249,16 +332,12 @@ class ROS2HRIConnector(HRIConnector[ROS2HRIMessage]):
         auto_topic_type: bool = True,
         **kwargs: Any,
     ) -> ROS2HRIMessage:
-        if msg_type != "std_msgs/msg/String":
-            raise ValueError("ROS2HRIConnector only supports receiving sting messages")
         msg = self._topic_api.receive(
             topic=source,
             timeout_sec=timeout_sec,
-            msg_type=msg_type,
             auto_topic_type=auto_topic_type,
         )
-        payload = HRIPayload(msg.data)
-        return ROS2HRIMessage(payload=payload, message_author=message_author)
+        return ROS2HRIMessage.from_ros2(msg, message_author)
 
     def service_call(
         self, message: ROS2HRIMessage, target: str, timeout_sec: float, **kwargs: Any
@@ -284,3 +363,10 @@ class ROS2HRIConnector(HRIConnector[ROS2HRIMessage]):
         raise NotImplementedError(
             f"{self.__class__.__name__} doesn't support action calls"
         )
+
+    def shutdown(self):
+        self._executor.shutdown()
+        self._thread.join()
+        self._actions_api.shutdown()
+        self._topic_api.shutdown()
+        self._node.destroy_node()
