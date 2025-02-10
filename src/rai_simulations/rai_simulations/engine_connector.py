@@ -12,14 +12,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import subprocess
+import time
 from abc import ABC, abstractmethod
-from geometry_msgs.msg import Pose
+from typing import Any, Dict, List
 
-class Entity:
-    # name: str
-    # prefab_name: str
-    # pose: Pose
-    pass
+import yaml
+from geometry_msgs.msg import Point, Pose, Quaternion
+from pydantic import BaseModel, Field, field_validator
+
+
+class Entity(BaseModel):
+    name: str
+    prefab_name: str
+    pose: Any = Field(
+        default=None
+    )  # TODO (mk) consider whether make it mandatory or not
+
+    @field_validator("pose", mode="after")
+    @classmethod
+    def convert_to_pose(cls, value: Dict[str, Any]) -> Pose:
+        """Convert a dict to a ROS `Pose` object."""
+
+        translation = value.get("translation", {})
+        rotation = value.get("rotation", {})
+
+        return Pose(
+            position=Point(**translation) if translation else Point(),
+            orientation=Quaternion(**rotation) if rotation else Quaternion(),
+        )
 
 
 class SceneConfig(BaseModel):
@@ -27,15 +48,16 @@ class SceneConfig(BaseModel):
     Setup of scene - arrangmenet of objects, interactions, environment etc.
     """
 
-    entities: list[Entity]
+    binary_path: str
+    entities: List[Entity]
 
 
-class SceneSetup(ABC):
+class SceneSetup(BaseModel):
     """
     Info about entities in the scene (positions, collisions, etc.)
     """
 
-    entities: list[Entity]
+    entities: List[Entity]
 
 
 class EngineConnector(ABC):
@@ -55,7 +77,7 @@ class EngineConnector(ABC):
         pass
 
     @abstractmethod
-    def despawn_entity(self, entity: Entity):
+    def _despawn_entity(self, entity: Entity):
         pass
 
     @abstractmethod
@@ -71,7 +93,38 @@ class O3DEEngineConnector(EngineConnector):
     def _despawn_entity(self, entity: Entity):
         pass
 
-    def setup_scene(self, scene_config: SceneConfig) -> SceneSetup:
+    def get_object_position(self, object_name: str) -> Pose:
         pass
-        # 8 times despawn_entity
-        # 10 times spawn_entity
+
+    def setup_scene(self, scene_config: SceneConfig) -> SceneSetup:
+        process = subprocess.Popen(
+            [scene_config.binary_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        time.sleep(5)
+        process.terminate()
+        # for entity in scene_config.entities:
+        #     self._spawn_entity(entity)
+        return SceneSetup(entities=scene_config.entities)
+
+
+# TODO (mk) move to engine connector if SceneConfig will be common for all engines
+def load_config(file_path: str) -> SceneConfig:
+    """
+    Load the scene configuration from a YAML file.
+    """
+    try:
+        with open(file_path, "r") as file:
+            content = yaml.safe_load(file)
+
+        return SceneConfig(**content)
+
+    except Exception as e:
+        raise e
+
+
+if __name__ == "__main__":
+    o3de_engine_connector = O3DEEngineConnector()
+    o3de_engine_connector.setup_scene(load_config("scene_config.yaml"))
