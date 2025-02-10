@@ -190,6 +190,7 @@ class SoundDeviceAPI:
         feed_data: Callable[[NDArray, int, Any, Any], None],
         on_done: Callable = lambda _: None,
         sample_rate: Optional[int] = None,
+        channels: Optional[int] = None,
     ):
         if not self.write_flag or not self.stream_flag:
             raise SoundDeviceError(
@@ -213,9 +214,11 @@ class SoundDeviceAPI:
         try:
             assert sd is not None
             sample_rate = self.sample_rate if sample_rate is None else sample_rate
+            print(sample_rate)
+            channels = self.config.channels if channels is None else channels
             self.out_stream = sd.OutputStream(
                 samplerate=sample_rate,
-                channels=self.config.channels,
+                channels=channels,
                 device=self.device_number,
                 dtype=self.config.dtype,
                 callback=callback,

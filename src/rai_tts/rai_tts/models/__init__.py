@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .base import SpeechResult, TTSModel, TTSModelError
+from .base import TTSModel, TTSModelError
 from .open_tts import OpenTTS
 
-__all__ = ["TTSModel", "SpeechResult", "TTSModelError", "OpenTTS"]
+__all__ = ["OpenTTS", "TTSModel", "TTSModelError"]

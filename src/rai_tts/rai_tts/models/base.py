@@ -13,14 +13,9 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import NamedTuple
+from typing import Tuple
 
-from numpy.typing import NDArray
-
-
-class SpeechResult(NamedTuple):
-    speech: NDArray
-    sample_rate: int
+from pydub import AudioSegment
 
 
 class TTSModelError(Exception):
@@ -29,5 +24,9 @@ class TTSModelError(Exception):
 
 class TTSModel(ABC):
     @abstractmethod
-    def get_speech(self, text: str) -> SpeechResult:
+    def get_speech(self, text: str) -> AudioSegment:
+        pass
+
+    @abstractmethod
+    def get_tts_params(self) -> Tuple[int, int]:
         pass
