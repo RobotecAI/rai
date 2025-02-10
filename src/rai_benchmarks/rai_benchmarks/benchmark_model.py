@@ -16,70 +16,8 @@ from abc import ABC, abstractmethod
 
 from geometry_msgs.msg import Pose
 from pydantic import BaseModel
-
 from rai.agents.conversational_agent import create_conversational_agent
-
-
-class Entity:
-    # name: str
-    # prefab_name: str
-    # pose: Pose
-    pass
-
-
-class SceneConfig(BaseModel):
-    """
-    Setup of scene - arrangmenet of objects, interactions, environment etc.
-    """
-
-    entities: list[Entity]
-
-
-class SceneSetup(ABC):
-    """
-    Info about entities in the scene (positions, collisions, etc.)
-    """
-
-    entities: list[Entity]
-
-
-class EngineConnector(ABC):
-    """
-    Responsible for communication with simulation.
-    """
-
-    def __init__(self):
-        pass
-
-    @abstractmethod
-    def setup_scene(self, scene_config: SceneConfig) -> SceneSetup:
-        pass
-
-    @abstractmethod
-    def _spawn_entity(self, entity: Entity):
-        pass
-
-    @abstractmethod
-    def despawn_entity(self, entity: Entity):
-        pass
-
-    @abstractmethod
-    def get_object_position(self, object_name: str) -> Pose:
-        pass
-
-
-class O3DEEngineConnector(EngineConnector):
-    def _spawn_entity(self, entity: Entity):
-        # connector.service_call('spawn', entity)
-        pass
-
-    def _despawn_entity(self, entity: Entity):
-        pass
-
-    def setup_scene(self, scene_config: SceneConfig) -> SceneSetup:
-        pass
-        # 8 times despawn_entity
-        # 10 times spawn_entity
+from rai_simulations.engine_connector import EngineConnector, SceneConfig, SceneSetup
 
 
 class Task(ABC):
