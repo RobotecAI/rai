@@ -15,5 +15,5 @@
 #
 
 int16[] audio
-int16 sample_rate
+uint16 sample_rate
 int16 channels
