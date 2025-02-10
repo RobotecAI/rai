@@ -15,5 +15,5 @@
 #
 
 int16[] audio
-float32 sample_rate
+int16 sample_rate
 int16 channels
