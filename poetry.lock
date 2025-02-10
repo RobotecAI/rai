@@ -5701,6 +5701,32 @@ type = "directory"
 url = "src/rai_asr"
 
 [[package]]
+name = "rai-benchmarks"
+version = "0.0.1"
+description = "Framework to create and run benchmarks"
+optional = false
+python-versions = "^3.10, <3.13"
+files = []
+develop = true
+
+[package.source]
+type = "directory"
+url = "src/rai_benchmarks"
+
+[[package]]
+name = "rai-simulations"
+version = "0.0.1"
+description = "Package to run simulations"
+optional = false
+python-versions = "^3.10, <3.13"
+files = []
+develop = true
+
+[package.source]
+type = "directory"
+url = "src/rai_simulations"
+
+[[package]]
 name = "rai-tts"
 version = "1.0.0"
 description = "Text-to-Speech module for RAI framework"
@@ -8302,4 +8328,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10, <3.13"
-content-hash = "242e440c4ce4b31fa629d198a3d79b0854e84284d013d819a4b7a24e633a1706"
+content-hash = "c2882b1bfc2af4923478805bd937f01b99456fa5d65decfc5f5fb2332f06c6bf"
