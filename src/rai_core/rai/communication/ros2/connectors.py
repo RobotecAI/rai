@@ -34,6 +34,7 @@ from rclpy.qos import QoSProfile
 from sensor_msgs.msg import Image as ROS2Image
 from tf2_ros import Buffer, LookupException, TransformListener, TransformStamped
 
+import rai_interfaces.msg
 from rai.communication import (
     ARIConnector,
     ARIMessage,
@@ -212,14 +213,9 @@ class ROS2HRIMessage(HRIMessage):
         super().__init__(payload, message_author)
 
     @classmethod
-    def from_ros2(cls, msg: Any, message_author: Literal["ai", "human"]):
-        from rai_interfaces.msg import HRIMessage as ROS2HRIMessage_
-
-        if not isinstance(msg, ROS2HRIMessage_):
-            raise ValueError(
-                "ROS2HRIMessage can only be created from rai_interfaces/msg/HRIMessage"
-            )
-
+    def from_ros2(
+        cls, msg: rai_interfaces.msg.HRIMessage, message_author: Literal["ai", "human"]
+    ):
         cv_bridge = CvBridge()
         images = [
             cv_bridge.imgmsg_to_cv2(img_msg, "rgb8")
