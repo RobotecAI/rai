@@ -18,15 +18,14 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 from geometry_msgs.msg import Point, Pose, Quaternion
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, field_validator
 
 
 class Entity(BaseModel):
     name: str
     prefab_name: str
-    pose: Any = Field(
-        default=None
-    )  # TODO (mk) consider whether make it mandatory or not
+    pose: Any
+    # TODO (mkotynia) consider whether create base model for poses instead of using Any as a workaround
 
     @field_validator("pose", mode="after")
     @classmethod
