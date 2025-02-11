@@ -4,7 +4,7 @@ entities:
     prefab_name: apple
     pose:
       translation:
-        x: 0.0
+        x: 0.5
         y: 0.0
         z: 0.05
       rotation:
@@ -16,7 +16,7 @@ entities:
     prefab_name: green_cube
     pose:
       translation:
-        x: 0.0
+        x: 0.5
         y: 0.3
         z: 0.05
       rotation:
