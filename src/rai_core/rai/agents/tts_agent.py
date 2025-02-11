@@ -115,7 +115,7 @@ class TextToSpeechAgent(BaseAgent):
         set_flags = [flag for flag, status in status_dict.items() if status]
 
         if set_flags:
-            self.logger.warning("Flags set:", ", ".join(set_flags))
+            self.logger.warning("Flags set:" + ", ".join(set_flags))
         if self.playback_data.playing:
             if self.playback_data.current_segment is None:
                 try:
@@ -182,12 +182,20 @@ class TextToSpeechAgent(BaseAgent):
         )
 
     def _on_to_human_message(self, message: ROS2HRIMessage):
+        self.logger.info(f"Receieved message from human: {message.text}")
         self.text_queue.put(message.text)
 
     def _on_command_message(self, message: ROS2HRIMessage):
         if message.text == "tog_play":
             self.playback_data.playing = not self.playback_data.playing
+        elif message.text == "play":
+            self.playback_data.playing = True
+        elif message.text == "pause":
+            self.playback_data.playing = False
         elif message.text == "stop":
             self.playback_data.playing = False
             while not self.audio_queue.empty():
                 _ = self.audio_queue.get()
+            self.playback_data.data = None
+            self.playback_data.current_frame = 0
+            self.playback_data.current_segment = None

@@ -159,7 +159,7 @@ class VoiceRecognitionAgent(BaseAgent):
         if voice_detected:
             self.logger.debug("Voice detected... resetting grace period")
             self.grace_period_start = sample_time
-
+            self._send_ros2_message("pause", "/voice_commands")
         if (
             self.recording_started
             and sample_time - self.grace_period_start > self.grace_period
@@ -174,12 +174,16 @@ class VoiceRecognitionAgent(BaseAgent):
                 self.sample_buffer = []
             self.transcription_threads[self.active_thread]["thread"].start()
             self.active_thread = ""
+            self._send_ros2_message("stop", "/voice_commands")
+        elif sample_time - self.grace_period_start > self.grace_period:
+            self._send_ros2_message("play", "/voice_commands")
 
     def should_record(
         self, audio_data: NDArray, input_parameters: dict[str, Any]
     ) -> bool:
         for model in self.should_record_pipeline:
             detected, output = model(audio_data, input_parameters)
+            self.logger.info(f"detected {detected}, output {output}")
             if detected:
                 return True
         return False
@@ -191,13 +195,13 @@ class VoiceRecognitionAgent(BaseAgent):
             self.transcription_lock
         ):  # this is only necessary for the local model... TODO: fix this somehow
             transcription = self.transcription_model.transcribe(audio_data)
-        assert isinstance(self.connectors["ros2"], ROS2ARIConnector)
-        self.connectors["ros2"].send_message(
-            ROS2ARIMessage(
-                {"data": transcription}, {"msg_type": "std_msgs/msg/String"}
-            ),
-            "/from_human",
-            msg_type="std_msgs/msg/String",
-        )
+        self._send_ros2_message(transcription, "/from_human")
         self.transcription_threads[identifier]["transcription"] = transcription
         self.transcription_threads[identifier]["event"].set()
+
+    def _send_ros2_message(self, data: str, topic: str):
+        self.connectors["ros2"].send_message(
+            ROS2ARIMessage({"data": data}, {"msg_type": "std_msgs/msg/String"}),
+            topic,
+            msg_type="std_msgs/msg/String",
+        )
