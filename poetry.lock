@@ -5701,7 +5701,7 @@ type = "directory"
 url = "src/rai_asr"
 
 [[package]]
-name = "rai-benchmarks"
+name = "rai-bench"
 version = "0.0.1"
 description = "Framework to create and run benchmarks"
 optional = false
@@ -5711,10 +5711,10 @@ develop = true
 
 [package.source]
 type = "directory"
-url = "src/rai_benchmarks"
+url = "src/rai_bench"
 
 [[package]]
-name = "rai-simulations"
+name = "rai-sim"
 version = "0.0.1"
 description = "Package to run simulations"
 optional = false
@@ -5722,9 +5722,12 @@ python-versions = "^3.10, <3.13"
 files = []
 develop = true
 
+[package.dependencies]
+PyYAML = "*"
+
 [package.source]
 type = "directory"
-url = "src/rai_simulations"
+url = "src/rai_sim"
 
 [[package]]
 name = "rai-tts"
@@ -8328,4 +8331,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10, <3.13"
-content-hash = "c2882b1bfc2af4923478805bd937f01b99456fa5d65decfc5f5fb2332f06c6bf"
+content-hash = "d943b786f2bb8dddc9249475409a4d7c9c4b0a77041611c039431df55ad94000"
