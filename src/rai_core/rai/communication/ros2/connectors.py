@@ -236,7 +236,7 @@ class ROS2HRIMessage(HRIMessage):
             message_author=message_author,
         )
 
-    def to_ros2_dict(self):
+    def to_ros2_dict(self) -> OrderedDict[str, Any]:
         cv_bridge = CvBridge()
         assert isinstance(self.payload, HRIPayload)
         img_msgs = [
