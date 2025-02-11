@@ -37,12 +37,33 @@ from rai_interfaces.msg import HRIMessage
 
 class HRIMessagePublisher(Node):
     def __init__(self, topic: str):
+        """
+        Initialize the HRIMessagePublisher node.
+        
+        This constructor sets up the ROS 2 node with the name "test_hri_message_publisher". It creates a publisher for HRIMessage objects on the specified topic with a queue size of 10, starts a timer that calls the publish_message callback every 0.1 seconds, and initializes a CvBridge instance for converting image formats.
+          
+        Parameters:
+            topic (str): The ROS topic on which HRIMessage objects will be published.
+        """
         super().__init__("test_hri_message_publisher")
         self.publisher = self.create_publisher(HRIMessage, topic, 10)
         self.timer = self.create_timer(0.1, self.publish_message)
         self.cv_bridge = CvBridge()
 
     def publish_message(self) -> None:
+        """
+        Publishes an HRIMessage containing a converted image, silent audio, and a greeting text.
+        
+        This method creates an HRIMessage instance and populates its fields by:
+        - Converting a 100x100 black NumPy array into a ROS image message using CvBridge and assigning it to the `images` list.
+        - Generating a one-second silent audio segment with AudioSegment and assigning it to the `audios` list.
+        - Setting the `text` field to "Hello, HRI!".
+        
+        The constructed message is then published using the node's publisher.
+        
+        Returns:
+            None
+        """
         msg = HRIMessage()
         image = self.cv_bridge.cv2_to_imgmsg(np.zeros((100, 100, 3), dtype=np.uint8))
         msg.images = [image]
@@ -53,6 +74,16 @@ class HRIMessagePublisher(Node):
 
 class HRIMessageSubscriber(Node):
     def __init__(self, topic: str):
+        """
+        Initialize a HRIMessageSubscriber node with a subscription to HRIMessage messages.
+        
+        This constructor initializes a ROS 2 node with the name "test_hri_message_subscriber" and creates a subscription
+        to receive HRIMessage objects from the specified topic. The subscription uses a queue size of 10 and directs incoming
+        messages to the `handle_test_message` callback. An empty list is also initialized to store all received HRIMessage instances.
+        
+        Parameters:
+            topic (str): The topic name from which to subscribe for HRIMessage messages.
+        """
         super().__init__("test_hri_message_subscriber")
         self.subscription = self.create_subscription(
             HRIMessage, topic, self.handle_test_message, 10
@@ -60,11 +91,30 @@ class HRIMessageSubscriber(Node):
         self.received_messages: List[HRIMessage] = []
 
     def handle_test_message(self, msg: HRIMessage) -> None:
+        """
+        Callback for handling a received HRIMessage.
+        
+        Appends the received HRIMessage to the internal list of messages.
+        
+        Parameters:
+            msg (HRIMessage): The HRIMessage instance received from the subscribed topic.
+        
+        Returns:
+            None
+        """
         self.received_messages.append(msg)
 
 
 class ServiceServer(Node):
     def __init__(self, service_name: str):
+        """
+        Initialize the ServiceServer node with the given service name.
+        
+        This constructor creates a ROS 2 service server node named "test_service_server" by setting up a service using the SetBool service type. The service is identified by the provided service name and uses the 'handle_test_service' callback to process incoming requests.
+        
+        Parameters:
+            service_name (str): The name of the service that the node will offer.
+        """
         super().__init__("test_service_server")
         self.srv = self.create_service(SetBool, service_name, self.handle_test_service)
 

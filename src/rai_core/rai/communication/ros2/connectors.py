@@ -56,6 +56,15 @@ from rai_interfaces.msg._audio_message import (
 
 class ROS2ARIMessage(ARIMessage):
     def __init__(self, payload: Any, metadata: Optional[Dict[str, Any]] = None):
+        """
+        Initialize a ROS2ARIMessage instance.
+        
+        This constructor initializes a ROS2ARIMessage by passing the given payload and optional metadata to the base ARIMessage class.
+        
+        Parameters:
+            payload (Any): The content of the message.
+            metadata (Optional[Dict[str, Any]]): Supplementary information for the message (default is None).
+        """
         super().__init__(payload, metadata)
 
 
@@ -209,10 +218,43 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
 
 class ROS2HRIMessage(HRIMessage):
     def __init__(self, payload: HRIPayload, message_author: Literal["ai", "human"]):
+        """
+        Initialize a ROS2HRIMessage instance with the specified payload and message author.
+        
+        Parameters:
+            payload (HRIPayload): The message payload containing HRI data.
+            message_author (Literal["ai", "human"]): Specifies the origin of the message, either "ai" or "human".
+        """
         super().__init__(payload, message_author)
 
     @classmethod
     def from_ros2(cls, msg: Any, message_author: Literal["ai", "human"]):
+        """
+        Create a ROS2HRIMessage instance from a ROS2 HRI message.
+        
+        This class method converts a ROS2 message into a ROS2HRIMessage object. The conversion process includes:
+          - Converting image messages from `msg.images` to OpenCV images using CvBridge and then to PIL Image objects.
+          - Converting audio messages from `msg.audios` into AudioSegment objects with a fixed sample width.
+          - Constructing a payload that bundles the text, converted images, and audio segments.
+        
+        Parameters:
+            msg (Any): A ROS2 HRI message instance from `rai_interfaces.msg.HRIMessage` containing the attributes:
+                       - text: A string message.
+                       - images: A list of ROS2 image messages.
+                       - audios: A list of ROS2 audio messages.
+            message_author (Literal["ai", "human"]): Indicates the author of the message. Must be either "ai" or "human".
+        
+        Returns:
+            ROS2HRIMessage: A new instance of ROS2HRIMessage with the converted payload and specified message_author.
+        
+        Raises:
+            ValueError: If the provided message is not an instance of `rai_interfaces.msg.HRIMessage`.
+        
+        Example:
+            >>> from rai_interfaces.msg import HRIMessage
+            >>> ros2_msg = HRIMessage(text="Hello", images=[...], audios=[...])
+            >>> hri_message = ROS2HRIMessage.from_ros2(ros2_msg, message_author="human")
+        """
         from rai_interfaces.msg import HRIMessage as ROS2HRIMessage_
 
         if not isinstance(msg, ROS2HRIMessage_):
@@ -241,6 +283,29 @@ class ROS2HRIMessage(HRIMessage):
         )
 
     def to_ros2_dict(self):
+        """
+        Convert the HRI payload to a ROS2-compatible ordered dictionary.
+        
+        This method converts the raw HRIPayload associated with the instance into a dictionary format that
+        can be used with ROS2 messaging. The conversion process includes the following steps:
+        - Images in the payload are converted to ROS2 image messages using CvBridge. Each image is first
+          transformed into a NumPy array and then mapped to an image message with an "rgb8" encoding.
+        - Audio segments in the payload are converted into ROS2 audio messages using the ROS2HRIMessage__Audio
+          helper, where attributes such as raw data, sample rate, and channel count are transferred.
+        - A new ROS2HRIMessage_ instance is created with the text, converted images, and converted audio messages.
+        - Finally, the ROS2HRIMessage_ instance is converted to an OrderedDict using the rosidl_runtime_py
+          conversion utility.
+        
+        Raises:
+            AssertionError: If the payload is not an instance of HRIPayload.
+        
+        Returns:
+            OrderedDict[str, Any]: An ordered dictionary representing the ROS2-compatible HRI message.
+        
+        Example:
+            >>> hri_message = ROS2HRIMessage(payload)
+            >>> ros2_message_dict = hri_message.to_ros2_dict()
+        """
         cv_bridge = CvBridge()
         assert isinstance(self.payload, HRIPayload)
         img_msgs = [
@@ -275,6 +340,41 @@ class ROS2HRIConnector(HRIConnector[ROS2HRIMessage]):
         targets: List[Union[str, Tuple[str, TopicConfig]]] = [],
         sources: List[Union[str, Tuple[str, TopicConfig]]] = [],
     ):
+        """
+        Initialize a ROS2 HRI Connector instance.
+        
+        This constructor sets up the ROS2 node and configures the topic APIs for
+        publishing and subscribing HRI messages. It accepts flexible configurations
+        for targets and sources, allowing them to be specified either as a simple
+        string (the topic name) or as a tuple containing the topic name and a
+        TopicConfig instance. If targets or sources are provided as strings, default
+        TopicConfig values will be applied (with `is_subscriber` set to False for
+        targets and True for sources).
+        
+        Parameters:
+            node_name (str): Name of the ROS2 node. Defaults to a generated string
+                in the format "rai_ros2_hri_connector_<UUID_suffix>".
+            targets (List[Union[str, Tuple[str, TopicConfig]]]): List of topics for
+                publishing messages. Each element can be either a topic name (str) or
+                a tuple of the form (topic name, TopicConfig). When specified as a
+                string, a default TopicConfig (with `is_subscriber=False`) is used.
+            sources (List[Union[str, Tuple[str, TopicConfig]]]): List of topics for
+                subscribing to messages. Each element can be either a topic name (str)
+                or a tuple of the form (topic name, TopicConfig). When specified as a
+                string, a default TopicConfig (with `is_subscriber=True`) is used.
+        
+        Side Effects:
+            - Instantiates a new ROS2 Node.
+            - Initializes configurable APIs for topics, services, and actions.
+            - Configures publishers and subscribers based on given targets and sources.
+            - Passes the processed topic configurations to the superclass initializer.
+            - Creates a MultiThreadedExecutor, adds the node to it, and starts a new
+              thread to handle asynchronous callback spinning.
+        
+        Raises:
+            Exception: Propagates any exceptions encountered during the initialization
+                of the node, APIs, or threading.
+        """
         configured_targets = [
             target[0] if isinstance(target, tuple) else target for target in targets
         ]
@@ -319,6 +419,20 @@ class ROS2HRIConnector(HRIConnector[ROS2HRIMessage]):
             self._topic_api.configure_subscriber(source[0], source[1])
 
     def send_message(self, message: ROS2HRIMessage, target: str, **kwargs):
+        """
+        Publish a ROS2 HRI message to the specified target topic.
+        
+        This method converts the provided ROS2HRIMessage instance into a ROS2-compatible dictionary
+        using its to_ros2_dict() method and publishes it via the configured topic API.
+        
+        Parameters:
+            message (ROS2HRIMessage): The HRI message to be published.
+            target (str): The identifier of the target topic where the message will be sent.
+            **kwargs: Additional keyword arguments (currently not used).
+        
+        Returns:
+            None
+        """
         self._topic_api.publish_configured(
             topic=target,
             msg_content=message.to_ros2_dict(),
@@ -334,6 +448,26 @@ class ROS2HRIConnector(HRIConnector[ROS2HRIMessage]):
         auto_topic_type: bool = True,
         **kwargs: Any,
     ) -> ROS2HRIMessage:
+        """
+        Receives a message from the specified source and converts it into a ROS2HRIMessage.
+        
+        This method retrieves a message using the underlying topic API with the given source and timeout settings.
+        The received message is then converted into a ROS2HRIMessage instance using the provided message_author.
+        
+        Parameters:
+            source (str): The name of the topic or source from which to receive the message.
+            timeout_sec (float, optional): Maximum time (in seconds) to wait for a message. Defaults to 1.0.
+            message_author (Literal["human", "ai"]): The designated author of the message; must be either "human" or "ai".
+            msg_type (Optional[str], optional): An optional message type specifier (currently not used in processing).
+            auto_topic_type (bool, optional): If True, the topic API will automatically detect the message type. Defaults to True.
+            **kwargs (Any): Additional keyword arguments for future extension (currently unused).
+        
+        Returns:
+            ROS2HRIMessage: An instance of ROS2HRIMessage created from the received ROS2 message.
+        
+        Raises:
+            Exception: Propagates any exception raised by the underlying topic API's receive method or during message conversion.
+        """
         msg = self._topic_api.receive(
             topic=source,
             timeout_sec=timeout_sec,
@@ -344,6 +478,20 @@ class ROS2HRIConnector(HRIConnector[ROS2HRIMessage]):
     def service_call(
         self, message: ROS2HRIMessage, target: str, timeout_sec: float, **kwargs: Any
     ) -> ROS2HRIMessage:
+        """
+        Attempt to perform a service call with a ROS2HRIMessage.
+        
+        This method is not implemented since the ROS2HRIConnector does not support service calls.
+        
+        Parameters:
+            message (ROS2HRIMessage): The ROS2 HRI message to be used in the service call.
+            target (str): The identifier of the service target.
+            timeout_sec (float): The maximum time in seconds to wait for a response.
+            **kwargs: Additional keyword arguments that might be used for the service call.
+        
+        Raises:
+            NotImplementedError: Always raised to indicate that service calls are not supported.
+        """
         raise NotImplementedError(
             f"{self.__class__.__name__} doesn't support service calls"
         )
@@ -362,11 +510,34 @@ class ROS2HRIConnector(HRIConnector[ROS2HRIMessage]):
         )
 
     def terminate_action(self, action_handle: str, **kwargs: Any):
+        """
+        Terminate an ongoing action (if supported).
+        
+        This method is not implemented for the current connector as action calls are not supported. Calling this method will always raise a NotImplementedError.
+        
+        Parameters:
+            action_handle (str): Unique identifier of the action to be terminated.
+            **kwargs: Additional keyword arguments specific to the connector (unused).
+        
+        Raises:
+            NotImplementedError: Always raised to indicate that action calls are not supported.
+        """
         raise NotImplementedError(
             f"{self.__class__.__name__} doesn't support action calls"
         )
 
     def shutdown(self):
+        """
+        Cleanly shuts down all ROS2 connector resources.
+        
+        This method performs a sequence of cleanup operations to gracefully terminate the connector:
+        1. Shuts down the multi-threaded executor.
+        2. Waits for the executor thread to finish.
+        3. Shuts down both the actions and topic APIs.
+        4. Destroys the associated ROS2 node.
+        
+        This ensures that all background processes and resources are properly released.
+        """
         self._executor.shutdown()
         self._thread.join()
         self._actions_api.shutdown()

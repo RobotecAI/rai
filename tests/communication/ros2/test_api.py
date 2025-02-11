@@ -66,6 +66,23 @@ def test_ros2_single_message_publish(
 
 
 def test_ros2_configure_publisher(ros_setup: None, request: pytest.FixtureRequest):
+    """
+    Tests the configuration of a ROS2 publisher for a topic.
+    
+    This function creates a ROS2 node and initiates a multi-threaded spinner to support asynchronous operations.
+    It then instantiates a ConfigurableROS2TopicAPI and a default TopicConfig to configure a publisher for a dynamically
+    generated topic name based on the test's original name. After configuring the publisher, the test asserts that the
+    publisher has been successfully created and stored in the API's internal publishers dictionary. Resources are cleaned
+    up using a shutdown of executors and threads in the finally block.
+    
+    Parameters:
+        ros_setup (None): A fixture that sets up the ROS2 environment; not used directly in test logic.
+        request (pytest.FixtureRequest): Pytest fixture providing information about the requesting test, used here
+            to derive unique names for the node and topic.
+    
+    Raises:
+        AssertionError: If the publisher is not successfully configured and stored in the topic API.
+    """
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
     node = Node(node_name)
@@ -80,6 +97,28 @@ def test_ros2_configure_publisher(ros_setup: None, request: pytest.FixtureReques
 
 
 def test_ros2_configure_subscriber(ros_setup, request: pytest.FixtureRequest):
+    """
+    Test the configuration of a ROS2 subscriber.
+    
+    This test verifies that a subscriber can be successfully configured using the ConfigurableROS2TopicAPI.
+    It creates a ROS2 node with a unique name derived from the test context, spins the node using a multi-threaded
+    spinner, and configures a subscriber on a dynamically generated topic. A TopicConfig with a dummy subscriber callback
+    (lambda that does nothing) is used to set up the subscriber. The test asserts that the subscriber has been registered
+    in the API’s internal subscriptions dictionary. Resources are cleaned up in a finally block to ensure proper shutdown
+    of executors and threads irrespective of test outcome.
+    
+    Parameters:
+        ros_setup: A fixture that sets up the ROS2 environment for tests.
+        request (pytest.FixtureRequest): Provides context for the test, including access to the test's original name for
+            generating unique node and topic names.
+    
+    Returns:
+        None
+    
+    Raises:
+        AssertionError: If the subscription is not properly configured (i.e., if the topic key in the subscriptions
+                        dictionary is missing or None).
+    """
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
     node = Node(node_name)
@@ -99,6 +138,24 @@ def test_ros2_configure_subscriber(ros_setup, request: pytest.FixtureRequest):
 def test_ros2_single_message_publish_configured(
     ros_setup: None, request: pytest.FixtureRequest
 ) -> None:
+    """
+    Test publishing of a single message using a pre-configured publisher on a ROS2 topic.
+    
+    This test sets up a ROS2 node and a subscriber, then configures a publisher for a specified topic using the 
+    ConfigurableROS2TopicAPI and a TopicConfig with is_subscriber set to False. It publishes a message with the text 
+    "Hello, ROS2!" and verifies that the subscriber receives exactly one message with the expected content. Resources 
+    like executors and threads are properly shut down after the test.
+    
+    Parameters:
+        ros_setup (None): Fixture for the ROS2 test setup (unused directly within the test).
+        request (pytest.FixtureRequest): Pytest fixture that provides test context, including the original test name.
+    
+    Returns:
+        None
+    
+    Raises:
+        AssertionError: If the subscriber does not receive exactly one message or if the received message text does not match "Hello, ROS2!".
+    """
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
     message_receiver = HRIMessageSubscriber(topic_name)

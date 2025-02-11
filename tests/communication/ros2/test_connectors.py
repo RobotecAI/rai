@@ -155,6 +155,24 @@ def test_ros2ari_connector_send_goal_and_terminate_action(
 def test_ros2ari_connector_send_goal_erronous_callback(
     ros_setup: None, request: pytest.FixtureRequest
 ):
+    """
+    Test starting an action with an erroneous feedback callback using ROS2ARIConnector.
+    
+    This test sets up an action server with a unique action name and initiates an action through the
+    ROS2ARIConnector. The feedback callback is intentionally designed to raise a ZeroDivisionError
+    (by performing a division by zero) to simulate an erroneous callback scenario. The test asserts
+    that a valid action handle is returned when the action is initiated, and it ensures proper cleanup
+    of resources by shutting down the connector and its associated executors and threads.
+    
+    Parameters:
+        ros_setup (None): Fixture for ROS2 setup (not used directly in this test).
+        request (pytest.FixtureRequest): Pytest fixture that provides context including the test name,
+            which is used to generate a unique action name.
+    
+    Note:
+        The division by zero error in the callback is not triggered during the action initiation phase.
+        It is expected to occur only if the feedback callback is invoked, which does not happen in this test.
+    """
     action_name = f"{request.node.originalname}_action"  # type: ignore
     action_server = ActionServer(action_name)
     executors, threads = multi_threaded_spinner([action_server])
@@ -176,6 +194,30 @@ def test_ros2ari_connector_send_goal_erronous_callback(
 def test_ros2hri_default_message_publish(
     ros_setup: None, request: pytest.FixtureRequest
 ):
+    """
+    Test default HRI message publish/receive functionality using ROS2HRIConnector.
+    
+    This test verifies that an HRI message containing images, audio, and text can be successfully
+    sent and received via the ROS2 communication framework. It performs the following steps:
+    1. Dynamically creates a topic name based on the test's node name.
+    2. Initializes a ROS2HRIConnector targeting the topic and sets up an HRIMessageSubscriber.
+    3. Constructs an HRI payload with:
+       - A red 100x100 RGB image,
+       - A one-second silent audio segment,
+       - Text "Hello, HRI!".
+    4. Encapsulates the payload in a ROS2HRIMessage with the message author "ai" and sends it.
+    5. Waits briefly to allow asynchronous processing.
+    6. Verifies that a message has been received and that the received message's text, author, images,
+       and audios match those of the sent message.
+    
+    All resources, including the connector and thread executors, are properly shut down after the test,
+    even in the event of errors.
+    
+    Parameters:
+        ros_setup (None): Fixture for ROS setup (used as a placeholder for ROS initialization).
+        request (pytest.FixtureRequest): Fixture providing test request details, used to generate a unique
+            topic name.
+    """
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     connector = ROS2HRIConnector(targets=[topic_name])
     hri_message_receiver = HRIMessageSubscriber(topic_name)
