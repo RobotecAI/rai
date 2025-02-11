@@ -152,7 +152,10 @@ class O3DEEngineConnector(EngineConnector):
         self.entity_ids[entity.name] = response.payload.status_message
 
     def _despawn_entity(self, entity: Entity):
-        msg_content = {"name": self.entity_ids[entity.name]}
+        self._despawn_entity_by_id(self.entity_ids[entity.name])
+
+    def _despawn_entity_by_id(self, entity_id: str):
+        msg_content = {"name": entity_id}
 
         msg = ROS2ARIMessage(payload=msg_content)
 
@@ -182,6 +185,10 @@ class O3DEEngineConnector(EngineConnector):
                 text=True,
             )
             self.current_binary_path = scene_config.binary_path
+        else:
+            for entity in self.entity_ids:
+                self._despawn_entity_by_id(self.entity_ids[entity])
+        self.entity_ids = {}
         time.sleep(3)
         for entity in scene_config.entities:
             self._spawn_entity(entity)
@@ -208,20 +215,21 @@ if __name__ == "__main__":
     connector = ROS2ARIConnector()
     o3de = O3DEEngineConnector(connector)
 
-    scene_config = load_config("src/rai_simulations/rai_simulations/scene_config.yaml")
+    scene_config = load_config(
+        "src/rai_simulations/rai_simulations/example_scene1.yaml"
+    )
     o3de.setup_scene(scene_config)
 
     import time
 
     time.sleep(3)
 
-    print(o3de.get_object_position(scene_config.entities[0].name))
-    o3de._despawn_entity(scene_config.entities[0])
+    scene_config = load_config(
+        "src/rai_simulations/rai_simulations/example_scene2.yaml"
+    )
+    o3de.setup_scene(scene_config)
 
     time.sleep(3)
-
-    print(o3de.get_object_position(scene_config.entities[1].name))
-    o3de._despawn_entity(scene_config.entities[1])
 
     o3de.shutdown()
     connector.shutdown()
