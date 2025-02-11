@@ -17,9 +17,13 @@ import time
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List
 
+import rclpy
 import yaml
 from geometry_msgs.msg import Point, Pose, Quaternion
 from pydantic import BaseModel, Field, field_validator
+from tf2_geometry_msgs import do_transform_pose
+
+from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 
 
 class Entity(BaseModel):
@@ -86,27 +90,100 @@ class EngineConnector(ABC):
 
 
 class O3DEEngineConnector(EngineConnector):
+    def __init__(self, connector: ROS2ARIConnector):
+        self.connector = connector
+        self.entity_ids = {}
+
+        self.current_process = None
+        self.current_binary_path = None
+
+    def shutdown(self):
+        if self.current_process:
+            self.current_process.terminate()
+            self.current_process = None
+
+    def __del__(self):
+        self.shutdown()
+
+    def get_available_spawnable_names(self) -> list[str]:
+        msg = ROS2ARIMessage({})
+
+        response = self.connector.service_call(
+            msg,
+            target="get_available_spawnable_names",
+            msg_type="gazebo_msgs/srv/GetWorldProperties",
+        )
+
+        return response.payload.model_names
+
     def _spawn_entity(self, entity: Entity):
-        # connector.service_call('spawn', entity)
-        pass
+        pose = do_transform_pose(
+            entity.pose, self.connector.get_transform("odom", "world")
+        )
+
+        msg_content = {
+            "name": entity.prefab_name,
+            "xml": "",
+            "robot_namespace": entity.name,
+            "initial_pose": {
+                "position": {
+                    "x": pose.position.x,
+                    "y": pose.position.y,
+                    "z": pose.position.z,
+                },
+                "orientation": {
+                    "x": pose.orientation.x,
+                    "y": pose.orientation.y,
+                    "z": pose.orientation.z,
+                    "w": pose.orientation.w,
+                },
+            },
+        }
+
+        msg = ROS2ARIMessage(payload=msg_content)
+
+        response = self.connector.service_call(
+            msg, target="spawn_entity", msg_type="gazebo_msgs/srv/SpawnEntity"
+        )
+
+        if not response.payload.success:
+            raise RuntimeError(response.payload.status_message)
+
+        self.entity_ids[entity.name] = response.payload.status_message
 
     def _despawn_entity(self, entity: Entity):
-        pass
+        msg_content = {"name": self.entity_ids[entity.name]}
+
+        msg = ROS2ARIMessage(payload=msg_content)
+
+        response = self.connector.service_call(
+            msg, target="delete_entity", msg_type="gazebo_msgs/srv/DeleteEntity"
+        )
+
+        if not response.payload.success:
+            raise RuntimeError(response.payload.status_message)
 
     def get_object_position(self, object_name: str) -> Pose:
-        pass
+        object_frame = object_name + "/"
+        pose = do_transform_pose(
+            Pose(), self.connector.get_transform(object_frame + "odom", object_frame)
+        )
+        pose = do_transform_pose(pose, self.connector.get_transform("world", "odom"))
+        return pose
 
     def setup_scene(self, scene_config: SceneConfig) -> SceneSetup:
-        process = subprocess.Popen(
-            [scene_config.binary_path],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        time.sleep(5)
-        process.terminate()
-        # for entity in scene_config.entities:
-        #     self._spawn_entity(entity)
+        if self.current_binary_path != scene_config.binary_path:
+            if self.current_process:
+                self.current_process.terminate()
+            self.current_process = subprocess.Popen(
+                [scene_config.binary_path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+        time.sleep(3)
+        for entity in scene_config.entities:
+            self._spawn_entity(entity)
         return SceneSetup(entities=scene_config.entities)
 
 
@@ -126,5 +203,25 @@ def load_config(file_path: str) -> SceneConfig:
 
 
 if __name__ == "__main__":
-    o3de_engine_connector = O3DEEngineConnector()
-    o3de_engine_connector.setup_scene(load_config("scene_config.yaml"))
+    rclpy.init()
+    connector = ROS2ARIConnector()
+    o3de = O3DEEngineConnector(connector)
+
+    scene_config = load_config("src/rai_simulations/rai_simulations/scene_config.yaml")
+    o3de.setup_scene(scene_config)
+
+    import time
+
+    time.sleep(3)
+
+    print(o3de.get_object_position(scene_config.entities[0].name))
+    o3de._despawn_entity(scene_config.entities[0])
+
+    time.sleep(3)
+
+    print(o3de.get_object_position(scene_config.entities[1].name))
+    o3de._despawn_entity(scene_config.entities[1])
+
+    o3de.shutdown()
+    connector.shutdown()
+    rclpy.shutdown()
