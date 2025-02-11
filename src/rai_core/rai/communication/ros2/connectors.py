@@ -15,6 +15,7 @@
 import threading
 import time
 import uuid
+from collections import OrderedDict
 from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union, cast
 
 import numpy as np
@@ -22,6 +23,7 @@ import rclpy
 import rclpy.executors
 import rclpy.node
 import rclpy.time
+import rosidl_runtime_py.convert
 from cv_bridge import CvBridge
 from PIL import Image
 from pydub import AudioSegment
@@ -239,9 +241,6 @@ class ROS2HRIMessage(HRIMessage):
         )
 
     def to_ros2_dict(self):
-        # TODO: This import causes circular import. Fix it.
-        from rai.tools.ros2.utils import ros2_message_to_dict
-
         cv_bridge = CvBridge()
         assert isinstance(self.payload, HRIPayload)
         img_msgs = [
@@ -257,12 +256,15 @@ class ROS2HRIMessage(HRIMessage):
             for audio in self.payload.audios
         ]
 
-        return ros2_message_to_dict(
-            ROS2HRIMessage_(
-                text=self.payload.text,
-                images=img_msgs,
-                audios=audio_msgs,
-            )
+        return cast(
+            OrderedDict[str, Any],
+            rosidl_runtime_py.convert.message_to_ordereddict(
+                ROS2HRIMessage_(
+                    text=self.payload.text,
+                    images=img_msgs,
+                    audios=audio_msgs,
+                )
+            ),
         )
 
 
