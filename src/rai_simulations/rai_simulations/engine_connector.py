@@ -181,6 +181,7 @@ class O3DEEngineConnector(EngineConnector):
                 stderr=subprocess.PIPE,
                 text=True,
             )
+            self.current_binary_path = scene_config.binary_path
         time.sleep(3)
         for entity in scene_config.entities:
             self._spawn_entity(entity)
