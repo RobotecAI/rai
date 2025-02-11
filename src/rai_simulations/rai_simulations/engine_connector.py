@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import shlex
 import subprocess
 import time
 from abc import ABC, abstractmethod
@@ -21,9 +22,8 @@ import rclpy
 import yaml
 from geometry_msgs.msg import Point, Pose, Quaternion
 from pydantic import BaseModel, Field, field_validator
-from tf2_geometry_msgs import do_transform_pose
-
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
+from tf2_geometry_msgs import do_transform_pose
 
 
 class Entity(BaseModel):
@@ -178,12 +178,7 @@ class O3DEEngineConnector(EngineConnector):
         if self.current_binary_path != scene_config.binary_path:
             if self.current_process:
                 self.current_process.terminate()
-            self.current_process = subprocess.Popen(
-                [scene_config.binary_path],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
+            self.launch_binary(scene_config.binary_path)
             self.current_binary_path = scene_config.binary_path
         else:
             for entity in self.entity_ids:
@@ -193,6 +188,16 @@ class O3DEEngineConnector(EngineConnector):
         for entity in scene_config.entities:
             self._spawn_entity(entity)
         return SceneSetup(entities=scene_config.entities)
+
+    def launch_binary(self, binary_path: str):
+        # NOTE (mk) ros2 launch command with binary path, to be refactored
+        command = shlex.split(binary_path)
+        self.current_process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
 
 
 # TODO (mk) move to engine connector if SceneConfig will be common for all engines
