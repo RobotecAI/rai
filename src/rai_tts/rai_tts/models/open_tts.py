@@ -65,5 +65,4 @@ class OpenTTS(TTSModel):
 
     def get_tts_params(self) -> Tuple[int, int]:
         data = self.get_speech("A")
-        print(data.frame_rate)
         return data.frame_rate, 1

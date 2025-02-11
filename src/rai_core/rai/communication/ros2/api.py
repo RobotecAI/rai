@@ -428,7 +428,6 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
 
         def callback_wrapper(message):
             text = message.data
-            print(text)
             assert config.subscriber_callback is not None
             config.subscriber_callback(
                 ROS2HRIMessage(
