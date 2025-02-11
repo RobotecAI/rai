@@ -56,13 +56,12 @@ def create_conversational_agent(
     debug=False,
 ):
     _logger = None
-    if isinstance(logger, RcutilsLogger):
+    if logger:
         _logger = logger
     else:
         _logger = logging.getLogger(__name__)
 
     _logger.info("Creating state based agent")
-
     llm_with_tools = llm.bind_tools(tools)
     tool_node = ToolRunner(tools=tools, logger=_logger)
 

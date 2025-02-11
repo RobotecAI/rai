@@ -15,21 +15,18 @@
 from typing import List, NamedTuple, Type
 
 import numpy as np
-import rclpy
-import rclpy.qos
 import sensor_msgs.msg
 from pydantic import BaseModel, Field
-from rai.node import RaiBaseNode
-from rai.tools.ros import Ros2BaseInput, Ros2BaseTool
-from rai.tools.ros.utils import convert_ros_img_to_ndarray
-from rai.tools.utils import wait_for_message
-from rai.utils.ros_async import get_future_result
 from rclpy.exceptions import (
     ParameterNotDeclaredException,
     ParameterUninitializedException,
 )
 from rclpy.task import Future
 
+from rai.communication.ros2.connectors import ROS2ARIConnector
+from rai.tools.ros import Ros2BaseInput, Ros2BaseTool
+from rai.tools.ros.utils import convert_ros_img_to_ndarray
+from rai.utils.ros_async import get_future_result
 from rai_interfaces.srv import RAIGroundingDino
 from rai_open_set_vision import GDINO_SERVICE_NAME
 
@@ -82,7 +79,7 @@ class DistanceMeasurement(NamedTuple):
 
 # --------------------- Tools ---------------------
 class GroundingDinoBaseTool(Ros2BaseTool):
-    node: RaiBaseNode = Field(..., exclude=True, required=True)
+    connector: ROS2ARIConnector = Field(..., exclude=True)
 
     box_threshold: float = Field(default=0.35, description="Box threshold for GDINO")
     text_threshold: float = Field(default=0.45, description="Text threshold for GDINO")
@@ -90,9 +87,11 @@ class GroundingDinoBaseTool(Ros2BaseTool):
     def _call_gdino_node(
         self, camera_img_message: sensor_msgs.msg.Image, object_names: list[str]
     ) -> Future:
-        cli = self.node.create_client(RAIGroundingDino, GDINO_SERVICE_NAME)
+        cli = self.connector.node.create_client(RAIGroundingDino, GDINO_SERVICE_NAME)
         while not cli.wait_for_service(timeout_sec=1.0):
-            self.node.get_logger().info("service not available, waiting again...")
+            self.node.get_logger().info(
+                f"service {GDINO_SERVICE_NAME} not available, waiting again..."
+            )
         req = RAIGroundingDino.Request()
         req.source_img = camera_img_message
         req.classes = " , ".join(object_names)
@@ -103,20 +102,16 @@ class GroundingDinoBaseTool(Ros2BaseTool):
         return future
 
     def get_img_from_topic(self, topic: str, timeout_sec: int = 2):
-        success, msg = wait_for_message(
-            sensor_msgs.msg.Image,
-            self.node,
-            topic,
-            qos_profile=rclpy.qos.qos_profile_sensor_data,
-            time_to_wait=timeout_sec,
-        )
+        msg = self.connector.receive_message(topic, timeout_sec=timeout_sec).payload
 
-        if success:
-            self.node.get_logger().info(f"Received message of type from topic {topic}")
+        if msg is not None:
+            self.connector.node.get_logger().info(
+                f"Received message of {type(msg)} from topic {topic}"
+            )
             return msg
         else:
             error = f"No message received in {timeout_sec} seconds from topic {topic}"
-            self.node.get_logger().error(error)
+            self.connector.node.get_logger().error(error)
             return error
 
     def _get_image_message(self, topic: str) -> sensor_msgs.msg.Image:
@@ -147,7 +142,9 @@ class GroundingDinoBaseTool(Ros2BaseTool):
 
 class GetDetectionTool(GroundingDinoBaseTool):
     name: str = "GetDetectionTool"
-    description: str = "A tool for detecting specified objects using a ros2 action. The tool call might take some time to execute and is blocking - you will not be able to check their feedback, only will be informed about the result."
+    description: str = (
+        "A tool for detecting specified objects using a ros2 action. The tool call might take some time to execute and is blocking - you will not be able to check their feedback, only will be informed about the result."
+    )
 
     args_schema: Type[Ros2GetDetectionInput] = Ros2GetDetectionInput
 
@@ -175,7 +172,9 @@ class GetDetectionTool(GroundingDinoBaseTool):
 
 class GetDistanceToObjectsTool(GroundingDinoBaseTool):
     name: str = "GetDistanceToObjectsTool"
-    description: str = "A tool for calculating distance to specified objects using a ros2 action. The tool call might take some time to execute and is blocking - you will not be able to check their feedback, only will be informed about the result."
+    description: str = (
+        "A tool for calculating distance to specified objects using a ros2 action. The tool call might take some time to execute and is blocking - you will not be able to check their feedback, only will be informed about the result."
+    )
 
     args_schema: Type[GetDistanceToObjectsInput] = GetDistanceToObjectsInput
 

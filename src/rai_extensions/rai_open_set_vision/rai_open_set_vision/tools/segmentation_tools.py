@@ -18,17 +18,18 @@ import cv2
 import numpy as np
 import rclpy
 import sensor_msgs.msg
+from langchain_core.tools import BaseTool
 from pydantic import Field
-from rai.node import RaiBaseNode
-from rai.tools.ros import Ros2BaseInput, Ros2BaseTool
-from rai.tools.ros.utils import convert_ros_img_to_base64, convert_ros_img_to_ndarray
-from rai.utils.ros_async import get_future_result
 from rclpy import Future
 from rclpy.exceptions import (
     ParameterNotDeclaredException,
     ParameterUninitializedException,
 )
 
+from rai.communication.ros2.connectors import ROS2ARIConnector
+from rai.tools.ros import Ros2BaseInput
+from rai.tools.ros.utils import convert_ros_img_to_base64, convert_ros_img_to_ndarray
+from rai.utils.ros_async import get_future_result
 from rai_interfaces.srv import RAIGroundedSam, RAIGroundingDino
 from rai_open_set_vision import GDINO_SERVICE_NAME
 
@@ -64,8 +65,8 @@ class GetGrabbingPointInput(Ros2BaseInput):
 
 
 # --------------------- Tools ---------------------
-class GetSegmentationTool(Ros2BaseTool):
-    node: RaiBaseNode = Field(..., exclude=True)
+class GetSegmentationTool:
+    connector: ROS2ARIConnector = Field(..., exclude=True)
 
     name: str = ""
     description: str = ""
@@ -84,7 +85,7 @@ class GetSegmentationTool(Ros2BaseTool):
         return get_future_result(future)
 
     def _get_image_message(self, topic: str) -> sensor_msgs.msg.Image:
-        msg = self.node.get_raw_message_from_topic(topic)
+        msg = self.connector.receive_message(topic).payload
         if type(msg) is sensor_msgs.msg.Image:
             return msg
         else:
@@ -93,9 +94,11 @@ class GetSegmentationTool(Ros2BaseTool):
     def _call_gdino_node(
         self, camera_img_message: sensor_msgs.msg.Image, object_name: str
     ) -> Future:
-        cli = self.node.create_client(RAIGroundingDino, GDINO_SERVICE_NAME)
+        cli = self.connector.node.create_client(RAIGroundingDino, GDINO_SERVICE_NAME)
         while not cli.wait_for_service(timeout_sec=1.0):
-            self.node.get_logger().info("service not available, waiting again...")
+            self.node.get_logger().info(
+                f"service {GDINO_SERVICE_NAME} not available, waiting again..."
+            )
         req = RAIGroundingDino.Request()
         req.source_img = camera_img_message
         req.classes = object_name
@@ -108,9 +111,11 @@ class GetSegmentationTool(Ros2BaseTool):
     def _call_gsam_node(
         self, camera_img_message: sensor_msgs.msg.Image, data: RAIGroundingDino.Response
     ):
-        cli = self.node.create_client(RAIGroundedSam, "grounded_sam_segment")
+        cli = self.connector.node.create_client(RAIGroundedSam, "grounded_sam_segment")
         while not cli.wait_for_service(timeout_sec=1.0):
-            self.node.get_logger().info("service not available, waiting again...")
+            self.node.get_logger().info(
+                "service grounded_sam_segment not available, waiting again..."
+            )
         req = RAIGroundedSam.Request()
         req.detections = data.detections
         req.source_img = camera_img_message
@@ -126,9 +131,11 @@ class GetSegmentationTool(Ros2BaseTool):
         camera_img_msg = self._get_image_message(camera_topic)
 
         future = self._call_gdino_node(camera_img_msg, object_name)
-        logger = self.node.get_logger()
+        logger = self.connector.node.get_logger()
         try:
-            conversion_ratio = self.node.get_parameter("conversion_ratio").value
+            conversion_ratio = self.connector.node.get_parameter(
+                "conversion_ratio"
+            ).value
             if not isinstance(conversion_ratio, float):
                 logger.error(
                     f"Parameter conversion_ratio was set badly: {type(conversion_ratio)}: {conversion_ratio} expected float. Using default value 0.001"
@@ -185,19 +192,72 @@ def depth_to_point_cloud(
     return points
 
 
-class GetGrabbingPointTool(GetSegmentationTool):
+class GetGrabbingPointTool(BaseTool):
+    connector: ROS2ARIConnector = Field(..., exclude=True)
+
     name: str = "GetGrabbingPointTool"
     description: str = "Get the grabbing point of an object"
     pcd: List[Any] = []
 
     args_schema: Type[GetGrabbingPointInput] = GetGrabbingPointInput
+    box_threshold: float = Field(default=0.35, description="Box threshold for GDINO")
+    text_threshold: float = Field(default=0.45, description="Text threshold for GDINO")
+
+    def _get_gdino_response(
+        self, future: Future
+    ) -> Optional[RAIGroundingDino.Response]:
+        return get_future_result(future)
+
+    def _get_gsam_response(self, future: Future) -> Optional[RAIGroundedSam.Response]:
+        return get_future_result(future)
+
+    def _get_image_message(self, topic: str) -> sensor_msgs.msg.Image:
+        msg = self.connector.receive_message(topic).payload
+        if type(msg) is sensor_msgs.msg.Image:
+            return msg
+        else:
+            raise Exception("Received wrong message")
+
+    def _call_gdino_node(
+        self, camera_img_message: sensor_msgs.msg.Image, object_name: str
+    ) -> Future:
+        cli = self.connector.node.create_client(RAIGroundingDino, GDINO_SERVICE_NAME)
+        while not cli.wait_for_service(timeout_sec=1.0):
+            self.connector.node.get_logger().info(
+                "service not available, waiting again..."
+            )
+        req = RAIGroundingDino.Request()
+        req.source_img = camera_img_message
+        req.classes = object_name
+        req.box_threshold = self.box_threshold
+        req.text_threshold = self.text_threshold
+
+        future = cli.call_async(req)
+        return future
+
+    def _call_gsam_node(
+        self, camera_img_message: sensor_msgs.msg.Image, data: RAIGroundingDino.Response
+    ):
+        cli = self.connector.node.create_client(RAIGroundedSam, "grounded_sam_segment")
+        while not cli.wait_for_service(timeout_sec=1.0):
+            self.connector.node.get_logger().info(
+                "service not available, waiting again..."
+            )
+        req = RAIGroundedSam.Request()
+        req.detections = data.detections
+        req.source_img = camera_img_message
+        future = cli.call_async(req)
+
+        return future
 
     def _get_camera_info_message(self, topic: str) -> sensor_msgs.msg.CameraInfo:
         for _ in range(3):
-            msg = self.node.get_raw_message_from_topic(topic, timeout_sec=3.0)
+            msg = self.connector.receive_message(topic, timeout_sec=3.0).payload
             if isinstance(msg, sensor_msgs.msg.CameraInfo):
                 return msg
-            self.node.get_logger().warn("Received wrong message type. Retrying...")
+            self.connector.node.get_logger().warn(
+                "Received wrong message type. Retrying..."
+            )
 
         raise Exception("Failed to receive correct CameraInfo message after 3 attempts")
 
@@ -259,16 +319,18 @@ class GetGrabbingPointTool(GetSegmentationTool):
         camera_info_topic: str,
         object_name: str,
     ):
-        camera_img_msg = self._get_image_message(camera_topic)
-        depth_msg = self._get_image_message(depth_topic)
+        camera_img_msg = self.connector.receive_message(camera_topic).payload
+        depth_msg = self.connector.receive_message(depth_topic).payload
         camera_info = self._get_camera_info_message(camera_info_topic)
 
         intrinsic = self._get_intrinsic_from_camera_info(camera_info)
 
         future = self._call_gdino_node(camera_img_msg, object_name)
-        logger = self.node.get_logger()
+        logger = self.connector.node.get_logger()
         try:
-            conversion_ratio = self.node.get_parameter("conversion_ratio").value
+            conversion_ratio = self.connector.node.get_parameter(
+                "conversion_ratio"
+            ).value
             if not isinstance(conversion_ratio, float):
                 logger.error(
                     f"Parameter conversion_ratio was set badly: {type(conversion_ratio)}: {conversion_ratio} expected float. Using default value 0.001"
@@ -280,21 +342,17 @@ class GetGrabbingPointTool(GetSegmentationTool):
             )
             conversion_ratio = 0.001
         resolved = None
-        while rclpy.ok():
-            resolved = self._get_gdino_response(future)
-            if resolved is not None:
-                break
+
+        resolved = get_future_result(future)
 
         assert resolved is not None
         future = self._call_gsam_node(camera_img_msg, resolved)
 
         ret = []
-        while rclpy.ok():
-            resolved = self._get_gsam_response(future)
-            if resolved is not None:
-                for img_msg in resolved.masks:
-                    ret.append(convert_ros_img_to_base64(img_msg))
-                break
+        resolved = get_future_result(future)
+        if resolved is not None:
+            for img_msg in resolved.masks:
+                ret.append(convert_ros_img_to_base64(img_msg))
         assert resolved is not None
         rets = []
         for mask_msg in resolved.masks:

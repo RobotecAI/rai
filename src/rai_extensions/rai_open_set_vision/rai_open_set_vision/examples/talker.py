@@ -28,7 +28,9 @@ class GDClientExample(Node):
         self.declare_parameter("image_path", "")
         self.cli = self.create_client(RAIGroundingDino, "grounding_dino_classify")
         while not self.cli.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info("service not available, waiting again...")
+            self.get_logger().info(
+                "service grounding_dino_classify not available, waiting again..."
+            )
         self.req = RAIGroundingDino.Request()
         self.bridge = CvBridge()
 
@@ -56,7 +58,9 @@ class GSClientExample(Node):
         super().__init__(node_name="GSClientExample", parameter_overrides=[])
         self.cli = self.create_client(RAIGroundedSam, "grounded_sam_segment")
         while not self.cli.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info("service not available, waiting again...")
+            self.get_logger().info(
+                "service grounded_sam_segment not available, waiting again..."
+            )
         self.req = RAIGroundedSam.Request()
         self.bridge = CvBridge()
 

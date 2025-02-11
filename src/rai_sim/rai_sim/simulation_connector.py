@@ -159,3 +159,6 @@ class SimulationConnector(ABC, Generic[SimulationConfigT]):
     @abstractmethod
     def get_scene_state(self) -> SceneState:
         pass
+
+    def shutdown(self):
+        pass

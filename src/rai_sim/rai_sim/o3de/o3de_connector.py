@@ -22,7 +22,6 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 from geometry_msgs.msg import Pose
-from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from tf2_geometry_msgs import do_transform_pose
 
 from rai_sim.simulation_connector import (
@@ -33,6 +32,11 @@ from rai_sim.simulation_connector import (
     SimulationConnector,
     SpawnedEntity,
 )
+from rai.utils.ros_async import get_future_result
+from rai_interfaces.srv import ManipulatorMoveTo
+from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
+
+logger = logging.getLogger(__name__)
 
 
 class O3DExROS2SimulationConfig(SimulationConfig):
@@ -56,9 +60,9 @@ class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
     ):
         super().__init__(logger=logger)
         self.connector = connector
-        self.spawned_entities: List[
-            SpawnedEntity
-        ] = []  # list of spawned entities with their initial poses
+        self.spawned_entities: List[SpawnedEntity] = (
+            []
+        )  # list of spawned entities with their initial poses
 
         self.current_sim_process = None
         self.current_robotic_stack_process = None
@@ -263,3 +267,19 @@ class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
                 f"Retrying {target}, response success: {response.payload.success}"
             )
         return response  # type: ignore
+
+
+class O3DEngineArmManipulationConnector(O3DExROS2Connector):
+    def move_arm(self, request: ManipulatorMoveTo.Request):
+        client = self.connector.node.create_client(
+            ManipulatorMoveTo,
+            "/manipulator_move_to",
+        )
+        while not client.wait_for_service(timeout_sec=5.0):
+            self.connector.node.get_logger().info("Service not available, waiting...")
+
+        self.connector.node.get_logger().info("Making request to arm manipulator...")
+        future = client.call_async(request)
+        result = get_future_result(future, timeout_sec=5.0)
+
+        self.connector.node.get_logger().debug(f"Moving arm result: {result}")
