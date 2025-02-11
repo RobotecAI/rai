@@ -16,4 +16,4 @@
 
 int16[] audio
 uint16 sample_rate
-int16 channels
+uint16 channels
