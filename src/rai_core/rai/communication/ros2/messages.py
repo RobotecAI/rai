@@ -12,9 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Literal, Optional
+from collections import OrderedDict
+from typing import Any, Dict, List, Literal, Optional, cast
 
+import numpy as np
+import rosidl_runtime_py.convert
+from cv_bridge import CvBridge
+from PIL import Image
+from pydub import AudioSegment
+from sensor_msgs.msg import Image as ROS2Image
+
+import rai_interfaces.msg
 from rai.communication import ARIMessage, HRIMessage, HRIPayload
+from rai_interfaces.msg import HRIMessage as ROS2HRIMessage_
+from rai_interfaces.msg._audio_message import AudioMessage as ROS2HRIMessage__Audio
 
 
 class ROS2ARIMessage(ARIMessage):
@@ -24,4 +35,55 @@ class ROS2ARIMessage(ARIMessage):
 
 class ROS2HRIMessage(HRIMessage):
     def __init__(self, payload: HRIPayload, message_author: Literal["ai", "human"]):
-        super().__init__(payload, message_author)
+        super().__init__(payload, {}, message_author)
+
+    @classmethod
+    def from_ros2(
+        cls, msg: rai_interfaces.msg.HRIMessage, message_author: Literal["ai", "human"]
+    ):
+        cv_bridge = CvBridge()
+        images = [
+            cv_bridge.imgmsg_to_cv2(img_msg, "rgb8")
+            for img_msg in cast(List[ROS2Image], msg.images)
+        ]
+        pil_images = [Image.fromarray(img) for img in images]
+        audio_segments = [
+            AudioSegment(
+                data=audio_msg.audio,
+                frame_rate=audio_msg.sample_rate,
+                sample_width=2,  # bytes, int16
+                channels=audio_msg.channels,
+            )
+            for audio_msg in msg.audios
+        ]
+        return ROS2HRIMessage(
+            payload=HRIPayload(text=msg.text, images=pil_images, audios=audio_segments),
+            message_author=message_author,
+        )
+
+    def to_ros2_dict(self) -> OrderedDict[str, Any]:
+        cv_bridge = CvBridge()
+        assert isinstance(self.payload, HRIPayload)
+        img_msgs = [
+            cv_bridge.cv2_to_imgmsg(np.array(img), "rgb8")
+            for img in self.payload.images
+        ]
+        audio_msgs = [
+            ROS2HRIMessage__Audio(
+                audio=audio.raw_data,
+                sample_rate=audio.frame_rate,
+                channels=audio.channels,
+            )
+            for audio in self.payload.audios
+        ]
+
+        return cast(
+            OrderedDict[str, Any],
+            rosidl_runtime_py.convert.message_to_ordereddict(
+                ROS2HRIMessage_(
+                    text=self.payload.text,
+                    images=img_msgs,
+                    audios=audio_msgs,
+                )
+            ),
+        )

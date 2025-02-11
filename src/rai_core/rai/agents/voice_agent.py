@@ -183,7 +183,7 @@ class VoiceRecognitionAgent(BaseAgent):
     ) -> bool:
         for model in self.should_record_pipeline:
             detected, output = model(audio_data, input_parameters)
-            self.logger.info(f"detected {detected}, output {output}")
+            self.logger.debug(f"detected {detected}, output {output}")
             if detected:
                 return True
         return False

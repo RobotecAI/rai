@@ -373,6 +373,7 @@ class TopicConfig:
     qos_profile: Optional[QoSProfile] = None
     is_subscriber: bool = False
     subscriber_callback: Optional[Callable[[ROS2HRIMessage], None]] = None
+    source_author: Literal["human", "ai"] = "ai"
 
     def __post_init__(self):
         if not self.auto_qos_matching and self.qos_profile is None:

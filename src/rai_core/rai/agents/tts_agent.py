@@ -161,7 +161,6 @@ class TextToSpeechAgent(BaseAgent):
 
     def _setup_ros2_connector(self):
         to_human = TopicConfig(
-            name="/to_human",
             msg_type="std_msgs/msg/String",
             auto_qos_matching=True,
             is_subscriber=True,
@@ -169,7 +168,6 @@ class TextToSpeechAgent(BaseAgent):
             source_author="ai",
         )
         voice_commands = TopicConfig(
-            name="/voice_commands",
             msg_type="std_msgs/msg/String",
             auto_qos_matching=True,
             is_subscriber=True,
