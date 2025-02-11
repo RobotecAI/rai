@@ -17,7 +17,8 @@ from abc import ABC, abstractmethod
 from geometry_msgs.msg import Pose
 from pydantic import BaseModel
 from rai.agents.conversational_agent import create_conversational_agent
-from rai_simulations.engine_connector import EngineConnector, SceneConfig, SceneSetup
+
+from rai_sim.engine_connector import EngineConnector, SceneConfig, SceneSetup
 
 
 class Task(ABC):
@@ -63,6 +64,7 @@ class Benchmark:
         Run benchmark
         """
         for scenario in self.scenarios:
+            # TODO (define type of engine connector)
             initial_scene_setup = self.engine_connector.setup_scene(
                 scenario.scene_config
             )
@@ -107,9 +109,17 @@ class BuildTowerTask(Task):
 
 agent = create_conversational_agent(llm, tools, "You are Bob Budowniczy.")
 
-scene_config = O3DESceneConfig(binary_path="/path/to/scene", objects_positions={})
+
+# scene_config = SceneConfig(entities=[
+# ])
+
+# gazebo_scene_config = GazeboSceneConfig(scene_config, cos_innego=)
+# o3de_scene_config = O3DESceneConfig(scene_config, binary_path="/path/to/binary")
 task = BuildTowerTask()
-scenarios = [Scenario(task=BuildTowerTask(), scene_config=scene_config)]
+scenarios = [
+    Scenario(task=BuildTowerTask(), scene_config=scene_config),
+    Scenario(task=BuildTowerTask(), scene_config=scene_config),
+]
 
 benchmark = Benchmark(agent, scenarios)
 benchmark.run()

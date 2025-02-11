@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "rai-simulations"
+name = "rai-bench"
 version = "0.0.1"
-description = "Package to run simulations"
+description = "Framework to create and run benchmarks"
 authors = ["Magdalena Kotynia <magdalena.kotynia@robotec.ai>", "Kacper Dąbrowski <kacper.dabrowski@robotec.ai>", "Jakub Matejczyk <jakub.matejczyk@robotec.ai>"]
 readme = "README.md"
 classifiers = [
@@ -10,12 +10,11 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
 ]
 packages = [
-    { include = "rai_simulations", from = "." },
+    { include = "rai_bench", from = "." },
 ]
 
 [tool.poetry.dependencies]
 python = "^3.10, <3.13"
-yaml = "*"
 
 
 [build-system]

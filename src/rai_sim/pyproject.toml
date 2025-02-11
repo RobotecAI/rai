@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "rai-benchmarks"
+name = "rai-sim"
 version = "0.0.1"
-description = "Framework to create and run benchmarks"
+description = "Package to run simulations"
 authors = ["Magdalena Kotynia <magdalena.kotynia@robotec.ai>", "Kacper Dąbrowski <kacper.dabrowski@robotec.ai>", "Jakub Matejczyk <jakub.matejczyk@robotec.ai>"]
 readme = "README.md"
 classifiers = [
@@ -10,11 +10,12 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
 ]
 packages = [
-    { include = "rai_benchmarks", from = "." },
+    { include = "rai_sim", from = "." },
 ]
 
 [tool.poetry.dependencies]
 python = "^3.10, <3.13"
+PyYAML = "*"
 
 
 [build-system]
