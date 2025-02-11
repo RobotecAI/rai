@@ -16,12 +16,21 @@ import time
 from typing import Any, List
 
 import pytest
-from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
+from PIL import Image
+from pydub import AudioSegment
+from rai.communication.ros2.connectors import (
+    HRIPayload,
+    ROS2ARIConnector,
+    ROS2ARIMessage,
+    ROS2HRIConnector,
+    ROS2HRIMessage,
+)
 from std_msgs.msg import String
 from std_srvs.srv import SetBool
 
 from .helpers import ActionServer_ as ActionServer
 from .helpers import (
+    HRIMessageSubscriber,
     MessagePublisher,
     MessageReceiver,
     ServiceServer,
@@ -159,6 +168,49 @@ def test_ros2ari_connector_send_goal_erronous_callback(
             msg_type="nav2_msgs/action/NavigateToPose",
         )
         assert handle is not None
+    finally:
+        connector.shutdown()
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2hri_default_message_publish(
+    ros_setup: None, request: pytest.FixtureRequest
+):
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    connector = ROS2HRIConnector(targets=[topic_name])
+    hri_message_receiver = HRIMessageSubscriber(topic_name)
+    executors, threads = multi_threaded_spinner([hri_message_receiver])
+
+    try:
+        images = [Image.new("RGB", (100, 100), color="red")]
+        audios = [AudioSegment.silent(duration=1000)]
+        text = "Hello, HRI!"
+        payload = HRIPayload(images=images, audios=audios, text=text)
+        message = ROS2HRIMessage(payload=payload, message_author="ai")
+        connector.send_message(message, target=topic_name)
+        time.sleep(1)  # wait for the message to be received
+
+        assert len(hri_message_receiver.received_messages) > 0
+        recreated_message = ROS2HRIMessage.from_ros2(
+            hri_message_receiver.received_messages[0], message_author="ai"
+        )
+
+        assert message.text == recreated_message.text
+        assert message.message_author == recreated_message.message_author
+        assert len(message.images) == len(recreated_message.images)
+        assert len(message.audios) == len(recreated_message.audios)
+        assert all(
+            [
+                image_a == image_b
+                for image_a, image_b in zip(message.images, recreated_message.images)
+            ]
+        )
+        assert all(
+            [
+                audio_a == audio_b
+                for audio_a, audio_b in zip(message.audios, recreated_message.audios)
+            ]
+        )
     finally:
         connector.shutdown()
         shutdown_executors_and_threads(executors, threads)

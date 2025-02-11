@@ -21,6 +21,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/VectorStoreRetrieval.srv"
   "srv/StringList.srv"
   "msg/RAIDetectionArray.msg"
+  "msg/AudioMessage.msg"
+  "msg/HRIMessage.msg"
   "srv/RAIGroundingDino.srv"
   "srv/RAIGroundedSam.srv"
   "action/Task.action"
