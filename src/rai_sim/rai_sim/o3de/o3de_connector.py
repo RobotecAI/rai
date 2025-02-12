@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import logging
-import os
 import shlex
 import signal
 import subprocess
@@ -41,38 +40,28 @@ class O3DEngineConnector(EngineConnector):
     def shutdown(self):
         if not self.current_process:
             return
-        try:
-            logger.debug(f"Sending SIGINT to process {self.current_process.pid}")
-            self.current_process.send_signal(signal.SIGINT)
+        parent = psutil.Process(self.current_process.pid)
+        children = parent.children(recursive=True)
 
-            parent = psutil.Process(self.current_process.pid)
-            children = parent.children(recursive=True)
-            processes = children + [parent]
+        # NOTE (mkotynia) terminating binary
+        for child in children:
+            logger.debug(f"Terminating child process {child.pid}, {child.name()}")
+            child.terminate()
 
-            _, alive = psutil.wait_procs(processes, timeout=3)
+        _, alive = psutil.wait_procs(children, timeout=3)
+        if alive:
+            for child in alive:
+                logger.warning(f"Force killing child process PID: {child.pid}")
+                child.kill()
+        # NOTE (mkotynia) terminating ros2 launch
+        parent.send_signal(signal.SIGINT)
+        parent.wait()
 
-            # NOTE (mkotynia) kill ros2
-            for process in alive:
-                logger.debug(f"Force killing process {process.pid}, {process.name()}")
-                try:
-                    process.kill()
-                except Exception as e:
-                    logger.warning(f"Failed to kill process {process.pid}: {e}")
-                    continue
+        if parent.is_running():
+            logger.error(f"Parent process PID: {parent.pid} is still running.")
+            raise RuntimeError(f"Failed to terminate main process PID {parent.pid}")
 
-        except Exception as e:
-            logger.warning(f"Error during shutdown: {e}")
-            try:
-                if self.current_process:
-                    os.killpg(os.getpgid(self.current_process.pid), signal.SIGKILL)
-            except Exception as e:
-                logger.debug(f"Failed to kill process group: {e}")
-
-        finally:
-            self.current_process = None
-
-    def __del__(self):
-        self.shutdown()
+        self.current_process = None
 
     def get_available_spawnable_names(self) -> list[str]:
         msg = ROS2ARIMessage({})
@@ -165,10 +154,18 @@ class O3DEngineConnector(EngineConnector):
     def launch_binary(self, binary_path: str):
         # NOTE (mkotynia) ros2 launch command with binary path, to be refactored
         command = shlex.split(binary_path)
-        logger.info(f"Running command: {command}")
+        logger.debug(f"Running command: {command}")
         self.current_process = subprocess.Popen(
             command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
         )
+        if not self.has_process_started():
+            raise RuntimeError("Process did not start in time.")
+
+    def has_process_started(self, timeout: int = 5):
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            if self.current_process is not None:
+                if self.current_process.poll() is None:
+                    return True
+            time.sleep(1)
+        return False
