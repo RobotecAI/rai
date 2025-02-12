@@ -24,8 +24,11 @@ from numpy.typing import NDArray
 
 from rai.agents.base import BaseAgent
 from rai.communication import (
+    HRIPayload,
     ROS2ARIConnector,
     ROS2ARIMessage,
+    ROS2HRIConnector,
+    ROS2HRIMessage,
     SoundDeviceConfig,
     SoundDeviceConnector,
     SoundDeviceMessage,
@@ -76,8 +79,15 @@ class VoiceRecognitionAgent(BaseAgent):
         microphone = SoundDeviceConnector(
             targets=[], sources=[("microphone", microphone_config)]
         )
-        ros2_connector = ROS2ARIConnector(ros2_name)
-        super().__init__(connectors={"microphone": microphone, "ros2": ros2_connector})
+        ros2_hri_connector = ROS2HRIConnector(ros2_name, targets=["/from_human"])
+        ros2_ari_connector = ROS2ARIConnector(ros2_name + "ari")
+        super().__init__(
+            connectors={
+                "microphone": microphone,
+                "ros2_hri": ros2_hri_connector,
+                "ros2_ari": ros2_ari_connector,
+            }
+        )
         self.should_record_pipeline: List[BaseVoiceDetectionModel] = []
         self.should_stop_pipeline: List[BaseVoiceDetectionModel] = []
 
@@ -141,6 +151,7 @@ class VoiceRecognitionAgent(BaseAgent):
             on_feedback=self._on_new_sample,
             on_done=lambda: None,
         )
+        self.logger.info("Started Voice Agent")
 
     def stop(self):
         """
@@ -149,6 +160,8 @@ class VoiceRecognitionAgent(BaseAgent):
         self.logger.info("Stopping voice agent")
         self.running = False
         self.connectors["microphone"].terminate_action(self.listener_handle)
+        assert isinstance(self.connectors["ros2_hri"], ROS2HRIConnector)
+        self.connectors["ros2_hri"].shutdown()
         while not all(
             [thread["joined"] for thread in self.transcription_threads.values()]
         ):
@@ -242,8 +255,11 @@ class VoiceRecognitionAgent(BaseAgent):
         self.transcription_threads[identifier]["event"].set()
 
     def _send_ros2_message(self, data: str, topic: str):
-        self.connectors["ros2"].send_message(
-            ROS2ARIMessage({"data": data}, {"msg_type": "std_msgs/msg/String"}),
-            topic,
-            msg_type="std_msgs/msg/String",
-        )
+        if topic == "/voice_commands":
+            msg = ROS2ARIMessage({"data": data})
+            self.connectors["ros2_ari"].send_message(
+                msg, topic, msg_type="std_msgs/msg/String"
+            )
+        else:
+            msg = ROS2HRIMessage(HRIPayload(text=data), "human")
+            self.connectors["ros2_hri"].send_message(msg, topic)

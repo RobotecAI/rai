@@ -23,7 +23,7 @@ from rai.agents.base import BaseAgent
 from rai.communication import BaseConnector
 from rai.communication.ros2.api import IROS2Message
 from rai.communication.ros2.connectors import ROS2HRIConnector, TopicConfig
-from rai.runners.base import BaseRunner
+from rai.runners import Speech2SpeechRunner
 from rai.utils.model_initialization import get_llm_model
 
 from rai_interfaces.msg import HRIMessage as InterfacesHRIMessage
@@ -133,6 +133,6 @@ class S2SConversationalAgent(BaseAgent):
 talking_agent = S2SConversationalAgent({})
 
 
-# runner = Speech2SpeechRunner()
-runner = BaseRunner([talking_agent])
+runner = Speech2SpeechRunner([talking_agent])
+# runner = BaseRunner([talking_agent])
 runner.run()
