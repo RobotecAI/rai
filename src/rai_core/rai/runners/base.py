@@ -43,7 +43,7 @@ class BaseRunner:
         """
         self.agents = agents
 
-    def run_indefinitely(self):
+    def run(self):
         """
         Starts all agents and keeps them running indefinitely.
 
