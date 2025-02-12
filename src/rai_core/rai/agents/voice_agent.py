@@ -41,6 +41,25 @@ class ThreadData(TypedDict):
 
 
 class VoiceRecognitionAgent(BaseAgent):
+    """
+    Agent responsible for voice recognition, transcription, and processing voice activity.
+
+    Parameters
+    ----------
+    microphone_config : SoundDeviceConfig
+        Configuration for the microphone device used for audio input.
+    ros2_name : str
+        Name of the ROS2 node.
+    transcription_model : BaseTranscriptionModel
+        Model used for transcribing audio input to text.
+    vad : BaseVoiceDetectionModel
+        Voice activity detection model used to determine when speech is present.
+    grace_period : float, optional
+        Time in seconds to wait before stopping recording after speech ends, by default 1.0.
+    logger : Optional[logging.Logger], optional
+        Logger instance for logging messages, by default None.
+    """
+
     def __init__(
         self,
         microphone_config: SoundDeviceConfig,
@@ -85,6 +104,23 @@ class VoiceRecognitionAgent(BaseAgent):
     def add_detection_model(
         self, model: BaseVoiceDetectionModel, pipeline: str = "record"
     ):
+        """
+        Add a voice detection model to the specified processing pipeline.
+
+        Parameters
+        ----------
+        model : BaseVoiceDetectionModel
+            The voice detection model to be added.
+        pipeline : str, optional
+            The pipeline where the model should be added, either 'record' or 'stop'.
+            Default is 'record'.
+
+        Raises
+        ------
+        ValueError
+            If the specified pipeline is not 'record' or 'stop'.
+        """
+
         if pipeline == "record":
             self.should_record_pipeline.append(model)
         elif pipeline == "stop":
@@ -93,17 +129,23 @@ class VoiceRecognitionAgent(BaseAgent):
             raise ValueError("Pipeline should be either 'record' or 'stop'")
 
     def run(self):
+        """
+        Start the voice recognition agent, initializing the microphone and handling incoming audio samples.
+        """
         self.running = True
         assert isinstance(self.connectors["microphone"], SoundDeviceConnector)
         msg = SoundDeviceMessage(read=True)
         self.listener_handle = self.connectors["microphone"].start_action(
             action_data=msg,
             target="microphone",
-            on_feedback=self.on_new_sample,
+            on_feedback=self._on_new_sample,
             on_done=lambda: None,
         )
 
     def stop(self):
+        """
+        Clean exit the voice recognition agent, ensuring all transcription threads finish before termination.
+        """
         self.logger.info("Stopping voice agent")
         self.running = False
         self.connectors["microphone"].terminate_action(self.listener_handle)
@@ -120,7 +162,7 @@ class VoiceRecognitionAgent(BaseAgent):
                     )
         self.logger.info("Voice agent stopped")
 
-    def on_new_sample(self, indata: np.ndarray, status_flags: dict[str, Any]):
+    def _on_new_sample(self, indata: np.ndarray, status_flags: dict[str, Any]):
         sample_time = time.time()
         with self.sample_buffer_lock:
             self.sample_buffer.append(indata)
@@ -137,14 +179,14 @@ class VoiceRecognitionAgent(BaseAgent):
         should_record = False
         # TODO: second condition is temporary
         if voice_detected and not self.recording_started:
-            should_record = self.should_record(indata, output_parameters)
+            should_record = self._should_record(indata, output_parameters)
 
         if should_record:
             self.logger.info("starting recording...")
             self.recording_started = True
             thread_id = str(uuid4())[0:8]
             transcription_thread = Thread(
-                target=self.transcription_thread,
+                target=self._transcription_thread,
                 args=[thread_id],
             )
             transcription_finished = Event()
@@ -178,7 +220,7 @@ class VoiceRecognitionAgent(BaseAgent):
         elif sample_time - self.grace_period_start > self.grace_period:
             self._send_ros2_message("play", "/voice_commands")
 
-    def should_record(
+    def _should_record(
         self, audio_data: NDArray, input_parameters: dict[str, Any]
     ) -> bool:
         for model in self.should_record_pipeline:
@@ -188,7 +230,7 @@ class VoiceRecognitionAgent(BaseAgent):
                 return True
         return False
 
-    def transcription_thread(self, identifier: str):
+    def _transcription_thread(self, identifier: str):
         self.logger.info(f"transcription thread {identifier} started")
         audio_data = np.concatenate(self.transcription_buffers[identifier])
         with (

@@ -25,6 +25,31 @@ from rai_asr.models.base import BaseTranscriptionModel
 
 
 class LocalWhisper(BaseTranscriptionModel):
+    """
+    A transcription model using OpenAI's Whisper, running locally.
+
+    This class loads a Whisper model and performs speech-to-text transcription
+    on audio data. It supports GPU acceleration if available.
+
+    Parameters
+    ----------
+    model_name : str
+        The name of the Whisper model to load.
+    sample_rate : int
+        The sample rate of the input audio, in Hz.
+    language : str, optional
+        The language of the transcription output. Default is "en" (English).
+    **kwargs : dict, optional
+        Additional keyword arguments for loading the Whisper model.
+
+    Attributes
+    ----------
+    whisper : whisper.Whisper
+        The loaded Whisper model for transcription.
+    logger : logging.Logger
+        Logger instance for logging transcription results.
+    """
+
     def __init__(
         self, model_name: str, sample_rate: int, language: str = "en", **kwargs
     ):
@@ -37,6 +62,22 @@ class LocalWhisper(BaseTranscriptionModel):
         self.logger = logging.getLogger(__name__)
 
     def transcribe(self, data: NDArray[np.int16]) -> str:
+        """
+        Transcribes speech from the given audio data using Whisper.
+
+        This method normalizes the input audio, processes it using the Whisper model,
+        and returns the transcribed text.
+
+        Parameters
+        ----------
+        data : NDArray[np.int16]
+            A NumPy array containing the raw audio waveform data.
+
+        Returns
+        -------
+        str
+            The transcribed text from the audio input.
+        """
         normalized_data = data.astype(np.float32) / 32768.0
         result = whisper.transcribe(
             self.whisper, normalized_data
@@ -49,6 +90,30 @@ class LocalWhisper(BaseTranscriptionModel):
 
 
 class FasterWhisper(BaseTranscriptionModel):
+    """
+    A transcription model using Faster Whisper for efficient speech-to-text conversion.
+
+    This class loads a Faster Whisper model, optimized for speed and efficiency.
+
+    Parameters
+    ----------
+    model_name : str
+        The name of the Faster Whisper model to load.
+    sample_rate : int
+        The sample rate of the input audio, in Hz.
+    language : str, optional
+        The language of the transcription output. Default is "en" (English).
+    **kwargs : dict, optional
+        Additional keyword arguments for loading the Faster Whisper model.
+
+    Attributes
+    ----------
+    model : WhisperModel
+        The loaded Faster Whisper model instance.
+    logger : logging.Logger
+        Logger instance for logging transcription results.
+    """
+
     def __init__(
         self, model_name: str, sample_rate: int, language: str = "en", **kwargs
     ):
@@ -57,6 +122,22 @@ class FasterWhisper(BaseTranscriptionModel):
         self.logger = logging.getLogger(__name__)
 
     def transcribe(self, data: NDArray[np.int16]) -> str:
+        """
+        Transcribes speech from the given audio data using Faster Whisper.
+
+        This method normalizes the input audio, processes it using the Faster Whisper model,
+        and returns the transcribed text.
+
+        Parameters
+        ----------
+        data : NDArray[np.int16]
+            A NumPy array containing the raw audio waveform data.
+
+        Returns
+        -------
+        str
+            The transcribed text from the audio input.
+        """
         normalized_data = data.astype(np.float32) / 32768.0
         segments, _ = self.model.transcribe(normalized_data)
         transcription = " ".join(segment.text for segment in segments)

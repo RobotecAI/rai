@@ -40,6 +40,19 @@ class ASRConfig:
 
 
 class Speech2SpeechRunner(BaseRunner):
+    """
+    Manages a speech-to-speech pipeline by integrating text-to-speech (TTS) and automatic speech recognition (ASR) agents.
+
+    Parameters
+    ----------
+    agents : Optional[list[BaseAgent]], optional
+        A list of existing agents to be included in the runner, by default None.
+    tts_cfg : TTSConfig, optional
+        Configuration for the text-to-speech agent, by default TTSConfig().
+    asr_config : ASRConfig, optional
+        Configuration for the automatic speech recognition agent, by default ASRConfig().
+    """
+
     def __init__(
         self,
         agents: Optional[list[BaseAgent]] = None,
