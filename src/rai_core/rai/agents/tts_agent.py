@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Optional
 
 from numpy._typing import NDArray
 from pydub import AudioSegment
+from std_msgs.msg import String
 
 from rai.agents.base import BaseAgent
 from rai.communication import (
@@ -28,8 +29,10 @@ from rai.communication import (
     SoundDeviceConnector,
     TopicConfig,
 )
+from rai.communication.ros2.api import IROS2Message
 from rai.communication.ros2.connectors import ROS2HRIMessage
 from rai.communication.sound_device.connector import SoundDeviceMessage
+from rai_interfaces.msg._hri_message import HRIMessage
 from rai_tts.models.base import TTSModel
 
 if TYPE_CHECKING:
@@ -182,7 +185,7 @@ class TextToSpeechAgent(BaseAgent):
 
     def _setup_ros2_connector(self):
         to_human = TopicConfig(
-            msg_type="std_msgs/msg/String",
+            msg_type="rai_interfaces/msg/HRIMessage",
             auto_qos_matching=True,
             is_subscriber=True,
             subscriber_callback=self._on_to_human_message,
@@ -200,18 +203,21 @@ class TextToSpeechAgent(BaseAgent):
             sources=[("/to_human", to_human), ("/voice_commands", voice_commands)],
         )
 
-    def _on_to_human_message(self, message: ROS2HRIMessage):
+    def _on_to_human_message(self, message: IROS2Message):
+        assert isinstance(message, HRIMessage)
+        msg = ROS2HRIMessage.from_ros2(message, "ai")
         self.logger.info(f"Receieved message from human: {message.text}")
-        self.text_queue.put(message.text)
+        self.text_queue.put(msg.text)
 
-    def _on_command_message(self, message: ROS2HRIMessage):
-        if message.text == "tog_play":
+    def _on_command_message(self, message: IROS2Message):
+        assert isinstance(message, String)
+        if message.data == "tog_play":
             self.playback_data.playing = not self.playback_data.playing
-        elif message.text == "play":
+        elif message.data == "play":
             self.playback_data.playing = True
-        elif message.text == "pause":
+        elif message.data == "pause":
             self.playback_data.playing = False
-        elif message.text == "stop":
+        elif message.data == "stop":
             self.playback_data.playing = False
             while not self.audio_queue.empty():
                 _ = self.audio_queue.get()
