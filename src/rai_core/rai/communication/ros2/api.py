@@ -457,7 +457,7 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
         except Exception as e:
             raise ValueError(f"{topic} has not been configured for publishing") from e
         msg_type = publisher.msg_type
-        msg = build_ros2_msg(msg_type, {"data": msg_content.text})  # type: ignore
+        msg = build_ros2_msg(msg_type, msg_content)  # type: ignore
         publisher.publish(msg)
 
 
