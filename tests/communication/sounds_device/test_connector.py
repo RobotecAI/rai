@@ -11,13 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import base64
 import io
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 import sounddevice
+from pydub import AudioSegment
 from rai.communication import HRIPayload
 from rai.communication.sound_device import SoundDeviceConfig, SoundDeviceError
 from rai.communication.sound_device.connector import (  # Replace with actual module name
@@ -69,7 +69,7 @@ def connector(mock_sound_device_api):
 
 
 @pytest.fixture
-def base64_audio():
+def sine_wav():
     frequency = 440
     duration = 2.0
     sample_rate = 44100
@@ -79,11 +79,8 @@ def base64_audio():
     wave_int16 = np.int16(wave * 32767)
     wav_buffer = io.BytesIO()
     wavfile.write(wav_buffer, sample_rate, wave_int16)
-
-    wav_binary = wav_buffer.getvalue()
-
-    base64_string = base64.b64encode(wav_binary).decode("utf-8")
-    return base64_string
+    audio = AudioSegment.from_wav(wav_buffer)
+    return audio
 
 
 @pytest.fixture
@@ -102,11 +99,11 @@ def binary_audio():
     return wav_binary
 
 
-def test_send_message_play_audio(connector, mock_sound_device_api, base64_audio):
+def test_send_message_play_audio(connector, mock_sound_device_api, sine_wav):
     message = SoundDeviceMessage(
         payload=HRIPayload(
             text="",
-            audios=[base64_audio],
+            audios=[sine_wav],
         )
     )
     connector.send_message(message, "speaker")
@@ -128,21 +125,20 @@ def test_send_message_read_error(connector):
         connector.send_message(message, "speaker")
 
 
-def test_service_call_play_audio(connector, mock_sound_device_api, base64_audio):
-    message = SoundDeviceMessage(payload=HRIPayload(text="", audios=[base64_audio]))
+def test_service_call_play_audio(connector, mock_sound_device_api, sine_wav):
+    message = SoundDeviceMessage(payload=HRIPayload(text="", audios=[sine_wav]))
     result = connector.service_call(message, "speaker")
     mock_sound_device_api.write.assert_called_once()
     assert isinstance(result, SoundDeviceMessage)
 
 
-def test_service_call_read_audio(
-    connector, mock_sound_device_api, binary_audio, base64_audio
-):
-    mock_sound_device_api.read.return_value = binary_audio
+def test_service_call_read_audio(connector, mock_sound_device_api, sine_wav):
+    mock_sound_device_api.read.return_value = sine_wav
     message = SoundDeviceMessage(read=True)
     result = connector.service_call(message, "microphone")
     mock_sound_device_api.read.assert_called_once_with(1.0, blocking=True)
-    assert result.audios == [base64_audio]
+
+    assert result.audios == [sine_wav]
 
 
 def test_service_call_stop_error(connector):
