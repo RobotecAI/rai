@@ -11,17 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import rclpy
+from rai.runners import Speech2SpeechRunner
 
-from rai.agents.conversational_agent import create_conversational_agent
-from rai.agents.state_based import create_state_based_agent
-from rai.agents.tool_runner import ToolRunner
-from rai.agents.tts_agent import TextToSpeechAgent
-from rai.agents.voice_agent import VoiceRecognitionAgent
-
-__all__ = [
-    "TextToSpeechAgent",
-    "ToolRunner",
-    "VoiceRecognitionAgent",
-    "create_conversational_agent",
-    "create_state_based_agent",
-]
+rclpy.init()
+runner = Speech2SpeechRunner()
+runner.run_indefinitely()

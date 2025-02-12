@@ -17,7 +17,7 @@ import threading
 from rai.agents.base import BaseAgent
 
 
-class AgentRunner:
+class BaseRunner:
     """
     Manages and runs a collection of agents.
 
@@ -34,7 +34,7 @@ class AgentRunner:
 
     def __init__(self, agents: list[BaseAgent]):
         """
-        Initializes the AgentRunner with a list of agents.
+        Initializes the BaseRunner with a list of agents.
 
         Parameters
         ----------
