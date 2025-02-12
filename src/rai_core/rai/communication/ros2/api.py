@@ -189,7 +189,9 @@ class ROS2TopicAPI:
         )
 
         msg = build_ros2_msg(msg_type, msg_content)
+        print(msg)
         publisher = self._get_or_create_publisher(topic, type(msg), qos_profile)
+        print(topic)
         publisher.publish(msg)
 
     def _verify_receive_args(
@@ -427,8 +429,9 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
 
         msg_type = import_message_from_str(config.msg_type)
 
+        # TODO: this is definitely not generic
         def callback_wrapper(message):
-            text = message.data
+            text = message.text
             assert config.subscriber_callback is not None
             config.subscriber_callback(
                 ROS2HRIMessage(
