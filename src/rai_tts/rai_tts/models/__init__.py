@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from .base import TTSModel, TTSModelError
+from .elevenlabs_tts import ElevenLabsTTS
 from .open_tts import OpenTTS
 
-__all__ = ["OpenTTS", "TTSModel", "TTSModelError"]
+__all__ = ["ElevenLabsTTS", "OpenTTS", "TTSModel", "TTSModelError"]
