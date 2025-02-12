@@ -211,6 +211,7 @@ class TextToSpeechAgent(BaseAgent):
 
     def _on_command_message(self, message: IROS2Message):
         assert isinstance(message, String)
+        self.logger.debug(f"Receieved status message: {message}")
         if message.data == "tog_play":
             self.playback_data.playing = not self.playback_data.playing
         elif message.data == "play":
@@ -224,3 +225,5 @@ class TextToSpeechAgent(BaseAgent):
             self.playback_data.data = None
             self.playback_data.current_frame = 0
             self.playback_data.current_segment = None
+
+        self.logger.debug(f"Current status is: {self.playback_data.playing}")
