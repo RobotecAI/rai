@@ -35,6 +35,40 @@ class SoundDeviceError(Exception):
 
 @dataclass
 class SoundDeviceConfig:
+    """
+    Configuration settings for a sound device.
+
+    This dataclass holds configuration parameters for audio input/output devices.
+    It ensures that at least one identifier (`device_number` or `device_name`) is
+    provided when initialized.
+
+    Parameters
+    ----------
+    stream : bool, optional
+        Whether the device should operate in streaming mode. Default is False.
+    block_size : int, optional
+        The block size for audio processing. Default is 1024.
+    dtype : str, optional
+        The data type of the audio stream (e.g., "int16", "float32"). Default is "int16".
+    channels : int, optional
+        The number of audio channels (e.g., 1 for mono, 2 for stereo). Default is 1.
+    consumer_sampling_rate : Optional[int], optional
+        The desired sampling rate for the audio consumer. Default is None.
+    device_number : Optional[int], optional
+        The device number for the sound device. If None, `device_name` must be set. Default is None.
+    device_name : Optional[str], optional
+        The name of the sound device. If None, `device_number` must be set. Default is None.
+    is_input : bool, optional
+        Indicates whether the device is used for input (recording). Default is False.
+    is_output : bool, optional
+        Indicates whether the device is used for output (playback). Default is False.
+
+    Raises
+    ------
+    ValueError
+        If neither `device_number` nor `device_name` is provided.
+    """
+
     stream: bool = False
     block_size: int = 1024
     dtype: str = "int16"

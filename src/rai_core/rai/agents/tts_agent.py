@@ -57,6 +57,21 @@ class PlayData:
 
 
 class TextToSpeechAgent(BaseAgent):
+    """
+    Agent responsible for converting text to speech and handling audio playback.
+
+    Parameters
+    ----------
+    speaker_config : SoundDeviceConfig
+        Configuration for the sound device used for playback.
+    ros2_name : str
+        Name of the ROS2 node.
+    tts : TTSModel
+        Text-to-speech model used for generating audio.
+    logger : Optional[logging.Logger], optional
+        Logger instance for logging messages, by default None.
+    """
+
     def __init__(
         self,
         speaker_config: SoundDeviceConfig,
@@ -94,6 +109,9 @@ class TextToSpeechAgent(BaseAgent):
         self.run()
 
     def run(self):
+        """
+        Start the text-to-speech agent, initializing playback and launching the transcription thread.
+        """
         self.running = True
         self.logger.info("TextToSpeechAgent started")
         self.transcription_thread = Thread(target=self._transcription_thread)
@@ -145,6 +163,9 @@ class TextToSpeechAgent(BaseAgent):
             outdata[:] = np.zeros(outdata.size).reshape(outdata.shape)
 
     def stop(self):
+        """
+        Clean exit the text-to-speech agent, terminating playback and joining the transcription thread.
+        """
         self.terminate_agent.set()
         if self.transcription_thread is not None:
             self.transcription_thread.join()

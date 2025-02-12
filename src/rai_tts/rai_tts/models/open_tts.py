@@ -24,6 +24,17 @@ from rai_tts.models import TTSModel, TTSModelError
 
 
 class OpenTTS(TTSModel):
+    """
+    A text-to-speech (TTS) model interface for OpenTTS.
+
+    Parameters
+    ----------
+    url : str, optional
+        The API endpoint for the OpenTTS server, by default "http://localhost:5500/api/tts".
+    voice : str, optional
+        The voice model to use, by default "larynx:blizzard_lessac-glow_tts".
+    """
+
     def __init__(
         self,
         url: str = "http://localhost:5500/api/tts",
@@ -33,6 +44,25 @@ class OpenTTS(TTSModel):
         self.voice = voice
 
     def get_speech(self, text: str) -> AudioSegment:
+        """
+        Converts text into speech using the OpenTTS API.
+
+        Parameters
+        ----------
+        text : str
+            The input text to be converted into speech.
+
+        Returns
+        -------
+        AudioSegment
+            The generated speech as an `AudioSegment` object.
+
+        Raises
+        ------
+        TTSModelError
+            If there is an issue with the request or the OpenTTS server is unreachable.
+            If the response does not contain valid audio data.
+        """
         params = {
             "voice": self.voice,
             "text": text,
@@ -47,7 +77,7 @@ class OpenTTS(TTSModel):
         content_type = response.headers.get("Content-Type", "")
 
         if "audio" not in content_type:
-            raise ValueError("Response does not contain audio data")
+            raise TTSModelError("Response does not contain audio data")
 
         # Load audio into memory
         audio_bytes = BytesIO(response.content)
@@ -64,5 +94,25 @@ class OpenTTS(TTSModel):
         return AudioSegment(data, frame_rate=sample_rate, sample_width=2, channels=1)
 
     def get_tts_params(self) -> Tuple[int, int]:
+        """
+        Returns TTS samling rate and channels.
+
+        The information is retrieved by running a sample transcription request, to ensure that the information will be accurate for generation.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        Tuple[int, int]
+            sample rate, channels
+
+        Raises
+        ------
+        TTSModelError
+            If there is an issue with the request or the OpenTTS server is unreachable.
+            If the response does not contain valid audio data.
+        """
+
         data = self.get_speech("A")
         return data.frame_rate, 1
