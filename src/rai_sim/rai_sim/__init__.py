@@ -13,5 +13,3 @@
 # limitations under the License.
 
 """RAI Simulations package."""
-
-__version__ = "0.0.1"
