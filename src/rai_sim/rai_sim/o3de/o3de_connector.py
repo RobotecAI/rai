@@ -22,9 +22,9 @@ from typing import Dict
 
 import psutil
 from geometry_msgs.msg import Pose
-from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from tf2_geometry_msgs import do_transform_pose
 
+from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from rai_sim.engine_connector import EngineConnector, Entity, SceneConfig, SceneSetup
 
 logger = logging.getLogger(__name__)
@@ -70,9 +70,6 @@ class O3DEngineConnector(EngineConnector):
 
         finally:
             self.current_process = None
-
-    def __del__(self):
-        self.shutdown()
 
     def get_available_spawnable_names(self) -> list[str]:
         msg = ROS2ARIMessage({})
