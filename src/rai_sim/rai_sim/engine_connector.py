@@ -93,7 +93,7 @@ class EngineConnector(ABC):
         pass
 
     @abstractmethod
-    def setup_scene(self, scene_config: SimulationConfig) -> SceneSetup:
+    def setup_scene(self, simulation_config: SimulationConfig) -> SceneSetup:
         pass
 
     @abstractmethod
