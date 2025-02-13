@@ -77,7 +77,7 @@ class MoveToPointTool(BaseTool):
         z: float,
         task: Literal["grab", "drop"],
     ) -> str:
-        self.client = self.connector.node.create_client(
+        client = self.connector.node.create_client(
             ManipulatorMoveTo,
             "/manipulator_move_to",
         )
@@ -109,7 +109,7 @@ class MoveToPointTool(BaseTool):
             request.initial_gripper_state = False  # closed
             request.final_gripper_state = True  # open
 
-        future = self.client.call_async(request)
+        future = client.call_async(request)
         self.connector.node.get_logger().debug(
             f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
         )
