@@ -56,7 +56,7 @@ class O3DEngineConnector(EngineConnector):
             logger.debug(f"Terminating child process {child.pid}, {child.name()}")
             child.terminate()
 
-        _, alive = psutil.wait_procs(children, timeout=3)
+        _, alive = psutil.wait_procs(children, timeout=15)
         if alive:
             for child in alive:
                 logger.warning(f"Force killing child process PID: {child.pid}")
@@ -73,13 +73,11 @@ class O3DEngineConnector(EngineConnector):
 
     def get_available_spawnable_names(self) -> list[str]:
         msg = ROS2ARIMessage({})
-
-        response = self.connector.service_call(
+        response = self._try_service_call(
             msg,
             target="get_available_spawnable_names",
             msg_type="gazebo_msgs/srv/GetWorldProperties",
         )
-
         return response.payload.model_names
 
     def _spawn_entity(self, entity: Entity):
@@ -108,12 +106,9 @@ class O3DEngineConnector(EngineConnector):
 
         msg = ROS2ARIMessage(payload=msg_content)
 
-        response = self.connector.service_call(
+        response = self._try_service_call(
             msg, target="spawn_entity", msg_type="gazebo_msgs/srv/SpawnEntity"
         )
-
-        if not response.payload.success:
-            raise RuntimeError(response.payload.status_message)
 
         self.entity_ids[entity.name] = response.payload.status_message
 
@@ -125,12 +120,9 @@ class O3DEngineConnector(EngineConnector):
 
         msg = ROS2ARIMessage(payload=msg_content)
 
-        response = self.connector.service_call(
+        self._try_service_call(
             msg, target="delete_entity", msg_type="gazebo_msgs/srv/DeleteEntity"
         )
-
-        if not response.payload.success:
-            raise RuntimeError(response.payload.status_message)
 
     def get_object_position(self, object_name: str) -> PoseModel:
         object_frame = object_name + "/"
@@ -140,13 +132,12 @@ class O3DEngineConnector(EngineConnector):
         ros2_pose = do_transform_pose(
             ros2_pose, self.connector.get_transform("world", "odom")
         )
-        pose = self.ros2_pose_to_pose_model(ros2_pose)
-        return pose
+        return self.ros2_pose_to_pose_model(ros2_pose)
 
     def setup_scene(self, scene_config: SceneConfig) -> SceneSetup:
         if self.current_binary_path != scene_config.binary_path:
             if self.current_process:
-                self.current_process.terminate()
+                self.shutdown()
             if scene_config.binary_path:
                 self.launch_binary(scene_config.binary_path)
             else:
@@ -155,8 +146,8 @@ class O3DEngineConnector(EngineConnector):
         else:
             for entity in self.entity_ids:
                 self._despawn_entity_by_id(self.entity_ids[entity])
+
         self.entity_ids = {}
-        time.sleep(3)
         for entity in scene_config.entities:
             self._spawn_entity(entity)
         # TODO (mkotynia) handle SceneSetup
@@ -181,9 +172,7 @@ class O3DEngineConnector(EngineConnector):
             w=pose.orientation.w,  # type: ignore
         )
 
-        pose_model = PoseModel(translation=translation, rotation=rotation)
-
-        return pose_model
+        return PoseModel(translation=translation, rotation=rotation)
 
     def launch_binary(self, binary_path: str):
         # NOTE (mkotynia) ros2 launch command with binary path, to be refactored
@@ -195,11 +184,26 @@ class O3DEngineConnector(EngineConnector):
         if not self.has_process_started():
             raise RuntimeError("Process did not start in time.")
 
-    def has_process_started(self, timeout: int = 5):
+    def has_process_started(self, timeout: int = 15):
         start_time = time.time()
         while time.time() - start_time < timeout:
-            if self.current_process is not None:
-                if self.current_process.poll() is None:
-                    return True
+            if self.current_process is not None and self.current_process.poll() is None:
+                return True
             time.sleep(1)
         return False
+
+    def _try_service_call(
+        self, msg: ROS2ARIMessage, target: str, msg_type: str, timeout: float = 10
+    ) -> ROS2ARIMessage:
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            response = self.connector.service_call(
+                msg, target=target, msg_type=msg_type
+            )
+            if response.payload.success:
+                return response
+            logger.warning(
+                f"Retrying {target}, response success: {response.payload.success}"
+            )
+            time.sleep(1)
+        raise RuntimeError(f"Service call {target} failed after multiple attempts.")
