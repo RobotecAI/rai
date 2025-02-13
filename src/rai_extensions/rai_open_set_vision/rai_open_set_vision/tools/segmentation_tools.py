@@ -20,16 +20,16 @@ import rclpy
 import sensor_msgs.msg
 from langchain_core.tools import BaseTool
 from pydantic import Field
-from rai.communication.ros2.connectors import ROS2ARIConnector
-from rai.tools.ros import Ros2BaseInput
-from rai.tools.ros.utils import convert_ros_img_to_base64, convert_ros_img_to_ndarray
-from rai.utils.ros_async import get_future_result
 from rclpy import Future
 from rclpy.exceptions import (
     ParameterNotDeclaredException,
     ParameterUninitializedException,
 )
 
+from rai.communication.ros2.connectors import ROS2ARIConnector
+from rai.tools.ros import Ros2BaseInput
+from rai.tools.ros.utils import convert_ros_img_to_base64, convert_ros_img_to_ndarray
+from rai.utils.ros_async import get_future_result
 from rai_interfaces.srv import RAIGroundedSam, RAIGroundingDino
 from rai_open_set_vision import GDINO_SERVICE_NAME
 
@@ -342,21 +342,17 @@ class GetGrabbingPointTool(BaseTool):
             )
             conversion_ratio = 0.001
         resolved = None
-        while rclpy.ok():
-            resolved = self._get_gdino_response(future)
-            if resolved is not None:
-                break
+
+        resolved = get_future_result(future)
 
         assert resolved is not None
         future = self._call_gsam_node(camera_img_msg, resolved)
 
         ret = []
-        while rclpy.ok():
-            resolved = self._get_gsam_response(future)
-            if resolved is not None:
-                for img_msg in resolved.masks:
-                    ret.append(convert_ros_img_to_base64(img_msg))
-                break
+        resolved = get_future_result(future)
+        if resolved is not None:
+            for img_msg in resolved.masks:
+                ret.append(convert_ros_img_to_base64(img_msg))
         assert resolved is not None
         rets = []
         for mask_msg in resolved.masks:

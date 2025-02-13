@@ -26,6 +26,7 @@ import io
 import time
 
 from PIL import Image
+
 from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.ros2 import (
     GetROS2ImageTool,
@@ -35,7 +36,6 @@ from rai.tools.ros2 import (
     PublishROS2MessageTool,
     ReceiveROS2MessageTool,
 )
-
 from tests.communication.ros2.helpers import (
     ImagePublisher,
     MessagePublisher,

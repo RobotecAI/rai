@@ -24,7 +24,6 @@ except ImportError:
 
 from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.ros2 import CallROS2ServiceTool
-
 from tests.communication.ros2.helpers import (
     ServiceServer,
     multi_threaded_spinner,

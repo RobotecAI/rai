@@ -151,7 +151,9 @@ def wait_for_message(
                 if msg_info is not None:
                     return True, msg_info[0]
     finally:
-        node.destroy_subscription(sub)
+        # TODO(boczekbartek): uncomment when rclpy resolves: https://github.com/ros2/rclpy/issues/1142
+        # node.destroy_subscription(sub)
+        pass
 
     return False, None
 
