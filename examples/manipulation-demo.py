@@ -21,6 +21,7 @@ from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.ros.manipulation import GetObjectPositionsTool, MoveToPointTool
 from rai.tools.ros2.topics import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
 from rai.utils.model_initialization import get_llm_model
+from rai_open_set_vision.tools import GetGrabbingPointTool
 
 
 def create_agent():
@@ -37,6 +38,7 @@ def create_agent():
             camera_topic="/color_image5",
             depth_topic="/depth_image5",
             camera_info_topic="/color_camera_info5",
+            get_grabbing_point_tool=GetGrabbingPointTool(connector=connector),
         ),
         MoveToPointTool(connector=connector, manipulator_frame="panda_link0"),
         GetROS2ImageTool(connector=connector),
