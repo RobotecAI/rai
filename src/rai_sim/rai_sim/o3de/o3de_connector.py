@@ -17,14 +17,22 @@ import shlex
 import signal
 import subprocess
 import time
-from typing import Dict
+from typing import Any, Dict
 
 import psutil
 from geometry_msgs.msg import Pose
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from tf2_geometry_msgs import do_transform_pose
 
-from rai_sim.engine_connector import EngineConnector, Entity, SceneConfig, SceneSetup
+from rai_sim.engine_connector import (
+    EngineConnector,
+    Entity,
+    PoseModel,
+    Rotation,
+    SceneConfig,
+    SceneSetup,
+    Translation,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -76,24 +84,24 @@ class O3DEngineConnector(EngineConnector):
 
     def _spawn_entity(self, entity: Entity):
         pose = do_transform_pose(
-            entity.pose, self.connector.get_transform("odom", "world")
+            entity.pose.to_ros2_pose(), self.connector.get_transform("odom", "world")
         )
 
-        msg_content = {
+        msg_content: Dict[str, Any] = {
             "name": entity.prefab_name,
             "xml": "",
             "robot_namespace": entity.name,
             "initial_pose": {
                 "position": {
-                    "x": pose.position.x,
-                    "y": pose.position.y,
-                    "z": pose.position.z,
+                    "x": pose.position.x,  # type: ignore
+                    "y": pose.position.y,  # type: ignore
+                    "z": pose.position.z,  # type: ignore
                 },
                 "orientation": {
-                    "x": pose.orientation.x,
-                    "y": pose.orientation.y,
-                    "z": pose.orientation.z,
-                    "w": pose.orientation.w,
+                    "x": pose.orientation.x,  # type: ignore
+                    "y": pose.orientation.y,  # type: ignore
+                    "z": pose.orientation.z,  # type: ignore
+                    "w": pose.orientation.w,  # type: ignore
                 },
             },
         }
@@ -124,12 +132,15 @@ class O3DEngineConnector(EngineConnector):
         if not response.payload.success:
             raise RuntimeError(response.payload.status_message)
 
-    def get_object_position(self, object_name: str) -> Pose:
+    def get_object_position(self, object_name: str) -> PoseModel:
         object_frame = object_name + "/"
-        pose = do_transform_pose(
+        ros2_pose = do_transform_pose(
             Pose(), self.connector.get_transform(object_frame + "odom", object_frame)
         )
-        pose = do_transform_pose(pose, self.connector.get_transform("world", "odom"))
+        ros2_pose = do_transform_pose(
+            ros2_pose, self.connector.get_transform("world", "odom")
+        )
+        pose = self.ros2_pose_to_pose_model(ros2_pose)
         return pose
 
     def setup_scene(self, scene_config: SceneConfig) -> SceneSetup:
@@ -150,6 +161,29 @@ class O3DEngineConnector(EngineConnector):
             self._spawn_entity(entity)
         # TODO (mkotynia) handle SceneSetup
         return SceneSetup(entities=scene_config.entities)
+
+    # TODO (mkotynia) move it to some common utils as it may be reused in other connectors
+    def ros2_pose_to_pose_model(self, pose: Pose) -> PoseModel:
+        """
+        Converts poses in ROS2 Pose format back to PoseModel format.
+        """
+
+        translation = Translation(
+            x=pose.position.x,  # type: ignore
+            y=pose.position.y,  # type: ignore
+            z=pose.position.z,  # type: ignore
+        )
+
+        rotation = Rotation(
+            x=pose.orientation.x,  # type: ignore
+            y=pose.orientation.y,  # type: ignore
+            z=pose.orientation.z,  # type: ignore
+            w=pose.orientation.w,  # type: ignore
+        )
+
+        pose_model = PoseModel(translation=translation, rotation=rotation)
+
+        return pose_model
 
     def launch_binary(self, binary_path: str):
         # NOTE (mkotynia) ros2 launch command with binary path, to be refactored

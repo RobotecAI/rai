@@ -12,33 +12,59 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 import yaml
 from geometry_msgs.msg import Point, Pose, Quaternion
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
+
+
+class Translation(BaseModel):
+    x: float
+    y: float
+    z: float
+
+
+class Rotation(BaseModel):
+    x: float
+    y: float
+    z: float
+    w: float
+
+
+class PoseModel(BaseModel):
+    translation: Translation
+    rotation: Optional[Rotation]
+
+    def to_ros2_pose(self) -> Pose:
+        """
+        Converts poses in PoseModel format to poses in ROS2 Pose format.
+        """
+
+        position = Point(
+            x=self.translation.x, y=self.translation.y, z=self.translation.z
+        )
+
+        if self.rotation is not None:
+            orientation = Quaternion(
+                x=self.rotation.x,
+                y=self.rotation.y,
+                z=self.rotation.z,
+                w=self.rotation.w,
+            )
+        else:
+            orientation = Quaternion()
+
+        ros2_pose = Pose(position=position, orientation=orientation)
+
+        return ros2_pose
 
 
 class Entity(BaseModel):
     name: str
     prefab_name: str
-    pose: Any
-    # TODO (mkotynia) consider whether create base model for poses instead of using Any as a workaround
-
-    @field_validator("pose", mode="after")
-    @classmethod
-    def convert_to_pose(cls, value: Dict[str, Any]) -> Pose:
-        """Convert a dict to a ROS `Pose` object."""
-
-        translation = value.get("translation", {})
-        rotation = value.get("rotation", {})
-
-        return Pose(
-            position=Point(**translation) if translation else Point(),
-            orientation=Quaternion(**rotation) if rotation else Quaternion(),
-        )
+    pose: PoseModel
 
 
 class SceneConfig(BaseModel):
@@ -79,7 +105,7 @@ class EngineConnector(ABC):
         pass
 
     @abstractmethod
-    def get_object_position(self, object_name: str) -> Pose:
+    def get_object_position(self, object_name: str) -> PoseModel:
         pass
 
 
