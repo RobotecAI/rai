@@ -67,9 +67,9 @@ class Entity(BaseModel):
     pose: PoseModel
 
 
-class SceneConfig(BaseModel):
+class SimulationConfig(BaseModel):
     """
-    Setup of scene - arrangmenet of objects, interactions, environment etc.
+    Setup of scene - arrangemenet of objects in the environment.
     """
 
     binary_path: Optional[str]
@@ -93,7 +93,7 @@ class EngineConnector(ABC):
         pass
 
     @abstractmethod
-    def setup_scene(self, scene_config: SceneConfig) -> SceneSetup:
+    def setup_scene(self, scene_config: SimulationConfig) -> SceneSetup:
         pass
 
     @abstractmethod
@@ -109,11 +109,11 @@ class EngineConnector(ABC):
         pass
 
 
-def load_config(file_path: str) -> SceneConfig:
+def load_config(file_path: str) -> SimulationConfig:
     """
     Load the scene configuration from a YAML file.
     """
     with open(file_path, "r") as file:
         content = yaml.safe_load(file)
 
-    return SceneConfig(**content)
+    return SimulationConfig(**content)

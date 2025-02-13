@@ -28,8 +28,8 @@ from rai_sim.engine_connector import (
     EngineConnector,
     Entity,
     PoseModel,
-    SceneConfig,
     SceneSetup,
+    SimulationConfig,
 )
 from rai_sim.utils import ros2_pose_to_pose_model
 
@@ -133,7 +133,7 @@ class O3DEngineConnector(EngineConnector):
         )
         return ros2_pose_to_pose_model(ros2_pose)
 
-    def setup_scene(self, scene_config: SceneConfig) -> SceneSetup:
+    def setup_scene(self, scene_config: SimulationConfig) -> SceneSetup:
         if self.current_binary_path != scene_config.binary_path:
             if self.current_process:
                 self.shutdown()
