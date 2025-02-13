@@ -113,11 +113,7 @@ def load_config(file_path: str) -> SceneConfig:
     """
     Load the scene configuration from a YAML file.
     """
-    try:
-        with open(file_path, "r") as file:
-            content = yaml.safe_load(file)
+    with open(file_path, "r") as file:
+        content = yaml.safe_load(file)
 
-        return SceneConfig(**content)
-
-    except Exception as e:
-        raise e
+    return SceneConfig(**content)
