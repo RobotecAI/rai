@@ -29,6 +29,7 @@ from tf2_geometry_msgs import do_transform_pose
 
 from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.utils import TF2TransformFetcher
+from rai.utils.ros_async import get_future_result
 from rai_interfaces.srv import ManipulatorMoveTo
 
 
@@ -113,17 +114,14 @@ class MoveToPointTool(BaseTool):
         self.connector.node.get_logger().debug(
             f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
         )
-
-        rclpy.spin_until_future_complete(self.connector.node, future, timeout_sec=5.0)
-
-        if future.result() is not None:
-            response = future.result()
-            if response.success:
-                return f"End effector successfully positioned at coordinates ({x:.2f}, {y:.2f}, {z:.2f}). Note: The status of object interaction (grab/drop) is not confirmed by this movement."
-            else:
-                return f"Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
-        else:
+        response = get_future_result(future, timeout_sec=5.0)
+        if response is None:
             return f"Service call failed for point ({x:.2f}, {y:.2f}, {z:.2f})."
+
+        if response.success:
+            return f"End effector successfully positioned at coordinates ({x:.2f}, {y:.2f}, {z:.2f}). Note: The status of object interaction (grab/drop) is not confirmed by this movement."
+        else:
+            return f"Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
 
 
 class GetObjectPositionsToolInput(BaseModel):
