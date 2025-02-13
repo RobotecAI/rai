@@ -1,16 +1,14 @@
 ########### EXAMPLE USAGE ###########
-import time
-from rai.agents.conversational_agent import create_conversational_agent
-import threading
 import rclpy
 import rclpy.qos
-from rai.node import RaiBaseNode
-from rai.tools.ros2.topics import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
-from rai.tools.ros.manipulation import GetObjectPositionsTool, MoveToPointTool
+from benchmark_model import Benchmark, Scenario, Task
 from rai_open_set_vision.tools import GetGrabbingPointTool
-from rai.utils.model_initialization import get_llm_model
+
+from rai.agents.conversational_agent import create_conversational_agent
 from rai.communication.ros2.connectors import ROS2ARIConnector
-from benchmark_model import Scenario, Task, Benchmark
+from rai.tools.ros.manipulation import GetObjectPositionsTool, MoveToPointTool
+from rai.tools.ros2.topics import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
+from rai.utils.model_initialization import get_llm_model
 from rai_sim.engine_connector import (
     load_config,
 )
@@ -53,7 +51,6 @@ def create_tools(connector):
 
 
 if __name__ == "__main__":
-
     llm = get_llm_model(model_type="complex_model", streaming=True)
 
     system_prompt = """
@@ -77,11 +74,11 @@ if __name__ == "__main__":
     # combine different scene configs with the tasks to create various scenarios
 
     scenarios = [
-        # Scenario(task=GrabCarrotTask(), scene_config=one_carrot_scene_config),
+        Scenario(task=GrabCarrotTask(), scene_config=one_carrot_scene_config),
         Scenario(task=CollectCornsTask(), scene_config=one_carrot_scene_config),
-        # Scenario(task=GrabCarrotTask(), scene_config=multiple_carrot_scene_config),
-        # Scenario(task=GrabCarrotTask(), scene_config=no_carrot_scene_config),
-        # Scenario(task=CollectCornsTask(), scene_config=multiple_carrot_scene_config),
+        Scenario(task=GrabCarrotTask(), scene_config=multiple_carrot_scene_config),
+        Scenario(task=GrabCarrotTask(), scene_config=no_carrot_scene_config),
+        Scenario(task=CollectCornsTask(), scene_config=multiple_carrot_scene_config),
         Scenario(task=CollectCornsTask(), scene_config=no_carrot_scene_config),
     ]
 
@@ -119,6 +116,8 @@ if __name__ == "__main__":
 
         agent = create_conversational_agent(llm, tools, system_prompt)
         benchmark.run_next(agent=agent)
+        print("Benchmark done")
 
         connector.shutdown()
+        o3de.shutdown()
         rclpy.shutdown()
