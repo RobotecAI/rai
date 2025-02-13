@@ -28,11 +28,10 @@ from rai_sim.engine_connector import (
     EngineConnector,
     Entity,
     PoseModel,
-    Rotation,
     SceneConfig,
     SceneSetup,
-    Translation,
 )
+from rai_sim.utils import ros2_pose_to_pose_model
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +131,7 @@ class O3DEngineConnector(EngineConnector):
         ros2_pose = do_transform_pose(
             ros2_pose, self.connector.get_transform("world", "odom")
         )
-        return self.ros2_pose_to_pose_model(ros2_pose)
+        return ros2_pose_to_pose_model(ros2_pose)
 
     def setup_scene(self, scene_config: SceneConfig) -> SceneSetup:
         if self.current_binary_path != scene_config.binary_path:
@@ -152,27 +151,6 @@ class O3DEngineConnector(EngineConnector):
             self._spawn_entity(entity)
         # TODO (mkotynia) handle SceneSetup
         return SceneSetup(entities=scene_config.entities)
-
-    # TODO (mkotynia) move it to some common utils as it may be reused in other connectors
-    def ros2_pose_to_pose_model(self, pose: Pose) -> PoseModel:
-        """
-        Converts poses in ROS2 Pose format back to PoseModel format.
-        """
-
-        translation = Translation(
-            x=pose.position.x,  # type: ignore
-            y=pose.position.y,  # type: ignore
-            z=pose.position.z,  # type: ignore
-        )
-
-        rotation = Rotation(
-            x=pose.orientation.x,  # type: ignore
-            y=pose.orientation.y,  # type: ignore
-            z=pose.orientation.z,  # type: ignore
-            w=pose.orientation.w,  # type: ignore
-        )
-
-        return PoseModel(translation=translation, rotation=rotation)
 
     def launch_binary(self, binary_path: str):
         # NOTE (mkotynia) ros2 launch command with binary path, to be refactored
