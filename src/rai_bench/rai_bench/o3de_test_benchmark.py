@@ -1,16 +1,13 @@
 ########### EXAMPLE USAGE ###########
 import time
 from rai.agents.conversational_agent import create_conversational_agent
-from rai.tools.ros.manipulation import GetObjectPositionsTool, MoveToPointTool
 import threading
-
-from wandb import agent
-
-from rai_hmi import base
 import rclpy
 import rclpy.qos
 from rai.node import RaiBaseNode
-from rai.tools.ros.native import GetCameraImage, Ros2GetTopicsNamesAndTypesTool
+from rai.tools.ros2.topics import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
+from rai.tools.ros.manipulation import GetObjectPositionsTool, MoveToPointTool
+from rai_open_set_vision.tools import GetGrabbingPointTool
 from rai.utils.model_initialization import get_llm_model
 from rai.communication.ros2.connectors import ROS2ARIConnector
 from benchmark_model import Scenario, Task, Benchmark
@@ -38,25 +35,20 @@ class CollectCornsTask(Task):
         return 1
 
 
-def create_base_node():
-    node = RaiBaseNode(node_name="manipulation_demo")
-    node.declare_parameter("conversion_ratio", 1.0)
-    return node
-
-
-def create_tools(node):
+def create_tools(connector):
     return [
         GetObjectPositionsTool(
-            node=node,
+            connector=connector,
             target_frame="panda_link0",
             source_frame="RGBDCamera5",
             camera_topic="/color_image5",
             depth_topic="/depth_image5",
             camera_info_topic="/color_camera_info5",
+            get_grabbing_point_tool=GetGrabbingPointTool(connector=connector),
         ),
-        MoveToPointTool(node=node, manipulator_frame="panda_link0"),
-        GetCameraImage(node=node),
-        Ros2GetTopicsNamesAndTypesTool(node=node),
+        MoveToPointTool(connector=connector, manipulator_frame="panda_link0"),
+        GetROS2ImageTool(connector=connector),
+        GetROS2TopicsNamesAndTypesTool(connector=connector),
     ]
 
 
@@ -114,12 +106,12 @@ if __name__ == "__main__":
 
     for s in scenarios:
         rclpy.init()
-        node = create_base_node()
-        base_node_thread = threading.Thread(target=rclpy.spin, args=(node,))
-        base_node_thread.start()
-        tools = create_tools(node)
-
         connector = ROS2ARIConnector()
+        node = connector.node
+        node.declare_parameter("conversion_ratio", 1.0)
+
+        tools = create_tools(connector)
+
         o3de = O3DEngineConnector(connector)
 
         benchmark = Benchmark([s])
@@ -130,4 +122,3 @@ if __name__ == "__main__":
 
         connector.shutdown()
         rclpy.shutdown()
-        base_node_thread.join()
