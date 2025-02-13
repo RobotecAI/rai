@@ -200,6 +200,10 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
     def terminate_action(self, action_handle: str, **kwargs: Any):
         self._actions_api.terminate_goal(action_handle)
 
+    @property
+    def node(self) -> Node:
+        return self._node
+
     def shutdown(self):
         self._executor.shutdown()
         self._thread.join()
