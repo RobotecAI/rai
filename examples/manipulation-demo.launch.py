@@ -12,23 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import rclpy
-import time
-from launch import LaunchContext, LaunchDescription
+from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     ExecuteProcess,
     IncludeLaunchDescription,
-    OpaqueFunction,
-    RegisterEventHandler,
 )
-from launch.event_handlers import OnExecutionComplete, OnProcessStart
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from rclpy.qos import QoSProfile, ReliabilityPolicy
-from rosgraph_msgs.msg import Clock
 
 
 def generate_launch_description():
@@ -46,22 +39,6 @@ def generate_launch_description():
         ],
         output="screen",
     )
-
-    def wait_for_clock_message(context: LaunchContext, *args, **kwargs):
-        time.sleep(5)
-        # rclpy.init()
-        # node = rclpy.create_node("wait_for_game_launcher")
-        # node.create_subscription(
-        #     Clock,
-        #     "/clock",
-        #     lambda msg: rclpy.shutdown(),
-        #     QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT),
-        # )
-        # rclpy.spin(node)
-        return None
-
-    # Game launcher will start publishing the clock message after loading the simulation
-    wait_for_game_launcher = OpaqueFunction(function=wait_for_clock_message)
 
     launch_moveit = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -92,13 +69,10 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            # Include the game_launcher argument
             game_launcher_arg,
-            # Launch the game launcher and wait for it to load
             launch_game_launcher,
             launch_openset,
             launch_moveit,
             launch_robotic_manipulation,
-        # Launch the MoveIt node after loading the simulation
         ]
     )
