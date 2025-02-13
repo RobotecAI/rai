@@ -25,10 +25,9 @@ from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 from rai_open_set_vision.tools import GetGrabbingPointTool
-from rclpy.client import Client
-from rclpy.node import Node
 from tf2_geometry_msgs import do_transform_pose
 
+from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.utils import TF2TransformFetcher
 from rai_interfaces.srv import ManipulatorMoveTo
 
@@ -52,8 +51,7 @@ class MoveToPointTool(BaseTool):
         "success of grabbing or releasing objects. Use additional sensors or tools for that information."
     )
 
-    node: Node
-    client: Client
+    connector: ROS2ARIConnector = Field(..., exclude=True)
 
     manipulator_frame: str = Field(..., description="Manipulator frame")
     min_z: float = Field(default=0.135, description="Minimum z coordinate [m]")
@@ -72,16 +70,6 @@ class MoveToPointTool(BaseTool):
 
     args_schema: Type[MoveToPointToolInput] = MoveToPointToolInput
 
-    def __init__(self, node: Node, **kwargs):
-        super().__init__(
-            node=node,
-            client=node.create_client(
-                ManipulatorMoveTo,
-                "/manipulator_move_to",
-            ),
-            **kwargs,
-        )
-
     def _run(
         self,
         x: float,
@@ -89,6 +77,10 @@ class MoveToPointTool(BaseTool):
         z: float,
         task: Literal["grab", "drop"],
     ) -> str:
+        self.client = self.connector.node.create_client(
+            ManipulatorMoveTo,
+            "/manipulator_move_to",
+        )
         pose_stamped = PoseStamped()
         pose_stamped.header.frame_id = self.manipulator_frame
         pose_stamped.pose = Pose(
@@ -118,11 +110,11 @@ class MoveToPointTool(BaseTool):
             request.final_gripper_state = True  # open
 
         future = self.client.call_async(request)
-        self.node.get_logger().debug(
+        self.connector.node.get_logger().debug(
             f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
         )
 
-        rclpy.spin_until_future_complete(self.node, future, timeout_sec=5.0)
+        rclpy.spin_until_future_complete(self.connector.node, future, timeout_sec=5.0)
 
         if future.result() is not None:
             response = future.result()
@@ -153,13 +145,8 @@ class GetObjectPositionsTool(BaseTool):
     camera_topic: str  # rgb camera topic
     depth_topic: str
     camera_info_topic: str  # rgb camera info topic
-    node: Node
+    connector: ROS2ARIConnector = Field(..., exclude=True)
     get_grabbing_point_tool: GetGrabbingPointTool
-
-    def __init__(self, node: Node, **kwargs):
-        super(GetObjectPositionsTool, self).__init__(
-            node=node, get_grabbing_point_tool=GetGrabbingPointTool(node=node), **kwargs
-        )
 
     args_schema: Type[GetObjectPositionsToolInput] = GetObjectPositionsToolInput
 
