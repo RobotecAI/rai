@@ -13,14 +13,12 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from os import system
 
-from pydantic import BaseModel
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import BaseMessage, HumanMessage
+from pydantic import BaseModel, ConfigDict
+
+from rai.messages import HumanMultimodalMessage
 from rai_sim.engine_connector import EngineConnector, SceneConfig, SceneSetup
-from rai.agents.conversational_agent import create_conversational_agent
-
-from pydantic import ConfigDict
 
 
 class Task(ABC):
@@ -76,18 +74,34 @@ class Benchmark:
             )
             task = scenario.task
             print(
-                f"========================================= RUNNING TASK ===================================="
+                "========================================= RUNNING TASK ===================================="
             )
             print(f"RUNNING TASK: {task.get_prompt()}")
             print(
                 "==========================================================================================="
             )
-            output = agent.invoke(
+            for state in agent.stream(
                 {"messages": [HumanMessage(content=task.get_prompt())]}
-            )
+            ):
+                graph_node_name = list(state.keys())[0]
+                msg = state[graph_node_name]["messages"][-1]
+
+                if isinstance(msg, HumanMultimodalMessage):
+                    last_msg = msg.text
+                elif isinstance(msg, BaseMessage):
+                    if isinstance(msg.content, list):
+                        assert len(msg.content) == 1
+                        last_msg = msg.content[0].get("text", "")
+                    else:
+                        last_msg = msg.content
+                else:
+                    raise ValueError(f"Unexpected type of message: {type(msg)}")
+
+                print(f"{graph_node_name}: {last_msg}")
+
             result = task.calculate_progress(self.engine_connector, initial_scene_setup)
             self.results.append(result)
-            output["messages"][-1].pretty_print()
+            msg.pretty_print()
 
         except StopIteration:
             print("No more scenarios left to run.")
