@@ -18,6 +18,9 @@ from typing import Any, List
 import pytest
 from PIL import Image
 from pydub import AudioSegment
+from std_msgs.msg import String
+from std_srvs.srv import SetBool
+
 from rai.communication.ros2.connectors import (
     HRIPayload,
     ROS2ARIConnector,
@@ -25,8 +28,6 @@ from rai.communication.ros2.connectors import (
     ROS2HRIConnector,
     ROS2HRIMessage,
 )
-from std_msgs.msg import String
-from std_srvs.srv import SetBool
 
 from .helpers import ActionServer_ as ActionServer
 from .helpers import (

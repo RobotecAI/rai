@@ -153,7 +153,7 @@ def wait_for_message(
     finally:
         # TODO(boczekbartek): uncomment when rclpy resolves: https://github.com/ros2/rclpy/issues/1142
         # node.destroy_subscription(sub)
-        pass 
+        pass
 
     return False, None
 
