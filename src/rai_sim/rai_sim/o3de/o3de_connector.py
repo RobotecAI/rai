@@ -28,8 +28,8 @@ from rai_sim.engine_connector import (
     EngineConnector,
     Entity,
     PoseModel,
-    SceneSetup,
     SimulationConfig,
+    SceneSetup,
 )
 from rai_sim.utils import ros2_pose_to_pose_model
 
@@ -133,24 +133,24 @@ class O3DEngineConnector(EngineConnector):
         )
         return ros2_pose_to_pose_model(ros2_pose)
 
-    def setup_scene(self, scene_config: SimulationConfig) -> SceneSetup:
-        if self.current_binary_path != scene_config.binary_path:
+    def setup_scene(self, simulation_config: SimulationConfig) -> SceneSetup:
+        if self.current_binary_path != simulation_config.binary_path:
             if self.current_process:
                 self.shutdown()
-            if scene_config.binary_path:
-                self.launch_binary(scene_config.binary_path)
+            if simulation_config.binary_path:
+                self.launch_binary(simulation_config.binary_path)
             else:
                 raise Exception("No binary path provided")
-            self.current_binary_path = scene_config.binary_path
+            self.current_binary_path = simulation_config.binary_path
         else:
             for entity in self.entity_ids:
                 self._despawn_entity_by_id(self.entity_ids[entity])
 
         self.entity_ids = {}
-        for entity in scene_config.entities:
+        for entity in simulation_config.entities:
             self._spawn_entity(entity)
         # TODO (mkotynia) handle SceneSetup
-        return SceneSetup(entities=scene_config.entities)
+        return SceneSetup(entities=simulation_config.entities)
 
     def launch_binary(self, binary_path: str):
         # NOTE (mkotynia) ros2 launch command with binary path, to be refactored
