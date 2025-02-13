@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import rclpy
+import time
 from launch import LaunchContext, LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
@@ -47,15 +48,16 @@ def generate_launch_description():
     )
 
     def wait_for_clock_message(context: LaunchContext, *args, **kwargs):
-        rclpy.init()
-        node = rclpy.create_node("wait_for_game_launcher")
-        node.create_subscription(
-            Clock,
-            "/clock",
-            lambda msg: rclpy.shutdown(),
-            QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT),
-        )
-        rclpy.spin(node)
+        time.sleep(5)
+        # rclpy.init()
+        # node = rclpy.create_node("wait_for_game_launcher")
+        # node.create_subscription(
+        #     Clock,
+        #     "/clock",
+        #     lambda msg: rclpy.shutdown(),
+        #     QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT),
+        # )
+        # rclpy.spin(node)
         return None
 
     # Game launcher will start publishing the clock message after loading the simulation
@@ -94,24 +96,9 @@ def generate_launch_description():
             game_launcher_arg,
             # Launch the game launcher and wait for it to load
             launch_game_launcher,
-            RegisterEventHandler(
-                event_handler=OnProcessStart(
-                    target_action=launch_game_launcher,
-                    on_start=[
-                        wait_for_game_launcher,
-                    ],
-                )
-            ),
-            # Launch the MoveIt node after loading the simulation
-            RegisterEventHandler(
-                event_handler=OnExecutionComplete(
-                    target_action=wait_for_game_launcher,
-                    on_completion=[
-                        launch_openset,
-                        launch_moveit,
-                        launch_robotic_manipulation,
-                    ],
-                )
-            ),
+            launch_openset,
+            launch_moveit,
+            launch_robotic_manipulation,
+        # Launch the MoveIt node after loading the simulation
         ]
     )
