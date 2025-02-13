@@ -342,21 +342,17 @@ class GetGrabbingPointTool(BaseTool):
             )
             conversion_ratio = 0.001
         resolved = None
-        while rclpy.ok():
-            resolved = self._get_gdino_response(future)
-            if resolved is not None:
-                break
+        
+        resolved = get_future_result(future)
 
         assert resolved is not None
         future = self._call_gsam_node(camera_img_msg, resolved)
-
+        
         ret = []
-        while rclpy.ok():
-            resolved = self._get_gsam_response(future)
-            if resolved is not None:
-                for img_msg in resolved.masks:
-                    ret.append(convert_ros_img_to_base64(img_msg))
-                break
+        resolved = get_future_result(future)
+        if resolved is not None:
+            for img_msg in resolved.masks:
+                ret.append(convert_ros_img_to_base64(img_msg))
         assert resolved is not None
         rets = []
         for mask_msg in resolved.masks:
