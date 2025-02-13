@@ -28,8 +28,8 @@ from rai_sim.engine_connector import (
     EngineConnector,
     Entity,
     PoseModel,
-    SimulationConfig,
     SceneSetup,
+    SimulationConfig,
 )
 from rai_sim.utils import ros2_pose_to_pose_model
 
