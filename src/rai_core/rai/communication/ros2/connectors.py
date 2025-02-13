@@ -205,11 +205,11 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         return self._node
 
     def shutdown(self):
-        self._executor.shutdown()
-        self._thread.join()
+        self._node.destroy_node()
         self._actions_api.shutdown()
         self._topic_api.shutdown()
-        self._node.destroy_node()
+        self._executor.shutdown()
+        self._thread.join()
 
 
 class ROS2HRIMessage(HRIMessage):
