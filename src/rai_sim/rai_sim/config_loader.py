@@ -13,7 +13,6 @@ def load_base_config(path: Path) -> SimulationConfig:
     """Load the base configuration file"""
     with open(path) as f:
         content = yaml.safe_load(f)
-    print(content)
     return SimulationConfig(**content)
 
 
