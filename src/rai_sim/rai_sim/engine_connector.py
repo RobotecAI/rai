@@ -80,7 +80,7 @@ class SimulationConfig(BaseModel):
 
 class SceneState(BaseModel):
     """
-    Info about entities in the scene (e.g. poses) # NOTE (mkotynia) can be extended by other attributes
+    Info about current entities' statein the scene # NOTE (mkotynia) can be extended by other attributes
     """
 
     entities: List[SpawnedEntity]
