@@ -36,7 +36,11 @@ from rai_sim.utils import ros2_pose_to_pose_model
 logger = logging.getLogger(__name__)
 
 
-class O3DEngineConnector(EngineConnector):
+class O3DESimulationConfig(SimulationConfig):
+    binary_path: str
+
+
+class O3DEngineConnector(EngineConnector[O3DESimulationConfig]):
     def __init__(self, connector: ROS2ARIConnector):
         self.connector = connector
         self.entity_ids: Dict[str, str] = {}
@@ -133,14 +137,11 @@ class O3DEngineConnector(EngineConnector):
         )
         return ros2_pose_to_pose_model(ros2_pose)
 
-    def setup_scene(self, simulation_config: SimulationConfig) -> SceneSetup:
+    def setup_scene(self, simulation_config: O3DESimulationConfig) -> SceneSetup:
         if self.current_binary_path != simulation_config.binary_path:
             if self.current_process:
                 self.shutdown()
-            if simulation_config.binary_path:
-                self.launch_binary(simulation_config.binary_path)
-            else:
-                raise Exception("No binary path provided")
+            self.launch_binary(simulation_config.binary_path)
             self.current_binary_path = simulation_config.binary_path
         else:
             for entity in self.entity_ids:
