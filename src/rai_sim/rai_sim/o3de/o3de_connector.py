@@ -17,6 +17,7 @@ import shlex
 import signal
 import subprocess
 import time
+from pathlib import Path
 from typing import Any, Dict
 
 import psutil
@@ -37,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 
 class O3DESimulationConfig(SimulationConfig):
-    binary_path: str
+    binary_path: Path
 
 
 class O3DEngineConnector(EngineConnector[O3DESimulationConfig]):
@@ -153,17 +154,17 @@ class O3DEngineConnector(EngineConnector[O3DESimulationConfig]):
         # TODO (mkotynia) handle SceneSetup
         return SceneSetup(entities=simulation_config.entities)
 
-    def launch_binary(self, binary_path: str):
+    def launch_binary(self, binary_path: Path):
         # NOTE (mkotynia) ros2 launch command with binary path, to be refactored
-        command = shlex.split(binary_path)
+        command = shlex.split(binary_path.as_posix())
         logger.debug(f"Running command: {command}")
         self.current_process = subprocess.Popen(
             command,
         )
-        if not self.has_process_started():
+        if not self._has_process_started():
             raise RuntimeError("Process did not start in time.")
 
-    def has_process_started(self, timeout: int = 15):
+    def _has_process_started(self, timeout: int = 15):
         start_time = time.time()
         while time.time() - start_time < timeout:
             if self.current_process is not None and self.current_process.poll() is None:
