@@ -18,7 +18,7 @@ import signal
 import subprocess
 import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import psutil
 from geometry_msgs.msg import Pose
@@ -29,8 +29,9 @@ from rai_sim.engine_connector import (
     EngineConnector,
     Entity,
     PoseModel,
-    SceneSetup,
+    SceneState,
     SimulationConfig,
+    SpawnedEntity,
 )
 from rai_sim.utils import ros2_pose_to_pose_model
 
@@ -44,7 +45,9 @@ class O3DESimulationConfig(SimulationConfig):
 class O3DEngineConnector(EngineConnector[O3DESimulationConfig]):
     def __init__(self, connector: ROS2ARIConnector):
         self.connector = connector
-        self.entity_ids: Dict[str, str] = {}
+        self.spawned_entities: List[
+            SpawnedEntity
+        ] = []  # list of spawned entities with their initial poses
 
         self.current_process = None
         self.current_binary_path = None
@@ -113,14 +116,12 @@ class O3DEngineConnector(EngineConnector[O3DESimulationConfig]):
         response = self._try_service_call(
             msg, target="spawn_entity", msg_type="gazebo_msgs/srv/SpawnEntity"
         )
+        self.spawned_entities.append(
+            SpawnedEntity(id=response.payload.status_message, **entity.model_dump())
+        )
 
-        self.entity_ids[entity.name] = response.payload.status_message
-
-    def _despawn_entity(self, entity: Entity):
-        self._despawn_entity_by_id(self.entity_ids[entity.name])
-
-    def _despawn_entity_by_id(self, entity_id: str):
-        msg_content = {"name": entity_id}
+    def _despawn_entity(self, entity: SpawnedEntity):
+        msg_content = {"name": entity.id}
 
         msg = ROS2ARIMessage(payload=msg_content)
 
@@ -128,7 +129,8 @@ class O3DEngineConnector(EngineConnector[O3DESimulationConfig]):
             msg, target="delete_entity", msg_type="gazebo_msgs/srv/DeleteEntity"
         )
 
-    def get_object_position(self, object_name: str) -> PoseModel:
+    def get_object_pose(self, entity: SpawnedEntity) -> PoseModel:
+        object_name = entity.name
         object_frame = object_name + "/"
         ros2_pose = do_transform_pose(
             Pose(), self.connector.get_transform(object_frame + "odom", object_frame)
@@ -138,23 +140,40 @@ class O3DEngineConnector(EngineConnector[O3DESimulationConfig]):
         )
         return ros2_pose_to_pose_model(ros2_pose)
 
-    def setup_scene(self, simulation_config: O3DESimulationConfig) -> SceneSetup:
+    def get_scene_state(self) -> SceneState:
+        """
+        Get the current scene state.
+        """
+        if not self.current_process:
+            raise RuntimeError("Simulation is not running.")
+        entities: list[SpawnedEntity] = []
+        for entity in self.spawned_entities:
+            current_pose = self.get_object_pose(entity)
+            entities.append(
+                SpawnedEntity(
+                    id=entity.id,
+                    name=entity.name,
+                    prefab_name=entity.prefab_name,
+                    pose=current_pose,
+                )
+            )
+        return SceneState(entities=entities)
+
+    def setup_scene(self, simulation_config: O3DESimulationConfig):
         if self.current_binary_path != simulation_config.binary_path:
             if self.current_process:
                 self.shutdown()
-            self.launch_binary(simulation_config.binary_path)
+            self._launch_binary(simulation_config.binary_path)
             self.current_binary_path = simulation_config.binary_path
         else:
-            for entity in self.entity_ids:
-                self._despawn_entity_by_id(self.entity_ids[entity])
+            for entity in self.spawned_entities:
+                self._despawn_entity(entity)
 
-        self.entity_ids = {}
+        self.spawned_entities = []
         for entity in simulation_config.entities:
             self._spawn_entity(entity)
-        # TODO (mkotynia) handle SceneSetup
-        return SceneSetup(entities=simulation_config.entities)
 
-    def launch_binary(self, binary_path: Path):
+    def _launch_binary(self, binary_path: Path):
         # NOTE (mkotynia) ros2 launch command with binary path, to be refactored
         command = shlex.split(binary_path.as_posix())
         logger.debug(f"Running command: {command}")
