@@ -66,20 +66,24 @@ class Entity(BaseModel):
     pose: PoseModel
 
 
+class SpawnedEntity(Entity):
+    id: str
+
+
 class SimulationConfig(BaseModel):
     """
-    Setup of scene - arrangemenet of objects in the environment.
+    Setup of scene - arrangemenet of objects in the environment. # NOTE (mkotynia) can be extended by other attributes
     """
 
     entities: List[Entity]
 
 
-class SceneSetup(BaseModel):
+class SceneState(BaseModel):
     """
-    Info about entities in the scene (positions, collisions, etc.)
+    Info about entities in the scene (e.g. poses) # NOTE (mkotynia) can be extended by other attributes
     """
 
-    entities: List[Entity]
+    entities: List[SpawnedEntity]
 
 
 SimulationConfigT = TypeVar("SimulationConfigT", bound=SimulationConfig)
@@ -91,7 +95,7 @@ class EngineConnector(ABC, Generic[SimulationConfigT]):
     """
 
     @abstractmethod
-    def setup_scene(self, simulation_config: SimulationConfigT) -> SceneSetup:
+    def setup_scene(self, simulation_config: SimulationConfigT):
         pass
 
     @abstractmethod
@@ -99,9 +103,13 @@ class EngineConnector(ABC, Generic[SimulationConfigT]):
         pass
 
     @abstractmethod
-    def _despawn_entity(self, entity: Entity):
+    def _despawn_entity(self, entity: SpawnedEntity):
         pass
 
     @abstractmethod
-    def get_object_position(self, object_name: str) -> PoseModel:
+    def get_object_pose(self, entity: SpawnedEntity) -> PoseModel:
+        pass
+
+    @abstractmethod
+    def get_scene_state(self) -> SceneState:
         pass
