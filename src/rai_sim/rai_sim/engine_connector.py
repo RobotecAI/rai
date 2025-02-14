@@ -13,9 +13,8 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import Generic, List, Optional, TypeVar
 
-import yaml
 from geometry_msgs.msg import Point, Pose, Quaternion
 from pydantic import BaseModel
 
@@ -72,7 +71,6 @@ class SimulationConfig(BaseModel):
     Setup of scene - arrangemenet of objects in the environment.
     """
 
-    binary_path: Optional[str]
     entities: List[Entity]
 
 
@@ -84,16 +82,16 @@ class SceneSetup(BaseModel):
     entities: List[Entity]
 
 
-class EngineConnector(ABC):
+SimulationConfigT = TypeVar("SimulationConfigT", bound=SimulationConfig)
+
+
+class EngineConnector(ABC, Generic[SimulationConfigT]):
     """
     Responsible for communication with simulation.
     """
 
-    def __init__(self):
-        pass
-
     @abstractmethod
-    def setup_scene(self, simulation_config: SimulationConfig) -> SceneSetup:
+    def setup_scene(self, simulation_config: SimulationConfigT) -> SceneSetup:
         pass
 
     @abstractmethod
@@ -107,13 +105,3 @@ class EngineConnector(ABC):
     @abstractmethod
     def get_object_position(self, object_name: str) -> PoseModel:
         pass
-
-
-def load_config(file_path: str) -> SimulationConfig:
-    """
-    Load the scene configuration from a YAML file.
-    """
-    with open(file_path, "r") as file:
-        content = yaml.safe_load(file)
-
-    return SimulationConfig(**content)
