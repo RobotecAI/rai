@@ -319,8 +319,7 @@ class ROS2TopicAPI:
 
 @dataclass
 class TopicConfig:
-    name: str
-    msg_type: str
+    msg_type: str = "rai_interfaces/msg/HRIMessage"
     auto_qos_matching: bool = True
     qos_profile: Optional[QoSProfile] = None
     is_subscriber: bool = False

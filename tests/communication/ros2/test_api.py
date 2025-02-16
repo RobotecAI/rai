@@ -30,6 +30,7 @@ from rclpy.node import Node
 
 from .helpers import ActionServer_ as ActionServer
 from .helpers import (
+    HRIMessageSubscriber,
     MessagePublisher,
     MessageReceiver,
     ServiceServer,
@@ -71,14 +72,14 @@ def test_ros2_configure_publisher(ros_setup: None, request: pytest.FixtureReques
     executors, threads = multi_threaded_spinner([node])
     try:
         topic_api = ConfigurableROS2TopicAPI(node)
-        cfg = TopicConfig(topic_name, "std_msgs/msg/String")
+        cfg = TopicConfig()
         topic_api.configure_publisher(topic_name, cfg)
         assert topic_api._publishers[topic_name] is not None
     finally:
         shutdown_executors_and_threads(executors, threads)
 
 
-def test_ros2_configre_subscriber(ros_setup, request: pytest.FixtureRequest):
+def test_ros2_configure_subscriber(ros_setup, request: pytest.FixtureRequest):
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
     node = Node(node_name)
@@ -86,8 +87,6 @@ def test_ros2_configre_subscriber(ros_setup, request: pytest.FixtureRequest):
     try:
         topic_api = ConfigurableROS2TopicAPI(node)
         cfg = TopicConfig(
-            topic_name,
-            "std_msgs/msg/String",
             is_subscriber=True,
             subscriber_callback=lambda _: None,
         )
@@ -102,25 +101,23 @@ def test_ros2_single_message_publish_configured(
 ) -> None:
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
-    message_receiver = MessageReceiver(topic_name)
+    message_receiver = HRIMessageSubscriber(topic_name)
     node = Node(node_name)
     executors, threads = multi_threaded_spinner([message_receiver, node])
 
     try:
         topic_api = ConfigurableROS2TopicAPI(node)
         cfg = TopicConfig(
-            topic_name,
-            "std_msgs/msg/String",
             is_subscriber=False,
         )
         topic_api.configure_publisher(topic_name, cfg)
         topic_api.publish_configured(
             topic_name,
-            {"data": "Hello, ROS2!"},
+            {"text": "Hello, ROS2!"},
         )
         time.sleep(1)
         assert len(message_receiver.received_messages) == 1
-        assert message_receiver.received_messages[0].data == "Hello, ROS2!"
+        assert message_receiver.received_messages[0].text == "Hello, ROS2!"
     finally:
         shutdown_executors_and_threads(executors, threads)
 
