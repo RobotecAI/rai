@@ -15,7 +15,7 @@
 
 from geometry_msgs.msg import Pose
 
-from rai_sim.engine_connector import PoseModel, Rotation, Translation
+from rai_sim.simulation_connector import PoseModel, Rotation, Translation
 
 
 def ros2_pose_to_pose_model(pose: Pose) -> PoseModel:
