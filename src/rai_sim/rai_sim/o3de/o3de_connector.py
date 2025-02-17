@@ -37,12 +37,12 @@ from rai_sim.utils import ros2_pose_to_pose_model
 logger = logging.getLogger(__name__)
 
 
-class O3DESimulationConfig(SimulationConfig):
+class O3DExROS2SimulationConfig(SimulationConfig):
     binary_path: Path
     robotic_stack_command: str
 
 
-class O3DEngineConnector(EngineConnector[O3DESimulationConfig]):
+class O3DExROS2Connector(EngineConnector[O3DExROS2SimulationConfig]):
     def __init__(self, connector: ROS2ARIConnector):
         self.connector = connector
         self.spawned_entities: List[
@@ -171,7 +171,7 @@ class O3DEngineConnector(EngineConnector[O3DESimulationConfig]):
             )
         return SceneState(entities=entities)
 
-    def setup_scene(self, simulation_config: O3DESimulationConfig):
+    def setup_scene(self, simulation_config: O3DExROS2SimulationConfig):
         if self.current_binary_path != simulation_config.binary_path:
             if self.current_sim_process:
                 self.shutdown()
