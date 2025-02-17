@@ -13,14 +13,11 @@
 # limitations under the License.
 
 from pathlib import Path
-from typing import Any, Set, Type
+from typing import Any, Type
 
 import yaml
 
-from rai_sim.o3de.o3de_connector import O3DExROS2SimulationConfig
 from rai_sim.simulation_connector import SimulationConfig, SimulationConfigT
-
-CONFIG_REGISTRY: Set[Type[SimulationConfig]] = {O3DExROS2SimulationConfig}
 
 
 def load_base_config(path: Path) -> SimulationConfig:
@@ -37,9 +34,9 @@ def load_simulation_config(
 ) -> SimulationConfigT:
     """Combine base config with connector-specific config"""
 
-    if config_type not in CONFIG_REGISTRY:
+    if not issubclass(config_type, SimulationConfig):  # type: ignore
         raise ValueError(
-            f"Invalid config type: {config_type}. Must be one of {CONFIG_REGISTRY}"
+            f"Invalid config type: {config_type}. It must be subclass of {SimulationConfig}"
         )
 
     base_config = load_base_config(base_config_path)
