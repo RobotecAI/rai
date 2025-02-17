@@ -20,7 +20,6 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
-import psutil
 from geometry_msgs.msg import Pose
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from tf2_geometry_msgs import do_transform_pose
@@ -40,6 +39,7 @@ logger = logging.getLogger(__name__)
 
 class O3DESimulationConfig(SimulationConfig):
     binary_path: Path
+    robotic_stack_command: str
 
 
 class O3DEngineConnector(EngineConnector[O3DESimulationConfig]):
@@ -49,34 +49,44 @@ class O3DEngineConnector(EngineConnector[O3DESimulationConfig]):
             SpawnedEntity
         ] = []  # list of spawned entities with their initial poses
 
-        self.current_process = None
+        self.current_sim_process = None
+        self.current_robotic_stack_process = None
         self.current_binary_path = None
 
     def shutdown(self):
-        if not self.current_process:
+        self._shutdown_binary()
+        self._shutdown_robotic_stack()
+
+    def _shutdown_binary(self):
+        if not self.current_sim_process:
             return
-        parent = psutil.Process(self.current_process.pid)
-        children = parent.children(recursive=True)
+        self.current_sim_process.send_signal(signal.SIGINT)
+        self.current_sim_process.wait()
 
-        # NOTE (mkotynia) terminating binary
-        for child in children:
-            logger.debug(f"Terminating child process {child.pid}, {child.name()}")
-            child.terminate()
+        if self.current_sim_process.poll() is None:
+            logger.error(
+                f"Parent process PID: {self.current_sim_process.pid} is still running."
+            )
+            raise RuntimeError(
+                f"Failed to terminate main process PID {self.current_sim_process.pid}"
+            )
 
-        _, alive = psutil.wait_procs(children, timeout=15)
-        if alive:
-            for child in alive:
-                logger.warning(f"Force killing child process PID: {child.pid}")
-                child.kill()
-        # NOTE (mkotynia) terminating ros2 launch
-        parent.send_signal(signal.SIGINT)
-        parent.wait()
+        self.current_sim_process = None
 
-        if parent.is_running():
-            logger.error(f"Parent process PID: {parent.pid} is still running.")
-            raise RuntimeError(f"Failed to terminate main process PID {parent.pid}")
+    def _shutdown_robotic_stack(self):
+        if not self.current_robotic_stack_process:
+            return
 
-        self.current_process = None
+        self.current_robotic_stack_process.send_signal(signal.SIGINT)
+        self.current_robotic_stack_process.wait()
+
+        if self.current_robotic_stack_process.poll() is None:
+            logger.error(
+                f"Parent process PID: {self.current_robotic_stack_process.pid} is still running."
+            )
+            raise RuntimeError(
+                f"Failed to terminate robotic stack process PID {self.current_robotic_stack_process.pid}"
+            )
 
     def get_available_spawnable_names(self) -> list[str]:
         msg = ROS2ARIMessage({})
@@ -144,7 +154,7 @@ class O3DEngineConnector(EngineConnector[O3DESimulationConfig]):
         """
         Get the current scene state.
         """
-        if not self.current_process:
+        if not self.current_sim_process:
             raise RuntimeError("Simulation is not running.")
         entities: list[SpawnedEntity] = []
         for entity in self.spawned_entities:
@@ -161,10 +171,12 @@ class O3DEngineConnector(EngineConnector[O3DESimulationConfig]):
 
     def setup_scene(self, simulation_config: O3DESimulationConfig):
         if self.current_binary_path != simulation_config.binary_path:
-            if self.current_process:
+            if self.current_sim_process:
                 self.shutdown()
             self._launch_binary(simulation_config.binary_path)
+            self._launch_robotic_stack(simulation_config.robotic_stack_command)
             self.current_binary_path = simulation_config.binary_path
+
         else:
             for entity in self.spawned_entities:
                 self._despawn_entity(entity)
@@ -174,22 +186,33 @@ class O3DEngineConnector(EngineConnector[O3DESimulationConfig]):
             self._spawn_entity(entity)
 
     def _launch_binary(self, binary_path: Path):
-        # NOTE (mkotynia) ros2 launch command with binary path, to be refactored
-        command = shlex.split(binary_path.as_posix())
-        logger.debug(f"Running command: {command}")
-        self.current_process = subprocess.Popen(
+        command = [binary_path.as_posix()]
+        logger.info(f"Running command: {command}")
+        self.current_sim_process = subprocess.Popen(
             command,
         )
-        if not self._has_process_started():
+        if not self._has_process_started(process=self.current_sim_process):
             raise RuntimeError("Process did not start in time.")
 
-    def _has_process_started(self, timeout: int = 15):
+    def _has_process_started(
+        self, process: subprocess.Popen[Any] | None, timeout: int = 15
+    ):
         start_time = time.time()
         while time.time() - start_time < timeout:
-            if self.current_process is not None and self.current_process.poll() is None:
+            if process is not None and process.poll() is None:
+                logger.info(f"Process started with PID {process.pid}")
                 return True
             time.sleep(1)
         return False
+
+    def _launch_robotic_stack(self, robotic_stack_command: str):
+        command = shlex.split(robotic_stack_command)
+        logger.info(f"Running command: {command}")
+        self.current_robotic_stack_process = subprocess.Popen(
+            command,
+        )
+        if not self._has_process_started(self.current_robotic_stack_process):
+            raise RuntimeError("Process did not start in time.")
 
     def _try_service_call(
         self, msg: ROS2ARIMessage, target: str, msg_type: str, timeout: float = 10
