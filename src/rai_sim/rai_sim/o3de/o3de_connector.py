@@ -195,6 +195,15 @@ class O3DExROS2Connector(EngineConnector[O3DExROS2SimulationConfig]):
         if not self._has_process_started(process=self.current_sim_process):
             raise RuntimeError("Process did not start in time.")
 
+    def _launch_robotic_stack(self, robotic_stack_command: str):
+        command = shlex.split(robotic_stack_command)
+        logger.info(f"Running command: {command}")
+        self.current_robotic_stack_process = subprocess.Popen(
+            command,
+        )
+        if not self._has_process_started(self.current_robotic_stack_process):
+            raise RuntimeError("Process did not start in time.")
+
     def _has_process_started(
         self, process: subprocess.Popen[Any] | None, timeout: int = 15
     ):
@@ -205,15 +214,6 @@ class O3DExROS2Connector(EngineConnector[O3DExROS2SimulationConfig]):
                 return True
             time.sleep(1)
         return False
-
-    def _launch_robotic_stack(self, robotic_stack_command: str):
-        command = shlex.split(robotic_stack_command)
-        logger.info(f"Running command: {command}")
-        self.current_robotic_stack_process = subprocess.Popen(
-            command,
-        )
-        if not self._has_process_started(self.current_robotic_stack_process):
-            raise RuntimeError("Process did not start in time.")
 
     def _try_service_call(
         self, msg: ROS2ARIMessage, target: str, msg_type: str, timeout: float = 10
