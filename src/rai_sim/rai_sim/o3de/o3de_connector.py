@@ -25,11 +25,11 @@ from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from tf2_geometry_msgs import do_transform_pose
 
 from rai_sim.engine_connector import (
-    EngineConnector,
     Entity,
     PoseModel,
     SceneState,
     SimulationConfig,
+    SimulationConnector,
     SpawnedEntity,
 )
 from rai_sim.utils import ros2_pose_to_pose_model
@@ -42,7 +42,7 @@ class O3DExROS2SimulationConfig(SimulationConfig):
     robotic_stack_command: str
 
 
-class O3DExROS2Connector(EngineConnector[O3DExROS2SimulationConfig]):
+class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
     def __init__(self, connector: ROS2ARIConnector):
         self.connector = connector
         self.spawned_entities: List[
