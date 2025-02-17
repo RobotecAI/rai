@@ -16,7 +16,7 @@ from abc import ABC, abstractmethod
 from typing import Generic, List, Optional, TypeVar
 
 from geometry_msgs.msg import Point, Pose, Quaternion
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class Translation(BaseModel):
@@ -76,6 +76,14 @@ class SimulationConfig(BaseModel):
     """
 
     entities: List[Entity]
+
+    @field_validator("entities")
+    @classmethod
+    def check_unique_names(cls, entities: List[Entity]) -> List[Entity]:
+        names = [entity.name for entity in entities]
+        if len(names) != len(set(names)):
+            raise ValueError("Each entity must have a unique name.")
+        return entities
 
 
 class SceneState(BaseModel):
