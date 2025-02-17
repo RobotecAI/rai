@@ -1,5 +1,6 @@
 ########### EXAMPLE USAGE ###########
 import rclpy
+import time
 import rclpy.qos
 from benchmark_model import Benchmark, Scenario, Task
 from rai_open_set_vision.tools import GetGrabbingPointTool
@@ -13,6 +14,13 @@ from rai_sim.engine_connector import (
     load_config,
 )
 from rai_sim.o3de.o3de_connector import O3DEngineConnector
+import rclpy
+from rclpy.node import Node
+from rai_interfaces.srv import ManipulatorMoveTo
+from geometry_msgs.msg import PoseStamped
+from std_msgs.msg import Header
+from builtin_interfaces.msg import Time
+from rai.utils.ros_async import get_future_result
 
 
 class GrabCarrotTask(Task):
@@ -24,9 +32,9 @@ class GrabCarrotTask(Task):
         return 1
 
 
-class CollectCornsTask(Task):
+class RedCubesTask(Task):
     def get_prompt(self) -> str:
-        return "Put red cubes next to each other"
+        return "Put red cubes side by side"
 
     def calculate_progress(self, engine_connector, initial_scene_setup) -> float:
         # TODO
@@ -48,6 +56,44 @@ def create_tools(connector):
         GetROS2ImageTool(connector=connector),
         GetROS2TopicsNamesAndTypesTool(connector=connector),
     ]
+
+
+class ManipulatorClient(Node):
+    def __init__(self):
+        super().__init__("manipulator_client")
+        self.client = self.create_client(ManipulatorMoveTo, "/manipulator_move_to")
+
+    def send_request(self):
+        request = ManipulatorMoveTo.Request()
+        request.initial_gripper_state = True
+        request.final_gripper_state = False
+
+        request.target_pose = PoseStamped()
+        request.target_pose.header = Header()
+        request.target_pose.header.stamp = Time(sec=0, nanosec=0)
+        request.target_pose.header.frame_id = "panda_link0"
+
+        request.target_pose.pose.position.x = 0.3
+        request.target_pose.pose.position.y = 0.0
+        request.target_pose.pose.position.z = 0.5
+
+        request.target_pose.pose.orientation.x = 1.0
+        request.target_pose.pose.orientation.y = 0.0
+        request.target_pose.pose.orientation.z = 0.0
+        request.target_pose.pose.orientation.w = 0.0
+
+        while not self.client.wait_for_service(timeout_sec=5.0):
+            self.get_logger().info("Service not available, waiting...")
+
+        self.get_logger().info("Making request to manipulator...")
+
+        future = self.client.call_async(request)
+        result = get_future_result(future, timeout_sec=5.0)
+
+        if result is not None:
+            self.get_logger().info(f"Result: {result}")
+        else:
+            self.get_logger().error("Service call failed")
 
 
 if __name__ == "__main__":
@@ -75,49 +121,33 @@ if __name__ == "__main__":
 
     scenarios = [
         Scenario(task=GrabCarrotTask(), scene_config=one_carrot_scene_config),
-        Scenario(task=CollectCornsTask(), scene_config=one_carrot_scene_config),
-        Scenario(task=GrabCarrotTask(), scene_config=multiple_carrot_scene_config),
+        Scenario(task=RedCubesTask(), scene_config=one_carrot_scene_config),
+        # Scenario(task=GrabCarrotTask(), scene_config=multiple_carrot_scene_config),
         Scenario(task=GrabCarrotTask(), scene_config=no_carrot_scene_config),
-        Scenario(task=CollectCornsTask(), scene_config=multiple_carrot_scene_config),
-        Scenario(task=CollectCornsTask(), scene_config=no_carrot_scene_config),
+        Scenario(task=RedCubesTask(), scene_config=multiple_carrot_scene_config),
+        Scenario(task=RedCubesTask(), scene_config=no_carrot_scene_config),
     ]
 
-    # connector = ROS2ARIConnector()
-    # o3de = O3DEngineConnector(connector)
+    rclpy.init()
+    connector = ROS2ARIConnector()
+    node = connector.node
+    node.declare_parameter("conversion_ratio", 1.0)
 
-    # benchmark = Benchmark(scenarios)
-    # benchmark.engine_connector = o3de
-    # node = create_base_node()
-    # tools = create_tools(node)
-    # base_node_thread = threading.Thread(target=node.spin)
-    # base_node_thread.start()
+    tools = create_tools(connector)
 
-    # for i in range(len(scenarios)):
-    #     agent = create_conversational_agent(llm, tools, system_prompt)
-    #     benchmark.run_next(agent=agent)
+    o3de = O3DEngineConnector(connector)
+    client = ManipulatorClient()
 
-    # time.sleep(3)
-
-    # connector.shutdown()
-    # rclpy.shutdown()
-
-    for s in scenarios:
-        rclpy.init()
-        connector = ROS2ARIConnector()
-        node = connector.node
-        node.declare_parameter("conversion_ratio", 1.0)
-
-        tools = create_tools(connector)
-
-        o3de = O3DEngineConnector(connector)
-
-        benchmark = Benchmark([s])
-        benchmark.engine_connector = o3de
-
+    benchmark = Benchmark(scenarios)
+    benchmark.engine_connector = o3de
+    for i, s in enumerate(scenarios):
         agent = create_conversational_agent(llm, tools, system_prompt)
         benchmark.run_next(agent=agent)
-        print("Benchmark done")
+        print(f"Scenario {i} done")
 
-        connector.shutdown()
-        o3de.shutdown()
-        rclpy.shutdown()
+        client.send_request()
+
+    time.sleep(30)
+    connector.shutdown()
+    o3de.shutdown()
+    rclpy.shutdown()
