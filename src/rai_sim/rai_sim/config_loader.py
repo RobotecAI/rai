@@ -18,9 +18,9 @@ from typing import Any, Set, Type
 import yaml
 
 from rai_sim.engine_connector import SimulationConfig, SimulationConfigT
-from rai_sim.o3de.o3de_connector import O3DESimulationConfig
+from rai_sim.o3de.o3de_connector import O3DExROS2SimulationConfig
 
-CONFIG_REGISTRY: Set[Type[SimulationConfig]] = {O3DESimulationConfig}
+CONFIG_REGISTRY: Set[Type[SimulationConfig]] = {O3DExROS2SimulationConfig}
 
 
 def load_base_config(path: Path) -> SimulationConfig:
