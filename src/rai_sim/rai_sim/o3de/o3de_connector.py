@@ -135,9 +135,11 @@ class O3DEngineConnector(EngineConnector[O3DESimulationConfig]):
 
         msg = ROS2ARIMessage(payload=msg_content)
 
-        self._try_service_call(
+        response = self._try_service_call(
             msg, target="delete_entity", msg_type="gazebo_msgs/srv/DeleteEntity"
         )
+        if response:
+            self.spawned_entities.remove(entity)
 
     def get_object_pose(self, entity: SpawnedEntity) -> PoseModel:
         object_name = entity.name
@@ -178,10 +180,9 @@ class O3DEngineConnector(EngineConnector[O3DESimulationConfig]):
             self.current_binary_path = simulation_config.binary_path
 
         else:
-            for entity in self.spawned_entities:
-                self._despawn_entity(entity)
+            while self.spawned_entities:
+                self._despawn_entity(self.spawned_entities[0])
 
-        self.spawned_entities = []
         for entity in simulation_config.entities:
             self._spawn_entity(entity)
 
