@@ -17,8 +17,8 @@ from typing import Any, Set, Type
 
 import yaml
 
-from rai_sim.engine_connector import SimulationConfig, SimulationConfigT
 from rai_sim.o3de.o3de_connector import O3DExROS2SimulationConfig
+from rai_sim.simulation_connector import SimulationConfig, SimulationConfigT
 
 CONFIG_REGISTRY: Set[Type[SimulationConfig]] = {O3DExROS2SimulationConfig}
 
