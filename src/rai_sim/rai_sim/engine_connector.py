@@ -97,7 +97,7 @@ class SceneState(BaseModel):
 SimulationConfigT = TypeVar("SimulationConfigT", bound=SimulationConfig)
 
 
-class EngineConnector(ABC, Generic[SimulationConfigT]):
+class SimulationConnector(ABC, Generic[SimulationConfigT]):
     """
     Responsible for communication with simulation.
     """
