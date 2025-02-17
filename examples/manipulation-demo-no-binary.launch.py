@@ -52,16 +52,8 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            # Launch the MoveIt node after loading the simulation
-            # RegisterEventHandler(
-            #     event_handler=OnExecutionComplete(
-            #         target_action=wait_for_game_launcher,
-            #         on_completion=[
             launch_openset,
             launch_moveit,
             launch_robotic_manipulation,
-            #         ],
-            #     )
-            # ),
         ]
     )
