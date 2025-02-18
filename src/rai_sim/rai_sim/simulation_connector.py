@@ -40,7 +40,7 @@ class PoseModel(BaseModel):
 
     def to_ros2_pose(self) -> Pose:
         """
-        Converts poses in PoseModel format to poses in ROS2 Pose format.
+        Converts pose in PoseModel format to pose in ROS2 Pose format.
         """
 
         position = Point(
@@ -60,6 +60,27 @@ class PoseModel(BaseModel):
         ros2_pose = Pose(position=position, orientation=orientation)
 
         return ros2_pose
+
+    @classmethod
+    def from_ros2_pose(cls, pose: Pose):
+        """
+        Converts ROS2 pose to PoseModel format
+        """
+
+        translation = Translation(
+            x=pose.position.x,  # type: ignore
+            y=pose.position.y,  # type: ignore
+            z=pose.position.z,  # type: ignore
+        )
+
+        rotation = Rotation(
+            x=pose.orientation.x,  # type: ignore
+            y=pose.orientation.y,  # type: ignore
+            z=pose.orientation.z,  # type: ignore
+            w=pose.orientation.w,  # type: ignore
+        )
+
+        return cls(translation=translation, rotation=rotation)
 
 
 class Entity(BaseModel):
