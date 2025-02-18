@@ -13,8 +13,10 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Generic, List, Optional, TypeVar
 
+import yaml
 from geometry_msgs.msg import Point, Pose, Quaternion
 from pydantic import BaseModel, field_validator
 
@@ -84,6 +86,12 @@ class SimulationConfig(BaseModel):
         if len(names) != len(set(names)):
             raise ValueError("Each entity must have a unique name.")
         return entities
+
+    @classmethod
+    def load_base_config(cls, base_config_path: Path) -> "SimulationConfig":
+        with open(base_config_path) as f:
+            content = yaml.safe_load(f)
+        return cls(**content)
 
 
 class SceneState(BaseModel):
