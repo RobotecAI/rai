@@ -20,6 +20,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
+import yaml
 from geometry_msgs.msg import Pose
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from tf2_geometry_msgs import do_transform_pose
@@ -40,6 +41,16 @@ logger = logging.getLogger(__name__)
 class O3DExROS2SimulationConfig(SimulationConfig):
     binary_path: Path
     robotic_stack_command: str
+
+    @classmethod
+    def load_config(
+        cls, base_config_path: Path, connector_config_path: Path
+    ) -> "O3DExROS2SimulationConfig":
+        base_config = SimulationConfig.load_base_config(base_config_path)
+
+        with open(connector_config_path) as f:
+            connector_content: dict[str, Any] = yaml.safe_load(f)
+        return cls(**base_config.model_dump(), **connector_content)
 
 
 class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
