@@ -25,12 +25,12 @@ from geometry_msgs.msg import Pose
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from tf2_geometry_msgs import do_transform_pose
 
-from rai_sim.simulation_connector import (
+from rai_sim.simulation_bridge import (
     Entity,
     PoseModel,
     SceneState,
-    SimulationConfig,
     SimulationBridge,
+    SimulationConfig,
     SpawnedEntity,
 )
 
