@@ -95,7 +95,13 @@ class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
             target="get_available_spawnable_names",
             msg_type="gazebo_msgs/srv/GetWorldProperties",
         )
-        return response.payload.model_names
+        # NOTE (mkotynia) There is a bug in the gazebo_msgs/srv/GetWorldProperties service - payload.success is not set to True even if the service call is successful. It was reported to Kacper Dąbrowski and he is going to fix it.
+        if response.payload.success:
+            return response.payload.model_names
+        else:
+            raise RuntimeError(
+                f"Failed to get available spawnable names. Response: {response.payload.status_message}"
+            )
 
     def _spawn_entity(self, entity: Entity):
         pose = do_transform_pose(
@@ -122,13 +128,17 @@ class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
         }
 
         msg = ROS2ARIMessage(payload=msg_content)
-
         response = self._try_service_call(
             msg, target="spawn_entity", msg_type="gazebo_msgs/srv/SpawnEntity"
         )
-        self.spawned_entities.append(
-            SpawnedEntity(id=response.payload.status_message, **entity.model_dump())
-        )
+        if response and response.payload.success:
+            self.spawned_entities.append(
+                SpawnedEntity(id=response.payload.status_message, **entity.model_dump())
+            )
+        else:
+            raise RuntimeError(
+                f"Failed to spawn entity {entity.name}. Response: {response.payload.status_message}"
+            )
 
     def _despawn_entity(self, entity: SpawnedEntity):
         msg_content = {"name": entity.id}
@@ -138,8 +148,12 @@ class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
         response = self._try_service_call(
             msg, target="delete_entity", msg_type="gazebo_msgs/srv/DeleteEntity"
         )
-        if response:
+        if response.payload.success:
             self.spawned_entities.remove(entity)
+        else:
+            raise RuntimeError(
+                f"Failed to delete entity {entity.name}. Response: {response.payload.status_message}"
+            )
 
     def get_object_pose(self, entity: SpawnedEntity) -> PoseModel:
         object_name = entity.name
@@ -216,17 +230,20 @@ class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
         return False
 
     def _try_service_call(
-        self, msg: ROS2ARIMessage, target: str, msg_type: str, timeout: float = 10
+        self, msg: ROS2ARIMessage, target: str, msg_type: str, n_retries: int = 3
     ) -> ROS2ARIMessage:
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            response = self.connector.service_call(
-                msg, target=target, msg_type=msg_type
-            )
+        if n_retries < 1:
+            raise ValueError("Number of retries must be at least 1")
+        for _ in range(n_retries):
+            try:
+                response = self.connector.service_call(
+                    msg, target=target, msg_type=msg_type
+                )
+            except Exception as e:
+                raise e
             if response.payload.success:
                 return response
             logger.warning(
                 f"Retrying {target}, response success: {response.payload.success}"
             )
-            time.sleep(1)
-        raise RuntimeError(f"Service call {target} failed after multiple attempts.")
+        return response  # type: ignore
