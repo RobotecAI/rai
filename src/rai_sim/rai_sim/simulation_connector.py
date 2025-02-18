@@ -74,9 +74,10 @@ class SpawnedEntity(Entity):
 
 class SimulationConfig(BaseModel):
     """
-    Setup of simulation - arrangemenet of objects in the environment. # NOTE (mkotynia) can be extended by other attributes
+    Setup of simulation - arrangemenet of objects in the environment.
     """
 
+    # NOTE (mkotynia) can be extended by other attributes
     entities: List[Entity]
 
     @field_validator("entities")
@@ -96,9 +97,10 @@ class SimulationConfig(BaseModel):
 
 class SceneState(BaseModel):
     """
-    Info about current entities' state in the scene # NOTE (mkotynia) can be extended by other attributes
+    Info about current entities' state in the scene.
     """
 
+    # NOTE (mkotynia) can be extended by other attributes
     entities: List[SpawnedEntity]
 
 
