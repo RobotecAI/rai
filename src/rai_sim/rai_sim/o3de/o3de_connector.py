@@ -106,7 +106,12 @@ class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
             msg_type="gazebo_msgs/srv/GetWorldProperties",
         )
         # NOTE (mkotynia) There is a bug in the gazebo_msgs/srv/GetWorldProperties service - payload.success is not set to True even if the service call is successful. It was reported to Kacper Dąbrowski and he is going to fix it.
-        if response.payload.success:
+        # TODO (mkotynia) add link to PR fixing the bug when it is ready
+        # TODO (mkotynia) uncomment check if response.payload.success when the bug is fixed and remove workaround check if response.payload.model_names.
+
+        # if response.payload.success:
+        #     return response.payload.model_names
+        if response.payload.model_names:
             return response.payload.model_names
         else:
             raise RuntimeError(
