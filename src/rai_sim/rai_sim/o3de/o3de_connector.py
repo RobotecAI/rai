@@ -245,10 +245,13 @@ class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
         for _ in range(n_retries):
             try:
                 response = self.connector.service_call(
-                    msg, target=target, msg_type=msg_type
+                    msg, target="target", msg_type=msg_type
                 )
             except Exception as e:
-                raise e
+                logger.error(
+                    f"Error while calling service {target} with msg_type {msg_type}: {e}"
+                )
+                raise
             if response.payload.success:
                 return response
             logger.warning(
