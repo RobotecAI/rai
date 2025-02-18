@@ -21,8 +21,8 @@ from langchain_core.messages import BaseMessage, HumanMessage
 from pydantic import BaseModel, ConfigDict
 
 from rai.messages import HumanMultimodalMessage
-from rai_sim.engine_connector import SimulationConnector, SimulationConfig
-from rai_sim.engine_connector import PoseModel
+from rai_sim.simulation_connector import SimulationConnector, SimulationConfig
+from rai_sim.simulation_connector import PoseModel
 
 
 SimulationConnectorT = TypeVar("SimulationConnectorT", bound=SimulationConnector)
