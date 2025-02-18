@@ -245,7 +245,7 @@ class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
         for _ in range(n_retries):
             try:
                 response = self.connector.service_call(
-                    msg, target="target", msg_type=msg_type
+                    msg, target=target, msg_type=msg_type
                 )
             except Exception as e:
                 logger.error(
