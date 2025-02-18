@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Generic, List, Optional, TypeVar
@@ -132,6 +133,12 @@ class SimulationConnector(ABC, Generic[SimulationConfigT]):
     """
     Responsible for communication with simulation.
     """
+
+    def __init__(self, logger: Optional[logging.Logger] = None):
+        if logger is None:
+            self.logger = logging.getLogger(__name__)
+        else:
+            self.logger = logger
 
     @abstractmethod
     def setup_scene(self, simulation_config: SimulationConfigT):
