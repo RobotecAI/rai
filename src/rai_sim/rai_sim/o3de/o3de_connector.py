@@ -167,8 +167,7 @@ class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
             )
 
     def get_object_pose(self, entity: SpawnedEntity) -> PoseModel:
-        object_name = entity.name
-        object_frame = object_name + "/"
+        object_frame = entity.name + "/"
         ros2_pose = do_transform_pose(
             Pose(), self.connector.get_transform(object_frame + "odom", object_frame)
         )
