@@ -228,12 +228,10 @@ class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
         if not self._has_process_started(self.current_robotic_stack_process):
             raise RuntimeError("Process did not start in time.")
 
-    def _has_process_started(
-        self, process: subprocess.Popen[Any] | None, timeout: int = 15
-    ):
+    def _has_process_started(self, process: subprocess.Popen[Any], timeout: int = 15):
         start_time = time.time()
         while time.time() - start_time < timeout:
-            if process is not None and process.poll() is None:
+            if process.poll() is None:
                 logger.info(f"Process started with PID {process.pid}")
                 return True
             time.sleep(1)
