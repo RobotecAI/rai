@@ -30,7 +30,7 @@ from rai_sim.simulation_connector import (
     PoseModel,
     SceneState,
     SimulationConfig,
-    SimulationConnector,
+    SimulationBridge,
     SpawnedEntity,
 )
 
@@ -50,7 +50,7 @@ class O3DExROS2SimulationConfig(SimulationConfig):
         return cls(**base_config.model_dump(), **connector_content)
 
 
-class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
+class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
     def __init__(
         self, connector: ROS2ARIConnector, logger: Optional[logging.Logger] = None
     ):
