@@ -90,6 +90,10 @@ class TextToSpeechAgent(BaseAgent):
         speaker = SoundDeviceConnector(
             targets=[("speaker", speaker_config)], sources=[]
         )
+        sample_rate, _, out_channels = speaker.get_audio_params("speaker")
+        tts.sample_rate = sample_rate
+        tts.channels = out_channels
+
         self.node_base_name = ros2_name
         self.model = tts
         ros2_connector = self._setup_ros2_connector()
@@ -119,7 +123,6 @@ class TextToSpeechAgent(BaseAgent):
         self.logger.info("TextToSpeechAgent started")
         self.transcription_thread = Thread(target=self._transcription_thread)
         self.transcription_thread.start()
-        sample_rate, channels = self.model.get_tts_params()
 
         msg = SoundDeviceMessage(read=False)
         assert isinstance(self.connectors["speaker"], SoundDeviceConnector)
@@ -128,8 +131,6 @@ class TextToSpeechAgent(BaseAgent):
             "speaker",
             on_feedback=self._speaker_callback,
             on_done=lambda: None,
-            sample_rate=sample_rate,
-            channels=channels,
         )
 
     def _speaker_callback(self, outdata, frames, time, status_dict):

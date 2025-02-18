@@ -72,7 +72,7 @@ class SoundDeviceConfig:
     stream: bool = False
     block_size: int = 1024
     dtype: str = "int16"
-    channels: int = 1
+    channels: Optional[int] = None
     consumer_sampling_rate: Optional[int] = None
     device_number: Optional[int] = None
     device_name: Optional[str] = None
@@ -82,12 +82,15 @@ class SoundDeviceConfig:
     def __post_init__(self):
         if self.device_number is None and self.device_name is None:
             raise ValueError("Either 'device_number' or 'device_name' must be set.")
+        if not self.is_input and not self.is_output:
+            raise ValueError("Either 'is_input' or 'is_output' must be True.")
 
 
 class SoundDeviceAPI:
     def __init__(self, config: SoundDeviceConfig):
         self.device_name = ""
 
+        self.config = config
         if not sd:
             raise SoundDeviceError("SoundDeviceAPI requires sound_device module!")
         if config.device_name:
@@ -100,16 +103,23 @@ class SoundDeviceAPI:
                     break
         else:
             self.device_number = config.device_number
-        self.sample_rate = int(
-            sd.query_devices(device=self.device_number, kind="input")[
-                "default_samplerate"
-            ]  # type: ignore
-        )
+        try:
+            device_data = sd.query_devices(device=self.device_number)
+        except AttributeError:
+            raise SoundDeviceError(
+                f"Device {self.device_name} was not found for configuration"
+            )
+        self.sample_rate = int(device_data["default_samplerate"])  # type: ignore
+        if self.config.channels is None:
+            self.in_channels = int(device_data["max_input_channels"])  # type: ignore
+            self.out_channels = int(device_data["max_output_channels"])  # type: ignore
+        else:
+            self.in_channels = self.config.channels
+            self.out_channels = self.config.channels
 
         self.read_flag = config.is_input
         self.write_flag = config.is_output
         self.stream_flag = config.stream
-        self.config = config
         self.in_stream = None
         self.out_stream = None
 
@@ -182,7 +192,7 @@ class SoundDeviceAPI:
         recording = sd.rec(
             frames=frames,
             samplerate=self.sample_rate,
-            channels=self.config.channels,
+            channels=self.in_channels,
             device=self.device_number,
             blocking=blocking,
             dtype=self.config.dtype,
@@ -192,7 +202,7 @@ class SoundDeviceAPI:
             data=recording.flatten(),
             sample_width=recording.dtype.itemsize,
             frame_rate=self.sample_rate,
-            channels=self.config.channels,
+            channels=self.in_channels,
         )
 
     def stop(self):
@@ -247,9 +257,12 @@ class SoundDeviceAPI:
 
         try:
             assert sd is not None
+            print(sample_rate)
             sample_rate = self.sample_rate if sample_rate is None else sample_rate
             print(sample_rate)
-            channels = self.config.channels if channels is None else channels
+            print(channels)
+            channels = self.out_channels if channels is None else channels
+            print(channels)
             self.out_stream = sd.OutputStream(
                 samplerate=sample_rate,
                 channels=channels,
@@ -312,7 +325,7 @@ class SoundDeviceAPI:
 
             self.in_stream = sd.InputStream(
                 samplerate=self.sample_rate,
-                channels=self.config.channels,
+                channels=self.in_channels,
                 device=self.device_number,
                 dtype=self.config.dtype,
                 blocksize=window_size_samples,

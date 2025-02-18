@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from typing import Callable, Literal, Optional, Tuple
+from typing import Callable, Literal, NamedTuple, Optional, Tuple
 
 try:
     import sounddevice as sd
@@ -51,6 +51,12 @@ class SoundDeviceMessage(HRIMessage):
         self.duration = duration
 
 
+class AudioParams(NamedTuple):
+    sample_rate: int
+    in_channels: int
+    out_channels: int
+
+
 class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
     """SoundDevice connector implementing the Human-Robot Interface.
 
@@ -78,6 +84,13 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
 
         super().__init__(configured_targets, configured_sources)
         sd.default.latency = ("low", "low")  # type: ignore
+
+    def get_audio_params(self, target: str) -> AudioParams:
+        return AudioParams(
+            self.devices[target].sample_rate,
+            self.devices[target].in_channels,
+            self.devices[target].out_channels,
+        )
 
     def configure_device(
         self,

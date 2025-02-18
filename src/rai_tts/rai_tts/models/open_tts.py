@@ -91,7 +91,13 @@ class OpenTTS(TTSModel):
                 (data * 32768).clip(-32768, 32767).astype(np.int16)
             )  # Convert float32 to int16
 
-        return AudioSegment(data, frame_rate=sample_rate, sample_width=2, channels=1)
+        audio = AudioSegment(
+            data.tobytes(), frame_rate=sample_rate, sample_width=2, channels=1
+        )
+        if self.sample_rate == -1:
+            return audio
+        else:
+            return self._resample(audio)
 
     def get_tts_params(self) -> Tuple[int, int]:
         """

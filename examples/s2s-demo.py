@@ -87,6 +87,8 @@ class S2SConversationalAgent(BaseAgent):
             if speech != "":
                 self.message_history.append(HumanMessage(content=speech))
                 assert isinstance(self.connectors["ros2"], ROS2HRIConnector)
+                # ai_answer = AIMessage(content="Yes, I am Jar Jar Binks")
+                # self.connectors["ros2"].send_all_targets(ai_answer)
                 ai_answer = self.llm.invoke(
                     speech,
                     config={"callbacks": [LLMTextHandler(self.connectors["ros2"])]},
