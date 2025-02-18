@@ -18,7 +18,7 @@ import signal
 import subprocess
 import time
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import yaml
 from geometry_msgs.msg import Pose
@@ -33,8 +33,6 @@ from rai_sim.simulation_connector import (
     SimulationConnector,
     SpawnedEntity,
 )
-
-logger = logging.getLogger(__name__)
 
 
 class O3DExROS2SimulationConfig(SimulationConfig):
@@ -53,7 +51,10 @@ class O3DExROS2SimulationConfig(SimulationConfig):
 
 
 class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
-    def __init__(self, connector: ROS2ARIConnector):
+    def __init__(
+        self, connector: ROS2ARIConnector, logger: Optional[logging.Logger] = None
+    ):
+        super().__init__(logger=logger)
         self.connector = connector
         self.spawned_entities: List[
             SpawnedEntity
@@ -74,7 +75,7 @@ class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
         self.current_sim_process.wait()
 
         if self.current_sim_process.poll() is None:
-            logger.error(
+            self.logger.error(
                 f"Parent process PID: {self.current_sim_process.pid} is still running."
             )
             raise RuntimeError(
@@ -91,7 +92,7 @@ class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
         self.current_robotic_stack_process.wait()
 
         if self.current_robotic_stack_process.poll() is None:
-            logger.error(
+            self.logger.error(
                 f"Parent process PID: {self.current_robotic_stack_process.pid} is still running."
             )
             raise RuntimeError(
@@ -216,7 +217,7 @@ class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
 
     def _launch_binary(self, binary_path: Path):
         command = [binary_path.as_posix()]
-        logger.info(f"Running command: {command}")
+        self.logger.info(f"Running command: {command}")
         self.current_sim_process = subprocess.Popen(
             command,
         )
@@ -225,7 +226,7 @@ class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
 
     def _launch_robotic_stack(self, robotic_stack_command: str):
         command = shlex.split(robotic_stack_command)
-        logger.info(f"Running command: {command}")
+        self.logger.info(f"Running command: {command}")
         self.current_robotic_stack_process = subprocess.Popen(
             command,
         )
@@ -236,7 +237,7 @@ class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
         start_time = time.time()
         while time.time() - start_time < timeout:
             if process.poll() is None:
-                logger.info(f"Process started with PID {process.pid}")
+                self.logger.info(f"Process started with PID {process.pid}")
                 return True
             time.sleep(1)
         return False
@@ -252,13 +253,13 @@ class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
                     msg, target=target, msg_type=msg_type
                 )
             except Exception as e:
-                logger.error(
+                self.logger.error(
                     f"Error while calling service {target} with msg_type {msg_type}: {e}"
                 )
                 raise
             if response.payload.success:
                 return response
-            logger.warning(
+            self.logger.warning(
                 f"Retrying {target}, response success: {response.payload.success}"
             )
         return response  # type: ignore
