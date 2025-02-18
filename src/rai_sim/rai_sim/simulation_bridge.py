@@ -129,7 +129,7 @@ class SceneState(BaseModel):
 SimulationConfigT = TypeVar("SimulationConfigT", bound=SimulationConfig)
 
 
-class SimulationConnector(ABC, Generic[SimulationConfigT]):
+class SimulationBridge(ABC, Generic[SimulationConfigT]):
     """
     Responsible for communication with simulation.
     """
