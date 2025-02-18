@@ -33,7 +33,6 @@ from rai_sim.simulation_connector import (
     SimulationConnector,
     SpawnedEntity,
 )
-from rai_sim.utils import ros2_pose_to_pose_model
 
 logger = logging.getLogger(__name__)
 
@@ -174,7 +173,7 @@ class O3DExROS2Connector(SimulationConnector[O3DExROS2SimulationConfig]):
         ros2_pose = do_transform_pose(
             ros2_pose, self.connector.get_transform("world", "odom")
         )
-        return ros2_pose_to_pose_model(ros2_pose)
+        return PoseModel.from_ros2_pose(ros2_pose)
 
     def get_scene_state(self) -> SceneState:
         """
