@@ -18,7 +18,12 @@ import logging
 import time
 import rclpy.qos
 
-from rai_bench.benchmark_model import Benchmark, Scenario, Task
+from rai_bench.benchmark_model import (
+    Benchmark,
+    Scenario,
+    Task,
+    EntitiesMismatchException,
+)
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
 from rai.agents.conversational_agent import create_conversational_agent
@@ -64,8 +69,9 @@ class GrabCarrotTask(Task):
         num_of_objects = len(initial_carrots)
 
         if num_of_objects != len(final_carrots):
-            # TODO raise error, number of spawned entities should be the same at the beginnning and at the end
-            pass
+            raise EntitiesMismatchException(
+                f"Number of initially spawned entities does not match number of entities present at the end."
+            )
 
         for ini_carrot in initial_carrots:
             for final_carrot in final_carrots:
@@ -87,8 +93,10 @@ class GrabCarrotTask(Task):
                                 1  # Moved incorrectly to the wrong side
                             )
                     break
-
-                # TODO raise error, initial entity with given name is not present in final setup
+            else:
+                raise EntitiesMismatchException(
+                    f"Entity with name: {ini_carrot.name} which was present in initial scene, not found in final scene."
+                )
         print(
             corrected_objects, misplaced_objects, unchanged_correct, displaced_objects
         )
@@ -129,8 +137,9 @@ class RedCubesTask(Task):
         num_of_objects = len(initial_cubes)
 
         if num_of_objects != len(final_cubes):
-            # TODO raise error, number of spawned entities should be the same at the beginnning and at the end
-            pass
+            raise EntitiesMismatchException(
+                f"Number of initially spawned entities does not match number of entities present at the end."
+            )
 
         ini_poses = [cube.pose for cube in initial_cubes]
         final_poses = [cube.pose for cube in final_cubes]
@@ -154,8 +163,10 @@ class RedCubesTask(Task):
                         displaced_objects += 1
 
                     break
-
-                # TODO raise error, initial entity with given name is not present in final setup
+            else:
+                raise EntitiesMismatchException(
+                    f"Entity with name: {ini_cube.name} which was present in initial scene, not found in final scene."
+                )
 
         print(
             corrected_objects, misplaced_objects, unchanged_correct, displaced_objects

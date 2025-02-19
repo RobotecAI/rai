@@ -34,6 +34,11 @@ SimulationConnectorT = TypeVar("SimulationConnectorT", bound=SimulationBridge)
 loggers_type = Union[RcutilsLogger, logging.Logger]
 
 
+class EntitiesMismatchException(Exception):
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
 class Task(ABC, Generic[SimulationConnectorT]):
     """
     Task to perform.
