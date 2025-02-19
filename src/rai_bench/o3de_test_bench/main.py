@@ -34,7 +34,6 @@ from rai.utils.model_initialization import get_llm_model
 from rai_sim.o3de.o3de_bridge import (
     O3DEngineArmManipulationBridge,
     O3DExROS2SimulationConfig,
-    SimulationConfig,
 )
 
 from rai_interfaces.srv import ManipulatorMoveTo
@@ -45,7 +44,7 @@ from pathlib import Path
 
 class GrabCarrotTask(Task):
     def get_prompt(self) -> str:
-        return "Move all carrots to the left side of the table (positive y)"
+        return "Manipulate objects, so that all carrots to the left side of the table (positive y)"
 
     def calculate_result(
         self,
@@ -68,7 +67,7 @@ class GrabCarrotTask(Task):
 
         if num_of_objects != len(final_carrots):
             raise EntitiesMismatchException(
-                f"Number of initially spawned entities does not match number of entities present at the end."
+                "Number of initially spawned entities does not match number of entities present at the end."
             )
 
         for ini_carrot in initial_carrots:
@@ -108,7 +107,7 @@ class GrabCarrotTask(Task):
 
 class RedCubesTask(Task):
     def get_prompt(self) -> str:
-        return "Put all cubes next to each other"
+        return "Manipulate objects, so that  all cubes are next to each other"
 
     def calculate_result(
         self,
@@ -132,7 +131,7 @@ class RedCubesTask(Task):
 
         if num_of_objects != len(final_cubes):
             raise EntitiesMismatchException(
-                f"Number of initially spawned entities does not match number of entities present at the end."
+                "Number of initially spawned entities does not match number of entities present at the end."
             )
 
         ini_poses = [cube.pose for cube in initial_cubes]
@@ -227,7 +226,7 @@ if __name__ == "__main__":
         GetROS2TopicsNamesAndTypesTool(connector=connector),
     ]
     # define loggers
-    log_file = "src/rai_bench/o3de_test_bench/benchamrk_agent.log"
+    log_file = "src/rai_bench/o3de_test_bench/benchamrk.log"
     file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(logging.DEBUG)
 
@@ -263,10 +262,18 @@ if __name__ == "__main__":
     )
     # combine different scene configs with the tasks to create various scenarios
     scenarios = [
-        # Scenario(task=GrabCarrotTask(), scene_config=one_carrot_scene_config),
-        # Scenario(task=GrabCarrotTask(), scene_config=multiple_carrot_scene_config),
-        # Scenario(task=GrabCarrotTask(), scene_config=red_cubes_scene_config),
-        # # Scenario(task=RedCubesTask(), scene_config=one_carrot_scene_config),
+        Scenario(
+            task=GrabCarrotTask(logger=bench_logger),
+            scene_config=one_carrot_scene_config,
+        ),
+        Scenario(
+            task=GrabCarrotTask(logger=bench_logger),
+            scene_config=multiple_carrot_scene_config,
+        ),
+        Scenario(
+            task=GrabCarrotTask(logger=bench_logger),
+            scene_config=red_cubes_scene_config,
+        ),
         Scenario(
             task=RedCubesTask(logger=bench_logger), scene_config=red_cubes_scene_config
         ),
@@ -287,10 +294,9 @@ if __name__ == "__main__":
             llm, tools, system_prompt, logger=agent_logger
         )
         benchmark.run_next(agent=agent)
-        print(f"{i+1} Scenario done")
         o3de.move_arm(request=request)  # return to case position
+        time.sleep(2)  # admire the end position for a second ;)
 
-    time.sleep(3)
     connector.shutdown()
     o3de.shutdown()
     rclpy.shutdown()

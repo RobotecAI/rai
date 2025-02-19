@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
 import logging
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar, Union, List
@@ -25,7 +26,6 @@ from rai_sim.simulation_bridge import (
     SimulationBridge,
     SimulationConfig,
     PoseModel,
-    Entity,
     SpawnedEntity,
 )
 
@@ -162,7 +162,7 @@ class Benchmark:
             self._logger.info(
                 f"RUNNING SCENARIO NUMBER {i+1}, TASK: {scenario.task.get_prompt()}"
             )
-
+            ts = time.perf_counter()
             for state in agent.stream(
                 {"messages": [HumanMessage(content=scenario.task.get_prompt())]}
             ):
@@ -182,11 +182,14 @@ class Benchmark:
 
                 self._logger.debug(f"{graph_node_name}: {last_msg}")
                 self._logger.info(f"AI Message: {msg}")
+                # TODO (jm) figure out how to get number of tool calls
+            te = time.perf_counter()
 
             self.engine_connector.get_scene_state()
             result = scenario.task.calculate_result(self.engine_connector)
 
-            self._logger.info(f"TASK SCORE: {result}")
+            total_time = te - ts
+            self._logger.info(f"TASK SCORE: {result}, TOTAL TIME: {total_time:.3f}")
 
         except StopIteration:
             print("No more scenarios left to run.")
