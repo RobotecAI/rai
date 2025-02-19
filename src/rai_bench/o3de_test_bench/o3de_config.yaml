@@ -1,0 +1,2 @@
+binary_path: /home/jmatejczyk/praca/RAIManipulationDemo/RAIManipulationDemo.GameLauncher
+robotic_stack_command: ros2 launch examples/manipulation-demo-no-binary.launch.py 
