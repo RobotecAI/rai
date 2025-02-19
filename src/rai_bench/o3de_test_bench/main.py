@@ -50,9 +50,7 @@ class GrabCarrotTask(Task):
     def calculate_result(
         self,
         engine_connector: O3DEngineArmManipulationBridge,
-        initial_scene_setup: SimulationConfig,
     ) -> float:
-        result = 0.0
         corrected_objects = 0  # when the object which was in the incorrect place at the start, is in a correct place at the end
         misplaced_objects = 0  # when the object which was in the incorrect place at the start, is in a incorrect place at the end
         unchanged_correct = 0  # when the object which was in the correct place at the start, is in a correct place at the end
@@ -97,18 +95,15 @@ class GrabCarrotTask(Task):
                 raise EntitiesMismatchException(
                     f"Entity with name: {ini_carrot.name} which was present in initial scene, not found in final scene."
                 )
-        print(
-            corrected_objects, misplaced_objects, unchanged_correct, displaced_objects
-        )
+
         if num_of_objects == 0:
-            print("No objects to manipulate, returning 1...")
-            return 1
+            self.logger.info("No objects to manipulate, returning 1.0")
+            return 1.0
         else:
-            result = (corrected_objects + unchanged_correct) / num_of_objects
-            print(
+            self.logger.info(
                 f"corrected_objects: {corrected_objects}, misplaced_objects: {misplaced_objects}, unchanged_correct: {unchanged_correct}, displaced_objects: {displaced_objects}"
             )
-            return result
+            return (corrected_objects + unchanged_correct) / num_of_objects
 
 
 class RedCubesTask(Task):
@@ -118,7 +113,6 @@ class RedCubesTask(Task):
     def calculate_result(
         self,
         engine_connector: O3DEngineArmManipulationBridge,
-        initial_scene_setup: SimulationConfig,
     ) -> float:
         corrected_objects = 0  # when the object which was in the incorrect place at the start, is in a correct place at the end
         misplaced_objects = 0  # when the object which was in the incorrect place at the start, is in a incorrect place at the end
@@ -168,18 +162,14 @@ class RedCubesTask(Task):
                     f"Entity with name: {ini_cube.name} which was present in initial scene, not found in final scene."
                 )
 
-        print(
-            corrected_objects, misplaced_objects, unchanged_correct, displaced_objects
-        )
         if num_of_objects == 0:
-            print("No objects to manipulate, returning 1...")
+            self.logger.info("No objects to manipulate, returning score 1.0")
             return 1
         else:
-            result = (corrected_objects + unchanged_correct) / num_of_objects
-            print(
+            self.logger.info(
                 f"corrected_objects: {corrected_objects}, misplaced_objects: {misplaced_objects}, unchanged_correct: {unchanged_correct}, displaced_objects: {displaced_objects}"
             )
-            return result
+            return (corrected_objects + unchanged_correct) / num_of_objects
 
 
 def request_to_base_position() -> ManipulatorMoveTo.Request:
@@ -236,6 +226,23 @@ if __name__ == "__main__":
         GetROS2ImageTool(connector=connector),
         GetROS2TopicsNamesAndTypesTool(connector=connector),
     ]
+    # define loggers
+    log_file = "src/rai_bench/o3de_test_bench/benchamrk_agent.log"
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(logging.DEBUG)
+
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    file_handler.setFormatter(formatter)
+
+    bench_logger = logging.getLogger("Benchmark logger")
+    bench_logger.setLevel(logging.INFO)
+    bench_logger.addHandler(file_handler)
+
+    agent_logger = logging.getLogger("Agent logger")
+    agent_logger.setLevel(logging.INFO)
+    agent_logger.addHandler(file_handler)
 
     # load different scenes
     one_carrot_scene_config = O3DExROS2SimulationConfig.load_config(
@@ -260,26 +267,14 @@ if __name__ == "__main__":
         # Scenario(task=GrabCarrotTask(), scene_config=multiple_carrot_scene_config),
         # Scenario(task=GrabCarrotTask(), scene_config=red_cubes_scene_config),
         # # Scenario(task=RedCubesTask(), scene_config=one_carrot_scene_config),
-        Scenario(task=RedCubesTask(), scene_config=red_cubes_scene_config),
-        Scenario(task=RedCubesTask(), scene_config=multiple_cubes_scene_config),
+        Scenario(
+            task=RedCubesTask(logger=bench_logger), scene_config=red_cubes_scene_config
+        ),
+        Scenario(
+            task=RedCubesTask(logger=bench_logger),
+            scene_config=multiple_cubes_scene_config,
+        ),
     ]
-    # define logger
-    log_file = "src/rai_bench/o3de_test_bench/benchamrk_agent.log"
-    file_handler = logging.FileHandler(log_file)
-    file_handler.setLevel(logging.DEBUG)
-
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    file_handler.setFormatter(formatter)
-
-    bench_logger = logging.getLogger("Benchmark logger")
-    bench_logger.setLevel(logging.INFO)
-    bench_logger.addHandler(file_handler)
-
-    agent_logger = logging.getLogger("Agent logger")
-    agent_logger.setLevel(logging.INFO)
-    agent_logger.addHandler(file_handler)
 
     # custom request to arm
     request = request_to_base_position()

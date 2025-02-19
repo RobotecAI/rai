@@ -47,8 +47,14 @@ class Task(ABC, Generic[SimulationConnectorT]):
     creating metrics
     """
 
-    def __init__(self) -> None:
-        pass
+    def __init__(
+        self,
+        logger: loggers_type | None = None,
+    ) -> None:
+        if logger:
+            self.logger = logger
+        else:
+            self.logger = logging.getLogger(__name__)
 
     @abstractmethod
     def get_prompt(self) -> str:
@@ -58,7 +64,6 @@ class Task(ABC, Generic[SimulationConnectorT]):
     def calculate_result(
         self,
         engine_connector: SimulationConnectorT,
-        initial_scene_setup: SimulationConfig,
     ) -> float:
         """
         Calculate result of the task
@@ -90,7 +95,7 @@ class Task(ABC, Generic[SimulationConnectorT]):
         self, pos1: PoseModel, positions: List[PoseModel], threshold_distance: float
     ) -> bool:
         """
-        Check if pos1 is adjacent to any position in the given list.
+        Check if given position is adjacent to any position in the given list.
         """
 
         return any(
@@ -179,9 +184,7 @@ class Benchmark:
                 self._logger.info(f"AI Message: {msg}")
 
             self.engine_connector.get_scene_state()
-            result = scenario.task.calculate_result(
-                self.engine_connector, scenario.scene_config
-            )
+            result = scenario.task.calculate_result(self.engine_connector)
 
             self._logger.info(f"TASK SCORE: {result}")
 
