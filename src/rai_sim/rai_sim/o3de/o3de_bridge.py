@@ -21,17 +21,19 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Point, Pose, Quaternion
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from tf2_geometry_msgs import do_transform_pose
 
 from rai_sim.simulation_bridge import (
     Entity,
     PoseModel,
+    Rotation,
     SceneState,
     SimulationBridge,
     SimulationConfig,
     SpawnedEntity,
+    Translation,
 )
 
 
@@ -121,7 +123,8 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
 
     def _spawn_entity(self, entity: Entity):
         pose = do_transform_pose(
-            entity.pose.to_ros2_pose(), self.connector.get_transform("odom", "world")
+            self.to_ros2_pose(entity.pose),
+            self.connector.get_transform("odom", "world"),
         )
 
         msg_content: Dict[str, Any] = {
@@ -176,7 +179,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         ros2_pose = do_transform_pose(
             Pose(), self.connector.get_transform(object_frame + "odom", object_frame)
         )
-        return PoseModel.from_ros2_pose(ros2_pose)
+        return self.from_ros2_pose(ros2_pose)
 
     def get_scene_state(self) -> SceneState:
         """
@@ -259,3 +262,46 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
                 f"Retrying {target}, response success: {response.payload.success}"
             )
         return response  # type: ignore
+
+    # NOTE (mkotynia) probably to be refactored, other bridges may also want to use pose conversion to/from ROS2 format
+    def to_ros2_pose(self, pose: PoseModel) -> Pose:
+        """
+        Converts pose in PoseModel format to pose in ROS2 Pose format.
+        """
+        position = Point(
+            x=pose.translation.x, y=pose.translation.y, z=pose.translation.z
+        )
+
+        if pose.rotation is not None:
+            orientation = Quaternion(
+                x=pose.rotation.x,
+                y=pose.rotation.y,
+                z=pose.rotation.z,
+                w=pose.rotation.w,
+            )
+        else:
+            orientation = Quaternion()
+
+        ros2_pose = Pose(position=position, orientation=orientation)
+
+        return ros2_pose
+
+    def from_ros2_pose(self, pose: Pose) -> PoseModel:
+        """
+        Converts ROS2 pose to PoseModel format
+        """
+
+        translation = Translation(
+            x=pose.position.x,  # type: ignore
+            y=pose.position.y,  # type: ignore
+            z=pose.position.z,  # type: ignore
+        )
+
+        rotation = Rotation(
+            x=pose.orientation.x,  # type: ignore
+            y=pose.orientation.y,  # type: ignore
+            z=pose.orientation.z,  # type: ignore
+            w=pose.orientation.w,  # type: ignore
+        )
+
+        return PoseModel(translation=translation, rotation=rotation)

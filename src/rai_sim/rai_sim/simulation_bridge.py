@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Generic, List, Optional, TypeVar
 
 import yaml
-from geometry_msgs.msg import Point, Pose, Quaternion
 from pydantic import BaseModel, field_validator
 
 
@@ -38,50 +37,6 @@ class Rotation(BaseModel):
 class PoseModel(BaseModel):
     translation: Translation
     rotation: Optional[Rotation]
-
-    def to_ros2_pose(self) -> Pose:
-        """
-        Converts pose in PoseModel format to pose in ROS2 Pose format.
-        """
-
-        position = Point(
-            x=self.translation.x, y=self.translation.y, z=self.translation.z
-        )
-
-        if self.rotation is not None:
-            orientation = Quaternion(
-                x=self.rotation.x,
-                y=self.rotation.y,
-                z=self.rotation.z,
-                w=self.rotation.w,
-            )
-        else:
-            orientation = Quaternion()
-
-        ros2_pose = Pose(position=position, orientation=orientation)
-
-        return ros2_pose
-
-    @classmethod
-    def from_ros2_pose(cls, pose: Pose):
-        """
-        Converts ROS2 pose to PoseModel format
-        """
-
-        translation = Translation(
-            x=pose.position.x,  # type: ignore
-            y=pose.position.y,  # type: ignore
-            z=pose.position.z,  # type: ignore
-        )
-
-        rotation = Rotation(
-            x=pose.orientation.x,  # type: ignore
-            y=pose.orientation.y,  # type: ignore
-            z=pose.orientation.z,  # type: ignore
-            w=pose.orientation.w,  # type: ignore
-        )
-
-        return cls(translation=translation, rotation=rotation)
 
 
 class Entity(BaseModel):
