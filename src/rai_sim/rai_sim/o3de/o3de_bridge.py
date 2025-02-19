@@ -176,9 +176,6 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         ros2_pose = do_transform_pose(
             Pose(), self.connector.get_transform(object_frame + "odom", object_frame)
         )
-        ros2_pose = do_transform_pose(
-            ros2_pose, self.connector.get_transform("world", "odom")
-        )
         return PoseModel.from_ros2_pose(ros2_pose)
 
     def get_scene_state(self) -> SceneState:
@@ -253,10 +250,9 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
                     msg, target=target, msg_type=msg_type
                 )
             except Exception as e:
-                self.logger.error(
-                    f"Error while calling service {target} with msg_type {msg_type}: {e}"
-                )
-                raise
+                error_message = f"Error while calling service {target} with msg_type {msg_type}: {e}"
+                self.logger.error(error_message)
+                raise RuntimeError(error_message)
             if response.payload.success:
                 return response
             self.logger.warning(
