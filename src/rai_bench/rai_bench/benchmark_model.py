@@ -21,7 +21,13 @@ from langchain_core.messages import BaseMessage, HumanMessage
 from pydantic import BaseModel, ConfigDict
 
 from rai.messages import HumanMultimodalMessage
-from rai_sim.simulation_bridge import SimulationBridge, SimulationConfig, PoseModel
+from rai_sim.simulation_bridge import (
+    SimulationBridge,
+    SimulationConfig,
+    PoseModel,
+    Entity,
+    SpawnedEntity,
+)
 
 
 SimulationConnectorT = TypeVar("SimulationConnectorT", bound=SimulationBridge)
@@ -54,6 +60,12 @@ class Task(ABC, Generic[SimulationConnectorT]):
         """
         pass
 
+    def filter_entities_by_prefab_type(
+        self, entities: List[SpawnedEntity], prefab_types: List[str]
+    ) -> List[SpawnedEntity]:
+        """Filter and return only these entities that match provided prefab types"""
+        return [ent for ent in entities if ent.prefab_name in prefab_types]
+
     def euclidean_distance(self, pos1: PoseModel, pos2: PoseModel) -> float:
         """Calculate euclidean distance between 2 positions"""
         return (
@@ -68,6 +80,17 @@ class Task(ABC, Generic[SimulationConnectorT]):
         in simulation, refering to how close they have to be to classify them as adjacent
         """
         return self.euclidean_distance(pos1, pos2) < threshold_distance
+
+    def is_adjacent_to_any(
+        self, pos1: PoseModel, positions: List[PoseModel], threshold_distance: float
+    ) -> bool:
+        """
+        Check if pos1 is adjacent to any position in the given list.
+        """
+
+        return any(
+            self.is_adjacent(pos1, pos2, threshold_distance) for pos2 in positions
+        )
 
     def count_adjacent(
         self, positions: List[PoseModel], threshold_distance: float
