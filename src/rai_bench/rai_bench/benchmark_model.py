@@ -150,6 +150,7 @@ class Benchmark:
                 self._logger.debug(f"{graph_node_name}: {last_msg}")
                 self._logger.info(f"AI Message: {msg}")
 
+            self.engine_connector.get_scene_state()
             result = scenario.task.calculate_result(
                 self.engine_connector, scenario.scene_config
             )
