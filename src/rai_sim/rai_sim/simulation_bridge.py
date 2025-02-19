@@ -90,6 +90,9 @@ class SimulationBridge(ABC, Generic[SimulationConfigT]):
     """
 
     def __init__(self, logger: Optional[logging.Logger] = None):
+        self.spawned_entities: List[
+            SpawnedEntity
+        ] = []  # list of spawned entities with their initial poses
         if logger is None:
             self.logger = logging.getLogger(__name__)
         else:
