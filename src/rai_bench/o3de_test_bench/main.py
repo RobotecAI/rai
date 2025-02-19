@@ -39,7 +39,12 @@ class GrabCarrotTask(Task):
         unchanged_correct = 0  # when the object which was in the correct place at the start, is in a correct place at the end
         displaced_objects = 0  # when the object which was in the correct place at the start, is in a incorrect place at the end
 
-        for entity in engine_connector.spawned_entities:
+        scene_state = engine_connector.get_scene_state()
+        entities = scene_state.entities
+
+        print(entities)
+        print(initial_scene_setup)
+        for entity in entities:
             if entity.prefab_name == "carrot":  # check all carrots
                 for ini_ent in initial_scene_setup.entities:
                     if (
@@ -63,6 +68,9 @@ class GrabCarrotTask(Task):
             + misplaced_objects
             + unchanged_correct
             + displaced_objects
+        )
+        print(
+            corrected_objects, misplaced_objects, unchanged_correct, displaced_objects
         )
         if all_obj == 0:
             print("No objects to manipulate, returning 1...")
@@ -95,15 +103,16 @@ class RedCubesTask(Task):
             for entity in initial_scene_setup.entities
             if entity.prefab_name in cube_types
         )
+        scene_state = engine_connector.get_scene_state()
+        entities = scene_state.entities
+
         initial_positions = [
             ent.pose
             for ent in initial_scene_setup.entities
             if ent.prefab_name in cube_types
         ]
         final_red_cubes = [
-            ent.pose
-            for ent in engine_connector.spawned_entities
-            if ent.prefab_name in cube_types
+            ent.pose for ent in entities if ent.prefab_name in cube_types
         ]
         initial_adjacent = self.count_adjacent(initial_positions, 0.1)
         final_adjacent = self.count_adjacent(final_red_cubes, 0.1)
