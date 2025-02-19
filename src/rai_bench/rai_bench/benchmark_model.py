@@ -12,18 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from abc import ABC, abstractmethod
+from typing import Generic, TypeVar, Union, List
+from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from langchain_core.messages import BaseMessage, HumanMessage
 from pydantic import BaseModel, ConfigDict
 
 from rai.messages import HumanMultimodalMessage
-from rai_sim.engine_connector import EngineConnector, SceneConfig, SceneSetup
+from rai_sim.simulation_bridge import SimulationBridge, SimulationConfig, PoseModel
 
 
-class Task(ABC):
-    """ "
-    Specific task to perform with different scene setups.
+SimulationConnectorT = TypeVar("SimulationConnectorT", bound=SimulationBridge)
+loggers_type = Union[RcutilsLogger, logging.Logger]
+
+
+class Task(ABC, Generic[SimulationConnectorT]):
+    """
+    Task to perform.
+    Specyfic implementation should implement a way to calculate results.
+    Abstract provides utility functions for common calculations, that can be usefull when
+    creating metrics
     """
 
     def __init__(self) -> None:
@@ -34,18 +44,56 @@ class Task(ABC):
         pass
 
     @abstractmethod
-    def calculate_progress(
-        self, engine_connector: EngineConnector, initial_scene_setup: SceneSetup
+    def calculate_result(
+        self,
+        engine_connector: SimulationConnectorT,
+        initial_scene_setup: SimulationConfig,
     ) -> float:
         """
-        Calculate progress of the task
+        Calculate result of the task
         """
         pass
 
+    def euclidean_distance(self, pos1: PoseModel, pos2: PoseModel) -> float:
+        """Calculate euclidean distance between 2 positions"""
+        return (
+            (pos1.translation.x - pos2.translation.x) ** 2
+            + (pos1.translation.y - pos2.translation.y) ** 2
+            + (pos1.translation.z - pos2.translation.z) ** 2
+        ) ** 0.5
+
+    def is_adjacent(self, pos1: PoseModel, pos2: PoseModel, threshold_distance: float):
+        """
+        Check if positions are adjacent to each other, the threshold_distance is a distance
+        in simulation, refering to how close they have to be to classify them as adjacent
+        """
+        return self.euclidean_distance(pos1, pos2) < threshold_distance
+
+    def count_adjacent(
+        self, positions: List[PoseModel], threshold_distance: float
+    ) -> int:
+        """
+        Count how many adjacent positions are in the given list.
+        Note that position has to be adjacent to only 1 other position
+        to be counted, not all of them
+        """
+        adjacent_count = 0
+
+        for i, p1 in enumerate(positions):
+            for j, p2 in enumerate(positions):
+                if i != j:
+                    if self.is_adjacent(p1, p2, threshold_distance):
+                        adjacent_count += 1
+                        break
+
+        return adjacent_count
+
 
 class Scenario(BaseModel):
+    """Single instances are run separatly by benchmark"""
+
     task: Task
-    scene_config: SceneConfig
+    scene_config: SimulationConfig
     model_config = ConfigDict(
         arbitrary_types_allowed=True
     )  # pydantic does not support ABC classes
@@ -53,35 +101,37 @@ class Scenario(BaseModel):
 
 class Benchmark:
     """
-    Set of tasks to be done.
+    Defined by a set of scenarios to be done
     """
 
-    def __init__(self, scenarios: list[Scenario]) -> None:
-        self.engine_connector: EngineConnector
+    def __init__(
+        self,
+        scenarios: list[Scenario],
+        logger: loggers_type | None = None,
+    ) -> None:
+        self.engine_connector: SimulationBridge
         self.tasks: list[Task] = []
-        self.scenarios = iter(scenarios)
+        self.scenarios = enumerate(iter(scenarios))
         self.results = []
+        if logger:
+            self._logger = logger
+        else:
+            self._logger = logging.getLogger(__name__)
 
     def run_next(self, agent):
         """
-        Runs the next scenario in the iterator manually.
+        Runs the next scenario
         """
         try:
-            scenario = next(self.scenarios)  # Get the next scenario
+            i, scenario = next(self.scenarios)  # Get the next scenario
 
-            initial_scene_setup = self.engine_connector.setup_scene(
-                scenario.scene_config
+            self.engine_connector.setup_scene(scenario.scene_config)
+            self._logger.info(
+                f"RUNNING SCENARIO NUMBER {i+1}, TASK: {scenario.task.get_prompt()}"
             )
-            task = scenario.task
-            print(
-                "========================================= RUNNING TASK ===================================="
-            )
-            print(f"RUNNING TASK: {task.get_prompt()}")
-            print(
-                "==========================================================================================="
-            )
+
             for state in agent.stream(
-                {"messages": [HumanMessage(content=task.get_prompt())]}
+                {"messages": [HumanMessage(content=scenario.task.get_prompt())]}
             ):
                 graph_node_name = list(state.keys())[0]
                 msg = state[graph_node_name]["messages"][-1]
@@ -97,11 +147,14 @@ class Benchmark:
                 else:
                     raise ValueError(f"Unexpected type of message: {type(msg)}")
 
-                print(f"{graph_node_name}: {last_msg}")
+                self._logger.debug(f"{graph_node_name}: {last_msg}")
+                self._logger.info(f"AI Message: {msg}")
 
-            result = task.calculate_progress(self.engine_connector, initial_scene_setup)
-            self.results.append(result)
-            msg.pretty_print()
+            result = scenario.task.calculate_result(
+                self.engine_connector, scenario.scene_config
+            )
+
+            self._logger.info(f"TASK SCORE: {result}")
 
         except StopIteration:
             print("No more scenarios left to run.")

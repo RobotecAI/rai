@@ -1,6 +1,5 @@
-binary_path: ros2 launch examples/manipulation-demo.launch.py game_launcher:=/home/jmatejczyk/praca/RAIManipulationDemo/RAIManipulationDemo.GameLauncher # TODO (mk) remove this before finalization
 entities:
-  - name: cube1
+  - name: carrot1
     prefab_name: carrot
     pose:
       translation:
@@ -12,15 +11,16 @@ entities:
         y: 0.0
         z: 0.0
         w: 1.0
-  - name: cube2
+  - name: corn2
     prefab_name: corn
     pose:
       translation:
         x: 0.5
-        y: 0.3
+        y: 0.4
         z: 0.05
       rotation:
         x: 0.0
         y: 0.0
         z: 0.0
         w: 1.0
+

@@ -1,4 +1,3 @@
-binary_path: ros2 launch examples/manipulation-demo.launch.py game_launcher:=/home/jmatejczyk/praca/RAIManipulationDemo/RAIManipulationDemo.GameLauncher # TODO (mk) remove this before finalization
 entities:
   - name: cube1
     prefab_name: red_cube
