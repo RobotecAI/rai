@@ -54,46 +54,49 @@ class GrabCarrotTask(Task):
         displaced_objects = 0  # when the object which was in the correct place at the start, is in a incorrect place at the end
 
         scene_state = engine_connector.get_scene_state()
-        entities = scene_state.entities
 
-        for entity in entities:
-            if entity.prefab_name == "carrot":  # check all carrots
-                for ini_ent in initial_scene_setup.entities:
-                    if (
-                        entity.name in ini_ent.name
-                    ):  # check for the entity in the initial setup
-                        if (
-                            ini_ent.pose.translation.y <= 0.0
-                        ):  # only check carrots that have been on the right side of the table at the start
-                            if entity.pose.translation.y >= 0.0:
-                                corrected_objects += 1
-                            else:
-                                misplaced_objects += 1
-
-                        else:  # also check if carrots that were already on the right side are still there
-                            if entity.pose.translation.y >= 0.0:
-                                unchanged_correct += 1
-                            else:
-                                displaced_objects += 1
-        all_obj = (
-            corrected_objects
-            + misplaced_objects
-            + unchanged_correct
-            + displaced_objects
+        initial_carrots = self.filter_entities_by_prefab_type(
+            engine_connector.spawned_entities, prefab_types=["carrot"]
         )
+        final_carrots = self.filter_entities_by_prefab_type(
+            scene_state.entities, prefab_types=["carrot"]
+        )
+        num_of_objects = len(initial_carrots)
+
+        if num_of_objects != len(final_carrots):
+            # TODO raise error, number of spawned entities should be the same at the beginnning and at the end
+            pass
+
+        for ini_carrot in initial_carrots:
+            for final_carrot in final_carrots:
+                if ini_carrot.name == final_carrot.name:
+                    initial_y = ini_carrot.pose.translation.y
+                    final_y = final_carrot.pose.translation.y
+                    if (
+                        initial_y <= 0.0
+                    ):  # Carrot started in the incorrect place (right side)
+                        if final_y >= 0.0:
+                            corrected_objects += 1  # Moved to correct side
+                        else:
+                            misplaced_objects += 1  # Stayed on incorrect side
+                    else:  # Carrot started in the correct place (left side)
+                        if final_y >= 0.0:
+                            unchanged_correct += 1  # Stayed on correct side
+                        else:
+                            displaced_objects += (
+                                1  # Moved incorrectly to the wrong side
+                            )
+                    break
+
+                # TODO raise error, initial entity with given name is not present in final setup
         print(
             corrected_objects, misplaced_objects, unchanged_correct, displaced_objects
         )
-        if all_obj == 0:
+        if num_of_objects == 0:
             print("No objects to manipulate, returning 1...")
             return 1
         else:
-            result = (corrected_objects + unchanged_correct) / (
-                corrected_objects
-                + misplaced_objects
-                + unchanged_correct
-                + displaced_objects
-            )
+            result = (corrected_objects + unchanged_correct) / num_of_objects
             print(
                 f"corrected_objects: {corrected_objects}, misplaced_objects: {misplaced_objects}, unchanged_correct: {unchanged_correct}, displaced_objects: {displaced_objects}"
             )
@@ -115,11 +118,6 @@ class RedCubesTask(Task):
         displaced_objects = 0  # when the object which was in the correct place at the start, is in a incorrect place at the end
 
         cube_types = ["red_cube", "blue_cube", "yellow_cube"]
-        num_of_objects = sum(
-            1
-            for entity in initial_scene_setup.entities
-            if entity.prefab_name in cube_types
-        )
         scene_state = engine_connector.get_scene_state()
 
         initial_cubes = self.filter_entities_by_prefab_type(
