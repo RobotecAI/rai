@@ -18,7 +18,7 @@ import signal
 import subprocess
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import yaml
 from geometry_msgs.msg import Point, Pose, Quaternion
@@ -58,10 +58,6 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
     ):
         super().__init__(logger=logger)
         self.connector = connector
-        self.spawned_entities: List[
-            SpawnedEntity
-        ] = []  # list of spawned entities with their initial poses
-
         self.current_sim_process = None
         self.current_robotic_stack_process = None
         self.current_binary_path = None
