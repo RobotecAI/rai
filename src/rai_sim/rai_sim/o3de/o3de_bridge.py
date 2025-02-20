@@ -175,6 +175,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             )
 
     def get_object_pose(self, entity: SpawnedEntity) -> PoseModel:
+        self.logger.info(f"GET OBJECT POSE: {entity}")
         object_frame = entity.name + "/"
         ros2_pose = do_transform_pose(
             Pose(), self.connector.get_transform(object_frame + "odom", object_frame)
@@ -193,6 +194,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         entities: list[SpawnedEntity] = []
         for entity in self.spawned_entities:
             current_pose = self.get_object_pose(entity)
+            self.logger.info(f"AFTER GET OBJECT POSE: {current_pose}")
             entities.append(
                 SpawnedEntity(
                     id=entity.id,

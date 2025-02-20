@@ -46,8 +46,6 @@ if __name__ == "__main__":
     node = connector.node
     node.declare_parameter("conversion_ratio", 1.0)
 
-    o3de = O3DEngineArmManipulationBridge(connector)
-
     # define model
     llm = get_llm_model(model_type="complex_model", streaming=True)
 
@@ -154,6 +152,7 @@ if __name__ == "__main__":
     # custom request to arm
     base_arm_pose = PoseModel(translation=Translation(x=0.3, y=0.0, z=0.5))
 
+    o3de = O3DEngineArmManipulationBridge(connector, logger=agent_logger)
     # define benchamrk
     benchmark = Benchmark(
         simulation_bridge=o3de,
