@@ -174,3 +174,4 @@ src/examples/*-demo
 artifact_database.pkl
 
 imgui.ini
+o3de_config.yaml
