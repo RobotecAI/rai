@@ -69,6 +69,7 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         self._topic_api = ROS2TopicAPI(self._node)
         self._service_api = ROS2ServiceAPI(self._node)
         self._actions_api = ROS2ActionAPI(self._node)
+        self._tf_buffer = Buffer(node=self._node)
 
         self._executor = MultiThreadedExecutor()
         self._executor.add_node(self._node)
@@ -179,16 +180,15 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         source_frame: str,
         timeout_sec: float = 5.0,
     ) -> TransformStamped:
-        tf_buffer = Buffer(node=self._node)
-        tf_listener = TransformListener(tf_buffer, self._node)
+        tf_listener = TransformListener(self._tf_buffer, self._node)
         transform_available = self.wait_for_transform(
-            tf_buffer, target_frame, source_frame, timeout_sec
+            self._tf_buffer, target_frame, source_frame, timeout_sec
         )
         if not transform_available:
             raise LookupException(
                 f"Could not find transform from {source_frame} to {target_frame} in {timeout_sec} seconds"
             )
-        transform: TransformStamped = tf_buffer.lookup_transform(
+        transform: TransformStamped = self._tf_buffer.lookup_transform(
             target_frame,
             source_frame,
             rclpy.time.Time(),
