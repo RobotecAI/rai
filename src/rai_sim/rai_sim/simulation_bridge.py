@@ -18,48 +18,102 @@ from pathlib import Path
 from typing import Generic, List, Optional, TypeVar
 
 import yaml
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class Translation(BaseModel):
-    x: float
-    y: float
-    z: float
+    """
+    Represents the position of an object in 3D space using
+    x, y, and z coordinates.
+    """
+
+    x: float = Field(description="X coordinate in meters")
+    y: float = Field(description="Y coordinate in meters")
+    z: float = Field(description="Z coordinate in meters")
 
 
 class Rotation(BaseModel):
-    x: float
-    y: float
-    z: float
-    w: float
+    """
+    Represents a 3D rotation using quaternion representation.
+    """
+
+    x: float = Field(description="X component of the quaternion")
+    y: float = Field(description="Y component of the quaternion")
+    z: float = Field(description="Z component of the quaternion")
+    w: float = Field(description="W component of the quaternion")
 
 
 class PoseModel(BaseModel):
-    translation: Translation
-    rotation: Optional[Rotation]
+    """
+    Represents the complete pose (position and orientation) of an object.
+    """
+
+    translation: Translation = Field(
+        description="The position of the object in 3D space"
+    )
+    rotation: Optional[Rotation] = Field(
+        description="The orientation of the object as a quaternion. Optional if orientation is not needed and default orientation is handled by the bridge"
+    )
 
 
 class Entity(BaseModel):
-    name: str
-    prefab_name: str
-    pose: PoseModel
+    """
+    Entity that can be spawned in the simulation environment.
+    """
+
+    name: str = Field(description="Unique name for the entity")
+    prefab_name: str = Field(
+        description="Name of the prefab resource to use for spawning this entity"
+    )
+    pose: PoseModel = Field(description="Initial pose of the entity")
 
 
 class SpawnedEntity(Entity):
-    id: str
+    """
+    Entity that has been spawned in the simulation environment.
+    """
+
+    id: str = Field(
+        description="Unique identifier assigned to the spawned entity instance"
+    )
 
 
 class SimulationConfig(BaseModel):
     """
-    Setup of simulation - arrangemenet of objects in the environment.
+    Setup of simulation - arrangement of objects in the environment.
+
+    Attributes
+    ----------
+    entities : List[Entity]
+        List of entities to be spawned in the simulation.
     """
 
     # NOTE (mkotynia) can be extended by other attributes
-    entities: List[Entity]
+    entities: List[Entity] = Field(
+        description="List of entities to be spawned in the simulation environment"
+    )
 
     @field_validator("entities")
     @classmethod
     def check_unique_names(cls, entities: List[Entity]) -> List[Entity]:
+        """
+        Validates that all entity names in the configuration are unique.
+
+        Parameters
+        ----------
+        entities : List[Entity]
+            List of entities to validate.
+
+        Returns
+        -------
+        List[Entity]
+            The validated list of entities.
+
+        Raises
+        ------
+        ValueError
+            If any entity names are duplicated.
+        """
         names = [entity.name for entity in entities]
         if len(names) != len(set(names)):
             raise ValueError("Each entity must have a unique name.")
@@ -67,6 +121,19 @@ class SimulationConfig(BaseModel):
 
     @classmethod
     def load_base_config(cls, base_config_path: Path) -> "SimulationConfig":
+        """
+        Loads a simulation configuration from a YAML file.
+
+        Parameters
+        ----------
+        base_config_path : Path
+            Path to the YAML configuration file.
+
+        Returns
+        -------
+        SimulationConfig
+            The loaded simulation configuration.
+        """
         with open(base_config_path) as f:
             content = yaml.safe_load(f)
         return cls(**content)
@@ -74,11 +141,18 @@ class SimulationConfig(BaseModel):
 
 class SceneState(BaseModel):
     """
-    Info about current entities' state in the scene.
+    Info about current state of the scene.
+
+    Attributes
+    ----------
+    entities : List[SpawnedEntity]
+        List of all entities currently present in the scene.
     """
 
     # NOTE (mkotynia) can be extended by other attributes
-    entities: List[SpawnedEntity]
+    entities: List[SpawnedEntity] = Field(
+        description="List of all entities currently spawned in the scene with their current poses"
+    )
 
 
 SimulationConfigT = TypeVar("SimulationConfigT", bound=SimulationConfig)
@@ -100,20 +174,100 @@ class SimulationBridge(ABC, Generic[SimulationConfigT]):
 
     @abstractmethod
     def setup_scene(self, simulation_config: SimulationConfigT):
+        """
+        Runs and sets up the simulation scene according to the provided configuration.
+
+        Parameters
+        ----------
+        simulation_config : SimulationConfigT
+            Configuration containing the simulation initialization and setup details including
+            entities to be spawned and their initial poses.
+
+        Returns
+        -------
+        None
+        """
         pass
 
     @abstractmethod
     def _spawn_entity(self, entity: Entity):
+        """
+        Spawns a single entity in the simulation environment.
+
+        Parameters
+        ----------
+        entity : Entity
+            Entity object containing the entity's properties
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        The spawned entity should be added to the spawned_entities list maintained
+        by the simulation bridge.
+        """
         pass
 
     @abstractmethod
     def _despawn_entity(self, entity: SpawnedEntity):
+        """
+        Removes a previously spawned entity from the simulation environment.
+
+        Parameters
+        ----------
+        entity : SpawnedEntity
+            Entity object representing the spawned entity to be removed.
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        Despawned entity should be removed from the spawned_entities list maintained
+        by the simulation bridge.
+        """
         pass
 
     @abstractmethod
     def get_object_pose(self, entity: SpawnedEntity) -> PoseModel:
+        """
+        Gets the current pose of a spawned entity.
+
+        This method queries the simulation to get the current position and
+        orientation of a specific entity.
+
+        Parameters
+        ----------
+        entity : SpawnedEntity
+            Entity object representing the spawned entity whose pose is
+            to be retrieved.
+
+        Returns
+        -------
+        PoseModel
+            Object containing the entity's current pose.
+        """
         pass
 
     @abstractmethod
     def get_scene_state(self) -> SceneState:
+        """
+        Gets the current state of the simulation scene.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        SceneState
+            Object containing the current state of the scene.
+
+        Notes
+        -----
+        SceneState should contain the current poses of spawned_entities.
+        """
         pass
