@@ -26,11 +26,11 @@ from rai_sim.simulation_bridge import (
     SimulationBridge,
     SimulationConfig,
     PoseModel,
-    SpawnedEntity,
+    Entity,
 )
 
 
-SimulationConnectorT = TypeVar("SimulationConnectorT", bound=SimulationBridge)
+SimulationBridgeT = TypeVar("SimulationBridgeT", bound=SimulationBridge)
 loggers_type = Union[RcutilsLogger, logging.Logger]
 
 
@@ -39,7 +39,7 @@ class EntitiesMismatchException(Exception):
         super().__init__(message)
 
 
-class Task(ABC, Generic[SimulationConnectorT]):
+class Task(ABC):
     """
     Task to perform.
     Specyfic implementation should implement a way to calculate results.
@@ -62,8 +62,7 @@ class Task(ABC, Generic[SimulationConnectorT]):
 
     @abstractmethod
     def calculate_result(
-        self,
-        engine_connector: SimulationConnectorT,
+        self, engine_connector: SimulationBridge, simulation_config: SimulationConfig
     ) -> float:
         """
         Calculate result of the task
@@ -71,8 +70,8 @@ class Task(ABC, Generic[SimulationConnectorT]):
         pass
 
     def filter_entities_by_prefab_type(
-        self, entities: List[SpawnedEntity], prefab_types: List[str]
-    ) -> List[SpawnedEntity]:
+        self, entities: List[Entity], prefab_types: List[str]
+    ) -> List[Entity]:
         """Filter and return only these entities that match provided prefab types"""
         return [ent for ent in entities if ent.prefab_name in prefab_types]
 
@@ -127,9 +126,9 @@ class Scenario(BaseModel):
 
     task: Task
     scene_config: SimulationConfig
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True
-    )  # pydantic does not support ABC classes
+    # model_config = ConfigDict(
+    #     arbitrary_types_allowed=True
+    # )  # pydantic does not support ABC classes
 
 
 class Benchmark:
@@ -143,7 +142,6 @@ class Benchmark:
         logger: loggers_type | None = None,
     ) -> None:
         self.engine_connector: SimulationBridge
-        self.tasks: list[Task] = []
         self.scenarios = enumerate(iter(scenarios))
         self.results = []
         if logger:
@@ -185,8 +183,9 @@ class Benchmark:
                 # TODO (jm) figure out how to get number of tool calls
             te = time.perf_counter()
 
-            self.engine_connector.get_scene_state()
-            result = scenario.task.calculate_result(self.engine_connector)
+            result = scenario.task.calculate_result(
+                self.engine_connector, scenario.scene_config
+            )
 
             total_time = te - ts
             self._logger.info(f"TASK SCORE: {result}, TOTAL TIME: {total_time:.3f}")
