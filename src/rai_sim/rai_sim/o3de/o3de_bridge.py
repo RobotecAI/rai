@@ -175,6 +175,9 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         ros2_pose = do_transform_pose(
             Pose(), self.connector.get_transform(object_frame + "odom", object_frame)
         )
+        ros2_pose = do_transform_pose(
+            ros2_pose, self.connector.get_transform("world", "odom")
+        )
         return self.from_ros2_pose(ros2_pose)
 
     def get_scene_state(self) -> SceneState:
