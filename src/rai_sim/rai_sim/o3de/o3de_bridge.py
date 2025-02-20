@@ -125,7 +125,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
 
     def _spawn_entity(self, entity: Entity):
         pose = do_transform_pose(
-            self.to_ros2_pose(entity.pose),
+            self._to_ros2_pose(entity.pose),
             self.connector.get_transform("odom", "world"),
         )
 
@@ -181,10 +181,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         ros2_pose = do_transform_pose(
             Pose(), self.connector.get_transform(object_frame + "odom", object_frame)
         )
-        ros2_pose = do_transform_pose(
-            ros2_pose, self.connector.get_transform("world", "odom")
-        )
-        return self.from_ros2_pose(ros2_pose)
+        return self._from_ros2_pose(ros2_pose)
 
     def get_scene_state(self) -> SceneState:
         """
@@ -303,7 +300,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         return response  # type: ignore
 
     # NOTE (mkotynia) probably to be refactored, other bridges may also want to use pose conversion to/from ROS2 format
-    def to_ros2_pose(self, pose: PoseModel) -> Pose:
+    def _to_ros2_pose(self, pose: PoseModel) -> Pose:
         """
         Converts pose in PoseModel format to pose in ROS2 Pose format.
         """
@@ -325,7 +322,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
 
         return ros2_pose
 
-    def from_ros2_pose(self, pose: Pose) -> PoseModel:
+    def _from_ros2_pose(self, pose: Pose) -> PoseModel:
         """
         Converts ROS2 pose to PoseModel format
         """
