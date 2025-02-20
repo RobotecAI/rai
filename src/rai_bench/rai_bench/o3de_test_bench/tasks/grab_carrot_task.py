@@ -6,11 +6,19 @@ from rai_bench.benchmark_model import (
 from rai_sim.o3de.o3de_bridge import (
     SimulationBridge,
 )
+from rai_sim.simulation_bridge import SimulationConfig
 
 
 class GrabCarrotTask(Task):
     def get_prompt(self) -> str:
         return "Manipulate objects, so that all carrots to the left side of the table (positive y)"
+
+    def validate_scene(self, simulation_config: SimulationConfig) -> bool:
+        for ent in simulation_config.entities:
+            if ent.prefab_name == "carrot":
+                return True
+
+        return False
 
     def calculate_result(self, simulation_bridge: SimulationBridge) -> float:
         corrected_objects = 0  # when the object which was in the incorrect place at the start, is in a correct place at the end
@@ -33,9 +41,6 @@ class GrabCarrotTask(Task):
                 "Number of initially spawned entities does not match number of entities present at the end."
             )
 
-        if num_initial_carrots == 0:
-            self.logger.info("No objects to manipulate, returning 1.0")
-            return 1.0
         else:
 
             for ini_carrot in initial_carrots:
