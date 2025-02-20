@@ -187,6 +187,8 @@ class Benchmark:
             self._logger.info(
                 f"RUNNING SCENARIO NUMBER {i+1}, TASK: {scenario.task.get_prompt()}"
             )
+            initial_result = scenario.task.calculate_result(self.simulation_bridge)
+            self._logger.info(f"RESULT OF THE INITIAL SETUP: {initial_result}")
             ts = time.perf_counter()
             for state in agent.stream(
                 {"messages": [HumanMessage(content=scenario.task.get_prompt())]}
@@ -208,7 +210,6 @@ class Benchmark:
                     raise ValueError(f"Unexpected type of message: {type(msg)}")
 
                 self._logger.info(f"AI Message: {msg}")
-                # TODO (jm) figure out how to get number of tool calls
             te = time.perf_counter()
 
             result = scenario.task.calculate_result(self.simulation_bridge)
@@ -216,7 +217,19 @@ class Benchmark:
             total_time = te - ts
             self._logger.info(f"TASK SCORE: {result}, TOTAL TIME: {total_time:.3f}")
 
-            # self.results.append{""})
+            self.results.append(
+                {
+                    "task": scenario.task.get_prompt(),
+                    "initial_score": initial_result,
+                    "final_score": result,
+                    "total_time": f"{total_time:.3f}",
+                    # TODO (jm) figure out how to get number of tool calls
+                    "tool_calls": None,
+                }
+            )
 
         except StopIteration:
             print("No more scenarios left to run.")
+
+    def get_results(self) -> list[dict]:
+        return self.results
