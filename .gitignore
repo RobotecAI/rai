@@ -172,3 +172,5 @@ logs/
 
 src/examples/*-demo
 artifact_database.pkl
+
+imgui.ini

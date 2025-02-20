@@ -31,11 +31,13 @@ from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.ros.manipulation import GetObjectPositionsTool, MoveToPointTool
 from rai.tools.ros2.topics import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
 from rai.utils.model_initialization import get_llm_model
+from rai_sim.simulation_bridge import Translation, Rotation
 from rai_sim.o3de.o3de_bridge import (
     O3DEngineArmManipulationBridge,
     O3DExROS2SimulationConfig,
     SimulationBridge,
     SimulationConfig,
+    PoseModel,
 )
 
 from rai_interfaces.srv import ManipulatorMoveTo
@@ -107,7 +109,7 @@ class GrabCarrotTask(Task):
                 return (corrected_objects + unchanged_correct) / num_initial_carrots
 
 
-class RedCubesTask(Task):
+class PlaceCubesTask(Task):
     def get_prompt(self) -> str:
         return "Manipulate objects, so that  all cubes are next to each other"
 
@@ -246,21 +248,23 @@ if __name__ == "__main__":
     agent_logger.addHandler(file_handler)
 
     # load different scenes
+    configs_dir = "src/rai_bench/o3de_test_bench/configs/"
+    connector_path = configs_dir + "o3de_config.yaml"
     one_carrot_scene_config = O3DExROS2SimulationConfig.load_config(
-        base_config_path=Path("src/rai_bench/o3de_test_bench/scene1.yaml"),
-        connector_config_path=Path("src/rai_bench/o3de_test_bench/o3de_config.yaml"),
+        base_config_path=Path(configs_dir + "scene1.yaml"),
+        connector_config_path=Path(connector_path),
     )
     multiple_carrot_scene_config = O3DExROS2SimulationConfig.load_config(
-        base_config_path=Path("src/rai_bench/o3de_test_bench/scene2.yaml"),
-        connector_config_path=Path("src/rai_bench/o3de_test_bench/o3de_config.yaml"),
+        base_config_path=Path(configs_dir + "scene2.yaml"),
+        connector_config_path=Path(connector_path),
     )
     red_cubes_scene_config = O3DExROS2SimulationConfig.load_config(
-        base_config_path=Path("src/rai_bench/o3de_test_bench/scene3.yaml"),
-        connector_config_path=Path("src/rai_bench/o3de_test_bench/o3de_config.yaml"),
+        base_config_path=Path(configs_dir + "scene3.yaml"),
+        connector_config_path=Path(connector_path),
     )
     multiple_cubes_scene_config = O3DExROS2SimulationConfig.load_config(
-        base_config_path=Path("src/rai_bench/o3de_test_bench/scene4.yaml"),
-        connector_config_path=Path("src/rai_bench/o3de_test_bench/o3de_config.yaml"),
+        base_config_path=Path(configs_dir + "scene4.yaml"),
+        connector_config_path=Path(connector_path),
     )
     # combine different scene configs with the tasks to create various scenarios
     scenarios = [
@@ -277,26 +281,36 @@ if __name__ == "__main__":
             scene_config=red_cubes_scene_config,
         ),
         Scenario(
-            task=RedCubesTask(logger=bench_logger), scene_config=red_cubes_scene_config
+            task=PlaceCubesTask(logger=bench_logger),
+            scene_config=red_cubes_scene_config,
         ),
         Scenario(
-            task=RedCubesTask(logger=bench_logger),
+            task=PlaceCubesTask(logger=bench_logger),
             scene_config=multiple_cubes_scene_config,
         ),
     ]
 
     # custom request to arm
+    base_arm_pose = PoseModel(translation=Translation(x=0.3, y=0.0, z=0.4))
     request = request_to_base_position()
 
     # define benchamrk
-    benchmark = Benchmark(scenarios, logger=bench_logger)
-    benchmark.engine_connector = o3de
+    benchmark = Benchmark(
+        simulation_bridge=o3de,
+        scenarios=scenarios,
+        logger=bench_logger,
+    )
     for i, s in enumerate(scenarios):
         agent = create_conversational_agent(
             llm, tools, system_prompt, logger=agent_logger
         )
         benchmark.run_next(agent=agent)
-        o3de.move_arm(request=request)  # return to case position
+        o3de.move_arm(
+            pose=base_arm_pose,
+            initial_gripper_state=True,
+            final_gripper_state=False,
+            frame_id="panda_link0",
+        )  # return to case position
         time.sleep(2)  # admire the end position for a second ;)
 
     connector.shutdown()

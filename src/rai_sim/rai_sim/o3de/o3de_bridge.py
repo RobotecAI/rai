@@ -20,6 +20,9 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from geometry_msgs.msg import PoseStamped
+from std_msgs.msg import Header
+
 import yaml
 from geometry_msgs.msg import Point, Pose, Quaternion
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
@@ -308,7 +311,45 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
 
 
 class O3DEngineArmManipulationBridge(O3DExROS2Bridge):
-    def move_arm(self, request: ManipulatorMoveTo.Request):
+    def move_arm(
+        self,
+        pose: PoseModel,
+        initial_gripper_state: bool,
+        final_gripper_state: bool,
+        frame_id: str,
+    ):
+        """Moves arm to a given position
+
+        Args:
+            pose (PoseModel): where to move arm
+            initial_gripper_state (bool): False means closed grip, True means open grip
+            final_gripper_state (bool): False means closed grip, True means open grip
+            frame_id (str): reference frame
+        """
+
+        request = ManipulatorMoveTo.Request()
+        request.initial_gripper_state = initial_gripper_state
+        request.final_gripper_state = final_gripper_state
+
+        request.target_pose = PoseStamped()
+        request.target_pose.header = Header()
+        request.target_pose.header.frame_id = frame_id
+
+        request.target_pose.pose.position.x = pose.translation.x
+        request.target_pose.pose.position.x = pose.translation.y
+        request.target_pose.pose.position.z = pose.translation.z
+
+        if pose.rotation:
+            request.target_pose.pose.orientation.x = pose.rotation.x
+            request.target_pose.pose.orientation.y = pose.rotation.y
+            request.target_pose.pose.orientation.z = pose.rotation.z
+            request.target_pose.pose.orientation.w = pose.rotation.w
+        else:
+            request.target_pose.pose.orientation.x = 1.0
+            request.target_pose.pose.orientation.y = 0.0
+            request.target_pose.pose.orientation.z = 0.0
+            request.target_pose.pose.orientation.w = 0.0
+
         client = self.connector.node.create_client(
             ManipulatorMoveTo,
             "/manipulator_move_to",
