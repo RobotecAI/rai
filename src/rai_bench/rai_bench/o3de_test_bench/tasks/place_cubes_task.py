@@ -3,14 +3,23 @@ from rai_bench.benchmark_model import (
     EntitiesMismatchException,
 )
 
-from rai_sim.o3de.o3de_bridge import (
-    SimulationBridge,
-)
+from rai_sim.o3de.o3de_bridge import SimulationBridge, SimulationConfig
 
 
 class PlaceCubesTask(Task):
     def get_prompt(self) -> str:
         return "Manipulate objects, so that  all cubes are next to each other"
+
+    def validate_scene(self, simulation_config: SimulationConfig) -> bool:
+        cube_types = ["red_cube", "blue_cube", "yellow_cube"]
+        cubes_num = 0
+        for ent in simulation_config.entities:
+            if ent.prefab_name in cube_types:
+                cubes_num += 1
+                if cubes_num > 1:
+                    return True
+
+        return False
 
     def calculate_result(self, simulation_bridge: SimulationBridge) -> float:
         corrected_objects = 0  # when the object which was in the incorrect place at the start, is in a correct place at the end
@@ -33,9 +42,7 @@ class PlaceCubesTask(Task):
             raise EntitiesMismatchException(
                 "Number of initially spawned entities does not match number of entities present at the end."
             )
-        if num_of_objects == 0:
-            self.logger.info("No objects to manipulate, returning score 1.0")
-            return 1.0
+
         else:
             ini_poses = [cube.pose for cube in initial_cubes]
             final_poses = [cube.pose for cube in final_cubes]

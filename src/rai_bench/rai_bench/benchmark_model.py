@@ -16,10 +16,10 @@ import time
 import logging
 from abc import ABC, abstractmethod
 from typing import TypeVar, Union, List
+
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from langchain_core.messages import BaseMessage, HumanMessage
-from pydantic import BaseModel, ConfigDict
 
 from rai.messages import HumanMultimodalMessage
 from rai_sim.simulation_bridge import (
@@ -58,6 +58,18 @@ class Task(ABC):
 
     @abstractmethod
     def get_prompt(self) -> str:
+        pass
+
+    @abstractmethod
+    def validate_scene(self, simulation_config: SimulationConfig) -> bool:
+        """Task should be able to verify if given scene is suitable for specific task
+        for example: GrabCarrotTask should verify if there is any carrots in the scene
+
+        Args:
+            simulation_config (SimulationConfig): initial scene setup
+        Returns:
+            bool: True is suitable, False otherwise
+        """
         pass
 
     @abstractmethod
@@ -119,16 +131,14 @@ class Task(ABC):
         return adjacent_count
 
 
-class Scenario(BaseModel):
+class Scenario:
     """Single instances are run separatly by benchmark"""
 
-    task: Task
-    scene_config: SimulationConfig
-    # TODO (jm) figure out how to avoid declaring this field
-    # for now model_config field is used to define additional configurations to a model.
-    # Param arbitrary_types_allowed=True, allows a field with
-    # an abstract class like SimulationConfig.Without it pydantic will throw validation error
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    def __init__(self, task: Task, simulation_config: SimulationConfig) -> None:
+        if not task.validate_scene(simulation_config):
+            raise ValueError("This scene is invalid for this task.")
+        self.task = task
+        self.simulation_config = simulation_config
 
 
 class Benchmark:
@@ -157,7 +167,7 @@ class Benchmark:
         try:
             i, scenario = next(self.scenarios)  # Get the next scenario
 
-            self.simulation_bridge.setup_scene(scenario.scene_config)
+            self.simulation_bridge.setup_scene(scenario.simulation_config)
             self._logger.info(
                 f"RUNNING SCENARIO NUMBER {i+1}, TASK: {scenario.task.get_prompt()}"
             )

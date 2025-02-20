@@ -95,19 +95,19 @@ if __name__ == "__main__":
     # load different scenes
     configs_dir = "src/rai_bench/rai_bench/o3de_test_bench/configs/"
     connector_path = configs_dir + "o3de_config.yaml"
-    one_carrot_scene_config = O3DExROS2SimulationConfig.load_config(
+    one_carrot_simulation_config = O3DExROS2SimulationConfig.load_config(
         base_config_path=Path(configs_dir + "scene1.yaml"),
         connector_config_path=Path(connector_path),
     )
-    multiple_carrot_scene_config = O3DExROS2SimulationConfig.load_config(
+    multiple_carrot_simulation_config = O3DExROS2SimulationConfig.load_config(
         base_config_path=Path(configs_dir + "scene2.yaml"),
         connector_config_path=Path(connector_path),
     )
-    red_cubes_scene_config = O3DExROS2SimulationConfig.load_config(
+    red_cubes_simulation_config = O3DExROS2SimulationConfig.load_config(
         base_config_path=Path(configs_dir + "scene3.yaml"),
         connector_config_path=Path(connector_path),
     )
-    multiple_cubes_scene_config = O3DExROS2SimulationConfig.load_config(
+    multiple_cubes_simulation_config = O3DExROS2SimulationConfig.load_config(
         base_config_path=Path(configs_dir + "scene4.yaml"),
         connector_config_path=Path(connector_path),
     )
@@ -115,23 +115,19 @@ if __name__ == "__main__":
     scenarios = [
         Scenario(
             task=GrabCarrotTask(logger=bench_logger),
-            scene_config=one_carrot_scene_config,
+            simulation_config=one_carrot_simulation_config,
         ),
         Scenario(
             task=GrabCarrotTask(logger=bench_logger),
-            scene_config=multiple_carrot_scene_config,
-        ),
-        Scenario(
-            task=GrabCarrotTask(logger=bench_logger),
-            scene_config=red_cubes_scene_config,
+            simulation_config=multiple_carrot_simulation_config,
         ),
         Scenario(
             task=PlaceCubesTask(logger=bench_logger),
-            scene_config=red_cubes_scene_config,
+            simulation_config=red_cubes_simulation_config,
         ),
         Scenario(
             task=PlaceCubesTask(logger=bench_logger),
-            scene_config=multiple_cubes_scene_config,
+            simulation_config=multiple_cubes_simulation_config,
         ),
     ]
 
