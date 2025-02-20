@@ -160,6 +160,22 @@ class Benchmark:
         else:
             self._logger = logging.getLogger(__name__)
 
+    @classmethod
+    def create_scenarios(
+        cls, tasks: List[Task], simulation_configs: List[SimulationConfig]
+    ):
+
+        scenarios = []
+        for task in tasks:
+            for sim_conf in simulation_configs:
+                try:
+                    scenarios.append(Scenario(task=task, simulation_config=sim_conf))
+                except ValueError as e:
+                    print(
+                        f"Could not create Scenario from task: {task.get_prompt()} and simulation_config: {sim_conf}, {e}"
+                    )
+        return scenarios
+
     def run_next(self, agent):
         """
         Runs the next scenario

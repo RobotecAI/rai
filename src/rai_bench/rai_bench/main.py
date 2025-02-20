@@ -92,44 +92,64 @@ if __name__ == "__main__":
     agent_logger.setLevel(logging.INFO)
     agent_logger.addHandler(file_handler)
 
-    # load different scenes
     configs_dir = "src/rai_bench/rai_bench/o3de_test_bench/configs/"
     connector_path = configs_dir + "o3de_config.yaml"
-    one_carrot_simulation_config = O3DExROS2SimulationConfig.load_config(
-        base_config_path=Path(configs_dir + "scene1.yaml"),
-        connector_config_path=Path(connector_path),
-    )
-    multiple_carrot_simulation_config = O3DExROS2SimulationConfig.load_config(
-        base_config_path=Path(configs_dir + "scene2.yaml"),
-        connector_config_path=Path(connector_path),
-    )
-    red_cubes_simulation_config = O3DExROS2SimulationConfig.load_config(
-        base_config_path=Path(configs_dir + "scene3.yaml"),
-        connector_config_path=Path(connector_path),
-    )
-    multiple_cubes_simulation_config = O3DExROS2SimulationConfig.load_config(
-        base_config_path=Path(configs_dir + "scene4.yaml"),
-        connector_config_path=Path(connector_path),
-    )
-    # combine different scene configs with the tasks to create various scenarios
-    scenarios = [
-        Scenario(
-            task=GrabCarrotTask(logger=bench_logger),
-            simulation_config=one_carrot_simulation_config,
-        ),
-        Scenario(
-            task=GrabCarrotTask(logger=bench_logger),
-            simulation_config=multiple_carrot_simulation_config,
-        ),
-        Scenario(
-            task=PlaceCubesTask(logger=bench_logger),
-            simulation_config=red_cubes_simulation_config,
-        ),
-        Scenario(
-            task=PlaceCubesTask(logger=bench_logger),
-            simulation_config=multiple_cubes_simulation_config,
-        ),
+    #### Create scenarios manually
+    # load different scenes
+    # one_carrot_simulation_config = O3DExROS2SimulationConfig.load_config(
+    #     base_config_path=Path(configs_dir + "scene1.yaml"),
+    #     connector_config_path=Path(connector_path),
+    # )
+    # multiple_carrot_simulation_config = O3DExROS2SimulationConfig.load_config(
+    #     base_config_path=Path(configs_dir + "scene2.yaml"),
+    #     connector_config_path=Path(connector_path),
+    # )
+    # red_cubes_simulation_config = O3DExROS2SimulationConfig.load_config(
+    #     base_config_path=Path(configs_dir + "scene3.yaml"),
+    #     connector_config_path=Path(connector_path),
+    # )
+    # multiple_cubes_simulation_config = O3DExROS2SimulationConfig.load_config(
+    #     base_config_path=Path(configs_dir + "scene4.yaml"),
+    #     connector_config_path=Path(connector_path),
+    # )
+    # # combine different scene configs with the tasks to create various scenarios
+    # scenarios = [
+    #     Scenario(
+    #         task=GrabCarrotTask(logger=bench_logger),
+    #         simulation_config=one_carrot_simulation_config,
+    #     ),
+    #     Scenario(
+    #         task=GrabCarrotTask(logger=bench_logger),
+    #         simulation_config=multiple_carrot_simulation_config,
+    #     ),
+    #     Scenario(
+    #         task=PlaceCubesTask(logger=bench_logger),
+    #         simulation_config=red_cubes_simulation_config,
+    #     ),
+    #     Scenario(
+    #         task=PlaceCubesTask(logger=bench_logger),
+    #         simulation_config=multiple_cubes_simulation_config,
+    #     ),
+    # ]
+
+    ### Create scenarios automatically
+    scene_paths = [
+        configs_dir + "scene1.yaml",
+        configs_dir + "scene2.yaml",
+        configs_dir + "scene3.yaml",
+        configs_dir + "scene4.yaml",
     ]
+    simulations_configs = [
+        O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
+        for path in scene_paths
+    ]
+    tasks = [
+        GrabCarrotTask(logger=bench_logger),
+        PlaceCubesTask(logger=bench_logger),
+    ]
+    scenarios = Benchmark.create_scenarios(
+        tasks=tasks, simulation_configs=simulations_configs
+    )
 
     # custom request to arm
     base_arm_pose = PoseModel(translation=Translation(x=0.3, y=0.0, z=0.4))
