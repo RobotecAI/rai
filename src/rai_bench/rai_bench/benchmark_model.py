@@ -126,9 +126,9 @@ class Scenario(BaseModel):
 
     task: Task
     scene_config: SimulationConfig
-    # model_config = ConfigDict(
-    #     arbitrary_types_allowed=True
-    # )  # pydantic does not support ABC classes
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True
+    )  # pydantic does not support ABC classes
 
 
 class Benchmark:
@@ -138,10 +138,11 @@ class Benchmark:
 
     def __init__(
         self,
+        simulation_bridge: SimulationBridge,
         scenarios: list[Scenario],
         logger: loggers_type | None = None,
     ) -> None:
-        self.engine_connector: SimulationBridge
+        self.simulation_bridge = simulation_bridge
         self.scenarios = enumerate(iter(scenarios))
         self.results = []
         if logger:
@@ -156,7 +157,7 @@ class Benchmark:
         try:
             i, scenario = next(self.scenarios)  # Get the next scenario
 
-            self.engine_connector.setup_scene(scenario.scene_config)
+            self.simulation_bridge.setup_scene(scenario.scene_config)
             self._logger.info(
                 f"RUNNING SCENARIO NUMBER {i+1}, TASK: {scenario.task.get_prompt()}"
             )
@@ -184,11 +185,13 @@ class Benchmark:
             te = time.perf_counter()
 
             result = scenario.task.calculate_result(
-                self.engine_connector, scenario.scene_config
+                self.simulation_bridge, scenario.scene_config
             )
 
             total_time = te - ts
             self._logger.info(f"TASK SCORE: {result}, TOTAL TIME: {total_time:.3f}")
+
+            # self.results.append{""})
 
         except StopIteration:
             print("No more scenarios left to run.")
