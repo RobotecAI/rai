@@ -15,7 +15,7 @@
 import time
 import logging
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar, Union, List
+from typing import TypeVar, Union, List
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from langchain_core.messages import BaseMessage, HumanMessage
@@ -173,7 +173,7 @@ class Benchmark:
                 elif isinstance(msg, BaseMessage):
                     if isinstance(msg.content, list):
                         if len(msg.content) == 1:
-                            if type(msg.content[0]) == dict:
+                            if type(msg.content[0]) is dict:
                                 last_msg = msg.content[0].get("text", "")
                     else:
                         last_msg = msg.content
