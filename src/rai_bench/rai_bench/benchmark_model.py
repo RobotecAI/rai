@@ -126,9 +126,11 @@ class Scenario(BaseModel):
 
     task: Task
     scene_config: SimulationConfig
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True
-    )  # pydantic does not support ABC classes
+    # TODO (jm) figure out how to avoid declaring this field
+    # for now model_config field is used to define additional configurations to a model.
+    # Param arbitrary_types_allowed=True, allows a field with
+    # an abstract class like SimulationConfig.Without it pydantic will throw validation error
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class Benchmark:
@@ -172,14 +174,15 @@ class Benchmark:
                     last_msg = msg.text
                 elif isinstance(msg, BaseMessage):
                     if isinstance(msg.content, list):
-                        assert len(msg.content) == 1
-                        last_msg = msg.content[0].get("text", "")
+                        if len(msg.content) == 1:
+                            if type(msg.content[0]) == dict:
+                                last_msg = msg.content[0].get("text", "")
                     else:
                         last_msg = msg.content
+                        self._logger.debug(f"{graph_node_name}: {last_msg}")
                 else:
                     raise ValueError(f"Unexpected type of message: {type(msg)}")
 
-                self._logger.debug(f"{graph_node_name}: {last_msg}")
                 self._logger.info(f"AI Message: {msg}")
                 # TODO (jm) figure out how to get number of tool calls
             te = time.perf_counter()

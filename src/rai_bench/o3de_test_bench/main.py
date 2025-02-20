@@ -40,9 +40,6 @@ from rai_sim.o3de.o3de_bridge import (
     PoseModel,
 )
 
-from rai_interfaces.srv import ManipulatorMoveTo
-from geometry_msgs.msg import PoseStamped
-from std_msgs.msg import Header
 from pathlib import Path
 
 
@@ -83,6 +80,9 @@ class GrabCarrotTask(Task):
                     if ini_carrot.name == final_carrot.name:
                         initial_y = ini_carrot.pose.translation.y
                         final_y = final_carrot.pose.translation.y
+                        # NOTE the specific coords that refer to for example
+                        # middle of the table can differ across simulations,
+                        # take that into consideration
                         if (
                             initial_y <= 0.0
                         ):  # Carrot started in the incorrect place (right side)
@@ -144,7 +144,9 @@ class PlaceCubesTask(Task):
         else:
             ini_poses = [cube.pose for cube in initial_cubes]
             final_poses = [cube.pose for cube in final_cubes]
-
+            # NOTE the specific coords that refer to for example
+            # middle of the table can differ across simulations,
+            # take that into consideration
             for ini_cube in initial_cubes:
                 for final_cube in final_cubes:
                     if ini_cube.name == final_cube.name:
@@ -173,26 +175,6 @@ class PlaceCubesTask(Task):
                     f"corrected_objects: {corrected_objects}, misplaced_objects: {misplaced_objects}, unchanged_correct: {unchanged_correct}, displaced_objects: {displaced_objects}"
                 )
                 return (corrected_objects + unchanged_correct) / num_of_objects
-
-
-def request_to_base_position() -> ManipulatorMoveTo.Request:
-    request = ManipulatorMoveTo.Request()
-    request.initial_gripper_state = True
-    request.final_gripper_state = False
-
-    request.target_pose = PoseStamped()
-    request.target_pose.header = Header()
-    request.target_pose.header.frame_id = "panda_link0"
-
-    request.target_pose.pose.position.x = 0.3
-    request.target_pose.pose.position.y = 0.0
-    request.target_pose.pose.position.z = 0.5
-
-    request.target_pose.pose.orientation.x = 1.0
-    request.target_pose.pose.orientation.y = 0.0
-    request.target_pose.pose.orientation.z = 0.0
-    request.target_pose.pose.orientation.w = 0.0
-    return request
 
 
 if __name__ == "__main__":
@@ -292,7 +274,6 @@ if __name__ == "__main__":
 
     # custom request to arm
     base_arm_pose = PoseModel(translation=Translation(x=0.3, y=0.0, z=0.4))
-    request = request_to_base_position()
 
     # define benchamrk
     benchmark = Benchmark(
