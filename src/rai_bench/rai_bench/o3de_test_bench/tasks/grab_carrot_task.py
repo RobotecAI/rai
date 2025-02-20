@@ -21,10 +21,10 @@ class GrabCarrotTask(Task):
         return False
 
     def calculate_result(self, simulation_bridge: SimulationBridge) -> float:
-        corrected_objects = 0  # when the object which was in the incorrect place at the start, is in a correct place at the end
-        misplaced_objects = 0  # when the object which was in the incorrect place at the start, is in a incorrect place at the end
-        unchanged_correct = 0  # when the object which was in the correct place at the start, is in a correct place at the end
-        displaced_objects = 0  # when the object which was in the correct place at the start, is in a incorrect place at the end
+        initially_misplaced_now_correct = 0  # when the object which was in the incorrect place at the start, is in a correct place at the end
+        initially_misplaced_still_incorrect = 0  # when the object which was in the incorrect place at the start, is in a incorrect place at the end
+        initially_correct_still_correct = 0  # when the object which was in the correct place at the start, is in a correct place at the end
+        initially_correct_now_incorrect = 0  # when the object which was in the correct place at the start, is in a incorrect place at the end
 
         scene_state = simulation_bridge.get_scene_state()
 
@@ -55,14 +55,20 @@ class GrabCarrotTask(Task):
                             initial_y <= 0.0
                         ):  # Carrot started in the incorrect place (right side)
                             if final_y >= 0.0:
-                                corrected_objects += 1  # Moved to correct side
+                                initially_misplaced_now_correct += (
+                                    1  # Moved to correct side
+                                )
                             else:
-                                misplaced_objects += 1  # Stayed on incorrect side
+                                initially_misplaced_still_incorrect += (
+                                    1  # Stayed on incorrect side
+                                )
                         else:  # Carrot started in the correct place (left side)
                             if final_y >= 0.0:
-                                unchanged_correct += 1  # Stayed on correct side
+                                initially_correct_still_correct += (
+                                    1  # Stayed on correct side
+                                )
                             else:
-                                displaced_objects += (
+                                initially_correct_now_incorrect += (
                                     1  # Moved incorrectly to the wrong side
                                 )
                         break
@@ -72,6 +78,8 @@ class GrabCarrotTask(Task):
                     )
 
             self.logger.info(
-                f"corrected_objects: {corrected_objects}, misplaced_objects: {misplaced_objects}, unchanged_correct: {unchanged_correct}, displaced_objects: {displaced_objects}"
+                f"corrected_objects: {initially_misplaced_now_correct}, misplaced_objects: {initially_misplaced_still_incorrect}, unchanged_correct: {initially_correct_still_correct}, displaced_objects: {initially_correct_now_incorrect}"
             )
-            return (corrected_objects + unchanged_correct) / num_initial_carrots
+            return (
+                initially_misplaced_now_correct + initially_correct_still_correct
+            ) / num_initial_carrots

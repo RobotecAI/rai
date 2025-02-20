@@ -152,7 +152,7 @@ if __name__ == "__main__":
     )
 
     # custom request to arm
-    base_arm_pose = PoseModel(translation=Translation(x=0.3, y=0.0, z=0.4))
+    base_arm_pose = PoseModel(translation=Translation(x=0.3, y=0.0, z=0.5))
 
     # define benchamrk
     benchmark = Benchmark(
