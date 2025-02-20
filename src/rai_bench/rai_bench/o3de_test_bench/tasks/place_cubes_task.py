@@ -8,7 +8,7 @@ from rai_sim.o3de.o3de_bridge import SimulationBridge, SimulationConfig
 
 class PlaceCubesTask(Task):
     def get_prompt(self) -> str:
-        return "Manipulate objects, so that  all cubes are next to each other"
+        return "Manipulate objects, so that all cubes are adjacent to at least one cube"
 
     def validate_scene(self, simulation_config: SimulationConfig) -> bool:
         cube_types = ["red_cube", "blue_cube", "yellow_cube"]
@@ -22,10 +22,10 @@ class PlaceCubesTask(Task):
         return False
 
     def calculate_result(self, simulation_bridge: SimulationBridge) -> float:
-        corrected_objects = 0  # when the object which was in the incorrect place at the start, is in a correct place at the end
-        misplaced_objects = 0  # when the object which was in the incorrect place at the start, is in a incorrect place at the end
-        unchanged_correct = 0  # when the object which was in the correct place at the start, is in a correct place at the end
-        displaced_objects = 0  # when the object which was in the correct place at the start, is in a incorrect place at the end
+        initially_misplaced_now_correct = 0  # when the object which was in the incorrect place at the start, is in a correct place at the end
+        initially_misplaced_still_incorrect = 0  # when the object which was in the incorrect place at the start, is in a incorrect place at the end
+        initially_correct_still_correct = 0  # when the object which was in the correct place at the start, is in a correct place at the end
+        initially_correct_now_incorrect = 0  # when the object which was in the correct place at the start, is in a incorrect place at the end
 
         cube_types = ["red_cube", "blue_cube", "yellow_cube"]
         scene_state = simulation_bridge.get_scene_state()
@@ -59,13 +59,13 @@ class PlaceCubesTask(Task):
                             final_cube.pose, final_poses, 0.1
                         )
                         if not was_adjacent_initially and is_adjacent_finally:
-                            corrected_objects += 1
+                            initially_misplaced_now_correct += 1
                         elif not was_adjacent_initially and not is_adjacent_finally:
-                            misplaced_objects += 1
+                            initially_misplaced_still_incorrect += 1
                         elif was_adjacent_initially and is_adjacent_finally:
-                            unchanged_correct += 1
+                            initially_correct_still_correct += 1
                         elif was_adjacent_initially and not is_adjacent_finally:
-                            displaced_objects += 1
+                            initially_correct_now_incorrect += 1
 
                         break
                 else:
@@ -74,6 +74,8 @@ class PlaceCubesTask(Task):
                     )
 
             self.logger.info(
-                f"corrected_objects: {corrected_objects}, misplaced_objects: {misplaced_objects}, unchanged_correct: {unchanged_correct}, displaced_objects: {displaced_objects}"
+                f"corrected_objects: {initially_misplaced_now_correct}, misplaced_objects: {initially_misplaced_still_incorrect}, unchanged_correct: {initially_correct_still_correct}, displaced_objects: {initially_correct_now_incorrect}"
             )
-            return (corrected_objects + unchanged_correct) / num_of_objects
+            return (
+                initially_misplaced_now_correct + initially_correct_still_correct
+            ) / num_of_objects
