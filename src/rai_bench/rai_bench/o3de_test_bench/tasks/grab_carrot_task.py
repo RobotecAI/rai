@@ -41,7 +41,7 @@ class GrabCarrotTask(Task):
         initially_correct_now_incorrect = 0  # when the object which was in the correct place at the start, is in a incorrect place at the end
 
         scene_state = simulation_bridge.get_scene_state()
-
+        self.logger.info(f"ENTITIES: {scene_state.entities}")
         initial_carrots = self.filter_entities_by_prefab_type(
             simulation_bridge.spawned_entities, prefab_types=["carrot"]
         )
@@ -50,15 +50,14 @@ class GrabCarrotTask(Task):
         )
         num_initial_carrots = len(initial_carrots)
 
-        self.logger.info(initial_carrots)
-        self.logger.info(final_carrots)
         if num_initial_carrots != len(final_carrots):
             raise EntitiesMismatchException(
                 "Number of initially spawned entities does not match number of entities present at the end."
             )
 
         else:
-
+            self.logger.info(initial_carrots)
+            self.logger.info(final_carrots)
             for ini_carrot in initial_carrots:
                 for final_carrot in final_carrots:
                     if ini_carrot.name == final_carrot.name:
@@ -67,8 +66,6 @@ class GrabCarrotTask(Task):
                         # NOTE the specific coords that refer to for example
                         # middle of the table can differ across simulations,
                         # take that into consideration
-                        self.logger.info(initial_y)
-                        self.logger.info(final_y)
                         if (
                             initial_y <= 0.0
                         ):  # Carrot started in the incorrect place (right side)
