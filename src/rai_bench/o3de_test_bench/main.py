@@ -34,6 +34,8 @@ from rai.utils.model_initialization import get_llm_model
 from rai_sim.o3de.o3de_bridge import (
     O3DEngineArmManipulationBridge,
     O3DExROS2SimulationConfig,
+    SimulationBridge,
+    SimulationConfig,
 )
 
 from rai_interfaces.srv import ManipulatorMoveTo
@@ -47,8 +49,7 @@ class GrabCarrotTask(Task):
         return "Manipulate objects, so that all carrots to the left side of the table (positive y)"
 
     def calculate_result(
-        self,
-        engine_connector: O3DEngineArmManipulationBridge,
+        self, engine_connector: SimulationBridge, simulation_config: SimulationConfig
     ) -> float:
         corrected_objects = 0  # when the object which was in the incorrect place at the start, is in a correct place at the end
         misplaced_objects = 0  # when the object which was in the incorrect place at the start, is in a incorrect place at the end
@@ -58,51 +59,52 @@ class GrabCarrotTask(Task):
         scene_state = engine_connector.get_scene_state()
 
         initial_carrots = self.filter_entities_by_prefab_type(
-            engine_connector.spawned_entities, prefab_types=["carrot"]
+            simulation_config.entities, prefab_types=["carrot"]
         )
         final_carrots = self.filter_entities_by_prefab_type(
             scene_state.entities, prefab_types=["carrot"]
         )
-        num_of_objects = len(initial_carrots)
+        num_initial_carrots = len(initial_carrots)
 
-        if num_of_objects != len(final_carrots):
+        if num_initial_carrots != len(final_carrots):
             raise EntitiesMismatchException(
                 "Number of initially spawned entities does not match number of entities present at the end."
             )
 
-        for ini_carrot in initial_carrots:
-            for final_carrot in final_carrots:
-                if ini_carrot.name == final_carrot.name:
-                    initial_y = ini_carrot.pose.translation.y
-                    final_y = final_carrot.pose.translation.y
-                    if (
-                        initial_y <= 0.0
-                    ):  # Carrot started in the incorrect place (right side)
-                        if final_y >= 0.0:
-                            corrected_objects += 1  # Moved to correct side
-                        else:
-                            misplaced_objects += 1  # Stayed on incorrect side
-                    else:  # Carrot started in the correct place (left side)
-                        if final_y >= 0.0:
-                            unchanged_correct += 1  # Stayed on correct side
-                        else:
-                            displaced_objects += (
-                                1  # Moved incorrectly to the wrong side
-                            )
-                    break
-            else:
-                raise EntitiesMismatchException(
-                    f"Entity with name: {ini_carrot.name} which was present in initial scene, not found in final scene."
-                )
-
-        if num_of_objects == 0:
+        if num_initial_carrots == 0:
             self.logger.info("No objects to manipulate, returning 1.0")
             return 1.0
         else:
-            self.logger.info(
-                f"corrected_objects: {corrected_objects}, misplaced_objects: {misplaced_objects}, unchanged_correct: {unchanged_correct}, displaced_objects: {displaced_objects}"
-            )
-            return (corrected_objects + unchanged_correct) / num_of_objects
+
+            for ini_carrot in initial_carrots:
+                for final_carrot in final_carrots:
+                    if ini_carrot.name == final_carrot.name:
+                        initial_y = ini_carrot.pose.translation.y
+                        final_y = final_carrot.pose.translation.y
+                        if (
+                            initial_y <= 0.0
+                        ):  # Carrot started in the incorrect place (right side)
+                            if final_y >= 0.0:
+                                corrected_objects += 1  # Moved to correct side
+                            else:
+                                misplaced_objects += 1  # Stayed on incorrect side
+                        else:  # Carrot started in the correct place (left side)
+                            if final_y >= 0.0:
+                                unchanged_correct += 1  # Stayed on correct side
+                            else:
+                                displaced_objects += (
+                                    1  # Moved incorrectly to the wrong side
+                                )
+                        break
+                else:
+                    raise EntitiesMismatchException(
+                        f"Entity with name: {ini_carrot.name} which was present in initial scene, not found in final scene."
+                    )
+
+                self.logger.info(
+                    f"corrected_objects: {corrected_objects}, misplaced_objects: {misplaced_objects}, unchanged_correct: {unchanged_correct}, displaced_objects: {displaced_objects}"
+                )
+                return (corrected_objects + unchanged_correct) / num_initial_carrots
 
 
 class RedCubesTask(Task):
@@ -111,7 +113,8 @@ class RedCubesTask(Task):
 
     def calculate_result(
         self,
-        engine_connector: O3DEngineArmManipulationBridge,
+        engine_connector: SimulationBridge,
+        simulation_config: SimulationConfig,
     ) -> float:
         corrected_objects = 0  # when the object which was in the incorrect place at the start, is in a correct place at the end
         misplaced_objects = 0  # when the object which was in the incorrect place at the start, is in a incorrect place at the end
@@ -122,7 +125,7 @@ class RedCubesTask(Task):
         scene_state = engine_connector.get_scene_state()
 
         initial_cubes = self.filter_entities_by_prefab_type(
-            engine_connector.spawned_entities, prefab_types=cube_types
+            simulation_config.entities, prefab_types=cube_types
         )
         final_cubes = self.filter_entities_by_prefab_type(
             scene_state.entities, prefab_types=cube_types
@@ -133,42 +136,41 @@ class RedCubesTask(Task):
             raise EntitiesMismatchException(
                 "Number of initially spawned entities does not match number of entities present at the end."
             )
-
-        ini_poses = [cube.pose for cube in initial_cubes]
-        final_poses = [cube.pose for cube in final_cubes]
-
-        for ini_cube in initial_cubes:
-            for final_cube in final_cubes:
-                if ini_cube.name == final_cube.name:
-                    was_adjacent_initially = self.is_adjacent_to_any(
-                        ini_cube.pose, ini_poses, 0.1
-                    )
-                    is_adjacent_finally = self.is_adjacent_to_any(
-                        final_cube.pose, final_poses, 0.1
-                    )
-                    if not was_adjacent_initially and is_adjacent_finally:
-                        corrected_objects += 1
-                    elif not was_adjacent_initially and not is_adjacent_finally:
-                        misplaced_objects += 1
-                    elif was_adjacent_initially and is_adjacent_finally:
-                        unchanged_correct += 1
-                    elif was_adjacent_initially and not is_adjacent_finally:
-                        displaced_objects += 1
-
-                    break
-            else:
-                raise EntitiesMismatchException(
-                    f"Entity with name: {ini_cube.name} which was present in initial scene, not found in final scene."
-                )
-
         if num_of_objects == 0:
             self.logger.info("No objects to manipulate, returning score 1.0")
-            return 1
+            return 1.0
         else:
-            self.logger.info(
-                f"corrected_objects: {corrected_objects}, misplaced_objects: {misplaced_objects}, unchanged_correct: {unchanged_correct}, displaced_objects: {displaced_objects}"
-            )
-            return (corrected_objects + unchanged_correct) / num_of_objects
+            ini_poses = [cube.pose for cube in initial_cubes]
+            final_poses = [cube.pose for cube in final_cubes]
+
+            for ini_cube in initial_cubes:
+                for final_cube in final_cubes:
+                    if ini_cube.name == final_cube.name:
+                        was_adjacent_initially = self.is_adjacent_to_any(
+                            ini_cube.pose, ini_poses, 0.1
+                        )
+                        is_adjacent_finally = self.is_adjacent_to_any(
+                            final_cube.pose, final_poses, 0.1
+                        )
+                        if not was_adjacent_initially and is_adjacent_finally:
+                            corrected_objects += 1
+                        elif not was_adjacent_initially and not is_adjacent_finally:
+                            misplaced_objects += 1
+                        elif was_adjacent_initially and is_adjacent_finally:
+                            unchanged_correct += 1
+                        elif was_adjacent_initially and not is_adjacent_finally:
+                            displaced_objects += 1
+
+                        break
+                else:
+                    raise EntitiesMismatchException(
+                        f"Entity with name: {ini_cube.name} which was present in initial scene, not found in final scene."
+                    )
+
+                self.logger.info(
+                    f"corrected_objects: {corrected_objects}, misplaced_objects: {misplaced_objects}, unchanged_correct: {unchanged_correct}, displaced_objects: {displaced_objects}"
+                )
+                return (corrected_objects + unchanged_correct) / num_of_objects
 
 
 def request_to_base_position() -> ManipulatorMoveTo.Request:
