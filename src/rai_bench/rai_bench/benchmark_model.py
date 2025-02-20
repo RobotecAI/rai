@@ -26,7 +26,7 @@ from rai_sim.simulation_bridge import (
     SimulationBridge,
     SimulationConfig,
     PoseModel,
-    Entity,
+    SpawnedEntity,
 )
 
 
@@ -61,17 +61,15 @@ class Task(ABC):
         pass
 
     @abstractmethod
-    def calculate_result(
-        self, engine_connector: SimulationBridge, simulation_config: SimulationConfig
-    ) -> float:
+    def calculate_result(self, simulation_bridge: SimulationBridge) -> float:
         """
         Calculate result of the task
         """
         pass
 
     def filter_entities_by_prefab_type(
-        self, entities: List[Entity], prefab_types: List[str]
-    ) -> List[Entity]:
+        self, entities: List[SpawnedEntity], prefab_types: List[str]
+    ) -> List[SpawnedEntity]:
         """Filter and return only these entities that match provided prefab types"""
         return [ent for ent in entities if ent.prefab_name in prefab_types]
 

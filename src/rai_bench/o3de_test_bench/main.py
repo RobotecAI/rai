@@ -47,18 +47,16 @@ class GrabCarrotTask(Task):
     def get_prompt(self) -> str:
         return "Manipulate objects, so that all carrots to the left side of the table (positive y)"
 
-    def calculate_result(
-        self, engine_connector: SimulationBridge, simulation_config: SimulationConfig
-    ) -> float:
+    def calculate_result(self, simulation_bridge: SimulationBridge) -> float:
         corrected_objects = 0  # when the object which was in the incorrect place at the start, is in a correct place at the end
         misplaced_objects = 0  # when the object which was in the incorrect place at the start, is in a incorrect place at the end
         unchanged_correct = 0  # when the object which was in the correct place at the start, is in a correct place at the end
         displaced_objects = 0  # when the object which was in the correct place at the start, is in a incorrect place at the end
 
-        scene_state = engine_connector.get_scene_state()
+        scene_state = simulation_bridge.get_scene_state()
 
         initial_carrots = self.filter_entities_by_prefab_type(
-            simulation_config.entities, prefab_types=["carrot"]
+            simulation_bridge.spawned_entities, prefab_types=["carrot"]
         )
         final_carrots = self.filter_entities_by_prefab_type(
             scene_state.entities, prefab_types=["carrot"]
@@ -113,21 +111,17 @@ class PlaceCubesTask(Task):
     def get_prompt(self) -> str:
         return "Manipulate objects, so that  all cubes are next to each other"
 
-    def calculate_result(
-        self,
-        engine_connector: SimulationBridge,
-        simulation_config: SimulationConfig,
-    ) -> float:
+    def calculate_result(self, simulation_bridge: SimulationBridge) -> float:
         corrected_objects = 0  # when the object which was in the incorrect place at the start, is in a correct place at the end
         misplaced_objects = 0  # when the object which was in the incorrect place at the start, is in a incorrect place at the end
         unchanged_correct = 0  # when the object which was in the correct place at the start, is in a correct place at the end
         displaced_objects = 0  # when the object which was in the correct place at the start, is in a incorrect place at the end
 
         cube_types = ["red_cube", "blue_cube", "yellow_cube"]
-        scene_state = engine_connector.get_scene_state()
+        scene_state = simulation_bridge.get_scene_state()
 
         initial_cubes = self.filter_entities_by_prefab_type(
-            simulation_config.entities, prefab_types=cube_types
+            simulation_bridge.spawned_entities, prefab_types=cube_types
         )
         final_cubes = self.filter_entities_by_prefab_type(
             scene_state.entities, prefab_types=cube_types
