@@ -185,9 +185,7 @@ class Benchmark:
                 # TODO (jm) figure out how to get number of tool calls
             te = time.perf_counter()
 
-            result = scenario.task.calculate_result(
-                self.simulation_bridge, scenario.scene_config
-            )
+            result = scenario.task.calculate_result(self.simulation_bridge)
 
             total_time = te - ts
             self._logger.info(f"TASK SCORE: {result}, TOTAL TIME: {total_time:.3f}")
