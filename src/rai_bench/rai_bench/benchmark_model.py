@@ -19,7 +19,7 @@ from typing import TypeVar, Union, List
 
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 
 from rai.messages import HumanMultimodalMessage
 from rai_sim.simulation_bridge import (
@@ -195,6 +195,8 @@ class Benchmark:
             )
             initial_result = scenario.task.calculate_result(self.simulation_bridge)
             self._logger.info(f"RESULT OF THE INITIAL SETUP: {initial_result}")
+            tool_calls_num = 0
+
             ts = time.perf_counter()
             for state in agent.stream(
                 {"messages": [HumanMessage(content=scenario.task.get_prompt())]}
@@ -212,17 +214,23 @@ class Benchmark:
                     else:
                         last_msg = msg.content
                         self._logger.debug(f"{graph_node_name}: {last_msg}")
+
                 else:
                     raise ValueError(f"Unexpected type of message: {type(msg)}")
+
+                if isinstance(msg, AIMessage):
+                    # TODO (jm) figure out more robust way of counting tool calls
+                    tool_calls_num += len(msg.tool_calls)
 
                 self._logger.info(f"AI Message: {msg}")
 
             te = time.perf_counter()
 
             result = scenario.task.calculate_result(self.simulation_bridge)
-
             total_time = te - ts
-            self._logger.info(f"TASK SCORE: {result}, TOTAL TIME: {total_time:.3f}")
+            self._logger.info(
+                f"TASK SCORE: {result}, TOTAL TIME: {total_time:.3f}, NUM_OF_TOOL_CALLS: {tool_calls_num}"
+            )
 
             self.results.append(
                 {
@@ -230,8 +238,7 @@ class Benchmark:
                     "initial_score": initial_result,
                     "final_score": result,
                     "total_time": f"{total_time:.3f}",
-                    # TODO (jm) figure out how to get number of tool calls
-                    "tool_calls": None,
+                    "numer_of_tool_calls": tool_calls_num,
                 }
             )
 
