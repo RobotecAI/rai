@@ -182,7 +182,6 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         ros2_pose = do_transform_pose(
             ros2_pose, self.connector.get_transform("world", "odom")
         )
-        self.logger.info(f"ros2 pose: {ros2_pose}")
         return self.from_ros2_pose(ros2_pose)
 
     def get_scene_state(self) -> SceneState:
@@ -194,7 +193,6 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         entities: list[SpawnedEntity] = []
         for entity in self.spawned_entities:
             current_pose = self.get_object_pose(entity)
-            self.logger.info(f"current pose: {current_pose}")
             entities.append(
                 SpawnedEntity(
                     id=entity.id,

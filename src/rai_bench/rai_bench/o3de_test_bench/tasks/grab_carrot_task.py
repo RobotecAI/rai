@@ -41,7 +41,6 @@ class GrabCarrotTask(Task):
         initially_correct_now_incorrect = 0  # when the object which was in the correct place at the start, is in a incorrect place at the end
 
         scene_state = simulation_bridge.get_scene_state()
-        self.logger.info(f"ENTITIES: {scene_state.entities}")
         initial_carrots = self.filter_entities_by_prefab_type(
             simulation_bridge.spawned_entities, prefab_types=["carrot"]
         )
@@ -56,8 +55,8 @@ class GrabCarrotTask(Task):
             )
 
         else:
-            self.logger.info(initial_carrots)
-            self.logger.info(final_carrots)
+            self.logger.debug(f"initial positions: {initial_carrots}")
+            self.logger.debug(f"final positions: {final_carrots}")
             for ini_carrot in initial_carrots:
                 for final_carrot in final_carrots:
                     if ini_carrot.name == final_carrot.name:
@@ -93,7 +92,7 @@ class GrabCarrotTask(Task):
                     )
 
             self.logger.info(
-                f"corrected_objects: {initially_misplaced_now_correct}, misplaced_objects: {initially_misplaced_still_incorrect}, unchanged_correct: {initially_correct_still_correct}, displaced_objects: {initially_correct_now_incorrect}"
+                f"initially_misplaced_now_correct: {initially_misplaced_now_correct}, initially_misplaced_still_incorrect: {initially_misplaced_still_incorrect}, initially_correct_still_correct: {initially_correct_still_correct}, initially_correct_now_incorrect: {initially_correct_now_incorrect}"
             )
             return (
                 initially_misplaced_now_correct + initially_correct_still_correct

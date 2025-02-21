@@ -63,6 +63,8 @@ class PlaceCubesTask(Task):
             # NOTE the specific coords that refer to for example
             # middle of the table can differ across simulations,
             # take that into consideration
+            self.logger.debug(f"initial positions: {initial_cubes}")
+            self.logger.debug(f"final positions: {final_cubes}")
             for ini_cube in initial_cubes:
                 for final_cube in final_cubes:
                     if ini_cube.name == final_cube.name:
