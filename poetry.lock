@@ -5701,6 +5701,19 @@ type = "directory"
 url = "src/rai_asr"
 
 [[package]]
+name = "rai-bench"
+version = "0.1.0"
+description = ""
+optional = false
+python-versions = "^3.10"
+files = []
+develop = true
+
+[package.source]
+type = "directory"
+url = "src/rai_bench"
+
+[[package]]
 name = "rai-sim"
 version = "0.0.1"
 description = "Package to run simulations"
@@ -8318,4 +8331,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10, <3.13"
-content-hash = "dbde1f09ad86e771f14942eb9aeab800e63759d14e8593b8bb2fd435a1ae944c"
+content-hash = "c5469635a5db79c258554ad9f4e49331515940e406fbf912822651a0e0c33dda"
