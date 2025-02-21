@@ -83,7 +83,7 @@ if __name__ == "__main__":
     file_handler.setFormatter(formatter)
 
     bench_logger = logging.getLogger("Benchmark logger")
-    bench_logger.setLevel(logging.INFO)
+    bench_logger.setLevel(logging.DEBUG)
     bench_logger.addHandler(file_handler)
 
     agent_logger = logging.getLogger("Agent logger")
@@ -116,18 +116,18 @@ if __name__ == "__main__":
             task=GrabCarrotTask(logger=bench_logger),
             simulation_config=one_carrot_simulation_config,
         ),
-        # Scenario(
-        #     task=GrabCarrotTask(logger=bench_logger),
-        #     simulation_config=multiple_carrot_simulation_config,
-        # ),
-        # Scenario(
-        #     task=PlaceCubesTask(logger=bench_logger),
-        #     simulation_config=red_cubes_simulation_config,
-        # ),
-        # Scenario(
-        #     task=PlaceCubesTask(logger=bench_logger),
-        #     simulation_config=multiple_cubes_simulation_config,
-        # ),
+        Scenario(
+            task=GrabCarrotTask(logger=bench_logger),
+            simulation_config=multiple_carrot_simulation_config,
+        ),
+        Scenario(
+            task=PlaceCubesTask(logger=bench_logger),
+            simulation_config=red_cubes_simulation_config,
+        ),
+        Scenario(
+            task=PlaceCubesTask(logger=bench_logger),
+            simulation_config=multiple_cubes_simulation_config,
+        ),
     ]
 
     ### Create scenarios automatically
@@ -150,7 +150,7 @@ if __name__ == "__main__":
     # )
 
     # custom request to arm
-    base_arm_pose = PoseModel(translation=Translation(x=0.3, y=0.0, z=0.5))
+    base_arm_pose = PoseModel(translation=Translation(x=0.5, y=0.1, z=0.3))
 
     o3de = O3DEngineArmManipulationBridge(connector, logger=agent_logger)
     # define benchamrk

@@ -185,6 +185,9 @@ class Benchmark:
 
             self.simulation_bridge.setup_scene(scenario.simulation_config)
             self._logger.info(
+                "======================================================================================"
+            )
+            self._logger.info(
                 f"RUNNING SCENARIO NUMBER {i+1}, TASK: {scenario.task.get_prompt()}"
             )
             initial_result = scenario.task.calculate_result(self.simulation_bridge)
@@ -210,6 +213,7 @@ class Benchmark:
                     raise ValueError(f"Unexpected type of message: {type(msg)}")
 
                 self._logger.info(f"AI Message: {msg}")
+
             te = time.perf_counter()
 
             result = scenario.task.calculate_result(self.simulation_bridge)
