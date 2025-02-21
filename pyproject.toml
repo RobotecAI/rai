@@ -18,6 +18,7 @@ rai = {path = "src/rai_core", develop = true}
 rai_asr = {path = "src/rai_asr", develop = true}
 rai_tts = {path = "src/rai_tts", develop = true}
 rai_sim = {path = "src/rai_sim", develop = true}
+rai_bench = {path = "src/rai_bench", develop = true}
 
 langchain-core = "^0.3"
 langchain = "*"
