@@ -36,6 +36,7 @@ class PlaceCubesTask(Task):
         return False
 
     def calculate_result(self, simulation_bridge: SimulationBridge) -> float:
+        # TODO (jm) extract common logic to some parent manipulation task?
         initially_misplaced_now_correct = 0  # when the object which was in the incorrect place at the start, is in a correct place at the end
         initially_misplaced_still_incorrect = 0  # when the object which was in the incorrect place at the start, is in a incorrect place at the end
         initially_correct_still_correct = 0  # when the object which was in the correct place at the start, is in a correct place at the end
@@ -64,15 +65,19 @@ class PlaceCubesTask(Task):
             # middle of the table can differ across simulations,
             # take that into consideration
             self.logger.debug(f"initial positions: {initial_cubes}")
-            self.logger.debug(f"final positions: {final_cubes}")
-            for ini_cube in initial_cubes:
-                for final_cube in final_cubes:
+            self.logger.debug(f"current positions: {final_cubes}")
+            for i, ini_cube in enumerate(initial_cubes):
+                for j, final_cube in enumerate(final_cubes):
                     if ini_cube.name == final_cube.name:
                         was_adjacent_initially = self.is_adjacent_to_any(
-                            ini_cube.pose, ini_poses, 0.1
+                            ini_cube.pose,
+                            [p for p in ini_poses if p != ini_cube.pose],
+                            0.15,
                         )
                         is_adjacent_finally = self.is_adjacent_to_any(
-                            final_cube.pose, final_poses, 0.1
+                            final_cube.pose,
+                            [p for p in final_poses if p != final_cube.pose],
+                            0.15,
                         )
                         if not was_adjacent_initially and is_adjacent_finally:
                             initially_misplaced_now_correct += 1
@@ -90,7 +95,7 @@ class PlaceCubesTask(Task):
                     )
 
             self.logger.info(
-                f"corrected_objects: {initially_misplaced_now_correct}, misplaced_objects: {initially_misplaced_still_incorrect}, unchanged_correct: {initially_correct_still_correct}, displaced_objects: {initially_correct_now_incorrect}"
+                f"initially_misplaced_now_correct: {initially_misplaced_now_correct}, initially_misplaced_still_incorrect: {initially_misplaced_still_incorrect}, initially_correct_still_correct: {initially_correct_still_correct}, initially_correct_now_incorrect: {initially_correct_now_incorrect}"
             )
             return (
                 initially_misplaced_now_correct + initially_correct_still_correct

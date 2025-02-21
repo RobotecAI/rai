@@ -35,6 +35,7 @@ class GrabCarrotTask(Task):
         return False
 
     def calculate_result(self, simulation_bridge: SimulationBridge) -> float:
+        # TODO (jm) extract common logic to some parent manipulation task?
         initially_misplaced_now_correct = 0  # when the object which was in the incorrect place at the start, is in a correct place at the end
         initially_misplaced_still_incorrect = 0  # when the object which was in the incorrect place at the start, is in a incorrect place at the end
         initially_correct_still_correct = 0  # when the object which was in the correct place at the start, is in a correct place at the end
@@ -56,7 +57,7 @@ class GrabCarrotTask(Task):
 
         else:
             self.logger.debug(f"initial positions: {initial_carrots}")
-            self.logger.debug(f"final positions: {final_carrots}")
+            self.logger.debug(f"current positions: {final_carrots}")
             for ini_carrot in initial_carrots:
                 for final_carrot in final_carrots:
                     if ini_carrot.name == final_carrot.name:

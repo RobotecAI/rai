@@ -98,6 +98,9 @@ class Task(ABC):
         Check if positions are adjacent to each other, the threshold_distance is a distance
         in simulation, refering to how close they have to be to classify them as adjacent
         """
+        self.logger.debug(
+            f"Euclidean distance: {self.euclidean_distance(pos1, pos2)}, pos1: {pos1}, pos2: {pos2}"
+        )
         return self.euclidean_distance(pos1, pos2) < threshold_distance
 
     def is_adjacent_to_any(
