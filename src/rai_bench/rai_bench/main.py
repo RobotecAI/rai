@@ -13,15 +13,12 @@
 # limitations under the License.
 
 ########### EXAMPLE USAGE ###########
-import rclpy
 import logging
 import time
-import rclpy.qos
+from pathlib import Path
 
-from rai_bench.benchmark_model import (
-    Benchmark,
-    Scenario,
-)
+import rclpy
+import rclpy.qos
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
 from rai.agents.conversational_agent import create_conversational_agent
@@ -29,16 +26,16 @@ from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.ros.manipulation import GetObjectPositionsTool, MoveToPointTool
 from rai.tools.ros2.topics import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
 from rai.utils.model_initialization import get_llm_model
-from rai_sim.simulation_bridge import Translation
+from rai_bench.benchmark_model import (
+    Benchmark,
+)
+from rai_bench.o3de_test_bench.tasks import GrabCarrotTask, PlaceCubesTask
 from rai_sim.o3de.o3de_bridge import (
     O3DEngineArmManipulationBridge,
     O3DExROS2SimulationConfig,
     PoseModel,
 )
-from rai_bench.o3de_test_bench.tasks import GrabCarrotTask, PlaceCubesTask
-
-from pathlib import Path
-
+from rai_sim.simulation_bridge import Translation
 
 if __name__ == "__main__":
     rclpy.init()
@@ -53,7 +50,7 @@ if __name__ == "__main__":
     You are a robotic arm with interfaces to detect and manipulate objects.
     Here are the coordinates information:
     x - front to back (positive is forward)
-    y - left to right (positive is right)  
+    y - left to right (positive is right)
     z - up to down (positive is up)
     Before starting the task, make sure to grab the camera image to understand the environment.
     """

@@ -12,23 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
 import logging
+import time
 from abc import ABC, abstractmethod
-from typing import TypeVar, Union, List
+from typing import List, TypeVar, Union
 
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from rclpy.impl.rcutils_logger import RcutilsLogger
-
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 
 from rai.messages import HumanMultimodalMessage
 from rai_sim.simulation_bridge import (
+    PoseModel,
     SimulationBridge,
     SimulationConfig,
-    PoseModel,
     SpawnedEntity,
 )
-
 
 SimulationBridgeT = TypeVar("SimulationBridgeT", bound=SimulationBridge)
 loggers_type = Union[RcutilsLogger, logging.Logger]
@@ -167,7 +165,6 @@ class Benchmark:
     def create_scenarios(
         cls, tasks: List[Task], simulation_configs: List[SimulationConfig]
     ):
-
         scenarios = []
         for task in tasks:
             for sim_conf in simulation_configs:
@@ -191,7 +188,7 @@ class Benchmark:
                 "======================================================================================"
             )
             self._logger.info(
-                f"RUNNING SCENARIO NUMBER {i+1}, TASK: {scenario.task.get_prompt()}"
+                f"RUNNING SCENARIO NUMBER {i + 1}, TASK: {scenario.task.get_prompt()}"
             )
             initial_result = scenario.task.calculate_result(self.simulation_bridge)
             self._logger.info(f"RESULT OF THE INITIAL SETUP: {initial_result}")
