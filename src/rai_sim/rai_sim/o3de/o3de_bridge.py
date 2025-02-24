@@ -214,11 +214,11 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             services = self.connector.node.get_service_names_and_types()
             topics_names = [tp[0] for tp in topics]
             service_names = [srv[0] for srv in services]
-            self.logger.debug(
+            self.logger.info(
                 f"required services: {simulation_config.required_services}"
             )
-            self.logger.debug(f"required topics: {simulation_config.required_topics}")
-            self.logger.debug(f"required actions: {simulation_config.required_actions}")
+            self.logger.info(f"required topics: {simulation_config.required_topics}")
+            self.logger.info(f"required actions: {simulation_config.required_actions}")
             # NOTE actions will be listed in services and topics
             if (
                 all(srv in service_names for srv in simulation_config.required_services)
@@ -227,7 +227,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
                     ac in service_names for ac in simulation_config.required_actions
                 )
             ):
-                self.logger.debug("All required services are available.")
+                self.logger.info("All required services are available.")
                 return True
 
             time.sleep(5)
@@ -380,11 +380,6 @@ class O3DEngineArmManipulationBridge(O3DExROS2Bridge):
             request.target_pose.pose.orientation.y = pose.rotation.y
             request.target_pose.pose.orientation.z = pose.rotation.z
             request.target_pose.pose.orientation.w = pose.rotation.w
-        else:
-            request.target_pose.pose.orientation.x = 1.0
-            request.target_pose.pose.orientation.y = 0.0
-            request.target_pose.pose.orientation.z = 0.0
-            request.target_pose.pose.orientation.w = 0.0
 
         client = self.connector.node.create_client(
             ManipulatorMoveTo,

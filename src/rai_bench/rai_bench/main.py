@@ -35,7 +35,7 @@ from rai_sim.o3de.o3de_bridge import (
     O3DExROS2SimulationConfig,
     PoseModel,
 )
-from rai_sim.simulation_bridge import Translation
+from rai_sim.simulation_bridge import Rotation, Translation
 
 if __name__ == "__main__":
     rclpy.init()
@@ -147,7 +147,10 @@ if __name__ == "__main__":
     )
 
     # custom request to arm
-    base_arm_pose = PoseModel(translation=Translation(x=0.5, y=0.1, z=0.3))
+    base_arm_pose = PoseModel(
+        translation=Translation(x=0.5, y=0.1, z=0.3),
+        rotation=Rotation(x=1.0, y=0.0, z=0.0, w=0.0),
+    )
 
     o3de = O3DEngineArmManipulationBridge(connector, logger=agent_logger)
     # define benchamrk
