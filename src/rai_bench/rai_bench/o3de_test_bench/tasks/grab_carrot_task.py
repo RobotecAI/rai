@@ -26,7 +26,7 @@ class GrabCarrotTask(Task):
     def get_prompt(self) -> str:
         return "Manipulate objects, so that all carrots to the left side of the table (positive y)"
 
-    def validate_scene(self, simulation_config: SimulationConfig) -> bool:
+    def validate_config(self, simulation_config: SimulationConfig) -> bool:
         for ent in simulation_config.entities:
             if ent.prefab_name == "carrot":
                 return True

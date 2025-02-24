@@ -23,7 +23,7 @@ class PlaceCubesTask(Task):
     def get_prompt(self) -> str:
         return "Manipulate objects, so that all cubes are adjacent to at least one cube"
 
-    def validate_scene(self, simulation_config: SimulationConfig) -> bool:
+    def validate_config(self, simulation_config: SimulationConfig) -> bool:
         cube_types = ["red_cube", "blue_cube", "yellow_cube"]
         cubes_num = 0
         for ent in simulation_config.entities:

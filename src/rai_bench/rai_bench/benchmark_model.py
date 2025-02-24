@@ -15,7 +15,7 @@
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import List, TypeVar, Union
+from typing import Any, Dict, List, TypeVar, Union
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from rclpy.impl.rcutils_logger import RcutilsLogger
@@ -59,9 +59,8 @@ class Task(ABC):
         pass
 
     @abstractmethod
-    def validate_scene(self, simulation_config: SimulationConfig) -> bool:
-        """Task should be able to verify if given scene is suitable for specific task
-        for example: GrabCarrotTask should verify if there is any carrots in the scene
+    def validate_config(self, simulation_config: SimulationConfig) -> bool:
+        """Task should be able to verify if given config is suitable for specific task
 
         Args:
             simulation_config (SimulationConfig): initial scene setup
@@ -136,7 +135,7 @@ class Scenario:
     """Single instances are run separatly by benchmark"""
 
     def __init__(self, task: Task, simulation_config: SimulationConfig) -> None:
-        if not task.validate_scene(simulation_config):
+        if not task.validate_config(simulation_config):
             raise ValueError("This scene is invalid for this task.")
         self.task = task
         self.simulation_config = simulation_config
@@ -149,13 +148,13 @@ class Benchmark:
 
     def __init__(
         self,
-        simulation_bridge: SimulationBridge,
+        simulation_bridge: SimulationBridge[SimulationConfig],
         scenarios: list[Scenario],
         logger: loggers_type | None = None,
     ) -> None:
         self.simulation_bridge = simulation_bridge
         self.scenarios = enumerate(iter(scenarios))
-        self.results = []
+        self.results: List[Dict[str, Any]] = []
         if logger:
             self._logger = logger
         else:
@@ -164,7 +163,7 @@ class Benchmark:
     @classmethod
     def create_scenarios(
         cls, tasks: List[Task], simulation_configs: List[SimulationConfig]
-    ):
+    ) -> list[Any]:
         scenarios = []
         for task in tasks:
             for sim_conf in simulation_configs:
@@ -235,7 +234,7 @@ class Benchmark:
                     "initial_score": initial_result,
                     "final_score": result,
                     "total_time": f"{total_time:.3f}",
-                    "numer_of_tool_calls": tool_calls_num,
+                    "number_of_tool_calls": tool_calls_num,
                 }
             )
 
