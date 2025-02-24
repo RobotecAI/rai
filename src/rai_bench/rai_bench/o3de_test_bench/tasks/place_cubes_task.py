@@ -13,10 +13,9 @@
 # limitations under the License.
 
 from rai_bench.benchmark_model import (
-    Task,
     EntitiesMismatchException,
+    Task,
 )
-
 from rai_sim.o3de.o3de_bridge import SimulationBridge, SimulationConfig
 
 

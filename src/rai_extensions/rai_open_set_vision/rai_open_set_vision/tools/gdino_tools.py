@@ -142,9 +142,7 @@ class GroundingDinoBaseTool(Ros2BaseTool):
 
 class GetDetectionTool(GroundingDinoBaseTool):
     name: str = "GetDetectionTool"
-    description: str = (
-        "A tool for detecting specified objects using a ros2 action. The tool call might take some time to execute and is blocking - you will not be able to check their feedback, only will be informed about the result."
-    )
+    description: str = "A tool for detecting specified objects using a ros2 action. The tool call might take some time to execute and is blocking - you will not be able to check their feedback, only will be informed about the result."
 
     args_schema: Type[Ros2GetDetectionInput] = Ros2GetDetectionInput
 
@@ -172,9 +170,7 @@ class GetDetectionTool(GroundingDinoBaseTool):
 
 class GetDistanceToObjectsTool(GroundingDinoBaseTool):
     name: str = "GetDistanceToObjectsTool"
-    description: str = (
-        "A tool for calculating distance to specified objects using a ros2 action. The tool call might take some time to execute and is blocking - you will not be able to check their feedback, only will be informed about the result."
-    )
+    description: str = "A tool for calculating distance to specified objects using a ros2 action. The tool call might take some time to execute and is blocking - you will not be able to check their feedback, only will be informed about the result."
 
     args_schema: Type[GetDistanceToObjectsInput] = GetDistanceToObjectsInput
 
