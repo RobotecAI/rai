@@ -16,9 +16,10 @@
 import logging
 import time
 from pathlib import Path
+from typing import List
 
 import rclpy
-import rclpy.qos
+from langchain.tools import BaseTool
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
 from rai.agents.conversational_agent import create_conversational_agent
@@ -26,16 +27,14 @@ from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.ros.manipulation import GetObjectPositionsTool, MoveToPointTool
 from rai.tools.ros2.topics import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
 from rai.utils.model_initialization import get_llm_model
-from rai_bench.benchmark_model import (
-    Benchmark,
-)
+from rai_bench.benchmark_model import Benchmark, Task
 from rai_bench.o3de_test_bench.tasks import GrabCarrotTask, PlaceCubesTask
 from rai_sim.o3de.o3de_bridge import (
     O3DEngineArmManipulationBridge,
     O3DExROS2SimulationConfig,
     PoseModel,
 )
-from rai_sim.simulation_bridge import Rotation, Translation
+from rai_sim.simulation_bridge import Rotation, SimulationConfig, Translation
 
 if __name__ == "__main__":
     rclpy.init()
@@ -55,7 +54,7 @@ if __name__ == "__main__":
     Before starting the task, make sure to grab the camera image to understand the environment.
     """
     # define tools
-    tools = [
+    tools: List[BaseTool] = [
         GetObjectPositionsTool(
             connector=connector,
             target_frame="panda_link0",
@@ -80,7 +79,7 @@ if __name__ == "__main__":
     file_handler.setFormatter(formatter)
 
     bench_logger = logging.getLogger("Benchmark logger")
-    bench_logger.setLevel(logging.DEBUG)
+    bench_logger.setLevel(logging.INFO)
     bench_logger.addHandler(file_handler)
 
     agent_logger = logging.getLogger("Agent logger")
@@ -134,11 +133,11 @@ if __name__ == "__main__":
         configs_dir + "scene3.yaml",
         configs_dir + "scene4.yaml",
     ]
-    simulations_configs = [
+    simulations_configs: List[SimulationConfig] = [
         O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
         for path in scene_paths
     ]
-    tasks = [
+    tasks: List[Task] = [
         GrabCarrotTask(logger=bench_logger),
         PlaceCubesTask(logger=bench_logger),
     ]

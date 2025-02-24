@@ -28,7 +28,9 @@ from rai_sim.simulation_bridge import (
     SpawnedEntity,
 )
 
-SimulationBridgeT = TypeVar("SimulationBridgeT", bound=SimulationBridge)
+SimulationBridgeT = TypeVar(
+    "SimulationBridgeT", bound=SimulationBridge[SimulationConfig]
+)
 loggers_type = Union[RcutilsLogger, logging.Logger]
 
 
@@ -70,7 +72,9 @@ class Task(ABC):
         pass
 
     @abstractmethod
-    def calculate_result(self, simulation_bridge: SimulationBridge) -> float:
+    def calculate_result(
+        self, simulation_bridge: SimulationBridge[SimulationConfig]
+    ) -> float:
         """
         Calculate result of the task
         """
@@ -95,7 +99,7 @@ class Task(ABC):
         Check if positions are adjacent to each other, the threshold_distance is a distance
         in simulation, refering to how close they have to be to classify them as adjacent
         """
-        self.logger.debug(
+        self.logger.debug(  # type: ignore
             f"Euclidean distance: {self.euclidean_distance(pos1, pos2)}, pos1: {pos1}, pos2: {pos2}"
         )
         return self.euclidean_distance(pos1, pos2) < threshold_distance
@@ -164,7 +168,7 @@ class Benchmark:
     def create_scenarios(
         cls, tasks: List[Task], simulation_configs: List[SimulationConfig]
     ) -> list[Any]:
-        scenarios = []
+        scenarios: List[Scenario] = []
         for task in tasks:
             for sim_conf in simulation_configs:
                 try:
@@ -175,7 +179,7 @@ class Benchmark:
                     )
         return scenarios
 
-    def run_next(self, agent):
+    def run_next(self, agent) -> None:
         """
         Runs the next scenario
         """
@@ -183,14 +187,14 @@ class Benchmark:
             i, scenario = next(self.scenarios)  # Get the next scenario
 
             self.simulation_bridge.setup_scene(scenario.simulation_config)
-            self._logger.info(
+            self._logger.info(  # type: ignore
                 "======================================================================================"
             )
-            self._logger.info(
+            self._logger.info(  # type: ignore
                 f"RUNNING SCENARIO NUMBER {i + 1}, TASK: {scenario.task.get_prompt()}"
             )
             initial_result = scenario.task.calculate_result(self.simulation_bridge)
-            self._logger.info(f"RESULT OF THE INITIAL SETUP: {initial_result}")
+            self._logger.info(f"RESULT OF THE INITIAL SETUP: {initial_result}")  # type: ignore
             tool_calls_num = 0
 
             ts = time.perf_counter()
@@ -209,7 +213,7 @@ class Benchmark:
                                 last_msg = msg.content[0].get("text", "")
                     else:
                         last_msg = msg.content
-                        self._logger.debug(f"{graph_node_name}: {last_msg}")
+                        self._logger.debug(f"{graph_node_name}: {last_msg}")  # type: ignore
 
                 else:
                     raise ValueError(f"Unexpected type of message: {type(msg)}")
@@ -218,13 +222,13 @@ class Benchmark:
                     # TODO (jm) figure out more robust way of counting tool calls
                     tool_calls_num += len(msg.tool_calls)
 
-                self._logger.info(f"AI Message: {msg}")
+                self._logger.info(f"AI Message: {msg}")  # type: ignore
 
             te = time.perf_counter()
 
             result = scenario.task.calculate_result(self.simulation_bridge)
             total_time = te - ts
-            self._logger.info(
+            self._logger.info(  # type: ignore
                 f"TASK SCORE: {result}, TOTAL TIME: {total_time:.3f}, NUM_OF_TOOL_CALLS: {tool_calls_num}"
             )
 
@@ -241,5 +245,5 @@ class Benchmark:
         except StopIteration:
             print("No more scenarios left to run.")
 
-    def get_results(self) -> list[dict]:
+    def get_results(self) -> List[Dict[str, Any]]:
         return self.results
