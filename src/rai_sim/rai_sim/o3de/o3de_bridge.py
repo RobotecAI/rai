@@ -18,15 +18,14 @@ import signal
 import subprocess
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
-
-from geometry_msgs.msg import PoseStamped
-from std_msgs.msg import Header
+from typing import Any, Dict, List, Optional
 
 import yaml
-from geometry_msgs.msg import Point, Pose, Quaternion
-from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
+from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
+from std_msgs.msg import Header
 from tf2_geometry_msgs import do_transform_pose
+
+from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from rai.utils.ros_async import get_future_result
 from rai_interfaces.srv import ManipulatorMoveTo
 from rai_sim.simulation_bridge import (
@@ -44,6 +43,9 @@ from rai_sim.simulation_bridge import (
 class O3DExROS2SimulationConfig(SimulationConfig):
     binary_path: Path
     robotic_stack_command: str
+    required_services: List[str]
+    required_topics: List[str]
+    required_actions: List[str]
 
     @classmethod
     def load_config(
@@ -203,6 +205,35 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             )
         return SceneState(entities=entities)
 
+    def _is_robotic_stack_ready(
+        self, simulation_config: O3DExROS2SimulationConfig
+    ) -> bool:
+        retries = 0
+        while retries < 30:
+            topics = self.connector.get_topics_names_and_types()
+            services = self.connector.node.get_service_names_and_types()
+            topics_names = [tp[0] for tp in topics]
+            service_names = [srv[0] for srv in services]
+            self.logger.debug(
+                f"required services: {simulation_config.required_services}"
+            )
+            self.logger.debug(f"required topics: {simulation_config.required_topics}")
+            self.logger.debug(f"required actions: {simulation_config.required_actions}")
+            # NOTE actions will be listed in services and topics
+            if (
+                all(srv in service_names for srv in simulation_config.required_services)
+                and all(tp in topics_names for tp in simulation_config.required_topics)
+                and all(
+                    ac in service_names for ac in simulation_config.required_actions
+                )
+            ):
+                self.logger.debug("All required services are available.")
+                return True
+
+            time.sleep(5)
+            retries += 1
+        return False
+
     def setup_scene(self, simulation_config: O3DExROS2SimulationConfig):
         if self.current_binary_path != simulation_config.binary_path:
             if self.current_sim_process:
@@ -214,6 +245,11 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         else:
             while self.spawned_entities:
                 self._despawn_entity(self.spawned_entities[0])
+
+        if not self._is_robotic_stack_ready(simulation_config=simulation_config):
+            raise RuntimeError(
+                "Not all required services, topics and actions are available"
+            )
 
         for entity in simulation_config.entities:
             self._spawn_entity(entity)
