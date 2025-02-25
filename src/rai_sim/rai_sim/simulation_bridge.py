@@ -52,7 +52,8 @@ class PoseModel(BaseModel):
         description="The position of the object in 3D space"
     )
     rotation: Optional[Rotation] = Field(
-        description="The orientation of the object as a quaternion. Optional if orientation is not needed and default orientation is handled by the bridge"
+        default=None,
+        description="The orientation of the object as a quaternion. Optional if orientation is not needed and default orientation is handled by the bridge",
     )
 
 
