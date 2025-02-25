@@ -149,38 +149,8 @@ def test_simulation_config_duplicate_names():
         SimulationConfig(entities=entities)
 
 
-@pytest.fixture
-def sample_yaml_config(tmp_path: Path) -> Path:
-    yaml_content = """
-    entities:
-      - name: entity1
-        prefab_name: cube
-        pose:
-          translation:
-            x: 1.0
-            y: 2.0
-            z: 3.0
-
-      - name: entity2
-        prefab_name: carrot
-        pose:
-          translation:
-            x: 1.0
-            y: 2.0
-            z: 3.0
-          rotation:
-            x: 0.1
-            y: 0.2
-            z: 0.3
-            w: 0.4
-    """
-    file_path = tmp_path / "test_config.yaml"
-    file_path.write_text(yaml_content)
-    return file_path
-
-
-def test_load_base_config(sample_yaml_config: Path):
-    config = SimulationConfig.load_base_config(sample_yaml_config)
+def test_load_base_config(sample_base_yaml_config: Path):
+    config = SimulationConfig.load_base_config(sample_base_yaml_config)
 
     assert isinstance(config.entities, list)
     assert all(isinstance(e, Entity) for e in config.entities)
