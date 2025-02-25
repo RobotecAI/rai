@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import csv
 import logging
 import time
 from abc import ABC, abstractmethod
@@ -136,11 +137,19 @@ class Task(ABC):
 class Scenario(Generic[SimulationConfigT]):
     """Single instances are run separatly by benchmark"""
 
-    def __init__(self, task: Task, simulation_config: SimulationConfigT) -> None:
+    def __init__(
+        self,
+        task: Task,
+        simulation_config: SimulationConfigT,
+        simulation_config_path: str,
+    ) -> None:
         if not task.validate_config(simulation_config):
             raise ValueError("This scene is invalid for this task.")
         self.task = task
         self.simulation_config = simulation_config
+        # NOTE (jm) needed for logging which config was used,
+        # there probably is better method to do it
+        self.simulation_config_path = simulation_config_path
 
 
 class Benchmark:
@@ -165,13 +174,24 @@ class Benchmark:
 
     @classmethod
     def create_scenarios(
-        cls, tasks: List[Task], simulation_configs: List[SimulationConfigT]
+        cls,
+        tasks: List[Task],
+        simulation_configs: List[SimulationConfigT],
+        simulation_configs_paths: List[str],
     ) -> List[Scenario[SimulationConfigT]]:
+        # TODO (jm) hacky_fix, taking paths as args here, not the best solution,
+        # but more changes to code would be required
         scenarios: List[Scenario[SimulationConfigT]] = []
         for task in tasks:
-            for sim_conf in simulation_configs:
+            for sim_conf, sim_path in zip(simulation_configs, simulation_configs_paths):
                 try:
-                    scenarios.append(Scenario(task=task, simulation_config=sim_conf))
+                    scenarios.append(
+                        Scenario(
+                            task=task,
+                            simulation_config=sim_conf,
+                            simulation_config_path=sim_path,
+                        )
+                    )
                 except ValueError as e:
                     print(
                         f"Could not create Scenario from task: {task.get_prompt()} and simulation_config: {sim_conf}, {e}"
@@ -234,6 +254,7 @@ class Benchmark:
             self.results.append(
                 {
                     "task": scenario.task.get_prompt(),
+                    "simulation_config": scenario.simulation_config_path,
                     "initial_score": initial_result,
                     "final_score": result,
                     "total_time": f"{total_time:.3f}",
@@ -246,3 +267,24 @@ class Benchmark:
 
     def get_results(self) -> List[Dict[str, Any]]:
         return self.results
+
+    def dump_results_to_csv(self, filename: str) -> None:
+        if not self.results:
+            self._logger.warning("No results to save.")  # type: ignore
+            return
+
+        fieldnames = [
+            "task",
+            "initial_score",
+            "simulation_config",
+            "final_score",
+            "total_time",
+            "number_of_tool_calls",
+        ]
+
+        with open(filename, mode="w", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(self.results)
+
+        self._logger.info(f"Results saved to {filename}")  # type: ignore
