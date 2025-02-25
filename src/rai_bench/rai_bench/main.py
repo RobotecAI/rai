@@ -111,23 +111,27 @@ if __name__ == "__main__":
     #     Scenario(
     #         task=GrabCarrotTask(logger=bench_logger),
     #         simulation_config=one_carrot_simulation_config,
+    #         simulation_config_path=configs_dir + "scene1.yaml",
     #     ),
     #     Scenario(
     #         task=GrabCarrotTask(logger=bench_logger),
     #         simulation_config=multiple_carrot_simulation_config,
+    #         simulation_config_path=configs_dir + "scene2.yaml",
     #     ),
     #     Scenario(
     #         task=PlaceCubesTask(logger=bench_logger),
     #         simulation_config=red_cubes_simulation_config,
+    #         simulation_config_path=configs_dir + "scene3.yaml",
     #     ),
     #     Scenario(
     #         task=PlaceCubesTask(logger=bench_logger),
     #         simulation_config=multiple_cubes_simulation_config,
+    #         simulation_config_path=configs_dir + "scene4.yaml",
     #     ),
     # ]
 
     ### Create scenarios automatically
-    scene_paths = [
+    simulation_configs_paths = [
         configs_dir + "scene1.yaml",
         configs_dir + "scene2.yaml",
         configs_dir + "scene3.yaml",
@@ -135,14 +139,16 @@ if __name__ == "__main__":
     ]
     simulations_configs = [
         O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
-        for path in scene_paths
+        for path in simulation_configs_paths
     ]
     tasks: List[Task] = [
         GrabCarrotTask(logger=bench_logger),
         PlaceCubesTask(logger=bench_logger),
     ]
     scenarios = Benchmark.create_scenarios(
-        tasks=tasks, simulation_configs=simulations_configs
+        tasks=tasks,
+        simulation_configs=simulations_configs,
+        simulation_configs_paths=simulation_configs_paths,
     )
 
     # custom request to arm
@@ -174,6 +180,8 @@ if __name__ == "__main__":
     bench_logger.info("===============================================================")
     bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
     bench_logger.info("===============================================================")
+    benchmark.dump_results_to_csv(filename="src/rai_bench/rai_bench/results.csv")
+
     connector.shutdown()
     o3de.shutdown()
     rclpy.shutdown()
