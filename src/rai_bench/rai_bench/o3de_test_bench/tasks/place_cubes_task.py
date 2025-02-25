@@ -16,7 +16,8 @@ from rai_bench.benchmark_model import (
     EntitiesMismatchException,
     Task,
 )
-from rai_sim.o3de.o3de_bridge import SimulationBridge, SimulationConfig
+from rai_sim.o3de.o3de_bridge import SimulationBridge
+from rai_sim.simulation_bridge import SimulationConfig, SimulationConfigT
 
 
 class PlaceCubesTask(Task):
@@ -34,7 +35,9 @@ class PlaceCubesTask(Task):
 
         return False
 
-    def calculate_result(self, simulation_bridge: SimulationBridge) -> float:
+    def calculate_result(
+        self, simulation_bridge: SimulationBridge[SimulationConfigT]
+    ) -> float:
         # TODO (jm) extract common logic to some parent manipulation task?
         initially_misplaced_now_correct = 0  # when the object which was in the incorrect place at the start, is in a correct place at the end
         initially_misplaced_still_incorrect = 0  # when the object which was in the incorrect place at the start, is in a incorrect place at the end

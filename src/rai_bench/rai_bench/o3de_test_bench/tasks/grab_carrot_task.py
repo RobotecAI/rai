@@ -19,7 +19,7 @@ from rai_bench.benchmark_model import (
 from rai_sim.o3de.o3de_bridge import (
     SimulationBridge,
 )
-from rai_sim.simulation_bridge import SimulationConfig
+from rai_sim.simulation_bridge import SimulationConfig, SimulationConfigT
 
 
 class GrabCarrotTask(Task):
@@ -34,7 +34,7 @@ class GrabCarrotTask(Task):
         return False
 
     def calculate_result(
-        self, simulation_bridge: SimulationBridge[SimulationConfig]
+        self, simulation_bridge: SimulationBridge[SimulationConfigT]
     ) -> float:
         # TODO (jm) extract common logic to some parent manipulation task?
         initially_misplaced_now_correct = 0  # when the object which was in the incorrect place at the start, is in a correct place at the end
