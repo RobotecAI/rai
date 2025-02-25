@@ -206,10 +206,10 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         return SceneState(entities=entities)
 
     def _is_robotic_stack_ready(
-        self, simulation_config: O3DExROS2SimulationConfig
+        self, simulation_config: O3DExROS2SimulationConfig, retries: int = 30
     ) -> bool:
-        retries = 0
-        while retries < 30:
+        i = 0
+        while i < retries:
             topics = self.connector.get_topics_names_and_types()
             services = self.connector.node.get_service_names_and_types()
             topics_names = [tp[0] for tp in topics]
