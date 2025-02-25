@@ -1,3 +1,5 @@
+import logging
+import unittest
 from pathlib import Path
 from typing import Optional
 
@@ -8,6 +10,8 @@ from rai_sim.simulation_bridge import (
     Entity,
     PoseModel,
     Rotation,
+    SceneState,
+    SimulationBridge,
     SimulationConfig,
     SpawnedEntity,
     Translation,
@@ -145,7 +149,6 @@ def test_simulation_config_duplicate_names():
         SimulationConfig(entities=entities)
 
 
-# Test Reading from YAML File
 @pytest.fixture
 def sample_yaml_config(tmp_path: Path) -> Path:
     yaml_content = """
@@ -183,3 +186,158 @@ def test_load_base_config(sample_yaml_config: Path):
     assert all(isinstance(e, Entity) for e in config.entities)
 
     assert len(config.entities) == 2
+
+
+class MockSimulationBridge(SimulationBridge[SimulationConfig]):
+    """Mock implementation of SimulationBridge for testing."""
+
+    def setup_scene(self, simulation_config: SimulationConfig):
+        """Mock implementation of setup_scene."""
+        for entity in simulation_config.entities:
+            self._spawn_entity(entity)
+
+    def _spawn_entity(self, entity: Entity):
+        """Mock implementation of _spawn_entity."""
+        spawned_entity = SpawnedEntity(
+            id=f"id_{entity.name}",
+            name=entity.name,
+            prefab_name=entity.prefab_name,
+            pose=entity.pose,
+        )
+        self.spawned_entities.append(spawned_entity)
+
+    def _despawn_entity(self, entity: SpawnedEntity):
+        """Mock implementation of _despawn_entity."""
+        self.spawned_entities = [e for e in self.spawned_entities if e.id != entity.id]
+
+    def get_object_pose(self, entity: SpawnedEntity) -> PoseModel:
+        """Mock implementation of get_object_pose."""
+        for spawned_entity in self.spawned_entities:
+            if spawned_entity.id == entity.id:
+                return spawned_entity.pose
+        raise ValueError(f"Entity with id {entity.id} not found")
+
+    def get_scene_state(self) -> SceneState:
+        """Mock implementation of get_scene_state."""
+        return SceneState(entities=self.spawned_entities)
+
+
+class TestSimulationBridge(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures."""
+        self.logger = logging.getLogger("test_logger")
+        self.bridge = MockSimulationBridge(logger=self.logger)
+
+        # Create test entities
+        self.test_entity1: Entity = Entity(
+            name="test_entity1",
+            prefab_name="test_prefab1",
+            pose=PoseModel(
+                translation=Translation(x=1.0, y=2.0, z=3.0),
+                rotation=Rotation(x=0.0, y=0.0, z=0.0, w=1.0),
+            ),
+        )
+
+        self.test_entity2: Entity = Entity(
+            name="test_entity2",
+            prefab_name="test_prefab2",
+            pose=PoseModel(translation=Translation(x=4.0, y=5.0, z=6.0), rotation=None),
+        )
+
+        # Create a test configuration
+        self.test_config = SimulationConfig(
+            entities=[self.test_entity1, self.test_entity2]
+        )
+
+    def test_init(self):
+        # Test with provided logger
+        bridge = MockSimulationBridge(logger=self.logger)
+        self.assertEqual(bridge.logger, self.logger)
+        self.assertEqual(len(bridge.spawned_entities), 0)
+
+        # Test with default logger
+        bridge = MockSimulationBridge()
+        self.assertIsNotNone(bridge.logger)
+        self.assertEqual(len(bridge.spawned_entities), 0)
+
+    def test_setup_scene(self):
+        self.bridge.setup_scene(self.test_config)
+
+        # Check if entities were spawned
+        self.assertEqual(len(self.bridge.spawned_entities), 2)
+
+        # Check if the spawned entities have correct properties
+        self.assertEqual(self.bridge.spawned_entities[0].name, "test_entity1")
+        self.assertEqual(self.bridge.spawned_entities[0].prefab_name, "test_prefab1")
+        self.assertEqual(self.bridge.spawned_entities[0].pose.translation.x, 1.0)
+        self.assertEqual(self.bridge.spawned_entities[0].pose.translation.y, 2.0)
+        self.assertEqual(self.bridge.spawned_entities[0].pose.translation.z, 3.0)
+        assert self.bridge.spawned_entities[0].pose.rotation
+        self.assertEqual(self.bridge.spawned_entities[0].pose.rotation.x, 0.0)
+        self.assertEqual(self.bridge.spawned_entities[0].pose.rotation.y, 0.0)
+        self.assertEqual(self.bridge.spawned_entities[0].pose.rotation.z, 0.0)
+        self.assertEqual(self.bridge.spawned_entities[0].pose.rotation.w, 1.0)
+
+        self.assertEqual(self.bridge.spawned_entities[1].name, "test_entity2")
+        self.assertEqual(self.bridge.spawned_entities[1].prefab_name, "test_prefab2")
+        self.assertEqual(self.bridge.spawned_entities[1].pose.translation.x, 4.0)
+        self.assertEqual(self.bridge.spawned_entities[1].pose.translation.y, 5.0)
+        self.assertEqual(self.bridge.spawned_entities[1].pose.translation.z, 6.0)
+        self.assertIsNone(self.bridge.spawned_entities[1].pose.rotation)
+
+    def test_spawn_entity(self):
+        self.bridge._spawn_entity(self.test_entity1)  # type: ignore
+        spawned_entity = self.bridge.spawned_entities[0]
+        # Check if entity was added to spawned_entities
+        self.assertEqual(len(self.bridge.spawned_entities), 1)
+        self.assertIsInstance(spawned_entity, SpawnedEntity)
+
+    def test_despawn_entity(self):
+        # First spawn an entity
+        self.bridge._spawn_entity(self.test_entity1)  # type: ignore
+        self.assertEqual(len(self.bridge.spawned_entities), 1)
+
+        # Then despawn it
+        self.bridge._despawn_entity(self.bridge.spawned_entities[0])  # type: ignore
+        self.assertEqual(len(self.bridge.spawned_entities), 0)
+
+    def test_get_object_pose(self):
+        # First spawn an entity
+        self.bridge._spawn_entity(self.test_entity1)  # type: ignore
+
+        # Get the pose
+        pose = self.bridge.get_object_pose(self.bridge.spawned_entities[0])
+
+        # Check if the pose matches
+        self.assertEqual(pose.translation.x, 1.0)
+        self.assertEqual(pose.translation.y, 2.0)
+        self.assertEqual(pose.translation.z, 3.0)
+        assert pose.rotation
+        self.assertEqual(pose.rotation.x, 0.0)
+        self.assertEqual(pose.rotation.y, 0.0)
+        self.assertEqual(pose.rotation.z, 0.0)
+        self.assertEqual(pose.rotation.w, 1.0)
+
+        # Test for non-existent entity
+        non_existent_entity = SpawnedEntity(
+            id="non_existent",
+            name="non_existent",
+            prefab_name="non_existent",
+            pose=PoseModel(translation=Translation(x=0.0, y=0.0, z=0.0)),
+        )
+
+        with self.assertRaises(ValueError):
+            self.bridge.get_object_pose(non_existent_entity)
+
+    def test_get_scene_state(self):
+        # First spawn some entities
+        self.bridge._spawn_entity(self.test_entity1)  # type: ignore
+        self.bridge._spawn_entity(self.test_entity2)  # type: ignore
+
+        # Get the scene state
+        scene_state = self.bridge.get_scene_state()
+
+        # Check if the scene state contains the correct entities
+        self.assertEqual(len(scene_state.entities), 2)
+        self.assertEqual(scene_state.entities[0].name, "test_entity1")
+        self.assertEqual(scene_state.entities[1].name, "test_entity2")
