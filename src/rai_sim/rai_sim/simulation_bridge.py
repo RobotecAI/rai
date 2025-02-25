@@ -36,7 +36,7 @@ class Rotation(BaseModel):
 
 class PoseModel(BaseModel):
     translation: Translation
-    rotation: Optional[Rotation]
+    rotation: Optional[Rotation] = None
 
 
 class Entity(BaseModel):

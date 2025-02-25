@@ -18,6 +18,7 @@ from io import BytesIO
 import numpy as np
 import pytest
 from PIL import Image
+
 from rai.messages.utils import preprocess_image
 
 

@@ -70,6 +70,7 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         self._service_api = ROS2ServiceAPI(self._node)
         self._actions_api = ROS2ActionAPI(self._node)
         self._tf_buffer = Buffer(node=self._node)
+        self.tf_listener = TransformListener(self._tf_buffer, self._node)
 
         self._executor = MultiThreadedExecutor()
         self._executor.add_node(self._node)
@@ -180,7 +181,6 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         source_frame: str,
         timeout_sec: float = 5.0,
     ) -> TransformStamped:
-        tf_listener = TransformListener(self._tf_buffer, self._node)
         transform_available = self.wait_for_transform(
             self._tf_buffer, target_frame, source_frame, timeout_sec
         )
@@ -192,20 +192,25 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
             target_frame,
             source_frame,
             rclpy.time.Time(),
-            timeout=Duration(seconds=timeout_sec),
+            timeout=Duration(seconds=int(timeout_sec)),
         )
-        tf_listener.unregister()
+
         return transform
 
     def terminate_action(self, action_handle: str, **kwargs: Any):
         self._actions_api.terminate_goal(action_handle)
 
+    @property
+    def node(self) -> Node:
+        return self._node
+
     def shutdown(self):
-        self._executor.shutdown()
-        self._thread.join()
+        self.tf_listener.unregister()
+        self._node.destroy_node()
         self._actions_api.shutdown()
         self._topic_api.shutdown()
-        self._node.destroy_node()
+        self._executor.shutdown()
+        self._thread.join()
 
 
 class ROS2HRIMessage(HRIMessage):
@@ -279,15 +284,19 @@ class ROS2HRIConnector(HRIConnector[ROS2HRIMessage]):
         ]
 
         _targets = [
-            target
-            if isinstance(target, tuple)
-            else (target, TopicConfig(is_subscriber=False))
+            (
+                target
+                if isinstance(target, tuple)
+                else (target, TopicConfig(is_subscriber=False))
+            )
             for target in targets
         ]
         _sources = [
-            source
-            if isinstance(source, tuple)
-            else (source, TopicConfig(is_subscriber=True))
+            (
+                source
+                if isinstance(source, tuple)
+                else (source, TopicConfig(is_subscriber=True))
+            )
             for source in sources
         ]
 

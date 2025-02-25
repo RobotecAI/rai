@@ -56,7 +56,7 @@ def create_conversational_agent(
     debug=False,
 ):
     _logger = None
-    if isinstance(logger, RcutilsLogger):
+    if logger:
         _logger = logger
     else:
         _logger = logging.getLogger(__name__)
