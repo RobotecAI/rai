@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from geometry_msgs.msg import Point, Pose, Quaternion
 from rai.communication.ros2.connectors import ROS2ARIConnector
 
 from rai_sim.o3de.o3de_bridge import O3DExROS2Bridge, O3DExROS2SimulationConfig
@@ -119,3 +120,51 @@ class TestO3DExROS2Bridge(unittest.TestCase):
             signal.SIGINT
         )
         self.bridge.current_robotic_stack_process.wait.assert_called_once()
+
+    def test_get_available_spawnable_names(self):
+        # Mock the response
+        response = MagicMock()
+        response.payload.model_names = ["cube", "carrot"]
+        self.bridge._try_service_call = MagicMock(return_value=response)
+
+        names = self.bridge.get_available_spawnable_names()
+
+        self.bridge._try_service_call.assert_called_once()
+        self.assertEqual(names, ["cube", "carrot"])
+
+    def test_to_ros2_pose(self):
+        # Create a pose
+        pose = PoseModel(
+            translation=Translation(x=1.0, y=2.0, z=3.0),
+            rotation=Rotation(x=0.1, y=0.2, z=0.3, w=0.4),
+        )
+
+        # Convert to ROS2 pose
+        ros2_pose = self.bridge._to_ros2_pose(pose)
+
+        # Check the conversion
+        self.assertEqual(ros2_pose.position.x, 1.0)
+        self.assertEqual(ros2_pose.position.y, 2.0)
+        self.assertEqual(ros2_pose.position.z, 3.0)
+        self.assertEqual(ros2_pose.orientation.x, 0.1)
+        self.assertEqual(ros2_pose.orientation.y, 0.2)
+        self.assertEqual(ros2_pose.orientation.z, 0.3)
+        self.assertEqual(ros2_pose.orientation.w, 0.4)
+
+    def test_from_ros2_pose(self):
+        # Create a ROS2 pose
+        position = Point(x=1.0, y=2.0, z=3.0)
+        orientation = Quaternion(x=0.1, y=0.2, z=0.3, w=0.4)
+        ros2_pose = Pose(position=position, orientation=orientation)
+
+        # Convert to PoseModel
+        pose = self.bridge._from_ros2_pose(ros2_pose)
+
+        # Check the conversion
+        self.assertEqual(pose.translation.x, 1.0)
+        self.assertEqual(pose.translation.y, 2.0)
+        self.assertEqual(pose.translation.z, 3.0)
+        self.assertEqual(pose.rotation.x, 0.1)
+        self.assertEqual(pose.rotation.y, 0.2)
+        self.assertEqual(pose.rotation.z, 0.3)
+        self.assertEqual(pose.rotation.w, 0.4)
