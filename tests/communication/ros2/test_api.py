@@ -18,9 +18,6 @@ import time
 import pytest
 from action_msgs.msg import GoalStatus
 from action_msgs.srv import CancelGoal
-from rclpy.executors import MultiThreadedExecutor
-from rclpy.node import Node
-
 from rai.communication.ros2.api import (
     ConfigurableROS2TopicAPI,
     ROS2ActionAPI,
@@ -28,6 +25,8 @@ from rai.communication.ros2.api import (
     ROS2TopicAPI,
     TopicConfig,
 )
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.node import Node
 
 from .helpers import ActionServer_ as ActionServer
 from .helpers import (

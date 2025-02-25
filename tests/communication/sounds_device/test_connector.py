@@ -18,14 +18,13 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 import sounddevice
-from scipy.io import wavfile
-
 from rai.communication import HRIPayload
 from rai.communication.sound_device import SoundDeviceConfig, SoundDeviceError
 from rai.communication.sound_device.connector import (  # Replace with actual module name
     SoundDeviceConnector,
     SoundDeviceMessage,
 )
+from scipy.io import wavfile
 
 
 @pytest.fixture

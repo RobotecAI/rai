@@ -15,12 +15,6 @@
 import argparse
 
 import rclpy
-from rclpy.action import ActionClient
-from rclpy.callback_groups import ReentrantCallbackGroup
-from rclpy.executors import MultiThreadedExecutor
-from rclpy.node import Node
-from std_srvs.srv import Trigger
-
 from rai.node import RaiStateBasedLlmNode, describe_ros_image
 from rai.tools.ros.native import (
     GetCameraImage,
@@ -30,6 +24,12 @@ from rai.tools.ros.native import (
     Ros2ShowMsgInterfaceTool,
 )
 from rai.tools.time import WaitForSecondsTool
+from rclpy.action import ActionClient
+from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.node import Node
+from std_srvs.srv import Trigger
+
 from rai_interfaces.action import Task
 
 

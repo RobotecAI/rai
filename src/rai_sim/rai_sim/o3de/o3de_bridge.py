@@ -22,11 +22,11 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
+from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
+from rai.utils.ros_async import get_future_result
 from std_msgs.msg import Header
 from tf2_geometry_msgs import do_transform_pose
 
-from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
-from rai.utils.ros_async import get_future_result
 from rai_interfaces.srv import ManipulatorMoveTo
 from rai_sim.simulation_bridge import (
     Entity,
