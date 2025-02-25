@@ -15,12 +15,12 @@
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Generic, List, TypeVar, Union
+from typing import Any, Dict, Generic, List, Union
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from rai.messages import HumanMultimodalMessage
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
+from rai.messages import HumanMultimodalMessage
 from rai_sim.simulation_bridge import (
     PoseModel,
     SimulationBridge,
@@ -29,9 +29,6 @@ from rai_sim.simulation_bridge import (
     SpawnedEntity,
 )
 
-SimulationBridgeT = TypeVar(
-    "SimulationBridgeT", bound=SimulationBridge[SimulationConfig]
-)
 loggers_type = Union[RcutilsLogger, logging.Logger]
 
 
