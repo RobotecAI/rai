@@ -20,13 +20,13 @@ from typing import List
 
 import rclpy
 from langchain.tools import BaseTool
+from rai_open_set_vision.tools import GetGrabbingPointTool
+
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.ros.manipulation import GetObjectPositionsTool, MoveToPointTool
 from rai.tools.ros2.topics import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
 from rai.utils.model_initialization import get_llm_model
-from rai_open_set_vision.tools import GetGrabbingPointTool
-
 from rai_bench.benchmark_model import Benchmark, Task
 from rai_bench.o3de_test_bench.tasks import GrabCarrotTask, PlaceCubesTask
 from rai_sim.o3de.o3de_bridge import (
@@ -171,6 +171,9 @@ if __name__ == "__main__":
         )  # return to case position
         time.sleep(2)  # admire the end position for a second ;)
 
+    bench_logger.info("===============================================================")
+    bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
+    bench_logger.info("===============================================================")
     connector.shutdown()
     o3de.shutdown()
     rclpy.shutdown()
