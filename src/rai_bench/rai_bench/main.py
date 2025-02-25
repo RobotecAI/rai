@@ -20,13 +20,13 @@ from typing import List
 
 import rclpy
 from langchain.tools import BaseTool
-from rai_open_set_vision.tools import GetGrabbingPointTool
-
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.ros.manipulation import GetObjectPositionsTool, MoveToPointTool
 from rai.tools.ros2.topics import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
 from rai.utils.model_initialization import get_llm_model
+from rai_open_set_vision.tools import GetGrabbingPointTool
+
 from rai_bench.benchmark_model import Benchmark, Task
 from rai_bench.o3de_test_bench.tasks import GrabCarrotTask, PlaceCubesTask
 from rai_sim.o3de.o3de_bridge import (
@@ -34,7 +34,7 @@ from rai_sim.o3de.o3de_bridge import (
     O3DExROS2SimulationConfig,
     PoseModel,
 )
-from rai_sim.simulation_bridge import Rotation, SimulationConfig, Translation
+from rai_sim.simulation_bridge import Rotation, Translation
 
 if __name__ == "__main__":
     rclpy.init()
@@ -133,7 +133,7 @@ if __name__ == "__main__":
         configs_dir + "scene3.yaml",
         configs_dir + "scene4.yaml",
     ]
-    simulations_configs: List[SimulationConfig] = [
+    simulations_configs = [
         O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
         for path in scene_paths
     ]

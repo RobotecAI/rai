@@ -15,16 +15,17 @@
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, TypeVar, Union
+from typing import Any, Dict, Generic, List, TypeVar, Union
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from rai.messages import HumanMultimodalMessage
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from rai.messages import HumanMultimodalMessage
 from rai_sim.simulation_bridge import (
     PoseModel,
     SimulationBridge,
     SimulationConfig,
+    SimulationConfigT,
     SpawnedEntity,
 )
 
@@ -73,7 +74,7 @@ class Task(ABC):
 
     @abstractmethod
     def calculate_result(
-        self, simulation_bridge: SimulationBridge[SimulationConfig]
+        self, simulation_bridge: SimulationBridge[SimulationConfigT]
     ) -> float:
         """
         Calculate result of the task
@@ -135,10 +136,10 @@ class Task(ABC):
         return adjacent_count
 
 
-class Scenario:
+class Scenario(Generic[SimulationConfigT]):
     """Single instances are run separatly by benchmark"""
 
-    def __init__(self, task: Task, simulation_config: SimulationConfig) -> None:
+    def __init__(self, task: Task, simulation_config: SimulationConfigT) -> None:
         if not task.validate_config(simulation_config):
             raise ValueError("This scene is invalid for this task.")
         self.task = task
@@ -152,8 +153,8 @@ class Benchmark:
 
     def __init__(
         self,
-        simulation_bridge: SimulationBridge[SimulationConfig],
-        scenarios: list[Scenario],
+        simulation_bridge: SimulationBridge[SimulationConfigT],
+        scenarios: List[Scenario[SimulationConfigT]],
         logger: loggers_type | None = None,
     ) -> None:
         self.simulation_bridge = simulation_bridge
@@ -166,9 +167,9 @@ class Benchmark:
 
     @classmethod
     def create_scenarios(
-        cls, tasks: List[Task], simulation_configs: List[SimulationConfig]
-    ) -> list[Any]:
-        scenarios: List[Scenario] = []
+        cls, tasks: List[Task], simulation_configs: List[SimulationConfigT]
+    ) -> List[Scenario[SimulationConfigT]]:
+        scenarios: List[Scenario[SimulationConfigT]] = []
         for task in tasks:
             for sim_conf in simulation_configs:
                 try:
