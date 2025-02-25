@@ -155,6 +155,7 @@ class Benchmark:
         logger: loggers_type | None = None,
     ) -> None:
         self.simulation_bridge = simulation_bridge
+        self.num_of_scenarios = len(scenarios)
         self.scenarios = enumerate(iter(scenarios))
         self.results: List[Dict[str, Any]] = []
         if logger:
@@ -189,7 +190,7 @@ class Benchmark:
                 "======================================================================================"
             )
             self._logger.info(  # type: ignore
-                f"RUNNING SCENARIO NUMBER {i + 1}, TASK: {scenario.task.get_prompt()}"
+                f"RUNNING SCENARIO NUMBER {i + 1} / {self.num_of_scenarios}, TASK: {scenario.task.get_prompt()}"
             )
             initial_result = scenario.task.calculate_result(self.simulation_bridge)
             self._logger.info(f"RESULT OF THE INITIAL SETUP: {initial_result}")  # type: ignore
