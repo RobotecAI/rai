@@ -62,7 +62,6 @@ pytest-timeout = "^2.3.1"
 tomli-w = "^1.1.0"
 faster-whisper = "^1.1.1"
 pydub = "^0.25.1"
-opencv-python = "^4.11.0.86"
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.4"
 
