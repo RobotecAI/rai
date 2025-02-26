@@ -109,3 +109,9 @@ class OpenWakeWord(BaseVoiceDetectionModel):
                 self.model.reset()
                 return True, ret
         return False, ret
+
+    def reset(self):
+        """
+        Resets the wake word detection model.
+        """
+        self.model.reset()

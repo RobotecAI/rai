@@ -80,6 +80,15 @@ class BaseVoiceDetectionModel(ABC):
         """
         pass
 
+    @abstractmethod
+    def reset(self):
+        """
+        Abstract method for resetting the voice detection model.
+
+        Subclasses must implement this method to reset the internal state of the model.
+        """
+        pass
+
 
 class BaseTranscriptionModel(ABC):
     """

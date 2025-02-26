@@ -191,7 +191,6 @@ class VoiceRecognitionAgent(BaseAgent):
         voice_detected, output_parameters = self.vad(indata, {})
         self.logger.debug(f"Voice detected: {voice_detected}: {output_parameters}")
         should_record = False
-        # TODO: second condition is temporary
         if voice_detected and not self.recording_started:
             should_record = self._should_record(indata, output_parameters)
 
@@ -241,6 +240,7 @@ class VoiceRecognitionAgent(BaseAgent):
             detected, output = model(audio_data, input_parameters)
             self.logger.debug(f"detected {detected}, output {output}")
             if detected:
+                model.reset()
                 return True
         return False
 

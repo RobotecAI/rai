@@ -113,3 +113,9 @@ class SileroVAD(BaseVoiceDetectionModel):
         ret.update({self.model_name: {"vad_confidence": vad_confidence}})
 
         return vad_confidence > self.threshold, ret
+
+    def reset(self):
+        """
+        Resets the voice activity detection model.
+        """
+        self.model.reset()

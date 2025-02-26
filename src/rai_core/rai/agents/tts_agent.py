@@ -17,6 +17,7 @@ import logging
 from dataclasses import dataclass
 from threading import Event, Thread
 from typing import TYPE_CHECKING, Optional
+from uuid import uuid4
 
 from numpy._typing import NDArray
 from pydub import AudioSegment
@@ -99,8 +100,9 @@ class TextToSpeechAgent(BaseAgent):
         ros2_connector = self._setup_ros2_connector()
         super().__init__(connectors={"ros2": ros2_connector, "speaker": speaker})
 
-        self.text_queue = Queue()
-        self.audio_queue = Queue()
+        self.current_transcription_id = str(uuid4())[0:8]
+        self.text_queues: dict[str, Queue] = {self.current_transcription_id: Queue()}
+        self.audio_queues: dict[str, Queue] = {self.current_transcription_id: Queue()}
 
         self.tog_play_event = Event()
         self.stop_event = Event()
@@ -141,13 +143,15 @@ class TextToSpeechAgent(BaseAgent):
         if self.playback_data.playing:
             if self.playback_data.current_segment is None:
                 try:
-                    self.playback_data.current_segment = self.audio_queue.get(
-                        block=False
-                    )
+                    self.playback_data.current_segment = self.audio_queues[
+                        self.current_transcription_id
+                    ].get(block=False)
                     self.playback_data.data = np.array(
                         self.playback_data.current_segment.get_array_of_samples()  # type: ignore
                     ).reshape(-1, self.playback_data.channels)
                 except Empty:
+                    pass
+                except KeyError:
                     pass
             if self.playback_data.data is not None:
                 current_frame = self.playback_data.current_frame
@@ -177,13 +181,21 @@ class TextToSpeechAgent(BaseAgent):
 
     def _transcription_thread(self):
         while not self.terminate_agent.wait(timeout=0.01):
-            try:
-                data = self.text_queue.get(block=False)
-            except Empty:
-                continue
-            audio = self.model.get_speech(data)
-            if self.playback_data.playing:
-                self.audio_queue.put(audio)
+            if self.current_transcription_id in self.text_queues:
+                try:
+                    data = self.text_queues[self.current_transcription_id].get(
+                        block=False
+                    )
+                except Empty:
+                    continue
+                audio = self.model.get_speech(data)
+                try:
+                    self.audio_queues[self.current_transcription_id].put(audio)
+                except KeyError as e:
+                    self.logger.error(
+                        f"Could not find queue for {self.current_transcription_id}: queuse: {self.audio_queues.keys()}"
+                    )
+                    raise e
 
     def _setup_ros2_connector(self):
         to_human = TopicConfig(
@@ -208,8 +220,11 @@ class TextToSpeechAgent(BaseAgent):
     def _on_to_human_message(self, message: IROS2Message):
         assert isinstance(message, HRIMessage)
         msg = ROS2HRIMessage.from_ros2(message, "ai")
-        self.logger.debug(f"Receieved message from human: {message.text}")
-        self.text_queue.put(msg.text)
+        self.logger.info(f"Receieved message from human: {message.text}")
+        self.logger.warning(
+            f"Starting playback, current id: {self.current_transcription_id}"
+        )
+        self.text_queues[self.current_transcription_id].put(msg.text)
         self.playback_data.playing = True
 
     def _on_command_message(self, message: IROS2Message):
@@ -223,8 +238,16 @@ class TextToSpeechAgent(BaseAgent):
             self.playback_data.playing = False
         elif message.data == "stop":
             self.playback_data.playing = False
-            while not self.audio_queue.empty():
-                _ = self.audio_queue.get()
+            previous_id = self.current_transcription_id
+            self.logger.warning(f"Stopping playback, previous id: {previous_id}")
+            self.current_transcription_id = str(uuid4())[0:8]
+            self.audio_queues[self.current_transcription_id] = Queue()
+            self.text_queues[self.current_transcription_id] = Queue()
+            try:
+                del self.audio_queues[previous_id]
+                del self.text_queues[previous_id]
+            except KeyError:
+                pass
             self.playback_data.data = None
             self.playback_data.current_frame = 0
             self.playback_data.current_segment = None

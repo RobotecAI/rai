@@ -43,6 +43,7 @@ class LLMTextHandler(BaseCallbackHandler):
     def on_llm_new_token(self, token: str, **kwargs):
         self.token_buffer += token
         if len(self.token_buffer) > 100 or token in [".", "?", "!", ",", ";", ":"]:
+            logging.info(f"Sending token buffer: {self.token_buffer}")
             self.connector.send_all_targets(AIMessage(content=self.token_buffer))
             self.token_buffer = ""
 
@@ -55,6 +56,7 @@ class LLMTextHandler(BaseCallbackHandler):
         **kwargs,
     ):
         if self.token_buffer:
+            logging.info(f"Sending token buffer: {self.token_buffer}")
             self.connector.send_all_targets(AIMessage(content=self.token_buffer))
             self.token_buffer = ""
 
