@@ -313,18 +313,11 @@ class TestROS2ARIConnectorInterface(unittest.TestCase):
 
         for param_name, expected_type in expected_params.items():
             param = parameters[param_name]
-            if isinstance(expected_type, tuple):
-                self.assertIn(
-                    param.annotation,
-                    expected_type,
-                    f"Parameter '{param_name}' has incorrect type, expected one of {expected_type}, got: {param.annotation}",
-                )
-            else:
-                self.assertIs(
-                    param.annotation,
-                    expected_type,
-                    f"Parameter '{param_name}' has incorrect type, expected: {expected_type}, got: {param.annotation}",
-                )
+            self.assertIs(
+                param.annotation,
+                expected_type,
+                f"Parameter '{param_name}' has incorrect type, expected: {expected_type}, got: {param.annotation}",
+            )
 
         self.assertIs(
             signature.return_annotation,
