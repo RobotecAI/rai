@@ -61,7 +61,7 @@ class PlaceCubesTask(Task):
             )
 
         else:
-            ini_poses = [cube.pose for cube in initial_cubes]
+            initial_poses = [cube.pose for cube in initial_cubes]
             final_poses = [cube.pose for cube in final_cubes]
             # NOTE the specific coords that refer to for example
             # middle of the table can differ across simulations,
@@ -73,7 +73,7 @@ class PlaceCubesTask(Task):
                     if ini_cube.name == final_cube.name:
                         was_adjacent_initially = self.is_adjacent_to_any(
                             ini_cube.pose,
-                            [p for p in ini_poses if p != ini_cube.pose],
+                            [p for p in initial_poses if p != ini_cube.pose],
                             0.15,
                         )
                         is_adjacent_finally = self.is_adjacent_to_any(
