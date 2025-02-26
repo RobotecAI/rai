@@ -111,13 +111,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             target="get_available_spawnable_names",
             msg_type="gazebo_msgs/srv/GetWorldProperties",
         )
-        # NOTE (mkotynia) There is a bug in the gazebo_msgs/srv/GetWorldProperties service - payload.success is not set to True even if the service call is successful. It was reported to Kacper Dąbrowski and he is going to fix it.
-        # PR fixing the bug: https://github.com/o3de/o3de-extras/pull/828
-        # TODO (mkotynia) uncomment check if response.payload.success when the bug is fixed and remove workaround check if response.payload.model_names.
-
-        # if response.payload.success:
-        #     return response.payload.model_names
-        if response.payload.model_names:
+        if response.payload.success:
             return response.payload.model_names
         else:
             raise RuntimeError(
