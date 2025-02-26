@@ -19,9 +19,9 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Generic, List, Union
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from rai.messages import HumanMultimodalMessage
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
+from rai.messages import HumanMultimodalMessage
 from rai_sim.simulation_bridge import (
     PoseModel,
     SimulationBridge,
@@ -34,8 +34,7 @@ loggers_type = Union[RcutilsLogger, logging.Logger]
 
 
 class EntitiesMismatchException(Exception):
-    def __init__(self, message: str) -> None:
-        super().__init__(message)
+    pass
 
 
 class Task(ABC):

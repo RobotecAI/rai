@@ -9,13 +9,7 @@ The RAI Bench is a package including benchmarks and providing frame for creating
 Frame components can be found in `src/rai_bench/rai_bench/benchmark_model.py`
 
 - `Task` - abstract class for creating specific task. It introduces helper funtions that make it easier to calculate metrics/scores. Your custom tasks must implement a prompt got agent to do, a way to calculate a result and a validation if given scene config suits the task.
--
-- `Scenario` - class defined by a Scene and Task. Can be created manually like:
-
-  ```python
-
-  ```
-
+- `Scenario` - class defined by a Scene and Task.
 - `Benchmark` - class responsible for running and logging scenarios.
 
 ### O3DE TEST BENCHMARK
