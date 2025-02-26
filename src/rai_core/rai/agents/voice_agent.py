@@ -157,7 +157,7 @@ class VoiceRecognitionAgent(BaseAgent):
         """
         Clean exit the voice recognition agent, ensuring all transcription threads finish before termination.
         """
-        self.logger.info("Stopping voice agent")
+        self.logger.info("Stopping Voice Agent")
         self.running = False
         self.connectors["microphone"].terminate_action(self.listener_handle)
         assert isinstance(self.connectors["ros2_hri"], ROS2HRIConnector)
@@ -189,6 +189,7 @@ class VoiceRecognitionAgent(BaseAgent):
                 self.transcription_threads[thread_id]["joined"] = True
 
         voice_detected, output_parameters = self.vad(indata, {})
+        self.logger.debug(f"Voice detected: {voice_detected}: {output_parameters}")
         should_record = False
         # TODO: second condition is temporary
         if voice_detected and not self.recording_started:
@@ -238,7 +239,7 @@ class VoiceRecognitionAgent(BaseAgent):
     ) -> bool:
         for model in self.should_record_pipeline:
             detected, output = model(audio_data, input_parameters)
-            self.logger.info(f"detected {detected}, output {output}")
+            self.logger.debug(f"detected {detected}, output {output}")
             if detected:
                 return True
         return False
@@ -255,11 +256,15 @@ class VoiceRecognitionAgent(BaseAgent):
         self.transcription_threads[identifier]["event"].set()
 
     def _send_ros2_message(self, data: str, topic: str):
+        self.logger.debug(f"Sending message to {topic}: {data}")
         if topic == "/voice_commands":
             msg = ROS2ARIMessage({"data": data})
-            self.connectors["ros2_ari"].send_message(
-                msg, topic, msg_type="std_msgs/msg/String"
-            )
+            try:
+                self.connectors["ros2_ari"].send_message(
+                    msg, topic, msg_type="std_msgs/msg/String"
+                )
+            except Exception as e:
+                self.logger.error(f"Error sending message to {topic}: {e}")
         else:
             msg = ROS2HRIMessage(HRIPayload(text=data), "human")
             self.connectors["ros2_hri"].send_message(msg, topic)

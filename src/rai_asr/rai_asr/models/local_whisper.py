@@ -54,6 +54,15 @@ class LocalWhisper(BaseTranscriptionModel):
         self, model_name: str, sample_rate: int, language: str = "en", **kwargs
     ):
         super().__init__(model_name, sample_rate, language)
+        self.decode_options = {
+            "language": language,  # Set language to English
+            "task": "transcribe",  # Set task to transcribe (not translate)
+            "fp16": False,  # Use FP32 instead of FP16 for better precision
+            "without_timestamps": True,  # Don't include timestamps in output
+            "suppress_tokens": [-1],  # Default tokens to suppress
+            "suppress_blank": True,  # Suppress blank outputs
+            "beam_size": 5,  # Beam size for beam search
+        }
         if torch.cuda.is_available():
             self.whisper = whisper.load_model(self.model_name, device="cuda", **kwargs)
         else:
@@ -79,9 +88,10 @@ class LocalWhisper(BaseTranscriptionModel):
             The transcribed text from the audio input.
         """
         normalized_data = data.astype(np.float32) / 32768.0
+
         result = whisper.transcribe(
-            self.whisper, normalized_data
-        )  # TODO: handling of additional transcribe arguments (perhaps in model init)
+            self.whisper, normalized_data, **self.decode_options
+        )
         transcription = result["text"]
         self.logger.info("transcription: %s", transcription)
         transcription = cast(str, transcription)

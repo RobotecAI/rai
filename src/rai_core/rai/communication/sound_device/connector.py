@@ -15,13 +15,6 @@
 
 from typing import Callable, Literal, NamedTuple, Optional, Tuple
 
-try:
-    import sounddevice as sd
-except ImportError as e:
-    raise ImportError(
-        "The sounddevice package is required to use the SoundDeviceConnector."
-    ) from e
-
 from rai.communication import HRIConnector, HRIMessage, HRIPayload
 from rai.communication.sound_device import (
     SoundDeviceAPI,
@@ -83,7 +76,6 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
             self.configure_device(dev_target, dev_config)
 
         super().__init__(configured_targets, configured_sources)
-        sd.default.latency = ("low", "low")  # type: ignore
 
     def get_audio_params(self, target: str) -> AudioParams:
         return AudioParams(

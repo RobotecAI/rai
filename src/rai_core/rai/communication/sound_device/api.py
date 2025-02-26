@@ -21,12 +21,6 @@ from numpy._typing import NDArray
 from pydub import AudioSegment
 from scipy.signal import resample
 
-try:
-    import sounddevice as sd
-except ImportError:
-    logging.warning("Install sound_device module to use sound device features!")
-    sd = None
-
 
 class SoundDeviceError(Exception):
     def __init__(self, msg: str):
@@ -91,8 +85,11 @@ class SoundDeviceAPI:
         self.device_name = ""
 
         self.config = config
-        if not sd:
+        try:
+            import sounddevice as sd
+        except ImportError:
             raise SoundDeviceError("SoundDeviceAPI requires sound_device module!")
+        sd.default.latency = ("low", "low")  # type: ignore
         if config.device_name:
             self.device_name = config.device_name
             devices = sd.query_devices()
@@ -146,7 +143,10 @@ class SoundDeviceAPI:
         """
         if not self.write_flag:
             raise SoundDeviceError(f"{self.device_name} does not support writing!")
-        assert sd is not None
+        try:
+            import sounddevice as sd
+        except ImportError:
+            raise SoundDeviceError("SoundDeviceAPI requires sound_device module!")
         audio = np.array(data.get_array_of_samples())
         sd.play(
             audio,
@@ -187,7 +187,10 @@ class SoundDeviceAPI:
 
         if not self.read_flag:
             raise SoundDeviceError(f"{self.device_name} does not support reading!")
-        assert sd is not None
+        try:
+            import sounddevice as sd
+        except ImportError:
+            raise SoundDeviceError("SoundDeviceAPI requires sound_device module!")
         frames = int(time * self.sample_rate)
         recording = sd.rec(
             frames=frames,
@@ -214,7 +217,10 @@ class SoundDeviceAPI:
         - This is a convenience function to stop the sound device from playing or recording.
         - It will stop any sound that is currently playing and any recording currently happening.
         """
-        assert sd is not None
+        try:
+            import sounddevice as sd
+        except ImportError:
+            raise SoundDeviceError("SoundDeviceAPI requires sound_device module!")
         sd.stop()
 
     def wait(self):
@@ -226,7 +232,10 @@ class SoundDeviceAPI:
         - This is a convenience function to wait for the sound device to finish playing or recording.
         - It will block until the sound is played or recorded.
         """
-        assert sd is not None
+        try:
+            import sounddevice as sd
+        except ImportError:
+            raise SoundDeviceError("SoundDeviceAPI requires sound_device module!")
         sd.wait()
 
     def open_write_stream(
@@ -241,7 +250,10 @@ class SoundDeviceAPI:
                 f"{self.device_name} does not support streaming writing!"
             )
 
-        assert sd is not None
+        try:
+            import sounddevice as sd
+        except ImportError:
+            raise SoundDeviceError("SoundDeviceAPI requires sound_device module!")
         from sounddevice import CallbackFlags
 
         def callback(indata: NDArray, frames: int, time: Any, status: CallbackFlags):
@@ -257,12 +269,11 @@ class SoundDeviceAPI:
 
         try:
             assert sd is not None
-            print(sample_rate)
             sample_rate = self.sample_rate if sample_rate is None else sample_rate
-            print(sample_rate)
-            print(channels)
             channels = self.out_channels if channels is None else channels
-            print(channels)
+            logging.warning(
+                f"Opening Output Stream with sample_rate: {sample_rate} channels: {channels} device: {self.device_number} dtype: {self.config.dtype}"
+            )
             self.out_stream = sd.OutputStream(
                 samplerate=sample_rate,
                 channels=channels,
@@ -313,7 +324,10 @@ class SoundDeviceAPI:
             on_feedback(indata, flag_dict)
 
         try:
-            assert sd is not None
+            import sounddevice as sd
+        except ImportError:
+            raise SoundDeviceError("SoundDeviceAPI requires sound_device module!")
+        try:
             if self.config.consumer_sampling_rate is None:
                 window_size_samples = self.config.block_size * self.sample_rate
             else:
@@ -323,6 +337,9 @@ class SoundDeviceAPI:
                     / self.config.consumer_sampling_rate
                 )
 
+            logging.warning(
+                f"Opening Input Stream with sample_rate: {self.sample_rate} channels: {self.in_channels} device: {self.device_number} dtype: {self.config.dtype} blocksize: {window_size_samples}"
+            )
             self.in_stream = sd.InputStream(
                 samplerate=self.sample_rate,
                 channels=self.in_channels,

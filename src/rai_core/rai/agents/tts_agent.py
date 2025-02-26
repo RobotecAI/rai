@@ -170,6 +170,7 @@ class TextToSpeechAgent(BaseAgent):
         """
         Clean exit the text-to-speech agent, terminating playback and joining the transcription thread.
         """
+        self.logger.info("Stopping TextToSpeechAgent")
         self.terminate_agent.set()
         if self.transcription_thread is not None:
             self.transcription_thread.join()
@@ -207,7 +208,7 @@ class TextToSpeechAgent(BaseAgent):
     def _on_to_human_message(self, message: IROS2Message):
         assert isinstance(message, HRIMessage)
         msg = ROS2HRIMessage.from_ros2(message, "ai")
-        self.logger.info(f"Receieved message from human: {message.text}")
+        self.logger.debug(f"Receieved message from human: {message.text}")
         self.text_queue.put(msg.text)
 
     def _on_command_message(self, message: IROS2Message):
