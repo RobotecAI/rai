@@ -39,10 +39,12 @@ class EntitiesMismatchException(Exception):
 
 class Task(ABC):
     """
-    Task to perform.
-    Specyfic implementation should implement a way to calculate results.
-    Abstract provides utility functions for common calculations, that can be usefull when
-    creating metrics
+    Abstract of a Task. Provides utility functions for common calculations
+    that can be helfull when creating metrics.
+    Specific child classes should implement:
+    - get_prompt method
+    - validate_config
+    - calculate_result
     """
 
     def __init__(
@@ -56,6 +58,7 @@ class Task(ABC):
 
     @abstractmethod
     def get_prompt(self) -> str:
+        """Returns the task instruction - the prompt that will be passed to agent"""
         pass
 
     @abstractmethod
@@ -74,7 +77,8 @@ class Task(ABC):
         self, simulation_bridge: SimulationBridge[SimulationConfigT]
     ) -> float:
         """
-        Calculate result of the task
+        Calculates result of the task, based on info retrieved from simulation.
+        Should return score between 0.0 and 1.
         """
         pass
 
@@ -134,7 +138,10 @@ class Task(ABC):
 
 
 class Scenario(Generic[SimulationConfigT]):
-    """Single instances are run separatly by benchmark"""
+    """
+    A Scenarios are defined by a pair of Task and Simlation Config.
+    Each Scenario is executed separatly by a Benchmark.
+    """
 
     def __init__(
         self,
@@ -153,7 +160,9 @@ class Scenario(Generic[SimulationConfigT]):
 
 class Benchmark:
     """
-    Defined by a set of scenarios to be done
+    Benchmark represents a set of Scenarios to be executed and evaluated.
+    It manages the execution, logs results, and provides functionality
+    for tracking and exporting performance metrics.
     """
 
     def __init__(
