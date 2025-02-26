@@ -52,6 +52,9 @@ def sample_o3dexros2_config(tmp_path: Path) -> Path:
     yaml_content = """
     binary_path: /path/to/binary
     robotic_stack_command: "ros2 launch robotic_stack.launch.py"
+    required_services: []
+    required_topics: []
+    required_actions: []
     """
     file_path = tmp_path / "test_o3dexros2_config.yaml"
     file_path.write_text(yaml_content)

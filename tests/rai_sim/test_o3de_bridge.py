@@ -81,6 +81,9 @@ class TestO3DExROS2Bridge(unittest.TestCase):
             binary_path=Path("/path/to/binary"),
             robotic_stack_command="ros2 launch robot.launch.py",
             entities=[self.test_entity],
+            required_actions=[],
+            required_services=[],
+            required_topics=[],
         )
 
     def test_init(self):
