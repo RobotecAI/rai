@@ -18,13 +18,16 @@ import signal
 import subprocess
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import yaml
-from geometry_msgs.msg import Point, Pose, Quaternion
+from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
+from rai.utils.ros_async import get_future_result
+from std_msgs.msg import Header
 from tf2_geometry_msgs import do_transform_pose
 
+from rai_interfaces.srv import ManipulatorMoveTo
 from rai_sim.simulation_bridge import (
     Entity,
     PoseModel,
@@ -40,6 +43,9 @@ from rai_sim.simulation_bridge import (
 class O3DExROS2SimulationConfig(SimulationConfig):
     binary_path: Path
     robotic_stack_command: str
+    required_services: List[str]
+    required_topics: List[str]
+    required_actions: List[str]
 
     @classmethod
     def load_config(
@@ -199,6 +205,35 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             )
         return SceneState(entities=entities)
 
+    def _is_robotic_stack_ready(
+        self, simulation_config: O3DExROS2SimulationConfig, retries: int = 30
+    ) -> bool:
+        i = 0
+        while i < retries:
+            topics = self.connector.get_topics_names_and_types()
+            services = self.connector.node.get_service_names_and_types()
+            topics_names = [tp[0] for tp in topics]
+            service_names = [srv[0] for srv in services]
+            self.logger.info(
+                f"required services: {simulation_config.required_services}"
+            )
+            self.logger.info(f"required topics: {simulation_config.required_topics}")
+            self.logger.info(f"required actions: {simulation_config.required_actions}")
+            # NOTE actions will be listed in services and topics
+            if (
+                all(srv in service_names for srv in simulation_config.required_services)
+                and all(tp in topics_names for tp in simulation_config.required_topics)
+                and all(
+                    ac in service_names for ac in simulation_config.required_actions
+                )
+            ):
+                self.logger.info("All required services are available.")
+                return True
+
+            time.sleep(5)
+            retries += 1
+        return False
+
     def setup_scene(self, simulation_config: O3DExROS2SimulationConfig):
         if self.current_binary_path != simulation_config.binary_path:
             if self.current_sim_process:
@@ -210,6 +245,11 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         else:
             while self.spawned_entities:
                 self._despawn_entity(self.spawned_entities[0])
+
+        if not self._is_robotic_stack_ready(simulation_config=simulation_config):
+            raise RuntimeError(
+                "Not all required services, topics and actions are available"
+            )
 
         for entity in simulation_config.entities:
             self._spawn_entity(entity)
@@ -304,3 +344,52 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         )
 
         return PoseModel(translation=translation, rotation=rotation)
+
+
+class O3DEngineArmManipulationBridge(O3DExROS2Bridge):
+    def move_arm(
+        self,
+        pose: PoseModel,
+        initial_gripper_state: bool,
+        final_gripper_state: bool,
+        frame_id: str,
+    ):
+        """Moves arm to a given position
+
+        Args:
+            pose (PoseModel): where to move arm
+            initial_gripper_state (bool): False means closed grip, True means open grip
+            final_gripper_state (bool): False means closed grip, True means open grip
+            frame_id (str): reference frame
+        """
+
+        request = ManipulatorMoveTo.Request()
+        request.initial_gripper_state = initial_gripper_state
+        request.final_gripper_state = final_gripper_state
+
+        request.target_pose = PoseStamped()
+        request.target_pose.header = Header()
+        request.target_pose.header.frame_id = frame_id
+
+        request.target_pose.pose.position.x = pose.translation.x
+        request.target_pose.pose.position.x = pose.translation.y
+        request.target_pose.pose.position.z = pose.translation.z
+
+        if pose.rotation:
+            request.target_pose.pose.orientation.x = pose.rotation.x
+            request.target_pose.pose.orientation.y = pose.rotation.y
+            request.target_pose.pose.orientation.z = pose.rotation.z
+            request.target_pose.pose.orientation.w = pose.rotation.w
+
+        client = self.connector.node.create_client(
+            ManipulatorMoveTo,
+            "/manipulator_move_to",
+        )
+        while not client.wait_for_service(timeout_sec=5.0):
+            self.connector.node.get_logger().info("Service not available, waiting...")
+
+        self.connector.node.get_logger().info("Making request to arm manipulator...")
+        future = client.call_async(request)
+        result = get_future_result(future, timeout_sec=5.0)
+
+        self.connector.node.get_logger().debug(f"Moving arm result: {result}")

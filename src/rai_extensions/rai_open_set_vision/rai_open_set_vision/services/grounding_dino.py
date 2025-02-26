@@ -43,9 +43,7 @@ GDINO_SERVICE_NAME = "grounding_dino_classify"
 class GDinoService(Node):
     def __init__(self):
         super().__init__(node_name=GDINO_NODE_NAME, parameter_overrides=[])
-        self.srv = self.create_service(
-            RAIGroundingDino, GDINO_SERVICE_NAME, self.classify_callback
-        )
+
         self.declare_parameter("weights_path", "")
         try:
             weight_path = self.get_parameter("weights_path").value
@@ -56,6 +54,10 @@ class GDinoService(Node):
         except Exception:
             self.get_logger().error("Could not load model")
             raise Exception("Could not load model")
+
+        self.srv = self.create_service(
+            RAIGroundingDino, GDINO_SERVICE_NAME, self.classify_callback
+        )
 
     def _init_weight_path(self) -> Path:
         try:

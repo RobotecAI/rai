@@ -34,9 +34,6 @@ GSAM_SERVICE_NAME = "grounded_sam_segment"
 class GSamService(Node):
     def __init__(self):
         super().__init__(node_name=GSAM_NODE_NAME, parameter_overrides=[])
-        self.srv = self.create_service(
-            RAIGroundedSam, GSAM_SERVICE_NAME, self.segment_callback
-        )
 
         self.declare_parameter("weights_path", "")
         try:
@@ -48,6 +45,10 @@ class GSamService(Node):
         except Exception:
             self.get_logger().error("Could not load model")
             raise Exception("Could not load model")
+
+        self.srv = self.create_service(
+            RAIGroundedSam, GSAM_SERVICE_NAME, self.segment_callback
+        )
 
     def _init_weight_path(self):
         try:

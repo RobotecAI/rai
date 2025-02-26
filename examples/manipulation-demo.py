@@ -12,37 +12,37 @@
 # See the License for the specific language goveself.rning permissions and
 # limitations under the License.
 
-import threading
 
 import rclpy
 import rclpy.qos
 from langchain_core.messages import HumanMessage
 from rai.agents.conversational_agent import create_conversational_agent
-from rai.node import RaiBaseNode
+from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.ros.manipulation import GetObjectPositionsTool, MoveToPointTool
-from rai.tools.ros.native import GetCameraImage, Ros2GetTopicsNamesAndTypesTool
+from rai.tools.ros2.topics import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
 from rai.utils.model_initialization import get_llm_model
+from rai_open_set_vision.tools import GetGrabbingPointTool
 
 
 def create_agent():
     rclpy.init()
-    node = RaiBaseNode(node_name="manipulation_demo")
+    connector = ROS2ARIConnector()
+    node = connector.node
     node.declare_parameter("conversion_ratio", 1.0)
-
-    threading.Thread(target=node.spin).start()
 
     tools = [
         GetObjectPositionsTool(
-            node=node,
+            connector=connector,
             target_frame="panda_link0",
             source_frame="RGBDCamera5",
             camera_topic="/color_image5",
             depth_topic="/depth_image5",
             camera_info_topic="/color_camera_info5",
+            get_grabbing_point_tool=GetGrabbingPointTool(connector=connector),
         ),
-        MoveToPointTool(node=node, manipulator_frame="panda_link0"),
-        GetCameraImage(node=node),
-        Ros2GetTopicsNamesAndTypesTool(node=node),
+        MoveToPointTool(connector=connector, manipulator_frame="panda_link0"),
+        GetROS2ImageTool(connector=connector),
+        GetROS2TopicsNamesAndTypesTool(connector=connector),
     ]
 
     llm = get_llm_model(model_type="complex_model", streaming=True)
