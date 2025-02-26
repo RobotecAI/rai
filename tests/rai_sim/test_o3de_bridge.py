@@ -221,6 +221,14 @@ class TestROS2ARIConnectorInterface(unittest.TestCase):
             hasattr(connector, "receive_message"), "receive_message method is missing"
         )
         self.assertTrue(hasattr(connector, "shutdown"), "shutdown method is missing")
+        self.assertTrue(
+            hasattr(connector, "get_topics_names_and_types"),
+            "get_topics_names_and_types method is missing",
+        )
+        self.assertTrue(
+            hasattr(connector, "get_service_names_and_types"),
+            "get_service_names_and_types method is missing",
+        )
 
     def test_get_transform_signature(self):
         signature = inspect.signature(self.connector.get_transform)
