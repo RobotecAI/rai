@@ -22,7 +22,7 @@ from pydantic import ValidationError
 
 from rai_sim.simulation_bridge import (
     Entity,
-    PoseModel,
+    Pose,
     Rotation,
     SceneState,
     SimulationBridge,
@@ -41,10 +41,8 @@ def create_rotation(x: float, y: float, z: float, w: float) -> Rotation:
     return Rotation(x=x, y=y, z=z, w=w)
 
 
-def create_pose(
-    translation: Translation, rotation: Optional[Rotation] = None
-) -> PoseModel:
-    return PoseModel(translation=translation, rotation=rotation)
+def create_pose(translation: Translation, rotation: Optional[Rotation] = None) -> Pose:
+    return Pose(translation=translation, rotation=rotation)
 
 
 # Test Cases
@@ -78,7 +76,7 @@ def test_pose():
     translation = create_translation(x=1.1, y=2.2, z=3.3)
     rotation = Rotation(x=0.1, y=0.2, z=0.3, w=0.4)
 
-    pose = PoseModel(translation=translation, rotation=rotation)
+    pose = Pose(translation=translation, rotation=rotation)
 
     assert isinstance(pose.translation, Translation)
     assert isinstance(pose.rotation, Rotation)
@@ -104,7 +102,7 @@ def test_entity():
 
     assert isinstance(entity.name, str)
     assert isinstance(entity.prefab_name, str)
-    assert isinstance(entity.pose, PoseModel)
+    assert isinstance(entity.pose, Pose)
 
     assert entity.name == "test_cube"
     assert entity.prefab_name == "cube"
@@ -125,7 +123,7 @@ def test_spawned_entity():
 
     assert isinstance(spawned_entity.name, str)
     assert isinstance(spawned_entity.prefab_name, str)
-    assert isinstance(spawned_entity.pose, PoseModel)
+    assert isinstance(spawned_entity.pose, Pose)
     assert isinstance(spawned_entity.id, str)
 
     assert spawned_entity.id == "id_123"
@@ -194,7 +192,7 @@ class MockSimulationBridge(SimulationBridge[SimulationConfig]):
         """Mock implementation of _despawn_entity."""
         self.spawned_entities = [e for e in self.spawned_entities if e.id != entity.id]
 
-    def get_object_pose(self, entity: SpawnedEntity) -> PoseModel:
+    def get_object_pose(self, entity: SpawnedEntity) -> Pose:
         """Mock implementation of get_object_pose."""
         for spawned_entity in self.spawned_entities:
             if spawned_entity.id == entity.id:
@@ -216,7 +214,7 @@ class TestSimulationBridge(unittest.TestCase):
         self.test_entity1: Entity = Entity(
             name="test_entity1",
             prefab_name="test_prefab1",
-            pose=PoseModel(
+            pose=Pose(
                 translation=Translation(x=1.0, y=2.0, z=3.0),
                 rotation=Rotation(x=0.0, y=0.0, z=0.0, w=1.0),
             ),
@@ -225,7 +223,7 @@ class TestSimulationBridge(unittest.TestCase):
         self.test_entity2: Entity = Entity(
             name="test_entity2",
             prefab_name="test_prefab2",
-            pose=PoseModel(translation=Translation(x=4.0, y=5.0, z=6.0), rotation=None),
+            pose=Pose(translation=Translation(x=4.0, y=5.0, z=6.0), rotation=None),
         )
 
         # Create a test configuration
@@ -307,7 +305,7 @@ class TestSimulationBridge(unittest.TestCase):
             id="non_existent",
             name="non_existent",
             prefab_name="non_existent",
-            pose=PoseModel(translation=Translation(x=0.0, y=0.0, z=0.0)),
+            pose=Pose(translation=Translation(x=0.0, y=0.0, z=0.0)),
         )
 
         with self.assertRaises(ValueError):

@@ -21,7 +21,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
-from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
+from geometry_msgs.msg import Point, PoseStamped, Quaternion
+from geometry_msgs.msg import Pose as ROS2Pose
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from rai.utils.ros_async import get_future_result
 from std_msgs.msg import Header
@@ -30,7 +31,7 @@ from tf2_geometry_msgs import do_transform_pose
 from rai_interfaces.srv import ManipulatorMoveTo
 from rai_sim.simulation_bridge import (
     Entity,
-    PoseModel,
+    Pose,
     Rotation,
     SceneState,
     SimulationBridge,
@@ -176,10 +177,11 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
                 f"Failed to delete entity {entity.name}. Response: {response.payload.status_message}"
             )
 
-    def get_object_pose(self, entity: SpawnedEntity) -> PoseModel:
+    def get_object_pose(self, entity: SpawnedEntity) -> Pose:
         object_frame = entity.name + "/"
         ros2_pose = do_transform_pose(
-            Pose(), self.connector.get_transform(object_frame + "odom", object_frame)
+            ROS2Pose(),
+            self.connector.get_transform(object_frame + "odom", object_frame),
         )
         return self._from_ros2_pose(ros2_pose)
 
@@ -300,7 +302,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         return response  # type: ignore
 
     # NOTE (mkotynia) probably to be refactored, other bridges may also want to use pose conversion to/from ROS2 format
-    def _to_ros2_pose(self, pose: PoseModel) -> Pose:
+    def _to_ros2_pose(self, pose: Pose) -> ROS2Pose:
         """
         Converts pose in PoseModel format to pose in ROS2 Pose format.
         """
@@ -318,11 +320,11 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         else:
             orientation = Quaternion()
 
-        ros2_pose = Pose(position=position, orientation=orientation)
+        ros2_pose = ROS2Pose(position=position, orientation=orientation)
 
         return ros2_pose
 
-    def _from_ros2_pose(self, pose: Pose) -> PoseModel:
+    def _from_ros2_pose(self, pose: ROS2Pose) -> Pose:
         """
         Converts ROS2 pose to PoseModel format
         """
@@ -340,13 +342,13 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             w=pose.orientation.w,  # type: ignore
         )
 
-        return PoseModel(translation=translation, rotation=rotation)
+        return Pose(translation=translation, rotation=rotation)
 
 
 class O3DEngineArmManipulationBridge(O3DExROS2Bridge):
     def move_arm(
         self,
-        pose: PoseModel,
+        pose: Pose,
         initial_gripper_state: bool,
         final_gripper_state: bool,
         frame_id: str,

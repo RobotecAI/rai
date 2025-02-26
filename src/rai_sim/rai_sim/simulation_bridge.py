@@ -43,7 +43,7 @@ class Rotation(BaseModel):
     w: float = Field(description="W component of the quaternion")
 
 
-class PoseModel(BaseModel):
+class Pose(BaseModel):
     """
     Represents the complete pose (position and orientation) of an object.
     """
@@ -66,7 +66,7 @@ class Entity(BaseModel):
     prefab_name: str = Field(
         description="Name of the prefab resource to use for spawning this entity"
     )
-    pose: PoseModel = Field(description="Initial pose of the entity")
+    pose: Pose = Field(description="Initial pose of the entity")
 
 
 class SpawnedEntity(Entity):
@@ -233,7 +233,7 @@ class SimulationBridge(ABC, Generic[SimulationConfigT]):
         pass
 
     @abstractmethod
-    def get_object_pose(self, entity: SpawnedEntity) -> PoseModel:
+    def get_object_pose(self, entity: SpawnedEntity) -> Pose:
         """
         Gets the current pose of a spawned entity.
 

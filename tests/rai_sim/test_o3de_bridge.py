@@ -22,7 +22,8 @@ from unittest.mock import MagicMock, patch
 
 import rclpy
 import rclpy.qos
-from geometry_msgs.msg import Point, Pose, Quaternion, TransformStamped
+from geometry_msgs.msg import Point, Quaternion, TransformStamped
+from geometry_msgs.msg import Pose as ROS2Pose
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
@@ -30,7 +31,7 @@ from rclpy.qos import QoSProfile
 from rai_sim.o3de.o3de_bridge import O3DExROS2Bridge, O3DExROS2SimulationConfig
 from rai_sim.simulation_bridge import (
     Entity,
-    PoseModel,
+    Pose,
     Rotation,
     SpawnedEntity,
     Translation,
@@ -62,7 +63,7 @@ class TestO3DExROS2Bridge(unittest.TestCase):
         self.test_entity = Entity(
             name="test_entity1",
             prefab_name="cube",
-            pose=PoseModel(
+            pose=Pose(
                 translation=Translation(x=1.0, y=2.0, z=3.0),
                 rotation=Rotation(x=0.0, y=0.0, z=0.0, w=1.0),
             ),
@@ -72,7 +73,7 @@ class TestO3DExROS2Bridge(unittest.TestCase):
             id="entity_id_123",
             name="test_entity1",
             prefab_name="cube",
-            pose=PoseModel(
+            pose=Pose(
                 translation=Translation(x=1.0, y=2.0, z=3.0),
                 rotation=Rotation(x=0.0, y=0.0, z=0.0, w=1.0),
             ),
@@ -158,7 +159,7 @@ class TestO3DExROS2Bridge(unittest.TestCase):
 
     def test_to_ros2_pose(self):
         # Create a pose
-        pose = PoseModel(
+        pose = Pose(
             translation=Translation(x=1.0, y=2.0, z=3.0),
             rotation=Rotation(x=0.1, y=0.2, z=0.3, w=0.4),
         )
@@ -179,7 +180,7 @@ class TestO3DExROS2Bridge(unittest.TestCase):
         # Create a ROS2 pose
         position = Point(x=1.0, y=2.0, z=3.0)
         orientation = Quaternion(x=0.1, y=0.2, z=0.3, w=0.4)
-        ros2_pose = Pose(position=position, orientation=orientation)
+        ros2_pose = ROS2Pose(position=position, orientation=orientation)
 
         # Convert to PoseModel
         pose = self.bridge._from_ros2_pose(ros2_pose)

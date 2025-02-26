@@ -32,7 +32,7 @@ from rai_bench.o3de_test_bench.tasks import GrabCarrotTask, PlaceCubesTask
 from rai_sim.o3de.o3de_bridge import (
     O3DEngineArmManipulationBridge,
     O3DExROS2SimulationConfig,
-    PoseModel,
+    Pose,
 )
 from rai_sim.simulation_bridge import Rotation, Translation
 
@@ -152,7 +152,7 @@ if __name__ == "__main__":
     )
 
     # custom request to arm
-    base_arm_pose = PoseModel(
+    base_arm_pose = Pose(
         translation=Translation(x=0.5, y=0.1, z=0.3),
         rotation=Rotation(x=1.0, y=0.0, z=0.0, w=0.0),
     )
