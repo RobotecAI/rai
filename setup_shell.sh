@@ -30,3 +30,6 @@ esac
 
 export PYTHONPATH
 PYTHONPATH="$(dirname "$(dirname "$(poetry run which python)")")/lib/python$(poetry run python --version | awk '{print $2}' | cut -d. -f1,2)/site-packages:$PYTHONPATH"
+PYTHONPATH="src/rai_core:$PYTHONPATH"
+PYTHONPATH="src/rai_asr:$PYTHONPATH"
+PYTHONPATH="src/rai_tts:$PYTHONPATH"

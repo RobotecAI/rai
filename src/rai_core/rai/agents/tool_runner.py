@@ -69,8 +69,13 @@ class ToolRunner(RunnableCallable):
                 ts = time.perf_counter()
                 output = self.tools_by_name[call["name"]].invoke(call, config)  # type: ignore
                 te = time.perf_counter() - ts
+                tool_output_log = (
+                    str(output.content)[:1000] + "..."
+                    if len(str(output.content)) > 1000
+                    else ""
+                )
                 self.logger.info(
-                    f"Tool {call['name']} completed in {te:.2f} seconds. Tool output: {str(output.content)[:100]}{'...' if len(str(output.content)) > 100 else ''}"
+                    f"Tool {call['name']} completed in {te:.2f} seconds. Tool output: {tool_output_log}"
                 )
                 self.logger.debug(
                     f"Tool {call['name']} output: \n\n{str(output.content)}"
