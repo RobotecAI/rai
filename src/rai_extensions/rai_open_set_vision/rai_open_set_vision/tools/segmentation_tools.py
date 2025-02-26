@@ -19,16 +19,16 @@ import numpy as np
 import rclpy
 import sensor_msgs.msg
 from pydantic import Field
-from rai.node import RaiBaseNode
-from rai.tools.ros import Ros2BaseInput, Ros2BaseTool
-from rai.tools.ros.utils import convert_ros_img_to_base64, convert_ros_img_to_ndarray
-from rai.utils.ros_async import get_future_result
 from rclpy import Future
 from rclpy.exceptions import (
     ParameterNotDeclaredException,
     ParameterUninitializedException,
 )
 
+from rai.node import RaiBaseNode
+from rai.tools.ros import Ros2BaseInput, Ros2BaseTool
+from rai.tools.ros.utils import convert_ros_img_to_base64, convert_ros_img_to_ndarray
+from rai.utils.ros_async import get_future_result
 from rai_interfaces.srv import RAIGroundedSam, RAIGroundingDino
 from rai_open_set_vision import GDINO_SERVICE_NAME
 

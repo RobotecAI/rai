@@ -10,10 +10,10 @@ embeddings_model = "amazon.titan-embed-text-v1"
 region_name = "us-east-1"
 
 [openai]
-simple_model = "gpt-4o-mini"
-complex_model = "gpt-4o"
+simple_model = "llama3.2-vision-tools"
+complex_model = "llama3.2-vision-tools"
 embeddings_model = "text-embedding-ada-002"
-base_url = "https://api.openai.com/v1/" # for openai compatible apis
+base_url = "http://localhost:11434/v1" # for openai compatible apis
 
 [ollama]
 simple_model = "llama3.2"
