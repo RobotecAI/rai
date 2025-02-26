@@ -226,8 +226,8 @@ class TestROS2ARIConnectorInterface(unittest.TestCase):
             "get_topics_names_and_types method is missing",
         )
         self.assertTrue(
-            hasattr(connector, "get_service_names_and_types"),
-            "get_service_names_and_types method is missing",
+            hasattr(connector, "node"),
+            "node property is missing",
         )
 
     def test_get_transform_signature(self):
