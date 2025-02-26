@@ -17,13 +17,14 @@ import signal
 import typing
 import unittest
 from pathlib import Path
-from typing import Optional, get_args, get_origin
+from typing import List, Optional, Tuple, get_args, get_origin
 from unittest.mock import MagicMock, patch
 
 import rclpy
 import rclpy.qos
 from geometry_msgs.msg import Point, Pose, Quaternion, TransformStamped
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
+from rclpy.node import Node
 from rclpy.qos import QoSProfile
 
 from rai_sim.o3de.o3de_bridge import O3DExROS2Bridge, O3DExROS2SimulationConfig
@@ -330,3 +331,33 @@ class TestROS2ARIConnectorInterface(unittest.TestCase):
             ROS2ARIMessage,
             f"Return type is incorrect, expected: ROS2ARIMessage, got: {signature.return_annotation}",
         )
+
+    def test_get_topics_names_and_types_signature(self):
+        signature = inspect.signature(self.connector.get_topics_names_and_types)
+        parameters = signature.parameters
+
+        expected_params: dict[str, type] = {}
+
+        assert list(parameters.keys()) == list(expected_params.keys()), (
+            f"Parameter names do not match, expected: {list(expected_params.keys())}, got: {list(parameters.keys())}"
+        )
+
+        for param_name, expected_type in expected_params.items():
+            param = parameters[param_name]
+            assert param.annotation is expected_type, (
+                f"Parameter '{param_name}' has incorrect type annotation, expected: {expected_type}, got: {param.annotation}"
+            )
+
+        self.assertEqual(
+            signature.return_annotation,
+            List[Tuple[str, List[str]]],
+            f"Return type is incorrect, expected: List[Tuple[str, List[str]]], got: {signature.return_annotation}",
+        )
+
+    def test_node_property(self):
+        """Test that the node property returns the expected Node instance."""
+        mock_node = MagicMock(spec=Node)
+        self.connector._node = mock_node
+
+        self.assertEqual(self.connector.node, mock_node)
+        self.assertIsInstance(self.connector.node, Node)
