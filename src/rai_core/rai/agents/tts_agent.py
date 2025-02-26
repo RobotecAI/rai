@@ -182,8 +182,8 @@ class TextToSpeechAgent(BaseAgent):
             except Empty:
                 continue
             audio = self.model.get_speech(data)
-            self.audio_queue.put(audio)
-            self.playback_data.playing = True
+            if self.playback_data.playing:
+                self.audio_queue.put(audio)
 
     def _setup_ros2_connector(self):
         to_human = TopicConfig(
@@ -210,6 +210,7 @@ class TextToSpeechAgent(BaseAgent):
         msg = ROS2HRIMessage.from_ros2(message, "ai")
         self.logger.debug(f"Receieved message from human: {message.text}")
         self.text_queue.put(msg.text)
+        self.playback_data.playing = True
 
     def _on_command_message(self, message: IROS2Message):
         assert isinstance(message, String)
