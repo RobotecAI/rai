@@ -1,0 +1,5 @@
+task,initial_score,simulation_config,final_score,total_time,number_of_tool_calls
+"Manipulate objects, so that all carrots to the left side of the table (positive y)",0.0,src/rai_bench/rai_bench/o3de_test_bench/configs/scene1.yaml,0.0,13.648,5
+"Manipulate objects, so that all carrots to the left side of the table (positive y)",0.5,src/rai_bench/rai_bench/o3de_test_bench/configs/scene2.yaml,0.75,29.011,7
+"Manipulate objects, so that all cubes are adjacent to at least one cube",0.0,src/rai_bench/rai_bench/o3de_test_bench/configs/scene3.yaml,0.0,17.047,5
+"Manipulate objects, so that all cubes are adjacent to at least one cube",1.0,src/rai_bench/rai_bench/o3de_test_bench/configs/scene4.yaml,0.75,18.869,5

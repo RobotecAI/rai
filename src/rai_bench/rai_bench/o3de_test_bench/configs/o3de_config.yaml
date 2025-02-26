@@ -1,0 +1,13 @@
+binary_path: /home/krachwal/binaries/rai/RAIManipulationDemo/RAIManipulationDemo.GameLauncher
+robotic_stack_command: ros2 launch examples/manipulation-demo-no-binary.launch.py
+required_services:
+  - /grounding_dino_classify
+  - /grounded_sam_segment
+  - /manipulator_move_to
+  - /spawn_entity
+  - /delete_entity
+required_topics:
+  - /color_image5
+  - /depth_image5
+  - /color_camera_info5
+required_actions: []
