@@ -89,7 +89,6 @@ class SimulationConfig(BaseModel):
         List of entities to be spawned in the simulation.
     """
 
-    # NOTE (mkotynia) can be extended by other attributes
     entities: List[Entity] = Field(
         description="List of entities to be spawned in the simulation environment"
     )
@@ -150,7 +149,6 @@ class SceneState(BaseModel):
         List of all entities currently present in the scene.
     """
 
-    # NOTE (mkotynia) can be extended by other attributes
     entities: List[SpawnedEntity] = Field(
         description="List of all entities currently spawned in the scene with their current poses"
     )
