@@ -34,16 +34,17 @@ loggers_type = Union[RcutilsLogger, logging.Logger]
 
 
 class EntitiesMismatchException(Exception):
-    def __init__(self, message: str) -> None:
-        super().__init__(message)
+    pass
 
 
 class Task(ABC):
     """
-    Task to perform.
-    Specyfic implementation should implement a way to calculate results.
-    Abstract provides utility functions for common calculations, that can be usefull when
-    creating metrics
+    Abstract of a Task. Provides utility functions for common calculations
+    that can be helfull when creating metrics.
+    Specific child classes should implement:
+    - get_prompt method
+    - validate_config
+    - calculate_result
     """
 
     def __init__(
@@ -57,6 +58,7 @@ class Task(ABC):
 
     @abstractmethod
     def get_prompt(self) -> str:
+        """Returns the task instruction - the prompt that will be passed to agent"""
         pass
 
     @abstractmethod
@@ -75,7 +77,8 @@ class Task(ABC):
         self, simulation_bridge: SimulationBridge[SimulationConfigT]
     ) -> float:
         """
-        Calculate result of the task
+        Calculates result of the task, based on info retrieved from simulation.
+        Should return score between 0.0 and 1.
         """
         pass
 
@@ -135,7 +138,10 @@ class Task(ABC):
 
 
 class Scenario(Generic[SimulationConfigT]):
-    """Single instances are run separatly by benchmark"""
+    """
+    A Scenarios are defined by a pair of Task and Simlation Config.
+    Each Scenario is executed separatly by a Benchmark.
+    """
 
     def __init__(
         self,
@@ -154,7 +160,9 @@ class Scenario(Generic[SimulationConfigT]):
 
 class Benchmark:
     """
-    Defined by a set of scenarios to be done
+    Benchmark represents a set of Scenarios to be executed and evaluated.
+    It manages the execution, logs results, and provides functionality
+    for tracking and exporting performance metrics.
     """
 
     def __init__(
@@ -162,15 +170,19 @@ class Benchmark:
         simulation_bridge: SimulationBridge[SimulationConfigT],
         scenarios: List[Scenario[SimulationConfigT]],
         logger: loggers_type | None = None,
+        results_filename: str = "benchmark_results.csv",
     ) -> None:
         self.simulation_bridge = simulation_bridge
         self.num_of_scenarios = len(scenarios)
         self.scenarios = enumerate(iter(scenarios))
         self.results: List[Dict[str, Any]] = []
+        self.results_filename = results_filename
         if logger:
             self._logger = logger
         else:
             self._logger = logging.getLogger(__name__)
+
+        self._initialize_results_file()
 
     @classmethod
     def create_scenarios(
@@ -197,6 +209,23 @@ class Benchmark:
                         f"Could not create Scenario from task: {task.get_prompt()} and simulation_config: {sim_conf}, {e}"
                     )
         return scenarios
+
+    def _initialize_results_file(self):
+        """Initialize the CSV file with headers."""
+        fieldnames = [
+            "task",
+            "simulation_config",
+            "initial_score",
+            "final_score",
+            "total_time",
+            "number_of_tool_calls",
+        ]
+
+        with open(
+            self.results_filename, mode="w", newline="", encoding="utf-8"
+        ) as file:
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
 
     def run_next(self, agent) -> None:
         """
@@ -251,40 +280,36 @@ class Benchmark:
                 f"TASK SCORE: {result}, TOTAL TIME: {total_time:.3f}, NUM_OF_TOOL_CALLS: {tool_calls_num}"
             )
 
-            self.results.append(
-                {
-                    "task": scenario.task.get_prompt(),
-                    "simulation_config": scenario.simulation_config_path,
-                    "initial_score": initial_result,
-                    "final_score": result,
-                    "total_time": f"{total_time:.3f}",
-                    "number_of_tool_calls": tool_calls_num,
-                }
-            )
+            scenario_result: Dict[str, Any] = {
+                "task": scenario.task.get_prompt(),
+                "simulation_config": scenario.simulation_config_path,
+                "initial_score": initial_result,
+                "final_score": result,
+                "total_time": f"{total_time:.3f}",
+                "number_of_tool_calls": tool_calls_num,
+            }
+            self.results.append(scenario_result)
+            self._save_scenario_result_to_csv(scenario_result)
 
         except StopIteration:
             print("No more scenarios left to run.")
 
-    def get_results(self) -> List[Dict[str, Any]]:
-        return self.results
-
-    def dump_results_to_csv(self, filename: str) -> None:
-        if not self.results:
-            self._logger.warning("No results to save.")  # type: ignore
-            return
-
+    def _save_scenario_result_to_csv(self, result: Dict[str, Any]) -> None:
+        """Save a single scenario result to the CSV file."""
         fieldnames = [
             "task",
-            "initial_score",
             "simulation_config",
+            "initial_score",
             "final_score",
             "total_time",
             "number_of_tool_calls",
         ]
 
-        with open(filename, mode="w", newline="", encoding="utf-8") as file:
+        with open(
+            self.results_filename, mode="a", newline="", encoding="utf-8"
+        ) as file:
             writer = csv.DictWriter(file, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(self.results)
+            writer.writerow(result)
 
-        self._logger.info(f"Results saved to {filename}")  # type: ignore
+    def get_results(self) -> List[Dict[str, Any]]:
+        return self.results

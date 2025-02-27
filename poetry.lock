@@ -5703,7 +5703,7 @@ url = "src/rai_asr"
 [[package]]
 name = "rai-bench"
 version = "0.1.0"
-description = ""
+description = "Package for running and creating benchmarks."
 optional = false
 python-versions = "^3.10"
 files = []
@@ -8331,4 +8331,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10, <3.13"
-content-hash = "c5469635a5db79c258554ad9f4e49331515940e406fbf912822651a0e0c33dda"
+content-hash = "d943b786f2bb8dddc9249475409a4d7c9c4b0a77041611c039431df55ad94000"

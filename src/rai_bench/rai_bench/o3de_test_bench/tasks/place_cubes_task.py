@@ -61,19 +61,19 @@ class PlaceCubesTask(Task):
             )
 
         else:
-            ini_poses = [cube.pose for cube in initial_cubes]
+            initial_poses = [cube.pose for cube in initial_cubes]
             final_poses = [cube.pose for cube in final_cubes]
             # NOTE the specific coords that refer to for example
             # middle of the table can differ across simulations,
             # take that into consideration
             self.logger.debug(f"initial positions: {initial_cubes}")
             self.logger.debug(f"current positions: {final_cubes}")
-            for i, ini_cube in enumerate(initial_cubes):
-                for j, final_cube in enumerate(final_cubes):
-                    if ini_cube.name == final_cube.name:
+            for initial_cube in initial_cubes:
+                for final_cube in final_cubes:
+                    if initial_cube.name == final_cube.name:
                         was_adjacent_initially = self.is_adjacent_to_any(
-                            ini_cube.pose,
-                            [p for p in ini_poses if p != ini_cube.pose],
+                            initial_cube.pose,
+                            [p for p in initial_poses if p != initial_cube.pose],
                             0.15,
                         )
                         is_adjacent_finally = self.is_adjacent_to_any(
@@ -93,7 +93,7 @@ class PlaceCubesTask(Task):
                         break
                 else:
                     raise EntitiesMismatchException(
-                        f"Entity with name: {ini_cube.name} which was present in initial scene, not found in final scene."
+                        f"Entity with name: {initial_cube.name} which was present in initial scene, not found in final scene."
                     )
 
             self.logger.info(
