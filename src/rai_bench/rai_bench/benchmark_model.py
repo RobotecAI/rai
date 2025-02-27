@@ -279,8 +279,7 @@ class Benchmark:
             self._logger.info(  # type: ignore
                 f"TASK SCORE: {result}, TOTAL TIME: {total_time:.3f}, NUM_OF_TOOL_CALLS: {tool_calls_num}"
             )
-            # TODO (jm) not sure if keeping all results here,
-            # besides saving them to file, is an overkill?
+
             scenario_result: Dict[str, Any] = {
                 "task": scenario.task.get_prompt(),
                 "simulation_config": scenario.simulation_config_path,
@@ -289,6 +288,7 @@ class Benchmark:
                 "total_time": f"{total_time:.3f}",
                 "number_of_tool_calls": tool_calls_num,
             }
+            self.results.append(scenario_result)
             self._save_scenario_result_to_csv(scenario_result)
 
         except StopIteration:
@@ -310,3 +310,6 @@ class Benchmark:
         ) as file:
             writer = csv.DictWriter(file, fieldnames=fieldnames)
             writer.writerow(result)
+
+    def get_results(self) -> List[Dict[str, Any]]:
+        return self.results
