@@ -59,10 +59,10 @@ class GrabCarrotTask(Task):
         else:
             self.logger.debug(f"initial positions: {initial_carrots}")  # type: ignore
             self.logger.debug(f"current positions: {final_carrots}")  # type: ignore
-            for ini_carrot in initial_carrots:
+            for initial_carrot in initial_carrots:
                 for final_carrot in final_carrots:
-                    if ini_carrot.name == final_carrot.name:
-                        initial_y = ini_carrot.pose.translation.y
+                    if initial_carrot.name == final_carrot.name:
+                        initial_y = initial_carrot.pose.translation.y
                         final_y = final_carrot.pose.translation.y
                         # NOTE the specific coords that refer to for example
                         # middle of the table can differ across simulations,
@@ -90,7 +90,7 @@ class GrabCarrotTask(Task):
                         break
                 else:
                     raise EntitiesMismatchException(
-                        f"Entity with name: {ini_carrot.name} which was present in initial scene, not found in final scene."
+                        f"Entity with name: {initial_carrot.name} which was present in initial scene, not found in final scene."
                     )
 
             self.logger.info(  # type: ignore
