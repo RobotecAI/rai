@@ -107,6 +107,7 @@ class VoiceRecognitionAgent(BaseAgent):
         self.active_thread = ""
         self.transcription_threads: dict[str, ThreadData] = {}
         self.transcription_buffers: dict[str, list[NDArray]] = {}
+        self.is_playing = True
 
     def __call__(self):
         self.run()
@@ -215,6 +216,7 @@ class VoiceRecognitionAgent(BaseAgent):
             self.logger.debug("Voice detected... resetting grace period")
             self.grace_period_start = sample_time
             self._send_ros2_message("pause", "/voice_commands")
+            self.is_playing = False
         if (
             self.recording_started
             and sample_time - self.grace_period_start > self.grace_period
@@ -230,12 +232,16 @@ class VoiceRecognitionAgent(BaseAgent):
             self.transcription_threads[self.active_thread]["thread"].start()
             self.active_thread = ""
             self._send_ros2_message("stop", "/voice_commands")
+            self.is_playing = False
         elif sample_time - self.grace_period_start > self.grace_period:
             self._send_ros2_message("play", "/voice_commands")
+            self.is_playing = True
 
     def _should_record(
         self, audio_data: NDArray, input_parameters: dict[str, Any]
     ) -> bool:
+        if len(self.should_record_pipeline) == 0:
+            return True
         for model in self.should_record_pipeline:
             detected, output = model(audio_data, input_parameters)
             self.logger.debug(f"detected {detected}, output {output}")
