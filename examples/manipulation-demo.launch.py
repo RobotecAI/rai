@@ -51,7 +51,6 @@ def generate_launch_description():
     launch_robotic_manipulation = Node(
         package="robotic_manipulation",
         executable="robotic_manipulation",
-        # name="robotic_manipulation_node",
         output="screen",
         parameters=[
             {"use_sim_time": True},

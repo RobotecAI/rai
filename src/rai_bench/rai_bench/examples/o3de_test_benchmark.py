@@ -163,6 +163,7 @@ if __name__ == "__main__":
         simulation_bridge=o3de,
         scenarios=scenarios,
         logger=bench_logger,
+        results_filename="src/rai_bench/rai_bench/results.csv",
     )
     for i, s in enumerate(scenarios):
         agent = create_conversational_agent(
@@ -180,7 +181,6 @@ if __name__ == "__main__":
     bench_logger.info("===============================================================")
     bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
     bench_logger.info("===============================================================")
-    benchmark.dump_results_to_csv(filename="src/rai_bench/rai_bench/results.csv")
 
     connector.shutdown()
     o3de.shutdown()
