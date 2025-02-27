@@ -408,7 +408,7 @@ class O3DEngineArmManipulationBridge(O3DExROS2Bridge):
         request.target_pose.header.frame_id = frame_id
 
         request.target_pose.pose.position.x = pose.translation.x
-        request.target_pose.pose.position.x = pose.translation.y
+        request.target_pose.pose.position.y = pose.translation.y
         request.target_pose.pose.position.z = pose.translation.z
 
         if pose.rotation:
