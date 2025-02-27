@@ -100,7 +100,7 @@ if __name__ == "__main__":
     ros2_name = "rai_asr_agent"
 
     agent = VoiceRecognitionAgent(microphone_configuration, ros2_name, whisper, vad)
-    agent.add_detection_model(oww, pipeline="record")
+    # agent.add_detection_model(oww, pipeline="record")
 
     agent.run()
 
@@ -114,6 +114,5 @@ if __name__ == "__main__":
 
     signal.signal(signal.SIGINT, cleanup)
 
-    print("Runnin")
     while True:
         time.sleep(1)
