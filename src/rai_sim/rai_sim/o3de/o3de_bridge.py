@@ -211,7 +211,6 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             for service in available_services_names:
                 if "/_action" in service:
                     action_name = service.split("/_action")[0]
-                    print("action_name:   ", action_name)
                     available_actions_names.add(action_name)
 
             required_services = required_ros2_stack["services"]
@@ -239,16 +238,19 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             ]
 
             if missing_services:
-                for service in missing_services:
-                    self.logger.warning(f"Waiting for service: {service}")
+                self.logger.warning(
+                    f"Waiting for missing services {missing_services} out of required services: {required_services}"
+                )
 
             if missing_topics:
-                for topic in missing_topics:
-                    self.logger.warning(f"Waiting for topic: {topic}")
+                self.logger.warning(
+                    f"Waiting for missing topics: {missing_topics} out of required topics: {required_topics}"
+                )
 
             if missing_actions:
-                for action in missing_actions:
-                    self.logger.warning(f"Waiting for action: {action}")
+                self.logger.warning(
+                    f"Waiting for missing actions: {missing_actions} out of required actions: {required_actions}"
+                )
 
             if not (missing_services or missing_topics or missing_actions):
                 self.logger.info("All required ROS2 stack components are available.")
