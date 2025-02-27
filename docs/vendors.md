@@ -17,7 +17,7 @@ llm = ChatOllama(model='llava')
 Ollama supports OpenAI compatible APIs (see [details](https://ollama.com/blog/openai-compatibility)).
 
 > [!TIP]
-> Such setup might be more convenient if you frequently switch between OpenAI API and
+> Such a setup might be more convenient if you frequently switch between OpenAI API and
 > local models.
 
 To configure ollama through OpenAI API in `rai`:
@@ -49,7 +49,7 @@ echo 'TEMPLATE """'"$(ollama show --template llama3.2)"'"""' >> Modelfile
 ollama create llama3.2-vision-tools
 ```
 
-3. Configure the model through OpenAI compatible API in [config.toml](../config.toml)
+3. Configure the model through an OpenAI compatible API in [config.toml](../config.toml)
 
 ```toml
 [openai]
