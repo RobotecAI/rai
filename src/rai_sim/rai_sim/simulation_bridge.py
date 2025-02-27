@@ -246,7 +246,7 @@ class SimulationBridge(ABC, Generic[SimulationConfigT]):
 
         Returns
         -------
-        PoseModel
+        Pose
             Object containing the entity's current pose.
         """
         pass

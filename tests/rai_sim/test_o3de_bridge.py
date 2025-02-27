@@ -192,7 +192,7 @@ class TestO3DExROS2Bridge(unittest.TestCase):
         orientation = Quaternion(x=0.1, y=0.2, z=0.3, w=0.4)
         ros2_pose = ROS2Pose(position=position, orientation=orientation)
 
-        # Convert to PoseModel
+        # Convert from ROS2Pose to Pose
         pose = self.bridge._from_ros2_pose(ros2_pose)
 
         # Check the conversion

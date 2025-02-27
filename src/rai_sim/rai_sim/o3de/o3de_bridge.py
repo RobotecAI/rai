@@ -335,7 +335,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
     # NOTE (mkotynia) probably to be refactored, other bridges may also want to use pose conversion to/from ROS2 format
     def _to_ros2_pose(self, pose: Pose) -> ROS2Pose:
         """
-        Converts pose in PoseModel format to pose in ROS2 Pose format.
+        Converts pose to pose in ROS2 Pose format.
         """
         position = Point(
             x=pose.translation.x, y=pose.translation.y, z=pose.translation.z
@@ -357,7 +357,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
 
     def _from_ros2_pose(self, pose: ROS2Pose) -> Pose:
         """
-        Converts ROS2 pose to PoseModel format
+        Converts ROS2Pose to Pose
         """
 
         translation = Translation(
@@ -387,7 +387,7 @@ class O3DEngineArmManipulationBridge(O3DExROS2Bridge):
         """Moves arm to a given position
 
         Args:
-            pose (PoseModel): where to move arm
+            pose (Pose): where to move arm
             initial_gripper_state (bool): False means closed grip, True means open grip
             final_gripper_state (bool): False means closed grip, True means open grip
             frame_id (str): reference frame
