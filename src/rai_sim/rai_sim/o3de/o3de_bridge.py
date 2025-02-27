@@ -44,8 +44,8 @@ from rai_sim.simulation_bridge import (
 class O3DExROS2SimulationConfig(SimulationConfig):
     binary_path: Path
     robotic_stack_command: str
-    required_binary_ros2_stack: dict[str, List[str]]
-    required_robotic_ros2_stack: dict[str, List[str]]
+    required_simulation_ros2_interfaces: dict[str, List[str]]
+    required_robotic_ros2_interfaces: dict[str, List[str]]
 
     @classmethod
     def load_config(
@@ -285,7 +285,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         if not self._has_process_started(process=self.current_sim_process):
             raise RuntimeError("Process did not start in time.")
         if not self._is_ros2_stack_ready(
-            required_ros2_stack=simulation_config.required_binary_ros2_stack
+            required_ros2_stack=simulation_config.required_simulation_ros2_interfaces
         ):
             raise RuntimeError("ROS2 stack is not ready in time.")
 
@@ -298,7 +298,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         if not self._has_process_started(self.current_robotic_stack_process):
             raise RuntimeError("Process did not start in time.")
         if not self._is_ros2_stack_ready(
-            required_ros2_stack=simulation_config.required_robotic_ros2_stack
+            required_ros2_stack=simulation_config.required_robotic_ros2_interfaces
         ):
             raise RuntimeError("ROS2 stack is not ready in time.")
 

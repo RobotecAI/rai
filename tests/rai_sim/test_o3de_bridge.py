@@ -45,12 +45,12 @@ def test_load_config(sample_base_yaml_config: Path, sample_o3dexros2_config: Pat
     assert isinstance(config, O3DExROS2SimulationConfig)
     assert config.binary_path == Path("/path/to/binary")
     assert config.robotic_stack_command == "ros2 launch robotic_stack.launch.py"
-    assert config.required_binary_ros2_stack == {
+    assert config.required_simulation_ros2_interfaces == {
         "services": ["/spawn_entity", "/delete_entity"],
         "topics": ["/color_image5", "/depth_image5", "/color_camera_info5"],
         "actions": [],
     }
-    assert config.required_robotic_ros2_stack == {
+    assert config.required_robotic_ros2_interfaces == {
         "services": [
             "/grounding_dino_classify",
             "/grounded_sam_segment",
@@ -97,8 +97,16 @@ class TestO3DExROS2Bridge(unittest.TestCase):
             binary_path=Path("/path/to/binary"),
             robotic_stack_command="ros2 launch robot.launch.py",
             entities=[self.test_entity],
-            required_binary_ros2_stack={"services": [], "topics": [], "actions": []},
-            required_robotic_ros2_stack={"services": [], "topics": [], "actions": []},
+            required_simulation_ros2_interfaces={
+                "services": [],
+                "topics": [],
+                "actions": [],
+            },
+            required_robotic_ros2_interfaces={
+                "services": [],
+                "topics": [],
+                "actions": [],
+            },
         )
 
     def test_init(self):

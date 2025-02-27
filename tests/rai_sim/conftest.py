@@ -52,7 +52,7 @@ def sample_o3dexros2_config(tmp_path: Path) -> Path:
     yaml_content = """
     binary_path: /path/to/binary
     robotic_stack_command: "ros2 launch robotic_stack.launch.py"
-    required_binary_ros2_stack:
+    required_simulation_ros2_interfaces:
       services:
         - /spawn_entity
         - /delete_entity
@@ -61,7 +61,7 @@ def sample_o3dexros2_config(tmp_path: Path) -> Path:
         - /depth_image5
         - /color_camera_info5
       actions: []
-    required_robotic_ros2_stack:
+    required_robotic_ros2_interfaces:
       services:
         - /grounding_dino_classify
         - /grounded_sam_segment
