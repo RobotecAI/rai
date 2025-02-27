@@ -107,6 +107,7 @@ class VoiceRecognitionAgent(BaseAgent):
         self.active_thread = ""
         self.transcription_threads: dict[str, ThreadData] = {}
         self.transcription_buffers: dict[str, list[NDArray]] = {}
+        self.last_command_sent = ""
 
     def __call__(self):
         self.run()
@@ -230,8 +231,11 @@ class VoiceRecognitionAgent(BaseAgent):
             self.transcription_threads[self.active_thread]["thread"].start()
             self.active_thread = ""
             self._send_ros2_message("stop", "/voice_commands")
+            self.last_command_sent = "stop"
         elif sample_time - self.grace_period_start > self.grace_period:
-            self._send_ros2_message("play", "/voice_commands")
+            if self.last_command_sent == "stop":
+                self._send_ros2_message("play", "/voice_commands")
+                self.last_command_sent = "start"
 
     def _should_record(
         self, audio_data: NDArray, input_parameters: dict[str, Any]
