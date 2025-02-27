@@ -18,10 +18,11 @@ import signal
 import subprocess
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 import yaml
-from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
+from geometry_msgs.msg import Point, PoseStamped, Quaternion
+from geometry_msgs.msg import Pose as ROS2Pose
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from rai.utils.ros_async import get_future_result
 from std_msgs.msg import Header
@@ -30,7 +31,7 @@ from tf2_geometry_msgs import do_transform_pose
 from rai_interfaces.srv import ManipulatorMoveTo
 from rai_sim.simulation_bridge import (
     Entity,
-    PoseModel,
+    Pose,
     Rotation,
     SceneState,
     SimulationBridge,
@@ -43,9 +44,8 @@ from rai_sim.simulation_bridge import (
 class O3DExROS2SimulationConfig(SimulationConfig):
     binary_path: Path
     robotic_stack_command: str
-    required_services: List[str]
-    required_topics: List[str]
-    required_actions: List[str]
+    required_simulation_ros2_interfaces: dict[str, List[str]]
+    required_robotic_ros2_interfaces: dict[str, List[str]]
 
     @classmethod
     def load_config(
@@ -110,13 +110,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             target="get_available_spawnable_names",
             msg_type="gazebo_msgs/srv/GetWorldProperties",
         )
-        # NOTE (mkotynia) There is a bug in the gazebo_msgs/srv/GetWorldProperties service - payload.success is not set to True even if the service call is successful. It was reported to Kacper Dąbrowski and he is going to fix it.
-        # PR fixing the bug: https://github.com/o3de/o3de-extras/pull/828
-        # TODO (mkotynia) uncomment check if response.payload.success when the bug is fixed and remove workaround check if response.payload.model_names.
-
-        # if response.payload.success:
-        #     return response.payload.model_names
-        if response.payload.model_names:
+        if response.payload.success:
             return response.payload.model_names
         else:
             raise RuntimeError(
@@ -125,7 +119,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
 
     def _spawn_entity(self, entity: Entity):
         pose = do_transform_pose(
-            self.to_ros2_pose(entity.pose),
+            self._to_ros2_pose(entity.pose),
             self.connector.get_transform("odom", "world"),
         )
 
@@ -176,15 +170,13 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
                 f"Failed to delete entity {entity.name}. Response: {response.payload.status_message}"
             )
 
-    def get_object_pose(self, entity: SpawnedEntity) -> PoseModel:
+    def get_object_pose(self, entity: SpawnedEntity) -> Pose:
         object_frame = entity.name + "/"
         ros2_pose = do_transform_pose(
-            Pose(), self.connector.get_transform(object_frame + "odom", object_frame)
+            ROS2Pose(),
+            self.connector.get_transform(object_frame + "odom", object_frame),
         )
-        ros2_pose = do_transform_pose(
-            ros2_pose, self.connector.get_transform("world", "odom")
-        )
-        return self.from_ros2_pose(ros2_pose)
+        return self._from_ros2_pose(ros2_pose)
 
     def get_scene_state(self) -> SceneState:
         """
@@ -205,72 +197,112 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             )
         return SceneState(entities=entities)
 
-    def _is_robotic_stack_ready(
-        self, simulation_config: O3DExROS2SimulationConfig, retries: int = 30
+    def _is_ros2_stack_ready(
+        self, required_ros2_stack: dict[str, List[str]], retries: int = 30
     ) -> bool:
-        i = 0
-        while i < retries:
-            topics = self.connector.get_topics_names_and_types()
-            services = self.connector.node.get_service_names_and_types()
-            topics_names = [tp[0] for tp in topics]
-            service_names = [srv[0] for srv in services]
-            self.logger.info(
-                f"required services: {simulation_config.required_services}"
-            )
-            self.logger.info(f"required topics: {simulation_config.required_topics}")
-            self.logger.info(f"required actions: {simulation_config.required_actions}")
-            # NOTE actions will be listed in services and topics
-            if (
-                all(srv in service_names for srv in simulation_config.required_services)
-                and all(tp in topics_names for tp in simulation_config.required_topics)
-                and all(
-                    ac in service_names for ac in simulation_config.required_actions
+        for i in range(retries):
+            available_topics = self.connector.get_topics_names_and_types()
+            available_services = self.connector.node.get_service_names_and_types()
+            available_topics_names = [tp[0] for tp in available_topics]
+            available_services_names = [srv[0] for srv in available_services]
+
+            # Extract action names
+            available_actions_names: Set[str] = set()
+            for service in available_services_names:
+                if "/_action" in service:
+                    action_name = service.split("/_action")[0]
+                    available_actions_names.add(action_name)
+
+            required_services = required_ros2_stack["services"]
+            required_topics = required_ros2_stack["topics"]
+            required_actions = required_ros2_stack["actions"]
+            self.logger.info(f"required services: {required_services}")
+            self.logger.info(f"required topics: {required_topics}")
+            self.logger.info(f"required actions: {required_actions}")
+            self.logger.info(f"available actions: {available_actions_names}")
+
+            missing_services = [
+                service
+                for service in required_services
+                if service not in available_services_names
+            ]
+            missing_topics = [
+                topic
+                for topic in required_topics
+                if topic not in available_topics_names
+            ]
+            missing_actions = [
+                action
+                for action in required_actions
+                if action not in available_actions_names
+            ]
+
+            if missing_services:
+                self.logger.warning(
+                    f"Waiting for missing services {missing_services} out of required services: {required_services}"
                 )
-            ):
-                self.logger.info("All required services are available.")
+
+            if missing_topics:
+                self.logger.warning(
+                    f"Waiting for missing topics: {missing_topics} out of required topics: {required_topics}"
+                )
+
+            if missing_actions:
+                self.logger.warning(
+                    f"Waiting for missing actions: {missing_actions} out of required actions: {required_actions}"
+                )
+
+            if not (missing_services or missing_topics or missing_actions):
+                self.logger.info("All required ROS2 stack components are available.")
                 return True
 
-            time.sleep(5)
-            retries += 1
+            time.sleep(3)
+
+        self.logger.error(
+            "Maximum number of retries reached. Required ROS2 stack components are not fully available."
+        )
         return False
 
     def setup_scene(self, simulation_config: O3DExROS2SimulationConfig):
         if self.current_binary_path != simulation_config.binary_path:
             if self.current_sim_process:
                 self.shutdown()
-            self._launch_binary(simulation_config.binary_path)
-            self._launch_robotic_stack(simulation_config.robotic_stack_command)
+            self._launch_binary(simulation_config)
+            self._launch_robotic_stack(simulation_config)
             self.current_binary_path = simulation_config.binary_path
 
         else:
             while self.spawned_entities:
                 self._despawn_entity(self.spawned_entities[0])
 
-        if not self._is_robotic_stack_ready(simulation_config=simulation_config):
-            raise RuntimeError(
-                "Not all required services, topics and actions are available"
-            )
-
         for entity in simulation_config.entities:
             self._spawn_entity(entity)
 
-    def _launch_binary(self, binary_path: Path):
-        command = [binary_path.as_posix()]
+    def _launch_binary(self, simulation_config: O3DExROS2SimulationConfig):
+        command = [simulation_config.binary_path.as_posix()]
         self.logger.info(f"Running command: {command}")
         self.current_sim_process = subprocess.Popen(
             command,
         )
         if not self._has_process_started(process=self.current_sim_process):
             raise RuntimeError("Process did not start in time.")
+        if not self._is_ros2_stack_ready(
+            required_ros2_stack=simulation_config.required_simulation_ros2_interfaces
+        ):
+            raise RuntimeError("ROS2 stack is not ready in time.")
 
-    def _launch_robotic_stack(self, robotic_stack_command: str):
-        command = shlex.split(robotic_stack_command)
+    def _launch_robotic_stack(self, simulation_config: O3DExROS2SimulationConfig):
+        command = shlex.split(simulation_config.robotic_stack_command)
         self.logger.info(f"Running command: {command}")
         self.current_robotic_stack_process = subprocess.Popen(
             command,
         )
         if not self._has_process_started(self.current_robotic_stack_process):
             raise RuntimeError("Process did not start in time.")
+        if not self._is_ros2_stack_ready(
+            required_ros2_stack=simulation_config.required_robotic_ros2_interfaces
+        ):
+            raise RuntimeError("ROS2 stack is not ready in time.")
 
     def _has_process_started(self, process: subprocess.Popen[Any], timeout: int = 15):
         start_time = time.time()
@@ -303,9 +335,9 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         return response  # type: ignore
 
     # NOTE (mkotynia) probably to be refactored, other bridges may also want to use pose conversion to/from ROS2 format
-    def to_ros2_pose(self, pose: PoseModel) -> Pose:
+    def _to_ros2_pose(self, pose: Pose) -> ROS2Pose:
         """
-        Converts pose in PoseModel format to pose in ROS2 Pose format.
+        Converts pose to pose in ROS2 Pose format.
         """
         position = Point(
             x=pose.translation.x, y=pose.translation.y, z=pose.translation.z
@@ -321,13 +353,13 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         else:
             orientation = Quaternion()
 
-        ros2_pose = Pose(position=position, orientation=orientation)
+        ros2_pose = ROS2Pose(position=position, orientation=orientation)
 
         return ros2_pose
 
-    def from_ros2_pose(self, pose: Pose) -> PoseModel:
+    def _from_ros2_pose(self, pose: ROS2Pose) -> Pose:
         """
-        Converts ROS2 pose to PoseModel format
+        Converts ROS2Pose to Pose
         """
 
         translation = Translation(
@@ -343,13 +375,13 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             w=pose.orientation.w,  # type: ignore
         )
 
-        return PoseModel(translation=translation, rotation=rotation)
+        return Pose(translation=translation, rotation=rotation)
 
 
 class O3DEngineArmManipulationBridge(O3DExROS2Bridge):
     def move_arm(
         self,
-        pose: PoseModel,
+        pose: Pose,
         initial_gripper_state: bool,
         final_gripper_state: bool,
         frame_id: str,
@@ -357,7 +389,7 @@ class O3DEngineArmManipulationBridge(O3DExROS2Bridge):
         """Moves arm to a given position
 
         Args:
-            pose (PoseModel): where to move arm
+            pose (Pose): where to move arm
             initial_gripper_state (bool): False means closed grip, True means open grip
             final_gripper_state (bool): False means closed grip, True means open grip
             frame_id (str): reference frame

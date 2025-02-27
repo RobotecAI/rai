@@ -23,7 +23,7 @@ from rai.messages import HumanMultimodalMessage
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai_sim.simulation_bridge import (
-    PoseModel,
+    Pose,
     SimulationBridge,
     SimulationConfig,
     SimulationConfigT,
@@ -88,7 +88,7 @@ class Task(ABC):
         """Filter and return only these entities that match provided prefab types"""
         return [ent for ent in entities if ent.prefab_name in prefab_types]
 
-    def euclidean_distance(self, pos1: PoseModel, pos2: PoseModel) -> float:
+    def euclidean_distance(self, pos1: Pose, pos2: Pose) -> float:
         """Calculate euclidean distance between 2 positions"""
         return (
             (pos1.translation.x - pos2.translation.x) ** 2
@@ -96,7 +96,7 @@ class Task(ABC):
             + (pos1.translation.z - pos2.translation.z) ** 2
         ) ** 0.5
 
-    def is_adjacent(self, pos1: PoseModel, pos2: PoseModel, threshold_distance: float):
+    def is_adjacent(self, pos1: Pose, pos2: Pose, threshold_distance: float):
         """
         Check if positions are adjacent to each other, the threshold_distance is a distance
         in simulation, refering to how close they have to be to classify them as adjacent
@@ -107,7 +107,7 @@ class Task(ABC):
         return self.euclidean_distance(pos1, pos2) < threshold_distance
 
     def is_adjacent_to_any(
-        self, pos1: PoseModel, positions: List[PoseModel], threshold_distance: float
+        self, pos1: Pose, positions: List[Pose], threshold_distance: float
     ) -> bool:
         """
         Check if given position is adjacent to any position in the given list.
@@ -117,9 +117,7 @@ class Task(ABC):
             self.is_adjacent(pos1, pos2, threshold_distance) for pos2 in positions
         )
 
-    def count_adjacent(
-        self, positions: List[PoseModel], threshold_distance: float
-    ) -> int:
+    def count_adjacent(self, positions: List[Pose], threshold_distance: float) -> int:
         """
         Count how many adjacent positions are in the given list.
         Note that position has to be adjacent to only 1 other position
