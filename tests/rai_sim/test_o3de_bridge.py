@@ -45,6 +45,20 @@ def test_load_config(sample_base_yaml_config: Path, sample_o3dexros2_config: Pat
     assert isinstance(config, O3DExROS2SimulationConfig)
     assert config.binary_path == Path("/path/to/binary")
     assert config.robotic_stack_command == "ros2 launch robotic_stack.launch.py"
+    assert config.required_binary_ros2_stack == {
+        "services": ["/spawn_entity", "/delete_entity"],
+        "topics": ["/color_image5", "/depth_image5", "/color_camera_info5"],
+        "actions": [],
+    }
+    assert config.required_robotic_ros2_stack == {
+        "services": [
+            "/grounding_dino_classify",
+            "/grounded_sam_segment",
+            "/manipulator_move_to",
+        ],
+        "topics": [],
+        "actions": ["/execute_trajectory"],
+    }
     assert isinstance(config.entities, list)
     assert all(isinstance(e, Entity) for e in config.entities)
 
@@ -83,9 +97,8 @@ class TestO3DExROS2Bridge(unittest.TestCase):
             binary_path=Path("/path/to/binary"),
             robotic_stack_command="ros2 launch robot.launch.py",
             entities=[self.test_entity],
-            required_actions=[],
-            required_services=[],
-            required_topics=[],
+            required_binary_ros2_stack={"services": [], "topics": [], "actions": []},
+            required_robotic_ros2_stack={"services": [], "topics": [], "actions": []},
         )
 
     def test_init(self):
@@ -102,9 +115,7 @@ class TestO3DExROS2Bridge(unittest.TestCase):
         mock_process.poll.return_value = None
         mock_process.pid = 54321
         mock_popen.return_value = mock_process
-
-        command = "ros2 launch robot.launch.py"
-        self.bridge._launch_robotic_stack(command)
+        self.bridge._launch_robotic_stack(self.test_config)
 
         mock_popen.assert_called_once_with(["ros2", "launch", "robot.launch.py"])
         self.assertEqual(self.bridge.current_robotic_stack_process, mock_process)
@@ -116,8 +127,7 @@ class TestO3DExROS2Bridge(unittest.TestCase):
         mock_process.pid = 54322
         mock_popen.return_value = mock_process
 
-        command = Path("/path/to/binary")
-        self.bridge._launch_binary(command)
+        self.bridge._launch_binary(self.test_config)
 
         mock_popen.assert_called_once_with(["/path/to/binary"])
         self.assertEqual(self.bridge.current_sim_process, mock_process)
