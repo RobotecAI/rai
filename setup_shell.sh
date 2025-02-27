@@ -33,3 +33,5 @@ PYTHONPATH="$(dirname "$(dirname "$(poetry run which python)")")/lib/python$(poe
 PYTHONPATH="src/rai_core:$PYTHONPATH"
 PYTHONPATH="src/rai_asr:$PYTHONPATH"
 PYTHONPATH="src/rai_tts:$PYTHONPATH"
+PYTHONPATH="src/rai_sim:$PYTHONPATH"
+PYTHONPATH="src/rai_bench:$PYTHONPATH"
