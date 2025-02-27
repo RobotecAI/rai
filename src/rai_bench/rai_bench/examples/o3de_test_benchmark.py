@@ -183,7 +183,7 @@ if __name__ == "__main__":
             final_gripper_state=False,
             frame_id="panda_link0",
         )  # return to case position
-        time.sleep(2)  # admire the end position for a second ;)
+        time.sleep(0.5)  # admire the end position for a second ;)
 
     bench_logger.info("===============================================================")
     bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
