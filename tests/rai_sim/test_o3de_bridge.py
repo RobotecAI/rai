@@ -242,6 +242,12 @@ class TestROS2ARIConnectorInterface(unittest.TestCase):
             "node property is missing",
         )
 
+    def resolve_annotation(self, annotation: type) -> type:
+        """Helper function to unwrap Optional types. Workaround for problem with asserting Optional types."""
+        if get_origin(annotation) is typing.Optional:
+            return get_args(annotation)[0]
+        return annotation
+
     def test_get_transform_signature(self):
         signature = inspect.signature(self.connector.get_transform)
         parameters = signature.parameters
@@ -258,8 +264,10 @@ class TestROS2ARIConnectorInterface(unittest.TestCase):
 
         for param_name, expected_type in expected_params.items():
             param = parameters[param_name]
-            assert param.annotation is expected_type, (
-                f"Parameter '{param_name}' has incorrect type annotation, expected: {expected_type}, got: {param.annotation}"
+            self.assertEqual(
+                self.resolve_annotation(param.annotation),
+                self.resolve_annotation(expected_type),
+                f"Parameter '{param_name}' has incorrect type, expected: {expected_type}, got: {param.annotation}",
             )
 
         # Check return type explicitly
@@ -268,12 +276,6 @@ class TestROS2ARIConnectorInterface(unittest.TestCase):
         )
 
     def test_send_message_signature(self):
-        def resolve_annotation(annotation: type):
-            """Helper function to unwrap Optional types. Workaround for problem with asserting Optional[QoSProfile] type."""
-            if get_origin(annotation) is typing.Optional:
-                return get_args(annotation)[0]
-            return annotation
-
         signature = inspect.signature(self.connector.send_message)
         parameters = signature.parameters
 
@@ -294,8 +296,8 @@ class TestROS2ARIConnectorInterface(unittest.TestCase):
         for param_name, expected_type in expected_params.items():
             param = parameters[param_name]
             self.assertEqual(
-                resolve_annotation(param.annotation),
-                resolve_annotation(expected_type),
+                self.resolve_annotation(param.annotation),
+                self.resolve_annotation(expected_type),
                 f"Parameter '{param_name}' has incorrect type, expected: {expected_type}, got: {param.annotation}",
             )
 
@@ -324,9 +326,9 @@ class TestROS2ARIConnectorInterface(unittest.TestCase):
 
         for param_name, expected_type in expected_params.items():
             param = parameters[param_name]
-            self.assertIs(
-                param.annotation,
-                expected_type,
+            self.assertEqual(
+                self.resolve_annotation(param.annotation),
+                self.resolve_annotation(expected_type),
                 f"Parameter '{param_name}' has incorrect type, expected: {expected_type}, got: {param.annotation}",
             )
 
@@ -348,8 +350,10 @@ class TestROS2ARIConnectorInterface(unittest.TestCase):
 
         for param_name, expected_type in expected_params.items():
             param = parameters[param_name]
-            assert param.annotation is expected_type, (
-                f"Parameter '{param_name}' has incorrect type annotation, expected: {expected_type}, got: {param.annotation}"
+            self.assertEqual(
+                self.resolve_annotation(param.annotation),
+                self.resolve_annotation(expected_type),
+                f"Parameter '{param_name}' has incorrect type, expected: {expected_type}, got: {param.annotation}",
             )
 
         self.assertEqual(
