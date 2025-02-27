@@ -22,12 +22,12 @@ from typing import Optional
 
 import rclpy
 from langchain_core.messages import HumanMessage
+from rai.node import RaiBaseNode
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import String
 
-from rai.node import RaiBaseNode
 from rai_hmi.agent import initialize_agent
 from rai_hmi.base import BaseHMINode
 from rai_hmi.text_hmi_utils import Memory

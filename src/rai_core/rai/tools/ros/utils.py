@@ -151,8 +151,7 @@ def wait_for_message(
                 if msg_info is not None:
                     return True, msg_info[0]
     finally:
-        pass
-        # node.destroy_subscription(sub)
+        node.destroy_subscription(sub)
 
     return False, None
 

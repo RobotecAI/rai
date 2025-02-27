@@ -20,12 +20,12 @@ from langchain_community.tools import GooglePlacesTool
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.tools import tool
-from std_msgs.msg import String
-
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.tools.ros.cli import Ros2ServiceTool
 from rai.tools.ros.native import Ros2PubMessageTool
 from rai.utils.model_initialization import get_llm_model, get_tracing_callbacks
+from std_msgs.msg import String
+
 from rai_hmi.api import GenericVoiceNode, split_message
 
 system_prompt = """

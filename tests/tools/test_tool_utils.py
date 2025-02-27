@@ -16,10 +16,9 @@
 import pytest
 from geometry_msgs.msg import Point, TransformStamped
 from nav2_msgs.action import NavigateToPose
+from rai.tools.ros2.utils import ros2_message_to_dict
 from sensor_msgs.msg import Image
 from tf2_msgs.msg import TFMessage
-
-from rai.tools.ros2.utils import ros2_message_to_dict
 
 
 # TODO(`maciejmajek`): Add custom RAI messages?
