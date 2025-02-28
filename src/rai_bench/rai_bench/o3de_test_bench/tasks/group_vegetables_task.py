@@ -1,8 +1,8 @@
-from typing import Dict, List, Set
-from rai_bench.benchmark_model import EntitiesMismatchException  # type: ignore
+from typing import List
+
+from rai_bench.o3de_test_bench.tasks.manipulation_task import ManipulationTask
 from rai_sim.o3de.o3de_bridge import SimulationBridge  # type: ignore
 from rai_sim.simulation_bridge import SimulationConfig, SpawnedEntity  # type: ignore
-from rai_bench.o3de_test_bench.tasks.manipulation_task import ManipulationTask
 
 
 class GroupVegetablesTask(ManipulationTask):

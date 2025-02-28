@@ -13,11 +13,14 @@
 # limitations under the License.
 from typing import List, Tuple
 
-from rai_bench.benchmark_model import EntitiesMismatchException
+from rai_bench.benchmark_model import (
+    EntitiesMismatchException,
+)
+from rai_bench.o3de_test_bench.tasks.manipulation_task import ManipulationTask
 from rai_sim.o3de.o3de_bridge import (
     SimulationBridge,
 )
-from rai_sim.simulation_bridge import SimulationConfig, SimulationConfigT, SpawnedEntity
+from rai_sim.simulation_bridge import SimulationConfig, SpawnedEntity, SimulationConfigT
 
 
 class GrabCarrotTask(ManipulationTask):
