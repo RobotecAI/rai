@@ -176,6 +176,9 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             ROS2Pose(),
             self.connector.get_transform(object_frame + "odom", object_frame),
         )
+        ros2_pose = do_transform_pose(
+            ros2_pose, self.connector.get_transform("world", "odom")
+        )
         return self._from_ros2_pose(ros2_pose)
 
     def get_scene_state(self) -> SceneState:
@@ -274,6 +277,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         else:
             while self.spawned_entities:
                 self._despawn_entity(self.spawned_entities[0])
+            self.logger.info(f"Entities after despawn: {self.spawned_entities}")
 
         for entity in simulation_config.entities:
             self._spawn_entity(entity)
