@@ -15,6 +15,7 @@
 ########### EXAMPLE USAGE ###########
 import logging
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import List
 
@@ -69,7 +70,12 @@ if __name__ == "__main__":
         GetROS2TopicsNamesAndTypesTool(connector=connector),
     ]
     # define loggers
-    log_file = "src/rai_bench/rai_bench/benchmark.log"
+    now = datetime.now()
+    experiment_dir = (
+        f"src/rai_bench/rai_bench/experiments/{now.strftime('%Y-%m-%d_%H-%M-%S')}"
+    )
+    Path(experiment_dir).mkdir(parents=True, exist_ok=True)
+    log_file = f"{experiment_dir}/benchmark.log"
     file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(logging.DEBUG)
 
@@ -159,11 +165,12 @@ if __name__ == "__main__":
 
     o3de = O3DEngineArmManipulationBridge(connector, logger=agent_logger)
     # define benchamrk
+    results_filename = f"{experiment_dir}/results.csv"
     benchmark = Benchmark(
         simulation_bridge=o3de,
         scenarios=scenarios,
         logger=bench_logger,
-        results_filename="src/rai_bench/rai_bench/results.csv",
+        results_filename=results_filename,
     )
     for i, s in enumerate(scenarios):
         agent = create_conversational_agent(
