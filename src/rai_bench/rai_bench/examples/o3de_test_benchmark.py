@@ -159,7 +159,7 @@ if __name__ == "__main__":
 
     # custom request to arm
     base_arm_pose = Pose(
-        translation=Translation(x=0.5, y=0.1, z=0.3),
+        translation=Translation(x=0.1, y=0.5, z=0.4),
         rotation=Rotation(x=1.0, y=0.0, z=0.0, w=0.0),
     )
 
@@ -183,7 +183,7 @@ if __name__ == "__main__":
             final_gripper_state=False,
             frame_id="panda_link0",
         )  # return to case position
-        time.sleep(2)  # admire the end position for a second ;)
+        time.sleep(0.2)  # admire the end position for a second ;)
 
     bench_logger.info("===============================================================")
     bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")

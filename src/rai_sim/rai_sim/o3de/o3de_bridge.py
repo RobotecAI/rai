@@ -201,7 +201,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         return SceneState(entities=entities)
 
     def _is_ros2_stack_ready(
-        self, required_ros2_stack: dict[str, List[str]], retries: int = 30
+        self, required_ros2_stack: dict[str, List[str]], retries: int = 120
     ) -> bool:
         for i in range(retries):
             available_topics = self.connector.get_topics_names_and_types()
@@ -259,7 +259,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
                 self.logger.info("All required ROS2 stack components are available.")
                 return True
 
-            time.sleep(3)
+            time.sleep(0.5)
 
         self.logger.error(
             "Maximum number of retries reached. Required ROS2 stack components are not fully available."
@@ -408,7 +408,7 @@ class O3DEngineArmManipulationBridge(O3DExROS2Bridge):
         request.target_pose.header.frame_id = frame_id
 
         request.target_pose.pose.position.x = pose.translation.x
-        request.target_pose.pose.position.x = pose.translation.y
+        request.target_pose.pose.position.y = pose.translation.y
         request.target_pose.pose.position.z = pose.translation.z
 
         if pose.rotation:
