@@ -16,6 +16,7 @@ import logging
 import shlex
 import signal
 import subprocess
+import threading
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
@@ -39,6 +40,10 @@ from rai_sim.simulation_bridge import (
     SpawnedEntity,
     Translation,
 )
+
+
+class ProcessMonitorError(Exception):
+    """Exception raised when a monitored process terminates unexpectedly."""
 
 
 class O3DExROS2SimulationConfig(SimulationConfig):
@@ -68,6 +73,52 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         self.current_sim_process = None
         self.current_robotic_stack_process = None
         self.current_binary_path = None
+
+        self._monitor_exception = None
+        self._monitor_running = True
+
+        self.monitor_thread = threading.Thread(
+            target=self._process_monitor, daemon=True
+        )
+        self.monitor_thread.start()
+
+    def _process_monitor(self):
+        """Background thread to check if the simulation and robotic stack processes are still running."""
+        try:
+            while self._monitor_running:
+                time.sleep(2)  # Check every 2 seconds
+
+                if (
+                    self.current_sim_process
+                    and self.current_sim_process.poll() is not None
+                ):
+                    error_msg = "Simulation process has unexpectedly terminated!"
+                    self.logger.error(error_msg)
+                    raise ProcessMonitorError(error_msg)
+
+                if (
+                    self.current_robotic_stack_process
+                    and self.current_robotic_stack_process.poll() is not None
+                ):
+                    error_msg = "Robotic stack process has unexpectedly terminated!"
+                    self.logger.error(error_msg)
+                    raise ProcessMonitorError(error_msg)
+        except Exception as e:
+            self._monitor_exception = e
+            self.logger.error(f"Process monitor detected an error: {str(e)}")
+
+    def check_monitor_status(self):
+        """
+        Checks if the process monitor has detected any errors.
+        This method should be called regularly by the main thread.
+
+        Raises:
+            Exception: If the monitor thread has detected an error
+        """
+        if self._monitor_exception:
+            exception = self._monitor_exception
+            self._monitor_exception = None
+            raise exception
 
     def shutdown(self):
         self._shutdown_binary()
