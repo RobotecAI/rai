@@ -17,14 +17,14 @@ from rai_bench.benchmark_model import (
     EntitiesMismatchException,
     Task,
 )
+from rai_bench.o3de_test_bench.tasks.manipulation_task import ManipulationTask
 from rai_sim.o3de.o3de_bridge import SimulationBridge
 from rai_sim.simulation_bridge import SimulationConfig, SimulationConfigT, SpawnedEntity
 
 
-class PlaceCubesTask(Task):
-    # TODO (jm) extract common logic to some parent manipulation task
+class PlaceCubesTask(ManipulationTask):
     obj_types = ["red_cube", "blue_cube", "yellow_cube"]
-
+    
     def get_prompt(self) -> str:
         return "Manipulate objects, so that all cubes are adjacent to at least one cube"
 
@@ -86,7 +86,7 @@ class PlaceCubesTask(Task):
         return final_correct, final_incorrect
 
     def calculate_result(
-        self, simulation_bridge: SimulationBridge[SimulationConfigT]
+        self, simulation_bridge: SimulationBridge[SimulationConfig]
     ) -> float:
         """
         Calculates a score from 0.0 to 1.0, where 0.0 represents the initial placements or worse and 1.0 represents perfect final placements.
