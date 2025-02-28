@@ -82,6 +82,21 @@ class Task(ABC):
         """
         pass
 
+    def get_initial_and_current_positions(self, simulation_bridge: SimulationBridge[SimulationConfig], object_types:List[str]):
+        scene_state = simulation_bridge.get_scene_state()
+        initial_objects = self.filter_entities_by_prefab_type(
+            simulation_bridge.spawned_entities, prefab_types=object_types
+        )
+        final_objects = self.filter_entities_by_prefab_type(
+            scene_state.entities, prefab_types=object_types
+        )
+
+        if len(initial_objects) != len(final_objects):
+            raise EntitiesMismatchException(
+                "Number of initially spawned entities does not match number of entities present at the end."
+            )
+        return initial_objects, final_objects
+    
     def filter_entities_by_prefab_type(
         self, entities: List[SpawnedEntity], prefab_types: List[str]
     ) -> List[SpawnedEntity]:
@@ -274,7 +289,6 @@ class Benchmark:
             self._logger.info(  # type: ignore
                 f"TASK SCORE: {result}, TOTAL TIME: {total_time:.3f}, NUM_OF_TOOL_CALLS: {tool_calls_num}"
             )
-
             scenario_result: Dict[str, Any] = {
                 "task": scenario.task.get_prompt(),
                 "simulation_config": scenario.simulation_config_path,
