@@ -13,5 +13,6 @@
 # limitations under the License.
 from rai_bench.o3de_test_bench.tasks.grab_carrot_task import GrabCarrotTask
 from rai_bench.o3de_test_bench.tasks.place_cubes_task import PlaceCubesTask
+from rai_bench.o3de_test_bench.tasks.group_vegetables_task import GroupVegetablesTask
 
-__all__ = ["GrabCarrotTask", "PlaceCubesTask"]
+__all__ = ["GrabCarrotTask", "PlaceCubesTask", "GroupVegetablesTask"]
