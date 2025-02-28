@@ -94,20 +94,19 @@ if __name__ == "__main__":
     vad = SileroVAD(args.vad_sampling_rate, args.vad_threshold)
     oww = OpenWakeWord("hey jarvis", args.oww_threshold)
     whisper = LocalWhisper("tiny", args.vad_sampling_rate)
+    # you can easily switch the the provider by changing the whisper object
     # whisper = OpenAIWhisper("whisper-1", args.vad_sampling_rate, "en")
 
     rclpy.init()
     ros2_name = "rai_asr_agent"
 
     agent = VoiceRecognitionAgent(microphone_configuration, ros2_name, whisper, vad)
+    # optionally add additional models to decide when to record data for transcription
     # agent.add_detection_model(oww, pipeline="record")
 
     agent.run()
 
     def cleanup(signum, frame):
-        print("\nCustom handler: Caught SIGINT (Ctrl+C).")
-        print("Performing cleanup")
-        # Optionally exit the program
         agent.stop()
         rclpy.shutdown()
         exit(0)
