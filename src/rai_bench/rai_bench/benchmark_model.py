@@ -180,6 +180,13 @@ class Benchmark:
         else:
             self._logger = logging.getLogger(__name__)
 
+        self.fieldnames = [
+            "task",
+            "simulation_config",
+            "final_score",
+            "total_time",
+            "number_of_tool_calls",
+        ]
         self._initialize_results_file()
 
     @classmethod
@@ -192,6 +199,7 @@ class Benchmark:
         # TODO (jm) hacky_fix, taking paths as args here, not the best solution,
         # but more changes to code would be required
         scenarios: List[Scenario[SimulationConfigT]] = []
+
         for task in tasks:
             for sim_conf, sim_path in zip(simulation_configs, simulation_configs_paths):
                 try:
@@ -210,19 +218,10 @@ class Benchmark:
 
     def _initialize_results_file(self):
         """Initialize the CSV file with headers."""
-        fieldnames = [
-            "task",
-            "simulation_config",
-            "initial_score",
-            "final_score",
-            "total_time",
-            "number_of_tool_calls",
-        ]
-
         with open(
             self.results_filename, mode="w", newline="", encoding="utf-8"
         ) as file:
-            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer = csv.DictWriter(file, fieldnames=self.fieldnames)
             writer.writeheader()
 
     def run_next(self, agent) -> None:
@@ -239,8 +238,6 @@ class Benchmark:
             self._logger.info(  # type: ignore
                 f"RUNNING SCENARIO NUMBER {i + 1} / {self.num_of_scenarios}, TASK: {scenario.task.get_prompt()}"
             )
-            initial_result = scenario.task.calculate_result(self.simulation_bridge)
-            self._logger.info(f"RESULT OF THE INITIAL SETUP: {initial_result}")  # type: ignore
             tool_calls_num = 0
 
             ts = time.perf_counter()
@@ -281,7 +278,6 @@ class Benchmark:
             scenario_result: Dict[str, Any] = {
                 "task": scenario.task.get_prompt(),
                 "simulation_config": scenario.simulation_config_path,
-                "initial_score": initial_result,
                 "final_score": result,
                 "total_time": f"{total_time:.3f}",
                 "number_of_tool_calls": tool_calls_num,
@@ -294,19 +290,10 @@ class Benchmark:
 
     def _save_scenario_result_to_csv(self, result: Dict[str, Any]) -> None:
         """Save a single scenario result to the CSV file."""
-        fieldnames = [
-            "task",
-            "simulation_config",
-            "initial_score",
-            "final_score",
-            "total_time",
-            "number_of_tool_calls",
-        ]
-
         with open(
             self.results_filename, mode="a", newline="", encoding="utf-8"
         ) as file:
-            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer = csv.DictWriter(file, fieldnames=self.fieldnames)
             writer.writerow(result)
 
     def get_results(self) -> List[Dict[str, Any]]:
