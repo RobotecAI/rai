@@ -15,7 +15,6 @@ from typing import List, Tuple
 
 from rai_bench.benchmark_model import (
     EntitiesMismatchException,
-    Task,
 )
 from rai_bench.o3de_test_bench.tasks.manipulation_task import ManipulationTask
 from rai_sim.o3de.o3de_bridge import SimulationBridge
@@ -24,7 +23,7 @@ from rai_sim.simulation_bridge import SimulationConfig, SimulationConfigT, Spawn
 
 class PlaceCubesTask(ManipulationTask):
     obj_types = ["red_cube", "blue_cube", "yellow_cube"]
-    
+
     def get_prompt(self) -> str:
         return "Manipulate objects, so that all cubes are adjacent to at least one cube"
 

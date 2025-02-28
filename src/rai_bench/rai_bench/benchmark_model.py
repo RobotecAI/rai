@@ -16,7 +16,7 @@ import csv
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Generic, List, Union, Set
+from typing import Any, Dict, Generic, List, Set, Union
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from rai.messages import HumanMultimodalMessage
