@@ -13,17 +13,16 @@
 # limitations under the License.
 from typing import List, Tuple
 
-from rai_bench.benchmark_model import EntitiesMismatchException, Task
+from rai_bench.benchmark_model import EntitiesMismatchException
 from rai_sim.o3de.o3de_bridge import (
     SimulationBridge,
 )
 from rai_sim.simulation_bridge import SimulationConfig, SimulationConfigT, SpawnedEntity
 
 
-class GrabCarrotTask(Task):
+class GrabCarrotTask(ManipulationTask):
     obj_types = ["carrot"]
 
-    # TODO (jm) extract common logic to some parent manipulation task
     def get_prompt(self) -> str:
         return "Manipulate objects, so that all carrots to the left side of the table (positive y)"
 
@@ -76,7 +75,7 @@ class GrabCarrotTask(Task):
         return final_correct, final_incorrect
 
     def calculate_result(
-        self, simulation_bridge: SimulationBridge[SimulationConfigT]
+        self, simulation_bridge: SimulationBridge[SimulationConfig]
     ) -> float:
         """
         Calculates a score from 0.0 to 1.0, where 0.0 represents the initial placements or worse and 1.0 represents perfect final placements.
