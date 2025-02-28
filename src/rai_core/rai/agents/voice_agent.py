@@ -233,7 +233,9 @@ class VoiceRecognitionAgent(BaseAgent):
             self.active_thread = ""
             self._send_ros2_message("stop", "/voice_commands")
             self.is_playing = False
-        elif sample_time - self.grace_period_start > self.grace_period:
+        elif not self.is_playing and (
+            sample_time - self.grace_period_start > self.grace_period
+        ):
             self._send_ros2_message("play", "/voice_commands")
             self.is_playing = True
 
