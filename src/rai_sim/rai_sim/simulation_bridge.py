@@ -68,6 +68,14 @@ class Entity(BaseModel):
     )
     pose: Pose = Field(description="Initial pose of the entity")
 
+    def __hash__(self) -> int:
+        return hash(self.name)  # Use ID for hashing
+
+    def __eq__(self, other) -> bool:
+        return (
+            isinstance(other, SpawnedEntity) and self.name == other.name
+        )  # Compare by ID
+
 
 class SpawnedEntity(Entity):
     """
@@ -163,9 +171,9 @@ class SimulationBridge(ABC, Generic[SimulationConfigT]):
     """
 
     def __init__(self, logger: Optional[logging.Logger] = None):
-        self.spawned_entities: List[
-            SpawnedEntity
-        ] = []  # list of spawned entities with their initial poses
+        self.spawned_entities: List[SpawnedEntity] = (
+            []
+        )  # list of spawned entities with their initial poses
         if logger is None:
             self.logger = logging.getLogger(__name__)
         else:
