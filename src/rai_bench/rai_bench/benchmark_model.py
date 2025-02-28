@@ -16,7 +16,7 @@ import csv
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Generic, List, Union
+from typing import Any, Dict, Generic, List, Union, Set
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from rai.messages import HumanMultimodalMessage
@@ -82,7 +82,11 @@ class Task(ABC):
         """
         pass
 
-    def get_initial_and_current_positions(self, simulation_bridge: SimulationBridge[SimulationConfig], object_types:List[str]):
+    def get_initial_and_current_positions(
+        self,
+        simulation_bridge: SimulationBridge[SimulationConfig],
+        object_types: List[str],
+    ):
         scene_state = simulation_bridge.get_scene_state()
         initial_objects = self.filter_entities_by_prefab_type(
             simulation_bridge.spawned_entities, prefab_types=object_types
@@ -96,7 +100,7 @@ class Task(ABC):
                 "Number of initially spawned entities does not match number of entities present at the end."
             )
         return initial_objects, final_objects
-    
+
     def filter_entities_by_prefab_type(
         self, entities: List[SpawnedEntity], prefab_types: List[str]
     ) -> List[SpawnedEntity]:
@@ -148,6 +152,62 @@ class Task(ABC):
                         break
 
         return adjacent_count
+
+    def build_neighbourhood_list(
+        self, entities: List[SpawnedEntity]
+    ) -> Dict[SpawnedEntity, List[SpawnedEntity]]:
+        """Assignes a list of neighbours to every object based on threshold distance"""
+        neighbourhood_graph: Dict[SpawnedEntity, List[SpawnedEntity]] = {
+            entity: [] for entity in entities
+        }
+        for entity in entities:
+            neighbourhood_graph[entity] = [
+                other
+                for other in entities
+                if entity != other and self.is_adjacent(entity.pose, other.pose, 0.15)
+            ]
+        return neighbourhood_graph
+
+    def group_entities_by_type(
+        self, entities: List[SpawnedEntity]
+    ) -> Dict[str, List[SpawnedEntity]]:
+        """Returns dictionary of entities grouped by type"""
+        entities_by_type: Dict[str, List[SpawnedEntity]] = {}
+        for entity in entities:
+            entities_by_type.setdefault(entity.prefab_name, []).append(entity)
+        return entities_by_type
+
+    def check_neighbourhood_types(
+        self,
+        neighbourhood: List[SpawnedEntity],
+        allowed_types: List[str],
+    ) -> bool:
+        """Check if ALL neighbours are given types"""
+        return not neighbourhood or all(
+            adj.prefab_name in allowed_types for adj in neighbourhood
+        )
+
+    def find_clusters(
+        self, neighbourhood_list: Dict[SpawnedEntity, List[SpawnedEntity]]
+    ) -> List[List[SpawnedEntity]]:
+        """Find clusters of entities using DFS algorithm, lone entities are counted as a cluster"""
+        visited: Set[SpawnedEntity] = set()
+        clusters: List[List[SpawnedEntity]] = []
+
+        def dfs(node: SpawnedEntity, cluster: List[SpawnedEntity]):
+            visited.add(node)
+            cluster.append(node)
+            for neighbor in neighbourhood_list.get(node, []):
+                if neighbor not in visited:
+                    dfs(neighbor, cluster)
+
+        for node in neighbourhood_list.keys():
+            if node not in visited:
+                component: List[SpawnedEntity] = []
+                dfs(node, component)
+                clusters.append(component)
+
+        return clusters
 
 
 class Scenario(Generic[SimulationConfigT]):
