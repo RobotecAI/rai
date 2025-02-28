@@ -165,6 +165,7 @@ if __name__ == "__main__":
         )
 
         o3de = O3DEngineArmManipulationBridge(connector, logger=agent_logger)
+        o3de.check_monitor_status()
         # define benchamrk
         results_filename = f"{experiment_dir}/results.csv"
         benchmark = Benchmark(
@@ -186,9 +187,13 @@ if __name__ == "__main__":
             )  # return to case position
             time.sleep(0.2)  # admire the end position for a second ;)
 
-        bench_logger.info("===============================================================")
+        bench_logger.info(
+            "==============================================================="
+        )
         bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
-        bench_logger.info("===============================================================")
+        bench_logger.info(
+            "==============================================================="
+        )
     except Exception as e:
         raise e
     finally:
