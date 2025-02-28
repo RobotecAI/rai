@@ -237,9 +237,6 @@ class ROS2HRIConnector(HRIConnector[ROS2HRIMessage]):
         self._thread = threading.Thread(target=self._executor.spin)
         self._thread.start()
 
-    # def run(self):
-    #     self._executor.spin()
-
     def _configure_publishers(self, targets: List[Tuple[str, TopicConfig]]):
         for target in targets:
             self._topic_api.configure_publisher(target[0], target[1])
