@@ -293,9 +293,10 @@ class ROS2TopicAPI:
 
     def _is_topic_available(self, topic: str, timeout_sec: float) -> bool:
         ts = time.time()
+        topic = topic.replace("/", "")
         while time.time() - ts < timeout_sec:
             topic_endpoints = self.get_topic_names_and_types()
-            if topic in [te[0] for te in topic_endpoints]:
+            if topic in [te[0].replace("/", "") for te in topic_endpoints]:
                 return True
             time.sleep(0.1)
         return False
