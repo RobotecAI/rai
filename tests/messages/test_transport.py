@@ -20,7 +20,7 @@ from typing import List
 import numpy as np
 import pytest
 import rclpy
-from rai.node import RaiBaseNode
+from rai.communication.ros2.connectors import ROS2ARIConnector
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import QoSPresetProfiles, QoSProfile
@@ -96,22 +96,17 @@ def test_transport(qos_profile: str):
     thread = threading.Thread(target=executor.spin)
     thread.start()
 
-    rai_base_node = RaiBaseNode(
+    connector = ROS2ARIConnector(
         node_name="test_transport_" + str(uuid.uuid4()).replace("-", "")
     )
 
-    thread2 = threading.Thread(target=rai_base_node.spin)
-    thread2.start()
     topics = ["/image", "/text"]
     try:
         for topic in topics:
-            output = rai_base_node.get_raw_message_from_topic(topic, timeout_sec=5.0)
-            assert not isinstance(output, str), "No message received"
+            _ = connector.receive_message(topic, timeout_sec=5.0)
     finally:
         executor.shutdown()
-        rai_base_node.executor.shutdown()
-        rai_base_node.destroy_node()
+        connector.shutdown()
         publisher.destroy_node()
         rclpy.shutdown()
         thread.join(timeout=1.0)
-        thread2.join(timeout=1.0)
