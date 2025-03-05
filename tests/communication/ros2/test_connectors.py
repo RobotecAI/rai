@@ -64,12 +64,6 @@ def test_ros2ari_connector_send_message(
         shutdown_executors_and_threads(executors, threads)
 
 
-@pytest.mark.xfail(
-    reason="Test expected to fail: ROS2 node discovery is asynchronous and the current implementation "
-    "doesn't wait for topic discovery. "
-    "TODO: Implement a proper discovery mechanism with timeout "
-    "to ensure reliable topic communication."
-)
 def test_ros2ari_connector_receive_message(
     ros_setup: None, request: pytest.FixtureRequest
 ):
