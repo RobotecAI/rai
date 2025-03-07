@@ -1,0 +1,76 @@
+# Copyright (C) 2025 Robotec.AI
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import logging
+import threading
+from typing import List, Optional
+
+from langchain_core.callbacks import BaseCallbackHandler
+from langchain_core.messages import AIMessage
+from langchain_core.outputs import LLMResult
+
+from rai.communication.hri_connector import HRIConnector, HRIMessage
+
+logger = logging.getLogger(__name__)
+
+
+class HRICallbackHandler(BaseCallbackHandler):
+    def __init__(
+        self,
+        connectors: dict[str, HRIConnector[HRIMessage]],
+        aggregate_chunks: bool = False,
+        splitting_chars: Optional[List[str]] = None,
+        max_buffer_size: int = 200,
+    ):
+        self.connectors = connectors
+        self.aggregate_chunks = aggregate_chunks
+        self.splitting_chars = splitting_chars or ["\n", ".", "!", "?"]
+        self.chunks_buffer = ""
+        self.max_buffer_size = max_buffer_size
+        self._buffer_lock = threading.Lock()
+
+    def _should_split(self, token: str) -> bool:
+        return any(token in char for char in self.splitting_chars)
+
+    def _send_all_targets(self, token: str):
+        for connector_name, connector in self.connectors.items():
+            connector.send_all_targets(AIMessage(content=token))
+            logger.debug(f"Sent token to {connector_name}")
+
+    def on_llm_new_token(self, token: str, **kwargs):
+        print("new token", token)
+        if token == "":
+            return
+        if self.aggregate_chunks:
+            with self._buffer_lock:
+                self.chunks_buffer += token
+                if len(self.chunks_buffer) < self.max_buffer_size:
+                    if self._should_split(token):
+                        self._send_all_targets(self.chunks_buffer)
+                        self.chunks_buffer = ""
+                else:
+                    self._send_all_targets(self.chunks_buffer)
+                    self.chunks_buffer = ""
+        else:
+            self._send_all_targets(token)
+
+    def on_llm_end(
+        self,
+        response: LLMResult,
+        **kwargs,
+    ):
+        if self.aggregate_chunks and self.chunks_buffer:
+            with self._buffer_lock:
+                self._send_all_targets(self.chunks_buffer)
+                self.chunks_buffer = ""

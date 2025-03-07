@@ -1,3 +1,17 @@
+# Copyright (C) 2025 Robotec.AI
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import operator
 from functools import partial
 from typing import Annotated, List, Optional, TypedDict, cast
@@ -8,6 +22,7 @@ from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
 from langgraph.graph import START, StateGraph
 from langgraph.prebuilt.tool_node import tools_condition
+
 from rai.agents.tool_runner import ToolRunner
 from rai.utils.model_initialization import get_llm_model
 
@@ -72,7 +87,7 @@ def create_simple_agent(
         If tools are provided but invalid
     """
     if llm is None:
-        llm = get_llm_model("complex_model")
+        llm = get_llm_model("complex_model", streaming=True)
 
     graph = StateGraph(SimpleAgentState)
     graph.add_edge(START, "llm")
