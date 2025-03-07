@@ -14,3 +14,4 @@ jobs:
       - uses: fuzzylabs/gha-poetry-update@v1
         with:
           python-version: 3.12
+          poetry-version: "1.8.4"
