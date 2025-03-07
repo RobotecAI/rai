@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import threading
 import time
 import uuid
@@ -27,8 +28,10 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile
 from tf2_ros import Buffer, LookupException, TransformListener, TransformStamped
 
-import rai_interfaces.msg
-from rai.communication import ARIConnector, HRIConnector
+from rai.communication import (
+    ARIConnector,
+    HRIConnector,
+)
 from rai.communication.ros2.api import (
     ConfigurableROS2TopicAPI,
     ROS2ActionAPI,
@@ -37,6 +40,11 @@ from rai.communication.ros2.api import (
     TopicConfig,
 )
 from rai.communication.ros2.messages import ROS2ARIMessage, ROS2HRIMessage
+
+try:
+    import rai_interfaces.msg
+except ImportError:
+    logging.warning("rai_interfaces is not installed, ROS 2 HRIMessage will not work.")
 
 
 class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
