@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+import logging
 import time
 from typing import Any, Callable, Dict, List, Literal, Optional, Type, Union
 
@@ -42,7 +43,11 @@ from rai.utils.ros import NodeDiscovery
 from rai.utils.ros_async import get_future_result
 from rai.utils.ros_executors import MultiThreadedExecutorFixed
 from rai.utils.ros_logs import create_logs_parser
-from rai_interfaces.action import Task as TaskAction
+
+try:
+    from rai_interfaces.action import Task as TaskAction
+except ImportError:
+    logging.warning("rai_interfaces is not installed, TaskAction will not work.")
 
 WHOAMI_SYSTEM_PROMPT_TEMPLATE = """
     Constitution:

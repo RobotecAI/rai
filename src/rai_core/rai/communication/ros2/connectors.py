@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import threading
 import time
 import uuid
@@ -34,7 +35,6 @@ from rclpy.qos import QoSProfile
 from sensor_msgs.msg import Image as ROS2Image
 from tf2_ros import Buffer, LookupException, TransformListener, TransformStamped
 
-import rai_interfaces.msg
 from rai.communication import (
     ARIConnector,
     ARIMessage,
@@ -49,10 +49,15 @@ from rai.communication.ros2.api import (
     ROS2TopicAPI,
     TopicConfig,
 )
-from rai_interfaces.msg import HRIMessage as ROS2HRIMessage_
-from rai_interfaces.msg._audio_message import (
-    AudioMessage as ROS2HRIMessage__Audio,
-)
+
+try:
+    import rai_interfaces.msg
+    from rai_interfaces.msg import HRIMessage as ROS2HRIMessage_
+    from rai_interfaces.msg._audio_message import (
+        AudioMessage as ROS2HRIMessage__Audio,
+    )
+except ImportError:
+    logging.warning("rai_interfaces is not installed, ROS 2 HRIMessage will not work.")
 
 
 class ROS2ARIMessage(ARIMessage):
@@ -219,7 +224,9 @@ class ROS2HRIMessage(HRIMessage):
 
     @classmethod
     def from_ros2(
-        cls, msg: rai_interfaces.msg.HRIMessage, message_author: Literal["ai", "human"]
+        cls,
+        msg: "rai_interfaces.msg.HRIMessage",
+        message_author: Literal["ai", "human"],
     ):
         cv_bridge = CvBridge()
         images = [
