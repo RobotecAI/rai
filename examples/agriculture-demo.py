@@ -15,16 +15,13 @@
 import argparse
 
 import rclpy
-from rai.node import RaiStateBasedLlmNode, describe_ros_image
-from rai.tools.ros.native import (
-    GetCameraImage,
-    GetMsgFromTopic,
-    Ros2GenericServiceCaller,
-    Ros2GetRobotInterfaces,
-    Ros2ShowMsgInterfaceTool,
-)
+from langchain_core.messages import HumanMessage
+from langchain_core.runnables import Runnable
+from rai.agents.conversational_agent import State, create_conversational_agent
+from rai.communication.ros2.connectors import ROS2ARIConnector
+from rai.tools.ros2.topics import ROS2TopicsToolkit
 from rai.tools.time import WaitForSecondsTool
-from rclpy.action import ActionClient
+from rai.utils.model_initialization import get_llm_model
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
@@ -34,9 +31,10 @@ from rai_interfaces.action import Task
 
 
 class MockBehaviorTreeNode(Node):
-    def __init__(self, tractor_number: int):
+    def __init__(self, tractor_number: int, agent: Runnable[State, State]):
         super().__init__(f"mock_behavior_tree_node_{tractor_number}")
         self.tractor_number = tractor_number
+        self.agent = agent
 
         # Create a callback group for concurrent execution
         self.callback_group = ReentrantCallbackGroup()
@@ -46,11 +44,6 @@ class MockBehaviorTreeNode(Node):
             Trigger,
             f"/tractor{tractor_number}/current_state",
             callback_group=self.callback_group,
-        )
-
-        # Create action client
-        self.perform_task_client = ActionClient(
-            self, Task, "/perform_task", callback_group=self.callback_group
         )
 
         # Create timer for periodic checks
@@ -79,18 +72,7 @@ class MockBehaviorTreeNode(Node):
             goal_msg.description = ""
             goal_msg.task = "Anomaly detected. Please decide what to do."
 
-            self.perform_task_client.wait_for_server()
-
-            future = self.perform_task_client.send_goal_async(goal_msg)
-            await future
-
-            goal_handle = future.result()
-            if goal_handle.accepted:
-                self.get_logger().info("Goal accepted by perform_task action server")
-                result = await goal_handle.get_result_async()
-                self.get_logger().info(f"Result: {result.result}")
-            else:
-                self.get_logger().warn("Goal rejected by perform_task action server")
+            self.agent.invoke(State(messages=[HumanMessage(content=str(goal_msg))]))
 
 
 def main():
@@ -105,29 +87,8 @@ def main():
     args = parser.parse_args()
 
     tractor_number = args.tractor_number
-    tractor_prefix = f"/tractor{tractor_number}"
 
     rclpy.init()
-
-    observe_topics = [
-        f"{tractor_prefix}/camera_image_color",
-    ]
-
-    observe_postprocessors = {
-        f"{tractor_prefix}/camera_image_color": describe_ros_image
-    }
-
-    topics_allowlist = [
-        "/rosout",
-        f"{tractor_prefix}/camera_image_color",
-        # Services
-        f"{tractor_prefix}/continue",
-        f"{tractor_prefix}/current_state",
-        f"{tractor_prefix}/flash",
-        f"{tractor_prefix}/replan",
-    ]
-
-    actions_allowlist = []
 
     SYSTEM_PROMPT = f"""
     You are autonomous tractor {tractor_number} operating in an agricultural field. You are activated whenever the tractor stops due to an unexpected situation. Your task is to call a service based on your assessment of the situation.
@@ -142,27 +103,20 @@ def main():
 
     Important: You must call only one service. The tractor can only handle one service call.
     """
-
-    rai_node = RaiStateBasedLlmNode(
-        observe_topics=observe_topics,
-        observe_postprocessors=observe_postprocessors,
-        allowlist=topics_allowlist + actions_allowlist,
+    connector = ROS2ARIConnector()
+    agent = create_conversational_agent(
+        llm=get_llm_model("complex_model"),
         system_prompt=SYSTEM_PROMPT,
         tools=[
-            Ros2ShowMsgInterfaceTool,
-            WaitForSecondsTool,
-            GetMsgFromTopic,
-            GetCameraImage,
-            Ros2GetRobotInterfaces,
-            Ros2GenericServiceCaller,
+            *ROS2TopicsToolkit(connector=connector).get_tools(),
+            WaitForSecondsTool(),
         ],
     )
 
-    mock_node = MockBehaviorTreeNode(tractor_number)
+    mock_node = MockBehaviorTreeNode(tractor_number, agent)
 
     # Use a MultiThreadedExecutor to allow for concurrent execution
     executor = MultiThreadedExecutor()
-    executor.add_node(rai_node)
     executor.add_node(mock_node)
 
     try:
@@ -170,7 +124,7 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
-        rai_node.destroy_node()
+        connector.shutdown()
         mock_node.destroy_node()
         rclpy.shutdown()
 
