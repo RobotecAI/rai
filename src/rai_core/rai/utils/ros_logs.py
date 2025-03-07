@@ -13,6 +13,7 @@
 # limitations under the License.
 #
 
+import logging
 from collections import deque
 from typing import Deque, Literal, Optional
 
@@ -25,7 +26,12 @@ import rclpy.subscription
 from langchain_core.language_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
 
-import rai_interfaces.srv
+try:
+    import rai_interfaces.srv
+except ImportError:
+    logging.warning(
+        "rai_interfaces is not installed, RaiStateLogsParser will not work."
+    )
 from rai.utils.ros_async import get_future_result
 
 
