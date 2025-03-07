@@ -55,7 +55,7 @@ from rclpy.qos import (
 from rclpy.task import Future
 from rclpy.topic_endpoint_info import TopicEndpointInfo
 
-from rai.tools.ros.utils import import_message_from_str, wait_for_message
+from rai.tools.ros.utils import import_message_from_str
 
 
 def adapt_requests_to_offers(publisher_info: List[TopicEndpointInfo]) -> QoSProfile:
@@ -206,6 +206,7 @@ class ROS2TopicAPI:
         timeout_sec: float = 1.0,
         auto_qos_matching: bool = True,
         qos_profile: Optional[QoSProfile] = None,
+        retry_count: int = 3,
     ) -> Any:
         """Receive a single message from a ROS2 topic.
 
@@ -241,19 +242,64 @@ class ROS2TopicAPI:
         )
 
         msg_cls = self._get_message_class(msg_type)
-        success, msg = wait_for_message(
-            msg_cls,
-            self._node,
-            topic,
-            qos_profile=qos_profile,
-            time_to_wait=int(timeout_sec),
-        )
+        if not self._is_topic_available(topic, timeout_sec):
+            raise ValueError(
+                f"Topic {topic} is not available within {timeout_sec} seconds. Check if the topic exists."
+            )
 
-        if not success:
+        for _ in range(retry_count):
+            success, msg = self._wait_for_message(
+                msg_cls,
+                self._node,
+                topic,
+                qos_profile=qos_profile,
+                timeout_sec=timeout_sec / retry_count,
+            )
+            if success:
+                return msg
+        else:
             raise ValueError(
                 f"No message received from topic: {topic} within {timeout_sec} seconds"
             )
-        return msg
+
+    def _wait_for_message(
+        self,
+        msg_cls: Type[Any],
+        node: rclpy.node.Node,
+        topic: str,
+        qos_profile: QoSProfile,
+        timeout_sec: float,
+    ) -> Tuple[bool, Any]:
+        success = False
+        msg = None
+
+        def callback(received_msg: Any):
+            nonlocal success
+            nonlocal msg
+            success = True
+            msg = received_msg
+
+        sub = node.create_subscription(
+            msg_cls, topic, callback, qos_profile=qos_profile
+        )
+        ts = time.time()
+        while time.time() - ts < timeout_sec:
+            if success:
+                node.destroy_subscription(sub)
+                return True, msg
+            time.sleep(0.01)
+        node.destroy_subscription(sub)
+        return False, None
+
+    def _is_topic_available(self, topic: str, timeout_sec: float) -> bool:
+        ts = time.time()
+        topic = topic if topic.startswith("/") else f"/{topic}"
+        while time.time() - ts < timeout_sec:
+            for topic_name, _ in self.get_topic_names_and_types():
+                if topic == topic_name:
+                    return True
+            time.sleep(0.1)
+        return False
 
     def _get_or_create_publisher(
         self, topic: str, msg_cls: Type[Any], qos_profile: QoSProfile

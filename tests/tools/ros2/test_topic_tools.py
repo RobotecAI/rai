@@ -68,12 +68,6 @@ def test_publish_message_tool(ros_setup: None, request: pytest.FixtureRequest) -
         shutdown_executors_and_threads(executors, threads)
 
 
-@pytest.mark.xfail(
-    reason="Test expected to fail: ROS2 node discovery is asynchronous and the current implementation "
-    "doesn't wait for topic discovery. "
-    "TODO: Implement a proper discovery mechanism with timeout "
-    "to ensure reliable topic communication."
-)
 def test_receive_message_tool(ros_setup: None, request: pytest.FixtureRequest) -> None:
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     connector = ROS2ARIConnector()
@@ -89,12 +83,6 @@ def test_receive_message_tool(ros_setup: None, request: pytest.FixtureRequest) -
         shutdown_executors_and_threads(executors, threads)
 
 
-@pytest.mark.xfail(
-    reason="Test expected to fail: ROS2 node discovery is asynchronous and the current implementation "
-    "doesn't wait for topic discovery. "
-    "TODO: Implement a proper discovery mechanism with timeout "
-    "to ensure reliable topic communication."
-)
 def test_receive_image_tool(ros_setup: None, request: pytest.FixtureRequest) -> None:
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     connector = ROS2ARIConnector()
