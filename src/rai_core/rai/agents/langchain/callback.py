@@ -49,7 +49,6 @@ class HRICallbackHandler(BaseCallbackHandler):
             logger.debug(f"Sent token to {connector_name}")
 
     def on_llm_new_token(self, token: str, **kwargs):
-        print("new token", token)
         if token == "":
             return
         if self.aggregate_chunks:
