@@ -256,7 +256,7 @@ class ROS2HRIConnector(HRIConnector[ROS2HRIMessage]):
         source: str,
         timeout_sec: float = 1.0,
         *,
-        message_author: Literal["human", "ai"],
+        message_author: Literal["human", "ai"] = "human",
         msg_type: Optional[str] = None,
         auto_topic_type: bool = True,
         **kwargs: Any,

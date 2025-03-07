@@ -63,6 +63,9 @@ class HRIMessage(BaseMessage):
         self.images = payload.images
         self.audios = payload.audios
 
+    def __bool__(self) -> bool:
+        return bool(self.text or self.images or self.audios)
+
     def __repr__(self):
         return f"HRIMessage(type={self.message_author}, text={self.text}, images={self.images}, audios={self.audios})"
 

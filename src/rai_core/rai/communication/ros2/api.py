@@ -16,9 +16,11 @@ import copy
 import logging
 import time
 import uuid
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from functools import partial
+from queue import Queue
 from typing import (
     Annotated,
     Any,
@@ -391,6 +393,10 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
     def __init__(self, node: rclpy.node.Node):
         super().__init__(node)
         self._subscribtions: dict[str, rclpy.node.Subscription] = {}
+        self.message_data: Dict[str, Queue[Any]] = defaultdict(Queue)
+
+    def _generic_callback(self, topic: str, msg: Any):
+        self.message_data[topic].put(msg)
 
     def configure_publisher(self, topic: str, config: TopicConfig):
         if config.is_subscriber:
@@ -431,12 +437,10 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
                 )
 
         msg_type = import_message_from_str(config.msg_type)
-
-        assert config.subscriber_callback is not None
         self._subscribtions[topic] = self._node.create_subscription(
             msg_type=msg_type,
             topic=topic,
-            callback=config.subscriber_callback,
+            callback=partial(self._generic_callback, topic),
             qos_profile=qos_profile,
         )
 
