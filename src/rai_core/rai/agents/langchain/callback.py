@@ -41,7 +41,7 @@ class HRICallbackHandler(BaseCallbackHandler):
         self._buffer_lock = threading.Lock()
 
     def _should_split(self, token: str) -> bool:
-        return any(token in char for char in self.splitting_chars)
+        return token in self.splitting_chars
 
     def _send_all_targets(self, token: str):
         for connector_name, connector in self.connectors.items():
