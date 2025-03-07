@@ -26,7 +26,7 @@ from threading import Lock
 from typing import Any, Callable, Dict, List, Type
 
 from langchain_core.tools import BaseTool, BaseToolkit  # type: ignore
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 
@@ -40,6 +40,10 @@ class ROS2ActionToolkit(BaseToolkit):
     action_feedbacks_store: Dict[str, List[Any]] = defaultdict(list)
     action_feedbacks_store_lock: Lock = Lock()
     internal_action_id_mapping: Dict[str, str] = {}
+
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
 
     def get_tools(self) -> List[BaseTool]:
         return [
