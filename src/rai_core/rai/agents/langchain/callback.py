@@ -22,8 +22,6 @@ from langchain_core.outputs import LLMResult
 
 from rai.communication.hri_connector import HRIConnector, HRIMessage
 
-logger = logging.getLogger(__name__)
-
 
 class HRICallbackHandler(BaseCallbackHandler):
     def __init__(
@@ -39,14 +37,18 @@ class HRICallbackHandler(BaseCallbackHandler):
         self.chunks_buffer = ""
         self.max_buffer_size = max_buffer_size
         self._buffer_lock = threading.Lock()
+        self.logger = logging.getLogger(__name__)
 
     def _should_split(self, token: str) -> bool:
         return token in self.splitting_chars
 
     def _send_all_targets(self, token: str):
         for connector_name, connector in self.connectors.items():
-            connector.send_all_targets(AIMessage(content=token))
-            logger.debug(f"Sent token to {connector_name}")
+            try:
+                connector.send_all_targets(AIMessage(content=token))
+                self.logger.debug(f"Sent token to {connector_name}")
+            except Exception as e:
+                self.logger.error(f"Failed to send token to {connector_name}: {e}")
 
     def on_llm_new_token(self, token: str, **kwargs):
         if token == "":
