@@ -39,15 +39,15 @@ class ToolRunner(RunnableCallable):
         *,
         name: str = "tools",
         tags: Optional[list[str]] = None,
-        logger: Union[RcutilsLogger, logging.Logger],
+        logger: Optional[Union[RcutilsLogger, logging.Logger]] = None,
     ) -> None:
         super().__init__(self._func, name=name, tags=tags, trace=False)
+        self.logger = logger or logging.getLogger(__name__)
         self.tools_by_name: Dict[str, BaseTool] = {}
         for tool_ in tools:
             if not isinstance(tool_, BaseTool):
                 tool_ = create_tool(tool_)
             self.tools_by_name[tool_.name] = tool_
-        self.logger = logger
 
     def _func(self, input: dict[str, Any], config: RunnableConfig) -> Any:
         config["max_concurrency"] = (
