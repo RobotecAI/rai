@@ -37,7 +37,7 @@ class ROS2SpatioTemporalConfig(SpatioTemporalConfig):
 
 
 class ROS2SpatioTemporalAgent(SpatioTemporalAgent):
-    def __init__(self, config: ROS2SpatioTemporalConfig, *args, **kwargs):
+    def __init__(self, config: ROS2SpatioTemporalConfig, *args, **kwargs):  # type: ignore
         super().__init__(config, *args, **kwargs)
         self.config = config
         self.connector = ROS2ARIConnector()
@@ -48,7 +48,7 @@ class ROS2SpatioTemporalAgent(SpatioTemporalAgent):
         images: Dict[Annotated[str, "camera topic"], str] = {}
         for camera_topic in self.config.camera_topics:
             try:
-                _, artifact = self.get_image_tool._run(topic=camera_topic)
+                _, artifact = self.get_image_tool._run(topic=camera_topic)  # type: ignore
                 image = artifact["images"][0]
                 images[camera_topic] = image
             except Exception as e:
@@ -67,21 +67,21 @@ class ROS2SpatioTemporalAgent(SpatioTemporalAgent):
             return None
         ps = PoseStamped(
             header=Header(
-                stamp=tf_stamped.header.stamp.sec
-                + tf_stamped.header.stamp.nanosec * 1e-9,
-                frame_id=tf_stamped.header.frame_id,
+                stamp=tf_stamped.header.stamp.sec  # type: ignore
+                + tf_stamped.header.stamp.nanosec * 1e-9,  # type: ignore
+                frame_id=tf_stamped.header.frame_id,  # type: ignore
             ),
             pose=Pose(
                 position=Point(
-                    x=tf_stamped.transform.translation.x,
-                    y=tf_stamped.transform.translation.y,
-                    z=tf_stamped.transform.translation.z,
+                    x=tf_stamped.transform.translation.x,  # type: ignore
+                    y=tf_stamped.transform.translation.y,  # type: ignore
+                    z=tf_stamped.transform.translation.z,  # type: ignore
                 ),
                 orientation=Quaternion(
-                    x=tf_stamped.transform.rotation.x,
-                    y=tf_stamped.transform.rotation.y,
-                    z=tf_stamped.transform.rotation.z,
-                    w=tf_stamped.transform.rotation.w,
+                    x=tf_stamped.transform.rotation.x,  # type: ignore
+                    y=tf_stamped.transform.rotation.y,  # type: ignore
+                    z=tf_stamped.transform.rotation.z,  # type: ignore
+                    w=tf_stamped.transform.rotation.w,  # type: ignore
                 ),
             ),
         )

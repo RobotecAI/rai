@@ -28,9 +28,6 @@ from pymongo import MongoClient
 from rai.agents.base import BaseAgent
 from rai.messages.multimodal import HumanMultimodalMessage
 
-EMBEDDINGS_FIELD_NAME = "embeddings"
-SEARCH_INDEX_NAME = "embeddings_search_index"
-
 
 class Header(BaseModel):
     stamp: Annotated[float, "timestamp"]
@@ -100,7 +97,7 @@ class SpatioTemporalAgent(BaseAgent):
         **kwargs : dict
             Additional keyword arguments.
         """
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)  # type: ignore
         self.config = config
 
         self.db = MongoClient(self.config.db_url)[self.config.db_name]  # type: ignore
@@ -133,7 +130,7 @@ class SpatioTemporalAgent(BaseAgent):
         self.logger.info("Inserting embeddings into vector store")
 
         print(
-            self.config.vector_db.add_texts(
+            self.config.vector_db.add_texts(  # type: ignore
                 texts=[data.temporal_context + data.image_text_descriptions],
                 metadatas=[{"id": data.id}],
                 ids=[data.id],
@@ -252,7 +249,7 @@ class SpatioTemporalAgent(BaseAgent):
                     [text_description_prompt, human_message]
                 ),
             )
-            if not isinstance(ai_msg.content, str):
+            if not isinstance(ai_msg.content, str):  # type: ignore
                 raise ValueError("AI message content is not a string")
             text_descriptions[source] = ai_msg.content
 
@@ -289,7 +286,8 @@ class SpatioTemporalAgent(BaseAgent):
         )
 
         robots_history: List[Dict[str, str]] = [
-            {"role": msg.type, "content": msg.content} for msg in history
+            {"role": msg.type, "content": msg.content}  # type: ignore
+            for msg in history
         ]
         if len(robots_history) == 0:
             return ""
@@ -301,6 +299,6 @@ class SpatioTemporalAgent(BaseAgent):
                 [system_prompt, human_message]
             ),
         )
-        if not isinstance(ai_msg.content, str):
+        if not isinstance(ai_msg.content, str):  # type: ignore
             raise ValueError("AI message content is not a string")
         return ai_msg.content

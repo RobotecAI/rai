@@ -15,7 +15,7 @@
 import logging
 import os
 from dataclasses import dataclass
-from typing import List, Literal, Optional, cast
+from typing import Any, List, Literal, Optional, cast
 
 import coloredlogs
 import tomli
@@ -109,7 +109,7 @@ def load_config() -> RAIConfig:
 def get_llm_model(
     model_type: Literal["simple_model", "complex_model"],
     vendor: Optional[str] = None,
-    **kwargs,
+    **kwargs: Any,
 ):
     config = load_config()
     if vendor is None:
@@ -184,7 +184,6 @@ def get_vectorstore():
         from langchain_community.vectorstores import FAISS
 
         if os.path.exists(config.vectorstore.uri):
-            print("I EXIST")
             return FAISS.load_local(
                 config.vectorstore.uri,
                 embeddings=get_embeddings_model(),
