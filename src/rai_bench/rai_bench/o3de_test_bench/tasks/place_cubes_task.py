@@ -13,12 +13,10 @@
 # limitations under the License.
 from typing import List, Tuple
 
-from rai_bench.benchmark_model import (
-    EntitiesMismatchException,
+from rai_bench.o3de_test_bench.tasks.manipulation_task import (
+    ManipulationTask,  # type: ignore
 )
-from rai_bench.o3de_test_bench.tasks.manipulation_task import ManipulationTask
-from rai_sim.o3de.o3de_bridge import SimulationBridge
-from rai_sim.simulation_bridge import SimulationConfig, SimulationConfigT, SpawnedEntity
+from rai_sim.simulation_bridge import SimulationConfig, SpawnedEntity  # type: ignore
 
 
 class PlaceCubesTask(ManipulationTask):
@@ -48,69 +46,3 @@ class PlaceCubesTask(ManipulationTask):
         )
         incorrect: int = len(entities) - correct
         return correct, incorrect
-
-    def calculate_initial_placements(
-        self, simulation_bridge: SimulationBridge[SimulationConfigT]
-    ) -> tuple[int, int]:
-        """
-        Calculates the number of objects that are correctly and incorrectly placed initially.
-        """
-        initial_cubes = self.filter_entities_by_prefab_type(
-            simulation_bridge.spawned_entities, prefab_types=self.obj_types
-        )
-        initially_correct, initially_incorrect = self.calculate_correct(
-            entities=initial_cubes
-        )
-
-        self.logger.info(  # type: ignore
-            f"Initially correctly placed cubes: {initially_correct}, Initially incorrectly placed cubes: {initially_incorrect}"
-        )
-        return initially_correct, initially_incorrect
-
-    def calculate_final_placements(
-        self, simulation_bridge: SimulationBridge[SimulationConfigT]
-    ) -> tuple[int, int]:
-        """
-        Calculates the number of objects that are correctly and incorrectly placed at the end of the simulation.
-        """
-        scene_state = simulation_bridge.get_scene_state()
-        final_cubes = self.filter_entities_by_prefab_type(
-            scene_state.entities, prefab_types=self.obj_types
-        )
-        final_correct, final_incorrect = self.calculate_correct(entities=final_cubes)
-
-        self.logger.info(  # type: ignore
-            f"Finally correctly placed cubes: {final_correct}, Finally incorrectly placed cubes: {final_incorrect}"
-        )
-        return final_correct, final_incorrect
-
-    def calculate_result(
-        self, simulation_bridge: SimulationBridge[SimulationConfig]
-    ) -> float:
-        """
-        Calculates a score from 0.0 to 1.0, where 0.0 represents the initial placements or worse and 1.0 represents perfect final placements.
-        """
-        initially_correct, initially_incorrect = self.calculate_initial_placements(
-            simulation_bridge
-        )
-        final_correct, final_incorrect = self.calculate_final_placements(
-            simulation_bridge
-        )
-
-        total_objects = initially_correct + initially_incorrect
-        if total_objects == 0:
-            return 1.0
-        elif (initially_correct + initially_incorrect) != (
-            final_correct + final_incorrect
-        ):
-            raise EntitiesMismatchException(
-                "number of initial entities does not match final entities number."
-            )
-        elif initially_incorrect == 0:
-            raise ValueError("All objects are placed correctly at the start.")
-        else:
-            corrected = final_correct - initially_correct
-            score = max(0.0, corrected / initially_incorrect)
-
-            self.logger.info(f"Calculated score: {score:.2f}")  # type: ignore
-            return score
