@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from rai_bench.o3de_test_bench.tasks.grab_carrot_task import GrabCarrotTask
+from rai_bench.o3de_test_bench.tasks.group_cubes_by_color_task import (
+    GroupCubesByColorTask,
+)
 from rai_bench.o3de_test_bench.tasks.group_vegetables_task import GroupVegetablesTask
 from rai_bench.o3de_test_bench.tasks.place_cubes_task import PlaceCubesTask
 from rai_bench.o3de_test_bench.tasks.build_tower_task import BuildCubeTowerTask
@@ -21,4 +24,6 @@ __all__ = [
     "GroupVegetablesTask",
     "PlaceCubesTask",
     "BuildCubeTowerTask",
+    "GroupCubesByColorTask",
+    "PlaceCubesTask",
 ]
