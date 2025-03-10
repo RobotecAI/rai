@@ -14,19 +14,19 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import List, Sequence, Tuple, Union
+from typing import List, Tuple, Union
 
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai_bench.benchmark_model import (  # type: ignore
     EntitiesMismatchException,
-    Task,  # type: ignore
+    EntityT,
+    Task,
 )
 from rai_sim.simulation_bridge import (  # type: ignore
     SimulationBridge,
     SimulationConfig,
     SimulationConfigT,
-    SpawnedEntity,
 )
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
@@ -49,7 +49,29 @@ class ManipulationTask(Task, ABC):
         self.initially_correct_now_incorrect = 0
 
     @abstractmethod
-    def calculate_correct(self, entities: List[SpawnedEntity]) -> Tuple[int, int]:
+    def check_if_required_objects_present(self, entities: List[EntityT]) -> bool:
+        """Each task should check if objects required to perform it are present"""
+        return True
+
+    def check_if_any_placed_incorrectly(self, entities: List[EntityT]) -> bool:
+        """Check If any object is placed incorrectly"""
+        _, incorrect = self.calculate_correct(entities=entities)
+        return incorrect > 0
+
+    def validate_config(self, simulation_config: SimulationConfig) -> bool:
+        """
+        Validate if both required objects are present and if any of them is placed incorrectly.
+        If these conditions are not met, there is no point in running task in these simulation config
+        """
+        if self.check_if_required_objects_present(
+            entities=simulation_config.entities
+        ) and self.check_if_any_placed_incorrectly(entities=simulation_config.entities):
+            return True
+        else:
+            return False
+
+    @abstractmethod
+    def calculate_correct(self, entities: List[EntityT]) -> Tuple[int, int]:
         """
         This method should implement calculation of how many objects
         are positioned correctly and incorrectly
@@ -117,7 +139,6 @@ class ManipulationTask(Task, ABC):
                 "number of initial entities does not match final entities number."
             )
         elif initially_incorrect == 0:
-            pass
             # NOTE all objects are placed correctly
             # no point in running task
             raise ValueError("All objects are placed correctly at the start.")
