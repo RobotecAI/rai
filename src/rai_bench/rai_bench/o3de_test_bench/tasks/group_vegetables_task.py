@@ -14,12 +14,10 @@
 
 from typing import List, Tuple
 
-from rai_bench.o3de_test_bench.tasks.manipulation_task import ManipulationTask
-from rai_bench.benchmark_model import (
-    EntitiesMismatchException,
+from rai_bench.o3de_test_bench.tasks.manipulation_task import (
+    ManipulationTask,  # type: ignore
 )
-from rai_sim.o3de.o3de_bridge import SimulationBridge  # type: ignore
-from rai_sim.simulation_bridge import SimulationConfig, SpawnedEntity, SimulationConfigT  # type: ignore
+from rai_sim.simulation_bridge import SimulationConfig, SpawnedEntity  # type: ignore
 
 
 class GroupVegetablesTask(ManipulationTask):
@@ -68,54 +66,3 @@ class GroupVegetablesTask(ManipulationTask):
                 misclustered.extend(veggies)
 
         return len(properly_clustered), len(misclustered)
-
-    def calculate_initial_placements(
-        self, simulation_bridge: SimulationBridge[SimulationConfigT]
-    ) -> Tuple[int, int]:
-        """Calculate the number of initially correct and incorrect placements."""
-        initial_veggies = self.filter_entities_by_prefab_type(
-            simulation_bridge.spawned_entities, self.obj_types
-        )
-        initially_correct, initially_incorrect = self.calculate_correct(initial_veggies)
-
-        self.logger.info(f"Initially correct: {initially_correct}, Initially incorrect: {initially_incorrect}")  # type: ignore
-        return initially_correct, initially_incorrect
-
-    def calculate_final_placements(
-        self, simulation_bridge: SimulationBridge[SimulationConfigT]
-    ) -> Tuple[int, int]:
-        """Calculate the number of correctly and incorrectly placed objects at the end of the simulation."""
-        scene_state = simulation_bridge.get_scene_state()
-        final_veggies = self.filter_entities_by_prefab_type(
-            scene_state.entities, self.obj_types
-        )
-        final_correct, final_incorrect = self.calculate_correct(final_veggies)
-
-        self.logger.info(f"Final correct: {final_correct}, Final incorrect: {final_incorrect}")  # type: ignore
-        return final_correct, final_incorrect
-
-    def calculate_result(
-        self, simulation_bridge: SimulationBridge[SimulationConfig]
-    ) -> float:
-        """Calculates a score from 0.0 to 1.0 based on placement improvements."""
-        initially_correct, initially_incorrect = self.calculate_initial_placements(
-            simulation_bridge
-        )
-        final_correct, final_incorrect = self.calculate_final_placements(
-            simulation_bridge
-        )
-
-        total_objects = initially_correct + initially_incorrect
-        if total_objects == 0:
-            return 1.0
-        elif total_objects != (final_correct + final_incorrect):
-            raise EntitiesMismatchException(
-                "Mismatch in initial and final entity counts."
-            )
-        elif initially_incorrect == 0:
-            raise ValueError("All objects are placed correctly at the start.")
-        else:
-            corrected = final_correct - initially_correct
-            score = max(0.0, corrected / initially_incorrect)
-            self.logger.info(f"Calculated score: {score:.2f}")  # type: ignore
-            return score
