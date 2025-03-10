@@ -65,15 +65,15 @@ class ManipulationTask(Task, ABC):
         """
         Calculates the number of objects that are correctly and incorrectly placed initially.
         """
-        initial_carrots = self.filter_entities_by_prefab_type(
+        initial_objects = self.filter_entities_by_prefab_type(
             simulation_bridge.spawned_entities, prefab_types=self.obj_types
         )
         initially_correct, initially_incorrect = self.calculate_correct(
-            entities=initial_carrots
+            entities=initial_objects
         )
 
         self.logger.info(  # type: ignore
-            f"Initially correctly placed carrots: {initially_correct}, Initially incorrectly placed carrots: {initially_incorrect}"
+            f"Initially correctly placed objects: {initially_correct}, Initially incorrectly placed objects: {initially_incorrect}"
         )
         return initially_correct, initially_incorrect
 
@@ -84,13 +84,13 @@ class ManipulationTask(Task, ABC):
         Calculates the number of objects that are correctly and incorrectly placed at the end of the simulation.
         """
         scene_state = simulation_bridge.get_scene_state()
-        final_carrots = self.filter_entities_by_prefab_type(
+        final_objects = self.filter_entities_by_prefab_type(
             scene_state.entities, prefab_types=self.obj_types
         )
-        final_correct, final_incorrect = self.calculate_correct(entities=final_carrots)
+        final_correct, final_incorrect = self.calculate_correct(entities=final_objects)
 
         self.logger.info(  # type: ignore
-            f"Finally correctly placed carrots: {final_correct}, Finally incorrectly placed carrots: {final_incorrect}"
+            f"Finally correctly placed objects: {final_correct}, Finally incorrectly placed objects: {final_incorrect}"
         )
         return final_correct, final_incorrect
 
