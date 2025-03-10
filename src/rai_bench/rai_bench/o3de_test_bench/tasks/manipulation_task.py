@@ -49,13 +49,20 @@ class ManipulationTask(Task, ABC):
         self.initially_correct_now_incorrect = 0
 
     @abstractmethod
-    def check_if_required_objects_present(self, entities: List[EntityT]) -> bool:
+    def check_if_required_objects_present(
+        self, simulation_config: SimulationConfig
+    ) -> bool:
         """Each task should check if objects required to perform it are present"""
         return True
 
-    def check_if_any_placed_incorrectly(self, entities: List[EntityT]) -> bool:
+    def check_if_any_placed_incorrectly(
+        self, simulation_config: SimulationConfig
+    ) -> bool:
         """Check If any object is placed incorrectly"""
-        _, incorrect = self.calculate_correct(entities=entities)
+        initial_entities = self.filter_entities_by_prefab_type(
+            simulation_config.entities, object_types=self.obj_types
+        )
+        _, incorrect = self.calculate_correct(entities=initial_entities)
         return incorrect > 0
 
     def validate_config(self, simulation_config: SimulationConfig) -> bool:
@@ -63,9 +70,10 @@ class ManipulationTask(Task, ABC):
         Validate if both required objects are present and if any of them is placed incorrectly.
         If these conditions are not met, there is no point in running task in these simulation config
         """
+
         if self.check_if_required_objects_present(
-            entities=simulation_config.entities
-        ) and self.check_if_any_placed_incorrectly(entities=simulation_config.entities):
+            simulation_config=simulation_config
+        ) and self.check_if_any_placed_incorrectly(simulation_config=simulation_config):
             return True
         else:
             return False
@@ -77,7 +85,7 @@ class ManipulationTask(Task, ABC):
         are positioned correctly and incorrectly
 
         first int of the tuple must be number of correctly placed objects
-        second int s- number of incorrectly placed objects
+        second int is number of incorrectly placed objects
         """
         pass
 
@@ -138,10 +146,6 @@ class ManipulationTask(Task, ABC):
             raise EntitiesMismatchException(
                 "number of initial entities does not match final entities number."
             )
-        elif initially_incorrect == 0:
-            # NOTE all objects are placed correctly
-            # no point in running task
-            raise ValueError("All objects are placed correctly at the start.")
         else:
             corrected = final_correct - initially_correct
             score = max(0.0, corrected / initially_incorrect)

@@ -37,10 +37,13 @@ from rai_open_set_vision.tools import GetGrabbingPointTool
 
 from rai_bench.benchmark_model import Benchmark, Task  # type: ignore
 from rai_bench.o3de_test_bench.tasks import (  # type: ignore
+    BuildCubeTowerTask,
     GrabCarrotTask,
     GroupVegetablesTask,
-    BuildCubeTowerTask,
     PlaceCubesTask,
+    BuildYellowCubeTowerTask,
+    BuildBlueCubeTowerTask,
+    BuildRedCubeTowerTask,
 )
 from rai_sim.o3de.o3de_bridge import (  # type: ignore
     O3DEngineArmManipulationBridge,
@@ -155,6 +158,8 @@ if __name__ == "__main__":
         configs_dir + "scene3.yaml",
         configs_dir + "scene4.yaml",
         configs_dir + "scene5.yaml",
+        configs_dir + "scene6.yaml",
+        configs_dir + "scene7.yaml",
     ]
     simulations_configs = [
         O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
@@ -165,6 +170,9 @@ if __name__ == "__main__":
         PlaceCubesTask(logger=bench_logger),
         GroupVegetablesTask(logger=bench_logger),
         BuildCubeTowerTask(logger=bench_logger),
+        BuildRedCubeTowerTask(logger=bench_logger),
+        BuildYellowCubeTowerTask(logger=bench_logger),
+        BuildBlueCubeTowerTask(logger=bench_logger),
     ]
     scenarios = Benchmark.create_scenarios(
         tasks=tasks,
