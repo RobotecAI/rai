@@ -18,13 +18,17 @@ import time
 from abc import abstractmethod
 from typing import Annotated, Any, Dict, List, Optional, cast
 
+from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from pymongo import MongoClient
 
 from rai.agents.base import BaseAgent
 from rai.messages.multimodal import HumanMultimodalMessage
+
+EMBEDDINGS_FIELD_NAME = "embeddings"
+SEARCH_INDEX_NAME = "embeddings_search_index"
 
 
 class Header(BaseModel):
@@ -61,6 +65,7 @@ class SpatioTemporalData(BaseModel):
     tf: Optional[PoseStamped]
     temporal_context: Annotated[str, "compressed history of messages"]
     image_text_descriptions: Annotated[str, "text descriptions of images"]
+    embeddings: List[float]
 
 
 class SpatioTemporalConfig(BaseModel):
@@ -69,7 +74,10 @@ class SpatioTemporalConfig(BaseModel):
     collection_name: str
     image_to_text_model: BaseChatModel
     context_compression_model: BaseChatModel
+    embeddings: Embeddings
     time_interval: float
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class SpatioTemporalAgent(BaseAgent):
@@ -118,7 +126,7 @@ class SpatioTemporalAgent(BaseAgent):
         """
         while True:
             ts = time.time()
-            self.logger.info("Running on interval")
+            self.logger.info("Starting new interval")
             self.on_interval()
             te = time.time()
             if te - ts > self.config.time_interval:
@@ -131,23 +139,55 @@ class SpatioTemporalAgent(BaseAgent):
         """
         Perform tasks at each interval, including data collection and insertion.
         """
+        self.logger.info("Retrieving images")
         images = self._get_images()
+        self.logger.info("Retrieving pose")
         tf = self._get_tf()
         if tf is None and len(images) == 0:
             self.logger.warning(
                 "No images or tf data to insert. Skipping this interval."
             )
             return
+        self.logger.info("Generating image text descriptions")
         image_text_descriptions = self._get_image_text_descriptions(images)
+        self.logger.info("Retrieving temporal context")
         temporal_context = self._get_robots_history()
+
+        embedding_text = temporal_context + str(image_text_descriptions.values())
+        self.logger.info("Embedding text")
+        embeddings = self._embed_text(embedding_text)
+
         data = SpatioTemporalData(
             timestamp=time.time(),
             images=images,
             tf=tf,
             temporal_context=temporal_context,
             image_text_descriptions=json.dumps(image_text_descriptions),
+            embeddings=embeddings,
         )
         self.insert_into_db(data)
+
+    def _initialize_embeddings_search_index(self):
+        self.collection.create_search_index(
+            {
+                "definition": {
+                    "mappings": {
+                        "dynamic": True,
+                        "fields": {
+                            EMBEDDINGS_FIELD_NAME: {
+                                "dimensions": 1536,
+                                "similarity": "dotProduct",
+                                "type": "knnVector",
+                            },
+                        },
+                    },
+                },
+                "name": SEARCH_INDEX_NAME,
+            }
+        )
+
+    def _embed_text(self, text: str) -> List[float]:
+        return self.config.embeddings.embed_query(text)
 
     @abstractmethod
     def _get_images(

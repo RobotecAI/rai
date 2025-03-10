@@ -14,7 +14,7 @@
 
 import rclpy
 from rai.agents.spatiotemporal import ROS2SpatioTemporalAgent, ROS2SpatioTemporalConfig
-from rai.utils.model_initialization import get_llm_model
+from rai.utils.model_initialization import get_embeddings_model, get_llm_model
 
 
 def create_agent():
@@ -28,6 +28,7 @@ def create_agent():
         context_compression_model=get_llm_model("simple_model"),
         time_interval=10.0,
         camera_topics=["/camera/camera/color/image_raw"],
+        embeddings=get_embeddings_model(),
     )
     agent = ROS2SpatioTemporalAgent(config)
     return agent

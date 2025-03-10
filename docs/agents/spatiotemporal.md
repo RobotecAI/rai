@@ -34,6 +34,7 @@ The agent is configured through `SpatioTemporalConfig`:
 - `collection_name`: Collection for data storage
 - `image_to_text_model`: AI model for image description
 - `context_compression_model`: AI model for context compression
+- `embeddings`: Embeddings model
 - `time_interval`: Data collection frequency
 
 ## ROS2 Implementation
@@ -62,7 +63,7 @@ docker run -d --name rai-mongo -p 27017:27017 mongo
 
 ```python
 from rai.agents.spatiotemporal import ROS2SpatioTemporalAgent, ROS2SpatioTemporalConfig
-from rai.utils.model_initialization import get_llm_model
+from rai.utils.model_initialization import get_llm_model, get_embeddings_model
 
 config = ROS2SpatioTemporalConfig(
     robot_frame="base_link",
@@ -73,7 +74,8 @@ config = ROS2SpatioTemporalConfig(
     image_to_text_model=get_llm_model("simple_model"),
     context_compression_model=get_llm_model("simple_model"),
     time_interval=10.0,
-    camera_topics=["/camera/color/image_raw"]
+    camera_topics=["/camera/color/image_raw"],
+    embeddings=get_embeddings_model(),
 )
 
 agent = ROS2SpatioTemporalAgent(config)
