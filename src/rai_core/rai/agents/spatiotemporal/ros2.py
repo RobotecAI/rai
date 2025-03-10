@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import logging
-from typing import Annotated, Dict, List, Optional, cast
+from typing import Annotated, Dict, List, Optional
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage
 
 from rai.agents.spatiotemporal.spatiotemporal_agent import (
     Header,
@@ -28,7 +27,6 @@ from rai.agents.spatiotemporal.spatiotemporal_agent import (
     SpatioTemporalConfig,
 )
 from rai.communication import ROS2ARIConnector
-from rai.messages.multimodal import HumanMultimodalMessage
 from rai.tools.ros2.topics import GetROS2ImageTool
 
 
@@ -89,53 +87,7 @@ class ROS2SpatioTemporalAgent(SpatioTemporalAgent):
         )
         return ps
 
-    def _get_image_text_descriptions(
-        self, images: Dict[Annotated[str, "source"], str]
-    ) -> Dict[Annotated[str, "source"], str]:
-        text_description_prompt = SystemMessage(
-            content="You are a helpful assistant that describes images."
-        )
-        text_descriptions: Dict[Annotated[str, "source"], str] = {}
-        for source, image in images.items():
-            human_message = HumanMultimodalMessage(
-                content="Describe the image in detail.", images=[image]
-            )
-            ai_msg = cast(
-                AIMessage,
-                self.config.image_to_text_model.invoke(
-                    [text_description_prompt, human_message]
-                ),
-            )
-            if not isinstance(ai_msg.content, str):
-                raise ValueError("AI message content is not a string")
-            text_descriptions[source] = ai_msg.content
-
-        return text_descriptions
-
     def _get_robots_history(self) -> str:
         # TODO: Implement this
         history: List[BaseMessage] = []
         return self._compress_context(history)
-
-    def _compress_context(self, history: List[BaseMessage]) -> str:
-        system_prompt = SystemMessage(
-            content="You are a helpful assistant that compresses context. Your task is to compress the history of messages into a single message."
-        )
-
-        robots_history: List[Dict[str, str]] = []
-        for msg in history:
-            if not isinstance(msg.content, str):
-                raise NotImplementedError("Only string content is supported")
-            robots_history.append({"role": msg.type, "content": msg.content})
-        if len(robots_history) == 0:
-            return ""
-        human_message = HumanMessage(content=json.dumps(robots_history))
-        ai_msg = cast(
-            AIMessage,
-            self.config.context_compression_model.invoke(
-                [system_prompt, human_message]
-            ),
-        )
-        if not isinstance(ai_msg.content, str):
-            raise ValueError("AI message content is not a string")
-        return ai_msg.content
