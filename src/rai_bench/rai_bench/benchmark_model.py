@@ -16,7 +16,7 @@ import csv
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Generic, List, Set, Union
+from typing import Any, Callable, Dict, Generic, List, Union, Set, Literal
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from rai.messages import HumanMultimodalMessage
@@ -89,10 +89,10 @@ class Task(ABC):
     ):
         scene_state = simulation_bridge.get_scene_state()
         initial_objects = self.filter_entities_by_prefab_type(
-            simulation_bridge.spawned_entities, prefab_types=object_types
+            simulation_bridge.spawned_entities, object_types=object_types
         )
         final_objects = self.filter_entities_by_prefab_type(
-            scene_state.entities, prefab_types=object_types
+            scene_state.entities, object_types=object_types
         )
 
         if len(initial_objects) != len(final_objects):
@@ -102,10 +102,10 @@ class Task(ABC):
         return initial_objects, final_objects
 
     def filter_entities_by_prefab_type(
-        self, entities: List[SpawnedEntity], prefab_types: List[str]
+        self, entities: List[SpawnedEntity], object_types: List[str]
     ) -> List[SpawnedEntity]:
         """Filter and return only these entities that match provided prefab types"""
-        return [ent for ent in entities if ent.prefab_name in prefab_types]
+        return [ent for ent in entities if ent.prefab_name in object_types]
 
     def euclidean_distance(self, pos1: Pose, pos2: Pose) -> float:
         """Calculate euclidean distance between 2 positions"""
@@ -208,6 +208,35 @@ class Task(ABC):
                 clusters.append(component)
 
         return clusters
+
+    def group_entities_by_z_coordinate(
+        # TODO (jm) figure out how to group by other coords and orientation, without reapeting code
+        self,
+        entities: List[SpawnedEntity],
+        margin: float,
+    ) -> List[List[SpawnedEntity]]:
+        """
+        Groups entities that are aligned along a z axis within a margin (top to bottom).
+        Usefull for checking if objects form lines or towers
+        """
+
+        entities = sorted(entities, key=lambda ent: ent.pose.translation.z)
+        groups: List[List[SpawnedEntity]] = []
+
+        for entity in entities:
+            placed = False
+            for group in groups:
+                if (
+                    abs(group[0].pose.translation.z - entity.pose.translation.z)
+                    <= margin
+                ):
+                    group.append(entity)
+                    placed = True
+                    break
+            if not placed:
+                groups.append([entity])
+
+        return groups
 
 
 class Scenario(Generic[SimulationConfigT]):
