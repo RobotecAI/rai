@@ -13,8 +13,8 @@
 # limitations under the License.
 from typing import List, Tuple
 
-from rai_bench.o3de_test_bench.tasks.manipulation_task import (
-    ManipulationTask,  # type: ignore
+from rai_bench.o3de_test_bench.tasks.manipulation_task import (  # type: ignore
+    ManipulationTask,
 )
 from rai_sim.simulation_bridge import SimulationConfig, SpawnedEntity  # type: ignore
 
@@ -26,6 +26,7 @@ class PlaceCubesTask(ManipulationTask):
         return "Manipulate objects, so that all cubes are adjacent to at least one cube"
 
     def validate_config(self, simulation_config: SimulationConfig) -> bool:
+        """validate if at least 2 cubes are present"""
         cubes_num = 0
         for ent in simulation_config.entities:
             if ent.prefab_name in self.obj_types:

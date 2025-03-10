@@ -14,8 +14,8 @@
 
 from typing import List, Tuple
 
-from rai_bench.o3de_test_bench.tasks.manipulation_task import (
-    ManipulationTask,  # type: ignore
+from rai_bench.o3de_test_bench.tasks.manipulation_task import (  # type: ignore
+    ManipulationTask,
 )
 from rai_sim.simulation_bridge import SimulationConfig, SpawnedEntity  # type: ignore
 
