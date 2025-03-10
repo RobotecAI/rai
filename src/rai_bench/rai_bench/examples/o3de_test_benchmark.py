@@ -19,7 +19,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import List
 
-
 import rclpy
 from langchain.tools import BaseTool
 from rai.agents.conversational_agent import create_conversational_agent  # type: ignore
@@ -37,10 +36,10 @@ from rai_open_set_vision.tools import GetGrabbingPointTool
 
 from rai_bench.benchmark_model import Benchmark, Task  # type: ignore
 from rai_bench.o3de_test_bench.tasks import (  # type: ignore
+    BuildCubeTowerTask,
     GrabCarrotTask,
     GroupCubesByColorTask,
     GroupVegetablesTask,
-    BuildCubeTowerTask,
     PlaceCubesTask,
 )
 from rai_sim.o3de.o3de_bridge import (  # type: ignore
@@ -166,11 +165,8 @@ if __name__ == "__main__":
         GrabCarrotTask(logger=bench_logger),
         PlaceCubesTask(logger=bench_logger),
         GroupVegetablesTask(logger=bench_logger),
-<<<<<<< HEAD
         BuildCubeTowerTask(logger=bench_logger),
-=======
         GroupCubesByColorTask(logger=bench_logger),
->>>>>>> 706e172 (feat: group cubes by color task)
     ]
     scenarios = Benchmark.create_scenarios(
         tasks=tasks,
