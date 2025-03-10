@@ -13,22 +13,19 @@
 # limitations under the License.
 
 from datetime import datetime
-from typing import Any, List, Type
+from typing import Any, Dict, List, Type
 
-from langchain_core.embeddings import Embeddings
 from langchain_core.tools import BaseTool, BaseToolkit
+from langchain_core.vectorstores import VectorStore
 from pydantic import BaseModel, ConfigDict, Field
 from pymongo.collection import Collection
 from pymongo.mongo_client import MongoClient
 
 from rai.agents.spatiotemporal.spatiotemporal_agent import (
-    EMBEDDINGS_FIELD_NAME,
-    SEARCH_INDEX_NAME,
     Pose,
     SpatioTemporalData,
 )
 from rai.agents.tool_runner import MultimodalArtifact
-from rai.utils.model_initialization import get_embeddings_model
 
 
 class SpatiotemporalToolkit(BaseToolkit):
@@ -38,6 +35,7 @@ class SpatiotemporalToolkit(BaseToolkit):
     mongodb_url: str = Field(default="mongodb://localhost:27017/")
     mongodb_db_name: str = Field(default="rai")
     mongodb_collection_name: str = Field(default="spatiotemporal_collection")
+    vectorstore: VectorStore
 
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
 
@@ -57,7 +55,7 @@ class SpatiotemporalToolkit(BaseToolkit):
                 collection=self.collection,
             ),
             GetMemoriesOfObjectTool(
-                collection=self.collection,
+                collection=self.collection, vectorstore=self.vectorstore
             ),
         ]
 
@@ -205,28 +203,20 @@ class GetMemoriesOfObjectTool(BaseTool):
     description: str = "Get the past memories of the robot of a specific object"
     args_schema: Type[GetMemoriesOfObjectToolInput] = GetMemoriesOfObjectToolInput
     collection: Collection[Any]
-    embeddings: Embeddings = Field(default_factory=lambda: get_embeddings_model())
+    vectorstore: VectorStore
 
     response_model: str = "content_and_artifact"
 
     def _run(self, object_name: str, n_results: int = 5):
-        results = list(
-            self.collection.aggregate(
-                [
-                    {
-                        "$vectorSearch": {
-                            "index": SEARCH_INDEX_NAME,
-                            "path": EMBEDDINGS_FIELD_NAME,
-                            "queryVector": self.embeddings.embed_query(object_name),
-                            "numCandidates": 200,
-                            "limit": n_results,
-                        }
-                    }
-                ]
-            ),
-        )
+        documents = self.vectorstore.similarity_search(object_name, k=n_results)
+        mongodb_data: List[Dict[str, Any]] = []
+        for document in documents:
+            id = document.id
+            record = self.collection.find_one({"id": id})
+            if record is not None:
+                mongodb_data.append(record)
         images: List[str] = []
-        parsed_results = list(map(SpatioTemporalData.model_validate, results))
+        parsed_results = list(map(SpatioTemporalData.model_validate, mongodb_data))
         for result in parsed_results:
             for image in result.images.values():
                 images.append(image)

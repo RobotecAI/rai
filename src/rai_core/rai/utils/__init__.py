@@ -13,6 +13,13 @@
 # limitations under the License.
 
 from .agents import wait_for_shutdown
+from .model_initialization import get_embeddings_model, get_llm_model, get_vectorstore
 from .ros import ROS2Context
 
-__all__ = ["ROS2Context", "wait_for_shutdown"]
+__all__ = [
+    "ROS2Context",
+    "get_embeddings_model",
+    "get_llm_model",
+    "get_vectorstore",
+    "wait_for_shutdown",
+]

@@ -15,12 +15,13 @@
 import json
 import logging
 import time
+import uuid
 from abc import abstractmethod
 from typing import Annotated, Any, Dict, List, Optional, cast
 
-from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.vectorstores import VectorStore
 from pydantic import BaseModel, ConfigDict, Field
 from pymongo import MongoClient
 
@@ -60,12 +61,12 @@ class PoseStamped(BaseModel):
 
 
 class SpatioTemporalData(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     timestamp: Annotated[float, "timestamp"]
     images: Dict[Annotated[str, "camera topic"], str] = Field(repr=False)
     tf: Optional[PoseStamped]
     temporal_context: Annotated[str, "compressed history of messages"]
     image_text_descriptions: Annotated[str, "text descriptions of images"]
-    embeddings: List[float] = Field(default_factory=list, repr=False)
 
 
 class SpatioTemporalConfig(BaseModel):
@@ -74,7 +75,7 @@ class SpatioTemporalConfig(BaseModel):
     collection_name: str
     image_to_text_model: BaseChatModel
     context_compression_model: BaseChatModel
-    embeddings: Embeddings
+    vector_db: VectorStore
     time_interval: float
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -104,10 +105,9 @@ class SpatioTemporalAgent(BaseAgent):
 
         self.db = MongoClient(self.config.db_url)[self.config.db_name]  # type: ignore
         self.collection = self.db[self.config.collection_name]  # type: ignore
-        self._initialize_embeddings_search_index()
         self.logger = logging.getLogger(__name__)
 
-    def insert_into_db(self, data: SpatioTemporalData):
+    def _insert_into_db(self, data: SpatioTemporalData):
         """
         Insert spatiotemporal data into the database.
 
@@ -121,20 +121,51 @@ class SpatioTemporalAgent(BaseAgent):
         )
         self.collection.insert_one(data.model_dump())  # type: ignore
 
+    def _insert_into_vectorstore(self, data: SpatioTemporalData):
+        """
+        Insert embeddings of the spatiotemporal data into the vector store.
+
+        Parameters
+        ----------
+        data : SpatioTemporalData
+            The spatiotemporal data to be inserted.
+        """
+        self.logger.info("Inserting embeddings into vector store")
+
+        print(
+            self.config.vector_db.add_texts(
+                texts=[data.temporal_context + data.image_text_descriptions],
+                metadatas=[{"id": data.id}],
+                ids=[data.id],
+            )
+        )
+
     def run(self):
         """
         Run the agent in a loop, executing tasks at specified intervals.
         """
         while True:
-            ts = time.time()
-            self.logger.info("Starting new interval")
-            self.on_interval()
-            te = time.time()
-            if te - ts > self.config.time_interval:
-                self.logger.warning(
-                    f"Time interval exceeded. Expected {self.config.time_interval:.2f}s, got {te - ts:.2f}s"
-                )
-            time.sleep(max(0, self.config.time_interval - (te - ts)))
+            try:
+                ts = time.time()
+                self.logger.info("Starting new interval")
+                self.on_interval()
+                te = time.time()
+                if te - ts > self.config.time_interval:
+                    self.logger.warning(
+                        f"Time interval exceeded. Expected {self.config.time_interval:.2f}s, got {te - ts:.2f}s"
+                    )
+                time.sleep(max(0, self.config.time_interval - (te - ts)))
+            except KeyboardInterrupt:
+                # seriously hacky
+                from langchain_community.vectorstores import FAISS
+
+                from rai.utils.model_initialization import load_config
+
+                self.logger.info("Saving vector store")
+
+                config = load_config()
+                cast(FAISS, self.config.vector_db).save_local(config.vectorstore.uri)
+                raise
 
     def on_interval(self):
         """
@@ -154,41 +185,15 @@ class SpatioTemporalAgent(BaseAgent):
         self.logger.info("Retrieving temporal context")
         temporal_context = self._get_robots_history()
 
-        embedding_text = temporal_context + str(image_text_descriptions.values())
-        self.logger.info("Embedding text")
-        embeddings = self._embed_text(embedding_text)
-
         data = SpatioTemporalData(
             timestamp=time.time(),
             images=images,
             tf=tf,
             temporal_context=temporal_context,
             image_text_descriptions=json.dumps(image_text_descriptions),
-            embeddings=embeddings,
         )
-        self.insert_into_db(data)
-
-    def _initialize_embeddings_search_index(self):
-        self.collection.create_search_index(
-            {
-                "definition": {
-                    "mappings": {
-                        "dynamic": True,
-                        "fields": {
-                            EMBEDDINGS_FIELD_NAME: {
-                                "dimensions": 1536,
-                                "similarity": "dotProduct",
-                                "type": "knnVector",
-                            },
-                        },
-                    },
-                },
-                "name": SEARCH_INDEX_NAME,
-            }
-        )
-
-    def _embed_text(self, text: str) -> List[float]:
-        return self.config.embeddings.embed_query(text)
+        self._insert_into_db(data)
+        self._insert_into_vectorstore(data)
 
     @abstractmethod
     def _get_images(

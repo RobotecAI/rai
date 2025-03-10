@@ -21,6 +21,10 @@ complex_model = "llama3.1:70b"
 embeddings_model = "llama3.2"
 base_url = "http://localhost:11434"
 
+[vectorstore]
+type = "faiss"
+uri = "vectorstore_data"
+
 [tracing]
 project = "rai"
 
