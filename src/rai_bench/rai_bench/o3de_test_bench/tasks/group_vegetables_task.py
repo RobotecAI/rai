@@ -14,10 +14,13 @@
 
 from typing import List, Tuple
 
+from rai_bench.benchmark_model import (  # type: ignore
+    EntityT,
+)
 from rai_bench.o3de_test_bench.tasks.manipulation_task import (  # type: ignore
     ManipulationTask,
 )
-from rai_sim.simulation_bridge import SimulationConfig, SpawnedEntity  # type: ignore
+from rai_sim.simulation_bridge import Entity  # type: ignore
 
 
 class GroupVegetablesTask(ManipulationTask):
@@ -33,19 +36,17 @@ class GroupVegetablesTask(ManipulationTask):
             "4. Be completely separated from other clusters "
         )
 
-    def validate_config(self, simulation_config: SimulationConfig) -> bool:
+    def check_if_required_objects_present(self, entities: List[EntityT]) -> bool:
         """Ensure that at least two types of vegetables are present."""
         veg_types = {
-            ent.prefab_name
-            for ent in simulation_config.entities
-            if ent.prefab_name in self.obj_types
+            ent.prefab_name for ent in entities if ent.prefab_name in self.obj_types
         }
         return len(veg_types) > 1
 
-    def calculate_correct(self, entities: List[SpawnedEntity]) -> Tuple[int, int]:
+    def calculate_correct(self, entities: List[Entity]) -> Tuple[int, int]:
         """Count correctly and incorrectly placed objects based on clustering rules."""
-        properly_clustered: List[SpawnedEntity] = []
-        misclustered: List[SpawnedEntity] = []
+        properly_clustered: List[Entity] = []
+        misclustered: List[Entity] = []
 
         entities_by_type = self.group_entities_by_type(entities)
 

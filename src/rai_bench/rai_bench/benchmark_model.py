@@ -16,21 +16,22 @@ import csv
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, Generic, List, Union, Set, Literal
+from typing import Any, Dict, Generic, List, Set, TypeVar, Union
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from rai.messages import HumanMultimodalMessage
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai_sim.simulation_bridge import (
+    Entity,
     Pose,
     SimulationBridge,
     SimulationConfig,
     SimulationConfigT,
-    SpawnedEntity,
 )
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
+EntityT = TypeVar("EntityT", bound=Entity)
 
 
 class EntitiesMismatchException(Exception):
@@ -102,8 +103,8 @@ class Task(ABC):
         return initial_objects, final_objects
 
     def filter_entities_by_prefab_type(
-        self, entities: List[SpawnedEntity], object_types: List[str]
-    ) -> List[SpawnedEntity]:
+        self, entities: List[EntityT], object_types: List[str]
+    ) -> List[EntityT]:
         """Filter and return only these entities that match provided prefab types"""
         return [ent for ent in entities if ent.prefab_name in object_types]
 
@@ -154,10 +155,10 @@ class Task(ABC):
         return adjacent_count
 
     def build_neighbourhood_list(
-        self, entities: List[SpawnedEntity]
-    ) -> Dict[SpawnedEntity, List[SpawnedEntity]]:
+        self, entities: List[EntityT]
+    ) -> Dict[EntityT, List[EntityT]]:
         """Assignes a list of neighbours to every object based on threshold distance"""
-        neighbourhood_graph: Dict[SpawnedEntity, List[SpawnedEntity]] = {
+        neighbourhood_graph: Dict[EntityT, List[EntityT]] = {
             entity: [] for entity in entities
         }
         for entity in entities:
@@ -169,17 +170,17 @@ class Task(ABC):
         return neighbourhood_graph
 
     def group_entities_by_type(
-        self, entities: List[SpawnedEntity]
-    ) -> Dict[str, List[SpawnedEntity]]:
+        self, entities: List[EntityT]
+    ) -> Dict[str, List[EntityT]]:
         """Returns dictionary of entities grouped by type"""
-        entities_by_type: Dict[str, List[SpawnedEntity]] = {}
+        entities_by_type: Dict[str, List[EntityT]] = {}
         for entity in entities:
             entities_by_type.setdefault(entity.prefab_name, []).append(entity)
         return entities_by_type
 
     def check_neighbourhood_types(
         self,
-        neighbourhood: List[SpawnedEntity],
+        neighbourhood: List[EntityT],
         allowed_types: List[str],
     ) -> bool:
         """Check if ALL neighbours are given types"""
@@ -188,13 +189,13 @@ class Task(ABC):
         )
 
     def find_clusters(
-        self, neighbourhood_list: Dict[SpawnedEntity, List[SpawnedEntity]]
-    ) -> List[List[SpawnedEntity]]:
+        self, neighbourhood_list: Dict[EntityT, List[EntityT]]
+    ) -> List[List[EntityT]]:
         """Find clusters of entities using DFS algorithm, lone entities are counted as a cluster"""
-        visited: Set[SpawnedEntity] = set()
-        clusters: List[List[SpawnedEntity]] = []
+        visited: Set[EntityT] = set()
+        clusters: List[List[EntityT]] = []
 
-        def dfs(node: SpawnedEntity, cluster: List[SpawnedEntity]):
+        def dfs(node: EntityT, cluster: List[EntityT]):
             visited.add(node)
             cluster.append(node)
             for neighbor in neighbourhood_list.get(node, []):
@@ -203,7 +204,7 @@ class Task(ABC):
 
         for node in neighbourhood_list.keys():
             if node not in visited:
-                component: List[SpawnedEntity] = []
+                component: List[EntityT] = []
                 dfs(node, component)
                 clusters.append(component)
 
@@ -212,16 +213,16 @@ class Task(ABC):
     def group_entities_by_z_coordinate(
         # TODO (jm) figure out how to group by other coords and orientation, without reapeting code
         self,
-        entities: List[SpawnedEntity],
+        entities: List[EntityT],
         margin: float,
-    ) -> List[List[SpawnedEntity]]:
+    ) -> List[List[EntityT]]:
         """
         Groups entities that are aligned along a z axis within a margin (top to bottom).
         Usefull for checking if objects form lines or towers
         """
 
         entities = sorted(entities, key=lambda ent: ent.pose.translation.z)
-        groups: List[List[SpawnedEntity]] = []
+        groups: List[List[EntityT]] = []
 
         for entity in entities:
             placed = False
@@ -373,7 +374,12 @@ class Benchmark:
 
             te = time.perf_counter()
 
-            result = scenario.task.calculate_result(self.simulation_bridge)
+            try:
+                result = scenario.task.calculate_result(self.simulation_bridge)
+            except ValueError as e:
+                self._logger.warning(f"Could not calculate result: {e}")  # type: ignore
+                return
+
             total_time = te - ts
             self._logger.info(  # type: ignore
                 f"TASK SCORE: {result}, TOTAL TIME: {total_time:.3f}, NUM_OF_TOOL_CALLS: {tool_calls_num}"

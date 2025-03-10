@@ -12,14 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Literal, Tuple, Union
 import logging
+from typing import List, Tuple, Union
 
+from rclpy.impl.rcutils_logger import RcutilsLogger
+
+from rai_bench.benchmark_model import (  # type: ignore
+    EntityT,
+)
 from rai_bench.o3de_test_bench.tasks.manipulation_task import (  # type: ignore
     ManipulationTask,
 )
-from rai_sim.simulation_bridge import SimulationConfig, SpawnedEntity  # type: ignore
-from rclpy.impl.rcutils_logger import RcutilsLogger
+from rai_sim.simulation_bridge import Entity, SimulationConfig  # type: ignore
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
 
@@ -33,10 +37,10 @@ class BuildCubeTowerTask(ManipulationTask):
             "Other types of objects cannot be included in a tower."
         )
 
-    def validate_config(self, simulation_config: SimulationConfig) -> bool:
+    def check_if_required_objects_present(self, entities: List[EntityT]) -> bool:
         """Validate that at least two cubes are present."""
         cubes_num = 0
-        for ent in simulation_config.entities:
+        for ent in entities:
             if ent.prefab_name in self.obj_types:
                 cubes_num += 1
                 if cubes_num > 1:
@@ -44,7 +48,7 @@ class BuildCubeTowerTask(ManipulationTask):
 
         return False
 
-    def calculate_correct(self, entities: List[SpawnedEntity]) -> Tuple[int, int]:
+    def calculate_correct(self, entities: List[Entity]) -> Tuple[int, int]:
         # TODO (jm) not sure how to treat single standing cube, as correctly or incorrectly placed?
         # for now when cubes are separated, one of them is treated as correctly placed
         # assuming it's the foundation of the tower, the rest of them as incorrect

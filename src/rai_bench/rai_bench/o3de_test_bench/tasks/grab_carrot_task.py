@@ -13,12 +13,14 @@
 # limitations under the License.
 from typing import List, Tuple
 
+from rai_bench.benchmark_model import (  # type: ignore
+    EntityT,
+)
 from rai_bench.o3de_test_bench.tasks.manipulation_task import (  # type: ignore
     ManipulationTask,
 )
 from rai_sim.simulation_bridge import (  # type: ignore
-    SimulationConfig,
-    SpawnedEntity,
+    Entity,
 )
 
 
@@ -28,14 +30,15 @@ class GrabCarrotTask(ManipulationTask):
     def get_prompt(self) -> str:
         return "Manipulate objects, so that all carrots are on the left side of the table (positive y)"
 
-    def validate_config(self, simulation_config: SimulationConfig) -> bool:
-        for ent in simulation_config.entities:
+    def check_if_required_objects_present(self, entities: List[EntityT]) -> bool:
+        """Validate if any carrot present"""
+        for ent in entities:
             if ent.prefab_name in self.obj_types:
                 return True
 
         return False
 
-    def calculate_correct(self, entities: List[SpawnedEntity]) -> Tuple[int, int]:
+    def calculate_correct(self, entities: List[Entity]) -> Tuple[int, int]:
         correct = sum(1 for ent in entities if ent.pose.translation.y > 0.0)
         incorrect: int = len(entities) - correct
         return correct, incorrect
