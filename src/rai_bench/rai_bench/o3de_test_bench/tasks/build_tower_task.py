@@ -99,3 +99,66 @@ class BuildCubeTowerTask(ManipulationTask):
             incorrect = len(entities)
 
         return correct, incorrect
+
+
+class BuildYellowCubeTowerTask(BuildCubeTowerTask):
+    obj_types = ["yellow_cube"]
+
+    def get_prompt(self) -> str:
+        return (
+            "Manipulate objects so that all yellow cubes form a single vertical tower. "
+            "Other types of objects cannot be included in a tower."
+        )
+
+    def validate_config(self, simulation_config: SimulationConfig) -> bool:
+        """Validate that at least two cubes are present."""
+        cubes_num = 0
+        for ent in simulation_config.entities:
+            if ent.prefab_name in self.obj_types:
+                cubes_num += 1
+                if cubes_num > 1:
+                    return True
+
+        return False
+
+
+class BuildRedCubeTowerTask(BuildCubeTowerTask):
+    obj_types = ["red_cube"]
+
+    def get_prompt(self) -> str:
+        return (
+            "Manipulate objects so that all red cubes form a single vertical tower. "
+            "Other types of objects cannot be included in a tower."
+        )
+
+    def validate_config(self, simulation_config: SimulationConfig) -> bool:
+        """Validate that at least two cubes are present."""
+        cubes_num = 0
+        for ent in simulation_config.entities:
+            if ent.prefab_name in self.obj_types:
+                cubes_num += 1
+                if cubes_num > 1:
+                    return True
+
+        return False
+
+
+class BuildBlueCubeTowerTask(BuildCubeTowerTask):
+    obj_types = ["blue_cube"]
+
+    def get_prompt(self) -> str:
+        return (
+            "Manipulate objects so that all blue cubes form a single vertical tower. "
+            "Other types of objects cannot be included in a tower."
+        )
+
+    def validate_config(self, simulation_config: SimulationConfig) -> bool:
+        """Validate that at least two cubes are present."""
+        cubes_num = 0
+        for ent in simulation_config.entities:
+            if ent.prefab_name in self.obj_types:
+                cubes_num += 1
+                if cubes_num > 1:
+                    return True
+
+        return False
