@@ -374,11 +374,7 @@ class Benchmark:
 
             te = time.perf_counter()
 
-            try:
-                result = scenario.task.calculate_result(self.simulation_bridge)
-            except ValueError as e:
-                self._logger.warning(f"Could not calculate result: {e}")  # type: ignore
-                return
+            result = scenario.task.calculate_result(self.simulation_bridge)
 
             total_time = te - ts
             self._logger.info(  # type: ignore

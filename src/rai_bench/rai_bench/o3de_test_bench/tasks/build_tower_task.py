@@ -17,9 +17,6 @@ from typing import List, Tuple, Union
 
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from rai_bench.benchmark_model import (  # type: ignore
-    EntityT,
-)
 from rai_bench.o3de_test_bench.tasks.manipulation_task import (  # type: ignore
     ManipulationTask,
 )
@@ -37,10 +34,12 @@ class BuildCubeTowerTask(ManipulationTask):
             "Other types of objects cannot be included in a tower."
         )
 
-    def check_if_required_objects_present(self, entities: List[EntityT]) -> bool:
+    def check_if_required_objects_present(
+        self, simulation_config: SimulationConfig
+    ) -> bool:
         """Validate that at least two cubes are present."""
         cubes_num = 0
-        for ent in entities:
+        for ent in simulation_config.entities:
             if ent.prefab_name in self.obj_types:
                 cubes_num += 1
                 if cubes_num > 1:
@@ -97,7 +96,7 @@ class BuildCubeTowerTask(ManipulationTask):
 
                 previous_entity = entity
 
-        # If any non-allowed objects were found in the tower, mark everything incorrect
+        # If any not allowed objects were found in the tower, mark everything incorrect
         if not tower_consists_only_of_valid_types:
             correct = 0
             incorrect = len(entities)
@@ -114,8 +113,10 @@ class BuildYellowCubeTowerTask(BuildCubeTowerTask):
             "Other types of objects cannot be included in a tower."
         )
 
-    def validate_config(self, simulation_config: SimulationConfig) -> bool:
-        """Validate that at least two cubes are present."""
+    def check_if_required_objects_present(
+        self, simulation_config: SimulationConfig
+    ) -> bool:
+        """Validate that at least two yellow cubes are present."""
         cubes_num = 0
         for ent in simulation_config.entities:
             if ent.prefab_name in self.obj_types:
@@ -135,8 +136,10 @@ class BuildRedCubeTowerTask(BuildCubeTowerTask):
             "Other types of objects cannot be included in a tower."
         )
 
-    def validate_config(self, simulation_config: SimulationConfig) -> bool:
-        """Validate that at least two cubes are present."""
+    def check_if_required_objects_present(
+        self, simulation_config: SimulationConfig
+    ) -> bool:
+        """Validate that at least two red cubes are present."""
         cubes_num = 0
         for ent in simulation_config.entities:
             if ent.prefab_name in self.obj_types:
@@ -156,8 +159,10 @@ class BuildBlueCubeTowerTask(BuildCubeTowerTask):
             "Other types of objects cannot be included in a tower."
         )
 
-    def validate_config(self, simulation_config: SimulationConfig) -> bool:
-        """Validate that at least two cubes are present."""
+    def check_if_required_objects_present(
+        self, simulation_config: SimulationConfig
+    ) -> bool:
+        """Validate that at least two blue cubes are present."""
         cubes_num = 0
         for ent in simulation_config.entities:
             if ent.prefab_name in self.obj_types:

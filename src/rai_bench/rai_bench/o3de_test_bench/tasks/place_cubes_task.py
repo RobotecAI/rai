@@ -13,13 +13,10 @@
 # limitations under the License.
 from typing import List, Tuple
 
-from rai_bench.benchmark_model import (  # type: ignore
-    EntityT,
-)
 from rai_bench.o3de_test_bench.tasks.manipulation_task import (  # type: ignore
     ManipulationTask,
 )
-from rai_sim.simulation_bridge import Entity  # type: ignore
+from rai_sim.simulation_bridge import Entity, SimulationConfig  # type: ignore
 
 
 class PlaceCubesTask(ManipulationTask):
@@ -28,10 +25,12 @@ class PlaceCubesTask(ManipulationTask):
     def get_prompt(self) -> str:
         return "Manipulate objects, so that all cubes are adjacent to at least one cube"
 
-    def check_if_required_objects_present(self, entities: List[EntityT]) -> bool:
+    def check_if_required_objects_present(
+        self, simulation_config: SimulationConfig
+    ) -> bool:
         """validate if at least 2 cubes are present"""
         cubes_num = 0
-        for ent in entities:
+        for ent in simulation_config.entities:
             if ent.prefab_name in self.obj_types:
                 cubes_num += 1
                 if cubes_num > 1:
