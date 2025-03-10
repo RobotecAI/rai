@@ -21,7 +21,7 @@ from typing import Annotated, Any, Dict, List, Optional, cast
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pymongo import MongoClient
 
 from rai.agents.base import BaseAgent
@@ -61,11 +61,11 @@ class PoseStamped(BaseModel):
 
 class SpatioTemporalData(BaseModel):
     timestamp: Annotated[float, "timestamp"]
-    images: Dict[Annotated[str, "camera topic"], str]
+    images: Dict[Annotated[str, "camera topic"], str] = Field(repr=False)
     tf: Optional[PoseStamped]
     temporal_context: Annotated[str, "compressed history of messages"]
     image_text_descriptions: Annotated[str, "text descriptions of images"]
-    embeddings: List[float]
+    embeddings: List[float] = Field(default_factory=list, repr=False)
 
 
 class SpatioTemporalConfig(BaseModel):
@@ -104,6 +104,7 @@ class SpatioTemporalAgent(BaseAgent):
 
         self.db = MongoClient(self.config.db_url)[self.config.db_name]  # type: ignore
         self.collection = self.db[self.config.collection_name]  # type: ignore
+        self._initialize_embeddings_search_index()
         self.logger = logging.getLogger(__name__)
 
     def insert_into_db(self, data: SpatioTemporalData):
