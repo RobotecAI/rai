@@ -16,7 +16,7 @@ import json
 import logging
 import time
 from abc import abstractmethod
-from typing import Annotated, Dict, List, Optional, cast
+from typing import Annotated, Any, Dict, List, Optional, cast
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
@@ -73,21 +73,49 @@ class SpatioTemporalConfig(BaseModel):
 
 
 class SpatioTemporalAgent(BaseAgent):
-    def __init__(self, config: SpatioTemporalConfig, *args, **kwargs):
+    def __init__(
+        self,
+        config: SpatioTemporalConfig,
+        *args: tuple[Any, ...],
+        **kwargs: dict[str, Any],
+    ):
+        """
+        Initialize the SpatioTemporalAgent.
+
+        Parameters
+        ----------
+        config : SpatioTemporalConfig
+            Configuration for the spatiotemporal agent.
+        *args : tuple
+            Additional positional arguments.
+        **kwargs : dict
+            Additional keyword arguments.
+        """
         super().__init__(*args, **kwargs)
         self.config = config
 
-        self.db = MongoClient(self.config.db_url)[self.config.db_name]
-        self.collection = self.db[self.config.collection_name]
+        self.db = MongoClient(self.config.db_url)[self.config.db_name]  # type: ignore
+        self.collection = self.db[self.config.collection_name]  # type: ignore
         self.logger = logging.getLogger(__name__)
 
     def insert_into_db(self, data: SpatioTemporalData):
+        """
+        Insert spatiotemporal data into the database.
+
+        Parameters
+        ----------
+        data : SpatioTemporalData
+            The spatiotemporal data to be inserted.
+        """
         self.logger.info(
             f"Inserting data into database: {self.config.db_name}[{self.config.collection_name}]"
         )
-        self.collection.insert_one(data.model_dump())
+        self.collection.insert_one(data.model_dump())  # type: ignore
 
     def run(self):
+        """
+        Run the agent in a loop, executing tasks at specified intervals.
+        """
         while True:
             ts = time.time()
             self.logger.info("Running on interval")
@@ -100,6 +128,9 @@ class SpatioTemporalAgent(BaseAgent):
             time.sleep(max(0, self.config.time_interval - (te - ts)))
 
     def on_interval(self):
+        """
+        Perform tasks at each interval, including data collection and insertion.
+        """
         images = self._get_images()
         tf = self._get_tf()
         if tf is None and len(images) == 0:
@@ -119,16 +150,48 @@ class SpatioTemporalAgent(BaseAgent):
         self.insert_into_db(data)
 
     @abstractmethod
-    def _get_images(self) -> Dict[Annotated[str, "image source"], str]:
+    def _get_images(
+        self,
+    ) -> Dict[Annotated[str, "image source"], Annotated[str, "base64 encoded image"]]:
+        """
+        Abstract method to get images from sources.
+
+        Returns
+        -------
+        Dict[Annotated[str, "image source"], Annotated[str, "base64 encoded image"]]
+            A dictionary mapping image sources to image data.
+        """
         pass
 
     @abstractmethod
     def _get_tf(self) -> Optional[PoseStamped]:
+        """
+        Abstract method to get the transformation data.
+
+        Returns
+        -------
+        Optional[PoseStamped]
+            The transformation data, if available.
+        """
         pass
 
     def _get_image_text_descriptions(
-        self, images: Dict[Annotated[str, "source"], str]
-    ) -> Dict[Annotated[str, "source"], str]:
+        self,
+        images: Dict[Annotated[str, "source"], Annotated[str, "base64 encoded image"]],
+    ) -> Dict[Annotated[str, "source"], Annotated[str, "text description"]]:
+        """
+        Generate text descriptions for images using a language model.
+
+        Parameters
+        ----------
+        images : Dict[Annotated[str, "source"], Annotated[str, "base64 encoded image"]]
+            A dictionary mapping image sources to image data.
+
+        Returns
+        -------
+        Dict[Annotated[str, "source"], str]
+            A dictionary mapping image sources to their text descriptions.
+        """
         text_description_prompt = SystemMessage(
             content="You are a helpful assistant that describes images."
         )
@@ -149,12 +212,32 @@ class SpatioTemporalAgent(BaseAgent):
 
         return text_descriptions
 
+    @abstractmethod
     def _get_robots_history(self) -> str:
-        # TODO: Implement this
-        history: List[BaseMessage] = []
-        return self._compress_context(history)
+        """
+        Retrieve and compress the robot's message history.
+
+        Returns
+        -------
+        str
+            The compressed history of messages.
+        """
+        pass
 
     def _compress_context(self, history: List[BaseMessage]) -> str:
+        """
+        Compress a list of messages into a single context string.
+
+        Parameters
+        ----------
+        history : List[BaseMessage]
+            A list of messages to be compressed.
+
+        Returns
+        -------
+        str
+            The compressed context string.
+        """
         system_prompt = SystemMessage(
             content="You are a helpful assistant that compresses context. Your task is to compress the history of messages into a single message."
         )
