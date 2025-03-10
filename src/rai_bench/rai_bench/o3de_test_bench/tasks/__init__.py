@@ -11,22 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from rai_bench.o3de_test_bench.tasks.build_tower_task import (
+    BuildBlueCubeTowerTask,
+    BuildCubeTowerTask,
+    BuildRedCubeTowerTask,
+    BuildYellowCubeTowerTask,
+)
 from rai_bench.o3de_test_bench.tasks.grab_carrot_task import GrabCarrotTask
 from rai_bench.o3de_test_bench.tasks.group_vegetables_task import GroupVegetablesTask
 from rai_bench.o3de_test_bench.tasks.place_cubes_task import PlaceCubesTask
-from rai_bench.o3de_test_bench.tasks.build_tower_task import (
-    BuildCubeTowerTask,
-    BuildYellowCubeTowerTask,
-    BuildRedCubeTowerTask,
-    BuildBlueCubeTowerTask,
-)
 
 __all__ = [
+    "BuildBlueCubeTowerTask",
+    "BuildCubeTowerTask",
+    "BuildRedCubeTowerTask",
+    "BuildYellowCubeTowerTask",
     "GrabCarrotTask",
     "GroupVegetablesTask",
     "PlaceCubesTask",
-    "BuildCubeTowerTask",
-    "BuildYellowCubeTowerTask",
-    "BuildRedCubeTowerTask",
-    "BuildBlueCubeTowerTask",
 ]
