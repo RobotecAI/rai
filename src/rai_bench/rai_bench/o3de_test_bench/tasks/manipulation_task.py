@@ -14,7 +14,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Union
+from typing import List, Sequence, Tuple, Union
 
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
@@ -66,7 +66,7 @@ class ManipulationTask(Task, ABC):
         Calculates the number of objects that are correctly and incorrectly placed initially.
         """
         initial_objects = self.filter_entities_by_prefab_type(
-            simulation_bridge.spawned_entities, prefab_types=self.obj_types
+            simulation_bridge.spawned_entities, object_types=self.obj_types
         )
         initially_correct, initially_incorrect = self.calculate_correct(
             entities=initial_objects
@@ -85,7 +85,7 @@ class ManipulationTask(Task, ABC):
         """
         scene_state = simulation_bridge.get_scene_state()
         final_objects = self.filter_entities_by_prefab_type(
-            scene_state.entities, prefab_types=self.obj_types
+            scene_state.entities, object_types=self.obj_types
         )
         final_correct, final_incorrect = self.calculate_correct(entities=final_objects)
 
