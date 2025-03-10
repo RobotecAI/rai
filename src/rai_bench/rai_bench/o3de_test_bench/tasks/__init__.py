@@ -18,6 +18,7 @@ from rai_bench.o3de_test_bench.tasks.group_cubes_by_color_task import (
 from rai_bench.o3de_test_bench.tasks.group_vegetables_task import GroupVegetablesTask
 from rai_bench.o3de_test_bench.tasks.place_cubes_task import PlaceCubesTask
 from rai_bench.o3de_test_bench.tasks.build_tower_task import BuildCubeTowerTask
+from rai_bench.o3de_test_bench.tasks.separate_carrots_task import SeparateCarrotsTask
 
 __all__ = [
     "GrabCarrotTask",
@@ -25,5 +26,5 @@ __all__ = [
     "PlaceCubesTask",
     "BuildCubeTowerTask",
     "GroupCubesByColorTask",
-    "PlaceCubesTask",
+    "SeparateCarrotsTask",
 ]
