@@ -26,14 +26,9 @@ jobs:
       image: osrf/ros:${{ matrix.ros_distro }}-desktop-full
 
     steps:
-      - name: Clean up workspace
-        run: |
-          ls -la $GITHUB_WORKSPACE
-          rm -rf $GITHUB_WORKSPACE/* || true
-          rm -rf $GITHUB_WORKSPACE/.??* || true
-          ls -la $GITHUB_WORKSPACE
-
       - uses: actions/checkout@v4
+        with:
+          clean: true
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
