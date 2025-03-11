@@ -156,6 +156,9 @@ if __name__ == "__main__":
         configs_dir + "scene5.yaml",
         configs_dir + "scene6.yaml",
         configs_dir + "scene7.yaml",
+        configs_dir + "scene8.yaml",
+        configs_dir + "scene9.yaml",
+        configs_dir + "scene10.yaml",
     ]
     simulations_configs = [
         O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
