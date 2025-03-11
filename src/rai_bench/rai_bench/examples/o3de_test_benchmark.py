@@ -40,7 +40,7 @@ from rai_bench.o3de_test_bench.tasks import (  # type: ignore
     BuildCubeTowerTask,
     BuildRedCubeTowerTask,
     BuildYellowCubeTowerTask,
-    GroupVegetablesTask,
+    GroupObjectsTask,
     MoveObjectsToLeftTask,
     PlaceCubesTask,
 )
@@ -173,7 +173,8 @@ if __name__ == "__main__":
             obj_types=["yellow_cube", "blue_cube", "red_cube"], logger=bench_logger
         ),
         PlaceCubesTask(logger=bench_logger),
-        GroupVegetablesTask(logger=bench_logger),
+        GroupObjectsTask(obj_types=["carrot", "apple"], logger=bench_logger),
+        GroupObjectsTask(obj_types=["yellow_cube", "red_cube"], logger=bench_logger),
         BuildCubeTowerTask(logger=bench_logger),
         BuildRedCubeTowerTask(logger=bench_logger),
         BuildYellowCubeTowerTask(logger=bench_logger),
