@@ -11,24 +11,32 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import List, Tuple
+import logging
+from typing import List, Tuple, Union
+
+from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai_bench.o3de_test_bench.tasks.manipulation_task import (  # type: ignore
     ManipulationTask,
 )
 from rai_sim.simulation_bridge import Entity, SimulationConfig  # type: ignore
 
+loggers_type = Union[RcutilsLogger, logging.Logger]
 
-class GrabCarrotTask(ManipulationTask):
-    obj_types = ["carrot"]
+
+class MoveObjectsToLeftTask(ManipulationTask):
+    def __init__(self, obj_types: List[str], logger: loggers_type | None = None):
+        super().__init__(logger=logger)
+        self.obj_types = obj_types
 
     def get_prompt(self) -> str:
-        return "Manipulate objects, so that all carrots are on the left side of the table (positive y)"
+        obj_names = ", ".join(self.obj_types).replace("_", " ")
+        return f"Manipulate objects, so that all of the following objects are on the left side of the table (positive y): {obj_names}."
 
     def check_if_required_objects_present(
         self, simulation_config: SimulationConfig
     ) -> bool:
-        """Validate if any carrot present"""
+        """Validate if any object present"""
         for ent in simulation_config.entities:
             if ent.prefab_name in self.obj_types:
                 return True
