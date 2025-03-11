@@ -113,19 +113,6 @@ class BuildYellowCubeTowerTask(BuildCubeTowerTask):
             "Other types of objects cannot be included in a tower."
         )
 
-    def check_if_required_objects_present(
-        self, simulation_config: SimulationConfig
-    ) -> bool:
-        """Validate that at least two yellow cubes are present."""
-        cubes_num = 0
-        for ent in simulation_config.entities:
-            if ent.prefab_name in self.obj_types:
-                cubes_num += 1
-                if cubes_num > 1:
-                    return True
-
-        return False
-
 
 class BuildRedCubeTowerTask(BuildCubeTowerTask):
     obj_types = ["red_cube"]
@@ -136,19 +123,6 @@ class BuildRedCubeTowerTask(BuildCubeTowerTask):
             "Other types of objects cannot be included in a tower."
         )
 
-    def check_if_required_objects_present(
-        self, simulation_config: SimulationConfig
-    ) -> bool:
-        """Validate that at least two red cubes are present."""
-        cubes_num = 0
-        for ent in simulation_config.entities:
-            if ent.prefab_name in self.obj_types:
-                cubes_num += 1
-                if cubes_num > 1:
-                    return True
-
-        return False
-
 
 class BuildBlueCubeTowerTask(BuildCubeTowerTask):
     obj_types = ["blue_cube"]
@@ -158,16 +132,3 @@ class BuildBlueCubeTowerTask(BuildCubeTowerTask):
             "Manipulate objects so that all blue cubes form a single vertical tower. "
             "Other types of objects cannot be included in a tower."
         )
-
-    def check_if_required_objects_present(
-        self, simulation_config: SimulationConfig
-    ) -> bool:
-        """Validate that at least two blue cubes are present."""
-        cubes_num = 0
-        for ent in simulation_config.entities:
-            if ent.prefab_name in self.obj_types:
-                cubes_num += 1
-                if cubes_num > 1:
-                    return True
-
-        return False
