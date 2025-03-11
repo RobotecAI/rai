@@ -21,6 +21,7 @@ from langchain.chat_models.base import BaseChatModel
 from langchain_core.messages import BaseMessage, SystemMessage
 from langchain_core.tools import BaseTool
 from langgraph.graph import START, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt.tool_node import tools_condition
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
@@ -54,7 +55,7 @@ def create_conversational_agent(
     system_prompt: str,
     logger: Optional[RcutilsLogger | logging.Logger] = None,
     debug=False,
-):
+) -> CompiledStateGraph:
     _logger = None
     if logger:
         _logger = logger
