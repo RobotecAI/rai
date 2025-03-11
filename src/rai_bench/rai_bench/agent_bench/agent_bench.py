@@ -3,14 +3,10 @@ import logging
 import time
 from typing import Any, Dict, List
 
-from rai.agents.conversational_agent import create_conversational_agent
 from rai.messages.multimodal import HumanMultimodalMessage
-from rai.utils.model_initialization import get_llm_model
 
 from rai_bench.agent_bench.agent_tasks import (
     AgentTask,
-    GetROS2CameraTask,
-    GetROS2TopicsTask,
     Result,
 )
 
@@ -19,12 +15,15 @@ loggers_type = logging.Logger
 
 class AgentBenchmark:
     def __init__(
-        self, tasks: List[AgentTask], logger: loggers_type | None = None
+        self,
+        tasks: List[AgentTask],
+        logger: loggers_type | None = None,
+        results_filename: str = "agent_benchmark_results.csv",
     ) -> None:
         self.tasks = enumerate(iter(tasks))
         self.num_tasks = len(tasks)
         self.tasks_results: List[Dict[str, Any]] = []
-        self.results_filename = "agent_benchmark_results.csv"
+        self.results_filename = results_filename
         self.fieldnames = [
             "task",
             "success",
@@ -83,23 +82,3 @@ class AgentBenchmark:
         ) as file:
             writer = csv.DictWriter(file, fieldnames=self.fieldnames)
             writer.writeheader()
-
-
-tasks: List[AgentTask] = [
-    GetROS2TopicsTask(),
-    GetROS2CameraTask(),
-]
-benchmark = AgentBenchmark(
-    tasks=tasks,
-    logger=logging.getLogger(__name__),
-)
-
-for _, task in enumerate(tasks):
-    agent = create_conversational_agent(
-        llm=get_llm_model(model_type="complex_model"),
-        tools=task.expected_tools,
-        system_prompt="""
-    You are the helpful assistant.
-    """,
-    )
-    benchmark.run_next(agent=agent)
