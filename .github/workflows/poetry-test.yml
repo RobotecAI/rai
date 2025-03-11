@@ -5,6 +5,7 @@ on:
     types: [opened, synchronize, reopened, edited, ready_for_review]
     branches:
       - development
+  workflow_dispatch:
 
 jobs:
   build-and-test-ros2:
@@ -26,13 +27,6 @@ jobs:
       image: osrf/ros:${{ matrix.ros_distro }}-desktop-full
 
     steps:
-      - name: Clean up workspace
-        run: |
-          ls -la $GITHUB_WORKSPACE
-          rm -rf $GITHUB_WORKSPACE/* || true
-          rm -rf $GITHUB_WORKSPACE/.??* || true
-          ls -la $GITHUB_WORKSPACE
-
       - uses: actions/checkout@v4
 
       - name: Install Poetry
