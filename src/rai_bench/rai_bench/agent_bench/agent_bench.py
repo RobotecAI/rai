@@ -11,6 +11,7 @@ from rai_bench.agent_bench.agent_tasks import (
     AgentTask,
     GetROS2CameraTask,
     GetROS2TopicsTask,
+    Result,
 )
 
 loggers_type = logging.Logger
@@ -26,7 +27,8 @@ class AgentBenchmark:
         self.results_filename = "agent_benchmark_results.csv"
         self.fieldnames = [
             "task",
-            "result",
+            "success",
+            "errors",
             "total_time",
         ]
         self._initialize_results_file()
@@ -45,13 +47,20 @@ class AgentBenchmark:
             response = agent.invoke(
                 {"messages": [HumanMultimodalMessage(content=task.get_prompt())]}
             )
-            result = task.verify_tool_calls(response=response)
+
+            # Get new Result object
+            result: Result = task.verify_tool_calls(response=response)
+
             te = time.perf_counter()
             total_time = te - ts
-            self.logger.info(f"TASK SUCCESS: {result}, TOTAL TIME: {total_time:.3f}")
-            task_result: dict[str, Any] = {
+            self.logger.info(
+                f"TASK SUCCESS: {result.success}, TOTAL TIME: {total_time:.3f}"
+            )
+
+            task_result: Dict[str, Any] = {
                 "task": task.get_prompt(),
-                "result": result,
+                "success": result.success,
+                "errors": "; ".join(result.errors) if result.errors else "",
                 "total_time": total_time,
             }
             self.tasks_results.append(task_result)
@@ -80,7 +89,6 @@ tasks: List[AgentTask] = [
     GetROS2TopicsTask(),
     GetROS2CameraTask(),
 ]
-
 benchmark = AgentBenchmark(
     tasks=tasks,
     logger=logging.getLogger(__name__),
