@@ -19,7 +19,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import List
 
-
 import rclpy
 from langchain.tools import BaseTool
 from rai.agents.conversational_agent import create_conversational_agent  # type: ignore
@@ -37,13 +36,13 @@ from rai_open_set_vision.tools import GetGrabbingPointTool
 
 from rai_bench.benchmark_model import Benchmark, Task  # type: ignore
 from rai_bench.o3de_test_bench.tasks import (  # type: ignore
-    BuildCubeTowerTask,
-    GrabCarrotTask,
-    GroupVegetablesTask,
-    PlaceCubesTask,
-    BuildYellowCubeTowerTask,
     BuildBlueCubeTowerTask,
+    BuildCubeTowerTask,
     BuildRedCubeTowerTask,
+    BuildYellowCubeTowerTask,
+    GroupVegetablesTask,
+    MoveObjectsToLeftTask,
+    PlaceCubesTask,
 )
 from rai_sim.o3de.o3de_bridge import (  # type: ignore
     O3DEngineArmManipulationBridge,
@@ -166,7 +165,13 @@ if __name__ == "__main__":
         for path in simulation_configs_paths
     ]
     tasks: List[Task] = [
-        GrabCarrotTask(logger=bench_logger),
+        MoveObjectsToLeftTask(obj_types=["carrot"], logger=bench_logger),
+        MoveObjectsToLeftTask(obj_types=["corn"], logger=bench_logger),
+        MoveObjectsToLeftTask(obj_types=["yellow_cube"], logger=bench_logger),
+        MoveObjectsToLeftTask(obj_types=["tomato"], logger=bench_logger),
+        MoveObjectsToLeftTask(
+            obj_types=["yellow_cube", "blue_cube", "red_cube"], logger=bench_logger
+        ),
         PlaceCubesTask(logger=bench_logger),
         GroupVegetablesTask(logger=bench_logger),
         BuildCubeTowerTask(logger=bench_logger),
