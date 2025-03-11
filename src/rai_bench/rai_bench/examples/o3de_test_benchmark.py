@@ -36,10 +36,7 @@ from rai_open_set_vision.tools import GetGrabbingPointTool
 
 from rai_bench.benchmark_model import Benchmark, Task  # type: ignore
 from rai_bench.o3de_test_bench.tasks import (  # type: ignore
-    BuildBlueCubeTowerTask,
     BuildCubeTowerTask,
-    BuildRedCubeTowerTask,
-    BuildYellowCubeTowerTask,
     GroupObjectsTask,
     MoveObjectsToLeftTask,
     PlaceCubesTask,
@@ -164,21 +161,41 @@ if __name__ == "__main__":
         O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
         for path in simulation_configs_paths
     ]
+    # move objects to the left
+    object_groups = [
+        ["carrot"],
+        ["corn"],
+        ["yellow_cube"],
+        ["tomato"],
+        ["yellow_cube", "blue_cube", "red_cube"],
+    ]
+
+    move_to_left_tasks = [
+        MoveObjectsToLeftTask(obj_types=objects, logger=bench_logger)
+        for objects in object_groups
+    ]
+    # group objects type tasks
+    group_objects_types = [["carrot", "apple"], ["yellow_cube", "red_cube"]]
+    group_objects_tasks = [
+        GroupObjectsTask(obj_types=obj, logger=bench_logger)
+        for obj in group_objects_types
+    ]
+    # build tower type tasks
+    build_tower_types = [
+        ["red_cube", "yellow_cube", "red_cube"],
+        ["red_cube"],
+        ["yellow_cube"],
+        ["blue_cube"],
+    ]
+    build_tower_tasks = [
+        BuildCubeTowerTask(obj_types=cubes, logger=bench_logger)
+        for cubes in build_tower_types
+    ]
     tasks: List[Task] = [
-        MoveObjectsToLeftTask(obj_types=["carrot"], logger=bench_logger),
-        MoveObjectsToLeftTask(obj_types=["corn"], logger=bench_logger),
-        MoveObjectsToLeftTask(obj_types=["yellow_cube"], logger=bench_logger),
-        MoveObjectsToLeftTask(obj_types=["tomato"], logger=bench_logger),
-        MoveObjectsToLeftTask(
-            obj_types=["yellow_cube", "blue_cube", "red_cube"], logger=bench_logger
-        ),
+        *move_to_left_tasks,
         PlaceCubesTask(logger=bench_logger),
-        GroupObjectsTask(obj_types=["carrot", "apple"], logger=bench_logger),
-        GroupObjectsTask(obj_types=["yellow_cube", "red_cube"], logger=bench_logger),
-        BuildCubeTowerTask(logger=bench_logger),
-        BuildRedCubeTowerTask(logger=bench_logger),
-        BuildYellowCubeTowerTask(logger=bench_logger),
-        BuildBlueCubeTowerTask(logger=bench_logger),
+        *group_objects_tasks,
+        *build_tower_tasks,
     ]
     scenarios = Benchmark.create_scenarios(
         tasks=tasks,
