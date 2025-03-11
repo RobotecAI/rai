@@ -19,6 +19,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Generic, List, Set, TypeVar, Union
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langgraph.graph.state import CompiledStateGraph
 from rai.messages import HumanMultimodalMessage
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
@@ -329,7 +330,7 @@ class Benchmark:
             writer = csv.DictWriter(file, fieldnames=self.fieldnames)
             writer.writeheader()
 
-    def run_next(self, agent) -> None:
+    def run_next(self, agent: CompiledStateGraph) -> None:
         """
         Runs the next scenario
         """
@@ -347,7 +348,8 @@ class Benchmark:
 
             ts = time.perf_counter()
             for state in agent.stream(
-                {"messages": [HumanMessage(content=scenario.task.get_prompt())]}
+                {"messages": [HumanMessage(content=scenario.task.get_prompt())]},
+                {"recursion_limit": 100},  # TODO (jm) what should be recursion limit?
             ):
                 graph_node_name = list(state.keys())[0]
                 msg = state[graph_node_name]["messages"][-1]
