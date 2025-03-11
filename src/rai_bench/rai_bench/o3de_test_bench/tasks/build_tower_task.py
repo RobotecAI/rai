@@ -26,26 +26,31 @@ loggers_type = Union[RcutilsLogger, logging.Logger]
 
 
 class BuildCubeTowerTask(ManipulationTask):
-    obj_types = ["red_cube", "blue_cube", "yellow_cube"]
+    ALLOWED_OBJECTS = {"red_cube", "blue_cube", "yellow_cube"}
+
+    def __init__(self, obj_types: List[str], logger: loggers_type | None = None):
+        super().__init__(logger)
+
+        # Validate that only cubes are passed
+        if not set(obj_types).issubset(self.ALLOWED_OBJECTS):
+            raise ValueError(
+                f"Invalid obj_types provided: {obj_types}. Allowed objects: {self.ALLOWED_OBJECTS}"
+            )
+
+        self.obj_types = obj_types
 
     def get_prompt(self) -> str:
-        return (
-            "Manipulate objects so that all cubes form a single vertical tower. "
-            "Other types of objects cannot be included in a tower."
-        )
+        cube_names = ", ".join(obj + "s" for obj in self.obj_types).replace("_", " ")
+        return f"Manipulate objects so that all {cube_names} form a single vertical tower. Other types of objects cannot be included in a tower."
 
     def check_if_required_objects_present(
         self, simulation_config: SimulationConfig
     ) -> bool:
-        """Validate that at least two cubes are present."""
-        cubes_num = 0
-        for ent in simulation_config.entities:
-            if ent.prefab_name in self.obj_types:
-                cubes_num += 1
-                if cubes_num > 1:
-                    return True
-
-        return False
+        """Validate that at least two cubes of the specified types are present."""
+        cube_count = sum(
+            1 for ent in simulation_config.entities if ent.prefab_name in self.obj_types
+        )
+        return cube_count > 1
 
     def calculate_correct(self, entities: List[Entity]) -> Tuple[int, int]:
         # TODO (jm) not sure how to treat single standing cube, as correctly or incorrectly placed?
@@ -102,33 +107,3 @@ class BuildCubeTowerTask(ManipulationTask):
             incorrect = len(entities)
 
         return correct, incorrect
-
-
-class BuildYellowCubeTowerTask(BuildCubeTowerTask):
-    obj_types = ["yellow_cube"]
-
-    def get_prompt(self) -> str:
-        return (
-            "Manipulate objects so that all yellow cubes form a single vertical tower. "
-            "Other types of objects cannot be included in a tower."
-        )
-
-
-class BuildRedCubeTowerTask(BuildCubeTowerTask):
-    obj_types = ["red_cube"]
-
-    def get_prompt(self) -> str:
-        return (
-            "Manipulate objects so that all red cubes form a single vertical tower. "
-            "Other types of objects cannot be included in a tower."
-        )
-
-
-class BuildBlueCubeTowerTask(BuildCubeTowerTask):
-    obj_types = ["blue_cube"]
-
-    def get_prompt(self) -> str:
-        return (
-            "Manipulate objects so that all blue cubes form a single vertical tower. "
-            "Other types of objects cannot be included in a tower."
-        )

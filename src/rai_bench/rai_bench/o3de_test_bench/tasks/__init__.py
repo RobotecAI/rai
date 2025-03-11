@@ -12,10 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from rai_bench.o3de_test_bench.tasks.build_tower_task import (
-    BuildBlueCubeTowerTask,
     BuildCubeTowerTask,
-    BuildRedCubeTowerTask,
-    BuildYellowCubeTowerTask,
 )
 from rai_bench.o3de_test_bench.tasks.group_objects_task import GroupObjectsTask
 from rai_bench.o3de_test_bench.tasks.move_object_to_left_task import (
@@ -24,10 +21,7 @@ from rai_bench.o3de_test_bench.tasks.move_object_to_left_task import (
 from rai_bench.o3de_test_bench.tasks.place_cubes_task import PlaceCubesTask
 
 __all__ = [
-    "BuildBlueCubeTowerTask",
     "BuildCubeTowerTask",
-    "BuildRedCubeTowerTask",
-    "BuildYellowCubeTowerTask",
     "GroupObjectsTask",
     "MoveObjectsToLeftTask",
     "PlaceCubesTask",
