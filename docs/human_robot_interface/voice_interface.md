@@ -18,7 +18,7 @@ The Agent utilises sounddevice module to access user's microphone, by default th
 To get information about available sounddevices use:
 
 ```
-python -c "import sounddevice; sounddevice.query_devices()"
+python -c "import sounddevice; print(sounddevice.query_devices())"
 ```
 
 The device can be identifed by name and passed to the configuration.
@@ -35,10 +35,10 @@ The Agent listens for information on two topics:
 `/voice_commands`: `std_msgs/msg/String` - containing control commands, to pause current playback (`{"data": "pause"}`), start/continue playback (`{"data": "play"}`), or stop the playback and drop the current playback queue (`{"data": "play"}`).
 
 The Agent utilises sounddevice module to access user's speaker, by default the `"default"` sound device is used.
-To get information about available sounddeives use:
+To get a list of names of available sound devices use:
 
 ```
-python -c "import sounddevice; sounddevice.query_devices()"
+python -c 'import sounddevice as sd; print([x["name"] for x in list(sd.query_devices())])'
 ```
 
 The device can be identifed by name and passed to the configuration.
