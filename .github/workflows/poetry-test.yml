@@ -5,9 +5,6 @@ on:
     types: [opened, synchronize, reopened, edited, ready_for_review]
     branches:
       - development
-  push:
-    branches:
-      - ms/ci_cleanup_update
 
 jobs:
   build-and-test-ros2:
@@ -30,6 +27,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          clean: true
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
