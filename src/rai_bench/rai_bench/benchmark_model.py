@@ -11,19 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import csv
 import logging
+import math
 import time
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Generic, List, Set, TypeVar, Union
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from langgraph.graph.state import CompiledStateGraph
-from rai.messages import HumanMultimodalMessage
+from langgraph.graph.state import CompiledStateGraph  # type: ignore
+from rai.messages import HumanMultimodalMessage  # type: ignore
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from rai_sim.simulation_bridge import (
+from rai_sim.simulation_bridge import (  # type: ignore
     Entity,
     Pose,
     SimulationBridge,
@@ -156,7 +156,7 @@ class Task(ABC):
         return adjacent_count
 
     def build_neighbourhood_list(
-        self, entities: List[EntityT]
+        self, entities: List[EntityT], threshold_distance: float = 0.15
     ) -> Dict[EntityT, List[EntityT]]:
         """Assignes a list of neighbours to every object based on threshold distance"""
         neighbourhood_graph: Dict[EntityT, List[EntityT]] = {
@@ -166,7 +166,8 @@ class Task(ABC):
             neighbourhood_graph[entity] = [
                 other
                 for other in entities
-                if entity != other and self.is_adjacent(entity.pose, other.pose, 0.15)
+                if entity != other
+                and self.is_adjacent(entity.pose, other.pose, threshold_distance)
             ]
         return neighbourhood_graph
 
@@ -211,33 +212,33 @@ class Task(ABC):
 
         return clusters
 
-    def group_entities_by_z_coordinate(
+    def group_entities_along_z_axis(
         # TODO (jm) figure out how to group by other coords and orientation, without reapeting code
         self,
         entities: List[EntityT],
         margin: float,
     ) -> List[List[EntityT]]:
         """
-        Groups entities that are aligned along a z axis within a margin (top to bottom).
-        Usefull for checking if objects form lines or towers
+        Groups entities that are aligned along a z axis within a given x y margin (top to bottom).
+        Usefull for checking if objects form towers
         """
 
-        entities = sorted(entities, key=lambda ent: ent.pose.translation.z)
-        groups: List[List[EntityT]] = []
+        entities = sorted(
+            entities, key=lambda ent: (ent.pose.translation.x, ent.pose.translation.y)
+        )
 
+        groups: List[List[EntityT]] = []
         for entity in entities:
             placed = False
             for group in groups:
-                if (
-                    abs(group[0].pose.translation.z - entity.pose.translation.z)
-                    <= margin
-                ):
+                dx = group[0].pose.translation.x - entity.pose.translation.x
+                dy = group[0].pose.translation.y - entity.pose.translation.y
+                if math.sqrt(dx * dx + dy * dy) <= margin:
                     group.append(entity)
                     placed = True
                     break
             if not placed:
                 groups.append([entity])
-
         return groups
 
 
@@ -342,7 +343,7 @@ class Benchmark:
                 "======================================================================================"
             )
             self._logger.info(  # type: ignore
-                f"RUNNING SCENARIO NUMBER {i + 1} / {self.num_of_scenarios}, TASK: {scenario.task.get_prompt()}"
+                f"RUNNING SCENARIO NUMBER {i + 1} / {self.num_of_scenarios}\n TASK: {scenario.task.get_prompt()}\n SIMULATION_CONFIG: {scenario.simulation_config_path}"
             )
             tool_calls_num = 0
 

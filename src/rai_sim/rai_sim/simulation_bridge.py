@@ -72,9 +72,10 @@ class Entity(BaseModel):
         return hash(self.name)  # Use ID for hashing
 
     def __eq__(self, other) -> bool:
-        return (
-            isinstance(other, SpawnedEntity) and self.name == other.name
-        )  # Compare by ID
+        if isinstance(other, Entity) or isinstance(other, SpawnedEntity):
+            return self.name == other.name
+        else:
+            return False
 
 
 class SpawnedEntity(Entity):
