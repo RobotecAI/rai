@@ -17,7 +17,7 @@ from rai_bench.o3de_test_bench.tasks.build_tower_task import (
     BuildRedCubeTowerTask,
     BuildYellowCubeTowerTask,
 )
-from rai_bench.o3de_test_bench.tasks.group_vegetables_task import GroupVegetablesTask
+from rai_bench.o3de_test_bench.tasks.group_objects_task import GroupObjectsTask
 from rai_bench.o3de_test_bench.tasks.move_object_to_left_task import (
     MoveObjectsToLeftTask,
 )
@@ -28,7 +28,7 @@ __all__ = [
     "BuildCubeTowerTask",
     "BuildRedCubeTowerTask",
     "BuildYellowCubeTowerTask",
-    "GroupVegetablesTask",
+    "GroupObjectsTask",
     "MoveObjectsToLeftTask",
     "PlaceCubesTask",
 ]

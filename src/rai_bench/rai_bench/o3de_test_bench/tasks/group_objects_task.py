@@ -11,24 +11,33 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import logging
+from typing import List, Tuple, Union
 
-from typing import List, Tuple
+from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai_bench.o3de_test_bench.tasks.manipulation_task import (  # type: ignore
     ManipulationTask,
 )
 from rai_sim.simulation_bridge import Entity, SimulationConfig  # type: ignore
 
+loggers_type = Union[RcutilsLogger, logging.Logger]
 
-class GroupVegetablesTask(ManipulationTask):
-    obj_types = ["tomato", "apple", "corn", "carrot"]
+
+class GroupObjectsTask(ManipulationTask):
+    def __init__(self, obj_types: List[str], logger: loggers_type | None = None):
+        super().__init__(logger)
+        self.obj_types = obj_types
 
     def get_prompt(self) -> str:
+        obj_names = ", ".join(obj + "s" for obj in self.obj_types).replace(
+            "_", " "
+        )  # create prompt, add s for plural form
         return (
-            "Manipulate objects so that vegetables form separate clusters based on their types. "
+            f"Manipulate objects so that {obj_names} form separate clusters based on their types. "
             "Each cluster must: "
-            "1. Contain ALL vegetables of the same type "
-            "2. Contain ONLY vegetables of the same type "
+            "1. Contain ALL objects of the same type "
+            "2. Contain ONLY objects of the same type "
             "3. Form a single connected group "
             "4. Be completely separated from other clusters "
         )
@@ -36,13 +45,14 @@ class GroupVegetablesTask(ManipulationTask):
     def check_if_required_objects_present(
         self, simulation_config: SimulationConfig
     ) -> bool:
-        """Ensure that at least two types of vegetables are present."""
-        veg_types = {
+        """Ensure that all specified object types are present"""
+        object_types_present = {
             ent.prefab_name
             for ent in simulation_config.entities
             if ent.prefab_name in self.obj_types
         }
-        return len(veg_types) > 1
+
+        return set(self.obj_types) <= object_types_present
 
     def calculate_correct(self, entities: List[Entity]) -> Tuple[int, int]:
         """Count correctly and incorrectly placed objects based on clustering rules."""
