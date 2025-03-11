@@ -30,18 +30,17 @@ class MoveObjectsToLeftTask(ManipulationTask):
         self.obj_types = obj_types
 
     def get_prompt(self) -> str:
-        obj_names = ", ".join(self.obj_types).replace("_", " ")
+        obj_names = ", ".join(obj + "s" for obj in self.obj_types).replace("_", " ")
         return f"Manipulate objects, so that all of the following objects are on the left side of the table (positive y): {obj_names}."
 
     def check_if_required_objects_present(
         self, simulation_config: SimulationConfig
     ) -> bool:
         """Validate if any object present"""
-        for ent in simulation_config.entities:
-            if ent.prefab_name in self.obj_types:
-                return True
-
-        return False
+        object_types_present = self.group_entities_by_type(
+            entities=simulation_config.entities
+        )
+        return set(self.obj_types) <= object_types_present.keys()
 
     def calculate_correct(self, entities: List[Entity]) -> Tuple[int, int]:
         correct = sum(1 for ent in entities if ent.pose.translation.y > 0.0)
