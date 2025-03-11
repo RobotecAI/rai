@@ -5,7 +5,9 @@ on:
     types: [opened, synchronize, reopened, edited, ready_for_review]
     branches:
       - development
-  workflow_dispatch:
+  push:
+    branches:
+      - ms/ci_cleanup_update
 
 jobs:
   build-and-test-ros2:
