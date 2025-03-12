@@ -67,7 +67,7 @@ tasks: List[AgentTask] = [
     GetROS2TopicsTask2(logger=bench_logger),
 ]
 benchmark = AgentBenchmark(
-    tasks=tasks, logger=logging.getLogger(__name__), results_filename=results_filename
+    tasks=tasks, logger=bench_logger, results_filename=results_filename
 )
 
 for _, task in enumerate(tasks):
