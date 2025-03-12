@@ -35,7 +35,9 @@ class ReActAgent(BaseAgent):
         super().__init__(connectors=connectors)
         self.logger = logging.getLogger(__name__)
         self.agent = create_react_agent(llm=llm)
-        self.callback = HRICallbackHandler(connectors=connectors, aggregate_chunks=True)
+        self.callback = HRICallbackHandler(
+            connectors=connectors, aggregate_chunks=True, logger=self.logger
+        )
         self.state = state or ReActAgentState(messages=[])
         self.thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
