@@ -24,8 +24,11 @@ from rai.utils.model_initialization import get_llm_model
 from rai_bench.agent_bench.agent_bench import AgentBenchmark
 from rai_bench.agent_bench.agent_tasks import (
     AgentTask,
+    GetAllROS2RGBCamerasTask,
+    GetROS2DepthCameraTask,
     GetROS2RGBCameraTask,
     GetROS2TopicsTask,
+    GetROS2TopicsTask2,
 )
 
 # define loggers
@@ -59,6 +62,9 @@ agent_logger.addHandler(file_handler)
 tasks: List[AgentTask] = [
     GetROS2RGBCameraTask(logger=bench_logger),
     GetROS2TopicsTask(logger=bench_logger),
+    GetROS2DepthCameraTask(logger=bench_logger),
+    GetAllROS2RGBCamerasTask(logger=bench_logger),
+    GetROS2TopicsTask2(logger=bench_logger),
 ]
 benchmark = AgentBenchmark(
     tasks=tasks, logger=logging.getLogger(__name__), results_filename=results_filename
