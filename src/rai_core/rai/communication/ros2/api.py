@@ -57,7 +57,7 @@ from rclpy.qos import (
 from rclpy.task import Future
 from rclpy.topic_endpoint_info import TopicEndpointInfo
 
-from rai.tools.ros.utils import import_message_from_str, wait_for_message
+from rai.tools.ros.utils import import_message_from_str
 
 
 class IROS2Message(Protocol):
