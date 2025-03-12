@@ -13,43 +13,62 @@
 # limitations under the License.
 
 import logging
+import threading
 import time
 from typing import Any, Dict, Optional, cast
 
 from langchain_core.language_models import BaseChatModel
 
 from rai.agents.base import BaseAgent
-from rai.agents.langchain import HRICallbackHandler, create_simple_agent
-from rai.agents.langchain.simple_agent import SimpleAgentState
+from rai.agents.langchain import HRICallbackHandler, create_react_agent
+from rai.agents.langchain.react_agent import ReActAgentState
 from rai.communication.hri_connector import HRIConnector, HRIMessage, HRIPayload
 
 
-class SimpleAgent(BaseAgent):
+class ReActAgent(BaseAgent):
     def __init__(
         self,
         connectors: dict[str, HRIConnector[HRIMessage]],
         llm: Optional[BaseChatModel] = None,
-        state: Optional[SimpleAgentState] = None,
+        state: Optional[ReActAgentState] = None,
     ):
         super().__init__(connectors=connectors)
         self.logger = logging.getLogger(__name__)
-        self.agent = create_simple_agent(llm=llm)
+        self.agent = create_react_agent(llm=llm)
         self.callback = HRICallbackHandler(connectors=connectors, aggregate_chunks=True)
-        self.state = state or SimpleAgentState(messages=[])
+        self.state = state or ReActAgentState(messages=[])
+        self.thread: Optional[threading.Thread] = None
+        self._stop_event = threading.Event()
 
     def run(self):
-        while True:
+        if self.thread is not None:
+            raise RuntimeError("Agent is already running")
+        self.thread = threading.Thread(target=self._run_loop)
+        self.thread.start()
+
+    def _run_loop(self):
+        while not self._stop_event.is_set():
             received_messages = {}
             try:
                 received_messages = self.receive_all_connectors()
             except ValueError:
                 self.logger.info("Waiting for messages...")
             if received_messages:
+                self.logger.info("Received messages")
                 reduced_message = self._reduce_messages(received_messages)
                 langchain_message = reduced_message.to_langchain()
                 self.state["messages"].append(langchain_message)
+                # callback is used to send messages to the connectors
                 self.agent.invoke(self.state, config={"callbacks": [self.callback]})
             time.sleep(0.3)
+
+    def stop(self):
+        self._stop_event.set()
+        if self.thread is not None:
+            self.logger.info("Stopping the agent. Please wait...")
+            self.thread.join()
+            self.thread = None
+            self.logger.info("Agent stopped")
 
     def receive_all_connectors(self) -> Dict[str, Dict[str, HRIMessage]]:
         received_messages: Dict[str, Any] = {}
