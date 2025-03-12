@@ -12,14 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai_sim.simulation_bridge import Entity, Pose, Translation  # type: ignore
 from rai_bench.o3de_test_bench.tasks import BuildCubeTowerTask  # type: ignore
-
-
-def create_entity(name: str, prefab: str, x: float, y: float, z: float) -> Entity:
-    return Entity(
-        name=name, prefab_name=prefab, pose=Pose(translation=Translation(x=x, y=y, z=z))
-    )
+from tests.rai_bench.conftest import create_entity
 
 
 def test_calculate_correct_proper_tower() -> None:
@@ -32,15 +26,17 @@ def test_calculate_correct_proper_tower() -> None:
     assert incorrect == 0
 
 
-def test_calculate_correct_multiple_groups() -> None:
+def test_calculate_multiple_groups() -> None:
     task = BuildCubeTowerTask(["red_cube"])
     e1 = create_entity("cube1", "red_cube", 0.0, 0.0, 0.0)  # Group 1
     e2 = create_entity("cube2", "red_cube", 0.0, 0.0, 0.03)  # Group 1
     e3 = create_entity("cube3", "red_cube", 0.0, 0.0, 0.06)  # Group 1
 
-    e3 = create_entity("cube4", "red_cube", 0.0, 1.0, 0.03)  # Group 2
-    e3 = create_entity("cube5", "red_cube", 0.0, 1.0, 0.06)  # Group 2
-    correct, incorrect = task.calculate_correct([e1, e2, e3])
+    e4 = create_entity("cube4", "red_cube", 0.0, 1.0, 0.03)  # Group 2
+    e5 = create_entity("cube5", "red_cube", 0.0, 1.0, 0.06)  # Group 2
+
+    # correct objects should be 3 as highest tower is 3 cubes high
+    correct, incorrect = task.calculate_correct([e1, e2, e3, e4, e5])
     assert correct == 3
     assert incorrect == 2
 
@@ -48,7 +44,7 @@ def test_calculate_correct_multiple_groups() -> None:
 def test_calculate_correct_invalid_object() -> None:
     task = BuildCubeTowerTask(["red_cube"])
     e1 = create_entity("cube1", "red_cube", 0.0, 0.0, 0.0)
-    e2 = create_entity("cube2", "green_cube", 0.0, 0.0, 0.03)
+    e2 = create_entity("cube2", "yellow_cube", 0.0, 0.0, 0.03)
     e3 = create_entity("cube3", "red_cube", 0.0, 0.0, 0.06)
     correct, incorrect = task.calculate_correct([e1, e2, e3])
     # The presence of an invalid object causes all cubes to be marked as incorrect.
