@@ -20,9 +20,9 @@ from rai.agents.tts_agent import TextToSpeechAgent
 from rai.agents.voice_agent import VoiceRecognitionAgent
 
 __all__ = [
-    "TextToSpeechAgent",
     "ROS2SpatioTemporalAgent",
     "ROS2SpatioTemporalConfig",
+    "TextToSpeechAgent",
     "ToolRunner",
     "VoiceRecognitionAgent",
     "create_conversational_agent",

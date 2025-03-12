@@ -87,7 +87,7 @@ class ROS2SpatioTemporalAgent(SpatioTemporalAgent):
         )
         return ps
 
-    def _get_robots_history(self) -> str:
+    def _get_robots_history(self) -> List[BaseMessage]:
         # TODO: Implement this
         history: List[BaseMessage] = []
-        return self._compress_context(history)
+        return history
