@@ -90,10 +90,10 @@ class Task(ABC):
         object_types: List[str],
     ):
         scene_state = simulation_bridge.get_scene_state()
-        initial_objects = self.filter_entities_by_prefab_type(
+        initial_objects = self.filter_entities_by_object_type(
             simulation_bridge.spawned_entities, object_types=object_types
         )
-        final_objects = self.filter_entities_by_prefab_type(
+        final_objects = self.filter_entities_by_object_type(
             scene_state.entities, object_types=object_types
         )
 
@@ -103,7 +103,7 @@ class Task(ABC):
             )
         return initial_objects, final_objects
 
-    def filter_entities_by_prefab_type(
+    def filter_entities_by_object_type(
         self, entities: List[EntityT], object_types: List[str]
     ) -> List[EntityT]:
         """Filter and return only these entities that match provided prefab types"""

@@ -91,24 +91,27 @@ class GroupObjectsTask(ManipulationTask):
         properly_clustered: List[Entity] = []
         misclustered: List[Entity] = []
 
-        entities_by_type = self.group_entities_by_type(entities)
-
-        for veg_type, veggies in entities_by_type.items():
-            neighbourhood_list = self.build_neighbourhood_list(
-                veggies, threshold_distance=threshold_distance
-            )
-            clusters = self.find_clusters(neighbourhood_list)
-            if len(clusters) == 1:
-                if all(
-                    self.check_neighbourhood_types(
-                        neighbourhood=neighbourhood_list[v], allowed_types=[veg_type]
-                    )
-                    for v in clusters[0]
-                ):
-                    properly_clustered.extend(clusters[0])
-                else:
-                    misclustered.extend(clusters[0])
+        neighbourhood_list = self.build_neighbourhood_list(
+            entities, threshold_distance=threshold_distance
+        )
+        clusters = self.find_clusters(neighbourhood_list)
+        selected_type_objects = self.filter_entities_by_object_type(
+            entities=entities, object_types=self.obj_types
+        )
+        entities_by_type = self.group_entities_by_type(selected_type_objects)
+        for obj_type, objects in entities_by_type.items():
+            # Filter clusters that contain only entities of this type.
+            clusters_of_type = [
+                cluster
+                for cluster in clusters
+                if all(ent.prefab_name == obj_type for ent in cluster)
+            ]
+            # Check if exactly one cluster exists and it includes all objects of that type.
+            if len(clusters_of_type) == 1 and len(objects) == len(clusters_of_type[0]):
+                # Verify that every entity in this cluster has neighbours exclusively of the allowed type.
+                properly_clustered.extend(clusters_of_type[0])
             else:
-                misclustered.extend(veggies)
+                # Either no cluster or more than one cluster means misclustering.
+                misclustered.extend(objects)
 
         return len(properly_clustered), len(misclustered)
