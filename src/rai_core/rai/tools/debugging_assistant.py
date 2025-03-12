@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import rclpy
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.agents.integrations.streamlit import get_streamlit_cb, streamlit_invoke
+from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.ros.cli import (
     ros2_action,
     ros2_interface,
@@ -25,15 +27,28 @@ from rai.tools.ros.cli import (
     ros2_service,
     ros2_topic,
 )
+from rai.tools.ros2.topics import GetROS2ImageTool
 from rai.utils.model_initialization import get_llm_model
 
 
 @st.cache_resource
 def initialize_graph():
+    rclpy.init()
     llm = get_llm_model(model_type="complex_model", streaming=True)
+
+    connector = ROS2ARIConnector()
+
     agent = create_conversational_agent(
         llm,
-        [ros2_topic, ros2_interface, ros2_node, ros2_service, ros2_action, ros2_param],
+        [
+            ros2_topic,
+            ros2_interface,
+            ros2_node,
+            ros2_service,
+            ros2_action,
+            ros2_param,
+            GetROS2ImageTool(connector=connector),
+        ],
         system_prompt="""You are a ROS 2 expert helping a user with their ROS 2 questions. You have access to various tools that allow you to query the ROS 2 system.
                 Be proactive and use the tools to answer questions. Retrieve as much information from the ROS 2 system as possible.
                 """,
