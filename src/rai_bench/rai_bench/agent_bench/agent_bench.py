@@ -53,7 +53,6 @@ class AgentBenchmark:
         else:
             self.logger = logging.getLogger(__name__)
 
-    # @observe
     def run_next(self, agent) -> None:
         try:
             i, task = next(self.tasks)
