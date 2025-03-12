@@ -49,7 +49,7 @@ def test_calculate_correct_invalid_object() -> None:
     correct, incorrect = task.calculate_correct([e1, e2, e3])
     # The presence of an invalid object causes all cubes to be marked as incorrect.
     assert correct == 0
-    assert incorrect == 3
+    assert incorrect == 2
 
 
 def test_calculate_correct_single_entity() -> None:

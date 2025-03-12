@@ -13,13 +13,13 @@
 # limitations under the License.
 
 from typing import List
+
 from rai_bench.o3de_test_bench.tasks import GroupObjectsTask  # type: ignore
 from rai_sim.simulation_bridge import Entity  # type: ignore
 from tests.rai_bench.conftest import create_entity
 
 
 def test_calculate_correct_proper_cluster() -> None:
-
     task = GroupObjectsTask(["red_cube"])
     # Create three red_cube objects, all placed close together.
     e1 = create_entity("e1", "red_cube", 0.0, 0.0, 0.0)
