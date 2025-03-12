@@ -174,3 +174,5 @@ src/examples/*-demo
 artifact_database.pkl
 
 imgui.ini
+
+vectorstore_data/
