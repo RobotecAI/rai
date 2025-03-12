@@ -23,7 +23,6 @@ from rai.utils.model_initialization import get_tracing_callbacks
 
 from rai_bench.agent_bench.agent_tasks import (
     AgentTask,
-    Result,
 )
 
 loggers_type = logging.Logger
@@ -68,7 +67,8 @@ class AgentBenchmark:
             te = time.perf_counter()
             total_time = te - ts
 
-            result: Result = task.verify_tool_calls(response=response)
+            task.verify_tool_calls(response=response)
+            result = task.result
             trace_id = None
             # TODO (mkotynia) currently only for langfuse, to handle langsmith tracing as well and then refactor
             if callbacks:
