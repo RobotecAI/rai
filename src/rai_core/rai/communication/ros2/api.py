@@ -48,6 +48,7 @@ import rosidl_runtime_py.utilities
 from action_msgs.srv import CancelGoal
 from rclpy.action import ActionClient
 from rclpy.action.client import ClientGoalHandle
+from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.publisher import Publisher
 from rclpy.qos import (
     DurabilityPolicy,
@@ -394,6 +395,7 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
         super().__init__(node)
         self._subscribtions: dict[str, rclpy.node.Subscription] = {}
         self.message_data: Dict[str, Queue[Any]] = defaultdict(Queue)
+        self.callback_group = ReentrantCallbackGroup()
 
     def _generic_callback(self, topic: str, msg: Any):
         self.message_data[topic].put(msg)
@@ -440,8 +442,10 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
         self._subscribtions[topic] = self._node.create_subscription(
             msg_type=msg_type,
             topic=topic,
-            callback=config.subscriber_callback or partial(self._generic_callback, topic),
+            callback=config.subscriber_callback
+            or partial(self._generic_callback, topic),
             qos_profile=qos_profile,
+            callback_group=self.callback_group,
         )
 
     def publish_configured(self, topic: str, msg_content: dict[str, Any]) -> None:
