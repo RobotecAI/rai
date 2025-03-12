@@ -24,12 +24,15 @@ from numpy.typing import NDArray
 
 from rai.agents.base import BaseAgent
 from rai.communication import (
+    HRIPayload,
     ROS2ARIConnector,
     ROS2ARIMessage,
+    ROS2HRIConnector,
+    ROS2HRIMessage,
+    SoundDeviceConfig,
     SoundDeviceConnector,
     SoundDeviceMessage,
 )
-from rai.communication.sound_device.api import SoundDeviceConfig
 from rai_asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
 
 
@@ -41,6 +44,25 @@ class ThreadData(TypedDict):
 
 
 class VoiceRecognitionAgent(BaseAgent):
+    """
+    Agent responsible for voice recognition, transcription, and processing voice activity.
+
+    Parameters
+    ----------
+    microphone_config : SoundDeviceConfig
+        Configuration for the microphone device used for audio input.
+    ros2_name : str
+        Name of the ROS2 node.
+    transcription_model : BaseTranscriptionModel
+        Model used for transcribing audio input to text.
+    vad : BaseVoiceDetectionModel
+        Voice activity detection model used to determine when speech is present.
+    grace_period : float, optional
+        Time in seconds to wait before stopping recording after speech ends, by default 1.0.
+    logger : Optional[logging.Logger], optional
+        Logger instance for logging messages, by default None.
+    """
+
     def __init__(
         self,
         microphone_config: SoundDeviceConfig,
@@ -57,8 +79,15 @@ class VoiceRecognitionAgent(BaseAgent):
         microphone = SoundDeviceConnector(
             targets=[], sources=[("microphone", microphone_config)]
         )
-        ros2_connector = ROS2ARIConnector(ros2_name)
-        super().__init__(connectors={"microphone": microphone, "ros2": ros2_connector})
+        ros2_hri_connector = ROS2HRIConnector(ros2_name, targets=["/from_human"])
+        ros2_ari_connector = ROS2ARIConnector(ros2_name + "ari")
+        super().__init__(
+            connectors={
+                "microphone": microphone,
+                "ros2_hri": ros2_hri_connector,
+                "ros2_ari": ros2_ari_connector,
+            }
+        )
         self.should_record_pipeline: List[BaseVoiceDetectionModel] = []
         self.should_stop_pipeline: List[BaseVoiceDetectionModel] = []
 
@@ -78,6 +107,7 @@ class VoiceRecognitionAgent(BaseAgent):
         self.active_thread = ""
         self.transcription_threads: dict[str, ThreadData] = {}
         self.transcription_buffers: dict[str, list[NDArray]] = {}
+        self.is_playing = True
 
     def __call__(self):
         self.run()
@@ -85,6 +115,23 @@ class VoiceRecognitionAgent(BaseAgent):
     def add_detection_model(
         self, model: BaseVoiceDetectionModel, pipeline: str = "record"
     ):
+        """
+        Add a voice detection model to the specified processing pipeline.
+
+        Parameters
+        ----------
+        model : BaseVoiceDetectionModel
+            The voice detection model to be added.
+        pipeline : str, optional
+            The pipeline where the model should be added, either 'record' or 'stop'.
+            Default is 'record'.
+
+        Raises
+        ------
+        ValueError
+            If the specified pipeline is not 'record' or 'stop'.
+        """
+
         if pipeline == "record":
             self.should_record_pipeline.append(model)
         elif pipeline == "stop":
@@ -93,20 +140,29 @@ class VoiceRecognitionAgent(BaseAgent):
             raise ValueError("Pipeline should be either 'record' or 'stop'")
 
     def run(self):
+        """
+        Start the voice recognition agent, initializing the microphone and handling incoming audio samples.
+        """
         self.running = True
         assert isinstance(self.connectors["microphone"], SoundDeviceConnector)
         msg = SoundDeviceMessage(read=True)
         self.listener_handle = self.connectors["microphone"].start_action(
             action_data=msg,
             target="microphone",
-            on_feedback=self.on_new_sample,
+            on_feedback=self._on_new_sample,
             on_done=lambda: None,
         )
+        self.logger.info("Started Voice Agent")
 
     def stop(self):
-        self.logger.info("Stopping voice agent")
+        """
+        Clean exit the voice recognition agent, ensuring all transcription threads finish before termination.
+        """
+        self.logger.info("Stopping Voice Agent")
         self.running = False
         self.connectors["microphone"].terminate_action(self.listener_handle)
+        assert isinstance(self.connectors["ros2_hri"], ROS2HRIConnector)
+        self.connectors["ros2_hri"].shutdown()
         while not all(
             [thread["joined"] for thread in self.transcription_threads.values()]
         ):
@@ -120,7 +176,7 @@ class VoiceRecognitionAgent(BaseAgent):
                     )
         self.logger.info("Voice agent stopped")
 
-    def on_new_sample(self, indata: np.ndarray, status_flags: dict[str, Any]):
+    def _on_new_sample(self, indata: np.ndarray, status_flags: dict[str, Any]):
         sample_time = time.time()
         with self.sample_buffer_lock:
             self.sample_buffer.append(indata)
@@ -134,17 +190,17 @@ class VoiceRecognitionAgent(BaseAgent):
                 self.transcription_threads[thread_id]["joined"] = True
 
         voice_detected, output_parameters = self.vad(indata, {})
+        self.logger.debug(f"Voice detected: {voice_detected}: {output_parameters}")
         should_record = False
-        # TODO: second condition is temporary
         if voice_detected and not self.recording_started:
-            should_record = self.should_record(indata, output_parameters)
+            should_record = self._should_record(indata, output_parameters)
 
         if should_record:
             self.logger.info("starting recording...")
             self.recording_started = True
             thread_id = str(uuid4())[0:8]
             transcription_thread = Thread(
-                target=self.transcription_thread,
+                target=self._transcription_thread,
                 args=[thread_id],
             )
             transcription_finished = Event()
@@ -159,7 +215,8 @@ class VoiceRecognitionAgent(BaseAgent):
         if voice_detected:
             self.logger.debug("Voice detected... resetting grace period")
             self.grace_period_start = sample_time
-
+            self._send_ros2_message("pause", "/voice_commands")
+            self.is_playing = False
         if (
             self.recording_started
             and sample_time - self.grace_period_start > self.grace_period
@@ -174,30 +231,48 @@ class VoiceRecognitionAgent(BaseAgent):
                 self.sample_buffer = []
             self.transcription_threads[self.active_thread]["thread"].start()
             self.active_thread = ""
+            self._send_ros2_message("stop", "/voice_commands")
+            self.is_playing = False
+        elif not self.is_playing and (
+            sample_time - self.grace_period_start > self.grace_period
+        ):
+            self._send_ros2_message("play", "/voice_commands")
+            self.is_playing = True
 
-    def should_record(
+    def _should_record(
         self, audio_data: NDArray, input_parameters: dict[str, Any]
     ) -> bool:
+        if len(self.should_record_pipeline) == 0:
+            return True
         for model in self.should_record_pipeline:
             detected, output = model(audio_data, input_parameters)
+            self.logger.debug(f"detected {detected}, output {output}")
             if detected:
+                model.reset()
                 return True
         return False
 
-    def transcription_thread(self, identifier: str):
+    def _transcription_thread(self, identifier: str):
         self.logger.info(f"transcription thread {identifier} started")
         audio_data = np.concatenate(self.transcription_buffers[identifier])
         with (
             self.transcription_lock
         ):  # this is only necessary for the local model... TODO: fix this somehow
             transcription = self.transcription_model.transcribe(audio_data)
-        assert isinstance(self.connectors["ros2"], ROS2ARIConnector)
-        self.connectors["ros2"].send_message(
-            ROS2ARIMessage(
-                {"data": transcription}, {"msg_type": "std_msgs/msg/String"}
-            ),
-            "/from_human",
-            msg_type="std_msgs/msg/String",
-        )
+        self._send_ros2_message(transcription, "/from_human")
         self.transcription_threads[identifier]["transcription"] = transcription
         self.transcription_threads[identifier]["event"].set()
+
+    def _send_ros2_message(self, data: str, topic: str):
+        self.logger.debug(f"Sending message to {topic}: {data}")
+        if topic == "/voice_commands":
+            msg = ROS2ARIMessage({"data": data})
+            try:
+                self.connectors["ros2_ari"].send_message(
+                    msg, topic, msg_type="std_msgs/msg/String"
+                )
+            except Exception as e:
+                self.logger.error(f"Error sending message to {topic}: {e}")
+        else:
+            msg = ROS2HRIMessage(HRIPayload(text=data), "human")
+            self.connectors["ros2_hri"].send_message(msg, topic)

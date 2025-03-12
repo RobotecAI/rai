@@ -13,11 +13,12 @@
 # limitations under the License.
 
 from .api import SoundDeviceAPI, SoundDeviceConfig, SoundDeviceError
-from .connector import SoundDeviceConnector
+from .connector import SoundDeviceConnector, SoundDeviceMessage
 
 __all__ = [
     "SoundDeviceAPI",
     "SoundDeviceConfig",
     "SoundDeviceConnector",
     "SoundDeviceError",
+    "SoundDeviceMessage",
 ]

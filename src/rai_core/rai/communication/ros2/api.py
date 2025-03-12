@@ -25,7 +25,9 @@ from typing import (
     Callable,
     Dict,
     List,
+    Literal,
     Optional,
+    Protocol,
     Tuple,
     Type,
     TypedDict,
@@ -56,6 +58,12 @@ from rclpy.task import Future
 from rclpy.topic_endpoint_info import TopicEndpointInfo
 
 from rai.tools.ros.utils import import_message_from_str
+
+
+class IROS2Message(Protocol):
+    __slots__: tuple
+
+    def get_fields_and_field_types(self) -> dict: ...
 
 
 def adapt_requests_to_offers(publisher_info: List[TopicEndpointInfo]) -> QoSProfile:
@@ -369,7 +377,8 @@ class TopicConfig:
     auto_qos_matching: bool = True
     qos_profile: Optional[QoSProfile] = None
     is_subscriber: bool = False
-    subscriber_callback: Optional[Callable[[Any], None]] = None
+    subscriber_callback: Optional[Callable[[IROS2Message], None]] = None
+    source_author: Literal["human", "ai"] = "ai"
 
     def __post_init__(self):
         if not self.auto_qos_matching and self.qos_profile is None:
@@ -421,9 +430,11 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
                     f"Failed to reconfigure existing subscriber to {topic}"
                 )
 
+        msg_type = import_message_from_str(config.msg_type)
+
         assert config.subscriber_callback is not None
         self._subscribtions[topic] = self._node.create_subscription(
-            msg_type=import_message_from_str(config.msg_type),
+            msg_type=msg_type,
             topic=topic,
             callback=config.subscriber_callback,
             qos_profile=qos_profile,

@@ -18,8 +18,8 @@ from typing import Any, List
 import pytest
 from PIL import Image
 from pydub import AudioSegment
+from rai.communication import HRIPayload
 from rai.communication.ros2.connectors import (
-    HRIPayload,
     ROS2ARIConnector,
     ROS2ARIMessage,
     ROS2HRIConnector,

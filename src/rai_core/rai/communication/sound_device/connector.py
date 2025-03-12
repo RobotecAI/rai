@@ -13,19 +13,7 @@
 # limitations under the License.
 
 
-import base64
-import io
-from typing import Callable, Literal, Optional, Tuple
-
-import numpy as np
-from scipy.io import wavfile
-
-try:
-    import sounddevice as sd
-except ImportError as e:
-    raise ImportError(
-        "The sounddevice package is required to use the SoundDeviceConnector."
-    ) from e
+from typing import Callable, Literal, NamedTuple, Optional, Tuple
 
 from rai.communication import HRIConnector, HRIMessage, HRIPayload
 from rai.communication.sound_device import (
@@ -56,6 +44,12 @@ class SoundDeviceMessage(HRIMessage):
         self.duration = duration
 
 
+class AudioParams(NamedTuple):
+    sample_rate: int
+    in_channels: int
+    out_channels: int
+
+
 class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
     """SoundDevice connector implementing the Human-Robot Interface.
 
@@ -82,7 +76,13 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
             self.configure_device(dev_target, dev_config)
 
         super().__init__(configured_targets, configured_sources)
-        sd.default.latency = ("low", "low")  # type: ignore
+
+    def get_audio_params(self, target: str) -> AudioParams:
+        return AudioParams(
+            self.devices[target].sample_rate,
+            self.devices[target].in_channels,
+            self.devices[target].out_channels,
+        )
 
     def configure_device(
         self,
@@ -100,10 +100,7 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
             )
         else:
             if message.audios is not None:
-                wav_bytes = base64.b64decode(message.audios[0])
-                wav_buffer = io.BytesIO(wav_bytes)
-                _, audio_data = wavfile.read(wav_buffer)
-                self.devices[target].write(audio_data)
+                self.devices[target].write(message.audios[0])
             else:
                 raise SoundDeviceError("Failed to provice audios in message to play")
 
@@ -127,22 +124,15 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
             raise SoundDeviceError("For stopping use send_message with stop=True.")
         elif message.read:
             recording = self.devices[target].read(duration, blocking=True)
+
             payload = HRIPayload(
                 text="",
-                audios=[
-                    base64.b64encode(recording).decode("utf-8")
-                ],  # TODO: refactor once utility functions for encoding/decoding are available
+                audios=[recording],
             )
             ret = SoundDeviceMessage(payload)
         else:
             if message.audios is not None:
-                wav_bytes = base64.b64decode(
-                    message.audios[0]
-                )  # TODO: refactor once utility functions for encoding/decoding are available
-                wav_buffer = io.BytesIO(wav_bytes)
-                _, audio_data = wavfile.read(wav_buffer)
-                audio_data = np.array(audio_data)
-                self.devices[target].write(audio_data, blocking=True)
+                self.devices[target].write(message.audios[0], blocking=True)
             else:
                 raise SoundDeviceError("Failed to provice audios in message to play")
             ret = SoundDeviceMessage()
@@ -164,7 +154,12 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
             self.devices[target].open_read_stream(on_feedback, on_done)
             self.action_handles[handle] = (target, True)
         else:
-            self.devices[target].open_write_stream(on_feedback, on_done)
+            sample_rate = kwargs.get("sample_rate", None)
+            channels = kwargs.get("channels", None)
+
+            self.devices[target].open_write_stream(
+                on_feedback, on_done, sample_rate, channels
+            )
             self.action_handles[handle] = (target, False)
 
         return handle
