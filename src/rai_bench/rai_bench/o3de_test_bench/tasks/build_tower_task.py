@@ -29,9 +29,16 @@ class BuildCubeTowerTask(ManipulationTask):
     ALLOWED_OBJECTS = {"red_cube", "blue_cube", "yellow_cube"}
 
     def __init__(self, obj_types: List[str], logger: loggers_type | None = None):
+        """
+        Initialize the BuildCubeTowerTask.
+
+        Raises
+        ------
+        TypeError
+            If any of the provided object types is not allowed.
+        """
         super().__init__(logger)
 
-        # Validate that only cubes are passed
         if not set(obj_types).issubset(self.ALLOWED_OBJECTS):
             raise TypeError(
                 f"Invalid obj_types provided: {obj_types}. Allowed objects: {self.ALLOWED_OBJECTS}"
@@ -46,31 +53,52 @@ class BuildCubeTowerTask(ManipulationTask):
     def check_if_required_objects_present(
         self, simulation_config: SimulationConfig
     ) -> bool:
-        """Validate that at least two cubes of the specified types are present."""
+        """
+        Validate that at least two cubes of the specified types are present.
+
+        Returns
+        -------
+        bool
+            True if at least two cubes of the allowed types are present, False otherwise.
+        """
         cube_count = sum(
             1 for ent in simulation_config.entities if ent.prefab_name in self.obj_types
         )
         return cube_count > 1
 
-    def calculate_correct(self, entities: List[Entity]) -> Tuple[int, int]:
-        # TODO (jm) not sure how to treat single standing cube, as correctly or incorrectly placed?
-        # for now when cubes are separated, one of them is treated as correctly placed
-        # assuming it's the foundation of the tower, the rest of them as incorrect
-
+    def calculate_correct(
+        self, entities: List[Entity], allowable_displacment: float = 0.02
+    ) -> Tuple[int, int]:
         """
-        This task does not consider single cube as correctly placed,
-        only cubes placed on other cube are counted as correctly placed
-        """
+        Calculate the number of correctly and incorrectly placed cubes.
 
-        tolerance_xy = 0.02  # Allowable horizontal displacement
+        This task does not consider a single cube as correctly placed.
+        Cubes are grouped by their z-coordinate using a horizontal tolerance.
+        The highest tower (i.e., the group with the most cubes) is considered correct,
+        and all other cubes are counted as incorrect.
+
+        Parameters
+        ----------
+        entities : List[Entity]
+            List of all entities present in the simulation scene.
+        allowable_displacment : float, optional
+            The allowable horizontal displacement (tolerance) used when grouping cubes by their
+            z-coordinate. Default is 0.02.
+
+        Returns
+        -------
+        Tuple[int, int]
+            A tuple where the first element is the number of correctly placed cubes (from the tallest tower)
+            and the second element is the number of incorrectly placed cubes.
+        """
 
         # Group entities by z-coordinate
-        grouped_entities = self.group_entities_along_z_axis(entities, tolerance_xy)
+        grouped_entities = self.group_entities_along_z_axis(
+            entities, allowable_displacment
+        )
 
         correct = 0
         incorrect = 0
-        print(entities)
-        print(grouped_entities)
         for group in grouped_entities:
             if len(group) > 1:
                 # we treat single standing cubes as incorrect

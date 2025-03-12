@@ -43,6 +43,22 @@ class MoveObjectsToLeftTask(ManipulationTask):
         return set(self.obj_types) <= object_types_present.keys()
 
     def calculate_correct(self, entities: List[Entity]) -> Tuple[int, int]:
+        """
+        Calculate the number of objects correctly moved to the left side of the table.
+
+        An object is considered correctly placed if its y-coordinate is positive.
+
+        Parameters
+        ----------
+        entities : List[Entity]
+            List of all entities present in the simulation scene.
+
+        Returns
+        -------
+        Tuple[int, int]
+            A tuple where the first element is the number of correctly placed objects (with positive y)
+            and the second element is the number of incorrectly placed objects.
+        """
         correct = sum(1 for ent in entities if ent.pose.translation.y > 0.0)
         incorrect: int = len(entities) - correct
         return correct, incorrect
