@@ -24,7 +24,7 @@ from tf2_geometry_msgs import do_transform_pose
 from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.utils import TF2TransformFetcher
 from rai.utils.ros_async import get_future_result
-from rai_interfaces.srv import ManipulatorMoveTo
+from rai_interfaces.srv import ManipulateObject, ManipulatorMoveTo
 
 
 class MoveToPointToolInput(BaseModel):
@@ -116,6 +116,118 @@ class MoveToPointTool(BaseTool):
             return f"End effector successfully positioned at coordinates ({x:.2f}, {y:.2f}, {z:.2f}). Note: The status of object interaction (grab/drop) is not confirmed by this movement."
         else:
             return f"Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
+
+
+class ManipulateObjectToolInput(BaseModel):
+    grab_x: float = Field(
+        description="The x coordinate of the point to grab the object from"
+    )
+    grab_y: float = Field(
+        description="The y coordinate of the point to grab the object from"
+    )
+    grab_z: float = Field(
+        description="The z coordinate of the point to grab the object from"
+    )
+    drop_x: float = Field(
+        description="The x coordinate of the point to drop the object to"
+    )
+    drop_y: float = Field(
+        description="The y coordinate of the point to drop the object to"
+    )
+    drop_z: float = Field(
+        description="The z coordinate of the point to drop the object to"
+    )
+
+
+class ManipulateObjectTool(BaseTool):
+    name: str = "manipulate_object"
+    description: str = (
+        "Grab an object from a specified point and drop it at another specified point. "
+        " This tool ensures precise movement to the desired locations. "
+        "While it confirms successful positioning, please note that it doesn't provide feedback on the "
+        "success of grabbing or releasing objects. Use additional sensors or tools for that information."
+    )
+
+    connector: ROS2ARIConnector = Field(..., exclude=True)
+
+    manipulator_frame: str = Field(..., description="Manipulator frame")
+    min_z: float = Field(default=0.135, description="Minimum z coordinate [m]")
+    calibration_x: float = Field(default=0.0, description="Calibration x [m]")
+    calibration_y: float = Field(default=0.0, description="Calibration y [m]")
+    calibration_z: float = Field(default=0.0, description="Calibration z [m]")
+    additional_height: float = Field(
+        default=0.05, description="Additional height for the place task [m]"
+    )
+
+    # constant quaternion
+    quaternion: Quaternion = Field(
+        default=Quaternion(x=0.9238795325112867, y=-0.3826834323650898, z=0.0, w=0.0),
+        description="Constant quaternion",
+    )
+
+    args_schema: Type[ManipulateObjectToolInput] = ManipulateObjectToolInput
+
+    def _run(
+        self,
+        grab_x: float,
+        grab_y: float,
+        grab_z: float,
+        drop_x: float,
+        drop_y: float,
+        drop_z: float,
+    ) -> str:
+        client = self.connector.node.create_client(
+            ManipulateObject,
+            "/manipulate_object",
+        )
+        pose_stamped = PoseStamped()
+        pose_stamped.header.frame_id = self.manipulator_frame
+        pose_stamped.pose = Pose(
+            position=Point(x=grab_x, y=grab_y, z=grab_z),
+            orientation=self.quaternion,
+        )
+
+        pose_stamped.pose.position.z += self.additional_height
+
+        pose_stamped.pose.position.x += self.calibration_x
+        pose_stamped.pose.position.y += self.calibration_y
+        pose_stamped.pose.position.z += self.calibration_z
+
+        pose_stamped.pose.position.z = np.max(
+            [pose_stamped.pose.position.z, self.min_z]
+        )
+
+        drop_pose_stamped = PoseStamped()
+        drop_pose_stamped.header.frame_id = self.manipulator_frame
+        drop_pose_stamped.pose = Pose(
+            position=Point(x=drop_x, y=drop_y, z=drop_z),
+            orientation=self.quaternion,
+        )
+
+        drop_pose_stamped.pose.position.x += self.calibration_x
+        drop_pose_stamped.pose.position.y += self.calibration_y
+        drop_pose_stamped.pose.position.z += self.calibration_z
+
+        drop_pose_stamped.pose.position.z = np.max(
+            [drop_pose_stamped.pose.position.z, self.min_z]
+        )
+
+        request = ManipulateObject.Request()
+        request.grab_pose = pose_stamped
+        request.drop_pose = drop_pose_stamped
+
+        future = client.call_async(request)
+        self.connector.node.get_logger().debug(
+            f"Calling ManipulateObject service with request: x={request.grab_pose.pose.position.x:.2f}, y={request.grab_pose.pose.position.y:.2f}, z={request.grab_pose.pose.position.z:.2f}"
+        )
+        response = get_future_result(future, timeout_sec=20.0)
+        if response is None:
+            return f"Service call failed for point ({grab_x:.2f}, {grab_y:.2f}, {grab_z:.2f})."
+
+        if response.success:
+            return f"End effector successfully positioned at coordinates ({drop_x:.2f}, {drop_y:.2f}, {drop_z:.2f}). Note: The status of object interaction (grab/drop) is not confirmed by this movement."
+        else:
+            return f"Failed to position end effector at coordinates ({drop_x:.2f}, {drop_y:.2f}, {drop_z:.2f})."
 
 
 class GetObjectPositionsToolInput(BaseModel):
