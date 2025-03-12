@@ -54,32 +54,6 @@ class AgentTask(ABC):
     def verify_tool_calls(self, response: dict[str, Any]):
         pass
 
-
-class ROS2AgentTask(AgentTask):
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger)
-
-    def _is_ai_message_requesting_get_ros2_topics_and_types(
-        self, ai_message: AIMessage
-    ) -> bool:
-        """Helper method to check if the given AIMessage is calling the only tool
-        to get ROS2 topics names and types correctly.
-        """
-        if len(ai_message.tool_calls) != 1:
-            self.logger.info(
-                f"Number of tool calls in AIMessage should be 1, but got {len(ai_message.tool_calls)}."
-            )
-            return False
-
-        tool_call: ToolCall = ai_message.tool_calls[0]
-        if not self._check_tool_call(
-            tool_call=tool_call,
-            expected_name="get_ros2_topics_names_and_types",
-            expected_args={},
-        ):
-            return False
-        return True
-
     def _check_tool_call(
         self, tool_call: ToolCall, expected_name: str, expected_args: dict[str, Any]
     ) -> bool:
@@ -108,6 +82,96 @@ class ROS2AgentTask(AgentTask):
             self.logger.error(
                 f"Expected args for tool call should be {expected_args}, but got {tool_call['args']}."
             )
+            error_occurs = True
+        if error_occurs:
+            return False
+        return True
+
+    def _check_multiple_tool_calls(
+        self, message: AIMessage, expected_tool_calls: list[dict[str, Any]]
+    ) -> bool:
+        """
+        Helper method to check multiple tool calls in a single AIMessage.
+
+        Args:
+            message: The AIMessage to check
+            expected_calls: A list of dictionaries, each containing expected 'name' and 'args' for a tool call
+
+        Returns:
+            bool: True if all tool calls match expected patterns, False otherwise
+        """
+        if not self._check_tool_calls_num_in_ai_message(
+            message, len(expected_tool_calls)
+        ):
+            return False
+
+        matched_calls = [False] * len(expected_tool_calls)
+        error_occurs = False
+
+        for tool_call in message.tool_calls:
+            found_match = False
+
+            for i, expected in enumerate(expected_tool_calls):
+                if matched_calls[i]:
+                    continue
+
+                if (
+                    tool_call["name"] == expected["name"]
+                    and tool_call["args"] == expected["args"]
+                ):
+                    matched_calls[i] = True
+                    found_match = True
+                    break
+
+            if not found_match:
+                error_msg = f"Tool call {tool_call['name']} with args {tool_call['args']} does not match any expected call"
+                self.logger.error(error_msg)
+                self.result.errors.append(error_msg)
+                error_occurs = True
+
+        return not error_occurs
+
+    def _check_tool_calls_num_in_ai_message(
+        self, message: AIMessage, expected_num: int
+    ) -> bool:
+        """
+        Helper method to check number of tool calls in a single AIMessage.
+
+        Args:
+            message: The AIMessage to check
+            expected_num: The expected number of tool calls
+
+        Returns:
+            bool: True if the number of tool calls in the message matches the expected number, False otherwise
+        """
+        if len(message.tool_calls) != expected_num:
+            error_msg = f"Expected number of tool calls should be {expected_num}, but got {len(message.tool_calls)}."
+            self.logger.error(error_msg)
+            self.result.errors.append(error_msg)
+            return False
+        return True
+
+
+class ROS2AgentTask(AgentTask):
+    def __init__(self, logger: loggers_type | None = None) -> None:
+        super().__init__(logger)
+
+    def _is_ai_message_requesting_get_ros2_topics_and_types(
+        self, ai_message: AIMessage
+    ) -> bool:
+        """Helper method to check if the given AIMessage is calling the only tool
+        to get ROS2 topics names and types correctly.
+        """
+        error_occurs = False
+        if not self._check_tool_calls_num_in_ai_message(ai_message, expected_num=1):
+            error_occurs = True
+
+        tool_call: ToolCall = ai_message.tool_calls[0]
+        if not self._check_tool_call(
+            tool_call=tool_call,
+            expected_name="get_ros2_topics_names_and_types",
+            expected_args={},
+        ):
             error_occurs = True
         if error_occurs:
             return False
@@ -171,12 +235,7 @@ class GetROS2TopicsTask(ROS2AgentTask):
             self.logger.error(error_msg)
             self.result.errors.append(error_msg)
 
-        if not self._is_ai_message_requesting_get_ros2_topics_and_types(ai_messages[0]):
-            error_msg = (
-                "First AI message did not request ROS2 topics and types correctly."
-            )
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
+        self._is_ai_message_requesting_get_ros2_topics_and_types(ai_messages[0])
 
         total_tool_calls = sum(len(message.tool_calls) for message in ai_messages)
         if total_tool_calls != 1:
@@ -231,16 +290,121 @@ class GetROS2RGBCameraTask(ROS2AgentTask):
             self.logger.error(error_msg)
             self.result.errors.append(error_msg)
 
-        if len(ai_messages) > 1:
-            if len(ai_messages[1].tool_calls) != 1:
-                error_msg = f"Number of tool_calls should be one but there are {len(ai_messages[1].tool_calls)}"
-                self.logger.error(error_msg)
-                self.result.errors.append(error_msg)
-            else:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
                 self._check_tool_call(
                     tool_call=ai_messages[1].tool_calls[0],
                     expected_name="get_ros2_image",
                     expected_args={"topic": "/camera_image_color"},
                 )
+        if not self.result.errors:
+            self.result.success = True
+
+
+class GetROS2DepthCameraTask(ROS2AgentTask):
+    def __init__(self, logger: loggers_type | None = None) -> None:
+        super().__init__(logger=logger)
+        self.expected_tools: List[BaseTool] = [
+            MockGetROS2TopicsNamesAndTypesTool(
+                mock_topics_names_and_types=[
+                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
+                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
+                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
+                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
+                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
+                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
+                    "topic: /color_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
+                    "topic: /depth_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
+                ]
+            ),
+            MockGetROS2ImageTool(),
+        ]
+
+    def get_prompt(self) -> str:
+        return "Get the depth image from the camera."
+
+    def verify_tool_calls(self, response: dict[str, Any]):
+        messages = response["messages"]
+        ai_messages: List[AIMessage] = [
+            message for message in messages if isinstance(message, AIMessage)
+        ]
+
+        if len(ai_messages) < 3:
+            error_msg = f"Expected at least 3 AI messages, but got {len(ai_messages)}."
+            self.logger.error(error_msg)
+            self.result.errors.append(error_msg)
+
+        if ai_messages and not self._is_ai_message_requesting_get_ros2_topics_and_types(
+            ai_messages[0]
+        ):
+            error_msg = (
+                "First AI message did not request ROS2 topics and types correctly."
+            )
+            self.logger.error(error_msg)
+            self.result.errors.append(error_msg)
+
+        if len(ai_messages) > 1:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
+                self._check_tool_call(
+                    tool_call=ai_messages[1].tool_calls[0],
+                    expected_name="get_ros2_image",
+                    expected_args={"topic": "/camera_image_depth"},
+                )
+        if not self.result.errors:
+            self.result.success = True
+
+
+class GetAllROS2RGBCamerasTask(ROS2AgentTask):
+    def __init__(self, logger: loggers_type | None = None) -> None:
+        super().__init__(logger=logger)
+        self.expected_tools: List[BaseTool] = [
+            MockGetROS2TopicsNamesAndTypesTool(
+                mock_topics_names_and_types=[
+                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
+                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
+                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
+                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
+                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
+                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
+                    "topic: /color_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
+                    "topic: /color_image5\ntype: sensor_msgs/msg/Image\n",
+                    "topic: /depth_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
+                    "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
+                ]
+            ),
+            MockGetROS2ImageTool(),
+        ]
+
+    def get_prompt(self) -> str:
+        return "Get RGB images from all of the available cameras."
+
+    def verify_tool_calls(self, response: dict[str, Any]):
+        messages = response["messages"]
+        ai_messages: List[AIMessage] = [
+            message for message in messages if isinstance(message, AIMessage)
+        ]
+
+        if len(ai_messages) < 3:
+            error_msg = f"Expected at least 3 AI messages, but got {len(ai_messages)}."
+            self.logger.error(error_msg)
+            self.result.errors.append(error_msg)
+
+        if ai_messages and not self._is_ai_message_requesting_get_ros2_topics_and_types(
+            ai_messages[0]
+        ):
+            error_msg = (
+                "First AI message did not request ROS2 topics and types correctly."
+            )
+            self.logger.error(error_msg)
+            self.result.errors.append(error_msg)
+
+        if len(ai_messages) > 1:
+            expected_tool_calls: list[dict[str, Any]] = [
+                {"name": "get_ros2_image", "args": {"topic": "/camera_image_color"}},
+                {"name": "get_ros2_image", "args": {"topic": "/color_image5"}},
+            ]
+
+            self._check_multiple_tool_calls(
+                message=ai_messages[1], expected_tool_calls=expected_tool_calls
+            )
         if not self.result.errors:
             self.result.success = True
