@@ -30,6 +30,7 @@ class HRICallbackHandler(BaseCallbackHandler):
         aggregate_chunks: bool = False,
         splitting_chars: Optional[List[str]] = None,
         max_buffer_size: int = 200,
+        logger: Optional[logging.Logger] = None,
     ):
         self.connectors = connectors
         self.aggregate_chunks = aggregate_chunks
@@ -37,18 +38,23 @@ class HRICallbackHandler(BaseCallbackHandler):
         self.chunks_buffer = ""
         self.max_buffer_size = max_buffer_size
         self._buffer_lock = threading.Lock()
-        self.logger = logging.getLogger(__name__)
+        self.logger = logger or logging.getLogger(__name__)
 
     def _should_split(self, token: str) -> bool:
         return token in self.splitting_chars
 
-    def _send_all_targets(self, token: str):
+    def _send_all_targets(self, tokens: str):
+        self.logger.info(
+            f"Sending {len(tokens)} tokens to {len(self.connectors)} connectors"
+        )
         for connector_name, connector in self.connectors.items():
             try:
-                connector.send_all_targets(AIMessage(content=token))
-                self.logger.debug(f"Sent token to {connector_name}")
+                connector.send_all_targets(AIMessage(content=tokens))
+                self.logger.debug(f"Sent {len(tokens)} tokens to {connector_name}")
             except Exception as e:
-                self.logger.error(f"Failed to send token to {connector_name}: {e}")
+                self.logger.error(
+                    f"Failed to send {len(tokens)} tokens to {connector_name}: {e}"
+                )
 
     def on_llm_new_token(self, token: str, **kwargs):
         if token == "":
