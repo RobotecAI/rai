@@ -75,15 +75,7 @@ class ManipulationTask(Task, ABC):
         bool
             True if at least one object is placed incorrectly, False otherwise.
         """
-        initial_entities = self.filter_entities_by_object_type(
-            simulation_config.entities, object_types=self.obj_types
-        )
-        correct, incorrect = self.calculate_correct(entities=initial_entities)
-        self.initially_correct = correct
-        self.initially_incorrect = incorrect
-        self.logger.info(  # type: ignore
-            f"Objects placed correctly in simulation config: {correct}, incorrectly: {incorrect}"
-        )
+        _, incorrect = self.calculate_correct(entities=simulation_config.entities)
         return incorrect > 0
 
     def validate_config(self, simulation_config: SimulationConfig) -> bool:
