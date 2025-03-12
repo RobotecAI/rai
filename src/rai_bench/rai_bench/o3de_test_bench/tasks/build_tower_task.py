@@ -96,6 +96,9 @@ class BuildCubeTowerTask(ManipulationTask):
         grouped_entities = self.group_entities_along_z_axis(
             entities, allowable_displacment
         )
+        selected_type_objects = self.filter_entities_by_object_type(
+            entities=entities, object_types=self.obj_types
+        )
 
         correct = 0
         incorrect = 0
@@ -106,5 +109,5 @@ class BuildCubeTowerTask(ManipulationTask):
                     # highest tower is number of correctly placed objects
                     # TODO (jm) should we check z distance between entities?
                     correct = max(correct, len(group))
-        incorrect = len(entities) - correct
+        incorrect = len(selected_type_objects) - correct
         return correct, incorrect

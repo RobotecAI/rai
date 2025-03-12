@@ -59,6 +59,11 @@ class MoveObjectsToLeftTask(ManipulationTask):
             A tuple where the first element is the number of correctly placed objects (with positive y)
             and the second element is the number of incorrectly placed objects.
         """
-        correct = sum(1 for ent in entities if ent.pose.translation.y > 0.0)
-        incorrect: int = len(entities) - correct
+        selected_type_objects = self.filter_entities_by_object_type(
+            entities=entities, object_types=self.obj_types
+        )
+        correct = sum(
+            1 for ent in selected_type_objects if ent.pose.translation.y > 0.0
+        )
+        incorrect: int = len(selected_type_objects) - correct
         return correct, incorrect

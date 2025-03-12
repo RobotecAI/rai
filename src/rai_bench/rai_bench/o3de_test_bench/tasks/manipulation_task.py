@@ -75,7 +75,7 @@ class ManipulationTask(Task, ABC):
         bool
             True if at least one object is placed incorrectly, False otherwise.
         """
-        initial_entities = self.filter_entities_by_prefab_type(
+        initial_entities = self.filter_entities_by_object_type(
             simulation_config.entities, object_types=self.obj_types
         )
         correct, incorrect = self.calculate_correct(entities=initial_entities)
@@ -148,11 +148,8 @@ class ManipulationTask(Task, ABC):
             and the second element is the number of currently incorrectly placed objects.
         """
         scene_state = simulation_bridge.get_scene_state()
-        current_objects = self.filter_entities_by_prefab_type(
-            scene_state.entities, object_types=self.obj_types
-        )
         current_correct, current_incorrect = self.calculate_correct(
-            entities=current_objects
+            entities=scene_state.entities
         )
 
         self.logger.info(  # type: ignore
