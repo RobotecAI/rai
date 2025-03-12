@@ -12,6 +12,8 @@
 # See the License for the specific language goveself.rning permissions and
 # limitations under the License.
 
+import time
+
 import rclpy
 from rai.agents.spatiotemporal import ROS2SpatioTemporalAgent, ROS2SpatioTemporalConfig
 from rai.utils.model_initialization import get_llm_model, get_vectorstore
@@ -38,6 +40,12 @@ def main():
     rclpy.init()
     agent = create_agent()
     agent.run()
+
+    try:
+        while True:
+            time.sleep(1.0)
+    except KeyboardInterrupt:
+        agent.stop()
 
 
 if __name__ == "__main__":
