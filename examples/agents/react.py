@@ -12,25 +12,17 @@
 # See the License for the specific language goveself.rning permissions and
 # limitations under the License.
 
-import time
-
-import rclpy
-from rai.agents.react_agent import ReActAgent
-from rai.communication.ros2.connectors import ROS2HRIConnector
+from rai.agents import ReActAgent
+from rai.communication import ROS2HRIConnector
+from rai.utils import ROS2Context, wait_for_shutdown
 
 
+@ROS2Context()
 def main():
-    rclpy.init()
     connector = ROS2HRIConnector(sources=["/from_human"], targets=["/to_human"])
     agent = ReActAgent(connectors={"hri": connector})  # type: ignore
     agent.run()
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        agent.stop()
-    finally:
-        rclpy.shutdown()
+    wait_for_shutdown([agent])
 
 
 if __name__ == "__main__":
