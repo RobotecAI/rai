@@ -30,7 +30,6 @@ from rai_bench.agent_bench.agent_tasks import (
 
 # define loggers
 now = datetime.now()
-# Get the current file name without extension
 current_test_name = os.path.splitext(os.path.basename(__file__))[0]
 
 # Define loggers
@@ -57,10 +56,9 @@ agent_logger = logging.getLogger("Agent logger")
 agent_logger.setLevel(logging.INFO)
 agent_logger.addHandler(file_handler)
 
-
 tasks: List[AgentTask] = [
-    GetROS2CameraTask(),
-    GetROS2TopicsTask(),
+    GetROS2CameraTask(logger=bench_logger),
+    GetROS2TopicsTask(logger=bench_logger),
 ]
 benchmark = AgentBenchmark(
     tasks=tasks, logger=logging.getLogger(__name__), results_filename=results_filename
@@ -73,5 +71,6 @@ for _, task in enumerate(tasks):
         system_prompt="""
     You are the helpful assistant.
     """,
+        logger=agent_logger,
     )
     benchmark.run_next(agent=agent)
