@@ -22,8 +22,8 @@ from rai.agents.conversational_agent import create_conversational_agent
 from rai.utils.model_initialization import get_llm_model
 
 from rai_bench.agent_bench.agent_bench import AgentBenchmark
-from rai_bench.agent_bench.agent_tasks import (
-    AgentTask,
+from rai_bench.agent_bench.agent_tasks_interfaces import AgentTask
+from rai_bench.agent_bench.ros2_agent_tasks import (
     GetAllROS2RGBCamerasTask,
     GetROS2DepthCameraTask,
     GetROS2RGBCameraTask,
