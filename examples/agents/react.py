@@ -22,7 +22,7 @@ from rai.communication.ros2.connectors import ROS2HRIConnector
 def main():
     rclpy.init()
     connector = ROS2HRIConnector(sources=["/from_human"], targets=["/to_human"])
-    agent = ReActAgent(connectors={"hri": connector})
+    agent = ReActAgent(connectors={"hri": connector})  # type: ignore
     agent.run()
     try:
         while True:
