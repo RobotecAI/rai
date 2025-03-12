@@ -71,7 +71,7 @@ class AgentBenchmark:
 
             result: Result = task.verify_tool_calls(response=response)
             trace_id = None
-            # TODO (mkotynia) currently only for langfuse, to handle lanchain callback as well
+            # TODO (mkotynia) currently only for langfuse, to handle langsmith tracing as well and then refactor
             if callbacks:
                 callback: CallbackHandler = callbacks[0]
                 trace_id = callback.get_trace_id()
