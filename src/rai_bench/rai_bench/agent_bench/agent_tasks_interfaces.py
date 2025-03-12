@@ -29,6 +29,10 @@ class Result(BaseModel):
 
 
 class AgentTask(ABC):
+    """
+    Abstract class for agent tasks. Contains methods for requested tool calls nverification.
+    """
+
     def __init__(
         self,
         logger: loggers_type | None = None,
@@ -148,6 +152,10 @@ class AgentTask(ABC):
 
 
 class ROS2AgentTask(AgentTask, ABC):
+    """
+    Abstract class for ROS2 agent tasks.
+    """
+
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger)
 
