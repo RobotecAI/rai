@@ -21,7 +21,7 @@ from langfuse.callback import CallbackHandler
 from rai.messages.multimodal import HumanMultimodalMessage
 from rai.utils.model_initialization import get_tracing_callbacks
 
-from rai_bench.agent_bench.agent_tasks import (
+from rai_bench.agent_bench.agent_tasks_interfaces import (
     AgentTask,
 )
 
