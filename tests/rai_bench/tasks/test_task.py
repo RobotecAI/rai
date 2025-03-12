@@ -13,8 +13,10 @@
 # limitations under the License.
 
 from typing import Any, Dict, List, Set
-from rai_sim.simulation_bridge import Entity, Pose, Translation  # type: ignore
+
 from rai_bench.benchmark_model import Task  # type: ignore
+from rai_sim.simulation_bridge import Entity, Pose, Translation  # type: ignore
+from tests.rai_bench.conftest import create_entity
 
 
 class DummyTask(Task):
@@ -26,12 +28,6 @@ class DummyTask(Task):
 
     def calculate_result(self, simulation_bridge: Any) -> float:
         return 1.0
-
-
-def create_entity(name: str, prefab: str, x: float, y: float, z: float) -> Entity:
-    return Entity(
-        name=name, prefab_name=prefab, pose=Pose(translation=Translation(x=x, y=y, z=z))
-    )
 
 
 def create_pose(x: float, y: float, z: float) -> Pose:
