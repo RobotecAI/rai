@@ -2,7 +2,7 @@
 name = "rai-bench"
 version = "0.1.0"
 description = "Package for running and creating benchmarks."
-authors = ["jmatejcz <jakub.matejczyk@robotec.ai>"]
+authors = ["jmatejcz <jakub.matejczyk@robotec.ai>", "Magdalena Kotynia <magdalena.kotynia@robotec.ai>"]
 readme = "README.md"
 
 packages = [
