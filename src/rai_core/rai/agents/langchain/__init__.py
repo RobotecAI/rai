@@ -13,6 +13,6 @@
 # limitations under the License.
 
 from .callback import HRICallbackHandler
-from .simple_agent import create_simple_agent
+from .react_agent import create_react_agent
 
-__all__ = ["HRICallbackHandler", "create_simple_agent"]
+__all__ = ["HRICallbackHandler", "create_react_agent"]

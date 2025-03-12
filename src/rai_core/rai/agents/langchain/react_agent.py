@@ -27,8 +27,8 @@ from rai.agents.tool_runner import ToolRunner
 from rai.utils.model_initialization import get_llm_model
 
 
-class SimpleAgentState(TypedDict):
-    """State type for the simple agent.
+class ReActAgentState(TypedDict):
+    """State type for the react agent.
 
     Parameters
     ----------
@@ -39,19 +39,19 @@ class SimpleAgentState(TypedDict):
     messages: Annotated[List[BaseMessage], operator.add]
 
 
-def llm_node(llm: BaseChatModel, state: SimpleAgentState):
+def llm_node(llm: BaseChatModel, state: ReActAgentState):
     """Process messages using the LLM.
 
     Parameters
     ----------
     llm : BaseChatModel
         The language model to use for processing
-    state : SimpleAgentState
+    state : ReActAgentState
         Current state containing messages
 
     Returns
     -------
-    SimpleAgentState
+    ReActAgentState
         Updated state with new AI message
 
     Raises
@@ -64,10 +64,10 @@ def llm_node(llm: BaseChatModel, state: SimpleAgentState):
     return {"messages": [ai_msg]}
 
 
-def create_simple_agent(
+def create_react_agent(
     llm: Optional[BaseChatModel] = None, tools: Optional[List[BaseTool]] = None
-) -> Runnable[SimpleAgentState, SimpleAgentState]:
-    """Create a simple agent that can process messages and optionally use tools.
+) -> Runnable[ReActAgentState, ReActAgentState]:
+    """Create a react agent that can process messages and optionally use tools.
 
     Parameters
     ----------
@@ -78,7 +78,7 @@ def create_simple_agent(
 
     Returns
     -------
-    Runnable[SimpleAgentState, SimpleAgentState]
+    Runnable[ReActAgentState, ReActAgentState]
         A runnable that processes messages and optionally uses tools
 
     Raises
@@ -89,7 +89,7 @@ def create_simple_agent(
     if llm is None:
         llm = get_llm_model("complex_model", streaming=True)
 
-    graph = StateGraph(SimpleAgentState)
+    graph = StateGraph(ReActAgentState)
     graph.add_edge(START, "llm")
 
     if tools:
