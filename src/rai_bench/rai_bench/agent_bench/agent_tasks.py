@@ -247,6 +247,46 @@ class GetROS2TopicsTask(ROS2AgentTask):
             self.result.success = True
 
 
+class GetROS2TopicsTask2(ROS2AgentTask):
+    def __init__(self, logger: loggers_type | None = None) -> None:
+        super().__init__(logger=logger)
+        self.expected_tools = [
+            MockGetROS2TopicsNamesAndTypesTool(
+                mock_topics_names_and_types=[
+                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
+                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
+                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
+                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
+                ]
+            )
+        ]
+
+    def get_prompt(self) -> str:
+        return "What is in the ROS2 network?"
+
+    def verify_tool_calls(self, response: dict[str, Any]):
+        messages = response["messages"]
+        ai_messages: List[AIMessage] = [
+            message for message in messages if isinstance(message, AIMessage)
+        ]
+
+        if not ai_messages:
+            error_msg = "No AI messages found in the response."
+            self.logger.error(error_msg)
+            self.result.errors.append(error_msg)
+
+        self._is_ai_message_requesting_get_ros2_topics_and_types(ai_messages[0])
+
+        total_tool_calls = sum(len(message.tool_calls) for message in ai_messages)
+        if total_tool_calls != 1:
+            error_msg = f"Total number of tool calls across all AI messages should be 1, but got {total_tool_calls}."
+            self.logger.error(error_msg)
+            self.result.errors.append(error_msg)
+
+        if not self.result.errors:
+            self.result.success = True
+
+
 class GetROS2RGBCameraTask(ROS2AgentTask):
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
