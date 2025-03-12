@@ -33,29 +33,75 @@ loggers_type = Union[RcutilsLogger, logging.Logger]
 
 
 class ManipulationTask(Task, ABC):
+    # TODO (jm) is this clear, what obj_types is?
+    """
+    Common class for manipulaiton tasks
+    obj_types are objects types that will be considered as the subject of the task.
+    That means that based on these objects simulation config will be evaluated
+    and score will be calculated.
+
+    Example
+    -------
+        MoveObjectsToLeftTask with 'carrot' as objects type, will check if carrtos are present
+        and then calculated score based on how many carrots were moved to the left side
+    """
+
     obj_types: List[str] = []
 
     @abstractmethod
     def check_if_required_objects_present(
         self, simulation_config: SimulationConfig
     ) -> bool:
-        """Each task should check if objects required to perform it are present"""
+        """
+        Check if the required objects are present in the simulation configuration.
+
+        Returns
+        -------
+        bool
+            True if the required objects are present, False otherwise.
+        """
         return True
 
     def check_if_any_placed_incorrectly(
         self, simulation_config: SimulationConfig
     ) -> bool:
-        """Check If any object is placed incorrectly"""
+        """
+        Check if any object is placed incorrectly in the simulation configuration.
+        Save number of initially correctly and incorrectly placed objects for
+        future calculations
+
+        Returns
+        -------
+        bool
+            True if at least one object is placed incorrectly, False otherwise.
+        """
         initial_entities = self.filter_entities_by_prefab_type(
             simulation_config.entities, object_types=self.obj_types
         )
-        _, incorrect = self.calculate_correct(entities=initial_entities)
+        correct, incorrect = self.calculate_correct(entities=initial_entities)
+        self.initially_correct = correct
+        self.initially_incorrect = incorrect
+        self.logger.info(  # type: ignore
+            f"Objects placed correctly in simulation config: {correct}, incorrectly: {incorrect}"
+        )
         return incorrect > 0
 
     def validate_config(self, simulation_config: SimulationConfig) -> bool:
         """
-        Validate if both required objects are present and if any of them is placed incorrectly.
-        If these conditions are not met, there is no point in running task in these simulation config
+        Validate the simulation configuration.
+
+        Checks whether the required objects are present and if any of them is placed incorrectly.
+        If these conditions are not met, the task should not be run with this configuration.
+
+        Parameters
+        ----------
+        simulation_config : SimulationConfig
+            The simulation configuration to validate.
+
+        Returns
+        -------
+        bool
+            True if the configuration is valid, False otherwise.
         """
 
         if self.check_if_required_objects_present(
@@ -67,74 +113,100 @@ class ManipulationTask(Task, ABC):
 
     @abstractmethod
     def calculate_correct(self, entities: List[EntityT]) -> Tuple[int, int]:
-        """
-        This method should implement calculation of how many objects
-        are positioned correctly and incorrectly
+        """Method to calculate how many objects are placed correctly
 
-        first int of the tuple must be number of correctly placed objects
-        second int is number of incorrectly placed objects
+        Parameters
+        ----------
+        entities : List[EntityT]
+            list of ALL entities present in the simulaiton scene
+
+        Returns
+        -------
+        Tuple[int, int]
+            first int HAVE TO be number of correctly placed objects, second int - number of incorrectly placed objects
         """
         pass
 
-    def calculate_initial_placements(
+    def calculate_current_placements(
         self, simulation_bridge: SimulationBridge[SimulationConfigT]
     ) -> tuple[int, int]:
         """
-        Calculates the number of objects that are correctly and incorrectly placed initially.
-        """
-        initial_objects = self.filter_entities_by_prefab_type(
-            simulation_bridge.spawned_entities, object_types=self.obj_types
-        )
-        initially_correct, initially_incorrect = self.calculate_correct(
-            entities=initial_objects
-        )
+        Calculate the current placements of objects in the simulation.
 
-        self.logger.info(  # type: ignore
-            f"Initially correctly placed objects: {initially_correct}, Initially incorrectly placed objects: {initially_incorrect}"
-        )
-        return initially_correct, initially_incorrect
+        Filters the current scene entities by the allowed object types and determines
+        the number of correctly and incorrectly placed objects at the end of the simulation.
 
-    def calculate_final_placements(
-        self, simulation_bridge: SimulationBridge[SimulationConfigT]
-    ) -> tuple[int, int]:
-        """
-        Calculates the number of objects that are correctly and incorrectly placed at the end of the simulation.
+        Parameters
+        ----------
+        simulation_bridge : SimulationBridge[SimulationConfigT]
+            The simulation bridge containing the current scene state.
+
+        Returns
+        -------
+        tuple[int, int]
+            A tuple where the first element is the number of currently correctly placed objects
+            and the second element is the number of currently incorrectly placed objects.
         """
         scene_state = simulation_bridge.get_scene_state()
-        final_objects = self.filter_entities_by_prefab_type(
+        current_objects = self.filter_entities_by_prefab_type(
             scene_state.entities, object_types=self.obj_types
         )
-        final_correct, final_incorrect = self.calculate_correct(entities=final_objects)
+        current_correct, current_incorrect = self.calculate_correct(
+            entities=current_objects
+        )
 
         self.logger.info(  # type: ignore
-            f"Finally correctly placed objects: {final_correct}, Finally incorrectly placed objects: {final_incorrect}"
+            f"Currently correctly placed objects: {current_correct}, Currenlty incorrectly placed objects: {current_incorrect}"
         )
-        return final_correct, final_incorrect
+        return current_correct, current_incorrect
 
     def calculate_result(
         self, simulation_bridge: SimulationBridge[SimulationConfig]
     ) -> float:
         """
-        Calculates a score from 0.0 to 1.0, where 0.0 represents the initial placements or worse and 1.0 represents perfect final placements.
+        Calculate the task score based on the difference between initial and current placements.
+
+        The score ranges from 0.0 to 1.0, where 0.0 indicates that the initial placements
+        remain unchanged (or got worse), and 1.0 indicates perfect placements relative to the initial ones.
+        The score is computed as the improvement in the number of correctly placed objects
+        divided by the number of initially incorrectly placed objects.
+
+        Parameters
+        ----------
+        simulation_bridge : SimulationBridge[SimulationConfig]
+            The simulation bridge that provides access to the current scene state.
+
+        Returns
+        -------
+        float
+            The calculated score, ranging from 0.0 to 1.0.
+
+        Raises
+        ------
+        EntitiesMismatchException
+            If the total number of initial entities does not match the total number of current entities.
         """
-        initially_correct, initially_incorrect = self.calculate_initial_placements(
-            simulation_bridge
+        # TODO (jm) probably redundant as we chack number of incorrect when creating scenario
+        initially_correct, initially_incorrect = self.calculate_correct(
+            entities=simulation_bridge.spawned_entities
         )
-        final_correct, final_incorrect = self.calculate_final_placements(
+        self.logger.info(  # type: ignore
+            f"Objects placed correctly in simulation config: {initially_correct}, incorrectly: {initially_incorrect}"
+        )
+        current_correct, current_incorrect = self.calculate_current_placements(
             simulation_bridge
         )
 
-        total_objects = initially_correct + initially_incorrect
-        if total_objects == 0:
+        initial_objects_num = initially_correct + initially_incorrect
+        current_objects_num = current_correct + current_incorrect
+        if initial_objects_num == 0:
             return 1.0
-        elif (initially_correct + initially_incorrect) != (
-            final_correct + final_incorrect
-        ):
+        elif initial_objects_num != current_objects_num:
             raise EntitiesMismatchException(
-                "number of initial entities does not match final entities number."
+                f"number of initial entities does not match current entities number, initially: {initially_correct + initially_incorrect}, current: {current_correct + current_incorrect}"
             )
         else:
-            corrected = final_correct - initially_correct
+            corrected = current_correct - initially_correct
             score = max(0.0, corrected / initially_incorrect)
 
             self.logger.info(f"Calculated score: {score:.2f}")  # type: ignore

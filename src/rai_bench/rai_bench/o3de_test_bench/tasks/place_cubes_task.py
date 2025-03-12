@@ -28,7 +28,12 @@ class PlaceCubesTask(ManipulationTask):
     def check_if_required_objects_present(
         self, simulation_config: SimulationConfig
     ) -> bool:
-        """validate if at least 2 cubes are present"""
+        """
+        Returns
+        -------
+        bool
+            True if at least two cubes are present; otherwise, False.
+        """
         cubes_num = 0
         for ent in simulation_config.entities:
             if ent.prefab_name in self.obj_types:
@@ -38,13 +43,34 @@ class PlaceCubesTask(ManipulationTask):
 
         return False
 
-    def calculate_correct(self, entities: List[Entity]) -> Tuple[int, int]:
-        """Calculate how many objects are positioned correct and incorrect"""
+    def calculate_correct(
+        self, entities: List[Entity], threshold_distance: float = 0.15
+    ) -> Tuple[int, int]:
+        """
+        Calculate the number of correctly and incorrectly placed cubes based on adjacency.
+
+        An object is considered correctly placed if it is adjacent to at least one other cube
+        within the given threshold distance.
+
+        Parameters
+        ----------
+        entities : List[Entity]
+            List of all entities (cubes) present in the simulation scene.
+        threshold_distance : float, optional
+            The distance threshold to determine if two cubes are adjacent. Default is 0.15.
+
+        Returns
+        -------
+        Tuple[int, int]
+            A tuple where the first element is the number of correctly placed cubes (i.e., cubes that
+            are adjacent to at least one other cube) and the second element is the number of
+            incorrectly placed cubes.
+        """
         correct = sum(
             1
             for ent in entities
             if self.is_adjacent_to_any(
-                ent.pose, [e.pose for e in entities if e != ent], 0.15
+                ent.pose, [e.pose for e in entities if e != ent], threshold_distance
             )
         )
         incorrect: int = len(entities) - correct

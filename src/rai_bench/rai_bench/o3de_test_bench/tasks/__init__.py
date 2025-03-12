@@ -11,14 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from rai_bench.o3de_test_bench.tasks.build_tower_task import (
+from rai_bench.o3de_test_bench.tasks.build_tower_task import (  # type: ignore
     BuildCubeTowerTask,
 )
-from rai_bench.o3de_test_bench.tasks.group_objects_task import GroupObjectsTask
-from rai_bench.o3de_test_bench.tasks.move_object_to_left_task import (
+from rai_bench.o3de_test_bench.tasks.group_objects_task import (  # type: ignore
+    GroupObjectsTask,
+)
+from rai_bench.o3de_test_bench.tasks.move_object_to_left_task import (  # type: ignore
     MoveObjectsToLeftTask,
 )
-from rai_bench.o3de_test_bench.tasks.place_cubes_task import PlaceCubesTask
+from rai_bench.o3de_test_bench.tasks.place_cubes_task import (  # type: ignore
+    PlaceCubesTask,
+)
 
 __all__ = [
     "BuildCubeTowerTask",

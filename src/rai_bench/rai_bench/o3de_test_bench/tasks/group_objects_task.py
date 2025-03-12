@@ -45,7 +45,12 @@ class GroupObjectsTask(ManipulationTask):
     def check_if_required_objects_present(
         self, simulation_config: SimulationConfig
     ) -> bool:
-        """Ensure that all specified object types are present"""
+        """
+        Returns
+        -------
+        bool
+            True if at least one entity of all specified object types are present, False otherwise.
+        """
         object_types_present = {
             ent.prefab_name
             for ent in simulation_config.entities
@@ -54,15 +59,44 @@ class GroupObjectsTask(ManipulationTask):
 
         return set(self.obj_types) <= object_types_present
 
-    def calculate_correct(self, entities: List[Entity]) -> Tuple[int, int]:
-        """Count correctly and incorrectly placed objects based on clustering rules."""
+    def calculate_correct(
+        self, entities: List[Entity], threshold_distance: float = 0.15
+    ) -> Tuple[int, int]:
+        """
+        Count correctly and incorrectly clustered objects based on clustering rules.
+
+        Method first groups the entities by type.
+        Then, using the specified threshold distance, it builds a neighbourhood list
+        and identifies clusters using a DFS-based algorithm.
+        A cluster is considered properly clustered if:
+        1. Only one cluster is found for that type.
+        2. All objects in the cluster have neighbours exclusively of the same type.
+        If these conditions are met, the objects in that cluster are counted as correctly clustered.
+        Otherwise, all objects of that type are counted as misclustered.
+
+        Parameters
+        ----------
+        entities : List[Entity]
+            List of all entities present in the simulation scene.
+        threshold_distance : float, optional
+            The maximum distance between two objects to be considered neighbours when building
+            the neighbourhood list. Default is 0.15.
+
+        Returns
+        -------
+        Tuple[int, int]
+            A tuple where the first element is the number of correctly clustered objects
+            and the second element is the number of misclustered objects.
+        """
         properly_clustered: List[Entity] = []
         misclustered: List[Entity] = []
 
         entities_by_type = self.group_entities_by_type(entities)
 
         for veg_type, veggies in entities_by_type.items():
-            neighbourhood_list = self.build_neighbourhood_list(veggies)
+            neighbourhood_list = self.build_neighbourhood_list(
+                veggies, threshold_distance=threshold_distance
+            )
             clusters = self.find_clusters(neighbourhood_list)
             if len(clusters) == 1:
                 if all(
