@@ -33,7 +33,7 @@ class BuildCubeTowerTask(ManipulationTask):
 
         # Validate that only cubes are passed
         if not set(obj_types).issubset(self.ALLOWED_OBJECTS):
-            raise ValueError(
+            raise TypeError(
                 f"Invalid obj_types provided: {obj_types}. Allowed objects: {self.ALLOWED_OBJECTS}"
             )
 
@@ -56,54 +56,27 @@ class BuildCubeTowerTask(ManipulationTask):
         # TODO (jm) not sure how to treat single standing cube, as correctly or incorrectly placed?
         # for now when cubes are separated, one of them is treated as correctly placed
         # assuming it's the foundation of the tower, the rest of them as incorrect
+
         """
         This task does not consider single cube as correctly placed,
         only cubes placed on other cube are counted as correctly placed
         """
 
-        tolerance_xy = 0.05  # Allowable horizontal displacement
-        margin_z = 0.1  # Allowable height difference to be in the same group
+        tolerance_xy = 0.02  # Allowable horizontal displacement
 
         # Group entities by z-coordinate
-        grouped_entities = self.group_entities_by_z_coordinate(entities, margin_z)
+        grouped_entities = self.group_entities_along_z_axis(entities, tolerance_xy)
 
         correct = 0
         incorrect = 0
-        tower_consists_only_of_valid_types = True
-
+        print(entities)
+        print(grouped_entities)
         for group in grouped_entities:
-            previous_entity = None
-            for entity in group:
-                if entity.prefab_name not in self.obj_types:
-                    tower_consists_only_of_valid_types = False
-                    incorrect += 1
-                    continue  # Skip non-valid objects
-
-                if previous_entity is None:
-                    correct += 1  # The first valid entity in the group is correct
-                else:
-                    # Check if the object is aligned with the previous one
-                    if (
-                        abs(
-                            previous_entity.pose.translation.x
-                            - entity.pose.translation.x
-                        )
-                        <= tolerance_xy
-                        and abs(
-                            previous_entity.pose.translation.y
-                            - entity.pose.translation.y
-                        )
-                        <= tolerance_xy
-                    ):
-                        correct += 1  # Object is correctly stacked
-                    else:
-                        incorrect += 1  # Misaligned object
-
-                previous_entity = entity
-
-        # If any not allowed objects were found in the tower, mark everything incorrect
-        if not tower_consists_only_of_valid_types:
-            correct = 0
-            incorrect = len(entities)
-
+            if len(group) > 1:
+                # we treat single standing cubes as incorrect
+                if all(entity.prefab_name in self.obj_types for entity in group):
+                    # highest tower is number of correctly placed objects
+                    # TODO (jm) should we check z distance between entities?
+                    correct = max(correct, len(group))
+        incorrect = len(entities) - correct
         return correct, incorrect
