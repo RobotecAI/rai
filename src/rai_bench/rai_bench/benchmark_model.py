@@ -376,22 +376,23 @@ class Benchmark:
                 self._logger.info(f"AI Message: {msg}")  # type: ignore
 
             te = time.perf_counter()
-
-            result = scenario.task.calculate_result(self.simulation_bridge)
-
-            total_time = te - ts
-            self._logger.info(  # type: ignore
-                f"TASK SCORE: {result}, TOTAL TIME: {total_time:.3f}, NUM_OF_TOOL_CALLS: {tool_calls_num}"
-            )
-            scenario_result: Dict[str, Any] = {
-                "task": scenario.task.get_prompt(),
-                "simulation_config": scenario.simulation_config_path,
-                "final_score": result,
-                "total_time": f"{total_time:.3f}",
-                "number_of_tool_calls": tool_calls_num,
-            }
-            self.results.append(scenario_result)
-            self._save_scenario_result_to_csv(scenario_result)
+            try:
+                result = scenario.task.calculate_result(self.simulation_bridge)
+                total_time = te - ts
+                self._logger.info(  # type: ignore
+                    f"TASK SCORE: {result}, TOTAL TIME: {total_time:.3f}, NUM_OF_TOOL_CALLS: {tool_calls_num}"
+                )
+                scenario_result: Dict[str, Any] = {
+                    "task": scenario.task.get_prompt(),
+                    "simulation_config": scenario.simulation_config_path,
+                    "final_score": result,
+                    "total_time": f"{total_time:.3f}",
+                    "number_of_tool_calls": tool_calls_num,
+                }
+                self.results.append(scenario_result)
+                self._save_scenario_result_to_csv(scenario_result)
+            except EntitiesMismatchException as e:
+                self._logger.error(e)  # type:ignore
 
         except StopIteration:
             print("No more scenarios left to run.")
