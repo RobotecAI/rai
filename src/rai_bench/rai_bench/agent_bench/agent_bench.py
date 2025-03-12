@@ -17,7 +17,9 @@ import logging
 import time
 from typing import Any, Dict, List
 
+from langfuse.callback import CallbackHandler
 from rai.messages.multimodal import HumanMultimodalMessage
+from rai.utils.model_initialization import get_tracing_callbacks
 
 from rai_bench.agent_bench.agent_tasks import (
     AgentTask,
@@ -43,6 +45,7 @@ class AgentBenchmark:
             "success",
             "errors",
             "total_time",
+            "callback_trace_id",
         ]
         self._initialize_results_file()
         if logger:
@@ -50,22 +53,35 @@ class AgentBenchmark:
         else:
             self.logger = logging.getLogger(__name__)
 
+    # @observe
     def run_next(self, agent) -> None:
         try:
             i, task = next(self.tasks)
             self.logger.info(
                 f"RUNNING TASK NUMBER {i + 1} / {self.num_tasks}, TASK {task.get_prompt()}"
             )
+            callbacks = get_tracing_callbacks()
             ts = time.perf_counter()
             response = agent.invoke(
-                {"messages": [HumanMultimodalMessage(content=task.get_prompt())]}
+                {"messages": [HumanMultimodalMessage(content=task.get_prompt())]},
+                config={"callbacks": callbacks},
             )
-
-            # Get new Result object
-            result: Result = task.verify_tool_calls(response=response)
-
             te = time.perf_counter()
             total_time = te - ts
+
+            result: Result = task.verify_tool_calls(response=response)
+            trace_id = None
+            # TODO (mkotynia) currently only for langfuse, to handle lanchain callback as well
+            if callbacks:
+                callback: CallbackHandler = callbacks[0]
+                trace_id = callback.get_trace_id()
+                callback.langfuse.score(
+                    trace_id=trace_id,
+                    name="tool calls result",
+                    value=float(result.success),
+                    comment="; ".join(result.errors),
+                )
+
             self.logger.info(
                 f"TASK SUCCESS: {result.success}, TOTAL TIME: {total_time:.3f}"
             )
@@ -75,6 +91,7 @@ class AgentBenchmark:
                 "success": result.success,
                 "errors": "; ".join(result.errors) if result.errors else "",
                 "total_time": total_time,
+                "callback_trace_id": trace_id,
             }
             self.tasks_results.append(task_result)
             self._save_task_result_to_csv(task_result)
