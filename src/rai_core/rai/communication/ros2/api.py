@@ -440,7 +440,7 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
         self._subscribtions[topic] = self._node.create_subscription(
             msg_type=msg_type,
             topic=topic,
-            callback=partial(self._generic_callback, topic),
+            callback=config.subscriber_callback or partial(self._generic_callback, topic),
             qos_profile=qos_profile,
         )
 
