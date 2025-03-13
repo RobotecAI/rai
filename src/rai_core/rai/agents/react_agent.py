@@ -15,9 +15,10 @@
 import logging
 import threading
 import time
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict, List, Optional, cast
 
 from langchain_core.language_models import BaseChatModel
+from langchain_core.tools import BaseTool
 
 from rai.agents.base import BaseAgent
 from rai.agents.langchain import HRICallbackHandler, create_react_agent
@@ -30,11 +31,12 @@ class ReActAgent(BaseAgent):
         self,
         connectors: dict[str, HRIConnector[HRIMessage]],
         llm: Optional[BaseChatModel] = None,
+        tools: Optional[List[BaseTool]] = None,
         state: Optional[ReActAgentState] = None,
     ):
         super().__init__(connectors=connectors)
         self.logger = logging.getLogger(__name__)
-        self.agent = create_react_agent(llm=llm)
+        self.agent = create_react_agent(llm=llm, tools=tools)
         self.callback = HRICallbackHandler(
             connectors=connectors, aggregate_chunks=True, logger=self.logger
         )
