@@ -13,14 +13,22 @@
 # limitations under the License.
 
 from rai.agents import ReActAgent
-from rai.communication import ROS2HRIConnector
+from rai.communication import ROS2ARIConnector, ROS2HRIConnector
+from rai.tools.ros2 import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
 from rai.utils import ROS2Context, wait_for_shutdown
 
 
 @ROS2Context()
 def main():
     connector = ROS2HRIConnector(sources=["/from_human"], targets=["/to_human"])
-    agent = ReActAgent(connectors={"hri": connector})  # type: ignore
+    ari_connector = ROS2ARIConnector()
+    agent = ReActAgent(
+        connectors={"hri": connector},
+        tools=[
+            GetROS2ImageTool(connector=ari_connector),
+            GetROS2TopicsNamesAndTypesTool(connector=ari_connector),
+        ],
+    )  # type: ignore
     agent.run()
     wait_for_shutdown([agent])
 
