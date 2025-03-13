@@ -394,11 +394,11 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
     def __init__(self, node: rclpy.node.Node):
         super().__init__(node)
         self._subscribtions: dict[str, rclpy.node.Subscription] = {}
-        self.message_data: Dict[str, Queue[Any]] = defaultdict(Queue)
         self.callback_group = ReentrantCallbackGroup()
+        self.topic_msg_queue: Dict[str, Queue[Any]] = defaultdict(Queue)
 
     def _generic_callback(self, topic: str, msg: Any):
-        self.message_data[topic].put(msg)
+        self.topic_msg_queue[topic].put(msg)
 
     def configure_publisher(self, topic: str, config: TopicConfig):
         if config.is_subscriber:
@@ -465,6 +465,56 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
         msg_type = publisher.msg_type
         msg = build_ros2_msg(msg_type, msg_content)  # type: ignore
         publisher.publish(msg)
+
+    def receive(
+        self,
+        topic: str,
+        *,
+        auto_topic_type: bool = True,
+        msg_type: Optional[str] = None,
+        timeout_sec: float = 1.0,
+        auto_qos_matching: bool = True,
+        qos_profile: Optional[QoSProfile] = None,
+        retry_count: int = 3,
+    ) -> Any:
+        """Receive a single message from a ROS2 topic's queue or by waiting for a new message.
+
+        For topics with configured subscribers, retrieves the next message from the topic's queue.
+        For unconfigured topics, falls back to the parent class behavior of waiting for a new message.
+
+        Args:
+            topic: Name of the topic to receive from
+            auto_topic_type: If True, automatically detect message type from publishers (ignored for configured topics)
+            msg_type: ROS2 message type as string (ignored for configured topics)
+            timeout_sec: Maximum time to wait for a message in seconds
+            auto_qos_matching: Whether to automatically match QoS with publishers (ignored for configured topics)
+            qos_profile: Optional custom QoS profile to use (ignored for configured topics)
+            retry_count: Number of attempts to receive a message (ignored for configured topics)
+
+        Returns:
+            The received message
+
+        Raises:
+            ValueError: If no message is available in the queue for configured topics
+            ValueError: For unconfigured topics, inherits parent class exceptions
+        """
+        if topic not in self.topic_msg_queue:
+            super().receive(
+                topic,
+                auto_topic_type=auto_topic_type,
+                msg_type=msg_type,
+                timeout_sec=timeout_sec,
+                auto_qos_matching=auto_qos_matching,
+                qos_profile=qos_profile,
+                retry_count=retry_count,
+            )
+        else:
+            if self.topic_msg_queue[topic].empty():
+                raise ValueError(
+                    f"No message received from topic: {topic} within {timeout_sec} seconds"
+                )
+            msg = self.topic_msg_queue[topic].get()
+            return msg
 
 
 class ROS2ServiceAPI:

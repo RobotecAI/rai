@@ -27,6 +27,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile
 from tf2_ros import Buffer, LookupException, TransformListener, TransformStamped
 
+import rai_interfaces.msg
 from rai.communication import ARIConnector, HRIConnector
 from rai.communication.ros2.api import (
     ConfigurableROS2TopicAPI,
@@ -266,6 +267,10 @@ class ROS2HRIConnector(HRIConnector[ROS2HRIMessage]):
             timeout_sec=timeout_sec,
             auto_topic_type=auto_topic_type,
         )
+        if not isinstance(msg, rai_interfaces.msg.HRIMessage):
+            raise ValueError(
+                f"Received message is not of type rai_interfaces.msg.HRIMessage, got {type(msg)}"
+            )
         return ROS2HRIMessage.from_ros2(msg, message_author)
 
     def service_call(
