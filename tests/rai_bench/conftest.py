@@ -12,10 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai_sim.simulation_bridge import Entity, Pose, Translation  # type: ignore
+from rai_sim.simulation_bridge import (  # type: ignore
+    Entity,
+    Pose,
+    Rotation,
+    Translation,
+)
 
 
-def create_entity(name: str, prefab: str, x: float, y: float, z: float) -> Entity:
+def create_entity(
+    name: str,
+    prefab: str,
+    x: float,
+    y: float,
+    z: float,
+    rotation: Rotation | None = None,
+) -> Entity:
     return Entity(
-        name=name, prefab_name=prefab, pose=Pose(translation=Translation(x=x, y=y, z=z))
+        name=name,
+        prefab_name=prefab,
+        pose=Pose(translation=Translation(x=x, y=y, z=z), rotation=rotation),
     )
