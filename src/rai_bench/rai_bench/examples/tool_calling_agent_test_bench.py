@@ -94,9 +94,7 @@ for _, task in enumerate(tasks):
     agent = create_conversational_agent(
         llm=get_llm_model(model_type="complex_model"),
         tools=task.expected_tools,
-        system_prompt="""
-    You are the helpful assistant.
-    """,
+        system_prompt=task.get_system_prompt(),
         logger=agent_logger,
     )
     benchmark.run_next(agent=agent)

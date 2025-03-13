@@ -45,6 +45,11 @@ class ToolCallingAgentTask(ABC):
         self.result = Result()
 
     @abstractmethod
+    def get_system_prompt(self) -> str:
+        """Returns the system prompt related to the task"""
+        pass
+
+    @abstractmethod
     def get_prompt(self) -> str:
         """Returns the task instruction - the prompt that will be passed to agent"""
         pass
