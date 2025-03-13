@@ -11,16 +11,37 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import List, Tuple
+import logging
+from typing import List, Tuple, Union
+
+from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai_bench.o3de_test_bench.tasks.manipulation_task import (  # type: ignore
     ManipulationTask,
 )
 from rai_sim.simulation_bridge import Entity, SimulationConfig  # type: ignore
 
+loggers_type = Union[RcutilsLogger, logging.Logger]
+
 
 class PlaceCubesTask(ManipulationTask):
     obj_types = ["red_cube", "blue_cube", "yellow_cube"]
+
+    def __init__(
+        self,
+        threshold_distance: float = 0.15,
+        logger: loggers_type | None = None,
+    ):
+        """
+        Parameters
+        ----------
+        threshold_distance : float, optional
+            The distance threshold (in meters) used to determine if two cubes are adjacent. If the Euclidean
+            distance between two cubes is less than or equal to this value, they are considered adjacent.
+            Defaults to 0.15.
+        """
+        super().__init__(logger)
+        self.threshold_distance = threshold_distance
 
     def get_prompt(self) -> str:
         return "Manipulate objects, so that all cubes are adjacent to at least one cube"
@@ -43,9 +64,7 @@ class PlaceCubesTask(ManipulationTask):
 
         return False
 
-    def calculate_correct(
-        self, entities: List[Entity], threshold_distance: float = 0.15
-    ) -> Tuple[int, int]:
+    def calculate_correct(self, entities: List[Entity]) -> Tuple[int, int]:
         """
         Calculate the number of correctly and incorrectly placed cubes based on adjacency.
 
@@ -56,8 +75,6 @@ class PlaceCubesTask(ManipulationTask):
         ----------
         entities : List[Entity]
             List of all entities (cubes) present in the simulation scene.
-        threshold_distance : float, optional
-            The distance threshold to determine if two cubes are adjacent. Default is 0.15.
 
         Returns
         -------
@@ -70,7 +87,9 @@ class PlaceCubesTask(ManipulationTask):
             1
             for ent in entities
             if self.is_adjacent_to_any(
-                ent.pose, [e.pose for e in entities if e != ent], threshold_distance
+                ent.pose,
+                [e.pose for e in entities if e != ent],
+                self.threshold_distance,
             )
         )
         incorrect: int = len(entities) - correct

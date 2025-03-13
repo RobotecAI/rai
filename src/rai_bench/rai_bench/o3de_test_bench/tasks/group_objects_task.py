@@ -25,9 +25,28 @@ loggers_type = Union[RcutilsLogger, logging.Logger]
 
 
 class GroupObjectsTask(ManipulationTask):
-    def __init__(self, obj_types: List[str], logger: loggers_type | None = None):
+    def __init__(
+        self,
+        obj_types: List[str],
+        threshold_distance: float = 0.15,
+        logger: loggers_type | None = None,
+    ):
+        """
+        This task instructs the robotic system to manipulate objects so that objects of each
+        specified type form a single, well-defined cluster.
+
+        Parameters
+        ----------
+        obj_types : List[str]
+            A list of object types to be grouped into clusters. Only objects whose prefab names match
+            one of these types will be evaluated.
+        threshold_distance : float, optional
+            The maximum distance between two objects (in meters) for them to be considered neighbours
+            when building the neighbourhood list. Defaults to 0.15.
+        """
         super().__init__(logger)
         self.obj_types = obj_types
+        self.threshold_distance = threshold_distance
 
     def get_prompt(self) -> str:
         obj_names = ", ".join(obj + "s" for obj in self.obj_types).replace(
@@ -59,9 +78,7 @@ class GroupObjectsTask(ManipulationTask):
 
         return set(self.obj_types) <= object_types_present
 
-    def calculate_correct(
-        self, entities: List[Entity], threshold_distance: float = 0.15
-    ) -> Tuple[int, int]:
+    def calculate_correct(self, entities: List[Entity]) -> Tuple[int, int]:
         """
         Count correctly and incorrectly clustered objects based on clustering rules.
 
@@ -78,9 +95,6 @@ class GroupObjectsTask(ManipulationTask):
         ----------
         entities : List[Entity]
             List of all entities present in the simulation scene.
-        threshold_distance : float, optional
-            The maximum distance between two objects to be considered neighbours when building
-            the neighbourhood list. Default is 0.15.
 
         Returns
         -------
@@ -92,7 +106,7 @@ class GroupObjectsTask(ManipulationTask):
         misclustered: List[Entity] = []
 
         neighbourhood_list = self.build_neighbourhood_list(
-            entities, threshold_distance=threshold_distance
+            entities, threshold_distance=self.threshold_distance
         )
         clusters = self.find_clusters(neighbourhood_list)
         selected_type_objects = self.filter_entities_by_object_type(
