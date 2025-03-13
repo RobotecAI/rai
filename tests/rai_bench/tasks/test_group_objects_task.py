@@ -27,7 +27,7 @@ def test_calculate_correct_proper_cluster() -> None:
     e3 = create_entity("e3", "red_cube", 0.05, 0.05, 0.0)
     entities: List[Entity] = [e1, e2, e3]
 
-    correct, misclustered = task.calculate_correct(entities, threshold_distance=0.15)
+    correct, misclustered = task.calculate_correct(entities)
     # Since all three red_cube objects form a single cluster, they are all considered correctly clustered.
     assert correct == 3
     assert misclustered == 0
@@ -43,7 +43,7 @@ def test_calculate_correct_multiple_clusters() -> None:
     e4 = create_entity("e4", "red_cube", 5.05, 5.05, 0.0)
     entities: List[Entity] = [e1, e2, e3, e4]
 
-    correct, misclustered = task.calculate_correct(entities, threshold_distance=0.15)
+    correct, misclustered = task.calculate_correct(entities)
     # Since there are two clusters for red_cube, all objects are considered misclustered.
     assert correct == 0
     assert misclustered == 4
@@ -60,7 +60,7 @@ def test_calculate_correct_multiple_types() -> None:
     b2 = create_entity("b2", "blue_cube", 10.1, 10.1, 0.0)
     entities: List[Entity] = [r1, r2, r3, b1, b2]
 
-    correct, misclustered = task.calculate_correct(entities, threshold_distance=0.15)
+    correct, misclustered = task.calculate_correct(entities)
 
     assert correct == 5
     assert misclustered == 0
@@ -77,7 +77,7 @@ def test_calculate_correct_multiple_types_mixed() -> None:
     b2 = create_entity("b2", "blue_cube", 0.05, 0.0, 0.0)
     entities: List[Entity] = [r1, r2, r3, b1, b2]
 
-    correct, misclustered = task.calculate_correct(entities, threshold_distance=0.15)
+    correct, misclustered = task.calculate_correct(entities)
 
     assert correct == 0
     assert misclustered == 5
@@ -95,7 +95,7 @@ def test_calculate_correct_other_types_mixed() -> None:
     b2 = create_entity("b2", "blue_cube", 0.05, 0.0, 0.0)
     entities: List[Entity] = [r1, r2, r3, b1, b2]
 
-    correct, misclustered = task.calculate_correct(entities, threshold_distance=0.15)
+    correct, misclustered = task.calculate_correct(entities)
 
     assert correct == 0
     assert misclustered == 3
@@ -113,7 +113,7 @@ def test_calculate_correct_no_selected_objects() -> None:
     b2 = create_entity("b2", "blue_cube", 0.05, 0.0, 0.0)
     entities: List[Entity] = [r1, r2, r3, b1, b2]
 
-    correct, misclustered = task.calculate_correct(entities, threshold_distance=0.15)
+    correct, misclustered = task.calculate_correct(entities)
 
     assert correct == 0
     assert misclustered == 0
