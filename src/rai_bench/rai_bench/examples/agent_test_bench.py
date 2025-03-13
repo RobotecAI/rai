@@ -25,10 +25,13 @@ from rai_bench.agent_bench.agent_bench import AgentBenchmark
 from rai_bench.agent_bench.agent_tasks_interfaces import AgentTask
 from rai_bench.agent_bench.ros2_agent_tasks import (
     GetAllROS2RGBCamerasTask,
+    GetObjectPositionsTask,
     GetROS2DepthCameraTask,
+    GetROS2MessageTask,
     GetROS2RGBCameraTask,
     GetROS2TopicsTask,
     GetROS2TopicsTask2,
+    MoveToPointTask,
 )
 
 # define loggers
@@ -65,6 +68,21 @@ tasks: List[AgentTask] = [
     GetROS2DepthCameraTask(logger=bench_logger),
     GetAllROS2RGBCamerasTask(logger=bench_logger),
     GetROS2TopicsTask2(logger=bench_logger),
+    GetROS2MessageTask(logger=bench_logger),
+    MoveToPointTask(
+        logger=bench_logger, args={"x": 1.0, "y": 2.0, "z": 3.0, "task": "grab"}
+    ),
+    MoveToPointTask(
+        logger=bench_logger, args={"x": 1.2, "y": 2.3, "z": 3.4, "task": "drop"}
+    ),
+    GetObjectPositionsTask(
+        logger=bench_logger,
+        objects={
+            "carrot": [(1.0, 2.0, 3.0)],
+            "apple": [(4.0, 5.0, 6.0)],
+            "banana": [(7.0, 8.0, 9.0), (10.0, 11.0, 12.0)],
+        },
+    ),
 ]
 benchmark = AgentBenchmark(
     tasks=tasks, logger=bench_logger, results_filename=results_filename

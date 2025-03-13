@@ -12,13 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Tuple
+from typing import List, Tuple
 from unittest.mock import MagicMock
 
 import numpy as np
 from rai.communication.ros2.connectors import ROS2ARIConnector
+from rai.communication.ros2.messages import ROS2ARIMessage
 from rai.messages import MultimodalArtifact, preprocess_image
-from rai.tools.ros2 import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
+from rai.tools.ros.manipulation import (
+    GetGrabbingPointTool,
+    GetObjectPositionsTool,
+    MoveToPointTool,
+)
+from rai.tools.ros2 import (
+    GetROS2ImageTool,
+    GetROS2TopicsNamesAndTypesTool,
+    ReceiveROS2MessageTool,
+)
 
 
 class MockGetROS2TopicsNamesAndTypesTool(GetROS2TopicsNamesAndTypesTool):
@@ -45,3 +55,41 @@ class MockGetROS2ImageTool(GetROS2ImageTool):
         height, width = 480, 640
         blank_image = np.zeros((height, width, 3), dtype=np.uint8)
         return blank_image
+
+
+class MockReceiveROS2MessageTool(ReceiveROS2MessageTool):
+    connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
+
+    def _run(self, topic: str) -> str:
+        message: ROS2ARIMessage = MagicMock(spec=ROS2ARIMessage)
+        message.payload = {"mock": "payload"}
+        message.metadata = {"mock": "metadata"}
+        return str({"payload": message.payload, "metadata": message.metadata})
+
+
+class MockMoveToPointTool(MoveToPointTool):
+    connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
+
+    def _run(self, x: float, y: float, z: float, task: str) -> str:
+        return f"End effector successfully positioned at coordinates ({x:.2f}, {y:.2f}, {z:.2f}). Note: The status of object interaction (grab/drop) is not confirmed by this movement."
+
+
+class MockGetObjectPositionsTool(GetObjectPositionsTool):
+    connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
+
+    # Create mock instances for the arguments
+    target_frame: str = MagicMock(spec=str)
+    source_frame: str = MagicMock(spec=str)
+    camera_topic: str = MagicMock(spec=str)
+    depth_topic: str = MagicMock(spec=str)
+    camera_info_topic: str = MagicMock(spec=str)
+    get_grabbing_point_tool: GetGrabbingPointTool = MagicMock(spec=GetGrabbingPointTool)
+    mock_objects: dict[str, List[Tuple[float, float, float]]]
+
+    def _run(self, object_name: str):
+        expected_positions = self.mock_objects.get(object_name, [])
+        print(f"Expected positions: {expected_positions}")
+        if len([expected_positions]) == 0:
+            return f"No {object_name}s detected."
+        else:
+            return f"Centroids of detected {object_name}s in manipulator frame: {expected_positions} Sizes of the detected objects are unknown."
