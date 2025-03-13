@@ -28,23 +28,44 @@ loggers_type = Union[RcutilsLogger, logging.Logger]
 class BuildCubeTowerTask(ManipulationTask):
     ALLOWED_OBJECTS = {"red_cube", "blue_cube", "yellow_cube"}
 
-    def __init__(self, obj_types: List[str], logger: loggers_type | None = None):
+    def __init__(
+        self,
+        obj_types: List[str],
+        allowable_displacement: float = 0.02,
+        logger: loggers_type | None = None,
+    ):
         """
-        Initialize the BuildCubeTowerTask.
+        This task requires that cubes of the specified types be arranged into a single vertical tower.
+        Only objects with types specified in `obj_types` (which must be a subset of the allowed objects)
+        are considered. Cubes are grouped by their z-coordinate using a horizontal tolerance, and only
+        groups with more than one cube are considered towers. The height of the tallest tower determines
+        the number of correctly placed cubes.
+
+        Parameters
+        ----------
+        obj_types : List[str]
+            A list of cube types (e.g., ["red_cube", "blue_cube"]) to be used for building the tower.
+            Each type must be one of the allowed objects: {"red_cube", "blue_cube", "yellow_cube"}.
+        allowable_displacement : float, optional
+            The allowable horizontal displacement (tolerance, in meters) used when grouping cubes by their
+            z-coordinate. Default is 0.02.
+
 
         Raises
         ------
         TypeError
             If any of the provided object types is not allowed.
         """
+        # TODO (jm) what if allowable_displament is greater then the size of object?
+        # we could check the z distance between entities
+        # or trust user with this
         super().__init__(logger)
-
         if not set(obj_types).issubset(self.ALLOWED_OBJECTS):
             raise TypeError(
                 f"Invalid obj_types provided: {obj_types}. Allowed objects: {self.ALLOWED_OBJECTS}"
             )
-
         self.obj_types = obj_types
+        self.allowable_displacement = allowable_displacement
 
     def get_prompt(self) -> str:
         cube_names = ", ".join(obj + "s" for obj in self.obj_types).replace("_", " ")
@@ -66,9 +87,7 @@ class BuildCubeTowerTask(ManipulationTask):
         )
         return cube_count > 1
 
-    def calculate_correct(
-        self, entities: List[Entity], allowable_displacment: float = 0.02
-    ) -> Tuple[int, int]:
+    def calculate_correct(self, entities: List[Entity]) -> Tuple[int, int]:
         """
         Calculate the number of correctly and incorrectly placed cubes.
 
@@ -81,9 +100,6 @@ class BuildCubeTowerTask(ManipulationTask):
         ----------
         entities : List[Entity]
             List of all entities present in the simulation scene.
-        allowable_displacment : float, optional
-            The allowable horizontal displacement (tolerance) used when grouping cubes by their
-            z-coordinate. Default is 0.02.
 
         Returns
         -------
@@ -94,7 +110,7 @@ class BuildCubeTowerTask(ManipulationTask):
 
         # Group entities by z-coordinate
         grouped_entities = self.group_entities_along_z_axis(
-            entities, allowable_displacment
+            entities, self.allowable_displacement
         )
         selected_type_objects = self.filter_entities_by_object_type(
             entities=entities, object_types=self.obj_types
