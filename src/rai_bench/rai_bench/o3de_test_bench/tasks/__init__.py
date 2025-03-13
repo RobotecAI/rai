@@ -20,6 +20,9 @@ from rai_bench.o3de_test_bench.tasks.group_objects_task import (  # type: ignore
 from rai_bench.o3de_test_bench.tasks.move_object_to_left_task import (  # type: ignore
     MoveObjectsToLeftTask,
 )
+from rai_bench.o3de_test_bench.tasks.place_at_coord_task import (  # type: ignore
+    PlaceObjectAtCoordTask,
+)
 from rai_bench.o3de_test_bench.tasks.place_cubes_task import (  # type: ignore
     PlaceCubesTask,
 )
@@ -29,4 +32,5 @@ __all__ = [
     "GroupObjectsTask",
     "MoveObjectsToLeftTask",
     "PlaceCubesTask",
+    "PlaceObjectAtCoordTask",
 ]
