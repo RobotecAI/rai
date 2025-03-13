@@ -618,6 +618,16 @@ class GetObjectPositionsTask(ROS2AgentTask):
         objects: Dict[str, List[Tuple[float, float, float]]],
         logger: loggers_type | None = None,
     ) -> None:
+        """
+        Args:
+            objects (Dict[str, List[Tuple[float, float, float]]]): dictionary containing the object types and their positions. Object type should be passed as singular.
+            logger (loggers_type | None, optional): Defaults to None.
+        Examples:
+            objects = {
+                "banana": [(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
+                "cube": [(0.7, 0.8, 0.9)],
+            }
+        """
         super().__init__(logger=logger)
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
@@ -634,6 +644,10 @@ class GetObjectPositionsTask(ROS2AgentTask):
         self.objects_types = objects
 
     def get_prompt(self) -> str:
+        """Generates a prompt based on the objects provided in the task. If there is more than one object, the object in the prompt will be pluralized.
+        Returns:
+            str: Formatted prompt for the task
+        """
         inflector = inflect.engine()
         object_counts = {
             obj: len(positions) for obj, positions in self.objects_types.items()
