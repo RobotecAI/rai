@@ -20,8 +20,10 @@ from langchain_core.messages import AIMessage
 from langchain_core.tools import BaseTool
 from rai.tools.ros.manipulation import MoveToPointToolInput
 
-from rai_bench.agent_bench.agent_tasks_interfaces import ROS2AgentTask
-from rai_bench.agent_bench.mocked_tools import (
+from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
+    ROS2ToolCallingAgentTask,
+)
+from rai_bench.tool_calling_agent_bench.mocked_tools import (
     MockGetObjectPositionsTool,
     MockGetROS2ImageTool,
     MockGetROS2TopicsNamesAndTypesTool,
@@ -32,7 +34,7 @@ from rai_bench.agent_bench.mocked_tools import (
 loggers_type = logging.Logger
 
 
-class GetROS2TopicsTask(ROS2AgentTask):
+class GetROS2TopicsTask(ROS2ToolCallingAgentTask):
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
         self.expected_tools = [
@@ -104,7 +106,7 @@ class GetROS2TopicsTask(ROS2AgentTask):
             self.result.success = True
 
 
-class GetROS2TopicsTask2(ROS2AgentTask):
+class GetROS2TopicsTask2(ROS2ToolCallingAgentTask):
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
         self.expected_tools = [
@@ -147,7 +149,7 @@ class GetROS2TopicsTask2(ROS2AgentTask):
             self.result.success = True
 
 
-class GetROS2RGBCameraTask(ROS2AgentTask):
+class GetROS2RGBCameraTask(ROS2ToolCallingAgentTask):
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
         self.expected_tools: List[BaseTool] = [
@@ -205,7 +207,7 @@ class GetROS2RGBCameraTask(ROS2AgentTask):
             self.result.success = True
 
 
-class GetROS2DepthCameraTask(ROS2AgentTask):
+class GetROS2DepthCameraTask(ROS2ToolCallingAgentTask):
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
         self.expected_tools: List[BaseTool] = [
@@ -263,7 +265,7 @@ class GetROS2DepthCameraTask(ROS2AgentTask):
             self.result.success = True
 
 
-class GetAllROS2RGBCamerasTask(ROS2AgentTask):
+class GetAllROS2RGBCamerasTask(ROS2ToolCallingAgentTask):
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
         self.expected_tools: List[BaseTool] = [
@@ -325,7 +327,7 @@ class GetAllROS2RGBCamerasTask(ROS2AgentTask):
             self.result.success = True
 
 
-class GetAllROS2DepthCamerasTask(ROS2AgentTask):
+class GetAllROS2DepthCamerasTask(ROS2ToolCallingAgentTask):
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
         self.expected_tools: List[BaseTool] = [
@@ -386,7 +388,7 @@ class GetAllROS2DepthCamerasTask(ROS2AgentTask):
             self.result.success = True
 
 
-class GetROS2MessageTask(ROS2AgentTask):
+class GetROS2MessageTask(ROS2ToolCallingAgentTask):
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
         self.expected_tools: List[BaseTool] = [
@@ -444,7 +446,7 @@ class GetROS2MessageTask(ROS2AgentTask):
             self.result.success = True
 
 
-class GetRobotDescriptionTask(ROS2AgentTask):
+class GetRobotDescriptionTask(ROS2ToolCallingAgentTask):
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
         self.expected_tools: List[BaseTool] = [
@@ -499,7 +501,7 @@ class GetRobotDescriptionTask(ROS2AgentTask):
             self.result.success = True
 
 
-class GetPointcloudTask(ROS2AgentTask):
+class GetPointcloudTask(ROS2ToolCallingAgentTask):
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
         self.expected_tools: List[BaseTool] = [
@@ -554,7 +556,7 @@ class GetPointcloudTask(ROS2AgentTask):
             self.result.success = True
 
 
-class MoveToPointTask(ROS2AgentTask):
+class MoveToPointTask(ROS2ToolCallingAgentTask):
     def __init__(
         self, args: Dict[str, Any], logger: loggers_type | None = None
     ) -> None:
@@ -612,7 +614,7 @@ class MoveToPointTask(ROS2AgentTask):
             self.result.success = True
 
 
-class GetObjectPositionsTask(ROS2AgentTask):
+class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
     def __init__(
         self,
         objects: Dict[str, List[Tuple[float, float, float]]],

@@ -15,23 +15,27 @@
 import csv
 import logging
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Sequence
 
 from langfuse.callback import CallbackHandler
 from rai.messages.multimodal import HumanMultimodalMessage
 from rai.utils.model_initialization import get_tracing_callbacks
 
-from rai_bench.agent_bench.agent_tasks_interfaces import (
-    AgentTask,
+from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
+    ToolCallingAgentTask,
 )
 
 loggers_type = logging.Logger
 
 
-class AgentBenchmark:
+class ToolCallingAgentBenchmark:
+    """
+    Benchmark for LangChain tool calling agents.
+    """
+
     def __init__(
         self,
-        tasks: List[AgentTask],
+        tasks: Sequence[ToolCallingAgentTask],
         logger: loggers_type | None = None,
         results_filename: str = "agent_benchmark_results.csv",
     ) -> None:
