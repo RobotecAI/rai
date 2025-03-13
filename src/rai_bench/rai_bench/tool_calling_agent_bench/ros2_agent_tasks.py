@@ -77,6 +77,11 @@ class GetROS2TopicsTask(ROS2ToolCallingAgentTask):
             )
         ]
 
+    def get_system_prompt(self) -> str:
+        return """You are a ROS 2 expert helping a user with their ROS 2 questions. You have access to various tools that allow you to query the ROS 2 system.
+                Be proactive and use the tools to answer questions.
+                """
+
     def get_prompt(self) -> str:
         return "Get the names and types of all ROS2 topics"
 
@@ -119,6 +124,11 @@ class GetROS2TopicsTask2(ROS2ToolCallingAgentTask):
                 ]
             )
         ]
+
+    def get_system_prompt(self) -> str:
+        return """You are a ROS 2 expert helping a user with their ROS 2 questions. You have access to various tools that allow you to query the ROS 2 system.
+                Be proactive and use the tools to answer questions.
+                """
 
     def get_prompt(self) -> str:
         return "What is in the ROS2 network?"
@@ -168,6 +178,11 @@ class GetROS2RGBCameraTask(ROS2ToolCallingAgentTask):
             ),
             MockGetROS2ImageTool(),
         ]
+
+    def get_system_prompt(self) -> str:
+        return """You are a ROS 2 expert helping a user with their ROS 2 questions. You have access to various tools that allow you to query the ROS 2 system.
+                Be proactive and use the tools to answer questions.
+                """
 
     def get_prompt(self) -> str:
         return "Get the RGB image from the camera."
@@ -225,6 +240,11 @@ class GetROS2DepthCameraTask(ROS2ToolCallingAgentTask):
             ),
             MockGetROS2ImageTool(),
         ]
+
+    def get_system_prompt(self) -> str:
+        return """You are a ROS 2 expert helping a user with their ROS 2 questions. You have access to various tools that allow you to query the ROS 2 system.
+                Be proactive and use the tools to answer questions.
+                """
 
     def get_prompt(self) -> str:
         return "Get the depth image from the camera."
@@ -289,6 +309,11 @@ class GetAllROS2RGBCamerasTask(ROS2ToolCallingAgentTask):
     def get_prompt(self) -> str:
         return "Get RGB images from all of the available cameras."
 
+    def get_system_prompt(self) -> str:
+        return """You are a ROS 2 expert helping a user with their ROS 2 questions. You have access to various tools that allow you to query the ROS 2 system.
+                Be proactive and use the tools to answer questions.
+                """
+
     def verify_tool_calls(self, response: dict[str, Any]):
         """
         It is expected that the agent will request:
@@ -350,6 +375,11 @@ class GetAllROS2DepthCamerasTask(ROS2ToolCallingAgentTask):
     def get_prompt(self) -> str:
         return "Get depth images from all of the available cameras."
 
+    def get_system_prompt(self) -> str:
+        return """You are a ROS 2 expert helping a user with their ROS 2 questions. You have access to various tools that allow you to query the ROS 2 system.
+                Be proactive and use the tools to answer questions.
+                """
+
     def verify_tool_calls(self, response: dict[str, Any]):
         """
         It is expected that the agent will request:
@@ -408,6 +438,11 @@ class GetROS2MessageTask(ROS2ToolCallingAgentTask):
             MockReceiveROS2MessageTool(),
         ]
 
+    def get_system_prompt(self) -> str:
+        return """You are a ROS 2 expert helping a user with their ROS 2 questions. You have access to various tools that allow you to query the ROS 2 system.
+                Be proactive and use the tools to answer questions.
+                """
+
     def get_prompt(self) -> str:
         return "Get RGB image."
 
@@ -463,6 +498,11 @@ class GetRobotDescriptionTask(ROS2ToolCallingAgentTask):
             MockReceiveROS2MessageTool(),
         ]
 
+    def get_system_prompt(self) -> str:
+        return """You are a ROS 2 expert helping a user with their ROS 2 questions. You have access to various tools that allow you to query the ROS 2 system.
+                Be proactive and use the tools to answer questions.
+                """
+
     def get_prompt(self) -> str:
         return "Give me description of the robot."
 
@@ -517,6 +557,11 @@ class GetPointcloudTask(ROS2ToolCallingAgentTask):
             ),
             MockReceiveROS2MessageTool(),
         ]
+
+    def get_system_prompt(self) -> str:
+        return """You are a ROS 2 expert helping a user with their ROS 2 questions. You have access to various tools that allow you to query the ROS 2 system.
+                Be proactive and use the tools to answer questions.
+                """
 
     def get_prompt(self) -> str:
         return "Get the pointcloud."
@@ -574,6 +619,11 @@ class MoveToPointTask(ROS2ToolCallingAgentTask):
             MockMoveToPointTool(manipulator_frame="base_link"),
         ]
         self.args = MoveToPointToolInput(**args)
+
+    def get_system_prompt(self) -> str:
+        return """You are a ROS 2 expert helping the user to manipulate the robotic arm. You have access to various tools that allow you to query the ROS 2 system.
+                Be proactive and use the tools to answer questions.
+                """
 
     def get_prompt(self) -> str:
         return f"Move the arm to a point x={self.args.x}, y={self.args.y}, z={self.args.z} to {self.args.task} an object."
@@ -644,6 +694,11 @@ class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
             MockGetObjectPositionsTool(mock_objects=objects),
         ]
         self.objects_types = objects
+
+    def get_system_prompt(self) -> str:
+        return """You are a ROS 2 expert helping a user with their ROS 2 questions. You have access to various tools that allow you to query the ROS 2 system.
+                Be proactive and use the tools to answer questions.
+                """
 
     def get_prompt(self) -> str:
         """Generates a prompt based on the objects provided in the task. If there is more than one object, the object in the prompt will be pluralized.
