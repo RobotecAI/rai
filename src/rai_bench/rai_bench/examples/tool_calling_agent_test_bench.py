@@ -16,14 +16,16 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import List
+from typing import Sequence
 
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.utils.model_initialization import get_llm_model
 
-from rai_bench.agent_bench.agent_bench import AgentBenchmark
-from rai_bench.agent_bench.agent_tasks_interfaces import AgentTask
-from rai_bench.agent_bench.ros2_agent_tasks import (
+from rai_bench.tool_calling_agent_bench.agent_bench import ToolCallingAgentBenchmark
+from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
+    ToolCallingAgentTask,
+)
+from rai_bench.tool_calling_agent_bench.ros2_agent_tasks import (
     GetAllROS2RGBCamerasTask,
     GetObjectPositionsTask,
     GetROS2DepthCameraTask,
@@ -62,7 +64,7 @@ agent_logger = logging.getLogger("Agent logger")
 agent_logger.setLevel(logging.INFO)
 agent_logger.addHandler(file_handler)
 
-tasks: List[AgentTask] = [
+tasks: Sequence[ToolCallingAgentTask] = [
     GetROS2RGBCameraTask(logger=bench_logger),
     GetROS2TopicsTask(logger=bench_logger),
     GetROS2DepthCameraTask(logger=bench_logger),
@@ -84,7 +86,7 @@ tasks: List[AgentTask] = [
         },
     ),
 ]
-benchmark = AgentBenchmark(
+benchmark = ToolCallingAgentBenchmark(
     tasks=tasks, logger=bench_logger, results_filename=results_filename
 )
 

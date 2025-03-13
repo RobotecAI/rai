@@ -28,9 +28,9 @@ class Result(BaseModel):
     errors: list[str] = []
 
 
-class AgentTask(ABC):
+class ToolCallingAgentTask(ABC):
     """
-    Abstract class for agent tasks. Contains methods for requested tool calls nverification.
+    Abstract class for tool calling agent tasks. Contains methods for requested tool calls verification.
     """
 
     def __init__(
@@ -151,7 +151,7 @@ class AgentTask(ABC):
         return True
 
 
-class ROS2AgentTask(AgentTask, ABC):
+class ROS2ToolCallingAgentTask(ToolCallingAgentTask, ABC):
     """
     Abstract class for ROS2 agent tasks.
     """
