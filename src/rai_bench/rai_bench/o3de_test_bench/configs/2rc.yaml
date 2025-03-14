@@ -1,0 +1,25 @@
+entities:
+  - name: cube1
+    prefab_name: red_cube
+    pose:
+      translation:
+        x: 0.5
+        y: -0.3
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+  - name: cube2
+    prefab_name: red_cube
+    pose:
+      translation:
+        x: 0.5
+        y: 0.3
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
