@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import operator
 from functools import partial
-from typing import Annotated, List, Optional, TypedDict, cast
+from typing import List, Optional, TypedDict, cast
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
@@ -33,10 +32,10 @@ class ReActAgentState(TypedDict):
     Parameters
     ----------
     messages : List[BaseMessage]
-        List of messages in the conversation, with operator.add for combining states
+        List of messages in the conversation
     """
 
-    messages: Annotated[List[BaseMessage], operator.add]
+    messages: List[BaseMessage]
 
 
 def llm_node(llm: BaseChatModel, state: ReActAgentState):
@@ -61,7 +60,7 @@ def llm_node(llm: BaseChatModel, state: ReActAgentState):
     """
 
     ai_msg = llm.invoke(state["messages"])
-    return {"messages": [ai_msg]}
+    state["messages"].append(ai_msg)
 
 
 def create_react_agent(

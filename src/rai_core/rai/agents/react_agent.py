@@ -95,4 +95,4 @@ class ReActAgent(BaseAgent):
                 hri_payload.text += f"{source_name}: {source_message.text}\n"
                 hri_payload.images.extend(source_message.images)
                 hri_payload.audios.extend(source_message.audios)
-        return HRIMessage(payload=hri_payload)
+        return HRIMessage(payload=hri_payload, message_author="human")
