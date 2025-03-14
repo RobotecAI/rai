@@ -38,7 +38,7 @@ class ToolCallingAgentBenchmark:
         logger: loggers_type | None = None,
         results_filename: str = "agent_benchmark_results.csv",
     ) -> None:
-        self.tasks = enumerate(iter(tasks))
+        self._tasks = enumerate(iter(tasks))
         self.num_tasks = len(tasks)
         self.tasks_results: List[Dict[str, Any]] = []
         self.results_filename = results_filename
@@ -58,7 +58,7 @@ class ToolCallingAgentBenchmark:
 
     def run_next(self, agent) -> None:
         try:
-            i, task = next(self.tasks)
+            i, task = next(self._tasks)
             self.logger.info(
                 f"RUNNING TASK NUMBER {i + 1} / {self.num_tasks}, TASK {task.get_prompt()}"
             )
