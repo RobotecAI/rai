@@ -17,13 +17,12 @@ import logging
 import time
 from typing import Any, Dict, List, Sequence
 
-from langfuse.callback import CallbackHandler
 from rai.messages.multimodal import HumanMultimodalMessage
-from rai.utils.model_initialization import get_tracing_callbacks
 
 from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
     ToolCallingAgentTask,
 )
+from rai_bench.tool_calling_agent_bench.scores_tracing import ScoreTracingHandler
 
 loggers_type = logging.Logger
 
@@ -48,9 +47,10 @@ class ToolCallingAgentBenchmark:
             "success",
             "errors",
             "total_time",
-            "callback_trace_id",
+            "callback_trace_ids",
         ]
         self._initialize_results_file()
+        self.score_tracing_handler = ScoreTracingHandler()
         if logger:
             self.logger = logger
         else:
@@ -62,7 +62,7 @@ class ToolCallingAgentBenchmark:
             self.logger.info(
                 f"RUNNING TASK NUMBER {i + 1} / {self.num_tasks}, TASK {task.get_prompt()}"
             )
-            callbacks = get_tracing_callbacks()
+            callbacks = self.score_tracing_handler.get_callbacks()
             ts = time.perf_counter()
             response = agent.invoke(
                 {"messages": [HumanMultimodalMessage(content=task.get_prompt())]},
@@ -73,17 +73,17 @@ class ToolCallingAgentBenchmark:
 
             task.verify_tool_calls(response=response)
             result = task.result
-            trace_id = None
-            # TODO (mkotynia) currently only for langfuse, to handle langsmith tracing as well and then refactor
-            if callbacks:
-                callback: CallbackHandler = callbacks[0]
-                trace_id = callback.get_trace_id()
-                callback.langfuse.score(
-                    trace_id=trace_id,
-                    name="tool calls result",
-                    value=float(result.success),
-                    comment="; ".join(result.errors),
-                )
+            trace_ids: List[str] = []
+            for callback in callbacks:
+                trace_id = self.score_tracing_handler.get_trace_id(callback)
+                if trace_id:
+                    trace_ids.append(trace_id)
+                    self.score_tracing_handler.send_score(
+                        callback=callback,
+                        trace_id=trace_id,
+                        success=result.success,
+                        errors=result.errors,
+                    )
 
             self.logger.info(
                 f"TASK SUCCESS: {result.success}, TOTAL TIME: {total_time:.3f}"
@@ -94,7 +94,7 @@ class ToolCallingAgentBenchmark:
                 "success": result.success,
                 "errors": "; ".join(result.errors) if result.errors else "",
                 "total_time": total_time,
-                "callback_trace_id": trace_id,
+                "callback_trace_ids": trace_ids,
             }
             self.tasks_results.append(task_result)
             self._save_task_result_to_csv(task_result)
