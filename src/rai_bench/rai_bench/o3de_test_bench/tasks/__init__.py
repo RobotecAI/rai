@@ -14,8 +14,8 @@
 from rai_bench.o3de_test_bench.tasks.build_tower_task import (  # type: ignore
     BuildCubeTowerTask,
 )
-from rai_bench.o3de_test_bench.tasks.change_orientation_task import (
-    RotateObjectTask,  # type: ignore
+from rai_bench.o3de_test_bench.tasks.change_orientation_task import (  # type: ignore
+    RotateObjectTask,
 )
 from rai_bench.o3de_test_bench.tasks.group_objects_task import (  # type: ignore
     GroupObjectsTask,

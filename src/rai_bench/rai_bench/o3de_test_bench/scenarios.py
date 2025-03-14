@@ -14,7 +14,6 @@
 
 import logging
 from pathlib import Path
-from tkinter import Place
 from typing import List, Union
 
 from rclpy.impl.rcutils_logger import RcutilsLogger
@@ -26,8 +25,8 @@ from rai_bench.benchmark_model import (  # type: ignore
 )
 from rai_bench.o3de_test_bench.tasks import (  # type: ignore
     MoveObjectsToLeftTask,
-    PlaceObjectAtCoordTask,
     PlaceCubesTask,
+    PlaceObjectAtCoordTask,
 )
 from rai_sim.o3de.o3de_bridge import (  # type: ignore
     O3DExROS2SimulationConfig,
