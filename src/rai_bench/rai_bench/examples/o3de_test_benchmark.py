@@ -21,21 +21,28 @@ from typing import List
 
 import rclpy
 from langchain.tools import BaseTool
-from rai.agents.conversational_agent import create_conversational_agent
-from rai.communication.ros2.connectors import ROS2ARIConnector
-from rai.tools.ros.manipulation import GetObjectPositionsTool, MoveToPointTool
-from rai.tools.ros2.topics import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
-from rai.utils.model_initialization import get_llm_model
+from rai.agents.conversational_agent import create_conversational_agent  # type: ignore
+from rai.communication.ros2.connectors import ROS2ARIConnector  # type: ignore
+from rai.tools.ros.manipulation import (  # type: ignore
+    GetObjectPositionsTool,
+    MoveToPointTool,
+)
+from rai.tools.ros2.topics import (  # type: ignore
+    GetROS2ImageTool,
+    GetROS2TopicsNamesAndTypesTool,
+)
+from rai.utils.model_initialization import get_llm_model  # type: ignore
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
-from rai_bench.benchmark_model import Benchmark, Task
-from rai_bench.o3de_test_bench.tasks import GrabCarrotTask, PlaceCubesTask
-from rai_sim.o3de.o3de_bridge import (
+from rai_bench.benchmark_model import Benchmark  # type: ignore
+from rai_bench.o3de_test_bench.scenarios import (  # type: ignore
+    easy_scenarios,
+)
+from rai_sim.o3de.o3de_bridge import (  # type: ignore
     O3DEngineArmManipulationBridge,
-    O3DExROS2SimulationConfig,
     Pose,
 )
-from rai_sim.simulation_bridge import Rotation, Translation
+from rai_sim.simulation_bridge import Rotation, Translation  # type: ignore
 
 if __name__ == "__main__":
     rclpy.init()
@@ -137,32 +144,12 @@ if __name__ == "__main__":
     # ]
 
     ### Create scenarios automatically
-    simulation_configs_paths = [
-        configs_dir + "scene1.yaml",
-        configs_dir + "scene2.yaml",
-        configs_dir + "scene3.yaml",
-        configs_dir + "scene4.yaml",
-    ]
-    simulations_configs = [
-        O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
-        for path in simulation_configs_paths
-    ]
-    tasks: List[Task] = [
-        GrabCarrotTask(logger=bench_logger),
-        PlaceCubesTask(logger=bench_logger),
-    ]
-    scenarios = Benchmark.create_scenarios(
-        tasks=tasks,
-        simulation_configs=simulations_configs,
-        simulation_configs_paths=simulation_configs_paths,
+    # scenarios = trivial_scenarios(
+    #     configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    # )
+    scenarios = easy_scenarios(
+        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
     )
-
-    # custom request to arm
-    base_arm_pose = Pose(
-        translation=Translation(x=0.1, y=0.5, z=0.4),
-        rotation=Rotation(x=1.0, y=0.0, z=0.0, w=0.0),
-    )
-
     o3de = O3DEngineArmManipulationBridge(connector, logger=agent_logger)
     # define benchamrk
     results_filename = f"{experiment_dir}/results.csv"
@@ -171,6 +158,11 @@ if __name__ == "__main__":
         scenarios=scenarios,
         logger=bench_logger,
         results_filename=results_filename,
+    )
+    # custom request to arm
+    base_arm_pose = Pose(
+        translation=Translation(x=0.1, y=0.5, z=0.4),
+        rotation=Rotation(x=1.0, y=0.0, z=0.0, w=0.0),
     )
     for i, s in enumerate(scenarios):
         agent = create_conversational_agent(

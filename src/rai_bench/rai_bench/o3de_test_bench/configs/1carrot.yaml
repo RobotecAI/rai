@@ -1,0 +1,13 @@
+entities:
+  - name: carrot1
+    prefab_name: carrot
+    pose:
+      translation:
+        x: 0.5
+        y: -0.4
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
