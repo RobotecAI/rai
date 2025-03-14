@@ -40,7 +40,7 @@ class PlaceObjectAtCoordTask(ManipulationTask):
         obj_type : str
             The type of object to be placed.
         target_position : Tuple[float, float]
-            The target (x, y) coordinates where one object of the specified type should be placed.
+            The target (x, y) coordinates (in meters) where one object of the specified type should be placed.
             The z coordinate is not enforced.
         allowable_displacement : float, optional
             The acceptable deviation (in meters) from the target (x, y) coordinates.
