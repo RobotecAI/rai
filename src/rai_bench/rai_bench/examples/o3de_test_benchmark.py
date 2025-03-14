@@ -34,16 +34,12 @@ from rai.tools.ros2.topics import (  # type: ignore
 from rai.utils.model_initialization import get_llm_model  # type: ignore
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
-from rai_bench.benchmark_model import Benchmark, Task  # type: ignore
-from rai_bench.o3de_test_bench.tasks import (  # type: ignore
-    BuildCubeTowerTask,
-    GroupObjectsTask,
-    MoveObjectsToLeftTask,
-    PlaceCubesTask,
+from rai_bench.benchmark_model import Benchmark  # type: ignore
+from rai_bench.o3de_test_bench.scenarios import (  # type: ignore
+    easy_scenarios,
 )
 from rai_sim.o3de.o3de_bridge import (  # type: ignore
     O3DEngineArmManipulationBridge,
-    O3DExROS2SimulationConfig,
     Pose,
 )
 from rai_sim.simulation_bridge import Rotation, Translation  # type: ignore
@@ -148,70 +144,12 @@ if __name__ == "__main__":
     # ]
 
     ### Create scenarios automatically
-    simulation_configs_paths = [
-        configs_dir + "scene1.yaml",
-        configs_dir + "scene2.yaml",
-        configs_dir + "scene3.yaml",
-        configs_dir + "scene4.yaml",
-        configs_dir + "scene5.yaml",
-        configs_dir + "scene6.yaml",
-        configs_dir + "scene7.yaml",
-        configs_dir + "scene8.yaml",
-        configs_dir + "scene9.yaml",
-        configs_dir + "scene10.yaml",
-    ]
-    simulations_configs = [
-        O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
-        for path in simulation_configs_paths
-    ]
-    # move objects to the left
-    object_groups = [
-        ["carrot"],
-        ["corn"],
-        ["yellow_cube"],
-        ["tomato"],
-        ["yellow_cube", "blue_cube", "red_cube"],
-    ]
-
-    move_to_left_tasks = [
-        MoveObjectsToLeftTask(obj_types=objects, logger=bench_logger)
-        for objects in object_groups
-    ]
-    # group objects type tasks
-    group_objects_types = [["carrot", "apple"], ["yellow_cube", "red_cube"]]
-    group_objects_tasks = [
-        GroupObjectsTask(obj_types=obj, logger=bench_logger)
-        for obj in group_objects_types
-    ]
-    # build tower type tasks
-    build_tower_types = [
-        ["red_cube", "yellow_cube", "red_cube"],
-        ["red_cube"],
-        ["yellow_cube"],
-        ["blue_cube"],
-    ]
-    build_tower_tasks = [
-        BuildCubeTowerTask(obj_types=cubes, logger=bench_logger)
-        for cubes in build_tower_types
-    ]
-    tasks: List[Task] = [
-        *move_to_left_tasks,
-        PlaceCubesTask(logger=bench_logger),
-        *group_objects_tasks,
-        *build_tower_tasks,
-    ]
-    scenarios = Benchmark.create_scenarios(
-        tasks=tasks,
-        simulation_configs=simulations_configs,
-        simulation_configs_paths=simulation_configs_paths,
+    # scenarios = trivial_scenarios(
+    #     configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    # )
+    scenarios = easy_scenarios(
+        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
     )
-
-    # custom request to arm
-    base_arm_pose = Pose(
-        translation=Translation(x=0.1, y=0.5, z=0.4),
-        rotation=Rotation(x=1.0, y=0.0, z=0.0, w=0.0),
-    )
-
     o3de = O3DEngineArmManipulationBridge(connector, logger=agent_logger)
     # define benchamrk
     results_filename = f"{experiment_dir}/results.csv"
@@ -220,6 +158,11 @@ if __name__ == "__main__":
         scenarios=scenarios,
         logger=bench_logger,
         results_filename=results_filename,
+    )
+    # custom request to arm
+    base_arm_pose = Pose(
+        translation=Translation(x=0.1, y=0.5, z=0.4),
+        rotation=Rotation(x=1.0, y=0.0, z=0.0, w=0.0),
     )
     for i, s in enumerate(scenarios):
         agent = create_conversational_agent(
