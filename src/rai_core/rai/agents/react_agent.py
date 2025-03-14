@@ -24,6 +24,7 @@ from rai.agents.base import BaseAgent
 from rai.agents.langchain import HRICallbackHandler, create_react_agent
 from rai.agents.langchain.react_agent import ReActAgentState
 from rai.communication.hri_connector import HRIConnector, HRIMessage, HRIPayload
+from rai.utils.model_initialization import get_tracing_callbacks
 
 
 class ReActAgent(BaseAgent):
@@ -40,6 +41,7 @@ class ReActAgent(BaseAgent):
         self.callback = HRICallbackHandler(
             connectors=connectors, aggregate_chunks=True, logger=self.logger
         )
+        self.tracing_callbacks = get_tracing_callbacks()
         self.state = state or ReActAgentState(messages=[])
         self.thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
@@ -63,7 +65,10 @@ class ReActAgent(BaseAgent):
                 langchain_message = reduced_message.to_langchain()
                 self.state["messages"].append(langchain_message)
                 # callback is used to send messages to the connectors
-                self.agent.invoke(self.state, config={"callbacks": [self.callback]})
+                self.agent.invoke(
+                    self.state,
+                    config={"callbacks": [self.callback, *self.tracing_callbacks]},
+                )
             time.sleep(0.3)
 
     def stop(self):
