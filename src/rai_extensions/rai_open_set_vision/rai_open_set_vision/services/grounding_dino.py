@@ -41,6 +41,9 @@ GDINO_SERVICE_NAME = "grounding_dino_classify"
 
 # TODO: Create a base class for vision services
 class GDinoService(Node):
+    WEIGHTS_URL = "https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth"
+    WEIGHTS_FILENAME = "groundingdino_swint_ogc.pth"
+
     def __init__(self):
         super().__init__(node_name=GDINO_NODE_NAME, parameter_overrides=[])
 
@@ -50,7 +53,15 @@ class GDinoService(Node):
             assert isinstance(weight_path, str)
             if self.get_parameter("weights_path").value == "":
                 weight_path = self._init_weight_path()
-            self.boxer = GDBoxer(weight_path)
+            try:
+                self.boxer = GDBoxer(weight_path)
+            except Exception:
+                self.get_logger().error(
+                    "Could not load model. The weights might be corrupted. Redownloading..."
+                )
+                self._remove_weights(weight_path)
+                weight_path = self._init_weight_path()
+                self.boxer = GDBoxer(weight_path)
         except Exception:
             self.get_logger().error("Could not load model")
             raise Exception("Could not load model")
@@ -63,10 +74,7 @@ class GDinoService(Node):
         try:
             found_path = get_package_share_directory("rai_open_set_vision")
             install_path = (
-                Path(found_path.strip())
-                / "share"
-                / "weights"
-                / "groundingdino_swint_ogc.pth"
+                Path(found_path.strip()) / "share" / "weights" / self.WEIGHTS_FILENAME
             )
             # make sure the file exists
             if install_path.exists():
@@ -85,14 +93,19 @@ class GDinoService(Node):
             subprocess.run(
                 [
                     "wget",
-                    "https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth",
+                    self.WEIGHTS_URL,
                     "-O",
                     path,
+                    "--progress=dot:giga",
                 ]
             )
         except Exception:
             self.get_logger().error("Could not download weights")
             raise Exception("Could not download weights")
+
+    def _remove_weights(self, path: Path):
+        if path.exists():
+            os.remove(path)
 
     def classify_callback(self, request, response: RAIDetectionArray):
         self.get_logger().info(

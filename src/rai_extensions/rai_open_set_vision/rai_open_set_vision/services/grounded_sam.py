@@ -32,6 +32,11 @@ GSAM_SERVICE_NAME = "grounded_sam_segment"
 
 # TODO: Create a base class for vision services
 class GSamService(Node):
+    WEIGHTS_URL = (
+        "https://dl.fbaipublicfiles.com/segment_anything_2/072824/sam2_hiera_large.pt"
+    )
+    WEIGHTS_FILENAME = "sam2_hiera_large.pt"
+
     def __init__(self):
         super().__init__(node_name=GSAM_NODE_NAME, parameter_overrides=[])
 
@@ -41,7 +46,16 @@ class GSamService(Node):
             assert isinstance(weight_path, str)
             if self.get_parameter("weights_path").value == "":
                 weight_path = self._init_weight_path()
-            self.segmenter = GDSegmenter(weight_path)
+            try:
+                self.segmenter = GDSegmenter(weight_path)
+            except Exception:
+                self.get_logger().error(
+                    "Could not load model. The weights might be corrupted. Redownloading..."
+                )
+                self._remove_weights(weight_path)
+                weight_path = self._init_weight_path()
+                self.segmenter = GDSegmenter(weight_path)
+
         except Exception:
             self.get_logger().error("Could not load model")
             raise Exception("Could not load model")
@@ -54,7 +68,7 @@ class GSamService(Node):
         try:
             found_path = get_package_share_directory("rai_open_set_vision")
             install_path = (
-                Path(found_path.strip()) / "share" / "weights" / "sam2_hiera_large.pt"
+                Path(found_path.strip()) / "share" / "weights" / self.WEIGHTS_FILENAME
             )
             # make sure the file exists
             if install_path.exists():
@@ -73,14 +87,19 @@ class GSamService(Node):
             subprocess.run(
                 [
                     "wget",
-                    "https://dl.fbaipublicfiles.com/segment_anything_2/072824/sam2_hiera_large.pt",
+                    self.WEIGHTS_URL,
                     "-O",
                     path,
+                    "--progress=dot:giga",
                 ]
             )
         except Exception:
             self.get_logger().error("Could not download weights")
             raise Exception("Could not download weights")
+
+    def _remove_weights(self, path: Path):
+        if path.exists():
+            os.remove(path)
 
     def segment_callback(self, request, response: RAIGroundedSam.Response):
         received_boxes = []
