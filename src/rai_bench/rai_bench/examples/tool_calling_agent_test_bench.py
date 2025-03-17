@@ -33,6 +33,10 @@ from rai_bench.tool_calling_agent_bench.ros2_agent_tasks import (
     GetROS2RGBCameraTask,
     GetROS2TopicsTask,
     GetROS2TopicsTask2,
+    GrabExistingObjectTask,
+    GrabNotExistingObjectTask,
+    MoveExistingObjectFrontTask,
+    MoveExistingObjectLeftTask,
     MoveToPointTask,
 )
 
@@ -83,6 +87,38 @@ tasks: Sequence[ToolCallingAgentTask] = [
             "carrot": [(1.0, 2.0, 3.0)],
             "apple": [(4.0, 5.0, 6.0)],
             "banana": [(7.0, 8.0, 9.0), (10.0, 11.0, 12.0)],
+        },
+    ),
+    GrabExistingObjectTask(
+        logger=bench_logger,
+        object_to_grab="banana",
+        objects={
+            "banana": [(7.0, 8.0, 9.0)],
+            "apple": [(4.0, 5.0, 6.0), (10.0, 11.0, 12.0)],
+        },
+    ),
+    GrabNotExistingObjectTask(
+        logger=bench_logger,
+        object_to_grab="apple",
+        objects={
+            "banana": [(7.0, 8.0, 9.0)],
+            "cube": [(4.0, 5.0, 6.0), (10.0, 11.0, 12.0)],
+        },
+    ),
+    MoveExistingObjectLeftTask(
+        logger=bench_logger,
+        object_to_grab="banana",
+        objects={
+            "banana": [(7.0, 8.0, 9.0)],
+            "apple": [(4.0, 5.0, 6.0), (10.0, 11.0, 12.0)],
+        },
+    ),
+    MoveExistingObjectFrontTask(
+        logger=bench_logger,
+        object_to_grab="banana",
+        objects={
+            "banana": [(7.0, 8.0, 9.0)],
+            "apple": [(4.0, 5.0, 6.0), (10.0, 11.0, 12.0)],
         },
     ),
 ]
