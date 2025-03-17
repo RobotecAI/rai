@@ -72,7 +72,6 @@ class ToolCallingAgentTask(ABC):
         Returns:
             bool: True if the tool call matches the expected name and args, False otherwise
         """
-        error_occurs = False
         if tool_call["name"] != expected_name:
             error_msg = f"Expected tool call name should be '{expected_name}', but got {tool_call['name']}."
             self.logger.error(error_msg)
@@ -80,14 +79,12 @@ class ToolCallingAgentTask(ABC):
             self.logger.error(
                 f"Expected tool call name should be '{expected_name}', but got {tool_call['name']}."
             )
-            error_occurs = True
+            return False
 
         if tool_call["args"] != expected_args:
-            self.logger.error(
-                f"Expected args for tool call should be {expected_args}, but got {tool_call['args']}."
-            )
-            error_occurs = True
-        if error_occurs:
+            error_msg = f"Expected args for expected tool call {expected_name} should be {expected_args}, but got {tool_call['args']}."
+            self.logger.error(error_msg)
+            self.result.errors.append(error_msg)
             return False
         return True
 
