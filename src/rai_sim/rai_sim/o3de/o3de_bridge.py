@@ -201,7 +201,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         return SceneState(entities=entities)
 
     def _is_ros2_stack_ready(
-        self, required_ros2_stack: dict[str, List[str]], retries: int = 120
+        self, required_ros2_stack: dict[str, List[str]], retries: int = 360
     ) -> bool:
         for i in range(retries):
             available_topics = self.connector.get_topics_names_and_types()
