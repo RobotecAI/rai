@@ -34,6 +34,12 @@ from rai_bench.tool_calling_agent_bench.mocked_tools import (
 loggers_type = logging.Logger
 
 
+class TaskParametrizationError(Exception):
+    """Exception raised when the task parameters are not valid."""
+
+    pass
+
+
 class GetROS2TopicsTask(ROS2ToolCallingAgentTask):
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
@@ -693,7 +699,7 @@ class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
             MockReceiveROS2MessageTool(),
             MockGetObjectPositionsTool(mock_objects=objects),
         ]
-        self.objects_types = objects
+        self.objects = objects
 
     def get_system_prompt(self) -> str:
         return """You are a ROS 2 expert helping a user with their ROS 2 questions. You have access to various tools that allow you to query the ROS 2 system.
@@ -706,9 +712,7 @@ class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
             str: Formatted prompt for the task
         """
         inflector = inflect.engine()
-        object_counts = {
-            obj: len(positions) for obj, positions in self.objects_types.items()
-        }
+        object_counts = {obj: len(positions) for obj, positions in self.objects.items()}
         formatted_objects = [
             inflector.plural(obj) if count > 1 else obj
             for obj, count in object_counts.items()
@@ -744,8 +748,482 @@ class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
                         "name": "get_object_positions",
                         "args": {"object_name": object_type},
                     }
-                    for object_type in self.objects_types
+                    for object_type in self.objects
                 ],
             )
         if not self.result.errors:
             self.result.success = True
+
+
+class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
+    """
+    Args:
+        objects (Dict[str, List[Tuple[float, float, float]]]): dictionary containing the object types and their positions. Object type should be passed as singular.
+        object_to_grab (str): object to grab. Object type should be passed as singular. Object to be grabbed should be defined in the objects argument with only one instance (one position).
+        logger (loggers_type | None, optional): Defaults to None.
+    Examples:
+        objects = {
+            "banana": [(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
+            "cube": [(0.7, 0.8, 0.9)],
+        }
+        object_to_grab = "cube"
+    """
+
+    def __init__(
+        self,
+        objects: Dict[str, List[Tuple[float, float, float]]],
+        object_to_grab: str,
+        logger: loggers_type | None = None,
+    ) -> None:
+        super().__init__(logger=logger)
+        self.expected_tools: List[BaseTool] = [
+            MockGetROS2TopicsNamesAndTypesTool(
+                mock_topics_names_and_types=[
+                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
+                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
+                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
+                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
+                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
+                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
+                ]
+            ),
+            MockGetObjectPositionsTool(
+                target_frame="panda_link0",
+                source_frame="RGBDCamera5",
+                camera_topic="/color_image5",
+                depth_topic="/depth_image5",
+                camera_info_topic="/color_camera_info5",
+                mock_objects=objects,
+            ),
+            MockMoveToPointTool(manipulator_frame="panda_link0"),
+            MockGetROS2ImageTool(),
+        ]
+        self.objects = objects
+        self.object_to_grab = object_to_grab
+        self._verify_args()
+
+    def get_system_prompt(self) -> str:
+        return """
+        You are a robotic arm with interfaces to detect and manipulate objects.
+        Here are the coordinates information:
+        x - front to back (positive is forward)
+        y - left to right (positive is right)
+        z - up to down (positive is up).
+        """
+
+    def get_prompt(self) -> str:
+        return f"Grab {self.object_to_grab}."
+
+    def _verify_args(self):
+        if self.object_to_grab not in self.objects:
+            error_message = f"Requested object to grab {self.object_to_grab} is not present in defined objects: {self.objects}."
+            self.result.errors.append(error_message)
+            raise TaskParametrizationError(error_message)
+
+        if len(self.objects[self.object_to_grab]) > 1:
+            error_message = f"Requested object to grab {self.object_to_grab} has more than one position in defined objects: {self.objects[self.object_to_grab]}."
+            self.result.errors.append(error_message)
+            raise TaskParametrizationError(error_message)
+
+    def verify_tool_calls(self, response: Dict[str, Any]):
+        """It is expected that the agent will request:
+        1. The tool get_object_positions to get the position of the object to grab.
+        2. The tool move_to_point to move to the position of the object to grab.
+        """
+        messages = response["messages"]
+        ai_messages: List[AIMessage] = [
+            message for message in messages if isinstance(message, AIMessage)
+        ]
+        expected_num_ai_messages = 3
+        if len(ai_messages) != expected_num_ai_messages:
+            error_msg = f"Expected {expected_num_ai_messages} AI messages, but got {len(ai_messages)}."
+            self.logger.error(error_msg)
+            self.result.errors.append(error_msg)
+
+        if ai_messages and self._check_tool_calls_num_in_ai_message(
+            ai_messages[0], expected_num=1
+        ):
+            self._check_tool_call(
+                tool_call=ai_messages[0].tool_calls[0],
+                expected_name="get_object_positions",
+                expected_args={"object_name": self.object_to_grab},
+            )
+
+        if len(ai_messages) > 1 and self._check_tool_calls_num_in_ai_message(
+            ai_messages[1], expected_num=1
+        ):
+            self._check_tool_call(
+                tool_call=ai_messages[1].tool_calls[0],
+                expected_name="move_to_point",
+                expected_args=self._object_position_and_task_to_dict(
+                    object_position=self.objects[self.object_to_grab][0], task="grab"
+                ),
+            )
+        if not self.result.errors:
+            self.result.success = True
+
+    def _object_position_and_task_to_dict(
+        self, object_position: Tuple[float, float, float], task: str
+    ) -> Dict[str, Any]:
+        return {
+            "x": object_position[0],
+            "y": object_position[1],
+            "z": object_position[2],
+            "task": task,
+        }
+
+
+class GrabNotExistingObjectTask(ROS2ToolCallingAgentTask):
+    """
+    Args:
+        objects (Dict[str, List[Tuple[float, float, float]]]): dictionary containing the object types and their positions. Object type should be passed as singular.
+        object_to_grab (str): object to grab. Object type should be passed as singular. Object to be grabbed should NOT be defined in the objects argument.
+        logger (loggers_type | None, optional): Defaults to None.
+    Examples:
+        objects = {
+            "banana": [(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
+            "cube": [(0.7, 0.8, 0.9)],
+        }
+        object_to_grab = "apple"
+    """
+
+    def __init__(
+        self,
+        objects: Dict[str, List[Tuple[float, float, float]]],
+        object_to_grab: str,
+        logger: loggers_type | None = None,
+    ) -> None:
+        super().__init__(logger=logger)
+        self.expected_tools: List[BaseTool] = [
+            MockGetROS2TopicsNamesAndTypesTool(
+                mock_topics_names_and_types=[
+                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
+                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
+                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
+                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
+                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
+                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
+                ]
+            ),
+            MockGetObjectPositionsTool(
+                target_frame="panda_link0",
+                source_frame="RGBDCamera5",
+                camera_topic="/color_image5",
+                depth_topic="/depth_image5",
+                camera_info_topic="/color_camera_info5",
+                mock_objects=objects,
+            ),
+            MockMoveToPointTool(manipulator_frame="panda_link0"),
+            MockGetROS2ImageTool(),
+        ]
+        self.objects = objects
+        self.object_to_grab = object_to_grab
+        self._verify_args()
+
+    def get_system_prompt(self) -> str:
+        return """
+        You are a robotic arm with interfaces to detect and manipulate objects.
+        Here are the coordinates information:
+        x - front to back (positive is forward)
+        y - left to right (positive is right)
+        z - up to down (positive is up).
+        """
+
+    def get_prompt(self) -> str:
+        return f"Grab {self.object_to_grab}."
+
+    def _verify_args(self):
+        if self.object_to_grab in self.objects:
+            error_message = f"Requested object to grab {self.object_to_grab} is present in defined objects: {self.objects} but should not be."
+            self.result.errors.append(error_message)
+            raise TaskParametrizationError(error_message)
+
+    def verify_tool_calls(self, response: Dict[str, Any]):
+        """It is expected that the agent will request the tool get_object_positions to get the position of the object to grab.
+        It is expected that no positions are returned and agent will not request any more tool.
+        """
+        messages = response["messages"]
+        ai_messages: List[AIMessage] = [
+            message for message in messages if isinstance(message, AIMessage)
+        ]
+        expected_num_ai_messages = 2
+        if len(ai_messages) != expected_num_ai_messages:
+            error_msg = f"Expected {expected_num_ai_messages} AI messages, but got {len(ai_messages)}."
+            self.logger.error(error_msg)
+            self.result.errors.append(error_msg)
+
+        if ai_messages and self._check_tool_calls_num_in_ai_message(
+            ai_messages[0], expected_num=1
+        ):
+            self._check_tool_call(
+                tool_call=ai_messages[0].tool_calls[0],
+                expected_name="get_object_positions",
+                expected_args={"object_name": self.object_to_grab},
+            )
+
+        if not self.result.errors:
+            self.result.success = True
+
+    def _object_position_and_task_to_dict(
+        self, object_position: Tuple[float, float, float], task: str
+    ) -> Dict[str, Any]:
+        return {
+            "x": object_position[0],
+            "y": object_position[1],
+            "z": object_position[2],
+            "task": task,
+        }
+
+
+class MoveExistingObjectLeftTask(ROS2ToolCallingAgentTask):
+    """
+    Args:
+        objects (Dict[str, List[Tuple[float, float, float]]]): dictionary containing the object types and their positions. Object type should be passed as singular.
+        object_to_grab (str): object to grab. Object type should be passed as singular. Object to be grabbed should be defined in the objects argument with only one instance (one position).
+        logger (loggers_type | None, optional): Defaults to None.
+    Examples:
+        objects = {
+            "banana": [(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
+            "cube": [(0.7, 0.8, 0.9)],
+        }
+        object_to_grab = "cube"
+    """
+
+    def __init__(
+        self,
+        objects: Dict[str, List[Tuple[float, float, float]]],
+        object_to_grab: str,
+        logger: loggers_type | None = None,
+    ) -> None:
+        super().__init__(logger=logger)
+        self.expected_tools: List[BaseTool] = [
+            MockGetROS2TopicsNamesAndTypesTool(
+                mock_topics_names_and_types=[
+                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
+                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
+                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
+                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
+                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
+                ]
+            ),
+            MockGetObjectPositionsTool(
+                target_frame="panda_link0",
+                source_frame="RGBDCamera5",
+                camera_topic="/color_image5",
+                depth_topic="/depth_image5",
+                camera_info_topic="/color_camera_info5",
+                mock_objects=objects,
+            ),
+            MockMoveToPointTool(manipulator_frame="panda_link0"),
+            MockGetROS2ImageTool(),
+        ]
+        self.objects = objects
+        self.object_to_grab = object_to_grab
+        self._verify_args()
+
+    def get_system_prompt(self) -> str:
+        return """
+        You are a robotic arm with interfaces to detect and manipulate objects.
+        Here are the coordinates information:
+        x - front to back (positive is forward)
+        y - left to right (positive is right)
+        z - up to down (positive is up).
+        Coordinates are in meters.
+        """
+
+    def get_prompt(self) -> str:
+        return f"Move {self.object_to_grab} 20 cm to the left."
+
+    def _verify_args(self):
+        if self.object_to_grab not in self.objects:
+            error_message = f"Requested object to grab {self.object_to_grab} is not present in defined objects: {self.objects}."
+            self.result.errors.append(error_message)
+            raise TaskParametrizationError(error_message)
+
+        if len(self.objects[self.object_to_grab]) > 1:
+            error_message = f"Requested object to grab {self.object_to_grab} has more than one position in defined objects: {self.objects[self.object_to_grab]}."
+            self.result.errors.append(error_message)
+            raise TaskParametrizationError(error_message)
+
+    def verify_tool_calls(self, response: Dict[str, Any]):
+        messages = response["messages"]
+        ai_messages: List[AIMessage] = [
+            message for message in messages if isinstance(message, AIMessage)
+        ]
+        expected_num_ai_messages = 4
+        if len(ai_messages) != expected_num_ai_messages:
+            error_msg = f"Expected {expected_num_ai_messages} AI messages, but got {len(ai_messages)}."
+            self.logger.error(error_msg)
+            self.result.errors.append(error_msg)
+
+        if ai_messages and self._check_tool_calls_num_in_ai_message(
+            ai_messages[0], expected_num=1
+        ):
+            self._check_tool_call(
+                tool_call=ai_messages[0].tool_calls[0],
+                expected_name="get_object_positions",
+                expected_args={"object_name": self.object_to_grab},
+            )
+
+        if len(ai_messages) > 1 and self._check_tool_calls_num_in_ai_message(
+            ai_messages[1], expected_num=1
+        ):
+            self._check_tool_call(
+                tool_call=ai_messages[1].tool_calls[0],
+                expected_name="move_to_point",
+                expected_args=self._object_position_and_task_to_dict(
+                    object_position=self.objects[self.object_to_grab][0], task="grab"
+                ),
+            )
+
+        if len(ai_messages) > 2 and self._check_tool_calls_num_in_ai_message(
+            ai_messages[2], expected_num=1
+        ):
+            object_position_and_task = self._object_position_and_task_to_dict(
+                object_position=self.objects[self.object_to_grab][0], task="drop"
+            )
+            object_position_and_task["y"] = object_position_and_task["y"] - 0.2
+            self._check_tool_call(
+                tool_call=ai_messages[2].tool_calls[0],
+                expected_name="move_to_point",
+                expected_args=object_position_and_task,
+            )
+
+        if not self.result.errors:
+            self.result.success = True
+
+    def _object_position_and_task_to_dict(
+        self, object_position: Tuple[float, float, float], task: str
+    ) -> Dict[str, Any]:
+        return {
+            "x": object_position[0],
+            "y": object_position[1],
+            "z": object_position[2],
+            "task": task,
+        }
+
+
+class MoveExistingObjectFrontTask(ROS2ToolCallingAgentTask):
+    """
+    Args:
+        objects (Dict[str, List[Tuple[float, float, float]]]): dictionary containing the object types and their positions. Object type should be passed as singular.
+        object_to_grab (str): object to grab. Object type should be passed as singular. Object to be grabbed should be defined in the objects argument with only one instance (one position).
+        logger (loggers_type | None, optional): Defaults to None.
+    Examples:
+        objects = {
+            "banana": [(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
+            "cube": [(0.7, 0.8, 0.9)],
+        }
+        object_to_grab = "cube"
+    """
+
+    def __init__(
+        self,
+        objects: Dict[str, List[Tuple[float, float, float]]],
+        object_to_grab: str,
+        logger: loggers_type | None = None,
+    ) -> None:
+        super().__init__(logger=logger)
+        self.expected_tools: List[BaseTool] = [
+            MockGetROS2TopicsNamesAndTypesTool(
+                mock_topics_names_and_types=[
+                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
+                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
+                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
+                ]
+            ),
+            MockGetObjectPositionsTool(
+                target_frame="panda_link0",
+                source_frame="RGBDCamera5",
+                camera_topic="/color_image5",
+                depth_topic="/depth_image5",
+                camera_info_topic="/color_camera_info5",
+                mock_objects=objects,
+            ),
+            MockMoveToPointTool(manipulator_frame="panda_link0"),
+            MockGetROS2ImageTool(),
+        ]
+        self.objects = objects
+        self.object_to_grab = object_to_grab
+        self._verify_args()
+
+    def get_system_prompt(self) -> str:
+        return """
+        You are a robotic arm with interfaces to detect and manipulate objects.
+        Here are the coordinates information:
+        x - front to back (positive is forward)
+        y - left to right (positive is right)
+        z - up to down (positive is up).
+        Coordinates are in meters.
+        """
+
+    def get_prompt(self) -> str:
+        return f"Move {self.object_to_grab} 60 cm to the front."
+
+    def _verify_args(self):
+        if self.object_to_grab not in self.objects:
+            error_message = f"Requested object to grab {self.object_to_grab} is not present in defined objects: {self.objects}."
+            self.result.errors.append(error_message)
+            raise TaskParametrizationError(error_message)
+
+        if len(self.objects[self.object_to_grab]) > 1:
+            error_message = f"Requested object to grab {self.object_to_grab} has more than one position in defined objects: {self.objects[self.object_to_grab]}."
+            self.result.errors.append(error_message)
+            raise TaskParametrizationError(error_message)
+
+    def verify_tool_calls(self, response: Dict[str, Any]):
+        messages = response["messages"]
+        ai_messages: List[AIMessage] = [
+            message for message in messages if isinstance(message, AIMessage)
+        ]
+        expected_num_ai_messages = 4
+        if len(ai_messages) != expected_num_ai_messages:
+            error_msg = f"Expected {expected_num_ai_messages} AI messages, but got {len(ai_messages)}."
+            self.logger.error(error_msg)
+            self.result.errors.append(error_msg)
+
+        if ai_messages and self._check_tool_calls_num_in_ai_message(
+            ai_messages[0], expected_num=1
+        ):
+            self._check_tool_call(
+                tool_call=ai_messages[0].tool_calls[0],
+                expected_name="get_object_positions",
+                expected_args={"object_name": self.object_to_grab},
+            )
+
+        if len(ai_messages) > 1 and self._check_tool_calls_num_in_ai_message(
+            ai_messages[1], expected_num=1
+        ):
+            self._check_tool_call(
+                tool_call=ai_messages[1].tool_calls[0],
+                expected_name="move_to_point",
+                expected_args=self._object_position_and_task_to_dict(
+                    object_position=self.objects[self.object_to_grab][0], task="grab"
+                ),
+            )
+
+        if len(ai_messages) > 2 and self._check_tool_calls_num_in_ai_message(
+            ai_messages[2], expected_num=1
+        ):
+            object_position_and_task = self._object_position_and_task_to_dict(
+                object_position=self.objects[self.object_to_grab][0], task="drop"
+            )
+            object_position_and_task["x"] = object_position_and_task["x"] + 0.6
+            self._check_tool_call(
+                tool_call=ai_messages[2].tool_calls[0],
+                expected_name="move_to_point",
+                expected_args=object_position_and_task,
+            )
+
+        if not self.result.errors:
+            self.result.success = True
+
+    def _object_position_and_task_to_dict(
+        self, object_position: Tuple[float, float, float], task: str
+    ) -> Dict[str, Any]:
+        return {
+            "x": object_position[0],
+            "y": object_position[1],
+            "z": object_position[2],
+            "task": task,
+        }
