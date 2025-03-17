@@ -14,9 +14,6 @@
 from rai_bench.o3de_test_bench.tasks.build_tower_task import (  # type: ignore
     BuildCubeTowerTask,
 )
-from rai_bench.o3de_test_bench.tasks.change_orientation_task import (  # type: ignore
-    RotateObjectTask,
-)
 from rai_bench.o3de_test_bench.tasks.group_objects_task import (  # type: ignore
     GroupObjectsTask,
 )
@@ -28,6 +25,9 @@ from rai_bench.o3de_test_bench.tasks.place_at_coord_task import (  # type: ignor
 )
 from rai_bench.o3de_test_bench.tasks.place_cubes_task import (  # type: ignore
     PlaceCubesTask,
+)
+from rai_bench.o3de_test_bench.tasks.rotate_object_task import (  # type: ignore
+    RotateObjectTask,
 )
 
 __all__ = [
