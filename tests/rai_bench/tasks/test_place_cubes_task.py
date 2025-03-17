@@ -16,7 +16,7 @@ from rai_bench.o3de_test_bench.tasks import PlaceCubesTask  # type: ignore
 from tests.rai_bench.conftest import create_entity
 
 
-def test_calculate_correct_all_adjacent() -> None:
+def test_calculate_all_adjacent() -> None:
     task = PlaceCubesTask(threshold_distance=0.15)
     # Create three cubes that are all close to each other.
     e1 = create_entity("cube1", "red_cube", 0.0, 0.0, 0.0)
@@ -27,7 +27,7 @@ def test_calculate_correct_all_adjacent() -> None:
     assert incorrect == 0
 
 
-def test_calculate_correct_mixed() -> None:
+def test_calculate_one_separated() -> None:
     task = PlaceCubesTask(threshold_distance=0.15)
     # Two cubes close together and one isolated.
     e1 = create_entity("cube1", "red_cube", 0.0, 0.0, 0.0)
@@ -38,7 +38,7 @@ def test_calculate_correct_mixed() -> None:
     assert incorrect == 1
 
 
-def test_calculate_correct_none_adjacent() -> None:
+def test_calculate_none_adjacent() -> None:
     task = PlaceCubesTask(threshold_distance=0.15)
     # All cubes are far apart.
     e1 = create_entity("cube1", "red_cube", 0.0, 0.0, 0.0)
@@ -49,7 +49,7 @@ def test_calculate_correct_none_adjacent() -> None:
     assert incorrect == 3
 
 
-def test_calculate_correct_2_clusters_adjacent() -> None:
+def test_calculate_2_clusters_adjacent() -> None:
     task = PlaceCubesTask(threshold_distance=0.15)
     # All cubes form 2 clusters
     e1 = create_entity("cube1", "red_cube", 0.0, 0.0, 0.0)

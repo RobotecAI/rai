@@ -35,7 +35,7 @@ class BuildCubeTowerTask(ManipulationTask):
         logger: loggers_type | None = None,
     ):
         """
-        This task requires that cubes of the specified types be arranged into a single vertical tower.
+        This task requires that cubes of the specified types are arranged into a single vertical tower.
         Only objects with types specified in `obj_types` (which must be a subset of the allowed objects)
         are considered. Cubes are grouped by their z-coordinate using a horizontal tolerance, and only
         groups with more than one cube are considered towers. The height of the tallest tower determines
@@ -93,7 +93,7 @@ class BuildCubeTowerTask(ManipulationTask):
 
         This task does not consider a single cube as correctly placed.
         Cubes are grouped by their z-coordinate using a horizontal tolerance.
-        The highest tower (i.e., the group with the most cubes) is considered correct,
+        The highest tower (the group with the most cubes) is considered correct,
         and all other cubes are counted as incorrect.
 
         Parameters

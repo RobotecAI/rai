@@ -33,11 +33,10 @@ loggers_type = Union[RcutilsLogger, logging.Logger]
 
 
 class ManipulationTask(Task, ABC):
-    # TODO (jm) is this clear, what obj_types is?
     """
     Common class for manipulaiton tasks
-    obj_types are objects types that will be considered as the subject of the task.
-    That means that based on these objects simulation config will be evaluated
+    obj_types variable represents object types that will be considered as the subject of the task.
+    That means that based on positions of these objects simulation config will be evaluated
     and score will be calculated.
 
     Example
@@ -46,6 +45,7 @@ class ManipulationTask(Task, ABC):
         and then calculated score based on how many carrots were moved to the left side
     """
 
+    # TODO (jm) is this clear, what obj_types is?
     obj_types: List[str] = []
 
     @abstractmethod
@@ -123,10 +123,8 @@ class ManipulationTask(Task, ABC):
         self, simulation_bridge: SimulationBridge[SimulationConfigT]
     ) -> tuple[int, int]:
         """
-        Calculate the current placements of objects in the simulation.
-
-        Filters the current scene entities by the allowed object types and determines
-        the number of correctly and incorrectly placed objects at the end of the simulation.
+        Get the current placements of objects in the simulation
+        and calculated their current placements
 
         Parameters
         ----------
@@ -175,7 +173,6 @@ class ManipulationTask(Task, ABC):
         EntitiesMismatchException
             If the total number of initial entities does not match the total number of current entities.
         """
-        # TODO (jm) probably redundant as we chack number of incorrect when creating scenario
         initially_correct, initially_incorrect = self.calculate_correct(
             entities=simulation_bridge.spawned_entities
         )

@@ -32,8 +32,7 @@ class GroupObjectsTask(ManipulationTask):
         logger: loggers_type | None = None,
     ):
         """
-        This task instructs the robotic system to manipulate objects so that objects of each
-        specified type form a single, well-defined cluster.
+        This task requires that objects of specified types form a single, well-defined cluster.
 
         Parameters
         ----------
