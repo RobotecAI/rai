@@ -69,7 +69,7 @@ class Entity(BaseModel):
     pose: Pose = Field(description="Initial pose of the entity")
 
     def __hash__(self) -> int:
-        return hash(self.name)  # Use ID for hashing
+        return hash(self.name)
 
     def __eq__(self, other) -> bool:
         if isinstance(other, Entity) or isinstance(other, SpawnedEntity):

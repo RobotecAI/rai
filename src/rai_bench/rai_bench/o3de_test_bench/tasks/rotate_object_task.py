@@ -44,7 +44,7 @@ class RotateObjectTask(ManipulationTask):
         target_quaternion : Tuple[float, float, float, float]
             The target rotation expressed as a quaternion (x, y, z, w).
         """
-        super().__init__(logger)
+        super().__init__(logger=logger)
         self.obj_types = obj_types
         self.target_quaternion = target_quaternion
 

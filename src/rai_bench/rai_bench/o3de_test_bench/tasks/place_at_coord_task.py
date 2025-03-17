@@ -35,6 +35,8 @@ class PlaceObjectAtCoordTask(ManipulationTask):
         logger: loggers_type | None = None,
     ):
         """
+        This task requires placing one object of specified type into specified coords.
+
         Parameters
         ----------
         obj_type : str

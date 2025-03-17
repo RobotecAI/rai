@@ -63,7 +63,7 @@ class Task(ABC):
         """
         Validate whether the provided simulation configuration is suitable for this task.
 
-                Returns
+        Returns
         -------
         bool
             True if the configuration is suitable, False otherwise.
@@ -146,9 +146,6 @@ class Task(ABC):
         bool
             True if the Euclidean distance between pos1 and pos2 is less than threshold_distance, False otherwise.
         """
-        self.logger.debug(  # type: ignore
-            f"Euclidean distance: {self.euclidean_distance(pos1, pos2)}, pos1: {pos1}, pos2: {pos2}"
-        )
         return self.euclidean_distance(pos1, pos2) < threshold_distance
 
     def is_adjacent_to_any(
@@ -325,8 +322,8 @@ class Task(ABC):
         Group entities that are aligned along the z axis based on their x and y coordinates.
 
         Entities are first sorted by their x and y coordinates. Then, each entity is added to an existing group
-        if its (x, y) distance from the first entity in the group is within the specified margin; otherwise,
-        a new group is created.
+        if its (x, y) distance from the first entity in the group is within the specified margin.
+        Otherwise, a new group is created.
 
         Parameters
         ----------

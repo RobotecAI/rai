@@ -26,6 +26,14 @@ loggers_type = Union[RcutilsLogger, logging.Logger]
 
 class MoveObjectsToLeftTask(ManipulationTask):
     def __init__(self, obj_types: List[str], logger: loggers_type | None = None):
+        """
+        This task requires moving all objects of specified types to the left side of the table (positive y).
+
+        Parameters
+        ----------
+        obj_types : List[str]
+            A list of object types to be moved.
+        """
         super().__init__(logger=logger)
         self.obj_types = obj_types
 

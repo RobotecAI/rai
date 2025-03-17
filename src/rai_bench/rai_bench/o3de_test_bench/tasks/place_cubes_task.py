@@ -33,6 +33,8 @@ class PlaceCubesTask(ManipulationTask):
         logger: loggers_type | None = None,
     ):
         """
+        This task requires that evry cube is placed to at least one other cube.
+
         Parameters
         ----------
         threshold_distance : float, optional

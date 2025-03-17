@@ -16,7 +16,7 @@ from rai_bench.o3de_test_bench.tasks import BuildCubeTowerTask  # type: ignore
 from tests.rai_bench.conftest import create_entity
 
 
-def test_calculate_correct_proper_tower() -> None:
+def test_calculate_proper_tower() -> None:
     task = BuildCubeTowerTask(["red_cube"])
     e1 = create_entity("cube1", "red_cube", 0.0, 0.0, 0.0)
     e2 = create_entity("cube2", "red_cube", 0.01, 0.01, 0.03)
@@ -41,7 +41,7 @@ def test_calculate_multiple_groups() -> None:
     assert incorrect == 2
 
 
-def test_calculate_correct_invalid_object() -> None:
+def test_calculate_invalid_entity() -> None:
     task = BuildCubeTowerTask(["red_cube"])
     e1 = create_entity("cube1", "red_cube", 0.0, 0.0, 0.0)
     e2 = create_entity("cube2", "yellow_cube", 0.0, 0.0, 0.03)
@@ -52,7 +52,7 @@ def test_calculate_correct_invalid_object() -> None:
     assert incorrect == 2
 
 
-def test_calculate_correct_single_entity() -> None:
+def test_calculate_single_entity() -> None:
     task = BuildCubeTowerTask(["red_cube"])
     e1 = create_entity("cube1", "red_cube", 0.0, 0.0, 0.0)
     correct, incorrect = task.calculate_correct([e1])

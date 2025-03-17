@@ -19,7 +19,7 @@ from rai_sim.simulation_bridge import Rotation  # type: ignore
 from tests.rai_bench.conftest import create_entity  # Assumed helper
 
 
-def test_calculate_correct_perfect_match() -> None:
+def test_calculate_perfect_match() -> None:
     target = Rotation(x=0.0, y=0.0, z=0.0, w=1.0)
     task = RotateObjectTask(["apple"], target_quaternion=target)
     e1 = create_entity(
@@ -30,7 +30,7 @@ def test_calculate_correct_perfect_match() -> None:
     assert incorrect == 0
 
 
-def test_calculate_correct_borderline() -> None:
+def test_calculate_error_under_threshold() -> None:
     target = Rotation(x=0.0, y=0.0, z=0.0, w=1.0)
     task = RotateObjectTask(["apple"], target_quaternion=target)
     half_angle = math.radians(3.0)
@@ -44,7 +44,7 @@ def test_calculate_correct_borderline() -> None:
     assert incorrect == 0
 
 
-def test_calculate_correct_multiple_types() -> None:
+def test_calculate_multiple_types() -> None:
     target = Rotation(x=0.0, y=0.0, z=0.0, w=1.0)
     task = RotateObjectTask(["apple", "carrot"], target_quaternion=target)
     half_angle = math.radians(1.0)
@@ -61,7 +61,7 @@ def test_calculate_correct_multiple_types() -> None:
     assert incorrect == 0
 
 
-def test_calculate_correct_mixed_types() -> None:
+def test_calculate_mixed_types() -> None:
     target = Rotation(x=0.0, y=0.0, z=0.0, w=1.0)
     task = RotateObjectTask(["yellow_cube", "carrot"], target_quaternion=target)
     half_angle = math.radians(1.0)
@@ -78,7 +78,7 @@ def test_calculate_correct_mixed_types() -> None:
     assert incorrect == 0
 
 
-def test_calculate_correct_incorrect() -> None:
+def test_calculate_error_above_threshold() -> None:
     target = Rotation(x=0.0, y=0.0, z=0.0, w=1.0)
     task = RotateObjectTask(["apple"], target_quaternion=target)
     half_angle = math.radians(5)

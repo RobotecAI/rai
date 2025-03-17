@@ -16,7 +16,7 @@ from rai_bench.o3de_test_bench.tasks import MoveObjectsToLeftTask  # type: ignor
 from tests.rai_bench.conftest import create_entity
 
 
-def test_calculate_correct_all_on_left() -> None:
+def test_calculate_all_on_left() -> None:
     task = MoveObjectsToLeftTask(["red_cube", "blue_cube"])
     e1 = create_entity("obj1", "red_cube", 0.0, 1.0, 0.0)  # y > 0 → correct
     e2 = create_entity("obj2", "blue_cube", 0.0, 0.5, 0.0)  # y > 0 → correct
@@ -25,7 +25,7 @@ def test_calculate_correct_all_on_left() -> None:
     assert incorrect == 0
 
 
-def test_calculate_correct_some_not_on_left() -> None:
+def test_calculate_some_not_on_left() -> None:
     task = MoveObjectsToLeftTask(["red_cube", "blue_cube"])
     e1 = create_entity("obj1", "red_cube", 0.0, 1.0, 0.0)  # y > 0 → correct
     e2 = create_entity("obj2", "blue_cube", 0.0, -0.5, 0.0)  # y < 0 → incorrect
@@ -34,7 +34,7 @@ def test_calculate_correct_some_not_on_left() -> None:
     assert incorrect == 1
 
 
-def test_calculate_correct_ignore_other_types() -> None:
+def test_calculate_other_types() -> None:
     task = MoveObjectsToLeftTask(["red_cube", "blue_cube"])
     e1 = create_entity("obj1", "red_cube", 0.0, 1.0, 0.0)  # valid type, y > 0 → correct
     e2 = create_entity(

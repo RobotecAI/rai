@@ -354,8 +354,8 @@ def hard_scenarios(
     In this packet:
         MoveObjectsToLeftTask with multiple object types to move
         PlaceCubesTask with small threshold
-        BuildTowerTask
-        GroupObjectsTask
+        BuildTowerTask with all cubes available
+        GroupObjectsTask with 1-2 types of objects to be grouped
 
     This level of difficulty requires recognizing multiple proper type of objects.
     All scenarios will require moving multiple objects.
@@ -483,8 +483,8 @@ def very_hard_scenarios(
     This packet contains harder variants of 'hard' tasks with majority of scenes containg 8+ objects,
     Objects can be positioned in an unusual way, for example stacked.
     In this packet:
-        BuildTowerTask
-        GroupObjectsTask
+        BuildTowerTask with only ceratin type of cubes
+        GroupObjectsTask with multiple objects to be grouped
 
     This level of difficulty requires recognizing multiple proper type of objects.
     All scenarios will require moving multiple objects.
