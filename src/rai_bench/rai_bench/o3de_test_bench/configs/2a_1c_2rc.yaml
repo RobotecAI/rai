@@ -1,0 +1,75 @@
+entities:
+  - name: apple1
+    prefab_name: apple
+    pose:
+      translation:
+        x: 0.1
+        y: -0.3
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+  - name: apple2
+    prefab_name: apple
+    pose:
+      translation:
+        x: 0.35
+        y: 0.1
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+
+  - name: corn1
+    prefab_name: corn
+    pose:
+      translation:
+        x: 0.2
+        y: 0.0
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+
+  - name: corn2
+    prefab_name: corn
+    pose:
+      translation:
+        x: 0.1
+        y: -0.45
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+  - name: red_cube1
+    prefab_name: red_cube
+    pose:
+      translation:
+        x: 0.05
+        y: 0.25
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+  - name: red_cube2
+    prefab_name: red_cube
+    pose:
+      translation:
+        x: 0.25
+        y: -0.5
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
