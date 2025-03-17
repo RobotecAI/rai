@@ -1,12 +1,10 @@
 ## RAI Benchmark
 
-## Description
+### Description
 
 The RAI Bench is a package including benchmarks and providing frame for creating new benchmarks
 
-## Frame Components
-
-Frame components can be found in `src/rai_bench/rai_bench/benchmark_model.py`
+### Frame Components
 
 - `Task`
 - `Scenario`
@@ -16,17 +14,15 @@ For more information about these classes go to -> `src/rai_bench/rai_bench/bench
 
 ### O3DE TEST BENCHMARK
 
-O3DE Test Benchmark (`src/rai_bench/rai_bench/o3de_test_bench/`), contains 2 Tasks(`tasks/`) - GrabCarrotTask and PlaceCubesTask (these tasks implement calculating scores) and 4 scene_configs(`configs/`) for O3DE robotic arm simulation.
+The O3DE Test Benchmark (`src/rai_bench/rai_bench/o3de_test_bench/`) provides tasks and scene configurations for robotic arm manipulation task. The tasks use a common `ManipulationTask` logic and can be parameterized, which allows for many task variants. The current tasks include:
 
-Both tasks calculate score, taking into consideration 4 values:
+- **MoveObjectToLeftTask**
+- **GroupObjectsTask**
+- **BuildCubeTowerTask**
+- **PlaceObjectAtCoordTask**
+- **RotateObjectTask** (currently not applicable due to limitations in the ManipulatorMoveTo tool)
 
-- initially_misplaced_now_correct
-- initially_misplaced_still_incorrect
-- initially_correct_still_correct
-- initially_correct_now_incorrect
-
-The result is a value between 0 and 1, calculated like (initially_misplaced_now_correct + initially_correct_still_correct) / number_of_initial_objects.
-This score is calculated at the beggining and at the end of each scenario.
+The result of a task is a value between 0 and 1, calculated like initially_misplaced_now_correct / initially_misplaced. This score is calculated at the end of each scenario.
 
 ### Example usage
 
@@ -52,3 +48,32 @@ scenarios = Benchmark.create_scenarios(
 ```
 
 which will result in list of scenarios with combination of every possible task and scene(task decides if scene config is suitable for it).
+
+or can be imported from exisitng packets (`src/rai_bench/rai_bench/examples/o3de_test_bench/scenarios.py`):
+
+```python
+t_scenarios = trivial_scenarios(
+        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    )
+e_scenarios = easy_scenarios(
+    configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+)
+m_scenarios = medium_scenarios(
+    configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+)
+h_scenarios = hard_scenarios(
+    configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+)
+vh_scenarios = very_hard_scenarios(
+    configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+)
+```
+
+which are grouped by their subjective difficulty. For now there are 10 trivial, 42 easy, 23 medium, 38 hard and 47 very hard scenarios.
+
+### Development
+
+When creating new task or changing existing ones, make sure to add unit tests for score calculation in `tests/rai_bench/tasks/`.
+This applies also when you are adding or changing the helper methods in `Task` or `ManipulationTask`.
+
+The number of scenarios can be easily extened without writing new tasks, by increasing number of variants of the same task and adding more simulation configs but it won't improve variety of scenarios as much as creating new tasks.
