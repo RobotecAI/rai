@@ -37,6 +37,10 @@ from rai_open_set_vision.tools import GetGrabbingPointTool
 from rai_bench.benchmark_model import Benchmark  # type: ignore
 from rai_bench.o3de_test_bench.scenarios import (  # type: ignore
     easy_scenarios,
+    hard_scenarios,
+    medium_scenarios,
+    trivial_scenarios,
+    very_hard_scenarios,
 )
 from rai_sim.o3de.o3de_bridge import (  # type: ignore
     O3DEngineArmManipulationBridge,
@@ -143,11 +147,20 @@ if __name__ == "__main__":
     #     ),
     # ]
 
-    ### Create scenarios automatically
-    # scenarios = trivial_scenarios(
-    #     configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
-    # )
-    scenarios = easy_scenarios(
+    ### import ready scenarios
+    t_scenarios = trivial_scenarios(
+        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    )
+    e_scenarios = easy_scenarios(
+        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    )
+    m_scenarios = medium_scenarios(
+        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    )
+    h_scenarios = hard_scenarios(
+        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    )
+    vh_scenarios = very_hard_scenarios(
         configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
     )
     o3de = O3DEngineArmManipulationBridge(connector, logger=agent_logger)
@@ -155,7 +168,7 @@ if __name__ == "__main__":
     results_filename = f"{experiment_dir}/results.csv"
     benchmark = Benchmark(
         simulation_bridge=o3de,
-        scenarios=scenarios,
+        scenarios=t_scenarios[:5],
         logger=bench_logger,
         results_filename=results_filename,
     )
@@ -164,7 +177,7 @@ if __name__ == "__main__":
         translation=Translation(x=0.1, y=0.5, z=0.4),
         rotation=Rotation(x=1.0, y=0.0, z=0.0, w=0.0),
     )
-    for i, s in enumerate(scenarios):
+    for i, s in enumerate(vh_scenarios):
         agent = create_conversational_agent(
             llm, tools, system_prompt, logger=agent_logger
         )
