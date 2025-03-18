@@ -16,6 +16,7 @@
 from typing import List
 
 from langchain_core.callbacks.base import BaseCallbackHandler
+from langchain_core.tracers.langchain import LangChainTracer
 from langfuse.callback import CallbackHandler
 from rai.utils.model_initialization import get_tracing_callbacks
 
@@ -25,9 +26,8 @@ class ScoreTracingHandler:
     Class to handle sending scores to tracing backends.
     """
 
-    # TODO (mkotynia) currently only for langfuse, to handle langsmith tracing as well
-    # TODO (mkotynia) handle grouping single benchmark scores to sessions (supported by langfuse)
-    # TODO (mkotynia) trace and send more data - e.g. execution time
+    # TODO (mkotynia) handle grouping single benchmark scores to sessions
+    # TODO (mkotynia) trace and send more metadata?
     @staticmethod
     def get_callbacks() -> List[BaseCallbackHandler]:
         return get_tracing_callbacks()
@@ -36,6 +36,10 @@ class ScoreTracingHandler:
     def get_trace_id(callback: BaseCallbackHandler):
         if isinstance(callback, CallbackHandler):
             return callback.get_trace_id()
+        if isinstance(callback, LangChainTracer):
+            if callback.latest_run:
+                return str(callback.latest_run.id)
+            raise ValueError("LangChainTracer has no latest_run")
         raise NotImplementedError(
             f"Callback {callback} of type {callback.__class__.__name__} not supported"
         )
@@ -51,7 +55,15 @@ class ScoreTracingHandler:
                 value=float(success),
                 comment="; ".join(errors) if errors else "",
             )
-            return
+            return None
+        if isinstance(callback, LangChainTracer):
+            callback.client.create_feedback(
+                run_id=trace_id,
+                key="tool calls result",
+                score=float(success),
+                comment="; ".join(errors) if errors else "",
+            )
+            return None
         raise NotImplementedError(
             f"Callback {callback} of type {callback.__class__.__name__} not supported"
         )

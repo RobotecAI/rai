@@ -20,6 +20,8 @@ from typing import List, Literal, Optional, cast
 import coloredlogs
 import tomli
 from langchain_core.callbacks.base import BaseCallbackHandler
+from langchain_core.tracers.langchain import LangChainTracer
+from langsmith import Client
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -64,6 +66,7 @@ class LangfuseConfig:
 @dataclass
 class LangsmithConfig:
     use_langsmith: bool
+    host: str
 
 
 @dataclass
@@ -193,4 +196,10 @@ def get_tracing_callbacks(
         api_key = os.getenv("LANGCHAIN_API_KEY", None)
         if api_key is None:
             raise ValueError("LANGCHAIN_API_KEY is not set")
+        callback = LangChainTracer(
+            project_name=config.tracing.project,
+            client=Client(api_key=api_key, api_url=config.tracing.langsmith.host),
+        )
+        callbacks.append(callback)
+
     return callbacks
