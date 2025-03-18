@@ -16,7 +16,6 @@ import copy
 import logging
 import time
 import uuid
-from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from functools import partial
@@ -380,6 +379,8 @@ class TopicConfig:
     auto_qos_matching: bool = True
     qos_profile: Optional[QoSProfile] = None
     is_subscriber: bool = False
+    queue_maxsize: Optional[int] = None
+    overflow_policy: Optional[Literal["drop_oldest", "drop_newest"]] = None
     subscriber_callback: Optional[Callable[[IROS2Message], None]] = None
     source_author: Literal["human", "ai"] = "ai"
 
@@ -395,10 +396,21 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
         super().__init__(node)
         self._subscribtions: dict[str, rclpy.node.Subscription] = {}
         self.callback_group = ReentrantCallbackGroup()
-        self.topic_msg_queue: Dict[str, Queue[Any]] = defaultdict(Queue)
+        self.topic_msg_queue: Dict[str, Queue[Any]] = {}
+        self.topic_config: Dict[str, TopicConfig] = {}
 
     def _generic_callback(self, topic: str, msg: Any):
-        self.topic_msg_queue[topic].put(msg)
+        if self.topic_config[topic].overflow_policy == "drop_oldest":
+            if self.topic_msg_queue[topic].full():
+                self.topic_msg_queue[topic].get()
+            self.topic_msg_queue[topic].put(msg)
+        elif self.topic_config[topic].overflow_policy == "drop_newest":
+            if not self.topic_msg_queue[topic].full():
+                self.topic_msg_queue[topic].put(msg)
+        else:
+            raise ValueError(
+                f"Invalid overflow policy: {self.topic_config[topic].overflow_policy}"
+            )
 
     def configure_publisher(self, topic: str, config: TopicConfig):
         if config.is_subscriber:
@@ -418,6 +430,7 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
             topic=topic,
             qos_profile=qos_profile,
         )
+        self.topic_config[topic] = config
 
     def configure_subscriber(
         self,
@@ -447,6 +460,8 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
             qos_profile=qos_profile,
             callback_group=self.callback_group,
         )
+        self.topic_msg_queue[topic] = Queue(maxsize=config.queue_maxsize or 0)
+        self.topic_config[topic] = config
 
     def publish_configured(self, topic: str, msg_content: dict[str, Any]) -> None:
         """Publish a message to a ROS2 topic.
