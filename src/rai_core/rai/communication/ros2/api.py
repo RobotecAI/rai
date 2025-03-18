@@ -20,6 +20,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from functools import partial
 from queue import Queue
+from threading import Lock
 from typing import (
     Annotated,
     Any,
@@ -400,6 +401,7 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
         self._subscribtions: dict[str, rclpy.node.Subscription] = {}
         self.callback_group = ReentrantCallbackGroup()
         self.topic_msg_queue: Dict[str, Queue[Any]] = {}
+        self.topic_queue_locks: Dict[str, Lock] = {}
         self.topic_config: Dict[str, TopicConfig] = {}
 
     def _generic_callback(self, topic: str, msg: Any) -> None:
@@ -412,6 +414,10 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
         Raises:
             ValueError: If an invalid overflow policy is configured
         """
+        with self.topic_queue_locks[topic]:
+            self._put_msg_in_queue(topic, msg)
+
+    def _put_msg_in_queue(self, topic: str, msg: Any):
         queue = self.topic_msg_queue[topic]
         config = self.topic_config[topic]
 
@@ -491,6 +497,7 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
         else:
             self.topic_msg_queue[topic] = Queue()
         self.topic_config[topic] = config
+        self.topic_queue_locks[topic] = Lock()
 
     def publish_configured(self, topic: str, msg_content: dict[str, Any]) -> None:
         """Publish a message to a ROS2 topic.
@@ -555,9 +562,10 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
         else:
             ts = time.time()
             while time.time() - ts < timeout_sec:
-                if not self.topic_msg_queue[topic].empty():
-                    msg = self.topic_msg_queue[topic].get()
-                    return msg
+                with self.topic_queue_locks[topic]:
+                    if not self.topic_msg_queue[topic].empty():
+                        msg = self.topic_msg_queue[topic].get()
+                        return msg
                 time.sleep(0.01)
             raise ValueError(
                 f"No message received from topic: {topic} within {timeout_sec} seconds"
