@@ -21,8 +21,8 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 
 from rai.agents.base import BaseAgent
-from rai.agents.langchain import HRICallbackHandler, create_react_agent
-from rai.agents.langchain.react_agent import ReActAgentState
+from rai.agents.langchain import HRICallbackHandler, create_react_runnable
+from rai.agents.langchain.runnables import ReActAgentState
 from rai.communication.hri_connector import HRIConnector, HRIMessage, HRIPayload
 from rai.utils.model_initialization import get_tracing_callbacks
 
@@ -37,7 +37,7 @@ class ReActAgent(BaseAgent):
     ):
         super().__init__(connectors=connectors)
         self.logger = logging.getLogger(__name__)
-        self.agent = create_react_agent(llm=llm, tools=tools)
+        self.agent = create_react_runnable(llm=llm, tools=tools)
         self.callback = HRICallbackHandler(
             connectors=connectors, aggregate_chunks=True, logger=self.logger
         )

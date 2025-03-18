@@ -63,7 +63,7 @@ def llm_node(llm: BaseChatModel, state: ReActAgentState):
     state["messages"].append(ai_msg)
 
 
-def create_react_agent(
+def create_react_runnable(
     llm: Optional[BaseChatModel] = None, tools: Optional[List[BaseTool]] = None
 ) -> Runnable[ReActAgentState, ReActAgentState]:
     """Create a react agent that can process messages and optionally use tools.
