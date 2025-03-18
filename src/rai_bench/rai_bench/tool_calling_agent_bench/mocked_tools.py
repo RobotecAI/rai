@@ -84,7 +84,7 @@ class MockGetObjectPositionsTool(GetObjectPositionsTool):
     depth_topic: str = MagicMock(spec=str)
     camera_info_topic: str = MagicMock(spec=str)
     get_grabbing_point_tool: GetGrabbingPointTool = MagicMock(spec=GetGrabbingPointTool)
-    mock_objects: dict[str, List[Tuple[float, float, float]]]
+    mock_objects: dict[str, List[dict[str, float]]]
 
     def _run(self, object_name: str):
         expected_positions = self.mock_objects.get(object_name, [])

@@ -15,7 +15,7 @@
 import copy
 import logging
 from itertools import permutations
-from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any, Dict, List, Sequence
 
 import inflect
 from langchain_core.messages import AIMessage
@@ -676,12 +676,12 @@ class MoveToPointTask(ROS2ToolCallingAgentTask):
 class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
     def __init__(
         self,
-        objects: Dict[str, List[Tuple[float, float, float]]],
+        objects: Dict[str, List[dict[str, float]]],
         logger: loggers_type | None = None,
     ) -> None:
         """
         Args:
-            objects (Dict[str, List[Tuple[float, float, float]]]): dictionary containing the object types and their positions. Object type should be passed as singular.
+            objects (Dict[str, List[dict[str, float]]): dictionary containing the object types and their positions. Object type should be passed as singular.
             logger (loggers_type | None, optional): Defaults to None.
         Examples:
             objects = {
@@ -761,7 +761,7 @@ class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
 class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
     """
     Args:
-        objects (Dict[str, List[Tuple[float, float, float]]]): dictionary containing the object types and their positions. Object type should be passed as singular.
+        objects (Dict[str, List[dict[str, float]]): dictionary containing the object types and their positions. Object type should be passed as singular.
         object_to_grab (str): object to grab. Object type should be passed as singular. Object to be grabbed should be defined in the objects argument with only one instance (one position).
         logger (loggers_type | None, optional): Defaults to None.
     Examples:
@@ -774,7 +774,7 @@ class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
 
     def __init__(
         self,
-        objects: Dict[str, List[Tuple[float, float, float]]],
+        objects: Dict[str, List[dict[str, float]]],
         object_to_grab: str,
         logger: loggers_type | None = None,
     ) -> None:
@@ -855,31 +855,23 @@ class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
         if len(ai_messages) > 1 and self._check_tool_calls_num_in_ai_message(
             ai_messages[1], expected_num=1
         ):
+            obj_to_grab: dict[str, Any] = copy.deepcopy(
+                self.objects[self.object_to_grab][0]
+            )
+            obj_to_grab.update({"task": "grab"})
             self._check_tool_call(
                 tool_call=ai_messages[1].tool_calls[0],
                 expected_name="move_to_point",
-                expected_args=self._object_position_and_task_to_dict(
-                    object_position=self.objects[self.object_to_grab][0], task="grab"
-                ),
+                expected_args=obj_to_grab,
             )
         if not self.result.errors:
             self.result.success = True
-
-    def _object_position_and_task_to_dict(
-        self, object_position: Tuple[float, float, float], task: str
-    ) -> Dict[str, Any]:
-        return {
-            "x": object_position[0],
-            "y": object_position[1],
-            "z": object_position[2],
-            "task": task,
-        }
 
 
 class GrabNotExistingObjectTask(ROS2ToolCallingAgentTask):
     """
     Args:
-        objects (Dict[str, List[Tuple[float, float, float]]]): dictionary containing the object types and their positions. Object type should be passed as singular.
+        objects (Dict[str, List[dict[str, float]]): dictionary containing the object types and their positions. Object type should be passed as singular.
         object_to_grab (str): object to grab. Object type should be passed as singular. Object to be grabbed should NOT be defined in the objects argument.
         logger (loggers_type | None, optional): Defaults to None.
     Examples:
@@ -892,7 +884,7 @@ class GrabNotExistingObjectTask(ROS2ToolCallingAgentTask):
 
     def __init__(
         self,
-        objects: Dict[str, List[Tuple[float, float, float]]],
+        objects: Dict[str, List[dict[str, float]]],
         object_to_grab: str,
         logger: loggers_type | None = None,
     ) -> None:
@@ -967,21 +959,11 @@ class GrabNotExistingObjectTask(ROS2ToolCallingAgentTask):
         if not self.result.errors:
             self.result.success = True
 
-    def _object_position_and_task_to_dict(
-        self, object_position: Tuple[float, float, float], task: str
-    ) -> Dict[str, Any]:
-        return {
-            "x": object_position[0],
-            "y": object_position[1],
-            "z": object_position[2],
-            "task": task,
-        }
-
 
 class MoveExistingObjectLeftTask(ROS2ToolCallingAgentTask):
     """
     Args:
-        objects (Dict[str, List[Tuple[float, float, float]]]): dictionary containing the object types and their positions. Object type should be passed as singular.
+        objects (Dict[str, List[dict[str, float]]): dictionary containing the object types and their positions. Object type should be passed as singular.
         object_to_grab (str): object to grab. Object type should be passed as singular. Object to be grabbed should be defined in the objects argument with only one instance (one position).
         logger (loggers_type | None, optional): Defaults to None.
     Examples:
@@ -994,7 +976,7 @@ class MoveExistingObjectLeftTask(ROS2ToolCallingAgentTask):
 
     def __init__(
         self,
-        objects: Dict[str, List[Tuple[float, float, float]]],
+        objects: Dict[str, List[dict[str, float]]],
         object_to_grab: str,
         logger: loggers_type | None = None,
     ) -> None:
@@ -1071,45 +1053,38 @@ class MoveExistingObjectLeftTask(ROS2ToolCallingAgentTask):
         if len(ai_messages) > 1 and self._check_tool_calls_num_in_ai_message(
             ai_messages[1], expected_num=1
         ):
+            obj_to_grab: dict[str, Any] = copy.deepcopy(
+                self.objects[self.object_to_grab][0]
+            )
+            obj_to_grab.update({"task": "grab"})
             self._check_tool_call(
                 tool_call=ai_messages[1].tool_calls[0],
                 expected_name="move_to_point",
-                expected_args=self._object_position_and_task_to_dict(
-                    object_position=self.objects[self.object_to_grab][0], task="grab"
-                ),
+                expected_args=obj_to_grab,
             )
 
         if len(ai_messages) > 2 and self._check_tool_calls_num_in_ai_message(
             ai_messages[2], expected_num=1
         ):
-            object_position_and_task = self._object_position_and_task_to_dict(
-                object_position=self.objects[self.object_to_grab][0], task="drop"
+            obj_to_drop: dict[str, Any] = copy.deepcopy(
+                self.objects[self.object_to_grab][0]
             )
-            object_position_and_task["y"] = object_position_and_task["y"] - 0.2
+            obj_to_drop.update({"task": "drop"})
+            obj_to_drop["y"] = obj_to_drop["y"] - 0.2
             self._check_tool_call(
                 tool_call=ai_messages[2].tool_calls[0],
                 expected_name="move_to_point",
-                expected_args=object_position_and_task,
+                expected_args=obj_to_drop,
             )
 
         if not self.result.errors:
             self.result.success = True
 
-    def _object_position_and_task_to_dict(
-        self, object_position: Tuple[float, float, float], task: str
-    ) -> Dict[str, Any]:
-        return {
-            "x": object_position[0],
-            "y": object_position[1],
-            "z": object_position[2],
-            "task": task,
-        }
-
 
 class MoveExistingObjectFrontTask(ROS2ToolCallingAgentTask):
     """
     Args:
-        objects (Dict[str, List[Tuple[float, float, float]]]): dictionary containing the object types and their positions. Object type should be passed as singular.
+        objects (Dict[str, List[dict[str, float]]): dictionary containing the object types and their positions. Object type should be passed as singular.
         object_to_grab (str): object to grab. Object type should be passed as singular. Object to be grabbed should be defined in the objects argument with only one instance (one position).
         logger (loggers_type | None, optional): Defaults to None.
     Examples:
@@ -1122,7 +1097,7 @@ class MoveExistingObjectFrontTask(ROS2ToolCallingAgentTask):
 
     def __init__(
         self,
-        objects: Dict[str, List[Tuple[float, float, float]]],
+        objects: Dict[str, List[dict[str, float]]],
         object_to_grab: str,
         logger: loggers_type | None = None,
     ) -> None:
@@ -1197,45 +1172,38 @@ class MoveExistingObjectFrontTask(ROS2ToolCallingAgentTask):
         if len(ai_messages) > 1 and self._check_tool_calls_num_in_ai_message(
             ai_messages[1], expected_num=1
         ):
+            obj_to_grab: dict[str, Any] = copy.deepcopy(
+                self.objects[self.object_to_grab][0]
+            )
+            obj_to_grab.update({"task": "grab"})
             self._check_tool_call(
                 tool_call=ai_messages[1].tool_calls[0],
                 expected_name="move_to_point",
-                expected_args=self._object_position_and_task_to_dict(
-                    object_position=self.objects[self.object_to_grab][0], task="grab"
-                ),
+                expected_args=obj_to_grab,
             )
 
         if len(ai_messages) > 2 and self._check_tool_calls_num_in_ai_message(
             ai_messages[2], expected_num=1
         ):
-            object_position_and_task = self._object_position_and_task_to_dict(
-                object_position=self.objects[self.object_to_grab][0], task="drop"
+            obj_to_drop: dict[str, Any] = copy.deepcopy(
+                self.objects[self.object_to_grab][0]
             )
-            object_position_and_task["x"] = object_position_and_task["x"] + 0.6
+            obj_to_drop.update({"task": "drop"})
+            obj_to_drop["x"] = obj_to_drop["x"] + 0.6
             self._check_tool_call(
                 tool_call=ai_messages[2].tool_calls[0],
                 expected_name="move_to_point",
-                expected_args=object_position_and_task,
+                expected_args=obj_to_drop,
             )
 
         if not self.result.errors:
             self.result.success = True
 
-    def _object_position_and_task_to_dict(
-        self, object_position: Tuple[float, float, float], task: str
-    ) -> Dict[str, Any]:
-        return {
-            "x": object_position[0],
-            "y": object_position[1],
-            "z": object_position[2],
-            "task": task,
-        }
-
 
 class SwapObjectsTask(ROS2ToolCallingAgentTask):
     """
     Args:
-        objects (Dict[str, List[Tuple[float, float, float]]]): dictionary containing the object types and their positions. Object type should be passed as singular.
+        objects (Dict[str, List[dict[str, float]]): dictionary containing the object types and their positions. Object type should be passed as singular.
         objects_to_swap (str): objects to be swapped. Object type should be passed as singular. Objects to be swapped should be defined in the objects argument with only one instance (one position).
         logger (loggers_type | None, optional): Defaults to None.
     Examples:

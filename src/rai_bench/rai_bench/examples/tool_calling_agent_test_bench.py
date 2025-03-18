@@ -85,41 +85,53 @@ tasks: Sequence[ToolCallingAgentTask] = [
     GetObjectPositionsTask(
         logger=bench_logger,
         objects={
-            "carrot": [(1.0, 2.0, 3.0)],
-            "apple": [(4.0, 5.0, 6.0)],
-            "banana": [(7.0, 8.0, 9.0), (10.0, 11.0, 12.0)],
+            "carrot": [{"x": 1.0, "y": 2.0, "z": 3.0}],
+            "apple": [{"x": 4.0, "y": 5.0, "z": 6.0}],
+            "banana": [
+                {"x": 7.0, "y": 8.0, "z": 9.0},
+                {"x": 10.0, "y": 11.0, "z": 12.0},
+            ],
         },
     ),
     GrabExistingObjectTask(
         logger=bench_logger,
         object_to_grab="banana",
         objects={
-            "banana": [(7.0, 8.0, 9.0)],
-            "apple": [(4.0, 5.0, 6.0), (10.0, 11.0, 12.0)],
+            "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
+            "apple": [
+                {"x": 4.0, "y": 5.0, "z": 6.0},
+                {"x": 10.0, "y": 11.0, "z": 12.0},
+            ],
         },
     ),
     GrabNotExistingObjectTask(
         logger=bench_logger,
         object_to_grab="apple",
         objects={
-            "banana": [(7.0, 8.0, 9.0)],
-            "cube": [(4.0, 5.0, 6.0), (10.0, 11.0, 12.0)],
+            "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
+            "cube": [{"x": 4.0, "y": 5.0, "z": 6.0}, {"x": 10.0, "y": 11.0, "z": 12.0}],
         },
     ),
     MoveExistingObjectLeftTask(
         logger=bench_logger,
         object_to_grab="banana",
         objects={
-            "banana": [(7.0, 8.0, 9.0)],
-            "apple": [(4.0, 5.0, 6.0), (10.0, 11.0, 12.0)],
+            "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
+            "apple": [
+                {"x": 4.0, "y": 5.0, "z": 6.0},
+                {"x": 10.0, "y": 11.0, "z": 12.0},
+            ],
         },
     ),
     MoveExistingObjectFrontTask(
         logger=bench_logger,
         object_to_grab="banana",
         objects={
-            "banana": [(7.0, 8.0, 9.0)],
-            "apple": [(4.0, 5.0, 6.0), (10.0, 11.0, 12.0)],
+            "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
+            "apple": [
+                {"x": 4.0, "y": 5.0, "z": 6.0},
+                {"x": 10.0, "y": 11.0, "z": 12.0},
+            ],
         },
     ),
     SwapObjectsTask(
