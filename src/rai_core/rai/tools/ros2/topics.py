@@ -74,6 +74,7 @@ class ReceiveROS2MessageTool(BaseTool):
 
 class GetROS2ImageToolInput(BaseModel):
     topic: str = Field(..., description="The topic to receive the image from")
+    timeout_sec: float = Field(1.0, description="The timeout in seconds")
 
 
 class GetROS2ImageTool(BaseTool):
@@ -83,8 +84,10 @@ class GetROS2ImageTool(BaseTool):
     args_schema: Type[GetROS2ImageToolInput] = GetROS2ImageToolInput
     response_format: Literal["content", "content_and_artifact"] = "content_and_artifact"
 
-    def _run(self, topic: str) -> Tuple[str, MultimodalArtifact]:
-        message = self.connector.receive_message(topic)
+    def _run(
+        self, topic: str, timeout_sec: float = 1.0
+    ) -> Tuple[str, MultimodalArtifact]:
+        message = self.connector.receive_message(topic, timeout_sec=timeout_sec)
         msg_type = type(message.payload)
         if msg_type == Image:
             image = CvBridge().imgmsg_to_cv2(  # type: ignore
