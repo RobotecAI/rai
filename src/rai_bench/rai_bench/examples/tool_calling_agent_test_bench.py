@@ -38,6 +38,7 @@ from rai_bench.tool_calling_agent_bench.ros2_agent_tasks import (
     MoveExistingObjectFrontTask,
     MoveExistingObjectLeftTask,
     MoveToPointTask,
+    SwapObjectsTask,
 )
 
 # define loggers
@@ -120,6 +121,14 @@ tasks: Sequence[ToolCallingAgentTask] = [
             "banana": [(7.0, 8.0, 9.0)],
             "apple": [(4.0, 5.0, 6.0), (10.0, 11.0, 12.0)],
         },
+    ),
+    SwapObjectsTask(
+        logger=bench_logger,
+        objects={
+            "banana": [{"x": 1.0, "y": 2.0, "z": 3.0}],
+            "apple": [{"x": 4.0, "y": 5.0, "z": 6.0}],
+        },
+        objects_to_swap=["banana", "apple"],
     ),
 ]
 benchmark = ToolCallingAgentBenchmark(
