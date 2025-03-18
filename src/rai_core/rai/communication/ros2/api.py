@@ -402,18 +402,37 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
         self.topic_msg_queue: Dict[str, Queue[Any]] = {}
         self.topic_config: Dict[str, TopicConfig] = {}
 
-    def _generic_callback(self, topic: str, msg: Any):
-        if self.topic_config[topic].overflow_policy == "drop_oldest":
-            if self.topic_msg_queue[topic].full():
-                self.topic_msg_queue[topic].get()
-            self.topic_msg_queue[topic].put(msg)
-        elif self.topic_config[topic].overflow_policy == "drop_newest":
-            if not self.topic_msg_queue[topic].full():
-                self.topic_msg_queue[topic].put(msg)
+    def _generic_callback(self, topic: str, msg: Any) -> None:
+        """Handle incoming messages for a topic based on queue configuration.
+
+        Args:
+            topic: The topic name receiving the message
+            msg: The received message
+
+        Raises:
+            ValueError: If an invalid overflow policy is configured
+        """
+        queue = self.topic_msg_queue[topic]
+        config = self.topic_config[topic]
+
+        # Fast path for unbounded queues
+        if config.queue_maxsize is None:
+            queue.put(msg)
+            return
+
+        # Handle bounded queues with overflow policies
+        if queue.full():
+            if config.overflow_policy == "drop_oldest":
+                queue.get()  # Remove oldest message
+                queue.put(msg)
+            elif config.overflow_policy == "drop_newest":
+                return  # Silently drop the new message
+            else:
+                raise ValueError(
+                    f"Invalid overflow policy for topic {topic}: {config.overflow_policy}"
+                )
         else:
-            raise ValueError(
-                f"Invalid overflow policy: {self.topic_config[topic].overflow_policy}"
-            )
+            queue.put(msg)
 
     def configure_publisher(self, topic: str, config: TopicConfig):
         if config.is_subscriber:
