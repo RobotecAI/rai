@@ -379,7 +379,10 @@ class TopicConfig:
     auto_qos_matching: bool = True
     qos_profile: Optional[QoSProfile] = None
     is_subscriber: bool = False
+    # if queue_maxsize is not set, the queue will be unbounded
+    # which may lead to memory issues for high-bandwidth topics
     queue_maxsize: Optional[int] = None
+    # if queue_maxsize is provided, the overflow policy must be set
     overflow_policy: Optional[Literal["drop_oldest", "drop_newest"]] = None
     subscriber_callback: Optional[Callable[[IROS2Message], None]] = None
     source_author: Literal["human", "ai"] = "ai"
@@ -460,7 +463,14 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
             qos_profile=qos_profile,
             callback_group=self.callback_group,
         )
-        self.topic_msg_queue[topic] = Queue(maxsize=config.queue_maxsize or 0)
+        if config.queue_maxsize is not None:
+            self.topic_msg_queue[topic] = Queue(maxsize=config.queue_maxsize)
+            if config.overflow_policy is None:
+                raise ValueError(
+                    "Overflow policy must be set if queue_maxsize is provided"
+                )
+        else:
+            self.topic_msg_queue[topic] = Queue()
         self.topic_config[topic] = config
 
     def publish_configured(self, topic: str, msg_content: dict[str, Any]) -> None:
