@@ -524,12 +524,15 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
                 retry_count=retry_count,
             )
         else:
-            if self.topic_msg_queue[topic].empty():
-                raise ValueError(
-                    f"No message received from topic: {topic} within {timeout_sec} seconds"
-                )
-            msg = self.topic_msg_queue[topic].get()
-            return msg
+            ts = time.time()
+            while time.time() - ts < timeout_sec:
+                if not self.topic_msg_queue[topic].empty():
+                    msg = self.topic_msg_queue[topic].get()
+                    return msg
+                time.sleep(0.01)
+            raise ValueError(
+                f"No message received from topic: {topic} within {timeout_sec} seconds"
+            )
 
 
 class ROS2ServiceAPI:
