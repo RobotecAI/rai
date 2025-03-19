@@ -33,8 +33,8 @@ class RotateObjectTask(ManipulationTask):
         target_quaternion: Rotation,
         logger: loggers_type | None = None,
     ):
-        # TODO (jm) for now manipulaiton tool does not support passing rotation
-        # TODO (jm) rotating around other axis than z seems to not have much sense as the objecet will fall
+        # NOTE (jmatejcz) for now manipulaiton tool does not support passing rotation
+        # NOTE (jmatejcz) rotating around other axis than z seems to not have much sense as the objecet will fall
         # can the target rotation be expressed differently? maybe only by rotation around z axis as an angle?
         """
         Parameters

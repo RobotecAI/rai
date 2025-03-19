@@ -16,6 +16,7 @@ import logging
 import math
 import time
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from typing import Any, Dict, Generic, List, Set, TypeVar, Union
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
@@ -241,9 +242,9 @@ class Task(ABC):
         Dict[str, List[EntityT]]
             A dictionary with keys as prefab names and values as lists of entities of that type.
         """
-        entities_by_type: Dict[str, List[EntityT]] = {}
+        entities_by_type: Dict[str, List[EntityT]] = defaultdict(list)
         for entity in entities:
-            entities_by_type.setdefault(entity.prefab_name, []).append(entity)
+            entities_by_type[entity.prefab_name].append(entity)
         return entities_by_type
 
     def check_neighbourhood_types(
@@ -308,7 +309,7 @@ class Task(ABC):
         return clusters
 
     def group_entities_along_z_axis(
-        # TODO (jm) figure out how to group by other coords and orientation, without reapeting code
+        # NOTE (jmatejcz) figure out how to group by other coords and orientation, without reapeting code
         self,
         entities: List[EntityT],
         margin: float,
@@ -394,7 +395,7 @@ class Scenario(Generic[SimulationConfigT]):
             raise ValueError("This simulation config is invalid for this task.")
         self.task = task
         self.simulation_config = simulation_config
-        # NOTE (jm) needed for logging which config was used,
+        # NOTE (jmatejcz) needed for logging which config was used,
         # there probably is better way to do it
         self.simulation_config_path = simulation_config_path
 
@@ -457,7 +458,7 @@ class Benchmark:
         List[Scenario[SimulationConfigT]]
             A list of scenarios generated from the given tasks and simulation configurations.
         """
-        # TODO (jm) hacky_fix, taking paths as args here, not the best solution,
+        # NOTE (jmatejcz) hacky_fix, taking paths as args here, not the best solution,
         # but more changes to code would be required
         scenarios: List[Scenario[SimulationConfigT]] = []
 
@@ -511,7 +512,9 @@ class Benchmark:
             ts = time.perf_counter()
             for state in agent.stream(
                 {"messages": [HumanMessage(content=scenario.task.get_prompt())]},
-                {"recursion_limit": 100},  # TODO (jm) what should be recursion limit?
+                {
+                    "recursion_limit": 100
+                },  # NOTE (jmatejcz) what should be recursion limit?
             ):
                 graph_node_name = list(state.keys())[0]
                 msg = state[graph_node_name]["messages"][-1]
@@ -531,7 +534,6 @@ class Benchmark:
                     raise ValueError(f"Unexpected type of message: {type(msg)}")
 
                 if isinstance(msg, AIMessage):
-                    # TODO (jm) figure out more robust way of counting tool calls
                     tool_calls_num += len(msg.tool_calls)
 
                 self._logger.info(f"AI Message: {msg}")

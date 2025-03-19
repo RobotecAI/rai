@@ -56,7 +56,7 @@ class BuildCubeTowerTask(ManipulationTask):
         TypeError
             If any of the provided object types is not allowed.
         """
-        # TODO (jm) what if allowable_displament is greater then the size of object?
+        # NOTE (jmatejcz) what if allowable_displament is greater then the size of object?
         # we could check the z distance between entities
         # or trust user with this
         super().__init__(logger)
@@ -123,7 +123,7 @@ class BuildCubeTowerTask(ManipulationTask):
                 # we treat single standing cubes as incorrect
                 if all(entity.prefab_name in self.obj_types for entity in group):
                     # highest tower is number of correctly placed objects
-                    # TODO (jm) should we check z distance between entities?
+                    # NOTE (jm) should we check z distance between entities?
                     correct = max(correct, len(group))
         incorrect = len(selected_type_objects) - correct
         return correct, incorrect
