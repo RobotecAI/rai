@@ -2,10 +2,10 @@
 
 This page is a tutorial on how to set up your O3DE scene to be compatible with the rai_sim and rai_bench frameworks, i.e. to allow for:
 
-- **spawning** and **despawning** objects
+- **spawning** and **despawning** entities
 - **tracking their position** in real time
 
-O3DE comes with a ROS2 gem that allows for easy integration of your scene with ROS2. We will use the ROS2 Spawner component and ROS2 Frame component to achieve the desired functionality. The ROS2 Spawner component exposes a service that allows you to spawn and despawn objects in the scene, while the ROS2 Frame component put on an entity will publish its position on the /tf topic.
+O3DE comes with a ROS2 gem that allows for easy integration of your scene with ROS2. We will use the ROS2 Spawner component and ROS2 Frame component to achieve the desired functionality. The ROS2 Spawner component exposes a service that allows you to spawn and despawn entities in the scene, while the ROS2 Frame component put on an entity will publish its position on the /tf topic.
 
 ## Requirements
 
@@ -55,7 +55,7 @@ cmake --build build/linux --config profile --target Editor -j 22
 
 Leave the frame name and joint name empty, set namespace strategy to “Generate from entity name” and check “Publish transform”.
 
-- Right-click on the entity name in the _entity manager_ to save the object as a prefab
+- Right-click on the entity name in the _entity manager_ to save the entity as a prefab
 
 ![image.png](../imgs/rai_sim/o3de/image%201.png)
 
@@ -75,11 +75,11 @@ You can now delete your entity from the scene.
 
 ![image.png](../imgs/rai_sim/o3de/image%205.png)
 
-- Enter the **name by which you will later refer to the object to spawn it**
+- Enter the **name by which you will later refer to the entity to spawn it**
 
 ![image.png](../imgs/rai_sim/o3de/image%206.png)
 
-- Click on the little folder icon that appeared next to your object’s name
+- Click on the little folder icon that appeared next to your entity’s name
 
 ![image.png](../imgs/rai_sim/o3de/image%207.png)
 
@@ -87,9 +87,9 @@ You can now delete your entity from the scene.
 
 ![image.png](../imgs/rai_sim/o3de/image%208.png)
 
-### **Repeat steps 3. and 4. for each object that you want to make spawnable.**
+### **Repeat steps 3. and 4. for each entity that you want to make spawnable.**
 
-Now, when you press play in the Editor, you should be able to spawn new objects by calling the `/spawn_entity` service, like so:
+Now, when you press play in the Editor, you should be able to spawn new entities by calling the `/spawn_entity` service, like so:
 
 ```bash
 ros2 service call /spawn_entity gazebo_msgs/srv/SpawnEntity "{name: 'apple', initial_pose: {position:{ x: 0.0, y: 0.0, z: 0.2 }, orientation: { x: 0.0, y: 0.0, z: 0.0, w: 1.0 } } }"
@@ -102,7 +102,7 @@ response:
 gazebo_msgs.srv.SpawnEntity_Response(success=True, status_message='apple_5')
 ```
 
-Then you should be able to see your object's position on the `/tf` topic by running:
+Then you should be able to see your entity's position on the `/tf` topic by running:
 
 ```bash
 ros2 topic echo /tf
