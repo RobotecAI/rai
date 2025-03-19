@@ -18,12 +18,12 @@ from typing import List, Tuple, Union
 
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from rai_bench.benchmark_model import (  # type: ignore
+from rai_bench.benchmark_model import (
     EntitiesMismatchException,
     EntityT,
     Task,
 )
-from rai_sim.simulation_bridge import (  # type: ignore
+from rai_sim.simulation_bridge import (
     SimulationBridge,
     SimulationConfig,
     SimulationConfigT,
@@ -142,7 +142,7 @@ class ManipulationTask(Task, ABC):
             entities=scene_state.entities
         )
 
-        self.logger.info(  # type: ignore
+        self.logger.info(
             f"Currently correctly placed objects: {current_correct}, Currenlty incorrectly placed objects: {current_incorrect}"
         )
         return current_correct, current_incorrect
@@ -176,7 +176,7 @@ class ManipulationTask(Task, ABC):
         initially_correct, initially_incorrect = self.calculate_correct(
             entities=simulation_bridge.spawned_entities
         )
-        self.logger.info(  # type: ignore
+        self.logger.info(
             f"Objects placed correctly in simulation config: {initially_correct}, incorrectly: {initially_incorrect}"
         )
         current_correct, current_incorrect = self.calculate_current_placements(
@@ -195,5 +195,5 @@ class ManipulationTask(Task, ABC):
             corrected = current_correct - initially_correct
             score = max(0.0, corrected / initially_incorrect)
 
-            self.logger.info(f"Calculated score: {score:.2f}")  # type: ignore
+            self.logger.info(f"Calculated score: {score:.2f}")
             return score

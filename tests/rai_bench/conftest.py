@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai_sim.simulation_bridge import (  # type: ignore
+from rai_sim.simulation_bridge import (
     Entity,
     Pose,
     Rotation,

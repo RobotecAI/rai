@@ -18,19 +18,19 @@ from typing import List, Union
 
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from rai_bench.benchmark_model import (  # type: ignore
+from rai_bench.benchmark_model import (
     Benchmark,
     Scenario,
     Task,
 )
-from rai_bench.o3de_test_bench.tasks import (  # type: ignore
+from rai_bench.o3de_test_bench.tasks import (
     BuildCubeTowerTask,
     GroupObjectsTask,
     MoveObjectsToLeftTask,
     PlaceCubesTask,
     PlaceObjectAtCoordTask,
 )
-from rai_sim.o3de.o3de_bridge import (  # type: ignore
+from rai_sim.o3de.o3de_bridge import (
     O3DExROS2SimulationConfig,
 )
 
@@ -175,6 +175,7 @@ def easy_scenarios(
         tasks=place_object_tasks,
         simulation_configs=simulations_configs,
         simulation_configs_paths=simulation_configs_paths,
+        logger=logger,
     )
     # move objects to the left
     object_groups = [
@@ -290,6 +291,7 @@ def medium_scenarios(
         tasks=move_to_left_tasks,
         simulation_configs=medium_simulations_configs,
         simulation_configs_paths=medium_simulation_configs_paths,
+        logger=logger,
     )
 
     # place cubes
@@ -298,6 +300,7 @@ def medium_scenarios(
         tasks=[task],
         simulation_configs=medium_simulations_configs,
         simulation_configs_paths=medium_simulation_configs_paths,
+        logger=logger,
     )
 
     # build tower task
@@ -446,6 +449,7 @@ def hard_scenarios(
         tasks=build_tower_tasks,
         simulation_configs=medium_simulations_configs,
         simulation_configs_paths=medium_simulation_configs_paths,
+        logger=logger,
     )
 
     # group object task
@@ -537,6 +541,7 @@ def very_hard_scenarios(
         tasks=build_tower_tasks,
         simulation_configs=hard_simulations_configs,
         simulation_configs_paths=hard_simulation_configs_paths,
+        logger=logger,
     )
 
     # group object task

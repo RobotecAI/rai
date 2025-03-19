@@ -14,8 +14,8 @@
 
 from typing import List
 
-from rai_bench.o3de_test_bench.tasks import GroupObjectsTask  # type: ignore
-from rai_sim.simulation_bridge import Entity  # type: ignore
+from rai_bench.o3de_test_bench.tasks import GroupObjectsTask
+from rai_sim.simulation_bridge import Entity
 from tests.rai_bench.conftest import create_entity
 
 

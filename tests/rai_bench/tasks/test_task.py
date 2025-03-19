@@ -14,8 +14,8 @@
 
 from typing import Any, Dict, List, Set
 
-from rai_bench.benchmark_model import Task  # type: ignore
-from rai_sim.simulation_bridge import Entity, Pose, Translation  # type: ignore
+from rai_bench.benchmark_model import Task
+from rai_sim.simulation_bridge import Entity, Pose, Translation
 from tests.rai_bench.conftest import create_entity
 
 

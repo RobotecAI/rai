@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai_bench.o3de_test_bench.tasks import PlaceCubesTask  # type: ignore
+from rai_bench.o3de_test_bench.tasks import PlaceCubesTask
 from tests.rai_bench.conftest import create_entity
 
 

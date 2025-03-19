@@ -18,10 +18,10 @@ from typing import List, Tuple, Union
 
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from rai_bench.o3de_test_bench.tasks.manipulation_task import (  # type: ignore
+from rai_bench.o3de_test_bench.tasks.manipulation_task import (
     ManipulationTask,
 )
-from rai_sim.simulation_bridge import Entity, SimulationConfig  # type: ignore
+from rai_sim.simulation_bridge import Entity, SimulationConfig
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
 
