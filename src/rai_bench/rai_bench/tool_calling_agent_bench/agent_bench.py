@@ -66,7 +66,7 @@ class ToolCallingAgentBenchmark:
             ts = time.perf_counter()
             response = agent.invoke(
                 {"messages": [HumanMultimodalMessage(content=task.get_prompt())]},
-                config={"callbacks": callbacks},
+                config={"callbacks": callbacks, "tags": [task.complexity]},
             )
             te = time.perf_counter()
             total_time = te - ts
