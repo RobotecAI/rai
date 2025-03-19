@@ -179,7 +179,7 @@ if __name__ == "__main__":
         translation=Translation(x=0.1, y=0.5, z=0.4),
         rotation=Rotation(x=1.0, y=0.0, z=0.0, w=0.0),
     )
-    for i in range(len(t_scenarios)):
+    for i in range(len(all_scenarios)):
         agent = create_conversational_agent(
             llm, tools, system_prompt, logger=agent_logger
         )
