@@ -70,6 +70,7 @@ vh_scenarios = very_hard_scenarios(
 ```
 
 which are grouped by their subjective difficulty. For now there are 10 trivial, 42 easy, 23 medium, 38 hard and 47 very hard scenarios.
+Check docstrings and code in src/rai_bench/rai_bench/o3de_test_bench/scenarios.py if you want to know how scenarios are assigned to difficulty level.
 
 ### Development
 
