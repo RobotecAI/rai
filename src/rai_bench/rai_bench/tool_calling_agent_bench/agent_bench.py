@@ -20,7 +20,7 @@ from typing import Iterator, List, Sequence, Tuple
 from uuid import UUID
 
 from langchain_core.runnables.config import RunnableConfig
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from rai.messages.multimodal import HumanMultimodalMessage
 
 from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
@@ -32,12 +32,16 @@ loggers_type = logging.Logger
 
 
 class TaskResult(BaseModel):
-    task: str
-    model: str
-    success: bool
-    errors: List[str]
-    total_time: float
-    run_id: UUID
+    task: str = Field(..., description="The task to be executed.")
+    model: str = Field(..., description="AI model used.")
+    success: bool = Field(
+        ..., description="Whether the task was successfully completed."
+    )
+    errors: List[str] = Field(
+        ..., description="List of errors that occurred during the task execution."
+    )
+    total_time: float = Field(..., description="Total time taken to complete the task.")
+    run_id: UUID = Field(..., description="UUID of the task run.")
 
 
 class ToolCallingAgentBenchmark:
