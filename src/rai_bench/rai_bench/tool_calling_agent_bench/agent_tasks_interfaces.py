@@ -14,7 +14,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, List
+from typing import Any, List, Literal
 
 from langchain_core.messages import AIMessage, ToolCall
 from langchain_core.tools import BaseTool
@@ -43,6 +43,7 @@ class ToolCallingAgentTask(ABC):
             self.logger = logging.getLogger(__name__)
         self.expected_tools: List[BaseTool] = []
         self.result = Result()
+        self.complexity: Literal["easy", "medium", "hard"]
 
     @abstractmethod
     def get_system_prompt(self) -> str:
