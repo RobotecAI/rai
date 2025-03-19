@@ -78,18 +78,28 @@ You can now delete your entity from the scene.
 
 ### **Repeat steps 3. and 4. for each object that you want to make spawnable.**
 
-Now, when you press play in the Editor, you should be able to spawn new objects and see their positions on the /tf topic, like so:
+Now, when you press play in the Editor, you should be able to spawn new objects by calling the `/spawn_entity` service, like so:
 
 ```bash
 ros2 service call /spawn_entity gazebo_msgs/srv/SpawnEntity "{name: 'apple', initial_pose: {position:{ x: 0.0, y: 0.0, z: 0.2 }, orientation: { x: 0.0, y: 0.0, z: 0.0, w: 1.0 } } }"
 ```
 
+The response should look like this:
+
+```bash
+response:
+gazebo_msgs.srv.SpawnEntity_Response(success=True, status_message='apple_5')
+```
+
+Then you should be able to see your object's position on the `/tf` topic by running:
+
 ```bash
 ros2 topic echo /tf
 ```
 
+The output should look like this:
+
 ```bash
-kdabrowski@robo-pc-019:~$ ros2 topic echo /tf
 transforms:
 - header:
     stamp:
