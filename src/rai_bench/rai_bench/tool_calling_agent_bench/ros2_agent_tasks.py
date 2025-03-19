@@ -230,6 +230,7 @@ class GetROS2RGBCameraTask(ROS2ToolCallingAgentTask):
                     tool_call=ai_messages[1].tool_calls[0],
                     expected_name="get_ros2_image",
                     expected_args={"topic": "/camera_image_color"},
+                    expected_optional_args={"timeout_sec": None},
                 )
         if not self.result.errors:
             self.result.success = True
@@ -295,6 +296,7 @@ class GetROS2DepthCameraTask(ROS2ToolCallingAgentTask):
                     tool_call=ai_messages[1].tool_calls[0],
                     expected_name="get_ros2_image",
                     expected_args={"topic": "/camera_image_depth"},
+                    expected_optional_args={"timeout_sec": None},
                 )
         if not self.result.errors:
             self.result.success = True
@@ -357,8 +359,16 @@ class GetAllROS2RGBCamerasTask(ROS2ToolCallingAgentTask):
 
         if len(ai_messages) > 1:
             expected_tool_calls: list[dict[str, Any]] = [
-                {"name": "get_ros2_image", "args": {"topic": "/camera_image_color"}},
-                {"name": "get_ros2_image", "args": {"topic": "/color_image5"}},
+                {
+                    "name": "get_ros2_image",
+                    "args": {"topic": "/camera_image_color"},
+                    "optional_args": {"timeout_sec": None},
+                },
+                {
+                    "name": "get_ros2_image",
+                    "args": {"topic": "/color_image5"},
+                    "optional_args": {"timeout_sec": None},
+                },
             ]
 
             self._check_multiple_tool_calls(
@@ -424,8 +434,16 @@ class GetAllROS2DepthCamerasTask(ROS2ToolCallingAgentTask):
 
         if len(ai_messages) > 1:
             expected_tool_calls: list[dict[str, Any]] = [
-                {"name": "get_ros2_image", "args": {"topic": "/camera_image_depth"}},
-                {"name": "get_ros2_image", "args": {"topic": "/depth_image5"}},
+                {
+                    "name": "get_ros2_image",
+                    "args": {"topic": "/camera_image_depth"},
+                    "optional_args": {"timeout_sec": None},
+                },
+                {
+                    "name": "get_ros2_image",
+                    "args": {"topic": "/depth_image5"},
+                    "optional_args": {"timeout_sec": None},
+                },
             ]
 
             self._check_multiple_tool_calls(

@@ -43,7 +43,9 @@ class MockGetROS2TopicsNamesAndTypesTool(GetROS2TopicsNamesAndTypesTool):
 class MockGetROS2ImageTool(GetROS2ImageTool):
     connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
 
-    def _run(self, topic: str) -> Tuple[str, MultimodalArtifact]:
+    def _run(
+        self, topic: str, timeout_sec: float = 1.0
+    ) -> Tuple[str, MultimodalArtifact]:
         image = self.generate_mock_image()
         return "Image received successfully", MultimodalArtifact(
             images=[preprocess_image(image)]

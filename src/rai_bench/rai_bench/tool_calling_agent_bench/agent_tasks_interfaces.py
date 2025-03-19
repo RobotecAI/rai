@@ -60,7 +60,11 @@ class ToolCallingAgentTask(ABC):
         pass
 
     def _check_tool_call(
-        self, tool_call: ToolCall, expected_name: str, expected_args: dict[str, Any]
+        self,
+        tool_call: ToolCall,
+        expected_name: str,
+        expected_args: dict[str, Any],
+        expected_optional_args: dict[str, Any] = {},
     ) -> bool:
         """
         Helper method to check if a tool call has the expected name and arguments.
@@ -68,7 +72,8 @@ class ToolCallingAgentTask(ABC):
         Args:
             tool_call: The tool call to check
             expected_name: The expected name of the tool
-            expected_args: The expected arguments dictionary
+            expected_args: The expected arguments dictionary that must be present
+            expected_optional_args: Optional arguments dictionary that can be present but don't need to be (e.g. timeout). If value of an optional argument does not matter, set it to None
 
         Returns:
             bool: True if the tool call matches the expected name and args, False otherwise
@@ -77,16 +82,39 @@ class ToolCallingAgentTask(ABC):
             error_msg = f"Expected tool call name should be '{expected_name}', but got {tool_call['name']}."
             self.logger.error(error_msg)
             self.result.errors.append(error_msg)
-            self.logger.error(
-                f"Expected tool call name should be '{expected_name}', but got {tool_call['name']}."
-            )
             return False
 
-        if tool_call["args"] != expected_args:
-            error_msg = f"Expected args for expected tool call {expected_name} should be {expected_args}, but got {tool_call['args']}."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
-            return False
+        # Check that all required arguments are present and have the expected values
+        for arg_name, arg_value in expected_args.items():
+            if arg_name in tool_call["args"]:
+                if tool_call["args"][arg_name] != arg_value:
+                    error_msg = f"Incorrect value {tool_call['args'][arg_name]} for argument '{arg_name}' in tool call {expected_name}."
+                    self.logger.error(error_msg)
+                    self.result.errors.append(error_msg)
+                    return False
+            else:
+                error_msg = f"Required argument '{arg_name}' missing in tool call {expected_name}."
+                self.logger.error(error_msg)
+                self.result.errors.append(error_msg)
+                return False
+
+        # Check that no unexpected arguments are present (except for optional ones)
+        for arg_name, arg_value in tool_call["args"].items():
+            if arg_name not in expected_args:
+                # If this argument is not required, check if it's an allowed optional argument
+                if not expected_optional_args or arg_name not in expected_optional_args:
+                    error_msg = f"Unexpected argument '{arg_name}' found in tool call {expected_name}."
+                    self.logger.error(error_msg)
+                    self.result.errors.append(error_msg)
+                    return False
+                # If optional argument has expected value, check if the value is correct
+                elif expected_optional_args[arg_name]:
+                    if expected_optional_args[arg_name] != arg_value:
+                        error_msg = f"Optional argument '{arg_name}' has incorrect value '{arg_value}' in tool call {expected_name}."
+                        self.logger.error(error_msg)
+                        self.result.errors.append(error_msg)
+                        return False
+
         return True
 
     def _check_multiple_tool_calls(
@@ -97,7 +125,7 @@ class ToolCallingAgentTask(ABC):
 
         Args:
             message: The AIMessage to check
-            expected_calls: A list of dictionaries, each containing expected 'name' and 'args' for a tool call
+            expected_tool_calls: A list of dictionaries, each containing expected 'name', 'args', and optional 'optional_args' for a tool call
 
         Returns:
             bool: True if all tool calls match expected patterns, False otherwise
@@ -117,9 +145,15 @@ class ToolCallingAgentTask(ABC):
                 if matched_calls[i]:
                     continue
 
-                if (
-                    tool_call["name"] == expected["name"]
-                    and tool_call["args"] == expected["args"]
+                expected_name = expected["name"]
+                expected_args = expected["args"]
+                expected_optional_args = expected.get("optional_args", {})
+
+                if self._check_tool_call(
+                    tool_call=tool_call,
+                    expected_name=expected_name,
+                    expected_args=expected_args,
+                    expected_optional_args=expected_optional_args,
                 ):
                     matched_calls[i] = True
                     found_match = True
