@@ -39,7 +39,9 @@ class MoveObjectsToLeftTask(ManipulationTask):
 
     def get_prompt(self) -> str:
         obj_names = ", ".join(obj + "s" for obj in self.obj_types).replace("_", " ")
-        return f"Manipulate objects, so that all of the following objects are on the left side of the table (positive y): {obj_names}."
+        # NOTE (jmatejcz) specifing (positive y) might not be the best way to tell agent what to do,
+        # but 'left side' is depending on where camera is positioned so it might not be enough
+        return f"Manipulate objects, so that all of the {obj_names} are on the left side of the table (positive y)"
 
     def check_if_required_objects_present(
         self, simulation_config: SimulationConfig
