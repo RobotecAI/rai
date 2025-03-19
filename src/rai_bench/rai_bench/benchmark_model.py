@@ -61,12 +61,7 @@ class Task(ABC):
     @abstractmethod
     def get_prompt(self) -> str:
         """
-        Validate whether the provided simulation configuration is suitable for this task.
-
-        Returns
-        -------
-        bool
-            True if the configuration is suitable, False otherwise.
+        Returns the task instruction - the prompt that will be passed to agent
         """
         pass
 
