@@ -9,8 +9,17 @@ O3DE comes with a ROS2 gem that allows for easy integration of your scene with R
 
 ## Requirements
 
+- Ubuntu operating system - the ROS2 gem in O3DE is only supported on Ubuntu
+
+> Note: `o3de` and `o3de-extras` repositories use `git-lfs` to store large files. Make sure to have it set up as described [here](https://github.com/o3de/o3de?tab=readme-ov-file#download-and-install) before cloning the repositories.
+
 - https://github.com/o3de/o3de and https://github.com/o3de/o3de-extras checked out on tag **2409.2**
-- an o3de project created (instructions: https://www.docs.o3de.org/docs/welcome-guide/create/creating-projects-using-cli/creating-linux/)
+
+> Note: If you have never built O3DE before, you will need to follow the instructions in the O3DE documentation to set up your environment and build the engine. First install all the needed dependencies for building O3DE listed here: https://www.docs.o3de.org/docs/welcome-guide/requirements/#linux (make sure to also install `ninja-build`). Then navigate to the O3DE directory and run the following commands: `python/get_python.sh && scripts/o3de.sh register --this-engine`
+
+> Note: If you have never used the ROS2 gem in O3DE, make sure to install all the needed dependencies listed [here](https://www.docs.o3de.org/docs/user-guide/interactivity/robotics/project-configuration/#additional-ros-2-packages-required). Then register the gem as described [here](https://www.docs.o3de.org/docs/user-guide/interactivity/robotics/project-configuration/#additional-ros-2-packages-required).
+
+- an o3de project created ([instructions](https://www.docs.o3de.org/docs/welcome-guide/create/creating-projects-using-cli/creating-linux/)).
 
 ## **Step 1. Enable ROS2 gem in your project.**
 
