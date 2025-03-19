@@ -45,7 +45,6 @@ class ManipulationTask(Task, ABC):
         and then calculated score based on how many carrots were moved to the left side
     """
 
-    # TODO (jm) is this clear, what obj_types is?
     obj_types: List[str] = []
 
     @abstractmethod

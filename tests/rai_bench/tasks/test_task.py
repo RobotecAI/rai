@@ -95,7 +95,7 @@ def test_group_entities_by_z_coordinate_all_stacked() -> None:
 
     groups: List[List[Entity]] = task.group_entities_along_z_axis(entities, margin=0.1)
     assert len(groups) == 1
-    assert groups[0] == [e1, e2, e3, e4, e5]
+    assert groups[0] == entities
 
 
 def test_group_entities_by_z_coordinate_2_stacks() -> None:
