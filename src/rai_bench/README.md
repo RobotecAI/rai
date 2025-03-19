@@ -12,7 +12,7 @@ The RAI Bench is a package including benchmarks and providing frame for creating
 
 For more information about these classes go to -> [benchmark_model](./rai_bench/benchmark_model.py)
 
-### O3DE TEST BENCHMARK
+### O3DE Test Benchmark
 
 The O3DE Test Benchmark [o3de_test_benchmark_module](./rai_bench/o3de_test_bench/) provides tasks and scene configurations for robotic arm manipulation task. The tasks use a common `ManipulationTask` logic and can be parameterized, which allows for many task variants. The current tasks include:
 
