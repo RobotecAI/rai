@@ -21,32 +21,32 @@ from typing import List
 
 import rclpy
 from langchain.tools import BaseTool
-from rai.agents.conversational_agent import create_conversational_agent  # type: ignore
-from rai.communication.ros2.connectors import ROS2ARIConnector  # type: ignore
-from rai.tools.ros.manipulation import (  # type: ignore
+from rai.agents.conversational_agent import create_conversational_agent
+from rai.communication.ros2.connectors import ROS2ARIConnector
+from rai.tools.ros.manipulation import (
     GetObjectPositionsTool,
     MoveToPointTool,
 )
-from rai.tools.ros2.topics import (  # type: ignore
+from rai.tools.ros2.topics import (
     GetROS2ImageTool,
     GetROS2TopicsNamesAndTypesTool,
 )
-from rai.utils.model_initialization import get_llm_model  # type: ignore
+from rai.utils.model_initialization import get_llm_model
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
-from rai_bench.benchmark_model import Benchmark  # type: ignore
-from rai_bench.o3de_test_bench.scenarios import (  # type: ignore
+from rai_bench.benchmark_model import Benchmark
+from rai_bench.o3de_test_bench.scenarios import (
     easy_scenarios,
     hard_scenarios,
     medium_scenarios,
     trivial_scenarios,
     very_hard_scenarios,
 )
-from rai_sim.o3de.o3de_bridge import (  # type: ignore
+from rai_sim.o3de.o3de_bridge import (
     O3DEngineArmManipulationBridge,
     Pose,
 )
-from rai_sim.simulation_bridge import Rotation, Translation  # type: ignore
+from rai_sim.simulation_bridge import Rotation, Translation
 
 if __name__ == "__main__":
     rclpy.init()

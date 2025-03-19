@@ -19,11 +19,11 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Generic, List, Set, TypeVar, Union
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from langgraph.graph.state import CompiledStateGraph  # type: ignore
-from rai.messages import HumanMultimodalMessage  # type: ignore
+from langgraph.graph.state import CompiledStateGraph
+from rai.messages import HumanMultimodalMessage
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from rai_sim.simulation_bridge import (  # type: ignore
+from rai_sim.simulation_bridge import (
     Entity,
     Pose,
     SimulationBridge,
@@ -368,6 +368,7 @@ class Scenario(Generic[SimulationConfigT]):
         task: Task,
         simulation_config: SimulationConfigT,
         simulation_config_path: str,
+        logger: loggers_type | None = None,
     ) -> None:
         """
         Initialize a Scenario.
@@ -386,8 +387,16 @@ class Scenario(Generic[SimulationConfigT]):
         ValueError
             If the provided simulation configuration is not valid for the task.
         """
+        if logger:
+            self._logger = logger
+        else:
+            self._logger = logging.getLogger(__name__)
+
         if not task.validate_config(simulation_config):
-            raise ValueError("This scene is invalid for this task.")
+            self._logger.debug(
+                f"Simulation config: {simulation_config_path} is not suitable for task: {task.get_prompt()}"
+            )
+            raise ValueError("This simulation config is invalid for this task.")
         self.task = task
         self.simulation_config = simulation_config
         # NOTE (jm) needed for logging which config was used,
@@ -434,6 +443,7 @@ class Benchmark:
         tasks: List[Task],
         simulation_configs: List[SimulationConfigT],
         simulation_configs_paths: List[str],
+        logger: loggers_type | None = None,
     ) -> List[Scenario[SimulationConfigT]]:
         """
         Create scenarios by pairing each task with each suitable simulation configuration.
@@ -464,12 +474,11 @@ class Benchmark:
                             task=task,
                             simulation_config=sim_conf,
                             simulation_config_path=sim_path,
+                            logger=logger,
                         )
                     )
-                except ValueError as e:
-                    print(
-                        f"Could not create Scenario from task: {task.get_prompt()} and simulation_config: {sim_conf}, {e}"
-                    )
+                except ValueError:
+                    pass
         return scenarios
 
     def _initialize_results_file(self):
@@ -496,10 +505,10 @@ class Benchmark:
             i, scenario = next(self.scenarios)  # Get the next scenario
 
             self.simulation_bridge.setup_scene(scenario.simulation_config)
-            self._logger.info(  # type: ignore
+            self._logger.info(
                 "======================================================================================"
             )
-            self._logger.info(  # type: ignore
+            self._logger.info(
                 f"RUNNING SCENARIO NUMBER {i + 1} / {self.num_of_scenarios}\n TASK: {scenario.task.get_prompt()}\n SIMULATION_CONFIG: {scenario.simulation_config_path}"
             )
             tool_calls_num = 0
@@ -521,7 +530,7 @@ class Benchmark:
                                 last_msg = msg.content[0].get("text", "")
                     else:
                         last_msg = msg.content
-                        self._logger.debug(f"{graph_node_name}: {last_msg}")  # type: ignore
+                        self._logger.debug(f"{graph_node_name}: {last_msg}")
 
                 else:
                     raise ValueError(f"Unexpected type of message: {type(msg)}")
@@ -530,13 +539,13 @@ class Benchmark:
                     # TODO (jm) figure out more robust way of counting tool calls
                     tool_calls_num += len(msg.tool_calls)
 
-                self._logger.info(f"AI Message: {msg}")  # type: ignore
+                self._logger.info(f"AI Message: {msg}")
 
             te = time.perf_counter()
             try:
                 result = scenario.task.calculate_result(self.simulation_bridge)
                 total_time = te - ts
-                self._logger.info(  # type: ignore
+                self._logger.info(
                     f"TASK SCORE: {result}, TOTAL TIME: {total_time:.3f}, NUM_OF_TOOL_CALLS: {tool_calls_num}"
                 )
                 scenario_result: Dict[str, Any] = {
@@ -549,7 +558,7 @@ class Benchmark:
                 self.results.append(scenario_result)
                 self._save_scenario_result_to_csv(scenario_result)
             except EntitiesMismatchException as e:
-                self._logger.error(e)  # type:ignore
+                self._logger.error(e)
 
         except StopIteration:
             print("No more scenarios left to run.")

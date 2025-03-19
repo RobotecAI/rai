@@ -14,9 +14,9 @@
 
 import math
 
-from rai_bench.o3de_test_bench.tasks import RotateObjectTask  # type: ignore
-from rai_sim.simulation_bridge import Rotation  # type: ignore
-from tests.rai_bench.conftest import create_entity  # Assumed helper
+from rai_bench.o3de_test_bench.tasks import RotateObjectTask
+from rai_sim.simulation_bridge import Rotation
+from tests.rai_bench.conftest import create_entity
 
 
 def test_calculate_perfect_match() -> None:
