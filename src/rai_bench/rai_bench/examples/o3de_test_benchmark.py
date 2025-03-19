@@ -150,25 +150,27 @@ if __name__ == "__main__":
     ### import ready scenarios
     t_scenarios = trivial_scenarios(
         configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
-    )[:3]
+    )
     e_scenarios = easy_scenarios(
         configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
-    )[:3]
+    )
     m_scenarios = medium_scenarios(
         configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
-    )[:3]
+    )
     h_scenarios = hard_scenarios(
         configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
-    )[:3]
+    )
     vh_scenarios = very_hard_scenarios(
         configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
-    )[:3]
+    )
+
+    all_scenarios = t_scenarios + e_scenarios + m_scenarios + h_scenarios + vh_scenarios
     o3de = O3DEngineArmManipulationBridge(connector, logger=agent_logger)
     # define benchamrk
     results_filename = f"{experiment_dir}/results.csv"
     benchmark = Benchmark(
         simulation_bridge=o3de,
-        scenarios=t_scenarios,
+        scenarios=all_scenarios,
         logger=bench_logger,
         results_filename=results_filename,
     )
