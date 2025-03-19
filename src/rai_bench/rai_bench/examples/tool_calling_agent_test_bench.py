@@ -41,121 +41,127 @@ from rai_bench.tool_calling_agent_bench.ros2_agent_tasks import (
     SwapObjectsTask,
 )
 
-# define loggers
-now = datetime.now()
-current_test_name = os.path.splitext(os.path.basename(__file__))[0]
+if __name__ == "__main__":
+    # define loggers
+    now = datetime.now()
+    current_test_name = os.path.splitext(os.path.basename(__file__))[0]
 
-# Define loggers
-now = datetime.now()
-experiment_dir = os.path.join(
-    "src/rai_bench/rai_bench/experiments",
-    current_test_name,
-    now.strftime("%Y-%m-%d_%H-%M-%S"),
-)
-Path(experiment_dir).mkdir(parents=True, exist_ok=True)
-log_filename = f"{experiment_dir}/benchmark.log"
-results_filename = f"{experiment_dir}/results.csv"
-
-file_handler = logging.FileHandler(log_filename)
-file_handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-file_handler.setFormatter(formatter)
-
-bench_logger = logging.getLogger("Benchmark logger")
-bench_logger.setLevel(logging.INFO)
-bench_logger.addHandler(file_handler)
-
-agent_logger = logging.getLogger("Agent logger")
-agent_logger.setLevel(logging.INFO)
-agent_logger.addHandler(file_handler)
-
-tasks: Sequence[ToolCallingAgentTask] = [
-    GetROS2RGBCameraTask(logger=bench_logger),
-    GetROS2TopicsTask(logger=bench_logger),
-    GetROS2DepthCameraTask(logger=bench_logger),
-    GetAllROS2RGBCamerasTask(logger=bench_logger),
-    GetROS2TopicsTask2(logger=bench_logger),
-    GetROS2MessageTask(logger=bench_logger),
-    MoveToPointTask(
-        logger=bench_logger, args={"x": 1.0, "y": 2.0, "z": 3.0, "task": "grab"}
-    ),
-    MoveToPointTask(
-        logger=bench_logger, args={"x": 1.2, "y": 2.3, "z": 3.4, "task": "drop"}
-    ),
-    GetObjectPositionsTask(
-        logger=bench_logger,
-        objects={
-            "carrot": [{"x": 1.0, "y": 2.0, "z": 3.0}],
-            "apple": [{"x": 4.0, "y": 5.0, "z": 6.0}],
-            "banana": [
-                {"x": 7.0, "y": 8.0, "z": 9.0},
-                {"x": 10.0, "y": 11.0, "z": 12.0},
-            ],
-        },
-    ),
-    GrabExistingObjectTask(
-        logger=bench_logger,
-        object_to_grab="banana",
-        objects={
-            "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
-            "apple": [
-                {"x": 4.0, "y": 5.0, "z": 6.0},
-                {"x": 10.0, "y": 11.0, "z": 12.0},
-            ],
-        },
-    ),
-    GrabNotExistingObjectTask(
-        logger=bench_logger,
-        object_to_grab="apple",
-        objects={
-            "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
-            "cube": [{"x": 4.0, "y": 5.0, "z": 6.0}, {"x": 10.0, "y": 11.0, "z": 12.0}],
-        },
-    ),
-    MoveExistingObjectLeftTask(
-        logger=bench_logger,
-        object_to_grab="banana",
-        objects={
-            "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
-            "apple": [
-                {"x": 4.0, "y": 5.0, "z": 6.0},
-                {"x": 10.0, "y": 11.0, "z": 12.0},
-            ],
-        },
-    ),
-    MoveExistingObjectFrontTask(
-        logger=bench_logger,
-        object_to_grab="banana",
-        objects={
-            "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
-            "apple": [
-                {"x": 4.0, "y": 5.0, "z": 6.0},
-                {"x": 10.0, "y": 11.0, "z": 12.0},
-            ],
-        },
-    ),
-    SwapObjectsTask(
-        logger=bench_logger,
-        objects={
-            "banana": [{"x": 1.0, "y": 2.0, "z": 3.0}],
-            "apple": [{"x": 4.0, "y": 5.0, "z": 6.0}],
-        },
-        objects_to_swap=["banana", "apple"],
-    ),
-]
-benchmark = ToolCallingAgentBenchmark(
-    tasks=tasks, logger=bench_logger, results_filename=results_filename
-)
-
-for _, task in enumerate(tasks):
-    # getting model name to tag it
-    model_type = "complex_model"
-    model_config = get_llm_model_config(model_type=model_type)
-    model_name = getattr(model_config, model_type)
-    agent = create_conversational_agent(
-        llm=get_llm_model(model_type=model_type),
-        tools=task.expected_tools,
-        system_prompt=task.get_system_prompt(),
-        logger=agent_logger,
+    # Define loggers
+    now = datetime.now()
+    experiment_dir = os.path.join(
+        "src/rai_bench/rai_bench/experiments",
+        current_test_name,
+        now.strftime("%Y-%m-%d_%H-%M-%S"),
     )
-    benchmark.run_next(agent=agent, model_name=model_name)
+    Path(experiment_dir).mkdir(parents=True, exist_ok=True)
+    log_filename = f"{experiment_dir}/benchmark.log"
+    results_filename = f"{experiment_dir}/results.csv"
+
+    file_handler = logging.FileHandler(log_filename)
+    file_handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    file_handler.setFormatter(formatter)
+
+    bench_logger = logging.getLogger("Benchmark logger")
+    bench_logger.setLevel(logging.INFO)
+    bench_logger.addHandler(file_handler)
+
+    agent_logger = logging.getLogger("Agent logger")
+    agent_logger.setLevel(logging.INFO)
+    agent_logger.addHandler(file_handler)
+
+    tasks: Sequence[ToolCallingAgentTask] = [
+        GetROS2RGBCameraTask(logger=bench_logger),
+        GetROS2TopicsTask(logger=bench_logger),
+        GetROS2DepthCameraTask(logger=bench_logger),
+        GetAllROS2RGBCamerasTask(logger=bench_logger),
+        GetROS2TopicsTask2(logger=bench_logger),
+        GetROS2MessageTask(logger=bench_logger),
+        MoveToPointTask(
+            logger=bench_logger, args={"x": 1.0, "y": 2.0, "z": 3.0, "task": "grab"}
+        ),
+        MoveToPointTask(
+            logger=bench_logger, args={"x": 1.2, "y": 2.3, "z": 3.4, "task": "drop"}
+        ),
+        GetObjectPositionsTask(
+            logger=bench_logger,
+            objects={
+                "carrot": [{"x": 1.0, "y": 2.0, "z": 3.0}],
+                "apple": [{"x": 4.0, "y": 5.0, "z": 6.0}],
+                "banana": [
+                    {"x": 7.0, "y": 8.0, "z": 9.0},
+                    {"x": 10.0, "y": 11.0, "z": 12.0},
+                ],
+            },
+        ),
+        GrabExistingObjectTask(
+            logger=bench_logger,
+            object_to_grab="banana",
+            objects={
+                "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
+                "apple": [
+                    {"x": 4.0, "y": 5.0, "z": 6.0},
+                    {"x": 10.0, "y": 11.0, "z": 12.0},
+                ],
+            },
+        ),
+        GrabNotExistingObjectTask(
+            logger=bench_logger,
+            object_to_grab="apple",
+            objects={
+                "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
+                "cube": [
+                    {"x": 4.0, "y": 5.0, "z": 6.0},
+                    {"x": 10.0, "y": 11.0, "z": 12.0},
+                ],
+            },
+        ),
+        MoveExistingObjectLeftTask(
+            logger=bench_logger,
+            object_to_grab="banana",
+            objects={
+                "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
+                "apple": [
+                    {"x": 4.0, "y": 5.0, "z": 6.0},
+                    {"x": 10.0, "y": 11.0, "z": 12.0},
+                ],
+            },
+        ),
+        MoveExistingObjectFrontTask(
+            logger=bench_logger,
+            object_to_grab="banana",
+            objects={
+                "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
+                "apple": [
+                    {"x": 4.0, "y": 5.0, "z": 6.0},
+                    {"x": 10.0, "y": 11.0, "z": 12.0},
+                ],
+            },
+        ),
+        SwapObjectsTask(
+            logger=bench_logger,
+            objects={
+                "banana": [{"x": 1.0, "y": 2.0, "z": 3.0}],
+                "apple": [{"x": 4.0, "y": 5.0, "z": 6.0}],
+            },
+            objects_to_swap=["banana", "apple"],
+        ),
+    ]
+    benchmark = ToolCallingAgentBenchmark(
+        tasks=tasks, logger=bench_logger, results_filename=results_filename
+    )
+
+    for _, task in enumerate(tasks):
+        # getting model name to tag it
+        model_type = "simple_model"
+        model_config = get_llm_model_config(model_type=model_type)
+        model_name = getattr(model_config, model_type)
+        agent = create_conversational_agent(
+            llm=get_llm_model(model_type=model_type),
+            tools=task.expected_tools,
+            system_prompt=task.get_system_prompt(),
+            logger=agent_logger,
+        )
+        benchmark.run_next(agent=agent, model_name=model_name)
