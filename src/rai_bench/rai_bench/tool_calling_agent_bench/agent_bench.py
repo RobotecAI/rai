@@ -19,6 +19,7 @@ import uuid
 from typing import Iterator, List, Sequence, Tuple
 from uuid import UUID
 
+from langchain_core.runnables.config import RunnableConfig
 from pydantic import BaseModel
 from rai.messages.multimodal import HumanMultimodalMessage
 
@@ -32,6 +33,7 @@ loggers_type = logging.Logger
 
 class TaskResult(BaseModel):
     task: str
+    model: str
     success: bool
     errors: List[str]
     total_time: float
@@ -61,7 +63,7 @@ class ToolCallingAgentBenchmark:
         else:
             self.logger = logging.getLogger(__name__)
 
-    def run_next(self, agent) -> None:
+    def run_next(self, agent, model_name: str) -> None:
         try:
             i, task = next(self._tasks)
             self.logger.info(
@@ -70,13 +72,14 @@ class ToolCallingAgentBenchmark:
             callbacks = self.score_tracing_handler.get_callbacks()
             ts = time.perf_counter()
             run_id = uuid.uuid4()
+            config: RunnableConfig = {
+                "run_id": run_id,
+                "callbacks": callbacks,
+                "tags": [task.complexity, model_name],
+            }
             response = agent.invoke(
                 {"messages": [HumanMultimodalMessage(content=task.get_prompt())]},
-                config={
-                    "run_id": run_id,
-                    "callbacks": callbacks,
-                    "tags": [task.complexity],
-                },
+                config=config,
             )
             te = time.perf_counter()
             total_time = te - ts
@@ -97,6 +100,7 @@ class ToolCallingAgentBenchmark:
 
             task_result = TaskResult(
                 task=task.get_prompt(),
+                model=model_name,
                 success=result.success,
                 errors=result.errors if result.errors else [],
                 total_time=total_time,
