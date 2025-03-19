@@ -27,6 +27,9 @@ loggers_type = Union[RcutilsLogger, logging.Logger]
 
 class BuildCubeTowerTask(ManipulationTask):
     ALLOWED_OBJECTS = {"red_cube", "blue_cube", "yellow_cube"}
+    # fixed upper limit for allowable displacement for every object type
+    # it should ensure that this displacement is not greater than half of the object size
+    MAXIMUM_DISPLACEMENT = {"red_cube": 0.02, "blue_cube": 0.02, "yellow_cube": 0.02}
 
     def __init__(
         self,
@@ -64,6 +67,11 @@ class BuildCubeTowerTask(ManipulationTask):
             raise TypeError(
                 f"Invalid obj_types provided: {obj_types}. Allowed objects: {self.ALLOWED_OBJECTS}"
             )
+        for obj_type in obj_types:
+            if allowable_displacement > self.MAXIMUM_DISPLACEMENT[obj_type]:
+                raise ValueError(
+                    f"allowable_displacement too large. For object type: {obj_type} maximum is {self.MAXIMUM_DISPLACEMENT[obj_type]}"
+                )
         self.obj_types = obj_types
         self.allowable_displacement = allowable_displacement
 
