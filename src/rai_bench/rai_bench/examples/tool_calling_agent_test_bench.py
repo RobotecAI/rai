@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Sequence
 
 from rai.agents.conversational_agent import create_conversational_agent
-from rai.utils.model_initialization import get_llm_model
+from rai.utils.model_initialization import get_llm_model, get_llm_model_config
 
 from rai_bench.tool_calling_agent_bench.agent_bench import ToolCallingAgentBenchmark
 from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
@@ -148,10 +148,14 @@ benchmark = ToolCallingAgentBenchmark(
 )
 
 for _, task in enumerate(tasks):
+    # getting model name to tag it
+    model_type = "complex_model"
+    model_config = get_llm_model_config(model_type=model_type)
+    model_name = getattr(model_config, model_type)
     agent = create_conversational_agent(
-        llm=get_llm_model(model_type="complex_model"),
+        llm=get_llm_model(model_type=model_type),
         tools=task.expected_tools,
         system_prompt=task.get_system_prompt(),
         logger=agent_logger,
     )
-    benchmark.run_next(agent=agent)
+    benchmark.run_next(agent=agent, model_name=model_name)
