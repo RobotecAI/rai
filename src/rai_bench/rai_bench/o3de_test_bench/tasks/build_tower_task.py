@@ -123,7 +123,6 @@ class BuildCubeTowerTask(ManipulationTask):
                 # we treat single standing cubes as incorrect
                 if all(entity.prefab_name in self.obj_types for entity in group):
                     # highest tower is number of correctly placed objects
-                    # NOTE (jm) should we check z distance between entities?
                     correct = max(correct, len(group))
         incorrect = len(selected_type_objects) - correct
         return correct, incorrect

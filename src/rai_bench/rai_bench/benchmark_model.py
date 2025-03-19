@@ -321,6 +321,11 @@ class Task(ABC):
         if its (x, y) distance from the first entity in the group is within the specified margin.
         Otherwise, a new group is created.
 
+        Example
+        ----------
+        You have 2 separate vertical towers of cubes.
+        In that case method will return 2 groups of entities, one for each tower.
+
         Parameters
         ----------
         entities : List[EntityT]
