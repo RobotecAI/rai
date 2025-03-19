@@ -46,14 +46,16 @@ cmake --build build/linux --config profile --target Editor -j 22
 
 ## **Step 3. Set up your spawnable prefabs**
 
-- Place your desired object somewhere in the scene
-- On the entity which you want to track, add the ROS2 Frame component and configure it as follows:
+- Create an entity in the scene that you want to make spawnable. For example, to create a simple entity that interacts with the physical environment, you can:
+  - Right-click in the _entity manager_ and click _Create entity_.
+  - Select the entity and in the _inspector window_ add _PhysX Dynamic Rigid Body_, _Box Shape_ and _PhysX Shape Collider_ components to it.
+- Select the entity you want to track in the _entity manager_ and add the `ROS2 Frame component` in the _inspector window_; configure it as follows:
 
 ![image.png](../imgs/rai_sim/o3de/image.png)
 
 Leave the frame name and joint name empty, set namespace strategy to “Generate from entity name” and check “Publish transform”.
 
-- Save the object as a prefab
+- Right-click on the entity name in the _entity manager_ to save the object as a prefab
 
 ![image.png](../imgs/rai_sim/o3de/image%201.png)
 
@@ -131,7 +133,19 @@ transforms:
 
 If these commands work for you, your scene is successfully set up and ready to be used with rai_sim. You can now build the binary package and run it with rai_sim.
 
-## Step 5. Building the binary package
+## Step 5. Building the GameLauncher
+
+To run your simulation with rai_sim, you need to build the binary package. To do this, you need to build the GameLauncher. Run the following command inside the project directory:
+
+```bash
+cmake --build build/linux --config profile --target YourProjectName.GameLauncher -j 22
+```
+
+The GameLauncher will be ready to run inside the `build/linux/bin/profile` directory with the name `YourProjectName.GameLauncher`.
+
+## Step 6. (Optional) Building the Monolithic package
+
+If you want to make a portable package that can be run on a different machine, you can build the Monolithic package. To do this, run the following commands inside the project directory:
 
 ```bash
 cmake -B build/linux_mono -S . -G "Ninja Multi-Config" -DLY_MONOLITHIC_GAME=1
