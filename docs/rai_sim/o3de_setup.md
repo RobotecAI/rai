@@ -14,6 +14,14 @@ O3DE comes with a ROS2 gem that allows for easy integration of your scene with R
 
 ## **Step 1. Enable ROS2 gem in your project.**
 
+The ROS2 gem depends on the `PhysX5` gem, which will conflict with the `PhysX` gem that is enabled by default when you create a project in O3DE. Therefore first make sure to have the `PhysX` gem disabled. To do this, enter the directory of your cloned O3DE repository and run the following command:
+
+```bash
+scripts/o3de.sh disable-gem -gn PhysX -pp /path/to/your-project/
+```
+
+Now you can enable the ROS2 gem:
+
 ```bash
 scripts/o3de.sh enable-gem -gn ROS2 -pp /path/to/your-project/
 ```
