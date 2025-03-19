@@ -168,9 +168,8 @@ class ROS2ToolCallingAgentTask(ToolCallingAgentTask, ABC):
         """Helper method to check if the given AIMessage is calling the only tool
         to get ROS2 topics names and types correctly.
         """
-        error_occurs = False
         if not self._check_tool_calls_num_in_ai_message(ai_message, expected_num=1):
-            error_occurs = True
+            return False
 
         tool_call: ToolCall = ai_message.tool_calls[0]
         if not self._check_tool_call(
@@ -178,7 +177,5 @@ class ROS2ToolCallingAgentTask(ToolCallingAgentTask, ABC):
             expected_name="get_ros2_topics_names_and_types",
             expected_args={},
         ):
-            error_occurs = True
-        if error_occurs:
             return False
         return True
