@@ -369,7 +369,6 @@ class Scenario(Generic[SimulationConfigT]):
         task: Task,
         simulation_config: SimulationConfigT,
         simulation_config_path: str,
-        logger: loggers_type | None = None,
     ) -> None:
         """
         Initialize a Scenario.
@@ -388,16 +387,6 @@ class Scenario(Generic[SimulationConfigT]):
         ValueError
             If the provided simulation configuration is not valid for the task.
         """
-        if logger:
-            self._logger = logger
-        else:
-            self._logger = logging.getLogger(__name__)
-
-        if not task.validate_config(simulation_config):
-            self._logger.debug(
-                f"Simulation config: {simulation_config_path} is not suitable for task: {task.get_prompt()}"
-            )
-            raise ValueError("This simulation config is invalid for this task.")
         self.task = task
         self.simulation_config = simulation_config
         # NOTE (jmatejcz) needed for logging which config was used,
@@ -466,20 +455,22 @@ class Benchmark:
         # NOTE (jmatejcz) hacky_fix, taking paths as args here, not the best solution,
         # but more changes to code would be required
         scenarios: List[Scenario[SimulationConfigT]] = []
-
+        if not logger:
+            logger = logging.getLogger(__name__)
         for task in tasks:
             for sim_conf, sim_path in zip(simulation_configs, simulation_configs_paths):
-                try:
+                if task.validate_config(simulation_config=sim_conf):
                     scenarios.append(
                         Scenario(
                             task=task,
                             simulation_config=sim_conf,
                             simulation_config_path=sim_path,
-                            logger=logger,
                         )
                     )
-                except ValueError:
-                    pass
+                else:
+                    logger.debug(
+                        f"Simulation config: {sim_path} is not suitable for task: {task.get_prompt()}"
+                    )
         return scenarios
 
     def _initialize_results_file(self):
