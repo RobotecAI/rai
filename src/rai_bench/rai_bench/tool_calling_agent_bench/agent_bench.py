@@ -15,6 +15,7 @@
 import csv
 import logging
 import time
+import uuid
 from typing import Any, Dict, List, Sequence
 
 from rai.messages.multimodal import HumanMultimodalMessage
@@ -47,7 +48,7 @@ class ToolCallingAgentBenchmark:
             "success",
             "errors",
             "total_time",
-            "callback_trace_ids",
+            "run_id",
         ]
         self._initialize_results_file()
         self.score_tracing_handler = ScoreTracingHandler()
@@ -64,26 +65,27 @@ class ToolCallingAgentBenchmark:
             )
             callbacks = self.score_tracing_handler.get_callbacks()
             ts = time.perf_counter()
+            run_id = uuid.uuid4()
             response = agent.invoke(
                 {"messages": [HumanMultimodalMessage(content=task.get_prompt())]},
-                config={"callbacks": callbacks, "tags": [task.complexity]},
+                config={
+                    "run_id": run_id,
+                    "callbacks": callbacks,
+                    "tags": [task.complexity],
+                },
             )
             te = time.perf_counter()
             total_time = te - ts
 
             task.verify_tool_calls(response=response)
             result = task.result
-            trace_ids: List[str] = []
             for callback in callbacks:
-                trace_id = self.score_tracing_handler.get_trace_id(callback)
-                if trace_id:
-                    trace_ids.append(trace_id)
-                    self.score_tracing_handler.send_score(
-                        callback=callback,
-                        trace_id=trace_id,
-                        success=result.success,
-                        errors=result.errors,
-                    )
+                self.score_tracing_handler.send_score(
+                    callback=callback,
+                    run_id=run_id,
+                    success=result.success,
+                    errors=result.errors,
+                )
 
             self.logger.info(
                 f"TASK SUCCESS: {result.success}, TOTAL TIME: {total_time:.3f}"
@@ -94,7 +96,7 @@ class ToolCallingAgentBenchmark:
                 "success": result.success,
                 "errors": "; ".join(result.errors) if result.errors else "",
                 "total_time": total_time,
-                "callback_trace_ids": trace_ids,
+                "run_id": run_id,
             }
             self.tasks_results.append(task_result)
             self._save_task_result_to_csv(task_result)

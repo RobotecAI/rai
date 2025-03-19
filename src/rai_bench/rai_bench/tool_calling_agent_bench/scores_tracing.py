@@ -14,6 +14,7 @@
 
 
 from typing import List
+from uuid import UUID
 
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.tracers.langchain import LangChainTracer
@@ -33,24 +34,12 @@ class ScoreTracingHandler:
         return get_tracing_callbacks()
 
     @staticmethod
-    def get_trace_id(callback: BaseCallbackHandler):
-        if isinstance(callback, CallbackHandler):
-            return callback.get_trace_id()
-        if isinstance(callback, LangChainTracer):
-            if callback.latest_run:
-                return str(callback.latest_run.id)
-            raise ValueError("LangChainTracer has no latest_run")
-        raise NotImplementedError(
-            f"Callback {callback} of type {callback.__class__.__name__} not supported"
-        )
-
-    @staticmethod
     def send_score(
-        callback: BaseCallbackHandler, trace_id: str, success: bool, errors: List[str]
+        callback: BaseCallbackHandler, run_id: UUID, success: bool, errors: List[str]
     ) -> None:
         if isinstance(callback, CallbackHandler):
             callback.langfuse.score(
-                trace_id=trace_id,
+                trace_id=str(run_id),
                 name="tool calls result",
                 value=float(success),
                 comment="; ".join(errors) if errors else "",
@@ -58,7 +47,7 @@ class ScoreTracingHandler:
             return None
         if isinstance(callback, LangChainTracer):
             callback.client.create_feedback(
-                run_id=trace_id,
+                run_id=run_id,
                 key="tool calls result",
                 score=float(success),
                 comment="; ".join(errors) if errors else "",
