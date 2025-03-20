@@ -188,7 +188,7 @@ class GetROS2RGBCameraTask(ROS2ToolCallingAgentTask):
                     "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
                 ]
             ),
-            MockGetROS2ImageTool(),
+            MockGetROS2ImageTool(expected_topics=["/camera_image_color"]),
         ]
 
     def get_system_prompt(self) -> str:
@@ -253,7 +253,7 @@ class GetROS2DepthCameraTask(ROS2ToolCallingAgentTask):
                     "topic: /depth_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
                 ]
             ),
-            MockGetROS2ImageTool(),
+            MockGetROS2ImageTool(expected_topics=["/camera_image_depth"]),
         ]
 
     def get_system_prompt(self) -> str:
@@ -321,7 +321,9 @@ class GetAllROS2RGBCamerasTask(ROS2ToolCallingAgentTask):
                     "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
                 ]
             ),
-            MockGetROS2ImageTool(),
+            MockGetROS2ImageTool(
+                expected_topics=["/camera_image_color", "/color_image5"]
+            ),
         ]
 
     def get_prompt(self) -> str:
@@ -396,7 +398,9 @@ class GetAllROS2DepthCamerasTask(ROS2ToolCallingAgentTask):
                     "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
                 ]
             ),
-            MockGetROS2ImageTool(),
+            MockGetROS2ImageTool(
+                expected_topics=["/camera_image_depth", "/depth_image5"]
+            ),
         ]
 
     def get_prompt(self) -> str:
@@ -471,7 +475,7 @@ class GetROS2MessageTask(ROS2ToolCallingAgentTask):
                     "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
                 ]
             ),
-            MockReceiveROS2MessageTool(),
+            MockReceiveROS2MessageTool(expected_topics=["/camera_image_color"]),
         ]
 
     def get_system_prompt(self) -> str:
@@ -533,7 +537,7 @@ class GetRobotDescriptionTask(ROS2ToolCallingAgentTask):
                     "topic: /trajectory_execution_event\ntype: std_msgs/msg/String\n",
                 ]
             ),
-            MockReceiveROS2MessageTool(),
+            MockReceiveROS2MessageTool(expected_topics=["/robot_description"]),
         ]
 
     def get_system_prompt(self) -> str:
@@ -595,7 +599,7 @@ class GetPointcloudTask(ROS2ToolCallingAgentTask):
                     "topic: /trajectory_execution_event\ntype: std_msgs/msg/String\n",
                 ]
             ),
-            MockReceiveROS2MessageTool(),
+            MockReceiveROS2MessageTool(expected_topics=["/pointcloud"]),
         ]
 
     def get_system_prompt(self) -> str:
@@ -658,7 +662,6 @@ class MoveToPointTask(ROS2ToolCallingAgentTask):
                     "topic: /tf\ntype: tf2_msgs/msg/TFMessage\n",
                 ]
             ),
-            MockReceiveROS2MessageTool(),
             MockMoveToPointTool(manipulator_frame="base_link"),
         ]
         self.args = MoveToPointToolInput(**args)
@@ -734,7 +737,6 @@ class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
                     "topic: /tf\ntype: tf2_msgs/msg/TFMessage\n",
                 ]
             ),
-            MockReceiveROS2MessageTool(),
             MockGetObjectPositionsTool(mock_objects=objects),
         ]
         self.objects = objects
@@ -835,7 +837,6 @@ class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
                 mock_objects=objects,
             ),
             MockMoveToPointTool(manipulator_frame="panda_link0"),
-            MockGetROS2ImageTool(),
         ]
         self.objects = objects
         self.object_to_grab = object_to_grab
@@ -944,7 +945,6 @@ class GrabNotExistingObjectTask(ROS2ToolCallingAgentTask):
                 mock_objects=objects,
             ),
             MockMoveToPointTool(manipulator_frame="panda_link0"),
-            MockGetROS2ImageTool(),
         ]
         self.objects = objects
         self.object_to_grab = object_to_grab
@@ -1035,7 +1035,6 @@ class MoveExistingObjectLeftTask(ROS2ToolCallingAgentTask):
                 mock_objects=objects,
             ),
             MockMoveToPointTool(manipulator_frame="panda_link0"),
-            MockGetROS2ImageTool(),
         ]
         self.objects = objects
         self.object_to_grab = object_to_grab
@@ -1152,7 +1151,6 @@ class MoveExistingObjectFrontTask(ROS2ToolCallingAgentTask):
                 mock_objects=objects,
             ),
             MockMoveToPointTool(manipulator_frame="panda_link0"),
-            MockGetROS2ImageTool(),
         ]
         self.objects = objects
         self.object_to_grab = object_to_grab
@@ -1271,7 +1269,6 @@ class SwapObjectsTask(ROS2ToolCallingAgentTask):
                 mock_objects=objects,
             ),
             MockMoveToPointTool(manipulator_frame="panda_link0"),
-            MockGetROS2ImageTool(),
         ]
         self.objects = objects
         self.objects_to_swap = objects_to_swap

@@ -42,10 +42,15 @@ class MockGetROS2TopicsNamesAndTypesTool(GetROS2TopicsNamesAndTypesTool):
 
 class MockGetROS2ImageTool(GetROS2ImageTool):
     connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
+    expected_topics: List[str]
 
     def _run(
         self, topic: str, timeout_sec: float = 1.0
     ) -> Tuple[str, MultimodalArtifact]:
+        if topic not in self.expected_topics:
+            raise ValueError(
+                f"Topic {topic} is not available within {timeout_sec} seconds. Check if the topic exists."
+            )
         image = self.generate_mock_image()
         return "Image received successfully", MultimodalArtifact(
             images=[preprocess_image(image)]
@@ -61,8 +66,13 @@ class MockGetROS2ImageTool(GetROS2ImageTool):
 
 class MockReceiveROS2MessageTool(ReceiveROS2MessageTool):
     connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
+    expected_topics: List[str]
 
     def _run(self, topic: str) -> str:
+        if topic not in self.expected_topics:
+            raise ValueError(
+                f"Topic {topic} is not available within 1.0 seconds. Check if the topic exists."
+            )
         message: ROS2ARIMessage = MagicMock(spec=ROS2ARIMessage)
         message.payload = {"mock": "payload"}
         message.metadata = {"mock": "metadata"}
