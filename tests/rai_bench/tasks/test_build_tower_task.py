@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
+
 from rai_bench.o3de_test_bench.tasks import BuildCubeTowerTask
 from tests.rai_bench.conftest import create_entity
 
@@ -59,3 +61,24 @@ def test_calculate_single_entity() -> None:
     # A single cube in a group is considered incorrectly placed.
     assert correct == 0
     assert incorrect == 1
+
+
+def test_calculate_seperate_entities() -> None:
+    task = BuildCubeTowerTask(["red_cube"])
+    e1 = create_entity("cube1", "red_cube", 0.0, 0.0, 0.0)
+    e2 = create_entity("cube2", "red_cube", 0.2, 0.2, 0.0)
+    e3 = create_entity("cube3", "red_cube", -0.2, -0.2, 0.0)
+    correct, incorrect = task.calculate_correct([e1, e2, e3])
+    # not a single cube should be treated as correct
+    assert correct == 0
+    assert incorrect == 3
+
+
+def test_too_big_displacement() -> None:
+    with pytest.raises(ValueError):
+        BuildCubeTowerTask(["red_cube"], allowable_displacement=0.1)
+
+
+def test_not_allowable_type() -> None:
+    with pytest.raises(TypeError):
+        BuildCubeTowerTask(["red_cube", "apple"], allowable_displacement=0.1)
