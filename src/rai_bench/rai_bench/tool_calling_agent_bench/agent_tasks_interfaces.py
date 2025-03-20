@@ -17,6 +17,7 @@ from abc import ABC, abstractmethod
 from typing import Any, List, Literal
 
 from langchain_core.messages import AIMessage, ToolCall
+from langchain_core.runnables.config import DEFAULT_RECURSION_LIMIT
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 
@@ -44,6 +45,7 @@ class ToolCallingAgentTask(ABC):
         self.expected_tools: List[BaseTool] = []
         self.result = Result()
         self.complexity: Literal["easy", "medium", "hard"]
+        self.recursion_limit: int = DEFAULT_RECURSION_LIMIT
 
     @abstractmethod
     def get_system_prompt(self) -> str:

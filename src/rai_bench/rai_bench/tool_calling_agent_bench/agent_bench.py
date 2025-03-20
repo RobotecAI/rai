@@ -20,6 +20,7 @@ from typing import Iterator, List, Sequence, Tuple
 from uuid import UUID
 
 from langchain_core.runnables.config import RunnableConfig
+from langgraph.errors import GraphRecursionError
 from pydantic import BaseModel, Field
 from rai.messages.multimodal import HumanMultimodalMessage
 
@@ -74,21 +75,26 @@ class ToolCallingAgentBenchmark:
                 f"RUNNING TASK NUMBER {i + 1} / {self.num_tasks}, TASK {task.get_prompt()}"
             )
             callbacks = self.score_tracing_handler.get_callbacks()
-            ts = time.perf_counter()
+
             run_id = uuid.uuid4()
             config: RunnableConfig = {
                 "run_id": run_id,
                 "callbacks": callbacks,
                 "tags": [task.complexity, model_name],
+                "recursion_limit": task.recursion_limit,
             }
-            response = agent.invoke(
-                {"messages": [HumanMultimodalMessage(content=task.get_prompt())]},
-                config=config,
-            )
+            ts = time.perf_counter()
+            try:
+                response = agent.invoke(
+                    {"messages": [HumanMultimodalMessage(content=task.get_prompt())]},
+                    config=config,
+                )
+                task.verify_tool_calls(response=response)
+            except GraphRecursionError as e:
+                self.logger.error(f"Graph Recursion Error: {e}")
+                task.result.errors.append(f"Graph Recursion Error: {e}")
             te = time.perf_counter()
             total_time = te - ts
-
-            task.verify_tool_calls(response=response)
             result = task.result
             for callback in callbacks:
                 self.score_tracing_handler.send_score(
