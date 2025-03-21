@@ -149,10 +149,11 @@ if __name__ == "__main__":
         tasks=tasks, logger=bench_logger, results_filename=results_filename
     )
 
+    model_type = "simple_model"
+    model_config = get_llm_model_config(model_type=model_type)
+    model_name = getattr(model_config, model_type)
+
     for task in tasks:
-        model_type = "simple_model"
-        model_config = get_llm_model_config(model_type=model_type)
-        model_name = getattr(model_config, model_type)
         agent = create_conversational_agent(
             llm=get_llm_model(model_type=model_type),
             tools=task.expected_tools,
