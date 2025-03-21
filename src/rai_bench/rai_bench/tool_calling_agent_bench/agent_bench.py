@@ -22,6 +22,7 @@ from uuid import UUID
 
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
+from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, Field
 from rai.messages.multimodal import HumanMultimodalMessage
 
@@ -88,7 +89,7 @@ class ToolCallingAgentBenchmark:
         else:
             self.logger = logging.getLogger(__name__)
 
-    def run_next(self, agent, model_name: str) -> None:
+    def run_next(self, agent: CompiledStateGraph, model_name: str) -> None:
         try:
             i, task = next(self._tasks)
             self.logger.info(
@@ -103,7 +104,7 @@ class ToolCallingAgentBenchmark:
                 "tags": [task.complexity, model_name],
                 "recursion_limit": task.recursion_limit,
             }
-            
+
             ts = time.perf_counter()
             try:
                 response = agent.invoke(
@@ -116,7 +117,7 @@ class ToolCallingAgentBenchmark:
                 task.result.errors.append(f"Graph Recursion Error: {e}")
             te = time.perf_counter()
             total_time = te - ts
-            
+
             result = task.result
             for callback in callbacks:
                 self.score_tracing_handler.send_score(
