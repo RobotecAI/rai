@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import logging
-import os
 from datetime import datetime
 from pathlib import Path
 from typing import Sequence
@@ -42,13 +41,13 @@ from rai_bench.tool_calling_agent_bench.ros2_agent_tasks import (
 )
 
 if __name__ == "__main__":
-    current_test_name = os.path.splitext(os.path.basename(__file__))[0]
+    current_test_name = Path(__file__).stem
 
     now = datetime.now()
-    experiment_dir = os.path.join(
-        "src/rai_bench/rai_bench/experiments",
-        current_test_name,
-        now.strftime("%Y-%m-%d_%H-%M-%S"),
+    experiment_dir = (
+        Path("src/rai_bench/rai_bench/experiments")
+        / current_test_name
+        / now.strftime("%Y-%m-%d_%H-%M-%S")
     )
     Path(experiment_dir).mkdir(parents=True, exist_ok=True)
     log_filename = f"{experiment_dir}/benchmark.log"
