@@ -37,7 +37,7 @@ loggers_type = logging.Logger
 
 class TaskResult(BaseModel):
     task: str = Field(..., description="The task to be executed.")
-    model: str = Field(..., description="AI model used.")
+    model_name: str = Field(..., description="Name of the LLM.")
     success: bool = Field(
         ..., description="Whether the task was successfully completed."
     )
@@ -49,7 +49,7 @@ class TaskResult(BaseModel):
 
 
 class BenchmarkSummary(BaseModel):
-    model: str = Field(..., description="AI model used.")
+    model_name: str = Field(..., description="Name of the LLM.")
     success_rate: float = Field(
         ..., description="Percentage of successfully completed tasks."
     )
@@ -150,7 +150,7 @@ class ToolCallingAgentBenchmark:
 
             task_result = TaskResult(
                 task=task.get_prompt(),
-                model=model_name,
+                model_name=model_name,
                 success=result.success,
                 errors=result.errors if result.errors else [],
                 total_time=total_time,
@@ -188,7 +188,7 @@ class ToolCallingAgentBenchmark:
             avg_time = statistics.mean(r.total_time for r in results)
 
             summary = BenchmarkSummary(
-                model=model_name,
+                model_name=model_name,
                 success_rate=round(success_rate, 2),
                 avg_time=round(avg_time, 3),
                 total_tasks=len(results),
