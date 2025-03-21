@@ -154,7 +154,6 @@ if __name__ == "__main__":
     )
 
     for task in tasks:
-        # getting model name to tag it
         model_type = "simple_model"
         model_config = get_llm_model_config(model_type=model_type)
         model_name = getattr(model_config, model_type)
