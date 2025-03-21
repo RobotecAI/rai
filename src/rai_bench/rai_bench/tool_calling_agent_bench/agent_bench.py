@@ -36,7 +36,8 @@ loggers_type = logging.Logger
 
 
 class TaskResult(BaseModel):
-    task: str = Field(..., description="The task to be executed.")
+    task_prompt: str = Field(..., description="The task prompt.")
+    system_prompt: str = Field(..., description="The system prompt.")
     model_name: str = Field(..., description="Name of the LLM.")
     success: bool = Field(
         ..., description="Whether the task was successfully completed."
@@ -149,7 +150,8 @@ class ToolCallingAgentBenchmark:
             )
 
             task_result = TaskResult(
-                task=task.get_prompt(),
+                task_prompt=task.get_prompt(),
+                system_prompt=task.get_system_prompt(),
                 model_name=model_name,
                 success=result.success,
                 errors=result.errors if result.errors else [],
