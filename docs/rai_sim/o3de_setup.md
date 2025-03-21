@@ -9,7 +9,7 @@ O3DE comes with a ROS2 gem that allows for easy integration of your scene with R
 
 ## Requirements
 
-- Ubuntu operating system - the ROS2 gem in O3DE is only supported on Ubuntu
+- Linux operating system (recommended platform for ROS2 gem in O3DE is Ubuntu 22.04 or Ubuntu 24.04)
 
 > Note: `o3de` and `o3de-extras` repositories use `git-lfs` to store large files. Make sure to have it set up as described [here](https://github.com/o3de/o3de?tab=readme-ov-file#download-and-install) before cloning the repositories.
 
@@ -37,6 +37,8 @@ scripts/o3de.sh enable-gem -gn ROS2 -pp /path/to/your-project/
 
 ## **Step 2. Build the Editor and open it**
 
+> Note: This process builds O3DE from the source, which might take up to two hours depending on your hardware.
+
 ```bash
 cd /path/to/your-project/
 cmake -B build/linux -S . -G "Ninja Multi-Config" -DLY_STRIP_DEBUG_SYMBOLS=TRUE -DLY_DISABLE_TEST_MODULES=ON
@@ -53,7 +55,7 @@ cmake --build build/linux --config profile --target Editor -j 22
 
 ![image.png](../imgs/rai_sim/o3de/image.png)
 
-Leave the frame name and joint name empty, set namespace strategy to “Generate from entity name” and check “Publish transform”.
+Leave the frame name and joint name empty, set namespace strategy to **Generate from entity name** and check **Publish transform**.
 
 - Right-click on the entity name in the _entity manager_ to save the entity as a prefab
 
@@ -65,7 +67,7 @@ You can now delete your entity from the scene.
 
 ## **Step 4. Setup ROS2 Spawner**
 
-- Create an empty entity and add a ROS2 spawner component to it.
+- Create an empty entity and add a ROS2 Spawner component to it.
 
 ![image.png](../imgs/rai_sim/o3de/image%203.png)
 
@@ -89,7 +91,7 @@ You can now delete your entity from the scene.
 
 ### **Repeat steps 3. and 4. for each entity that you want to make spawnable.**
 
-Now, when you press play in the Editor, you should be able to spawn new entities by calling the `/spawn_entity` service, like so:
+Now, press the **play** button in the Editor to start the simulation. You should be able to spawn new entities by calling the `/spawn_entity` service, like so:
 
 ```bash
 ros2 service call /spawn_entity gazebo_msgs/srv/SpawnEntity "{name: 'apple', initial_pose: {position:{ x: 0.0, y: 0.0, z: 0.2 }, orientation: { x: 0.0, y: 0.0, z: 0.0, w: 1.0 } } }"
