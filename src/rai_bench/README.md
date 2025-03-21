@@ -24,6 +24,11 @@ The O3DE Test Benchmark [o3de_test_benchmark_module](./rai_bench/o3de_test_bench
 
 The result of a task is a value between 0 and 1, calculated like initially_misplaced_now_correct / initially_misplaced. This score is calculated at the end of each scenario.
 
+Current O3DE simulation binaries:
+
+- [ros2-humble](https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIManipulationDemo_jammyhumble.zip)
+- [ros2-jazzy](https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIManipulationDemo_noblejazzy.zip)
+
 ### Example usage
 
 Example of how to load scenes, define scenarios and run benchmark can be found in [o3de_test_benchmark_example](./rai_bench/examples/o3de_test_benchmark.py)
