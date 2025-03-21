@@ -116,6 +116,7 @@ class ToolCallingAgentBenchmark:
                 task.result.errors.append(f"Graph Recursion Error: {e}")
             te = time.perf_counter()
             total_time = te - ts
+            
             result = task.result
             for callback in callbacks:
                 self.score_tracing_handler.send_score(
