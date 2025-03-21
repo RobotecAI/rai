@@ -50,11 +50,11 @@ class O3DExROS2SimulationConfig(SimulationConfig):
 
     @classmethod
     def load_config(
-        cls, base_config_path: Path, connector_config_path: Path
+        cls, base_config_path: Path, bridge_config_path: Path
     ) -> "O3DExROS2SimulationConfig":
         base_config = SimulationConfig.load_base_config(base_config_path)
 
-        with open(connector_config_path) as f:
+        with open(bridge_config_path) as f:
             connector_content: dict[str, Any] = yaml.safe_load(f)
         return cls(**base_config.model_dump(), **connector_content)
 

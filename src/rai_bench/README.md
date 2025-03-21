@@ -57,7 +57,7 @@ Scenarios can be loaded manually like:
 ```python
 one_carrot_simulation_config = O3DExROS2SimulationConfig.load_config(
         base_config_path=Path("path_to_scene.yaml"),
-        connector_config_path=Path("path_to_o3de_config.yaml"),
+        bridge_config_path=Path("path_to_o3de_config.yaml"),
     )
 
 Scenario(task=GrabCarrotTask(logger=some_logger), simulation_config=one_carrot_simulation_config)
