@@ -42,11 +42,8 @@ from rai_bench.tool_calling_agent_bench.ros2_agent_tasks import (
 )
 
 if __name__ == "__main__":
-    # define loggers
-    now = datetime.now()
     current_test_name = os.path.splitext(os.path.basename(__file__))[0]
 
-    # Define loggers
     now = datetime.now()
     experiment_dir = os.path.join(
         "src/rai_bench/rai_bench/experiments",
