@@ -15,30 +15,12 @@
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Sequence
 
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.utils.model_initialization import get_llm_model, get_llm_model_config
 
+from rai_bench.examples.tool_calling_agent_bench_tasks import tasks
 from rai_bench.tool_calling_agent_bench.agent_bench import ToolCallingAgentBenchmark
-from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
-    ToolCallingAgentTask,
-)
-from rai_bench.tool_calling_agent_bench.ros2_agent_tasks import (
-    GetAllROS2RGBCamerasTask,
-    GetObjectPositionsTask,
-    GetROS2DepthCameraTask,
-    GetROS2MessageTask,
-    GetROS2RGBCameraTask,
-    GetROS2TopicsTask,
-    GetROS2TopicsTask2,
-    GrabExistingObjectTask,
-    GrabNotExistingObjectTask,
-    MoveExistingObjectFrontTask,
-    MoveExistingObjectLeftTask,
-    MoveToPointTask,
-    SwapObjectsTask,
-)
 
 if __name__ == "__main__":
     current_test_name = Path(__file__).stem
@@ -68,83 +50,9 @@ if __name__ == "__main__":
     agent_logger.setLevel(logging.INFO)
     agent_logger.addHandler(file_handler)
 
-    tasks: Sequence[ToolCallingAgentTask] = [
-        GetROS2RGBCameraTask(logger=bench_logger),
-        GetROS2TopicsTask(logger=bench_logger),
-        GetROS2DepthCameraTask(logger=bench_logger),
-        GetAllROS2RGBCamerasTask(logger=bench_logger),
-        GetROS2TopicsTask2(logger=bench_logger),
-        GetROS2MessageTask(logger=bench_logger),
-        MoveToPointTask(
-            logger=bench_logger, args={"x": 1.0, "y": 2.0, "z": 3.0, "task": "grab"}
-        ),
-        MoveToPointTask(
-            logger=bench_logger, args={"x": 1.2, "y": 2.3, "z": 3.4, "task": "drop"}
-        ),
-        GetObjectPositionsTask(
-            logger=bench_logger,
-            objects={
-                "carrot": [{"x": 1.0, "y": 2.0, "z": 3.0}],
-                "apple": [{"x": 4.0, "y": 5.0, "z": 6.0}],
-                "banana": [
-                    {"x": 7.0, "y": 8.0, "z": 9.0},
-                    {"x": 10.0, "y": 11.0, "z": 12.0},
-                ],
-            },
-        ),
-        GrabExistingObjectTask(
-            logger=bench_logger,
-            object_to_grab="banana",
-            objects={
-                "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
-                "apple": [
-                    {"x": 4.0, "y": 5.0, "z": 6.0},
-                    {"x": 10.0, "y": 11.0, "z": 12.0},
-                ],
-            },
-        ),
-        GrabNotExistingObjectTask(
-            logger=bench_logger,
-            object_to_grab="apple",
-            objects={
-                "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
-                "cube": [
-                    {"x": 4.0, "y": 5.0, "z": 6.0},
-                    {"x": 10.0, "y": 11.0, "z": 12.0},
-                ],
-            },
-        ),
-        MoveExistingObjectLeftTask(
-            logger=bench_logger,
-            object_to_grab="banana",
-            objects={
-                "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
-                "apple": [
-                    {"x": 4.0, "y": 5.0, "z": 6.0},
-                    {"x": 10.0, "y": 11.0, "z": 12.0},
-                ],
-            },
-        ),
-        MoveExistingObjectFrontTask(
-            logger=bench_logger,
-            object_to_grab="banana",
-            objects={
-                "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
-                "apple": [
-                    {"x": 4.0, "y": 5.0, "z": 6.0},
-                    {"x": 10.0, "y": 11.0, "z": 12.0},
-                ],
-            },
-        ),
-        SwapObjectsTask(
-            logger=bench_logger,
-            objects={
-                "banana": [{"x": 1.0, "y": 2.0, "z": 3.0}],
-                "apple": [{"x": 4.0, "y": 5.0, "z": 6.0}],
-            },
-            objects_to_swap=["banana", "apple"],
-        ),
-    ]
+    for task in tasks:
+        task.logger = bench_logger
+
     benchmark = ToolCallingAgentBenchmark(
         tasks=tasks, logger=bench_logger, results_filename=results_filename
     )
