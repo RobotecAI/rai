@@ -201,8 +201,8 @@ class ROS2ToolCallingAgentTask(ToolCallingAgentTask, ABC):
     def _is_ai_message_requesting_get_ros2_topics_and_types(
         self, ai_message: AIMessage
     ) -> bool:
-        """Helper method to check if the given AIMessage is calling the only tool
-        to get ROS2 topics names and types correctly.
+        """Helper method to check if the given AIMessage is calling the only one tool
+        that gets ROS2 topics names and types correctly.
         """
         if not self._check_tool_calls_num_in_ai_message(ai_message, expected_num=1):
             return False
