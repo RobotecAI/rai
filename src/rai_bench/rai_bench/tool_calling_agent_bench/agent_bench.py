@@ -17,6 +17,7 @@ import logging
 import statistics
 import time
 import uuid
+from pathlib import Path
 from typing import Dict, Iterator, List, Sequence, Tuple
 from uuid import UUID
 
@@ -66,15 +67,19 @@ class ToolCallingAgentBenchmark:
         self,
         tasks: Sequence[ToolCallingAgentTask],
         logger: loggers_type | None = None,
-        results_filename: str = "agent_benchmark_results.csv",
+        results_filename: Path = Path("agent_benchmark_results.csv"),
         summary_filename: str | None = None,
     ) -> None:
         self._tasks: Iterator[Tuple[int, ToolCallingAgentTask]] = enumerate(iter(tasks))
         self.num_tasks = len(tasks)
         self.task_results: List[TaskResult] = []
         self.results_filename = results_filename
-        self.summary_filename = summary_filename or results_filename.replace(
-            ".csv", "_summary.csv"
+        self.summary_filename = (
+            Path(summary_filename)
+            if summary_filename
+            else results_filename.with_name(
+                results_filename.stem + "_summary" + results_filename.suffix
+            )
         )
         self.fieldnames = [field for field in TaskResult.__annotations__.keys()]
         self.summary_fieldnames = [

@@ -50,8 +50,8 @@ if __name__ == "__main__":
         / now.strftime("%Y-%m-%d_%H-%M-%S")
     )
     Path(experiment_dir).mkdir(parents=True, exist_ok=True)
-    log_filename = f"{experiment_dir}/benchmark.log"
-    results_filename = f"{experiment_dir}/results.csv"
+    log_filename = experiment_dir / "benchmark.log"
+    results_filename = experiment_dir / "results.csv"
 
     file_handler = logging.FileHandler(log_filename)
     file_handler.setLevel(logging.DEBUG)
