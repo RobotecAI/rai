@@ -55,7 +55,6 @@ class BenchmarkSummary(BaseModel):
     )
     avg_time: float = Field(..., description="Average time taken across all tasks.")
     total_tasks: int = Field(..., description="Total number of executed tasks.")
-    run_id: UUID = Field(..., description="UUID of the average results entry.")
 
 
 class ToolCallingAgentBenchmark:
@@ -204,7 +203,6 @@ class ToolCallingAgentBenchmark:
                 success_rate=round(success_rate, 2),
                 avg_time=round(avg_time, 3),
                 total_tasks=len(results),
-                run_id=uuid.uuid4(),
             )
 
             with open(
