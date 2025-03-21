@@ -44,9 +44,7 @@ from rai_bench.o3de_test_bench.scenarios import (
 )
 from rai_sim.o3de.o3de_bridge import (
     O3DEngineArmManipulationBridge,
-    Pose,
 )
-from rai_sim.simulation_bridge import Rotation, Translation
 
 if __name__ == "__main__":
     rclpy.init()
@@ -174,22 +172,12 @@ if __name__ == "__main__":
         logger=bench_logger,
         results_filename=results_filename,
     )
-    # custom request to arm
-    base_arm_pose = Pose(
-        translation=Translation(x=0.1, y=0.5, z=0.4),
-        rotation=Rotation(x=1.0, y=0.0, z=0.0, w=0.0),
-    )
     for i in range(len(all_scenarios)):
         agent = create_conversational_agent(
             llm, tools, system_prompt, logger=agent_logger
         )
         benchmark.run_next(agent=agent)
-        o3de.move_arm(
-            pose=base_arm_pose,
-            initial_gripper_state=True,
-            final_gripper_state=False,
-            frame_id="panda_link0",
-        )  # return to case position
+        o3de.reset_arm()
         time.sleep(0.2)  # admire the end position for a second ;)
 
     bench_logger.info("===============================================================")

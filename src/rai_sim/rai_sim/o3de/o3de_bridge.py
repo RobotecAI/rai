@@ -26,6 +26,7 @@ from geometry_msgs.msg import Pose as ROS2Pose
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from rai.utils.ros_async import get_future_result
 from std_msgs.msg import Header
+from std_srvs.srv import Trigger
 from tf2_geometry_msgs import do_transform_pose
 
 from rai_interfaces.srv import ManipulatorMoveTo
@@ -394,6 +395,21 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
 
 
 class O3DEngineArmManipulationBridge(O3DExROS2Bridge):
+    def reset_arm(self):
+        client = self.connector.node.create_client(
+            Trigger,
+            "/reset_manipulator",
+        )
+        while not client.wait_for_service(timeout_sec=5.0):
+            self.connector.node.get_logger().info("Service not available, waiting...")
+
+        self.connector.node.get_logger().info("Making request to reset manipulator...")
+        request = Trigger.Request()
+        future = client.call_async(request)
+        result = get_future_result(future, timeout_sec=5.0)
+
+        self.connector.node.get_logger().debug(f"Reset manipulator result: {result}")
+
     def move_arm(
         self,
         pose: Pose,
