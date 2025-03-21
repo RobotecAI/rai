@@ -103,6 +103,7 @@ class ToolCallingAgentBenchmark:
                 "tags": [task.complexity, model_name],
                 "recursion_limit": task.recursion_limit,
             }
+            
             ts = time.perf_counter()
             try:
                 response = agent.invoke(
