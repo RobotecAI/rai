@@ -52,7 +52,7 @@ class BenchmarkSummary(BaseModel):
         ..., description="Percentage of successfully completed tasks."
     )
     avg_time: float = Field(..., description="Average time taken across all tasks.")
-    total_tasks: int = Field(..., description="Total number of tasks executed.")
+    total_tasks: int = Field(..., description="Total number of executed tasks.")
     run_id: UUID = Field(..., description="UUID of the average results entry.")
 
 
