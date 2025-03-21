@@ -80,18 +80,31 @@ class ToolCallingAgentBenchmark:
                 results_filename.stem + "_summary" + results_filename.suffix
             )
         )
-        self.fieldnames = [field for field in TaskResult.__annotations__.keys()]
-        self.summary_fieldnames = [
-            field for field in BenchmarkSummary.__annotations__.keys()
-        ]
-        self._initialize_results_file()
-        self._initialize_summary_file()
+        self.csv_initialize(self.results_filename, TaskResult)
+        self.csv_initialize(self.summary_filename, BenchmarkSummary)
+
         self.score_tracing_handler = ScoreTracingHandler()
         self.model_results: Dict[str, List[TaskResult]] = {}
-        if logger:
-            self.logger = logger
-        else:
-            self.logger = logging.getLogger(__name__)
+
+        self.logger = logger if logger else logging.getLogger(__name__)
+
+    @staticmethod
+    def csv_initialize(filename: Path, base_model_cls: type[BaseModel]):
+        """Initialize a CSV file with headers based on a Pydantic model."""
+        with open(filename, mode="w", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(
+                file, fieldnames=base_model_cls.__annotations__.keys()
+            )
+            writer.writeheader()
+
+    @staticmethod
+    def csv_writerow(filename: Path, base_model_instance: BaseModel):
+        """Write a row to a CSV file based on a Pydantic model instance."""
+        with open(filename, mode="a", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(
+                file, fieldnames=base_model_instance.__annotations__.keys()
+            )
+            writer.writerow(base_model_instance.model_dump())
 
     def run_next(self, agent: CompiledStateGraph, model_name: str) -> None:
         try:
@@ -100,7 +113,6 @@ class ToolCallingAgentBenchmark:
                 f"RUNNING TASK NUMBER {i + 1} / {self.num_tasks}, TASK {task.get_prompt()}"
             )
             callbacks = self.score_tracing_handler.get_callbacks()
-
             run_id = uuid.uuid4()
             config: RunnableConfig = {
                 "run_id": run_id,
@@ -119,10 +131,11 @@ class ToolCallingAgentBenchmark:
             except GraphRecursionError as e:
                 self.logger.error(f"Graph Recursion Error: {e}")
                 task.result.errors.append(f"Graph Recursion Error: {e}")
+
             te = time.perf_counter()
             total_time = te - ts
-
             result = task.result
+
             for callback in callbacks:
                 self.score_tracing_handler.send_score(
                     callback=callback,
@@ -143,13 +156,14 @@ class ToolCallingAgentBenchmark:
                 total_time=total_time,
                 run_id=run_id,
             )
+
             self.task_results.append(task_result)
 
             if model_name not in self.model_results:
                 self.model_results[model_name] = []
             self.model_results[model_name].append(task_result)
 
-            self._save_task_result_to_csv(task_result)
+            self.csv_writerow(self.results_filename, task_result)
 
             completed_tasks = sum(
                 len(results) for results in self.model_results.values()
@@ -162,34 +176,9 @@ class ToolCallingAgentBenchmark:
                 self._compute_and_save_summary()
             print("No more scenarios left to run.")
 
-    def _save_task_result_to_csv(self, result: TaskResult) -> None:
-        """Save a single task result to the CSV file."""
-        with open(
-            self.results_filename, mode="a", newline="", encoding="utf-8"
-        ) as file:
-            writer = csv.DictWriter(file, fieldnames=self.fieldnames)
-            writer.writerow(result.model_dump())
-
-    def _initialize_results_file(self):
-        """Initialize the CSV file with headers."""
-        with open(
-            self.results_filename, mode="w", newline="", encoding="utf-8"
-        ) as file:
-            writer = csv.DictWriter(file, fieldnames=self.fieldnames)
-            writer.writeheader()
-
-    def _initialize_summary_file(self):
-        """Initialize the summary CSV file with headers."""
-        with open(
-            self.summary_filename, mode="w", newline="", encoding="utf-8"
-        ) as file:
-            writer = csv.DictWriter(file, fieldnames=self.summary_fieldnames)
-            writer.writeheader()
-
     def _compute_and_save_summary(self):
         """Save the average results to the summary CSV file."""
         self.logger.info("Computing and saving average results...")
-
         for model_name, results in self.model_results.items():
             if not results:
                 continue
@@ -205,11 +194,7 @@ class ToolCallingAgentBenchmark:
                 total_tasks=len(results),
             )
 
-            with open(
-                self.summary_filename, mode="a", newline="", encoding="utf-8"
-            ) as file:
-                writer = csv.DictWriter(file, fieldnames=self.summary_fieldnames)
-                writer.writerow(summary.model_dump())
+            self.csv_writerow(self.summary_filename, summary)
 
             self.logger.info(
                 f"Summary for model {model_name}: Success rate {success_rate:.2f}%, "
