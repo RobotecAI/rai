@@ -54,4 +54,9 @@ It complies to the following ROS 2 API:
 Subscription topic `/to_human: [rai_interfaces/msg/HRIMessage]`:
 `message.text` will be parsed, run through the TTS model and played using the speaker
 Subscription topic `/voice_commands: [std_msgs/msg/String]`:
-The following values are accepted: - `"play"`: allow for playing the voice through the speaker (if voice queue is not empty) - `"pause"`: pause the playing of the voice through the speaker - `"stop"`: stop the current playback and clear the queue - `"tog_play"`: toggle between play and pause
+The following values are accepted:
+
+- `"play"`: allow for playing the voice through the speaker (if voice queue is not empty)
+- `"pause"`: pause the playing of the voice through the speaker
+- `"stop"`: stop the current playback and clear the queue
+- `"tog_play"`: toggle between play and pause

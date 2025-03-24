@@ -68,4 +68,8 @@ It fulfills the following ROS 2 communication API:
 Publishes to topic `/to_human: [HRIMessage]`:
 `message.text` is set with the transcription result using the selected transcription model.
 
-Publishes to topic `/voice_commands: [std_msgs/msg/String]`: - `"pause"` - when voice is detected but the `detection_pipeline` didn't return detection (for interruptive S2S) - `"play"` - when voice is not detected, but there was previously a transcription sent - `"stop"` - when voice is detected and the `detection_pipeline` returned a detection (or is empty)
+Publishes to topic `/voice_commands: [std_msgs/msg/String]`:
+
+- `"pause"` - when voice is detected but the `detection_pipeline` didn't return detection (for interruptive S2S)
+- `"play"` - when voice is not detected, but there was previously a transcription sent
+- `"stop"` - when voice is detected and the `detection_pipeline` returned a detection (or is empty)
