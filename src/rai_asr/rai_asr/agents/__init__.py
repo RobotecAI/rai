@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai_asr.agents.asr_agent import ASRAgent
+from rai_asr.agents.asr_agent import SpeechRecognitionAgent
 
 __all__ = [
-    "ASRAgent",
+    "SpeechRecognitionAgent",
 ]

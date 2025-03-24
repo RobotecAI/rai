@@ -43,7 +43,7 @@ class ThreadData(TypedDict):
     joined: bool
 
 
-class ASRAgent(BaseAgent):
+class SpeechRecognitionAgent(BaseAgent):
     """
     Agent responsible for voice recognition, transcription, and processing voice activity.
 
