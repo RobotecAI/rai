@@ -21,29 +21,12 @@ The RAI Sim is a package providing interface to implement connection with a spec
 
 1. Setup RAI - follow [README.md](https://github.com/RobotecAI/rai)
 2. Setup rai-manipulation-demo - follow [manipulation.md](https://github.com/RobotecAI/rai/blob/main/docs/demos/manipulation.md)
-3. # TODO (instructions to download binary from s3 bucket when it's ready)
+3. Click to download GameLauncher binary from s3 bucket: [humble](https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIManipulationDemo_jammyhumble.zip) or [jazzy](https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIManipulationDemo_noblejazzy.zip).
 4. Populate the .yaml config with the following content:
 
 ```
 binary_path: /path/to/your/GameLauncher
 level: RoboticManipulationBenchmark
-robotic_stack_command: ros2 launch examples/manipulation-demo-no-binary.launch.py
-required_simulation_ros2_interfaces:
-  services:
-    - /spawn_entity
-    - /delete_entity
-  topics:
-    - /color_image5
-    - /depth_image5
-    - /color_camera_info5
-  actions: []
-required_robotic_ros2_interfaces:
-  services:
-    - /grounding_dino_classify
-    - /grounded_sam_segment
-    - /manipulator_move_to
-  topics: []
-  actions: []
 robotic_stack_command: ros2 launch examples/manipulation-demo-no-binary.launch.py
 required_simulation_ros2_interfaces:
   services:
@@ -71,29 +54,73 @@ required_robotic_ros2_interfaces:
 
 ```
 import rclpy
-from rai_sim.o3de.o3de_bridge import O3DExROS2Bridge, O3DExROS2SimulationConfig
-from rai.communication.ros2.connectors import ROS2ARIConnector
+import logging
 import time
-
 from pathlib import Path
 
+from rai_sim.o3de.o3de_bridge import O3DExROS2Bridge, O3DExROS2SimulationConfig, O3DExROS2BridgeProcessesMonitor
+from rai.communication.ros2.connectors import ROS2ARIConnector
+
+
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    )
+    logger = logging.getLogger("O3DExROS2-Sim")
+
+    o3de = None
+    connector = None
+    monitor = None
 
     try:
         rclpy.init()
+
         connector = ROS2ARIConnector()
-        o3de = O3DExROS2Bridge(connector)
-        scene_config  = O3DExROS2SimulationConfig.load_config(base_config_path=Path("base_config1.yaml"), bridge_config_path=Path("old_o3de_config.yaml"))
+        o3de = O3DExROS2Bridge(connector, logger=logger)
+
+        monitor = O3DExROS2BridgeProcessesMonitor(o3de, logger=logger)
+
+        scene_config = O3DExROS2SimulationConfig.load_config(
+            base_config_path=Path("src/rai_bench/rai_bench/o3de_test_bench/configs/scene1.yaml"),
+            connector_config_path=Path("src/rai_bench/rai_bench/o3de_test_bench/configs/o3de_config.yaml")
+        )
+
         o3de.setup_scene(scene_config)
-        time.sleep(100)
 
+        time.sleep(5)
+
+        scene_config = O3DExROS2SimulationConfig.load_config(
+            base_config_path=Path("src/rai_bench/rai_bench/o3de_test_bench/configs/scene2.yaml"),
+            connector_config_path=Path("src/rai_bench/rai_bench/o3de_test_bench/configs/o3de_config.yaml")
+        )
+        o3de.setup_scene(scene_config)
+        time.sleep(5)
+
+    except KeyboardInterrupt:
+        logger.info("Received KeyboardInterrupt.")
     except Exception as e:
+        logger.exception(f"Error occurred: {e}")
         raise e
+
     finally:
-        o3de.shutdown()
+        logger.info("Shutting down script...")
 
+        if monitor:
+            logger.info("Shutting down processes monitor")
+            monitor.shutdown()
 
-        connector.shutdown()
-        rclpy.shutdown()
+        if o3de:
+            logger.info("Shutting down O3DE bridge")
+            o3de.shutdown()
+
+        if connector:
+            logger.info("Shutting down connector")
+            connector.shutdown()
+
+        logger.info("Shutting down ROS2")
+        rclpy.try_shutdown()
+
+        logger.info("Cleanup complete")
 
 ```
