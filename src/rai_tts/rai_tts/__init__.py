@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .tts_clients import ElevenLabsClient, OpenTTSClient
+from .agents import TextToSpeechAgent
+from .models import ElevenLabsTTS, OpenTTS
 
-__all__ = ["ElevenLabsClient", "OpenTTSClient"]
+__all__ = ["ElevenLabsTTS", "OpenTTS", "TextToSpeechAgent"]
