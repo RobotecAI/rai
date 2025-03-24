@@ -95,7 +95,7 @@ The ROS2-specific implementation (`ROS2SpatioTemporalAgent`) extends the base ag
 ## Best Practices
 
 1. **Camera Topics**: Choose camera topics that provide stable, consistent data streams
-2. **Transform Frames**: Ensure your robot_frame and world_frame are valid and published
+2. **Transform Frames**: Ensure your `robot_frame` and `world_frame` are valid and published
 3. **Time Interval**: Set based on your application needs - shorter for high-frequency monitoring, longer for periodic snapshots
 
 ## Troubleshooting
