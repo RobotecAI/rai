@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Robotec.AI
+# Copyright (C) 2025 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,14 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai.agents.conversational_agent import create_conversational_agent
-from rai.agents.react_agent import ReActAgent
-from rai.agents.state_based import create_state_based_agent
-from rai.agents.tool_runner import ToolRunner
+from rai_asr.agents.asr_agent import ASRAgent
 
 __all__ = [
-    "ReActAgent",
-    "ToolRunner",
-    "create_conversational_agent",
-    "create_state_based_agent",
+    "ASRAgent",
 ]
