@@ -1,6 +1,7 @@
 # RAI Text To Speech
 
-This is the [RAI](https://github.com/RobotecAI/rai) text to speech package. It contains Agent definitions for the TTS feature.
+This is the [RAI](https://github.com/RobotecAI/rai) text to speech package.
+It contains Agent definitions for the TTS feature.
 
 ## Models
 
