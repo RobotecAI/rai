@@ -43,10 +43,6 @@ from rai_sim.simulation_bridge import (
 )
 
 
-class ProcessMonitorError(Exception):
-    """Exception raised when a monitored process terminates unexpectedly."""
-
-
 class O3DExROS2SimulationConfig(SimulationConfig):
     binary_path: Path
     level: Optional[str] = None
