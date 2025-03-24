@@ -50,7 +50,6 @@ rai_bench = {path = "src/rai_bench", develop = true}
 optional = true
 
 [tool.poetry.group.openset.dependencies]
-pip = "^24.1.2"
 torch = "^2.3.1"
 torchvision = "^0.18.1"
 rf-groundingdino = "^0.2.0"
