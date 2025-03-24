@@ -17,9 +17,9 @@ import signal
 import time
 
 import rclpy
-from rai.agents import VoiceRecognitionAgent
 from rai.communication.sound_device.api import SoundDeviceConfig
 
+from rai_asr.agents import SpeechRecognitionAgent
 from rai_asr.models import LocalWhisper, OpenWakeWord, SileroVAD
 
 VAD_THRESHOLD = 0.8  # Note that this might be different depending on your device
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     rclpy.init()
     ros2_name = "rai_asr_agent"
 
-    agent = VoiceRecognitionAgent(microphone_configuration, ros2_name, whisper, vad)
+    agent = SpeechRecognitionAgent(microphone_configuration, ros2_name, whisper, vad)
     # optionally add additional models to decide when to record data for transcription
     # agent.add_detection_model(oww, pipeline="record")
 
