@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+import os
 import shlex
 import signal
 import subprocess
@@ -73,52 +74,6 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         self.current_sim_process = None
         self.current_robotic_stack_process = None
         self.current_binary_path = None
-
-        self._monitor_exception = None
-        self._monitor_running = True
-
-        self.monitor_thread = threading.Thread(
-            target=self._process_monitor, daemon=True
-        )
-        self.monitor_thread.start()
-
-    def _process_monitor(self):
-        """Background thread to check if the simulation and robotic stack processes are still running."""
-        try:
-            while self._monitor_running:
-                time.sleep(2)  # Check every 2 seconds
-
-                if (
-                    self.current_sim_process
-                    and self.current_sim_process.poll() is not None
-                ):
-                    error_msg = "Simulation process has unexpectedly terminated!"
-                    self.logger.error(error_msg)
-                    raise ProcessMonitorError(error_msg)
-
-                if (
-                    self.current_robotic_stack_process
-                    and self.current_robotic_stack_process.poll() is not None
-                ):
-                    error_msg = "Robotic stack process has unexpectedly terminated!"
-                    self.logger.error(error_msg)
-                    raise ProcessMonitorError(error_msg)
-        except Exception as e:
-            self._monitor_exception = e
-            self.logger.error(f"Process monitor detected an error: {str(e)}")
-
-    def check_monitor_status(self):
-        """
-        Checks if the process monitor has detected any errors.
-        This method should be called regularly by the main thread.
-
-        Raises:
-            Exception: If the monitor thread has detected an error
-        """
-        if self._monitor_exception:
-            exception = self._monitor_exception
-            self._monitor_exception = None
-            raise exception
 
     def shutdown(self):
         self._shutdown_binary()
@@ -500,3 +455,52 @@ class O3DEngineArmManipulationBridge(O3DExROS2Bridge):
         result = get_future_result(future, timeout_sec=5.0)
 
         self.connector.node.get_logger().debug(f"Moving arm result: {result}")
+
+
+class O3DExROS2BridgeProcessesMonitor:
+    def __init__(
+        self, bridge: O3DExROS2Bridge, logger: Optional[logging.Logger] = None
+    ):
+        self.bridge = bridge
+        if logger is None:
+            self.logger = logging.getLogger(__name__)
+        else:
+            self.logger = logger
+        self.is_running = True
+
+        self.monitor_thread = threading.Thread(
+            target=self._monitor_processes, daemon=True
+        )
+        self.monitor_thread.start()
+        self.logger.info("O3DExROS2Bridge processes monitor started")
+
+    def _monitor_processes(self):
+        """Background thread that monitors the simulation and robotic stack processes"""
+        while self.is_running:
+            if (
+                self.bridge.current_sim_process
+                and self.bridge.current_sim_process.poll() is not None
+            ):
+                self.logger.error(
+                    f"Simulation process exited unexpectedly with code {self.bridge.current_sim_process.poll()}"
+                )
+                self.logger.info("Sending SIGINT to main process...")
+                os.kill(os.getpid(), signal.SIGINT)
+
+            if (
+                self.bridge.current_robotic_stack_process
+                and self.bridge.current_robotic_stack_process.poll() is not None
+            ):
+                self.logger.error(
+                    f"Robotic stack process exited unexpectedly with code {self.bridge.current_robotic_stack_process.poll()}"
+                )
+                self.logger.info("Sending SIGINT to main process...")
+                os.kill(os.getpid(), signal.SIGINT)
+
+            time.sleep(1)
+
+    def shutdown(self):
+        self.is_running = False
+        if self.monitor_thread.is_alive():
+            self.monitor_thread.join(timeout=2)
+            self.logger.info("Processes monitor thread shut down.")
