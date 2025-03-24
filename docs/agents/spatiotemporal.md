@@ -20,7 +20,7 @@ Key capabilities:
 
 The agent works with several key data structures:
 
-- `SpatioTemporalData`: The main data container that includes:
+- `SpatioTemporalRecord`: The main data container that includes:
   - `timestamp`: When the data was captured
   - `images`: Dictionary of camera images (base64 encoded)
   - `tf`: Transform data (robot's pose)
@@ -55,42 +55,42 @@ The ROS2-specific implementation (`ROS2SpatioTemporalAgent`) extends the base ag
 
 1. **Prerequisites**
 
-First, ensure MongoDB is running. Using Docker is recommended:
+   First, ensure MongoDB is running. Using Docker is recommended:
 
-```bash
-docker run -d --name rai-mongo -p 27017:27017 mongo
-```
+   ```bash
+   docker run -d --name rai-mongo -p 27017:27017 mongo
+   ```
 
 2. **Agent Configuration**
 
-```python
-import rclpy
-from rai.agents.spatiotemporal import ROS2SpatioTemporalAgent, ROS2SpatioTemporalConfig
-from rai.utils.model_initialization import get_llm_model, get_vectorstore
+   ```python
+   import rclpy
+   from rai.agents.spatiotemporal import ROS2SpatioTemporalAgent, ROS2SpatioTemporalConfig
+   from rai.utils.model_initialization import get_llm_model, get_vectorstore
 
-config = ROS2SpatioTemporalConfig(
-    robot_frame="base_link",
-    world_frame="world",
-    db_url="mongodb://localhost:27017/",
-    db_name="rai",
-    collection_name="spatiotemporal_collection",
-    image_to_text_model=get_llm_model("simple_model"),
-    context_compression_model=get_llm_model("simple_model"),
-    time_interval=10.0,
-    camera_topics=["/camera/camera/color/image_raw"],
-    vector_db=get_vectorstore(),
-)
+   config = ROS2SpatioTemporalConfig(
+      robot_frame="base_link",
+      world_frame="world",
+      db_url="mongodb://localhost:27017/",
+      db_name="rai",
+      collection_name="spatiotemporal_collection",
+      image_to_text_model=get_llm_model("simple_model"),
+      context_compression_model=get_llm_model("simple_model"),
+      time_interval=10.0,
+      camera_topics=["/camera/camera/color/image_raw"],
+      vector_db=get_vectorstore(),
+   )
 
-agent = ROS2SpatioTemporalAgent(config)
-```
+   agent = ROS2SpatioTemporalAgent(config)
+   ```
 
-A complete working example can be found in `examples/agents/spatiotemporal.py`.
+   A complete working example can be found in `examples/agents/spatiotemporal.py`.
 
 3. **Running the Agent**
 
-```python
-agent.run()
-```
+   ```python
+   agent.run()
+   ```
 
 ## Best Practices
 

@@ -31,13 +31,13 @@ from rai.tools.ros2.topics import GetROS2ImageTool
 
 
 class ROS2SpatioTemporalConfig(SpatioTemporalConfig):
-    camera_topics: List[str]
+    camera_topics: List[Annotated[str, "camera topic"]]
     robot_frame: str
     world_frame: str
 
 
 class ROS2SpatioTemporalAgent(SpatioTemporalAgent):
-    def __init__(self, config: ROS2SpatioTemporalConfig, *args, **kwargs):  # type: ignore
+    def __init__(self, config: ROS2SpatioTemporalConfig, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
         self.config = config
         self.connector = ROS2ARIConnector()

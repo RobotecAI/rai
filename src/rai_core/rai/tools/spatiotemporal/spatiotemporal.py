@@ -23,7 +23,7 @@ from pymongo.mongo_client import MongoClient
 
 from rai.agents.spatiotemporal.spatiotemporal_agent import (
     Pose,
-    SpatioTemporalData,
+    SpatioTemporalRecord,
 )
 from rai.agents.tool_runner import MultimodalArtifact
 
@@ -130,7 +130,7 @@ class GetMemoriesNearPoseTool(BaseTool):
             ),
         )
         images: List[str] = []
-        parsed_results = list(map(SpatioTemporalData.model_validate, results))
+        parsed_results = list(map(SpatioTemporalRecord.model_validate, results))
         for result in parsed_results:
             for image in result.images.values():
                 images.append(image)
@@ -184,7 +184,7 @@ class GetMemoriesNearTimestampTool(BaseTool):
             ),
         )
         images: List[str] = []
-        parsed_results = list(map(SpatioTemporalData.model_validate, results))
+        parsed_results = list(map(SpatioTemporalRecord.model_validate, results))
         for result in parsed_results:
             for image in result.images.values():
                 images.append(image)
@@ -216,7 +216,7 @@ class GetMemoriesOfObjectTool(BaseTool):
             if record is not None:
                 mongodb_data.append(record)
         images: List[str] = []
-        parsed_results = list(map(SpatioTemporalData.model_validate, mongodb_data))
+        parsed_results = list(map(SpatioTemporalRecord.model_validate, mongodb_data))
         for result in parsed_results:
             for image in result.images.values():
                 images.append(image)

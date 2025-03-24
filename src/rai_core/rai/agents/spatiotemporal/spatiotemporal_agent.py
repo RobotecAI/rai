@@ -69,7 +69,7 @@ class PoseStamped(BaseModel):
     pose: Pose
 
 
-class SpatioTemporalData(BaseModel):
+class SpatioTemporalRecord(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     timestamp: Annotated[float, "timestamp"]
     images: Dict[Annotated[str, "camera topic"], str] = Field(repr=False)
@@ -151,7 +151,7 @@ class SpatioTemporalAgent(BaseAgent):
     def _get_robots_history(self) -> List[BaseMessage]:
         """
         Retrieve the robot's message history to provide
-        a temporal context to the SpatioTemporalData samples.
+        a temporal context to the SpatioTemporalRecord samples.
 
         Returns
         -------
@@ -229,13 +229,13 @@ class SpatioTemporalAgent(BaseAgent):
             raise ValueError("AI message content is not a string")
         return ai_msg.content
 
-    def _insert_into_db(self, data: SpatioTemporalData):
+    def _insert_into_db(self, data: SpatioTemporalRecord):
         """
         Insert spatiotemporal data into the database.
 
         Parameters
         ----------
-        data : SpatioTemporalData
+        data : SpatioTemporalRecord
             The spatiotemporal data to be inserted.
         """
         self.logger.info(
@@ -243,13 +243,13 @@ class SpatioTemporalAgent(BaseAgent):
         )
         self.collection.insert_one(data.model_dump())  # type: ignore
 
-    def _insert_into_vectorstore(self, data: SpatioTemporalData):
+    def _insert_into_vectorstore(self, data: SpatioTemporalRecord):
         """
         Insert embeddings of the spatiotemporal data into the vector store.
 
         Parameters
         ----------
-        data : SpatioTemporalData
+        data : SpatioTemporalRecord
             The spatiotemporal data to be inserted.
         """
         self.logger.info("Inserting embeddings into vector store")
@@ -316,15 +316,15 @@ class SpatioTemporalAgent(BaseAgent):
         self.logger.info("Compressing temporal context")
         temporal_context = self._compress_context(temporal_context)
 
-        data = SpatioTemporalData(
+        record = SpatioTemporalRecord(
             timestamp=time.time(),
             images=images,
             tf=tf,
             temporal_context=temporal_context,
             image_text_descriptions=json.dumps(image_text_descriptions),
         )
-        self._insert_into_db(data)
-        self._insert_into_vectorstore(data)
+        self._insert_into_db(record)
+        self._insert_into_vectorstore(record)
 
     def _save_vector_store(self):
         """
