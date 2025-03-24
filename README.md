@@ -110,7 +110,7 @@ rosdep install --from-paths src --ignore-src -r -y
 > RAI is modular. If you want to use features such as speech-to-speech, simulation and benchmarking suite, openset detection, or NoMaD integration, install additional dependencies:
 >
 > ```bash
-> poetry install --with openset,nomad,s2s,sim
+> poetry install --with openset,nomad,s2s,simbench
 > ```
 
 #### 1.4 Configure RAI

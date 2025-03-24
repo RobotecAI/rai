@@ -39,10 +39,10 @@ optional = true
 [tool.poetry.group.tts.dependencies]
 rai_tts = {path = "src/rai_tts", develop = true}
 
-[tool.poetry.group.sim]
+[tool.poetry.group.simbench]
 optional = true
 
-[tool.poetry.group.sim.dependencies]
+[tool.poetry.group.simbench.dependencies]
 rai_sim = {path = "src/rai_sim", develop = true}
 rai_bench = {path = "src/rai_bench", develop = true}
 
@@ -55,7 +55,6 @@ torch = "^2.3.1"
 torchvision = "^0.18.1"
 rf-groundingdino = "^0.2.0"
 sam2 = { git = "https://github.com/RobotecAI/Grounded-SAM-2", branch = "main" }
-
 
 [tool.poetry.group.nomad]
 optional = true
