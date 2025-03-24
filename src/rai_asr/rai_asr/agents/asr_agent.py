@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Robotec.AI
+# Copyright (C) 2025 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ from uuid import uuid4
 
 import numpy as np
 from numpy.typing import NDArray
-
 from rai.agents.base import BaseAgent
 from rai.communication import (
     HRIPayload,
@@ -33,6 +32,7 @@ from rai.communication import (
     SoundDeviceConnector,
     SoundDeviceMessage,
 )
+
 from rai_asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
 
 
@@ -43,7 +43,7 @@ class ThreadData(TypedDict):
     joined: bool
 
 
-class VoiceRecognitionAgent(BaseAgent):
+class SpeechRecognitionAgent(BaseAgent):
     """
     Agent responsible for voice recognition, transcription, and processing voice activity.
 
