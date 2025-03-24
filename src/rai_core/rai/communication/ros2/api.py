@@ -19,6 +19,8 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from functools import partial
+from queue import Queue
+from threading import Lock
 from typing import (
     Annotated,
     Any,
@@ -46,6 +48,7 @@ import rosidl_runtime_py.utilities
 from action_msgs.srv import CancelGoal
 from rclpy.action import ActionClient
 from rclpy.action.client import ClientGoalHandle
+from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.publisher import Publisher
 from rclpy.qos import (
     DurabilityPolicy,
@@ -377,6 +380,11 @@ class TopicConfig:
     auto_qos_matching: bool = True
     qos_profile: Optional[QoSProfile] = None
     is_subscriber: bool = False
+    # if queue_maxsize is not set, the queue will be unbounded
+    # which may lead to memory issues for high-bandwidth topics
+    queue_maxsize: Optional[int] = None
+    # if queue_maxsize is provided, the overflow policy must be set
+    overflow_policy: Optional[Literal["drop_oldest", "drop_newest"]] = None
     subscriber_callback: Optional[Callable[[IROS2Message], None]] = None
     source_author: Literal["human", "ai"] = "ai"
 
@@ -391,6 +399,46 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
     def __init__(self, node: rclpy.node.Node):
         super().__init__(node)
         self._subscribtions: dict[str, rclpy.node.Subscription] = {}
+        self.callback_group = ReentrantCallbackGroup()
+        self.topic_msg_queue: Dict[str, Queue[Any]] = {}
+        self.topic_queue_locks: Dict[str, Lock] = {}
+        self.topic_config: Dict[str, TopicConfig] = {}
+
+    def _generic_callback(self, topic: str, msg: Any) -> None:
+        """Handle incoming messages for a topic based on queue configuration.
+
+        Args:
+            topic: The topic name receiving the message
+            msg: The received message
+
+        Raises:
+            ValueError: If an invalid overflow policy is configured
+        """
+        with self.topic_queue_locks[topic]:
+            self._put_msg_in_queue(topic, msg)
+
+    def _put_msg_in_queue(self, topic: str, msg: Any):
+        queue = self.topic_msg_queue[topic]
+        config = self.topic_config[topic]
+
+        # Fast path for unbounded queues
+        if config.queue_maxsize is None:
+            queue.put(msg)
+            return
+
+        # Handle bounded queues with overflow policies
+        if queue.full():
+            if config.overflow_policy == "drop_oldest":
+                queue.get()  # Remove oldest message
+                queue.put(msg)
+            elif config.overflow_policy == "drop_newest":
+                return  # Silently drop the new message
+            else:
+                raise ValueError(
+                    f"Invalid overflow policy for topic {topic}: {config.overflow_policy}"
+                )
+        else:
+            queue.put(msg)
 
     def configure_publisher(self, topic: str, config: TopicConfig):
         if config.is_subscriber:
@@ -410,6 +458,7 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
             topic=topic,
             qos_profile=qos_profile,
         )
+        self.topic_config[topic] = config
 
     def configure_subscriber(
         self,
@@ -431,14 +480,24 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
                 )
 
         msg_type = import_message_from_str(config.msg_type)
-
-        assert config.subscriber_callback is not None
         self._subscribtions[topic] = self._node.create_subscription(
             msg_type=msg_type,
             topic=topic,
-            callback=config.subscriber_callback,
+            callback=config.subscriber_callback
+            or partial(self._generic_callback, topic),
             qos_profile=qos_profile,
+            callback_group=self.callback_group,
         )
+        if config.queue_maxsize is not None:
+            self.topic_msg_queue[topic] = Queue(maxsize=config.queue_maxsize)
+            if config.overflow_policy is None:
+                raise ValueError(
+                    "Overflow policy must be set if queue_maxsize is provided"
+                )
+        else:
+            self.topic_msg_queue[topic] = Queue()
+        self.topic_config[topic] = config
+        self.topic_queue_locks[topic] = Lock()
 
     def publish_configured(self, topic: str, msg_content: dict[str, Any]) -> None:
         """Publish a message to a ROS2 topic.
@@ -457,6 +516,60 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
         msg_type = publisher.msg_type
         msg = build_ros2_msg(msg_type, msg_content)  # type: ignore
         publisher.publish(msg)
+
+    def receive(
+        self,
+        topic: str,
+        *,
+        auto_topic_type: bool = True,
+        msg_type: Optional[str] = None,
+        timeout_sec: float = 1.0,
+        auto_qos_matching: bool = True,
+        qos_profile: Optional[QoSProfile] = None,
+        retry_count: int = 3,
+    ) -> Any:
+        """Receive a single message from a ROS2 topic's queue or by waiting for a new message.
+
+        For topics with configured subscribers, retrieves the next message from the topic's queue.
+        For unconfigured topics, falls back to the parent class behavior of waiting for a new message.
+
+        Args:
+            topic: Name of the topic to receive from
+            auto_topic_type: If True, automatically detect message type from publishers (ignored for configured topics)
+            msg_type: ROS2 message type as string (ignored for configured topics)
+            timeout_sec: Maximum time to wait for a message in seconds
+            auto_qos_matching: Whether to automatically match QoS with publishers (ignored for configured topics)
+            qos_profile: Optional custom QoS profile to use (ignored for configured topics)
+            retry_count: Number of attempts to receive a message (ignored for configured topics)
+
+        Returns:
+            The received message
+
+        Raises:
+            ValueError: If no message is available in the queue for configured topics
+            ValueError: For unconfigured topics, inherits parent class exceptions
+        """
+        if topic not in self.topic_msg_queue:
+            super().receive(
+                topic,
+                auto_topic_type=auto_topic_type,
+                msg_type=msg_type,
+                timeout_sec=timeout_sec,
+                auto_qos_matching=auto_qos_matching,
+                qos_profile=qos_profile,
+                retry_count=retry_count,
+            )
+        else:
+            ts = time.time()
+            while time.time() - ts < timeout_sec:
+                with self.topic_queue_locks[topic]:
+                    if not self.topic_msg_queue[topic].empty():
+                        msg = self.topic_msg_queue[topic].get()
+                        return msg
+                time.sleep(0.01)
+            raise ValueError(
+                f"No message received from topic: {topic} within {timeout_sec} seconds"
+            )
 
 
 class ROS2ServiceAPI:

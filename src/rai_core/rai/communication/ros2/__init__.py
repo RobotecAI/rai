@@ -13,12 +13,15 @@
 # limitations under the License.
 
 from .api import ConfigurableROS2TopicAPI, ROS2ActionAPI, ROS2ServiceAPI, ROS2TopicAPI
+from .connectors import ROS2ARIConnector, ROS2HRIConnector
 from .messages import ROS2ARIMessage, ROS2HRIMessage
 
 __all__ = [
     "ConfigurableROS2TopicAPI",
+    "ROS2ARIConnector",
     "ROS2ARIMessage",
     "ROS2ActionAPI",
+    "ROS2HRIConnector",
     "ROS2HRIMessage",
     "ROS2ServiceAPI",
     "ROS2TopicAPI",
