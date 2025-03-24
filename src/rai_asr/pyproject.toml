@@ -24,3 +24,4 @@ openai-whisper = "^20231117"
 scipy = "^1.14.0"
 faster-whisper = "^1.1.1"
 pydub = "^0.25.1"
+openwakeword = { git = "https://github.com/maciejmajek/openWakeWord.git", branch = "chore/remove-tflite-backend" }

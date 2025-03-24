@@ -15,32 +15,36 @@ package-mode = false
 python = "^3.10, <3.13"
 
 rai = {path = "src/rai_core", develop = true}
+pre-commit = "^3.7.0"
+tabulate = "^0.9.0"
+pytest = "^8.2.0"
+pytest-timeout = "^2.3.1"
+
+[tool.poetry.group.s2s]
+optional = true
+
+[tool.poetry.group.s2s.dependencies]
 rai_asr = {path = "src/rai_asr", develop = true}
 rai_tts = {path = "src/rai_tts", develop = true}
+
+[tool.poetry.group.asr]
+optional = true
+
+[tool.poetry.group.asr.dependencies]
+rai_asr = {path = "src/rai_asr", develop = true}
+
+[tool.poetry.group.tts]
+optional = true
+
+[tool.poetry.group.tts.dependencies]
+rai_tts = {path = "src/rai_tts", develop = true}
+
+[tool.poetry.group.sim]
+optional = true
+
+[tool.poetry.group.sim.dependencies]
 rai_sim = {path = "src/rai_sim", develop = true}
 rai_bench = {path = "src/rai_bench", develop = true}
-
-langchain-core = "^0.3"
-langchain = "*"
-langgraph = "*"
-langchain-aws = "*"
-langchain-openai = "*"
-langchain-ollama = "*"
-langchain-community = "*"
-pre-commit = "^3.7.0"
-opencv-python = "^4.9.0.80"
-pytest = "^8.2.0"
-langfuse = "^2.36.1"
-tabulate = "^0.9.0"
-transforms3d = "^0.4.1"
-lark = "^1.1.9"
-streamlit = "^1.37.1"
-
-openwakeword = { git = "https://github.com/maciejmajek/openWakeWord.git", branch = "chore/remove-tflite-backend" }
-
-[tool.poetry.group.dev.dependencies]
-ipykernel = "^6.29.4"
-
 
 [tool.poetry.group.openset]
 optional = true
