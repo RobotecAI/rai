@@ -146,7 +146,7 @@ def main(args=None):
         gdino_service.get_logger().error(f"Error: {e}")
     finally:
         gdino_service.destroy_node()
-        rclpy.shutdown()
+        rclpy.try_shutdown()
 
 
 if __name__ == "__main__":
