@@ -287,7 +287,6 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         else:
             while self.spawned_entities:
                 self._despawn_entity(self.spawned_entities[0])
-            self.logger.info(f"Entities after despawn: {self.spawned_entities}")
 
         for entity in simulation_config.entities:
             self._spawn_entity(entity)
