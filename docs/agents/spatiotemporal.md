@@ -84,7 +84,7 @@ The ROS2-specific implementation (`ROS2SpatioTemporalAgent`) extends the base ag
    agent = ROS2SpatioTemporalAgent(config)
    ```
 
-   A complete working example can be found in `examples/agents/spatiotemporal.py`.
+   A complete working example can be found in [examples/agents/spatiotemporal.py](../../examples/agents/spatiotemporal.py).
 
 3. **Running the Agent**
 
