@@ -48,9 +48,9 @@ required_robotic_ros2_interfaces:
 
 5. Run example script:
 
-# TODO (test it)
+<!-- # TODO (test it)
 
-# TODO (change connector to bridge everywhere, check it)
+# TODO (change connector to bridge everywhere, check it) -->
 
 ```
 import rclpy
@@ -124,3 +124,6 @@ if __name__ == "__main__":
         logger.info("Cleanup complete")
 
 ```
+
+> [!WARNING]
+> It is not recommended to resize the binary window because it may crash the simulation.
