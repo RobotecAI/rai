@@ -84,10 +84,10 @@ Before going further, make sure you have ROS 2 (Jazzy or Humble) installed and s
 
 #### 1.1 Install poetry
 
-RAI uses [Poetry](https://python-poetry.org/) for python packaging and dependency management. Install poetry (1.8.\*) with the following line:
+RAI uses [Poetry](https://python-poetry.org/) for python packaging and dependency management. Install poetry with the following line:
 
 ```bash
-curl -sSL https://install.python-poetry.org | python3 - --version 1.8.4
+curl -sSL https://install.python-poetry.org | python3 -
 ```
 
 Alternatively, you can opt to do so by following the [official docs](https://python-poetry.org/docs/#installation).
@@ -107,10 +107,10 @@ rosdep install --from-paths src --ignore-src -r -y
 ```
 
 > [!TIP]  
-> If you want to use features such as Grounded SAM 2 or NoMaD install additional dependencies:
+> RAI is modular. If you want to use features such as speech-to-speech, simulation and benchmarking suite, openset detection, or NoMaD integration, install additional dependencies:
 >
 > ```bash
-> poetry install --with openset,nomad
+> poetry install --with openset,nomad,s2s,simbench
 > ```
 
 #### 1.4 Configure RAI
@@ -118,7 +118,7 @@ rosdep install --from-paths src --ignore-src -r -y
 Run the configuration tool to set up your vendor and other settings:
 
 ```bash
-poetry run streamlit run src/rai/rai/utils/configurator.py
+poetry run streamlit run src/rai_core/rai/utils/configurator.py
 ```
 
 > [!TIP]  

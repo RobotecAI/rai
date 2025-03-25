@@ -32,20 +32,13 @@ source /opt/ros/${ROS_DISTRO}/setup.bash
 Run the build process:
 
 ```
-colcon build
+colcon build --symlink-install
 ```
 
-Source the local installation:
+Source the environment
 
 ```
-source ./install/setup.bash
-```
-
-Activate the poetry environment:
-
-```
-poetry shell
-export PYTHONPATH="$(dirname $(dirname $(poetry run which python)))/lib/python$(poetry run python --version | awk '{print $2}' | cut -d. -f1,2)/site-packages:$PYTHONPATH"
+source setup_shell.sh
 ```
 
 Run the ROS node using `ros2 launch`:
