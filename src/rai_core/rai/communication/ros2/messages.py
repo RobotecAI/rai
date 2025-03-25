@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+import uuid
 from collections import OrderedDict
 from typing import Any, Dict, List, Literal, Optional, cast
 
@@ -105,3 +106,8 @@ class ROS2HRIMessage(HRIMessage):
                 )
             ),
         )
+
+    @classmethod
+    def generate_conversation_id(cls) -> str:
+        """Generate a unique conversation ID."""
+        return str(uuid.uuid1())

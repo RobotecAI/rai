@@ -274,5 +274,9 @@ class SpeechRecognitionAgent(BaseAgent):
             except Exception as e:
                 self.logger.error(f"Error sending message to {topic}: {e}")
         else:
-            msg = ROS2HRIMessage(HRIPayload(text=data), "human")
+            msg = ROS2HRIMessage(
+                HRIPayload(text=data),
+                "human",
+                ROS2HRIMessage.generate_conversation_id(),
+            )
             self.connectors["ros2_hri"].send_message(msg, topic)
