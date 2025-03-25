@@ -59,8 +59,18 @@ class BenchmarkSummary(BaseModel):
 
 
 class ToolCallingAgentBenchmark:
-    """
-    Benchmark for LangChain tool calling agents.
+    """Benchmark for LangChain tool calling agents.
+
+    Parameters
+    ----------
+    tasks : Sequence[ToolCallingAgentTask]
+        Sequence of tasks to be passed to the agent.
+    logger : loggers_type | None, optional
+        Logger, by default None
+    results_filename : Path, optional
+        Filename of the CSV file to store the results, by default Path("agent_benchmark_results.csv")
+    summary_filename : str | None, optional
+        Filename of the CSV file to store the summary of the results, by default None
     """
 
     def __init__(
@@ -91,7 +101,15 @@ class ToolCallingAgentBenchmark:
 
     @staticmethod
     def csv_initialize(filename: Path, base_model_cls: type[BaseModel]):
-        """Initialize a CSV file with headers based on a Pydantic model."""
+        """Initialize a CSV file based on a Pydantic model class.
+
+        Parameters
+        ----------
+        filename : Path
+            Filename of the CSV file.
+        base_model_cls : type[BaseModel]
+            Pydantic model class to be used for creating the columns in the CSV file.
+        """
         with open(filename, mode="w", newline="", encoding="utf-8") as file:
             writer = csv.DictWriter(
                 file, fieldnames=base_model_cls.__annotations__.keys()
@@ -100,7 +118,15 @@ class ToolCallingAgentBenchmark:
 
     @staticmethod
     def csv_writerow(filename: Path, base_model_instance: BaseModel):
-        """Write a row to a CSV file based on a Pydantic model instance."""
+        """Write a single row to a CSV file based on a Pydantic model instance contents.
+
+        Parameters
+        ----------
+        filename : Path
+            Filename of the CSV file.
+        base_model_instance : BaseModel
+            Pydantic model instance which contains the data to be written to the CSV file.
+        """
         with open(filename, mode="a", newline="", encoding="utf-8") as file:
             writer = csv.DictWriter(
                 file, fieldnames=base_model_instance.__annotations__.keys()
@@ -108,6 +134,15 @@ class ToolCallingAgentBenchmark:
             writer.writerow(base_model_instance.model_dump())
 
     def run_next(self, agent: CompiledStateGraph, model_name: str) -> None:
+        """Runs the next task of the benchmark.
+
+        Parameters
+        ----------
+        agent : CompiledStateGraph
+            LangChain tool calling agent.
+        model_name : str
+            Name of the LLM model.
+        """
         try:
             i, task = next(self._tasks)
             self.logger.info(
@@ -179,7 +214,6 @@ class ToolCallingAgentBenchmark:
             print("No more scenarios left to run.")
 
     def _compute_and_save_summary(self):
-        """Save the average results to the summary CSV file."""
         self.logger.info("Computing and saving average results...")
         for model_name, results in self.model_results.items():
             if not results:
