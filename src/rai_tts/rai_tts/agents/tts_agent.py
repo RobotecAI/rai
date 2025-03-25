@@ -101,6 +101,7 @@ class TextToSpeechAgent(BaseAgent):
         super().__init__(connectors={"ros2": ros2_connector, "speaker": speaker})
 
         self.current_transcription_id = str(uuid4())[0:8]
+        self.current_speech_id = None
         self.text_queues: dict[str, Queue] = {self.current_transcription_id: Queue()}
         self.audio_queues: dict[str, Queue] = {self.current_transcription_id: Queue()}
 
@@ -224,7 +225,10 @@ class TextToSpeechAgent(BaseAgent):
         self.logger.warning(
             f"Starting playback, current id: {self.current_transcription_id}"
         )
-        self.text_queues[self.current_transcription_id].put(msg.text)
+        if self.current_speech_id is None:
+            self.current_speech_id = msg.conversation_id
+        if self.current_speech_id == msg.conversation_id:
+            self.text_queues[self.current_transcription_id].put(msg.text)
         self.playback_data.playing = True
 
     def _on_command_message(self, message: IROS2Message):
@@ -237,6 +241,7 @@ class TextToSpeechAgent(BaseAgent):
         elif message.data == "pause":
             self.playback_data.playing = False
         elif message.data == "stop":
+            self.current_speech_id = None
             self.playback_data.playing = False
             previous_id = self.current_transcription_id
             self.logger.warning(f"Stopping playback, previous id: {previous_id}")
