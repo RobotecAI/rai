@@ -103,8 +103,12 @@ class GetROS2TopicsTask(ROS2ToolCallingAgentTask):
         return "Get the names and types of all ROS2 topics"
 
     def verify_tool_calls(self, response: dict[str, Any]):
-        """
-        It is expected that the agent will request only the tool that retrieves the ROS2 topics names and types
+        """It is expected that the agent will request only the tool that retrieves the ROS2 topics names and types
+
+        Parameters
+        ----------
+        response : dict[str, Any]
+            The response from the agent
         """
         messages = response["messages"]
         ai_messages: Sequence[AIMessage] = [
@@ -154,8 +158,12 @@ class GetROS2TopicsTask2(ROS2ToolCallingAgentTask):
         return "What is in the ROS2 network?"
 
     def verify_tool_calls(self, response: dict[str, Any]):
-        """
-        It is expected that the agent will request only the tool that retrieves the ROS2 topics names and types
+        """It is expected that the agent will request only the tool that retrieves the ROS2 topics names and types
+
+        Parameters
+        ----------
+        response : dict[str, Any]
+            The response from the agent
         """
         messages = response["messages"]
         ai_messages: Sequence[AIMessage] = [
@@ -211,10 +219,14 @@ class GetROS2RGBCameraTask(ROS2ToolCallingAgentTask):
         return "Get the RGB image from the camera."
 
     def verify_tool_calls(self, response: dict[str, Any]):
-        """
-        It is expected that the agent will request:
+        """It is expected that the agent will request:
         1. The tool that retrieves the ROS2 topics names and types to recognize the RGB image topic
         2. The tool that retrieves the RGB image from the /camera_image_color topic
+
+        Parameters
+        ----------
+        response : dict[str, Any]
+            The response from the agent
         """
         messages = response["messages"]
         ai_messages: Sequence[AIMessage] = [
@@ -278,10 +290,14 @@ class GetROS2DepthCameraTask(ROS2ToolCallingAgentTask):
         return "Get the depth image from the camera."
 
     def verify_tool_calls(self, response: dict[str, Any]):
-        """
-        It is expected that the agent will request:
+        """It is expected that the agent will request:
         1. The tool that retrieves the ROS2 topic names and types to identify the depth image topic.
         2. The tool that retrieves the RGB image from the /camera_image_depth topic
+
+        Parameters
+        ----------
+        response : dict[str, Any]
+            The response from the agent
         """
         messages = response["messages"]
         ai_messages: Sequence[AIMessage] = [
@@ -350,10 +366,14 @@ class GetAllROS2RGBCamerasTask(ROS2ToolCallingAgentTask):
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
 
     def verify_tool_calls(self, response: dict[str, Any]):
-        """
-        It is expected that the agent will request:
+        """It is expected that the agent will request:
         1. The tool that retrieves the ROS2 topic names and types to identify the topics with RGB images.
         2. The tool that retrieves the RGB images - from the /camera_image_color and from the /color_image5 topic
+
+        Parameters
+        ----------
+        response : dict[str, Any]
+            The response from the agent
         """
         messages = response["messages"]
         ai_messages: Sequence[AIMessage] = [
@@ -429,10 +449,14 @@ class GetAllROS2DepthCamerasTask(ROS2ToolCallingAgentTask):
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
 
     def verify_tool_calls(self, response: dict[str, Any]):
-        """
-        It is expected that the agent will request:
+        """It is expected that the agent will request:
         1. The tool that retrieves the ROS2 topic names and types to identify the topics with depth images.
         2. The tool that retrieves the depth images - from the /camera_image_depth and from the /depth_image5 topic
+
+        Parameters
+        ----------
+        response : dict[str, Any]
+            The response from the agent
         """
         messages = response["messages"]
         ai_messages: Sequence[AIMessage] = [
@@ -506,10 +530,14 @@ class GetROS2MessageTask(ROS2ToolCallingAgentTask):
         return "Get RGB image."
 
     def verify_tool_calls(self, response: dict[str, Any]):
-        """
-        It is expected that the agent will request:
+        """It is expected that the agent will request:
         1. The tool that retrieves the ROS2 topics names and types to recognize the RGB image topic
         2. The tool that retrieves the RGB image from the /camera_image_color topic
+
+        Parameters
+        ----------
+        response : dict[str, Any]
+            The response from the agent
         """
         messages = response["messages"]
         ai_messages: Sequence[AIMessage] = [
@@ -570,10 +598,14 @@ class GetRobotDescriptionTask(ROS2ToolCallingAgentTask):
         return "Give me description of the robot."
 
     def verify_tool_calls(self, response: dict[str, Any]):
-        """
-        It is expected that the agent will request:
+        """It is expected that the agent will request:
         1. The tool that retrieves the ROS2 topics names and types to recognize the topic with the robot description
         2. The tool that retrieves the message from the /robot_description topic
+
+        Parameters
+        ----------
+        response : dict[str, Any]
+            The response from the agent
         """
         messages = response["messages"]
         ai_messages: Sequence[AIMessage] = [
@@ -634,10 +666,14 @@ class GetPointcloudTask(ROS2ToolCallingAgentTask):
         return "Get the pointcloud."
 
     def verify_tool_calls(self, response: dict[str, Any]):
-        """
-        It is expected that the agent will request:
+        """It is expected that the agent will request:
         1. The tool that retrieves the ROS2 topics names and types to recognize the topic with the pointcloud
         2. The tool that retrieves the message from the /pointcloud topic
+
+        Parameters
+        ----------
+        response : dict[str, Any]
+            The response from the agent
         """
         messages = response["messages"]
         ai_messages: Sequence[AIMessage] = [
@@ -702,8 +738,12 @@ class MoveToPointTask(ROS2ToolCallingAgentTask):
         return f"Move the arm to a point x={self.args.x}, y={self.args.y}, z={self.args.z} to {self.args.task} an object."
 
     def verify_tool_calls(self, response: dict[str, Any]):
-        """
-        It is expected that the agent will request the tool that moves the arm to a point specified in the prompt with requested task (grab or drop)"
+        """It is expected that the agent will request the tool that moves the arm to a point specified in the prompt with requested task (grab or drop)"
+
+        Parameters
+        ----------
+        response : dict[str, Any]
+            The response from the agent
         """
         messages = response["messages"]
         ai_messages: Sequence[AIMessage] = [
@@ -743,15 +783,21 @@ class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
         objects: Dict[str, List[dict[str, float]]],
         logger: loggers_type | None = None,
     ) -> None:
-        """
-        Args:
-            objects (Dict[str, List[dict[str, float]]): dictionary containing the object types and their positions. Object type should be passed as singular.
-            logger (loggers_type | None, optional): Defaults to None.
-        Examples:
-            objects = {
-                "banana": [(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
-                "cube": [(0.7, 0.8, 0.9)],
-            }
+        """Task to get the positions of the objects
+
+        Parameters
+        ----------
+        objects : Dict[str, List[dict[str, float]]]
+            Dictionary containing the object types and their positions. Object type should be passed as singular.
+        logger : loggers_type | None, optional
+            Logger, by default None
+
+        Examples
+        --------
+        objects = {
+            "banana": [(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
+            "cube": [(0.7, 0.8, 0.9)],
+        }
         """
         super().__init__(logger=logger)
         self._complexity = "easy"
@@ -795,8 +841,12 @@ class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
         return f"Get the {objects_list} positions."
 
     def verify_tool_calls(self, response: dict[str, Any]):
-        """
-        It is expected that the agent will request the tool for each object type to get its positions.
+        """It is expected that the agent will request the tool for each object type to get its positions.
+
+        Parameters
+        ----------
+        response : dict[str, Any]
+            The response from the agent
         """
         messages = response["messages"]
         ai_messages: Sequence[AIMessage] = [
@@ -825,17 +875,24 @@ class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
 
 
 class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
-    """
-    Args:
-        objects (Dict[str, List[dict[str, float]]): dictionary containing the object types and their positions. Object type should be passed as singular.
-        object_to_grab (str): object to grab. Object type should be passed as singular. Object to be grabbed should be defined in the objects argument with only one instance (one position).
-        logger (loggers_type | None, optional): Defaults to None.
-    Examples:
-        objects = {
-            "banana": [(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
-            "cube": [(0.7, 0.8, 0.9)],
-        }
-        object_to_grab = "cube"
+    """Task to grab an object
+
+    Parameters
+    ----------
+    objects : Dict[str, List[dict[str, float]]]
+        Dictionary containing the object types and their positions. Object type should be passed as singular.
+    object_to_grab : str
+        Object to grab. Object type should be passed as singular. Object to be grabbed should be defined in the objects argument with only one instance (one position).
+    logger : loggers_type | None, optional
+        Logger, by default None
+
+    Examples
+    --------
+    objects = {
+        "banana": [(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
+        "cube": [(0.7, 0.8, 0.9)],
+    }
+    object_to_grab = "cube"
     """
 
     def __init__(
@@ -902,6 +959,11 @@ class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
         """It is expected that the agent will request:
         1. The tool get_object_positions to get the position of the object to grab.
         2. The tool move_to_point to move to the position of the object to grab.
+
+        Parameters
+        ----------
+        response : Dict[str, Any]
+            The response from the agent
         """
         messages = response["messages"]
         ai_messages: Sequence[AIMessage] = [
@@ -937,17 +999,24 @@ class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
 
 
 class GrabNotExistingObjectTask(ROS2ToolCallingAgentTask):
-    """
-    Args:
-        objects (Dict[str, List[dict[str, float]]): dictionary containing the object types and their positions. Object type should be passed as singular.
-        object_to_grab (str): object to grab. Object type should be passed as singular. Object to be grabbed should NOT be defined in the objects argument.
-        logger (loggers_type | None, optional): Defaults to None.
-    Examples:
-        objects = {
-            "banana": [(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
-            "cube": [(0.7, 0.8, 0.9)],
-        }
-        object_to_grab = "apple"
+    """Task to grab an object that does not exist
+
+    Parameters
+    ----------
+    objects : Dict[str, List[dict[str, float]]]
+        Dictionary containing the object types and their positions. Object type should be passed as singular.
+    object_to_grab : str
+        Object to grab. Object type should be passed as singular. Object to be grabbed should NOT be defined in the objects argument.
+    logger : loggers_type | None, optional
+        Logger, by default None
+
+    Examples
+    --------
+    objects = {
+        "banana": [(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
+        "cube": [(0.7, 0.8, 0.9)],
+    }
+    object_to_grab = "apple"
     """
 
     def __init__(
@@ -1008,6 +1077,11 @@ class GrabNotExistingObjectTask(ROS2ToolCallingAgentTask):
     def verify_tool_calls(self, response: Dict[str, Any]):
         """It is expected that the agent will request the tool get_object_positions to get the position of the object to grab.
         It is expected that no positions are returned and agent will not request any more tool.
+
+        Parameters
+        ----------
+        response : Dict[str, Any]
+            The response from the agent
         """
         messages = response["messages"]
         ai_messages: Sequence[AIMessage] = [
@@ -1032,17 +1106,24 @@ class GrabNotExistingObjectTask(ROS2ToolCallingAgentTask):
 
 
 class MoveExistingObjectLeftTask(ROS2ToolCallingAgentTask):
-    """
-    Args:
-        objects (Dict[str, List[dict[str, float]]): dictionary containing the object types and their positions. Object type should be passed as singular.
-        object_to_grab (str): object to grab. Object type should be passed as singular. Object to be grabbed should be defined in the objects argument with only one instance (one position).
-        logger (loggers_type | None, optional): Defaults to None.
-    Examples:
-        objects = {
-            "banana": [(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
-            "cube": [(0.7, 0.8, 0.9)],
-        }
-        object_to_grab = "cube"
+    """Task to move an existing object to the left.
+
+    Parameters
+    ----------
+    objects : Dict[str, List[dict[str, float]]]
+        Dictionary containing the object types and their positions. Object type should be passed as singular.
+    object_to_grab : str
+        Object type should be passed as singular. Object to be grabbed should be defined in the objects argument with only one instance (one position).
+    logger : loggers_type | None, optional
+        Logger, by default None
+
+    Examples
+    --------
+    objects = {
+        "banana": [(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
+        "cube": [(0.7, 0.8, 0.9)],
+    }
+    object_to_grab = "cube"
     """
 
     def __init__(
@@ -1106,6 +1187,16 @@ class MoveExistingObjectLeftTask(ROS2ToolCallingAgentTask):
             raise TaskParametrizationError(error_message)
 
     def verify_tool_calls(self, response: Dict[str, Any]):
+        """It is expected that the agent will request:
+        1. get_object_positions for the object to grab
+        2. move_to_point for the object to grab with the coordinates of the object to grab specified in the task
+        3. move_to_point for the the same object but with the task set to "drop" and y coordinate smaller by 0.6
+
+        Parameters
+        ----------
+        response : Dict[str, Any]
+            The response from the agent
+        """
         messages = response["messages"]
         ai_messages: Sequence[AIMessage] = [
             message for message in messages if isinstance(message, AIMessage)
@@ -1154,17 +1245,16 @@ class MoveExistingObjectLeftTask(ROS2ToolCallingAgentTask):
 
 
 class MoveExistingObjectFrontTask(ROS2ToolCallingAgentTask):
-    """
-    Args:
-        objects (Dict[str, List[dict[str, float]]): dictionary containing the object types and their positions. Object type should be passed as singular.
-        object_to_grab (str): object to grab. Object type should be passed as singular. Object to be grabbed should be defined in the objects argument with only one instance (one position).
-        logger (loggers_type | None, optional): Defaults to None.
-    Examples:
-        objects = {
-            "banana": [(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
-            "cube": [(0.7, 0.8, 0.9)],
-        }
-        object_to_grab = "cube"
+    """Task to move an existing object to the front
+
+    Parameters
+    ----------
+    objects : Dict[str, List[dict[str, float]]]
+        Dictionary containing the object types and their positions. Object type should be passed as singular.
+    object_to_grab : str
+        Object to grab. Object type should be passed as singular. Object to be grabbed should be defined in the objects argument with only one instance (one position).
+    logger : loggers_type | None, optional
+        Logger, by default None
     """
 
     def __init__(
@@ -1226,6 +1316,16 @@ class MoveExistingObjectFrontTask(ROS2ToolCallingAgentTask):
             raise TaskParametrizationError(error_message)
 
     def verify_tool_calls(self, response: Dict[str, Any]):
+        """It is expected that the agent will request:
+        1. get_object_positions for the object to grab
+        2. move_to_point for the object to grab with the coordinates of the object to grab specified in the task
+        3. move_to_point for the the same object but with the task set to "drop" and x coordinate bigger by 0.6
+
+        Parameters
+        ----------
+        response : Dict[str, Any]
+            The response from the agent
+        """
         messages = response["messages"]
         ai_messages: Sequence[AIMessage] = [
             message for message in messages if isinstance(message, AIMessage)
@@ -1274,19 +1374,26 @@ class MoveExistingObjectFrontTask(ROS2ToolCallingAgentTask):
 
 
 class SwapObjectsTask(ROS2ToolCallingAgentTask):
-    """
-    Args:
-        objects (Dict[str, List[dict[str, float]]): dictionary containing the object types and their positions. Object type should be passed as singular.
-        objects_to_swap (str): objects to be swapped. Object type should be passed as singular. Objects to be swapped should be defined in the objects argument with only one instance (one position).
-        logger (loggers_type | None, optional): Defaults to None.
-    Examples:
-        objects = {
-            "banana": [(0.1, 0.2, 0.1)],
-            "cube": [(0.7, 0.8, 0.1)],
-            "apple": [(0.3, 0.4, 0.1), (0.5, 0.6, 0.1)],
+    """Task to swap objects
 
-        }
-        objects_to_swap = ["cube", "banana"]
+    Parameters
+    ----------
+    objects : Dict[str, List[Dict[str, float]]]
+        Dictionary containing the object types and their positions. Object type should be passed as singular.
+    objects_to_swap : List[str]
+        Objects to be swapped. Object type should be passed as singular. Objects to be swapped should be defined in the objects argument with only one instance (one position).
+    logger : loggers_type | None, optional
+        Logger, by default None
+
+    Examples
+    --------
+    objects = {
+        "banana": [(0.1, 0.2, 0.1)],
+        "cube": [(0.7, 0.8, 0.1)],
+        "apple": [(0.3, 0.4, 0.1), (0.5, 0.6, 0.1)],
+
+    }
+    objects_to_swap = ["cube", "banana"]
     """
 
     def __init__(
@@ -1352,12 +1459,16 @@ class SwapObjectsTask(ROS2ToolCallingAgentTask):
         return f"Move {self.objects_to_swap[0]} to the initial position of {self.objects_to_swap[1]}, and move {self.objects_to_swap[1]} to the initial position of {self.objects_to_swap[0]}."
 
     def verify_tool_calls(self, response: Dict[str, Any]):
-        """
-        It is expected that the agent will request:
+        """It is expected that the agent will request:
         1. get_object_positions for both objects to be swapped
         2. move_to_point for one object to some temporary position to make place to second object
         3. move_to_point for the second object to the position of the first object
         4. move_to_point for the first object to the position of the second object
+
+        Parameters
+        ----------
+        response : Dict[str, Any]
+            The response from the agent
         """
 
         messages = response["messages"]
@@ -1463,6 +1574,7 @@ class SwapObjectsTask(ROS2ToolCallingAgentTask):
     ) -> bool:
         """
         Helper method to check if actual tool calls sequence match expected tool calls in terms of sequence and arguments.
+
         Parameters
         ----------
         actual_tool_calls_seq : Sequence[ToolCall]
