@@ -15,6 +15,7 @@
 import logging
 import threading
 from typing import List, Optional
+from uuid import UUID
 
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import AIMessage
@@ -41,9 +42,6 @@ class HRICallbackHandler(BaseCallbackHandler):
         self.logger = logger or logging.getLogger(__name__)
         self.current_conversation_id = None
 
-    def set_conversation_id(self, conversation_id: str):
-        self.current_conversation_id = conversation_id
-
     def _should_split(self, token: str) -> bool:
         return token in self.splitting_chars
 
@@ -62,9 +60,10 @@ class HRICallbackHandler(BaseCallbackHandler):
                     f"Failed to send {len(tokens)} tokens to {connector_name}: {e}"
                 )
 
-    def on_llm_new_token(self, token: str, **kwargs):
+    def on_llm_new_token(self, token: str, *, run_id: UUID, **kwargs):
         if token == "":
             return
+        self.current_conversation_id = str(run_id)
         if self.aggregate_chunks:
             with self._buffer_lock:
                 self.chunks_buffer += token
@@ -81,8 +80,11 @@ class HRICallbackHandler(BaseCallbackHandler):
     def on_llm_end(
         self,
         response: LLMResult,
+        *,
+        run_id: UUID,
         **kwargs,
     ):
+        self.current_conversation_id = str(run_id)
         if self.aggregate_chunks and self.chunks_buffer:
             with self._buffer_lock:
                 self._send_all_targets(self.chunks_buffer)

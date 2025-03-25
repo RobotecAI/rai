@@ -61,7 +61,6 @@ class ReActAgent(BaseAgent):
                 self.logger.info("Waiting for messages...")
             if received_messages:
                 self.logger.info("Received messages")
-                self.callback.set_conversation_id(HRIMessage.generate_conversation_id())
                 reduced_message = self._reduce_messages(received_messages)
                 langchain_message = reduced_message.to_langchain()
                 self.state["messages"].append(langchain_message)
