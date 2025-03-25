@@ -74,14 +74,11 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
     def shutdown(self):
         self._shutdown_binary()
         self._shutdown_robotic_stack()
+        self._processes = []
 
     def _shutdown_binary(self):
         if not self.current_sim_process:
             return
-        process_to_remove = [
-            p for p in self._processes if p.process == self.current_sim_process
-        ][0]
-        self._processes.remove(process_to_remove)
         self.current_sim_process.send_signal(signal.SIGINT)
         self.current_sim_process.wait()
 
@@ -98,12 +95,6 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
     def _shutdown_robotic_stack(self):
         if not self.current_robotic_stack_process:
             return
-        process_to_remove = [
-            p
-            for p in self._processes
-            if p.process == self.current_robotic_stack_process
-        ][0]
-        self._processes.remove(process_to_remove)
         self.current_robotic_stack_process.send_signal(signal.SIGINT)
         self.current_robotic_stack_process.wait()
 
@@ -315,6 +306,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             required_ros2_stack=simulation_config.required_simulation_ros2_interfaces
         ):
             raise RuntimeError("ROS2 stack is not ready in time.")
+
         self._processes.append(
             Process(
                 name=psutil.Process(self.current_sim_process.pid).name(),
@@ -334,12 +326,23 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             required_ros2_stack=simulation_config.required_robotic_ros2_interfaces
         ):
             raise RuntimeError("ROS2 stack is not ready in time.")
+
         self._processes.append(
             Process(
                 name=psutil.Process(self.current_robotic_stack_process.pid).name(),
                 process=self.current_robotic_stack_process,
             )
         )
+
+        parent = psutil.Process(self.current_robotic_stack_process.pid)
+        children = parent.children(recursive=True)
+        for child in children:
+            self._processes.append(
+                Process(
+                    name=psutil.Process(child.pid).name(),
+                    process=child,
+                )
+            )
 
     def _has_process_started(self, process: subprocess.Popen[Any], timeout: int = 15):
         start_time = time.time()

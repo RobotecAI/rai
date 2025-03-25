@@ -21,9 +21,10 @@ import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Generic, List, Optional, TypeVar
+from typing import Any, Generic, List, Optional, TypeVar, Union
 
 import yaml
+from psutil import Process as PsutilProcess
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -172,7 +173,7 @@ class SceneState(BaseModel):
 @dataclass(frozen=True)
 class Process:
     name: str
-    process: subprocess.Popen[Any]
+    process: Union[subprocess.Popen[Any], PsutilProcess]
 
 
 SimulationConfigT = TypeVar("SimulationConfigT", bound=SimulationConfig)
@@ -302,12 +303,20 @@ class SimulationBridge(ABC, Generic[SimulationConfigT]):
         """Checks the status of managed processes and shuts everything down if one of the processes exits unexpectedly."""
         while self._monitoring_running:
             for process in self._processes[:]:
-                if process.process.poll() is not None:
-                    self.logger.error(
-                        f"Process {process.name} with PID {process.process.pid} exited unexpectedly with code {process.process.returncode}"
-                    )
-                    self.logger.info("Shutting down all processes.")
-                    os.kill(os.getpid(), signal.SIGINT)
+                if isinstance(process.process, subprocess.Popen):
+                    if process.process.poll() is not None:
+                        self.logger.critical(
+                            f"Process {process.name} with PID {process.process.pid} exited unexpectedly with code {process.process.returncode}"
+                        )
+                        self.logger.info("Shutting down main process.")
+                        os.kill(os.getpid(), signal.SIGINT)
+                else:
+                    if not process.process.is_running():
+                        self.logger.critical(
+                            f"Process {process.name} with PID {process.process.pid} exited unexpectedly."
+                        )
+                        self.logger.info("Shutting down main process.")
+                        os.kill(os.getpid(), signal.SIGINT)
             time.sleep(1)
 
     def stop_monitoring(self):
