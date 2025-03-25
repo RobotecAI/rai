@@ -15,7 +15,7 @@
 import logging
 import os
 from dataclasses import dataclass
-from typing import List, Literal, Optional, cast
+from typing import List, Literal, Optional, Tuple, cast
 
 import coloredlogs
 import tomli
@@ -101,10 +101,10 @@ def load_config() -> RAIConfig:
     )
 
 
-def get_llm_model_config(
+def get_llm_model_config_and_vendor(
     model_type: Literal["simple_model", "complex_model"],
     vendor: Optional[str] = None,
-) -> str:
+) -> Tuple[str, str]:
     config = load_config()
     if vendor is None:
         if model_type == "simple_model":
@@ -113,7 +113,7 @@ def get_llm_model_config(
             vendor = config.vendor.complex_model
 
     model_config = getattr(config, vendor)
-    return model_config
+    return model_config, vendor
 
 
 def get_llm_model(
@@ -121,14 +121,7 @@ def get_llm_model(
     vendor: Optional[str] = None,
     **kwargs,
 ):
-    config = load_config()
-    if vendor is None:
-        if model_type == "simple_model":
-            vendor = config.vendor.simple_model
-        else:
-            vendor = config.vendor.complex_model
-
-    model_config = getattr(config, vendor)
+    model_config, vendor = get_llm_model_config_and_vendor(model_type, vendor)
     model = getattr(model_config, model_type)
     logger.info(f"Initializing {model_type}: Vendor: {vendor}, Model: {model}")
     if vendor == "openai":
