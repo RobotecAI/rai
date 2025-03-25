@@ -41,9 +41,6 @@ jobs:
           DEBIAN_FRONTEND=noninteractive apt-get --yes install jackd
           jackd -d dummy -r 44100 &
 
-      - name: remove poetry env
-        run: poetry env remove --all
-
       - name: Install python dependencies
         run: poetry install --with openset,nomad,s2s,simbench
 
