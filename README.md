@@ -87,7 +87,7 @@ Before going further, make sure you have ROS 2 (Jazzy or Humble) installed and s
 RAI uses [Poetry](https://python-poetry.org/) for python packaging and dependency management. Install poetry with the following line:
 
 ```bash
-curl -sSL https://install.python-poetry.org
+curl -sSL https://install.python-poetry.org | python3 -
 ```
 
 Alternatively, you can opt to do so by following the [official docs](https://python-poetry.org/docs/#installation).
