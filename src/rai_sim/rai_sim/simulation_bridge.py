@@ -19,73 +19,15 @@ from typing import Generic, List, Optional, TypeVar
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
-
-
-class Translation(BaseModel):
-    """
-    Represents the position of an object in 3D space using
-    x, y, and z coordinates.
-    """
-
-    x: float = Field(description="X coordinate in meters")
-    y: float = Field(description="Y coordinate in meters")
-    z: float = Field(description="Z coordinate in meters")
-
-
-class Rotation(BaseModel):
-    """
-    Represents a 3D rotation using quaternion representation.
-    """
-
-    x: float = Field(description="X component of the quaternion")
-    y: float = Field(description="Y component of the quaternion")
-    z: float = Field(description="Z component of the quaternion")
-    w: float = Field(description="W component of the quaternion")
-
-
-class Pose(BaseModel):
-    """
-    Represents the complete pose (position and orientation) of an object.
-    """
-
-    translation: Translation = Field(
-        description="The position of the object in 3D space"
-    )
-    rotation: Optional[Rotation] = Field(
-        default=None,
-        description="The orientation of the object as a quaternion. Optional if orientation is not needed and default orientation is handled by the bridge",
-    )
-
-
-class Entity(BaseModel):
-    """
-    Entity that can be spawned in the simulation environment.
-    """
-
-    name: str = Field(description="Unique name for the entity")
-    prefab_name: str = Field(
-        description="Name of the prefab resource to use for spawning this entity"
-    )
-    pose: Pose = Field(description="Initial pose of the entity")
-
-    def __hash__(self) -> int:
-        return hash(self.name)
-
-    def __eq__(self, other) -> bool:
-        if isinstance(other, Entity) or isinstance(other, SpawnedEntity):
-            return self.name == other.name
-        else:
-            return False
-
-
-class SpawnedEntity(Entity):
-    """
-    Entity that has been spawned in the simulation environment.
-    """
-
-    id: str = Field(
-        description="Unique identifier assigned to the spawned entity instance"
-    )
+from rai.types import (
+    Entity,
+    Header,
+    Point,
+    Pose,
+    PoseStamped,
+    Quaternion,
+    SpawnedEntity,
+)
 
 
 class SimulationConfig(BaseModel):
@@ -94,8 +36,7 @@ class SimulationConfig(BaseModel):
 
     Attributes
     ----------
-    entities : List[Entity]
-        List of entities to be spawned in the simulation.
+    List of entities to be spawned in the simulation.
     """
 
     entities: List[Entity] = Field(
@@ -145,7 +86,28 @@ class SimulationConfig(BaseModel):
         """
         with open(base_config_path) as f:
             content = yaml.safe_load(f)
-        return cls(**content)
+        frame_id = content["frame_id"]
+        header = Header(frame_id=frame_id)
+        entities = [
+            Entity(
+                name=entity["name"],
+                prefab_name=entity["prefab_name"],
+                pose=PoseStamped(
+                    header=header,
+                    pose=Pose(
+                        position=Point(
+                            **entity["pose"]["translation"]
+                        ),  # TODO(boczekbartek): adapt yaml configs to ros2 naming convension
+                        orientation=Quaternion(
+                            **entity["pose"].get("rotation", dict())
+                        ),
+                    ),
+                ),
+            )
+            for entity in content["entities"]
+        ]
+
+        return cls(entities=entities)
 
 
 class SceneState(BaseModel):
@@ -240,7 +202,7 @@ class SimulationBridge(ABC, Generic[SimulationConfigT]):
         pass
 
     @abstractmethod
-    def get_object_pose(self, entity: SpawnedEntity) -> Pose:
+    def get_object_pose(self, entity: SpawnedEntity) -> PoseStamped:
         """
         Gets the current pose of a spawned entity.
 
@@ -255,7 +217,7 @@ class SimulationBridge(ABC, Generic[SimulationConfigT]):
 
         Returns
         -------
-        Pose
+        PoseStamped
             Object containing the entity's current pose.
         """
         pass

@@ -21,21 +21,21 @@ from typing import List, Optional, Tuple, get_args, get_origin
 from unittest.mock import MagicMock, patch
 
 import rclpy
-import rclpy.qos
-from geometry_msgs.msg import Point, Quaternion, TransformStamped
-from geometry_msgs.msg import Pose as ROS2Pose
+from geometry_msgs.msg import TransformStamped as ROS2TransformStamped
 from rai.communication.ros2 import ROS2Connector, ROS2Message
+from rai.types import (
+    Entity,
+    Header,
+    Point,
+    Pose,
+    PoseStamped,
+    Quaternion,
+    SpawnedEntity,
+)
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
 
 from rai_sim.o3de.o3de_bridge import O3DExROS2Bridge, O3DExROS2SimulationConfig
-from rai_sim.simulation_bridge import (
-    Entity,
-    Pose,
-    Rotation,
-    SpawnedEntity,
-    Translation,
-)
 
 
 def test_load_config(sample_base_yaml_config: Path, sample_o3dexros2_config: Path):
@@ -77,9 +77,12 @@ class TestO3DExROS2Bridge(unittest.TestCase):
         self.test_entity = Entity(
             name="test_entity1",
             prefab_name="cube",
-            pose=Pose(
-                translation=Translation(x=1.0, y=2.0, z=3.0),
-                rotation=Rotation(x=0.0, y=0.0, z=0.0, w=1.0),
+            pose=PoseStamped(
+                header=Header(frame_id="odom"),
+                pose=Pose(
+                    position=Point(x=1.0, y=2.0, z=3.0),
+                    orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
+                ),
             ),
         )
 
@@ -87,9 +90,12 @@ class TestO3DExROS2Bridge(unittest.TestCase):
             id="entity_id_123",
             name="test_entity1",
             prefab_name="cube",
-            pose=Pose(
-                translation=Translation(x=1.0, y=2.0, z=3.0),
-                rotation=Rotation(x=0.0, y=0.0, z=0.0, w=1.0),
+            pose=PoseStamped(
+                header=Header(frame_id="odom"),
+                pose=Pose(
+                    position=Point(x=1.0, y=2.0, z=3.0),
+                    orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
+                ),
             ),
         )
 
@@ -175,43 +181,6 @@ class TestO3DExROS2Bridge(unittest.TestCase):
         self.bridge._try_service_call.assert_called_once()
         self.assertEqual(names, ["cube", "carrot"])
 
-    def test_to_ros2_pose(self):
-        # Create a pose
-        pose = Pose(
-            translation=Translation(x=1.0, y=2.0, z=3.0),
-            rotation=Rotation(x=0.1, y=0.2, z=0.3, w=0.4),
-        )
-
-        # Convert to ROS2 pose
-        ros2_pose = self.bridge._to_ros2_pose(pose)
-
-        # Check the conversion
-        self.assertEqual(ros2_pose.position.x, 1.0)
-        self.assertEqual(ros2_pose.position.y, 2.0)
-        self.assertEqual(ros2_pose.position.z, 3.0)
-        self.assertEqual(ros2_pose.orientation.x, 0.1)
-        self.assertEqual(ros2_pose.orientation.y, 0.2)
-        self.assertEqual(ros2_pose.orientation.z, 0.3)
-        self.assertEqual(ros2_pose.orientation.w, 0.4)
-
-    def test_from_ros2_pose(self):
-        # Create a ROS2 pose
-        position = Point(x=1.0, y=2.0, z=3.0)
-        orientation = Quaternion(x=0.1, y=0.2, z=0.3, w=0.4)
-        ros2_pose = ROS2Pose(position=position, orientation=orientation)
-
-        # Convert from ROS2Pose to Pose
-        pose = self.bridge._from_ros2_pose(ros2_pose)
-
-        # Check the conversion
-        self.assertEqual(pose.translation.x, 1.0)
-        self.assertEqual(pose.translation.y, 2.0)
-        self.assertEqual(pose.translation.z, 3.0)
-        self.assertEqual(pose.rotation.x, 0.1)
-        self.assertEqual(pose.rotation.y, 0.2)
-        self.assertEqual(pose.rotation.z, 0.3)
-        self.assertEqual(pose.rotation.w, 0.4)
-
 
 class TestROS2ConnectorInterface(unittest.TestCase):
     """Tests to ensure the ROS2Connector interface meets the expectations of O3DExROS2Bridge."""
@@ -279,7 +248,7 @@ class TestROS2ConnectorInterface(unittest.TestCase):
             )
 
         # Check return type explicitly
-        assert signature.return_annotation is TransformStamped, (
+        assert signature.return_annotation is ROS2TransformStamped, (
             f"Return type is incorrect, expected: TransformStamped, got: {signature.return_annotation}"
         )
 

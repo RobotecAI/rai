@@ -19,11 +19,11 @@ from typing import Any, Dict, Generic, List, TypeVar, Union
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langgraph.graph.state import CompiledStateGraph
 from rai.messages import HumanMultimodalMessage
+from rai.types import Entity
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai_bench.manipulation_o3de.interfaces import Task
 from rai_sim.simulation_bridge import (
-    Entity,
     SimulationBridge,
     SimulationConfigT,
 )

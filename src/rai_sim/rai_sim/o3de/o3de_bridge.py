@@ -18,27 +18,26 @@ import signal
 import subprocess
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, List, Optional, Set, cast
 
 import yaml
-from geometry_msgs.msg import Point, PoseStamped, Quaternion
 from geometry_msgs.msg import Pose as ROS2Pose
+from geometry_msgs.msg import PoseStamped as ROS2PoseStamped
 from rai.communication.ros2 import ROS2Connector, ROS2Message
 from rai.communication.ros2.ros_async import get_future_result
-from std_msgs.msg import Header
-from tf2_geometry_msgs import do_transform_pose
+from rai.types import (
+    Entity,
+    Header,
+    Pose,
+    PoseStamped,
+    SpawnedEntity,
+    SpawnEntityService,
+)
+from rai.types.ros2 import from_ros2_msg, to_ros2_msg
+from tf2_geometry_msgs import do_transform_pose, do_transform_pose_stamped
 
 from rai_interfaces.srv import ManipulatorMoveTo
-from rai_sim.simulation_bridge import (
-    Entity,
-    Pose,
-    Rotation,
-    SceneState,
-    SimulationBridge,
-    SimulationConfig,
-    SpawnedEntity,
-    Translation,
-)
+from rai_sim.simulation_bridge import SceneState, SimulationBridge, SimulationConfig
 
 
 class O3DExROS2SimulationConfig(SimulationConfig):
@@ -119,29 +118,17 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             )
 
     def _spawn_entity(self, entity: Entity):
-        pose = do_transform_pose(
-            self._to_ros2_pose(entity.pose),
-            self.connector.get_transform("odom", "world"),
+        pose: ROS2PoseStamped = do_transform_pose_stamped(
+            to_ros2_msg(entity.pose),
+            self.connector.get_transform(entity.pose.header.frame_id, "world"),
         )
 
-        msg_content: Dict[str, Any] = {
-            "name": entity.prefab_name,
-            "xml": "",
-            "robot_namespace": entity.name,
-            "initial_pose": {
-                "position": {
-                    "x": pose.position.x,  # type: ignore
-                    "y": pose.position.y,  # type: ignore
-                    "z": pose.position.z,  # type: ignore
-                },
-                "orientation": {
-                    "x": pose.orientation.x,  # type: ignore
-                    "y": pose.orientation.y,  # type: ignore
-                    "z": pose.orientation.z,  # type: ignore
-                    "w": pose.orientation.w,  # type: ignore
-                },
-            },
-        }
+        msg_content = SpawnEntityService(
+            name=entity.name,
+            robot_namespace=entity.name,
+            reference_frame=pose.header.frame_id,
+            initial_pose=cast(Pose, from_ros2_msg(pose.pose)),
+        )
 
         msg = ROS2Message(payload=msg_content)
         response = self._try_service_call(
@@ -171,7 +158,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
                 f"Failed to delete entity {entity.name}. Response: {response.payload.status_message}"
             )
 
-    def get_object_pose(self, entity: SpawnedEntity) -> Pose:
+    def get_object_pose(self, entity: SpawnedEntity) -> PoseStamped:
         object_frame = entity.name + "/"
         ros2_pose = do_transform_pose(
             ROS2Pose(),
@@ -180,7 +167,10 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         ros2_pose = do_transform_pose(
             ros2_pose, self.connector.get_transform("world", "odom")
         )
-        return self._from_ros2_pose(ros2_pose)
+        return PoseStamped(
+            pose=cast(Pose, from_ros2_msg(ros2_pose)),
+            header=Header(frame_id="odom"),
+        )
 
     def get_scene_state(self) -> SceneState:
         """
@@ -349,49 +339,6 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             )
         return response  # type: ignore
 
-    # NOTE (mkotynia) probably to be refactored, other bridges may also want to use pose conversion to/from ROS2 format
-    def _to_ros2_pose(self, pose: Pose) -> ROS2Pose:
-        """
-        Converts pose to pose in ROS2 Pose format.
-        """
-        position = Point(
-            x=pose.translation.x, y=pose.translation.y, z=pose.translation.z
-        )
-
-        if pose.rotation is not None:
-            orientation = Quaternion(
-                x=pose.rotation.x,
-                y=pose.rotation.y,
-                z=pose.rotation.z,
-                w=pose.rotation.w,
-            )
-        else:
-            orientation = Quaternion()
-
-        ros2_pose = ROS2Pose(position=position, orientation=orientation)
-
-        return ros2_pose
-
-    def _from_ros2_pose(self, pose: ROS2Pose) -> Pose:
-        """
-        Converts ROS2Pose to Pose
-        """
-
-        translation = Translation(
-            x=pose.position.x,  # type: ignore
-            y=pose.position.y,  # type: ignore
-            z=pose.position.z,  # type: ignore
-        )
-
-        rotation = Rotation(
-            x=pose.orientation.x,  # type: ignore
-            y=pose.orientation.y,  # type: ignore
-            z=pose.orientation.z,  # type: ignore
-            w=pose.orientation.w,  # type: ignore
-        )
-
-        return Pose(translation=translation, rotation=rotation)
-
 
 class O3DEngineArmManipulationBridge(O3DExROS2Bridge):
     def reset_arm(self):
@@ -405,37 +352,23 @@ class O3DEngineArmManipulationBridge(O3DExROS2Bridge):
 
     def move_arm(
         self,
-        pose: Pose,
+        pose: PoseStamped,
         initial_gripper_state: bool,
         final_gripper_state: bool,
-        frame_id: str,
     ):
         """Moves arm to a given position
 
         Args:
-            pose (Pose): where to move arm
+            pose (PoseStamped): where to move arm
             initial_gripper_state (bool): False means closed grip, True means open grip
             final_gripper_state (bool): False means closed grip, True means open grip
-            frame_id (str): reference frame
         """
 
         request = ManipulatorMoveTo.Request()
         request.initial_gripper_state = initial_gripper_state
         request.final_gripper_state = final_gripper_state
 
-        request.target_pose = PoseStamped()
-        request.target_pose.header = Header()
-        request.target_pose.header.frame_id = frame_id
-
-        request.target_pose.pose.position.x = pose.translation.x
-        request.target_pose.pose.position.y = pose.translation.y
-        request.target_pose.pose.position.z = pose.translation.z
-
-        if pose.rotation:
-            request.target_pose.pose.orientation.x = pose.rotation.x
-            request.target_pose.pose.orientation.y = pose.rotation.y
-            request.target_pose.pose.orientation.z = pose.rotation.z
-            request.target_pose.pose.orientation.w = pose.rotation.w
+        request.target_pose = to_ros2_msg(pose)
 
         client = self.connector.node.create_client(
             ManipulatorMoveTo,

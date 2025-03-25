@@ -20,6 +20,7 @@ import pytest
 @pytest.fixture
 def sample_base_yaml_config(tmp_path: Path) -> Path:
     yaml_content = """
+    frame_id: test_frame_id
     entities:
       - name: entity1
         prefab_name: cube

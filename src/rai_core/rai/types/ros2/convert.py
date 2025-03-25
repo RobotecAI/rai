@@ -1,0 +1,38 @@
+# Copyright (C) 2025 Robotec.AI
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import importlib
+from typing import Any
+
+import rosidl_runtime_py
+from pydantic import BaseModel
+
+from rai.tools.ros.utils import import_message_from_str
+
+
+def to_ros2_msg(base_model: BaseModel) -> Any:
+    msg_name = base_model.__class__.__name__
+    ros2_msg_cls = import_message_from_str(msg_name)
+    msg_args = base_model.model_dump()
+    ros2_msg = ros2_msg_cls()
+    rosidl_runtime_py.set_message.set_message_fields(ros2_msg, msg_args)
+    return ros2_msg
+
+
+def from_ros2_msg(msg: Any) -> BaseModel:
+    msg_name = msg.__class__.__name__
+    types_module = importlib.import_module("rai.types")
+    base_model_cls: BaseModel = getattr(types_module, msg_name)
+    msg_dict = rosidl_runtime_py.message_to_ordereddict(msg)
+    return base_model_cls.model_validate(msg_dict)
