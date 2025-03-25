@@ -21,6 +21,8 @@ from typing import List
 
 import rclpy
 from langchain.tools import BaseTool
+from rai_open_set_vision.tools import GetGrabbingPointTool
+
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.ros.manipulation import (
@@ -32,8 +34,6 @@ from rai.tools.ros2.topics import (
     GetROS2TopicsNamesAndTypesTool,
 )
 from rai.utils.model_initialization import get_llm_model
-from rai_open_set_vision.tools import GetGrabbingPointTool
-
 from rai_bench.benchmark_model import Benchmark
 from rai_bench.o3de_test_bench.scenarios import (
     easy_scenarios,
@@ -164,26 +164,31 @@ if __name__ == "__main__":
 
     all_scenarios = t_scenarios + e_scenarios + m_scenarios + h_scenarios + vh_scenarios
     o3de = O3DEngineArmManipulationBridge(connector, logger=agent_logger)
-    # define benchamrk
-    results_filename = f"{experiment_dir}/results.csv"
-    benchmark = Benchmark(
-        simulation_bridge=o3de,
-        scenarios=all_scenarios,
-        logger=bench_logger,
-        results_filename=results_filename,
-    )
-    for i in range(len(all_scenarios)):
-        agent = create_conversational_agent(
-            llm, tools, system_prompt, logger=agent_logger
+    try:
+        # define benchamrk
+        results_filename = f"{experiment_dir}/results.csv"
+        benchmark = Benchmark(
+            simulation_bridge=o3de,
+            scenarios=all_scenarios,
+            logger=bench_logger,
+            results_filename=results_filename,
         )
-        benchmark.run_next(agent=agent)
-        o3de.reset_arm()
-        time.sleep(0.2)  # admire the end position for a second ;)
+        for i in range(len(all_scenarios)):
+            agent = create_conversational_agent(
+                llm, tools, system_prompt, logger=agent_logger
+            )
+            benchmark.run_next(agent=agent)
+            o3de.reset_arm()
+            time.sleep(0.2)  # admire the end position for a second ;)
 
-    bench_logger.info("===============================================================")
-    bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
-    bench_logger.info("===============================================================")
-
-    connector.shutdown()
-    o3de.shutdown()
-    rclpy.shutdown()
+        bench_logger.info(
+            "==============================================================="
+        )
+        bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
+        bench_logger.info(
+            "==============================================================="
+        )
+    finally:
+        connector.shutdown()
+        o3de.shutdown()
+        rclpy.shutdown()
