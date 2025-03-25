@@ -116,17 +116,15 @@ class GetROS2TopicsTask(ROS2ToolCallingAgentTask):
         ]
 
         if not ai_messages:
-            error_msg = "No AI messages found in the response."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
+            self.log_error(msg="No AI messages found in the response.")
 
         self._is_ai_message_requesting_get_ros2_topics_and_types(ai_messages[0])
 
         total_tool_calls = sum(len(message.tool_calls) for message in ai_messages)
         if total_tool_calls != 1:
-            error_msg = f"Total number of tool calls across all AI messages should be 1, but got {total_tool_calls}."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
+            self.log_error(
+                msg=f"Total number of tool calls across all AI messages should be 1, but got {total_tool_calls}."
+            )
 
         if not self.result.errors:
             self.result.success = True
@@ -171,17 +169,15 @@ class GetROS2TopicsTask2(ROS2ToolCallingAgentTask):
         ]
 
         if not ai_messages:
-            error_msg = "No AI messages found in the response."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
+            self.log_error(msg="No AI messages found in the response.")
 
         self._is_ai_message_requesting_get_ros2_topics_and_types(ai_messages[0])
 
         total_tool_calls = sum(len(message.tool_calls) for message in ai_messages)
         if total_tool_calls != 1:
-            error_msg = f"Total number of tool calls across all AI messages should be 1, but got {total_tool_calls}."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
+            self.log_error(
+                msg=f"Total number of tool calls across all AI messages should be 1, but got {total_tool_calls}."
+            )
 
         if not self.result.errors:
             self.result.success = True
@@ -234,19 +230,17 @@ class GetROS2RGBCameraTask(ROS2ToolCallingAgentTask):
         ]
 
         if len(ai_messages) < 3:
-            error_msg = f"Expected at least 3 AI messages, but got {len(ai_messages)}."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
+            self.log_error(
+                msg=f"Expected at least 3 AI messages, but got {len(ai_messages)}."
+            )
 
         if ai_messages:
             if not self._is_ai_message_requesting_get_ros2_topics_and_types(
                 ai_messages[0]
             ):
-                error_msg = (
-                    "First AI message did not request ROS2 topics and types correctly."
+                self.log_error(
+                    msg="First AI message did not request ROS2 topics and types correctly."
                 )
-                self.logger.error(error_msg)
-                self.result.errors.append(error_msg)
         if len(ai_messages) > 1:
             if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
                 self._check_tool_call(
@@ -305,19 +299,17 @@ class GetROS2DepthCameraTask(ROS2ToolCallingAgentTask):
         ]
 
         if len(ai_messages) < 3:
-            error_msg = f"Expected at least 3 AI messages, but got {len(ai_messages)}."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
+            self.log_error(
+                msg=f"Expected at least 3 AI messages, but got {len(ai_messages)}."
+            )
 
         if ai_messages:
             if not self._is_ai_message_requesting_get_ros2_topics_and_types(
                 ai_messages[0]
             ):
-                error_msg = (
-                    "First AI message did not request ROS2 topics and types correctly."
+                self.log_error(
+                    msg="First AI message did not request ROS2 topics and types correctly."
                 )
-                self.logger.error(error_msg)
-                self.result.errors.append(error_msg)
 
         if len(ai_messages) > 1:
             if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
@@ -381,18 +373,16 @@ class GetAllROS2RGBCamerasTask(ROS2ToolCallingAgentTask):
         ]
 
         if len(ai_messages) < 3:
-            error_msg = f"Expected at least 3 AI messages, but got {len(ai_messages)}."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
+            self.log_error(
+                msg=f"Expected at least 3 AI messages, but got {len(ai_messages)}."
+            )
         if ai_messages:
             if not self._is_ai_message_requesting_get_ros2_topics_and_types(
                 ai_messages[0]
             ):
-                error_msg = (
-                    "First AI message did not request ROS2 topics and types correctly."
+                self.log_error(
+                    msg="First AI message did not request ROS2 topics and types correctly."
                 )
-                self.logger.error(error_msg)
-                self.result.errors.append(error_msg)
 
         if len(ai_messages) > 1:
             expected_tool_calls: list[dict[str, Any]] = [
@@ -464,18 +454,16 @@ class GetAllROS2DepthCamerasTask(ROS2ToolCallingAgentTask):
         ]
 
         if len(ai_messages) < 3:
-            error_msg = f"Expected at least 3 AI messages, but got {len(ai_messages)}."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
+            self.log_error(
+                msg=f"Expected at least 3 AI messages, but got {len(ai_messages)}."
+            )
         if ai_messages:
             if not self._is_ai_message_requesting_get_ros2_topics_and_types(
                 ai_messages[0]
             ):
-                error_msg = (
-                    "First AI message did not request ROS2 topics and types correctly."
+                self.log_error(
+                    msg="First AI message did not request ROS2 topics and types correctly."
                 )
-                self.logger.error(error_msg)
-                self.result.errors.append(error_msg)
 
         if len(ai_messages) > 1:
             expected_tool_calls: list[dict[str, Any]] = [
@@ -545,19 +533,16 @@ class GetROS2MessageTask(ROS2ToolCallingAgentTask):
         ]
 
         if len(ai_messages) < 3:
-            error_msg = f"Expected at least 3 AI messages, but got {len(ai_messages)}."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
+            self.log_error(
+                msg=f"Expected at least 3 AI messages, but got {len(ai_messages)}."
+            )
         if ai_messages:
             if not self._is_ai_message_requesting_get_ros2_topics_and_types(
                 ai_messages[0]
             ):
-                error_msg = (
-                    "First AI message did not request ROS2 topics and types correctly."
+                self.log_error(
+                    msg="First AI message did not request ROS2 topics and types correctly."
                 )
-                self.logger.error(error_msg)
-                self.result.errors.append(error_msg)
-
         if len(ai_messages) > 1:
             if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
                 self._check_tool_call(
@@ -613,19 +598,16 @@ class GetRobotDescriptionTask(ROS2ToolCallingAgentTask):
         ]
 
         if len(ai_messages) < 3:
-            error_msg = f"Expected at least 3 AI messages, but got {len(ai_messages)}."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
-
+            self.log_error(
+                msg=f"Expected at least 3 AI messages, but got {len(ai_messages)}."
+            )
         if ai_messages:
             if not self._is_ai_message_requesting_get_ros2_topics_and_types(
                 ai_messages[0]
             ):
-                error_msg = (
-                    "First AI message did not request ROS2 topics and types correctly."
+                self.log_error(
+                    msg="First AI message did not request ROS2 topics and types correctly."
                 )
-                self.logger.error(error_msg)
-                self.result.errors.append(error_msg)
         if len(ai_messages) > 1:
             if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
                 self._check_tool_call(
@@ -681,20 +663,16 @@ class GetPointcloudTask(ROS2ToolCallingAgentTask):
         ]
 
         if len(ai_messages) < 3:
-            error_msg = f"Expected at least 3 AI messages, but got {len(ai_messages)}."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
-
+            self.log_error(
+                msg=f"Expected at least 3 AI messages, but got {len(ai_messages)}."
+            )
         if ai_messages:
             if not self._is_ai_message_requesting_get_ros2_topics_and_types(
                 ai_messages[0]
             ):
-                error_msg = (
-                    "First AI message did not request ROS2 topics and types correctly."
+                self.log_error(
+                    msg="First AI message did not request ROS2 topics and types correctly."
                 )
-                self.logger.error(error_msg)
-                self.result.errors.append(error_msg)
-
         if len(ai_messages) > 1:
             if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
                 self._check_tool_call(
@@ -751,16 +729,13 @@ class MoveToPointTask(ROS2ToolCallingAgentTask):
         ]
 
         if not ai_messages:
-            error_msg = "No AI messages found in the response."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
-
+            self.log_error(msg="No AI messages found in the response.")
         else:
             total_tool_calls = sum(len(message.tool_calls) for message in ai_messages)
             if total_tool_calls != 1:
-                error_msg = f"Total number of tool calls across all AI messages should be 1, but got {total_tool_calls}."
-                self.logger.error(error_msg)
-                self.result.errors.append(error_msg)
+                self.log_error(
+                    msg=f"Total number of tool calls across all AI messages should be 1, but got {total_tool_calls}."
+                )
             else:
                 self._check_tool_call(
                     tool_call=ai_messages[0].tool_calls[0],
@@ -854,10 +829,7 @@ class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
         ]
 
         if not ai_messages:
-            error_msg = "No AI messages found in the response."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
-
+            self.log_error(msg="No AI messages found in the response.")
         else:
             ai_message = ai_messages[0]
             self._check_multiple_tool_calls(
@@ -947,12 +919,12 @@ class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
     def _verify_args(self):
         if self.object_to_grab not in self.objects:
             error_message = f"Requested object to grab {self.object_to_grab} is not present in defined objects: {self.objects}."
-            self.result.errors.append(error_message)
+            self.log_error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
         if len(self.objects[self.object_to_grab]) > 1:
             error_message = f"Requested object to grab {self.object_to_grab} has more than one position in defined objects: {self.objects[self.object_to_grab]}."
-            self.result.errors.append(error_message)
+            self.log_error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
     def verify_tool_calls(self, response: Dict[str, Any]):
@@ -971,9 +943,9 @@ class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
         ]
         expected_num_ai_messages = 3
         if len(ai_messages) != expected_num_ai_messages:
-            error_msg = f"Expected {expected_num_ai_messages} AI messages, but got {len(ai_messages)}."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
+            self.log_error(
+                msg=f"Expected {expected_num_ai_messages} AI messages, but got {len(ai_messages)}."
+            )
 
         if ai_messages:
             if self._check_tool_calls_num_in_ai_message(ai_messages[0], expected_num=1):
@@ -1071,7 +1043,7 @@ class GrabNotExistingObjectTask(ROS2ToolCallingAgentTask):
     def _verify_args(self):
         if self.object_to_grab in self.objects:
             error_message = f"Requested object to grab {self.object_to_grab} is present in defined objects: {self.objects} but should not be."
-            self.result.errors.append(error_message)
+            self.log_error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
     def verify_tool_calls(self, response: Dict[str, Any]):
@@ -1089,10 +1061,9 @@ class GrabNotExistingObjectTask(ROS2ToolCallingAgentTask):
         ]
         expected_num_ai_messages = 2
         if len(ai_messages) != expected_num_ai_messages:
-            error_msg = f"Expected {expected_num_ai_messages} AI messages, but got {len(ai_messages)}."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
-
+            self.log_error(
+                msg=f"Expected {expected_num_ai_messages} AI messages, but got {len(ai_messages)}."
+            )
         if ai_messages:
             if self._check_tool_calls_num_in_ai_message(ai_messages[0], expected_num=1):
                 self._check_tool_call(
@@ -1178,12 +1149,12 @@ class MoveExistingObjectLeftTask(ROS2ToolCallingAgentTask):
     def _verify_args(self):
         if self.object_to_grab not in self.objects:
             error_message = f"Requested object to grab {self.object_to_grab} is not present in defined objects: {self.objects}."
-            self.result.errors.append(error_message)
+            self.log_error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
         if len(self.objects[self.object_to_grab]) > 1:
             error_message = f"Requested object to grab {self.object_to_grab} has more than one position in defined objects: {self.objects[self.object_to_grab]}."
-            self.result.errors.append(error_message)
+            self.log_error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
     def verify_tool_calls(self, response: Dict[str, Any]):
@@ -1203,10 +1174,9 @@ class MoveExistingObjectLeftTask(ROS2ToolCallingAgentTask):
         ]
         expected_num_ai_messages = 4
         if len(ai_messages) != expected_num_ai_messages:
-            error_msg = f"Expected {expected_num_ai_messages} AI messages, but got {len(ai_messages)}."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
-
+            self.log_error(
+                msg=f"Expected {expected_num_ai_messages} AI messages, but got {len(ai_messages)}."
+            )
         if ai_messages:
             if self._check_tool_calls_num_in_ai_message(ai_messages[0], expected_num=1):
                 self._check_tool_call(
@@ -1307,12 +1277,12 @@ class MoveExistingObjectFrontTask(ROS2ToolCallingAgentTask):
     def _verify_args(self):
         if self.object_to_grab not in self.objects:
             error_message = f"Requested object to grab {self.object_to_grab} is not present in defined objects: {self.objects}."
-            self.result.errors.append(error_message)
+            self.log_error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
         if len(self.objects[self.object_to_grab]) > 1:
             error_message = f"Requested object to grab {self.object_to_grab} has more than one position in defined objects: {self.objects[self.object_to_grab]}."
-            self.result.errors.append(error_message)
+            self.log_error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
     def verify_tool_calls(self, response: Dict[str, Any]):
@@ -1332,9 +1302,9 @@ class MoveExistingObjectFrontTask(ROS2ToolCallingAgentTask):
         ]
         expected_num_ai_messages = 4
         if len(ai_messages) != expected_num_ai_messages:
-            error_msg = f"Expected {expected_num_ai_messages} AI messages, but got {len(ai_messages)}."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
+            self.log_error(
+                msg=f"Expected {expected_num_ai_messages} AI messages, but got {len(ai_messages)}."
+            )
 
         if ai_messages:
             if self._check_tool_calls_num_in_ai_message(ai_messages[0], expected_num=1):
@@ -1434,15 +1404,15 @@ class SwapObjectsTask(ROS2ToolCallingAgentTask):
         for obj in self.objects_to_swap:
             if obj not in self.objects:
                 error_message = f"Requested object to swap {obj} is not present in defined objects: {self.objects}."
-                self.result.errors.append(error_message)
+                self.log_error(msg=error_message)
                 raise TaskParametrizationError(error_message)
             if len(self.objects[obj]) != 1:
                 error_message = f"Number of positions for object to swap ({obj}) should be equal to 1."
-                self.result.errors.append(error_message)
+                self.log_error(msg=error_message)
                 raise TaskParametrizationError(error_message)
         if len(self.objects_to_swap) != 2:
             error_message = f"Number of requested objects to swap {len(self.objects_to_swap)} should be equal to 2."
-            self.result.errors.append(error_message)
+            self.log_error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
     def get_system_prompt(self) -> str:
@@ -1481,9 +1451,9 @@ class SwapObjectsTask(ROS2ToolCallingAgentTask):
 
         expected_num_tool_calls = 8
         if len(actual_tool_calls) < expected_num_tool_calls:
-            error_msg = f"Expected at least {expected_num_tool_calls} tool calls, but got {len(actual_tool_calls)}."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
+            self.log_error(
+                msg=f"Expected at least {expected_num_tool_calls} tool calls, but got {len(actual_tool_calls)}."
+            )
             return None
 
         obj1, obj2 = self.objects_to_swap
@@ -1505,9 +1475,7 @@ class SwapObjectsTask(ROS2ToolCallingAgentTask):
                 break
 
         if temp_position is None:
-            error_msg = "No temporary position found."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
+            self.log_error(msg="No temporary position found.")
         else:
             get_position_permutations = list(
                 permutations(
@@ -1558,11 +1526,9 @@ class SwapObjectsTask(ROS2ToolCallingAgentTask):
                 self._matches_sequence(actual_tool_calls, seq)
                 for seq in valid_sequences
             ):
-                error_msg = (
-                    "The tool calls are in an invalid sequence for object swapping."
+                self.log_error(
+                    msg="The tool calls are in an invalid sequence for object swapping."
                 )
-                self.logger.error(error_msg)
-                self.result.errors.append(error_msg)
 
         if not self.result.errors:
             self.result.success = True

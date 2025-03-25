@@ -130,23 +130,23 @@ class ToolCallingAgentTask(ABC):
             True if the tool call matches the expected name and args, False otherwise
         """
         if tool_call["name"] != expected_name:
-            error_msg = f"Expected tool call name should be '{expected_name}', but got {tool_call['name']}."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
+            self.log_error(
+                msg=f"Expected tool call name should be '{expected_name}', but got {tool_call['name']}"
+            )
             return False
 
         # Check that all required arguments are present and have the expected values
         for arg_name, arg_value in expected_args.items():
             if arg_name in tool_call["args"]:
                 if tool_call["args"][arg_name] != arg_value:
-                    error_msg = f"Incorrect value {tool_call['args'][arg_name]} for argument '{arg_name}' in tool call {expected_name}."
-                    self.logger.error(error_msg)
-                    self.result.errors.append(error_msg)
+                    self.log_error(
+                        msg=f"Expected argument '{arg_name}' should have value '{arg_value}', but got '{tool_call['args'][arg_name]}'"
+                    )
                     return False
             else:
-                error_msg = f"Required argument '{arg_name}' missing in tool call {expected_name}."
-                self.logger.error(error_msg)
-                self.result.errors.append(error_msg)
+                self.log_error(
+                    msg=f"Required argument '{arg_name}' missing in tool call {expected_name}."
+                )
                 return False
 
         # Check that no unexpected arguments are present (except for optional ones)
@@ -154,16 +154,16 @@ class ToolCallingAgentTask(ABC):
             if arg_name not in expected_args:
                 # If this argument is not required, check if it's an allowed optional argument
                 if not expected_optional_args or arg_name not in expected_optional_args:
-                    error_msg = f"Unexpected argument '{arg_name}' found in tool call {expected_name}."
-                    self.logger.error(error_msg)
-                    self.result.errors.append(error_msg)
+                    self.log_error(
+                        msg=f"Unexpected argument '{arg_name}' found in tool call {expected_name}."
+                    )
                     return False
                 # If optional argument has expected value, check if the value is correct
                 elif expected_optional_args[arg_name]:
                     if expected_optional_args[arg_name] != arg_value:
-                        error_msg = f"Optional argument '{arg_name}' has incorrect value '{arg_value}' in tool call {expected_name}."
-                        self.logger.error(error_msg)
-                        self.result.errors.append(error_msg)
+                        self.log_error(
+                            msg=f"Optional argument '{arg_name}' has incorrect value '{arg_value}' in tool call {expected_name}."
+                        )
                         return False
 
         return True
@@ -215,9 +215,9 @@ class ToolCallingAgentTask(ABC):
                     break
 
             if not found_match:
-                error_msg = f"Tool call {tool_call['name']} with args {tool_call['args']} does not match any expected call"
-                self.logger.error(error_msg)
-                self.result.errors.append(error_msg)
+                self.log_error(
+                    msg=f"Tool call {tool_call['name']} with args {tool_call['args']} does not match any expected call"
+                )
                 error_occurs = True
 
         return not error_occurs
@@ -240,11 +240,15 @@ class ToolCallingAgentTask(ABC):
             True if the number of tool calls in the message matches the expected number, False otherwise
         """
         if len(message.tool_calls) != expected_num:
-            error_msg = f"Expected number of tool calls should be {expected_num}, but got {len(message.tool_calls)}."
-            self.logger.error(error_msg)
-            self.result.errors.append(error_msg)
+            self.log_error(
+                msg=f"Expected number of tool calls should be {expected_num}, but got {len(message.tool_calls)}"
+            )
             return False
         return True
+
+    def log_error(self, msg: str):
+        self.logger.error(msg)
+        self.result.errors.append(msg)
 
 
 class ROS2ToolCallingAgentTask(ToolCallingAgentTask, ABC):

@@ -165,9 +165,7 @@ class ToolCallingAgentBenchmark:
                 )
                 task.verify_tool_calls(response=response)
             except GraphRecursionError as e:
-                self.logger.error(f"Graph Recursion Error: {e}")
-                task.result.errors.append(f"Graph Recursion Error: {e}")
-
+                task.log_error(msg=f"Graph Recursion Error: {e}")
             te = time.perf_counter()
             total_time = te - ts
             result = task.result
