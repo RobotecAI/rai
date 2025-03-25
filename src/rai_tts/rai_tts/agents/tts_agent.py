@@ -74,6 +74,8 @@ class TextToSpeechAgent(BaseAgent):
         Text-to-speech model used for generating audio.
     logger : Optional[logging.Logger], optional
         Logger instance for logging messages, by default None.
+    max_speech_history : int, optional
+        Maximum amount of speech ids to remember, by default 64
     """
 
     def __init__(
@@ -82,6 +84,7 @@ class TextToSpeechAgent(BaseAgent):
         ros2_name: str,
         tts: TTSModel,
         logger: Optional[logging.Logger] = None,
+        max_speech_history=64,
     ):
         if logger is None:
             self.logger = logging.getLogger(__name__)
@@ -104,6 +107,7 @@ class TextToSpeechAgent(BaseAgent):
         self.current_speech_id = None
         self.text_queues: dict[str, Queue] = {self.current_transcription_id: Queue()}
         self.audio_queues: dict[str, Queue] = {self.current_transcription_id: Queue()}
+        self.remembered_speech_ids: list[str] = []
 
         self.tog_play_event = Event()
         self.stop_event = Event()
@@ -225,8 +229,15 @@ class TextToSpeechAgent(BaseAgent):
         self.logger.warning(
             f"Starting playback, current id: {self.current_transcription_id}"
         )
-        if self.current_speech_id is None:
+        if (
+            self.current_speech_id is None
+            and msg.conversation_id is not None
+            and msg.conversation_id not in self.remembered_speech_ids
+        ):
             self.current_speech_id = msg.conversation_id
+            self.remembered_speech_ids.append(self.current_speech_id)
+            if len(self.remembered_speech_ids) > 64:
+                self.remembered_speech_ids.pop(0)
         if self.current_speech_id == msg.conversation_id:
             self.text_queues[self.current_transcription_id].put(msg.text)
         self.playback_data.playing = True
