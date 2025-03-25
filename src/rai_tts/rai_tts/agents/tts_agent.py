@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Robotec.AI
+# Copyright (C) 2025 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,8 +21,6 @@ from uuid import uuid4
 
 from numpy._typing import NDArray
 from pydub import AudioSegment
-from std_msgs.msg import String
-
 from rai.agents.base import BaseAgent
 from rai.communication import (
     ROS2HRIConnector,
@@ -33,6 +31,8 @@ from rai.communication import (
 from rai.communication.ros2.api import IROS2Message
 from rai.communication.ros2.connectors import ROS2HRIMessage
 from rai.communication.sound_device.connector import SoundDeviceMessage
+from std_msgs.msg import String
+
 from rai_interfaces.msg._hri_message import HRIMessage
 from rai_tts.models.base import TTSModel
 

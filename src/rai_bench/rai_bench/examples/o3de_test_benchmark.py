@@ -23,10 +23,9 @@ import rclpy
 from langchain.tools import BaseTool
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.communication.ros2.connectors import ROS2ARIConnector
-from rai.tools.ros.manipulation import GetObjectPositionsTool, MoveToPointTool
+from rai.tools.ros.manipulation import MoveToPointTool
 from rai.tools.ros2.topics import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
 from rai.utils.model_initialization import get_llm_model
-from rai_open_set_vision.tools import GetGrabbingPointTool
 
 from rai_bench.benchmark_model import Benchmark, Task
 from rai_bench.o3de_test_bench.tasks import GrabCarrotTask, PlaceCubesTask
@@ -36,6 +35,7 @@ from rai_sim.o3de.o3de_bridge import (
     Pose,
 )
 from rai_sim.simulation_bridge import Rotation, Translation
+from rai_sim.tools import GetObjectPositionsGroundTruthTool
 
 if __name__ == "__main__":
     rclpy.init()
@@ -54,21 +54,6 @@ if __name__ == "__main__":
     z - up to down (positive is up)
     Before starting the task, make sure to grab the camera image to understand the environment.
     """
-    # define tools
-    tools: List[BaseTool] = [
-        GetObjectPositionsTool(
-            connector=connector,
-            target_frame="panda_link0",
-            source_frame="RGBDCamera5",
-            camera_topic="/color_image5",
-            depth_topic="/depth_image5",
-            camera_info_topic="/color_camera_info5",
-            get_grabbing_point_tool=GetGrabbingPointTool(connector=connector),
-        ),
-        MoveToPointTool(connector=connector, manipulator_frame="panda_link0"),
-        GetROS2ImageTool(connector=connector),
-        GetROS2TopicsNamesAndTypesTool(connector=connector),
-    ]
     # define loggers
     now = datetime.now()
     experiment_dir = (
@@ -173,6 +158,15 @@ if __name__ == "__main__":
         results_filename=results_filename,
     )
     for i, s in enumerate(scenarios):
+        # define tools
+        tools: List[BaseTool] = [
+            GetObjectPositionsGroundTruthTool(
+                simulation=o3de,
+            ),
+            MoveToPointTool(connector=connector, manipulator_frame="panda_link0"),
+            GetROS2ImageTool(connector=connector),
+            GetROS2TopicsNamesAndTypesTool(connector=connector),
+        ]
         agent = create_conversational_agent(
             llm, tools, system_prompt, logger=agent_logger
         )

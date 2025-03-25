@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Robotec.AI
+# Copyright (C) 2025 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,57 +11,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import argparse
-from pathlib import Path
-from typing import Optional
+
+from typing import cast
 
 import rclpy
 import rclpy.executors
 import rclpy.logging
-from rai.node import RaiStateBasedLlmNode
-from rai.tools.ros.native import (
-    GetMsgFromTopic,
-    Ros2GetRobotInterfaces,
-    Ros2PubMessageTool,
-    Ros2ShowMsgInterfaceTool,
-)
-from rai.tools.ros.native_actions import (
-    GetTransformTool,
-    Ros2CancelAction,
-    Ros2GetActionResult,
-    Ros2GetLastActionFeedback,
-    Ros2RunActionAsync,
-)
+from langchain_core.messages import BaseMessage, HumanMessage
+from rai.agents.conversational_agent import State, create_conversational_agent
+from rai.communication.ros2.connectors import ROS2ARIConnector
+from rai.tools.ros2.actions import ROS2ActionToolkit
+from rai.tools.ros2.topics import ROS2TopicsToolkit
 from rai.tools.time import WaitForSecondsTool
+from rai.utils.model_initialization import get_llm_model
 from rai_open_set_vision.tools import GetDetectionTool, GetDistanceToObjectsTool
 
-p = argparse.ArgumentParser()
-p.add_argument("--allowlist", type=Path, required=False, default=None)
 
-
-def main(allowlist: Optional[Path] = None):
+def main():
     rclpy.init()
-    # observe_topics = [
-    #     "/camera/camera/color/image_raw",
-    # ]
-    #
-    # observe_postprocessors = {"/camera/camera/color/image_raw": describe_ros_image}
-    ros2_allowlist = []
-    if allowlist is not None:
-        try:
-            content = allowlist.read_text().strip()
-            if content:
-                ros2_allowlist = content.splitlines()
-            else:
-                rclpy.logging.get_logger("rosbot_xl_demo").warning(
-                    "Allowlist file is empty"
-                )
-        except Exception as e:
-            rclpy.logging.get_logger("rosbot_xl_demo").error(
-                f"Failed to read allowlist: {e}"
-            )
-    else:
-        ros2_allowlist = None
 
     SYSTEM_PROMPT = """You are an autonomous robot connected to ros2 environment. Your main goal is to fulfill the user's requests.
     Do not make assumptions about the environment you are currently in.
@@ -114,32 +81,31 @@ def main(allowlist: Optional[Path] = None):
     (0.92, 1.01, 0.0)
     """
 
-    node = RaiStateBasedLlmNode(
-        observe_topics=None,
-        observe_postprocessors=None,
-        allowlist=ros2_allowlist,
+    connector = ROS2ARIConnector()
+    ros2_action_toolkit = ROS2ActionToolkit(connector=connector)
+    ros2_topics_toolkit = ROS2TopicsToolkit(connector=connector)
+
+    agent = create_conversational_agent(
+        llm=get_llm_model("complex_model"),
         system_prompt=SYSTEM_PROMPT,
         tools=[
-            Ros2GetRobotInterfaces,
-            Ros2PubMessageTool,
-            Ros2RunActionAsync,
-            Ros2CancelAction,
-            Ros2GetActionResult,
-            Ros2GetLastActionFeedback,
-            Ros2ShowMsgInterfaceTool,
-            GetTransformTool,
-            WaitForSecondsTool,
-            GetMsgFromTopic,
-            GetDetectionTool,
-            GetDistanceToObjectsTool,
+            *ros2_action_toolkit.get_tools(),
+            *ros2_topics_toolkit.get_tools(),
+            WaitForSecondsTool(),
+            GetDetectionTool(connector=connector, node=connector.node),
+            GetDistanceToObjectsTool(connector=connector, node=connector.node),
         ],
     )
-    node.declare_parameter("conversion_ratio", 1.0)
+    connector.node.declare_parameter("conversion_ratio", 1.0)
 
-    node.spin()
+    state = State(messages=[])
+    while rclpy.ok():
+        user_input = input("Enter your message: ")
+        state["messages"].append(HumanMessage(content=user_input))
+        response = agent.invoke(state)
+        cast(BaseMessage, response["messages"][-1]).pretty_print()
     rclpy.shutdown()
 
 
 if __name__ == "__main__":
-    args = p.parse_args()
-    main(**vars(args))
+    main()

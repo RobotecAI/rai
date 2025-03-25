@@ -20,20 +20,41 @@ except ImportError:
     )
 
 import json
-from typing import Any, Dict, Literal, Tuple, Type
+from typing import Any, Dict, List, Literal, Tuple, Type
 
 import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
 from cv_bridge import CvBridge
 from langchain.tools import BaseTool
+from langchain_core.tools import BaseToolkit
 from langchain_core.utils import stringify_dict
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sensor_msgs.msg import CompressedImage, Image
 
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from rai.messages.multimodal import MultimodalArtifact
 from rai.messages.utils import preprocess_image
 from rai.tools.ros2.utils import ros2_message_to_dict
+
+
+class ROS2TopicsToolkit(BaseToolkit):
+    name: str = "ROS2TopicsToolkit"
+    description: str = "A toolkit for ROS2 topics"
+    connector: ROS2ARIConnector
+
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
+
+    def get_tools(self) -> List[BaseTool]:
+        return [
+            PublishROS2MessageTool(connector=self.connector),
+            ReceiveROS2MessageTool(connector=self.connector),
+            GetROS2ImageTool(connector=self.connector),
+            GetROS2TransformTool(connector=self.connector),
+            GetROS2TopicsNamesAndTypesTool(connector=self.connector),
+            GetROS2MessageInterfaceTool(connector=self.connector),
+        ]
 
 
 class PublishROS2MessageToolInput(BaseModel):

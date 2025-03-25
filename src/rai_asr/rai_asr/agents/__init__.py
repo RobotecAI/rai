@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Robotec.AI
+# Copyright (C) 2025 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,25 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from rai_asr.agents.asr_agent import SpeechRecognitionAgent
 
-from enum import Enum
-
-from pydantic import BaseModel
-
-
-class Priority(str, Enum):
-    highest = "highest"
-    high = "high"
-    medium = "medium"
-    low = "low"
-    lowest = "lowest"
-
-
-class TaskInput(BaseModel):
-    name: str
-    description: str
-    priority: Priority
-
-
-class Task(TaskInput):
-    uid: str
+__all__ = [
+    "SpeechRecognitionAgent",
+]
