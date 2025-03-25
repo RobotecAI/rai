@@ -12,19 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from typing import Literal, Type
 
 import numpy as np
 from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
-from rai_open_set_vision.tools import GetGrabbingPointTool
 from tf2_geometry_msgs import do_transform_pose
 
 from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.utils import TF2TransformFetcher
 from rai.utils.ros_async import get_future_result
-from rai_interfaces.srv import ManipulatorMoveTo
+
+try:
+    from rai_interfaces.srv import ManipulatorMoveTo
+except ImportError:
+    logging.warning(
+        "rai_interfaces is not installed, ManipulatorMoveTo tool will not work."
+    )
+
+try:
+    from rai_open_set_vision.tools import GetGrabbingPointTool
+except ImportError:
+    logging.warning(
+        "rai_open_set_vision is not installed, GetGrabbingPointTool will not work"
+    )
 
 
 class MoveToPointToolInput(BaseModel):
@@ -138,7 +151,7 @@ class GetObjectPositionsTool(BaseTool):
     depth_topic: str
     camera_info_topic: str  # rgb camera info topic
     connector: ROS2ARIConnector = Field(..., exclude=True)
-    get_grabbing_point_tool: GetGrabbingPointTool
+    get_grabbing_point_tool: "GetGrabbingPointTool"
 
     args_schema: Type[GetObjectPositionsToolInput] = GetObjectPositionsToolInput
 
