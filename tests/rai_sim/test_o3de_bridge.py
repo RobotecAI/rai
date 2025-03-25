@@ -118,18 +118,24 @@ class TestO3DExROS2Bridge(unittest.TestCase):
         self.assertEqual(self.bridge.spawned_entities, [])
 
     @patch("subprocess.Popen")
-    def test_launch_robotic_stack(self, mock_popen):
+    @patch("psutil.Process")
+    def test_launch_robotic_stack(
+        self, mock_psutil_process: MagicMock, mock_popen: MagicMock
+    ):
         mock_process = MagicMock()
         mock_process.poll.return_value = None
         mock_process.pid = 54321
         mock_popen.return_value = mock_process
+
         self.bridge._launch_robotic_stack(self.test_config)
 
         mock_popen.assert_called_once_with(["ros2", "launch", "robot.launch.py"])
+        mock_psutil_process.assert_any_call(mock_process.pid)
         self.assertEqual(self.bridge.current_robotic_stack_process, mock_process)
 
     @patch("subprocess.Popen")
-    def test_launch_binary(self, mock_popen):
+    @patch("psutil.Process")
+    def test_launch_binary(self, mock_psutil_process: MagicMock, mock_popen: MagicMock):
         mock_process = MagicMock()
         mock_process.poll.return_value = None
         mock_process.pid = 54322
@@ -138,6 +144,7 @@ class TestO3DExROS2Bridge(unittest.TestCase):
         self.bridge._launch_binary(self.test_config)
 
         mock_popen.assert_called_once_with(["/path/to/binary"])
+        mock_psutil_process.assert_called_once_with(mock_process.pid)
         self.assertEqual(self.bridge.current_sim_process, mock_process)
 
     def test_shutdown_binary(self):
