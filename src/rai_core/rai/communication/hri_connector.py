@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import base64
+import uuid
 from dataclasses import dataclass, field
 from io import BytesIO
 from typing import Any, Dict, Generic, Literal, Optional, Sequence, TypeVar, get_args
@@ -142,6 +143,11 @@ class HRIMessage(BaseMessage):
             message_author=message.type,  # type: ignore
             conversation_id=conversation_id,
         )
+
+    @classmethod
+    def generate_conversation_id(cls) -> str:
+        """Generate a unique conversation ID."""
+        return str(uuid.uuid1())
 
 
 T = TypeVar("T", bound=HRIMessage)

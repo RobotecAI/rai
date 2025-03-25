@@ -36,7 +36,11 @@ def audio():
 
 def test_initialization(image, audio):
     payload = HRIPayload(text="Hello", images=[image], audios=[audio])
-    message = HRIMessage(payload=payload, message_author="human")
+    message = HRIMessage(
+        payload=payload,
+        message_author="human",
+        conversation_id=HRIMessage.generate_conversation_id(),
+    )
 
     assert message.text == "Hello"
     assert message.images == [image]
@@ -46,14 +50,22 @@ def test_initialization(image, audio):
 
 def test_repr():
     payload = HRIPayload(text="Hello")
-    message = HRIMessage(payload=payload, message_author="ai")
+    message = HRIMessage(
+        payload=payload,
+        message_author="ai",
+        conversation_id=HRIMessage.generate_conversation_id(),
+    )
 
     assert repr(message) == "HRIMessage(type=ai, text=Hello, images=[], audios=[])"
 
 
 def test_to_langchain_human():
     payload = HRIPayload(text="Hi there", images=[], audios=[])
-    message = HRIMessage(payload=payload, message_author="human")
+    message = HRIMessage(
+        payload=payload,
+        message_author="human",
+        conversation_id=HRIMessage.generate_conversation_id(),
+    )
     langchain_message = message.to_langchain()
 
     assert isinstance(langchain_message, HumanMessage)
@@ -62,7 +74,11 @@ def test_to_langchain_human():
 
 def test_to_langchain_ai_multimodal(image, audio):
     payload = HRIPayload(text="Response", images=[image], audios=[audio])
-    message = HRIMessage(payload=payload, message_author="ai")
+    message = HRIMessage(
+        payload=payload,
+        message_author="ai",
+        conversation_id=HRIMessage.generate_conversation_id(),
+    )
 
     with pytest.raises(
         ValueError
@@ -77,7 +93,10 @@ def test_to_langchain_ai_multimodal(image, audio):
 
 def test_from_langchain_human():
     langchain_message = HumanMessage(content="Hello")
-    hri_message = HRIMessage.from_langchain(langchain_message)
+    hri_message = HRIMessage.from_langchain(
+        langchain_message,
+        conversation_id=HRIMessage.generate_conversation_id(),
+    )
 
     assert hri_message.text == "Hello"
     assert hri_message.images == []
