@@ -39,6 +39,10 @@ class HRICallbackHandler(BaseCallbackHandler):
         self.max_buffer_size = max_buffer_size
         self._buffer_lock = threading.Lock()
         self.logger = logger or logging.getLogger(__name__)
+        self.current_conversation_id = None
+
+    def set_conversation_id(self, conversation_id: str):
+        self.current_conversation_id = conversation_id
 
     def _should_split(self, token: str) -> bool:
         return token in self.splitting_chars
@@ -49,7 +53,9 @@ class HRICallbackHandler(BaseCallbackHandler):
         )
         for connector_name, connector in self.connectors.items():
             try:
-                connector.send_all_targets(AIMessage(content=tokens))
+                connector.send_all_targets(
+                    AIMessage(content=tokens), self.current_conversation_id
+                )
                 self.logger.debug(f"Sent {len(tokens)} tokens to {connector_name}")
             except Exception as e:
                 self.logger.error(
