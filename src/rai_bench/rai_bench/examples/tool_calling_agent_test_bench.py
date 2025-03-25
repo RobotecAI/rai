@@ -31,7 +31,7 @@ if __name__ == "__main__":
         / current_test_name
         / now.strftime("%Y-%m-%d_%H-%M-%S")
     )
-    Path(experiment_dir).mkdir(parents=True, exist_ok=True)
+    experiment_dir.mkdir(parents=True, exist_ok=True)
     log_filename = experiment_dir / "benchmark.log"
     results_filename = experiment_dir / "results.csv"
 
