@@ -177,12 +177,17 @@ class HRIConnector(Generic[T], BaseConnector[T]):
     def _build_message(
         self,
         message: LangchainBaseMessage | RAIMultimodalMessage,
+        conversation_id: Optional[str] = None,
     ) -> T:
-        return self.T_class.from_langchain(message)
+        return self.T_class.from_langchain(message, conversation_id)
 
-    def send_all_targets(self, message: LangchainBaseMessage | RAIMultimodalMessage):
+    def send_all_targets(
+        self,
+        message: LangchainBaseMessage | RAIMultimodalMessage,
+        conversation_id: Optional[str] = None,
+    ):
         for target in self.configured_targets:
-            to_send = self._build_message(message)
+            to_send = self._build_message(message, conversation_id)
             self.send_message(to_send, target)
 
     def receive_all_sources(self, timeout_sec: float = 1.0) -> dict[str, T]:
