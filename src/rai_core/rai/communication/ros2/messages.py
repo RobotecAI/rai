@@ -23,10 +23,8 @@ from PIL import Image
 from pydub import AudioSegment
 from sensor_msgs.msg import Image as ROS2Image
 
-import rai_interfaces.msg
-from rai.communication import ARIMessage, HRIMessage, HRIPayload
-from rai_interfaces.msg import HRIMessage as ROS2HRIMessage_
-from rai_interfaces.msg._audio_message import AudioMessage as ROS2HRIMessage__Audio
+from rai.communication.ari_connector import ARIMessage
+from rai.communication.hri_connector import HRIMessage, HRIPayload
 
 try:
     import rai_interfaces.msg
@@ -49,7 +47,9 @@ class ROS2HRIMessage(HRIMessage):
 
     @classmethod
     def from_ros2(
-        cls, msg: rai_interfaces.msg.HRIMessage, message_author: Literal["ai", "human"]
+        cls,
+        msg: "rai_interfaces.msg.HRIMessage",
+        message_author: Literal["ai", "human"],
     ):
         cv_bridge = CvBridge()
         images = [

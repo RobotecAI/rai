@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 import threading
 import time
 import uuid
@@ -40,11 +39,6 @@ from rai.communication.ros2.api import (
     TopicConfig,
 )
 from rai.communication.ros2.messages import ROS2ARIMessage, ROS2HRIMessage
-
-try:
-    import rai_interfaces.msg
-except ImportError:
-    logging.warning("rai_interfaces is not installed, ROS 2 HRIMessage will not work.")
 
 
 class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
@@ -275,7 +269,7 @@ class ROS2HRIConnector(HRIConnector[ROS2HRIMessage]):
             timeout_sec=timeout_sec,
             auto_topic_type=auto_topic_type,
         )
-        if not isinstance(msg, rai_interfaces.msg.HRIMessage):
+        if "rai_interfaces" not in msg.__module__:
             raise ValueError(
                 f"Received message is not of type rai_interfaces.msg.HRIMessage, got {type(msg)}"
             )
