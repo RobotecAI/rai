@@ -23,8 +23,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Generic, List, Optional, TypeVar, Union
 
+import psutil
 import yaml
-from psutil import Process as PsutilProcess
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -173,7 +173,7 @@ class SceneState(BaseModel):
 @dataclass(frozen=True)
 class Process:
     name: str
-    process: Union[subprocess.Popen[Any], PsutilProcess]
+    process: Union[subprocess.Popen[Any], psutil.Process]
 
 
 SimulationConfigT = TypeVar("SimulationConfigT", bound=SimulationConfig)
