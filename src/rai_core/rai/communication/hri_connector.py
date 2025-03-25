@@ -55,6 +55,7 @@ class HRIMessage(BaseMessage):
         payload: HRIPayload,
         metadata: Optional[Dict[str, Any]] = None,
         message_author: Literal["ai", "human"] = "ai",
+        conversation_id: Optional[str] = None,
         **kwargs,
     ):
         super().__init__(payload, metadata)
@@ -62,6 +63,7 @@ class HRIMessage(BaseMessage):
         self.text = payload.text
         self.images = payload.images
         self.audios = payload.audios
+        self.conversation_id = conversation_id
 
     def __bool__(self) -> bool:
         return bool(self.text or self.images or self.audios)
@@ -115,6 +117,7 @@ class HRIMessage(BaseMessage):
     def from_langchain(
         cls,
         message: LangchainBaseMessage | RAIMultimodalMessage,
+        conversation_id: Optional[str] = None,
     ) -> "HRIMessage":
         if isinstance(message, RAIMultimodalMessage):
             text = message.text
@@ -137,6 +140,7 @@ class HRIMessage(BaseMessage):
                 ),
             ),
             message_author=message.type,  # type: ignore
+            conversation_id=conversation_id,
         )
 
 

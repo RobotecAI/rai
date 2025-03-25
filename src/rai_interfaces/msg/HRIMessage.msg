@@ -18,3 +18,4 @@ std_msgs/Header header
 string text
 sensor_msgs/Image[] images
 rai_interfaces/AudioMessage[] audios
+string conversation_id
