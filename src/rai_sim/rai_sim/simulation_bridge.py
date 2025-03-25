@@ -13,9 +13,15 @@
 # limitations under the License.
 
 import logging
+import os
+import signal
+import subprocess
+import threading
+import time
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Generic, List, Optional, TypeVar
+from typing import Any, Generic, List, Optional, TypeVar
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
@@ -163,6 +169,12 @@ class SceneState(BaseModel):
     )
 
 
+@dataclass(frozen=True)
+class Process:
+    name: str
+    process: subprocess.Popen[Any]
+
+
 SimulationConfigT = TypeVar("SimulationConfigT", bound=SimulationConfig)
 
 
@@ -172,13 +184,19 @@ class SimulationBridge(ABC, Generic[SimulationConfigT]):
     """
 
     def __init__(self, logger: Optional[logging.Logger] = None):
-        self.spawned_entities: List[
-            SpawnedEntity
-        ] = []  # list of spawned entities with their initial poses
+        self.spawned_entities: List[SpawnedEntity] = []
+        self._processes: List[Process] = []
+
         if logger is None:
             self.logger = logging.getLogger(__name__)
         else:
             self.logger = logger
+
+        self._monitoring_running = True
+        self._process_monitor_thread = threading.Thread(
+            target=self._monitor_processes, daemon=True
+        )
+        self._process_monitor_thread.start()
 
     @abstractmethod
     def setup_scene(self, simulation_config: SimulationConfigT):
@@ -279,3 +297,21 @@ class SimulationBridge(ABC, Generic[SimulationConfigT]):
         SceneState should contain the current poses of spawned_entities.
         """
         pass
+
+    def _monitor_processes(self):
+        """Checks the status of managed processes and shuts everything down if one of the processes exits unexpectedly."""
+        while self._monitoring_running:
+            for process in self._processes[:]:
+                if process.process.poll() is not None:
+                    self.logger.error(
+                        f"Process {process.name} with PID {process.process.pid} exited unexpectedly with code {process.process.returncode}"
+                    )
+                    self.logger.info("Shutting down all processes.")
+                    os.kill(os.getpid(), signal.SIGINT)
+            time.sleep(1)
+
+    def stop_monitoring(self):
+        self._monitoring_running = False
+        if self._process_monitor_thread.is_alive():
+            self._process_monitor_thread.join()
+            self.logger.info("Processes monitor thread shut down.")

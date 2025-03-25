@@ -13,15 +13,14 @@
 # limitations under the License.
 
 import logging
-import os
 import shlex
 import signal
 import subprocess
-import threading
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
+import psutil
 import yaml
 from geometry_msgs.msg import Point, PoseStamped, Quaternion
 from geometry_msgs.msg import Pose as ROS2Pose
@@ -34,6 +33,7 @@ from rai_interfaces.srv import ManipulatorMoveTo
 from rai_sim.simulation_bridge import (
     Entity,
     Pose,
+    Process,
     Rotation,
     SceneState,
     SimulationBridge,
@@ -78,6 +78,10 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
     def _shutdown_binary(self):
         if not self.current_sim_process:
             return
+        process_to_remove = [
+            p for p in self._processes if p.process == self.current_sim_process
+        ][0]
+        self._processes.remove(process_to_remove)
         self.current_sim_process.send_signal(signal.SIGINT)
         self.current_sim_process.wait()
 
@@ -94,7 +98,12 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
     def _shutdown_robotic_stack(self):
         if not self.current_robotic_stack_process:
             return
-
+        process_to_remove = [
+            p
+            for p in self._processes
+            if p.process == self.current_robotic_stack_process
+        ][0]
+        self._processes.remove(process_to_remove)
         self.current_robotic_stack_process.send_signal(signal.SIGINT)
         self.current_robotic_stack_process.wait()
 
@@ -306,6 +315,12 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             required_ros2_stack=simulation_config.required_simulation_ros2_interfaces
         ):
             raise RuntimeError("ROS2 stack is not ready in time.")
+        self._processes.append(
+            Process(
+                name=psutil.Process(self.current_sim_process.pid).name(),
+                process=self.current_sim_process,
+            )
+        )
 
     def _launch_robotic_stack(self, simulation_config: O3DExROS2SimulationConfig):
         command = shlex.split(simulation_config.robotic_stack_command)
@@ -319,6 +334,12 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             required_ros2_stack=simulation_config.required_robotic_ros2_interfaces
         ):
             raise RuntimeError("ROS2 stack is not ready in time.")
+        self._processes.append(
+            Process(
+                name=psutil.Process(self.current_robotic_stack_process.pid).name(),
+                process=self.current_robotic_stack_process,
+            )
+        )
 
     def _has_process_started(self, process: subprocess.Popen[Any], timeout: int = 15):
         start_time = time.time()
@@ -450,52 +471,3 @@ class O3DEngineArmManipulationBridge(O3DExROS2Bridge):
         result = get_future_result(future, timeout_sec=5.0)
 
         self.connector.node.get_logger().debug(f"Moving arm result: {result}")
-
-
-class O3DExROS2BridgeProcessesMonitor:
-    def __init__(
-        self, bridge: O3DExROS2Bridge, logger: Optional[logging.Logger] = None
-    ):
-        self.bridge = bridge
-        if logger is None:
-            self.logger = logging.getLogger(__name__)
-        else:
-            self.logger = logger
-        self.is_running = True
-
-        self.monitor_thread = threading.Thread(
-            target=self._monitor_processes, daemon=True
-        )
-        self.monitor_thread.start()
-        self.logger.info("O3DExROS2Bridge processes monitor started")
-
-    def _monitor_processes(self):
-        """Background thread that monitors the simulation and robotic stack processes"""
-        while self.is_running:
-            if (
-                self.bridge.current_sim_process
-                and self.bridge.current_sim_process.poll() is not None
-            ):
-                self.logger.error(
-                    f"Simulation process exited unexpectedly with code {self.bridge.current_sim_process.poll()}"
-                )
-                self.logger.info("Sending SIGINT to main process...")
-                os.kill(os.getpid(), signal.SIGINT)
-
-            if (
-                self.bridge.current_robotic_stack_process
-                and self.bridge.current_robotic_stack_process.poll() is not None
-            ):
-                self.logger.error(
-                    f"Robotic stack process exited unexpectedly with code {self.bridge.current_robotic_stack_process.poll()}"
-                )
-                self.logger.info("Sending SIGINT to main process...")
-                os.kill(os.getpid(), signal.SIGINT)
-
-            time.sleep(1)
-
-    def shutdown(self):
-        self.is_running = False
-        if self.monitor_thread.is_alive():
-            self.monitor_thread.join(timeout=2)
-            self.logger.info("Processes monitor thread shut down.")
