@@ -339,7 +339,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         for child in children:
             self._processes.append(
                 Process(
-                    name=psutil.Process(child.pid).name(),
+                    name=child.name(),
                     process=child,
                 )
             )
