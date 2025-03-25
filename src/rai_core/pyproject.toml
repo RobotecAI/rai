@@ -21,6 +21,7 @@ packages = [
 python = "^3.10, <3.13"
 langchain-core = "^0.3"
 langgraph = "*"
+langgraph-prebuilt = "*"
 langchain = "*"
 langchain-aws = "*"
 langchain-openai = "*"
