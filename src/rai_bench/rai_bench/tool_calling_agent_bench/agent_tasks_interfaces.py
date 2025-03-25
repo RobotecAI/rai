@@ -30,8 +30,12 @@ class Result(BaseModel):
 
 
 class ToolCallingAgentTask(ABC):
-    """
-    Abstract class for tool calling agent tasks. Contains methods for requested tool calls verification.
+    """Abstract class for tool calling agent tasks. Contains methods for requested tool calls verification.
+
+    Parameters
+    ----------
+    logger : loggers_type | None, optional
+        Logger, by default None
     """
 
     def __init__(
@@ -50,25 +54,54 @@ class ToolCallingAgentTask(ABC):
     @property
     @abstractmethod
     def complexity(self) -> Literal["easy", "medium", "hard"]:
-        """Returns the complexity of the task"""
         raise NotImplementedError
 
     @property
     def recursion_limit(self) -> int:
+        """The number of allowed steps for agent.
+
+        Returns
+        -------
+        int
+            The number of allowed steps
+        """
         return self._recursion_limit
 
     @abstractmethod
     def get_system_prompt(self) -> str:
-        """Returns the system prompt related to the task"""
+        """Get the system prompt that will be passed to agent
+
+        Returns
+        -------
+        str
+            System prompt
+        """
         pass
 
     @abstractmethod
     def get_prompt(self) -> str:
-        """Returns the task instruction - the prompt that will be passed to agent"""
+        """Get the task instruction - the prompt that will be passed to agent.
+
+        Returns
+        -------
+        str
+            Prompt
+        """
         pass
 
     @abstractmethod
     def verify_tool_calls(self, response: dict[str, Any]):
+        """Verify correctness of the tool calls from the agent's response.
+
+        Note
+        ----
+        This method should set self.result.success to True if the verification is successful and append occuring errors related to verification to self.result.errors.
+
+        Parameters
+        ----------
+        response : dict[str, Any]
+            Agent's response
+        """
         pass
 
     def _check_tool_call(
@@ -78,17 +111,23 @@ class ToolCallingAgentTask(ABC):
         expected_args: dict[str, Any],
         expected_optional_args: dict[str, Any] = {},
     ) -> bool:
-        """
-        Helper method to check if a tool call has the expected name and arguments.
+        """Helper method to check if a tool call has the expected name and arguments.
 
-        Args:
-            tool_call: The tool call to check
-            expected_name: The expected name of the tool
-            expected_args: The expected arguments dictionary that must be present
-            expected_optional_args: Optional arguments dictionary that can be present but don't need to be (e.g. timeout). If value of an optional argument does not matter, set it to None
+        Parameters
+        ----------
+        tool_call : ToolCall
+            The tool call to check
+        expected_name : str
+            The expected name of the tool
+        expected_args : dict[str, Any]
+            The expected arguments dictionary that must be present
+        expected_optional_args : dict[str, Any], optional
+            Optional arguments dictionary that can be present but don't need to be (e.g. timeout). If value of an optional argument does not matter, set it to {}
 
-        Returns:
-            bool: True if the tool call matches the expected name and args, False otherwise
+        Returns
+        -------
+        bool
+            True if the tool call matches the expected name and args, False otherwise
         """
         if tool_call["name"] != expected_name:
             error_msg = f"Expected tool call name should be '{expected_name}', but got {tool_call['name']}."
@@ -132,15 +171,19 @@ class ToolCallingAgentTask(ABC):
     def _check_multiple_tool_calls(
         self, message: AIMessage, expected_tool_calls: list[dict[str, Any]]
     ) -> bool:
-        """
-        Helper method to check multiple tool calls in a single AIMessage.
+        """Helper method to check multiple tool calls in a single AIMessage.
 
-        Args:
-            message: The AIMessage to check
-            expected_tool_calls: A list of dictionaries, each containing expected 'name', 'args', and optional 'optional_args' for a tool call
+        Parameters
+        ----------
+        message : AIMessage
+            The AIMessage to check
+        expected_tool_calls : list[dict[str, Any]]
+            A list of dictionaries, each containing expected 'name', 'args', and optional 'optional_args' for a tool call
 
-        Returns:
-            bool: True if all tool calls match expected patterns, False otherwise
+        Returns
+        -------
+        bool
+            True if all tool calls match expected patterns, False otherwise
         """
         if not self._check_tool_calls_num_in_ai_message(
             message, len(expected_tool_calls)
@@ -182,15 +225,19 @@ class ToolCallingAgentTask(ABC):
     def _check_tool_calls_num_in_ai_message(
         self, message: AIMessage, expected_num: int
     ) -> bool:
-        """
-        Helper method to check number of tool calls in a single AIMessage.
+        """Helper method to check number of tool calls in a single AIMessage.
 
-        Args:
-            message: The AIMessage to check
-            expected_num: The expected number of tool calls
+        Parameters
+        ----------
+        message : AIMessage
+            The AIMessage to check
+        expected_num : int
+            The expected number of tool calls
 
-        Returns:
-            bool: True if the number of tool calls in the message matches the expected number, False otherwise
+        Returns
+        -------
+        bool
+            True if the number of tool calls in the message matches the expected number, False otherwise
         """
         if len(message.tool_calls) != expected_num:
             error_msg = f"Expected number of tool calls should be {expected_num}, but got {len(message.tool_calls)}."
@@ -201,8 +248,12 @@ class ToolCallingAgentTask(ABC):
 
 
 class ROS2ToolCallingAgentTask(ToolCallingAgentTask, ABC):
-    """
-    Abstract class for ROS2 agent tasks.
+    """Abstract class for ROS2 related tasks for tool calling agent.
+
+    Parameters
+    ----------
+    logger : loggers_type | None
+        Logger for the task.
     """
 
     def __init__(self, logger: loggers_type | None = None) -> None:
@@ -211,8 +262,17 @@ class ROS2ToolCallingAgentTask(ToolCallingAgentTask, ABC):
     def _is_ai_message_requesting_get_ros2_topics_and_types(
         self, ai_message: AIMessage
     ) -> bool:
-        """Helper method to check if the given AIMessage is calling the only one tool
-        that gets ROS2 topics names and types correctly.
+        """Helper method to check if the given AIMessage is calling the exactly one tool that gets ROS2 topics names and types correctly.
+
+        Parameters
+        ----------
+        ai_message : AIMessage
+            The AIMessage to check
+
+        Returns
+        -------
+        bool
+            True if the ai_message is requesting get_ros2_topics_names_and_types correctly, False otherwise
         """
         if not self._check_tool_calls_num_in_ai_message(ai_message, expected_num=1):
             return False
