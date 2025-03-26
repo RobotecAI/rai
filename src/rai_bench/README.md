@@ -118,5 +118,11 @@ The Tool Calling Agent Benchmark is the benchmark for LangChain tool calling age
 
 To set up tracing backends, please follow the instructions in the [tracing.md](../../docs/tracing.md) document.
 
+To run the benchmark:
+```bash
+cd rai
+source setup_shell.sh
+python src/rai_bench/rai_bench/examples/tool_calling_agent_test_bench.py
+
 > [!NOTE]
 > The `simple_model` from [config.toml](../../config.toml) is currently set up in the example benchmark script. Change it to `complex_model` in the script if needed.
