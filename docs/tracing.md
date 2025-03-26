@@ -31,6 +31,7 @@ To enable LangSmith tracing:
 
 1. Set `use_langsmith = true` in the `config.toml` file.
 2. Set the `LANGCHAIN_API_KEY` environment variable with your LangSmith API key.
+3. Optionally, you can specify a custom LangSmith host by modifying the `host` field under `[tracing.langsmith]`.
 
 ## Usage
 

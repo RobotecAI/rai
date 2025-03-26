@@ -30,6 +30,7 @@ host = "http://localhost:3000"
 
 [tracing.langsmith]
 use_langsmith = false
+host = "https://api.smith.langchain.com"
 
 [asr]
 recording_device_name = "default"
