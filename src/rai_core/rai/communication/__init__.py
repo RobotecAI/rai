@@ -15,12 +15,12 @@
 from .ari_connector import ARIConnector, ARIMessage
 from .base_connector import BaseConnector, BaseMessage
 from .hri_connector import HRIConnector, HRIMessage, HRIPayload
-from .ros2.api import TopicConfig
-from .ros2.connectors import (
+from .ros2 import (
     ROS2ARIConnector,
     ROS2ARIMessage,
     ROS2HRIConnector,
     ROS2HRIMessage,
+    TopicConfig,
 )
 from .sound_device.connector import (
     SoundDeviceConfig,

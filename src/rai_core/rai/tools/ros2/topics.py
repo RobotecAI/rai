@@ -30,7 +30,7 @@ from langchain_core.utils import stringify_dict
 from pydantic import BaseModel, Field
 from sensor_msgs.msg import CompressedImage, Image
 
-from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
+from rai.communication.ros2 import ROS2ARIConnector, ROS2ARIMessage
 from rai.messages.multimodal import MultimodalArtifact
 from rai.messages.utils import preprocess_image
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
