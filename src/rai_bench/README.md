@@ -102,6 +102,7 @@ When creating new task or changing existing ones, make sure to add unit tests fo
 This applies also when you are adding or changing the helper methods in `Task` or `ManipulationTask`.
 
 The number of scenarios can be easily extened without writing new tasks, by increasing number of variants of the same task and adding more simulation configs but it won't improve variety of scenarios as much as creating new tasks.
+
 ### Tool Calling Agent Benchmark
 
 The Tool Calling Agent Benchmark is the benchmark for LangChain tool calling agents. It includes a set of tasks and a benchmark that evaluates the performance of the agent on those tasks by verifying the correctness of the tool calls requested by the agent. The benchmark is integrated with LangSmith and Langfuse tracing backends to easily track the performance of the agents.
@@ -119,6 +120,7 @@ The Tool Calling Agent Benchmark is the benchmark for LangChain tool calling age
 To set up tracing backends, please follow the instructions in the [tracing.md](../../docs/tracing.md) document.
 
 To run the benchmark:
+
 ```bash
 cd rai
 source setup_shell.sh
@@ -126,3 +128,4 @@ python src/rai_bench/rai_bench/examples/tool_calling_agent_test_bench.py
 
 > [!NOTE]
 > The `simple_model` from [config.toml](../../config.toml) is currently set up in the example benchmark script. Change it to `complex_model` in the script if needed.
+```
