@@ -49,9 +49,10 @@ class TaskParametrizationError(Exception):
 
 
 class GetROS2TopicsTask(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
-        self.complexity = "easy"
         self.expected_tools = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -127,9 +128,10 @@ class GetROS2TopicsTask(ROS2ToolCallingAgentTask):
 
 
 class GetROS2TopicsTask2(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
-        self.complexity = "easy"
         self.expected_tools = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -176,9 +178,10 @@ class GetROS2TopicsTask2(ROS2ToolCallingAgentTask):
 
 
 class GetROS2RGBCameraTask(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
-        self.complexity = "easy"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -242,9 +245,10 @@ class GetROS2RGBCameraTask(ROS2ToolCallingAgentTask):
 
 
 class GetROS2DepthCameraTask(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
-        self.complexity = "easy"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -308,9 +312,10 @@ class GetROS2DepthCameraTask(ROS2ToolCallingAgentTask):
 
 
 class GetAllROS2RGBCamerasTask(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
-        self.complexity = "easy"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -386,9 +391,10 @@ class GetAllROS2RGBCamerasTask(ROS2ToolCallingAgentTask):
 
 
 class GetAllROS2DepthCamerasTask(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
-        self.complexity = "easy"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -463,9 +469,10 @@ class GetAllROS2DepthCamerasTask(ROS2ToolCallingAgentTask):
 
 
 class GetROS2MessageTask(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
-        self.complexity = "easy"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -527,8 +534,9 @@ class GetROS2MessageTask(ROS2ToolCallingAgentTask):
 
 
 class GetRobotDescriptionTask(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+
     def __init__(self, logger: loggers_type | None = None) -> None:
-        self.complexity = "easy"
         super().__init__(logger=logger)
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
@@ -588,8 +596,9 @@ class GetRobotDescriptionTask(ROS2ToolCallingAgentTask):
 
 
 class GetPointcloudTask(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+
     def __init__(self, logger: loggers_type | None = None) -> None:
-        self.complexity = "easy"
         super().__init__(logger=logger)
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
@@ -649,11 +658,12 @@ class GetPointcloudTask(ROS2ToolCallingAgentTask):
 
 
 class MoveToPointTask(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+
     def __init__(
         self, args: Dict[str, Any], logger: loggers_type | None = None
     ) -> None:
         super().__init__(logger=logger)
-        self.complexity = "easy"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -713,6 +723,8 @@ class MoveToPointTask(ROS2ToolCallingAgentTask):
 
 
 class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+
     def __init__(
         self,
         objects: Dict[str, List[dict[str, float]]],
@@ -735,7 +747,6 @@ class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
         }
         """
         super().__init__(logger=logger)
-        self.complexity = "easy"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -803,6 +814,8 @@ class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
 
 
 class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
+    complexity = "medium"
+
     """Task to grab an object
 
     Parameters
@@ -830,7 +843,6 @@ class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
         logger: loggers_type | None = None,
     ) -> None:
         super().__init__(logger=logger)
-        self.complexity = "medium"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -943,6 +955,8 @@ class GrabNotExistingObjectTask(ROS2ToolCallingAgentTask):
     object_to_grab = "apple"
     """
 
+    complexity = "medium"
+
     def __init__(
         self,
         objects: Dict[str, List[dict[str, float]]],
@@ -950,7 +964,6 @@ class GrabNotExistingObjectTask(ROS2ToolCallingAgentTask):
         logger: loggers_type | None = None,
     ) -> None:
         super().__init__(logger=logger)
-        self.complexity = "medium"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -1045,6 +1058,8 @@ class MoveExistingObjectLeftTask(ROS2ToolCallingAgentTask):
     object_to_grab = "cube"
     """
 
+    complexity = "medium"
+
     def __init__(
         self,
         objects: Dict[str, List[dict[str, float]]],
@@ -1052,7 +1067,6 @@ class MoveExistingObjectLeftTask(ROS2ToolCallingAgentTask):
         logger: loggers_type | None = None,
     ) -> None:
         super().__init__(logger=logger)
-        self.complexity = "medium"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -1171,6 +1185,8 @@ class MoveExistingObjectFrontTask(ROS2ToolCallingAgentTask):
         Logger, by default None
     """
 
+    complexity = "medium"
+
     def __init__(
         self,
         objects: Dict[str, List[dict[str, float]]],
@@ -1178,7 +1194,6 @@ class MoveExistingObjectFrontTask(ROS2ToolCallingAgentTask):
         logger: loggers_type | None = None,
     ) -> None:
         super().__init__(logger=logger)
-        self.complexity = "medium"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -1306,6 +1321,8 @@ class SwapObjectsTask(ROS2ToolCallingAgentTask):
     objects_to_swap = ["cube", "banana"]
     """
 
+    complexity = "hard"
+
     def __init__(
         self,
         objects: Dict[str, List[Dict[str, float]]],
@@ -1313,7 +1330,6 @@ class SwapObjectsTask(ROS2ToolCallingAgentTask):
         logger: loggers_type | None = None,
     ) -> None:
         super().__init__(logger=logger)
-        self.complexity = "hard"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
