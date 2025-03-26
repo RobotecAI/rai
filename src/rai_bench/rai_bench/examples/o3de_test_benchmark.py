@@ -21,8 +21,6 @@ from typing import List
 
 import rclpy
 from langchain.tools import BaseTool
-from rai_open_set_vision.tools import GetGrabbingPointTool
-
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.ros.manipulation import (
@@ -34,6 +32,8 @@ from rai.tools.ros2.topics import (
     GetROS2TopicsNamesAndTypesTool,
 )
 from rai.utils.model_initialization import get_llm_model
+from rai_open_set_vision.tools import GetGrabbingPointTool
+
 from rai_bench.benchmark_model import Benchmark
 from rai_bench.o3de_test_bench.scenarios import (
     easy_scenarios,
