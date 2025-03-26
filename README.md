@@ -1,7 +1,7 @@
 # RAI
 
 > [!IMPORTANT]  
-> **RAI is meant for R&D. Make sure to understand its limitations.**
+> **Development Status**: RAI is currently undergoing significant development on the development branch, focusing on version 2.0. This major version update will introduce substantial improvements and is not backward compatible with version 1.0. For the latest stable release, please refer to the [main branch](https://github.com/RobotecAI/rai/tree/main).
 
 RAI is a flexible AI agent framework to develop and deploy Embodied AI features for your robots.
 
