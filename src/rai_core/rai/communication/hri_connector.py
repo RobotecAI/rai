@@ -162,7 +162,7 @@ class HRIConnector(Generic[T], BaseConnector[T]):
             raise HRIException(
                 f"Error while instantiating {str(self.__class__)}: Message type T derived from HRIMessage needs to be provided e.g. Connector[MessageType]()"
             )
-        self.T_class = get_args(self.__orig_bases__[0])[0]
+        self.T_class = get_args(self.__orig_bases__[-1])[0]
 
     def _build_message(
         self,
