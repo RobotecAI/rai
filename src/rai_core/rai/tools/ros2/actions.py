@@ -24,7 +24,7 @@ from typing import Any, Callable, Dict, Type
 from langchain_core.tools import BaseTool, tool  # type: ignore
 from pydantic import BaseModel, Field
 
-from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
+from rai.communication.ros2 import ROS2ARIConnector, ROS2ARIMessage
 
 
 class StartROS2ActionToolInput(BaseModel):
