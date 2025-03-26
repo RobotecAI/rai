@@ -26,8 +26,27 @@ The result of a task is a value between 0 and 1, calculated like initially_mispl
 
 Current O3DE simulation binaries:
 
-- [ros2-humble](https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIManipulationDemo_jammyhumble.zip)
-- [ros2-jazzy](https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIManipulationDemo_noblejazzy.zip)
+### Running
+
+1. Download O3DE simulation binary and unzip it.
+
+   - [ros2-humble](https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIManipulationDemo_jammyhumble.zip)
+   - [ros2-jazzy](https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIManipulationDemo_noblejazzy.zip)
+
+2. Follow step 2 from [Manipulation demo Setup section](../../docs/demos/manipulation.md#setup)
+
+3. Adjust the path to the binary in: [o3de_config.yaml](./rai_bench/o3de_test_bench/configs/o3de_config.yaml)
+4. Run benchmark with:
+
+   ```bash
+   cd rai
+   source setup_shell.sh
+   python src/rai_bench/rai_bench/examples/o3de_test_benchmark.py
+   ```
+
+> [!NOTE]
+> For now benchmark runs all available scenarios (~160). See [Examples](#example-usege)
+> section for details.
 
 ### Example usage
 
