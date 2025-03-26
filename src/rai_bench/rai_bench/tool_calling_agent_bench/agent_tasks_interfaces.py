@@ -38,6 +38,9 @@ class ToolCallingAgentTask(ABC):
         Logger, by default None
     """
 
+    complexity: Literal["easy", "medium", "hard"]
+    recursion_limit: int = DEFAULT_RECURSION_LIMIT
+
     def __init__(
         self,
         logger: loggers_type | None = None,
@@ -48,8 +51,6 @@ class ToolCallingAgentTask(ABC):
             self.logger = logging.getLogger(__name__)
         self.expected_tools: List[BaseTool] = []
         self.result = Result()
-        self.complexity: Literal["easy", "medium", "hard"]
-        self.recursion_limit: int = DEFAULT_RECURSION_LIMIT
 
     @abstractmethod
     def get_system_prompt(self) -> str:
