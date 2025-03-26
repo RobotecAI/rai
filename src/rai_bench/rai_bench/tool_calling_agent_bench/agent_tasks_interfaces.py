@@ -48,24 +48,8 @@ class ToolCallingAgentTask(ABC):
             self.logger = logging.getLogger(__name__)
         self.expected_tools: List[BaseTool] = []
         self.result = Result()
-        self._complexity: Literal["easy", "medium", "hard"]
-        self._recursion_limit: int = DEFAULT_RECURSION_LIMIT
-
-    @property
-    @abstractmethod
-    def complexity(self) -> Literal["easy", "medium", "hard"]:
-        raise NotImplementedError
-
-    @property
-    def recursion_limit(self) -> int:
-        """The number of allowed steps for agent.
-
-        Returns
-        -------
-        int
-            The number of allowed steps
-        """
-        return self._recursion_limit
+        self.complexity: Literal["easy", "medium", "hard"]
+        self.recursion_limit: int = DEFAULT_RECURSION_LIMIT
 
     @abstractmethod
     def get_system_prompt(self) -> str:

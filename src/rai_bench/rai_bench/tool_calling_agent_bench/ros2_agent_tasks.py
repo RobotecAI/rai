@@ -51,7 +51,7 @@ class TaskParametrizationError(Exception):
 class GetROS2TopicsTask(ROS2ToolCallingAgentTask):
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
-        self._complexity = "easy"
+        self.complexity = "easy"
         self.expected_tools = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -92,10 +92,6 @@ class GetROS2TopicsTask(ROS2ToolCallingAgentTask):
             )
         ]
 
-    @property
-    def complexity(self):
-        return self._complexity
-
     def get_system_prompt(self) -> str:
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
 
@@ -133,7 +129,7 @@ class GetROS2TopicsTask(ROS2ToolCallingAgentTask):
 class GetROS2TopicsTask2(ROS2ToolCallingAgentTask):
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
-        self._complexity = "easy"
+        self.complexity = "easy"
         self.expected_tools = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -144,10 +140,6 @@ class GetROS2TopicsTask2(ROS2ToolCallingAgentTask):
                 ]
             )
         ]
-
-    @property
-    def complexity(self):
-        return self._complexity
 
     def get_system_prompt(self) -> str:
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
@@ -186,7 +178,7 @@ class GetROS2TopicsTask2(ROS2ToolCallingAgentTask):
 class GetROS2RGBCameraTask(ROS2ToolCallingAgentTask):
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
-        self._complexity = "easy"
+        self.complexity = "easy"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -203,10 +195,6 @@ class GetROS2RGBCameraTask(ROS2ToolCallingAgentTask):
             ),
             MockGetROS2ImageTool(expected_topics=["/camera_image_color"]),
         ]
-
-    @property
-    def complexity(self):
-        return self._complexity
 
     def get_system_prompt(self) -> str:
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
@@ -256,7 +244,7 @@ class GetROS2RGBCameraTask(ROS2ToolCallingAgentTask):
 class GetROS2DepthCameraTask(ROS2ToolCallingAgentTask):
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
-        self._complexity = "easy"
+        self.complexity = "easy"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -272,10 +260,6 @@ class GetROS2DepthCameraTask(ROS2ToolCallingAgentTask):
             ),
             MockGetROS2ImageTool(expected_topics=["/camera_image_depth"]),
         ]
-
-    @property
-    def complexity(self):
-        return self._complexity
 
     def get_system_prompt(self) -> str:
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
@@ -326,7 +310,7 @@ class GetROS2DepthCameraTask(ROS2ToolCallingAgentTask):
 class GetAllROS2RGBCamerasTask(ROS2ToolCallingAgentTask):
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
-        self._complexity = "easy"
+        self.complexity = "easy"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -346,10 +330,6 @@ class GetAllROS2RGBCamerasTask(ROS2ToolCallingAgentTask):
                 expected_topics=["/camera_image_color", "/color_image5"]
             ),
         ]
-
-    @property
-    def complexity(self):
-        return self._complexity
 
     def get_prompt(self) -> str:
         return "Get RGB images from all of the available cameras."
@@ -408,7 +388,7 @@ class GetAllROS2RGBCamerasTask(ROS2ToolCallingAgentTask):
 class GetAllROS2DepthCamerasTask(ROS2ToolCallingAgentTask):
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
-        self._complexity = "easy"
+        self.complexity = "easy"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -427,10 +407,6 @@ class GetAllROS2DepthCamerasTask(ROS2ToolCallingAgentTask):
                 expected_topics=["/camera_image_depth", "/depth_image5"]
             ),
         ]
-
-    @property
-    def complexity(self):
-        return self._complexity
 
     def get_prompt(self) -> str:
         return "Get depth images from all of the available cameras."
@@ -489,7 +465,7 @@ class GetAllROS2DepthCamerasTask(ROS2ToolCallingAgentTask):
 class GetROS2MessageTask(ROS2ToolCallingAgentTask):
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
-        self._complexity = "easy"
+        self.complexity = "easy"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -506,10 +482,6 @@ class GetROS2MessageTask(ROS2ToolCallingAgentTask):
             ),
             MockReceiveROS2MessageTool(expected_topics=["/camera_image_color"]),
         ]
-
-    @property
-    def complexity(self):
-        return self._complexity
 
     def get_system_prompt(self) -> str:
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
@@ -556,7 +528,7 @@ class GetROS2MessageTask(ROS2ToolCallingAgentTask):
 
 class GetRobotDescriptionTask(ROS2ToolCallingAgentTask):
     def __init__(self, logger: loggers_type | None = None) -> None:
-        self._complexity = "easy"
+        self.complexity = "easy"
         super().__init__(logger=logger)
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
@@ -571,10 +543,6 @@ class GetRobotDescriptionTask(ROS2ToolCallingAgentTask):
             ),
             MockReceiveROS2MessageTool(expected_topics=["/robot_description"]),
         ]
-
-    @property
-    def complexity(self):
-        return self._complexity
 
     def get_system_prompt(self) -> str:
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
@@ -621,7 +589,7 @@ class GetRobotDescriptionTask(ROS2ToolCallingAgentTask):
 
 class GetPointcloudTask(ROS2ToolCallingAgentTask):
     def __init__(self, logger: loggers_type | None = None) -> None:
-        self._complexity = "easy"
+        self.complexity = "easy"
         super().__init__(logger=logger)
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
@@ -636,10 +604,6 @@ class GetPointcloudTask(ROS2ToolCallingAgentTask):
             ),
             MockReceiveROS2MessageTool(expected_topics=["/pointcloud"]),
         ]
-
-    @property
-    def complexity(self):
-        return self._complexity
 
     def get_system_prompt(self) -> str:
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
@@ -689,7 +653,7 @@ class MoveToPointTask(ROS2ToolCallingAgentTask):
         self, args: Dict[str, Any], logger: loggers_type | None = None
     ) -> None:
         super().__init__(logger=logger)
-        self._complexity = "easy"
+        self.complexity = "easy"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -702,10 +666,6 @@ class MoveToPointTask(ROS2ToolCallingAgentTask):
             MockMoveToPointTool(manipulator_frame="base_link"),
         ]
         self.args = MoveToPointToolInput(**args)
-
-    @property
-    def complexity(self):
-        return self._complexity
 
     def get_system_prompt(self) -> str:
         return """You are a ROS 2 expert helping the user to manipulate the robotic arm. You have access to various tools that allow you to query the ROS 2 system.
@@ -775,7 +735,7 @@ class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
         }
         """
         super().__init__(logger=logger)
-        self._complexity = "easy"
+        self.complexity = "easy"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -788,10 +748,6 @@ class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
             MockGetObjectPositionsTool(mock_objects=objects),
         ]
         self.objects = objects
-
-    @property
-    def complexity(self):
-        return self._complexity
 
     def get_system_prompt(self) -> str:
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
@@ -874,7 +830,7 @@ class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
         logger: loggers_type | None = None,
     ) -> None:
         super().__init__(logger=logger)
-        self._complexity = "medium"
+        self.complexity = "medium"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -899,10 +855,6 @@ class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
         self.objects = objects
         self.object_to_grab = object_to_grab
         self._verify_args()
-
-    @property
-    def complexity(self):
-        return self._complexity
 
     def get_system_prompt(self) -> str:
         return """
@@ -998,7 +950,7 @@ class GrabNotExistingObjectTask(ROS2ToolCallingAgentTask):
         logger: loggers_type | None = None,
     ) -> None:
         super().__init__(logger=logger)
-        self._complexity = "medium"
+        self.complexity = "medium"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -1023,10 +975,6 @@ class GrabNotExistingObjectTask(ROS2ToolCallingAgentTask):
         self.objects = objects
         self.object_to_grab = object_to_grab
         self._verify_args()
-
-    @property
-    def complexity(self):
-        return self._complexity
 
     def get_system_prompt(self) -> str:
         return """
@@ -1104,7 +1052,7 @@ class MoveExistingObjectLeftTask(ROS2ToolCallingAgentTask):
         logger: loggers_type | None = None,
     ) -> None:
         super().__init__(logger=logger)
-        self._complexity = "medium"
+        self.complexity = "medium"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -1128,10 +1076,6 @@ class MoveExistingObjectLeftTask(ROS2ToolCallingAgentTask):
         self.objects = objects
         self.object_to_grab = object_to_grab
         self._verify_args()
-
-    @property
-    def complexity(self):
-        return self._complexity
 
     def get_system_prompt(self) -> str:
         return """
@@ -1234,7 +1178,7 @@ class MoveExistingObjectFrontTask(ROS2ToolCallingAgentTask):
         logger: loggers_type | None = None,
     ) -> None:
         super().__init__(logger=logger)
-        self._complexity = "medium"
+        self.complexity = "medium"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -1256,10 +1200,6 @@ class MoveExistingObjectFrontTask(ROS2ToolCallingAgentTask):
         self.objects = objects
         self.object_to_grab = object_to_grab
         self._verify_args()
-
-    @property
-    def complexity(self):
-        return self._complexity
 
     def get_system_prompt(self) -> str:
         return """
@@ -1373,7 +1313,7 @@ class SwapObjectsTask(ROS2ToolCallingAgentTask):
         logger: loggers_type | None = None,
     ) -> None:
         super().__init__(logger=logger)
-        self._complexity = "hard"
+        self.complexity = "hard"
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
@@ -1395,10 +1335,6 @@ class SwapObjectsTask(ROS2ToolCallingAgentTask):
         self.objects = objects
         self.objects_to_swap = objects_to_swap
         self._verify_args()
-
-    @property
-    def complexity(self):
-        return self._complexity
 
     def _verify_args(self):
         for obj in self.objects_to_swap:
