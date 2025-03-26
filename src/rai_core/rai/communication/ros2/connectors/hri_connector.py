@@ -14,7 +14,7 @@
 
 import threading
 import uuid
-from typing import Any, Callable, List, Literal, Optional, Tuple, Union
+from typing import Any, List, Literal, Optional, Tuple, Union
 
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
@@ -27,10 +27,12 @@ from rai.communication.ros2.api import (
     ROS2ServiceAPI,
     TopicConfig,
 )
+from rai.communication.ros2.connectors.action_mixin import ROS2ActionMixin
+from rai.communication.ros2.connectors.service_mixin import ROS2ServiceMixin
 from rai.communication.ros2.messages import ROS2HRIMessage
 
 
-class ROS2HRIConnector(HRIConnector[ROS2HRIMessage]):
+class ROS2HRIConnector(ROS2ActionMixin, ROS2ServiceMixin, HRIConnector[ROS2HRIMessage]):
     def __init__(
         self,
         node_name: str = f"rai_ros2_hri_connector_{str(uuid.uuid4())[-12:]}",
@@ -110,31 +112,6 @@ class ROS2HRIConnector(HRIConnector[ROS2HRIMessage]):
                 f"Received message is not of type rai_interfaces.msg.HRIMessage, got {type(msg)}"
             )
         return ROS2HRIMessage.from_ros2(msg, message_author)
-
-    def service_call(
-        self, message: ROS2HRIMessage, target: str, timeout_sec: float, **kwargs: Any
-    ) -> ROS2HRIMessage:
-        raise NotImplementedError(
-            f"{self.__class__.__name__} doesn't support service calls"
-        )
-
-    def start_action(
-        self,
-        action_data: Optional[ROS2HRIMessage],
-        target: str,
-        on_feedback: Callable,
-        on_done: Callable,
-        timeout_sec: float,
-        **kwargs: Any,
-    ) -> str:
-        raise NotImplementedError(
-            f"{self.__class__.__name__} doesn't support action calls"
-        )
-
-    def terminate_action(self, action_handle: str, **kwargs: Any):
-        raise NotImplementedError(
-            f"{self.__class__.__name__} doesn't support action calls"
-        )
 
     def shutdown(self):
         self._executor.shutdown()

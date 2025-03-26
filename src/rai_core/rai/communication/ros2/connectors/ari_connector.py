@@ -15,7 +15,7 @@
 import threading
 import time
 import uuid
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import rclpy
 import rclpy.executors
@@ -33,10 +33,12 @@ from rai.communication.ros2.api import (
     ROS2ServiceAPI,
     ROS2TopicAPI,
 )
+from rai.communication.ros2.connectors.action_mixin import ROS2ActionMixin
+from rai.communication.ros2.connectors.service_mixin import ROS2ServiceMixin
 from rai.communication.ros2.messages import ROS2ARIMessage
 
 
-class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
+class ROS2ARIConnector(ROS2ActionMixin, ROS2ServiceMixin, ARIConnector[ROS2ARIMessage]):
     def __init__(
         self, node_name: str = f"rai_ros2_ari_connector_{str(uuid.uuid4())[-12:]}"
     ):
@@ -93,50 +95,6 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
             payload=msg, metadata={"msg_type": str(type(msg)), "topic": source}
         )
 
-    def service_call(
-        self,
-        message: ROS2ARIMessage,
-        target: str,
-        timeout_sec: float = 1.0,
-        *,
-        msg_type: str,
-        **kwargs: Any,
-    ) -> ROS2ARIMessage:
-        msg = self._service_api.call_service(
-            service_name=target,
-            service_type=msg_type,
-            request=message.payload,
-            timeout_sec=timeout_sec,
-        )
-        return ROS2ARIMessage(
-            payload=msg, metadata={"msg_type": str(type(msg)), "service": target}
-        )
-
-    def start_action(
-        self,
-        action_data: Optional[ROS2ARIMessage],
-        target: str,
-        on_feedback: Callable[[Any], None] = lambda _: None,
-        on_done: Callable[[Any], None] = lambda _: None,
-        timeout_sec: float = 1.0,
-        *,
-        msg_type: str,
-        **kwargs: Any,
-    ) -> str:
-        if not isinstance(action_data, ROS2ARIMessage):
-            raise ValueError("Action data must be of type ROS2ARIMessage")
-        accepted, handle = self._actions_api.send_goal(
-            action_name=target,
-            action_type=msg_type,
-            goal=action_data.payload,
-            timeout_sec=timeout_sec,
-            feedback_callback=on_feedback,
-            done_callback=on_done,
-        )
-        if not accepted:
-            raise RuntimeError("Action goal was not accepted")
-        return handle
-
     @staticmethod
     def wait_for_transform(
         tf_buffer: Buffer,
@@ -172,9 +130,6 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
         )
 
         return transform
-
-    def terminate_action(self, action_handle: str, **kwargs: Any):
-        self._actions_api.terminate_goal(action_handle)
 
     @property
     def node(self) -> Node:
