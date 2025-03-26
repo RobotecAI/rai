@@ -1,0 +1,112 @@
+entities:
+  - name: red_cube1
+    prefab_name: red_cube
+    pose:
+      translation:
+        x: 0.1
+        y: -0.2
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+  - name: red_cube2
+    prefab_name: red_cube
+    pose:
+      translation:
+        x: 0.1
+        y: -0.2
+        z: 0.15
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+
+  - name: blue_cube1
+    prefab_name: blue_cube
+    pose:
+      translation:
+        x: 0.1
+        y: -0.2
+        z: 0.25
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+
+  - name: blue_cube2
+    prefab_name: blue_cube
+    pose:
+      translation:
+        x: 0.2
+        y: -0.1
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+
+  - name: blue_cube3
+    prefab_name: blue_cube
+    pose:
+      translation:
+        x: 0.2
+        y: -0.1
+        z: 0.15
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+  - name: yellow_cube1
+    prefab_name: yellow_cube
+    pose:
+      translation:
+        x: 0.2
+        y: -0.1
+        z: 0.25
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+  - name: yellow_cube2
+    prefab_name: yellow_cube
+    pose:
+      translation:
+        x: 0.2
+        y: -0.1
+        z: 0.35
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+  - name: yellow_cube3
+    prefab_name: yellow_cube
+    pose:
+      translation:
+        x: 0.5
+        y: -0.5
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+  - name: yellow_cube4
+    prefab_name: yellow_cube
+    pose:
+      translation:
+        x: 0.4
+        y: -0.4
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0

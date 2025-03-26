@@ -23,19 +23,28 @@ import rclpy
 from langchain.tools import BaseTool
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.communication.ros2.connectors import ROS2ARIConnector
-from rai.tools.ros.manipulation import MoveToPointTool
-from rai.tools.ros2.topics import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
+from rai.tools.ros.manipulation import (
+    GetObjectPositionsTool,
+    MoveToPointTool,
+)
+from rai.tools.ros2.topics import (
+    GetROS2ImageTool,
+    GetROS2TopicsNamesAndTypesTool,
+)
 from rai.utils.model_initialization import get_llm_model
+from rai_open_set_vision.tools import GetGrabbingPointTool
 
-from rai_bench.benchmark_model import Benchmark, Task
-from rai_bench.o3de_test_bench.tasks import GrabCarrotTask, PlaceCubesTask
+from rai_bench.benchmark_model import Benchmark
+from rai_bench.o3de_test_bench.scenarios import (
+    easy_scenarios,
+    hard_scenarios,
+    medium_scenarios,
+    trivial_scenarios,
+    very_hard_scenarios,
+)
 from rai_sim.o3de.o3de_bridge import (
     O3DEngineArmManipulationBridge,
-    O3DExROS2SimulationConfig,
-    Pose,
 )
-from rai_sim.simulation_bridge import Rotation, Translation
-from rai_sim.tools import GetObjectPositionsGroundTruthTool
 
 if __name__ == "__main__":
     rclpy.init()
@@ -54,6 +63,21 @@ if __name__ == "__main__":
     z - up to down (positive is up)
     Before starting the task, make sure to grab the camera image to understand the environment.
     """
+    # define tools
+    tools: List[BaseTool] = [
+        GetObjectPositionsTool(
+            connector=connector,
+            target_frame="panda_link0",
+            source_frame="RGBDCamera5",
+            camera_topic="/color_image5",
+            depth_topic="/depth_image5",
+            camera_info_topic="/color_camera_info5",
+            get_grabbing_point_tool=GetGrabbingPointTool(connector=connector),
+        ),
+        MoveToPointTool(connector=connector, manipulator_frame="panda_link0"),
+        GetROS2ImageTool(connector=connector),
+        GetROS2TopicsNamesAndTypesTool(connector=connector),
+    ]
     # define loggers
     now = datetime.now()
     experiment_dir = (
@@ -121,68 +145,50 @@ if __name__ == "__main__":
     #     ),
     # ]
 
-    ### Create scenarios automatically
-    simulation_configs_paths = [
-        configs_dir + "scene1.yaml",
-        configs_dir + "scene2.yaml",
-        configs_dir + "scene3.yaml",
-        configs_dir + "scene4.yaml",
-    ]
-    simulations_configs = [
-        O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
-        for path in simulation_configs_paths
-    ]
-    tasks: List[Task] = [
-        GrabCarrotTask(logger=bench_logger),
-        PlaceCubesTask(logger=bench_logger),
-    ]
-    scenarios = Benchmark.create_scenarios(
-        tasks=tasks,
-        simulation_configs=simulations_configs,
-        simulation_configs_paths=simulation_configs_paths,
+    ### import ready scenarios
+    t_scenarios = trivial_scenarios(
+        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    )
+    e_scenarios = easy_scenarios(
+        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    )
+    m_scenarios = medium_scenarios(
+        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    )
+    h_scenarios = hard_scenarios(
+        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    )
+    vh_scenarios = very_hard_scenarios(
+        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
     )
 
-    # custom request to arm
-    base_arm_pose = Pose(
-        translation=Translation(x=0.1, y=0.5, z=0.4),
-        rotation=Rotation(x=1.0, y=0.0, z=0.0, w=0.0),
-    )
-
+    all_scenarios = t_scenarios + e_scenarios + m_scenarios + h_scenarios + vh_scenarios
     o3de = O3DEngineArmManipulationBridge(connector, logger=agent_logger)
-    # define benchamrk
-    results_filename = f"{experiment_dir}/results.csv"
-    benchmark = Benchmark(
-        simulation_bridge=o3de,
-        scenarios=scenarios,
-        logger=bench_logger,
-        results_filename=results_filename,
-    )
-    for i, s in enumerate(scenarios):
-        # define tools
-        tools: List[BaseTool] = [
-            GetObjectPositionsGroundTruthTool(
-                simulation=o3de,
-            ),
-            MoveToPointTool(connector=connector, manipulator_frame="panda_link0"),
-            GetROS2ImageTool(connector=connector),
-            GetROS2TopicsNamesAndTypesTool(connector=connector),
-        ]
-        agent = create_conversational_agent(
-            llm, tools, system_prompt, logger=agent_logger
+    try:
+        # define benchamrk
+        results_filename = f"{experiment_dir}/results.csv"
+        benchmark = Benchmark(
+            simulation_bridge=o3de,
+            scenarios=all_scenarios,
+            logger=bench_logger,
+            results_filename=results_filename,
         )
-        benchmark.run_next(agent=agent)
-        o3de.move_arm(
-            pose=base_arm_pose,
-            initial_gripper_state=True,
-            final_gripper_state=False,
-            frame_id="panda_link0",
-        )  # return to case position
-        time.sleep(0.2)  # admire the end position for a second ;)
+        for i in range(len(all_scenarios)):
+            agent = create_conversational_agent(
+                llm, tools, system_prompt, logger=agent_logger
+            )
+            benchmark.run_next(agent=agent)
+            o3de.reset_arm()
+            time.sleep(0.2)  # admire the end position for a second ;)
 
-    bench_logger.info("===============================================================")
-    bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
-    bench_logger.info("===============================================================")
-
-    connector.shutdown()
-    o3de.shutdown()
-    rclpy.shutdown()
+        bench_logger.info(
+            "==============================================================="
+        )
+        bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
+        bench_logger.info(
+            "==============================================================="
+        )
+    finally:
+        connector.shutdown()
+        o3de.shutdown()
+        rclpy.shutdown()

@@ -43,6 +43,7 @@ from rai_sim.simulation_bridge import (
 
 class O3DExROS2SimulationConfig(SimulationConfig):
     binary_path: Path
+    level: Optional[str] = None
     robotic_stack_command: str
     required_simulation_ros2_interfaces: dict[str, List[str]]
     required_robotic_ros2_interfaces: dict[str, List[str]]
@@ -201,7 +202,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         return SceneState(entities=entities)
 
     def _is_ros2_stack_ready(
-        self, required_ros2_stack: dict[str, List[str]], retries: int = 120
+        self, required_ros2_stack: dict[str, List[str]], retries: int = 360
     ) -> bool:
         for i in range(retries):
             available_topics = self.connector.get_topics_names_and_types()
@@ -266,7 +267,10 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         )
         return False
 
-    def setup_scene(self, simulation_config: O3DExROS2SimulationConfig):
+    def setup_scene(
+        self,
+        simulation_config: O3DExROS2SimulationConfig,
+    ):
         if self.current_binary_path != simulation_config.binary_path:
             if self.current_sim_process:
                 self.shutdown()
@@ -282,8 +286,15 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         for entity in simulation_config.entities:
             self._spawn_entity(entity)
 
-    def _launch_binary(self, simulation_config: O3DExROS2SimulationConfig):
-        command = [simulation_config.binary_path.as_posix()]
+    def _launch_binary(
+        self,
+        simulation_config: O3DExROS2SimulationConfig,
+    ):
+        command = [
+            simulation_config.binary_path.as_posix(),
+        ]
+        if simulation_config.level:
+            command.append(f"+LoadLevel {simulation_config.level}")
         self.logger.info(f"Running command: {command}")
         self.current_sim_process = subprocess.Popen(
             command,
@@ -383,6 +394,15 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
 
 
 class O3DEngineArmManipulationBridge(O3DExROS2Bridge):
+    def reset_arm(self):
+        self.connector.service_call(
+            ROS2ARIMessage(payload={}),
+            target="/reset_manipulator",
+            msg_type="std_srvs/srv/Trigger",
+        )
+
+        self.connector.node.get_logger().debug("Reset manipulator arm: DONE")
+
     def move_arm(
         self,
         pose: Pose,

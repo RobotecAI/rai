@@ -11,26 +11,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import csv
 import logging
+import math
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Generic, List, Union
+from collections import defaultdict
+from typing import Any, Dict, Generic, List, Set, TypeVar, Union
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langgraph.graph.state import CompiledStateGraph
 from rai.messages import HumanMultimodalMessage
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai_sim.simulation_bridge import (
+    Entity,
     Pose,
     SimulationBridge,
     SimulationConfig,
     SimulationConfigT,
-    SpawnedEntity,
 )
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
+EntityT = TypeVar("EntityT", bound=Entity)
 
 
 class EntitiesMismatchException(Exception):
@@ -58,7 +61,9 @@ class Task(ABC):
 
     @abstractmethod
     def get_prompt(self) -> str:
-        """Returns the task instruction - the prompt that will be passed to agent"""
+        """
+        Returns the task instruction - the prompt that will be passed to agent
+        """
         pass
 
     @abstractmethod
@@ -77,16 +82,39 @@ class Task(ABC):
         self, simulation_bridge: SimulationBridge[SimulationConfigT]
     ) -> float:
         """
-        Calculates result of the task, based on info retrieved from simulation.
-        Should return score between 0.0 and 1.
+        Calculate the task result (score) based on the simulation information.
+
+        Parameters
+        ----------
+        simulation_bridge : SimulationBridge[SimulationConfigT]
+            The simulation bridge used to retrieve simulation data.
+
+        Returns
+        -------
+        float
+            A score between 0.0 and 1.0.
         """
         pass
 
-    def filter_entities_by_prefab_type(
-        self, entities: List[SpawnedEntity], prefab_types: List[str]
-    ) -> List[SpawnedEntity]:
-        """Filter and return only these entities that match provided prefab types"""
-        return [ent for ent in entities if ent.prefab_name in prefab_types]
+    def filter_entities_by_object_type(
+        self, entities: List[EntityT], object_types: List[str]
+    ) -> List[EntityT]:
+        """
+        Filter and return only the entities that match the provided prefab types.
+
+        Parameters
+        ----------
+        entities : List[EntityT]
+            The list of entities to filter.
+        object_types : List[str]
+            The allowed object types.
+
+        Returns
+        -------
+        List[EntityT]
+            A list of entities whose prefab_name is in object_types.
+        """
+        return [ent for ent in entities if ent.prefab_name in object_types]
 
     def euclidean_distance(self, pos1: Pose, pos2: Pose) -> float:
         """Calculate euclidean distance between 2 positions"""
@@ -98,19 +126,43 @@ class Task(ABC):
 
     def is_adjacent(self, pos1: Pose, pos2: Pose, threshold_distance: float):
         """
-        Check if positions are adjacent to each other, the threshold_distance is a distance
-        in simulation, refering to how close they have to be to classify them as adjacent
+        Check if two positions are adjacent, based on a threshold distance.
+
+        Parameters
+        ----------
+        pos1 : Pose
+            The first position.
+        pos2 : Pose
+            The second position.
+        threshold_distance : float
+            The maximum allowed distance for the positions to be considered adjacent.
+
+        Returns
+        -------
+        bool
+            True if the Euclidean distance between pos1 and pos2 is less than threshold_distance, False otherwise.
         """
-        self.logger.debug(  # type: ignore
-            f"Euclidean distance: {self.euclidean_distance(pos1, pos2)}, pos1: {pos1}, pos2: {pos2}"
-        )
         return self.euclidean_distance(pos1, pos2) < threshold_distance
 
     def is_adjacent_to_any(
         self, pos1: Pose, positions: List[Pose], threshold_distance: float
     ) -> bool:
         """
-        Check if given position is adjacent to any position in the given list.
+        Check if a position is adjacent to any position in a given list.
+
+        Parameters
+        ----------
+        pos1 : Pose
+            The position to check.
+        positions : List[Pose]
+            A list of positions to compare against.
+        threshold_distance : float
+            The distance threshold for adjacency.
+
+        Returns
+        -------
+        bool
+            True if pos1 is adjacent to any position in positions, False otherwise.
         """
 
         return any(
@@ -119,9 +171,19 @@ class Task(ABC):
 
     def count_adjacent(self, positions: List[Pose], threshold_distance: float) -> int:
         """
-        Count how many adjacent positions are in the given list.
-        Note that position has to be adjacent to only 1 other position
-        to be counted, not all of them
+        Count how many positions in the list are adjacent to at least one other position.
+
+        Parameters
+        ----------
+        positions : List[Pose]
+            A list of positions.
+        threshold_distance : float
+            The distance threshold to determine adjacency.
+
+        Returns
+        -------
+        int
+            The count of positions that are adjacent to at least one other position.
         """
         adjacent_count = 0
 
@@ -134,10 +196,171 @@ class Task(ABC):
 
         return adjacent_count
 
+    def build_neighbourhood_list(
+        self, entities: List[EntityT], threshold_distance: float = 0.15
+    ) -> Dict[EntityT, List[EntityT]]:
+        """
+        Build a neighbourhood list assigning a list of neighbours to every entity based on a threshold distance.
+
+        Parameters
+        ----------
+        entities : List[EntityT]
+            The list of entities.
+        threshold_distance : float, optional
+            The maximum distance between entities to consider them neighbours. Default is 0.15.
+
+        Returns
+        -------
+        Dict[EntityT, List[EntityT]]
+            A dictionary mapping each entity to a list of neighbouring entities.
+        """
+        neighbourhood_graph: Dict[EntityT, List[EntityT]] = {
+            entity: [] for entity in entities
+        }
+        for entity in entities:
+            neighbourhood_graph[entity] = [
+                other
+                for other in entities
+                if entity != other
+                and self.is_adjacent(entity.pose, other.pose, threshold_distance)
+            ]
+        return neighbourhood_graph
+
+    def group_entities_by_type(
+        self, entities: List[EntityT]
+    ) -> Dict[str, List[EntityT]]:
+        """
+        Group entities by their prefab type.
+
+        Parameters
+        ----------
+        entities : List[EntityT]
+            The list of entities to group.
+
+        Returns
+        -------
+        Dict[str, List[EntityT]]
+            A dictionary with keys as prefab names and values as lists of entities of that type.
+        """
+        entities_by_type: Dict[str, List[EntityT]] = defaultdict(list)
+        for entity in entities:
+            entities_by_type[entity.prefab_name].append(entity)
+        return entities_by_type
+
+    def check_neighbourhood_types(
+        self,
+        neighbourhood: List[EntityT],
+        allowed_types: List[str],
+    ) -> bool:
+        """
+        Check if all entities in the neighbourhood are of the allowed types.
+
+        Parameters
+        ----------
+        neighbourhood : List[EntityT]
+            The list of neighbouring entities.
+        allowed_types : List[str]
+            The allowed prefab types.
+
+        Returns
+        -------
+        bool
+            True if the neighbourhood is empty or if all neighbours have a prefab_name in allowed_types, False otherwise.
+        """
+        return not neighbourhood or all(
+            adj.prefab_name in allowed_types for adj in neighbourhood
+        )
+
+    def find_clusters(
+        self, neighbourhood_list: Dict[EntityT, List[EntityT]]
+    ) -> List[List[EntityT]]:
+        """
+        Identify clusters of entities using a DFS algorithm.
+
+        Each connected component in the neighbourhood graph is considered a cluster.
+        Lone entities are counted as their own cluster.
+
+        Parameters
+        ----------
+        neighbourhood_list : Dict[EntityT, List[EntityT]]
+            A dictionary mapping entities to their list of neighbours.
+
+        Returns
+        -------
+        List[List[EntityT]]
+            A list of clusters, where each cluster is a list of connected entities.
+        """
+        visited: Set[EntityT] = set()
+        clusters: List[List[EntityT]] = []
+
+        def dfs(node: EntityT, cluster: List[EntityT]):
+            visited.add(node)
+            cluster.append(node)
+            for neighbor in neighbourhood_list.get(node, []):
+                if neighbor not in visited:
+                    dfs(neighbor, cluster)
+
+        for node in neighbourhood_list.keys():
+            if node not in visited:
+                component: List[EntityT] = []
+                dfs(node, component)
+                clusters.append(component)
+
+        return clusters
+
+    def group_entities_along_z_axis(
+        # NOTE (jmatejcz) figure out how to group by other coords and orientation, without reapeting code
+        self,
+        entities: List[EntityT],
+        margin: float,
+    ) -> List[List[EntityT]]:
+        """
+        Group entities that are aligned along the z axis based on their x and y coordinates.
+
+        Entities are first sorted by their x and y coordinates. Then, each entity is added to an existing group
+        if its (x, y) distance from the first entity in the group is within the specified margin.
+        Otherwise, a new group is created.
+
+        Example
+        ----------
+        You have 2 separate vertical towers of cubes.
+        In that case method will return 2 groups of entities, one for each tower.
+
+        Parameters
+        ----------
+        entities : List[EntityT]
+            The list of entities to group.
+        margin : float
+            The maximum allowable Euclidean distance in the x-y plane to consider entities as part of the same group.
+
+        Returns
+        -------
+        List[List[EntityT]]
+            A list of groups (clusters) of entities.
+        """
+
+        entities = sorted(
+            entities, key=lambda ent: (ent.pose.translation.x, ent.pose.translation.y)
+        )
+
+        groups: List[List[EntityT]] = []
+        for entity in entities:
+            placed = False
+            for group in groups:
+                dx = group[0].pose.translation.x - entity.pose.translation.x
+                dy = group[0].pose.translation.y - entity.pose.translation.y
+                if math.sqrt(dx * dx + dy * dy) <= margin:
+                    group.append(entity)
+                    placed = True
+                    break
+            if not placed:
+                groups.append([entity])
+        return groups
+
 
 class Scenario(Generic[SimulationConfigT]):
     """
-    A Scenarios are defined by a pair of Task and Simlation Config.
+    A Scenario are defined by a pair of Task and Simlation Config.
     Each Scenario is executed separatly by a Benchmark.
     """
 
@@ -147,12 +370,27 @@ class Scenario(Generic[SimulationConfigT]):
         simulation_config: SimulationConfigT,
         simulation_config_path: str,
     ) -> None:
-        if not task.validate_config(simulation_config):
-            raise ValueError("This scene is invalid for this task.")
+        """
+        Initialize a Scenario.
+
+        Parameters
+        ----------
+        task : Task
+            The task to be executed.
+        simulation_config : SimulationConfigT
+            The simulation configuration for the scenario.
+        simulation_config_path : str
+            The file path to the simulation configuration.
+
+        Raises
+        ------
+        ValueError
+            If the provided simulation configuration is not valid for the task.
+        """
         self.task = task
         self.simulation_config = simulation_config
-        # NOTE (jm) needed for logging which config was used,
-        # there probably is better method to do it
+        # NOTE (jmatejcz) needed for logging which config was used,
+        # there probably is better way to do it
         self.simulation_config_path = simulation_config_path
 
 
@@ -195,14 +433,33 @@ class Benchmark:
         tasks: List[Task],
         simulation_configs: List[SimulationConfigT],
         simulation_configs_paths: List[str],
+        logger: loggers_type | None = None,
     ) -> List[Scenario[SimulationConfigT]]:
-        # TODO (jm) hacky_fix, taking paths as args here, not the best solution,
+        """
+        Create scenarios by pairing each task with each suitable simulation configuration.
+
+        Parameters
+        ----------
+        tasks : List[Task]
+            The list of tasks.
+        simulation_configs : List[SimulationConfigT]
+            The list of simulation configurations.
+        simulation_configs_paths : List[str]
+            The corresponding file paths for the simulation configurations.
+
+        Returns
+        -------
+        List[Scenario[SimulationConfigT]]
+            A list of scenarios generated from the given tasks and simulation configurations.
+        """
+        # NOTE (jmatejcz) hacky_fix, taking paths as args here, not the best solution,
         # but more changes to code would be required
         scenarios: List[Scenario[SimulationConfigT]] = []
-
+        if not logger:
+            logger = logging.getLogger(__name__)
         for task in tasks:
             for sim_conf, sim_path in zip(simulation_configs, simulation_configs_paths):
-                try:
+                if task.validate_config(simulation_config=sim_conf):
                     scenarios.append(
                         Scenario(
                             task=task,
@@ -210,9 +467,9 @@ class Benchmark:
                             simulation_config_path=sim_path,
                         )
                     )
-                except ValueError as e:
-                    print(
-                        f"Could not create Scenario from task: {task.get_prompt()} and simulation_config: {sim_conf}, {e}"
+                else:
+                    logger.debug(
+                        f"Simulation config: {sim_path} is not suitable for task: {task.get_prompt()}"
                     )
         return scenarios
 
@@ -224,25 +481,36 @@ class Benchmark:
             writer = csv.DictWriter(file, fieldnames=self.fieldnames)
             writer.writeheader()
 
-    def run_next(self, agent) -> None:
+    def run_next(self, agent: CompiledStateGraph) -> None:
         """
-        Runs the next scenario
+        Run the next scenario in the benchmark.
+
+        Parameters
+        ----------
+        agent : CompiledStateGraph
+            The agent used to execute the scenario.
+
+        This method sets up the scene, streams the agent's responses, logs messages,
+        counts tool calls, calculates the final task score, and writes the result to a CSV file.
         """
         try:
             i, scenario = next(self.scenarios)  # Get the next scenario
 
             self.simulation_bridge.setup_scene(scenario.simulation_config)
-            self._logger.info(  # type: ignore
+            self._logger.info(
                 "======================================================================================"
             )
-            self._logger.info(  # type: ignore
-                f"RUNNING SCENARIO NUMBER {i + 1} / {self.num_of_scenarios}, TASK: {scenario.task.get_prompt()}"
+            self._logger.info(
+                f"RUNNING SCENARIO NUMBER {i + 1} / {self.num_of_scenarios}\n TASK: {scenario.task.get_prompt()}\n SIMULATION_CONFIG: {scenario.simulation_config_path}"
             )
             tool_calls_num = 0
 
             ts = time.perf_counter()
             for state in agent.stream(
-                {"messages": [HumanMessage(content=scenario.task.get_prompt())]}
+                {"messages": [HumanMessage(content=scenario.task.get_prompt())]},
+                {
+                    "recursion_limit": 100
+                },  # NOTE (jmatejcz) what should be recursion limit?
             ):
                 graph_node_name = list(state.keys())[0]
                 msg = state[graph_node_name]["messages"][-1]
@@ -256,34 +524,34 @@ class Benchmark:
                                 last_msg = msg.content[0].get("text", "")
                     else:
                         last_msg = msg.content
-                        self._logger.debug(f"{graph_node_name}: {last_msg}")  # type: ignore
+                        self._logger.debug(f"{graph_node_name}: {last_msg}")
 
                 else:
                     raise ValueError(f"Unexpected type of message: {type(msg)}")
 
                 if isinstance(msg, AIMessage):
-                    # TODO (jm) figure out more robust way of counting tool calls
                     tool_calls_num += len(msg.tool_calls)
 
-                self._logger.info(f"AI Message: {msg}")  # type: ignore
+                self._logger.info(f"AI Message: {msg}")
 
             te = time.perf_counter()
-
-            result = scenario.task.calculate_result(self.simulation_bridge)
-            total_time = te - ts
-            self._logger.info(  # type: ignore
-                f"TASK SCORE: {result}, TOTAL TIME: {total_time:.3f}, NUM_OF_TOOL_CALLS: {tool_calls_num}"
-            )
-
-            scenario_result: Dict[str, Any] = {
-                "task": scenario.task.get_prompt(),
-                "simulation_config": scenario.simulation_config_path,
-                "final_score": result,
-                "total_time": f"{total_time:.3f}",
-                "number_of_tool_calls": tool_calls_num,
-            }
-            self.results.append(scenario_result)
-            self._save_scenario_result_to_csv(scenario_result)
+            try:
+                result = scenario.task.calculate_result(self.simulation_bridge)
+                total_time = te - ts
+                self._logger.info(
+                    f"TASK SCORE: {result}, TOTAL TIME: {total_time:.3f}, NUM_OF_TOOL_CALLS: {tool_calls_num}"
+                )
+                scenario_result: Dict[str, Any] = {
+                    "task": scenario.task.get_prompt(),
+                    "simulation_config": scenario.simulation_config_path,
+                    "final_score": result,
+                    "total_time": f"{total_time:.3f}",
+                    "number_of_tool_calls": tool_calls_num,
+                }
+                self.results.append(scenario_result)
+                self._save_scenario_result_to_csv(scenario_result)
+            except EntitiesMismatchException as e:
+                self._logger.error(e)
 
         except StopIteration:
             print("No more scenarios left to run.")
