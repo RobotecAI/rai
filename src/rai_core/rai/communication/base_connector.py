@@ -53,7 +53,7 @@ class BaseConnector(Generic[T]):
     @abstractmethod
     def service_call(
         self, message: T, target: str, timeout_sec: float, **kwargs: Any
-    ) -> T:
+    ) -> BaseMessage:
         pass
 
     @abstractmethod

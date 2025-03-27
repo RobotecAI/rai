@@ -38,7 +38,7 @@ class ROS2ServiceMixin:
         *,
         msg_type: str,
         **kwargs: Any,
-    ) -> ROS2ARIMessage:
+    ) -> ROS2ARIMessage | ROS2HRIMessage:
         msg = self._service_api.call_service(
             service_name=target,
             service_type=msg_type,

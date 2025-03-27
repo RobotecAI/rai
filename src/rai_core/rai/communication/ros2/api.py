@@ -34,6 +34,7 @@ from typing import (
     Type,
     TypedDict,
     cast,
+    runtime_checkable,
 )
 
 import rclpy
@@ -47,8 +48,9 @@ import rclpy.task
 import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
 from action_msgs.srv import CancelGoal
-from rclpy.action import ActionClient
+from rclpy.action import ActionClient, ActionServer
 from rclpy.action.client import ClientGoalHandle
+from rclpy.action.server import ServerGoalHandle
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.publisher import Publisher
 from rclpy.qos import (
@@ -58,14 +60,16 @@ from rclpy.qos import (
     QoSProfile,
     ReliabilityPolicy,
 )
+from rclpy.service import Service
 from rclpy.task import Future
 from rclpy.topic_endpoint_info import TopicEndpointInfo
 
 from rai.tools.ros.utils import import_message_from_str
 
 
+@runtime_checkable
 class IROS2Message(Protocol):
-    __slots__: tuple
+    __slots__: list
 
     def get_fields_and_field_types(self) -> dict: ...
 
@@ -590,6 +594,7 @@ class ROS2ServiceAPI:
     def __init__(self, node: rclpy.node.Node) -> None:
         self.node = node
         self._logger = node.get_logger()
+        self._services: Dict[str, Service] = {}
 
     def call_service(
         self,
@@ -622,6 +627,19 @@ class ROS2ServiceAPI:
     def get_service_names_and_types(self) -> List[Tuple[str, List[str]]]:
         return self.node.get_service_names_and_types()
 
+    def create_service(
+        self,
+        service_name: str,
+        service_type: str,
+        callback: Callable[[Any, Any], Any],
+        **kwargs,
+    ) -> str:
+        srv_cls = import_message_from_str(service_type)
+        service = self.node.create_service(srv_cls, service_name, callback, **kwargs)
+        handle = str(uuid.uuid4())
+        self._services[handle] = service
+        return handle
+
 
 class ROS2ActionData(TypedDict):
     action_client: Optional[ActionClient]
@@ -636,6 +654,7 @@ class ROS2ActionAPI:
         self.node = node
         self._logger = node.get_logger()
         self.actions: Dict[str, ROS2ActionData] = {}
+        self._action_servers: Dict[str, ActionServer] = {}
         self._callback_executor = ThreadPoolExecutor(max_workers=10)
 
     def _generate_handle(self):
@@ -671,6 +690,54 @@ class ROS2ActionAPI:
             callback(copy.deepcopy(feedback_msg))
         except Exception as e:
             self._logger.error(f"Error in feedback callback: {str(e)}")
+
+    def create_action_server(
+        self,
+        action_type: str,
+        action_name: str,
+        execute_callback: Callable[[ServerGoalHandle], Type[IROS2Message]],
+        **kwargs,
+    ) -> str:
+        """
+        Create an action server.
+
+        Args:
+            action_type: The action message type with namespace
+            action_name: The name of the action server
+            execute_callback: The callback to execute when a goal is received
+            **kwargs: Additional arguments to pass to the ActionServer constructor
+
+        Returns:
+            The handle for the created action server
+
+        Raises:
+            ValueError: If the action server cannot be created
+        """
+        handle = self._generate_handle()
+        action_ros_type = import_message_from_str(action_type)
+        try:
+            action_server = ActionServer(
+                node=self.node,
+                action_type=action_ros_type,
+                action_name=action_name,
+                execute_callback=execute_callback,
+                **kwargs,
+            )
+        except TypeError as e:
+            import inspect
+
+            signature = inspect.signature(ActionServer.__init__)
+            args = [
+                param.name
+                for param in signature.parameters.values()
+                if param.name != "self"
+            ]
+
+            raise ValueError(
+                f"Failed to create action server: {str(e)}. Valid arguments are: {args}"
+            )
+        self._action_servers[handle] = action_server
+        return handle
 
     def send_goal(
         self,
