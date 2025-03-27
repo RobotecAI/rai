@@ -194,7 +194,7 @@ class GetROS2TopicsNamesAndTypesTool(BaseROS2Tool):
             response = [
                 {"topic": topic, "type": type} for topic, type in topics_and_types
             ]
-            return f"{'\n'.join([stringify_dict(topic) for topic in response])}"
+            return "\n".join([stringify_dict(topic) for topic in response])
         else:
             readable_and_writable_topics: List[Dict[str, Any]] = []
             readable_topics: List[Dict[str, Any]] = []
