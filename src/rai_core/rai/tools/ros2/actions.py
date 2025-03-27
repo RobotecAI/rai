@@ -23,18 +23,40 @@ import uuid
 from collections import defaultdict
 from functools import partial
 from threading import Lock
-from typing import Any, Callable, Dict, List, Type
+from typing import Annotated, Any, Callable, Dict, List, Optional, Type
 
 from langchain_core.tools import BaseTool, BaseToolkit  # type: ignore
 from pydantic import BaseModel, ConfigDict, Field
 
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
+from rai.tools.ros2.base import BaseROS2Tool
 
 
 class ROS2ActionToolkit(BaseToolkit):
     name: str = "ros2_action"
     description: str = "A toolkit for ROS2 actions"
     connector: ROS2ARIConnector
+    readable: Optional[
+        Annotated[
+            List[str],
+            """The topics that can be read.
+            If the list is not provided, all topics can be read.""",
+        ]
+    ] = None
+    writable: Optional[
+        Annotated[
+            List[str],
+            """The names (topics/actions/services) that can be written.
+            If the list is not provided, all topics can be written.""",
+        ]
+    ] = None
+    forbidden: Optional[
+        Annotated[
+            List[str],
+            """The names (topics/actions/services) that are forbidden to read and write.""",
+        ]
+    ] = None
+
     action_results_store: Dict[str, Any] = {}
     action_results_store_lock: Lock = Lock()
     action_feedbacks_store: Dict[str, List[Any]] = defaultdict(list)
@@ -51,9 +73,21 @@ class ROS2ActionToolkit(BaseToolkit):
                 connector=self.connector,
                 feedback_callback=self._generic_feedback_callback,
                 on_done_callback=self._generic_on_done_callback,
+                readable=self.readable,
+                writable=self.writable,
+                forbidden=self.forbidden,
             ),
-            CancelROS2ActionTool(connector=self.connector),
+            CancelROS2ActionTool(
+                connector=self.connector,
+                readable=self.readable,
+                writable=self.writable,
+                forbidden=self.forbidden,
+            ),
             GetROS2ActionFeedbackTool(
+                connector=self.connector,
+                readable=self.readable,
+                writable=self.writable,
+                forbidden=self.forbidden,
                 action_feedbacks_store=self.action_feedbacks_store,
                 action_feedbacks_store_lock=self.action_feedbacks_store_lock,
                 internal_action_id_mapping=self.internal_action_id_mapping,
@@ -85,7 +119,7 @@ class StartROS2ActionToolInput(BaseModel):
     )
 
 
-class StartROS2ActionTool(BaseTool):
+class StartROS2ActionTool(BaseROS2Tool):
     connector: ROS2ARIConnector
     feedback_callback: Callable[[Any, str], None] = lambda _, __: None
     on_done_callback: Callable[[Any, str], None] = lambda _, __: None
@@ -97,6 +131,8 @@ class StartROS2ActionTool(BaseTool):
     def _run(
         self, action_name: str, action_type: str, action_args: Dict[str, Any]
     ) -> str:
+        if not self.is_writable(action_name):
+            raise ValueError(f"Action {action_name} is not writable")
         message = ROS2ARIMessage(payload=action_args)
         action_id = str(uuid.uuid4())
         response = self.connector.start_action(
@@ -114,7 +150,7 @@ class GetROS2ActionFeedbackToolInput(BaseModel):
     action_id: str = Field(..., description="The ID of the action to get feedback for")
 
 
-class GetROS2ActionFeedbackTool(BaseTool):
+class GetROS2ActionFeedbackTool(BaseROS2Tool):
     name: str = "get_ros2_action_feedback"
     description: str = "Get the feedback of a ROS2 action by its action ID"
     args_schema: Type[GetROS2ActionFeedbackToolInput] = GetROS2ActionFeedbackToolInput
@@ -157,8 +193,7 @@ class CancelROS2ActionToolInput(BaseModel):
     action_id: str = Field(..., description="The ID of the action to cancel")
 
 
-class CancelROS2ActionTool(BaseTool):
-    connector: ROS2ARIConnector
+class CancelROS2ActionTool(BaseROS2Tool):
     name: str = "cancel_ros2_action"
     description: str = "Cancel a ROS2 action"
     args_schema: Type[CancelROS2ActionToolInput] = CancelROS2ActionToolInput

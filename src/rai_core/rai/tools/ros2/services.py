@@ -21,10 +21,10 @@ except ImportError:
 
 from typing import Any, Dict, Type
 
-from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
+from rai.communication.ros2.connectors import ROS2ARIMessage
+from rai.tools.ros2.base import BaseROS2Tool
 
 
 class CallROS2ServiceToolInput(BaseModel):
@@ -35,8 +35,7 @@ class CallROS2ServiceToolInput(BaseModel):
     )
 
 
-class CallROS2ServiceTool(BaseTool):
-    connector: ROS2ARIConnector
+class CallROS2ServiceTool(BaseROS2Tool):
     name: str = "call_ros2_service"
     description: str = "Call a ROS2 service"
     args_schema: Type[CallROS2ServiceToolInput] = CallROS2ServiceToolInput
@@ -44,6 +43,8 @@ class CallROS2ServiceTool(BaseTool):
     def _run(
         self, service_name: str, service_type: str, service_args: Dict[str, Any]
     ) -> str:
+        if not self.is_writable(service_name):
+            raise ValueError(f"Service {service_name} is not writable")
         message = ROS2ARIMessage(payload=service_args)
         response = self.connector.service_call(
             message, service_name, msg_type=service_type
