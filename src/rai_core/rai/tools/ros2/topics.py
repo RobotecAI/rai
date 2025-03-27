@@ -209,11 +209,26 @@ class GetROS2TopicsNamesAndTypesTool(BaseROS2Tool):
                 if self.is_writable(topic):
                     writable_topics.append({"topic": topic, "type": type})
 
-            text_response = f"{'\n'.join([stringify_dict(topic_description) for topic_description in readable_and_writable_topics])}"
+            text_response = "\n".join(
+                [
+                    stringify_dict(topic_description)
+                    for topic_description in readable_and_writable_topics
+                ]
+            )
             if readable_topics:
-                text_response += f"\nReadable topics: {'\n'.join([stringify_dict(topic_description) for topic_description in readable_topics])}"
+                text_response += "\nReadable topics:" + "\n".join(
+                    [
+                        stringify_dict(topic_description)
+                        for topic_description in readable_topics
+                    ]
+                )
             if writable_topics:
-                text_response += f"\nWritable topics: {'\n'.join([stringify_dict(topic_description) for topic_description in writable_topics])}"
+                text_response += "\nWritable topics:" + "\n".join(
+                    [
+                        stringify_dict(topic_description)
+                        for topic_description in writable_topics
+                    ]
+                )
             return text_response
 
 
