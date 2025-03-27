@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "rai-whoami"
+version = "0.0.1"
+description = "Package for processing robot's documentation into identity, capabilities, constraints and vector database"
+authors = ["Maciej Majek <maciej.majek@robotec.ai>"]
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+]
+packages = [
+    { include = "rai_whoami", from = "." },
+]
+
+[tool.poetry.dependencies]
+python = "^3.10, <3.13"
+pymongo = "^4.11.3"
+docx2txt = "^0.9"
+pypdf = "^5.4.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

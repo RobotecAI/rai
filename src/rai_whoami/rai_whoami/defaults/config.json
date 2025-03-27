@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0",
+  "environment": "development",
+  "identity": {
+    "$ref": "identity.json"
+  },
+  "constitution": {
+    "$ref": "constitution.json"
+  },
+  "vector_db": {
+    "$ref": "vector_db.json"
+  }
+}
