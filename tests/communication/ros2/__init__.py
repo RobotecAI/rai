@@ -15,7 +15,7 @@
 from .helpers import (
     ActionServer,
     MessagePublisher,
-    MessageReceiver,
+    MessageSubscriber,
     multi_threaded_spinner,
     shutdown_executors_and_threads,
 )
@@ -23,7 +23,7 @@ from .helpers import (
 __all__ = [
     "ActionServer",
     "MessagePublisher",
-    "MessageReceiver",
+    "MessageSubscriber",
     "multi_threaded_spinner",
     "shutdown_executors_and_threads",
 ]

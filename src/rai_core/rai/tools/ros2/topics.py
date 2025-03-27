@@ -20,7 +20,7 @@ except ImportError:
     )
 
 import json
-from typing import Any, Dict, List, Literal, Tuple, Type
+from typing import Annotated, Any, Dict, List, Literal, Optional, Tuple, Type
 
 import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
@@ -34,6 +34,7 @@ from sensor_msgs.msg import CompressedImage, Image
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from rai.messages.multimodal import MultimodalArtifact
 from rai.messages.utils import preprocess_image
+from rai.tools.ros2.base import BaseROS2Tool
 from rai.tools.ros2.utils import ros2_message_to_dict
 
 
@@ -41,6 +42,26 @@ class ROS2TopicsToolkit(BaseToolkit):
     name: str = "ROS2TopicsToolkit"
     description: str = "A toolkit for ROS2 topics"
     connector: ROS2ARIConnector
+    readable: Optional[
+        Annotated[
+            List[str],
+            """The topics that can be read.
+            If the list is not provided, all topics can be read.""",
+        ]
+    ] = None
+    writable: Optional[
+        Annotated[
+            List[str],
+            """The names (topics/actions/services) that can be written.
+            If the list is not provided, all topics can be written.""",
+        ]
+    ] = None
+    forbidden: Optional[
+        Annotated[
+            List[str],
+            """The names (topics/actions/services) that are forbidden to read and write.""",
+        ]
+    ] = None
 
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
@@ -48,12 +69,42 @@ class ROS2TopicsToolkit(BaseToolkit):
 
     def get_tools(self) -> List[BaseTool]:
         return [
-            PublishROS2MessageTool(connector=self.connector),
-            ReceiveROS2MessageTool(connector=self.connector),
-            GetROS2ImageTool(connector=self.connector),
-            GetROS2TransformTool(connector=self.connector),
-            GetROS2TopicsNamesAndTypesTool(connector=self.connector),
-            GetROS2MessageInterfaceTool(connector=self.connector),
+            PublishROS2MessageTool(
+                connector=self.connector,
+                readable=self.readable,
+                writable=self.writable,
+                forbidden=self.forbidden,
+            ),
+            ReceiveROS2MessageTool(
+                connector=self.connector,
+                readable=self.readable,
+                writable=self.writable,
+                forbidden=self.forbidden,
+            ),
+            GetROS2ImageTool(
+                connector=self.connector,
+                readable=self.readable,
+                writable=self.writable,
+                forbidden=self.forbidden,
+            ),
+            GetROS2TransformTool(
+                connector=self.connector,
+                readable=self.readable,
+                writable=self.writable,
+                forbidden=self.forbidden,
+            ),
+            GetROS2TopicsNamesAndTypesTool(
+                connector=self.connector,
+                readable=self.readable,
+                writable=self.writable,
+                forbidden=self.forbidden,
+            ),
+            GetROS2MessageInterfaceTool(
+                connector=self.connector,
+                readable=self.readable,
+                writable=self.writable,
+                forbidden=self.forbidden,
+            ),
         ]
 
 
@@ -63,13 +114,14 @@ class PublishROS2MessageToolInput(BaseModel):
     message_type: str = Field(..., description="The type of the message")
 
 
-class PublishROS2MessageTool(BaseTool):
-    connector: ROS2ARIConnector
+class PublishROS2MessageTool(BaseROS2Tool):
     name: str = "publish_ros2_message"
     description: str = "Publish a message to a ROS2 topic"
     args_schema: Type[PublishROS2MessageToolInput] = PublishROS2MessageToolInput
 
     def _run(self, topic: str, message: Dict[str, Any], message_type: str) -> str:
+        if not self.is_writable(topic):
+            raise ValueError(f"Topic {topic} is not writable")
         ros_message = ROS2ARIMessage(
             payload=message,
             metadata={"topic": topic},
@@ -82,13 +134,15 @@ class ReceiveROS2MessageToolInput(BaseModel):
     topic: str = Field(..., description="The topic to receive the message from")
 
 
-class ReceiveROS2MessageTool(BaseTool):
+class ReceiveROS2MessageTool(BaseROS2Tool):
     connector: ROS2ARIConnector
     name: str = "receive_ros2_message"
     description: str = "Receive a message from a ROS2 topic"
     args_schema: Type[ReceiveROS2MessageToolInput] = ReceiveROS2MessageToolInput
 
     def _run(self, topic: str) -> str:
+        if not self.is_readable(topic):
+            raise ValueError(f"Topic {topic} is not readable")
         message = self.connector.receive_message(topic)
         return str({"payload": message.payload, "metadata": message.metadata})
 
@@ -98,7 +152,7 @@ class GetROS2ImageToolInput(BaseModel):
     timeout_sec: float = Field(1.0, description="The timeout in seconds")
 
 
-class GetROS2ImageTool(BaseTool):
+class GetROS2ImageTool(BaseROS2Tool):
     connector: ROS2ARIConnector
     name: str = "get_ros2_image"
     description: str = "Get an image from a ROS2 topic"
@@ -108,6 +162,8 @@ class GetROS2ImageTool(BaseTool):
     def _run(
         self, topic: str, timeout_sec: float = 1.0
     ) -> Tuple[str, MultimodalArtifact]:
+        if not self.is_readable(topic):
+            raise ValueError(f"Topic {topic} is not readable")
         message = self.connector.receive_message(topic, timeout_sec=timeout_sec)
         msg_type = type(message.payload)
         if msg_type == Image:
@@ -127,18 +183,53 @@ class GetROS2ImageTool(BaseTool):
         )  # type: ignore
 
 
-class GetROS2TopicsNamesAndTypesTool(BaseTool):
+class GetROS2TopicsNamesAndTypesTool(BaseROS2Tool):
     connector: ROS2ARIConnector
     name: str = "get_ros2_topics_names_and_types"
     description: str = "Get the names and types of all ROS2 topics"
 
     def _run(self) -> str:
         topics_and_types = self.connector.get_topics_names_and_types()
-        response = [
-            stringify_dict({"topic": topic, "type": type})
-            for topic, type in topics_and_types
-        ]
-        return "\n".join(response)
+        if all([self.readable is None, self.writable is None, self.forbidden is None]):
+            response = [
+                {"topic": topic, "type": type} for topic, type in topics_and_types
+            ]
+            return "\n".join([stringify_dict(topic) for topic in response])
+        else:
+            readable_and_writable_topics: List[Dict[str, Any]] = []
+            readable_topics: List[Dict[str, Any]] = []
+            writable_topics: List[Dict[str, Any]] = []
+
+            for topic, type in topics_and_types:
+                if self.is_readable(topic) and self.is_writable(topic):
+                    readable_and_writable_topics.append({"topic": topic, "type": type})
+                    continue
+                if self.is_readable(topic):
+                    readable_topics.append({"topic": topic, "type": type})
+                if self.is_writable(topic):
+                    writable_topics.append({"topic": topic, "type": type})
+
+            text_response = "\n".join(
+                [
+                    stringify_dict(topic_description)
+                    for topic_description in readable_and_writable_topics
+                ]
+            )
+            if readable_topics:
+                text_response += "\nReadable topics:" + "\n".join(
+                    [
+                        stringify_dict(topic_description)
+                        for topic_description in readable_topics
+                    ]
+                )
+            if writable_topics:
+                text_response += "\nWritable topics:" + "\n".join(
+                    [
+                        stringify_dict(topic_description)
+                        for topic_description in writable_topics
+                    ]
+                )
+            return text_response
 
 
 class GetROS2MessageInterfaceToolInput(BaseModel):
@@ -147,7 +238,7 @@ class GetROS2MessageInterfaceToolInput(BaseModel):
     )
 
 
-class GetROS2MessageInterfaceTool(BaseTool):
+class GetROS2MessageInterfaceTool(BaseROS2Tool):
     connector: ROS2ARIConnector
     name: str = "get_ros2_message_interface"
     description: str = "Get the interface of a ROS2 message"
@@ -179,7 +270,7 @@ class GetROS2TransformToolInput(BaseModel):
     timeout_sec: float = Field(default=5.0, description="The timeout in seconds")
 
 
-class GetROS2TransformTool(BaseTool):
+class GetROS2TransformTool(BaseROS2Tool):
     connector: ROS2ARIConnector
     name: str = "get_ros2_transform"
     description: str = "Get the transform between two frames"

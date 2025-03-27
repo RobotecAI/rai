@@ -39,7 +39,7 @@ from rai.tools.ros2 import (
 from tests.communication.ros2.helpers import (
     ImagePublisher,
     MessagePublisher,
-    MessageReceiver,
+    MessageSubscriber,
     TransformPublisher,
     multi_threaded_spinner,
     ros_setup,
@@ -52,7 +52,7 @@ _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
 def test_publish_message_tool(ros_setup: None, request: pytest.FixtureRequest) -> None:
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     connector = ROS2ARIConnector()
-    receiver = MessageReceiver(topic=topic_name)
+    receiver = MessageSubscriber(topic=topic_name)
     executors, threads = multi_threaded_spinner([receiver])
     tool = PublishROS2MessageTool(connector=connector)
     try:
@@ -64,6 +64,41 @@ def test_publish_message_tool(ros_setup: None, request: pytest.FixtureRequest) -
         time.sleep(0.2)
         assert len(receiver.received_messages) == 1
         assert receiver.received_messages[0].data == "test"  # type: ignore
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_publish_message_tool_with_forbidden_topic(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    connector = ROS2ARIConnector()
+    tool = PublishROS2MessageTool(connector=connector, forbidden=[topic_name])
+    with pytest.raises(ValueError):
+        tool._run(
+            topic=topic_name,
+            message={"data": "test"},
+            message_type="std_msgs/msg/String",
+        )
+
+
+def test_publish_message_tool_with_writable_topic(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    connector = ROS2ARIConnector()
+    subscriber = MessageSubscriber(topic=topic_name)
+    executors, threads = multi_threaded_spinner([subscriber])
+    tool = PublishROS2MessageTool(connector=connector, writable=[topic_name])
+    try:
+        tool._run(
+            topic=topic_name,
+            message={"data": "test"},
+            message_type="std_msgs/msg/String",
+        )  # type: ignore
+        time.sleep(0.2)
+        assert len(subscriber.received_messages) == 1
+        assert subscriber.received_messages[0].data == "test"  # type: ignore
     finally:
         shutdown_executors_and_threads(executors, threads)
 
@@ -101,6 +136,36 @@ def test_receive_image_tool(ros_setup: None, request: pytest.FixtureRequest) -> 
         shutdown_executors_and_threads(executors, threads)
 
 
+def test_receive_message_tool_with_forbidden_topic(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    connector = ROS2ARIConnector()
+    tool = ReceiveROS2MessageTool(connector=connector, forbidden=[topic_name])
+    with pytest.raises(ValueError):
+        tool._run(topic=topic_name)  # type: ignore
+
+
+def test_receive_message_tool_with_readable_topic(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    connector = ROS2ARIConnector()
+    publisher = ImagePublisher(topic=topic_name)
+    executors, threads = multi_threaded_spinner([publisher])
+    tool = GetROS2ImageTool(connector=connector, readable=[topic_name])
+    time.sleep(1)
+    try:
+        _, artifact_dict = tool._run(topic=topic_name)  # type: ignore
+        images = artifact_dict["images"]
+        assert len(images) == 1
+        image = images[0]
+        image = Image.open(io.BytesIO(base64.b64decode(image)))
+        assert image.size == (100, 100)
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
 def test_get_topics_names_and_types_tool(
     ros_setup: None, request: pytest.FixtureRequest
 ) -> None:
@@ -108,6 +173,27 @@ def test_get_topics_names_and_types_tool(
     tool = GetROS2TopicsNamesAndTypesTool(connector=connector)
     response = tool._run()
     assert response != ""
+
+
+def test_get_topics_names_and_types_tool_with_forbidden_topic(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    connector = ROS2ARIConnector()
+    tool = GetROS2TopicsNamesAndTypesTool(connector=connector, forbidden=["/rosout"])
+    response = tool._run()
+    assert response != ""
+    assert "/rosout" not in response
+
+
+def test_get_topics_names_and_types_tool_with_readable_topic(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    connector = ROS2ARIConnector()
+    tool = GetROS2TopicsNamesAndTypesTool(connector=connector, readable=["/rosout"])
+    response = tool._run()
+    print(response)
+    assert response != ""
+    assert "/rosout" in response
 
 
 def test_get_message_interface_tool(

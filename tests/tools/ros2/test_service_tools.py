@@ -51,3 +51,37 @@ def test_service_call_tool(ros_setup: None, request: pytest.FixtureRequest) -> N
         assert "success=True" in response
     finally:
         shutdown_executors_and_threads(executors, threads)
+
+
+def test_service_call_tool_with_forbidden_service(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    service_name = f"{request.node.originalname}_service"  # type: ignore
+    connector = ROS2ARIConnector()
+    tool = CallROS2ServiceTool(connector=connector, forbidden=[service_name])
+    with pytest.raises(ValueError):
+        tool._run(
+            service_name=service_name,
+            service_type="std_srvs/srv/SetBool",
+            service_args={},
+        )
+
+
+def test_service_call_tool_with_writable_service(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    service_name = f"{request.node.originalname}_service"  # type: ignore
+    connector = ROS2ARIConnector()
+    server = ServiceServer(service_name=service_name)
+    executors, threads = multi_threaded_spinner([server])
+    tool = CallROS2ServiceTool(connector=connector, writable=[service_name])
+    try:
+        response = tool._run(  # type: ignore
+            service_name=service_name,
+            service_type="std_srvs/srv/SetBool",
+            service_args={},
+        )
+        assert "Test service called" in response
+        assert "success=True" in response
+    finally:
+        shutdown_executors_and_threads(executors, threads)

@@ -32,7 +32,7 @@ from .helpers import ActionServer_ as ActionServer
 from .helpers import (
     HRIMessageSubscriber,
     MessagePublisher,
-    MessageReceiver,
+    MessageSubscriber,
     ServiceServer,
     multi_threaded_spinner,
     ros_setup,
@@ -47,7 +47,7 @@ def test_ros2_single_message_publish(
 ) -> None:
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
-    message_receiver = MessageReceiver(topic_name)
+    message_receiver = MessageSubscriber(topic_name)
     node = Node(node_name)
     executors, threads = multi_threaded_spinner([message_receiver, node])
 
@@ -127,7 +127,7 @@ def test_ros2_single_message_publish_configured_no_config(
 ) -> None:
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
-    message_receiver = MessageReceiver(topic_name)
+    message_receiver = MessageSubscriber(topic_name)
     node = Node(node_name)
     executors, threads = multi_threaded_spinner([message_receiver, node])
 
@@ -147,7 +147,7 @@ def test_ros2_single_message_publish_wrong_msg_type(
 ) -> None:
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
-    message_receiver = MessageReceiver(topic_name)
+    message_receiver = MessageSubscriber(topic_name)
     node = Node(node_name)
     executors, threads = multi_threaded_spinner([message_receiver, node])
 
@@ -168,7 +168,7 @@ def test_ros2_single_message_publish_wrong_msg_content(
 ) -> None:
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
-    message_receiver = MessageReceiver(topic_name)
+    message_receiver = MessageSubscriber(topic_name)
     node = Node(node_name)
     executors, threads = multi_threaded_spinner([message_receiver, node])
 
@@ -189,7 +189,7 @@ def test_ros2_single_message_publish_wrong_qos_setup(
 ) -> None:
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
-    message_receiver = MessageReceiver(topic_name)
+    message_receiver = MessageSubscriber(topic_name)
     node = Node(node_name)
     executors, threads = multi_threaded_spinner([message_receiver, node])
 

@@ -32,7 +32,7 @@ from .helpers import ActionServer_ as ActionServer
 from .helpers import (
     HRIMessageSubscriber,
     MessagePublisher,
-    MessageReceiver,
+    MessageSubscriber,
     ServiceServer,
     multi_threaded_spinner,
     ros_setup,
@@ -46,7 +46,7 @@ def test_ros2ari_connector_send_message(
     ros_setup: None, request: pytest.FixtureRequest
 ):
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
-    message_receiver = MessageReceiver(topic_name)
+    message_receiver = MessageSubscriber(topic_name)
     executors, threads = multi_threaded_spinner([message_receiver])
     connector = ROS2ARIConnector()
     try:
