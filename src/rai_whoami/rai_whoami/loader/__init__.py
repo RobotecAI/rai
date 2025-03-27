@@ -12,14 +12,57 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
+from typing import Tuple
+
 from .base import ConfigData, ConfigLoader
-from .manager import ConfigManager, ConfigSource
-from .schema import RobotConfig
+from .file_loader import FileConfigLoader
+from .mongo_loader import MongoConfigLoader
+from .schema import RobotConfig, RobotConstitution, RobotIdentity, VectorDBConfig
 
 __all__ = [
     "ConfigData",
     "ConfigLoader",
-    "ConfigManager",
-    "ConfigSource",
+    "FileConfigLoader",
+    "MongoConfigLoader",
     "RobotConfig",
+    "RobotConstitution",
+    "RobotIdentity",
+    "VectorDBConfig",
+    "load_configs_from_dir",
 ]
+
+
+def load_configs_from_dir(
+    config_dir: str | Path,
+) -> Tuple[RobotIdentity, RobotConstitution]:
+    """Load both identity and constitution configurations from a directory.
+
+    Parameters
+    ----------
+    config_dir : str | Path
+        Path to the directory containing configuration files.
+
+    Returns
+    -------
+    Tuple[RobotIdentity, RobotConstitution]
+        A tuple containing the loaded identity and constitution configurations.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the configuration files are not found.
+    """
+    config_dir = Path(config_dir)
+
+    # Load identity configuration
+    identity_loader = FileConfigLoader(config_dir / "identity.json")
+    identity_data = identity_loader.load()
+    identity = RobotIdentity(**identity_data.data)
+
+    # Load constitution configuration
+    constitution_loader = FileConfigLoader(config_dir / "constitution.json")
+    constitution_data = constitution_loader.load()
+    constitution = RobotConstitution(**constitution_data.data)
+
+    return identity, constitution

@@ -16,10 +16,14 @@
 
 from .docs_processors.config_generator import ConfigGenerator
 from .docs_processors.generate_configs import generate_configs_from_docs
+from .loader.file_loader import FileConfigLoader
+from .loader.mongo_loader import MongoConfigLoader
 from .loader.schema import RobotConfig, RobotConstitution, RobotIdentity
 
 __all__ = [
     "ConfigGenerator",
+    "FileConfigLoader",
+    "MongoConfigLoader",
     "RobotConfig",
     "RobotConstitution",
     "RobotIdentity",
