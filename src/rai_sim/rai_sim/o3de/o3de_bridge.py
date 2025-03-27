@@ -70,6 +70,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         self.current_sim_process = None
         self.current_robotic_stack_process = None
         self.current_binary_path = None
+        self.current_binary_level = None
 
     def shutdown(self):
         self._shutdown_binary()
@@ -273,12 +274,16 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         self,
         simulation_config: O3DExROS2SimulationConfig,
     ):
-        if self.current_binary_path != simulation_config.binary_path:
+        if (
+            self.current_binary_path != simulation_config.binary_path
+            or self.current_binary_level != simulation_config.level
+        ):
             if self.current_sim_process:
                 self.shutdown()
             self._launch_binary(simulation_config)
             self._launch_robotic_stack(simulation_config)
             self.current_binary_path = simulation_config.binary_path
+            self.current_binary_level = simulation_config.level
 
         else:
             while self.spawned_entities:
