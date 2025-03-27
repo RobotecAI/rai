@@ -30,10 +30,12 @@ from rai_bench.tool_calling_agent_bench.ros2_agent_tasks import (
     MoveExistingObjectFrontTask,
     MoveExistingObjectLeftTask,
     MoveToPointTask,
+    PublishROS2CustomMessageTask,
     SwapObjectsTask,
 )
 
 tasks: Sequence[ToolCallingAgentTask] = [
+    PublishROS2CustomMessageTask(),
     GetROS2RGBCameraTask(),
     GetROS2TopicsTask(),
     GetROS2DepthCameraTask(),

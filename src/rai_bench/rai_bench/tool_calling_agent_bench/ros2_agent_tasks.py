@@ -29,8 +29,10 @@ from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
 from rai_bench.tool_calling_agent_bench.mocked_tools import (
     MockGetObjectPositionsTool,
     MockGetROS2ImageTool,
+    MockGetROS2MessageInterfaceTool,
     MockGetROS2TopicsNamesAndTypesTool,
     MockMoveToPointTool,
+    MockPublishROS2MessageTool,
     MockReceiveROS2MessageTool,
 )
 
@@ -1512,3 +1514,157 @@ class SwapObjectsTask(ROS2ToolCallingAgentTask):
             any(call["name"] == e["name"] and call["args"] == e["args"] for call in it)
             for e in expected_tool_calls_seq
         )
+
+
+class PublishROS2CustomMessageTask(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+
+    def __init__(self, logger: loggers_type | None = None) -> None:
+        super().__init__(logger=logger)
+        self.expected_tools: List[BaseTool] = [
+            MockGetROS2TopicsNamesAndTypesTool(
+                mock_topics_names_and_types=[
+                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
+                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
+                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
+                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
+                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
+                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
+                    "topic: /color_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
+                    "topic: /depth_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
+                    "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
+                    "topic: /to_human\ntype: rai_interfaces/msg/HRIMessage\n",
+                ]
+            ),
+            MockGetROS2MessageInterfaceTool(
+                mock_interfaces={
+                    "moveit_msgs/msg/AttachedCollisionObject": (
+                        "ros2 interface show moveit_msgs/msg/AttachedCollisionObject:\n"
+                        "std_msgs/Header header\n"
+                        "string link_name\n"
+                        "moveit_msgs/msg/CollisionObject object\n"
+                        "string[] touch_links\n"
+                    ),
+                    "sensor_msgs/msg/Image": (
+                        "ros2 interface show sensor_msgs/msg/Image:\n"
+                        "std_msgs/Header header\n"
+                        "uint32 height\n"
+                        "uint32 width\n"
+                        "string encoding\n"
+                        "uint8 is_bigendian\n"
+                        "uint32 step\n"
+                        "uint8[] data\n"
+                    ),
+                    "rosgraph_msgs/msg/Clock": (
+                        "ros2 interface show rosgraph_msgs/msg/Clock:\n"
+                        "builtin_interfaces/Time clock\n"
+                    ),
+                    "moveit_msgs/msg/CollisionObject": (
+                        "ros2 interface show moveit_msgs/msg/CollisionObject:\n"
+                        "std_msgs/Header header\n"
+                        "string id\n"
+                        "shape_msgs/SolidPrimitive[] primitives\n"
+                        "geometry_msgs/Pose[] primitive_poses\n"
+                        "shape_msgs/Mesh[] meshes\n"
+                        "geometry_msgs/Pose[] mesh_poses\n"
+                        "shape_msgs/Plane[] planes\n"
+                        "geometry_msgs/Pose[] plane_poses\n"
+                        "uint8 operation\n"
+                    ),
+                    "sensor_msgs/msg/CameraInfo": (
+                        "ros2 interface show sensor_msgs/msg/CameraInfo:\n"
+                        "std_msgs/Header header\n"
+                        "uint32 height\n"
+                        "uint32 width\n"
+                        "string distortion_model\n"
+                        "float64[] D\n"
+                        "float64[9] K\n"
+                        "float64[9] R\n"
+                        "float64[12] P\n"
+                        "uint32 binning_x\n"
+                        "uint32 binning_y\n"
+                        "sensor_msgs/RegionOfInterest roi\n"
+                    ),
+                    "rai_interfaces/msg/HRIMessage": (
+                        "ros2 interface show rai_interfaces/msg/HRIMessage:\n"
+                        "std_msgs/Header header\n"
+                        "string text\n"
+                        "sensor_msgs/Image[] images\n"
+                        "rai_interfaces/AudioMessage[] audios\n"
+                    ),
+                    "rai_interfaces/msg/AudioMessage": (
+                        "ros2 interface show rai_interfaces/msg/AudioMessage:\n"
+                        "int16[] audio\n"
+                        "uint16 sample_rate\n"
+                        "uint16 channels\n"
+                    ),
+                }
+            ),
+            MockPublishROS2MessageTool(
+                expected_topic="/to_human",
+                expected_message={
+                    "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+                    "text": "Hello!",
+                    "images": [],
+                    "audios": [],
+                },
+                expected_message_type="rai_interfaces/msg/HRIMessage",
+            ),
+        ]
+
+    def get_system_prompt(self) -> str:
+        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
+
+    def get_prompt(self) -> str:
+        return "Publish message 'Hello!' to the topic /to_human"
+
+    def verify_tool_calls(self, response: dict[str, Any]):
+        """It is expected that the agent will request:
+        1. The tool that retrieves the ROS2 topics names and types to recognize what type of message to_human topic has
+        2. The tool that retrieves interfaces to check HRIMessage type
+        3. The tool to publish message with proper topic, message type and content
+
+        Parameters
+        ----------
+        response : dict[str, Any]
+            The response from the agent
+        """
+        messages = response["messages"]
+        ai_messages: Sequence[AIMessage] = [
+            message for message in messages if isinstance(message, AIMessage)
+        ]
+
+        if len(ai_messages) == 4:
+            self.log_error(
+                msg=f"Expected exactly 4 AI messages, but got {len(ai_messages)}."
+            )
+        if ai_messages:
+            if not self._is_ai_message_requesting_get_ros2_topics_and_types(
+                ai_messages[0]
+            ):
+                self.log_error(
+                    msg="First AI message did not request ROS2 topics and types correctly."
+                )
+        if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
+            self._check_tool_call(
+                tool_call=ai_messages[1].tool_calls[0],
+                expected_name="get_ros2_message_interface",
+                expected_args={"msg_type": "rai_interfaces/msg/HRIMessage"},
+            )
+        if self._check_tool_calls_num_in_ai_message(ai_messages[2], expected_num=1):
+            self._check_tool_call(
+                tool_call=ai_messages[2].tool_calls[0],
+                expected_name="publish_ros2_message",
+                expected_args={
+                    "topic": "/to_human",
+                    "message": {
+                        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+                        "text": "Hello!",
+                        "images": [],
+                        "audios": [],
+                    },
+                    "message_type": "rai_interfaces/msg/HRIMessage",
+                },
+            )
+        if not self.result.errors:
+            self.result.success = True

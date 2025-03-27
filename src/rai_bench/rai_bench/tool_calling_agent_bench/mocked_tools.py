@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -27,7 +27,9 @@ from rai.tools.ros.manipulation import (
 )
 from rai.tools.ros2 import (
     GetROS2ImageTool,
+    GetROS2MessageInterfaceTool,
     GetROS2TopicsNamesAndTypesTool,
+    PublishROS2MessageTool,
     ReceiveROS2MessageTool,
 )
 
@@ -181,3 +183,57 @@ class MockGetObjectPositionsTool(GetObjectPositionsTool):
             return f"No {object_name}s detected."
         else:
             return f"Centroids of detected {object_name}s in manipulator frame: {expected_positions} Sizes of the detected objects are unknown."
+
+
+class MockPublishROS2MessageTool(PublishROS2MessageTool):
+    connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
+    expected_topic: str
+    expected_message: Dict[str, Any]
+    expected_message_type: str
+
+    def _run(self, topic: str, message: Dict[str, Any], message_type: str) -> str:
+        """
+        Mocked method that simulates publihing to a topic and return a status string.
+
+        Parameters
+        ----------
+        topic : str
+            The name of the topic to which the message is published.
+        message : Dict[str, Any]
+            The content of the message as a dictionary.
+        message_type : str
+            The type of the message being published.
+
+        """
+        if (
+            self.expected_topic == topic
+            and self.expected_message == message
+            and self.expected_message_type == message_type
+        ):
+            return "Message published successfully"
+        else:
+            return "Failed to publish message"
+
+
+class MockGetROS2MessageInterfaceTool(GetROS2MessageInterfaceTool):
+    connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
+    mock_interfaces: Dict[str, str]
+
+    def _run(self, msg_type: str) -> str:
+        """
+        Mocked method that returns the interface definition for a given ROS2 message type.
+
+        Parameters
+        ----------
+        msg_type : str
+            The ROS2 message type for which to retrieve the interface definition.
+
+        Returns
+        -------
+        str
+            The mocked output of 'ros2 interface show' for the specified message type.
+        """
+        if msg_type in self.mock_interfaces:
+            return self.mock_interfaces[msg_type]
+        else:
+            return f"Interface for {msg_type} not found."
