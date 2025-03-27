@@ -14,7 +14,7 @@
 
 import threading
 import time
-from typing import Generator, List, Tuple
+from typing import Any, Generator, List, Tuple
 
 import numpy as np
 import pytest
@@ -95,15 +95,16 @@ class ImagePublisher(Node):
         self.publisher.publish(msg)
 
 
-class MessageReceiver(Node):
-    def __init__(self, topic: str):
-        super().__init__("test_message_receiver")
+class MessageSubscriber(Node):
+    def __init__(self, topic: str, msg_type: Any = String):
+        super().__init__("test_message_subscriber")
+        self.msg_type = msg_type
         self.subscription = self.create_subscription(
-            String, topic, self.handle_test_message, 10
+            msg_type, topic, self.handle_test_message, 10
         )
-        self.received_messages: List[String] = []
+        self.received_messages: List[msg_type] = []
 
-    def handle_test_message(self, msg: String) -> None:
+    def handle_test_message(self, msg: Any) -> None:
         self.received_messages.append(msg)
 
 

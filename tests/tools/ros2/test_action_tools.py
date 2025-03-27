@@ -51,3 +51,37 @@ def test_action_call_tool(ros_setup: None, request: pytest.FixtureRequest) -> No
 
     finally:
         shutdown_executors_and_threads(executors, threads)
+
+
+def test_action_call_tool_with_forbidden_action(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    action_name = f"{request.node.originalname}_action"  # type: ignore
+    connector = ROS2ARIConnector()
+    tool = StartROS2ActionTool(connector=connector, forbidden=[action_name])
+    with pytest.raises(ValueError):
+        tool._run(  # type: ignore
+            action_name=action_name,
+            action_type="nav2_msgs/action/NavigateToPose",
+            action_args={},
+        )
+
+
+def test_action_call_tool_with_writable_action(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    action_name = f"{request.node.originalname}_action"  # type: ignore
+    connector = ROS2ARIConnector()
+    server = ActionServer(action_name=action_name)
+    executors, threads = multi_threaded_spinner([server])
+    tool = StartROS2ActionTool(connector=connector, writable=[action_name])
+    try:
+        response = tool._run(  # type: ignore
+            action_name=action_name,
+            action_type="nav2_msgs/action/NavigateToPose",
+            action_args={},
+        )
+        assert "Action started with ID:" in response
+
+    finally:
+        shutdown_executors_and_threads(executors, threads)
