@@ -1539,64 +1539,61 @@ class PublishROS2CustomMessageTask(ROS2ToolCallingAgentTask):
             MockGetROS2MessageInterfaceTool(
                 mock_interfaces={
                     "moveit_msgs/msg/AttachedCollisionObject": (
-                        "ros2 interface show moveit_msgs/msg/AttachedCollisionObject:\n"
-                        "std_msgs/Header header\n"
-                        "string link_name\n"
-                        "moveit_msgs/msg/CollisionObject object\n"
-                        "string[] touch_links\n"
+                        '{"header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""}, '
+                        '"link_name": "", '
+                        '"object": {"header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""}, '
+                        '"id": "", '
+                        '"primitives": [], '
+                        '"primitive_poses": [], '
+                        '"meshes": [], '
+                        '"mesh_poses": [], '
+                        '"planes": [], '
+                        '"plane_poses": [], '
+                        '"operation": 0}, '
+                        '"touch_links": []}'
                     ),
                     "sensor_msgs/msg/Image": (
-                        "ros2 interface show sensor_msgs/msg/Image:\n"
-                        "std_msgs/Header header\n"
-                        "uint32 height\n"
-                        "uint32 width\n"
-                        "string encoding\n"
-                        "uint8 is_bigendian\n"
-                        "uint32 step\n"
-                        "uint8[] data\n"
+                        '{"header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""}, '
+                        '"height": 0, '
+                        '"width": 0, '
+                        '"encoding": "", '
+                        '"is_bigendian": 0, '
+                        '"step": 0, '
+                        '"data": []}'
                     ),
-                    "rosgraph_msgs/msg/Clock": (
-                        "ros2 interface show rosgraph_msgs/msg/Clock:\n"
-                        "builtin_interfaces/Time clock\n"
-                    ),
+                    "rosgraph_msgs/msg/Clock": ('{"clock": {"sec": 0, "nanosec": 0}}'),
                     "moveit_msgs/msg/CollisionObject": (
-                        "ros2 interface show moveit_msgs/msg/CollisionObject:\n"
-                        "std_msgs/Header header\n"
-                        "string id\n"
-                        "shape_msgs/SolidPrimitive[] primitives\n"
-                        "geometry_msgs/Pose[] primitive_poses\n"
-                        "shape_msgs/Mesh[] meshes\n"
-                        "geometry_msgs/Pose[] mesh_poses\n"
-                        "shape_msgs/Plane[] planes\n"
-                        "geometry_msgs/Pose[] plane_poses\n"
-                        "uint8 operation\n"
+                        '{"header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""}, '
+                        '"id": "", '
+                        '"primitives": [], '
+                        '"primitive_poses": [], '
+                        '"meshes": [], '
+                        '"mesh_poses": [], '
+                        '"planes": [], '
+                        '"plane_poses": [], '
+                        '"operation": 0}'
                     ),
                     "sensor_msgs/msg/CameraInfo": (
-                        "ros2 interface show sensor_msgs/msg/CameraInfo:\n"
-                        "std_msgs/Header header\n"
-                        "uint32 height\n"
-                        "uint32 width\n"
-                        "string distortion_model\n"
-                        "float64[] D\n"
-                        "float64[9] K\n"
-                        "float64[9] R\n"
-                        "float64[12] P\n"
-                        "uint32 binning_x\n"
-                        "uint32 binning_y\n"
-                        "sensor_msgs/RegionOfInterest roi\n"
+                        '{"header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""}, '
+                        '"height": 0, '
+                        '"width": 0, '
+                        '"distortion_model": "", '
+                        '"D": [], '
+                        '"K": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], '
+                        '"R": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], '
+                        '"P": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], '
+                        '"binning_x": 0, '
+                        '"binning_y": 0, '
+                        '"roi": {"x_offset": 0, "y_offset": 0, "height": 0, "width": 0, "do_rectify": false}}'
                     ),
                     "rai_interfaces/msg/HRIMessage": (
-                        "ros2 interface show rai_interfaces/msg/HRIMessage:\n"
-                        "std_msgs/Header header\n"
-                        "string text\n"
-                        "sensor_msgs/Image[] images\n"
-                        "rai_interfaces/AudioMessage[] audios\n"
+                        '{"header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""}, '
+                        '"text": "Hello!", '
+                        '"images": [], '
+                        '"audios": []}'
                     ),
                     "rai_interfaces/msg/AudioMessage": (
-                        "ros2 interface show rai_interfaces/msg/AudioMessage:\n"
-                        "int16[] audio\n"
-                        "uint16 sample_rate\n"
-                        "uint16 channels\n"
+                        '{"audio": [], "sample_rate": 0, "channels": 0}'
                     ),
                 }
             ),
@@ -1616,7 +1613,7 @@ class PublishROS2CustomMessageTask(ROS2ToolCallingAgentTask):
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
 
     def get_prompt(self) -> str:
-        return "Publish message 'Hello!' to the topic /to_human"
+        return "Publish message 'Hello!' to the topic /to_human. Before that check the type of message and interface of that type."
 
     def verify_tool_calls(self, response: dict[str, Any]):
         """It is expected that the agent will request:
@@ -1634,7 +1631,7 @@ class PublishROS2CustomMessageTask(ROS2ToolCallingAgentTask):
             message for message in messages if isinstance(message, AIMessage)
         ]
 
-        if len(ai_messages) == 4:
+        if len(ai_messages) != 4:
             self.log_error(
                 msg=f"Expected exactly 4 AI messages, but got {len(ai_messages)}."
             )

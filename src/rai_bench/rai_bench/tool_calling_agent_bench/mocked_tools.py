@@ -205,14 +205,24 @@ class MockPublishROS2MessageTool(PublishROS2MessageTool):
             The type of the message being published.
 
         """
-        if (
-            self.expected_topic == topic
-            and self.expected_message == message
-            and self.expected_message_type == message_type
-        ):
-            return "Message published successfully"
-        else:
-            return "Failed to publish message"
+        if self.expected_topic != topic:
+            raise ValueError(
+                f"Topic {topic} is not available within 1.0 seconds. Check if the topic exists."
+            )
+            # NOTE (jm)  when send to a not exisitng topic, real tool will create this topic
+        if self.expected_message_type != message_type:
+            raise TypeError(
+                "Expected message type {}, got {}".format(
+                    self.expected_message_type, message_type
+                )
+            )
+        if self.expected_message != message:
+            ValueError(
+                "Expected message {}, got {}".format(
+                    self.expected_message_type, message_type
+                )
+            )
+        return "Message published successfully"
 
 
 class MockGetROS2MessageInterfaceTool(GetROS2MessageInterfaceTool):
@@ -236,4 +246,4 @@ class MockGetROS2MessageInterfaceTool(GetROS2MessageInterfaceTool):
         if msg_type in self.mock_interfaces:
             return self.mock_interfaces[msg_type]
         else:
-            return f"Interface for {msg_type} not found."
+            raise ImportError(f"Module {msg_type} not found.")
