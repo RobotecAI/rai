@@ -157,9 +157,7 @@ class ROS2ARIConnector(ROS2ActionMixin, ROS2ServiceMixin, ARIConnector[ROS2ARIMe
     def create_action(
         self,
         action_name: str,
-        on_request: Callable,
-        on_feedback: Callable,
-        on_done: Callable,
+        generate_feedback_callback: Callable,
         *,
         action_type: str,
         **kwargs: Any,
@@ -167,9 +165,7 @@ class ROS2ARIConnector(ROS2ActionMixin, ROS2ServiceMixin, ARIConnector[ROS2ARIMe
         return self._actions_api.create_action_server(
             action_name=action_name,
             action_type=action_type,
-            on_request=on_request,
-            on_feedback=on_feedback,
-            on_done=on_done,
+            execute_callback=generate_feedback_callback,
             **kwargs,
         )
 

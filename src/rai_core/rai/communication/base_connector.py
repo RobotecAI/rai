@@ -70,9 +70,7 @@ class BaseConnector(Generic[T]):
     def create_action(
         self,
         action_name: str,
-        on_request: Callable,
-        on_feedback: Callable,
-        on_done: Callable,
+        generate_feedback_callback: Callable,
         **kwargs: Any,
     ) -> str:
         pass

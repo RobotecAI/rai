@@ -14,7 +14,7 @@
 
 import threading
 import uuid
-from typing import Any, List, Literal, Optional, Tuple, Union
+from typing import Any, Callable, List, Literal, Optional, Tuple, Union
 
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
@@ -112,6 +112,38 @@ class ROS2HRIConnector(ROS2ActionMixin, ROS2ServiceMixin, HRIConnector[ROS2HRIMe
                 f"Received message is not of type rai_interfaces.msg.HRIMessage, got {type(msg)}"
             )
         return ROS2HRIMessage.from_ros2(msg, message_author)
+
+    def create_service(
+        self,
+        service_name: str,
+        on_request: Callable,
+        on_done: Optional[Callable] = None,
+        *,
+        service_type: str,
+        **kwargs: Any,
+    ) -> str:
+        return self._service_api.create_service(
+            service_name=service_name,
+            callback=on_request,
+            on_done=on_done,
+            service_type=service_type,
+            **kwargs,
+        )
+
+    def create_action(
+        self,
+        action_name: str,
+        generate_feedback_callback: Callable,
+        *,
+        action_type: str,
+        **kwargs: Any,
+    ) -> str:
+        return self._actions_api.create_action_server(
+            action_name=action_name,
+            action_type=action_type,
+            execute_callback=generate_feedback_callback,
+            **kwargs,
+        )
 
     def shutdown(self):
         self._executor.shutdown()
