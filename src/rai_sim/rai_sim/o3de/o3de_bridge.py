@@ -55,8 +55,8 @@ class O3DExROS2SimulationConfig(SimulationConfig):
         base_config = SimulationConfig.load_base_config(base_config_path)
 
         with open(bridge_config_path) as f:
-            connector_content: dict[str, Any] = yaml.safe_load(f)
-        return cls(**base_config.model_dump(), **connector_content)
+            bridge_config_content: dict[str, Any] = yaml.safe_load(f)
+        return cls(**base_config.model_dump(), **bridge_config_content)
 
 
 class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):

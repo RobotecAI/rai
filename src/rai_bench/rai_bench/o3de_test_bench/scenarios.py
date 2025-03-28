@@ -38,7 +38,7 @@ loggers_type = Union[RcutilsLogger, logging.Logger]
 
 
 def trivial_scenarios(
-    configs_dir: str, connector_path: str, logger: loggers_type | None
+    configs_dir: str, bridge_config_path: str, logger: loggers_type | None
 ) -> List[Scenario[O3DExROS2SimulationConfig]]:
     """Packet of trivial scenarios. The grading is subjective.
     This packet contains easy variants of 'easy' tasks with minimalistic scenes setups(1 object).
@@ -53,8 +53,8 @@ def trivial_scenarios(
     ----------
     configs_dir : str
         path to directory with simulation configs
-    connector_path : str
-        path to connector config
+    bridge_config_path : str
+        path to simulation bridge config
 
 
     Returns
@@ -70,7 +70,7 @@ def trivial_scenarios(
         configs_dir + "1carrot.yaml",
     ]
     simulations_configs = [
-        O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
+        O3DExROS2SimulationConfig.load_config(Path(path), Path(bridge_config_path))
         for path in simulation_configs_paths
     ]
     # place object at coords
@@ -112,7 +112,7 @@ def trivial_scenarios(
 
 
 def easy_scenarios(
-    configs_dir: str, connector_path: str, logger: loggers_type | None
+    configs_dir: str, bridge_config_path: str, logger: loggers_type | None
 ) -> List[Scenario[O3DExROS2SimulationConfig]]:
     """Packet of easy scenarios. The grading is subjective.
     This packet contains easy variants of 'easy' tasks with scenes containg no more than 3 objects
@@ -129,8 +129,8 @@ def easy_scenarios(
     ----------
     configs_dir : str
         path to directory with simulation configs
-    connector_path : str
-        path to connector config
+    bridge_config_path : str
+        path to simulation bridge config
 
 
     Returns
@@ -151,7 +151,7 @@ def easy_scenarios(
         configs_dir + "1carrot_1t_1rc.yaml",
     ]
     simulations_configs = [
-        O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
+        O3DExROS2SimulationConfig.load_config(Path(path), Path(bridge_config_path))
         for path in simulation_configs_paths
     ]
     # place object at coords
@@ -213,7 +213,7 @@ def easy_scenarios(
 
 
 def medium_scenarios(
-    configs_dir: str, connector_path: str, logger: loggers_type | None
+    configs_dir: str, bridge_config_path: str, logger: loggers_type | None
 ) -> List[Scenario[O3DExROS2SimulationConfig]]:
     """Packet of medium scenarios. The grading is subjective.
     This packet contains harder variants of 'easy' tasks with scenes containg 4-7 objects
@@ -233,8 +233,8 @@ def medium_scenarios(
     ----------
     configs_dir : str
         path to directory with simulation configs
-    connector_path : str
-        path to connector config
+    bridge_config_path : str
+        path to simulation bridge config
 
 
     Returns
@@ -265,11 +265,11 @@ def medium_scenarios(
         configs_dir + "1carrot_1t_1rc.yaml",
     ]
     medium_simulations_configs = [
-        O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
+        O3DExROS2SimulationConfig.load_config(Path(path), Path(bridge_config_path))
         for path in medium_simulation_configs_paths
     ]
     easy_simulations_configs = [
-        O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
+        O3DExROS2SimulationConfig.load_config(Path(path), Path(bridge_config_path))
         for path in easy_simulation_configs_paths
     ]
     # move objects to the left
@@ -347,7 +347,7 @@ def medium_scenarios(
 
 
 def hard_scenarios(
-    configs_dir: str, connector_path: str, logger: loggers_type | None
+    configs_dir: str, bridge_config_path: str, logger: loggers_type | None
 ) -> List[Scenario[O3DExROS2SimulationConfig]]:
     """Packet of hard scenarios. The grading is subjective.
     This packet contains harder variants of 'easy' tasks with majority of scenes containg 8+ objects,
@@ -368,8 +368,8 @@ def hard_scenarios(
     ----------
     configs_dir : str
         path to directory with simulation configs
-    connector_path : str
-        path to connector config
+    bridge_config_path : str
+        path to simulation bridge config
 
 
     Returns
@@ -399,11 +399,11 @@ def hard_scenarios(
         configs_dir + "3rc_3bc_stacked.yaml",
     ]
     medium_simulations_configs = [
-        O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
+        O3DExROS2SimulationConfig.load_config(Path(path), Path(bridge_config_path))
         for path in medium_simulation_configs_paths
     ]
     hard_simulations_configs = [
-        O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
+        O3DExROS2SimulationConfig.load_config(Path(path), Path(bridge_config_path))
         for path in hard_simulation_configs_paths
     ]
     # move objects to the left
@@ -481,7 +481,7 @@ def hard_scenarios(
 
 
 def very_hard_scenarios(
-    configs_dir: str, connector_path: str, logger: loggers_type | None
+    configs_dir: str, bridge_config_path: str, logger: loggers_type | None
 ) -> List[Scenario[O3DExROS2SimulationConfig]]:
     """Packet of very_hard scenarios. The grading is subjective.
     This packet contains harder variants of 'hard' tasks with majority of scenes containg 8+ objects,
@@ -498,8 +498,8 @@ def very_hard_scenarios(
     ----------
     configs_dir : str
         path to directory with simulation configs
-    connector_path : str
-        path to connector config
+    bridge_config_path : str
+        path to simulation bridge config
 
 
     Returns
@@ -519,7 +519,7 @@ def very_hard_scenarios(
         configs_dir + "3rc_3bc_stacked.yaml",
     ]
     hard_simulations_configs = [
-        O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
+        O3DExROS2SimulationConfig.load_config(Path(path), Path(bridge_config_path))
         for path in hard_simulation_configs_paths
     ]
     # build tower task

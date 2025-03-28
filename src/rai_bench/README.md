@@ -77,19 +77,19 @@ or can be imported from exisitng packets [scenarios_packets](./rai_bench/o3de_te
 
 ```python
 t_scenarios = trivial_scenarios(
-        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+        configs_dir=configs_dir, bridge_config_path=bridge_config_path, logger=bench_logger
     )
 e_scenarios = easy_scenarios(
-    configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    configs_dir=configs_dir, bridge_config_path=bridge_config_path, logger=bench_logger
 )
 m_scenarios = medium_scenarios(
-    configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    configs_dir=configs_dir, bridge_config_path=bridge_config_path, logger=bench_logger
 )
 h_scenarios = hard_scenarios(
-    configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    configs_dir=configs_dir, bridge_config_path=bridge_config_path, logger=bench_logger
 )
 vh_scenarios = very_hard_scenarios(
-    configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    configs_dir=configs_dir, bridge_config_path=bridge_config_path, logger=bench_logger
 )
 ```
 

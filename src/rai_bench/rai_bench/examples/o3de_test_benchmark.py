@@ -147,19 +147,19 @@ if __name__ == "__main__":
 
     ### import ready scenarios
     t_scenarios = trivial_scenarios(
-        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+        configs_dir=configs_dir, bridge_config_path=connector_path, logger=bench_logger
     )
     e_scenarios = easy_scenarios(
-        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+        configs_dir=configs_dir, bridge_config_path=connector_path, logger=bench_logger
     )
     m_scenarios = medium_scenarios(
-        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+        configs_dir=configs_dir, bridge_config_path=connector_path, logger=bench_logger
     )
     h_scenarios = hard_scenarios(
-        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+        configs_dir=configs_dir, bridge_config_path=connector_path, logger=bench_logger
     )
     vh_scenarios = very_hard_scenarios(
-        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+        configs_dir=configs_dir, bridge_config_path=connector_path, logger=bench_logger
     )
 
     all_scenarios = t_scenarios + e_scenarios + m_scenarios + h_scenarios + vh_scenarios
