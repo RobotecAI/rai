@@ -28,6 +28,7 @@ from pydantic import BaseModel, Field
 from rai.messages.multimodal import HumanMultimodalMessage
 
 from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
+    SpatialReasoningAgentTask,
     ToolCallingAgentTask,
 )
 from rai_bench.tool_calling_agent_bench.scores_tracing import ScoreTracingHandler
@@ -160,10 +161,26 @@ class ToolCallingAgentBenchmark:
 
             ts = time.perf_counter()
             try:
-                response = agent.invoke(
-                    {"messages": [HumanMultimodalMessage(content=task.get_prompt())]},
-                    config=config,
-                )
+                if isinstance(task, SpatialReasoningAgentTask):
+                    response = agent.invoke(
+                        {
+                            "messages": [
+                                HumanMultimodalMessage(
+                                    content=task.get_prompt(), images=task.get_images()
+                                )
+                            ]
+                        },
+                        config=config,
+                    )
+                else:
+                    response = agent.invoke(
+                        {
+                            "messages": [
+                                HumanMultimodalMessage(content=task.get_prompt())
+                            ]
+                        },
+                        config=config,
+                    )
                 task.verify_tool_calls(response=response)
             except GraphRecursionError as e:
                 task.log_error(msg=f"Graph Recursion Error: {e}")

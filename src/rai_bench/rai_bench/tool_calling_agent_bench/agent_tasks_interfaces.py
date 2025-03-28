@@ -274,3 +274,24 @@ class ROS2ToolCallingAgentTask(ToolCallingAgentTask, ABC):
         ):
             return False
         return True
+
+
+class SpatialReasoningAgentTask(ToolCallingAgentTask):
+    """Abstract class for spatial reasoning tasks for tool calling agent."""
+
+    def __init__(self, logger: loggers_type | None = None) -> None:
+        super().__init__(logger)
+        self.expected_tools: List[BaseTool]
+        self.question: str
+        self.images_paths: List[str]
+
+    @abstractmethod
+    def get_images(self) -> List[str]:
+        """Get the images related to the task.
+
+        Returns
+        -------
+        List[str]
+            List of image paths
+        """
+        pass
