@@ -14,7 +14,7 @@
 
 from rai.agents import ReActAgent
 from rai.communication import ROS2ARIConnector, ROS2HRIConnector
-from rai.tools.ros2 import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
+from rai.tools.ros2 import ROS2ActionToolkit, ROS2ServicesToolkit, ROS2TopicsToolkit
 from rai.utils import ROS2Context, wait_for_shutdown
 
 
@@ -25,8 +25,9 @@ def main():
     agent = ReActAgent(
         connectors={"hri": connector},
         tools=[
-            GetROS2ImageTool(connector=ari_connector),
-            GetROS2TopicsNamesAndTypesTool(connector=ari_connector),
+            *ROS2TopicsToolkit(connector=ari_connector).get_tools(),
+            *ROS2ServicesToolkit(connector=ari_connector).get_tools(),
+            *ROS2ActionToolkit(connector=ari_connector).get_tools(),
         ],
     )  # type: ignore
     agent.run()

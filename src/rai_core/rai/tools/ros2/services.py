@@ -19,12 +19,28 @@ except ImportError:
         "This is a ROS2 feature. Make sure ROS2 is installed and sourced."
     )
 
-from typing import Any, Dict, Type
+from typing import Any, Dict, List, Type
 
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
 from rai.communication.ros2.connectors import ROS2ARIMessage
-from rai.tools.ros2.base import BaseROS2Tool
+from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
+
+
+class ROS2ServicesToolkit(BaseROS2Toolkit):
+    name: str = "ROS2ServicesToolkit"
+    description: str = "A toolkit for ROS2 services"
+
+    def get_tools(self) -> List[BaseTool]:
+        return [
+            CallROS2ServiceTool(
+                connector=self.connector,
+                readable=self.readable,
+                writable=self.writable,
+                forbidden=self.forbidden,
+            ),
+        ]
 
 
 class CallROS2ServiceToolInput(BaseModel):

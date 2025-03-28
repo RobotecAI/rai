@@ -23,49 +23,24 @@ import uuid
 from collections import defaultdict
 from functools import partial
 from threading import Lock
-from typing import Annotated, Any, Callable, Dict, List, Optional, Type
+from typing import Any, Callable, Dict, List, Type
 
-from langchain_core.tools import BaseTool, BaseToolkit  # type: ignore
-from pydantic import BaseModel, ConfigDict, Field
+from langchain_core.tools import BaseTool  # type: ignore
+from pydantic import BaseModel, Field
 
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
-from rai.tools.ros2.base import BaseROS2Tool
+from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
 
 
-class ROS2ActionToolkit(BaseToolkit):
+class ROS2ActionToolkit(BaseROS2Toolkit):
     name: str = "ros2_action"
     description: str = "A toolkit for ROS2 actions"
-    connector: ROS2ARIConnector
-    readable: Optional[
-        Annotated[
-            List[str],
-            """The topics that can be read.
-            If the list is not provided, all topics can be read.""",
-        ]
-    ] = None
-    writable: Optional[
-        Annotated[
-            List[str],
-            """The names (topics/actions/services) that can be written.
-            If the list is not provided, all topics can be written.""",
-        ]
-    ] = None
-    forbidden: Optional[
-        Annotated[
-            List[str],
-            """The names (topics/actions/services) that are forbidden to read and write.""",
-        ]
-    ] = None
 
     action_results_store: Dict[str, Any] = {}
     action_results_store_lock: Lock = Lock()
     action_feedbacks_store: Dict[str, List[Any]] = defaultdict(list)
     action_feedbacks_store_lock: Lock = Lock()
     internal_action_id_mapping: Dict[str, str] = {}
-
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True,
-    )
 
     def get_tools(self) -> List[BaseTool]:
         return [
