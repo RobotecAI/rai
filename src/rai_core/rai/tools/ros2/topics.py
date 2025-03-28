@@ -106,6 +106,7 @@ class PublishROS2MessageTool(BaseROS2Tool):
 
 class ReceiveROS2MessageToolInput(BaseModel):
     topic: str = Field(..., description="The topic to receive the message from")
+    timeout_sec: float = Field(1.0, description="The timeout in seconds")
 
 
 class ReceiveROS2MessageTool(BaseROS2Tool):
@@ -114,10 +115,10 @@ class ReceiveROS2MessageTool(BaseROS2Tool):
     description: str = "Receive a message from a ROS2 topic"
     args_schema: Type[ReceiveROS2MessageToolInput] = ReceiveROS2MessageToolInput
 
-    def _run(self, topic: str) -> str:
+    def _run(self, topic: str, timeout_sec: float = 1.0) -> str:
         if not self.is_readable(topic):
             raise ValueError(f"Topic {topic} is not readable")
-        message = self.connector.receive_message(topic)
+        message = self.connector.receive_message(topic, timeout_sec=timeout_sec)
         return str({"payload": message.payload, "metadata": message.metadata})
 
 
