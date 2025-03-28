@@ -15,7 +15,7 @@
 import threading
 import time
 import uuid
-from typing import Any, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 import rclpy
 import rclpy.executors
@@ -136,6 +136,42 @@ class ROS2ARIConnector(ROS2ActionMixin, ROS2ServiceMixin, ARIConnector[ROS2ARIMe
         )
 
         return transform
+
+    def create_service(
+        self,
+        service_name: str,
+        on_request: Callable,
+        on_done: Optional[Callable] = None,
+        *,
+        service_type: str,
+        **kwargs: Any,
+    ) -> str:
+        return self._service_api.create_service(
+            service_name=service_name,
+            callback=on_request,
+            on_done=on_done,
+            service_type=service_type,
+            **kwargs,
+        )
+
+    def create_action(
+        self,
+        action_name: str,
+        on_request: Callable,
+        on_feedback: Callable,
+        on_done: Callable,
+        *,
+        action_type: str,
+        **kwargs: Any,
+    ) -> str:
+        return self._actions_api.create_action_server(
+            action_name=action_name,
+            action_type=action_type,
+            on_request=on_request,
+            on_feedback=on_feedback,
+            on_done=on_done,
+            **kwargs,
+        )
 
     @property
     def node(self) -> Node:

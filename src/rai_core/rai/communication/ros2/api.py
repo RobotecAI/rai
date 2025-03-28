@@ -48,9 +48,15 @@ import rclpy.task
 import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
 from action_msgs.srv import CancelGoal
-from rclpy.action import ActionClient, ActionServer
+from rclpy.action import ActionClient, CancelResponse, GoalResponse
 from rclpy.action.client import ClientGoalHandle
-from rclpy.action.server import ServerGoalHandle
+from rclpy.action.server import (
+    ActionServer,
+    ServerGoalHandle,
+    default_cancel_callback,
+    default_goal_callback,
+    default_handle_accepted_callback,
+)
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.publisher import Publisher
 from rclpy.qos import (
@@ -59,6 +65,8 @@ from rclpy.qos import (
     LivelinessPolicy,
     QoSProfile,
     ReliabilityPolicy,
+    qos_profile_action_status_default,
+    qos_profile_services_default,
 )
 from rclpy.service import Service
 from rclpy.task import Future
@@ -696,7 +704,21 @@ class ROS2ActionAPI:
         action_type: str,
         action_name: str,
         execute_callback: Callable[[ServerGoalHandle], Type[IROS2Message]],
-        **kwargs,
+        *,
+        callback_group: Optional[rclpy.node.CallbackGroup] = None,
+        goal_callback: Callable[[IROS2Message], GoalResponse] = default_goal_callback,
+        handle_accepted_callback: Callable[
+            [ServerGoalHandle], None
+        ] = default_handle_accepted_callback,
+        cancel_callback: Callable[
+            [IROS2Message], CancelResponse
+        ] = default_cancel_callback,
+        goal_service_qos_profile: QoSProfile = qos_profile_services_default,
+        result_service_qos_profile: QoSProfile = qos_profile_services_default,
+        cancel_service_qos_profile: QoSProfile = qos_profile_services_default,
+        feedback_pub_qos_profile: QoSProfile = QoSProfile(depth=10),
+        status_pub_qos_profile: QoSProfile = qos_profile_action_status_default,
+        result_timeout: int = 900,
     ) -> str:
         """
         Create an action server.
@@ -705,7 +727,16 @@ class ROS2ActionAPI:
             action_type: The action message type with namespace
             action_name: The name of the action server
             execute_callback: The callback to execute when a goal is received
-            **kwargs: Additional arguments to pass to the ActionServer constructor
+            callback_grou: The callback group to use for the action server
+            goal_callback: The callback to execute when a goal is received
+            handle_accepted_callback: The callback to execute when a goal handle is accepted
+            cancel_callback: The callback to execute when a goal is canceled
+            goal_service_qos_profile: The QoS profile for the goal service
+            result_service_qos_profile: The QoS profile for the result service
+            cancel_service_qos_profile: The QoS profile for the cancel service
+            feedback_pub_qos_profile: The QoS profile for the feedback publisher
+            status_pub_qos_profile: The QoS profile for the status publisher
+            result_timeout: The timeout for waiting for a result
 
         Returns:
             The handle for the created action server
@@ -721,7 +752,16 @@ class ROS2ActionAPI:
                 action_type=action_ros_type,
                 action_name=action_name,
                 execute_callback=execute_callback,
-                **kwargs,
+                callback_group=callback_group,
+                goal_callback=goal_callback,
+                handle_accepted_callback=handle_accepted_callback,
+                cancel_callback=cancel_callback,
+                goal_service_qos_profile=goal_service_qos_profile,
+                result_service_qos_profile=result_service_qos_profile,
+                cancel_service_qos_profile=cancel_service_qos_profile,
+                feedback_pub_qos_profile=feedback_pub_qos_profile,
+                status_pub_qos_profile=status_pub_qos_profile,
+                result_timeout=result_timeout,
             )
         except TypeError as e:
             import inspect

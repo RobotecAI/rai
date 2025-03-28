@@ -57,6 +57,27 @@ class BaseConnector(Generic[T]):
         pass
 
     @abstractmethod
+    def create_service(
+        self,
+        service_name: str,
+        on_request: Callable,
+        on_done: Optional[Callable] = None,
+        **kwargs: Any,
+    ) -> str:
+        pass
+
+    @abstractmethod
+    def create_action(
+        self,
+        action_name: str,
+        on_request: Callable,
+        on_feedback: Callable,
+        on_done: Callable,
+        **kwargs: Any,
+    ) -> str:
+        pass
+
+    @abstractmethod
     def start_action(
         self,
         action_data: Optional[T],
