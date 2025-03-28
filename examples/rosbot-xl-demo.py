@@ -21,6 +21,7 @@ from rai.agents.conversational_agent import create_conversational_agent
 from rai.agents.integrations.streamlit import get_streamlit_cb, streamlit_invoke
 from rai.communication.ros2 import ROS2ARIConnector
 from rai.messages import HumanMultimodalMessage
+from rai.tools.ros.manipulation import GetGrabbingPointTool, GetObjectPositionsTool
 from rai.tools.ros2 import ROS2Toolkit
 from rai.tools.time import WaitForSecondsTool
 from rai.utils.model_initialization import get_llm_model
@@ -93,6 +94,17 @@ def initialize_agent():
             WaitForSecondsTool(),
             GetDetectionTool(connector=connector, node=connector.node),
             GetDistanceToObjectsTool(connector=connector, node=connector.node),
+            GetObjectPositionsTool(
+                connector=connector,
+                target_frame="map",
+                source_frame="sensor_frame",
+                camera_topic="/camera/camera/color/image_raw",
+                depth_topic="/camera/camera/depth/image_rect_raw",
+                camera_info_topic="/camera/camera/color/camera_info",
+                get_grabbing_point_tool=GetGrabbingPointTool(
+                    connector=connector,
+                ),
+            ),
         ],
     )
     connector.node.declare_parameter("conversion_ratio", 1.0)
