@@ -51,7 +51,7 @@ class MockGetROS2TopicsNamesAndTypesTool(GetROS2TopicsNamesAndTypesTool):
 
 class MockGetROS2ImageTool(GetROS2ImageTool):
     connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
-    expected_topics: List[str]
+    available_topics: List[str]
 
     def _run(
         self, topic: str, timeout_sec: float = 1.0
@@ -75,7 +75,7 @@ class MockGetROS2ImageTool(GetROS2ImageTool):
         ValueError
             If the passed topic is not correct.
         """
-        if topic not in self.expected_topics:
+        if topic not in self.available_topics:
             raise ValueError(
                 f"Topic {topic} is not available within {timeout_sec} seconds. Check if the topic exists."
             )
@@ -100,7 +100,7 @@ class MockGetROS2ImageTool(GetROS2ImageTool):
 
 class MockReceiveROS2MessageTool(ReceiveROS2MessageTool):
     connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
-    expected_topics: List[str]
+    available_topics: List[str]
 
     def _run(self, topic: str) -> str:
         """Method that returns a mock message if the passed topic is correct.
@@ -120,7 +120,7 @@ class MockReceiveROS2MessageTool(ReceiveROS2MessageTool):
         ValueError
             If the passed topic is not correct.
         """
-        if topic not in self.expected_topics:
+        if topic not in self.available_topics:
             raise ValueError(
                 f"Topic {topic} is not available within 1.0 seconds. Check if the topic exists."
             )
@@ -187,9 +187,8 @@ class MockGetObjectPositionsTool(GetObjectPositionsTool):
 
 class MockPublishROS2MessageTool(PublishROS2MessageTool):
     connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
-    expected_topic: str
-    expected_message: Dict[str, Any]
-    expected_message_type: str
+    available_topics: List[str]
+    available_message_types: List[str]
 
     def _run(self, topic: str, message: Dict[str, Any], message_type: str) -> str:
         """
@@ -205,21 +204,14 @@ class MockPublishROS2MessageTool(PublishROS2MessageTool):
             The type of the message being published.
 
         """
-        if self.expected_topic != topic:
+        if topic not in self.available_topics:
             raise ValueError(
                 f"Topic {topic} is not available within 1.0 seconds. Check if the topic exists."
             )
-            # NOTE (jm)  when send to a not exisitng topic, real tool will create this topic
-        if self.expected_message_type != message_type:
+        if message_type not in self.available_message_types:
             raise TypeError(
-                "Expected message type {}, got {}".format(
-                    self.expected_message_type, message_type
-                )
-            )
-        if self.expected_message != message:
-            ValueError(
-                "Expected message {}, got {}".format(
-                    self.expected_message_type, message_type
+                "Expected message one of message types: {}, got {}".format(
+                    self.available_message_types, message_type
                 )
             )
         return "Message published successfully"

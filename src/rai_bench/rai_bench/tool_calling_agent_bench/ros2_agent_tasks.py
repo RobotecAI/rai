@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import copy
+import json
 import logging
 from itertools import permutations
 from typing import Any, Dict, List, Sequence
@@ -182,23 +183,31 @@ class GetROS2TopicsTask2(ROS2ToolCallingAgentTask):
 class GetROS2RGBCameraTask(ROS2ToolCallingAgentTask):
     complexity = "easy"
 
+    topics_and_types: Dict[str, str] = {
+        "/attached_collision_object": "moveit_msgs/msg/AttachedCollisionObject",
+        "/camera_image_color": "sensor_msgs/msg/Image",
+        "/camera_image_depth": "sensor_msgs/msg/Image",
+        "/clock": "rosgraph_msgs/msg/Clock",
+        "/collision_object": "moveit_msgs/msg/CollisionObject",
+        "/color_camera_info": "sensor_msgs/msg/CameraInfo",
+        "/color_camera_info5": "sensor_msgs/msg/CameraInfo",
+        "/depth_camera_info5": "sensor_msgs/msg/CameraInfo",
+        "/depth_image5": "sensor_msgs/msg/Image",
+    }
+
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
+
+        topic_strings = [
+            f"topic: {topic}\ntype: {msg_type}\n"
+            for topic, msg_type in self.topics_and_types.items()
+        ]
+
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
-                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /color_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /depth_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
-                ]
+                mock_topics_names_and_types=topic_strings
             ),
-            MockGetROS2ImageTool(expected_topics=["/camera_image_color"]),
+            MockGetROS2ImageTool(available_topics=list(self.topics_and_types.keys())),
         ]
 
     def get_system_prompt(self) -> str:
@@ -249,22 +258,28 @@ class GetROS2RGBCameraTask(ROS2ToolCallingAgentTask):
 class GetROS2DepthCameraTask(ROS2ToolCallingAgentTask):
     complexity = "easy"
 
+    topics_and_types: Dict[str, str] = {
+        "/attached_collision_object": "moveit_msgs/msg/AttachedCollisionObject",
+        "/camera_image_color": "sensor_msgs/msg/Image",
+        "/camera_image_depth": "sensor_msgs/msg/Image",
+        "/clock": "rosgraph_msgs/msg/Clock",
+        "/collision_object": "moveit_msgs/msg/CollisionObject",
+        "/color_camera_info": "sensor_msgs/msg/CameraInfo",
+        "/color_camera_info5": "sensor_msgs/msg/CameraInfo",
+        "/depth_camera_info5": "sensor_msgs/msg/CameraInfo",
+    }
+
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
+        topic_strings = [
+            f"topic: {topic}\ntype: {msg_type}\n"
+            for topic, msg_type in self.topics_and_types.items()
+        ]
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
-                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /color_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /depth_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                ]
+                mock_topics_names_and_types=topic_strings
             ),
-            MockGetROS2ImageTool(expected_topics=["/camera_image_depth"]),
+            MockGetROS2ImageTool(available_topics=list(self.topics_and_types.keys())),
         ]
 
     def get_system_prompt(self) -> str:
@@ -276,7 +291,7 @@ class GetROS2DepthCameraTask(ROS2ToolCallingAgentTask):
     def verify_tool_calls(self, response: dict[str, Any]):
         """It is expected that the agent will request:
         1. The tool that retrieves the ROS2 topic names and types to identify the depth image topic.
-        2. The tool that retrieves the RGB image from the /camera_image_depth topic
+        2. The tool that retrieves the depth image from the /camera_image_depth topic
 
         Parameters
         ----------
@@ -316,26 +331,30 @@ class GetROS2DepthCameraTask(ROS2ToolCallingAgentTask):
 class GetAllROS2RGBCamerasTask(ROS2ToolCallingAgentTask):
     complexity = "easy"
 
+    topics_and_types: Dict[str, str] = {
+        "/attached_collision_object": "moveit_msgs/msg/AttachedCollisionObject",
+        "/camera_image_color": "sensor_msgs/msg/Image",
+        "/camera_image_depth": "sensor_msgs/msg/Image",
+        "/clock": "rosgraph_msgs/msg/Clock",
+        "/collision_object": "moveit_msgs/msg/CollisionObject",
+        "/color_camera_info": "sensor_msgs/msg/CameraInfo",
+        "/color_camera_info5": "sensor_msgs/msg/CameraInfo",
+        "/color_image5": "sensor_msgs/msg/Image",
+        "/depth_camera_info5": "sensor_msgs/msg/CameraInfo",
+        "/depth_image5": "sensor_msgs/msg/Image",
+    }
+
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
+        topic_strings = [
+            f"topic: {topic}\ntype: {msg_type}\n"
+            for topic, msg_type in self.topics_and_types.items()
+        ]
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
-                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /color_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /color_image5\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /depth_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
-                ]
+                mock_topics_names_and_types=topic_strings
             ),
-            MockGetROS2ImageTool(
-                expected_topics=["/camera_image_color", "/color_image5"]
-            ),
+            MockGetROS2ImageTool(available_topics=list(self.topics_and_types.keys())),
         ]
 
     def get_prompt(self) -> str:
@@ -384,7 +403,6 @@ class GetAllROS2RGBCamerasTask(ROS2ToolCallingAgentTask):
                     "optional_args": {"timeout_sec": None},
                 },
             ]
-
             self._check_multiple_tool_calls(
                 message=ai_messages[1], expected_tool_calls=expected_tool_calls
             )
@@ -395,25 +413,29 @@ class GetAllROS2RGBCamerasTask(ROS2ToolCallingAgentTask):
 class GetAllROS2DepthCamerasTask(ROS2ToolCallingAgentTask):
     complexity = "easy"
 
+    topics_and_types: Dict[str, str] = {
+        "/camera_image_color": "sensor_msgs/msg/Image",
+        "/camera_image_depth": "sensor_msgs/msg/Image",
+        "/clock": "rosgraph_msgs/msg/Clock",
+        "/collision_object": "moveit_msgs/msg/CollisionObject",
+        "/color_camera_info": "sensor_msgs/msg/CameraInfo",
+        "/color_camera_info5": "sensor_msgs/msg/CameraInfo",
+        "/color_image5": "sensor_msgs/msg/Image",
+        "/depth_camera_info5": "sensor_msgs/msg/CameraInfo",
+        "/depth_image5": "sensor_msgs/msg/Image",
+    }
+
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
+        topic_strings = [
+            f"topic: {topic}\ntype: {msg_type}\n"
+            for topic, msg_type in self.topics_and_types.items()
+        ]
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
-                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /color_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /color_image5\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /depth_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
-                ]
+                mock_topics_names_and_types=topic_strings
             ),
-            MockGetROS2ImageTool(
-                expected_topics=["/camera_image_depth", "/depth_image5"]
-            ),
+            MockGetROS2ImageTool(available_topics=list(self.topics_and_types.keys())),
         ]
 
     def get_prompt(self) -> str:
@@ -462,7 +484,6 @@ class GetAllROS2DepthCamerasTask(ROS2ToolCallingAgentTask):
                     "optional_args": {"timeout_sec": None},
                 },
             ]
-
             self._check_multiple_tool_calls(
                 message=ai_messages[1], expected_tool_calls=expected_tool_calls
             )
@@ -473,23 +494,33 @@ class GetAllROS2DepthCamerasTask(ROS2ToolCallingAgentTask):
 class GetROS2MessageTask(ROS2ToolCallingAgentTask):
     complexity = "easy"
 
+    topics_and_types: Dict[str, str] = {
+        "/attached_collision_object": "moveit_msgs/msg/AttachedCollisionObject",
+        "/camera_image_color": "sensor_msgs/msg/Image",
+        "/camera_image_depth": "sensor_msgs/msg/Image",
+        "/clock": "rosgraph_msgs/msg/Clock",
+        "/collision_object": "moveit_msgs/msg/CollisionObject",
+        "/color_camera_info": "sensor_msgs/msg/CameraInfo",
+        "/color_camera_info5": "sensor_msgs/msg/CameraInfo",
+        "/depth_camera_info5": "sensor_msgs/msg/CameraInfo",
+        "/depth_image5": "sensor_msgs/msg/Image",
+    }
+
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
+
+        topic_strings = [
+            f"topic: {topic}\ntype: {msg_type}\n"
+            for topic, msg_type in self.topics_and_types.items()
+        ]
+
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
-                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /color_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /depth_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
-                ]
+                mock_topics_names_and_types=topic_strings
             ),
-            MockReceiveROS2MessageTool(expected_topics=["/camera_image_color"]),
+            MockReceiveROS2MessageTool(
+                available_topics=list(self.topics_and_types.keys())
+            ),
         ]
 
     def get_system_prompt(self) -> str:
@@ -500,7 +531,7 @@ class GetROS2MessageTask(ROS2ToolCallingAgentTask):
 
     def verify_tool_calls(self, response: dict[str, Any]):
         """It is expected that the agent will request:
-        1. The tool that retrieves the ROS2 topics names and types to recognize the RGB image topic
+        1. The tool that retrieves the ROS2 topics names and types to recognize the RGB image topic.
         2. The tool that retrieves the RGB image from the /camera_image_color topic
 
         Parameters
@@ -517,6 +548,7 @@ class GetROS2MessageTask(ROS2ToolCallingAgentTask):
             self.log_error(
                 msg=f"Expected at least 3 AI messages, but got {len(ai_messages)}."
             )
+
         if ai_messages:
             if not self._is_ai_message_requesting_get_ros2_topics_and_types(
                 ai_messages[0]
@@ -524,6 +556,7 @@ class GetROS2MessageTask(ROS2ToolCallingAgentTask):
                 self.log_error(
                     msg="First AI message did not request ROS2 topics and types correctly."
                 )
+
         if len(ai_messages) > 1:
             if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
                 self._check_tool_call(
@@ -531,6 +564,7 @@ class GetROS2MessageTask(ROS2ToolCallingAgentTask):
                     expected_name="receive_ros2_message",
                     expected_args={"topic": "/camera_image_color"},
                 )
+
         if not self.result.errors:
             self.result.success = True
 
@@ -538,20 +572,30 @@ class GetROS2MessageTask(ROS2ToolCallingAgentTask):
 class GetRobotDescriptionTask(ROS2ToolCallingAgentTask):
     complexity = "easy"
 
+    topics_and_types: Dict[str, str] = {
+        "/pointcloud": "sensor_msgs/msg/PointCloud2",
+        "/robot_description": "std_msgs/msg/String",
+        "/rosout": "rcl_interfaces/msg/Log",
+        "/tf": "tf2_msgs/msg/TFMessage",
+        "/tf_static": "tf2_msgs/msg/TFMessage",
+        "/trajectory_execution_event": "std_msgs/msg/String",
+    }
+
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
+
+        topic_strings = [
+            f"topic: {topic}\ntype: {msg_type}\n"
+            for topic, msg_type in self.topics_and_types.items()
+        ]
+
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /pointcloud\ntype: sensor_msgs/msg/PointCloud2\n",
-                    "topic: /robot_description\ntype: std_msgs/msg/String\n",
-                    "topic: /rosout\ntype: rcl_interfaces/msg/Log\n",
-                    "topic: /tf\ntype: tf2_msgs/msg/TFMessage\n",
-                    "topic: /tf_static\ntype: tf2_msgs/msg/TFMessage\n",
-                    "topic: /trajectory_execution_event\ntype: std_msgs/msg/String\n",
-                ]
+                mock_topics_names_and_types=topic_strings
             ),
-            MockReceiveROS2MessageTool(expected_topics=["/robot_description"]),
+            MockReceiveROS2MessageTool(
+                available_topics=list(self.topics_and_types.keys())
+            ),
         ]
 
     def get_system_prompt(self) -> str:
@@ -593,6 +637,7 @@ class GetRobotDescriptionTask(ROS2ToolCallingAgentTask):
                     expected_name="receive_ros2_message",
                     expected_args={"topic": "/robot_description"},
                 )
+
         if not self.result.errors:
             self.result.success = True
 
@@ -600,20 +645,30 @@ class GetRobotDescriptionTask(ROS2ToolCallingAgentTask):
 class GetPointcloudTask(ROS2ToolCallingAgentTask):
     complexity = "easy"
 
+    topics_and_types: Dict[str, str] = {
+        "/pointcloud": "sensor_msgs/msg/PointCloud2",
+        "/robot_description": "std_msgs/msg/String",
+        "/rosout": "rcl_interfaces/msg/Log",
+        "/tf": "tf2_msgs/msg/TFMessage",
+        "/tf_static": "tf2_msgs/msg/TFMessage",
+        "/trajectory_execution_event": "std_msgs/msg/String",
+    }
+
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
+
+        topic_strings = [
+            f"topic: {topic}\ntype: {msg_type}\n"
+            for topic, msg_type in self.topics_and_types.items()
+        ]
+
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /pointcloud\ntype: sensor_msgs/msg/PointCloud2\n",
-                    "topic: /robot_description\ntype: std_msgs/msg/String\n",
-                    "topic: /rosout\ntype: rcl_interfaces/msg/Log\n",
-                    "topic: /tf\ntype: tf2_msgs/msg/TFMessage\n",
-                    "topic: /tf_static\ntype: tf2_msgs/msg/TFMessage\n",
-                    "topic: /trajectory_execution_event\ntype: std_msgs/msg/String\n",
-                ]
+                mock_topics_names_and_types=topic_strings
             ),
-            MockReceiveROS2MessageTool(expected_topics=["/pointcloud"]),
+            MockReceiveROS2MessageTool(
+                available_topics=list(self.topics_and_types.keys())
+            ),
         ]
 
     def get_system_prompt(self) -> str:
@@ -641,6 +696,7 @@ class GetPointcloudTask(ROS2ToolCallingAgentTask):
             self.log_error(
                 msg=f"Expected at least 3 AI messages, but got {len(ai_messages)}."
             )
+
         if ai_messages:
             if not self._is_ai_message_requesting_get_ros2_topics_and_types(
                 ai_messages[0]
@@ -648,6 +704,7 @@ class GetPointcloudTask(ROS2ToolCallingAgentTask):
                 self.log_error(
                     msg="First AI message did not request ROS2 topics and types correctly."
                 )
+
         if len(ai_messages) > 1:
             if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
                 self._check_tool_call(
@@ -655,6 +712,7 @@ class GetPointcloudTask(ROS2ToolCallingAgentTask):
                     expected_name="receive_ros2_message",
                     expected_args={"topic": "/pointcloud"},
                 )
+
         if not self.result.errors:
             self.result.success = True
 
@@ -662,21 +720,30 @@ class GetPointcloudTask(ROS2ToolCallingAgentTask):
 class MoveToPointTask(ROS2ToolCallingAgentTask):
     complexity = "easy"
 
+    topics_and_types: Dict[str, str] = {
+        "/pointcloud": "sensor_msgs/msg/PointCloud2",
+        "/robot_description": "std_msgs/msg/String",
+        "/rosout": "rcl_interfaces/msg/Log",
+        "/tf": "tf2_msgs/msg/TFMessage",
+    }
+
     def __init__(
         self, args: Dict[str, Any], logger: loggers_type | None = None
     ) -> None:
         super().__init__(logger=logger)
+
+        topic_strings = [
+            f"topic: {topic}\ntype: {msg_type}\n"
+            for topic, msg_type in self.topics_and_types.items()
+        ]
+
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /pointcloud\ntype: sensor_msgs/msg/PointCloud2\n",
-                    "topic: /robot_description\ntype: std_msgs/msg/String\n",
-                    "topic: /rosout\ntype: rcl_interfaces/msg/Log\n",
-                    "topic: /tf\ntype: tf2_msgs/msg/TFMessage\n",
-                ]
+                mock_topics_names_and_types=topic_strings
             ),
             MockMoveToPointTool(manipulator_frame="base_link"),
         ]
+
         self.args = MoveToPointToolInput(**args)
 
     def get_system_prompt(self) -> str:
@@ -727,6 +794,13 @@ class MoveToPointTask(ROS2ToolCallingAgentTask):
 class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
     complexity = "easy"
 
+    topics_and_types: Dict[str, str] = {
+        "/pointcloud": "sensor_msgs/msg/PointCloud2",
+        "/robot_description": "std_msgs/msg/String",
+        "/rosout": "rcl_interfaces/msg/Log",
+        "/tf": "tf2_msgs/msg/TFMessage",
+    }
+
     def __init__(
         self,
         objects: Dict[str, List[dict[str, float]]],
@@ -749,17 +823,19 @@ class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
         }
         """
         super().__init__(logger=logger)
+
+        topic_strings = [
+            f"topic: {topic}\ntype: {msg_type}\n"
+            for topic, msg_type in self.topics_and_types.items()
+        ]
+
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /pointcloud\ntype: sensor_msgs/msg/PointCloud2\n",
-                    "topic: /robot_description\ntype: std_msgs/msg/String\n",
-                    "topic: /rosout\ntype: rcl_interfaces/msg/Log\n",
-                    "topic: /tf\ntype: tf2_msgs/msg/TFMessage\n",
-                ]
+                mock_topics_names_and_types=topic_strings
             ),
             MockGetObjectPositionsTool(mock_objects=objects),
         ]
+
         self.objects = objects
 
     def get_system_prompt(self) -> str:
@@ -811,6 +887,7 @@ class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
                     for object_type in self.objects
                 ],
             )
+
         if not self.result.errors:
             self.result.success = True
 
@@ -837,6 +914,14 @@ class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
     }
     object_to_grab = "cube"
     """
+    topics_and_types: Dict[str, str] = {
+        "/attached_collision_object": "moveit_msgs/msg/AttachedCollisionObject",
+        "/camera_image_color": "sensor_msgs/msg/Image",
+        "/camera_image_depth": "sensor_msgs/msg/Image",
+        "/clock": "rosgraph_msgs/msg/Clock",
+        "/collision_object": "moveit_msgs/msg/CollisionObject",
+        "/color_camera_info": "sensor_msgs/msg/CameraInfo",
+    }
 
     def __init__(
         self,
@@ -845,16 +930,15 @@ class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
         logger: loggers_type | None = None,
     ) -> None:
         super().__init__(logger=logger)
+
+        topic_strings = [
+            f"topic: {topic}\ntype: {msg_type}\n"
+            for topic, msg_type in self.topics_and_types.items()
+        ]
+
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
-                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
-                ]
+                mock_topics_names_and_types=topic_strings
             ),
             MockGetObjectPositionsTool(
                 target_frame="panda_link0",
@@ -866,6 +950,7 @@ class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
             ),
             MockMoveToPointTool(manipulator_frame="panda_link0"),
         ]
+
         self.objects = objects
         self.object_to_grab = object_to_grab
         self._verify_args()
@@ -907,6 +992,7 @@ class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
         ai_messages: Sequence[AIMessage] = [
             message for message in messages if isinstance(message, AIMessage)
         ]
+
         expected_num_ai_messages = 3
         if len(ai_messages) != expected_num_ai_messages:
             self.log_error(
@@ -932,6 +1018,7 @@ class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
                     expected_name="move_to_point",
                     expected_args=obj_to_grab,
                 )
+
         if not self.result.errors:
             self.result.success = True
 
@@ -959,6 +1046,15 @@ class GrabNotExistingObjectTask(ROS2ToolCallingAgentTask):
 
     complexity = "medium"
 
+    topics_and_types: Dict[str, str] = {
+        "/attached_collision_object": "moveit_msgs/msg/AttachedCollisionObject",
+        "/camera_image_color": "sensor_msgs/msg/Image",
+        "/camera_image_depth": "sensor_msgs/msg/Image",
+        "/clock": "rosgraph_msgs/msg/Clock",
+        "/collision_object": "moveit_msgs/msg/CollisionObject",
+        "/color_camera_info": "sensor_msgs/msg/CameraInfo",
+    }
+
     def __init__(
         self,
         objects: Dict[str, List[dict[str, float]]],
@@ -966,16 +1062,15 @@ class GrabNotExistingObjectTask(ROS2ToolCallingAgentTask):
         logger: loggers_type | None = None,
     ) -> None:
         super().__init__(logger=logger)
+
+        topic_strings = [
+            f"topic: {topic}\ntype: {msg_type}\n"
+            for topic, msg_type in self.topics_and_types.items()
+        ]
+
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
-                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
-                ]
+                mock_topics_names_and_types=topic_strings
             ),
             MockGetObjectPositionsTool(
                 target_frame="panda_link0",
@@ -987,6 +1082,7 @@ class GrabNotExistingObjectTask(ROS2ToolCallingAgentTask):
             ),
             MockMoveToPointTool(manipulator_frame="panda_link0"),
         ]
+
         self.objects = objects
         self.object_to_grab = object_to_grab
         self._verify_args()
@@ -1022,11 +1118,13 @@ class GrabNotExistingObjectTask(ROS2ToolCallingAgentTask):
         ai_messages: Sequence[AIMessage] = [
             message for message in messages if isinstance(message, AIMessage)
         ]
+
         expected_num_ai_messages = 2
         if len(ai_messages) != expected_num_ai_messages:
             self.log_error(
                 msg=f"Expected {expected_num_ai_messages} AI messages, but got {len(ai_messages)}."
             )
+
         if ai_messages:
             if self._check_tool_calls_num_in_ai_message(ai_messages[0], expected_num=1):
                 self._check_tool_call(
@@ -1062,6 +1160,14 @@ class MoveExistingObjectLeftTask(ROS2ToolCallingAgentTask):
 
     complexity = "medium"
 
+    topics_and_types: Dict[str, str] = {
+        "/attached_collision_object": "moveit_msgs/msg/AttachedCollisionObject",
+        "/camera_image_color": "sensor_msgs/msg/Image",
+        "/camera_image_depth": "sensor_msgs/msg/Image",
+        "/clock": "rosgraph_msgs/msg/Clock",
+        "/collision_object": "moveit_msgs/msg/CollisionObject",
+    }
+
     def __init__(
         self,
         objects: Dict[str, List[dict[str, float]]],
@@ -1069,15 +1175,15 @@ class MoveExistingObjectLeftTask(ROS2ToolCallingAgentTask):
         logger: loggers_type | None = None,
     ) -> None:
         super().__init__(logger=logger)
+
+        topic_strings = [
+            f"topic: {topic}\ntype: {msg_type}\n"
+            for topic, msg_type in self.topics_and_types.items()
+        ]
+
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
-                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                ]
+                mock_topics_names_and_types=topic_strings
             ),
             MockGetObjectPositionsTool(
                 target_frame="panda_link0",
@@ -1089,6 +1195,7 @@ class MoveExistingObjectLeftTask(ROS2ToolCallingAgentTask):
             ),
             MockMoveToPointTool(manipulator_frame="panda_link0"),
         ]
+
         self.objects = objects
         self.object_to_grab = object_to_grab
         self._verify_args()
@@ -1132,11 +1239,13 @@ class MoveExistingObjectLeftTask(ROS2ToolCallingAgentTask):
         ai_messages: Sequence[AIMessage] = [
             message for message in messages if isinstance(message, AIMessage)
         ]
+
         expected_num_ai_messages = 4
         if len(ai_messages) != expected_num_ai_messages:
             self.log_error(
                 msg=f"Expected {expected_num_ai_messages} AI messages, but got {len(ai_messages)}."
             )
+
         if ai_messages:
             if self._check_tool_calls_num_in_ai_message(ai_messages[0], expected_num=1):
                 self._check_tool_call(
@@ -1189,6 +1298,12 @@ class MoveExistingObjectFrontTask(ROS2ToolCallingAgentTask):
 
     complexity = "medium"
 
+    topics_and_types: Dict[str, str] = {
+        "/attached_collision_object": "moveit_msgs/msg/AttachedCollisionObject",
+        "/camera_image_color": "sensor_msgs/msg/Image",
+        "/camera_image_depth": "sensor_msgs/msg/Image",
+    }
+
     def __init__(
         self,
         objects: Dict[str, List[dict[str, float]]],
@@ -1196,13 +1311,15 @@ class MoveExistingObjectFrontTask(ROS2ToolCallingAgentTask):
         logger: loggers_type | None = None,
     ) -> None:
         super().__init__(logger=logger)
+
+        topic_strings = [
+            f"topic: {topic}\ntype: {msg_type}\n"
+            for topic, msg_type in self.topics_and_types.items()
+        ]
+
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
-                ]
+                mock_topics_names_and_types=topic_strings
             ),
             MockGetObjectPositionsTool(
                 target_frame="panda_link0",
@@ -1214,6 +1331,7 @@ class MoveExistingObjectFrontTask(ROS2ToolCallingAgentTask):
             ),
             MockMoveToPointTool(manipulator_frame="panda_link0"),
         ]
+
         self.objects = objects
         self.object_to_grab = object_to_grab
         self._verify_args()
@@ -1257,6 +1375,7 @@ class MoveExistingObjectFrontTask(ROS2ToolCallingAgentTask):
         ai_messages: Sequence[AIMessage] = [
             message for message in messages if isinstance(message, AIMessage)
         ]
+
         expected_num_ai_messages = 4
         if len(ai_messages) != expected_num_ai_messages:
             self.log_error(
@@ -1325,6 +1444,12 @@ class SwapObjectsTask(ROS2ToolCallingAgentTask):
 
     complexity = "hard"
 
+    topics_and_types: Dict[str, str] = {
+        "/attached_collision_object": "moveit_msgs/msg/AttachedCollisionObject",
+        "/camera_image_color": "sensor_msgs/msg/Image",
+        "/camera_image_depth": "sensor_msgs/msg/Image",
+    }
+
     def __init__(
         self,
         objects: Dict[str, List[Dict[str, float]]],
@@ -1332,13 +1457,15 @@ class SwapObjectsTask(ROS2ToolCallingAgentTask):
         logger: loggers_type | None = None,
     ) -> None:
         super().__init__(logger=logger)
+
+        topic_strings = [
+            f"topic: {topic}\ntype: {msg_type}\n"
+            for topic, msg_type in self.topics_and_types.items()
+        ]
+
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
-                ]
+                mock_topics_names_and_types=topic_strings
             ),
             MockGetObjectPositionsTool(
                 target_frame="panda_link0",
@@ -1350,6 +1477,7 @@ class SwapObjectsTask(ROS2ToolCallingAgentTask):
             ),
             MockMoveToPointTool(manipulator_frame="panda_link0"),
         ]
+
         self.objects = objects
         self.objects_to_swap = objects_to_swap
         self._verify_args()
@@ -1394,7 +1522,6 @@ class SwapObjectsTask(ROS2ToolCallingAgentTask):
         response : Dict[str, Any]
             The response from the agent
         """
-
         messages = response["messages"]
         ai_messages: Sequence[AIMessage] = [
             message for message in messages if isinstance(message, AIMessage)
@@ -1518,94 +1645,109 @@ class SwapObjectsTask(ROS2ToolCallingAgentTask):
 
 class PublishROS2CustomMessageTask(ROS2ToolCallingAgentTask):
     complexity = "easy"
+    topics_and_types: Dict[str, str] = {
+        "/attached_collision_object": "moveit_msgs/msg/AttachedCollisionObject",
+        "/camera_image_color": "sensor_msgs/msg/Image",
+        "/camera_image_depth": "sensor_msgs/msg/Image",
+        "/clock": "rosgraph_msgs/msg/Clock",
+        "/collision_object": "moveit_msgs/msg/CollisionObject",
+        "/color_camera_info": "sensor_msgs/msg/CameraInfo",
+        "/color_camera_info5": "sensor_msgs/msg/CameraInfo",
+        "/depth_camera_info5": "sensor_msgs/msg/CameraInfo",
+        "/depth_image5": "sensor_msgs/msg/Image",
+        "/to_human": "rai_interfaces/msg/HRIMessage",
+    }
+
+    interfaces: Dict[str, Dict[str, Any]] = {
+        "moveit_msgs/msg/AttachedCollisionObject": {
+            "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+            "link_name": "",
+            "object": {
+                "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+                "id": "",
+                "primitives": [],
+                "primitive_poses": [],
+                "meshes": [],
+                "mesh_poses": [],
+                "planes": [],
+                "plane_poses": [],
+                "operation": 0,
+            },
+            "touch_links": [],
+        },
+        "sensor_msgs/msg/Image": {
+            "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+            "height": 0,
+            "width": 0,
+            "encoding": "",
+            "is_bigendian": 0,
+            "step": 0,
+            "data": [],
+        },
+        "rosgraph_msgs/msg/Clock": {"clock": {"sec": 0, "nanosec": 0}},
+        "moveit_msgs/msg/CollisionObject": {
+            "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+            "id": "",
+            "primitives": [],
+            "primitive_poses": [],
+            "meshes": [],
+            "mesh_poses": [],
+            "planes": [],
+            "plane_poses": [],
+            "operation": 0,
+        },
+        "sensor_msgs/msg/CameraInfo": {
+            "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+            "height": 0,
+            "width": 0,
+            "distortion_model": "",
+            "D": [],
+            "K": [0.0] * 9,
+            "R": [0.0] * 9,
+            "P": [0.0] * 12,
+            "binning_x": 0,
+            "binning_y": 0,
+            "roi": {
+                "x_offset": 0,
+                "y_offset": 0,
+                "height": 0,
+                "width": 0,
+                "do_rectify": False,
+            },
+        },
+        "rai_interfaces/msg/HRIMessage": {
+            "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+            "text": "",
+            "images": [],
+            "audios": [],
+        },
+        "rai_interfaces/msg/AudioMessage": {
+            "audio": [],
+            "sample_rate": 0,
+            "channels": 0,
+        },
+    }
+
+    expected_text = "Hello!"
 
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
+        topic_strings = [
+            f"topic: {topic}\ntype: {msg_type}\n"
+            for topic, msg_type in self.topics_and_types.items()
+        ]
+        interface_strings = {
+            msg_type: json.dumps(interface)
+            for msg_type, interface in self.interfaces.items()
+        }
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
-                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /color_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /depth_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /to_human\ntype: rai_interfaces/msg/HRIMessage\n",
-                ]
+                mock_topics_names_and_types=topic_strings
             ),
-            MockGetROS2MessageInterfaceTool(
-                mock_interfaces={
-                    "moveit_msgs/msg/AttachedCollisionObject": (
-                        '{"header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""}, '
-                        '"link_name": "", '
-                        '"object": {"header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""}, '
-                        '"id": "", '
-                        '"primitives": [], '
-                        '"primitive_poses": [], '
-                        '"meshes": [], '
-                        '"mesh_poses": [], '
-                        '"planes": [], '
-                        '"plane_poses": [], '
-                        '"operation": 0}, '
-                        '"touch_links": []}'
-                    ),
-                    "sensor_msgs/msg/Image": (
-                        '{"header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""}, '
-                        '"height": 0, '
-                        '"width": 0, '
-                        '"encoding": "", '
-                        '"is_bigendian": 0, '
-                        '"step": 0, '
-                        '"data": []}'
-                    ),
-                    "rosgraph_msgs/msg/Clock": ('{"clock": {"sec": 0, "nanosec": 0}}'),
-                    "moveit_msgs/msg/CollisionObject": (
-                        '{"header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""}, '
-                        '"id": "", '
-                        '"primitives": [], '
-                        '"primitive_poses": [], '
-                        '"meshes": [], '
-                        '"mesh_poses": [], '
-                        '"planes": [], '
-                        '"plane_poses": [], '
-                        '"operation": 0}'
-                    ),
-                    "sensor_msgs/msg/CameraInfo": (
-                        '{"header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""}, '
-                        '"height": 0, '
-                        '"width": 0, '
-                        '"distortion_model": "", '
-                        '"D": [], '
-                        '"K": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], '
-                        '"R": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], '
-                        '"P": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], '
-                        '"binning_x": 0, '
-                        '"binning_y": 0, '
-                        '"roi": {"x_offset": 0, "y_offset": 0, "height": 0, "width": 0, "do_rectify": false}}'
-                    ),
-                    "rai_interfaces/msg/HRIMessage": (
-                        '{"header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""}, '
-                        '"text": "Hello!", '
-                        '"images": [], '
-                        '"audios": []}'
-                    ),
-                    "rai_interfaces/msg/AudioMessage": (
-                        '{"audio": [], "sample_rate": 0, "channels": 0}'
-                    ),
-                }
-            ),
+            MockGetROS2MessageInterfaceTool(mock_interfaces=interface_strings),
             MockPublishROS2MessageTool(
-                expected_topic="/to_human",
-                expected_message={
-                    "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
-                    "text": "Hello!",
-                    "images": [],
-                    "audios": [],
-                },
-                expected_message_type="rai_interfaces/msg/HRIMessage",
+                available_topics=topic_strings,
+                available_message_types=list(self.topics_and_types.keys()),
             ),
         ]
 
@@ -1613,7 +1755,8 @@ class PublishROS2CustomMessageTask(ROS2ToolCallingAgentTask):
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
 
     def get_prompt(self) -> str:
-        return "Publish message 'Hello!' to the topic /to_human. Before that check the type of message and interface of that type."
+        # return f"Publish message with text: `{self.expected_text}` to the topic /to_human. Check the type of message this topic requires. Don't forget about the message argument."
+        return "What are arguments of tool publish_ros2_message?"
 
     def verify_tool_calls(self, response: dict[str, Any]):
         """It is expected that the agent will request:
@@ -1642,26 +1785,28 @@ class PublishROS2CustomMessageTask(ROS2ToolCallingAgentTask):
                 self.log_error(
                     msg="First AI message did not request ROS2 topics and types correctly."
                 )
-        if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
-            self._check_tool_call(
-                tool_call=ai_messages[1].tool_calls[0],
-                expected_name="get_ros2_message_interface",
-                expected_args={"msg_type": "rai_interfaces/msg/HRIMessage"},
-            )
-        if self._check_tool_calls_num_in_ai_message(ai_messages[2], expected_num=1):
-            self._check_tool_call(
-                tool_call=ai_messages[2].tool_calls[0],
-                expected_name="publish_ros2_message",
-                expected_args={
-                    "topic": "/to_human",
-                    "message": {
-                        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
-                        "text": "Hello!",
-                        "images": [],
-                        "audios": [],
+        if len(ai_messages) > 1:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
+                self._check_tool_call(
+                    tool_call=ai_messages[1].tool_calls[0],
+                    expected_name="get_ros2_message_interface",
+                    expected_args={"msg_type": "rai_interfaces/msg/HRIMessage"},
+                )
+
+        if len(ai_messages) > 2:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[2], expected_num=1):
+                expected_message = self.interfaces[
+                    "rai_interfaces/msg/HRIMessage"
+                ].copy()
+                expected_message["text"] = self.expected_text
+                self._check_tool_call(
+                    tool_call=ai_messages[2].tool_calls[0],
+                    expected_name="publish_ros2_message",
+                    expected_args={
+                        "topic": "/to_human",
+                        "message": expected_message,
+                        "message_type": "rai_interfaces/msg/HRIMessage",
                     },
-                    "message_type": "rai_interfaces/msg/HRIMessage",
-                },
-            )
+                )
         if not self.result.errors:
             self.result.success = True
