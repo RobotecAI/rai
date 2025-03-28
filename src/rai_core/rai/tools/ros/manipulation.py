@@ -186,4 +186,4 @@ class GetObjectPositionsTool(BaseTool):
         if len(mani_frame_poses) == 0:
             return f"No {object_name}s detected."
         else:
-            return f"Centroids of detected {object_name}s in manipulator frame: [{', '.join(map(self.format_pose, mani_frame_poses))}]. Sizes of the detected objects are unknown."
+            return f"Centroids of detected {object_name}s in {self.target_frame} frame: [{', '.join(map(self.format_pose, mani_frame_poses))}]. Sizes of the detected objects are unknown."
