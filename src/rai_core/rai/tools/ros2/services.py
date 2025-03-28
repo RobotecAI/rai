@@ -22,6 +22,7 @@ except ImportError:
 from typing import Any, Dict, List, Type
 
 from langchain_core.tools import BaseTool
+from langchain_core.utils import stringify_dict
 from pydantic import BaseModel, Field
 
 from rai.communication.ros2.connectors import ROS2ARIMessage
@@ -40,7 +41,49 @@ class ROS2ServicesToolkit(BaseROS2Toolkit):
                 writable=self.writable,
                 forbidden=self.forbidden,
             ),
+            GetROS2ServicesNamesAndTypesTool(
+                connector=self.connector,
+                readable=self.readable,
+                writable=self.writable,
+                forbidden=self.forbidden,
+            ),
         ]
+
+
+class GetROS2ServicesNamesAndTypesToolInput(BaseModel):
+    pass
+
+
+class GetROS2ServicesNamesAndTypesTool(BaseROS2Tool):
+    name: str = "get_ros2_services_names_and_types"
+    description: str = "Get the names and types of all ROS2 services"
+    args_schema: Type[GetROS2ServicesNamesAndTypesToolInput] = (
+        GetROS2ServicesNamesAndTypesToolInput
+    )
+
+    def _run(self) -> str:
+        services_and_types = self.connector.get_services_names_and_types()
+        if all([self.readable is None, self.writable is None, self.forbidden is None]):
+            response = [
+                {"service": service, "type": type}
+                for service, type in services_and_types
+            ]
+            return "\n".join([stringify_dict(service) for service in response])
+        else:
+            writable_services: List[Dict[str, Any]] = []
+
+            for service, type in services_and_types:
+                if self.is_writable(service):
+                    writable_services.append({"service": service, "type": type})
+                    continue
+
+            text_response = "\n".join(
+                [
+                    stringify_dict(service_description)
+                    for service_description in writable_services
+                ]
+            )
+            return text_response
 
 
 class CallROS2ServiceToolInput(BaseModel):

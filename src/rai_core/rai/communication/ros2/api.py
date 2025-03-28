@@ -37,6 +37,7 @@ from typing import (
 )
 
 import rclpy
+import rclpy.action
 import rclpy.callback_groups
 import rclpy.executors
 import rclpy.node
@@ -607,6 +608,9 @@ class ROS2ServiceAPI:
             )
         return service_client.call(srv_msg)
 
+    def get_service_names_and_types(self) -> List[Tuple[str, List[str]]]:
+        return self.node.get_service_names_and_types()
+
 
 class ROS2ActionData(TypedDict):
     action_client: Optional[ActionClient]
@@ -740,6 +744,9 @@ class ROS2ActionAPI:
         if self.actions[handle]["result_future"] is None:
             raise ValueError(f"No result available for goal {handle}")
         return self.actions[handle]["result_future"].result()
+
+    def get_action_names_and_types(self) -> List[Tuple[str, List[str]]]:
+        return rclpy.action.get_action_names_and_types(self.node)
 
     def shutdown(self) -> None:
         """Cleanup thread pool when object is destroyed."""

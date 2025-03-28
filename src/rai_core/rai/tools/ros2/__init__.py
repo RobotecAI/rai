@@ -12,8 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .actions import CancelROS2ActionTool, ROS2ActionToolkit, StartROS2ActionTool
-from .services import CallROS2ServiceTool, ROS2ServicesToolkit
+from .actions import (
+    CancelROS2ActionTool,
+    GetROS2ActionsNamesAndTypesTool,
+    ROS2ActionToolkit,
+    StartROS2ActionTool,
+)
+from .services import (
+    CallROS2ServiceTool,
+    GetROS2ServicesNamesAndTypesTool,
+    ROS2ServicesToolkit,
+)
 from .toolkit import ROS2Toolkit
 from .topics import (
     GetROS2ImageTool,
@@ -28,8 +37,10 @@ from .topics import (
 __all__ = [
     "CallROS2ServiceTool",
     "CancelROS2ActionTool",
+    "GetROS2ActionsNamesAndTypesTool",
     "GetROS2ImageTool",
     "GetROS2MessageInterfaceTool",
+    "GetROS2ServicesNamesAndTypesTool",
     "GetROS2TopicsNamesAndTypesTool",
     "GetROS2TransformTool",
     "PublishROS2MessageTool",

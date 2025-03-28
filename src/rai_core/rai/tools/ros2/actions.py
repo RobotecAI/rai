@@ -26,6 +26,7 @@ from threading import Lock
 from typing import Any, Callable, Dict, List, Type
 
 from langchain_core.tools import BaseTool  # type: ignore
+from langchain_core.utils import stringify_dict
 from pydantic import BaseModel, Field
 
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
@@ -75,6 +76,12 @@ class ROS2ActionToolkit(BaseROS2Toolkit):
             GetROS2ActionIDsTool(
                 internal_action_id_mapping=self.internal_action_id_mapping
             ),
+            GetROS2ActionsNamesAndTypesTool(
+                connector=self.connector,
+                readable=self.readable,
+                writable=self.writable,
+                forbidden=self.forbidden,
+            ),
         ]
 
     def _generic_feedback_callback(self, action_id: str, feedback: Any) -> None:
@@ -84,6 +91,41 @@ class ROS2ActionToolkit(BaseROS2Toolkit):
     def _generic_on_done_callback(self, action_id: str, result: Any) -> None:
         with self.action_results_store_lock:
             self.action_results_store[action_id] = result
+
+
+class GetROS2ActionsNamesAndTypesToolInput(BaseModel):
+    pass
+
+
+class GetROS2ActionsNamesAndTypesTool(BaseROS2Tool):
+    name: str = "get_ros2_actions_names_and_types"
+    description: str = "Get the names and types of all ROS2 actions"
+    args_schema: Type[GetROS2ActionsNamesAndTypesToolInput] = (
+        GetROS2ActionsNamesAndTypesToolInput
+    )
+
+    def _run(self) -> str:
+        actions_and_types = self.connector.get_actions_names_and_types()
+        if all([self.readable is None, self.writable is None, self.forbidden is None]):
+            response = [
+                {"action": action, "type": type} for action, type in actions_and_types
+            ]
+            return "\n".join([stringify_dict(action) for action in response])
+        else:
+            writable_actions: List[Dict[str, Any]] = []
+
+            for action, type in actions_and_types:
+                if self.is_writable(action):
+                    writable_actions.append({"action": action, "type": type})
+                    continue
+
+            text_response = "\n".join(
+                [
+                    stringify_dict(action_description)
+                    for action_description in writable_actions
+                ]
+            )
+            return text_response
 
 
 class StartROS2ActionToolInput(BaseModel):
