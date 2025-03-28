@@ -31,6 +31,9 @@ from rai_bench.tool_calling_agent.interfaces import (
     Task,
 )
 from rai_bench.tool_calling_agent.scores_tracing import ScoreTracingHandler
+from rai_bench.tool_calling_agent.tasks.spatial import (
+    SpatialReasoningAgentTask,
+)
 
 loggers_type = logging.Logger
 
@@ -177,10 +180,23 @@ class ToolCallingAgentBenchmark:
 
         ts = time.perf_counter()
         try:
-            response = agent.invoke(
-                {"messages": [HumanMultimodalMessage(content=task.get_prompt())]},
-                config=config,
-            )
+            if isinstance(task, SpatialReasoningAgentTask):
+                response = agent.invoke(
+                    {
+                        "messages": [
+                            HumanMultimodalMessage(
+                                content=task.get_prompt(), images=task.get_images()
+                            )
+                        ]
+                    },
+                    config=config,
+                )
+            else:
+                response = agent.invoke(
+                    {"messages": [HumanMultimodalMessage(content=task.get_prompt())]},
+                    config=config,
+                )
+
             self.logger.debug(response)
             toll_calls = task.get_tool_calls(response=response)
             task.validate(tool_calls=toll_calls)

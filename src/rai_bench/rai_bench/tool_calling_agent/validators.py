@@ -33,19 +33,21 @@ class OrderedCallsValidator(Validator):
         super().__init__(subtasks=subtasks, logger=logger)
         if len(self.subtasks) < 1:
             raise ValueError("Validator must have at least 1 subtask.")
-        self.subtask_iter = iter(subtasks)
 
     def validate(self, tool_calls: List[ToolCall]) -> Tuple[bool, List[ToolCall]]:
+        # Before validation create new iterator, in case validator
+        # was used before in other task
+        subtask_iter = iter(self.subtasks)
         if len(tool_calls) < 1:
             self.log_error("Not a single tool call to validate")
             return False, tool_calls
 
         else:
-            subtask = next(self.subtask_iter)
+            subtask = next(subtask_iter)
             for i, tool_call in enumerate(tool_calls):
                 try:
                     if subtask.validate(tool_call=tool_call):
-                        subtask = next(self.subtask_iter)
+                        subtask = next(subtask_iter)
                 except SubTaskValidationError as e:
                     self.log_error(msg=str(e))
                 except StopIteration:
