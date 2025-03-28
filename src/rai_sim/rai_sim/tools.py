@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Type
+from typing import List, Type
 
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from rai_sim.simulation_bridge import Pose, SimulationBridge
+from rai_sim.simulation_bridge import Pose, SimulationBridge, SimulationConfig
 
 
 class GetObjectPositionsGroundTruthToolInput(BaseModel):
@@ -34,7 +34,7 @@ class GetObjectPositionsGroundTruthTool(BaseTool):
         "While position detection is reliable, please note that object classification may occasionally be inaccurate."
     )
 
-    simulation: SimulationBridge
+    simulation: SimulationBridge[SimulationConfig]
 
     args_schema: Type[GetObjectPositionsGroundTruthToolInput] = (
         GetObjectPositionsGroundTruthToolInput
@@ -49,7 +49,7 @@ class GetObjectPositionsGroundTruthTool(BaseTool):
         return all([word in prefab_name for word in object_name.split()])
 
     def _run(self, object_name: str):
-        poses = []
+        poses: List[Pose] = []
         for entity in self.simulation.get_scene_state().entities:
             if self.match_name(object_name, entity.prefab_name):
                 poses.append(entity.pose)
