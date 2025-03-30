@@ -31,6 +31,7 @@ from rai.tools.ros2 import (
     GetROS2TopicsNamesAndTypesTool,
     PublishROS2MessageTool,
     ReceiveROS2MessageTool,
+    CallROS2ServiceTool,
 )
 
 
@@ -239,3 +240,30 @@ class MockGetROS2MessageInterfaceTool(GetROS2MessageInterfaceTool):
             return self.mock_interfaces[msg_type]
         else:
             raise ImportError(f"Module {msg_type} not found.")
+
+
+class MockCallROS2ServiceTool(CallROS2ServiceTool):
+    connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
+    available_services: List[str]
+    available_service_types: List[str]
+
+    def _run(
+        self, service_name: str, service_type: str, service_args: Dict[str, Any]
+    ) -> str:
+        if service_name not in self.available_services:
+            raise ValueError(
+                f"Service {service_name} is not available within 1.0 seconds. Check if the service exists."
+            )
+        if service_type not in self.available_service_types:
+            raise TypeError(
+                "Expected one of service types: {}, got {}".format(
+                    self.available_service_types, service_type
+                )
+            )
+        response = ROS2ARIMessage(payload={"response": "success"})
+        return str(
+            {
+                "payload": response.payload,
+                "metadata": response.metadata,
+            }
+        )

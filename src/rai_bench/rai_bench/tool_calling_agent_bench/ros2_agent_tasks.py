@@ -35,6 +35,7 @@ from rai_bench.tool_calling_agent_bench.mocked_tools import (
     MockMoveToPointTool,
     MockPublishROS2MessageTool,
     MockReceiveROS2MessageTool,
+    MockCallROS2ServiceTool,
 )
 
 loggers_type = logging.Logger
@@ -1808,5 +1809,155 @@ class PublishROS2CustomMessageTask(ROS2ToolCallingAgentTask):
                         "message_type": "rai_interfaces/msg/HRIMessage",
                     },
                 )
+        if not self.result.errors:
+            self.result.success = True
+
+
+class CallROS2CustomServiceTask(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+    services_and_types: Dict[str, str] = {
+        "/manipulator_move_to": "rai_interfaces/srv/ManipulatorMoveTo",
+        "/rai_ros2_ari_connector_46b5f901d7cc/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+        "/rai_ros2_ari_connector_46b5f901d7cc/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+        "/rai_ros2_ari_connector_46b5f901d7cc/get_parameters": "rcl_interfaces/srv/GetParameters",
+        "/rai_ros2_ari_connector_46b5f901d7cc/list_parameters": "rcl_interfaces/srv/ListParameters",
+        "/rai_ros2_ari_connector_46b5f901d7cc/set_parameters": "rcl_interfaces/srv/SetParameters",
+        "/rai_ros2_ari_connector_46b5f901d7cc/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+        "/tf2_frames": "tf2_msgs/srv/FrameGraph",
+    }
+    interfaces: Dict[str, Dict[str, Any]] = {
+        "rai_interfaces/srv/ManipulatorMoveTo": {
+            "request": {
+                "initial_gripper_state": False,
+                "final_gripper_state": False,
+                "target_pose": {
+                    "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+                    "pose": {
+                        "position": {"x": 0.0, "y": 0.0, "z": 0.0},
+                        "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+                    },
+                },
+            },
+            "response": {"success": False},
+        },
+        "rcl_interfaces/srv/DescribeParameters": {
+            "request": {
+                "names": [],
+                "include_default_value": False,
+            },
+            "response": {
+                "descriptors": [],
+            },
+        },
+        "rcl_interfaces/srv/GetParameterTypes": {
+            "request": {"names": []},
+            "response": {"types": []},
+        },
+        "rcl_interfaces/srv/GetParameters": {
+            "request": {"names": []},
+            "response": {"values": []},
+        },
+        "rcl_interfaces/srv/ListParameters": {
+            "request": {
+                "prefixes": [],
+                "depth": 0,
+            },
+            "response": {
+                "names": [],
+                "prefixes": [],
+            },
+        },
+        "rcl_interfaces/srv/SetParameters": {
+            "request": {"parameters": []},
+            "response": {"results": []},
+        },
+        "rcl_interfaces/srv/SetParametersAtomically": {
+            "request": {"parameters": []},
+            "response": {"result": {"successful": False, "reason": ""}},
+        },
+        "tf2_msgs/srv/FrameGraph": {
+            "request": {},
+            "response": {"frame_yaml": ""},
+        },
+    }
+
+    expected_initial_gripper_state = True
+    expected_final_gripper_state = False
+    expected_target_pose: Dict[str, Dict[str, Any]] = {
+        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "world"},
+        "pose": {
+            "position": {"x": 1.0, "y": 2.0, "z": 3.0},
+            "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+        },
+    }
+
+    def __init__(self, logger: loggers_type | None = None) -> None:
+        super().__init__(logger=logger)
+        service_strings = [
+            f"service: {service}\ntype: {srv_type}\n"
+            for service, srv_type in self.services_and_types.items()
+        ]
+        interface_strings = {
+            srv_type: json.dumps(interface)
+            for srv_type, interface in self.interfaces.items()
+        }
+        self.expected_tools: List[BaseTool] = [
+            MockGetROS2MessageInterfaceTool(mock_interfaces=interface_strings),
+            MockCallROS2ServiceTool(
+                available_services=service_strings,
+                available_service_types=list(self.services_and_types.values()),
+            ),
+        ]
+
+    def get_system_prompt(self) -> str:
+        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
+
+    def get_prompt(self) -> str:
+        return "Call service /manipulator_move_to"
+
+    def verify_tool_calls(self, response: dict[str, Any]):
+        """
+        It is expected that the agent will request:
+        1. The tool to call the ROS2 service with proper service name, service type, and request arguments.
+
+        Parameters
+        ----------
+        response : dict[str, Any]
+            The response from the agent.
+        """
+        messages = response["messages"]
+        ai_messages: Sequence[AIMessage] = [
+            message for message in messages if isinstance(message, AIMessage)
+        ]
+
+        if len(ai_messages) != 2:
+            self.log_error(
+                msg=f"Expected exactly 2 AI messages, but got {len(ai_messages)}."
+            )
+
+        if ai_messages:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[0], expected_num=1):
+                # Create the expected service request based on the interface and override with our expected values.
+                expected_request = self.interfaces[
+                    "rai_interfaces/srv/ManipulatorMoveTo"
+                ]["request"].copy()
+                expected_request["initial_gripper_state"] = (
+                    self.expected_initial_gripper_state
+                )
+                expected_request["final_gripper_state"] = (
+                    self.expected_final_gripper_state
+                )
+                expected_request["target_pose"] = self.expected_target_pose
+
+                self._check_tool_call(
+                    tool_call=ai_messages[0].tool_calls[0],
+                    expected_name="call_ros2_service",
+                    expected_args={
+                        "service_name": "/manipulator_move_to",
+                        "service_type": "rai_interfaces/srv/ManipulatorMoveTo",
+                        "service_args": expected_request,
+                    },
+                )
+
         if not self.result.errors:
             self.result.success = True
