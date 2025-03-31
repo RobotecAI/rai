@@ -1748,8 +1748,8 @@ class PublishROS2CustomMessageTask(ROS2ToolCallingAgentTask):
             ),
             MockGetROS2MessageInterfaceTool(mock_interfaces=interface_strings),
             MockPublishROS2MessageTool(
-                available_topics=topic_strings,
-                available_message_types=list(self.topics_and_types.keys()),
+                available_topics=list(self.topics_and_types.keys()),
+                available_message_types=list(self.topics_and_types.values()),
             ),
         ]
 
@@ -1807,6 +1807,220 @@ class PublishROS2CustomMessageTask(ROS2ToolCallingAgentTask):
                         "topic": "/to_human",
                         "message": expected_message,
                         "message_type": "rai_interfaces/msg/HRIMessage",
+                    },
+                )
+        if not self.result.errors:
+            self.result.success = True
+
+
+class PublishROS2AudioMessageTask(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+    topics_and_types: Dict[str, str] = {
+        "/send_audio": "rai_interfaces/msg/AudioMessage",
+    }
+
+    interfaces: Dict[str, Dict[str, Any]] = {
+        "rai_interfaces/msg/AudioMessage": {
+            "audio": [],
+            "sample_rate": 0,
+            "channels": 0,
+        }
+    }
+
+    expected_audio = [123, 456, 789]
+    expected_sample_rate = 44100
+    expected_channels = 2
+
+    def __init__(self, logger: loggers_type | None = None) -> None:
+        super().__init__(logger=logger)
+        topic_strings = [
+            f"topic: {topic}\ntype: {msg_type}\n"
+            for topic, msg_type in self.topics_and_types.items()
+        ]
+        interface_strings = {
+            msg_type: json.dumps(interface)
+            for msg_type, interface in self.interfaces.items()
+        }
+        self.expected_tools: List[BaseTool] = [
+            MockGetROS2TopicsNamesAndTypesTool(
+                mock_topics_names_and_types=topic_strings
+            ),
+            MockGetROS2MessageInterfaceTool(mock_interfaces=interface_strings),
+            MockPublishROS2MessageTool(
+                available_topics=list(self.topics_and_types.keys()),
+                available_message_types=list(self.topics_and_types.values()),
+            ),
+        ]
+
+    def get_system_prompt(self) -> str:
+        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
+
+    def get_prompt(self) -> str:
+        return (
+            "Publish message to the /send_audio topic with audio samples [123, 456, 789], sample rate 44100, "
+            "and 2 channels  Before publishing, check the "
+            "message type of this topic and its interface."
+        )
+
+    def verify_tool_calls(self, response: dict[str, Any]):
+        """
+        It is expected that the agent will:
+        1. Request the tool that retrieves ROS2 topics names and types to determine
+           the message type of the /send_audio topic.
+        2. Request the tool that retrieves message interfaces to check the AudioMessage type.
+        3. Request the tool to publish the message with the correct topic, message type,
+           and content.
+        """
+        messages = response["messages"]
+        ai_messages: Sequence[AIMessage] = [
+            message for message in messages if isinstance(message, AIMessage)
+        ]
+        self.logger.debug(ai_messages)
+        if len(ai_messages) != 4:
+            self.log_error(
+                msg=f"Expected exactly 4 AI messages, but got {len(ai_messages)}."
+            )
+        if ai_messages:
+            if not self._is_ai_message_requesting_get_ros2_topics_and_types(
+                ai_messages[0]
+            ):
+                self.log_error(
+                    msg="First AI message did not request ROS2 topics and types correctly."
+                )
+        if len(ai_messages) > 1:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
+                self._check_tool_call(
+                    tool_call=ai_messages[1].tool_calls[0],
+                    expected_name="get_ros2_message_interface",
+                    expected_args={"msg_type": "rai_interfaces/msg/AudioMessage"},
+                )
+        if len(ai_messages) > 2:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[2], expected_num=1):
+                expected_message = self.interfaces[
+                    "rai_interfaces/msg/AudioMessage"
+                ].copy()
+                expected_message["audio"] = self.expected_audio
+                expected_message["sample_rate"] = self.expected_sample_rate
+                expected_message["channels"] = self.expected_channels
+                self._check_tool_call(
+                    tool_call=ai_messages[2].tool_calls[0],
+                    expected_name="publish_ros2_message",
+                    expected_args={
+                        "topic": "/send_audio",
+                        "message": expected_message,
+                        "message_type": "rai_interfaces/msg/AudioMessage",
+                    },
+                )
+        if not self.result.errors:
+            self.result.success = True
+
+
+class PublishROS2DetectionArrayTask(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+    topics_and_types: Dict[str, str] = {
+        "/send_detections": "rai_interfaces/msg/RAIDetectionArray",
+    }
+    interfaces: Dict[str, Dict[str, Any]] = {
+        "rai_interfaces/msg/RAIDetectionArray": {
+            "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+            "detections": [],
+            "detection_classes": [],
+        }
+    }
+
+    expected_header: Dict[str, Any] = {
+        "stamp": {"sec": 0, "nanosec": 0},
+        "frame_id": "camera",
+    }
+    expected_detections: List[Any] = [
+        {
+            "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera"},
+            "results": [],
+            "bbox": {
+                "center": {"x": 320.0, "y": 240.0},
+                "size": {"x": 50.0, "y": 50.0},
+            },
+        }
+    ]
+    expected_detection_classes: List[str] = ["person", "car"]
+
+    def __init__(self, logger: loggers_type | None = None) -> None:
+        super().__init__(logger=logger)
+        topic_strings = [
+            f"topic: {topic}\ntype: {msg_type}\n"
+            for topic, msg_type in self.topics_and_types.items()
+        ]
+        interface_strings = {
+            msg_type: json.dumps(interface)
+            for msg_type, interface in self.interfaces.items()
+        }
+        self.expected_tools: List[BaseTool] = [
+            MockGetROS2TopicsNamesAndTypesTool(
+                mock_topics_names_and_types=topic_strings
+            ),
+            MockGetROS2MessageInterfaceTool(mock_interfaces=interface_strings),
+            MockPublishROS2MessageTool(
+                available_topics=list(self.topics_and_types.keys()),
+                available_message_types=list(self.topics_and_types.values()),
+            ),
+        ]
+
+    def get_system_prompt(self) -> str:
+        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
+
+    def get_prompt(self) -> str:
+        return (
+            "Publish a detection message to the /send_detections topic. The message should have a header "
+            f"with frame_id 'camera', one detection: {self.expected_detections}, and detection classes ['person', 'car']. "
+            "Before publishing, check the message type of this topic and its interface."
+        )
+
+    def verify_tool_calls(self, response: dict[str, Any]):
+        """
+        Expected behavior:
+        1. The agent should request the tool that retrieves ROS2 topics names and types to determine
+           the message type of /send_detections.
+        2. The agent should request the tool that retrieves the message interface for 'rai_interfaces/msg/RAIDetectionArray'.
+        3. The agent should call the publish tool with the correct topic, message type, and content.
+        """
+        messages = response["messages"]
+        ai_messages: Sequence[AIMessage] = [
+            msg for msg in messages if isinstance(msg, AIMessage)
+        ]
+        self.logger.debug(ai_messages)
+        if len(ai_messages) != 4:
+            self.log_error(
+                msg=f"Expected exactly 4 AI messages, but got {len(ai_messages)}."
+            )
+        if ai_messages:
+            if not self._is_ai_message_requesting_get_ros2_topics_and_types(
+                ai_messages[0]
+            ):
+                self.log_error(
+                    msg="First AI message did not request ROS2 topics and types correctly."
+                )
+        if len(ai_messages) > 1:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
+                self._check_tool_call(
+                    tool_call=ai_messages[1].tool_calls[0],
+                    expected_name="get_ros2_message_interface",
+                    expected_args={"msg_type": "rai_interfaces/msg/RAIDetectionArray"},
+                )
+        if len(ai_messages) > 2:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[2], expected_num=1):
+                expected_message = self.interfaces[
+                    "rai_interfaces/msg/RAIDetectionArray"
+                ].copy()
+                expected_message["header"] = self.expected_header
+                expected_message["detections"] = self.expected_detections
+                expected_message["detection_classes"] = self.expected_detection_classes
+                self._check_tool_call(
+                    tool_call=ai_messages[2].tool_calls[0],
+                    expected_name="publish_ros2_message",
+                    expected_args={
+                        "topic": "/send_detections",
+                        "message": expected_message,
+                        "message_type": "rai_interfaces/msg/RAIDetectionArray",
                     },
                 )
         if not self.result.errors:
@@ -1893,10 +2107,7 @@ class CallROS2CustomServiceTask(ROS2ToolCallingAgentTask):
 
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
-        service_strings = [
-            f"service: {service}\ntype: {srv_type}\n"
-            for service, srv_type in self.services_and_types.items()
-        ]
+
         interface_strings = {
             srv_type: json.dumps(interface)
             for srv_type, interface in self.interfaces.items()
@@ -1904,7 +2115,7 @@ class CallROS2CustomServiceTask(ROS2ToolCallingAgentTask):
         self.expected_tools: List[BaseTool] = [
             MockGetROS2MessageInterfaceTool(mock_interfaces=interface_strings),
             MockCallROS2ServiceTool(
-                available_services=service_strings,
+                available_services=list(self.services_and_types.keys()),
                 available_service_types=list(self.services_and_types.values()),
             ),
         ]
@@ -2052,10 +2263,7 @@ class CallROS2CustomActionTask(ROS2ToolCallingAgentTask):
 
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
-        action_strings = [
-            f"action: {action}\ntype: {act_type}\n"
-            for action, act_type in self.actions_and_types.items()
-        ]
+
         interface_strings = {
             act_type: json.dumps(interface)
             for act_type, interface in self.interfaces.items()
@@ -2063,7 +2271,7 @@ class CallROS2CustomActionTask(ROS2ToolCallingAgentTask):
         self.expected_tools: List[BaseTool] = [
             MockGetROS2MessageInterfaceTool(mock_interfaces=interface_strings),
             MockStartROS2ActionTool(
-                available_actions=action_strings,
+                available_actions=list(self.actions_and_types.keys()),
                 available_action_types=list(self.actions_and_types.values()),
             ),
         ]
