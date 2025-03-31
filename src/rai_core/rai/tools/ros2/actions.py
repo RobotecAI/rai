@@ -161,7 +161,6 @@ class StartROS2ActionToolInput(BaseModel):
 
 
 class StartROS2ActionTool(BaseROS2Tool):
-    connector: ROS2ARIConnector
     feedback_callback: Callable[[Any, str], None] = lambda _, __: None
     on_done_callback: Callable[[Any, str], None] = lambda _, __: None
     internal_action_id_mapping: Dict[str, str] = Field(

@@ -36,6 +36,7 @@ from rai_bench.tool_calling_agent_bench.mocked_tools import (
     MockMoveToPointTool,
     MockPublishROS2MessageTool,
     MockReceiveROS2MessageTool,
+    MockStartROS2ActionTool,
 )
 
 loggers_type = logging.Logger
@@ -1756,8 +1757,7 @@ class PublishROS2CustomMessageTask(ROS2ToolCallingAgentTask):
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
 
     def get_prompt(self) -> str:
-        # return f"Publish message with text: `{self.expected_text}` to the topic /to_human. Check the type of message this topic requires. Don't forget about the message argument."
-        return "What are arguments of tool publish_ros2_message?"
+        return "Publish message with text value: 'Hello!' to the /to_human topic. Before publishing check the message type of this topic and it's interface."
 
     def verify_tool_calls(self, response: dict[str, Any]):
         """It is expected that the agent will request:
@@ -1774,7 +1774,7 @@ class PublishROS2CustomMessageTask(ROS2ToolCallingAgentTask):
         ai_messages: Sequence[AIMessage] = [
             message for message in messages if isinstance(message, AIMessage)
         ]
-
+        self.logger.debug(ai_messages)
         if len(ai_messages) != 4:
             self.log_error(
                 msg=f"Expected exactly 4 AI messages, but got {len(ai_messages)}."
@@ -1929,7 +1929,7 @@ class CallROS2CustomServiceTask(ROS2ToolCallingAgentTask):
         ai_messages: Sequence[AIMessage] = [
             message for message in messages if isinstance(message, AIMessage)
         ]
-
+        self.logger.debug(ai_messages)
         if len(ai_messages) != 2:
             self.log_error(
                 msg=f"Expected exactly 2 AI messages, but got {len(ai_messages)}."
@@ -1937,7 +1937,6 @@ class CallROS2CustomServiceTask(ROS2ToolCallingAgentTask):
 
         if ai_messages:
             if self._check_tool_calls_num_in_ai_message(ai_messages[0], expected_num=1):
-                # Create the expected service request based on the interface and override with our expected values.
                 expected_request = self.interfaces[
                     "rai_interfaces/srv/ManipulatorMoveTo"
                 ]["request"].copy()
@@ -1956,6 +1955,155 @@ class CallROS2CustomServiceTask(ROS2ToolCallingAgentTask):
                         "service_name": "/manipulator_move_to",
                         "service_type": "rai_interfaces/srv/ManipulatorMoveTo",
                         "service_args": expected_request,
+                    },
+                )
+
+        if not self.result.errors:
+            self.result.success = True
+
+
+class CallROS2CustomActionTask(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+    actions_and_types: Dict[str, str] = {
+        # custom action
+        "/perform_task": "rai_interfaces/action/Task",
+        # some sample actions
+        "/execute_trajectory": "moveit_msgs/action/ExecuteTrajectory",
+        "/move_action": "moveit_msgs/action/MoveGroup",
+        "/follow_joint_trajectory": "control_msgs/action/FollowJointTrajectory",
+        "/gripper_cmd": "control_msgs/action/GripperCommand",
+    }
+    interfaces: Dict[str, Dict[str, Any]] = {
+        "rai_interfaces/action/Task": {
+            "goal": {
+                "task": "",
+                "description": "",
+                "priority": "",
+            },
+            "result": {
+                "success": False,
+                "report": "",
+            },
+            "feedback": {
+                "current_status": "",
+            },
+        },
+        "moveit_msgs/action/ExecuteTrajectory": {
+            "goal": {
+                "trajectory": {},
+            },
+            "result": {
+                "error_code": 0,
+                "error_message": "",
+            },
+            "feedback": {
+                "state": "",
+            },
+        },
+        "moveit_msgs/action/MoveGroup": {
+            "goal": {
+                "planning_options": {},
+                "request": {},
+            },
+            "result": {
+                "error_code": 0,
+                "trajectory": {},
+            },
+            "feedback": {
+                "state": "",
+            },
+        },
+        "control_msgs/action/FollowJointTrajectory": {
+            "goal": {
+                "trajectory": {},
+            },
+            "result": {
+                "error_code": 0,
+                "error_string": "",
+            },
+            "feedback": {
+                "joint_names": [],
+                "actual": {},
+                "desired": {},
+                "error": {},
+            },
+        },
+        "control_msgs/action/GripperCommand": {
+            "goal": {
+                "command": {
+                    "position": 0.0,
+                    "max_effort": 0.0,
+                },
+            },
+            "result": {
+                "position": 0.0,
+                "effort": 0.0,
+                "reached_goal": False,
+            },
+            "feedback": {
+                "position": 0.0,
+                "effort": 0.0,
+            },
+        },
+    }
+    expected_task = "Where are you?"
+    expected_description = ""
+    expected_priority = "10"
+
+    def __init__(self, logger: loggers_type | None = None) -> None:
+        super().__init__(logger=logger)
+        action_strings = [
+            f"action: {action}\ntype: {act_type}\n"
+            for action, act_type in self.actions_and_types.items()
+        ]
+        interface_strings = {
+            act_type: json.dumps(interface)
+            for act_type, interface in self.interfaces.items()
+        }
+        self.expected_tools: List[BaseTool] = [
+            MockGetROS2MessageInterfaceTool(mock_interfaces=interface_strings),
+            MockStartROS2ActionTool(
+                available_actions=action_strings,
+                available_action_types=list(self.actions_and_types.values()),
+            ),
+        ]
+
+    def get_system_prompt(self) -> str:
+        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
+
+    def get_prompt(self) -> str:
+        return "Call action /perform_task with the provided goal values: {priority: 10, description: '', task: 'Where are you?'}"
+
+    def verify_tool_calls(self, response: dict[str, Any]):
+        """It is expected that the agent will request:
+        1. The tool to start action with proper action name, message type and content"
+        """
+        messages = response["messages"]
+        ai_messages: Sequence[AIMessage] = [
+            message for message in messages if isinstance(message, AIMessage)
+        ]
+
+        if len(ai_messages) != 2:
+            self.log_error(
+                msg=f"Expected exactly 2 AI messages, but got {len(ai_messages)}."
+            )
+
+        if ai_messages:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[0], expected_num=1):
+                expected_goal = self.interfaces["rai_interfaces/action/Task"][
+                    "goal"
+                ].copy()
+                expected_goal["task"] = self.expected_task
+                expected_goal["description"] = self.expected_description
+                expected_goal["priority"] = self.expected_priority
+
+                self._check_tool_call(
+                    tool_call=ai_messages[0].tool_calls[0],
+                    expected_name="start_ros2_action",
+                    expected_args={
+                        "action_name": "/perform_task",
+                        "action_type": "rai_interfaces/action/Task",
+                        "action_args": expected_goal,
                     },
                 )
 

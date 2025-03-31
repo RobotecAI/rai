@@ -255,7 +255,10 @@ class MockCallROS2ServiceTool(CallROS2ServiceTool):
     available_service_types: List[str]
 
     def _run(
-        self, service_name: str, service_type: str, service_args: Dict[str, Any]
+        self,
+        service_name: str,
+        service_type: str,
+        service_args: Dict[str, Any],
     ) -> str:
         if service_name not in self.available_services:
             raise ValueError(
@@ -309,6 +312,7 @@ class MockCancelROS2ActionTool(CancelROS2ActionTool):
 
 
 class MockGetROS2ActionFeedbackTool(GetROS2ActionFeedbackTool):
+    connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
     available_feedbacks: Dict[str, List[Any]] = {}
     internal_action_id_mapping: Dict[str, str] = {}
     action_feedbacks_store_lock: Lock = Lock()
