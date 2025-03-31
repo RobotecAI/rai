@@ -33,8 +33,10 @@ from rai.tools.ros2 import (
     GetROS2ActionFeedbackTool,
     GetROS2ActionIDsTool,
     GetROS2ActionResultTool,
+    GetROS2ActionsNamesAndTypesTool,
     GetROS2ImageTool,
     GetROS2MessageInterfaceTool,
+    GetROS2ServicesNamesAndTypesTool,
     GetROS2TopicsNamesAndTypesTool,
     PublishROS2MessageTool,
     ReceiveROS2MessageTool,
@@ -277,6 +279,36 @@ class MockCallROS2ServiceTool(CallROS2ServiceTool):
                 "metadata": response.metadata,
             }
         )
+
+
+class MockGetROS2ServicesNamesAndTypesTool(GetROS2ServicesNamesAndTypesTool):
+    connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
+    mock_service_names_and_types: list[str]
+
+    def _run(self) -> str:
+        """Mocked method that returns the mock topics and types instead of fetching from ROS2.
+
+        Returns
+        -------
+        str
+            Mocked output of 'get_ros2_topics_names_and_types' tool.
+        """
+        return "\n".join(self.mock_service_names_and_types)
+
+
+class MockGetROS2ActionsNamesAndTypesTool(GetROS2ActionsNamesAndTypesTool):
+    connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
+    mock_actions_names_and_types: list[str]
+
+    def _run(self) -> str:
+        """Mocked method that returns the mock topics and types instead of fetching from ROS2.
+
+        Returns
+        -------
+        str
+            Mocked output of 'get_ros2_topics_names_and_types' tool.
+        """
+        return "\n".join(self.mock_actions_names_and_types)
 
 
 class MockStartROS2ActionTool(StartROS2ActionTool):
