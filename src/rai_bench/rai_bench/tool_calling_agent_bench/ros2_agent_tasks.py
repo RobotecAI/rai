@@ -30,8 +30,10 @@ from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
 from rai_bench.tool_calling_agent_bench.mocked_tools import (
     MockCallROS2ServiceTool,
     MockGetObjectPositionsTool,
+    MockGetROS2ActionsNamesAndTypesTool,
     MockGetROS2ImageTool,
     MockGetROS2MessageInterfaceTool,
+    MockGetROS2ServicesNamesAndTypesTool,
     MockGetROS2TopicsNamesAndTypesTool,
     MockMoveToPointTool,
     MockPublishROS2MessageTool,
@@ -2027,7 +2029,7 @@ class PublishROS2DetectionArrayTask(ROS2ToolCallingAgentTask):
             self.result.success = True
 
 
-class CallROS2CustomServiceTask(ROS2ToolCallingAgentTask):
+class CallROS2ManipulatorMoveToServiceTask(ROS2ToolCallingAgentTask):
     complexity = "easy"
     services_and_types: Dict[str, str] = {
         "/manipulator_move_to": "rai_interfaces/srv/ManipulatorMoveTo",
@@ -2107,12 +2109,18 @@ class CallROS2CustomServiceTask(ROS2ToolCallingAgentTask):
 
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
-
+        service_strings = [
+            f"service: {service}\ntype: {srv_type}\n"
+            for service, srv_type in self.services_and_types.items()
+        ]
         interface_strings = {
             srv_type: json.dumps(interface)
             for srv_type, interface in self.interfaces.items()
         }
         self.expected_tools: List[BaseTool] = [
+            MockGetROS2ServicesNamesAndTypesTool(
+                mock_service_names_and_types=service_strings
+            ),
             MockGetROS2MessageInterfaceTool(mock_interfaces=interface_strings),
             MockCallROS2ServiceTool(
                 available_services=list(self.services_and_types.keys()),
@@ -2124,7 +2132,7 @@ class CallROS2CustomServiceTask(ROS2ToolCallingAgentTask):
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
 
     def get_prompt(self) -> str:
-        return "Call service /manipulator_move_to"
+        return f"Call service /manipulator_move_to with a target_pose: {self.expected_target_pose}. Before publishing, check the message type of this topic and its interface."
 
     def verify_tool_calls(self, response: dict[str, Any]):
         """
@@ -2165,6 +2173,486 @@ class CallROS2CustomServiceTask(ROS2ToolCallingAgentTask):
                     expected_args={
                         "service_name": "/manipulator_move_to",
                         "service_type": "rai_interfaces/srv/ManipulatorMoveTo",
+                        "service_args": expected_request,
+                    },
+                )
+
+        if not self.result.errors:
+            self.result.success = True
+
+
+class CallGroundedSAMSegmentTask(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+    services_and_types: Dict[str, str] = {
+        "/grounded_sam_segment": "rai_interfaces/srv/RAIGroundedSam",
+    }
+    interfaces: Dict[str, Dict[str, Any]] = {
+        "rai_interfaces/srv/RAIGroundedSam": {
+            "request": {
+                "detections": {
+                    "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+                    "detections": [],
+                },
+                "source_img": {
+                    "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+                    "height": 0,
+                    "width": 0,
+                    "encoding": "",
+                    "is_bigendian": 0,
+                    "step": 0,
+                    "data": [],
+                },
+            },
+            "response": {
+                "masks": [],
+            },
+        }
+    }
+
+    expected_detections: Dict[str, Any] = {
+        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera_frame"},
+        "detections": [],
+    }
+    expected_source_img: Dict[str, Any] = {
+        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera_frame"},
+        "height": 480,
+        "width": 640,
+        "encoding": "rgb8",
+        "is_bigendian": 0,
+        "step": 1920,
+        "data": [],
+    }
+
+    def __init__(self, logger: loggers_type | None = None) -> None:
+        super().__init__(logger=logger)
+        service_strings = [
+            f"service: {service}\ntype: {srv_type}\n"
+            for service, srv_type in self.services_and_types.items()
+        ]
+        interface_strings = {
+            srv_type: json.dumps(interface)
+            for srv_type, interface in self.interfaces.items()
+        }
+        self.expected_tools: List[BaseTool] = [
+            MockGetROS2ServicesNamesAndTypesTool(
+                mock_service_names_and_types=service_strings
+            ),
+            MockGetROS2MessageInterfaceTool(mock_interfaces=interface_strings),
+            MockCallROS2ServiceTool(
+                available_services=list(self.services_and_types.keys()),
+                available_service_types=list(self.services_and_types.values()),
+            ),
+        ]
+
+    def get_system_prompt(self) -> str:
+        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
+
+    def get_prompt(self) -> str:
+        return (
+            "Call service /grounded_sam_segment with detections from frame 'camera_frame' and "
+            "an RGB image of size 640x480. Before calling, look up the service type and its message structure."
+        )
+
+    def verify_tool_calls(self, response: dict[str, Any]):
+        messages = response["messages"]
+        ai_messages: Sequence[AIMessage] = [
+            message for message in messages if isinstance(message, AIMessage)
+        ]
+        self.logger.debug(ai_messages)
+        if len(ai_messages) != 2:
+            self.log_error(
+                msg=f"Expected exactly 2 AI messages, but got {len(ai_messages)}."
+            )
+
+        if ai_messages:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[0], expected_num=1):
+                expected_request = self.interfaces["rai_interfaces/srv/RAIGroundedSam"][
+                    "request"
+                ].copy()
+                expected_request["detections"] = self.expected_detections
+                expected_request["source_img"] = self.expected_source_img
+
+                self._check_tool_call(
+                    tool_call=ai_messages[0].tool_calls[0],
+                    expected_name="call_ros2_service",
+                    expected_args={
+                        "service_name": "/grounded_sam_segment",
+                        "service_type": "rai_interfaces/srv/RAIGroundedSam",
+                        "service_args": expected_request,
+                    },
+                )
+
+        if not self.result.errors:
+            self.result.success = True
+
+
+class CallGroundingDinoClassifyTask(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+    services_and_types: Dict[str, str] = {
+        "/grounding_dino_classify": "rai_interfaces/srv/RAIGroundingDino",
+    }
+    interfaces: Dict[str, Dict[str, Any]] = {
+        "rai_interfaces/srv/RAIGroundingDino": {
+            "request": {
+                "classes": "",
+                "box_threshold": 0.0,
+                "text_threshold": 0.0,
+                "source_img": {
+                    "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+                    "height": 0,
+                    "width": 0,
+                    "encoding": "",
+                    "is_bigendian": 0,
+                    "step": 0,
+                    "data": [],
+                },
+            },
+            "response": {
+                "detections": {
+                    "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+                    "detections": [],
+                },
+            },
+        }
+    }
+
+    expected_classes = "bottle, book, chair"
+    expected_box_threshold = 0.4
+    expected_text_threshold = 0.25
+    expected_source_img: Dict[str, Any] = {
+        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera_frame"},
+        "height": 480,
+        "width": 640,
+        "encoding": "rgb8",
+        "is_bigendian": 0,
+        "step": 1920,
+        "data": [],
+    }
+
+    def __init__(self, logger: loggers_type | None = None) -> None:
+        super().__init__(logger=logger)
+        service_strings = [
+            f"service: {service}\ntype: {srv_type}\n"
+            for service, srv_type in self.services_and_types.items()
+        ]
+        interface_strings = {
+            srv_type: json.dumps(interface)
+            for srv_type, interface in self.interfaces.items()
+        }
+        self.expected_tools: List[BaseTool] = [
+            MockGetROS2ServicesNamesAndTypesTool(
+                mock_service_names_and_types=service_strings
+            ),
+            MockGetROS2MessageInterfaceTool(mock_interfaces=interface_strings),
+            MockCallROS2ServiceTool(
+                available_services=list(self.services_and_types.keys()),
+                available_service_types=list(self.services_and_types.values()),
+            ),
+        ]
+
+    def get_system_prompt(self) -> str:
+        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
+
+    def get_prompt(self) -> str:
+        return (
+            f"Call the service /grounding_dino_classify with the following arguments: "
+            f"classes='{self.expected_classes}', box_threshold={self.expected_box_threshold}, "
+            f"text_threshold={self.expected_text_threshold}, and a 640x480 RGB image from frame 'camera_frame'. "
+            f"Before calling, look up the service type and its message structure."
+        )
+
+    def verify_tool_calls(self, response: dict[str, Any]):
+        messages = response["messages"]
+        ai_messages: Sequence[AIMessage] = [
+            message for message in messages if isinstance(message, AIMessage)
+        ]
+        self.logger.debug(ai_messages)
+        if len(ai_messages) != 2:
+            self.log_error(
+                msg=f"Expected exactly 2 AI messages, but got {len(ai_messages)}."
+            )
+
+        if ai_messages:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[0], expected_num=1):
+                expected_request = self.interfaces[
+                    "rai_interfaces/srv/RAIGroundingDino"
+                ]["request"].copy()
+                expected_request["classes"] = self.expected_classes
+                expected_request["box_threshold"] = self.expected_box_threshold
+                expected_request["text_threshold"] = self.expected_text_threshold
+                expected_request["source_img"] = self.expected_source_img
+
+                self._check_tool_call(
+                    tool_call=ai_messages[0].tool_calls[0],
+                    expected_name="call_ros2_service",
+                    expected_args={
+                        "service_name": "/grounding_dino_classify",
+                        "service_type": "rai_interfaces/srv/RAIGroundingDino",
+                        "service_args": expected_request,
+                    },
+                )
+
+        if not self.result.errors:
+            self.result.success = True
+
+
+class CallGetLogDigestTask(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+    services_and_types: Dict[str, str] = {
+        "/get_log_digest": "rai_interfaces/srv/StringList",
+    }
+    interfaces: Dict[str, Dict[str, Any]] = {
+        "rai_interfaces/srv/StringList": {
+            "request": {},
+            "response": {
+                "success": False,
+                "string_list": [],
+            },
+        }
+    }
+
+    def __init__(self, logger: loggers_type | None = None) -> None:
+        super().__init__(logger=logger)
+        service_strings = [
+            f"service: {service}\ntype: {srv_type}\n"
+            for service, srv_type in self.services_and_types.items()
+        ]
+        interface_strings = {
+            srv_type: json.dumps(interface)
+            for srv_type, interface in self.interfaces.items()
+        }
+        self.expected_tools: List[BaseTool] = [
+            MockGetROS2ServicesNamesAndTypesTool(
+                mock_service_names_and_types=service_strings
+            ),
+            MockGetROS2MessageInterfaceTool(mock_interfaces=interface_strings),
+            MockCallROS2ServiceTool(
+                available_services=list(self.services_and_types.keys()),
+                available_service_types=list(self.services_and_types.values()),
+            ),
+        ]
+
+    def get_system_prompt(self) -> str:
+        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
+
+    def get_prompt(self) -> str:
+        return (
+            "Call the service /get_log_digest to retrieve a list of log strings. "
+            "Before calling, look up the service type and its message structure."
+            "No request arguments are needed."
+        )
+
+    def verify_tool_calls(self, response: dict[str, Any]):
+        messages = response["messages"]
+        ai_messages: Sequence[AIMessage] = [
+            message for message in messages if isinstance(message, AIMessage)
+        ]
+        self.logger.debug(ai_messages)
+        if len(ai_messages) != 2:
+            self.log_error(
+                msg=f"Expected exactly 2 AI messages, but got {len(ai_messages)}."
+            )
+
+        if ai_messages:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[0], expected_num=1):
+                self._check_tool_call(
+                    tool_call=ai_messages[0].tool_calls[0],
+                    expected_name="call_ros2_service",
+                    expected_args={
+                        "service_name": "/get_log_digest",
+                        "service_type": "rai_interfaces/srv/StringList",
+                        "service_args": {},
+                    },
+                )
+
+        if not self.result.errors:
+            self.result.success = True
+
+
+class CallVectorStoreRetrievalTask(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+    services_and_types: Dict[str, str] = {
+        "rai_whoami_documentation_service": "rai_interfaces/srv/VectorStoreRetrieval",
+    }
+    interfaces: Dict[str, Dict[str, Any]] = {
+        "rai_interfaces/srv/VectorStoreRetrieval": {
+            "request": {
+                "query": "",
+            },
+            "response": {
+                "success": False,
+                "message": "",
+                "documents": [],
+                "scores": [],
+            },
+        }
+    }
+
+    expected_query = "What is the purpose of this robot?"
+
+    def __init__(self, logger: loggers_type | None = None) -> None:
+        super().__init__(logger=logger)
+        service_strings = [
+            f"service: {service}\ntype: {srv_type}\n"
+            for service, srv_type in self.services_and_types.items()
+        ]
+        interface_strings = {
+            srv_type: json.dumps(interface)
+            for srv_type, interface in self.interfaces.items()
+        }
+        self.expected_tools: List[BaseTool] = [
+            MockGetROS2ServicesNamesAndTypesTool(
+                mock_service_names_and_types=service_strings
+            ),
+            MockGetROS2MessageInterfaceTool(mock_interfaces=interface_strings),
+            MockCallROS2ServiceTool(
+                available_services=list(self.services_and_types.keys()),
+                available_service_types=list(self.services_and_types.values()),
+            ),
+        ]
+
+    def get_system_prompt(self) -> str:
+        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
+
+    def get_prompt(self) -> str:
+        return (
+            f"Call the service rai_whoami_documentation_service with the query: '{self.expected_query}'. "
+            "Before calling, look up the service type and its message structure."
+        )
+
+    def verify_tool_calls(self, response: dict[str, Any]):
+        messages = response["messages"]
+        ai_messages: Sequence[AIMessage] = [
+            message for message in messages if isinstance(message, AIMessage)
+        ]
+        self.logger.debug(ai_messages)
+        if len(ai_messages) != 2:
+            self.log_error(
+                msg=f"Expected exactly 2 AI messages, but got {len(ai_messages)}."
+            )
+
+        if ai_messages:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[0], expected_num=1):
+                expected_request = {
+                    "query": self.expected_query,
+                }
+
+                self._check_tool_call(
+                    tool_call=ai_messages[0].tool_calls[0],
+                    expected_name="call_ros2_service",
+                    expected_args={
+                        "service_name": "rai_whoami_documentation_service",
+                        "service_type": "rai_interfaces/srv/VectorStoreRetrieval",
+                        "service_args": expected_request,
+                    },
+                )
+
+        if not self.result.errors:
+            self.result.success = True
+
+
+class CallWhatISeeTask(ROS2ToolCallingAgentTask):
+    complexity = "easy"
+    services_and_types: Dict[str, str] = {
+        "rai/whatisee/get": "rai_interfaces/srv/WhatISee",
+    }
+    interfaces: Dict[str, Dict[str, Any]] = {
+        "rai_interfaces/srv/WhatISee": {
+            "request": {
+                "observations": [],
+                "perception_source": "",
+                "image": {
+                    "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+                    "height": 0,
+                    "width": 0,
+                    "encoding": "",
+                    "is_bigendian": 0,
+                    "step": 0,
+                    "data": [],
+                },
+                "pose": {
+                    "position": {"x": 0.0, "y": 0.0, "z": 0.0},
+                    "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+                },
+            },
+            "response": {},  # Assuming empty response structure
+        }
+    }
+
+    expected_observations = ["table", "cup", "notebook"]
+    expected_perception_source = "front_camera"
+    expected_image: Dict[str, Any] = {
+        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera_frame"},
+        "height": 480,
+        "width": 640,
+        "encoding": "rgb8",
+        "is_bigendian": 0,
+        "step": 1920,
+        "data": [],
+    }
+    expected_pose = {
+        "position": {"x": 1.0, "y": 2.0, "z": 0.5},
+        "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+    }
+
+    def __init__(self, logger: loggers_type | None = None) -> None:
+        super().__init__(logger=logger)
+        service_strings = [
+            f"service: {service}\ntype: {srv_type}\n"
+            for service, srv_type in self.services_and_types.items()
+        ]
+        interface_strings = {
+            srv_type: json.dumps(interface)
+            for srv_type, interface in self.interfaces.items()
+        }
+        self.expected_tools: List[BaseTool] = [
+            MockGetROS2ServicesNamesAndTypesTool(
+                mock_service_names_and_types=service_strings
+            ),
+            MockGetROS2MessageInterfaceTool(mock_interfaces=interface_strings),
+            MockCallROS2ServiceTool(
+                available_services=list(self.services_and_types.keys()),
+                available_service_types=list(self.services_and_types.values()),
+            ),
+        ]
+
+    def get_system_prompt(self) -> str:
+        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
+
+    def get_prompt(self) -> str:
+        return (
+            f"Call the service rai/whatisee/get using the WhatISee interface. "
+            f"Pass in observations {self.expected_observations}, source '{self.expected_perception_source}', "
+            f"a 640x480 RGB image from 'camera_frame', and a pose at position {self.expected_pose['position']}."
+            "Before calling, look up the service type and its message structure."
+        )
+
+    def verify_tool_calls(self, response: dict[str, Any]):
+        messages = response["messages"]
+        ai_messages: Sequence[AIMessage] = [
+            message for message in messages if isinstance(message, AIMessage)
+        ]
+        self.logger.debug(ai_messages)
+        if len(ai_messages) != 2:
+            self.log_error(
+                msg=f"Expected exactly 2 AI messages, but got {len(ai_messages)}."
+            )
+
+        if ai_messages:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[0], expected_num=1):
+                expected_request: Dict[str, Any] = {
+                    "observations": self.expected_observations,
+                    "perception_source": self.expected_perception_source,
+                    "image": self.expected_image,
+                    "pose": self.expected_pose,
+                }
+
+                self._check_tool_call(
+                    tool_call=ai_messages[0].tool_calls[0],
+                    expected_name="call_ros2_service",
+                    expected_args={
+                        "service_name": "rai/whatisee/get",
+                        "service_type": "rai_interfaces/srv/WhatISee",
                         "service_args": expected_request,
                     },
                 )
@@ -2263,12 +2751,18 @@ class CallROS2CustomActionTask(ROS2ToolCallingAgentTask):
 
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
-
+        action_strings = [
+            f"action: {action}\ntype: {act_type}\n"
+            for action, act_type in self.actions_and_types.items()
+        ]
         interface_strings = {
             act_type: json.dumps(interface)
             for act_type, interface in self.interfaces.items()
         }
         self.expected_tools: List[BaseTool] = [
+            MockGetROS2ActionsNamesAndTypesTool(
+                mock_actions_names_and_types=action_strings
+            ),
             MockGetROS2MessageInterfaceTool(mock_interfaces=interface_strings),
             MockStartROS2ActionTool(
                 available_actions=list(self.actions_and_types.keys()),
