@@ -28,6 +28,7 @@ from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
     ROS2ToolCallingAgentTask,
 )
 from rai_bench.tool_calling_agent_bench.mocked_tools import (
+    MockCallROS2ServiceTool,
     MockGetObjectPositionsTool,
     MockGetROS2ImageTool,
     MockGetROS2MessageInterfaceTool,
@@ -35,7 +36,6 @@ from rai_bench.tool_calling_agent_bench.mocked_tools import (
     MockMoveToPointTool,
     MockPublishROS2MessageTool,
     MockReceiveROS2MessageTool,
-    MockCallROS2ServiceTool,
 )
 
 loggers_type = logging.Logger

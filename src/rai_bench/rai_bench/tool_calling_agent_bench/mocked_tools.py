@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import uuid
+from threading import Lock
 from typing import Any, Dict, List, Tuple
 from unittest.mock import MagicMock
 
@@ -26,12 +28,17 @@ from rai.tools.ros.manipulation import (
     MoveToPointTool,
 )
 from rai.tools.ros2 import (
+    CallROS2ServiceTool,
+    CancelROS2ActionTool,
+    GetROS2ActionFeedbackTool,
+    GetROS2ActionIDsTool,
+    GetROS2ActionResultTool,
     GetROS2ImageTool,
     GetROS2MessageInterfaceTool,
     GetROS2TopicsNamesAndTypesTool,
     PublishROS2MessageTool,
     ReceiveROS2MessageTool,
-    CallROS2ServiceTool,
+    StartROS2ActionTool,
 )
 
 
@@ -267,3 +274,73 @@ class MockCallROS2ServiceTool(CallROS2ServiceTool):
                 "metadata": response.metadata,
             }
         )
+
+
+class MockStartROS2ActionTool(StartROS2ActionTool):
+    connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
+    available_actions: List[str] = []
+    available_action_types: List[str] = []
+
+    def _run(
+        self, action_name: str, action_type: str, action_args: Dict[str, Any]
+    ) -> str:
+        if action_name not in self.available_actions:
+            raise ValueError(
+                f"Action {action_name} is not available within 1.0 seconds. Check if the action exists."
+            )
+        if action_type not in self.available_action_types:
+            raise TypeError(
+                f"Expected one of action types: {self.available_action_types}, got {action_type}"
+            )
+        action_id = str(uuid.uuid4())
+        response = "mock_action_response_" + action_id
+        self.internal_action_id_mapping[response] = action_id
+        return "Action started with ID: " + response
+
+
+class MockCancelROS2ActionTool(CancelROS2ActionTool):
+    connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
+    available_action_ids: List[str] = []
+
+    def _run(self, action_id: str) -> str:
+        if action_id not in self.available_action_ids:
+            raise ValueError(f"Action {action_id} is not available for cancellation.")
+        return f"Action {action_id} cancelled"
+
+
+class MockGetROS2ActionFeedbackTool(GetROS2ActionFeedbackTool):
+    available_feedbacks: Dict[str, List[Any]] = {}
+    internal_action_id_mapping: Dict[str, str] = {}
+    action_feedbacks_store_lock: Lock = Lock()
+
+    def _run(self, action_id: str) -> str:
+        if action_id not in self.internal_action_id_mapping:
+            raise KeyError(f"Action ID {action_id} not found in internal mapping.")
+        external_id = self.internal_action_id_mapping[action_id]
+        with self.action_feedbacks_store_lock:
+            feedbacks = self.available_feedbacks.get(external_id, [])
+            self.available_feedbacks[external_id] = []
+        return str(feedbacks)
+
+
+class MockGetROS2ActionResultTool(GetROS2ActionResultTool):
+    available_results: Dict[str, Any] = {}
+    internal_action_id_mapping: Dict[str, str] = {}
+    action_results_store_lock: Lock = Lock()
+
+    def _run(self, action_id: str) -> str:
+        if action_id not in self.internal_action_id_mapping:
+            raise KeyError(f"Action ID {action_id} not found in internal mapping.")
+        external_id = self.internal_action_id_mapping[action_id]
+        with self.action_results_store_lock:
+            if external_id not in self.available_results:
+                raise ValueError(f"No result available for action {action_id}")
+            result = self.available_results[external_id]
+        return str(result)
+
+
+class MockGetROS2ActionIDsTool(GetROS2ActionIDsTool):
+    internal_action_id_mapping: Dict[str, str] = {}
+
+    def _run(self) -> str:
+        return str(list(self.internal_action_id_mapping.keys()))
