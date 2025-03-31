@@ -14,8 +14,10 @@
 
 import time
 from typing import Any, List
+from unittest.mock import MagicMock
 
 import pytest
+from nav2_msgs.action import NavigateToPose
 from PIL import Image
 from pydub import AudioSegment
 from rai.communication import HRIPayload
@@ -33,7 +35,9 @@ from .helpers import (
     MessagePublisher,
     MessageSubscriber,
     ServiceServer,
+    TestActionClient,
     TestActionServer,
+    TestServiceClient,
     multi_threaded_spinner,
     ros_setup,
     shutdown_executors_and_threads,
@@ -208,3 +212,55 @@ def test_ros2hri_default_message_publish(
     finally:
         connector.shutdown()
         shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2ari_connector_create_service(
+    ros_setup: None, request: pytest.FixtureRequest
+):
+    connector = ROS2ARIConnector()
+    mock_callback = MagicMock()
+    mock_callback.return_value = SetBool.Response()
+
+    try:
+        handle = connector.create_service(
+            service_name="set_bool",
+            service_type="std_srvs/srv/SetBool",
+            on_request=mock_callback,
+        )
+        assert handle is not None
+        service_client = TestServiceClient()
+        executors, threads = multi_threaded_spinner([service_client])
+        service_client.send_request()
+        time.sleep(0.01)
+        assert mock_callback.called
+    except Exception as e:
+        raise e
+
+    connector.shutdown()
+    shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2ari_connector_action_call(ros_setup: None, request: pytest.FixtureRequest):
+    action_name = "navigate_to_pose"
+    connector = ROS2ARIConnector()
+    mock_callback = MagicMock()
+    mock_callback.return_value = NavigateToPose.Result()
+
+    try:
+        action_server_handle = connector.create_action(
+            action_name,
+            generate_feedback_callback=mock_callback,
+            action_type="nav2_msgs/action/NavigateToPose",
+        )
+        assert action_server_handle is not None
+    except Exception as e:
+        raise e
+
+    try:
+        action_client = TestActionClient()
+        executors, threads = multi_threaded_spinner([action_client])
+        action_client.send_goal()
+        time.sleep(0.01)
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+        assert mock_callback.called

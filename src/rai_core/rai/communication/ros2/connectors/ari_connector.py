@@ -149,7 +149,6 @@ class ROS2ARIConnector(ROS2ActionMixin, ROS2ServiceMixin, ARIConnector[ROS2ARIMe
         return self._service_api.create_service(
             service_name=service_name,
             callback=on_request,
-            on_done=on_done,
             service_type=service_type,
             **kwargs,
         )
