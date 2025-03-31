@@ -46,9 +46,11 @@ class ROS2HRIMessage(HRIMessage):
         self,
         payload: HRIPayload,
         message_author: Literal["ai", "human"],
-        conversation_id: Optional[str] = None,
+        communication_id: Optional[str] = None,
+        seq_no: int = 0,
+        seq_end: bool = False,
     ):
-        super().__init__(payload, {}, message_author, conversation_id)
+        super().__init__(payload, {}, message_author, communication_id, seq_no, seq_end)
 
     @classmethod
     def from_ros2(
@@ -71,11 +73,13 @@ class ROS2HRIMessage(HRIMessage):
             )
             for audio_msg in cast(List[ROS2HRIMessage__Audio], msg.audios)
         ]
-        conversation_id = msg.conversation_id if msg.conversation_id != "" else None
+        communication_id = msg.communication_id if msg.communication_id != "" else None
         return ROS2HRIMessage(
             payload=HRIPayload(text=msg.text, images=pil_images, audios=audio_segments),
             message_author=message_author,
-            conversation_id=conversation_id,
+            communication_id=communication_id,
+            seq_no=msg.seq_no,
+            seq_end=msg.seq_end,
         )
 
     def to_ros2_dict(self) -> OrderedDict[str, Any]:
@@ -101,7 +105,9 @@ class ROS2HRIMessage(HRIMessage):
                     text=self.payload.text,
                     images=img_msgs,
                     audios=audio_msgs,
-                    conversation_id=self.conversation_id or "",
+                    conversation_id=self.communication_id or "",
+                    seq_no=self.seq_no,
+                    seq_end=self.seq_end,
                 )
             ),
         )

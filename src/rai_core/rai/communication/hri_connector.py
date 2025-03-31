@@ -56,7 +56,9 @@ class HRIMessage(BaseMessage):
         payload: HRIPayload,
         metadata: Optional[Dict[str, Any]] = None,
         message_author: Literal["ai", "human"] = "ai",
-        conversation_id: Optional[str] = None,
+        communication_id: Optional[str] = None,
+        seq_no: int = 0,
+        seq_end: bool = False,
         **kwargs,
     ):
         super().__init__(payload, metadata)
@@ -64,7 +66,9 @@ class HRIMessage(BaseMessage):
         self.text = payload.text
         self.images = payload.images
         self.audios = payload.audios
-        self.conversation_id = conversation_id
+        self.communication_id = communication_id
+        self.seq_no = seq_no
+        self.seq_end = seq_end
 
     def __bool__(self) -> bool:
         return bool(self.text or self.images or self.audios)
