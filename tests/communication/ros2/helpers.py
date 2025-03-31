@@ -22,7 +22,7 @@ import rclpy
 from cv_bridge import CvBridge
 from nav2_msgs.action import NavigateToPose
 from pydub import AudioSegment
-from rclpy.action import ActionServer, CancelResponse, GoalResponse
+from rclpy.action import ActionClient, ActionServer, CancelResponse, GoalResponse
 from rclpy.action.server import ServerGoalHandle
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
@@ -148,6 +148,59 @@ class ActionServer_(Node):
     def cancel_callback(self, cancel_request) -> CancelResponse:
         self.get_logger().info("Got cancel request")
         return CancelResponse.ACCEPT
+
+
+class TestActionClient(Node):
+    def __init__(self):
+        super().__init__("navigate_to_pose_client")
+        self._action_client = ActionClient(self, NavigateToPose, "navigate_to_pose")
+
+    def send_goal(self):
+        goal_msg = NavigateToPose.Goal()
+
+        self.get_logger().info("Waiting for action server...")
+        self._action_client.wait_for_server()
+        self.get_logger().info("Sending goal")
+
+        self._send_goal_future = self._action_client.send_goal_async(
+            goal_msg, feedback_callback=self.feedback_callback
+        )
+        self._send_goal_future.add_done_callback(self.goal_response_callback)
+        self.get_logger().info("Goal sent")
+
+    def goal_response_callback(self, future):
+        goal_handle = future.result()
+        if not goal_handle.accepted:
+            self.get_logger().info("Goal rejected")
+            return
+
+        self.get_logger().info("Goal accepted")
+        self._get_result_future = goal_handle.get_result_async()
+        self._get_result_future.add_done_callback(self.get_result_callback)
+
+    def get_result_callback(self, future):
+        result = future.result().result
+        self.get_logger().info(f"Result: {result.sequence}")
+        rclpy.shutdown()
+
+    def feedback_callback(self, feedback_msg):
+        feedback = feedback_msg.feedback
+        self.get_logger().info(f"Received feedback: {feedback.partial_sequence}")
+
+
+class TestServiceClient(Node):
+    def __init__(self):
+        super().__init__("set_bool_client")
+        self.client = self.create_client(SetBool, "set_bool")
+
+        while not self.client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info("Waiting for service...")
+
+        self.req = SetBool.Request()
+        self.req.data = True
+
+    def send_request(self):
+        self.future = self.client.call_async(self.req)
 
 
 class MessagePublisher(Node):

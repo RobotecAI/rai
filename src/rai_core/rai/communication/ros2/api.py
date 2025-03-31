@@ -763,6 +763,7 @@ class ROS2ActionAPI:
                 status_pub_qos_profile=status_pub_qos_profile,
                 result_timeout=result_timeout,
             )
+            self._logger.info(f"Created action server: {action_name}")
         except TypeError as e:
             import inspect
 

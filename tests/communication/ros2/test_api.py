@@ -14,10 +14,12 @@
 
 import threading
 import time
+from unittest.mock import MagicMock
 
 import pytest
 from action_msgs.msg import GoalStatus
 from action_msgs.srv import CancelGoal
+from nav2_msgs.action import NavigateToPose
 from rai.communication.ros2.api import (
     ConfigurableROS2TopicAPI,
     ROS2ActionAPI,
@@ -27,6 +29,7 @@ from rai.communication.ros2.api import (
 )
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
+from std_srvs.srv import SetBool
 
 from .helpers import ActionServer_ as ActionServer
 from .helpers import (
@@ -34,6 +37,8 @@ from .helpers import (
     MessagePublisher,
     MessageSubscriber,
     ServiceServer,
+    TestActionClient,
+    TestServiceClient,
     multi_threaded_spinner,
     ros_setup,
     shutdown_executors_and_threads,
@@ -503,3 +508,61 @@ def test_ros2_action_send_goal_terminate_goal(
         assert len(feedbacks_before) == len(feedbacks_after)
     finally:
         shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_create_action_server(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    action_name = "navigate_to_pose"
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    node = Node(node_name)
+    mock_callback = MagicMock()
+    mock_callback.return_value = NavigateToPose.Result()
+
+    try:
+        action_api = ROS2ActionAPI(node)
+        action_server_handle = action_api.create_action_server(
+            "nav2_msgs/action/NavigateToPose",
+            action_name,
+            execute_callback=mock_callback,
+        )
+        assert action_server_handle is not None
+    except Exception as e:
+        raise e
+
+    try:
+        action_client = TestActionClient()
+        executors, threads = multi_threaded_spinner([node, action_client])
+        action_client.send_goal()
+        time.sleep(0.01)
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+        assert mock_callback.called
+
+
+def test_ros2_create_create_service(ros_setup: None, request: pytest.FixtureRequest):
+    service_name = "set_bool"
+    node_name = f"{request.node.originalname}_node"
+    node = Node(node_name)
+    mock_callback = MagicMock()
+    mock_callback.return_value = SetBool.Response()
+
+    try:
+        service_api = ROS2ServiceAPI(node)
+        service_server_handle = service_api.create_service(
+            service_name,
+            "std_srvs/srv/SetBool",
+            callback=mock_callback,
+        )
+        assert service_server_handle is not None
+    except Exception as e:
+        raise e
+
+    try:
+        client = TestServiceClient()
+        executors, threads = multi_threaded_spinner([node, client])
+        client.send_request()
+        time.sleep(0.01)
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+        assert mock_callback.called
