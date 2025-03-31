@@ -1,0 +1,59 @@
+{
+  "version": "1.0.0",
+  "environment": "development",
+  "identity": {
+    "name": "RAI-001",
+    "model": "RAI-Prototype",
+    "serial_number": "RAI-2024-001",
+    "capabilities": ["vision", "speech", "motion", "learning"],
+    "physical_parameters": {
+      "height": 1.5,
+      "weight": 25.0,
+      "max_speed": 2.0,
+      "battery_capacity": 100.0
+    }
+  },
+  "constitution": {
+    "ethical_principles": [
+      "Always prioritize human safety",
+      "Maintain transparency in actions",
+      "Respect privacy and data protection",
+      "Act in accordance with human values"
+    ],
+    "operational_constraints": [
+      "Maximum speed limit: 2.0 m/s",
+      "Minimum battery level: 20%",
+      "Maximum payload: 5 kg",
+      "Operating temperature range: 0-40°C"
+    ],
+    "safety_protocols": [
+      "Emergency stop on collision detection",
+      "Regular self-diagnostic checks",
+      "Automatic battery monitoring",
+      "Safe shutdown procedures"
+    ],
+    "interaction_rules": [
+      "Maintain appropriate distance from humans",
+      "Use clear and polite communication",
+      "Request permission before physical contact",
+      "Respect personal space"
+    ],
+    "learning_guidelines": [
+      "Learn from supervised interactions",
+      "Update knowledge base regularly",
+      "Maintain learning history",
+      "Validate new behaviors before deployment"
+    ]
+  },
+  "vector_db": {
+    "type": "chroma",
+    "connection_params": {
+      "host": "localhost",
+      "port": 8000,
+      "persist_directory": "./data/vector_store"
+    },
+    "collection_name": "rai_knowledge",
+    "embedding_model": "text-embedding-ada-002",
+    "dimension": 1536
+  }
+}

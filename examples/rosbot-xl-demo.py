@@ -90,7 +90,9 @@ def initialize_agent():
         llm=get_llm_model("complex_model", streaming=True),
         system_prompt=SYSTEM_PROMPT,
         tools=[
-            *ROS2Toolkit(connector=connector).get_tools(),
+            *ROS2Toolkit(
+                connector=connector, forbidden=["/tf", "/cmd_vel"]
+            ).get_tools(),
             WaitForSecondsTool(),
             GetDetectionTool(connector=connector, node=connector.node),
             GetDistanceToObjectsTool(connector=connector, node=connector.node),
