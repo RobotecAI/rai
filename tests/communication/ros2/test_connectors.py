@@ -28,12 +28,12 @@ from rai.communication.ros2 import (
 from std_msgs.msg import String
 from std_srvs.srv import SetBool
 
-from .helpers import ActionServer_ as ActionServer
 from .helpers import (
     HRIMessageSubscriber,
     MessagePublisher,
     MessageSubscriber,
     ServiceServer,
+    TestActionServer,
     multi_threaded_spinner,
     ros_setup,
     shutdown_executors_and_threads,
@@ -101,7 +101,7 @@ def test_ros2ari_connector_service_call(
 
 def test_ros2ari_connector_send_goal(ros_setup: None, request: pytest.FixtureRequest):
     action_name = f"{request.node.originalname}_action"  # type: ignore
-    action_server = ActionServer(action_name)
+    action_server = TestActionServer(action_name)
     executors, threads = multi_threaded_spinner([action_server])
     connector = ROS2ARIConnector()
     try:
@@ -123,7 +123,7 @@ def test_ros2ari_connector_send_goal_and_terminate_action(
     ros_setup: None, request: pytest.FixtureRequest
 ):
     action_name = f"{request.node.originalname}_action"  # type: ignore
-    action_server = ActionServer(action_name)
+    action_server = TestActionServer(action_name)
     executors, threads = multi_threaded_spinner([action_server])
     connector = ROS2ARIConnector()
     feedbacks: List[Any] = []
@@ -150,7 +150,7 @@ def test_ros2ari_connector_send_goal_erronous_callback(
     ros_setup: None, request: pytest.FixtureRequest
 ):
     action_name = f"{request.node.originalname}_action"  # type: ignore
-    action_server = ActionServer(action_name)
+    action_server = TestActionServer(action_name)
     executors, threads = multi_threaded_spinner([action_server])
     connector = ROS2ARIConnector()
     try:

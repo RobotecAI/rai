@@ -31,13 +31,13 @@ from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from std_srvs.srv import SetBool
 
-from .helpers import ActionServer_ as ActionServer
 from .helpers import (
     HRIMessageSubscriber,
     MessagePublisher,
     MessageSubscriber,
     ServiceServer,
     TestActionClient,
+    TestActionServer,
     TestServiceClient,
     multi_threaded_spinner,
     ros_setup,
@@ -364,7 +364,7 @@ def test_ros2_service_single_call_wrong_service_name(
 def test_ros2_action_send_goal(ros_setup: None, request: pytest.FixtureRequest) -> None:
     action_name = f"{request.node.originalname}_action"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
-    action_server = ActionServer(action_name)
+    action_server = TestActionServer(action_name)
     node = Node(node_name)
     executors, threads = multi_threaded_spinner([action_server, node])
 
@@ -385,7 +385,7 @@ def test_ros2_action_send_goal_get_result(
 ) -> None:
     action_name = f"{request.node.originalname}_action"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
-    action_server = ActionServer(action_name)
+    action_server = TestActionServer(action_name)
     node = Node(node_name)
     executors, threads = multi_threaded_spinner([action_server, node])
 
@@ -416,7 +416,7 @@ def test_ros2_action_send_goal_wrong_action_type(
 ) -> None:
     action_name = f"{request.node.originalname}_action"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
-    action_server = ActionServer(action_name)
+    action_server = TestActionServer(action_name)
     node = Node(node_name)
     executors, threads = multi_threaded_spinner([action_server, node])
 
@@ -437,7 +437,7 @@ def test_ros2_action_send_goal_wrong_action_name(
 ) -> None:
     action_name = f"{request.node.originalname}_action"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
-    action_server = ActionServer(action_name)
+    action_server = TestActionServer(action_name)
     node = Node(node_name)
     executors, threads = multi_threaded_spinner([action_server, node])
 
@@ -457,7 +457,7 @@ def test_ros2_action_send_goal_get_feedback(
 ) -> None:
     action_name = f"{request.node.originalname}_action"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
-    action_server = ActionServer(action_name)
+    action_server = TestActionServer(action_name)
     node = Node(node_name)
     executors, threads = multi_threaded_spinner([action_server])
     executor = MultiThreadedExecutor()
@@ -485,7 +485,7 @@ def test_ros2_action_send_goal_terminate_goal(
 ) -> None:
     action_name = f"{request.node.originalname}_action"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
-    action_server = ActionServer(action_name)
+    action_server = TestActionServer(action_name)
     node = Node(node_name)
     executors, threads = multi_threaded_spinner([action_server])
     executor = MultiThreadedExecutor()

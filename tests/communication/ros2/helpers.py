@@ -108,7 +108,7 @@ class MessageSubscriber(Node):
         self.received_messages.append(msg)
 
 
-class ActionServer_(Node):
+class TestActionServer(Node):
     def __init__(self, action_name: str):
         super().__init__("test_action_server")
         self.action_server = ActionServer(
