@@ -69,12 +69,12 @@ inputs: List[BoolImageTaskInput] = [
         expected_response=False,
     ),
     BoolImageTaskInput(
-        question="Is there a rack on the left from the sofa?",
+        question="Is there a cabinet on the left from the sofa?",
         images_paths=["src/rai_bench/rai_bench/examples/images/image_4.jpg"],
         expected_response=False,
     ),
     BoolImageTaskInput(
-        question="Is there a plant behind the rack?",
+        question="Is there a plant behind the cabinet?",
         images_paths=["src/rai_bench/rai_bench/examples/images/image_5.jpg"],
         expected_response=True,
     ),
