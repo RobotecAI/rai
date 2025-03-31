@@ -72,7 +72,7 @@ def test_action_call_tool_with_writable_action(
 ) -> None:
     action_name = f"{request.node.originalname}_action"  # type: ignore
     connector = ROS2ARIConnector()
-    server = ActionServer(action_name=action_name)
+    server = TestActionServer(action_name=action_name)
     executors, threads = multi_threaded_spinner([server])
     tool = StartROS2ActionTool(connector=connector, writable=[action_name])
     try:
