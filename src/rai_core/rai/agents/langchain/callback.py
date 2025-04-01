@@ -41,18 +41,22 @@ class HRICallbackHandler(BaseCallbackHandler):
         self._buffer_lock = threading.Lock()
         self.logger = logger or logging.getLogger(__name__)
         self.current_conversation_id = None
+        self.current_chunk_id = 0
 
     def _should_split(self, token: str) -> bool:
         return token in self.splitting_chars
 
-    def _send_all_targets(self, tokens: str):
+    def _send_all_targets(self, tokens: str, done: bool = False):
         self.logger.info(
             f"Sending {len(tokens)} tokens to {len(self.connectors)} connectors"
         )
         for connector_name, connector in self.connectors.items():
             try:
                 connector.send_all_targets(
-                    AIMessage(content=tokens), self.current_conversation_id
+                    AIMessage(content=tokens),
+                    self.current_conversation_id,
+                    self.current_chunk_id,
+                    done,
                 )
                 self.logger.debug(f"Sent {len(tokens)} tokens to {connector_name}")
             except Exception as e:
@@ -63,7 +67,9 @@ class HRICallbackHandler(BaseCallbackHandler):
     def on_llm_new_token(self, token: str, *, run_id: UUID, **kwargs):
         if token == "":
             return
-        self.current_conversation_id = str(run_id)
+        if self.current_conversation_id != str(run_id):
+            self.current_conversation_id = str(run_id)
+            self.current_chunk_id = 0
         if self.aggregate_chunks:
             with self._buffer_lock:
                 self.chunks_buffer += token
@@ -71,11 +77,14 @@ class HRICallbackHandler(BaseCallbackHandler):
                     if self._should_split(token):
                         self._send_all_targets(self.chunks_buffer)
                         self.chunks_buffer = ""
+                        self.current_chunk_id += 1
                 else:
                     self._send_all_targets(self.chunks_buffer)
                     self.chunks_buffer = ""
+                    self.current_chunk_id += 1
         else:
             self._send_all_targets(token)
+            self.current_chunk_id += 1
 
     def on_llm_end(
         self,
@@ -87,5 +96,5 @@ class HRICallbackHandler(BaseCallbackHandler):
         self.current_conversation_id = str(run_id)
         if self.aggregate_chunks and self.chunks_buffer:
             with self._buffer_lock:
-                self._send_all_targets(self.chunks_buffer)
+                self._send_all_targets(self.chunks_buffer, done=True)
                 self.chunks_buffer = ""

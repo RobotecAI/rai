@@ -182,16 +182,20 @@ class HRIConnector(Generic[T], BaseConnector[T]):
         self,
         message: LangchainBaseMessage | RAIMultimodalMessage,
         communication_id: Optional[str] = None,
+        seq_no: int = 0,
+        seq_end: bool = False,
     ) -> T:
-        return self.T_class.from_langchain(message, communication_id)
+        return self.T_class.from_langchain(message, communication_id, seq_no, seq_end)
 
     def send_all_targets(
         self,
         message: LangchainBaseMessage | RAIMultimodalMessage,
         communication_id: Optional[str] = None,
+        seq_no: int = 0,
+        seq_end: bool = False,
     ):
         for target in self.configured_targets:
-            to_send = self._build_message(message, communication_id)
+            to_send = self._build_message(message, communication_id, seq_no, seq_end)
             self.send_message(to_send, target)
 
     def receive_all_sources(self, timeout_sec: float = 1.0) -> dict[str, T]:
