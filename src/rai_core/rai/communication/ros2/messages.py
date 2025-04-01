@@ -105,7 +105,7 @@ class ROS2HRIMessage(HRIMessage):
                     text=self.payload.text,
                     images=img_msgs,
                     audios=audio_msgs,
-                    conversation_id=self.communication_id or "",
+                    communication_id=self.communication_id or "",
                     seq_no=self.seq_no,
                     seq_end=self.seq_end,
                 )

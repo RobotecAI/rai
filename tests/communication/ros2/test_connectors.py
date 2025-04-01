@@ -184,7 +184,9 @@ def test_ros2hri_default_message_publish(
         audios = [AudioSegment.silent(duration=1000)]
         text = "Hello, HRI!"
         payload = HRIPayload(images=images, audios=audios, text=text)
-        message = ROS2HRIMessage(payload=payload, message_author="ai")
+        message = ROS2HRIMessage(
+            payload=payload, message_author="ai", communication_id=""
+        )
         connector.send_message(message, target=topic_name)
         time.sleep(1)  # wait for the message to be received
 

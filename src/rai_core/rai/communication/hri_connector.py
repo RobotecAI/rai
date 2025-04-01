@@ -122,7 +122,7 @@ class HRIMessage(BaseMessage):
     def from_langchain(
         cls,
         message: LangchainBaseMessage | RAIMultimodalMessage,
-        conversation_id: Optional[str] = None,
+        communication_id: Optional[str] = None,
     ) -> "HRIMessage":
         if isinstance(message, RAIMultimodalMessage):
             text = message.text
@@ -145,12 +145,12 @@ class HRIMessage(BaseMessage):
                 ),
             ),
             message_author=message.type,  # type: ignore
-            conversation_id=conversation_id,
+            communication_id=communication_id,
         )
 
     @classmethod
-    def generate_conversation_id(cls) -> str:
-        """Generate a unique conversation ID."""
+    def generate_communication_id(cls) -> str:
+        """Generate a unique communication ID."""
         return str(uuid.uuid1())
 
 
@@ -181,17 +181,17 @@ class HRIConnector(Generic[T], BaseConnector[T]):
     def _build_message(
         self,
         message: LangchainBaseMessage | RAIMultimodalMessage,
-        conversation_id: Optional[str] = None,
+        communication_id: Optional[str] = None,
     ) -> T:
-        return self.T_class.from_langchain(message, conversation_id)
+        return self.T_class.from_langchain(message, communication_id)
 
     def send_all_targets(
         self,
         message: LangchainBaseMessage | RAIMultimodalMessage,
-        conversation_id: Optional[str] = None,
+        communication_id: Optional[str] = None,
     ):
         for target in self.configured_targets:
-            to_send = self._build_message(message, conversation_id)
+            to_send = self._build_message(message, communication_id)
             self.send_message(to_send, target)
 
     def receive_all_sources(self, timeout_sec: float = 1.0) -> dict[str, T]:

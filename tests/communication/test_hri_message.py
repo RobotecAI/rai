@@ -39,7 +39,7 @@ def test_initialization(image, audio):
     message = HRIMessage(
         payload=payload,
         message_author="human",
-        conversation_id=HRIMessage.generate_conversation_id(),
+        communication_id=HRIMessage.generate_communication_id(),
     )
 
     assert message.text == "Hello"
@@ -53,7 +53,7 @@ def test_repr():
     message = HRIMessage(
         payload=payload,
         message_author="ai",
-        conversation_id=HRIMessage.generate_conversation_id(),
+        communication_id=HRIMessage.generate_communication_id(),
     )
 
     assert repr(message) == "HRIMessage(type=ai, text=Hello, images=[], audios=[])"
@@ -64,7 +64,7 @@ def test_to_langchain_human():
     message = HRIMessage(
         payload=payload,
         message_author="human",
-        conversation_id=HRIMessage.generate_conversation_id(),
+        communication_id=HRIMessage.generate_communication_id(),
     )
     langchain_message = message.to_langchain()
 
@@ -77,7 +77,7 @@ def test_to_langchain_ai_multimodal(image, audio):
     message = HRIMessage(
         payload=payload,
         message_author="ai",
-        conversation_id=HRIMessage.generate_conversation_id(),
+        communication_id=HRIMessage.generate_communication_id(),
     )
 
     with pytest.raises(
@@ -95,7 +95,7 @@ def test_from_langchain_human():
     langchain_message = HumanMessage(content="Hello")
     hri_message = HRIMessage.from_langchain(
         langchain_message,
-        conversation_id=HRIMessage.generate_conversation_id(),
+        communication_id=HRIMessage.generate_communication_id(),
     )
 
     assert hri_message.text == "Hello"
