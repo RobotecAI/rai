@@ -40,6 +40,8 @@ def test_initialization(image, audio):
         payload=payload,
         message_author="human",
         communication_id=HRIMessage.generate_communication_id(),
+        seq_no=0,
+        seq_end=True,
     )
 
     assert message.text == "Hello"
@@ -50,13 +52,19 @@ def test_initialization(image, audio):
 
 def test_repr():
     payload = HRIPayload(text="Hello")
+    comm_id = HRIMessage.generate_communication_id()
     message = HRIMessage(
         payload=payload,
         message_author="ai",
-        communication_id=HRIMessage.generate_communication_id(),
+        communication_id=comm_id,
+        seq_no=0,
+        seq_end=True,
     )
 
-    assert repr(message) == "HRIMessage(type=ai, text=Hello, images=[], audios=[])"
+    assert (
+        repr(message)
+        == f"HRIMessage(type=ai, text=Hello, images=[], audios=[], communication_id={comm_id}, seq_no=0, seq_end=True)"
+    )
 
 
 def test_to_langchain_human():
@@ -65,6 +73,8 @@ def test_to_langchain_human():
         payload=payload,
         message_author="human",
         communication_id=HRIMessage.generate_communication_id(),
+        seq_no=0,
+        seq_end=True,
     )
     langchain_message = message.to_langchain()
 
@@ -78,6 +88,8 @@ def test_to_langchain_ai_multimodal(image, audio):
         payload=payload,
         message_author="ai",
         communication_id=HRIMessage.generate_communication_id(),
+        seq_no=0,
+        seq_end=True,
     )
 
     with pytest.raises(

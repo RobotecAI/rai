@@ -74,7 +74,7 @@ class HRIMessage(BaseMessage):
         return bool(self.text or self.images or self.audios)
 
     def __repr__(self):
-        return f"HRIMessage(type={self.message_author}, text={self.text}, images={self.images}, audios={self.audios})"
+        return f"HRIMessage(type={self.message_author}, text={self.text}, images={self.images}, audios={self.audios}, communication_id={self.communication_id}, seq_no={self.seq_no}, seq_end={self.seq_end})"
 
     def _image_to_base64(self, image: ImageType) -> str:
         buffered = BytesIO()
