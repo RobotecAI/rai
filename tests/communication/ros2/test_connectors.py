@@ -184,7 +184,9 @@ def test_ros2hri_default_message_publish(
         audios = [AudioSegment.silent(duration=1000)]
         text = "Hello, HRI!"
         payload = HRIPayload(images=images, audios=audios, text=text)
-        message = ROS2HRIMessage(payload=payload, message_author="ai")
+        message = ROS2HRIMessage(
+            payload=payload, message_author="ai", communication_id=""
+        )
         connector.send_message(message, target=topic_name)
         time.sleep(1)  # wait for the message to be received
 
@@ -231,13 +233,11 @@ def test_ros2ari_connector_create_service(
         service_client = TestServiceClient()
         executors, threads = multi_threaded_spinner([service_client])
         service_client.send_request()
-        time.sleep(0.01)
+        time.sleep(0.02)
         assert mock_callback.called
-    except Exception as e:
-        raise e
-
-    connector.shutdown()
-    shutdown_executors_and_threads(executors, threads)
+    finally:
+        connector.shutdown()
+        shutdown_executors_and_threads(executors, threads)
 
 
 def test_ros2ari_connector_action_call(ros_setup: None, request: pytest.FixtureRequest):
@@ -256,7 +256,7 @@ def test_ros2ari_connector_action_call(ros_setup: None, request: pytest.FixtureR
         action_client = TestActionClient()
         executors, threads = multi_threaded_spinner([action_client])
         action_client.send_goal()
-        time.sleep(0.01)
+        time.sleep(0.02)
+        assert mock_callback.called
     finally:
         shutdown_executors_and_threads(executors, threads)
-        assert mock_callback.called

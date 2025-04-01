@@ -18,3 +18,6 @@ std_msgs/Header header
 string text
 sensor_msgs/Image[] images
 rai_interfaces/AudioMessage[] audios
+string communication_id
+int64 seq_no
+bool seq_end

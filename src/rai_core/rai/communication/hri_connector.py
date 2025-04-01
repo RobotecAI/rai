@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import base64
+import uuid
 from dataclasses import dataclass, field
 from io import BytesIO
 from typing import Any, Dict, Generic, Literal, Optional, Sequence, TypeVar, get_args
@@ -55,6 +56,9 @@ class HRIMessage(BaseMessage):
         payload: HRIPayload,
         metadata: Optional[Dict[str, Any]] = None,
         message_author: Literal["ai", "human"] = "ai",
+        communication_id: Optional[str] = None,
+        seq_no: int = 0,
+        seq_end: bool = False,
         **kwargs,
     ):
         super().__init__(payload, metadata)
@@ -62,12 +66,15 @@ class HRIMessage(BaseMessage):
         self.text = payload.text
         self.images = payload.images
         self.audios = payload.audios
+        self.communication_id = communication_id
+        self.seq_no = seq_no
+        self.seq_end = seq_end
 
     def __bool__(self) -> bool:
         return bool(self.text or self.images or self.audios)
 
     def __repr__(self):
-        return f"HRIMessage(type={self.message_author}, text={self.text}, images={self.images}, audios={self.audios})"
+        return f"HRIMessage(type={self.message_author}, text={self.text}, images={self.images}, audios={self.audios}, communication_id={self.communication_id}, seq_no={self.seq_no}, seq_end={self.seq_end})"
 
     def _image_to_base64(self, image: ImageType) -> str:
         buffered = BytesIO()
@@ -115,6 +122,7 @@ class HRIMessage(BaseMessage):
     def from_langchain(
         cls,
         message: LangchainBaseMessage | RAIMultimodalMessage,
+        communication_id: Optional[str] = None,
     ) -> "HRIMessage":
         if isinstance(message, RAIMultimodalMessage):
             text = message.text
@@ -137,7 +145,13 @@ class HRIMessage(BaseMessage):
                 ),
             ),
             message_author=message.type,  # type: ignore
+            communication_id=communication_id,
         )
+
+    @classmethod
+    def generate_communication_id(cls) -> str:
+        """Generate a unique communication ID."""
+        return str(uuid.uuid1())
 
 
 T = TypeVar("T", bound=HRIMessage)
@@ -167,12 +181,21 @@ class HRIConnector(Generic[T], BaseConnector[T]):
     def _build_message(
         self,
         message: LangchainBaseMessage | RAIMultimodalMessage,
+        communication_id: Optional[str] = None,
+        seq_no: int = 0,
+        seq_end: bool = False,
     ) -> T:
-        return self.T_class.from_langchain(message)
+        return self.T_class.from_langchain(message, communication_id, seq_no, seq_end)
 
-    def send_all_targets(self, message: LangchainBaseMessage | RAIMultimodalMessage):
+    def send_all_targets(
+        self,
+        message: LangchainBaseMessage | RAIMultimodalMessage,
+        communication_id: Optional[str] = None,
+        seq_no: int = 0,
+        seq_end: bool = False,
+    ):
         for target in self.configured_targets:
-            to_send = self._build_message(message)
+            to_send = self._build_message(message, communication_id, seq_no, seq_end)
             self.send_message(to_send, target)
 
     def receive_all_sources(self, timeout_sec: float = 1.0) -> dict[str, T]:

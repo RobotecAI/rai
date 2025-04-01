@@ -35,15 +35,18 @@ from rai_interfaces.msg import HRIMessage as InterfacesHRIMessage
 
 
 class LLMTextHandler(BaseCallbackHandler):
-    def __init__(self, connector: ROS2HRIConnector):
+    def __init__(self, connector: ROS2HRIConnector, speech_id: str = ""):
         self.connector = connector
         self.token_buffer = ""
+        self.speech_id = speech_id
 
     def on_llm_new_token(self, token: str, **kwargs):
         self.token_buffer += token
         if len(self.token_buffer) > 100 or token in [".", "?", "!", ",", ";", ":"]:
             logging.info(f"Sending token buffer: {self.token_buffer}")
-            self.connector.send_all_targets(AIMessage(content=self.token_buffer))
+            self.connector.send_all_targets(
+                AIMessage(content=self.token_buffer), self.speech_id
+            )
             self.token_buffer = ""
 
     def on_llm_end(
@@ -74,6 +77,7 @@ class S2SConversationalAgent(BaseAgent):
         self._setup_ros_connector()
         self.main_thread = None
         self.stop_thread = Event()
+        self.current_speech_id = ""
 
     def run(self):
         logging.info("Running S2SConversationalAgent")
@@ -85,14 +89,24 @@ class S2SConversationalAgent(BaseAgent):
             time.sleep(0.01)
             speech = ""
             while not self.speech_queue.empty():
-                speech += "".join(self.speech_queue.get().text)
+                speech_message = self.speech_queue.get()
+                speech += "".join(speech_message.text)
                 logging.info(f"Received human speech {speech}!")
+                self.current_speech_id = speech_message.conversation_id
             if speech != "":
-                self.message_history.append(HumanMessage(content=speech))
+                self.message_history.append(
+                    HumanMessage(content=speech, conversation_id=self.current_speech_id)
+                )
                 assert isinstance(self.connectors["ros2"], ROS2HRIConnector)
                 ai_answer = self.llm.invoke(
                     self.message_history,
-                    config={"callbacks": [LLMTextHandler(self.connectors["ros2"])]},
+                    config={
+                        "callbacks": [
+                            LLMTextHandler(
+                                self.connectors["ros2"], self.current_speech_id
+                            )
+                        ]
+                    },
                 )
                 self.message_history.append(ai_answer)  # type: ignore
 

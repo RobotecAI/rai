@@ -180,12 +180,11 @@ class TestActionClient(Node):
 
     def get_result_callback(self, future):
         result = future.result().result
-        self.get_logger().info(f"Result: {result.sequence}")
-        rclpy.shutdown()
+        self.get_logger().info(f"Result: {result}")
 
     def feedback_callback(self, feedback_msg):
         feedback = feedback_msg.feedback
-        self.get_logger().info(f"Received feedback: {feedback.partial_sequence}")
+        self.get_logger().info(f"Received feedback: {feedback}")
 
 
 class TestServiceClient(Node):
