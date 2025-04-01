@@ -527,10 +527,6 @@ def test_ros2_create_action_server(
             execute_callback=mock_callback,
         )
         assert action_server_handle is not None
-    except Exception as e:
-        raise e
-
-    try:
         action_client = TestActionClient()
         executors, threads = multi_threaded_spinner([node, action_client])
         action_client.send_goal()
@@ -555,10 +551,6 @@ def test_ros2_create_create_service(ros_setup: None, request: pytest.FixtureRequ
             callback=mock_callback,
         )
         assert service_server_handle is not None
-    except Exception as e:
-        raise e
-
-    try:
         client = TestServiceClient()
         executors, threads = multi_threaded_spinner([node, client])
         client.send_request()

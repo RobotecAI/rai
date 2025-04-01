@@ -253,10 +253,6 @@ def test_ros2ari_connector_action_call(ros_setup: None, request: pytest.FixtureR
             action_type="nav2_msgs/action/NavigateToPose",
         )
         assert action_server_handle is not None
-    except Exception as e:
-        raise e
-
-    try:
         action_client = TestActionClient()
         executors, threads = multi_threaded_spinner([action_client])
         action_client.send_goal()
