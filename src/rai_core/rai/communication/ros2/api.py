@@ -37,6 +37,7 @@ from typing import (
 )
 
 import rclpy
+import rclpy.action
 import rclpy.callback_groups
 import rclpy.executors
 import rclpy.node
@@ -161,6 +162,15 @@ class ROS2TopicAPI:
         self._logger = node.get_logger()
         self._publishers: Dict[str, Publisher] = {}
 
+        # TODO: These fields are a workaround to prevent subscriber destruction,
+        # which often fails as described in https://github.com/ros2/rclpy/issues/1142
+        # By setting destroy_subscriptions to False, subscribers are not destroyed.
+        # While this may lead to memory/performance issues, it's preferable to
+        # preventing node crashes.
+        self._last_msg: Dict[str, Tuple[float, Any]] = {}
+        self._subscriptions: Dict[str, rclpy.node.Subscription] = {}
+        self._destroy_subscriptions: bool = False
+
     def get_topic_names_and_types(
         self, no_demangle: bool = False
     ) -> List[Tuple[str, List[str]]]:
@@ -273,6 +283,9 @@ class ROS2TopicAPI:
                 f"No message received from topic: {topic} within {timeout_sec} seconds"
             )
 
+    def _generic_callback(self, topic: str, msg: Any) -> None:
+        self._last_msg[topic] = (time.time(), msg)
+
     def _wait_for_message(
         self,
         msg_cls: Type[Any],
@@ -281,25 +294,24 @@ class ROS2TopicAPI:
         qos_profile: QoSProfile,
         timeout_sec: float,
     ) -> Tuple[bool, Any]:
-        success = False
-        msg = None
+        if topic not in self._subscriptions:
+            self._subscriptions[topic] = node.create_subscription(
+                msg_cls,
+                topic,
+                partial(self._generic_callback, topic),
+                qos_profile=qos_profile,
+            )
 
-        def callback(received_msg: Any):
-            nonlocal success
-            nonlocal msg
-            success = True
-            msg = received_msg
-
-        sub = node.create_subscription(
-            msg_cls, topic, callback, qos_profile=qos_profile
-        )
         ts = time.time()
         while time.time() - ts < timeout_sec:
-            if success:
-                node.destroy_subscription(sub)
-                return True, msg
+            if topic in self._last_msg:
+                if self._last_msg[topic][0] + timeout_sec > time.time():
+                    if self._destroy_subscriptions:
+                        node.destroy_subscription(self._subscriptions.pop(topic))
+                    return True, self._last_msg[topic][1]
             time.sleep(0.01)
-        node.destroy_subscription(sub)
+        if self._destroy_subscriptions:
+            node.destroy_subscription(self._subscriptions.pop(topic))
         return False, None
 
     def _is_topic_available(self, topic: str, timeout_sec: float) -> bool:
@@ -607,6 +619,9 @@ class ROS2ServiceAPI:
             )
         return service_client.call(srv_msg)
 
+    def get_service_names_and_types(self) -> List[Tuple[str, List[str]]]:
+        return self.node.get_service_names_and_types()
+
 
 class ROS2ActionData(TypedDict):
     action_client: Optional[ActionClient]
@@ -740,6 +755,9 @@ class ROS2ActionAPI:
         if self.actions[handle]["result_future"] is None:
             raise ValueError(f"No result available for goal {handle}")
         return self.actions[handle]["result_future"].result()
+
+    def get_action_names_and_types(self) -> List[Tuple[str, List[str]]]:
+        return rclpy.action.get_action_names_and_types(self.node)
 
     def shutdown(self) -> None:
         """Cleanup thread pool when object is destroyed."""

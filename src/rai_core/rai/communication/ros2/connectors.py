@@ -61,6 +61,12 @@ class ROS2ARIConnector(ARIConnector[ROS2ARIMessage]):
     def get_topics_names_and_types(self) -> List[Tuple[str, List[str]]]:
         return self._topic_api.get_topic_names_and_types()
 
+    def get_services_names_and_types(self) -> List[Tuple[str, List[str]]]:
+        return self._service_api.get_service_names_and_types()
+
+    def get_actions_names_and_types(self) -> List[Tuple[str, List[str]]]:
+        return self._actions_api.get_action_names_and_types()
+
     def send_message(
         self,
         message: ROS2ARIMessage,

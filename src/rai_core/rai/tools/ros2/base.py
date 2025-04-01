@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional
+from typing import Annotated, List, Optional
 
-from langchain_core.tools import BaseTool
+from langchain_core.tools import BaseTool, BaseToolkit
+from pydantic import ConfigDict
 
 from rai.communication.ros2.connectors import ROS2ARIConnector
 
@@ -56,3 +57,46 @@ class BaseROS2Tool(BaseTool):
         if self.writable is None:
             return True
         return topic in self.writable
+
+
+class BaseROS2Toolkit(BaseToolkit):
+    """
+    Base class for all ROS2 toolkits.
+
+    Parameters
+    ----------
+    connector : ROS2ARIConnector
+        The connector to the ROS2 system.
+    readable : Optional[List[str]]
+        The topics that can be read. If the list is not provided, all topics can be read.
+    writable : Optional[List[str]]
+        The names (topics/actions/services) that can be written. If the list is not provided, all topics can be written.
+    forbidden : Optional[List[str]]
+        The names (topics/actions/services) that are forbidden to read and write.
+    """
+
+    connector: ROS2ARIConnector
+    readable: Optional[
+        Annotated[
+            List[str],
+            """The topics that can be read.
+            If the list is not provided, all topics can be read.""",
+        ]
+    ] = None
+    writable: Optional[
+        Annotated[
+            List[str],
+            """The names (topics/actions/services) that can be written.
+            If the list is not provided, all topics can be written.""",
+        ]
+    ] = None
+    forbidden: Optional[
+        Annotated[
+            List[str],
+            """The names (topics/actions/services) that are forbidden to read and write.""",
+        ]
+    ] = None
+
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )

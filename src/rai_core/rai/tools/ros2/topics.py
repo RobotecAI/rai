@@ -20,52 +20,26 @@ except ImportError:
     )
 
 import json
-from typing import Annotated, Any, Dict, List, Literal, Optional, Tuple, Type
+from typing import Any, Dict, List, Literal, Tuple, Type
 
 import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
 from cv_bridge import CvBridge
 from langchain.tools import BaseTool
-from langchain_core.tools import BaseToolkit
 from langchain_core.utils import stringify_dict
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 from sensor_msgs.msg import CompressedImage, Image
 
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
 from rai.messages.multimodal import MultimodalArtifact
 from rai.messages.utils import preprocess_image
-from rai.tools.ros2.base import BaseROS2Tool
+from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
 from rai.tools.ros2.utils import ros2_message_to_dict
 
 
-class ROS2TopicsToolkit(BaseToolkit):
+class ROS2TopicsToolkit(BaseROS2Toolkit):
     name: str = "ROS2TopicsToolkit"
     description: str = "A toolkit for ROS2 topics"
-    connector: ROS2ARIConnector
-    readable: Optional[
-        Annotated[
-            List[str],
-            """The topics that can be read.
-            If the list is not provided, all topics can be read.""",
-        ]
-    ] = None
-    writable: Optional[
-        Annotated[
-            List[str],
-            """The names (topics/actions/services) that can be written.
-            If the list is not provided, all topics can be written.""",
-        ]
-    ] = None
-    forbidden: Optional[
-        Annotated[
-            List[str],
-            """The names (topics/actions/services) that are forbidden to read and write.""",
-        ]
-    ] = None
-
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True,
-    )
 
     def get_tools(self) -> List[BaseTool]:
         return [
@@ -132,6 +106,7 @@ class PublishROS2MessageTool(BaseROS2Tool):
 
 class ReceiveROS2MessageToolInput(BaseModel):
     topic: str = Field(..., description="The topic to receive the message from")
+    timeout_sec: float = Field(1.0, description="The timeout in seconds")
 
 
 class ReceiveROS2MessageTool(BaseROS2Tool):
@@ -140,10 +115,10 @@ class ReceiveROS2MessageTool(BaseROS2Tool):
     description: str = "Receive a message from a ROS2 topic"
     args_schema: Type[ReceiveROS2MessageToolInput] = ReceiveROS2MessageToolInput
 
-    def _run(self, topic: str) -> str:
+    def _run(self, topic: str, timeout_sec: float = 1.0) -> str:
         if not self.is_readable(topic):
             raise ValueError(f"Topic {topic} is not readable")
-        message = self.connector.receive_message(topic)
+        message = self.connector.receive_message(topic, timeout_sec=timeout_sec)
         return str({"payload": message.payload, "metadata": message.metadata})
 
 

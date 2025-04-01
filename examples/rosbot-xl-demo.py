@@ -12,24 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast
-
 import rclpy
 import rclpy.executors
 import rclpy.logging
-from langchain_core.messages import BaseMessage, HumanMessage
-from rai.agents.conversational_agent import State, create_conversational_agent
-from rai.communication.ros2.connectors import ROS2ARIConnector
-from rai.tools.ros2.actions import ROS2ActionToolkit
-from rai.tools.ros2.topics import ROS2TopicsToolkit
+import streamlit as st
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from rai.agents.conversational_agent import create_conversational_agent
+from rai.agents.integrations.streamlit import get_streamlit_cb, streamlit_invoke
+from rai.communication.ros2 import ROS2ARIConnector
+from rai.messages import HumanMultimodalMessage
+from rai.tools.ros.manipulation import GetGrabbingPointTool, GetObjectPositionsTool
+from rai.tools.ros2 import ROS2Toolkit
 from rai.tools.time import WaitForSecondsTool
 from rai.utils.model_initialization import get_llm_model
 from rai_open_set_vision.tools import GetDetectionTool, GetDistanceToObjectsTool
 
 
-def main():
+@st.cache_resource
+def initialize_agent():
     rclpy.init()
-
     SYSTEM_PROMPT = """You are an autonomous robot connected to ros2 environment. Your main goal is to fulfill the user's requests.
     Do not make assumptions about the environment you are currently in.
     You can use ros2 topics, services and actions to operate.
@@ -79,32 +80,80 @@ def main():
     (-2.50, 5.49, 0.0),
     (0.79, 5.73, 0.0),
     (0.92, 1.01, 0.0)
+
+    Before starting anything, make sure to load available topics, services and actions.
     """
 
     connector = ROS2ARIConnector()
-    ros2_action_toolkit = ROS2ActionToolkit(connector=connector)
-    ros2_topics_toolkit = ROS2TopicsToolkit(connector=connector)
 
     agent = create_conversational_agent(
-        llm=get_llm_model("complex_model"),
+        llm=get_llm_model("complex_model", streaming=True),
         system_prompt=SYSTEM_PROMPT,
         tools=[
-            *ros2_action_toolkit.get_tools(),
-            *ros2_topics_toolkit.get_tools(),
+            *ROS2Toolkit(
+                connector=connector, forbidden=["/tf", "/cmd_vel"]
+            ).get_tools(),
             WaitForSecondsTool(),
             GetDetectionTool(connector=connector, node=connector.node),
             GetDistanceToObjectsTool(connector=connector, node=connector.node),
+            GetObjectPositionsTool(
+                connector=connector,
+                target_frame="map",
+                source_frame="sensor_frame",
+                camera_topic="/camera/camera/color/image_raw",
+                depth_topic="/camera/camera/depth/image_rect_raw",
+                camera_info_topic="/camera/camera/color/camera_info",
+                get_grabbing_point_tool=GetGrabbingPointTool(
+                    connector=connector,
+                ),
+            ),
         ],
     )
     connector.node.declare_parameter("conversion_ratio", 1.0)
 
-    state = State(messages=[])
-    while rclpy.ok():
-        user_input = input("Enter your message: ")
-        state["messages"].append(HumanMessage(content=user_input))
-        response = agent.invoke(state)
-        cast(BaseMessage, response["messages"][-1]).pretty_print()
-    rclpy.shutdown()
+    return agent
+
+
+def main():
+    st.set_page_config(
+        page_title="RAI ROSBotXL Demo",
+        page_icon=":robot:",
+    )
+    st.title("RAI ROSBotXL Demo")
+    st.markdown("---")
+
+    st.sidebar.header("Tool Calls History")
+
+    if "graph" not in st.session_state:
+        graph = initialize_agent()
+        st.session_state["graph"] = graph
+
+    if "messages" not in st.session_state:
+        st.session_state["messages"] = [
+            AIMessage(content="Hi! I am ROSBotXL. What can I do for you?")
+        ]
+
+    prompt = st.chat_input()
+    for msg in st.session_state.messages:
+        if isinstance(msg, AIMessage):
+            if msg.content:
+                st.chat_message("assistant").write(msg.content)
+        elif isinstance(msg, HumanMultimodalMessage):
+            continue
+        elif isinstance(msg, HumanMessage):
+            st.chat_message("user").write(msg.content)
+        elif isinstance(msg, ToolMessage):
+            with st.sidebar.expander(f"Tool: {msg.name}", expanded=False):
+                st.code(msg.content, language="json")
+
+    if prompt:
+        st.session_state.messages.append(HumanMessage(content=prompt))
+        st.chat_message("user").write(prompt)
+        with st.chat_message("assistant"):
+            st_callback = get_streamlit_cb(st.container())
+            streamlit_invoke(
+                st.session_state["graph"], st.session_state.messages, [st_callback]
+            )
 
 
 if __name__ == "__main__":

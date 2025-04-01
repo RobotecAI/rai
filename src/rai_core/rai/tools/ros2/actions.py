@@ -23,48 +23,57 @@ import uuid
 from collections import defaultdict
 from functools import partial
 from threading import Lock
-from typing import Annotated, Any, Callable, Dict, List, Optional, Type
+from typing import Any, Callable, Dict, List, Type
 
-from langchain_core.tools import BaseTool, BaseToolkit  # type: ignore
-from pydantic import BaseModel, ConfigDict, Field
+from langchain_core.tools import BaseTool  # type: ignore
+from langchain_core.utils import stringify_dict
+from pydantic import BaseModel, Field
 
 from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
-from rai.tools.ros2.base import BaseROS2Tool
+from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
+
+internal_action_id_mapping: Dict[str, str] = {}
+action_results_store: Dict[str, Any] = {}
+action_results_store_lock: Lock = Lock()
+action_feedbacks_store: Dict[str, List[Any]] = defaultdict(list)
+action_feedbacks_store_lock: Lock = Lock()
 
 
-class ROS2ActionToolkit(BaseToolkit):
+def get_internal_action_id_mapping():
+    return internal_action_id_mapping
+
+
+def get_action_results_store():
+    return action_results_store
+
+
+def get_action_results_store_lock():
+    return action_results_store_lock
+
+
+def get_action_feedbacks_store():
+    return action_feedbacks_store
+
+
+def get_action_feedbacks_store_lock():
+    return action_feedbacks_store_lock
+
+
+class ROS2ActionToolkit(BaseROS2Toolkit):
     name: str = "ros2_action"
     description: str = "A toolkit for ROS2 actions"
-    connector: ROS2ARIConnector
-    readable: Optional[
-        Annotated[
-            List[str],
-            """The topics that can be read.
-            If the list is not provided, all topics can be read.""",
-        ]
-    ] = None
-    writable: Optional[
-        Annotated[
-            List[str],
-            """The names (topics/actions/services) that can be written.
-            If the list is not provided, all topics can be written.""",
-        ]
-    ] = None
-    forbidden: Optional[
-        Annotated[
-            List[str],
-            """The names (topics/actions/services) that are forbidden to read and write.""",
-        ]
-    ] = None
 
-    action_results_store: Dict[str, Any] = {}
-    action_results_store_lock: Lock = Lock()
-    action_feedbacks_store: Dict[str, List[Any]] = defaultdict(list)
-    action_feedbacks_store_lock: Lock = Lock()
-    internal_action_id_mapping: Dict[str, str] = {}
-
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True,
+    action_results_store: Dict[str, Any] = Field(
+        default_factory=get_action_results_store
+    )
+    action_results_store_lock: Lock = Field(
+        default_factory=get_action_results_store_lock
+    )
+    action_feedbacks_store: Dict[str, List[Any]] = Field(
+        default_factory=get_action_feedbacks_store
+    )
+    action_feedbacks_store_lock: Lock = Field(
+        default_factory=get_action_feedbacks_store_lock
     )
 
     def get_tools(self) -> List[BaseTool]:
@@ -88,17 +97,14 @@ class ROS2ActionToolkit(BaseToolkit):
                 readable=self.readable,
                 writable=self.writable,
                 forbidden=self.forbidden,
-                action_feedbacks_store=self.action_feedbacks_store,
-                action_feedbacks_store_lock=self.action_feedbacks_store_lock,
-                internal_action_id_mapping=self.internal_action_id_mapping,
             ),
-            GetROS2ActionResultTool(
-                action_results_store=self.action_results_store,
-                action_results_store_lock=self.action_results_store_lock,
-                internal_action_id_mapping=self.internal_action_id_mapping,
-            ),
-            GetROS2ActionIDsTool(
-                internal_action_id_mapping=self.internal_action_id_mapping
+            GetROS2ActionResultTool(),
+            GetROS2ActionIDsTool(),
+            GetROS2ActionsNamesAndTypesTool(
+                connector=self.connector,
+                readable=self.readable,
+                writable=self.writable,
+                forbidden=self.forbidden,
             ),
         ]
 
@@ -106,9 +112,44 @@ class ROS2ActionToolkit(BaseToolkit):
         with self.action_feedbacks_store_lock:
             self.action_feedbacks_store[action_id].append(feedback)
 
-    def _generic_on_done_callback(self, action_id: str, result: Any) -> None:
+    def _generic_on_done_callback(self, action_id: str, future: Any) -> None:
         with self.action_results_store_lock:
-            self.action_results_store[action_id] = result
+            self.action_results_store[action_id] = future.result().result
+
+
+class GetROS2ActionsNamesAndTypesToolInput(BaseModel):
+    pass
+
+
+class GetROS2ActionsNamesAndTypesTool(BaseROS2Tool):
+    name: str = "get_ros2_actions_names_and_types"
+    description: str = "Get the names and types of all ROS2 actions"
+    args_schema: Type[GetROS2ActionsNamesAndTypesToolInput] = (
+        GetROS2ActionsNamesAndTypesToolInput
+    )
+
+    def _run(self) -> str:
+        actions_and_types = self.connector.get_actions_names_and_types()
+        if all([self.readable is None, self.writable is None, self.forbidden is None]):
+            response = [
+                {"action": action, "type": type} for action, type in actions_and_types
+            ]
+            return "\n".join([stringify_dict(action) for action in response])
+        else:
+            writable_actions: List[Dict[str, Any]] = []
+
+            for action, type in actions_and_types:
+                if self.is_writable(action):
+                    writable_actions.append({"action": action, "type": type})
+                    continue
+
+            text_response = "\n".join(
+                [
+                    stringify_dict(action_description)
+                    for action_description in writable_actions
+                ]
+            )
+            return text_response
 
 
 class StartROS2ActionToolInput(BaseModel):
@@ -123,7 +164,9 @@ class StartROS2ActionTool(BaseROS2Tool):
     connector: ROS2ARIConnector
     feedback_callback: Callable[[Any, str], None] = lambda _, __: None
     on_done_callback: Callable[[Any, str], None] = lambda _, __: None
-    internal_action_id_mapping: Dict[str, str] = {}
+    internal_action_id_mapping: Dict[str, str] = Field(
+        default_factory=get_internal_action_id_mapping
+    )
     name: str = "start_ros2_action"
     description: str = "Start a ROS2 action"
     args_schema: Type[StartROS2ActionToolInput] = StartROS2ActionToolInput
@@ -155,9 +198,15 @@ class GetROS2ActionFeedbackTool(BaseROS2Tool):
     description: str = "Get the feedback of a ROS2 action by its action ID"
     args_schema: Type[GetROS2ActionFeedbackToolInput] = GetROS2ActionFeedbackToolInput
 
-    action_feedbacks_store: Dict[str, List[Any]]
-    action_feedbacks_store_lock: Lock
-    internal_action_id_mapping: Dict[str, str] = {}
+    action_feedbacks_store: Dict[str, List[Any]] = Field(
+        default_factory=get_action_feedbacks_store
+    )
+    action_feedbacks_store_lock: Lock = Field(
+        default_factory=get_action_feedbacks_store_lock
+    )
+    internal_action_id_mapping: Dict[str, str] = Field(
+        default_factory=get_internal_action_id_mapping
+    )
 
     def _run(self, action_id: str) -> str:
         with self.action_feedbacks_store_lock:
@@ -178,9 +227,15 @@ class GetROS2ActionResultTool(BaseTool):
     description: str = "Get the result of a ROS2 action by its id"
     args_schema: Type[GetROS2ActionResultToolInput] = GetROS2ActionResultToolInput
 
-    action_results_store: Dict[str, Any]
-    action_results_store_lock: Lock
-    internal_action_id_mapping: Dict[str, str] = {}
+    action_results_store: Dict[str, Any] = Field(
+        default_factory=get_action_results_store
+    )
+    action_results_store_lock: Lock = Field(
+        default_factory=get_action_results_store_lock
+    )
+    internal_action_id_mapping: Dict[str, str] = Field(
+        default_factory=get_internal_action_id_mapping
+    )
 
     def _run(self, action_id: str) -> str:
         with self.action_results_store_lock:
@@ -198,8 +253,13 @@ class CancelROS2ActionTool(BaseROS2Tool):
     description: str = "Cancel a ROS2 action"
     args_schema: Type[CancelROS2ActionToolInput] = CancelROS2ActionToolInput
 
+    internal_action_id_mapping: Dict[str, str] = Field(
+        default_factory=get_internal_action_id_mapping
+    )
+
     def _run(self, action_id: str) -> str:
-        self.connector.terminate_action(action_id)
+        external_action_id = self.internal_action_id_mapping[action_id]
+        self.connector.terminate_action(external_action_id)
         return f"Action {action_id} cancelled"
 
 
@@ -211,7 +271,9 @@ class GetROS2ActionIDsTool(BaseTool):
     name: str = "get_ros2_action_ids"
     description: str = "Get the IDs of all ROS2 actions"
     args_schema: Type[GetROS2ActionIDsToolInput] = GetROS2ActionIDsToolInput
-    internal_action_id_mapping: Dict[str, str] = {}
+    internal_action_id_mapping: Dict[str, str] = Field(
+        default_factory=get_internal_action_id_mapping
+    )
 
     def _run(self) -> str:
         return str(list(self.internal_action_id_mapping.keys()))

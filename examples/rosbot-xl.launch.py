@@ -20,26 +20,26 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    game_launcher = LaunchConfiguration("game_launcher")
     return LaunchDescription(
         [
+            ExecuteProcess(
+                cmd=["bash", "run-nav.bash"],
+                cwd="src/examples/rai-rosbot-xl-demo",
+                output="screen",
+            ),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     [
                         FindPackageShare("rai_bringup"),
-                        "/launch/sim_whoami_demo.launch.py",
+                        "/launch/openset.launch.py",
                     ]
                 ),
-                launch_arguments={
-                    "allowlist": "examples/rosbot-xl_allowlist.txt",
-                    "demo_script": "examples/rosbot-xl-demo.py",
-                    "robot_description_package": "rosbot_xl_whoami",
-                    "game_launcher": game_launcher,
-                }.items(),
             ),
             ExecuteProcess(
-                cmd=["bash", "run-nav.bash"],
-                cwd="src/examples/rai-rosbot-xl-demo",
+                cmd=[
+                    LaunchConfiguration("game_launcher"),
+                    "-bg_ConnectToAssetProcessor=0",
+                ],
                 output="screen",
             ),
         ]
