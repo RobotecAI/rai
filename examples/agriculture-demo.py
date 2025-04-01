@@ -19,7 +19,7 @@ from langchain_core.messages import HumanMessage
 from langchain_core.runnables import Runnable
 from rai.agents.conversational_agent import State, create_conversational_agent
 from rai.communication.ros2.connectors import ROS2ARIConnector
-from rai.tools.ros2.topics import ROS2TopicsToolkit
+from rai.tools.ros2 import ROS2ServicesToolkit, ROS2TopicsToolkit
 from rai.tools.time import WaitForSecondsTool
 from rai.utils.model_initialization import get_llm_model
 from rclpy.callback_groups import ReentrantCallbackGroup
@@ -109,6 +109,7 @@ def main():
         system_prompt=SYSTEM_PROMPT,
         tools=[
             *ROS2TopicsToolkit(connector=connector).get_tools(),
+            *ROS2ServicesToolkit(connector=connector).get_tools(),
             WaitForSecondsTool(),
         ],
     )
