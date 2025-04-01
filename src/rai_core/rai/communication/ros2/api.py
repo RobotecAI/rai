@@ -308,7 +308,7 @@ class ROS2TopicAPI:
                 if self._last_msg[topic][0] + timeout_sec > time.time():
                     if self._destroy_subscriptions:
                         node.destroy_subscription(self._subscriptions.pop(topic))
-                return True, self._last_msg[topic][1]
+                    return True, self._last_msg[topic][1]
             time.sleep(0.01)
         if self._destroy_subscriptions:
             node.destroy_subscription(self._subscriptions.pop(topic))
