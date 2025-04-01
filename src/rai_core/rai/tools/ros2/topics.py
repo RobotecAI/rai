@@ -34,7 +34,7 @@ from rai.communication.ros2 import ROS2ARIConnector, ROS2ARIMessage
 from rai.messages.multimodal import MultimodalArtifact
 from rai.messages.utils import preprocess_image
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
-from rai.tools.ros2.utils import ros2_message_to_dict
+from rai.tools.ros2.utils import render_interface_string, ros2_message_to_dict
 
 
 class ROS2TopicsToolkit(BaseROS2Toolkit):
@@ -225,9 +225,8 @@ class GetROS2MessageInterfaceTool(BaseROS2Tool):
         """Show ros2 message interface in json format."""
         msg_cls: Type[object] = rosidl_runtime_py.utilities.get_interface(msg_type)
         try:
-            msg_dict = ros2_message_to_dict(msg_cls())  # type: ignore
-            return json.dumps(msg_dict)
-        except NotImplementedError:
+            return render_interface_string(msg_type)
+        except (ValueError, LookupError, NotImplementedError):
             # For action classes that can't be instantiated
             goal_dict = ros2_message_to_dict(msg_cls.Goal())  # type: ignore
 
