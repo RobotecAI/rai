@@ -53,7 +53,26 @@ class BaseConnector(Generic[T]):
     @abstractmethod
     def service_call(
         self, message: T, target: str, timeout_sec: float, **kwargs: Any
-    ) -> T:
+    ) -> BaseMessage:
+        pass
+
+    @abstractmethod
+    def create_service(
+        self,
+        service_name: str,
+        on_request: Callable,
+        on_done: Optional[Callable] = None,
+        **kwargs: Any,
+    ) -> str:
+        pass
+
+    @abstractmethod
+    def create_action(
+        self,
+        action_name: str,
+        generate_feedback_callback: Callable,
+        **kwargs: Any,
+    ) -> str:
         pass
 
     @abstractmethod

@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Robotec.AI
+# Copyright (C) 2025 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,26 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .api import (
-    ConfigurableROS2TopicAPI,
-    IROS2Message,
-    ROS2ActionAPI,
-    ROS2ServiceAPI,
-    ROS2TopicAPI,
-    TopicConfig,
-)
-from .connectors import ROS2ARIConnector, ROS2HRIConnector
-from .messages import ROS2ARIMessage, ROS2HRIMessage
+from .action_mixin import ROS2ActionMixin
+from .ari_connector import ROS2ARIConnector
+from .hri_connector import ROS2HRIConnector
+from .service_mixin import ROS2ServiceMixin
 
 __all__ = [
-    "ConfigurableROS2TopicAPI",
-    "IROS2Message",
     "ROS2ARIConnector",
-    "ROS2ARIMessage",
-    "ROS2ActionAPI",
+    "ROS2ActionMixin",
     "ROS2HRIConnector",
-    "ROS2HRIMessage",
-    "ROS2ServiceAPI",
-    "ROS2TopicAPI",
-    "TopicConfig",
+    "ROS2ServiceMixin",
 ]

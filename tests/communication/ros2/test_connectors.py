@@ -14,12 +14,14 @@
 
 import time
 from typing import Any, List
+from unittest.mock import MagicMock
 
 import pytest
+from nav2_msgs.action import NavigateToPose
 from PIL import Image
 from pydub import AudioSegment
 from rai.communication import HRIPayload
-from rai.communication.ros2.connectors import (
+from rai.communication.ros2 import (
     ROS2ARIConnector,
     ROS2ARIMessage,
     ROS2HRIConnector,
@@ -28,12 +30,14 @@ from rai.communication.ros2.connectors import (
 from std_msgs.msg import String
 from std_srvs.srv import SetBool
 
-from .helpers import ActionServer_ as ActionServer
 from .helpers import (
     HRIMessageSubscriber,
     MessagePublisher,
     MessageSubscriber,
     ServiceServer,
+    TestActionClient,
+    TestActionServer,
+    TestServiceClient,
     multi_threaded_spinner,
     ros_setup,
     shutdown_executors_and_threads,
@@ -101,7 +105,7 @@ def test_ros2ari_connector_service_call(
 
 def test_ros2ari_connector_send_goal(ros_setup: None, request: pytest.FixtureRequest):
     action_name = f"{request.node.originalname}_action"  # type: ignore
-    action_server = ActionServer(action_name)
+    action_server = TestActionServer(action_name)
     executors, threads = multi_threaded_spinner([action_server])
     connector = ROS2ARIConnector()
     try:
@@ -123,7 +127,7 @@ def test_ros2ari_connector_send_goal_and_terminate_action(
     ros_setup: None, request: pytest.FixtureRequest
 ):
     action_name = f"{request.node.originalname}_action"  # type: ignore
-    action_server = ActionServer(action_name)
+    action_server = TestActionServer(action_name)
     executors, threads = multi_threaded_spinner([action_server])
     connector = ROS2ARIConnector()
     feedbacks: List[Any] = []
@@ -150,7 +154,7 @@ def test_ros2ari_connector_send_goal_erronous_callback(
     ros_setup: None, request: pytest.FixtureRequest
 ):
     action_name = f"{request.node.originalname}_action"  # type: ignore
-    action_server = ActionServer(action_name)
+    action_server = TestActionServer(action_name)
     executors, threads = multi_threaded_spinner([action_server])
     connector = ROS2ARIConnector()
     try:
@@ -208,3 +212,51 @@ def test_ros2hri_default_message_publish(
     finally:
         connector.shutdown()
         shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2ari_connector_create_service(
+    ros_setup: None, request: pytest.FixtureRequest
+):
+    connector = ROS2ARIConnector()
+    mock_callback = MagicMock()
+    mock_callback.return_value = SetBool.Response()
+
+    try:
+        handle = connector.create_service(
+            service_name="set_bool",
+            service_type="std_srvs/srv/SetBool",
+            on_request=mock_callback,
+        )
+        assert handle is not None
+        service_client = TestServiceClient()
+        executors, threads = multi_threaded_spinner([service_client])
+        service_client.send_request()
+        time.sleep(0.01)
+        assert mock_callback.called
+    except Exception as e:
+        raise e
+
+    connector.shutdown()
+    shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2ari_connector_action_call(ros_setup: None, request: pytest.FixtureRequest):
+    action_name = "navigate_to_pose"
+    connector = ROS2ARIConnector()
+    mock_callback = MagicMock()
+    mock_callback.return_value = NavigateToPose.Result()
+
+    try:
+        action_server_handle = connector.create_action(
+            action_name,
+            generate_feedback_callback=mock_callback,
+            action_type="nav2_msgs/action/NavigateToPose",
+        )
+        assert action_server_handle is not None
+        action_client = TestActionClient()
+        executors, threads = multi_threaded_spinner([action_client])
+        action_client.send_goal()
+        time.sleep(0.01)
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+        assert mock_callback.called

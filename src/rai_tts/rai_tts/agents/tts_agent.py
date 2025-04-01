@@ -28,8 +28,8 @@ from rai.communication import (
     SoundDeviceConnector,
     TopicConfig,
 )
+from rai.communication.ros2 import ROS2HRIMessage
 from rai.communication.ros2.api import IROS2Message
-from rai.communication.ros2.connectors import ROS2HRIMessage
 from rai.communication.sound_device.connector import SoundDeviceMessage
 from std_msgs.msg import String
 

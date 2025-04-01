@@ -34,6 +34,7 @@ from typing import (
     Type,
     TypedDict,
     cast,
+    runtime_checkable,
 )
 
 import rclpy
@@ -47,8 +48,15 @@ import rclpy.task
 import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
 from action_msgs.srv import CancelGoal
-from rclpy.action import ActionClient
+from rclpy.action import ActionClient, CancelResponse, GoalResponse
 from rclpy.action.client import ClientGoalHandle
+from rclpy.action.server import (
+    ActionServer,
+    ServerGoalHandle,
+    default_cancel_callback,
+    default_goal_callback,
+    default_handle_accepted_callback,
+)
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.publisher import Publisher
 from rclpy.qos import (
@@ -57,15 +65,19 @@ from rclpy.qos import (
     LivelinessPolicy,
     QoSProfile,
     ReliabilityPolicy,
+    qos_profile_action_status_default,
+    qos_profile_services_default,
 )
+from rclpy.service import Service
 from rclpy.task import Future
 from rclpy.topic_endpoint_info import TopicEndpointInfo
 
 from rai.tools.ros.utils import import_message_from_str
 
 
+@runtime_checkable
 class IROS2Message(Protocol):
-    __slots__: tuple
+    __slots__: list
 
     def get_fields_and_field_types(self) -> dict: ...
 
@@ -590,6 +602,7 @@ class ROS2ServiceAPI:
     def __init__(self, node: rclpy.node.Node) -> None:
         self.node = node
         self._logger = node.get_logger()
+        self._services: Dict[str, Service] = {}
 
     def call_service(
         self,
@@ -622,6 +635,19 @@ class ROS2ServiceAPI:
     def get_service_names_and_types(self) -> List[Tuple[str, List[str]]]:
         return self.node.get_service_names_and_types()
 
+    def create_service(
+        self,
+        service_name: str,
+        service_type: str,
+        callback: Callable[[Any, Any], Any],
+        **kwargs,
+    ) -> str:
+        srv_cls = import_message_from_str(service_type)
+        service = self.node.create_service(srv_cls, service_name, callback, **kwargs)
+        handle = str(uuid.uuid4())
+        self._services[handle] = service
+        return handle
+
 
 class ROS2ActionData(TypedDict):
     action_client: Optional[ActionClient]
@@ -636,6 +662,7 @@ class ROS2ActionAPI:
         self.node = node
         self._logger = node.get_logger()
         self.actions: Dict[str, ROS2ActionData] = {}
+        self._action_servers: Dict[str, ActionServer] = {}
         self._callback_executor = ThreadPoolExecutor(max_workers=10)
 
     def _generate_handle(self):
@@ -671,6 +698,87 @@ class ROS2ActionAPI:
             callback(copy.deepcopy(feedback_msg))
         except Exception as e:
             self._logger.error(f"Error in feedback callback: {str(e)}")
+
+    def create_action_server(
+        self,
+        action_type: str,
+        action_name: str,
+        execute_callback: Callable[[ServerGoalHandle], Type[IROS2Message]],
+        *,
+        callback_group: Optional[rclpy.node.CallbackGroup] = None,
+        goal_callback: Callable[[IROS2Message], GoalResponse] = default_goal_callback,
+        handle_accepted_callback: Callable[
+            [ServerGoalHandle], None
+        ] = default_handle_accepted_callback,
+        cancel_callback: Callable[
+            [IROS2Message], CancelResponse
+        ] = default_cancel_callback,
+        goal_service_qos_profile: QoSProfile = qos_profile_services_default,
+        result_service_qos_profile: QoSProfile = qos_profile_services_default,
+        cancel_service_qos_profile: QoSProfile = qos_profile_services_default,
+        feedback_pub_qos_profile: QoSProfile = QoSProfile(depth=10),
+        status_pub_qos_profile: QoSProfile = qos_profile_action_status_default,
+        result_timeout: int = 900,
+    ) -> str:
+        """
+        Create an action server.
+
+        Args:
+            action_type: The action message type with namespace
+            action_name: The name of the action server
+            execute_callback: The callback to execute when a goal is received
+            callback_grou: The callback group to use for the action server
+            goal_callback: The callback to execute when a goal is received
+            handle_accepted_callback: The callback to execute when a goal handle is accepted
+            cancel_callback: The callback to execute when a goal is canceled
+            goal_service_qos_profile: The QoS profile for the goal service
+            result_service_qos_profile: The QoS profile for the result service
+            cancel_service_qos_profile: The QoS profile for the cancel service
+            feedback_pub_qos_profile: The QoS profile for the feedback publisher
+            status_pub_qos_profile: The QoS profile for the status publisher
+            result_timeout: The timeout for waiting for a result
+
+        Returns:
+            The handle for the created action server
+
+        Raises:
+            ValueError: If the action server cannot be created
+        """
+        handle = self._generate_handle()
+        action_ros_type = import_message_from_str(action_type)
+        try:
+            action_server = ActionServer(
+                node=self.node,
+                action_type=action_ros_type,
+                action_name=action_name,
+                execute_callback=execute_callback,
+                callback_group=callback_group,
+                goal_callback=goal_callback,
+                handle_accepted_callback=handle_accepted_callback,
+                cancel_callback=cancel_callback,
+                goal_service_qos_profile=goal_service_qos_profile,
+                result_service_qos_profile=result_service_qos_profile,
+                cancel_service_qos_profile=cancel_service_qos_profile,
+                feedback_pub_qos_profile=feedback_pub_qos_profile,
+                status_pub_qos_profile=status_pub_qos_profile,
+                result_timeout=result_timeout,
+            )
+            self._logger.info(f"Created action server: {action_name}")
+        except TypeError as e:
+            import inspect
+
+            signature = inspect.signature(ActionServer.__init__)
+            args = [
+                param.name
+                for param in signature.parameters.values()
+                if param.name != "self"
+            ]
+
+            raise ValueError(
+                f"Failed to create action server: {str(e)}. Valid arguments are: {args}"
+            )
+        self._action_servers[handle] = action_server
+        return handle
 
     def send_goal(
         self,

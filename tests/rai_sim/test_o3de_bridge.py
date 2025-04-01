@@ -24,7 +24,7 @@ import rclpy
 import rclpy.qos
 from geometry_msgs.msg import Point, Quaternion, TransformStamped
 from geometry_msgs.msg import Pose as ROS2Pose
-from rai.communication.ros2.connectors import ROS2ARIConnector, ROS2ARIMessage
+from rai.communication.ros2 import ROS2ARIConnector, ROS2ARIMessage
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
 
