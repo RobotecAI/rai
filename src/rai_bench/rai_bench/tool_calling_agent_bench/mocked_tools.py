@@ -43,6 +43,8 @@ from rai.tools.ros2 import (
     StartROS2ActionTool,
 )
 
+from rai_bench.tool_calling_agent_bench.actions.action_base_model import ActionBaseModel
+
 
 class MockGetROS2TopicsNamesAndTypesTool(GetROS2TopicsNamesAndTypesTool):
     connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
@@ -315,6 +317,7 @@ class MockStartROS2ActionTool(StartROS2ActionTool):
     connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
     available_actions: List[str] = []
     available_action_types: List[str] = []
+    available_action_models: List[type[ActionBaseModel]]
 
     def _run(
         self, action_name: str, action_type: str, action_args: Dict[str, Any]
@@ -327,8 +330,15 @@ class MockStartROS2ActionTool(StartROS2ActionTool):
             raise TypeError(
                 f"Expected one of action types: {self.available_action_types}, got {action_type}"
             )
+        for action_model in self.available_action_models:
+            if (
+                action_model.model_fields["action_name"].default == action_name
+                and action_model.model_fields["action_type"].default == action_type
+            ):
+                goal = action_model.__annotations__["goal"]
+                goal.model_validate(action_args)
         action_id = str(uuid.uuid4())
-        response = "mock_action_response_" + action_id
+        response = action_id
         self.internal_action_id_mapping[response] = action_id
         return "Action started with ID: " + response
 

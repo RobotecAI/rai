@@ -22,7 +22,7 @@ from rai.utils.model_initialization import (
     get_llm_model_config_and_vendor,
 )
 
-from rai_bench.examples.tool_calling_agent_bench_tasks import tasks
+from rai_bench.examples.tool_calling_agent_bench_navigation_tasks import tasks
 from rai_bench.tool_calling_agent_bench.agent_bench import ToolCallingAgentBenchmark
 
 if __name__ == "__main__":
@@ -60,7 +60,7 @@ if __name__ == "__main__":
         tasks=tasks, logger=bench_logger, results_filename=results_filename
     )
 
-    model_type = "simple_model"
+    model_type = "complex_model"
     model_config = get_llm_model_config_and_vendor(model_type=model_type)[0]
     model_name = getattr(model_config, model_type)
 

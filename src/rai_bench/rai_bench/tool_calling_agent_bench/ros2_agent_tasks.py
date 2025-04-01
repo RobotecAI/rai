@@ -23,6 +23,11 @@ from langchain_core.messages.tool import ToolCall
 from langchain_core.tools import BaseTool
 from rai.tools.ros.manipulation import MoveToPointToolInput
 
+from rai_bench.tool_calling_agent_bench.actions import (
+    ActionBaseModel,
+    NavigateToPoseAction,
+    SpinAction,
+)
 from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
     ROS2ToolCallingAgentTask,
     CustomInterfacesActionTask,
@@ -2216,8 +2221,466 @@ class CallROS2CustomActionTask(CustomInterfacesActionTask):
         expected["goal"]["priority "] = self.expected_priority
         return expected
 
+
+ROBOT_NAVIGATION_SYSTEM_PROMPT = """You are an autonomous robot connected to ros2 environment. Your main goal is to fulfill the user's requests.
+    Do not make assumptions about the environment you are currently in.
+    You can use ros2 topics, services and actions to operate.
+
+    <rule> As a first step check transforms by getting 1 message from /tf topic </rule>
+    <rule> use /cmd_vel topic very carefully. Obstacle detection works only with nav2 stack, so be careful when it is not used. </rule>>
+    <rule> be patient with running ros2 actions. usually the take some time to run. </rule>
+    <rule> Always check your transform before and after you perform ros2 actions, so that you can verify if it worked. </rule>
+
+    Navigation tips:
+    - it's good to start finding objects by rotating, then navigating to some diverse location with occasional rotations. Remember to frequency detect objects.
+    - for driving forward/backward or to some coordinates, ros2 actions are better.
+    - for driving for some specific time or in specific manner (like shaper or turns) it good to use /cmd_vel topic
+    - you are currently unable to read map or point-cloud, so please avoid subscribing to such topics.
+    - if you are asked to drive towards some object, it's good to:
+        1. check the camera image and verify if objects can be seen
+        2. if only driving forward is required, do it
+        3. if obstacle avoidance might be required, use ros2 actions navigate_*, but first check your current position, then very accurately estimate the goal pose.
+    - it is good to verify using given information if the robot is not stuck
+    - navigation actions sometimes fail. Their output can be read from rosout. You can also tell if they partially worked by checking the robot position and rotation.
+    - before using any ros2 interfaces, always make sure to check you are using the right interface
+    - processing camera image takes 5-10s. Take it into account that if the robot is moving, the information can be outdated. Handle it by good planning of your movements.
+    - you are encouraged to use wait tool in between checking the status of actions
+    - to find some object navigate around and check the surrounding area
+    - when the goal is accomplished please make sure to cancel running actions
+    - when you reach the navigation goal - double check if you reached it by checking the current position
+    - if you detect collision, please stop operation
+
+    - you will be given your camera image description. Based on this information you can reason about positions of objects.
+    - be careful and aboid obstacles
+
+    Here are the corners of your environment:
+    (-2.76,9.04, 0.0),
+    (4.62, 9.07, 0.0),
+    (-2.79, -3.83, 0.0),
+    (4.59, -3.81, 0.0)
+
+    This is location of places:
+    Kitchen:
+    (2.06, -0.23, 0.0),
+    (2.07, -1.43, 0.0),
+    (-2.44, -0.38, 0.0),
+    (-2.56, -1.47, 0.0)
+
+    # Living room:
+    (-2.49, 1.87, 0.0),
+    (-2.50, 5.49, 0.0),
+    (0.79, 5.73, 0.0),
+    (0.92, 1.01, 0.0)
+
+    Before starting anything, make sure to load available topics, services and actions.
+    """
+NAVIGATION_SERVICES_AND_TYPES: Dict[str, str] = {
+    "/assisted_teleop/_action/cancel_goal": "action_msgs/srv/CancelGoal",
+    "/assisted_teleop/_action/get_result": "nav2_msgs/action/AssistedTeleop_GetResult",
+    "/assisted_teleop/_action/send_goal": "nav2_msgs/action/AssistedTeleop_SendGoal",
+    "/backup/_action/cancel_goal": "action_msgs/srv/CancelGoal",
+    "/backup/_action/get_result": "nav2_msgs/action/BackUp_GetResult",
+    "/backup/_action/send_goal": "nav2_msgs/action/BackUp_SendGoal",
+    "/behavior_server/change_state": "lifecycle_msgs/srv/ChangeState",
+    "/behavior_server/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+    "/behavior_server/get_available_states": "lifecycle_msgs/srv/GetAvailableStates",
+    "/behavior_server/get_available_transitions": "lifecycle_msgs/srv/GetAvailableTransitions",
+    "/behavior_server/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+    "/behavior_server/get_parameters": "rcl_interfaces/srv/GetParameters",
+    "/behavior_server/get_state": "lifecycle_msgs/srv/GetState",
+    "/behavior_server/get_transition_graph": "lifecycle_msgs/srv/GetAvailableTransitions",
+    "/behavior_server/list_parameters": "rcl_interfaces/srv/ListParameters",
+    "/behavior_server/set_parameters": "rcl_interfaces/srv/SetParameters",
+    "/behavior_server/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+    "/bt_navigator/change_state": "lifecycle_msgs/srv/ChangeState",
+    "/bt_navigator/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+    "/bt_navigator/get_available_states": "lifecycle_msgs/srv/GetAvailableStates",
+    "/bt_navigator/get_available_transitions": "lifecycle_msgs/srv/GetAvailableTransitions",
+    "/bt_navigator/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+    "/bt_navigator/get_parameters": "rcl_interfaces/srv/GetParameters",
+    "/bt_navigator/get_state": "lifecycle_msgs/srv/GetState",
+    "/bt_navigator/get_transition_graph": "lifecycle_msgs/srv/GetAvailableTransitions",
+    "/bt_navigator/list_parameters": "rcl_interfaces/srv/ListParameters",
+    "/bt_navigator/set_parameters": "rcl_interfaces/srv/SetParameters",
+    "/bt_navigator/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+    "/bt_navigator_navigate_through_poses_rclcpp_node/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+    "/bt_navigator_navigate_through_poses_rclcpp_node/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+    "/bt_navigator_navigate_through_poses_rclcpp_node/get_parameters": "rcl_interfaces/srv/GetParameters",
+    "/bt_navigator_navigate_through_poses_rclcpp_node/list_parameters": "rcl_interfaces/srv/ListParameters",
+    "/bt_navigator_navigate_through_poses_rclcpp_node/set_parameters": "rcl_interfaces/srv/SetParameters",
+    "/bt_navigator_navigate_through_poses_rclcpp_node/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+    "/bt_navigator_navigate_to_pose_rclcpp_node/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+    "/bt_navigator_navigate_to_pose_rclcpp_node/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+    "/bt_navigator_navigate_to_pose_rclcpp_node/get_parameters": "rcl_interfaces/srv/GetParameters",
+    "/bt_navigator_navigate_to_pose_rclcpp_node/list_parameters": "rcl_interfaces/srv/ListParameters",
+    "/bt_navigator_navigate_to_pose_rclcpp_node/set_parameters": "rcl_interfaces/srv/SetParameters",
+    "/bt_navigator_navigate_to_pose_rclcpp_node/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+    "/compute_path_through_poses/_action/cancel_goal": "action_msgs/srv/CancelGoal",
+    "/compute_path_through_poses/_action/get_result": "nav2_msgs/action/ComputePathThroughPoses_GetResult",
+    "/compute_path_through_poses/_action/send_goal": "nav2_msgs/action/ComputePathThroughPoses_SendGoal",
+    "/compute_path_to_pose/_action/cancel_goal": "action_msgs/srv/CancelGoal",
+    "/compute_path_to_pose/_action/get_result": "nav2_msgs/action/ComputePathToPose_GetResult",
+    "/compute_path_to_pose/_action/send_goal": "nav2_msgs/action/ComputePathToPose_SendGoal",
+    "/controller_server/change_state": "lifecycle_msgs/srv/ChangeState",
+    "/controller_server/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+    "/controller_server/get_available_states": "lifecycle_msgs/srv/GetAvailableStates",
+    "/controller_server/get_available_transitions": "lifecycle_msgs/srv/GetAvailableTransitions",
+    "/controller_server/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+    "/controller_server/get_parameters": "rcl_interfaces/srv/GetParameters",
+    "/controller_server/get_state": "lifecycle_msgs/srv/GetState",
+    "/controller_server/get_transition_graph": "lifecycle_msgs/srv/GetAvailableTransitions",
+    "/controller_server/list_parameters": "rcl_interfaces/srv/ListParameters",
+    "/controller_server/set_parameters": "rcl_interfaces/srv/SetParameters",
+    "/controller_server/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+    "/drive_on_heading/_action/cancel_goal": "action_msgs/srv/CancelGoal",
+    "/drive_on_heading/_action/get_result": "nav2_msgs/action/DriveOnHeading_GetResult",
+    "/drive_on_heading/_action/send_goal": "nav2_msgs/action/DriveOnHeading_SendGoal",
+    "/follow_path/_action/cancel_goal": "action_msgs/srv/CancelGoal",
+    "/follow_path/_action/get_result": "nav2_msgs/action/FollowPath_GetResult",
+    "/follow_path/_action/send_goal": "nav2_msgs/action/FollowPath_SendGoal",
+    "/follow_waypoints/_action/cancel_goal": "action_msgs/srv/CancelGoal",
+    "/follow_waypoints/_action/get_result": "nav2_msgs/action/FollowWaypoints_GetResult",
+    "/follow_waypoints/_action/send_goal": "nav2_msgs/action/FollowWaypoints_SendGoal",
+    "/global_costmap/clear_around_global_costmap": "nav2_msgs/srv/ClearCostmapAroundRobot",
+    "/global_costmap/clear_entirely_global_costmap": "nav2_msgs/srv/ClearEntireCostmap",
+    "/global_costmap/clear_except_global_costmap": "nav2_msgs/srv/ClearCostmapExceptRegion",
+    "/global_costmap/get_costmap": "nav2_msgs/srv/GetCostmap",
+    "/global_costmap/global_costmap/change_state": "lifecycle_msgs/srv/ChangeState",
+    "/global_costmap/global_costmap/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+    "/global_costmap/global_costmap/get_available_states": "lifecycle_msgs/srv/GetAvailableStates",
+    "/global_costmap/global_costmap/get_available_transitions": "lifecycle_msgs/srv/GetAvailableTransitions",
+    "/global_costmap/global_costmap/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+    "/global_costmap/global_costmap/get_parameters": "rcl_interfaces/srv/GetParameters",
+    "/global_costmap/global_costmap/get_state": "lifecycle_msgs/srv/GetState",
+    "/global_costmap/global_costmap/get_transition_graph": "lifecycle_msgs/srv/GetAvailableTransitions",
+    "/global_costmap/global_costmap/list_parameters": "rcl_interfaces/srv/ListParameters",
+    "/global_costmap/global_costmap/set_parameters": "rcl_interfaces/srv/SetParameters",
+    "/global_costmap/global_costmap/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+    "/grounded_sam/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+    "/grounded_sam/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+    "/grounded_sam/get_parameters": "rcl_interfaces/srv/GetParameters",
+    "/grounded_sam/list_parameters": "rcl_interfaces/srv/ListParameters",
+    "/grounded_sam/set_parameters": "rcl_interfaces/srv/SetParameters",
+    "/grounded_sam/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+    "/grounded_sam_segment": "rai_interfaces/srv/RAIGroundedSam",
+    "/grounding_dino/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+    "/grounding_dino/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+    "/grounding_dino/get_parameters": "rcl_interfaces/srv/GetParameters",
+    "/grounding_dino/list_parameters": "rcl_interfaces/srv/ListParameters",
+    "/grounding_dino/set_parameters": "rcl_interfaces/srv/SetParameters",
+    "/grounding_dino/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+    "/grounding_dino_classify": "rai_interfaces/srv/RAIGroundingDino",
+    "/is_path_valid": "nav2_msgs/srv/IsPathValid",
+    "/launch_ros_138640/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+    "/launch_ros_138640/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+    "/launch_ros_138640/get_parameters": "rcl_interfaces/srv/GetParameters",
+    "/launch_ros_138640/list_parameters": "rcl_interfaces/srv/ListParameters",
+    "/launch_ros_138640/set_parameters": "rcl_interfaces/srv/SetParameters",
+    "/launch_ros_138640/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+    "/lifecycle_manager_navigation/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+    "/lifecycle_manager_navigation/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+    "/lifecycle_manager_navigation/get_parameters": "rcl_interfaces/srv/GetParameters",
+    "/lifecycle_manager_navigation/is_active": "std_srvs/srv/Trigger",
+    "/lifecycle_manager_navigation/list_parameters": "rcl_interfaces/srv/ListParameters",
+    "/lifecycle_manager_navigation/manage_nodes": "nav2_msgs/srv/ManageLifecycleNodes",
+    "/lifecycle_manager_navigation/set_parameters": "rcl_interfaces/srv/SetParameters",
+    "/lifecycle_manager_navigation/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+    "/lifecycle_manager_slam/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+    "/lifecycle_manager_slam/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+    "/lifecycle_manager_slam/get_parameters": "rcl_interfaces/srv/GetParameters",
+    "/lifecycle_manager_slam/is_active": "std_srvs/srv/Trigger",
+    "/lifecycle_manager_slam/list_parameters": "rcl_interfaces/srv/ListParameters",
+    "/lifecycle_manager_slam/manage_nodes": "nav2_msgs/srv/ManageLifecycleNodes",
+    "/lifecycle_manager_slam/set_parameters": "rcl_interfaces/srv/SetParameters",
+    "/lifecycle_manager_slam/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+    "/local_costmap/clear_around_local_costmap": "nav2_msgs/srv/ClearCostmapAroundRobot",
+    "/local_costmap/clear_entirely_local_costmap": "nav2_msgs/srv/ClearEntireCostmap",
+    "/local_costmap/clear_except_local_costmap": "nav2_msgs/srv/ClearCostmapExceptRegion",
+    "/local_costmap/get_costmap": "nav2_msgs/srv/GetCostmap",
+    "/local_costmap/local_costmap/change_state": "lifecycle_msgs/srv/ChangeState",
+    "/local_costmap/local_costmap/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+    "/local_costmap/local_costmap/get_available_states": "lifecycle_msgs/srv/GetAvailableStates",
+    "/local_costmap/local_costmap/get_available_transitions": "lifecycle_msgs/srv/GetAvailableTransitions",
+    "/local_costmap/local_costmap/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+    "/local_costmap/local_costmap/get_parameters": "rcl_interfaces/srv/GetParameters",
+    "/local_costmap/local_costmap/get_state": "lifecycle_msgs/srv/GetState",
+    "/local_costmap/local_costmap/get_transition_graph": "lifecycle_msgs/srv/GetAvailableTransitions",
+    "/local_costmap/local_costmap/list_parameters": "rcl_interfaces/srv/ListParameters",
+    "/local_costmap/local_costmap/set_parameters": "rcl_interfaces/srv/SetParameters",
+    "/local_costmap/local_costmap/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+    "/map_saver/change_state": "lifecycle_msgs/srv/ChangeState",
+    "/map_saver/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+    "/map_saver/get_available_states": "lifecycle_msgs/srv/GetAvailableStates",
+    "/map_saver/get_available_transitions": "lifecycle_msgs/srv/GetAvailableTransitions",
+    "/map_saver/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+    "/map_saver/get_parameters": "rcl_interfaces/srv/GetParameters",
+    "/map_saver/get_state": "lifecycle_msgs/srv/GetState",
+    "/map_saver/get_transition_graph": "lifecycle_msgs/srv/GetAvailableTransitions",
+    "/map_saver/list_parameters": "rcl_interfaces/srv/ListParameters",
+    "/map_saver/save_map": "nav2_msgs/srv/SaveMap",
+    "/map_saver/set_parameters": "rcl_interfaces/srv/SetParameters",
+    "/map_saver/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+    "/nav2_container/_container/list_nodes": "composition_interfaces/srv/ListNodes",
+    "/nav2_container/_container/load_node": "composition_interfaces/srv/LoadNode",
+    "/nav2_container/_container/unload_node": "composition_interfaces/srv/UnloadNode",
+    "/navigate_through_poses/_action/cancel_goal": "action_msgs/srv/CancelGoal",
+    "/navigate_through_poses/_action/get_result": "nav2_msgs/action/NavigateThroughPoses_GetResult",
+    "/navigate_through_poses/_action/send_goal": "nav2_msgs/action/NavigateThroughPoses_SendGoal",
+    "/navigate_to_pose/_action/cancel_goal": "action_msgs/srv/CancelGoal",
+    "/navigate_to_pose/_action/get_result": "nav2_msgs/action/NavigateToPose_GetResult",
+    "/navigate_to_pose/_action/send_goal": "nav2_msgs/action/NavigateToPose_SendGoal",
+    "/o3de_ros2_node/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+    "/o3de_ros2_node/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+    "/o3de_ros2_node/get_parameters": "rcl_interfaces/srv/GetParameters",
+    "/o3de_ros2_node/list_parameters": "rcl_interfaces/srv/ListParameters",
+    "/o3de_ros2_node/set_parameters": "rcl_interfaces/srv/SetParameters",
+    "/o3de_ros2_node/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+    "/planner_server/change_state": "lifecycle_msgs/srv/ChangeState",
+    "/planner_server/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+    "/planner_server/get_available_states": "lifecycle_msgs/srv/GetAvailableStates",
+    "/planner_server/get_available_transitions": "lifecycle_msgs/srv/GetAvailableTransitions",
+    "/planner_server/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+    "/planner_server/get_parameters": "rcl_interfaces/srv/GetParameters",
+    "/planner_server/get_state": "lifecycle_msgs/srv/GetState",
+    "/planner_server/get_transition_graph": "lifecycle_msgs/srv/GetAvailableTransitions",
+    "/planner_server/list_parameters": "rcl_interfaces/srv/ListParameters",
+    "/planner_server/set_parameters": "rcl_interfaces/srv/SetParameters",
+    "/planner_server/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+    "/rai_ros2_ari_connector_b6ed00ab6356/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+    "/rai_ros2_ari_connector_b6ed00ab6356/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+    "/rai_ros2_ari_connector_b6ed00ab6356/get_parameters": "rcl_interfaces/srv/GetParameters",
+    "/rai_ros2_ari_connector_b6ed00ab6356/list_parameters": "rcl_interfaces/srv/ListParameters",
+    "/rai_ros2_ari_connector_b6ed00ab6356/set_parameters": "rcl_interfaces/srv/SetParameters",
+    "/rai_ros2_ari_connector_b6ed00ab6356/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+    "/slam_toolbox/clear_changes": "slam_toolbox/srv/Clear",
+    "/slam_toolbox/clear_queue": "slam_toolbox/srv/ClearQueue",
+    "/slam_toolbox/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+    "/slam_toolbox/deserialize_map": "slam_toolbox/srv/DeserializePoseGraph",
+    "/slam_toolbox/dynamic_map": "nav_msgs/srv/GetMap",
+    "/slam_toolbox/get_interactive_markers": "visualization_msgs/srv/GetInteractiveMarkers",
+    "/slam_toolbox/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+    "/slam_toolbox/get_parameters": "rcl_interfaces/srv/GetParameters",
+    "/slam_toolbox/list_parameters": "rcl_interfaces/srv/ListParameters",
+    "/slam_toolbox/manual_loop_closure": "slam_toolbox/srv/LoopClosure",
+    "/slam_toolbox/pause_new_measurements": "slam_toolbox/srv/Pause",
+    "/slam_toolbox/save_map": "slam_toolbox/srv/SaveMap",
+    "/slam_toolbox/serialize_map": "slam_toolbox/srv/SerializePoseGraph",
+    "/slam_toolbox/set_parameters": "rcl_interfaces/srv/SetParameters",
+    "/slam_toolbox/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+    "/slam_toolbox/toggle_interactive_mode": "slam_toolbox/srv/ToggleInteractive",
+    "/smooth_path/_action/cancel_goal": "action_msgs/srv/CancelGoal",
+    "/smooth_path/_action/get_result": "nav2_msgs/action/SmoothPath_GetResult",
+    "/smooth_path/_action/send_goal": "nav2_msgs/action/SmoothPath_SendGoal",
+    "/smoother_server/change_state": "lifecycle_msgs/srv/ChangeState",
+    "/smoother_server/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+    "/smoother_server/get_available_states": "lifecycle_msgs/srv/GetAvailableStates",
+    "/smoother_server/get_available_transitions": "lifecycle_msgs/srv/GetAvailableTransitions",
+    "/smoother_server/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+    "/smoother_server/get_parameters": "rcl_interfaces/srv/GetParameters",
+    "/smoother_server/get_state": "lifecycle_msgs/srv/GetState",
+    "/smoother_server/get_transition_graph": "lifecycle_msgs/srv/GetAvailableTransitions",
+    "/smoother_server/list_parameters": "rcl_interfaces/srv/ListParameters",
+    "/smoother_server/set_parameters": "rcl_interfaces/srv/SetParameters",
+    "/smoother_server/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+    "/spin/_action/cancel_goal": "action_msgs/srv/CancelGoal",
+    "/spin/_action/get_result": "nav2_msgs/action/Spin_GetResult",
+    "/spin/_action/send_goal": "nav2_msgs/action/Spin_SendGoal",
+    "/tf2_frames": "tf2_msgs/srv/FrameGraph",
+    "/velocity_smoother/change_state": "lifecycle_msgs/srv/ChangeState",
+    "/velocity_smoother/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+    "/velocity_smoother/get_available_states": "lifecycle_msgs/srv/GetAvailableStates",
+    "/velocity_smoother/get_available_transitions": "lifecycle_msgs/srv/GetAvailableTransitions",
+    "/velocity_smoother/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+    "/velocity_smoother/get_parameters": "rcl_interfaces/srv/GetParameters",
+    "/velocity_smoother/get_state": "lifecycle_msgs/srv/GetState",
+    "/velocity_smoother/get_transition_graph": "lifecycle_msgs/srv/GetAvailableTransitions",
+    "/velocity_smoother/list_parameters": "rcl_interfaces/srv/ListParameters",
+    "/velocity_smoother/set_parameters": "rcl_interfaces/srv/SetParameters",
+    "/velocity_smoother/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+    "/wait/_action/cancel_goal": "action_msgs/srv/CancelGoal",
+    "/wait/_action/get_result": "nav2_msgs/action/Wait_GetResult",
+    "/wait/_action/send_goal": "nav2_msgs/action/Wait_SendGoal",
+    "/waypoint_follower/change_state": "lifecycle_msgs/srv/ChangeState",
+    "/waypoint_follower/describe_parameters": "rcl_interfaces/srv/DescribeParameters",
+    "/waypoint_follower/get_available_states": "lifecycle_msgs/srv/GetAvailableStates",
+    "/waypoint_follower/get_available_transitions": "lifecycle_msgs/srv/GetAvailableTransitions",
+    "/waypoint_follower/get_parameter_types": "rcl_interfaces/srv/GetParameterTypes",
+    "/waypoint_follower/get_parameters": "rcl_interfaces/srv/GetParameters",
+    "/waypoint_follower/get_state": "lifecycle_msgs/srv/GetState",
+    "/waypoint_follower/get_transition_graph": "lifecycle_msgs/srv/GetAvailableTransitions",
+    "/waypoint_follower/list_parameters": "rcl_interfaces/srv/ListParameters",
+    "/waypoint_follower/set_parameters": "rcl_interfaces/srv/SetParameters",
+    "/waypoint_follower/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
+}
+
+
+class NavigateToPointTask(ROS2ToolCallingAgentTask):
+    complexity = "medium"
+    actions_and_types: Dict[str, str] = {
+        "/assisted_teleop": "nav2_msgs/action/AssistedTeleop",
+        "/backup": "nav2_msgs/action/BackUp",
+        "/compute_path_through_poses": "nav2_msgs/action/ComputePathThroughPoses",
+        "/compute_path_to_pose": "nav2_msgs/action/ComputePathToPose",
+        "/drive_on_heading": "nav2_msgs/action/DriveOnHeading",
+        "/follow_path": "nav2_msgs/action/FollowPath",
+        "/follow_waypoints": "nav2_msgs/action/FollowWaypoints",
+        "/navigate_through_poses": "nav2_msgs/action/NavigateThroughPoses",
+        "/navigate_to_pose": "nav2_msgs/action/NavigateToPose",
+        "/smooth_path": "nav2_msgs/action/SmoothPath",
+        "/spin": "nav2_msgs/action/Spin",
+        "/wait": "nav2_msgs/action/Wait",
+    }
+    services_and_types: Dict[str, str] = NAVIGATION_SERVICES_AND_TYPES
+    interfaces: Dict[str, Dict[str, Any]] = {
+        "nav2_msgs/action/NavigateToPose": {
+            "goal": {
+                "pose": {
+                    "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+                    "pose": {
+                        "position": {"x": 0.0, "y": 0.0, "z": 0.0},
+                        "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+                    },
+                },
+                "behavior_tree": "",
+            },
+            "result": {"result": {}},
+            "feedback": {
+                "current_pose": {
+                    "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+                    "pose": {
+                        "position": {"x": 0.0, "y": 0.0, "z": 0.0},
+                        "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+                    },
+                },
+                "navigation_time": {"sec": 0, "nanosec": 0},
+                "estimated_time_remaining": {"sec": 0, "nanosec": 0},
+                "number_of_recoveries": 0,
+                "distance_remaining": 0.0,
+            },
+        },
+    }
+    action_models: List[type[ActionBaseModel]] = [NavigateToPoseAction]
+
+    def __init__(self, logger: loggers_type | None = None) -> None:
+        super().__init__(logger=logger)
+        action_strings = [
+            f"action: {action}\ntype: {act_type}\n"
+            for action, act_type in self.actions_and_types.items()
+        ]
+        service_strings = [
+            f"service: {service}\ntype: {srv_type}\n"
+            for service, srv_type in self.services_and_types.items()
+        ]
+        interface_strings = {
+            msg_type: json.dumps(interface)
+            for msg_type, interface in self.interfaces.items()
+        }
+
+        self.expected_tools: List[BaseTool] = [
+            MockGetROS2ActionsNamesAndTypesTool(
+                mock_actions_names_and_types=action_strings
+            ),
+            MockStartROS2ActionTool(
+                available_actions=list(self.actions_and_types.keys()),
+                available_action_types=list(self.actions_and_types.values()),
+                available_action_models=self.action_models,
+            ),
+            MockGetROS2ActionFeedbackTool(),
+            MockGetROS2ActionResultTool(),
+            MockGetROS2ServicesNamesAndTypesTool(
+                mock_service_names_and_types=service_strings
+            ),
+            MockGetROS2MessageInterfaceTool(mock_interfaces=interface_strings),
+        ]
+
+    def get_system_prompt(self) -> str:
+        return ROBOT_NAVIGATION_SYSTEM_PROMPT
+
     def get_prompt(self) -> str:
         return (
             "Call action /perform_task with the provided goal values: "
             "{priority: 10, description: '', task: 'Where are you?'}"
         )
+
+
+class SpinAroundTask(ROS2ToolCallingAgentTask):
+    complexity = "medium"
+    interfaces: Dict[str, Dict[str, Any]] = {
+        "nav2_msgs/action/Spin": {
+            "goal": {"target_yaw": 0.0, "time_allowance": {"sec": 0, "nanosec": 0}},
+            "result": {"total_elapsed_time": {"sec": 0, "nanosec": 0}},
+            "feedback": {"angular_distance_traveled": 0.0},
+        }
+    }
+    actions_and_types: Dict[str, str] = {
+        "/assisted_teleop": "nav2_msgs/action/AssistedTeleop",
+        "/backup": "nav2_msgs/action/BackUp",
+        "/compute_path_through_poses": "nav2_msgs/action/ComputePathThroughPoses",
+        "/compute_path_to_pose": "nav2_msgs/action/ComputePathToPose",
+        "/drive_on_heading": "nav2_msgs/action/DriveOnHeading",
+        "/follow_path": "nav2_msgs/action/FollowPath",
+        "/follow_waypoints": "nav2_msgs/action/FollowWaypoints",
+        "/navigate_through_poses": "nav2_msgs/action/NavigateThroughPoses",
+        "/navigate_to_pose": "nav2_msgs/action/NavigateToPose",
+        "/smooth_path": "nav2_msgs/action/SmoothPath",
+        "/spin": "nav2_msgs/action/Spin",
+        "/wait": "nav2_msgs/action/Wait",
+    }
+    action_models: List[type[ActionBaseModel]] = [SpinAction]
+
+    def __init__(self, logger: loggers_type | None = None) -> None:
+        super().__init__(logger=logger)
+        action_strings = [
+            f"action: {action}\ntype: {act_type}\n"
+            for action, act_type in self.actions_and_types.items()
+        ]
+        self.expected_tools: List[BaseTool] = [
+            MockGetROS2ActionsNamesAndTypesTool(
+                mock_actions_names_and_types=action_strings
+            ),
+            MockStartROS2ActionTool(
+                available_actions=list(self.actions_and_types.keys()),
+                available_action_types=list(self.actions_and_types.values()),
+                available_action_models=self.action_models,
+            ),
+            MockGetROS2ActionFeedbackTool(),
+            MockGetROS2ActionResultTool(),
+        ]
+
+    def get_system_prompt(self) -> str:
+        return ROBOT_NAVIGATION_SYSTEM_PROMPT
+
+    def get_prompt(self) -> str:
+        return "Spin around by 3 radians."
+
+    def verify_tool_calls(self, response: dict[str, Any]):
+        messages = response["messages"]
+        ai_messages: Sequence[AIMessage] = [
+            message for message in messages if isinstance(message, AIMessage)
+        ]
+        tool_calls = [
+            tool_call for message in ai_messages for tool_call in message.tool_calls
+        ]
+        expected_tool_calls: list[dict[str, Any]] = [
+            {"name": "get_ros2_actions_names_and_types", "args": {}},
+            {
+                "name": "start_ros2_action",
+                "args": {
+                    "action_name": "/spin",
+                    "action_type": "nav2_msgs/action/Spin",
+                    "action_args": {"target_yaw": 3},
+                },
+                "optional_args": {
+                    "action_args": {
+                        "time_allowance": {"sec": ANY_VALUE, "nanosec": ANY_VALUE}
+                    }
+                },
+            },
+            {"name": "get_ros2_action_feedback", "args": {"action_id": ANY_VALUE}},
+            {"name": "get_ros2_action_result", "args": {"action_id": ANY_VALUE}},
+        ]
+        self._check_multiple_tool_calls_from_list(
+            tool_calls=tool_calls, expected_tool_calls=expected_tool_calls
+        )
+        if not self.result.errors:
+            self.result.success = True
