@@ -17,88 +17,91 @@ from typing import Sequence
 from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
     ToolCallingAgentTask,
 )
-from rai_bench.tool_calling_agent_bench.ros2_agent_tasks import (
-    GetAllROS2RGBCamerasTask,
-    GetObjectPositionsTask,
-    GetROS2DepthCameraTask,
-    GetROS2MessageTask,
-    GetROS2RGBCameraTask,
-    GetROS2TopicsTask,
-    GetROS2TopicsTask2,
-    GrabExistingObjectTask,
-    GrabNotExistingObjectTask,
-    MoveExistingObjectFrontTask,
-    MoveExistingObjectLeftTask,
-    MoveToPointTask,
-    PublishROS2CustomMessageTask,
-    SwapObjectsTask,
+from rai_bench.tool_calling_agent_bench.ros2_agent_tasks.custom_interfaces_tasks import (
+    CallGetLogDigestTask,
+    CallGroundedSAMSegmentTask,
+    CallGroundingDinoClassifyTask,
+    CallROS2ManipulatorMoveToServiceTask,
+    CallVectorStoreRetrievalTask,
+    CallWhatISeeTask,
+    PublishROS2AudioMessageTask,
+    PublishROS2DetectionArrayTask,
+    PublishROS2HRIMessageTask,
 )
 
 tasks: Sequence[ToolCallingAgentTask] = [
-    PublishROS2CustomMessageTask(),
-    GetROS2RGBCameraTask(),
-    GetROS2TopicsTask(),
-    GetROS2DepthCameraTask(),
-    GetAllROS2RGBCamerasTask(),
-    GetROS2TopicsTask2(),
-    GetROS2MessageTask(),
-    MoveToPointTask(args={"x": 1.0, "y": 2.0, "z": 3.0, "task": "grab"}),
-    MoveToPointTask(args={"x": 1.2, "y": 2.3, "z": 3.4, "task": "drop"}),
-    GetObjectPositionsTask(
-        objects={
-            "carrot": [{"x": 1.0, "y": 2.0, "z": 3.0}],
-            "apple": [{"x": 4.0, "y": 5.0, "z": 6.0}],
-            "banana": [
-                {"x": 7.0, "y": 8.0, "z": 9.0},
-                {"x": 10.0, "y": 11.0, "z": 12.0},
-            ],
-        },
-    ),
-    GrabExistingObjectTask(
-        object_to_grab="banana",
-        objects={
-            "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
-            "apple": [
-                {"x": 4.0, "y": 5.0, "z": 6.0},
-                {"x": 10.0, "y": 11.0, "z": 12.0},
-            ],
-        },
-    ),
-    GrabNotExistingObjectTask(
-        object_to_grab="apple",
-        objects={
-            "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
-            "cube": [
-                {"x": 4.0, "y": 5.0, "z": 6.0},
-                {"x": 10.0, "y": 11.0, "z": 12.0},
-            ],
-        },
-    ),
-    MoveExistingObjectLeftTask(
-        object_to_grab="banana",
-        objects={
-            "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
-            "apple": [
-                {"x": 4.0, "y": 5.0, "z": 6.0},
-                {"x": 10.0, "y": 11.0, "z": 12.0},
-            ],
-        },
-    ),
-    MoveExistingObjectFrontTask(
-        object_to_grab="banana",
-        objects={
-            "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
-            "apple": [
-                {"x": 4.0, "y": 5.0, "z": 6.0},
-                {"x": 10.0, "y": 11.0, "z": 12.0},
-            ],
-        },
-    ),
-    SwapObjectsTask(
-        objects={
-            "banana": [{"x": 1.0, "y": 2.0, "z": 3.0}],
-            "apple": [{"x": 4.0, "y": 5.0, "z": 6.0}],
-        },
-        objects_to_swap=["banana", "apple"],
-    ),
+    PublishROS2HRIMessageTask(),
+    PublishROS2AudioMessageTask(),
+    PublishROS2DetectionArrayTask(),
+    CallGetLogDigestTask(),
+    CallGroundedSAMSegmentTask(),
+    CallGroundingDinoClassifyTask(),
+    CallROS2ManipulatorMoveToServiceTask(),
+    CallVectorStoreRetrievalTask(),
+    CallWhatISeeTask(),
+    # GetROS2RGBCameraTask(),
+    # GetROS2TopicsTask(),
+    # GetROS2DepthCameraTask(),
+    # GetAllROS2RGBCamerasTask(),
+    # GetROS2TopicsTask2(),
+    # GetROS2MessageTask(),
+    # MoveToPointTask(args={"x": 1.0, "y": 2.0, "z": 3.0, "task": "grab"}),
+    # MoveToPointTask(args={"x": 1.2, "y": 2.3, "z": 3.4, "task": "drop"}),
+    # GetObjectPositionsTask(
+    #     objects={
+    #         "carrot": [{"x": 1.0, "y": 2.0, "z": 3.0}],
+    #         "apple": [{"x": 4.0, "y": 5.0, "z": 6.0}],
+    #         "banana": [
+    #             {"x": 7.0, "y": 8.0, "z": 9.0},
+    #             {"x": 10.0, "y": 11.0, "z": 12.0},
+    #         ],
+    #     },
+    # ),
+    # GrabExistingObjectTask(
+    #     object_to_grab="banana",
+    #     objects={
+    #         "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
+    #         "apple": [
+    #             {"x": 4.0, "y": 5.0, "z": 6.0},
+    #             {"x": 10.0, "y": 11.0, "z": 12.0},
+    #         ],
+    #     },
+    # ),
+    # GrabNotExistingObjectTask(
+    #     object_to_grab="apple",
+    #     objects={
+    #         "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
+    #         "cube": [
+    #             {"x": 4.0, "y": 5.0, "z": 6.0},
+    #             {"x": 10.0, "y": 11.0, "z": 12.0},
+    #         ],
+    #     },
+    # ),
+    # MoveExistingObjectLeftTask(
+    #     object_to_grab="banana",
+    #     objects={
+    #         "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
+    #         "apple": [
+    #             {"x": 4.0, "y": 5.0, "z": 6.0},
+    #             {"x": 10.0, "y": 11.0, "z": 12.0},
+    #         ],
+    #     },
+    # ),
+    # MoveExistingObjectFrontTask(
+    #     object_to_grab="banana",
+    #     objects={
+    #         "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
+    #         "apple": [
+    #             {"x": 4.0, "y": 5.0, "z": 6.0},
+    #             {"x": 10.0, "y": 11.0, "z": 12.0},
+    #         ],
+    #     },
+    # ),
+    # SwapObjectsTask(
+    #     objects={
+    #         "banana": [{"x": 1.0, "y": 2.0, "z": 3.0}],
+    #         "apple": [{"x": 4.0, "y": 5.0, "z": 6.0}],
+    #     },
+    #     objects_to_swap=["banana", "apple"],
+    # ),
 ]
