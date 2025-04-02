@@ -23,16 +23,40 @@ from langchain_core.messages.tool import ToolCall
 from langchain_core.tools import BaseTool
 from rai.tools.ros.manipulation import MoveToPointToolInput
 
+from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
+    CustomInterfacesActionTask,
+    CustomInterfacesServiceTask,
+    CustomInterfacesTopicTask,
+    ROS2ToolCallingAgentTask,
+)
 from rai_bench.tool_calling_agent_bench.actions import (
     ActionBaseModel,
     NavigateToPoseAction,
     SpinAction,
 )
-from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
-    ROS2ToolCallingAgentTask,
-    CustomInterfacesActionTask,
-    CustomInterfacesServiceTask,
-    CustomInterfacesTopicTask,
+from rai_bench.tool_calling_agent_bench.messages.actions import (
+    TaskFeedback,
+    TaskGoal,
+    TaskResult,
+)
+from rai_bench.tool_calling_agent_bench.messages.services import (
+    ManipulatorMoveToRequest,
+    ManipulatorMoveToResponse,
+    RAIGroundedSamRequest,
+    RAIGroundedSamResponse,
+    RAIGroundingDinoRequest,
+    RAIGroundingDinoResponse,
+    StringListRequest,
+    StringListResponse,
+    VectorStoreRetrievalRequest,
+    VectorStoreRetrievalResponse,
+    WhatISeeRequest,
+    WhatISeeResponse,
+)
+from rai_bench.tool_calling_agent_bench.messages.topics import (
+    AudioMessage,
+    HRIMessage,
+    RAIDetectionArray,
 )
 from rai_bench.tool_calling_agent_bench.mocked_tools import (
     MockGetObjectPositionsTool,
@@ -40,8 +64,13 @@ from rai_bench.tool_calling_agent_bench.mocked_tools import (
     MockGetROS2TopicsNamesAndTypesTool,
     MockMoveToPointTool,
     MockReceiveROS2MessageTool,
+    MockGetROS2ActionsNamesAndTypesTool,
+    MockStartROS2ActionTool,
+    MockGetROS2ActionFeedbackTool,
+    MockGetROS2ActionResultTool,
+    MockGetROS2ServicesNamesAndTypesTool,
+    MockGetROS2MessageInterfaceTool,
 )
-
 
 loggers_type = logging.Logger
 
@@ -1650,209 +1679,38 @@ class SwapObjectsTask(ROS2ToolCallingAgentTask):
 
 
 # only custom interfaces will be tested, so there no need for defualts for all of interfaces
-DEFAULT_MESSAGES: Dict[str, Dict[str, Any]] = {
-    "rai_interfaces/msg/HRIMessage": {
-        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
-        "text": "",
-        "images": [
-            {
-                "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
-                "height": 0,
-                "width": 0,
-                "encoding": "",
-                "is_bigendian": 0,
-                "step": 0,
-                "data": [],
-            }
-        ],
-        "audios": [{"audio": [], "sample_rate": 0, "channels": 0}],
-    },
-    "rai_interfaces/msg/AudioMessage": {
-        "audio": [],
-        "sample_rate": 0,
-        "channels": 0,
-    },
-    "rai_interfaces/msg/RAIDetectionArray": {
-        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
-        "detections": [
-            {
-                "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
-                "results": [
-                    {
-                        "hypothesis": {"class_id": "", "score": 0.0},
-                        "pose": {
-                            "pose": {
-                                "position": {"x": 0.0, "y": 0.0, "z": 0.0},
-                                "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 0.0},
-                            },
-                            "covariance": {},
-                        },
-                    }
-                ],
-                "bbox": {
-                    "center": {"position": {"x": 0.0, "y": 0.0}, "theta": 0.0},
-                    "size_x": 0.0,
-                    "size_y": 0.0,
-                },
-                "id": "",
-            }
-        ],
-        "detection_classes": [],
-    },
+DEFAULT_MESSAGES: Dict[str, Any] = {
+    "rai_interfaces/msg/HRIMessage": HRIMessage(),
+    "rai_interfaces/msg/AudioMessage": AudioMessage(),
+    "rai_interfaces/msg/RAIDetectionArray": RAIDetectionArray(),
     "rai_interfaces/srv/ManipulatorMoveTo": {
-        "request": {
-            "initial_gripper_state": False,
-            "final_gripper_state": False,
-            "target_pose": {
-                "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
-                "pose": {
-                    "position": {"x": 0.0, "y": 0.0, "z": 0.0},
-                    "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 0.0},
-                },
-            },
-        },
-        "response": {"success": False},
+        "request": ManipulatorMoveToRequest(),
+        "response": ManipulatorMoveToResponse(),
     },
     "rai_interfaces/srv/RAIGroundedSam": {
-        "request": {
-            "detections": {
-                "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
-                "detections": [
-                    {
-                        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
-                        "results": [
-                            {
-                                "hypothesis": {"class_id": "", "score": 0.0},
-                                "pose": {
-                                    "pose": {
-                                        "position": {"x": 0.0, "y": 0.0, "z": 0.0},
-                                        "orientation": {
-                                            "x": 0.0,
-                                            "y": 0.0,
-                                            "z": 0.0,
-                                            "w": 0.0,
-                                        },
-                                    },
-                                    "covariance": {},
-                                },
-                            }
-                        ],
-                        "bbox": {
-                            "center": {"position": {"x": 0.0, "y": 0.0}, "theta": 0.0},
-                            "size_x": 0.0,
-                            "size_y": 0.0,
-                        },
-                        "id": "",
-                    }
-                ],
-                "detection_classes": [],
-            },
-            "source_img": {
-                "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
-                "height": 0,
-                "width": 0,
-                "encoding": "",
-                "is_bigendian": 0,
-                "step": 0,
-                "data": [],
-            },
-        },
-        "response": {
-            "masks": [
-                {
-                    "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
-                    "height": 0,
-                    "width": 0,
-                    "encoding": "",
-                    "is_bigendian": 0,
-                    "step": 0,
-                    "data": [],
-                }
-            ]
-        },
+        "request": RAIGroundedSamRequest(),
+        "response": RAIGroundedSamResponse(),
     },
     "rai_interfaces/srv/RAIGroundingDino": {
-        "request": {
-            "classes": "",
-            "box_threshold": 0.0,
-            "text_threshold": 0.0,
-            "source_img": {
-                "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
-                "height": 0,
-                "width": 0,
-                "encoding": "",
-                "is_bigendian": 0,
-                "step": 0,
-                "data": [],
-            },
-        },
-        "response": {
-            "detections": {
-                "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
-                "detections": [
-                    {
-                        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
-                        "results": [
-                            {
-                                "hypothesis": {"class_id": "", "score": 0.0},
-                                "pose": {
-                                    "pose": {
-                                        "position": {"x": 0.0, "y": 0.0, "z": 0.0},
-                                        "orientation": {
-                                            "x": 0.0,
-                                            "y": 0.0,
-                                            "z": 0.0,
-                                            "w": 0.0,
-                                        },
-                                    },
-                                    "covariance": {},
-                                },
-                            }
-                        ],
-                        "bbox": {
-                            "center": {"position": {"x": 0.0, "y": 0.0}, "theta": 0.0},
-                            "size_x": 0.0,
-                            "size_y": 0.0,
-                        },
-                        "id": "",
-                    }
-                ],
-                "detection_classes": [],
-            }
-        },
+        "request": RAIGroundingDinoRequest(),
+        "response": RAIGroundingDinoResponse(),
     },
     "rai_interfaces/srv/StringList": {
-        "request": {},
-        "response": {"success": False, "string_list": []},
+        "request": StringListRequest(),
+        "response": StringListResponse(),
     },
     "rai_interfaces/srv/VectorStoreRetrieval": {
-        "request": {"query": ""},
-        "response": {"success": False, "message": "", "documents": [], "scores": []},
+        "request": VectorStoreRetrievalRequest(),
+        "response": VectorStoreRetrievalResponse(),
     },
     "rai_interfaces/srv/WhatISee": {
-        "request": {},
-        "response": {
-            "observations": [],
-            "perception_source": "",
-            "image": {
-                "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
-                "height": 0,
-                "width": 0,
-                "encoding": "",
-                "is_bigendian": 0,
-                "step": 0,
-                "data": [],
-            },
-            "pose": {
-                "position": {"x": 0.0, "y": 0.0, "z": 0.0},
-                "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 0.0},
-            },
-        },
+        "request": WhatISeeRequest(),
+        "response": WhatISeeResponse(),
     },
     "rai_interfaces/action/Task": {
-        "goal": {"task": "", "description": "", "priority": ""},
-        "result": {"success": False, "report": ""},
-        "feedback": {"current_status": ""},
+        "goal": TaskGoal(),
+        "result": TaskResult(),
+        "feedback": TaskFeedback(),
     },
 }
 
@@ -2514,173 +2372,174 @@ NAVIGATION_SERVICES_AND_TYPES: Dict[str, str] = {
 }
 
 
-class NavigateToPointTask(ROS2ToolCallingAgentTask):
-    complexity = "medium"
-    actions_and_types: Dict[str, str] = {
-        "/assisted_teleop": "nav2_msgs/action/AssistedTeleop",
-        "/backup": "nav2_msgs/action/BackUp",
-        "/compute_path_through_poses": "nav2_msgs/action/ComputePathThroughPoses",
-        "/compute_path_to_pose": "nav2_msgs/action/ComputePathToPose",
-        "/drive_on_heading": "nav2_msgs/action/DriveOnHeading",
-        "/follow_path": "nav2_msgs/action/FollowPath",
-        "/follow_waypoints": "nav2_msgs/action/FollowWaypoints",
-        "/navigate_through_poses": "nav2_msgs/action/NavigateThroughPoses",
-        "/navigate_to_pose": "nav2_msgs/action/NavigateToPose",
-        "/smooth_path": "nav2_msgs/action/SmoothPath",
-        "/spin": "nav2_msgs/action/Spin",
-        "/wait": "nav2_msgs/action/Wait",
-    }
-    services_and_types: Dict[str, str] = NAVIGATION_SERVICES_AND_TYPES
-    interfaces: Dict[str, Dict[str, Any]] = {
-        "nav2_msgs/action/NavigateToPose": {
-            "goal": {
-                "pose": {
-                    "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
-                    "pose": {
-                        "position": {"x": 0.0, "y": 0.0, "z": 0.0},
-                        "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
-                    },
-                },
-                "behavior_tree": "",
-            },
-            "result": {"result": {}},
-            "feedback": {
-                "current_pose": {
-                    "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
-                    "pose": {
-                        "position": {"x": 0.0, "y": 0.0, "z": 0.0},
-                        "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
-                    },
-                },
-                "navigation_time": {"sec": 0, "nanosec": 0},
-                "estimated_time_remaining": {"sec": 0, "nanosec": 0},
-                "number_of_recoveries": 0,
-                "distance_remaining": 0.0,
-            },
-        },
-    }
-    action_models: List[type[ActionBaseModel]] = [NavigateToPoseAction]
+# class NavigateToPointTask(ROS2ToolCallingAgentTask):
+#     complexity = "medium"
+#     actions_and_types: Dict[str, str] = {
+#         "/assisted_teleop": "nav2_msgs/action/AssistedTeleop",
+#         "/backup": "nav2_msgs/action/BackUp",
+#         "/compute_path_through_poses": "nav2_msgs/action/ComputePathThroughPoses",
+#         "/compute_path_to_pose": "nav2_msgs/action/ComputePathToPose",
+#         "/drive_on_heading": "nav2_msgs/action/DriveOnHeading",
+#         "/follow_path": "nav2_msgs/action/FollowPath",
+#         "/follow_waypoints": "nav2_msgs/action/FollowWaypoints",
+#         "/navigate_through_poses": "nav2_msgs/action/NavigateThroughPoses",
+#         "/navigate_to_pose": "nav2_msgs/action/NavigateToPose",
+#         "/smooth_path": "nav2_msgs/action/SmoothPath",
+#         "/spin": "nav2_msgs/action/Spin",
+#         "/wait": "nav2_msgs/action/Wait",
+#     }
+#     services_and_types: Dict[str, str] = NAVIGATION_SERVICES_AND_TYPES
+#     interfaces: Dict[str, Dict[str, Any]] = {
+#         "nav2_msgs/action/NavigateToPose": {
+#             "goal": {
+#                 "pose": {
+#                     "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+#                     "pose": {
+#                         "position": {"x": 0.0, "y": 0.0, "z": 0.0},
+#                         "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+#                     },
+#                 },
+#                 "behavior_tree": "",
+#             },
+#             "result": {"result": {}},
+#             "feedback": {
+#                 "current_pose": {
+#                     "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+#                     "pose": {
+#                         "position": {"x": 0.0, "y": 0.0, "z": 0.0},
+#                         "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+#                     },
+#                 },
+#                 "navigation_time": {"sec": 0, "nanosec": 0},
+#                 "estimated_time_remaining": {"sec": 0, "nanosec": 0},
+#                 "number_of_recoveries": 0,
+#                 "distance_remaining": 0.0,
+#             },
+#         },
+#     }
+#     action_models: List[type[ActionBaseModel]] = [NavigateToPoseAction]
 
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger=logger)
-        action_strings = [
-            f"action: {action}\ntype: {act_type}\n"
-            for action, act_type in self.actions_and_types.items()
-        ]
-        service_strings = [
-            f"service: {service}\ntype: {srv_type}\n"
-            for service, srv_type in self.services_and_types.items()
-        ]
-        interface_strings = {
-            msg_type: json.dumps(interface)
-            for msg_type, interface in self.interfaces.items()
-        }
+#     def __init__(self, logger: loggers_type | None = None) -> None:
+#         super().__init__(logger=logger)
+#         action_strings = [
+#             f"action: {action}\ntype: {act_type}\n"
+#             for action, act_type in self.actions_and_types.items()
+#         ]
+#         service_strings = [
+#             f"service: {service}\ntype: {srv_type}\n"
+#             for service, srv_type in self.services_and_types.items()
+#         ]
+#         interface_strings = {
+#             msg_type: json.dumps(interface)
+#             for msg_type, interface in self.interfaces.items()
+#         }
 
-        self.expected_tools: List[BaseTool] = [
-            MockGetROS2ActionsNamesAndTypesTool(
-                mock_actions_names_and_types=action_strings
-            ),
-            MockStartROS2ActionTool(
-                available_actions=list(self.actions_and_types.keys()),
-                available_action_types=list(self.actions_and_types.values()),
-                available_action_models=self.action_models,
-            ),
-            MockGetROS2ActionFeedbackTool(),
-            MockGetROS2ActionResultTool(),
-            MockGetROS2ServicesNamesAndTypesTool(
-                mock_service_names_and_types=service_strings
-            ),
-            MockGetROS2MessageInterfaceTool(mock_interfaces=interface_strings),
-        ]
+#         self.expected_tools: List[BaseTool] = [
+#             MockGetROS2ActionsNamesAndTypesTool(
+#                 mock_actions_names_and_types=action_strings
+#             ),
+#             MockStartROS2ActionTool(
+#                 available_actions=list(self.actions_and_types.keys()),
+#                 available_action_types=list(self.actions_and_types.values()),
+#                 available_action_models=self.action_models,
+#             ),
+#             MockGetROS2ActionFeedbackTool(),
+#             MockGetROS2ActionResultTool(),
+#             MockGetROS2ServicesNamesAndTypesTool(
+#                 mock_service_names_and_types=service_strings
+#             ),
+#             MockGetROS2MessageInterfaceTool(mock_interfaces=interface_strings),
+#         ]
 
-    def get_system_prompt(self) -> str:
-        return ROBOT_NAVIGATION_SYSTEM_PROMPT
+#     def get_system_prompt(self) -> str:
+#         return ROBOT_NAVIGATION_SYSTEM_PROMPT
 
-    def get_prompt(self) -> str:
-        return (
-            "Call action /perform_task with the provided goal values: "
-            "{priority: 10, description: '', task: 'Where are you?'}"
-        )
+#     def get_prompt(self) -> str:
+#         return (
+#             "Call action /perform_task with the provided goal values: "
+#             "{priority: 10, description: '', task: 'Where are you?'}"
+#         )
 
 
-class SpinAroundTask(ROS2ToolCallingAgentTask):
-    complexity = "medium"
-    interfaces: Dict[str, Dict[str, Any]] = {
-        "nav2_msgs/action/Spin": {
-            "goal": {"target_yaw": 0.0, "time_allowance": {"sec": 0, "nanosec": 0}},
-            "result": {"total_elapsed_time": {"sec": 0, "nanosec": 0}},
-            "feedback": {"angular_distance_traveled": 0.0},
-        }
-    }
-    actions_and_types: Dict[str, str] = {
-        "/assisted_teleop": "nav2_msgs/action/AssistedTeleop",
-        "/backup": "nav2_msgs/action/BackUp",
-        "/compute_path_through_poses": "nav2_msgs/action/ComputePathThroughPoses",
-        "/compute_path_to_pose": "nav2_msgs/action/ComputePathToPose",
-        "/drive_on_heading": "nav2_msgs/action/DriveOnHeading",
-        "/follow_path": "nav2_msgs/action/FollowPath",
-        "/follow_waypoints": "nav2_msgs/action/FollowWaypoints",
-        "/navigate_through_poses": "nav2_msgs/action/NavigateThroughPoses",
-        "/navigate_to_pose": "nav2_msgs/action/NavigateToPose",
-        "/smooth_path": "nav2_msgs/action/SmoothPath",
-        "/spin": "nav2_msgs/action/Spin",
-        "/wait": "nav2_msgs/action/Wait",
-    }
-    action_models: List[type[ActionBaseModel]] = [SpinAction]
+# class SpinAroundTask(ROS2ToolCallingAgentTask):
+#     complexity = "medium"
+#     interfaces: Dict[str, Dict[str, Any]] = {
+#         "nav2_msgs/action/Spin": {
+#             "goal": {"target_yaw": 0.0, "time_allowance": {"sec": 0, "nanosec": 0}},
+#             "result": {"total_elapsed_time": {"sec": 0, "nanosec": 0}},
+#             "feedback": {"angular_distance_traveled": 0.0},
+#         }
+#     }
+#     actions_and_types: Dict[str, str] = {
+#         "/assisted_teleop": "nav2_msgs/action/AssistedTeleop",
+#         "/backup": "nav2_msgs/action/BackUp",
+#         "/compute_path_through_poses": "nav2_msgs/action/ComputePathThroughPoses",
+#         "/compute_path_to_pose": "nav2_msgs/action/ComputePathToPose",
+#         "/drive_on_heading": "nav2_msgs/action/DriveOnHeading",
+#         "/follow_path": "nav2_msgs/action/FollowPath",
+#         "/follow_waypoints": "nav2_msgs/action/FollowWaypoints",
+#         "/navigate_through_poses": "nav2_msgs/action/NavigateThroughPoses",
+#         "/navigate_to_pose": "nav2_msgs/action/NavigateToPose",
+#         "/smooth_path": "nav2_msgs/action/SmoothPath",
+#         "/spin": "nav2_msgs/action/Spin",
+#         "/wait": "nav2_msgs/action/Wait",
+#     }
+#     action_models: List[type[ActionBaseModel]] = [SpinAction]
 
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger=logger)
-        action_strings = [
-            f"action: {action}\ntype: {act_type}\n"
-            for action, act_type in self.actions_and_types.items()
-        ]
-        self.expected_tools: List[BaseTool] = [
-            MockGetROS2ActionsNamesAndTypesTool(
-                mock_actions_names_and_types=action_strings
-            ),
-            MockStartROS2ActionTool(
-                available_actions=list(self.actions_and_types.keys()),
-                available_action_types=list(self.actions_and_types.values()),
-                available_action_models=self.action_models,
-            ),
-            MockGetROS2ActionFeedbackTool(),
-            MockGetROS2ActionResultTool(),
-        ]
+#     def __init__(self, logger: loggers_type | None = None) -> None:
+#         super().__init__(logger=logger)
+#         action_strings = [
+#             f"action: {action}\ntype: {act_type}\n"
+#             for action, act_type in self.actions_and_types.items()
+#         ]
+#         self.expected_tools: List[BaseTool] = [
+#             MockGetROS2ActionsNamesAndTypesTool(
+#                 mock_actions_names_and_types=action_strings
+#             ),
+#             MockStartROS2ActionTool(
+#                 available_actions=list(self.actions_and_types.keys()),
+#                 available_action_types=list(self.actions_and_types.values()),
+#                 available_action_models=self.action_models,
+#             ),
+#             MockGetROS2ActionFeedbackTool(),
+#             MockGetROS2ActionResultTool(),
+#         ]
 
-    def get_system_prompt(self) -> str:
-        return ROBOT_NAVIGATION_SYSTEM_PROMPT
+#     def get_system_prompt(self) -> str:
+#         return ROBOT_NAVIGATION_SYSTEM_PROMPT
 
-    def get_prompt(self) -> str:
-        return "Spin around by 3 radians."
+#     def get_prompt(self) -> str:
+#         return "Spin around by 3 radians."
 
-    def verify_tool_calls(self, response: dict[str, Any]):
-        messages = response["messages"]
-        ai_messages: Sequence[AIMessage] = [
-            message for message in messages if isinstance(message, AIMessage)
-        ]
-        tool_calls = [
-            tool_call for message in ai_messages for tool_call in message.tool_calls
-        ]
-        expected_tool_calls: list[dict[str, Any]] = [
-            {"name": "get_ros2_actions_names_and_types", "args": {}},
-            {
-                "name": "start_ros2_action",
-                "args": {
-                    "action_name": "/spin",
-                    "action_type": "nav2_msgs/action/Spin",
-                    "action_args": {"target_yaw": 3},
-                },
-                "optional_args": {
-                    "action_args": {
-                        "time_allowance": {"sec": ANY_VALUE, "nanosec": ANY_VALUE}
-                    }
-                },
-            },
-            {"name": "get_ros2_action_feedback", "args": {"action_id": ANY_VALUE}},
-            {"name": "get_ros2_action_result", "args": {"action_id": ANY_VALUE}},
-        ]
-        self._check_multiple_tool_calls_from_list(
-            tool_calls=tool_calls, expected_tool_calls=expected_tool_calls
-        )
-        if not self.result.errors:
-            self.result.success = True
+#     def verify_tool_calls(self, response: dict[str, Any]):
+#
+# messages = response["messages"]
+# ai_messages: Sequence[AIMessage] = [
+#     message for message in messages if isinstance(message, AIMessage)
+# ]
+# tool_calls = [
+#     tool_call for message in ai_messages for tool_call in message.tool_calls
+# ]
+# expected_tool_calls: list[dict[str, Any]] = [
+#     {"name": "get_ros2_actions_names_and_types", "args": {}},
+#     {
+#         "name": "start_ros2_action",
+#         "args": {
+#             "action_name": "/spin",
+#             "action_type": "nav2_msgs/action/Spin",
+#             "action_args": {"target_yaw": 3},
+#         },
+#         "optional_args": {
+#             "action_args": {
+#                 "time_allowance": {"sec": ANY_VALUE, "nanosec": ANY_VALUE}
+#             }
+#         },
+#     },
+#     {"name": "get_ros2_action_feedback", "args": {"action_id": ANY_VALUE}},
+#     {"name": "get_ros2_action_result", "args": {"action_id": ANY_VALUE}},
+# ]
+# self._check_multiple_tool_calls_from_list(
+#     tool_calls=tool_calls, expected_tool_calls=expected_tool_calls
+# )
+# if not self.result.errors:
+#     self.result.success = True

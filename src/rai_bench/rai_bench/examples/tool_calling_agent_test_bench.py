@@ -21,8 +21,9 @@ from rai.utils.model_initialization import (
     get_llm_model,
     get_llm_model_config_and_vendor,
 )
+from rai_bench.examples.tool_calling_agent_bench_tasks import tasks
 
-from rai_bench.examples.tool_calling_agent_bench_navigation_tasks import tasks
+# from rai_bench.examples.tool_calling_agent_bench_navigation_tasks import tasks
 from rai_bench.tool_calling_agent_bench.agent_bench import ToolCallingAgentBenchmark
 
 if __name__ == "__main__":
