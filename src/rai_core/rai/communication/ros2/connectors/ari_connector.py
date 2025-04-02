@@ -39,16 +39,69 @@ from rai.communication.ros2.messages import ROS2ARIMessage
 
 
 class ROS2ARIConnector(ROS2ActionMixin, ROS2ServiceMixin, ARIConnector[ROS2ARIMessage]):
+    """ROS2-specific implementation of the ARIConnector.
+
+    This connector provides functionality for ROS2 communication through topics,
+    services, and actions, as well as TF (Transform) operations.
+
+    Parameters
+    ----------
+    node_name : str, optional
+        Name of the ROS2 node. If not provided, generates a unique name with UUID.
+    destroy_subscribers : bool, optional
+        Whether to destroy subscribers after receiving a message, by default False.
+
+    Methods
+    -------
+    get_topics_names_and_types()
+        Get list of available topics and their message types.
+    get_services_names_and_types()
+        Get list of available services and their types.
+    get_actions_names_and_types()
+        Get list of available actions and their types.
+    send_message(message, target, msg_type, auto_qos_matching=True, qos_profile=None, **kwargs)
+        Send a message to a specified topic.
+    receive_message(source, timeout_sec=1.0, msg_type=None, auto_topic_type=True, **kwargs)
+        Receive a message from a specified topic.
+    wait_for_transform(tf_buffer, target_frame, source_frame, timeout_sec=1.0)
+        Wait for a transform to become available.
+    get_transform(target_frame, source_frame, timeout_sec=5.0)
+        Get the transform between two frames.
+    create_service(service_name, on_request, on_done=None, service_type, **kwargs)
+        Create a ROS2 service.
+    create_action(action_name, generate_feedback_callback, action_type, **kwargs)
+        Create a ROS2 action server.
+    shutdown()
+        Clean up resources and shut down the connector.
+
+    Notes
+    -----
+    Threading Model:
+        The connector creates a MultiThreadedExecutor that runs in a dedicated thread.
+        This executor processes all ROS2 callbacks and operations asynchronously.
+
+    Subscriber Lifecycle:
+        The `destroy_subscribers` parameter controls subscriber cleanup behavior:
+        - True: Subscribers are destroyed after receiving a message
+            - Pros: Better resource utilization
+            - Cons: Known stability issues (see: https://github.com/ros2/rclpy/issues/1142)
+        - False (default): Subscribers remain active after message reception
+            - Pros: More stable operation, avoids potential crashes
+            - Cons: May lead to memory/performance overhead from inactive subscribers
+    """
+
     def __init__(
-        self, node_name: str = f"rai_ros2_ari_connector_{str(uuid.uuid4())[-12:]}"
+        self,
+        node_name: str = f"rai_ros2_ari_connector_{str(uuid.uuid4())[-12:]}",
+        destroy_subscribers: bool = False,
     ):
         super().__init__()
         self._node = Node(node_name)
-        self._topic_api = ROS2TopicAPI(self._node)
+        self._topic_api = ROS2TopicAPI(self._node, destroy_subscribers)
         self._service_api = ROS2ServiceAPI(self._node)
         self._actions_api = ROS2ActionAPI(self._node)
         self._tf_buffer = Buffer(node=self._node)
-        self.tf_listener = TransformListener(self._tf_buffer, self._node)
+        self._tf_listener = TransformListener(self._tf_buffer, self._node)
 
         self._executor = MultiThreadedExecutor()
         self._executor.add_node(self._node)
@@ -173,7 +226,7 @@ class ROS2ARIConnector(ROS2ActionMixin, ROS2ServiceMixin, ARIConnector[ROS2ARIMe
         return self._node
 
     def shutdown(self):
-        self.tf_listener.unregister()
+        self._tf_listener.unregister()
         self._node.destroy_node()
         self._actions_api.shutdown()
         self._topic_api.shutdown()
