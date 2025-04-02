@@ -164,7 +164,9 @@ class ROS2TopicAPI:
         _publishers: Dictionary mapping topic names to their publisher instances
     """
 
-    def __init__(self, node: rclpy.node.Node) -> None:
+    def __init__(
+        self, node: rclpy.node.Node, destroy_subscribers: bool = False
+    ) -> None:
         """Initialize the ROS2 topic API.
 
         Args:
@@ -181,7 +183,7 @@ class ROS2TopicAPI:
         # preventing node crashes.
         self._last_msg: Dict[str, Tuple[float, Any]] = {}
         self._subscriptions: Dict[str, rclpy.node.Subscription] = {}
-        self._destroy_subscriptions: bool = False
+        self._destroy_subscribers: bool = destroy_subscribers
 
     def get_topic_names_and_types(
         self, no_demangle: bool = False
@@ -298,7 +300,35 @@ class ROS2TopicAPI:
     def _generic_callback(self, topic: str, msg: Any) -> None:
         self._last_msg[topic] = (time.time(), msg)
 
-    def _wait_for_message(
+    def _wait_for_message_once(
+        self,
+        msg_cls: Type[Any],
+        node: rclpy.node.Node,
+        topic: str,
+        qos_profile: QoSProfile,
+        timeout_sec: float,
+    ) -> Tuple[bool, Any]:
+        ts = time.time()
+        success = False
+        msg = None
+
+        def callback(received_msg: Any):
+            nonlocal success, msg
+            success = True
+            msg = received_msg
+
+        sub = node.create_subscription(
+            msg_cls,
+            topic,
+            callback,
+            qos_profile=qos_profile,
+        )
+        while not success and time.time() - ts < timeout_sec:
+            time.sleep(0.01)
+        node.destroy_subscription(sub)
+        return success, msg
+
+    def _wait_for_message_persistent(
         self,
         msg_cls: Type[Any],
         node: rclpy.node.Node,
@@ -313,18 +343,29 @@ class ROS2TopicAPI:
                 partial(self._generic_callback, topic),
                 qos_profile=qos_profile,
             )
-
         ts = time.time()
         while time.time() - ts < timeout_sec:
             if topic in self._last_msg:
                 if self._last_msg[topic][0] + timeout_sec > time.time():
-                    if self._destroy_subscriptions:
-                        node.destroy_subscription(self._subscriptions.pop(topic))
                     return True, self._last_msg[topic][1]
             time.sleep(0.01)
-        if self._destroy_subscriptions:
-            node.destroy_subscription(self._subscriptions.pop(topic))
         return False, None
+
+    def _wait_for_message(
+        self,
+        msg_cls: Type[Any],
+        node: rclpy.node.Node,
+        topic: str,
+        qos_profile: QoSProfile,
+        timeout_sec: float,
+    ) -> Tuple[bool, Any]:
+        if self._destroy_subscribers:
+            return self._wait_for_message_once(
+                msg_cls, node, topic, qos_profile, timeout_sec
+            )
+        return self._wait_for_message_persistent(
+            msg_cls, node, topic, qos_profile, timeout_sec
+        )
 
     def _is_topic_available(self, topic: str, timeout_sec: float) -> bool:
         ts = time.time()

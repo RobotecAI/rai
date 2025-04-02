@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import threading
 import uuid
 from typing import Any, Callable, List, Literal, Optional, Tuple, Union
@@ -19,7 +20,6 @@ from typing import Any, Callable, List, Literal, Optional, Tuple, Union
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 
-import rai_interfaces.msg
 from rai.communication import HRIConnector
 from rai.communication.ros2.api import (
     ConfigurableROS2TopicAPI,
@@ -30,6 +30,11 @@ from rai.communication.ros2.api import (
 from rai.communication.ros2.connectors.action_mixin import ROS2ActionMixin
 from rai.communication.ros2.connectors.service_mixin import ROS2ServiceMixin
 from rai.communication.ros2.messages import ROS2HRIMessage
+
+try:
+    import rai_interfaces.msg
+except ImportError:
+    logging.warning("rai_interfaces is not installed, ROS 2 HRIMessage will not work.")
 
 
 class ROS2HRIConnector(ROS2ActionMixin, ROS2ServiceMixin, HRIConnector[ROS2HRIMessage]):
