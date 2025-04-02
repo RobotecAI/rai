@@ -17,7 +17,7 @@ from typing import Sequence
 from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
     ToolCallingAgentTask,
 )
-from rai_bench.tool_calling_agent_bench.ros2_agent_tasks.custom_interfaces_tasks import (
+from rai_bench.tool_calling_agent_bench.ros2_agent_tasks import (
     CallGetLogDigestTask,
     CallGroundedSAMSegmentTask,
     CallGroundingDinoClassifyTask,
