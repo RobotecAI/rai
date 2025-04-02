@@ -14,7 +14,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, List, Literal
+from typing import Any, Dict, List, Literal, Sequence
 
 from langchain_core.messages import AIMessage, ToolCall
 from langchain_core.runnables.config import DEFAULT_RECURSION_LIMIT
@@ -274,3 +274,319 @@ class ROS2ToolCallingAgentTask(ToolCallingAgentTask, ABC):
         ):
             return False
         return True
+
+    def _is_ai_message_requesting_get_ros2_services_and_types(
+        self, ai_message: AIMessage
+    ) -> bool:
+        """Helper method to check if the given AIMessage is calling the exactly one tool that gets ROS2 service names and types correctly.
+
+        Parameters
+        ----------
+        ai_message : AIMessage
+            The AIMessage to check
+
+        Returns
+        -------
+        bool
+            True if the ai_message is requesting get_ros2_service_names_and_types correctly, False otherwise
+        """
+        if not self._check_tool_calls_num_in_ai_message(ai_message, expected_num=1):
+            return False
+
+        tool_call: ToolCall = ai_message.tool_calls[0]
+        if not self._check_tool_call(
+            tool_call=tool_call,
+            expected_name="get_ros2_services_names_and_types",
+            expected_args={},
+        ):
+            return False
+        return True
+
+    def _is_ai_message_requesting_get_ros2_actions_and_types(
+        self, ai_message: AIMessage
+    ) -> bool:
+        """Helper method to check if the given AIMessage is calling the exactly one tool that gets ROS2 actions names and types correctly.
+
+        Parameters
+        ----------
+        ai_message : AIMessage
+            The AIMessage to check
+
+        Returns
+        -------
+        bool
+            True if the ai_message is requesting get_ros2_actions_names_and_types correctly, False otherwise
+        """
+        if not self._check_tool_calls_num_in_ai_message(ai_message, expected_num=1):
+            return False
+
+        tool_call: ToolCall = ai_message.tool_calls[0]
+        if not self._check_tool_call(
+            tool_call=tool_call,
+            expected_name="get_ros2_actions_names_and_types",
+            expected_args={},
+        ):
+            return False
+        return True
+
+
+class CustomInterfacesTopicTask(ROS2ToolCallingAgentTask, ABC):
+    TOPICS_AND_TYPES: Dict[str, str] = {
+        # sample topics
+        "/attached_collision_object": "moveit_msgs/msg/AttachedCollisionObject",
+        "/camera_image_color": "sensor_msgs/msg/Image",
+        "/camera_image_depth": "sensor_msgs/msg/Image",
+        "/clock": "rosgraph_msgs/msg/Clock",
+        "/collision_object": "moveit_msgs/msg/CollisionObject",
+        "/color_camera_info": "sensor_msgs/msg/CameraInfo",
+        "/color_camera_info5": "sensor_msgs/msg/CameraInfo",
+        "/depth_camera_info5": "sensor_msgs/msg/CameraInfo",
+        "/depth_image5": "sensor_msgs/msg/Image",
+        # custom topics
+        "/to_human": "rai_interfaces/msg/HRIMessage",
+        "/send_audio": "rai_interfaces/msg/AudioMessage",
+        "/send_detections": "rai_interfaces/msg/RAIDetectionArray",
+    }
+    topic_strings = [
+        f"topic: {topic}\ntype: {msg_type}\n"
+        for topic, msg_type in TOPICS_AND_TYPES.items()
+    ]
+
+    def __init__(self, logger: loggers_type | None = None) -> None:
+        super().__init__(logger=logger)
+
+        # self.expected_message_type = TOPICS_AND_TYPES[self.expected_topic]
+
+    # def get_system_prompt(self) -> str:
+    #     return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
+
+    @property
+    @abstractmethod
+    def expected_topic(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def expected_message(self) -> Dict[str, Any]:
+        pass
+
+    @property
+    def expected_message_type(self) -> str:
+        return self.TOPICS_AND_TYPES[self.expected_topic]
+
+    def verify_tool_calls(self, response: dict[str, Any]):
+        """It is expected that the agent will request:
+        1. The tool that retrieves the topics names and types to recognize what type of message to_human topic has
+        2. The tool that retrieves interfaces to check HRIMessage type
+        3. The tool to publish message with proper topic, message type and content
+
+        Parameters
+        ----------
+        response : dict[str, Any]
+            The response from the agent
+        """
+        messages = response["messages"]
+        ai_messages: Sequence[AIMessage] = [
+            message for message in messages if isinstance(message, AIMessage)
+        ]
+        self.logger.debug(ai_messages)
+        if len(ai_messages) != 4:
+            self.log_error(
+                msg=f"Expected exactly 4 AI messages, but got {len(ai_messages)}."
+            )
+        if ai_messages:
+            if not self._is_ai_message_requesting_get_ros2_topics_and_types(
+                ai_messages[0]
+            ):
+                self.log_error(
+                    msg="First AI message did not request ROS2 topics and types correctly."
+                )
+        if len(ai_messages) > 1:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
+                self._check_tool_call(
+                    tool_call=ai_messages[1].tool_calls[0],
+                    expected_name="get_ros2_message_interface",
+                    expected_args={"msg_type": self.expected_message_type},
+                )
+
+        if len(ai_messages) > 2:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[2], expected_num=1):
+                self._check_tool_call(
+                    tool_call=ai_messages[2].tool_calls[0],
+                    expected_name="publish_ros2_message",
+                    expected_args={
+                        "topic": self.expected_topic,
+                        "message": self.expected_message,
+                        "message_type": self.expected_message_type,
+                    },
+                )
+        if not self.result.errors:
+            self.result.success = True
+
+
+class CustomInterfacesServiceTask(ROS2ToolCallingAgentTask):
+    SERVICES_AND_TYPES = {
+        # sample interfaces
+        "/load_map": "moveit_msgs/srv/LoadMap",
+        "/query_planner_interface": "moveit_msgs/srv/QueryPlannerInterfaces",
+        # custom interfaces
+        "/manipulator_move_to": "rai_interfaces/srv/ManipulatorMoveTo",
+        "/grounded_sam_segment": "rai_interfaces/srv/RAIGroundedSam",
+        "/grounding_dino_classify": "rai_interfaces/srv/RAIGroundingDino",
+        "/get_log_digest": "rai_interfaces/srv/StringList",
+        "/rai_whoami_documentation_service": "rai_interfaces/srv/VectorStoreRetrieval",
+        "rai/whatisee/get": "rai_interfaces/srv/WhatISee",
+    }
+    service_strings = [
+        f"service: {service}\ntype: {msg_type}\n"
+        for service, msg_type in SERVICES_AND_TYPES.items()
+    ]
+
+    def __init__(self, logger: loggers_type | None = None) -> None:
+        super().__init__(logger=logger)
+
+    @property
+    @abstractmethod
+    def expected_service(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def expected_message(self) -> Dict[str, Any]:
+        pass
+
+    @property
+    def expected_service_type(self) -> str:
+        return self.SERVICES_AND_TYPES[self.expected_service]
+
+    def verify_tool_calls(self, response: dict[str, Any]):
+        """It is expected that the agent will request:
+        1. The tool that retrieves the topics names and types to recognize what type of message to_human topic has
+        2. The tool that retrieves interfaces to check HRIMessage type
+        3. The tool to publish message with proper topic, message type and content
+
+        Parameters
+        ----------
+        response : dict[str, Any]
+            The response from the agent
+        """
+        messages = response["messages"]
+        ai_messages: Sequence[AIMessage] = [
+            message for message in messages if isinstance(message, AIMessage)
+        ]
+        self.logger.debug(ai_messages)
+        if len(ai_messages) != 4:
+            self.log_error(
+                msg=f"Expected exactly 4 AI messages, but got {len(ai_messages)}."
+            )
+        if ai_messages:
+            if not self._is_ai_message_requesting_get_ros2_services_and_types(
+                ai_messages[0]
+            ):
+                self.log_error(
+                    msg="First AI message did not request ROS2 topics and types correctly."
+                )
+        if len(ai_messages) > 1:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
+                self._check_tool_call(
+                    tool_call=ai_messages[1].tool_calls[0],
+                    expected_name="get_ros2_message_interface",
+                    expected_args={"msg_type": self.expected_service_type},
+                )
+
+        if len(ai_messages) > 2:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[2], expected_num=1):
+                self._check_tool_call(
+                    tool_call=ai_messages[2].tool_calls[0],
+                    expected_name="call_ros2_service",
+                    expected_args={
+                        "topic": self.expected_service,
+                        "message": self.expected_message,
+                        "message_type": self.expected_service_type,
+                    },
+                )
+        if not self.result.errors:
+            self.result.success = True
+
+
+class CustomInterfacesActionTask(ROS2ToolCallingAgentTask):
+    ACTIONS_AND_TYPES = {
+        # custom actions
+        "/perform_task": "rai_interfaces/action/Task",
+        # some sample actions
+        # "/execute_trajectory": "moveit_msgs/action/ExecuteTrajectory",
+        # "/move_action": "moveit_msgs/action/MoveGroup",
+        # "/follow_joint_trajectory": "control_msgs/action/FollowJointTrajectory",
+        # "/gripper_cmd": "control_msgs/action/GripperCommand",
+    }
+
+    action_strings = [
+        f"action: {action}\ntype: {msg_type}\n"
+        for action, msg_type in ACTIONS_AND_TYPES.items()
+    ]
+
+    def __init__(self, logger: loggers_type | None = None) -> None:
+        super().__init__(logger=logger)
+
+    @property
+    @abstractmethod
+    def expected_action(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def expected_message(self) -> Dict[str, Any]:
+        pass
+
+    @property
+    def expected_action_type(self) -> str:
+        return self.ACTIONS_AND_TYPES[self.expected_action]
+
+    def verify_tool_calls(self, response: dict[str, Any]):
+        """It is expected that the agent will request:
+        1. The tool that retrieves the topics names and types to recognize what type of message to_human topic has
+        2. The tool that retrieves interfaces to check HRIMessage type
+        3. The tool to publish message with proper topic, message type and content
+
+        Parameters
+        ----------
+        response : dict[str, Any]
+            The response from the agent
+        """
+        messages = response["messages"]
+        ai_messages: Sequence[AIMessage] = [
+            message for message in messages if isinstance(message, AIMessage)
+        ]
+        self.logger.debug(ai_messages)
+        if len(ai_messages) != 4:
+            self.log_error(
+                msg=f"Expected exactly 4 AI messages, but got {len(ai_messages)}."
+            )
+        if ai_messages:
+            if not self._is_ai_message_requesting_get_ros2_actions_and_types(
+                ai_messages[0]
+            ):
+                self.log_error(
+                    msg="First AI message did not request ROS2 topics and types correctly."
+                )
+        if len(ai_messages) > 1:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
+                self._check_tool_call(
+                    tool_call=ai_messages[1].tool_calls[0],
+                    expected_name="get_ros2_message_interface",
+                    expected_args={"msg_type": self.expected_action_type},
+                )
+
+        if len(ai_messages) > 2:
+            if self._check_tool_calls_num_in_ai_message(ai_messages[2], expected_num=1):
+                self._check_tool_call(
+                    tool_call=ai_messages[2].tool_calls[0],
+                    expected_name="start_ros2_action",
+                    expected_args={
+                        "topic": self.expected_action,
+                        "message": self.expected_message,
+                        "message_type": self.expected_action_type,
+                    },
+                )
+        if not self.result.errors:
+            self.result.success = True

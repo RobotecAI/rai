@@ -1,21 +1,15 @@
 import logging
-from abc import abstractmethod
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, List
 
-from langchain_core.messages import AIMessage
 from langchain_core.tools import BaseTool
 
 from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
-    ROS2ToolCallingAgentTask,
+    CustomInterfacesTopicTask,
 )
 from rai_bench.tool_calling_agent_bench.mocked_tools import (
-    MockCallROS2ServiceTool,
-    MockGetROS2ActionsNamesAndTypesTool,
     MockGetROS2MessageInterfaceTool,
-    MockGetROS2ServicesNamesAndTypesTool,
     MockGetROS2TopicsNamesAndTypesTool,
     MockPublishROS2MessageTool,
-    MockStartROS2ActionTool,
 )
 
 loggers_type = logging.Logger
@@ -849,46 +843,6 @@ PlannerInterfaceDescription[] planner_interfaces
 }
 
 
-TOPICS_AND_TYPES: Dict[str, str] = {
-    # sample topics
-    "/attached_collision_object": "moveit_msgs/msg/AttachedCollisionObject",
-    "/camera_image_color": "sensor_msgs/msg/Image",
-    "/camera_image_depth": "sensor_msgs/msg/Image",
-    "/clock": "rosgraph_msgs/msg/Clock",
-    "/collision_object": "moveit_msgs/msg/CollisionObject",
-    "/color_camera_info": "sensor_msgs/msg/CameraInfo",
-    "/color_camera_info5": "sensor_msgs/msg/CameraInfo",
-    "/depth_camera_info5": "sensor_msgs/msg/CameraInfo",
-    "/depth_image5": "sensor_msgs/msg/Image",
-    # custom topics
-    "/to_human": "rai_interfaces/msg/HRIMessage",
-    "/send_audio": "rai_interfaces/msg/AudioMessage",
-    "/send_detections": "rai_interfaces/msg/RAIDetectionArray",
-}
-
-SERVICES_AND_TYPES = {
-    # sample interfaces
-    "/load_map": "moveit_msgs/srv/LoadMap",
-    "/query_planner_interface": "moveit_msgs/srv/QueryPlannerInterfaces",
-    # custom interfaces
-    "/manipulator_move_to": "rai_interfaces/srv/ManipulatorMoveTo",
-    "/grounded_sam_segment": "rai_interfaces/srv/RAIGroundedSam",
-    "/grounding_dino_classify": "rai_interfaces/srv/RAIGroundingDino",
-    "/get_log_digest": "rai_interfaces/srv/StringList",
-    "/rai_whoami_documentation_service": "rai_interfaces/srv/VectorStoreRetrieval",
-    "rai/whatisee/get": "rai_interfaces/srv/WhatISee",
-}
-
-ACTIONS_AND_TYPES = {
-    # custom actions
-    "/perform_task": "rai_interfaces/action/Task",
-    # some sample actions
-    # "/execute_trajectory": "moveit_msgs/action/ExecuteTrajectory",
-    # "/move_action": "moveit_msgs/action/MoveGroup",
-    # "/follow_joint_trajectory": "control_msgs/action/FollowJointTrajectory",
-    # "/gripper_cmd": "control_msgs/action/GripperCommand",
-}
-
 # only custom interfaces will be tested, so there no need for defualts for all of interfaces
 DEFAULT_MESSAGES: Dict[str, Dict[str, Any]] = {
     "rai_interfaces/msg/HRIMessage": {
@@ -912,6 +866,33 @@ DEFAULT_MESSAGES: Dict[str, Dict[str, Any]] = {
         "sample_rate": 0,
         "channels": 0,
     },
+    "rai_interfaces/msg/RAIDetectionArray": {
+        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+        "detections": [
+            {
+                "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+                "results": [
+                    {
+                        "hypothesis": {"class_id": "", "score": 0.0},
+                        "pose": {
+                            "pose": {
+                                "position": {"x": 0.0, "y": 0.0, "z": 0.0},
+                                "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 0.0},
+                            },
+                            "covariance": {},
+                        },
+                    }
+                ],
+                "bbox": {
+                    "center": {"position": {"x": 0.0, "y": 0.0}, "theta": 0.0},
+                    "size_x": 0.0,
+                    "size_y": 0.0,
+                },
+                "id": "",
+            }
+        ],
+        "detection_classes": [],
+    },
     "rai_interfaces/srv/ManipulatorMoveTo": {
         "request": {
             "initial_gripper_state": False,
@@ -926,124 +907,165 @@ DEFAULT_MESSAGES: Dict[str, Dict[str, Any]] = {
         },
         "response": {"success": False},
     },
-    # "sensor_msgs/msg/CameraInfo":{
-    #   "header": {
-    #     "stamp": {
-    #       "sec": 0,
-    #       "nanosec": 0
-    #     },
-    #     "frame_id": ""
-    #   },
-    #   "height": 0,
-    #   "width": 0,
-    #   "distortion_model": "",
-    #   "d": [],
-    #   "k": [],
-    #   "r": [],
-    #   "p": [],
-    #   "binning_x": 0,
-    #   "binning_y": 0,
-    #   "roi": {
-    #     "x_offset": 0,
-    #     "y_offset": 0,
-    #     "height": 0,
-    #     "width": 0,
-    #     "do_rectify": False
-    #   }
-    # }
+    "rai_interfaces/srv/RAIGroundedSam": {
+        "request": {
+            "detections": {
+                "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+                "detections": [
+                    {
+                        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+                        "results": [
+                            {
+                                "hypothesis": {"class_id": "", "score": 0.0},
+                                "pose": {
+                                    "pose": {
+                                        "position": {"x": 0.0, "y": 0.0, "z": 0.0},
+                                        "orientation": {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 0.0,
+                                            "w": 0.0,
+                                        },
+                                    },
+                                    "covariance": {},
+                                },
+                            }
+                        ],
+                        "bbox": {
+                            "center": {"position": {"x": 0.0, "y": 0.0}, "theta": 0.0},
+                            "size_x": 0.0,
+                            "size_y": 0.0,
+                        },
+                        "id": "",
+                    }
+                ],
+                "detection_classes": [],
+            },
+            "source_img": {
+                "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+                "height": 0,
+                "width": 0,
+                "encoding": "",
+                "is_bigendian": 0,
+                "step": 0,
+                "data": [],
+            },
+        },
+        "response": {
+            "masks": [
+                {
+                    "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+                    "height": 0,
+                    "width": 0,
+                    "encoding": "",
+                    "is_bigendian": 0,
+                    "step": 0,
+                    "data": [],
+                }
+            ]
+        },
+    },
+    "rai_interfaces/srv/RAIGroundingDino": {
+        "request": {
+            "classes": "",
+            "box_threshold": 0.0,
+            "text_threshold": 0.0,
+            "source_img": {
+                "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+                "height": 0,
+                "width": 0,
+                "encoding": "",
+                "is_bigendian": 0,
+                "step": 0,
+                "data": [],
+            },
+        },
+        "response": {
+            "detections": {
+                "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+                "detections": [
+                    {
+                        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+                        "results": [
+                            {
+                                "hypothesis": {"class_id": "", "score": 0.0},
+                                "pose": {
+                                    "pose": {
+                                        "position": {"x": 0.0, "y": 0.0, "z": 0.0},
+                                        "orientation": {
+                                            "x": 0.0,
+                                            "y": 0.0,
+                                            "z": 0.0,
+                                            "w": 0.0,
+                                        },
+                                    },
+                                    "covariance": {},
+                                },
+                            }
+                        ],
+                        "bbox": {
+                            "center": {"position": {"x": 0.0, "y": 0.0}, "theta": 0.0},
+                            "size_x": 0.0,
+                            "size_y": 0.0,
+                        },
+                        "id": "",
+                    }
+                ],
+                "detection_classes": [],
+            }
+        },
+    },
+    "rai_interfaces/srv/StringList": {
+        "request": {},
+        "response": {"success": False, "string_list": []},
+    },
+    "rai_interfaces/srv/VectorStoreRetrieval": {
+        "request": {"query": ""},
+        "response": {"success": False, "message": "", "documents": [], "scores": []},
+    },
+    "rai_interfaces/srv/WhatISee": {
+        "request": {},
+        "response": {
+            "observations": [],
+            "perception_source": "",
+            "image": {
+                "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": ""},
+                "height": 0,
+                "width": 0,
+                "encoding": "",
+                "is_bigendian": 0,
+                "step": 0,
+                "data": [],
+            },
+            "pose": {
+                "position": {"x": 0.0, "y": 0.0, "z": 0.0},
+                "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 0.0},
+            },
+        },
+    },
+    "rai_interfaces/action/Task": {
+        "goal": {"task": "", "description": "", "priority": ""},
+        "result": {"success": False, "report": ""},
+        "feedback": {"current_status": ""},
+    },
 }
 
 
-class CustomInterfacesTask(ROS2ToolCallingAgentTask):
-    topic_strings = [
-        f"topic: {topic}\ntype: {msg_type}\n"
-        for topic, msg_type in TOPICS_AND_TYPES.items()
-    ]
-    service_strings = [
-        f"service: {service}\ntype: {msg_type}\n"
-        for service, msg_type in SERVICES_AND_TYPES.items()
-    ]
-    action_strings = [
-        f"action: {action}\ntype: {msg_type}\n"
-        for action, msg_type in SERVICES_AND_TYPES.items()
-    ]
-
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger=logger)
-        self.expected_message_type = TOPICS_AND_TYPES[self.expected_topic]
-        self.expected_message = DEFAULT_MESSAGES[self.expected_message_type]
-
-    def get_system_prompt(self) -> str:
-        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
-
-    @property
-    @abstractmethod
-    def expected_topic(self) -> str:
-        pass
-
-    def verify_tool_calls(self, response: dict[str, Any]):
-        """It is expected that the agent will request:
-        1. The tool that retrieves the ROS2 topics names and types to recognize what type of message to_human topic has
-        2. The tool that retrieves interfaces to check HRIMessage type
-        3. The tool to publish message with proper topic, message type and content
-
-        Parameters
-        ----------
-        response : dict[str, Any]
-            The response from the agent
-        """
-        messages = response["messages"]
-        ai_messages: Sequence[AIMessage] = [
-            message for message in messages if isinstance(message, AIMessage)
-        ]
-        self.logger.debug(ai_messages)
-        if len(ai_messages) != 4:
-            self.log_error(
-                msg=f"Expected exactly 4 AI messages, but got {len(ai_messages)}."
-            )
-        if ai_messages:
-            if not self._is_ai_message_requesting_get_ros2_topics_and_types(
-                ai_messages[0]
-            ):
-                self.log_error(
-                    msg="First AI message did not request ROS2 topics and types correctly."
-                )
-        if len(ai_messages) > 1:
-            if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
-                self._check_tool_call(
-                    tool_call=ai_messages[1].tool_calls[0],
-                    expected_name="get_ros2_message_interface",
-                    expected_args={"msg_type": self.expected_message_type},
-                )
-
-        if len(ai_messages) > 2:
-            if self._check_tool_calls_num_in_ai_message(ai_messages[2], expected_num=1):
-                self._check_tool_call(
-                    tool_call=ai_messages[2].tool_calls[0],
-                    expected_name="publish_ros2_message",
-                    expected_args={
-                        "topic": self.expected_topic,
-                        "message": self.expected_message,
-                        "message_type": self.expected_message_type,
-                    },
-                )
-        if not self.result.errors:
-            self.result.success = True
-
-
-class PublishROS2HRIMessageTask(CustomInterfacesTask):
+class PublishROS2HRIMessageTask(CustomInterfacesTopicTask):
     complexity = "easy"
+    expected_text = "Hello!"
 
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
+
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=self.topic_strings
             ),
             MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
             MockPublishROS2MessageTool(
-                available_topics=list(TOPICS_AND_TYPES.keys()),
-                available_message_types=list(TOPICS_AND_TYPES.values()),
+                available_topics=list(self.TOPICS_AND_TYPES.keys()),
+                available_message_types=list(self.TOPICS_AND_TYPES.values()),
             ),
         ]
 
@@ -1051,20 +1073,29 @@ class PublishROS2HRIMessageTask(CustomInterfacesTask):
     def expected_topic(self) -> str:
         return "/to_human"
 
+    @property
+    def expected_message(self) -> Dict[str, Any]:
+        expected = DEFAULT_MESSAGES[self.expected_message_type].copy()
+        expected["text"] = self.expected_text
+        return expected
+
     def get_prompt(self) -> str:
-        return "Publish message with text value: 'Hello!' to the /to_human topic. Before publishing check the message type of this topic and it's interface."
+        return (
+            f"You need to publish a message to the topic '{self.expected_topic}' with the text value: '{self.expected_text}'.\n\n"
+            "Before publishing, follow these steps:\n"
+            "1. Use the tool to retrieve the available ROS2 topics and their message types.\n"
+            f"2. Find the message type for the topic '{self.expected_topic}'.\n"
+            "3. Use the message type to get the full message interface definition.\n"
+            f"4. Publish the message to '{self.expected_topic}' using the correct message type and interface.\n\n"
+            "Make sure all required fields are correctly filled according to the interface."
+        )
 
 
-class PublishROS2AudioMessageTask(CustomInterfacesTask):
+class PublishROS2AudioMessageTask(CustomInterfacesTopicTask):
     complexity = "easy"
-
     expected_audio = [123, 456, 789]
     expected_sample_rate = 44100
     expected_channels = 2
-
-    @property
-    def expected_topic(self) -> str:
-        return "/send_audio"
 
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
@@ -1074,20 +1105,32 @@ class PublishROS2AudioMessageTask(CustomInterfacesTask):
             ),
             MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
             MockPublishROS2MessageTool(
-                available_topics=list(TOPICS_AND_TYPES.keys()),
-                available_message_types=list(TOPICS_AND_TYPES.values()),
+                available_topics=list(self.TOPICS_AND_TYPES.keys()),
+                available_message_types=list(self.TOPICS_AND_TYPES.values()),
             ),
         ]
 
+    @property
+    def expected_topic(self) -> str:
+        return "/send_audio"
+
+    @property
+    def expected_message(self) -> Dict[str, Any]:
+        expected = DEFAULT_MESSAGES[self.expected_message_type].copy()
+        expected["audio"] = self.expected_audio
+        expected["sample_rate"] = self.expected_sample_rate
+        expected["channels"] = self.expected_channels
+        return expected
+
     def get_prompt(self) -> str:
         return (
-            "Publish message to the /send_audio topic with audio samples [123, 456, 789], "
+            f"Publish message to the {self.expected_topic} topic with audio samples [123, 456, 789], "
             "sample rate 44100, and 2 channels. Before publishing, check the message type "
             "of this topic and its interface."
         )
 
 
-class PublishROS2DetectionArrayTask(CustomInterfacesTask):
+class PublishROS2DetectionArrayTask(CustomInterfacesTopicTask):
     complexity = "easy"
 
     expected_detection_classes: List[str] = ["person", "car"]
@@ -1106,10 +1149,6 @@ class PublishROS2DetectionArrayTask(CustomInterfacesTask):
         "frame_id": "camera",
     }
 
-    @property
-    def expected_topic(self) -> str:
-        return "/send_detections"
-
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
         self.expected_tools: List[BaseTool] = [
@@ -1118,268 +1157,302 @@ class PublishROS2DetectionArrayTask(CustomInterfacesTask):
             ),
             MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
             MockPublishROS2MessageTool(
-                available_topics=list(TOPICS_AND_TYPES.keys()),
-                available_message_types=list(TOPICS_AND_TYPES.values()),
+                available_topics=list(self.TOPICS_AND_TYPES.keys()),
+                available_message_types=list(self.TOPICS_AND_TYPES.values()),
             ),
         ]
 
+    @property
+    def expected_topic(self) -> str:
+        return "/send_detections"
+
+    @property
+    def expected_message(self) -> Dict[str, Any]:
+        expected = DEFAULT_MESSAGES[self.expected_message_type].copy()
+        expected["detections"] = {
+            "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera"},
+            "results": [],
+            "bbox": {
+                "center": {"x": 320.0, "y": 240.0},
+                "size": {"x": 50.0, "y": 50.0},
+            },
+        }
+        expected["detection_classes"] = ["person", "car"]
+        return expected
+
     def get_prompt(self) -> str:
         return (
-            "Publish a detection message to the /send_detections topic. The message should have a header "
-            f"with frame_id 'camera', one detection: {self.expected_detections}, and detection classes "
+            "Publish a detection message to the /send_detections topic. The message should have a unchanged header,"
+            f"one detection: {self.expected_detections}, and detection classes "
             f"{self.expected_detection_classes}. Before publishing, check the message type of this topic "
             "and its interface."
         )
 
 
-class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesTask):
-    complexity = "easy"
+# TODO (jm) apply parent classes and expected messages to service and action tasks
+# class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesTask):
+#     complexity = "easy"
 
-    expected_initial_gripper_state = True
-    expected_final_gripper_state = False
-    expected_target_pose: Dict[str, Dict[str, Any]] = {
-        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "world"},
-        "pose": {
-            "position": {"x": 1.0, "y": 2.0, "z": 3.0},
-            "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
-        },
-    }
+#     expected_initial_gripper_state = True
+#     expected_final_gripper_state = False
+#     expected_target_pose: Dict[str, Dict[str, Any]] = {
+#         "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "world"},
+#         "pose": {
+#             "position": {"x": 1.0, "y": 2.0, "z": 3.0},
+#             "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+#         },
+#     }
 
-    @property
-    def expected_service(self) -> str:
-        return "/manipulator_move_to"
-
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
-            MockGetROS2ServicesNamesAndTypesTool(
-                mock_service_names_and_types=self.service_strings
-            ),
-            MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
-            MockCallROS2ServiceTool(
-                available_services=list(SERVICES_AND_TYPES.keys()),
-                available_service_types=list(SERVICES_AND_TYPES.values()),
-            ),
-        ]
-
-    def get_prompt(self) -> str:
-        return (
-            f"Call service {self.expected_service} with a target_pose: {self.expected_target_pose}. "
-            "Before calling the service, check the service type and its interface."
-        )
+#     def __init__(self, logger: loggers_type | None = None) -> None:
+#         super().__init__(logger=logger)
+#         self.expected_tools: List[BaseTool] = [
+#             MockGetROS2ServicesNamesAndTypesTool(
+#                 mock_service_names_and_types=self.service_strings
+#             ),
+#             MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
+#             MockCallROS2ServiceTool(
+#                 available_services=list(SERVICES_AND_TYPES.keys()),
+#                 available_service_types=list(SERVICES_AND_TYPES.values()),
+#             ),
+#         ]
 
 
-class CallGroundedSAMSegmentTask(CustomInterfacesTask):
-    complexity = "easy"
+#     @property
+#     def expected_topic(self) -> str:
+#         return "/manipulator_move_to"
 
-    expected_detections: Dict[str, Any] = {
-        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera_frame"},
-        "detections": [],
-    }
-    expected_source_img: Dict[str, Any] = {
-        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera_frame"},
-        "height": 480,
-        "width": 640,
-        "encoding": "rgb8",
-        "is_bigendian": 0,
-        "step": 1920,
-        "data": [],
-    }
+#     @property
+#     def expected_message(self) -> Dict[str, Any]:
+#         expected = DEFAULT_MESSAGES[self.expected_message_type].copy()
+#         expected["detections"] = {
+#             "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera"},
+#             "results": [],
+#             "bbox": {
+#                 "center": {"x": 320.0, "y": 240.0},
+#                 "size": {"x": 50.0, "y": 50.0},
+#             },
+#         }
+#         expected["detection_classes"] = ["person", "car"]
+#         return expected
 
-    @property
-    def expected_service(self) -> str:
-        return "/grounded_sam_segment"
-
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
-            MockGetROS2ServicesNamesAndTypesTool(
-                mock_service_names_and_types=self.service_strings
-            ),
-            MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
-            MockCallROS2ServiceTool(
-                available_services=list(SERVICES_AND_TYPES.keys()),
-                available_service_types=list(SERVICES_AND_TYPES.values()),
-            ),
-        ]
-
-    def get_prompt(self) -> str:
-        return (
-            "Call service /grounded_sam_segment with detections from frame 'camera_frame' and "
-            "an RGB image of size 640x480. Before calling, look up the service type and its message structure."
-        )
+#     def get_prompt(self) -> str:
+#         return (
+#             f"Call service {self.expected_service} with a target_pose: {self.expected_target_pose}. "
+#             "Before calling the service, check the service type and its interface."
+#         )
 
 
-class CallGroundingDinoClassifyTask(CustomInterfacesTask):
-    complexity = "easy"
+# class CallGroundedSAMSegmentTask(CustomInterfacesTask):
+#     complexity = "easy"
 
-    expected_classes = "bottle, book, chair"
-    expected_box_threshold = 0.4
-    expected_text_threshold = 0.25
-    expected_source_img: Dict[str, Any] = {
-        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera_frame"},
-        "height": 480,
-        "width": 640,
-        "encoding": "rgb8",
-        "is_bigendian": 0,
-        "step": 1920,
-        "data": [],
-    }
+#     expected_detections: Dict[str, Any] = {
+#         "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera_frame"},
+#         "detections": [],
+#     }
+#     expected_source_img: Dict[str, Any] = {
+#         "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera_frame"},
+#         "height": 480,
+#         "width": 640,
+#         "encoding": "rgb8",
+#         "is_bigendian": 0,
+#         "step": 1920,
+#         "data": [],
+#     }
 
-    @property
-    def expected_service(self) -> str:
-        return "/grounding_dino_classify"
+#     @property
+#     def expected_service(self) -> str:
+#         return "/grounded_sam_segment"
 
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
-            MockGetROS2ServicesNamesAndTypesTool(
-                mock_service_names_and_types=self.service_strings
-            ),
-            MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
-            MockCallROS2ServiceTool(
-                available_services=list(SERVICES_AND_TYPES.keys()),
-                available_service_types=list(SERVICES_AND_TYPES.values()),
-            ),
-        ]
+#     def __init__(self, logger: loggers_type | None = None) -> None:
+#         super().__init__(logger=logger)
+#         self.expected_tools: List[BaseTool] = [
+#             MockGetROS2ServicesNamesAndTypesTool(
+#                 mock_service_names_and_types=self.service_strings
+#             ),
+#             MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
+#             MockCallROS2ServiceTool(
+#                 available_services=list(SERVICES_AND_TYPES.keys()),
+#                 available_service_types=list(SERVICES_AND_TYPES.values()),
+#             ),
+#         ]
 
-    def get_prompt(self) -> str:
-        return (
-            f"Call the service /grounding_dino_classify with the following arguments: "
-            f"classes='{self.expected_classes}', box_threshold={self.expected_box_threshold}, "
-            f"text_threshold={self.expected_text_threshold}, and a 640x480 RGB image from frame 'camera_frame'. "
-            "Before calling, look up the service type and its message structure."
-        )
-
-
-class CallGetLogDigestTask(CustomInterfacesTask):
-    complexity = "easy"
-
-    @property
-    def expected_service(self) -> str:
-        return "/get_log_digest"
-
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
-            MockGetROS2ServicesNamesAndTypesTool(
-                mock_service_names_and_types=self.service_strings
-            ),
-            MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
-            MockCallROS2ServiceTool(
-                available_services=list(SERVICES_AND_TYPES.keys()),
-                available_service_types=list(SERVICES_AND_TYPES.values()),
-            ),
-        ]
-
-    def get_prompt(self) -> str:
-        return (
-            "Call the service /get_log_digest to retrieve a list of log strings. "
-            "Before calling, look up the service type and its message structure. "
-            "No request arguments are needed."
-        )
+#     def get_prompt(self) -> str:
+#         return (
+#             "Call service /grounded_sam_segment with detections from frame 'camera_frame' and "
+#             "an RGB image of size 640x480. Before calling, look up the service type and its message structure."
+#         )
 
 
-class CallVectorStoreRetrievalTask(CustomInterfacesTask):
-    complexity = "easy"
+# class CallGroundingDinoClassifyTask(CustomInterfacesTask):
+#     complexity = "easy"
 
-    expected_query = "What is the purpose of this robot?"
+#     expected_classes = "bottle, book, chair"
+#     expected_box_threshold = 0.4
+#     expected_text_threshold = 0.25
+#     expected_source_img: Dict[str, Any] = {
+#         "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera_frame"},
+#         "height": 480,
+#         "width": 640,
+#         "encoding": "rgb8",
+#         "is_bigendian": 0,
+#         "step": 1920,
+#         "data": [],
+#     }
 
-    @property
-    def expected_service(self) -> str:
-        return "/rai_whoami_documentation_service"
+#     @property
+#     def expected_service(self) -> str:
+#         return "/grounding_dino_classify"
 
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
-            MockGetROS2ServicesNamesAndTypesTool(
-                mock_service_names_and_types=self.service_strings
-            ),
-            MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
-            MockCallROS2ServiceTool(
-                available_services=list(SERVICES_AND_TYPES.keys()),
-                available_service_types=list(SERVICES_AND_TYPES.values()),
-            ),
-        ]
+#     def __init__(self, logger: loggers_type | None = None) -> None:
+#         super().__init__(logger=logger)
+#         self.expected_tools: List[BaseTool] = [
+#             MockGetROS2ServicesNamesAndTypesTool(
+#                 mock_service_names_and_types=self.service_strings
+#             ),
+#             MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
+#             MockCallROS2ServiceTool(
+#                 available_services=list(SERVICES_AND_TYPES.keys()),
+#                 available_service_types=list(SERVICES_AND_TYPES.values()),
+#             ),
+#         ]
 
-    def get_prompt(self) -> str:
-        return (
-            f"Call the service rai_whoami_documentation_service with the query: '{self.expected_query}'. "
-            "Before calling, look up the service type and its message structure."
-        )
-
-
-class CallWhatISeeTask(CustomInterfacesTask):
-    complexity = "easy"
-
-    expected_observations = ["table", "cup", "notebook"]
-    expected_perception_source = "front_camera"
-    expected_image: Dict[str, Any] = {
-        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera_frame"},
-        "height": 480,
-        "width": 640,
-        "encoding": "rgb8",
-        "is_bigendian": 0,
-        "step": 1920,
-        "data": [],
-    }
-    expected_pose = {
-        "position": {"x": 1.0, "y": 2.0, "z": 0.5},
-        "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
-    }
-
-    @property
-    def expected_service(self) -> str:
-        return "rai/whatisee/get"
-
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
-            MockGetROS2ServicesNamesAndTypesTool(
-                mock_service_names_and_types=self.service_strings
-            ),
-            MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
-            MockCallROS2ServiceTool(
-                available_services=list(SERVICES_AND_TYPES.keys()),
-                available_service_types=list(SERVICES_AND_TYPES.values()),
-            ),
-        ]
-
-    def get_prompt(self) -> str:
-        return (
-            f"Call the service rai/whatisee/get using the WhatISee interface. "
-            f"Pass in observations {self.expected_observations}, source '{self.expected_perception_source}', "
-            f"a 640x480 RGB image from 'camera_frame', and a pose at position {self.expected_pose['position']}."
-            "Before calling, look up the service type and its message structure."
-        )
+#     def get_prompt(self) -> str:
+#         return (
+#             f"Call the service /grounding_dino_classify with the following arguments: "
+#             f"classes='{self.expected_classes}', box_threshold={self.expected_box_threshold}, "
+#             f"text_threshold={self.expected_text_threshold}, and a 640x480 RGB image from frame 'camera_frame'. "
+#             "Before calling, look up the service type and its message structure."
+#         )
 
 
-class CallROS2CustomActionTask(CustomInterfacesTask):
-    complexity = "easy"
+# class CallGetLogDigestTask(CustomInterfacesTask):
+#     complexity = "easy"
 
-    expected_task = "Where are you?"
-    expected_description = ""
-    expected_priority = "10"
+#     @property
+#     def expected_service(self) -> str:
+#         return "/get_log_digest"
 
-    @property
-    def expected_action(self) -> str:
-        return "/perform_task"
+#     def __init__(self, logger: loggers_type | None = None) -> None:
+#         super().__init__(logger=logger)
+#         self.expected_tools: List[BaseTool] = [
+#             MockGetROS2ServicesNamesAndTypesTool(
+#                 mock_service_names_and_types=self.service_strings
+#             ),
+#             MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
+#             MockCallROS2ServiceTool(
+#                 available_services=list(SERVICES_AND_TYPES.keys()),
+#                 available_service_types=list(SERVICES_AND_TYPES.values()),
+#             ),
+#         ]
 
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
-            MockGetROS2ActionsNamesAndTypesTool(
-                mock_actions_names_and_types=self.action_strings
-            ),
-            MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
-            MockStartROS2ActionTool(
-                available_actions=list(ACTIONS_AND_TYPES.keys()),
-                available_action_types=list(ACTIONS_AND_TYPES.values()),
-            ),
-        ]
+#     def get_prompt(self) -> str:
+#         return (
+#             "Call the service /get_log_digest to retrieve a list of log strings. "
+#             "Before calling, look up the service type and its message structure. "
+#             "No request arguments are needed."
+#         )
 
-    def get_prompt(self) -> str:
-        return (
-            "Call action /perform_task with the provided goal values: "
-            "{priority: 10, description: '', task: 'Where are you?'}"
-        )
+
+# class CallVectorStoreRetrievalTask(CustomInterfacesTask):
+#     complexity = "easy"
+
+#     expected_query = "What is the purpose of this robot?"
+
+#     @property
+#     def expected_service(self) -> str:
+#         return "/rai_whoami_documentation_service"
+
+#     def __init__(self, logger: loggers_type | None = None) -> None:
+#         super().__init__(logger=logger)
+#         self.expected_tools: List[BaseTool] = [
+#             MockGetROS2ServicesNamesAndTypesTool(
+#                 mock_service_names_and_types=self.service_strings
+#             ),
+#             MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
+#             MockCallROS2ServiceTool(
+#                 available_services=list(SERVICES_AND_TYPES.keys()),
+#                 available_service_types=list(SERVICES_AND_TYPES.values()),
+#             ),
+#         ]
+
+#     def get_prompt(self) -> str:
+#         return (
+#             f"Call the service rai_whoami_documentation_service with the query: '{self.expected_query}'. "
+#             "Before calling, look up the service type and its message structure."
+#         )
+
+
+# class CallWhatISeeTask(CustomInterfacesTask):
+#     complexity = "easy"
+
+#     expected_observations = ["table", "cup", "notebook"]
+#     expected_perception_source = "front_camera"
+#     expected_image: Dict[str, Any] = {
+#         "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera_frame"},
+#         "height": 480,
+#         "width": 640,
+#         "encoding": "rgb8",
+#         "is_bigendian": 0,
+#         "step": 1920,
+#         "data": [],
+#     }
+#     expected_pose = {
+#         "position": {"x": 1.0, "y": 2.0, "z": 0.5},
+#         "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+#     }
+
+#     @property
+#     def expected_service(self) -> str:
+#         return "rai/whatisee/get"
+
+#     def __init__(self, logger: loggers_type | None = None) -> None:
+#         super().__init__(logger=logger)
+#         self.expected_tools: List[BaseTool] = [
+#             MockGetROS2ServicesNamesAndTypesTool(
+#                 mock_service_names_and_types=self.service_strings
+#             ),
+#             MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
+#             MockCallROS2ServiceTool(
+#                 available_services=list(SERVICES_AND_TYPES.keys()),
+#                 available_service_types=list(SERVICES_AND_TYPES.values()),
+#             ),
+#         ]
+
+#     def get_prompt(self) -> str:
+#         return (
+#             f"Call the service rai/whatisee/get using the WhatISee interface. "
+#             f"Pass in observations {self.expected_observations}, source '{self.expected_perception_source}', "
+#             f"a 640x480 RGB image from 'camera_frame', and a pose at position {self.expected_pose['position']}."
+#             "Before calling, look up the service type and its message structure."
+#         )
+
+
+# class CallROS2CustomActionTask(CustomInterfacesTask):
+#     complexity = "easy"
+
+#     expected_task = "Where are you?"
+#     expected_description = ""
+#     expected_priority = "10"
+
+#     @property
+#     def expected_action(self) -> str:
+#         return "/perform_task"
+
+#     def __init__(self, logger: loggers_type | None = None) -> None:
+#         super().__init__(logger=logger)
+#         self.expected_tools: List[BaseTool] = [
+#             MockGetROS2ActionsNamesAndTypesTool(
+#                 mock_actions_names_and_types=self.action_strings
+#             ),
+#             MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
+#             MockStartROS2ActionTool(
+#                 available_actions=list(ACTIONS_AND_TYPES.keys()),
+#                 available_action_types=list(ACTIONS_AND_TYPES.values()),
+#             ),
+#         ]
+
+#     def get_prompt(self) -> str:
+#         return (
+#             "Call action /perform_task with the provided goal values: "
+#             "{priority: 10, description: '', task: 'Where are you?'}"
+#         )
