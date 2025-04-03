@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -7,8 +7,6 @@ from rai_bench.tool_calling_agent_bench.messages.base import (
     Header,
     RegionOfInterest,
 )
-from typing import List, Optional
-from pydantic import BaseModel
 
 
 class CameraInfo(BaseModel):

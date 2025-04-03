@@ -1,11 +1,9 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 
 from rai_bench.tool_calling_agent_bench.messages.base import Pose, PoseStamped
 from rai_bench.tool_calling_agent_bench.messages.topics import Image, RAIDetectionArray
-
-from typing import List, Optional
 
 
 class ManipulatorMoveToRequest(BaseModel):

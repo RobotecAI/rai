@@ -36,8 +36,9 @@ loggers_type = logging.Logger
 
 
 class TaskResult(BaseModel):
-    task_prompt: str = Field(..., description="The task prompt.")
-    system_prompt: str = Field(..., description="The system prompt.")
+    # task_prompt: str = Field(..., description="The task prompt.")
+    # system_prompt: str = Field(..., description="The system prompt.")
+    task: str = Field(..., description="task name")
     complexity: str = Field(..., description="Complexity of the task.")
     model_name: str = Field(..., description="Name of the LLM.")
     success: bool = Field(
@@ -184,8 +185,9 @@ class ToolCallingAgentBenchmark:
             )
 
             task_result = TaskResult(
-                task_prompt=task.get_prompt(),
-                system_prompt=task.get_system_prompt(),
+                # task_prompt=task.get_prompt(),
+                # system_prompt=task.get_system_prompt(),
+                task=task.__class__.__name__,
                 complexity=task.complexity,
                 model_name=model_name,
                 success=result.success,
