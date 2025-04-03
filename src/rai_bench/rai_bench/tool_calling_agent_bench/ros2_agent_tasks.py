@@ -24,20 +24,26 @@ from langchain_core.tools import BaseTool
 from rai.tools.ros.manipulation import MoveToPointToolInput
 
 from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
-    CustomInterfacesActionTask,
     CustomInterfacesServiceTask,
     CustomInterfacesTopicTask,
     ROS2ToolCallingAgentTask,
-)
-from rai_bench.tool_calling_agent_bench.actions import (
-    ActionBaseModel,
-    NavigateToPoseAction,
-    SpinAction,
 )
 from rai_bench.tool_calling_agent_bench.messages.actions import (
     TaskFeedback,
     TaskGoal,
     TaskResult,
+)
+from rai_bench.tool_calling_agent_bench.messages.base import (
+    BoundingBox2D,
+    Detection2D,
+    Header,
+    Orientation,
+    Point2D,
+    Pose,
+    Pose2D,
+    PoseStamped,
+    Position,
+    Time,
 )
 from rai_bench.tool_calling_agent_bench.messages.services import (
     ManipulatorMoveToRequest,
@@ -56,6 +62,7 @@ from rai_bench.tool_calling_agent_bench.messages.services import (
 from rai_bench.tool_calling_agent_bench.messages.topics import (
     AudioMessage,
     HRIMessage,
+    Image,
     RAIDetectionArray,
 )
 from rai_bench.tool_calling_agent_bench.mocked_tools import (
@@ -64,12 +71,6 @@ from rai_bench.tool_calling_agent_bench.mocked_tools import (
     MockGetROS2TopicsNamesAndTypesTool,
     MockMoveToPointTool,
     MockReceiveROS2MessageTool,
-    MockGetROS2ActionsNamesAndTypesTool,
-    MockStartROS2ActionTool,
-    MockGetROS2ActionFeedbackTool,
-    MockGetROS2ActionResultTool,
-    MockGetROS2ServicesNamesAndTypesTool,
-    MockGetROS2MessageInterfaceTool,
 )
 
 loggers_type = logging.Logger
@@ -1727,9 +1728,9 @@ class PublishROS2HRIMessageTask(CustomInterfacesTopicTask):
         return "/to_human"
 
     @property
-    def expected_message(self) -> Dict[str, Any]:
-        expected = DEFAULT_MESSAGES[self.expected_message_type].copy()
-        expected["text"] = self.expected_text
+    def expected_message(self) -> HRIMessage:
+        expected: HRIMessage = DEFAULT_MESSAGES[self.expected_message_type].copy()
+        expected.text = self.expected_text
         return expected
 
     def get_prompt(self) -> str:
@@ -1758,11 +1759,11 @@ class PublishROS2AudioMessageTask(CustomInterfacesTopicTask):
         return "/send_audio"
 
     @property
-    def expected_message(self) -> Dict[str, Any]:
-        expected = DEFAULT_MESSAGES[self.expected_message_type].copy()
-        expected["audio"] = self.expected_audio
-        expected["sample_rate"] = self.expected_sample_rate
-        expected["channels"] = self.expected_channels
+    def expected_message(self) -> AudioMessage:
+        expected: AudioMessage = DEFAULT_MESSAGES[self.expected_message_type].copy()
+        expected.audio = self.expected_audio
+        expected.sample_rate = self.expected_sample_rate
+        expected.channels = self.expected_channels
         return expected
 
     def get_prompt(self) -> str:
@@ -1777,20 +1778,15 @@ class PublishROS2DetectionArrayTask(CustomInterfacesTopicTask):
     complexity = "easy"
 
     expected_detection_classes: List[str] = ["person", "car"]
-    expected_detections: List[Any] = [
-        {
-            "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera"},
-            "results": [],
-            "bbox": {
-                "center": {"x": 320.0, "y": 240.0},
-                "size": {"x": 50.0, "y": 50.0},
-            },
-        }
+    expected_detections: List[Detection2D] = [
+        Detection2D(
+            bbox=BoundingBox2D(
+                center=Pose2D(position=Point2D(x=320.0, y=240.0), theta=0.0),
+                size_x=50.0,
+                size_y=50.0,
+            ),
+        )
     ]
-    expected_header: Dict[str, Any] = {
-        "stamp": {"sec": 0, "nanosec": 0},
-        "frame_id": "camera",
-    }
 
     def get_system_prompt(self) -> str:
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
@@ -1800,23 +1796,16 @@ class PublishROS2DetectionArrayTask(CustomInterfacesTopicTask):
         return "/send_detections"
 
     @property
-    def expected_message(self) -> Dict[str, Any]:
-        expected = DEFAULT_MESSAGES[self.expected_message_type].copy()
-        expected["detections"] = {
-            "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera"},
-            "results": [],
-            "bbox": {
-                "center": {"x": 320.0, "y": 240.0},
-                "size": {"x": 50.0, "y": 50.0},
-            },
-        }
-        expected["detection_classes"] = ["person", "car"]
-        return expected
+    def expected_message(self) -> RAIDetectionArray:
+        return RAIDetectionArray(
+            detections=self.expected_detections,
+            detection_classes=self.expected_detection_classes,
+        )
 
     def get_prompt(self) -> str:
         return (
             "Publish a detection message to the /send_detections topic. The message should have a unchanged header,"
-            f"one detection: {self.expected_detections}, and detection classes "
+            f"one detection: {self.expected_detections[0].model_dump()}, and detection classes "
             f"{self.expected_detection_classes}. Before publishing, check the message type of this topic "
             "and its interface."
         )
@@ -1826,15 +1815,15 @@ class PublishROS2DetectionArrayTask(CustomInterfacesTopicTask):
 class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
     complexity = "easy"
 
-    expected_initial_gripper_state = True
-    expected_final_gripper_state = False
-    expected_target_pose: Dict[str, Dict[str, Any]] = {
-        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "world"},
-        "pose": {
-            "position": {"x": 1.0, "y": 2.0, "z": 3.0},
-            "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
-        },
-    }
+    expected_initial_gripper_state: bool = True
+    expected_final_gripper_state: bool = False
+
+    expected_target_pose: PoseStamped = PoseStamped(
+        pose=Pose(
+            position=Position(x=1.0, y=2.0, z=3.0),
+            orientation=Orientation(x=0.0, y=0.0, z=0.0, w=1.0),
+        )
+    )
 
     def get_system_prompt(self) -> str:
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
@@ -1844,42 +1833,34 @@ class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
         return "/manipulator_move_to"
 
     @property
-    def expected_message(self) -> Dict[str, Any]:
-        expected = DEFAULT_MESSAGES[self.expected_service_type].copy()
-        expected["detections"] = {
-            "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera"},
-            "results": [],
-            "bbox": {
-                "center": {"x": 320.0, "y": 240.0},
-                "size": {"x": 50.0, "y": 50.0},
-            },
-        }
-        expected["detection_classes"] = ["person", "car"]
-        return expected
+    def expected_message(self) -> ManipulatorMoveToRequest:
+        return ManipulatorMoveToRequest(
+            target_pose=self.expected_target_pose,
+            initial_gripper_state=self.expected_initial_gripper_state,
+            final_gripper_state=self.expected_final_gripper_state,
+        )
 
     def get_prompt(self) -> str:
         return (
-            f"Call service {self.expected_service} with a target_pose: {self.expected_target_pose}. "
-            "Before calling the service, check the service type and its interface."
+            f"Call service {self.expected_service} with a target_pose: "
+            f"{self.expected_target_pose.model_dump()}. Before calling the service, "
+            "check the service type and its interface."
         )
 
 
 class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
     complexity = "easy"
 
-    expected_detections: Dict[str, Any] = {
-        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera_frame"},
-        "detections": [],
-    }
-    expected_source_img: Dict[str, Any] = {
-        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera_frame"},
-        "height": 480,
-        "width": 640,
-        "encoding": "rgb8",
-        "is_bigendian": 0,
-        "step": 1920,
-        "data": [],
-    }
+    expected_detections: RAIDetectionArray = RAIDetectionArray(
+        header=Header(stamp=Time(sec=0, nanosec=0), frame_id="camera_frame"),
+        detections=[],
+    )
+
+    expected_source_img: Image = Image(
+        header=Header(frame_id="camera_frame"),
+        height=480,
+        width=640,
+    )
 
     def get_system_prompt(self) -> str:
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
@@ -1889,21 +1870,21 @@ class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
         return "/grounded_sam_segment"
 
     @property
-    def expected_message(self) -> Dict[str, Any]:
-        expected = DEFAULT_MESSAGES[self.expected_service_type].copy()
-        expected["detections"] = self.expected_detections
-        expected["source_img"] = self.expected_source_img
-        return expected
+    def expected_message(self) -> RAIGroundedSamRequest:
+        return RAIGroundedSamRequest(
+            detections=self.expected_detections,
+            source_img=self.expected_source_img,
+        )
 
     def get_prompt(self) -> str:
         return (
-            "Call the service /grounded_sam_segment using the RAIGroundedSam interface.\n"
+            f"Call the service {self.expected_service} using the RAIGroundedSam interface.\n"
             "Steps to follow:\n"
             "1. Look up the available ROS2 services and their types.\n"
             "2. Retrieve the message interface for the /grounded_sam_segment service.\n"
             "3. Use the interface to construct the request message with:\n"
-            "   - detections from 'camera_frame'\n"
-            "   - an RGB image of size 640x480\n"
+            "   - detections from 'camera_frame', but leave detections field empty\n"
+            "   - an image of size 640x480 from 'camera_frame', but leave other fields empty\n"
             "4. Call the service with the populated message."
         )
 
@@ -1911,18 +1892,15 @@ class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
 class CallGroundingDinoClassifyTask(CustomInterfacesServiceTask):
     complexity = "easy"
 
-    expected_classes = "bottle, book, chair"
-    expected_box_threshold = 0.4
-    expected_text_threshold = 0.25
-    expected_source_img: Dict[str, Any] = {
-        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera_frame"},
-        "height": 480,
-        "width": 640,
-        "encoding": "rgb8",
-        "is_bigendian": 0,
-        "step": 1920,
-        "data": [],
-    }
+    expected_classes: str = "bottle, book, chair"
+    expected_box_threshold: float = 0.4
+    expected_text_threshold: float = 0.25
+
+    expected_source_img: Image = Image(
+        header=Header(frame_id="camera_frame"),
+        height=480,
+        width=640,
+    )
 
     def get_system_prompt(self) -> str:
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
@@ -1932,13 +1910,13 @@ class CallGroundingDinoClassifyTask(CustomInterfacesServiceTask):
         return "/grounding_dino_classify"
 
     @property
-    def expected_message(self) -> Dict[str, Any]:
-        expected = DEFAULT_MESSAGES[self.expected_service_type].copy()
-        expected["classes"] = self.expected_classes
-        expected["box_threshold"] = self.expected_box_threshold
-        expected["text_threshold"] = self.expected_text_threshold
-        expected["source_img"] = self.expected_source_img
-        return expected
+    def expected_message(self) -> RAIGroundingDinoRequest:
+        return RAIGroundingDinoRequest(
+            classes=self.expected_classes,
+            box_threshold=self.expected_box_threshold,
+            text_threshold=self.expected_text_threshold,
+            source_img=self.expected_source_img,
+        )
 
     def get_prompt(self) -> str:
         return (
@@ -1966,8 +1944,8 @@ class CallGetLogDigestTask(CustomInterfacesServiceTask):
         return "/get_log_digest"
 
     @property
-    def expected_message(self) -> Dict[str, Any]:
-        return {}
+    def expected_message(self) -> StringListRequest:
+        return StringListRequest()
 
     def get_prompt(self) -> str:
         return (
@@ -1983,7 +1961,7 @@ class CallGetLogDigestTask(CustomInterfacesServiceTask):
 class CallVectorStoreRetrievalTask(CustomInterfacesServiceTask):
     complexity = "easy"
 
-    expected_query = "What is the purpose of this robot?"
+    expected_query: str = "What is the purpose of this robot?"
 
     def get_system_prompt(self) -> str:
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
@@ -1993,8 +1971,8 @@ class CallVectorStoreRetrievalTask(CustomInterfacesServiceTask):
         return "/rai_whoami_documentation_service"
 
     @property
-    def expected_message(self) -> Dict[str, Any]:
-        return {"query": self.expected_query}
+    def expected_message(self) -> VectorStoreRetrievalRequest:
+        return VectorStoreRetrievalRequest(query=self.expected_query)
 
     def get_prompt(self) -> str:
         return (
@@ -2010,21 +1988,19 @@ class CallVectorStoreRetrievalTask(CustomInterfacesServiceTask):
 class CallWhatISeeTask(CustomInterfacesServiceTask):
     complexity = "easy"
 
-    expected_observations = ["table", "cup", "notebook"]
-    expected_perception_source = "front_camera"
-    expected_image: Dict[str, Any] = {
-        "header": {"stamp": {"sec": 0, "nanosec": 0}, "frame_id": "camera_frame"},
-        "height": 480,
-        "width": 640,
-        "encoding": "rgb8",
-        "is_bigendian": 0,
-        "step": 1920,
-        "data": [],
-    }
-    expected_pose = {
-        "position": {"x": 1.0, "y": 2.0, "z": 0.5},
-        "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
-    }
+    expected_observations: List[str] = ["table", "cup", "notebook"]
+    expected_perception_source: str = "front_camera"
+
+    expected_image: Image = Image(
+        header=Header(frame_id="camera_frame"),
+        height=480,
+        width=640,
+    )
+
+    expected_pose: Pose = Pose(
+        position=Position(x=1.0, y=2.0, z=0.5),
+        orientation=Orientation(x=0.0, y=0.0, z=0.0, w=1.0),
+    )
 
     def get_system_prompt(self) -> str:
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
@@ -2034,20 +2010,20 @@ class CallWhatISeeTask(CustomInterfacesServiceTask):
         return "rai/whatisee/get"
 
     @property
-    def expected_message(self) -> Dict[str, Any]:
-        expected = DEFAULT_MESSAGES[self.expected_service_type].copy()
-        expected["observations"] = self.expected_observations
-        expected["perception_source"] = self.expected_perception_source
-        expected["image"] = self.expected_image
-        expected["pose"] = self.expected_pose
-        return expected
+    def expected_message(self) -> WhatISeeResponse:
+        return WhatISeeResponse(
+            observations=self.expected_observations,
+            perception_source=self.expected_perception_source,
+            image=self.expected_image,
+            pose=self.expected_pose,
+        )
 
     def get_prompt(self) -> str:
         return (
             f"Call the service {self.expected_service} using the WhatISee interface.\n"
             "Steps:\n"
             "1. Get available services and their types.\n"
-            "2. Retrieve the message interface for the WhatISee service.\n"
+            f"2. Retrieve the message interface for the {self.expected_service} service.\n"
             "3. Create the request using:\n"
             f"   - Observations: {self.expected_observations}\n"
             f"   - Source: '{self.expected_perception_source}'\n"
@@ -2057,27 +2033,27 @@ class CallWhatISeeTask(CustomInterfacesServiceTask):
         )
 
 
-class CallROS2CustomActionTask(CustomInterfacesActionTask):
-    complexity = "easy"
+# class CallROS2CustomActionTask(CustomInterfacesActionTask):
+#     complexity = "easy"
 
-    expected_task = "Where are you?"
-    expected_description = ""
-    expected_priority = "10"
+#     expected_task = "Where are you?"
+#     expected_description = ""
+#     expected_priority = "10"
 
-    def get_system_prompt(self) -> str:
-        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
+#     def get_system_prompt(self) -> str:
+#         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
 
-    @property
-    def expected_action(self) -> str:
-        return "/perform_task"
+#     @property
+#     def expected_action(self) -> str:
+#         return "/perform_task"
 
-    @property
-    def expected_message(self) -> Dict[str, Any]:
-        expected = DEFAULT_MESSAGES[self.expected_action_type].copy()
-        expected["goal"]["task"] = self.expected_task
-        expected["goal"]["description"] = self.expected_description
-        expected["goal"]["priority "] = self.expected_priority
-        return expected
+#     @property
+#     def expected_message(self) -> Dict[str, Any]:
+#         expected = DEFAULT_MESSAGES[self.expected_action_type].copy()
+#         expected["goal"]["task"] = self.expected_task
+#         expected["goal"]["description"] = self.expected_description
+#         expected["goal"]["priority "] = self.expected_priority
+#         return expected
 
 
 ROBOT_NAVIGATION_SYSTEM_PROMPT = """You are an autonomous robot connected to ros2 environment. Your main goal is to fulfill the user's requests.

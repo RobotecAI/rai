@@ -1206,7 +1206,7 @@ class CustomInterfacesTopicTask(ROS2ToolCallingAgentTask, ABC):
 
     @property
     @abstractmethod
-    def expected_message(self) -> Dict[str, Any]:
+    def expected_message(self) -> BaseModel:
         pass
 
     @property
@@ -1255,7 +1255,7 @@ class CustomInterfacesTopicTask(ROS2ToolCallingAgentTask, ABC):
                     expected_name="publish_ros2_message",
                     expected_args={
                         "topic": self.expected_topic,
-                        "message": self.expected_message,
+                        "message": self.expected_message.model_dump(),
                         "message_type": self.expected_message_type,
                     },
                 )
@@ -1301,7 +1301,7 @@ class CustomInterfacesServiceTask(ROS2ToolCallingAgentTask, ABC):
 
     @property
     @abstractmethod
-    def expected_message(self) -> Dict[str, Any]:
+    def expected_message(self) -> BaseModel:
         pass
 
     @property
@@ -1350,7 +1350,7 @@ class CustomInterfacesServiceTask(ROS2ToolCallingAgentTask, ABC):
                     expected_name="call_ros2_service",
                     expected_args={
                         "topic": self.expected_service,
-                        "message": self.expected_message,
+                        "message": self.expected_message.model_dump(),
                         "message_type": self.expected_service_type,
                     },
                 )
@@ -1394,7 +1394,7 @@ class CustomInterfacesActionTask(ROS2ToolCallingAgentTask, ABC):
 
     @property
     @abstractmethod
-    def expected_message(self) -> Dict[str, Any]:
+    def expected_message(self) -> BaseModel:
         pass
 
     @property
@@ -1443,7 +1443,7 @@ class CustomInterfacesActionTask(ROS2ToolCallingAgentTask, ABC):
                     expected_name="start_ros2_action",
                     expected_args={
                         "topic": self.expected_action,
-                        "message": self.expected_message,
+                        "message": self.expected_message.model_dump(),
                         "message_type": self.expected_action_type,
                     },
                 )
