@@ -2149,7 +2149,7 @@ class CallGetLogDigestTask3ExtraCalls(CustomInterfacesServiceTask):
             "1. Use the tool to retrieve the available ROS2 services and their types.\n"
             f"2. Find the service type for '{self.expected_service}'.\n"
             "3. Retrieve the full message interface definition for that service.\n"
-            "4. Construct the request message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
+            "4. Construct the message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
             f"5. Call the service '{self.expected_service}' using the correct message type and interface.\n"
         )
 
@@ -2251,7 +2251,7 @@ class CallWhatISeeTask3ExtraCalls(CustomInterfacesServiceTask):
 
     @property
     def expected_service(self) -> str:
-        return "rai/whatisee/get"
+        return "/rai/whatisee/get"
 
     @property
     def extra_calls(self) -> int:
@@ -2274,9 +2274,7 @@ class CallWhatISeeTask3ExtraCalls(CustomInterfacesServiceTask):
 
     def get_prompt(self) -> str:
         return (
-            f"You need to call the service '{self.expected_service}' with observations: {self.expected_observations}, "
-            f"source: '{self.expected_perception_source}', an image from 'camera_frame' (640x480, RGB), "
-            f"and a pose: {self.expected_pose.model_dump()}.\n"
+            f"You need to call the service '{self.expected_service}' with an empty request.\n"
             "Before calling, follow these steps:\n"
             "1. Use the tool to retrieve the available ROS2 services and their types.\n"
             f"2. Find the service type for '{self.expected_service}'.\n"

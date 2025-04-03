@@ -942,6 +942,13 @@ class ToolCallingAgentTask(ABC):
             self.log_error("Tool call does not contain a 'service_args' argument.")
             return False
 
+        if field_path == "":
+            if service_args == {}:
+                return True
+            else:
+                self.log_error(f"Expected empty service_args, but got: {service_args}")
+                return False
+
         keys = field_path.split(".")
         value: Any = service_args
         for key in keys:
@@ -1341,7 +1348,7 @@ class CustomInterfacesServiceTask(ROS2ToolCallingAgentTask, ABC):
         "/grounding_dino_classify": "rai_interfaces/srv/RAIGroundingDino",
         "/get_log_digest": "rai_interfaces/srv/StringList",
         "/rai_whoami_documentation_service": "rai_interfaces/srv/VectorStoreRetrieval",
-        "rai/whatisee/get": "rai_interfaces/srv/WhatISee",
+        "/rai/whatisee/get": "rai_interfaces/srv/WhatISee",
     }
 
     MODELS: Dict[str, Type[BaseModel]] = {
