@@ -56,8 +56,15 @@ loggers_type = logging.Logger
 
 
 PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT = """You are a ROS 2 expert helping a user with their ROS 2 questions. You have access to various tools that allow you to query the ROS 2 system.
-                Be proactive and use the tools to answer questions.
-                """
+Be proactive and use the tools to answer questions.
+
+Example of tool calls:
+- get_ros2_message_interface, args: {'msg_type': 'geometry_msgs/msg/Twist'}
+- publish_ros2_message, args: {'topic': '/cmd_vel', 'message_type': 'geometry_msgs/msg/Twist', 'message': {linear: {x: 0.5, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 1.0}}}
+
+- get_ros2_message_interface, args: {'msg_type': 'turtlesim/srv/TeleportAbsolute'}
+- publish_ros2_message, args: {'topic': '/turtle1/teleport_absolute', 'message_type': 'turtlesim/srv/TeleportAbsolute', 'message': {x: 5.0, y: 2.0, theta: 1.57}}
+"""
 
 
 class TaskParametrizationError(Exception):
@@ -1658,7 +1665,7 @@ class SwapObjectsTask(ROS2ToolCallingAgentTask):
         )
 
 
-class PublishROS2HRIMessageTask(CustomInterfacesTopicTask):
+class PublishROS2HRIMessageTask3ExtraCalls(CustomInterfacesTopicTask):
     complexity = "easy"
     expected_text = "Hello!"
 
@@ -1674,6 +1681,7 @@ class PublishROS2HRIMessageTask(CustomInterfacesTopicTask):
         return 3
 
     def verify_message_tool_call(self, tool_calls: list[ToolCall]) -> bool:
+
         for call in tool_calls:
             if self._check_topic_tool_call_field(
                 tool_call=call,
@@ -1685,7 +1693,7 @@ class PublishROS2HRIMessageTask(CustomInterfacesTopicTask):
             ):
                 return True
 
-        self.log_error("No valid publish_ros2_message call found.")
+        self.log_error(f"No valid call to {self.expected_topic} found.")
         return False
 
     def get_prompt(self) -> str:
@@ -1700,7 +1708,23 @@ class PublishROS2HRIMessageTask(CustomInterfacesTopicTask):
         )
 
 
-class PublishROS2AudioMessageTask(CustomInterfacesTopicTask):
+class PublishROS2HRIMessageTask1ExtraCall(PublishROS2HRIMessageTask3ExtraCalls):
+    complexity = "medium"
+
+    @property
+    def extra_calls(self) -> int:
+        return 1
+
+
+class PublishROS2HRIMessageTask0ExtraCalls(PublishROS2HRIMessageTask3ExtraCalls):
+    complexity = "hard"
+
+    @property
+    def extra_calls(self) -> int:
+        return 0
+
+
+class PublishROS2AudioMessageTask3ExtraCalls(CustomInterfacesTopicTask):
     complexity = "easy"
     expected_audio: List[int] = [123, 456, 789]
     expected_sample_rate: int = 44100
@@ -1719,38 +1743,35 @@ class PublishROS2AudioMessageTask(CustomInterfacesTopicTask):
 
     def verify_message_tool_call(self, tool_calls: list[ToolCall]) -> bool:
         for call in tool_calls:
-            if not self._check_topic_tool_call_field(
-                tool_call=call,
-                expected_name="publish_ros2_message",
-                expected_topic=self.expected_topic,
-                expected_message_type=self.expected_message_type,
-                field_path="audio",
-                expected_value=self.expected_audio,
+            if (
+                self._check_topic_tool_call_field(
+                    tool_call=call,
+                    expected_name="publish_ros2_message",
+                    expected_topic=self.expected_topic,
+                    expected_message_type=self.expected_message_type,
+                    field_path="audio",
+                    expected_value=self.expected_audio,
+                )
+                and self._check_topic_tool_call_field(
+                    tool_call=call,
+                    expected_name="publish_ros2_message",
+                    expected_topic=self.expected_topic,
+                    expected_message_type=self.expected_message_type,
+                    field_path="sample_rate",
+                    expected_value=self.expected_sample_rate,
+                )
+                and self._check_topic_tool_call_field(
+                    tool_call=call,
+                    expected_name="publish_ros2_message",
+                    expected_topic=self.expected_topic,
+                    expected_message_type=self.expected_message_type,
+                    field_path="channels",
+                    expected_value=self.expected_channels,
+                )
             ):
-                return False
-            if not self._check_topic_tool_call_field(
-                tool_call=call,
-                expected_name="publish_ros2_message",
-                expected_topic=self.expected_topic,
-                expected_message_type=self.expected_message_type,
-                field_path="sample_rate",
-                expected_value=self.expected_sample_rate,
-            ):
-                return False
+                return True
 
-            if not self._check_topic_tool_call_field(
-                tool_call=call,
-                expected_name="publish_ros2_message",
-                expected_topic=self.expected_topic,
-                expected_message_type=self.expected_message_type,
-                field_path="expected_channels",
-                expected_value=self.expected_channels,
-            ):
-                return False
-
-            return True
-
-        self.log_error("No valid publish_ros2_message call found.")
+        self.log_error(f"No valid call to {self.expected_topic} found.")
         return False
 
     def get_prompt(self) -> str:
@@ -1766,7 +1787,23 @@ class PublishROS2AudioMessageTask(CustomInterfacesTopicTask):
         )
 
 
-class PublishROS2DetectionArrayTask(CustomInterfacesTopicTask):
+class PublishROS2AudioMessageTask1ExtraCall(PublishROS2AudioMessageTask3ExtraCalls):
+    complexity = "medium"
+
+    @property
+    def extra_calls(self) -> int:
+        return 1
+
+
+class PublishROS2AudioMessageTask0ExtraCalls(PublishROS2AudioMessageTask3ExtraCalls):
+    complexity = "hard"
+
+    @property
+    def extra_calls(self) -> int:
+        return 0
+
+
+class PublishROS2DetectionArrayTask3ExtraCalls(CustomInterfacesTopicTask):
     complexity = "easy"
 
     expected_detection_classes: List[str] = ["person", "car"]
@@ -1809,9 +1846,8 @@ class PublishROS2DetectionArrayTask(CustomInterfacesTopicTask):
                 expected_value=self.expected_detection_classes,
             ):
                 return True
-        self.log_error(
-            "No valid publish_ros2_message call with detection_classes found."
-        )
+
+        self.log_error(f"No valid call to {self.expected_topic} found.")
         return False
 
     def get_prompt(self) -> str:
@@ -1827,7 +1863,25 @@ class PublishROS2DetectionArrayTask(CustomInterfacesTopicTask):
         )
 
 
-class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
+class PublishROS2DetectionArrayTask1ExtraCall(PublishROS2DetectionArrayTask3ExtraCalls):
+    complexity = "medium"
+
+    @property
+    def extra_calls(self) -> int:
+        return 1
+
+
+class PublishROS2DetectionArrayTask0ExtraCalls(
+    PublishROS2DetectionArrayTask3ExtraCalls
+):
+    complexity = "hard"
+
+    @property
+    def extra_calls(self) -> int:
+        return 0
+
+
+class CallROS2ManipulatorMoveToServiceTask3ExtraCalls(CustomInterfacesServiceTask):
     complexity = "easy"
 
     expected_initial_gripper_state = True
@@ -1851,9 +1905,6 @@ class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
         return 3
 
     def verify_message_tool_call(self, tool_calls: list[ToolCall]) -> bool:
-        if not tool_calls:
-            self.log_error("call to call_ros2_service not found.")
-            return False
         for call in tool_calls:
             if (
                 self._check_service_tool_call_field(
@@ -1882,7 +1933,8 @@ class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
                 )
             ):
                 return True
-        self.log_error("No valid call_ros2_service found with correct gripper state.")
+
+        self.log_error(f"No valid call to {self.expected_service} found.")
         return False
 
     def get_prompt(self) -> str:
@@ -1898,7 +1950,27 @@ class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
         )
 
 
-class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
+class CallROS2ManipulatorMoveToServiceTask1ExtraCall(
+    CallROS2ManipulatorMoveToServiceTask3ExtraCalls
+):
+    complexity = "medium"
+
+    @property
+    def extra_calls(self) -> int:
+        return 1
+
+
+class CallROS2ManipulatorMoveToServiceTask0ExtraCalls(
+    CallROS2ManipulatorMoveToServiceTask3ExtraCalls
+):
+    complexity = "hard"
+
+    @property
+    def extra_calls(self) -> int:
+        return 0
+
+
+class CallGroundedSAMSegmentTask3ExtraCalls(CustomInterfacesServiceTask):
     complexity = "easy"
 
     expected_detections: RAIDetectionArray = RAIDetectionArray(
@@ -1918,9 +1990,6 @@ class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
         return 3
 
     def verify_message_tool_call(self, tool_calls: list[ToolCall]) -> bool:
-        if not tool_calls:
-            self.log_error("call to call_ros2_service not found.")
-            return False
         for call in tool_calls:
             if self._check_service_tool_call_field(
                 tool_call=call,
@@ -1931,7 +2000,7 @@ class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
                 expected_value=self.expected_detections.model_dump(),
             ):
                 return True
-        self.log_error(f"No valid call_ros2_service for {self.expected_service} found.")
+        self.log_error(f"No valid call to {self.expected_service} found.")
         return False
 
     def get_prompt(self) -> str:
@@ -1946,7 +2015,23 @@ class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
         )
 
 
-class CallGroundingDinoClassifyTask(CustomInterfacesServiceTask):
+class CallGroundedSAMSegmentTask1ExtraCall(CallGroundedSAMSegmentTask3ExtraCalls):
+    complexity = "medium"
+
+    @property
+    def extra_calls(self) -> int:
+        return 1
+
+
+class CallGroundedSAMSegmentTask0ExtraCalls(CallGroundedSAMSegmentTask3ExtraCalls):
+    complexity = "hard"
+
+    @property
+    def extra_calls(self) -> int:
+        return 0
+
+
+class CallGroundingDinoClassifyTask3ExtraCalls(CustomInterfacesServiceTask):
     complexity = "easy"
 
     expected_classes: str = "bottle, book, chair"
@@ -1965,10 +2050,6 @@ class CallGroundingDinoClassifyTask(CustomInterfacesServiceTask):
         return "/grounding_dino_classify"
 
     def verify_message_tool_call(self, tool_calls: list[ToolCall]) -> bool:
-        if not tool_calls:
-            self.log_error("call to call_ros2_service not found.")
-            return False
-
         for call in tool_calls:
             if (
                 self._check_service_tool_call_field(
@@ -1998,7 +2079,7 @@ class CallGroundingDinoClassifyTask(CustomInterfacesServiceTask):
             ):
                 return True
 
-        self.log_error(f"No valid call_ros2_service for {self.expected_service} found.")
+        self.log_error(f"No valid call to {self.expected_service} found.")
         return False
 
     def get_prompt(self) -> str:
@@ -2014,7 +2095,25 @@ class CallGroundingDinoClassifyTask(CustomInterfacesServiceTask):
         )
 
 
-class CallGetLogDigestTask(CustomInterfacesServiceTask):
+class CallGroundingDinoClassifyTask1ExtraCall(CallGroundingDinoClassifyTask3ExtraCalls):
+    complexity = "medium"
+
+    @property
+    def extra_calls(self) -> int:
+        return 1
+
+
+class CallGroundingDinoClassifyTask0ExtraCalls(
+    CallGroundingDinoClassifyTask3ExtraCalls
+):
+    complexity = "hard"
+
+    @property
+    def extra_calls(self) -> int:
+        return 0
+
+
+class CallGetLogDigestTask3ExtraCalls(CustomInterfacesServiceTask):
     complexity = "easy"
 
     def get_system_prompt(self) -> str:
@@ -2029,10 +2128,6 @@ class CallGetLogDigestTask(CustomInterfacesServiceTask):
         return 3
 
     def verify_message_tool_call(self, tool_calls: list[ToolCall]) -> bool:
-        if not tool_calls:
-            self.log_error("call to call_ros2_service not found.")
-            return False
-
         for call in tool_calls:
             if self._check_service_tool_call_field(
                 call,
@@ -2044,7 +2139,7 @@ class CallGetLogDigestTask(CustomInterfacesServiceTask):
             ):
                 return True
 
-        self.log_error("No valid call_ros2_service for GetLogDigest found.")
+        self.log_error(f"No valid call to {self.expected_service} found.")
         return False
 
     def get_prompt(self) -> str:
@@ -2059,7 +2154,23 @@ class CallGetLogDigestTask(CustomInterfacesServiceTask):
         )
 
 
-class CallVectorStoreRetrievalTask(CustomInterfacesServiceTask):
+class CallGetLogDigestTask1ExtraCall(CallGetLogDigestTask3ExtraCalls):
+    complexity = "medium"
+
+    @property
+    def extra_calls(self) -> int:
+        return 1
+
+
+class CallGetLogDigestTask0ExtraCalls(CallGetLogDigestTask3ExtraCalls):
+    complexity = "hard"
+
+    @property
+    def extra_calls(self) -> int:
+        return 0
+
+
+class CallVectorStoreRetrievalTask3ExtraCalls(CustomInterfacesServiceTask):
     complexity = "easy"
 
     expected_query: str = "What is the purpose of this robot?"
@@ -2076,10 +2187,6 @@ class CallVectorStoreRetrievalTask(CustomInterfacesServiceTask):
         return 3
 
     def verify_message_tool_call(self, tool_calls: list[ToolCall]) -> bool:
-        if not tool_calls:
-            self.log_error("call to call_ros2_service not found.")
-            return False
-
         for call in tool_calls:
             if self._check_service_tool_call_field(
                 call,
@@ -2091,7 +2198,7 @@ class CallVectorStoreRetrievalTask(CustomInterfacesServiceTask):
             ):
                 return True
 
-        self.log_error(f"No valid call_ros2_service for {self.expected_service} found.")
+        self.log_error(f"No valid call to {self.expected_service} found.")
         return False
 
     def get_prompt(self) -> str:
@@ -2106,7 +2213,23 @@ class CallVectorStoreRetrievalTask(CustomInterfacesServiceTask):
         )
 
 
-class CallWhatISeeTask(CustomInterfacesServiceTask):
+class CallVectorStoreRetrievalTask1ExtraCall(CallVectorStoreRetrievalTask3ExtraCalls):
+    complexity = "medium"
+
+    @property
+    def extra_calls(self) -> int:
+        return 1
+
+
+class CallVectorStoreRetrievalTask0ExtraCalls(CallVectorStoreRetrievalTask3ExtraCalls):
+    complexity = "hard"
+
+    @property
+    def extra_calls(self) -> int:
+        return 0
+
+
+class CallWhatISeeTask3ExtraCalls(CustomInterfacesServiceTask):
     complexity = "easy"
 
     expected_observations: List[str] = ["table", "cup", "notebook"]
@@ -2135,10 +2258,6 @@ class CallWhatISeeTask(CustomInterfacesServiceTask):
         return 3
 
     def verify_message_tool_call(self, tool_calls: list[ToolCall]) -> bool:
-        if not tool_calls:
-            self.log_error("call to call_ros2_service not found.")
-            return False
-
         for call in tool_calls:
             if self._check_service_tool_call_field(
                 call,
@@ -2150,7 +2269,7 @@ class CallWhatISeeTask(CustomInterfacesServiceTask):
             ):
                 return True
 
-        self.log_error(f"No valid call_ros2_service for {self.expected_service} found.")
+        self.log_error(f"No valid call to {self.expected_service} found.")
         return False
 
     def get_prompt(self) -> str:
@@ -2165,6 +2284,22 @@ class CallWhatISeeTask(CustomInterfacesServiceTask):
             "4. Construct the request message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
             f"5. Call the service '{self.expected_service}' using the correct message type and interface.\n"
         )
+
+
+class CallWhatISeeTask1ExtraCall(CallWhatISeeTask3ExtraCalls):
+    complexity = "medium"
+
+    @property
+    def extra_calls(self) -> int:
+        return 1
+
+
+class CallWhatISeeTask0ExtraCalls(CallWhatISeeTask3ExtraCalls):
+    complexity = "hard"
+
+    @property
+    def extra_calls(self) -> int:
+        return 0
 
 
 # class CallROS2CustomActionTask(CustomInterfacesActionTask):
