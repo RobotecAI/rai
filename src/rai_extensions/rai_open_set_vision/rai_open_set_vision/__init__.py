@@ -13,12 +13,21 @@
 # limitations under the License.
 
 
-from .services.grounding_dino import GDINO_NODE_NAME, GDINO_SERVICE_NAME
+from .agents.grounded_sam import GSAM_NODE_NAME, GSAM_SERVICE_NAME, GroundedSamAgent
+from .agents.grounding_dino import (
+    GDINO_NODE_NAME,
+    GDINO_SERVICE_NAME,
+    GroundingDinoAgent,
+)
 from .tools import GetDetectionTool, GetDistanceToObjectsTool
 
 __all__ = [
     "GDINO_NODE_NAME",
     "GDINO_SERVICE_NAME",
+    "GSAM_NODE_NAME",
+    "GSAM_SERVICE_NAME",
     "GetDetectionTool",
     "GetDistanceToObjectsTool",
+    "GroundedSamAgent",
+    "GroundingDinoAgent",
 ]
