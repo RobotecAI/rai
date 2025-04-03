@@ -411,6 +411,9 @@ rai_interfaces/AudioMessage[] audios
 	int16[] audio
 	uint16 sample_rate
 	uint16 channels
+string communication_id
+int64 seq_no
+bool seq_end
 """,
     "rai_interfaces/msg/AudioMessage": """
 #

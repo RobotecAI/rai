@@ -44,6 +44,9 @@ class HRIMessage(BaseModel):
     text: str = ""
     images: List[Image] = []
     audios: List[AudioMessage] = []
+    communication_id: str = ""
+    seq_no: int = 0
+    seq_end: bool = False
 
 
 class RAIDetectionArray(BaseModel):
