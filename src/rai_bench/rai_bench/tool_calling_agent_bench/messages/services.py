@@ -5,35 +5,37 @@ from pydantic import BaseModel
 from rai_bench.tool_calling_agent_bench.messages.base import Pose, PoseStamped
 from rai_bench.tool_calling_agent_bench.messages.topics import Image, RAIDetectionArray
 
+from typing import List, Optional
+
 
 class ManipulatorMoveToRequest(BaseModel):
-    initial_gripper_state: bool = False
-    final_gripper_state: bool = False
-    target_pose: PoseStamped = PoseStamped()
+    initial_gripper_state: Optional[bool] = False
+    final_gripper_state: Optional[bool] = False
+    target_pose: Optional[PoseStamped] = PoseStamped()
 
 
 class ManipulatorMoveToResponse(BaseModel):
-    success: bool = False
+    success: Optional[bool] = False
 
 
 class RAIGroundedSamRequest(BaseModel):
-    detections: RAIDetectionArray = RAIDetectionArray()
-    source_img: Image = Image()
+    detections: Optional[RAIDetectionArray] = RAIDetectionArray()
+    source_img: Optional[Image] = Image()
 
 
 class RAIGroundedSamResponse(BaseModel):
-    masks: List[Image] = []
+    masks: Optional[List[Image]] = []
 
 
 class RAIGroundingDinoRequest(BaseModel):
-    classes: str = ""
-    box_threshold: float = 0.0
-    text_threshold: float = 0.0
-    source_img: Image = Image()
+    classes: Optional[str] = ""
+    box_threshold: Optional[float] = 0.0
+    text_threshold: Optional[float] = 0.0
+    source_img: Optional[Image] = Image()
 
 
 class RAIGroundingDinoResponse(BaseModel):
-    detections: RAIDetectionArray = RAIDetectionArray()
+    detections: Optional[RAIDetectionArray] = RAIDetectionArray()
 
 
 class StringListRequest(BaseModel):
@@ -41,19 +43,19 @@ class StringListRequest(BaseModel):
 
 
 class StringListResponse(BaseModel):
-    success: bool = False
-    string_list: List[str] = []
+    success: Optional[bool] = False
+    string_list: Optional[List[str]] = []
 
 
 class VectorStoreRetrievalRequest(BaseModel):
-    query: str = ""
+    query: Optional[str] = ""
 
 
 class VectorStoreRetrievalResponse(BaseModel):
-    success: bool = False
-    message: str = ""
-    documents: List[str] = []
-    scores: List[float] = []
+    success: Optional[bool] = False
+    message: Optional[str] = ""
+    documents: Optional[List[str]] = []
+    scores: Optional[List[float]] = []
 
 
 class WhatISeeRequest(BaseModel):
@@ -61,17 +63,17 @@ class WhatISeeRequest(BaseModel):
 
 
 class WhatISeeResponse(BaseModel):
-    observations: List[str] = []
-    perception_source: str = ""
-    image: Image = Image()
-    pose: Pose = Pose()
+    observations: Optional[List[str]] = []
+    perception_source: Optional[str] = ""
+    image: Optional[Image] = Image()
+    pose: Optional[Pose] = Pose()
 
 
 class PlannerInterfaceDescription(BaseModel):
-    name: str = ""
-    pipeline_id: str = ""
-    planner_ids: List[str] = []
+    name: Optional[str] = ""
+    pipeline_id: Optional[str] = ""
+    planner_ids: Optional[List[str]] = []
 
 
 class QueryPlannerInterfaceResponse(BaseModel):
-    planner_interfaces: List[PlannerInterfaceDescription] = []
+    planner_interfaces: Optional[List[PlannerInterfaceDescription]] = []

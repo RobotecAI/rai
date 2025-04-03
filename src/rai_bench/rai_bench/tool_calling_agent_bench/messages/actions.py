@@ -1,24 +1,25 @@
+from typing import Optional
 from pydantic import BaseModel
 
 
 class TaskGoal(BaseModel):
-    task: str = ""
-    description: str = ""
-    priority: str = ""
+    task: Optional[str] = ""
+    description: Optional[str] = ""
+    priority: Optional[str] = ""
 
 
 class TaskResult(BaseModel):
-    success: bool = False
-    report: str = ""
+    success: Optional[bool] = False
+    report: Optional[str] = ""
 
 
 class TaskFeedback(BaseModel):
-    current_status: str = ""
+    current_status: Optional[str] = ""
 
 
 class LoadMapRequest(BaseModel):
-    filename: str = ""
+    filename: Optional[str] = ""
 
 
 class LoadMapResponse(BaseModel):
-    success: bool = False
+    success: Optional[bool] = False

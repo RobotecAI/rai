@@ -11,21 +11,21 @@ class Time(BaseModel):
 
 class Header(BaseModel):
     stamp: Optional[Time] = Time()
-    frame_id: str = ""
+    frame_id: Optional[str] = ""
 
 
 class RegionOfInterest(BaseModel):
-    x_offset: int = 0
-    y_offset: int = 0
-    height: int = 0
-    width: int = 0
-    do_rectify: bool = False
+    x_offset: Optional[int] = 0
+    y_offset: Optional[int] = 0
+    height: Optional[int] = 0
+    width: Optional[int] = 0
+    do_rectify: Optional[bool] = False
 
 
 class Position(BaseModel):
-    x: float = 0.0
-    y: float = 0.0
-    z: float = 0.0
+    x: Optional[float] = 0.0
+    y: Optional[float] = 0.0
+    z: Optional[float] = 0.0
 
 
 class Orientation(BaseModel):
@@ -36,52 +36,52 @@ class Orientation(BaseModel):
 
 
 class Pose(BaseModel):
-    position: Position = Position()
+    position: Optional[Position] = Position()
     orientation: Optional[Orientation] = Orientation()
 
 
 class PoseStamped(BaseModel):
-    header: Header = Header()
-    pose: Pose = Pose()
+    header: Optional[Header] = Header()
+    pose: Optional[Pose] = Pose()
 
 
 class Clock(BaseModel):
-    clock: Time = Time()
+    clock: Optional[Time] = Time()
 
 
 class ObjectHypothesis(BaseModel):
-    class_id: str = ""
-    score: float = 0.0
+    class_id: Optional[str] = ""
+    score: Optional[float] = 0.0
 
 
 class PoseWithCovariance(BaseModel):
-    pose: Pose = Pose()
-    covariance: List[float] = [0.0] * 36
+    pose: Optional[Pose] = Pose()
+    covariance: Optional[List[float]] = [0.0] * 36
 
 
 class ObjectHypothesisWithPose(BaseModel):
-    hypothesis: ObjectHypothesis = ObjectHypothesis()
-    pose: PoseWithCovariance = PoseWithCovariance()
+    hypothesis: Optional[ObjectHypothesis] = ObjectHypothesis()
+    pose: Optional[PoseWithCovariance] = PoseWithCovariance()
 
 
 class Point2D(BaseModel):
-    x: float = 0.0
-    y: float = 0.0
+    x: Optional[float] = 0.0
+    y: Optional[float] = 0.0
 
 
 class Pose2D(BaseModel):
-    position: Point2D = Point2D()
-    theta: float = 0.0
+    position: Optional[Point2D] = Point2D()
+    theta: Optional[float] = 0.0
 
 
 class BoundingBox2D(BaseModel):
-    center: Pose2D = Pose2D()
-    size_x: float = 0.0
-    size_y: float = 0.0
+    center: Optional[Pose2D] = Pose2D()
+    size_x: Optional[float] = 0.0
+    size_y: Optional[float] = 0.0
 
 
 class Detection2D(BaseModel):
-    header: Header = Header()
-    results: List[ObjectHypothesisWithPose] = []
-    bbox: BoundingBox2D = BoundingBox2D()
-    id: str = ""
+    header: Optional[Header] = Header()
+    results: Optional[List[ObjectHypothesisWithPose]] = []
+    bbox: Optional[BoundingBox2D] = BoundingBox2D()
+    id: Optional[str] = ""
