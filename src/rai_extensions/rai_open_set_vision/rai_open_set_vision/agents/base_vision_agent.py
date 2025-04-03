@@ -29,11 +29,13 @@ class BaseVisionAgent(BaseAgent):
 
     def __init__(
         self,
-        weights_path: str | Path = Path.home() / Path(".cache/rai"),
+        weights_path: str | Path = Path.home() / Path(".cache/rai/"),
         ros2_name: str = "",
         logger: Optional[logging.Logger] = None,
     ):
         self._weights_path = Path(weights_path)
+        os.makedirs(self._weights_path, exist_ok=True)
+        self._init_weight_path()
         self._logger = logger if logger else logging.getLogger(__name__)
         ros2_connector = ROS2ARIConnector(ros2_name)
 
@@ -49,10 +51,10 @@ class BaseVisionAgent(BaseAgent):
             )
             # make sure the file exists
             if install_path.exists():
-                return install_path
+                self._weights_path = install_path
             else:
                 self._download_weights(install_path)
-                return install_path
+                self._weights_path = install_path
 
         except Exception:
             self._logger.error("Could not find package path")
@@ -77,3 +79,7 @@ class BaseVisionAgent(BaseAgent):
     def _remove_weights(self, path: Path):
         if path.exists():
             os.remove(path)
+
+    def stop(self):
+        assert isinstance(self.connectors["ros2"], ROS2ARIConnector)
+        self.connectors["ros2"].shutdown()

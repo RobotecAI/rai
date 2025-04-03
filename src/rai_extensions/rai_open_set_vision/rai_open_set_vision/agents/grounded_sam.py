@@ -43,7 +43,7 @@ class GroundedSamAgent(BaseVisionAgent):
         super().__init__(weights_path, ros2_name, logger)
         self._segmenter = GDSegmenter(self._weights_path)
 
-    def _run(self):
+    def run(self):
         self.connectors["ros2"].create_service(
             service_name=GSAM_SERVICE_NAME,
             on_request=self._segment_callback,

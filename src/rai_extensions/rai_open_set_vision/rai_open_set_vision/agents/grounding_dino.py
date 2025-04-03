@@ -40,7 +40,7 @@ class GroundingDinoAgent(BaseVisionAgent):
         super().__init__(weights_path, ros2_name, logger)
         self._boxer = GDBoxer(self._weights_path)
 
-    def _run(self):
+    def run(self):
         self.connectors["ros2"].create_service(
             GDINO_SERVICE_NAME,
             self._classify_callback,
