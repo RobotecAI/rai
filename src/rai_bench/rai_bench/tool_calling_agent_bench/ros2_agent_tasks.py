@@ -28,11 +28,6 @@ from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
     CustomInterfacesTopicTask,
     ROS2ToolCallingAgentTask,
 )
-from rai_bench.tool_calling_agent_bench.messages.actions import (
-    TaskFeedback,
-    TaskGoal,
-    TaskResult,
-)
 from rai_bench.tool_calling_agent_bench.messages.base import (
     BoundingBox2D,
     Detection2D,
@@ -45,23 +40,7 @@ from rai_bench.tool_calling_agent_bench.messages.base import (
     Position,
     Time,
 )
-from rai_bench.tool_calling_agent_bench.messages.services import (
-    ManipulatorMoveToRequest,
-    ManipulatorMoveToResponse,
-    RAIGroundedSamRequest,
-    RAIGroundedSamResponse,
-    RAIGroundingDinoRequest,
-    RAIGroundingDinoResponse,
-    StringListRequest,
-    StringListResponse,
-    VectorStoreRetrievalRequest,
-    VectorStoreRetrievalResponse,
-    WhatISeeRequest,
-    WhatISeeResponse,
-)
 from rai_bench.tool_calling_agent_bench.messages.topics import (
-    AudioMessage,
-    HRIMessage,
     Image,
     RAIDetectionArray,
 )
@@ -1679,43 +1658,6 @@ class SwapObjectsTask(ROS2ToolCallingAgentTask):
         )
 
 
-# only custom interfaces will be tested, so there no need for defualts for all of interfaces
-DEFAULT_MESSAGES: Dict[str, Any] = {
-    "rai_interfaces/msg/HRIMessage": HRIMessage(),
-    "rai_interfaces/msg/AudioMessage": AudioMessage(),
-    "rai_interfaces/msg/RAIDetectionArray": RAIDetectionArray(),
-    "rai_interfaces/srv/ManipulatorMoveTo": {
-        "request": ManipulatorMoveToRequest(),
-        "response": ManipulatorMoveToResponse(),
-    },
-    "rai_interfaces/srv/RAIGroundedSam": {
-        "request": RAIGroundedSamRequest(),
-        "response": RAIGroundedSamResponse(),
-    },
-    "rai_interfaces/srv/RAIGroundingDino": {
-        "request": RAIGroundingDinoRequest(),
-        "response": RAIGroundingDinoResponse(),
-    },
-    "rai_interfaces/srv/StringList": {
-        "request": StringListRequest(),
-        "response": StringListResponse(),
-    },
-    "rai_interfaces/srv/VectorStoreRetrieval": {
-        "request": VectorStoreRetrievalRequest(),
-        "response": VectorStoreRetrievalResponse(),
-    },
-    "rai_interfaces/srv/WhatISee": {
-        "request": WhatISeeRequest(),
-        "response": WhatISeeResponse(),
-    },
-    "rai_interfaces/action/Task": {
-        "goal": TaskGoal(),
-        "result": TaskResult(),
-        "feedback": TaskFeedback(),
-    },
-}
-
-
 class PublishROS2HRIMessageTask(CustomInterfacesTopicTask):
     complexity = "easy"
     expected_text = "Hello!"
@@ -1728,28 +1670,41 @@ class PublishROS2HRIMessageTask(CustomInterfacesTopicTask):
         return "/to_human"
 
     @property
-    def expected_message(self) -> HRIMessage:
-        expected: HRIMessage = DEFAULT_MESSAGES[self.expected_message_type].copy()
-        expected.text = self.expected_text
-        return expected
+    def extra_calls(self) -> int:
+        return 3
+
+    def verify_message_tool_call(self, tool_calls: list[ToolCall]) -> bool:
+        for call in tool_calls:
+            if self._check_topic_tool_call_field(
+                tool_call=call,
+                expected_name="publish_ros2_message",
+                expected_topic=self.expected_topic,
+                expected_message_type=self.expected_message_type,
+                field_path="text",
+                expected_value=self.expected_text,
+            ):
+                return True
+
+        self.log_error("No valid publish_ros2_message call found.")
+        return False
 
     def get_prompt(self) -> str:
         return (
-            f"You need to publish a message to the topic '{self.expected_topic}' with the text value: '{self.expected_text}'.\n\n"
+            f"You need to publish a message to the topic '{self.expected_topic}' with the text value: '{self.expected_text}'.\n"
             "Before publishing, follow these steps:\n"
             "1. Use the tool to retrieve the available ROS2 topics and their message types.\n"
             f"2. Find the message type for the topic '{self.expected_topic}'.\n"
-            "3. Use the message type to get the full message interface definition.\n"
-            f"4. Publish the message to '{self.expected_topic}' using the correct message type and interface.\n\n"
-            "Make sure all required fields are correctly filled according to the interface."
+            "3. Retrieve the full message interface definition for that type.\n"
+            "4. Construct the message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
+            f"5. Publish the message to '{self.expected_topic}' using the correct message type and interface.\n"
         )
 
 
 class PublishROS2AudioMessageTask(CustomInterfacesTopicTask):
     complexity = "easy"
-    expected_audio = [123, 456, 789]
-    expected_sample_rate = 44100
-    expected_channels = 2
+    expected_audio: List[int] = [123, 456, 789]
+    expected_sample_rate: int = 44100
+    expected_channels: int = 2
 
     def get_system_prompt(self) -> str:
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
@@ -1759,18 +1714,55 @@ class PublishROS2AudioMessageTask(CustomInterfacesTopicTask):
         return "/send_audio"
 
     @property
-    def expected_message(self) -> AudioMessage:
-        expected: AudioMessage = DEFAULT_MESSAGES[self.expected_message_type].copy()
-        expected.audio = self.expected_audio
-        expected.sample_rate = self.expected_sample_rate
-        expected.channels = self.expected_channels
-        return expected
+    def extra_calls(self) -> int:
+        return 3
+
+    def verify_message_tool_call(self, tool_calls: list[ToolCall]) -> bool:
+        for call in tool_calls:
+            if not self._check_topic_tool_call_field(
+                tool_call=call,
+                expected_name="publish_ros2_message",
+                expected_topic=self.expected_topic,
+                expected_message_type=self.expected_message_type,
+                field_path="audio",
+                expected_value=self.expected_audio,
+            ):
+                return False
+            if not self._check_topic_tool_call_field(
+                tool_call=call,
+                expected_name="publish_ros2_message",
+                expected_topic=self.expected_topic,
+                expected_message_type=self.expected_message_type,
+                field_path="sample_rate",
+                expected_value=self.expected_sample_rate,
+            ):
+                return False
+
+            if not self._check_topic_tool_call_field(
+                tool_call=call,
+                expected_name="publish_ros2_message",
+                expected_topic=self.expected_topic,
+                expected_message_type=self.expected_message_type,
+                field_path="expected_channels",
+                expected_value=self.expected_channels,
+            ):
+                return False
+
+            return True
+
+        self.log_error("No valid publish_ros2_message call found.")
+        return False
 
     def get_prompt(self) -> str:
         return (
-            f"Publish message to the {self.expected_topic} topic with audio samples [123, 456, 789], "
-            "sample rate 44100, and 2 channels. Before publishing, check the message type "
-            "of this topic and its interface."
+            f"You need to publish a message to the topic '{self.expected_topic}' with audio samples {self.expected_audio}, "
+            f"sample rate {self.expected_sample_rate}, and {self.expected_channels} channels.\n"
+            "Before publishing, follow these steps:\n"
+            "1. Use the tool to retrieve the available ROS2 topics and their message types.\n"
+            f"2. Find the message type for the topic '{self.expected_topic}'.\n"
+            "3. Retrieve the full message interface definition for that type.\n"
+            "4. Construct the message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
+            f"5. Publish the message to '{self.expected_topic}' using the correct message type and interface.\n"
         )
 
 
@@ -1784,7 +1776,7 @@ class PublishROS2DetectionArrayTask(CustomInterfacesTopicTask):
                 center=Pose2D(position=Point2D(x=320.0, y=240.0), theta=0.0),
                 size_x=50.0,
                 size_y=50.0,
-            ),
+            )
         )
     ]
 
@@ -1802,22 +1794,44 @@ class PublishROS2DetectionArrayTask(CustomInterfacesTopicTask):
             detection_classes=self.expected_detection_classes,
         )
 
+    @property
+    def extra_calls(self) -> int:
+        return 3
+
+    def verify_message_tool_call(self, tool_calls: list[ToolCall]) -> bool:
+        for call in tool_calls:
+            if self._check_topic_tool_call_field(
+                tool_call=call,
+                expected_name="publish_ros2_message",
+                expected_topic=self.expected_topic,
+                expected_message_type=self.expected_message_type,
+                field_path="detection_classes",
+                expected_value=self.expected_detection_classes,
+            ):
+                return True
+        self.log_error(
+            "No valid publish_ros2_message call with detection_classes found."
+        )
+        return False
+
     def get_prompt(self) -> str:
         return (
-            "Publish a detection message to the /send_detections topic. The message should have a unchanged header,"
-            f"one detection: {self.expected_detections[0].model_dump()}, and detection classes "
-            f"{self.expected_detection_classes}. Before publishing, check the message type of this topic "
-            "and its interface."
+            f"You need to publish a detection message to the topic '{self.expected_topic}' with one detection:\n"
+            f"{self.expected_detections[0].model_dump()} and detection classes {self.expected_detection_classes}.\n"
+            "Before publishing, follow these steps:\n"
+            "1. Use the tool to retrieve the available ROS2 topics and their message types.\n"
+            f"2. Find the message type for the topic '{self.expected_topic}'.\n"
+            "3. Retrieve the full message interface definition for that type.\n"
+            "4. Construct the message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
+            f"5. Publish the message to '{self.expected_topic}' using the correct message type and interface.\n"
         )
 
 
-# TODO (jm) apply parent classes and expected messages to service and action tasks
 class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
     complexity = "easy"
 
-    expected_initial_gripper_state: bool = True
-    expected_final_gripper_state: bool = False
-
+    expected_initial_gripper_state = True
+    expected_final_gripper_state = False
     expected_target_pose: PoseStamped = PoseStamped(
         pose=Pose(
             position=Position(x=1.0, y=2.0, z=3.0),
@@ -1833,18 +1847,54 @@ class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
         return "/manipulator_move_to"
 
     @property
-    def expected_message(self) -> ManipulatorMoveToRequest:
-        return ManipulatorMoveToRequest(
-            target_pose=self.expected_target_pose,
-            initial_gripper_state=self.expected_initial_gripper_state,
-            final_gripper_state=self.expected_final_gripper_state,
-        )
+    def extra_calls(self) -> int:
+        return 3
+
+    def verify_message_tool_call(self, tool_calls: list[ToolCall]) -> bool:
+        if not tool_calls:
+            self.log_error("call to call_ros2_service not found.")
+            return False
+        for call in tool_calls:
+            if (
+                self._check_service_tool_call_field(
+                    tool_call=call,
+                    expected_name="call_ros2_service",
+                    expected_service=self.expected_service,
+                    expected_service_type=self.expected_service_type,
+                    field_path="initial_gripper_state",
+                    expected_value=self.expected_initial_gripper_state,
+                )
+                and self._check_service_tool_call_field(
+                    tool_call=call,
+                    expected_name="call_ros2_service",
+                    expected_service=self.expected_service,
+                    expected_service_type=self.expected_service_type,
+                    field_path="final_gripper_state",
+                    expected_value=self.expected_final_gripper_state,
+                )
+                and self._check_service_tool_call_field(
+                    tool_call=call,
+                    expected_name="call_ros2_service",
+                    expected_service=self.expected_service,
+                    expected_service_type=self.expected_service_type,
+                    field_path="target_pose",
+                    expected_value=self.expected_target_pose.model_dump(),
+                )
+            ):
+                return True
+        self.log_error("No valid call_ros2_service found with correct gripper state.")
+        return False
 
     def get_prompt(self) -> str:
         return (
-            f"Call service {self.expected_service} with a target_pose: "
-            f"{self.expected_target_pose.model_dump()}. Before calling the service, "
-            "check the service type and its interface."
+            f"You need to call the service '{self.expected_service}' with a target_pose: "
+            f"{self.expected_target_pose.model_dump()} and gripper states (initial: {self.expected_initial_gripper_state}, final: {self.expected_final_gripper_state}).\n"
+            "Before calling, follow these steps:\n"
+            "1. Use the tool to retrieve the available ROS2 services and their types.\n"
+            f"2. Find the service type for '{self.expected_service}'.\n"
+            "3. Retrieve the full message interface definition for that service.\n"
+            "4. Construct the request message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
+            f"5. Call the service '{self.expected_service}' using the correct message type and interface.\n"
         )
 
 
@@ -1856,12 +1906,6 @@ class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
         detections=[],
     )
 
-    expected_source_img: Image = Image(
-        header=Header(frame_id="camera_frame"),
-        height=480,
-        width=640,
-    )
-
     def get_system_prompt(self) -> str:
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
 
@@ -1870,22 +1914,35 @@ class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
         return "/grounded_sam_segment"
 
     @property
-    def expected_message(self) -> RAIGroundedSamRequest:
-        return RAIGroundedSamRequest(
-            detections=self.expected_detections,
-            source_img=self.expected_source_img,
-        )
+    def extra_calls(self) -> int:
+        return 3
+
+    def verify_message_tool_call(self, tool_calls: list[ToolCall]) -> bool:
+        if not tool_calls:
+            self.log_error("call to call_ros2_service not found.")
+            return False
+        for call in tool_calls:
+            if self._check_service_tool_call_field(
+                tool_call=call,
+                expected_name="call_ros2_service",
+                expected_service=self.expected_service,
+                expected_service_type=self.expected_service_type,
+                field_path="detections",
+                expected_value=self.expected_detections.model_dump(),
+            ):
+                return True
+        self.log_error(f"No valid call_ros2_service for {self.expected_service} found.")
+        return False
 
     def get_prompt(self) -> str:
         return (
-            f"Call the service {self.expected_service} using the RAIGroundedSam interface.\n"
-            "Steps to follow:\n"
-            "1. Look up the available ROS2 services and their types.\n"
-            "2. Retrieve the message interface for the /grounded_sam_segment service.\n"
-            "3. Use the interface to construct the request message with:\n"
-            "   - detections from 'camera_frame', but leave detections field empty\n"
-            "   - an image of size 640x480 from 'camera_frame', but leave other fields empty\n"
-            "4. Call the service with the populated message."
+            f"You need to call the service '{self.expected_service}' with detections: {self.expected_detections.model_dump()}\n"
+            "Before calling, follow these steps:\n"
+            "1. Use the tool to retrieve the available ROS2 services and their types.\n"
+            f"2. Find the service type for '{self.expected_service}'.\n"
+            "3. Retrieve the full message interface definition for that service.\n"
+            "4. Construct the request message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
+            f"5. Call the service '{self.expected_service}' using the correct message type and interface.\n"
         )
 
 
@@ -1896,40 +1953,64 @@ class CallGroundingDinoClassifyTask(CustomInterfacesServiceTask):
     expected_box_threshold: float = 0.4
     expected_text_threshold: float = 0.25
 
-    expected_source_img: Image = Image(
-        header=Header(frame_id="camera_frame"),
-        height=480,
-        width=640,
-    )
-
     def get_system_prompt(self) -> str:
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
+
+    @property
+    def extra_calls(self) -> int:
+        return 3
 
     @property
     def expected_service(self) -> str:
         return "/grounding_dino_classify"
 
-    @property
-    def expected_message(self) -> RAIGroundingDinoRequest:
-        return RAIGroundingDinoRequest(
-            classes=self.expected_classes,
-            box_threshold=self.expected_box_threshold,
-            text_threshold=self.expected_text_threshold,
-            source_img=self.expected_source_img,
-        )
+    def verify_message_tool_call(self, tool_calls: list[ToolCall]) -> bool:
+        if not tool_calls:
+            self.log_error("call to call_ros2_service not found.")
+            return False
+
+        for call in tool_calls:
+            if (
+                self._check_service_tool_call_field(
+                    call,
+                    "call_ros2_service",
+                    self.expected_service,
+                    self.expected_service_type,
+                    "classes",
+                    self.expected_classes,
+                )
+                and self._check_service_tool_call_field(
+                    call,
+                    "call_ros2_service",
+                    self.expected_service,
+                    self.expected_service_type,
+                    "box_threshold",
+                    self.expected_box_threshold,
+                )
+                and self._check_service_tool_call_field(
+                    call,
+                    "call_ros2_service",
+                    self.expected_service,
+                    self.expected_service_type,
+                    "text_threshold",
+                    self.expected_text_threshold,
+                )
+            ):
+                return True
+
+        self.log_error(f"No valid call_ros2_service for {self.expected_service} found.")
+        return False
 
     def get_prompt(self) -> str:
         return (
-            "Call the service /grounding_dino_classify using the RAIGroundingDino interface.\n"
-            "Follow these steps:\n"
-            "1. Look up all available ROS2 services and their types.\n"
-            "2. Retrieve the interface of /grounding_dino_classify.\n"
-            "3. Create a message with:\n"
-            f"   - classes: '{self.expected_classes}'\n"
-            f"   - box_threshold: {self.expected_box_threshold}\n"
-            f"   - text_threshold: {self.expected_text_threshold}\n"
-            "   - source image from 'camera_frame' (640x480, RGB)\n"
-            "4. Call the service with the populated request."
+            f"You need to call the service '{self.expected_service}' with classes: '{self.expected_classes}', "
+            f"box_threshold: {self.expected_box_threshold}, text_threshold: {self.expected_text_threshold}, "
+            "Before calling, follow these steps:\n"
+            "1. Use the tool to retrieve the available ROS2 services and their types.\n"
+            f"2. Find the service type for '{self.expected_service}'.\n"
+            "3. Retrieve the full message interface definition for that service.\n"
+            "4. Construct the request message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
+            f"5. Call the service '{self.expected_service}' using the correct message type and interface.\n"
         )
 
 
@@ -1944,17 +2025,37 @@ class CallGetLogDigestTask(CustomInterfacesServiceTask):
         return "/get_log_digest"
 
     @property
-    def expected_message(self) -> StringListRequest:
-        return StringListRequest()
+    def extra_calls(self) -> int:
+        return 3
+
+    def verify_message_tool_call(self, tool_calls: list[ToolCall]) -> bool:
+        if not tool_calls:
+            self.log_error("call to call_ros2_service not found.")
+            return False
+
+        for call in tool_calls:
+            if self._check_service_tool_call_field(
+                call,
+                "call_ros2_service",
+                self.expected_service,
+                self.expected_service_type,
+                field_path="",  # empty request
+                expected_value="",
+            ):
+                return True
+
+        self.log_error("No valid call_ros2_service for GetLogDigest found.")
+        return False
 
     def get_prompt(self) -> str:
         return (
-            "Call the service /get_log_digest using the StringList interface.\n"
-            "Steps:\n"
-            "1. Look up available ROS2 services and their message types.\n"
-            "2. Retrieve the interface for /get_log_digest.\n"
-            "3. Use an empty request (no fields needed).\n"
-            "4. Call the service and retrieve the response."
+            f"You need to call the service '{self.expected_service}' with an empty request.\n"
+            "Before calling, follow these steps:\n"
+            "1. Use the tool to retrieve the available ROS2 services and their types.\n"
+            f"2. Find the service type for '{self.expected_service}'.\n"
+            "3. Retrieve the full message interface definition for that service.\n"
+            "4. Construct the request message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
+            f"5. Call the service '{self.expected_service}' using the correct message type and interface.\n"
         )
 
 
@@ -1971,17 +2072,37 @@ class CallVectorStoreRetrievalTask(CustomInterfacesServiceTask):
         return "/rai_whoami_documentation_service"
 
     @property
-    def expected_message(self) -> VectorStoreRetrievalRequest:
-        return VectorStoreRetrievalRequest(query=self.expected_query)
+    def extra_calls(self) -> int:
+        return 3
+
+    def verify_message_tool_call(self, tool_calls: list[ToolCall]) -> bool:
+        if not tool_calls:
+            self.log_error("call to call_ros2_service not found.")
+            return False
+
+        for call in tool_calls:
+            if self._check_service_tool_call_field(
+                call,
+                "call_ros2_service",
+                self.expected_service,
+                self.expected_service_type,
+                "query",
+                self.expected_query,
+            ):
+                return True
+
+        self.log_error(f"No valid call_ros2_service for {self.expected_service} found.")
+        return False
 
     def get_prompt(self) -> str:
         return (
-            f"Call the service {self.expected_service} with the query: '{self.expected_query}'.\n"
-            "Before calling:\n"
-            "1. Retrieve the list of ROS2 services and their types.\n"
-            "2. Fetch the message interface for this service.\n"
-            "3. Create a request message using the query string.\n"
-            "4. Call the service using the interface."
+            f"You need to call the service '{self.expected_service}' with the query: '{self.expected_query}'.\n"
+            "Before calling, follow these steps:\n"
+            "1. Use the tool to retrieve the available ROS2 services and their types.\n"
+            f"2. Find the service type for '{self.expected_service}'.\n"
+            "3. Retrieve the full message interface definition for that service.\n"
+            "4. Construct the request message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
+            f"5. Call the service '{self.expected_service}' using the correct message type and interface.\n"
         )
 
 
@@ -2010,26 +2131,39 @@ class CallWhatISeeTask(CustomInterfacesServiceTask):
         return "rai/whatisee/get"
 
     @property
-    def expected_message(self) -> WhatISeeResponse:
-        return WhatISeeResponse(
-            observations=self.expected_observations,
-            perception_source=self.expected_perception_source,
-            image=self.expected_image,
-            pose=self.expected_pose,
-        )
+    def extra_calls(self) -> int:
+        return 3
+
+    def verify_message_tool_call(self, tool_calls: list[ToolCall]) -> bool:
+        if not tool_calls:
+            self.log_error("call to call_ros2_service not found.")
+            return False
+
+        for call in tool_calls:
+            if self._check_service_tool_call_field(
+                call,
+                "call_ros2_service",
+                self.expected_service,
+                self.expected_service_type,
+                field_path="",  # empty request
+                expected_value="",
+            ):
+                return True
+
+        self.log_error(f"No valid call_ros2_service for {self.expected_service} found.")
+        return False
 
     def get_prompt(self) -> str:
         return (
-            f"Call the service {self.expected_service} using the WhatISee interface.\n"
-            "Steps:\n"
-            "1. Get available services and their types.\n"
-            f"2. Retrieve the message interface for the {self.expected_service} service.\n"
-            "3. Create the request using:\n"
-            f"   - Observations: {self.expected_observations}\n"
-            f"   - Source: '{self.expected_perception_source}'\n"
-            "   - Image: 640x480 RGB from 'camera_frame'\n"
-            f"   - Pose: {self.expected_pose}\n"
-            "4. Call the service with this structured message."
+            f"You need to call the service '{self.expected_service}' with observations: {self.expected_observations}, "
+            f"source: '{self.expected_perception_source}', an image from 'camera_frame' (640x480, RGB), "
+            f"and a pose: {self.expected_pose.model_dump()}.\n"
+            "Before calling, follow these steps:\n"
+            "1. Use the tool to retrieve the available ROS2 services and their types.\n"
+            f"2. Find the service type for '{self.expected_service}'.\n"
+            "3. Retrieve the full message interface definition for that service.\n"
+            "4. Construct the request message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
+            f"5. Call the service '{self.expected_service}' using the correct message type and interface.\n"
         )
 
 

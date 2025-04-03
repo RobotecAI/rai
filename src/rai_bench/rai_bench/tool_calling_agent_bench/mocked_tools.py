@@ -14,11 +14,12 @@
 
 import uuid
 from threading import Lock
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Type
 from unittest.mock import MagicMock
 
 import numpy as np
 import numpy.typing as npt
+from pydantic import BaseModel, ValidationError
 from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.communication.ros2.messages import ROS2ARIMessage
 from rai.messages import MultimodalArtifact, preprocess_image
@@ -201,6 +202,7 @@ class MockPublishROS2MessageTool(PublishROS2MessageTool):
     connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
     available_topics: List[str]
     available_message_types: List[str]
+    available_topic_models: Dict[str, Type[BaseModel]]
 
     def _run(self, topic: str, message: Dict[str, Any], message_type: str) -> str:
         """
@@ -226,6 +228,13 @@ class MockPublishROS2MessageTool(PublishROS2MessageTool):
                     self.available_message_types, message_type
                 )
             )
+
+        model = self.available_topic_models[message_type]
+        try:
+            model.model_validate(message)
+        except ValidationError as e:
+            raise ValueError(f"Failed to populate fields: {e}")
+
         return "Message published successfully"
 
 
@@ -257,6 +266,7 @@ class MockCallROS2ServiceTool(CallROS2ServiceTool):
     connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
     available_services: List[str]
     available_service_types: List[str]
+    available_service_models: Dict[str, Type[BaseModel]]
 
     def _run(
         self,
@@ -274,6 +284,11 @@ class MockCallROS2ServiceTool(CallROS2ServiceTool):
                     self.available_service_types, service_type
                 )
             )
+        model = self.available_service_models[service_type]
+        try:
+            model.model_validate(service_args)
+        except ValidationError as e:
+            raise ValueError(f"Failed to populate fields: {e}")
         response = ROS2ARIMessage(payload={"response": "success"})
         return str(
             {

@@ -14,13 +14,29 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Literal, Sequence
+from typing import Any, Dict, List, Literal, Sequence, Type
 
 from langchain_core.messages import AIMessage, ToolCall
 from langchain_core.runnables.config import DEFAULT_RECURSION_LIMIT
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 
+from rai_bench.tool_calling_agent_bench.messages.base import Clock
+from rai_bench.tool_calling_agent_bench.messages.services import (
+    ManipulatorMoveToRequest,
+    RAIGroundedSamRequest,
+    RAIGroundingDinoRequest,
+    StringListRequest,
+    VectorStoreRetrievalRequest,
+    WhatISeeRequest,
+)
+from rai_bench.tool_calling_agent_bench.messages.topics import (
+    AudioMessage,
+    CameraInfo,
+    HRIMessage,
+    Image,
+    RAIDetectionArray,
+)
 from rai_bench.tool_calling_agent_bench.mocked_tools import (
     MockCallROS2ServiceTool,
     MockGetROS2ActionsNamesAndTypesTool,
@@ -181,142 +197,6 @@ RegionOfInterest roi
 	uint32 height    #
 	uint32 width     #
 	bool do_rectify
-""",
-    "moveit_msgs/msg/AttachedCollisionObject": """
-# The CollisionObject will be attached with a fixed joint to this link
-string link_name
-
-#This contains the actual shapes and poses for the CollisionObject
-#to be attached to the link
-#If action is remove and no object.id is set, all objects
-#attached to the link indicated by link_name will be removed
-CollisionObject object
-    std_msgs/Header header
-        builtin_interfaces/Time stamp
-            int32 sec
-            uint32 nanosec
-        string frame_id
-    geometry_msgs/Pose pose
-        Point position
-            float64 x
-            float64 y
-            float64 z
-        Quaternion orientation
-            float64 x 0
-            float64 y 0
-            float64 z 0
-            float64 w 1
-    string id
-    object_recognition_msgs/ObjectType type
-        string key
-        string db
-    shape_msgs/SolidPrimitive[] primitives
-        uint8 BOX=1
-        uint8 SPHERE=2
-        uint8 CYLINDER=3
-        uint8 CONE=4
-        uint8 PRISM=5
-        uint8 type
-        float64[<=3] dimensions  #
-        uint8 BOX_X=0
-        uint8 BOX_Y=1
-        uint8 BOX_Z=2
-        uint8 SPHERE_RADIUS=0
-        uint8 CYLINDER_HEIGHT=0
-        uint8 CYLINDER_RADIUS=1
-        uint8 CONE_HEIGHT=0
-        uint8 CONE_RADIUS=1
-        uint8 PRISM_HEIGHT=0
-        geometry_msgs/Polygon polygon
-            Point32[] points
-                #
-                #
-                float32 x
-                float32 y
-                float32 z
-    geometry_msgs/Pose[] primitive_poses
-        Point position
-            float64 x
-            float64 y
-            float64 z
-        Quaternion orientation
-            float64 x 0
-            float64 y 0
-            float64 z 0
-            float64 w 1
-    shape_msgs/Mesh[] meshes
-        MeshTriangle[] triangles
-            uint32[3] vertex_indices
-        geometry_msgs/Point[] vertices
-            float64 x
-            float64 y
-            float64 z
-    geometry_msgs/Pose[] mesh_poses
-        Point position
-            float64 x
-            float64 y
-            float64 z
-        Quaternion orientation
-            float64 x 0
-            float64 y 0
-            float64 z 0
-            float64 w 1
-    shape_msgs/Plane[] planes
-        #
-        float64[4] coef
-    geometry_msgs/Pose[] plane_poses
-        Point position
-            float64 x
-            float64 y
-            float64 z
-        Quaternion orientation
-            float64 x 0
-            float64 y 0
-            float64 z 0
-            float64 w 1
-    string[] subframe_names
-    geometry_msgs/Pose[] subframe_poses
-        Point position
-            float64 x
-            float64 y
-            float64 z
-        Quaternion orientation
-            float64 x 0
-            float64 y 0
-            float64 z 0
-            float64 w 1
-    byte ADD=0
-    byte REMOVE=1
-    byte APPEND=2
-    byte MOVE=3
-    byte operation
-
-# The set of links that the attached objects are allowed to touch
-# by default - the link_name is already considered by default
-string[] touch_links
-
-# If certain links were placed in a particular posture for this object to remain attached
-# (e.g., an end effector closing around an object), the posture necessary for releasing
-# the object is stored here
-trajectory_msgs/JointTrajectory detach_posture
-    std_msgs/Header header
-        builtin_interfaces/Time stamp
-            int32 sec
-            uint32 nanosec
-        string frame_id
-    string[] joint_names
-    JointTrajectoryPoint[] points
-        float64[] positions
-        float64[] velocities
-        float64[] accelerations
-        float64[] effort
-        builtin_interfaces/Duration time_from_start
-            int32 sec
-            uint32 nanosec
-
-# The weight of the attached object, if known
-float64 weight
-
 """,
     "sensor_msgs/msg/Image": """
 # This message contains an uncompressed image
@@ -773,7 +653,7 @@ string message
 string[] documents
 float32[] scores
 """,
-    "rai_interfaces/srv/WhatISee": """
+    "rai_interfaces/srv/WhatISee": """z
 # Copyright (C) 2024 Robotec.AI
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -924,6 +804,160 @@ class ToolCallingAgentTask(ABC):
             Agent's response
         """
         pass
+
+    def _check_topic_tool_call_field(
+        self,
+        tool_call: ToolCall,
+        expected_name: str,
+        expected_topic: str,
+        expected_message_type: str,
+        field_path: str,
+        expected_value: Any,
+    ) -> bool:
+        """
+        Verifies a tool call for a topic publishing operation.
+
+        Parameters
+        ----------
+        tool_call : ToolCall
+            The tool call dictionary containing keys such as "name" and "args".
+        expected_name : str
+            The expected tool call name (e.g., "publish_ros2_message").
+        expected_topic : str
+            The expected topic name in the tool call's arguments.
+        expected_message_type : str
+            The expected message type (e.g., "rai_interfaces/msg/HRIMessage").
+        field_path : str
+            Dot-separated path to the field inside the message (e.g., "header.frame_id").
+        expected_value : Any
+            The expected value at the given field path.
+
+        Returns
+        -------
+        bool
+            True if all conditions are met; False otherwise.
+        """
+        # Check tool call name.
+        if tool_call.get("name") != expected_name:
+            self.log_error(
+                f"Expected tool call name '{expected_name}', but got '{tool_call.get('name')}'."
+            )
+            return False
+
+        args = tool_call.get("args", {})
+
+        # Check topic.
+        if args.get("topic") != expected_topic:
+            self.log_error(
+                f"Expected topic '{expected_topic}', but got '{args.get('topic')}'."
+            )
+            return False
+
+        # Check message type.
+        if args.get("message_type") != expected_message_type:
+            self.log_error(
+                f"Expected message type '{expected_message_type}', but got '{args.get('message_type')}'."
+            )
+            return False
+
+        # Traverse the message field.
+        message = args.get("message")
+        if message is None:
+            self.log_error("Tool call does not contain a 'message' argument.")
+            return False
+
+        keys = field_path.split(".")
+        value: Any = message
+        for key in keys:
+            if isinstance(value, dict) and key in value:
+                value = value[key]
+            else:
+                self.log_error(f"Field path '{field_path}' not found in the message.")
+                return False
+
+        if value != expected_value:
+            self.log_error(
+                f"Expected value for field '{field_path}' is '{expected_value}', but got '{value}'."
+            )
+            return False
+
+        return True
+
+    def _check_service_tool_call_field(
+        self,
+        tool_call: ToolCall,
+        expected_name: str,
+        expected_service: str,
+        expected_service_type: str,
+        field_path: str,
+        expected_value: Any,
+    ) -> bool:
+        """
+        Verifies a tool call for a service call.
+
+        Parameters
+        ----------
+        tool_call : ToolCall
+            The tool call dictionary containing keys such as "name" and "args".
+        expected_name : str
+            The expected tool call name (e.g., "call_ros2_service").
+        expected_service : str
+            The expected service name in the tool call's arguments.
+        expected_message_type : str
+            The expected message type.
+        field_path : str
+            Dot-separated path to the field inside the message.
+        expected_value : Any
+            The expected value at the given field path.
+
+        Returns
+        -------
+        bool
+            True if all conditions are met; False otherwise.
+        """
+        if tool_call.get("name") != expected_name:
+            self.log_error(
+                f"Expected tool call name '{expected_name}', but got '{tool_call.get('name')}'."
+            )
+            return False
+
+        args = tool_call.get("args", {})
+
+        # Check service.
+        if args.get("service_name") != expected_service:
+            self.log_error(
+                f"Expected service '{expected_service}', but got '{args.get('service')}'."
+            )
+            return False
+
+        # Check message type.
+        if args.get("service_type") != expected_service_type:
+            self.log_error(
+                f"Expected message type '{expected_service_type}', but got '{args.get('service_type')}'."
+            )
+            return False
+
+        service_args = args.get("service_args")
+        if service_args is None:
+            self.log_error("Tool call does not contain a 'service_args' argument.")
+            return False
+
+        keys = field_path.split(".")
+        value: Any = service_args
+        for key in keys:
+            if isinstance(value, dict) and key in value:
+                value = value[key]
+            else:
+                self.log_error(f"Field path '{field_path}' not found in the message.")
+                return False
+
+        if value != expected_value:
+            self.log_error(
+                f"Expected value for field '{field_path}' is '{expected_value}', but got '{value}'."
+            )
+            return False
+
+        return True
 
     def _check_tool_call(
         self,
@@ -1165,15 +1199,21 @@ class ROS2ToolCallingAgentTask(ToolCallingAgentTask, ABC):
             return False
         return True
 
+    def get_tool_calls(self, response: dict[str, Any]) -> list[ToolCall]:
+        """Extracts all tool calls from the response, flattened across all AI messages."""
+        tool_calls: List[ToolCall] = []
+        for msg in response["messages"]:
+            if isinstance(msg, AIMessage):
+                tool_calls.extend(msg.tool_calls)
+        return tool_calls
+
 
 class CustomInterfacesTopicTask(ROS2ToolCallingAgentTask, ABC):
     TOPICS_AND_TYPES: Dict[str, str] = {
         # sample topics
-        "/attached_collision_object": "moveit_msgs/msg/AttachedCollisionObject",
         "/camera_image_color": "sensor_msgs/msg/Image",
         "/camera_image_depth": "sensor_msgs/msg/Image",
         "/clock": "rosgraph_msgs/msg/Clock",
-        "/collision_object": "moveit_msgs/msg/CollisionObject",
         "/color_camera_info": "sensor_msgs/msg/CameraInfo",
         "/color_camera_info5": "sensor_msgs/msg/CameraInfo",
         "/depth_camera_info5": "sensor_msgs/msg/CameraInfo",
@@ -1187,6 +1227,14 @@ class CustomInterfacesTopicTask(ROS2ToolCallingAgentTask, ABC):
         f"topic: {topic}\ntype: {msg_type}\n"
         for topic, msg_type in TOPICS_AND_TYPES.items()
     ]
+    MODELS: Dict[str, Type[BaseModel]] = {
+        "sensor_msgs/msg/CameraInfo": CameraInfo,
+        "sensor_msgs/msg/Image": Image,
+        "rosgraph_msgs/msg/Clock": Clock,
+        "rai_interfaces/msg/HRIMessage": HRIMessage,
+        "rai_interfaces/msg/AudioMessage": AudioMessage,
+        "rai_interfaces/msg/RAIDetectionArray": RAIDetectionArray,
+    }
 
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
@@ -1199,6 +1247,7 @@ class CustomInterfacesTopicTask(ROS2ToolCallingAgentTask, ABC):
             MockPublishROS2MessageTool(
                 available_topics=list(self.TOPICS_AND_TYPES.keys()),
                 available_message_types=list(self.TOPICS_AND_TYPES.values()),
+                available_topic_models=self.MODELS,
             ),
         ]
 
@@ -1208,69 +1257,84 @@ class CustomInterfacesTopicTask(ROS2ToolCallingAgentTask, ABC):
         pass
 
     @property
-    @abstractmethod
-    def expected_message(self) -> BaseModel:
-        pass
-
-    @property
     def expected_message_type(self) -> str:
         return self.TOPICS_AND_TYPES[self.expected_topic]
 
-    def verify_tool_calls(self, response: dict[str, Any]):
-        """It is expected that the agent will request:
-        1. The tool that retrieves the topics names and types to recognize what type of message to_human topic has
-        2. The tool that retrieves interfaces to check HRIMessage type
-        3. The tool to publish message with proper topic, message type and content
+    @property
+    def extra_calls(self) -> int:
+        return 0
 
-        Parameters
-        ----------
-        response : dict[str, Any]
-            The response from the agent
+    def verify_list_and_get_interface_tool_calls(
+        self, tool_calls: List[ToolCall]
+    ) -> tuple[bool, list[ToolCall]]:
+        """
+        Verifies tool calls in this required order:
+        1. get_ros2_topics_and_types
+        2. get_ros2_message_interface (with correct msg_type)
+
+        Returns
+        -------
+        Tuple[bool, List[AIMessage]]
+            Success flag and remaining messages (to be used in `verify_message_tool_call`)
+        """
+
+        expected_core_calls = 3
+        max_allowed = expected_core_calls + self.extra_calls
+        if len(tool_calls) > max_allowed:
+            self.log_error(
+                f"Too many tool calls. Expected at most {max_allowed}, got {len(tool_calls)}."
+            )
+            return False, []
+
+        stage = 0  # 0: expect topics, 1: expect interface
+        for idx, call in enumerate(tool_calls):
+            if stage == 0 and call["name"] == "get_ros2_topics_names_and_types":
+                stage = 1
+                continue
+
+            if stage == 1 and call["name"] == "get_ros2_message_interface":
+                if call["args"].get("msg_type") == self.expected_message_type:
+                    stage = 2
+                    return True, tool_calls[idx + 1 :]
+
+        self.log_error("Required tool calls not found in order: topics → interface")
+        return False, []
+
+    @abstractmethod
+    def verify_message_tool_call(self, tool_calls: List[ToolCall]) -> bool:
+        """
+        Search the remaining AI messages for the expected publish/service tool call.
+        """
+        pass
+
+    def verify_tool_calls(self, response: dict[str, Any]):
+        """
+        Validates the full sequence of AI tool calls with support for extras and ordering.
+
+        Steps:
+        1. Get topics
+        2. Get message interface
+        3. Call publish/service with expected content
         """
         messages = response["messages"]
         ai_messages: Sequence[AIMessage] = [
-            message for message in messages if isinstance(message, AIMessage)
+            msg for msg in messages if isinstance(msg, AIMessage)
         ]
-        self.logger.debug(ai_messages)
-        if len(ai_messages) != 4:
-            self.log_error(
-                msg=f"Expected exactly 4 AI messages, but got {len(ai_messages)}."
-            )
-        if ai_messages:
-            if not self._is_ai_message_requesting_get_ros2_topics_and_types(
-                ai_messages[0]
-            ):
-                self.log_error(
-                    msg="First AI message did not request ROS2 topics and types correctly."
-                )
-        if len(ai_messages) > 1:
-            if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
-                self._check_tool_call(
-                    tool_call=ai_messages[1].tool_calls[0],
-                    expected_name="get_ros2_message_interface",
-                    expected_args={"msg_type": self.expected_message_type},
-                )
+        self.logger.debug(f"AI messages: {ai_messages}")
+        tool_calls = self.get_tool_calls(response)
 
-        if len(ai_messages) > 2:
-            if self._check_tool_calls_num_in_ai_message(ai_messages[2], expected_num=1):
-                self._check_tool_call(
-                    tool_call=ai_messages[2].tool_calls[0],
-                    expected_name="publish_ros2_message",
-                    expected_args={
-                        "topic": self.expected_topic,
-                        "message": self.expected_message.model_dump(),
-                        "message_type": self.expected_message_type,
-                    },
-                )
-        if not self.result.errors:
+        success, remaining_tool_calls = self.verify_list_and_get_interface_tool_calls(
+            tool_calls
+        )
+        if success and self.verify_message_tool_call(remaining_tool_calls):
             self.result.success = True
 
 
 class CustomInterfacesServiceTask(ROS2ToolCallingAgentTask, ABC):
     SERVICES_AND_TYPES = {
         # sample interfaces
-        "/load_map": "moveit_msgs/srv/LoadMap",
-        "/query_planner_interface": "moveit_msgs/srv/QueryPlannerInterfaces",
+        # "/load_map": "moveit_msgs/srv/LoadMap",
+        # "/query_planner_interface": "moveit_msgs/srv/QueryPlannerInterfaces",
         # custom interfaces
         "/manipulator_move_to": "rai_interfaces/srv/ManipulatorMoveTo",
         "/grounded_sam_segment": "rai_interfaces/srv/RAIGroundedSam",
@@ -1278,6 +1342,15 @@ class CustomInterfacesServiceTask(ROS2ToolCallingAgentTask, ABC):
         "/get_log_digest": "rai_interfaces/srv/StringList",
         "/rai_whoami_documentation_service": "rai_interfaces/srv/VectorStoreRetrieval",
         "rai/whatisee/get": "rai_interfaces/srv/WhatISee",
+    }
+
+    MODELS: Dict[str, Type[BaseModel]] = {
+        "rai_interfaces/srv/ManipulatorMoveTo": ManipulatorMoveToRequest,
+        "rai_interfaces/srv/RAIGroundedSam": RAIGroundedSamRequest,
+        "rai_interfaces/srv/RAIGroundingDino": RAIGroundingDinoRequest,
+        "rai_interfaces/srv/StringList": StringListRequest,
+        "rai_interfaces/srv/VectorStoreRetrieval": VectorStoreRetrievalRequest,
+        "rai_interfaces/srv/WhatISee": WhatISeeRequest,
     }
     service_strings = [
         f"service: {service}\ntype: {msg_type}\n"
@@ -1294,6 +1367,7 @@ class CustomInterfacesServiceTask(ROS2ToolCallingAgentTask, ABC):
             MockCallROS2ServiceTool(
                 available_services=list(self.SERVICES_AND_TYPES.keys()),
                 available_service_types=list(self.SERVICES_AND_TYPES.values()),
+                available_service_models=self.MODELS,
             ),
         ]
 
@@ -1303,61 +1377,71 @@ class CustomInterfacesServiceTask(ROS2ToolCallingAgentTask, ABC):
         pass
 
     @property
-    @abstractmethod
-    def expected_message(self) -> BaseModel:
-        pass
-
-    @property
     def expected_service_type(self) -> str:
         return self.SERVICES_AND_TYPES[self.expected_service]
 
-    def verify_tool_calls(self, response: dict[str, Any]):
-        """It is expected that the agent will request:
-        1. The tool that retrieves the topics names and types to recognize what type of message to_human topic has
-        2. The tool that retrieves interfaces to check HRIMessage type
-        3. The tool to publish message with proper topic, message type and content
+    @property
+    def extra_calls(self) -> int:
+        return 0
 
-        Parameters
-        ----------
-        response : dict[str, Any]
-            The response from the agent
+    def verify_list_and_get_interface_tool_calls(
+        self, tool_calls: List[ToolCall]
+    ) -> tuple[bool, list[ToolCall]]:
+        """
+        Verifies tool calls in this required order:
+        1. get_ros2_services_names_and_types
+        2. get_ros2_message_interface (with correct msg_type)
+
+        Returns
+        -------
+        Tuple[bool, List[ToolCall]]
+            Success flag and remaining tool calls for message verification
+        """
+        expected_core_calls = 3
+        max_allowed = expected_core_calls + self.extra_calls
+        if len(tool_calls) > max_allowed:
+            self.log_error(
+                f"Too many tool calls. Expected at most {max_allowed}, got {len(tool_calls)}."
+            )
+            return False, []
+
+        stage = 0  # 0: expect service list, 1: expect interface
+        for idx, call in enumerate(tool_calls):
+            if stage == 0 and call["name"] == "get_ros2_services_names_and_types":
+                stage = 1
+                continue
+
+            if stage == 1 and call["name"] == "get_ros2_message_interface":
+                if call["args"].get("msg_type") == self.expected_service_type:
+                    stage = 2
+                    return True, tool_calls[idx + 1 :]
+
+        self.log_error("Required tool calls not found in order: services → interface")
+        return False, []
+
+    @abstractmethod
+    def verify_message_tool_call(self, tool_calls: List[ToolCall]) -> bool:
+        """Search the remaining tool calls for the expected service call."""
+        pass
+
+    def verify_tool_calls(self, response: dict[str, Any]):
+        """
+        Full tool call sequence verification:
+        1. Get services
+        2. Get message interface
+        3. Call service with expected values
         """
         messages = response["messages"]
         ai_messages: Sequence[AIMessage] = [
-            message for message in messages if isinstance(message, AIMessage)
+            msg for msg in messages if isinstance(msg, AIMessage)
         ]
-        self.logger.debug(ai_messages)
-        if len(ai_messages) != 4:
-            self.log_error(
-                msg=f"Expected exactly 4 AI messages, but got {len(ai_messages)}."
-            )
-        if ai_messages:
-            if not self._is_ai_message_requesting_get_ros2_services_and_types(
-                ai_messages[0]
-            ):
-                self.log_error(
-                    msg="First AI message did not request ROS2 topics and types correctly."
-                )
-        if len(ai_messages) > 1:
-            if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
-                self._check_tool_call(
-                    tool_call=ai_messages[1].tool_calls[0],
-                    expected_name="get_ros2_message_interface",
-                    expected_args={"msg_type": self.expected_service_type},
-                )
+        self.logger.debug(f"AI messages: {ai_messages}")
+        tool_calls = self.get_tool_calls(response)
 
-        if len(ai_messages) > 2:
-            if self._check_tool_calls_num_in_ai_message(ai_messages[2], expected_num=1):
-                self._check_tool_call(
-                    tool_call=ai_messages[2].tool_calls[0],
-                    expected_name="call_ros2_service",
-                    expected_args={
-                        "topic": self.expected_service,
-                        "message": self.expected_message.model_dump(),
-                        "message_type": self.expected_service_type,
-                    },
-                )
-        if not self.result.errors:
+        success, remaining_tool_calls = self.verify_list_and_get_interface_tool_calls(
+            tool_calls
+        )
+        if success and self.verify_message_tool_call(remaining_tool_calls):
             self.result.success = True
 
 
@@ -1445,9 +1529,9 @@ class CustomInterfacesActionTask(ROS2ToolCallingAgentTask, ABC):
                     tool_call=ai_messages[2].tool_calls[0],
                     expected_name="start_ros2_action",
                     expected_args={
-                        "topic": self.expected_action,
-                        "message": self.expected_message.model_dump(),
-                        "message_type": self.expected_action_type,
+                        "action_name": self.expected_action,
+                        "action_args": self.expected_message.model_dump(),
+                        "action_type": self.expected_action_type,
                     },
                 )
         if not self.result.errors:
