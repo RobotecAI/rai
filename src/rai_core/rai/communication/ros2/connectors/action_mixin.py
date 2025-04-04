@@ -12,13 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from rai.communication.ros2.api import ROS2ActionAPI
 from rai.communication.ros2.messages import ROS2ARIMessage, ROS2HRIMessage
 
 
 class ROS2ActionMixin:
+    if TYPE_CHECKING:
+        _actions_api: ROS2ActionAPI
+
     def __post_init__(self, *args: Any, **kwargs: Any) -> None:
         if not hasattr(self, "_actions_api"):
             raise AttributeError(
@@ -60,4 +63,4 @@ class ROS2ActionMixin:
         return handle
 
     def terminate_action(self, action_handle: str, **kwargs: Any):
-        self._actions_api.terminate_goal(action_handle)
+        return self._actions_api.terminate_goal(action_handle)
