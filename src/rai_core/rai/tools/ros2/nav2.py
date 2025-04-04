@@ -15,7 +15,7 @@
 from typing import List, Optional, Type
 
 from geometry_msgs.msg import PoseStamped, Quaternion
-from langchain_core.tools import BaseTool, BaseToolkit
+from langchain_core.tools import BaseTool
 from nav2_msgs.action import NavigateToPose
 from pydantic import BaseModel, Field
 from rclpy.action import ActionClient
@@ -23,7 +23,7 @@ from tf_transformations import quaternion_from_euler
 
 from rai.communication.ros2 import ROS2ARIMessage
 from rai.communication.ros2.connectors import ROS2ARIConnector
-from rai.tools.ros2.base import BaseROS2Tool
+from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
 
 action_client: Optional[ActionClient] = None
 current_action_id: Optional[str] = None
@@ -31,7 +31,7 @@ current_feedback: Optional[NavigateToPose.Feedback] = None
 current_result: Optional[NavigateToPose.Result] = None
 
 
-class Nav2Toolkit(BaseToolkit):
+class Nav2Toolkit(BaseROS2Toolkit):
     connector: ROS2ARIConnector
 
     def get_tools(self) -> List[BaseTool]:
