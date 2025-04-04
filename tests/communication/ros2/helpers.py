@@ -120,6 +120,7 @@ class TestActionServer(Node):
             cancel_callback=self.cancel_callback,
             callback_group=ReentrantCallbackGroup(),
         )
+        self.cancelled: bool = False
 
     def handle_test_action(
         self, goal_handle: ServerGoalHandle
@@ -147,6 +148,7 @@ class TestActionServer(Node):
 
     def cancel_callback(self, cancel_request) -> CancelResponse:
         self.get_logger().info("Got cancel request")
+        self.cancelled = True
         return CancelResponse.ACCEPT
 
 
