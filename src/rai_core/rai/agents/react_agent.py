@@ -34,10 +34,13 @@ class ReActAgent(BaseAgent):
         llm: Optional[BaseChatModel] = None,
         tools: Optional[List[BaseTool]] = None,
         state: Optional[ReActAgentState] = None,
+        system_prompt: Optional[str] = None,
     ):
         super().__init__(connectors=connectors)
         self.logger = logging.getLogger(__name__)
-        self.agent = create_react_runnable(llm=llm, tools=tools)
+        self.agent = create_react_runnable(
+            llm=llm, tools=tools, system_prompt=system_prompt
+        )
         self.callback = HRICallbackHandler(
             connectors=connectors, aggregate_chunks=True, logger=self.logger
         )
