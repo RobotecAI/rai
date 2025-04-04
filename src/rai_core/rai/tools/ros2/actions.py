@@ -28,6 +28,7 @@ from typing import Any, Callable, Dict, List, Type
 from langchain_core.tools import BaseTool  # type: ignore
 from langchain_core.utils import stringify_dict
 from pydantic import BaseModel, Field
+from rclpy.action import CancelResponse
 
 from rai.communication.ros2 import ROS2ARIConnector, ROS2ARIMessage
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
@@ -253,14 +254,12 @@ class CancelROS2ActionTool(BaseROS2Tool):
     description: str = "Cancel a ROS2 action"
     args_schema: Type[CancelROS2ActionToolInput] = CancelROS2ActionToolInput
 
-    internal_action_id_mapping: Dict[str, str] = Field(
-        default_factory=get_internal_action_id_mapping
-    )
-
     def _run(self, action_id: str) -> str:
-        external_action_id = self.internal_action_id_mapping[action_id]
-        self.connector.terminate_action(external_action_id)
-        return f"Action {action_id} cancelled"
+        response = self.connector.terminate_action(action_id)
+        if response == CancelResponse.ACCEPT:
+            return f"Action {action_id} cancelled."
+        else:
+            return f"Action {action_id} could not be cancelled."
 
 
 class GetROS2ActionIDsToolInput(BaseModel):
