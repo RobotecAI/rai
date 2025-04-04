@@ -27,7 +27,7 @@ from rai.tools.ros.manipulation import (
     GetObjectPositionsTool,
     MoveToPointTool,
 )
-from rai.tools.ros2.topics import (
+from rai.tools.ros2 import (
     GetROS2ImageTool,
     GetROS2TopicsNamesAndTypesTool,
 )
