@@ -16,7 +16,7 @@ from functools import partial
 from typing import List, Optional, TypedDict, cast
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import BaseMessage, SystemMessage
 from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
 from langgraph.graph import START, StateGraph
@@ -38,7 +38,7 @@ class ReActAgentState(TypedDict):
     messages: List[BaseMessage]
 
 
-def llm_node(llm: BaseChatModel, state: ReActAgentState):
+def llm_node(llm: BaseChatModel, system_prompt: Optional[str], state: ReActAgentState):
     """Process messages using the LLM.
 
     Parameters
@@ -58,13 +58,18 @@ def llm_node(llm: BaseChatModel, state: ReActAgentState):
     ValueError
         If state is invalid or LLM processing fails
     """
-
+    if system_prompt:
+        # at this point, state['messages'] length should at least be 1
+        if not isinstance(state["messages"][0], SystemMessage):
+            state["messages"].insert(0, SystemMessage(content=system_prompt))
     ai_msg = llm.invoke(state["messages"])
     state["messages"].append(ai_msg)
 
 
 def create_react_runnable(
-    llm: Optional[BaseChatModel] = None, tools: Optional[List[BaseTool]] = None
+    llm: Optional[BaseChatModel] = None,
+    tools: Optional[List[BaseTool]] = None,
+    system_prompt: Optional[str] = None,
 ) -> Runnable[ReActAgentState, ReActAgentState]:
     """Create a react agent that can process messages and optionally use tools.
 
@@ -101,9 +106,9 @@ def create_react_runnable(
         graph.add_edge("tools", "llm")
         # Bind tools to LLM
         bound_llm = cast(BaseChatModel, llm.bind_tools(tools))
-        graph.add_node("llm", partial(llm_node, bound_llm))
+        graph.add_node("llm", partial(llm_node, bound_llm, system_prompt))
     else:
-        graph.add_node("llm", partial(llm_node, llm))
+        graph.add_node("llm", partial(llm_node, llm, system_prompt))
 
     # Compile the graph
     return graph.compile()
