@@ -12,21 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any
+
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.runnables import Runnable
 
 from rai.agents.integrations.streamlit import get_streamlit_cb, streamlit_invoke
-from rai.agents.langchain.runnables import ReActAgentState
 from rai.messages import HumanMultimodalMessage
 
 
-def run_streamlit_app(agent: Runnable[ReActAgentState, ReActAgentState]):
-    st.set_page_config(
-        page_title="RAI Manipulation Demo",
-        page_icon=":robot:",
-    )
-    st.title("RAI Manipulation Demo")
+def run_streamlit_app(agent: Runnable[Any, Any], page_title: str, initial_message: str):
+    st.title(page_title)
     st.markdown("---")
 
     st.sidebar.header("Tool Calls History")
@@ -35,9 +32,7 @@ def run_streamlit_app(agent: Runnable[ReActAgentState, ReActAgentState]):
         st.session_state["graph"] = agent
 
     if "messages" not in st.session_state:
-        st.session_state["messages"] = [
-            AIMessage(content="Hi! I am a robotic arm. What can I do for you?")
-        ]
+        st.session_state["messages"] = [AIMessage(content=initial_message)]
 
     prompt = st.chat_input()
     for msg in st.session_state.messages:
