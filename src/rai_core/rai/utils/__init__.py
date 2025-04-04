@@ -14,5 +14,6 @@
 
 from .agents import wait_for_shutdown
 from .ros import ROS2Context
+from .streamlit import run_streamlit_app
 
-__all__ = ["ROS2Context", "wait_for_shutdown"]
+__all__ = ["ROS2Context", "run_streamlit_app", "wait_for_shutdown"]

@@ -32,56 +32,28 @@ This demo utilizes Open 3D Engine simulation and allows you to work with RAI on 
 If you would like more freedom to adapt the simulation to your needs, you can make changes using
 [O3DE Editor](https://www.docs.o3de.org/docs/welcome-guide/) and build the project
 yourself.
-Please refer to [rai husarion rosbot xl demo][rai rosbot demo] for more details.
+Please refer to [rai husarion rosbot xl demo](https://github.com/RobotecAI/rai-rosbot-xl-demo) for more details.
 
 # Running RAI
 
-1. Robot identity
-
-   Process of setting up the robot identity is described in [create_robots_whoami](../create_robots_whoami.md).
-   We provide ready whoami for RosBotXL in the package.
-
-   ```bash
-   cd rai
-   vcs import < demos.repos
-   colcon build --symlink-install --packages-select rosbot_xl_whoami
-   ```
-
-2. Running rai nodes and agents, navigation stack and O3DE simulation.
+1. Running rai nodes and agents, navigation stack and O3DE simulation.
 
    ```bash
    ros2 launch ./examples/rosbot-xl.launch.py game_launcher:=path/to/RAIROSBotXLDemo.GameLauncher
    ```
 
-3. Play with the demo, adding tasks to the RAI agent. Here are some examples:
+2. Run streamlit gui:
 
    ```bash
-   # Ask robot where it is. RAI will use camera to describe the environment
-   ros2 action send_goal -f /perform_task rai_interfaces/action/Task "{priority: 10, description: '', task: 'Where are you?'}"
-
-   # See integration with the navigation stack
-   ros2 action send_goal -f /perform_task rai_interfaces/action/Task "{priority: 10, description: '', task: 'Drive 1 meter forward'}"
-   ros2 action send_goal -f /perform_task rai_interfaces/action/Task "{priority: 10, description: '', task: 'Spin 90 degrees'}"
-
-   # Try out more complicated tasks
-   ros2 action send_goal -f /perform_task rai_interfaces/action/Task "{priority: 10, description: '', task: ' Drive forward if the path is clear, otherwise backward'}"
+   streamlit run examples/rosbot-xl-demo.py
    ```
 
-> **NOTE**: For now agent is capable of performing only 1 task at once.
-> Human-Robot Interaction module is not yet included in the demo (coming soon!).
+3. Play with the demo, prompting the agent to perform tasks. Here are some examples:
 
-### What is happening?
-
-By looking at the example code in [rai/examples/rosbot-xl-demo.py](../../examples/rosbot-xl-demo.py) `examples` you can see that:
-
-- This node has no information about the robot besides what it can get from `rai_whoami_node`.
-- Topics can be whitelisted to only receive information about the robot.
-- Before every LLM decision, `rai_node` sends its state to the LLM Agent. By default, it contains ros interfaces (topics, services, actions) and logs summary, but the state can be extended.
-- In the example we are also adding description of the camera image to the state.
-
-If you wish, you can learn more about [configuring RAI for a specific robot](../create_robots_whoami.md).
-
-[rai rosbot demo]: https://github.com/RobotecAI/rai-rosbot-xl-demo
+   - Where are you now?
+   - What do you see?
+   - What is the position of bed?
+   - Navigate to the kitchen.
 
 > [!TIP]
 > If you are having trouble running the binary, you can build it from source [here](https://github.com/RobotecAI/rai-rosbot-xl-demo).

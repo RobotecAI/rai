@@ -12,148 +12,96 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import List
+
 import rclpy
-import rclpy.executors
-import rclpy.logging
 import streamlit as st
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
-from rai.agents.conversational_agent import create_conversational_agent
-from rai.agents.integrations.streamlit import get_streamlit_cb, streamlit_invoke
+from langchain_core.tools import BaseTool
+from rai.agents.react_agent import ReActAgent
 from rai.communication.ros2 import ROS2ARIConnector
-from rai.messages import HumanMultimodalMessage
 from rai.tools.ros.manipulation import GetGrabbingPointTool, GetObjectPositionsTool
-from rai.tools.ros2 import ROS2Toolkit
+from rai.tools.ros2.simple import (
+    GetROS2ImageConfiguredTool,
+    GetROS2TransformConfiguredTool,
+)
 from rai.tools.time import WaitForSecondsTool
 from rai.utils.model_initialization import get_llm_model
-from rai_open_set_vision.tools import GetDetectionTool, GetDistanceToObjectsTool
+from rai.utils.streamlit import run_streamlit_app
+
+# Set page configuration first
+st.set_page_config(
+    page_title="RAI ROSBotXL Demo",
+    page_icon=":robot:",
+)
 
 
 @st.cache_resource
 def initialize_agent():
     rclpy.init()
-    SYSTEM_PROMPT = """You are an autonomous robot connected to ros2 environment. Your main goal is to fulfill the user's requests.
-    Do not make assumptions about the environment you are currently in.
-    You can use ros2 topics, services and actions to operate.
-
-    <rule> As a first step check transforms by getting 1 message from /tf topic </rule>
-    <rule> use /cmd_vel topic very carefully. Obstacle detection works only with nav2 stack, so be careful when it is not used. </rule>>
-    <rule> be patient with running ros2 actions. usually the take some time to run. </rule>
-    <rule> Always check your transform before and after you perform ros2 actions, so that you can verify if it worked. </rule>
-
-    Navigation tips:
-    - it's good to start finding objects by rotating, then navigating to some diverse location with occasional rotations. Remember to frequency detect objects.
-    - for driving forward/backward or to some coordinates, ros2 actions are better.
-    - for driving for some specific time or in specific manner (like shaper or turns) it good to use /cmd_vel topic
-    - you are currently unable to read map or point-cloud, so please avoid subscribing to such topics.
-    - if you are asked to drive towards some object, it's good to:
-        1. check the camera image and verify if objects can be seen
-        2. if only driving forward is required, do it
-        3. if obstacle avoidance might be required, use ros2 actions navigate_*, but first check your current position, then very accurately estimate the goal pose.
-    - it is good to verify using given information if the robot is not stuck
-    - navigation actions sometimes fail. Their output can be read from rosout. You can also tell if they partially worked by checking the robot position and rotation.
-    - before using any ros2 interfaces, always make sure to check you are using the right interface
-    - processing camera image takes 5-10s. Take it into account that if the robot is moving, the information can be outdated. Handle it by good planning of your movements.
-    - you are encouraged to use wait tool in between checking the status of actions
-    - to find some object navigate around and check the surrounding area
-    - when the goal is accomplished please make sure to cancel running actions
-    - when you reach the navigation goal - double check if you reached it by checking the current position
-    - if you detect collision, please stop operation
-
-    - you will be given your camera image description. Based on this information you can reason about positions of objects.
-    - be careful and aboid obstacles
-
-    Here are the corners of your environment:
-    (-2.76,9.04, 0.0),
-    (4.62, 9.07, 0.0),
-    (-2.79, -3.83, 0.0),
-    (4.59, -3.81, 0.0)
-
-    This is location of places:
-    Kitchen:
-    (2.06, -0.23, 0.0),
-    (2.07, -1.43, 0.0),
-    (-2.44, -0.38, 0.0),
-    (-2.56, -1.47, 0.0)
-
-    # Living room:
-    (-2.49, 1.87, 0.0),
-    (-2.50, 5.49, 0.0),
-    (0.79, 5.73, 0.0),
-    (0.92, 1.01, 0.0)
-
-    Before starting anything, make sure to load available topics, services and actions.
+    SYSTEM_PROMPT = """
+    You are an intelligent autonomous agent embodied in ROSBotXL—this robot is your body, your interface with the physical world.
+    You operate within a known indoor environment. Key locations include:
+    Kitchen (center): (-0.2175, -0.8775, 0.0)
+    Living Room (center): (-0.82, 3.525, 0.0)
+    ROSBotXL is equipped with a camera, enabling you to visually perceive your surroundings.
+    You can obtain real-time images from the ROS 2 topic using the get_ros2_camera_image tool.
+    When executing tasks that require time to complete—such as navigating between locations,
+    waiting for an event, or monitoring a process—you must use the WaitForSecondsTool to pause appropriately during or between steps.
+    This ensures smooth and realistic operation.
+    Your mission is to understand and faithfully execute the user's commands using your tools, sensors, and spatial knowledge.
+    Always plan ahead: analyze the task, evaluate the context, and reason through your actions to ensure they are effective, safe, and aligned with the goal.
+    Act with intelligence and autonomy. Be proactive, deliberate, and aware of your environment.
+    Your job is to transform user intent into meaningful, goal-driven behavior within the physical world.
     """
 
     connector = ROS2ARIConnector()
+    tools: List[BaseTool] = [
+        GetROS2TransformConfiguredTool(
+            connector=connector,
+            source_frame="map",
+            target_frame="base_link",
+            timeout_sec=5.0,
+        ),
+        GetROS2ImageConfiguredTool(
+            connector=connector,
+            topic="/camera/camera/color/image_raw",
+            response_format="content_and_artifact",
+        ),
+        WaitForSecondsTool(),
+        GetObjectPositionsTool(
+            connector=connector,
+            target_frame="map",
+            source_frame="sensor_frame",
+            camera_topic="/camera/camera/color/image_raw",
+            depth_topic="/camera/camera/depth/image_rect_raw",
+            camera_info_topic="/camera/camera/color/camera_info",
+            get_grabbing_point_tool=GetGrabbingPointTool(
+                connector=connector,
+            ),
+        ),
+    ]
+    # Initialize an empty connectors dictionary since we're using the agent in direct mode
+    # In a distributed setup, connectors would be used to handle communication between
+    # components, routing agent inputs/outputs through the distributed system
+    connectors = {}
 
-    agent = create_conversational_agent(
+    agent = ReActAgent(
+        connectors=connectors,
         llm=get_llm_model("complex_model", streaming=True),
         system_prompt=SYSTEM_PROMPT,
-        tools=[
-            *ROS2Toolkit(
-                connector=connector, forbidden=["/tf", "/cmd_vel"]
-            ).get_tools(),
-            WaitForSecondsTool(),
-            GetDetectionTool(connector=connector, node=connector.node),
-            GetDistanceToObjectsTool(connector=connector, node=connector.node),
-            GetObjectPositionsTool(
-                connector=connector,
-                target_frame="map",
-                source_frame="sensor_frame",
-                camera_topic="/camera/camera/color/image_raw",
-                depth_topic="/camera/camera/depth/image_rect_raw",
-                camera_info_topic="/camera/camera/color/camera_info",
-                get_grabbing_point_tool=GetGrabbingPointTool(
-                    connector=connector,
-                ),
-            ),
-        ],
-    )
+        tools=tools,
+    ).agent
     connector.node.declare_parameter("conversion_ratio", 1.0)
 
     return agent
 
 
 def main():
-    st.set_page_config(
-        page_title="RAI ROSBotXL Demo",
-        page_icon=":robot:",
+    run_streamlit_app(
+        initialize_agent(),
+        "RAI ROSBotXL Demo",
+        "Hi! I am a ROSBotXL robot. What can I do for you?",
     )
-    st.title("RAI ROSBotXL Demo")
-    st.markdown("---")
-
-    st.sidebar.header("Tool Calls History")
-
-    if "graph" not in st.session_state:
-        graph = initialize_agent()
-        st.session_state["graph"] = graph
-
-    if "messages" not in st.session_state:
-        st.session_state["messages"] = [
-            AIMessage(content="Hi! I am ROSBotXL. What can I do for you?")
-        ]
-
-    prompt = st.chat_input()
-    for msg in st.session_state.messages:
-        if isinstance(msg, AIMessage):
-            if msg.content:
-                st.chat_message("assistant").write(msg.content)
-        elif isinstance(msg, HumanMultimodalMessage):
-            continue
-        elif isinstance(msg, HumanMessage):
-            st.chat_message("user").write(msg.content)
-        elif isinstance(msg, ToolMessage):
-            with st.sidebar.expander(f"Tool: {msg.name}", expanded=False):
-                st.code(msg.content, language="json")
-
-    if prompt:
-        st.session_state.messages.append(HumanMessage(content=prompt))
-        st.chat_message("user").write(prompt)
-        with st.chat_message("assistant"):
-            st_callback = get_streamlit_cb(st.container())
-            streamlit_invoke(
-                st.session_state["graph"], st.session_state.messages, [st_callback]
-            )
 
 
 if __name__ == "__main__":
