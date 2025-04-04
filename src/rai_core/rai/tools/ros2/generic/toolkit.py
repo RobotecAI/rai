@@ -16,14 +16,18 @@ from typing import List
 
 from langchain_core.tools import BaseTool
 
-from rai.tools.ros2.actions import ROS2ActionToolkit
 from rai.tools.ros2.base import BaseROS2Toolkit
-from rai.tools.ros2.services import ROS2ServicesToolkit
-from rai.tools.ros2.topics import ROS2TopicsToolkit
 
 
 class ROS2Toolkit(BaseROS2Toolkit):
     def get_tools(self) -> List[BaseTool]:
+        # lazy import to avoid circular import
+        from rai.tools.ros2.generic import (
+            ROS2ActionToolkit,
+            ROS2ServicesToolkit,
+            ROS2TopicsToolkit,
+        )
+
         return [
             *ROS2TopicsToolkit(
                 connector=self.connector,

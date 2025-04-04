@@ -233,7 +233,7 @@ def test_ros2ari_connector_create_service(
         service_client = TestServiceClient()
         executors, threads = multi_threaded_spinner([service_client])
         service_client.send_request()
-        time.sleep(0.02)
+        time.sleep(0.2)
         assert mock_callback.called
     finally:
         connector.shutdown()

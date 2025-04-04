@@ -24,7 +24,10 @@ from typing import Any, Literal
 from pydantic import Field
 
 from rai.tools.ros2.base import BaseROS2Tool
-from rai.tools.ros2.topics import GetROS2ImageTool, GetROS2TransformTool
+from rai.tools.ros2.generic.topics import (
+    GetROS2ImageTool,
+    GetROS2TransformTool,
+)
 
 
 class GetROS2ImageConfiguredTool(BaseROS2Tool):
