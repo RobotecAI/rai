@@ -253,13 +253,8 @@ class CancelROS2ActionTool(BaseROS2Tool):
     description: str = "Cancel a ROS2 action"
     args_schema: Type[CancelROS2ActionToolInput] = CancelROS2ActionToolInput
 
-    internal_action_id_mapping: Dict[str, str] = Field(
-        default_factory=get_internal_action_id_mapping
-    )
-
     def _run(self, action_id: str) -> str:
-        external_action_id = self.internal_action_id_mapping[action_id]
-        self.connector.terminate_action(external_action_id)
+        self.connector.terminate_action(action_id)
         return f"Action {action_id} cancelled"
 
 
