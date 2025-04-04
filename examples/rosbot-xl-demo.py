@@ -20,9 +20,10 @@ from langchain_core.tools import BaseTool
 from rai.agents.react_agent import ReActAgent
 from rai.communication.ros2 import ROS2ARIConnector
 from rai.tools.ros.manipulation import GetGrabbingPointTool, GetObjectPositionsTool
-from rai.tools.ros2.simple import (
+from rai.tools.ros2 import (
     GetROS2ImageConfiguredTool,
     GetROS2TransformConfiguredTool,
+    Nav2Toolkit,
 )
 from rai.tools.time import WaitForSecondsTool
 from rai.utils.model_initialization import get_llm_model
@@ -79,6 +80,7 @@ def initialize_agent():
                 connector=connector,
             ),
         ),
+        *Nav2Toolkit(connector=connector).get_tools(),
     ]
     # Initialize an empty connectors dictionary since we're using the agent in direct mode
     # In a distributed setup, connectors would be used to handle communication between
