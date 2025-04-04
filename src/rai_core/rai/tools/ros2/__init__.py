@@ -23,6 +23,10 @@ from .services import (
     GetROS2ServicesNamesAndTypesTool,
     ROS2ServicesToolkit,
 )
+from .simple import (
+    GetROS2ImageConfiguredTool,
+    GetROS2RobotPositionTool,
+)
 from .toolkit import ROS2Toolkit
 from .topics import (
     GetROS2ImageTool,
@@ -38,8 +42,10 @@ __all__ = [
     "CallROS2ServiceTool",
     "CancelROS2ActionTool",
     "GetROS2ActionsNamesAndTypesTool",
+    "GetROS2ImageConfiguredTool",
     "GetROS2ImageTool",
     "GetROS2MessageInterfaceTool",
+    "GetROS2RobotPositionTool",
     "GetROS2ServicesNamesAndTypesTool",
     "GetROS2TopicsNamesAndTypesTool",
     "GetROS2TransformTool",
