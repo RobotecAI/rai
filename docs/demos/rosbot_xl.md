@@ -11,10 +11,11 @@ This demo utilizes Open 3D Engine simulation and allows you to work with RAI on 
 - Ubuntu 22.04 & ros2 humble: [link](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIROSBotDemo_1.0.0_jammyhumble.zip)
 - Ubuntu 24.04 & ros2 jazzy: [link](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIROSBotDemo_1.0.0_noblejazzy.zip)
 
-2. Install required packages
+2. Install and download required packages
 
    ```bash
-   sudo apt install ros-${ROS_DISTRO}-ackermann-msgs ros-${ROS_DISTRO}-gazebo-msgs ros-${ROS_DISTRO}-control-toolbox ros-${ROS_DISTRO}-nav2-bringup
+   vcs import < demos.repos
+   rosdep install --from-paths src --ignore-src -r -y
    poetry install --with openset
    ```
 
