@@ -81,7 +81,10 @@ class BoolImageTask(SpatialReasoningAgentTask):
         return SPATIAL_REASONING_SYSTEM_PROMPT
 
     def get_prompt(self):
-        return self.question
+        return (
+            self.question
+            + "Answer the question and additionaly describe what you see in the image."
+        )
 
     def get_images(self):
         images = [preprocess_image(image_path) for image_path in self.images_paths]
