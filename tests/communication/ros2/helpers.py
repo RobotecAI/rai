@@ -109,6 +109,8 @@ class MessageSubscriber(Node):
 
 
 class TestActionServer(Node):
+    __test__ = False
+
     def __init__(self, action_name: str):
         super().__init__("test_action_server")
         self.action_server = ActionServer(
@@ -153,6 +155,8 @@ class TestActionServer(Node):
 
 
 class TestActionClient(Node):
+    __test__ = False
+
     def __init__(self):
         super().__init__("navigate_to_pose_client")
         self._action_client = ActionClient(self, NavigateToPose, "navigate_to_pose")
@@ -190,6 +194,8 @@ class TestActionClient(Node):
 
 
 class TestServiceClient(Node):
+    __test__ = False
+
     def __init__(self):
         super().__init__("set_bool_client")
         self.client = self.create_client(SetBool, "set_bool")
