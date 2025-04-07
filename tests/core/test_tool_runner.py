@@ -19,7 +19,7 @@ from langchain_core.tools import tool
 from rai.agents.tool_runner import ToolRunner
 from rai.messages import HumanMultimodalMessage, ToolMultimodalMessage
 from rai.messages.utils import preprocess_image
-from rai.tools.ros.cli import ros2_topic
+from rai.tools.ros2.cli import ros2_topic
 
 
 @tool(response_format="content_and_artifact")
