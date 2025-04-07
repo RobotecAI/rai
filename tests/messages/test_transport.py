@@ -57,6 +57,8 @@ def get_qos_profiles() -> List[str]:
 
 
 class TestPublisher(Node):
+    __test__ = False
+
     def __init__(self, qos_profile: QoSProfile):
         super().__init__("test_publisher_" + str(uuid.uuid4()).replace("-", ""))
 
