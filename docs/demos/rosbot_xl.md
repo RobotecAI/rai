@@ -6,6 +6,9 @@ This demo utilizes Open 3D Engine simulation and allows you to work with RAI on 
 
 ## Quick start
 
+> [!TIP]
+> The demo uses the `complex_model` LLM configured in [../../config.toml](../../config.toml). The model should be a multimodal, tool-calling model.
+
 1. Download the newest binary release:
 
 - Ubuntu 22.04 & ros2 humble: [link](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIROSBotDemo_1.0.0_jammyhumble.zip)
