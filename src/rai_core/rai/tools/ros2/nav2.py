@@ -12,17 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional, Type
+import base64
+import time
+from typing import List, Optional, Type, cast
 
-from geometry_msgs.msg import PoseStamped, Quaternion
+import cv2
+import numpy as np
+from geometry_msgs.msg import Point, PoseStamped, Quaternion, TransformStamped
 from langchain_core.tools import BaseTool
 from nav2_msgs.action import NavigateToPose
+from nav_msgs.msg import OccupancyGrid
 from pydantic import BaseModel, Field
 from rclpy.action import ActionClient
-from tf_transformations import quaternion_from_euler
+from tf_transformations import euler_from_quaternion, quaternion_from_euler
 
 from rai.communication.ros2 import ROS2ARIMessage
 from rai.communication.ros2.connectors import ROS2ARIConnector
+from rai.messages.multimodal import MultimodalArtifact
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
 
 action_client: Optional[ActionClient] = None
@@ -145,3 +151,140 @@ class CancelNavigateToPoseTool(BaseROS2Tool):
             return "No action to cancel"
         self.connector.terminate_action(current_action_id)
         return "Action cancelled"
+
+
+class GetOccupancyGridTool(BaseROS2Tool):
+    """Get the current map as an image with the robot's position marked on it (red dot)."""
+
+    name: str = "GetOccupancyGridTool"
+    description: str = "A tool for getting the current map as an image with the robot's position marked on it."
+
+    response_format: str = "content_and_artifact"
+    image_width: int = 1500
+    debug: bool = False
+
+    def _postprocess_msg(self, map_msg: OccupancyGrid, transform: TransformStamped):
+        width = cast(int, map_msg.info.width)
+        height = cast(int, map_msg.info.height)
+        resolution = cast(float, map_msg.info.resolution)
+        origin_position = cast(Point, map_msg.info.origin.position)
+        origin_orientation = cast(Quaternion, map_msg.info.origin.orientation)
+
+        data = np.array(map_msg.data).reshape((height, width))
+
+        # Convert the OccupancyGrid values to grayscale image (0-255)
+        # the final image shape is (self.image_width, self.image_width), scale to fit
+        scale = self.image_width / max(width, height)
+        width = int(width * scale)
+        height = int(height * scale)
+        data = cv2.resize(data, (width, height), interpolation=cv2.INTER_NEAREST)
+        resolution = resolution / scale
+        image = np.zeros_like(data, dtype=np.uint8)
+        image[data == -1] = 127  # Unknown space
+        image[data == 0] = 255  # Free space
+        image[data > 0] = 0  # Occupied space
+
+        # Calculate robot's position in the image
+        robot_x = cast(
+            float, (transform.transform.translation.x - origin_position.x) / resolution
+        )
+
+        robot_y = cast(
+            float, (transform.transform.translation.y - origin_position.y) / resolution
+        )
+
+        _, _, yaw = euler_from_quaternion(
+            [
+                origin_orientation.x,  # type: ignore
+                origin_orientation.y,  # type: ignore
+                origin_orientation.z,  # type: ignore
+                origin_orientation.w,  # type: ignore
+            ]
+        )
+        # Rotate the robot's position based on the yaw angle
+        rotated_x = robot_x * np.cos(yaw) - robot_y * np.sin(yaw)
+        rotated_y = robot_x * np.sin(yaw) + robot_y * np.cos(yaw)
+        robot_x = int(rotated_x)
+        robot_y = int(rotated_y)
+
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+
+        # Draw the robot's position as an arrow
+        if 0 <= robot_x < width and 0 <= robot_y < height:
+            _, _, yaw = euler_from_quaternion(
+                [
+                    transform.transform.rotation.x,  # type: ignore
+                    transform.transform.rotation.y,  # type: ignore
+                    transform.transform.rotation.z,  # type: ignore
+                    transform.transform.rotation.w,  # type: ignore
+                ]
+            )
+            arrow_length = 100
+            arrow_end_x = int(robot_x + arrow_length * np.cos(yaw))
+            arrow_end_y = int(robot_y + arrow_length * np.sin(yaw))
+            cv2.arrowedLine(
+                image, (robot_x, robot_y), (arrow_end_x, arrow_end_y), (0, 0, 255), 5
+            )
+
+        image = cv2.flip(image, 1)
+
+        step_size_m: float = 2.0  # Step size for grid lines in meters, adjust as needed
+        step_size_pixels = int(step_size_m / resolution)
+        # print(step_size_pixels, scale)
+        for x in range(0, width, step_size_pixels):
+            cv2.line(
+                img=image,
+                pt1=(x, 40),
+                pt2=(x, height),
+                color=(200, 200, 200),
+                thickness=1,
+            )
+            cv2.putText(
+                img=image,
+                text=f"{x * resolution + origin_position.x:.1f}",
+                org=(x, 30),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                fontScale=1.5,
+                color=(0, 0, 255),
+                thickness=2,
+                lineType=cv2.LINE_AA,
+            )
+        for y in range(0, height, step_size_pixels):
+            cv2.line(
+                img=image,
+                pt1=(0, y),
+                pt2=(width, y),
+                color=(200, 200, 200),
+                thickness=1,
+            )
+            cv2.putText(
+                img=image,
+                text=f"{y * resolution + origin_position.y:.1f}",
+                org=(15, y + 35),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                fontScale=1.5,
+                color=(0, 0, 255),
+                thickness=2,
+                lineType=cv2.LINE_AA,
+            )
+        # Encode into PNG base64
+        _, buffer = cv2.imencode(".png", image)
+
+        if self.debug:
+            cv2.imwrite(f"map{time.time()}.png", image)
+        return base64.b64encode(buffer.tobytes()).decode("utf-8")
+
+    def _run(self):
+        """Gets the current map from the specified topic."""
+        map_msg = self.connector.receive_message("/map", timeout_sec=10).payload
+        transform = self.connector.get_transform(
+            target_frame="map", source_frame="base_link", timeout_sec=10
+        )
+
+        if map_msg is None or transform is None:
+            return {"content": "Failed to get the map, wrong topic?"}
+
+        base64_image = self._postprocess_msg(map_msg, transform)
+        return "Map grabbed successfully", MultimodalArtifact(
+            images=[base64_image], audios=[]
+        )
