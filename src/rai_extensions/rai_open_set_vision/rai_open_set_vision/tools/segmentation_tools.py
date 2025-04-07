@@ -19,9 +19,8 @@ import numpy as np
 import rclpy
 import sensor_msgs.msg
 from langchain_core.tools import BaseTool
-from pydantic import Field
+from pydantic import BaseModel, Field
 from rai.communication.ros2.connectors import ROS2ARIConnector
-from rai.tools.ros import Ros2BaseInput
 from rai.tools.ros.utils import convert_ros_img_to_base64, convert_ros_img_to_ndarray
 from rai.utils.ros_async import get_future_result
 from rclpy import Future
@@ -36,7 +35,7 @@ from rai_open_set_vision import GDINO_SERVICE_NAME
 # --------------------- Inputs ---------------------
 
 
-class GetSegmentationInput(Ros2BaseInput):
+class GetSegmentationInput(BaseModel):
     camera_topic: str = Field(
         ...,
         description="Ros2 topic for the camera image containing image to run detection on.",
@@ -46,7 +45,7 @@ class GetSegmentationInput(Ros2BaseInput):
     )
 
 
-class GetGrabbingPointInput(Ros2BaseInput):
+class GetGrabbingPointInput(BaseModel):
     camera_topic: str = Field(
         ...,
         description="Ros2 topic for the camera image containing image to run detection on.",
@@ -96,7 +95,7 @@ class GetSegmentationTool:
     ) -> Future:
         cli = self.connector.node.create_client(RAIGroundingDino, GDINO_SERVICE_NAME)
         while not cli.wait_for_service(timeout_sec=1.0):
-            self.node.get_logger().info(
+            self.connector.node.get_logger().info(
                 f"service {GDINO_SERVICE_NAME} not available, waiting again..."
             )
         req = RAIGroundingDino.Request()
@@ -113,7 +112,7 @@ class GetSegmentationTool:
     ):
         cli = self.connector.node.create_client(RAIGroundedSam, "grounded_sam_segment")
         while not cli.wait_for_service(timeout_sec=1.0):
-            self.node.get_logger().info(
+            self.connector.node.get_logger().info(
                 "service grounded_sam_segment not available, waiting again..."
             )
         req = RAIGroundedSam.Request()

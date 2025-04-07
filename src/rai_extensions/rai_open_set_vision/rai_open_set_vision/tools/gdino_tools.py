@@ -16,9 +16,9 @@ from typing import List, NamedTuple, Type
 
 import numpy as np
 import sensor_msgs.msg
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 from rai.communication.ros2.connectors import ROS2ARIConnector
-from rai.tools.ros import Ros2BaseInput, Ros2BaseTool
 from rai.tools.ros.utils import convert_ros_img_to_ndarray
 from rai.utils.ros_async import get_future_result
 from rclpy.exceptions import (
@@ -32,7 +32,7 @@ from rai_open_set_vision import GDINO_SERVICE_NAME
 
 
 # --------------------- Inputs ---------------------
-class Ros2GetDetectionInput(Ros2BaseInput):
+class Ros2GetDetectionInput(BaseModel):
     camera_topic: str = Field(
         ...,
         description="Ros2 topic for the camera image containing image to run detection on.",
@@ -42,7 +42,7 @@ class Ros2GetDetectionInput(Ros2BaseInput):
     )
 
 
-class GetDistanceToObjectsInput(Ros2BaseInput):
+class GetDistanceToObjectsInput(BaseModel):
     camera_topic: str = Field(
         ...,
         description="Ros2 topic for the camera image containing image to run detection on.",
@@ -78,7 +78,7 @@ class DistanceMeasurement(NamedTuple):
 
 
 # --------------------- Tools ---------------------
-class GroundingDinoBaseTool(Ros2BaseTool):
+class GroundingDinoBaseTool(BaseTool):
     connector: ROS2ARIConnector = Field(..., exclude=True)
 
     box_threshold: float = Field(default=0.35, description="Box threshold for GDINO")
@@ -211,10 +211,12 @@ class GetDistanceToObjectsTool(GroundingDinoBaseTool):
         camera_img_msg = self._get_image_message(camera_topic)
         depth_img_msg = self._get_image_message(depth_topic)
         future = self._call_gdino_node(camera_img_msg, object_names)
-        logger = self.node.get_logger()
+        logger = self.connector.node.get_logger()
 
         try:
-            threshold = self.node.get_parameter("outlier_sigma_threshold").value
+            threshold = self.connector.node.get_parameter(
+                "outlier_sigma_threshold"
+            ).value
             if not isinstance(threshold, float):
                 logger.error(
                     f"Parameter outlier_sigma_threshold was set badly: {type(threshold)}: {threshold} expected float. Using default value 1.0"
@@ -227,7 +229,9 @@ class GetDistanceToObjectsTool(GroundingDinoBaseTool):
             threshold = 1.0
 
         try:
-            conversion_ratio = self.node.get_parameter("conversion_ratio").value
+            conversion_ratio = self.connector.node.get_parameter(
+                "conversion_ratio"
+            ).value
             if not isinstance(conversion_ratio, float):
                 logger.error(
                     f"Parameter conversion_ratio was set badly: {type(conversion_ratio)}: {conversion_ratio} expected float. Using default value 0.001"
