@@ -18,7 +18,7 @@ from typing import List
 from langchain_core.messages import BaseMessage, HumanMessage
 
 from rai.agents.conversational_agent import create_conversational_agent
-from rai.tools.ros.cli import ros2_action, ros2_interface, ros2_service, ros2_topic
+from rai.tools.ros2.cli import ros2_action, ros2_interface, ros2_service, ros2_topic
 from rai.utils.model_initialization import get_llm_model
 
 
