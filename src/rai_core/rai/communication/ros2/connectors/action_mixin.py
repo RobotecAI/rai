@@ -12,22 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Any, Callable, Optional
+from typing import Any, Callable, Optional
 
 from rai.communication.ros2.api import ROS2ActionAPI
 from rai.communication.ros2.messages import ROS2ARIMessage, ROS2HRIMessage
 
 
 class ROS2ActionMixin:
-    if TYPE_CHECKING:
-        _actions_api: ROS2ActionAPI
-
     def __post_init__(self, *args: Any, **kwargs: Any) -> None:
         if not hasattr(self, "_actions_api"):
             raise AttributeError(
                 f"{self.__class__.__name__} instance must have an attribute 'actions_api' of type ROS2ActionAPI"
             )
-        self._actions_api = self._actions_api  # to make the type checker happy
+        self._actions_api: ROS2ActionAPI  # to make the type checker happy
         if not isinstance(self._actions_api, ROS2ActionAPI):
             raise AttributeError(
                 f"{self.__class__.__name__} instance must have an attribute 'actions_api' of type ROS2ActionAPI"
