@@ -19,7 +19,7 @@ from langchain_core.messages import HumanMessage
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.ros.manipulation import GetObjectPositionsTool, MoveToPointTool
-from rai.tools.ros2.topics import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
+from rai.tools.ros2 import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
 from rai.utils.model_initialization import get_llm_model
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
