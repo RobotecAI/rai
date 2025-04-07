@@ -113,7 +113,7 @@ class Get360ImageTool(BaseTool):
 
 ### ROS 2 Tools
 
-RAI includes a base class for ROS 2 tools, supporting configuration of readable, writable, and forbidden topics/actions/services, as well as ROS 2 connectors.
+RAI includes a base class for ROS 2 tools, supporting configuration of readable, writable, and forbidden topics/actions/services, as well as ROS 2 connector. TODO(docs): link docs to the ARIConnector.
 
 ```python
 from rai.tools.ros2.base import BaseROS2Tool
@@ -188,6 +188,8 @@ def initialize_tools(connector: ROS2ARIConnector):
 ---
 
 ### Using Tools in a RAI Agent (Distributed Setup)
+
+TODO(docs): add link to the BaseAgent docs (regarding distributed setup)
 
 ```python
 from rai.agents import ReActAgent
