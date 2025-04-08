@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai_bench.o3de_test_bench.tasks import MoveObjectsToLeftTask
+from rai_bench.manipulation_o3de_bench.tasks import MoveObjectsToLeftTask
 from tests.rai_bench.conftest import create_entity
 
 

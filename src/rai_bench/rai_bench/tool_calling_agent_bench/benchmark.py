@@ -27,7 +27,7 @@ from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, Field
 from rai.messages import HumanMultimodalMessage
 
-from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
+from rai_bench.tool_calling_agent_bench.interfaces import (
     ToolCallingAgentTask,
 )
 from rai_bench.tool_calling_agent_bench.scores_tracing import ScoreTracingHandler

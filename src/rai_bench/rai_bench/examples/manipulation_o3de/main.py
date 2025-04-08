@@ -32,14 +32,14 @@ from rai.tools.ros2 import (
 )
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
-from rai_bench.benchmark_model import Benchmark
-from rai_bench.o3de_test_bench.scenarios import (
+from rai_bench.examples.manipulation_o3de.scenarios import (
     easy_scenarios,
     hard_scenarios,
     medium_scenarios,
     trivial_scenarios,
     very_hard_scenarios,
 )
+from rai_bench.manipulation_o3de_bench.benchmark import Benchmark
 from rai_sim.o3de.o3de_bridge import (
     O3DEngineArmManipulationBridge,
 )
@@ -78,9 +78,7 @@ if __name__ == "__main__":
     ]
     # define loggers
     now = datetime.now()
-    experiment_dir = (
-        f"src/rai_bench/rai_bench/experiments/{now.strftime('%Y-%m-%d_%H-%M-%S')}"
-    )
+    experiment_dir = f"src/rai_bench/rai_bench/experiments/o3de_manipulation_bench/{now.strftime('%Y-%m-%d_%H-%M-%S')}"
     Path(experiment_dir).mkdir(parents=True, exist_ok=True)
     log_file = f"{experiment_dir}/benchmark.log"
     file_handler = logging.FileHandler(log_file)
@@ -99,7 +97,7 @@ if __name__ == "__main__":
     agent_logger.setLevel(logging.INFO)
     agent_logger.addHandler(file_handler)
 
-    configs_dir = "src/rai_bench/rai_bench/o3de_test_bench/configs/"
+    configs_dir = "src/rai_bench/rai_bench/examples/manipulation_o3de/configs/"
     connector_path = configs_dir + "o3de_config.yaml"
     #### Create scenarios manually
     # load different scenes

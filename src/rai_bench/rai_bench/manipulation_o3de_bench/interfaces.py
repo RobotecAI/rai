@@ -11,17 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import csv
 import logging
 import math
-import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Any, Dict, Generic, List, Set, TypeVar, Union
+from typing import Dict, List, Set, Tuple, TypeVar, Union
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from langgraph.graph.state import CompiledStateGraph
-from rai.messages import HumanMultimodalMessage
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai_sim.simulation_bridge import (
@@ -358,211 +353,167 @@ class Task(ABC):
         return groups
 
 
-class Scenario(Generic[SimulationConfigT]):
+class ManipulationTask(Task, ABC):
     """
-    A Scenario are defined by a pair of Task and Simlation Config.
-    Each Scenario is executed separatly by a Benchmark.
+    Common class for manipulaiton tasks
+    obj_types variable represents object types that will be considered as the subject of the task.
+    That means that based on positions of these objects simulation config will be evaluated
+    and score will be calculated.
+
+    Example
+    -------
+        MoveObjectsToLeftTask with 'carrot' as objects type, will check if carrtos are present
+        and then calculated score based on how many carrots were moved to the left side
     """
 
-    def __init__(
-        self,
-        task: Task,
-        simulation_config: SimulationConfigT,
-        simulation_config_path: str,
-    ) -> None:
+    obj_types: List[str] = []
+
+    @abstractmethod
+    def check_if_required_objects_present(
+        self, simulation_config: SimulationConfig
+    ) -> bool:
         """
-        Initialize a Scenario.
-
-        Parameters
-        ----------
-        task : Task
-            The task to be executed.
-        simulation_config : SimulationConfigT
-            The simulation configuration for the scenario.
-        simulation_config_path : str
-            The file path to the simulation configuration.
-
-        Raises
-        ------
-        ValueError
-            If the provided simulation configuration is not valid for the task.
-        """
-        self.task = task
-        self.simulation_config = simulation_config
-        # NOTE (jmatejcz) needed for logging which config was used,
-        # there probably is better way to do it
-        self.simulation_config_path = simulation_config_path
-
-
-class Benchmark:
-    """
-    Benchmark represents a set of Scenarios to be executed and evaluated.
-    It manages the execution, logs results, and provides functionality
-    for tracking and exporting performance metrics.
-    """
-
-    def __init__(
-        self,
-        simulation_bridge: SimulationBridge[SimulationConfigT],
-        scenarios: List[Scenario[SimulationConfigT]],
-        logger: loggers_type | None = None,
-        results_filename: str = "benchmark_results.csv",
-    ) -> None:
-        self.simulation_bridge = simulation_bridge
-        self.num_of_scenarios = len(scenarios)
-        self.scenarios = enumerate(iter(scenarios))
-        self.results: List[Dict[str, Any]] = []
-        self.results_filename = results_filename
-        if logger:
-            self._logger = logger
-        else:
-            self._logger = logging.getLogger(__name__)
-
-        self.fieldnames = [
-            "task",
-            "simulation_config",
-            "final_score",
-            "total_time",
-            "number_of_tool_calls",
-        ]
-        self._initialize_results_file()
-
-    @classmethod
-    def create_scenarios(
-        cls,
-        tasks: List[Task],
-        simulation_configs: List[SimulationConfigT],
-        simulation_configs_paths: List[str],
-        logger: loggers_type | None = None,
-    ) -> List[Scenario[SimulationConfigT]]:
-        """
-        Create scenarios by pairing each task with each suitable simulation configuration.
-
-        Parameters
-        ----------
-        tasks : List[Task]
-            The list of tasks.
-        simulation_configs : List[SimulationConfigT]
-            The list of simulation configurations.
-        simulation_configs_paths : List[str]
-            The corresponding file paths for the simulation configurations.
+        Check if the required objects are present in the simulation configuration.
 
         Returns
         -------
-        List[Scenario[SimulationConfigT]]
-            A list of scenarios generated from the given tasks and simulation configurations.
+        bool
+            True if the required objects are present, False otherwise.
         """
-        # NOTE (jmatejcz) hacky_fix, taking paths as args here, not the best solution,
-        # but more changes to code would be required
-        scenarios: List[Scenario[SimulationConfigT]] = []
-        if not logger:
-            logger = logging.getLogger(__name__)
-        for task in tasks:
-            for sim_conf, sim_path in zip(simulation_configs, simulation_configs_paths):
-                if task.validate_config(simulation_config=sim_conf):
-                    scenarios.append(
-                        Scenario(
-                            task=task,
-                            simulation_config=sim_conf,
-                            simulation_config_path=sim_path,
-                        )
-                    )
-                else:
-                    logger.debug(
-                        f"Simulation config: {sim_path} is not suitable for task: {task.get_prompt()}"
-                    )
-        return scenarios
+        return True
 
-    def _initialize_results_file(self):
-        """Initialize the CSV file with headers."""
-        with open(
-            self.results_filename, mode="w", newline="", encoding="utf-8"
-        ) as file:
-            writer = csv.DictWriter(file, fieldnames=self.fieldnames)
-            writer.writeheader()
-
-    def run_next(self, agent: CompiledStateGraph) -> None:
+    def check_if_any_placed_incorrectly(
+        self, simulation_config: SimulationConfig
+    ) -> bool:
         """
-        Run the next scenario in the benchmark.
+        Check if any object is placed incorrectly in the simulation configuration.
+        Save number of initially correctly and incorrectly placed objects for
+        future calculations
+
+        Returns
+        -------
+        bool
+            True if at least one object is placed incorrectly, False otherwise.
+        """
+        _, incorrect = self.calculate_correct(entities=simulation_config.entities)
+        return incorrect > 0
+
+    def validate_config(self, simulation_config: SimulationConfig) -> bool:
+        """
+        Validate the simulation configuration.
+
+        Checks whether the required objects are present and if any of them is placed incorrectly.
+        If these conditions are not met, the task should not be run with this configuration.
 
         Parameters
         ----------
-        agent : CompiledStateGraph
-            The agent used to execute the scenario.
+        simulation_config : SimulationConfig
+            The simulation configuration to validate.
 
-        This method sets up the scene, streams the agent's responses, logs messages,
-        counts tool calls, calculates the final task score, and writes the result to a CSV file.
+        Returns
+        -------
+        bool
+            True if the configuration is valid, False otherwise.
         """
-        try:
-            i, scenario = next(self.scenarios)  # Get the next scenario
 
-            self.simulation_bridge.setup_scene(scenario.simulation_config)
-            self._logger.info(
-                "======================================================================================"
+        if self.check_if_required_objects_present(
+            simulation_config=simulation_config
+        ) and self.check_if_any_placed_incorrectly(simulation_config=simulation_config):
+            return True
+        else:
+            return False
+
+    @abstractmethod
+    def calculate_correct(self, entities: List[EntityT]) -> Tuple[int, int]:
+        """Method to calculate how many objects are placed correctly
+
+        Parameters
+        ----------
+        entities : List[EntityT]
+            list of ALL entities present in the simulaiton scene
+
+        Returns
+        -------
+        Tuple[int, int]
+            first int HAVE TO be number of correctly placed objects, second int - number of incorrectly placed objects
+        """
+        pass
+
+    def calculate_current_placements(
+        self, simulation_bridge: SimulationBridge[SimulationConfigT]
+    ) -> tuple[int, int]:
+        """
+        Get the current placements of objects in the simulation
+        and calculated their current placements
+
+        Parameters
+        ----------
+        simulation_bridge : SimulationBridge[SimulationConfigT]
+            The simulation bridge containing the current scene state.
+
+        Returns
+        -------
+        tuple[int, int]
+            A tuple where the first element is the number of currently correctly placed objects
+            and the second element is the number of currently incorrectly placed objects.
+        """
+        scene_state = simulation_bridge.get_scene_state()
+        current_correct, current_incorrect = self.calculate_correct(
+            entities=scene_state.entities
+        )
+
+        self.logger.info(  # type: ignore
+            f"Currently correctly placed objects: {current_correct}, Currenlty incorrectly placed objects: {current_incorrect}"
+        )
+        return current_correct, current_incorrect
+
+    def calculate_result(
+        self, simulation_bridge: SimulationBridge[SimulationConfig]
+    ) -> float:
+        """
+        Calculate the task score based on the difference between initial and current placements.
+
+        The score ranges from 0.0 to 1.0, where 0.0 indicates that the initial placements
+        remain unchanged (or got worse), and 1.0 indicates perfect placements relative to the initial ones.
+        The score is computed as the improvement in the number of correctly placed objects
+        divided by the number of initially incorrectly placed objects.
+
+        Parameters
+        ----------
+        simulation_bridge : SimulationBridge[SimulationConfig]
+            The simulation bridge that provides access to the current scene state.
+
+        Returns
+        -------
+        float
+            The calculated score, ranging from 0.0 to 1.0.
+
+        Raises
+        ------
+        EntitiesMismatchException
+            If the total number of initial entities does not match the total number of current entities.
+        """
+        initially_correct, initially_incorrect = self.calculate_correct(
+            entities=simulation_bridge.spawned_entities
+        )
+        self.logger.info(  # type: ignore
+            f"Objects placed correctly in simulation config: {initially_correct}, incorrectly: {initially_incorrect}"
+        )
+        current_correct, current_incorrect = self.calculate_current_placements(
+            simulation_bridge
+        )
+
+        initial_objects_num = initially_correct + initially_incorrect
+        current_objects_num = current_correct + current_incorrect
+        if initial_objects_num == 0:
+            return 1.0
+        elif initial_objects_num != current_objects_num:
+            raise EntitiesMismatchException(
+                f"number of initial entities does not match current entities number, initially: {initially_correct + initially_incorrect}, current: {current_correct + current_incorrect}"
             )
-            self._logger.info(
-                f"RUNNING SCENARIO NUMBER {i + 1} / {self.num_of_scenarios}\n TASK: {scenario.task.get_prompt()}\n SIMULATION_CONFIG: {scenario.simulation_config_path}"
-            )
-            tool_calls_num = 0
+        else:
+            corrected = current_correct - initially_correct
+            score = max(0.0, corrected / initially_incorrect)
 
-            ts = time.perf_counter()
-            for state in agent.stream(
-                {"messages": [HumanMessage(content=scenario.task.get_prompt())]},
-                {
-                    "recursion_limit": 100
-                },  # NOTE (jmatejcz) what should be recursion limit?
-            ):
-                graph_node_name = list(state.keys())[0]
-                msg = state[graph_node_name]["messages"][-1]
-
-                if isinstance(msg, HumanMultimodalMessage):
-                    last_msg = msg.text
-                elif isinstance(msg, BaseMessage):
-                    if isinstance(msg.content, list):
-                        if len(msg.content) == 1:
-                            if type(msg.content[0]) is dict:
-                                last_msg = msg.content[0].get("text", "")
-                    else:
-                        last_msg = msg.content
-                        self._logger.debug(f"{graph_node_name}: {last_msg}")
-
-                else:
-                    raise ValueError(f"Unexpected type of message: {type(msg)}")
-
-                if isinstance(msg, AIMessage):
-                    tool_calls_num += len(msg.tool_calls)
-
-                self._logger.info(f"AI Message: {msg}")
-
-            te = time.perf_counter()
-            try:
-                result = scenario.task.calculate_result(self.simulation_bridge)
-                total_time = te - ts
-                self._logger.info(
-                    f"TASK SCORE: {result}, TOTAL TIME: {total_time:.3f}, NUM_OF_TOOL_CALLS: {tool_calls_num}"
-                )
-                scenario_result: Dict[str, Any] = {
-                    "task": scenario.task.get_prompt(),
-                    "simulation_config": scenario.simulation_config_path,
-                    "final_score": result,
-                    "total_time": f"{total_time:.3f}",
-                    "number_of_tool_calls": tool_calls_num,
-                }
-                self.results.append(scenario_result)
-                self._save_scenario_result_to_csv(scenario_result)
-            except EntitiesMismatchException as e:
-                self._logger.error(e)
-
-        except StopIteration:
-            print("No more scenarios left to run.")
-
-    def _save_scenario_result_to_csv(self, result: Dict[str, Any]) -> None:
-        """Save a single scenario result to the CSV file."""
-        with open(
-            self.results_filename, mode="a", newline="", encoding="utf-8"
-        ) as file:
-            writer = csv.DictWriter(file, fieldnames=self.fieldnames)
-            writer.writerow(result)
-
-    def get_results(self) -> List[Dict[str, Any]]:
-        return self.results
+            self.logger.info(f"Calculated score: {score:.2f}")  # type: ignore
+            return score
