@@ -14,12 +14,14 @@
 
 import base64
 import inspect
-from typing import Any, Callable, Dict, TypeVar
+from typing import Any, Callable, Dict, List, TypeVar
 
 import cv2
 import numpy as np
 import streamlit as st
 from langchain_core.callbacks.base import BaseCallbackHandler
+from langchain_core.messages import BaseMessage
+from langchain_core.runnables import Runnable, RunnableConfig
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 
@@ -170,7 +172,12 @@ def get_streamlit_cb(parent_container: DeltaGenerator) -> BaseCallbackHandler:
     return st_cb
 
 
-def streamlit_invoke(graph, messages, callables):
+def streamlit_invoke(
+    graph: Runnable[Any, Any], messages: List[BaseMessage], callables: List[Callable]
+):
     if not isinstance(callables, list):
         raise TypeError("callables must be a list")
-    return graph.invoke({"messages": messages}, config={"callbacks": callables})
+    return graph.invoke(
+        {"messages": messages},
+        config=RunnableConfig({"callbacks": callables, "recursion_limit": 100}),
+    )
