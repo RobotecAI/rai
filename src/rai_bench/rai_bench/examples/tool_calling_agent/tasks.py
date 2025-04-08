@@ -17,14 +17,16 @@ from typing import Sequence
 from rai_bench.tool_calling_agent_bench.interfaces import (
     ToolCallingAgentTask,
 )
-from rai_bench.tool_calling_agent_bench.ros2_agent_tasks import (
+from rai_bench.tool_calling_agent_bench.tasks.basic import (
     GetAllROS2RGBCamerasTask,
-    GetObjectPositionsTask,
     GetROS2DepthCameraTask,
     GetROS2MessageTask,
     GetROS2RGBCameraTask,
     GetROS2TopicsTask,
     GetROS2TopicsTask2,
+)
+from rai_bench.tool_calling_agent_bench.tasks.manipulation import (
+    GetObjectPositionsTask,
     GrabExistingObjectTask,
     GrabNotExistingObjectTask,
     MoveExistingObjectFrontTask,
