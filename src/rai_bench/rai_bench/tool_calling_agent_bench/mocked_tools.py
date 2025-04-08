@@ -284,18 +284,23 @@ class MockCallROS2ServiceTool(CallROS2ServiceTool):
                     self.available_service_types, service_type
                 )
             )
-        model = self.available_service_models[service_type]
-        try:
-            model.model_validate(service_args)
-        except ValidationError as e:
-            raise ValueError(f"Failed to populate fields: {e}")
-        response = ROS2ARIMessage(payload={"response": "success"})
-        return str(
-            {
-                "payload": response.payload,
-                "metadata": response.metadata,
-            }
-        )
+        if service_type in self.available_service_models:
+            model = self.available_service_models[service_type]
+            try:
+                model.model_validate(service_args)
+            except ValidationError as e:
+                raise ValueError(f"Failed to populate fields: {e}")
+            response = ROS2ARIMessage(payload={"response": "success"})
+            return str(
+                {
+                    "payload": response.payload,
+                    "metadata": response.metadata,
+                }
+            )
+        else:
+            raise KeyError(
+                f"Model for service type {service_type} not included in models"
+            )
 
 
 class MockGetROS2ServicesNamesAndTypesTool(GetROS2ServicesNamesAndTypesTool):

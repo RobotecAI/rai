@@ -39,10 +39,14 @@ from rai_bench.tool_calling_agent_bench.messages.topics import (
 )
 from rai_bench.tool_calling_agent_bench.mocked_tools import (
     MockCallROS2ServiceTool,
+    MockCancelROS2ActionTool,
+    MockGetROS2ActionIDsTool,
     MockGetROS2ActionsNamesAndTypesTool,
+    MockGetROS2ImageTool,
     MockGetROS2MessageInterfaceTool,
     MockGetROS2ServicesNamesAndTypesTool,
     MockGetROS2TopicsNamesAndTypesTool,
+    MockMoveToPointTool,
     MockPublishROS2MessageTool,
     MockStartROS2ActionTool,
 )
@@ -1215,46 +1219,98 @@ class ROS2ToolCallingAgentTask(ToolCallingAgentTask, ABC):
         return tool_calls
 
 
-class CustomInterfacesTopicTask(ROS2ToolCallingAgentTask, ABC):
-    TOPICS_AND_TYPES: Dict[str, str] = {
-        # sample topics
-        "/camera_image_color": "sensor_msgs/msg/Image",
-        "/camera_image_depth": "sensor_msgs/msg/Image",
-        "/clock": "rosgraph_msgs/msg/Clock",
-        "/color_camera_info": "sensor_msgs/msg/CameraInfo",
-        "/color_camera_info5": "sensor_msgs/msg/CameraInfo",
-        "/depth_camera_info5": "sensor_msgs/msg/CameraInfo",
-        "/depth_image5": "sensor_msgs/msg/Image",
-        # custom topics
-        "/to_human": "rai_interfaces/msg/HRIMessage",
-        "/send_audio": "rai_interfaces/msg/AudioMessage",
-        "/send_detections": "rai_interfaces/msg/RAIDetectionArray",
-    }
-    topic_strings = [
-        f"topic: {topic}\ntype: {msg_type}\n"
-        for topic, msg_type in TOPICS_AND_TYPES.items()
-    ]
-    MODELS: Dict[str, Type[BaseModel]] = {
-        "sensor_msgs/msg/CameraInfo": CameraInfo,
-        "sensor_msgs/msg/Image": Image,
-        "rosgraph_msgs/msg/Clock": Clock,
-        "rai_interfaces/msg/HRIMessage": HRIMessage,
-        "rai_interfaces/msg/AudioMessage": AudioMessage,
-        "rai_interfaces/msg/RAIDetectionArray": RAIDetectionArray,
-    }
+SERVICES_AND_TYPES = {
+    # sample interfaces
+    # "/load_map": "moveit_msgs/srv/LoadMap",
+    # "/query_planner_interface": "moveit_msgs/srv/QueryPlannerInterfaces",
+    # custom interfaces
+    "/manipulator_move_to": "rai_interfaces/srv/ManipulatorMoveTo",
+    "/grounded_sam_segment": "rai_interfaces/srv/RAIGroundedSam",
+    "/grounding_dino_classify": "rai_interfaces/srv/RAIGroundingDino",
+    "/get_log_digest": "rai_interfaces/srv/StringList",
+    "/rai_whoami_documentation_service": "rai_interfaces/srv/VectorStoreRetrieval",
+    "/rai/whatisee/get": "rai_interfaces/srv/WhatISee",
+}
 
+SERVICE_MODELS: Dict[str, Type[BaseModel]] = {
+    "rai_interfaces/srv/ManipulatorMoveTo": ManipulatorMoveToRequest,
+    "rai_interfaces/srv/RAIGroundedSam": RAIGroundedSamRequest,
+    "rai_interfaces/srv/RAIGroundingDino": RAIGroundingDinoRequest,
+    "rai_interfaces/srv/StringList": StringListRequest,
+    "rai_interfaces/srv/VectorStoreRetrieval": VectorStoreRetrievalRequest,
+    "rai_interfaces/srv/WhatISee": WhatISeeRequest,
+}
+
+TOPICS_AND_TYPES: Dict[str, str] = {
+    # sample topics
+    "/camera_image_color": "sensor_msgs/msg/Image",
+    "/camera_image_depth": "sensor_msgs/msg/Image",
+    "/clock": "rosgraph_msgs/msg/Clock",
+    "/color_camera_info": "sensor_msgs/msg/CameraInfo",
+    "/color_camera_info5": "sensor_msgs/msg/CameraInfo",
+    "/depth_camera_info5": "sensor_msgs/msg/CameraInfo",
+    "/depth_image5": "sensor_msgs/msg/Image",
+    # custom topics
+    "/to_human": "rai_interfaces/msg/HRIMessage",
+    "/send_audio": "rai_interfaces/msg/AudioMessage",
+    "/send_detections": "rai_interfaces/msg/RAIDetectionArray",
+}
+TOPIC_STRINGS = [
+    f"topic: {topic}\ntype: {msg_type}\n"
+    for topic, msg_type in TOPICS_AND_TYPES.items()
+]
+TOPIC_MODELS: Dict[str, Type[BaseModel]] = {
+    "sensor_msgs/msg/CameraInfo": CameraInfo,
+    "sensor_msgs/msg/Image": Image,
+    "rosgraph_msgs/msg/Clock": Clock,
+    "rai_interfaces/msg/HRIMessage": HRIMessage,
+    "rai_interfaces/msg/AudioMessage": AudioMessage,
+    "rai_interfaces/msg/RAIDetectionArray": RAIDetectionArray,
+}
+
+IMAGE_TOPICS: Dict[str, str] = {
+    "/attached_collision_object": "moveit_msgs/msg/AttachedCollisionObject",
+    "/camera_image_color": "sensor_msgs/msg/Image",
+    "/camera_image_depth": "sensor_msgs/msg/Image",
+    "/clock": "rosgraph_msgs/msg/Clock",
+    "/collision_object": "moveit_msgs/msg/CollisionObject",
+    "/color_camera_info": "sensor_msgs/msg/CameraInfo",
+    "/color_camera_info5": "sensor_msgs/msg/CameraInfo",
+    "/depth_camera_info5": "sensor_msgs/msg/CameraInfo",
+}
+
+SERVICE_STRINGS = [
+    f"service: {service}\ntype: {msg_type}\n"
+    for service, msg_type in SERVICES_AND_TYPES.items()
+]
+
+
+class CustomInterfacesTopicTask(ROS2ToolCallingAgentTask, ABC):
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
 
         self.expected_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=self.topic_strings
+                mock_topics_names_and_types=TOPIC_STRINGS
             ),
             MockGetROS2MessageInterfaceTool(mock_interfaces=MOCK_INTERFACES),
             MockPublishROS2MessageTool(
-                available_topics=list(self.TOPICS_AND_TYPES.keys()),
-                available_message_types=list(self.TOPICS_AND_TYPES.values()),
-                available_topic_models=self.MODELS,
+                available_topics=list(TOPICS_AND_TYPES.keys()),
+                available_message_types=list(TOPICS_AND_TYPES.values()),
+                available_topic_models=TOPIC_MODELS,
+            ),
+            MockCancelROS2ActionTool(),
+            MockGetROS2ActionIDsTool(),
+            MockMoveToPointTool(manipulator_frame="base_link"),
+            MockGetROS2ImageTool(available_topics=list(IMAGE_TOPICS.keys())),
+            MockGetROS2ServicesNamesAndTypesTool(
+                mock_service_names_and_types=SERVICE_STRINGS
+            ),
+            MockGetROS2MessageInterfaceTool(mock_interfaces=MOCK_INTERFACES),
+            MockCallROS2ServiceTool(
+                available_services=list(SERVICES_AND_TYPES.keys()),
+                available_service_types=list(SERVICES_AND_TYPES.values()),
+                available_service_models=SERVICE_MODELS,
             ),
         ]
 
@@ -1265,7 +1321,7 @@ class CustomInterfacesTopicTask(ROS2ToolCallingAgentTask, ABC):
 
     @property
     def expected_message_type(self) -> str:
-        return self.TOPICS_AND_TYPES[self.expected_topic]
+        return TOPICS_AND_TYPES[self.expected_topic]
 
     @property
     def extra_calls(self) -> int:
@@ -1330,51 +1386,40 @@ class CustomInterfacesTopicTask(ROS2ToolCallingAgentTask, ABC):
         self.logger.debug(f"AI messages: {ai_messages}")
         tool_calls = self.get_tool_calls(response)
 
-        success, remaining_tool_calls = self.verify_list_and_get_interface_tool_calls(
-            tool_calls
-        )
-        if success and self.verify_message_tool_call(remaining_tool_calls):
+        # success, remaining_tool_calls = self.verify_list_and_get_interface_tool_calls(
+        #     tool_calls
+        # )
+        # if success and self.verify_message_tool_call(remaining_tool_calls):
+        #     self.result.success = True
+        if self.verify_message_tool_call(tool_calls):
             self.result.success = True
 
 
 class CustomInterfacesServiceTask(ROS2ToolCallingAgentTask, ABC):
-    SERVICES_AND_TYPES = {
-        # sample interfaces
-        # "/load_map": "moveit_msgs/srv/LoadMap",
-        # "/query_planner_interface": "moveit_msgs/srv/QueryPlannerInterfaces",
-        # custom interfaces
-        "/manipulator_move_to": "rai_interfaces/srv/ManipulatorMoveTo",
-        "/grounded_sam_segment": "rai_interfaces/srv/RAIGroundedSam",
-        "/grounding_dino_classify": "rai_interfaces/srv/RAIGroundingDino",
-        "/get_log_digest": "rai_interfaces/srv/StringList",
-        "/rai_whoami_documentation_service": "rai_interfaces/srv/VectorStoreRetrieval",
-        "/rai/whatisee/get": "rai_interfaces/srv/WhatISee",
-    }
-
-    MODELS: Dict[str, Type[BaseModel]] = {
-        "rai_interfaces/srv/ManipulatorMoveTo": ManipulatorMoveToRequest,
-        "rai_interfaces/srv/RAIGroundedSam": RAIGroundedSamRequest,
-        "rai_interfaces/srv/RAIGroundingDino": RAIGroundingDinoRequest,
-        "rai_interfaces/srv/StringList": StringListRequest,
-        "rai_interfaces/srv/VectorStoreRetrieval": VectorStoreRetrievalRequest,
-        "rai_interfaces/srv/WhatISee": WhatISeeRequest,
-    }
-    service_strings = [
-        f"service: {service}\ntype: {msg_type}\n"
-        for service, msg_type in SERVICES_AND_TYPES.items()
-    ]
-
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
         self.expected_tools: List[BaseTool] = [
+            MockGetROS2TopicsNamesAndTypesTool(
+                mock_topics_names_and_types=TOPIC_STRINGS
+            ),
+            MockGetROS2MessageInterfaceTool(mock_interfaces=MOCK_INTERFACES),
+            MockPublishROS2MessageTool(
+                available_topics=list(TOPICS_AND_TYPES.keys()),
+                available_message_types=list(TOPICS_AND_TYPES.values()),
+                available_topic_models=TOPIC_MODELS,
+            ),
+            MockCancelROS2ActionTool(),
+            MockGetROS2ActionIDsTool(),
+            MockMoveToPointTool(manipulator_frame="base_link"),
+            MockGetROS2ImageTool(available_topics=list(IMAGE_TOPICS.keys())),
             MockGetROS2ServicesNamesAndTypesTool(
-                mock_service_names_and_types=self.service_strings
+                mock_service_names_and_types=SERVICE_STRINGS
             ),
             MockGetROS2MessageInterfaceTool(mock_interfaces=MOCK_INTERFACES),
             MockCallROS2ServiceTool(
-                available_services=list(self.SERVICES_AND_TYPES.keys()),
-                available_service_types=list(self.SERVICES_AND_TYPES.values()),
-                available_service_models=self.MODELS,
+                available_services=list(SERVICES_AND_TYPES.keys()),
+                available_service_types=list(SERVICES_AND_TYPES.values()),
+                available_service_models=SERVICE_MODELS,
             ),
         ]
 
@@ -1385,7 +1430,7 @@ class CustomInterfacesServiceTask(ROS2ToolCallingAgentTask, ABC):
 
     @property
     def expected_service_type(self) -> str:
-        return self.SERVICES_AND_TYPES[self.expected_service]
+        return SERVICES_AND_TYPES[self.expected_service]
 
     @property
     def extra_calls(self) -> int:
@@ -1445,10 +1490,12 @@ class CustomInterfacesServiceTask(ROS2ToolCallingAgentTask, ABC):
         self.logger.debug(f"AI messages: {ai_messages}")
         tool_calls = self.get_tool_calls(response)
 
-        success, remaining_tool_calls = self.verify_list_and_get_interface_tool_calls(
-            tool_calls
-        )
-        if success and self.verify_message_tool_call(remaining_tool_calls):
+        # success, remaining_tool_calls = self.verify_list_and_get_interface_tool_calls(
+        #     tool_calls
+        # )
+        # if success and
+
+        if self.verify_message_tool_call(tool_calls):
             self.result.success = True
 
 

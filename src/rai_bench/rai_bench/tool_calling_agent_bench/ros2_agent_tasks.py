@@ -1681,7 +1681,6 @@ class PublishROS2HRIMessageTask3ExtraCalls(CustomInterfacesTopicTask):
         return 3
 
     def verify_message_tool_call(self, tool_calls: list[ToolCall]) -> bool:
-
         for call in tool_calls:
             if self._check_topic_tool_call_field(
                 tool_call=call,
