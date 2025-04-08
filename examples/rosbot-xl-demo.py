@@ -17,8 +17,9 @@ from typing import List
 import rclpy
 import streamlit as st
 from langchain_core.tools import BaseTool
-from rai.agents.react_agent import ReActAgent
+from rai.agents import ReActAgent
 from rai.communication.ros2 import ROS2ARIConnector
+from rai.frontend.streamlit import run_streamlit_app
 from rai.tools.ros.manipulation import GetGrabbingPointTool, GetObjectPositionsTool
 from rai.tools.ros2 import (
     GetROS2ImageConfiguredTool,
@@ -27,7 +28,6 @@ from rai.tools.ros2 import (
 )
 from rai.tools.time import WaitForSecondsTool
 from rai.utils.model_initialization import get_llm_model
-from rai.utils.streamlit import run_streamlit_app
 
 # Set page configuration first
 st.set_page_config(

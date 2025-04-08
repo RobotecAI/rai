@@ -39,10 +39,20 @@ current_result: Optional[NavigateToPose.Result] = None
 
 class Nav2Toolkit(BaseROS2Toolkit):
     connector: ROS2ARIConnector
+    frame_id: str = Field(
+        default="map", description="The frame id of the Nav2 stack (map, odom, etc.)"
+    )
+    action_name: str = Field(
+        default="navigate_to_pose", description="The name of the NavigateToPose action"
+    )
 
     def get_tools(self) -> List[BaseTool]:
         return [
-            NavigateToPoseTool(connector=self.connector),
+            NavigateToPoseTool(
+                connector=self.connector,
+                frame_id=self.frame_id,
+                action_name=self.action_name,
+            ),
             CancelNavigateToPoseTool(connector=self.connector),
             GetNavigateToPoseFeedbackTool(connector=self.connector),
             GetNavigateToPoseResultTool(connector=self.connector),
@@ -62,8 +72,12 @@ class NavigateToPoseTool(BaseROS2Tool):
 
     args_schema: Type[NavigateToPoseToolInput] = NavigateToPoseToolInput
 
-    frame_id: str = "base_link"
-    action_name: str = "navigate_to_pose"
+    frame_id: str = Field(
+        default="map", description="The frame id of the Nav2 stack (map, odom, etc.)"
+    )
+    action_name: str = Field(
+        default="navigate_to_pose", description="The name of the NavigateToPose action"
+    )
 
     def on_feedback(self, feedback: NavigateToPose.Feedback) -> None:
         global current_feedback
