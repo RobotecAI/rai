@@ -13,14 +13,13 @@
 # limitations under the License.
 
 import logging
-from typing import Any, List, Sequence
+from abc import ABC
+from typing import List
 
-from langchain_core.messages import AIMessage
 from langchain_core.tools import BaseTool
 
 from rai_bench.tool_calling_agent.interfaces import (
     Task,
-    Validator,
 )
 from rai_bench.tool_calling_agent.mocked_tools import (
     MockGetROS2ImageTool,
@@ -40,19 +39,17 @@ Example of tool calls:
 - publish_ros2_message, args: {'topic': '/turtle1/teleport_absolute', 'message_type': 'turtlesim/srv/TeleportAbsolute', 'message': {x: 5.0, y: 2.0, theta: 1.57}}"""
 
 
-class GetROS2TopicsTask(Task):
+class BasicTask(Task, ABC):
+    def get_system_prompt(self) -> str:
+        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
+
+
+class GetROS2TopicsTask(BasicTask):
     complexity = "easy"
 
-    def __init__(
-        self,
-        validators: List[Validator],
-        extra_tool_calls: int = 0,
-        logger: loggers_type | None = None,
-    ) -> None:
-        super().__init__(
-            validators=validators, extra_tool_calls=extra_tool_calls, logger=logger
-        )
-        self.available_tools = [
+    @property
+    def available_tools(self) -> List[BaseTool]:
+        return [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
                     "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
@@ -92,19 +89,16 @@ class GetROS2TopicsTask(Task):
             )
         ]
 
-    def get_system_prompt(self) -> str:
-        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
-
     def get_prompt(self) -> str:
         return "Get the names and types of all ROS2 topics"
 
 
-class GetROS2TopicsTask2(Task):
+class GetROS2TopicsTask2(BasicTask):
     complexity = "easy"
 
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger=logger)
-        self.available_tools = [
+    @property
+    def available_tools(self) -> List[BaseTool]:
+        return [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
                     "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
@@ -115,53 +109,16 @@ class GetROS2TopicsTask2(Task):
             )
         ]
 
-    def get_system_prompt(self) -> str:
-        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
-
     def get_prompt(self) -> str:
         return "What is in the ROS2 network?"
 
-    def verify_tool_calls(self, response: dict[str, Any]):
-        """It is expected that the agent will request only the tool that retrieves the ROS2 topics names and types
 
-        Parameters
-        ----------
-        response : dict[str, Any]
-            The response from the agent
-        """
-        messages = response["messages"]
-        ai_messages: Sequence[AIMessage] = [
-            message for message in messages if isinstance(message, AIMessage)
-        ]
-
-        if not ai_messages:
-            self.log_error(msg="No AI messages found in the response.")
-
-        self._is_ai_message_requesting_get_ros2_topics_and_types(ai_messages[0])
-
-        total_tool_calls = sum(len(message.tool_calls) for message in ai_messages)
-        if total_tool_calls != 1:
-            self.log_error(
-                msg=f"Total number of tool calls across all AI messages should be 1, but got {total_tool_calls}."
-            )
-
-        if not self.result.errors:
-            self.result.success = True
-
-
-class GetROS2RGBCameraTask(Task):
+class GetROS2RGBCameraTask(BasicTask):
     complexity = "easy"
 
-    def __init__(
-        self,
-        validators: List[Validator],
-        extra_tool_calls: int = 0,
-        logger: loggers_type | None = None,
-    ) -> None:
-        super().__init__(
-            validators=validators, extra_tool_calls=extra_tool_calls, logger=logger
-        )
-        self.available_tools: List[BaseTool] = [
+    @property
+    def available_tools(self) -> List[BaseTool]:
+        return [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
                     "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
@@ -178,19 +135,16 @@ class GetROS2RGBCameraTask(Task):
             MockGetROS2ImageTool(expected_topics=["/camera_image_color"]),
         ]
 
-    def get_system_prompt(self) -> str:
-        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
-
     def get_prompt(self) -> str:
         return "Get the RGB image from the camera."
 
 
-class GetROS2DepthCameraTask(Task):
+class GetROS2DepthCameraTask(BasicTask):
     complexity = "easy"
 
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
+    @property
+    def available_tools(self) -> List[BaseTool]:
+        return [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
                     "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
@@ -206,58 +160,16 @@ class GetROS2DepthCameraTask(Task):
             MockGetROS2ImageTool(expected_topics=["/camera_image_depth"]),
         ]
 
-    def get_system_prompt(self) -> str:
-        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
-
     def get_prompt(self) -> str:
         return "Get the depth image from the camera."
 
-    def verify_tool_calls(self, response: dict[str, Any]):
-        """It is expected that the agent will request:
-        1. The tool that retrieves the ROS2 topic names and types to identify the depth image topic.
-        2. The tool that retrieves the RGB image from the /camera_image_depth topic
 
-        Parameters
-        ----------
-        response : dict[str, Any]
-            The response from the agent
-        """
-        messages = response["messages"]
-        ai_messages: Sequence[AIMessage] = [
-            message for message in messages if isinstance(message, AIMessage)
-        ]
-
-        if len(ai_messages) < 3:
-            self.log_error(
-                msg=f"Expected at least 3 AI messages, but got {len(ai_messages)}."
-            )
-
-        if ai_messages:
-            if not self._is_ai_message_requesting_get_ros2_topics_and_types(
-                ai_messages[0]
-            ):
-                self.log_error(
-                    msg="First AI message did not request ROS2 topics and types correctly."
-                )
-
-        if len(ai_messages) > 1:
-            if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
-                self._check_tool_call(
-                    tool_call=ai_messages[1].tool_calls[0],
-                    expected_name="get_ros2_image",
-                    expected_args={"topic": "/camera_image_depth"},
-                    expected_optional_args={"timeout_sec": None},
-                )
-        if not self.result.errors:
-            self.result.success = True
-
-
-class GetAllROS2RGBCamerasTask(Task):
+class GetAllROS2RGBCamerasTask(BasicTask):
     complexity = "easy"
 
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
+    @property
+    def available_tools(self) -> List[BaseTool]:
+        return [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
                     "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
@@ -280,63 +192,13 @@ class GetAllROS2RGBCamerasTask(Task):
     def get_prompt(self) -> str:
         return "Get RGB images from all of the available cameras."
 
-    def get_system_prompt(self) -> str:
-        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
 
-    def verify_tool_calls(self, response: dict[str, Any]):
-        """It is expected that the agent will request:
-        1. The tool that retrieves the ROS2 topic names and types to identify the topics with RGB images.
-        2. The tool that retrieves the RGB images - from the /camera_image_color and from the /color_image5 topic
-
-        Parameters
-        ----------
-        response : dict[str, Any]
-            The response from the agent
-        """
-        messages = response["messages"]
-        ai_messages: Sequence[AIMessage] = [
-            message for message in messages if isinstance(message, AIMessage)
-        ]
-
-        if len(ai_messages) < 3:
-            self.log_error(
-                msg=f"Expected at least 3 AI messages, but got {len(ai_messages)}."
-            )
-        if ai_messages:
-            if not self._is_ai_message_requesting_get_ros2_topics_and_types(
-                ai_messages[0]
-            ):
-                self.log_error(
-                    msg="First AI message did not request ROS2 topics and types correctly."
-                )
-
-        if len(ai_messages) > 1:
-            expected_tool_calls: list[dict[str, Any]] = [
-                {
-                    "name": "get_ros2_image",
-                    "args": {"topic": "/camera_image_color"},
-                    "optional_args": {"timeout_sec": None},
-                },
-                {
-                    "name": "get_ros2_image",
-                    "args": {"topic": "/color_image5"},
-                    "optional_args": {"timeout_sec": None},
-                },
-            ]
-
-            self._check_multiple_tool_calls(
-                message=ai_messages[1], expected_tool_calls=expected_tool_calls
-            )
-        if not self.result.errors:
-            self.result.success = True
-
-
-class GetAllROS2DepthCamerasTask(Task):
+class GetAllROS2DepthCamerasTask(BasicTask):
     complexity = "easy"
 
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
+    @property
+    def available_tools(self) -> List[BaseTool]:
+        return [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
                     "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
@@ -358,63 +220,13 @@ class GetAllROS2DepthCamerasTask(Task):
     def get_prompt(self) -> str:
         return "Get depth images from all of the available cameras."
 
-    def get_system_prompt(self) -> str:
-        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
 
-    def verify_tool_calls(self, response: dict[str, Any]):
-        """It is expected that the agent will request:
-        1. The tool that retrieves the ROS2 topic names and types to identify the topics with depth images.
-        2. The tool that retrieves the depth images - from the /camera_image_depth and from the /depth_image5 topic
-
-        Parameters
-        ----------
-        response : dict[str, Any]
-            The response from the agent
-        """
-        messages = response["messages"]
-        ai_messages: Sequence[AIMessage] = [
-            message for message in messages if isinstance(message, AIMessage)
-        ]
-
-        if len(ai_messages) < 3:
-            self.log_error(
-                msg=f"Expected at least 3 AI messages, but got {len(ai_messages)}."
-            )
-        if ai_messages:
-            if not self._is_ai_message_requesting_get_ros2_topics_and_types(
-                ai_messages[0]
-            ):
-                self.log_error(
-                    msg="First AI message did not request ROS2 topics and types correctly."
-                )
-
-        if len(ai_messages) > 1:
-            expected_tool_calls: list[dict[str, Any]] = [
-                {
-                    "name": "get_ros2_image",
-                    "args": {"topic": "/camera_image_depth"},
-                    "optional_args": {"timeout_sec": None},
-                },
-                {
-                    "name": "get_ros2_image",
-                    "args": {"topic": "/depth_image5"},
-                    "optional_args": {"timeout_sec": None},
-                },
-            ]
-
-            self._check_multiple_tool_calls(
-                message=ai_messages[1], expected_tool_calls=expected_tool_calls
-            )
-        if not self.result.errors:
-            self.result.success = True
-
-
-class GetROS2MessageTask(Task):
+class GetROS2MessageTask(BasicTask):
     complexity = "easy"
 
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
+    @property
+    def available_tools(self) -> List[BaseTool]:
+        return [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
                     "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
@@ -437,49 +249,13 @@ class GetROS2MessageTask(Task):
     def get_prompt(self) -> str:
         return "Get RGB image."
 
-    def verify_tool_calls(self, response: dict[str, Any]):
-        """It is expected that the agent will request:
-        1. The tool that retrieves the ROS2 topics names and types to recognize the RGB image topic
-        2. The tool that retrieves the RGB image from the /camera_image_color topic
 
-        Parameters
-        ----------
-        response : dict[str, Any]
-            The response from the agent
-        """
-        messages = response["messages"]
-        ai_messages: Sequence[AIMessage] = [
-            message for message in messages if isinstance(message, AIMessage)
-        ]
-
-        if len(ai_messages) < 3:
-            self.log_error(
-                msg=f"Expected at least 3 AI messages, but got {len(ai_messages)}."
-            )
-        if ai_messages:
-            if not self._is_ai_message_requesting_get_ros2_topics_and_types(
-                ai_messages[0]
-            ):
-                self.log_error(
-                    msg="First AI message did not request ROS2 topics and types correctly."
-                )
-        if len(ai_messages) > 1:
-            if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
-                self._check_tool_call(
-                    tool_call=ai_messages[1].tool_calls[0],
-                    expected_name="receive_ros2_message",
-                    expected_args={"topic": "/camera_image_color"},
-                )
-        if not self.result.errors:
-            self.result.success = True
-
-
-class GetRobotDescriptionTask(Task):
+class GetRobotDescriptionTask(BasicTask):
     complexity = "easy"
 
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
+    @property
+    def available_tools(self) -> List[BaseTool]:
+        return [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
                     "topic: /pointcloud\ntype: sensor_msgs/msg/PointCloud2\n",
@@ -493,55 +269,16 @@ class GetRobotDescriptionTask(Task):
             MockReceiveROS2MessageTool(expected_topics=["/robot_description"]),
         ]
 
-    def get_system_prompt(self) -> str:
-        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
-
     def get_prompt(self) -> str:
         return "Give me description of the robot."
 
-    def verify_tool_calls(self, response: dict[str, Any]):
-        """It is expected that the agent will request:
-        1. The tool that retrieves the ROS2 topics names and types to recognize the topic with the robot description
-        2. The tool that retrieves the message from the /robot_description topic
 
-        Parameters
-        ----------
-        response : dict[str, Any]
-            The response from the agent
-        """
-        messages = response["messages"]
-        ai_messages: Sequence[AIMessage] = [
-            message for message in messages if isinstance(message, AIMessage)
-        ]
-
-        if len(ai_messages) < 3:
-            self.log_error(
-                msg=f"Expected at least 3 AI messages, but got {len(ai_messages)}."
-            )
-        if ai_messages:
-            if not self._is_ai_message_requesting_get_ros2_topics_and_types(
-                ai_messages[0]
-            ):
-                self.log_error(
-                    msg="First AI message did not request ROS2 topics and types correctly."
-                )
-        if len(ai_messages) > 1:
-            if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
-                self._check_tool_call(
-                    tool_call=ai_messages[1].tool_calls[0],
-                    expected_name="receive_ros2_message",
-                    expected_args={"topic": "/robot_description"},
-                )
-        if not self.result.errors:
-            self.result.success = True
-
-
-class GetPointcloudTask(Task):
+class GetPointcloudTask(BasicTask):
     complexity = "easy"
 
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
+    @property
+    def available_tools(self) -> List[BaseTool]:
+        return [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
                     "topic: /pointcloud\ntype: sensor_msgs/msg/PointCloud2\n",
@@ -555,44 +292,5 @@ class GetPointcloudTask(Task):
             MockReceiveROS2MessageTool(expected_topics=["/pointcloud"]),
         ]
 
-    def get_system_prompt(self) -> str:
-        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
-
     def get_prompt(self) -> str:
         return "Get the pointcloud."
-
-    def verify_tool_calls(self, response: dict[str, Any]):
-        """It is expected that the agent will request:
-        1. The tool that retrieves the ROS2 topics names and types to recognize the topic with the pointcloud
-        2. The tool that retrieves the message from the /pointcloud topic
-
-        Parameters
-        ----------
-        response : dict[str, Any]
-            The response from the agent
-        """
-        messages = response["messages"]
-        ai_messages: Sequence[AIMessage] = [
-            message for message in messages if isinstance(message, AIMessage)
-        ]
-
-        if len(ai_messages) < 3:
-            self.log_error(
-                msg=f"Expected at least 3 AI messages, but got {len(ai_messages)}."
-            )
-        if ai_messages:
-            if not self._is_ai_message_requesting_get_ros2_topics_and_types(
-                ai_messages[0]
-            ):
-                self.log_error(
-                    msg="First AI message did not request ROS2 topics and types correctly."
-                )
-        if len(ai_messages) > 1:
-            if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
-                self._check_tool_call(
-                    tool_call=ai_messages[1].tool_calls[0],
-                    expected_name="receive_ros2_message",
-                    expected_args={"topic": "/pointcloud"},
-                )
-        if not self.result.errors:
-            self.result.success = True

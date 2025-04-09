@@ -137,7 +137,7 @@ class Task(ABC):
     def __init__(
         self,
         validators: List[Validator],
-        extra_tool_calls: int,
+        extra_tool_calls: int = 0,
         logger: loggers_type | None = None,
     ) -> None:
         """
@@ -155,7 +155,6 @@ class Task(ABC):
             self.logger = logging.getLogger(__name__)
         self.validators = validators
         self.extra_tool_calls = extra_tool_calls
-        self.available_tools: List[BaseTool] = []
         self.result = Result()
 
     def set_logger(self, logger: loggers_type):
@@ -174,6 +173,12 @@ class Task(ABC):
     def get_validators_string_list(self) -> List[str]:
         """Represent validators and list of strings, where strings are subtask in very validator"""
         return [val.as_string() for val in self.validators]
+
+    @property
+    @abstractmethod
+    def available_tools(self) -> List[BaseTool]:
+        """List of tool available for the agent"""
+        pass
 
     @property
     def required_calls(self):
