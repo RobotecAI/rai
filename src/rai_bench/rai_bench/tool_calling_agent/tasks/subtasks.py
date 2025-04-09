@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any
+
 from langchain_core.messages import ToolCall
 
 from rai_bench.tool_calling_agent.interfaces import SubTask
 
 
 class GetROS2TopicNamesAndTypesSubTask(SubTask):
-    def validate(self, tool_call: ToolCall) -> bool:
+    def validate(self, tool_call: ToolCall, **kwargs: Any) -> bool:
         return self._check_tool_call(
             tool_call=tool_call,
             expected_name="get_ros2_topics_names_and_types",
@@ -27,10 +29,26 @@ class GetROS2TopicNamesAndTypesSubTask(SubTask):
 
 
 class GetROS2ImageSubTask(SubTask):
+    def __init__(self, expected_topic: str):
+        self.expected_topic = expected_topic
+
     def validate(self, tool_call: ToolCall) -> bool:
         return self._check_tool_call(
             tool_call=tool_call,
             expected_name="get_ros2_image",
-            expected_args={"topic": "/camera_image_color"},
+            expected_args={"topic": self.expected_topic},
+            expected_optional_args={"timeout": {}},
+        )
+
+
+class ReceiveROSMessageSubTask(SubTask):
+    def __init__(self, expected_topic: str):
+        self.expected_topic = expected_topic
+
+    def validate(self, tool_call: ToolCall) -> bool:
+        return self._check_tool_call(
+            tool_call=tool_call,
+            expected_name="receive_ros2_message",
+            expected_args={"topic": self.expected_topic},
             expected_optional_args={"timeout": {}},
         )

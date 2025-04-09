@@ -221,6 +221,7 @@ class GetAllROS2DepthCamerasTask(BasicTask):
         return "Get depth images from all of the available cameras."
 
 
+# NOTE (jm) is this task redundant?
 class GetROS2MessageTask(BasicTask):
     complexity = "easy"
 

@@ -18,40 +18,69 @@ from rai_bench.tool_calling_agent.interfaces import (
     Task,
 )
 from rai_bench.tool_calling_agent.tasks.basic import (
+    GetAllROS2DepthCamerasTask,
+    GetAllROS2RGBCamerasTask,
+    GetROS2DepthCameraTask,
     GetROS2RGBCameraTask,
     GetROS2TopicsTask,
 )
 from rai_bench.tool_calling_agent.tasks.subtasks import (
     GetROS2ImageSubTask,
     GetROS2TopicNamesAndTypesSubTask,
+    ReceiveROSMessageSubTask,
 )
-from rai_bench.tool_calling_agent.validators import OrderedCallsValidator
-
-get_topics_ord_val = OrderedCallsValidator(
-    subtasks=[GetROS2TopicNamesAndTypesSubTask()]
+from rai_bench.tool_calling_agent.validators import (
+    NotOrderedCallsValidator,
+    OrderedCallsValidator,
 )
-get_topics_and_image_ord_val = OrderedCallsValidator(
-    subtasks=[GetROS2TopicNamesAndTypesSubTask(), GetROS2ImageSubTask()]
+
+########## subtasks
+get_topics_subtask = GetROS2TopicNamesAndTypesSubTask()
+
+color_image_subtask = GetROS2ImageSubTask(expected_topic="/camera_image_color")
+depth_image_subtask = GetROS2ImageSubTask(expected_topic="/camera_image_depth")
+color_image5_subtask = GetROS2ImageSubTask(expected_topic="/color_image5")
+depth_image5_subtask = GetROS2ImageSubTask(expected_topic="/depth_image5")
+
+receive_robot_desc_subtask = ReceiveROSMessageSubTask(
+    expected_topic="/robot_description"
 )
-get_image_ord_val = OrderedCallsValidator(subtasks=[GetROS2ImageSubTask()])
+######### validators
+topics_ord_val = OrderedCallsValidator(subtasks=[get_topics_subtask])
+topics_and_color_image_ord_val = OrderedCallsValidator(
+    subtasks=[
+        get_topics_subtask,
+        color_image_subtask,
+    ]
+)
+color_image_ord_val = OrderedCallsValidator(subtasks=[color_image_subtask])
+depth_image_ord_val = OrderedCallsValidator(subtasks=[depth_image_subtask])
+all_color_images_notord_val = NotOrderedCallsValidator(
+    subtasks=[color_image_subtask, color_image5_subtask]
+)
+all_depth_images_notord_val = NotOrderedCallsValidator(
+    subtasks=[depth_image_subtask, depth_image5_subtask]
+)
 
-
+######### tasks
 tasks: Sequence[Task] = [
     # 3 options to validate same task:
     # most strict, agent has to call both tool correctly to pass this validator
-    GetROS2RGBCameraTask(validators=[get_topics_and_image_ord_val]),
+    GetROS2RGBCameraTask(validators=[topics_and_color_image_ord_val]),
     # verifing only if the GetCameraImage call was made properly
-    GetROS2RGBCameraTask(validators=[get_image_ord_val]),
+    GetROS2RGBCameraTask(validators=[color_image_ord_val]),
     # Soft verification. verifing in separate vaidators the list topic and get image.
     #  agent can get 0.5 score by only calling list topics
-    GetROS2RGBCameraTask(validators=[get_topics_ord_val, get_image_ord_val]),
+    GetROS2RGBCameraTask(validators=[topics_ord_val, color_image_ord_val]),
     # we can also add extra tool calls to allow model to correct itself
     GetROS2RGBCameraTask(
-        validators=[get_topics_ord_val, get_image_ord_val], extra_tool_calls=3
+        validators=[topics_ord_val, color_image_ord_val], extra_tool_calls=3
     ),
-    GetROS2TopicsTask(validators=[get_topics_ord_val]),
-    # GetROS2DepthCameraTask(),
-    # GetAllROS2RGBCamerasTask(),
+    GetROS2TopicsTask(validators=[topics_ord_val]),
+    GetROS2DepthCameraTask(validators=[depth_image_ord_val]),
+    GetAllROS2RGBCamerasTask(validators=[all_color_images_notord_val]),
+    GetAllROS2DepthCamerasTask(validators=[all_depth_images_notord_val]),
+    # GetRobotDescriptionTask(validators=)
     # GetROS2TopicsTask2(),
     # GetROS2MessageTask(),
     # MoveToPointTask(args={"x": 1.0, "y": 2.0, "z": 3.0, "task": "grab"}),
