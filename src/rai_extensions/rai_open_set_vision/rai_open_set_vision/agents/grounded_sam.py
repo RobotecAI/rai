@@ -41,7 +41,15 @@ class GroundedSamAgent(BaseVisionAgent):
         logger: Optional[logging.Logger] = None,
     ):
         super().__init__(weights_path, ros2_name, logger)
-        self._segmenter = GDSegmenter(self._weights_path)
+        try:
+            self._segmenter = GDSegmenter(self._weights_path)
+        except Exception:
+            self.get_logger().error(
+                "Could not load model. The weights might be corrupted. Redownloading..."
+            )
+            self._remove_weights(self.weight_path)
+            self._init_weight_path()
+            self.segmenter = GDSegmenter(self.weight_path)
 
     def run(self):
         self.connectors["ros2"].create_service(
