@@ -14,7 +14,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, List, Literal
+from typing import Any, List, Literal, Tuple
 
 from langchain_core.messages import AIMessage, ToolCall
 from langchain_core.runnables.config import DEFAULT_RECURSION_LIMIT
@@ -25,68 +25,23 @@ loggers_type = logging.Logger
 
 
 class Result(BaseModel):
-    success: bool = False
+    # success: bool = False
+    score: float = 0.0
     errors: list[str] = []
 
 
-class ToolCallingAgentTask(ABC):
-    """Abstract class for tool calling agent tasks. Contains methods for requested tool calls verification.
+class SubTaskValidationError(Exception):
+    pass
 
-    Parameters
-    ----------
-    logger : loggers_type | None, optional
-        Logger, by default None
-    """
 
-    complexity: Literal["easy", "medium", "hard"]
-    recursion_limit: int = DEFAULT_RECURSION_LIMIT
-
+class SubTask(ABC):
     def __init__(
         self,
-        logger: loggers_type | None = None,
     ) -> None:
-        if logger:
-            self.logger = logger
-        else:
-            self.logger = logging.getLogger(__name__)
-        self.expected_tools: List[BaseTool] = []
-        self.result = Result()
-
-    @abstractmethod
-    def get_system_prompt(self) -> str:
-        """Get the system prompt that will be passed to agent
-
-        Returns
-        -------
-        str
-            System prompt
-        """
         pass
 
     @abstractmethod
-    def get_prompt(self) -> str:
-        """Get the task instruction - the prompt that will be passed to agent.
-
-        Returns
-        -------
-        str
-            Prompt
-        """
-        pass
-
-    @abstractmethod
-    def verify_tool_calls(self, response: dict[str, Any]):
-        """Verify correctness of the tool calls from the agent's response.
-
-        Note
-        ----
-        This method should set self.result.success to True if the verification is successful and append occuring errors related to verification to self.result.errors.
-
-        Parameters
-        ----------
-        response : dict[str, Any]
-            Agent's response
-        """
+    def validate(self, tool_call: ToolCall) -> bool:
         pass
 
     def _check_tool_call(
@@ -115,162 +70,206 @@ class ToolCallingAgentTask(ABC):
             True if the tool call matches the expected name and args, False otherwise
         """
         if tool_call["name"] != expected_name:
-            self.log_error(
-                msg=f"Expected tool call name should be '{expected_name}', but got {tool_call['name']}"
+            raise SubTaskValidationError(
+                f"Expected tool call name should be '{expected_name}', but got {tool_call['name']}"
             )
-            return False
 
         # Check that all required arguments are present and have the expected values
         for arg_name, arg_value in expected_args.items():
             if arg_name in tool_call["args"]:
                 if tool_call["args"][arg_name] != arg_value:
-                    self.log_error(
-                        msg=f"Expected argument '{arg_name}' should have value '{arg_value}', but got '{tool_call['args'][arg_name]}'"
+                    SubTaskValidationError(
+                        f"Expected argument '{arg_name}' should have value '{arg_value}', but got '{tool_call['args'][arg_name]}'"
                     )
-                    return False
             else:
-                self.log_error(
-                    msg=f"Required argument '{arg_name}' missing in tool call {expected_name}."
+                SubTaskValidationError(
+                    f"Required argument '{arg_name}' missing in tool call {expected_name}."
                 )
-                return False
 
         # Check that no unexpected arguments are present (except for optional ones)
         for arg_name, arg_value in tool_call["args"].items():
             if arg_name not in expected_args:
                 # If this argument is not required, check if it's an allowed optional argument
                 if not expected_optional_args or arg_name not in expected_optional_args:
-                    self.log_error(
-                        msg=f"Unexpected argument '{arg_name}' found in tool call {expected_name}."
+                    SubTaskValidationError(
+                        f"Unexpected argument '{arg_name}' found in tool call {expected_name}."
                     )
-                    return False
                 # If optional argument has expected value, check if the value is correct
                 elif expected_optional_args[arg_name]:
                     if expected_optional_args[arg_name] != arg_value:
-                        self.log_error(
-                            msg=f"Optional argument '{arg_name}' has incorrect value '{arg_value}' in tool call {expected_name}."
+                        SubTaskValidationError(
+                            f"Optional argument '{arg_name}' has incorrect value '{arg_value}' in tool call {expected_name}."
                         )
-                        return False
-
         return True
 
-    def _check_multiple_tool_calls(
-        self, message: AIMessage, expected_tool_calls: list[dict[str, Any]]
-    ) -> bool:
-        """Helper method to check multiple tool calls in a single AIMessage.
+
+class Validator(ABC):
+    def __init__(
+        self, subtasks: List[SubTask], logger: loggers_type | None = None
+    ) -> None:
+        self.subtasks = subtasks
+        if logger:
+            self.logger = logger
+        else:
+            self.logger = logging.getLogger(__name__)
+
+    def log_error(self, msg: str):
+        self.logger.error(msg)
+
+    def as_string(self) -> str:
+        """Represent subtasks of this validator as string"""
+        string = ""
+        for i, subt in enumerate(self.subtasks):
+            string += f"{subt.__class__.__name__}"
+            if not i + 1 == len(self.subtasks):
+                string += ", "
+        return string
+
+    @abstractmethod
+    def validate(self, tool_calls: List[ToolCall]) -> Tuple[bool, List[ToolCall]]:
+        pass
+
+
+class Task(ABC):
+    complexity: Literal["easy", "medium", "hard"]
+    recursion_limit: int = DEFAULT_RECURSION_LIMIT
+
+    def __init__(
+        self,
+        validators: List[Validator],
+        extra_tool_calls: int,
+        logger: loggers_type | None = None,
+    ) -> None:
+        """
 
         Parameters
         ----------
-        message : AIMessage
-            The AIMessage to check
-        expected_tool_calls : list[dict[str, Any]]
-            A list of dictionaries, each containing expected 'name', 'args', and optional 'optional_args' for a tool call
+        validators : List[Validator]
+            Every validator can be treated as single step of validation.
+        extra_tool_calls : int
+            How many extra tool calls agent can make to still pass test
+        """
+        if logger:
+            self.logger = logger
+        else:
+            self.logger = logging.getLogger(__name__)
+        self.validators = validators
+        self.extra_tool_calls = extra_tool_calls
+        self.available_tools: List[BaseTool] = []
+        self.result = Result()
+
+    def set_logger(self, logger: loggers_type):
+        self.logger = logger
+        for validator in self.validators:
+            validator.logger = logger
+
+    def get_tool_calls(self, response: dict[str, Any]) -> list[ToolCall]:
+        """Extracts all tool calls from the response, flattened across all AI messages."""
+        tool_calls: List[ToolCall] = []
+        for msg in response["messages"]:
+            if isinstance(msg, AIMessage):
+                tool_calls.extend(msg.tool_calls)
+        return tool_calls
+
+    def get_validators_string_list(self) -> List[str]:
+        """Represent validators and list of strings, where strings are subtask in very validator"""
+        return [val.as_string() for val in self.validators]
+
+    @property
+    def required_calls(self):
+        """Minimal number of calls required to complete task"""
+        total = 0
+        for val in self.validators:
+            total += len(val.subtasks)
+        return total
+
+    @abstractmethod
+    def get_system_prompt(self) -> str:
+        """Get the system prompt that will be passed to agent
 
         Returns
         -------
-        bool
-            True if all tool calls match expected patterns, False otherwise
+        str
+            System prompt
         """
-        if not self._check_tool_calls_num_in_ai_message(
-            message, len(expected_tool_calls)
-        ):
-            return False
+        pass
 
-        matched_calls = [False] * len(expected_tool_calls)
-        error_occurs = False
-
-        for tool_call in message.tool_calls:
-            found_match = False
-
-            for i, expected in enumerate(expected_tool_calls):
-                if matched_calls[i]:
-                    continue
-
-                expected_name = expected["name"]
-                expected_args = expected["args"]
-                expected_optional_args = expected.get("optional_args", {})
-
-                if self._check_tool_call(
-                    tool_call=tool_call,
-                    expected_name=expected_name,
-                    expected_args=expected_args,
-                    expected_optional_args=expected_optional_args,
-                ):
-                    matched_calls[i] = True
-                    found_match = True
-                    break
-
-            if not found_match:
-                self.log_error(
-                    msg=f"Tool call {tool_call['name']} with args {tool_call['args']} does not match any expected call"
-                )
-                error_occurs = True
-
-        return not error_occurs
-
-    def _check_tool_calls_num_in_ai_message(
-        self, message: AIMessage, expected_num: int
-    ) -> bool:
-        """Helper method to check number of tool calls in a single AIMessage.
-
-        Parameters
-        ----------
-        message : AIMessage
-            The AIMessage to check
-        expected_num : int
-            The expected number of tool calls
+    @abstractmethod
+    def get_prompt(self) -> str:
+        """Get the task instruction - the prompt that will be passed to agent.
 
         Returns
         -------
-        bool
-            True if the number of tool calls in the message matches the expected number, False otherwise
+        str
+            Prompt
         """
-        if len(message.tool_calls) != expected_num:
-            self.log_error(
-                msg=f"Expected number of tool calls should be {expected_num}, but got {len(message.tool_calls)}"
-            )
-            return False
-        return True
+        pass
 
     def log_error(self, msg: str):
         self.logger.error(msg)
         self.result.errors.append(msg)
 
+    def validate(self, tool_calls: List[ToolCall]):
+        self.logger.debug(
+            f"required_calls: {self.required_calls}, extra_calls {self.extra_tool_calls}"
+        )
+        remaining_tool_calls = tool_calls[
+            : self.required_calls + self.extra_tool_calls
+        ].copy()
+        self.logger.debug(f"Tool calls to validate: {remaining_tool_calls}")
 
-class ROS2ToolCallingAgentTask(ToolCallingAgentTask, ABC):
-    """Abstract class for ROS2 related tasks for tool calling agent.
+        done_properly = 0
+        for validator in self.validators:
+            if_success, remaining_tool_calls = validator.validate(
+                tool_calls=remaining_tool_calls
+            )
+            if if_success:
+                done_properly += 1
 
-    Parameters
-    ----------
-    logger : loggers_type | None
-        Logger for the task.
-    """
+        self.result.score = done_properly / len(self.validators)
 
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger)
+    # def _check_multiple_tool_calls(
+    #     self, tool_calls: List[ToolCall], expected_tool_calls: list[dict[str, Any]]
+    # ) -> bool:
+    #     matched_calls = [False] * len(expected_tool_calls)
+    #     error_occurs = False
 
-    def _is_ai_message_requesting_get_ros2_topics_and_types(
-        self, ai_message: AIMessage
-    ) -> bool:
-        """Helper method to check if the given AIMessage is calling the exactly one tool that gets ROS2 topics names and types correctly.
+    #     for tool_call in tool_calls:
+    #         found_match = False
 
-        Parameters
-        ----------
-        ai_message : AIMessage
-            The AIMessage to check
+    #         for i, expected in enumerate(expected_tool_calls):
+    #             if matched_calls[i]:
+    #                 continue
 
-        Returns
-        -------
-        bool
-            True if the ai_message is requesting get_ros2_topics_names_and_types correctly, False otherwise
-        """
-        if not self._check_tool_calls_num_in_ai_message(ai_message, expected_num=1):
-            return False
+    #             expected_name = expected["name"]
+    #             expected_args = expected["args"]
+    #             expected_optional_args = expected.get("optional_args", {})
 
-        tool_call: ToolCall = ai_message.tool_calls[0]
-        if not self._check_tool_call(
-            tool_call=tool_call,
-            expected_name="get_ros2_topics_names_and_types",
-            expected_args={},
-        ):
-            return False
-        return True
+    #             if self._check_tool_call(
+    #                 tool_call=tool_call,
+    #                 expected_name=expected_name,
+    #                 expected_args=expected_args,
+    #                 expected_optional_args=expected_optional_args,
+    #             ):
+    #                 matched_calls[i] = True
+    #                 found_match = True
+    #                 break
+
+    #         if not found_match:
+    #             self.log_error(
+    #                 msg=f"Tool call {tool_call['name']} with args {tool_call['args']} does not match any expected call"
+    #             )
+    #             error_occurs = True
+
+    #     return not error_occurs
+
+    # def _is_ai_message_requesting_get_ros2_topics_and_types(
+    #     self, tool_call: ToolCall
+    # ) -> bool:
+    #     if not self._check_tool_call(
+    #         tool_call=tool_call,
+    #         expected_name="get_ros2_topics_names_and_types",
+    #         expected_args={},
+    #     ):
+    #         return False
+    #     return True

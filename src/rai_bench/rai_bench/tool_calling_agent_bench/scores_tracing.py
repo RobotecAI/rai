@@ -35,13 +35,13 @@ class ScoreTracingHandler:
 
     @staticmethod
     def send_score(
-        callback: BaseCallbackHandler, run_id: UUID, success: bool, errors: List[str]
+        callback: BaseCallbackHandler, run_id: UUID, score: float, errors: List[str]
     ) -> None:
         if isinstance(callback, CallbackHandler):
             callback.langfuse.score(
                 trace_id=str(run_id),
                 name="tool calls result",
-                value=float(success),
+                value=float(score),
                 comment="; ".join(errors) if errors else "",
             )
             return None
@@ -49,7 +49,7 @@ class ScoreTracingHandler:
             callback.client.create_feedback(
                 run_id=run_id,
                 key="tool calls result",
-                score=float(success),
+                score=float(score),
                 comment="; ".join(errors) if errors else "",
             )
             return None

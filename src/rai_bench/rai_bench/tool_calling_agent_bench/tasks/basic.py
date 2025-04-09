@@ -19,7 +19,8 @@ from langchain_core.messages import AIMessage
 from langchain_core.tools import BaseTool
 
 from rai_bench.tool_calling_agent_bench.interfaces import (
-    ROS2ToolCallingAgentTask,
+    Task,
+    Validator,
 )
 from rai_bench.tool_calling_agent_bench.mocked_tools import (
     MockGetROS2ImageTool,
@@ -30,17 +31,28 @@ from rai_bench.tool_calling_agent_bench.mocked_tools import (
 loggers_type = logging.Logger
 
 
-PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT = """You are a ROS 2 expert helping a user with their ROS 2 questions. You have access to various tools that allow you to query the ROS 2 system.
-                Be proactive and use the tools to answer questions.
-                """
+PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT = """You are a ROS 2 expert that want to solve tasks. You have access to various tools that allow you to query the ROS 2 system.
+Be proactive and use the tools to answer questions.
+Example of tool calls:
+- get_ros2_message_interface, args: {'msg_type': 'geometry_msgs/msg/Twist'}
+- publish_ros2_message, args: {'topic': '/cmd_vel', 'message_type': 'geometry_msgs/msg/Twist', 'message': {linear: {x: 0.5, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 1.0}}}
+- get_ros2_message_interface, args: {'msg_type': 'turtlesim/srv/TeleportAbsolute'}
+- publish_ros2_message, args: {'topic': '/turtle1/teleport_absolute', 'message_type': 'turtlesim/srv/TeleportAbsolute', 'message': {x: 5.0, y: 2.0, theta: 1.57}}"""
 
 
-class GetROS2TopicsTask(ROS2ToolCallingAgentTask):
+class GetROS2TopicsTask(Task):
     complexity = "easy"
 
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools = [
+    def __init__(
+        self,
+        validators: List[Validator],
+        extra_tool_calls: int = 0,
+        logger: loggers_type | None = None,
+    ) -> None:
+        super().__init__(
+            validators=validators, extra_tool_calls=extra_tool_calls, logger=logger
+        )
+        self.available_tools = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
                     "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
@@ -86,40 +98,13 @@ class GetROS2TopicsTask(ROS2ToolCallingAgentTask):
     def get_prompt(self) -> str:
         return "Get the names and types of all ROS2 topics"
 
-    def verify_tool_calls(self, response: dict[str, Any]):
-        """It is expected that the agent will request only the tool that retrieves the ROS2 topics names and types
 
-        Parameters
-        ----------
-        response : dict[str, Any]
-            The response from the agent
-        """
-        messages = response["messages"]
-        ai_messages: Sequence[AIMessage] = [
-            message for message in messages if isinstance(message, AIMessage)
-        ]
-
-        if not ai_messages:
-            self.log_error(msg="No AI messages found in the response.")
-
-        self._is_ai_message_requesting_get_ros2_topics_and_types(ai_messages[0])
-
-        total_tool_calls = sum(len(message.tool_calls) for message in ai_messages)
-        if total_tool_calls != 1:
-            self.log_error(
-                msg=f"Total number of tool calls across all AI messages should be 1, but got {total_tool_calls}."
-            )
-
-        if not self.result.errors:
-            self.result.success = True
-
-
-class GetROS2TopicsTask2(ROS2ToolCallingAgentTask):
+class GetROS2TopicsTask2(Task):
     complexity = "easy"
 
     def __init__(self, logger: loggers_type | None = None) -> None:
         super().__init__(logger=logger)
-        self.expected_tools = [
+        self.available_tools = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
                     "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
@@ -164,12 +149,19 @@ class GetROS2TopicsTask2(ROS2ToolCallingAgentTask):
             self.result.success = True
 
 
-class GetROS2RGBCameraTask(ROS2ToolCallingAgentTask):
+class GetROS2RGBCameraTask(Task):
     complexity = "easy"
 
-    def __init__(self, logger: loggers_type | None = None) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
+    def __init__(
+        self,
+        validators: List[Validator],
+        extra_tool_calls: int = 0,
+        logger: loggers_type | None = None,
+    ) -> None:
+        super().__init__(
+            validators=validators, extra_tool_calls=extra_tool_calls, logger=logger
+        )
+        self.available_tools: List[BaseTool] = [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
                     "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
@@ -192,46 +184,8 @@ class GetROS2RGBCameraTask(ROS2ToolCallingAgentTask):
     def get_prompt(self) -> str:
         return "Get the RGB image from the camera."
 
-    def verify_tool_calls(self, response: dict[str, Any]):
-        """It is expected that the agent will request:
-        1. The tool that retrieves the ROS2 topics names and types to recognize the RGB image topic
-        2. The tool that retrieves the RGB image from the /camera_image_color topic
 
-        Parameters
-        ----------
-        response : dict[str, Any]
-            The response from the agent
-        """
-        messages = response["messages"]
-        ai_messages: Sequence[AIMessage] = [
-            message for message in messages if isinstance(message, AIMessage)
-        ]
-
-        if len(ai_messages) < 3:
-            self.log_error(
-                msg=f"Expected at least 3 AI messages, but got {len(ai_messages)}."
-            )
-
-        if ai_messages:
-            if not self._is_ai_message_requesting_get_ros2_topics_and_types(
-                ai_messages[0]
-            ):
-                self.log_error(
-                    msg="First AI message did not request ROS2 topics and types correctly."
-                )
-        if len(ai_messages) > 1:
-            if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
-                self._check_tool_call(
-                    tool_call=ai_messages[1].tool_calls[0],
-                    expected_name="get_ros2_image",
-                    expected_args={"topic": "/camera_image_color"},
-                    expected_optional_args={"timeout_sec": None},
-                )
-        if not self.result.errors:
-            self.result.success = True
-
-
-class GetROS2DepthCameraTask(ROS2ToolCallingAgentTask):
+class GetROS2DepthCameraTask(Task):
     complexity = "easy"
 
     def __init__(self, logger: loggers_type | None = None) -> None:
@@ -298,7 +252,7 @@ class GetROS2DepthCameraTask(ROS2ToolCallingAgentTask):
             self.result.success = True
 
 
-class GetAllROS2RGBCamerasTask(ROS2ToolCallingAgentTask):
+class GetAllROS2RGBCamerasTask(Task):
     complexity = "easy"
 
     def __init__(self, logger: loggers_type | None = None) -> None:
@@ -377,7 +331,7 @@ class GetAllROS2RGBCamerasTask(ROS2ToolCallingAgentTask):
             self.result.success = True
 
 
-class GetAllROS2DepthCamerasTask(ROS2ToolCallingAgentTask):
+class GetAllROS2DepthCamerasTask(Task):
     complexity = "easy"
 
     def __init__(self, logger: loggers_type | None = None) -> None:
@@ -455,7 +409,7 @@ class GetAllROS2DepthCamerasTask(ROS2ToolCallingAgentTask):
             self.result.success = True
 
 
-class GetROS2MessageTask(ROS2ToolCallingAgentTask):
+class GetROS2MessageTask(Task):
     complexity = "easy"
 
     def __init__(self, logger: loggers_type | None = None) -> None:
@@ -520,7 +474,7 @@ class GetROS2MessageTask(ROS2ToolCallingAgentTask):
             self.result.success = True
 
 
-class GetRobotDescriptionTask(ROS2ToolCallingAgentTask):
+class GetRobotDescriptionTask(Task):
     complexity = "easy"
 
     def __init__(self, logger: loggers_type | None = None) -> None:
@@ -582,7 +536,7 @@ class GetRobotDescriptionTask(ROS2ToolCallingAgentTask):
             self.result.success = True
 
 
-class GetPointcloudTask(ROS2ToolCallingAgentTask):
+class GetPointcloudTask(Task):
     complexity = "easy"
 
     def __init__(self, logger: loggers_type | None = None) -> None:

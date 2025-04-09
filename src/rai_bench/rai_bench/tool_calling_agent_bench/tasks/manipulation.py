@@ -24,7 +24,7 @@ from langchain_core.tools import BaseTool
 from rai.tools.ros2 import MoveToPointToolInput
 
 from rai_bench.tool_calling_agent_bench.interfaces import (
-    ROS2ToolCallingAgentTask,
+    Task,
 )
 from rai_bench.tool_calling_agent_bench.mocked_tools import (
     MockGetObjectPositionsTool,
@@ -45,7 +45,7 @@ class TaskParametrizationError(Exception):
     pass
 
 
-class MoveToPointTask(ROS2ToolCallingAgentTask):
+class MoveToPointTask(Task):
     complexity = "easy"
 
     def __init__(
@@ -110,7 +110,7 @@ class MoveToPointTask(ROS2ToolCallingAgentTask):
             self.result.success = True
 
 
-class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
+class GetObjectPositionsTask(Task):
     complexity = "easy"
 
     def __init__(
@@ -201,7 +201,7 @@ class GetObjectPositionsTask(ROS2ToolCallingAgentTask):
             self.result.success = True
 
 
-class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
+class GrabExistingObjectTask(Task):
     complexity = "medium"
 
     """Task to grab an object
@@ -322,7 +322,7 @@ class GrabExistingObjectTask(ROS2ToolCallingAgentTask):
             self.result.success = True
 
 
-class GrabNotExistingObjectTask(ROS2ToolCallingAgentTask):
+class GrabNotExistingObjectTask(Task):
     """Task to grab an object that does not exist
 
     Parameters
@@ -425,7 +425,7 @@ class GrabNotExistingObjectTask(ROS2ToolCallingAgentTask):
             self.result.success = True
 
 
-class MoveExistingObjectLeftTask(ROS2ToolCallingAgentTask):
+class MoveExistingObjectLeftTask(Task):
     """Task to move an existing object to the left.
 
     Parameters
@@ -560,7 +560,7 @@ class MoveExistingObjectLeftTask(ROS2ToolCallingAgentTask):
             self.result.success = True
 
 
-class MoveExistingObjectFrontTask(ROS2ToolCallingAgentTask):
+class MoveExistingObjectFrontTask(Task):
     """Task to move an existing object to the front
 
     Parameters
@@ -686,7 +686,7 @@ class MoveExistingObjectFrontTask(ROS2ToolCallingAgentTask):
             self.result.success = True
 
 
-class SwapObjectsTask(ROS2ToolCallingAgentTask):
+class SwapObjectsTask(Task):
     """Task to swap objects
 
     Parameters

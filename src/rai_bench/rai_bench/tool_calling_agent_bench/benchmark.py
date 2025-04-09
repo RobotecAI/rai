@@ -28,7 +28,7 @@ from pydantic import BaseModel, Field
 from rai.messages import HumanMultimodalMessage
 
 from rai_bench.tool_calling_agent_bench.interfaces import (
-    ToolCallingAgentTask,
+    Task,
 )
 from rai_bench.tool_calling_agent_bench.scores_tracing import ScoreTracingHandler
 
@@ -40,8 +40,15 @@ class TaskResult(BaseModel):
     system_prompt: str = Field(..., description="The system prompt.")
     complexity: str = Field(..., description="Complexity of the task.")
     model_name: str = Field(..., description="Name of the LLM.")
-    success: bool = Field(
-        ..., description="Whether the task was successfully completed."
+    validation: List[str] = Field(
+        ..., description="List of validators with theirs' subtasks."
+    )
+    # success: bool = Field(
+    #     ..., description="Whether the task was successfully completed."
+    # )
+    score: float = Field(
+        ...,
+        description="Value between 0 and 1, describing how many steps of a task were done correctly.",
     )
     errors: List[str] = Field(
         ..., description="List of errors that occurred during the task execution."
@@ -64,7 +71,7 @@ class ToolCallingAgentBenchmark:
 
     Parameters
     ----------
-    tasks : Sequence[ToolCallingAgentTask]
+    tasks : Sequence[Task]
         Sequence of tasks to be passed to the agent.
     logger : loggers_type | None, optional
         Logger, by default None
@@ -76,12 +83,12 @@ class ToolCallingAgentBenchmark:
 
     def __init__(
         self,
-        tasks: Sequence[ToolCallingAgentTask],
+        tasks: Sequence[Task],
         logger: loggers_type | None = None,
         results_filename: Path = Path("agent_benchmark_results.csv"),
         summary_filename: str | None = None,
     ) -> None:
-        self._tasks: Iterator[Tuple[int, ToolCallingAgentTask]] = enumerate(iter(tasks))
+        self._tasks: Iterator[Tuple[int, Task]] = enumerate(iter(tasks))
         self.num_tasks = len(tasks)
         self.task_results: List[TaskResult] = []
         self.results_filename = results_filename
@@ -144,74 +151,73 @@ class ToolCallingAgentBenchmark:
         model_name : str
             Name of the LLM model.
         """
+        # try:
+        i, task = next(self._tasks)
+        self.logger.info(
+            f"RUNNING TASK NUMBER {i + 1} / {self.num_tasks}, TASK {task.get_prompt()}"
+        )
+        callbacks = self.score_tracing_handler.get_callbacks()
+        run_id = uuid.uuid4()
+        config: RunnableConfig = {
+            "run_id": run_id,
+            "callbacks": callbacks,
+            "tags": [task.complexity, model_name],
+            "recursion_limit": task.recursion_limit,
+        }
+
+        ts = time.perf_counter()
         try:
-            i, task = next(self._tasks)
-            self.logger.info(
-                f"RUNNING TASK NUMBER {i + 1} / {self.num_tasks}, TASK {task.get_prompt()}"
+            response = agent.invoke(
+                {"messages": [HumanMultimodalMessage(content=task.get_prompt())]},
+                config=config,
             )
-            callbacks = self.score_tracing_handler.get_callbacks()
-            run_id = uuid.uuid4()
-            config: RunnableConfig = {
-                "run_id": run_id,
-                "callbacks": callbacks,
-                "tags": [task.complexity, model_name],
-                "recursion_limit": task.recursion_limit,
-            }
+            self.logger.debug(response)
+            toll_calls = task.get_tool_calls(response=response)
+            task.validate(tool_calls=toll_calls)
+        except GraphRecursionError as e:
+            task.log_error(msg=f"Graph Recursion Error: {e}")
+        te = time.perf_counter()
+        total_time = te - ts
+        result = task.result
 
-            ts = time.perf_counter()
-            try:
-                response = agent.invoke(
-                    {"messages": [HumanMultimodalMessage(content=task.get_prompt())]},
-                    config=config,
-                )
-                task.verify_tool_calls(response=response)
-            except GraphRecursionError as e:
-                task.log_error(msg=f"Graph Recursion Error: {e}")
-            te = time.perf_counter()
-            total_time = te - ts
-            result = task.result
-
-            for callback in callbacks:
-                self.score_tracing_handler.send_score(
-                    callback=callback,
-                    run_id=run_id,
-                    success=result.success,
-                    errors=result.errors,
-                )
-
-            self.logger.info(
-                f"TASK SUCCESS: {result.success}, TOTAL TIME: {total_time:.3f}"
-            )
-
-            task_result = TaskResult(
-                task_prompt=task.get_prompt(),
-                system_prompt=task.get_system_prompt(),
-                complexity=task.complexity,
-                model_name=model_name,
-                success=result.success,
-                errors=result.errors if result.errors else [],
-                total_time=total_time,
+        for callback in callbacks:
+            self.score_tracing_handler.send_score(
+                callback=callback,
                 run_id=run_id,
+                score=result.score,
+                errors=result.errors,
             )
 
-            self.task_results.append(task_result)
+        self.logger.info(f"TASK SCORE: {result.score}, TOTAL TIME: {total_time:.3f}")
 
-            if model_name not in self.model_results:
-                self.model_results[model_name] = []
-            self.model_results[model_name].append(task_result)
+        task_result = TaskResult(
+            task_prompt=task.get_prompt(),
+            system_prompt=task.get_system_prompt(),
+            complexity=task.complexity,
+            model_name=model_name,
+            validation=task.get_validators_string_list(),
+            score=result.score,
+            errors=result.errors if result.errors else [],
+            total_time=total_time,
+            run_id=run_id,
+        )
 
-            self.csv_writerow(self.results_filename, task_result)
+        self.task_results.append(task_result)
 
-            completed_tasks = sum(
-                len(results) for results in self.model_results.values()
-            )
-            if completed_tasks == self.num_tasks:
-                self._compute_and_save_summary()
+        if model_name not in self.model_results:
+            self.model_results[model_name] = []
+        self.model_results[model_name].append(task_result)
 
-        except StopIteration:
-            if self.task_results:
-                self._compute_and_save_summary()
-            print("No more scenarios left to run.")
+        self.csv_writerow(self.results_filename, task_result)
+
+        completed_tasks = sum(len(results) for results in self.model_results.values())
+        if completed_tasks == self.num_tasks:
+            self._compute_and_save_summary()
+
+        # except StopIteration:
+        #     if self.task_results:
+        #         self._compute_and_save_summary()
+        #     print("No more scenarios left to run.")
 
     def _compute_and_save_summary(self):
         self.logger.info("Computing and saving average results...")
@@ -219,7 +225,7 @@ class ToolCallingAgentBenchmark:
             if not results:
                 continue
 
-            success_count = sum(1 for r in results if r.success)
+            success_count = sum(1 for r in results if r.score)
             success_rate = success_count / len(results) * 100
             avg_time = statistics.mean(r.total_time for r in results)
 

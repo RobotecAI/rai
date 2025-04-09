@@ -78,7 +78,7 @@ if __name__ == "__main__":
     ]
     # define loggers
     now = datetime.now()
-    experiment_dir = f"src/rai_bench/rai_bench/experiments/o3de_manipulation_bench/{now.strftime('%Y-%m-%d_%H-%M-%S')}"
+    experiment_dir = f"src/rai_bench/rai_bench/experiments/o3de_manipulation/{now.strftime('%Y-%m-%d_%H-%M-%S')}"
     Path(experiment_dir).mkdir(parents=True, exist_ok=True)
     log_file = f"{experiment_dir}/benchmark.log"
     file_handler = logging.FileHandler(log_file)

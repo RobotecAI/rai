@@ -26,14 +26,10 @@ from rai_bench.examples.tool_calling_agent.tasks import tasks
 from rai_bench.tool_calling_agent_bench.benchmark import ToolCallingAgentBenchmark
 
 if __name__ == "__main__":
-    current_test_name = Path(__file__).stem
-
     now = datetime.now()
-    experiment_dir = (
-        Path("src/rai_bench/rai_bench/experiments/o3de_manipulation")
-        / current_test_name
-        / now.strftime("%Y-%m-%d_%H-%M-%S")
-    )
+    experiment_dir = Path(
+        "src/rai_bench/rai_bench/experiments/tool_calling_agent"
+    ) / now.strftime("%Y-%m-%d_%H-%M-%S")
     experiment_dir.mkdir(parents=True, exist_ok=True)
     log_filename = experiment_dir / "benchmark.log"
     results_filename = experiment_dir / "results.csv"
@@ -54,20 +50,20 @@ if __name__ == "__main__":
     agent_logger.addHandler(file_handler)
 
     for task in tasks:
-        task.logger = bench_logger
+        task.set_logger(bench_logger)
 
     benchmark = ToolCallingAgentBenchmark(
         tasks=tasks, logger=bench_logger, results_filename=results_filename
     )
 
-    model_type = "simple_model"
+    model_type = "complex_model"
     model_config = get_llm_model_config_and_vendor(model_type=model_type)[0]
     model_name = getattr(model_config, model_type)
 
     for task in tasks:
         agent = create_conversational_agent(
             llm=get_llm_model(model_type=model_type),
-            tools=task.expected_tools,
+            tools=task.available_tools,
             system_prompt=task.get_system_prompt(),
             logger=agent_logger,
         )
