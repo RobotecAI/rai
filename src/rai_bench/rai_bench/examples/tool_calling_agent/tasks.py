@@ -14,18 +14,18 @@
 
 from typing import Sequence
 
-from rai_bench.tool_calling_agent_bench.interfaces import (
+from rai_bench.tool_calling_agent.interfaces import (
     Task,
 )
-from rai_bench.tool_calling_agent_bench.tasks.basic import (
+from rai_bench.tool_calling_agent.tasks.basic import (
     GetROS2RGBCameraTask,
     GetROS2TopicsTask,
 )
-from rai_bench.tool_calling_agent_bench.tasks.subtasks import (
+from rai_bench.tool_calling_agent.tasks.subtasks import (
     GetROS2ImageSubTask,
     GetROS2TopicNamesAndTypesSubTask,
 )
-from rai_bench.tool_calling_agent_bench.validators import OrderedCallsValidator
+from rai_bench.tool_calling_agent.validators import OrderedCallsValidator
 
 get_topics_ord_val = OrderedCallsValidator(
     subtasks=[GetROS2TopicNamesAndTypesSubTask()]

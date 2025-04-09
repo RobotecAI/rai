@@ -14,7 +14,7 @@
 
 import math
 
-from rai_bench.manipulation_o3de_bench.tasks import RotateObjectTask
+from rai_bench.manipulation_o3de.tasks import RotateObjectTask
 from rai_sim.simulation_bridge import Rotation
 from tests.rai_bench.conftest import create_entity
 

@@ -39,7 +39,7 @@ from rai_bench.examples.manipulation_o3de.scenarios import (
     trivial_scenarios,
     very_hard_scenarios,
 )
-from rai_bench.manipulation_o3de_bench.benchmark import Benchmark
+from rai_bench.manipulation_o3de.benchmark import Benchmark
 from rai_sim.o3de.o3de_bridge import (
     O3DEngineArmManipulationBridge,
 )

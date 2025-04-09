@@ -11,22 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from rai_bench.manipulation_o3de_bench.tasks.build_tower_task import (
+from rai_bench.manipulation_o3de.tasks.build_tower_task import (
     BuildCubeTowerTask,
 )
-from rai_bench.manipulation_o3de_bench.tasks.group_objects_task import (
+from rai_bench.manipulation_o3de.tasks.group_objects_task import (
     GroupObjectsTask,
 )
-from rai_bench.manipulation_o3de_bench.tasks.move_object_to_left_task import (
+from rai_bench.manipulation_o3de.tasks.move_object_to_left_task import (
     MoveObjectsToLeftTask,
 )
-from rai_bench.manipulation_o3de_bench.tasks.place_at_coord_task import (
+from rai_bench.manipulation_o3de.tasks.place_at_coord_task import (
     PlaceObjectAtCoordTask,
 )
-from rai_bench.manipulation_o3de_bench.tasks.place_cubes_task import (
+from rai_bench.manipulation_o3de.tasks.place_cubes_task import (
     PlaceCubesTask,
 )
-from rai_bench.manipulation_o3de_bench.tasks.rotate_object_task import (
+from rai_bench.manipulation_o3de.tasks.rotate_object_task import (
     RotateObjectTask,
 )
 

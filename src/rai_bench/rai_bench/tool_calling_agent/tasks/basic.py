@@ -18,11 +18,11 @@ from typing import Any, List, Sequence
 from langchain_core.messages import AIMessage
 from langchain_core.tools import BaseTool
 
-from rai_bench.tool_calling_agent_bench.interfaces import (
+from rai_bench.tool_calling_agent.interfaces import (
     Task,
     Validator,
 )
-from rai_bench.tool_calling_agent_bench.mocked_tools import (
+from rai_bench.tool_calling_agent.mocked_tools import (
     MockGetROS2ImageTool,
     MockGetROS2TopicsNamesAndTypesTool,
     MockReceiveROS2MessageTool,

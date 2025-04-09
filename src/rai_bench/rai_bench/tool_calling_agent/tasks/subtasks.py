@@ -13,7 +13,8 @@
 # limitations under the License.
 
 from langchain_core.messages import ToolCall
-from rai_bench.tool_calling_agent_bench.interfaces import SubTask
+
+from rai_bench.tool_calling_agent.interfaces import SubTask
 
 
 class GetROS2TopicNamesAndTypesSubTask(SubTask):

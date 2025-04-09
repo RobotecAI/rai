@@ -23,7 +23,7 @@ from rai import (
 from rai.agents.conversational_agent import create_conversational_agent
 
 from rai_bench.examples.tool_calling_agent.tasks import tasks
-from rai_bench.tool_calling_agent_bench.benchmark import ToolCallingAgentBenchmark
+from rai_bench.tool_calling_agent.benchmark import ToolCallingAgentBenchmark
 
 if __name__ == "__main__":
     now = datetime.now()

@@ -14,7 +14,7 @@
 
 import pytest
 
-from rai_bench.manipulation_o3de_bench.tasks import BuildCubeTowerTask
+from rai_bench.manipulation_o3de.tasks import BuildCubeTowerTask
 from tests.rai_bench.conftest import create_entity
 
 

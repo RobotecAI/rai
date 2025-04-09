@@ -13,18 +13,14 @@
 # limitations under the License.
 
 import logging
-from abc import ABC, abstractmethod
-from typing import Any, List, Literal, Tuple
+from typing import List, Tuple
 
 from langchain_core.messages import ToolCall
-from langchain_core.runnables.config import DEFAULT_RECURSION_LIMIT
-from langchain_core.tools import BaseTool
-from pydantic import BaseModel
-from langchain_core.messages import AIMessage
-from rai_bench.tool_calling_agent_bench.interfaces import (
-    Validator,
+
+from rai_bench.tool_calling_agent.interfaces import (
     SubTask,
     SubTaskValidationError,
+    Validator,
 )
 
 loggers_type = logging.Logger
@@ -48,7 +44,7 @@ class OrderedCallsValidator(Validator):
             except StopIteration:
                 return True, tool_calls[i:]
 
-        self.log_error(msg=f"Failed to validate")
+        self.log_error(msg="Failed to validate")
         return False, []
 
 

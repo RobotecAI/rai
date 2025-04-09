@@ -18,7 +18,7 @@ from typing import List, Tuple, Union
 
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from rai_bench.manipulation_o3de_bench.interfaces import (
+from rai_bench.manipulation_o3de.interfaces import (
     ManipulationTask,
 )
 from rai_sim.simulation_bridge import Entity, Rotation, SimulationConfig

@@ -21,7 +21,7 @@ from langgraph.graph.state import CompiledStateGraph
 from rai.messages import HumanMultimodalMessage
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from rai_bench.manipulation_o3de_bench.interfaces import Task
+from rai_bench.manipulation_o3de.interfaces import Task
 from rai_sim.simulation_bridge import (
     Entity,
     SimulationBridge,

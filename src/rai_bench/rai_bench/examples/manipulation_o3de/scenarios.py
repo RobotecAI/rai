@@ -18,9 +18,9 @@ from typing import List, Union
 
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from rai_bench.manipulation_o3de_bench.benchmark import Benchmark, Scenario
-from rai_bench.manipulation_o3de_bench.interfaces import Task
-from rai_bench.manipulation_o3de_bench.tasks import (
+from rai_bench.manipulation_o3de.benchmark import Benchmark, Scenario
+from rai_bench.manipulation_o3de.interfaces import Task
+from rai_bench.manipulation_o3de.tasks import (
     BuildCubeTowerTask,
     GroupObjectsTask,
     MoveObjectsToLeftTask,
