@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import logging
 from abc import ABC, abstractmethod
 
 
 class BaseAgent(ABC):
+    def __init__(self):
+        self.logger = logging.getLogger(self.__class__.__name__)
+
     @abstractmethod
     def run(self):
         pass
