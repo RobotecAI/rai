@@ -17,6 +17,9 @@ from .actions import (
     GetROS2ActionsNamesAndTypesTool,
     ROS2ActionToolkit,
     StartROS2ActionTool,
+    GetROS2ActionFeedbackTool,
+    GetROS2ActionIDsTool,
+    GetROS2ActionResultTool,
 )
 from .services import (
     CallROS2ServiceTool,

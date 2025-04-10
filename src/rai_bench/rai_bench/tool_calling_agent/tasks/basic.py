@@ -132,7 +132,7 @@ class GetROS2RGBCameraTask(BasicTask):
                     "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
                 ]
             ),
-            MockGetROS2ImageTool(expected_topics=["/camera_image_color"]),
+            MockGetROS2ImageTool(avilable_topics=["/camera_image_color"]),
         ]
 
     def get_prompt(self) -> str:
@@ -157,7 +157,7 @@ class GetROS2DepthCameraTask(BasicTask):
                     "topic: /depth_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
                 ]
             ),
-            MockGetROS2ImageTool(expected_topics=["/camera_image_depth"]),
+            MockGetROS2ImageTool(avilable_topics=["/camera_image_depth"]),
         ]
 
     def get_prompt(self) -> str:
@@ -185,7 +185,7 @@ class GetAllROS2RGBCamerasTask(BasicTask):
                 ]
             ),
             MockGetROS2ImageTool(
-                expected_topics=["/camera_image_color", "/color_image5"]
+                avilable_topics=["/camera_image_color", "/color_image5"]
             ),
         ]
 
@@ -213,7 +213,7 @@ class GetAllROS2DepthCamerasTask(BasicTask):
                 ]
             ),
             MockGetROS2ImageTool(
-                expected_topics=["/camera_image_depth", "/depth_image5"]
+                avilable_topics=["/camera_image_depth", "/depth_image5"]
             ),
         ]
 
@@ -241,7 +241,7 @@ class GetROS2MessageTask(BasicTask):
                     "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
                 ]
             ),
-            MockReceiveROS2MessageTool(expected_topics=["/camera_image_color"]),
+            MockReceiveROS2MessageTool(available_topics=["/camera_image_color"]),
         ]
 
     def get_system_prompt(self) -> str:
@@ -267,7 +267,7 @@ class GetRobotDescriptionTask(BasicTask):
                     "topic: /trajectory_execution_event\ntype: std_msgs/msg/String\n",
                 ]
             ),
-            MockReceiveROS2MessageTool(expected_topics=["/robot_description"]),
+            MockReceiveROS2MessageTool(available_topics=["/robot_description"]),
         ]
 
     def get_prompt(self) -> str:
@@ -290,7 +290,7 @@ class GetPointcloudTask(BasicTask):
                     "topic: /trajectory_execution_event\ntype: std_msgs/msg/String\n",
                 ]
             ),
-            MockReceiveROS2MessageTool(expected_topics=["/pointcloud"]),
+            MockReceiveROS2MessageTool(available_topics=["/pointcloud"]),
         ]
 
     def get_prompt(self) -> str:

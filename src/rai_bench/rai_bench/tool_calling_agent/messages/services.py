@@ -15,6 +15,7 @@
 from typing import List, Optional
 
 from pydantic import BaseModel
+
 from rai_bench.tool_calling_agent.messages.base import Pose, PoseStamped
 from rai_bench.tool_calling_agent.messages.topics import Image, RAIDetectionArray
 
