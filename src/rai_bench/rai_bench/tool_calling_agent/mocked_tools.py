@@ -40,6 +40,8 @@ from rai.tools.ros2 import (
 )
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
+from rai_bench.tool_calling_agent.messages.base import Position
+
 
 class MockGetROS2TopicsNamesAndTypesTool(GetROS2TopicsNamesAndTypesTool):
     connector: ROS2Connector = MagicMock(spec=ROS2Connector)
@@ -169,7 +171,7 @@ class MockGetObjectPositionsTool(GetObjectPositionsTool):
     depth_topic: str = MagicMock(spec=str)
     camera_info_topic: str = MagicMock(spec=str)
     get_grabbing_point_tool: GetGrabbingPointTool = MagicMock(spec=GetGrabbingPointTool)
-    mock_objects: dict[str, List[dict[str, float]]]
+    mock_objects: dict[str, List[Position]]
 
     def _run(self, object_name: str) -> str:
         """Method that returns a mock message with the object positions if the object_name is present in the mock_objects dictionary.

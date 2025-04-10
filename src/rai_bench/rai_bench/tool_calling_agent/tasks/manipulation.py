@@ -12,21 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import copy
 import logging
-from itertools import permutations
-from typing import Any, Dict, List, Sequence
+from abc import ABC, abstractmethod
+from typing import Dict, List
 
 import inflect
-from langchain_core.messages import AIMessage
-from langchain_core.messages.tool import ToolCall
 from langchain_core.tools import BaseTool
 from rai.tools.ros2 import MoveToPointToolInput
 
-from rai_bench.tool_calling_agent_bench.interfaces import (
-    Task,
-)
-from rai_bench.tool_calling_agent_bench.mocked_tools import (
+from rai_bench.tool_calling_agent.interfaces import Task, Validator
+from rai_bench.tool_calling_agent.messages.base import Position
+from rai_bench.tool_calling_agent.mocked_tools import (
     MockGetObjectPositionsTool,
     MockGetROS2TopicsNamesAndTypesTool,
     MockMoveToPointTool,
@@ -34,9 +30,13 @@ from rai_bench.tool_calling_agent_bench.mocked_tools import (
 
 loggers_type = logging.Logger
 
-PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT = """You are a ROS 2 expert helping a user with their ROS 2 questions. You have access to various tools that allow you to query the ROS 2 system.
-                Be proactive and use the tools to answer questions.
-                """
+PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT = """
+        You are a robotic arm with interfaces to detect and manipulate objects.
+        Here are the coordinates information:
+        x - front to back (positive is forward)
+        y - left to right (positive is right)
+        z - up to down (positive is up).
+        """
 
 
 class TaskParametrizationError(Exception):
@@ -45,14 +45,77 @@ class TaskParametrizationError(Exception):
     pass
 
 
-class MoveToPointTask(Task):
+class ManipulationTask(Task, ABC):
+    def get_system_prompt(self) -> str:
+        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
+
+
+class GrabTask(Task, ABC):
+    def __init__(
+        self,
+        objects: Dict[str, List[Position]],
+        object_to_grab: str,
+        validators: List[Validator],
+        extra_tool_calls: int = 0,
+        logger: loggers_type | None = None,
+    ) -> None:
+        super().__init__(
+            validators=validators,
+            extra_tool_calls=extra_tool_calls,
+            logger=logger,
+        )
+        self.objects = objects
+        self.object_to_grab = object_to_grab
+        self._verify_args()
+
+    @abstractmethod
+    def _verify_args(self) -> None:
+        pass
+
+    @property
+    def available_tools(self) -> List[BaseTool]:
+        return [
+            MockGetROS2TopicsNamesAndTypesTool(
+                mock_topics_names_and_types=[
+                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
+                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
+                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
+                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
+                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
+                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
+                ]
+            ),
+            MockGetObjectPositionsTool(
+                target_frame="panda_link0",
+                source_frame="RGBDCamera5",
+                camera_topic="/color_image5",
+                depth_topic="/depth_image5",
+                camera_info_topic="/color_camera_info5",
+                mock_objects=self.objects,
+            ),
+            MockMoveToPointTool(manipulator_frame="panda_link0"),
+        ]
+
+
+class MoveToPointTask(ManipulationTask):
     complexity = "easy"
 
     def __init__(
-        self, args: Dict[str, Any], logger: loggers_type | None = None
+        self,
+        move_to_tool_input: MoveToPointToolInput,
+        validators: List[Validator],
+        extra_tool_calls: int = 0,
+        logger: loggers_type | None = None,
     ) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
+        super().__init__(
+            validators=validators, extra_tool_calls=extra_tool_calls, logger=logger
+        )
+
+        self.move_to_tool_input = move_to_tool_input
+
+    @property
+    def available_tools(self) -> List[BaseTool]:
+        return [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
                     "topic: /pointcloud\ntype: sensor_msgs/msg/PointCloud2\n",
@@ -63,51 +126,9 @@ class MoveToPointTask(Task):
             ),
             MockMoveToPointTool(manipulator_frame="base_link"),
         ]
-        self.args = MoveToPointToolInput(**args)
-
-    def get_system_prompt(self) -> str:
-        return """You are a ROS 2 expert helping the user to manipulate the robotic arm. You have access to various tools that allow you to query the ROS 2 system.
-                Be proactive and use the tools to answer questions.
-                """
 
     def get_prompt(self) -> str:
-        return f"Move the arm to a point x={self.args.x}, y={self.args.y}, z={self.args.z} to {self.args.task} an object."
-
-    def verify_tool_calls(self, response: dict[str, Any]):
-        """It is expected that the agent will request the tool that moves the arm to a point specified in the prompt with requested task (grab or drop)"
-
-        Parameters
-        ----------
-        response : dict[str, Any]
-            The response from the agent
-        """
-        messages = response["messages"]
-        ai_messages: Sequence[AIMessage] = [
-            message for message in messages if isinstance(message, AIMessage)
-        ]
-
-        if not ai_messages:
-            self.log_error(msg="No AI messages found in the response.")
-        else:
-            total_tool_calls = sum(len(message.tool_calls) for message in ai_messages)
-            if total_tool_calls != 1:
-                self.log_error(
-                    msg=f"Total number of tool calls across all AI messages should be 1, but got {total_tool_calls}."
-                )
-            else:
-                self._check_tool_call(
-                    tool_call=ai_messages[0].tool_calls[0],
-                    expected_name="move_to_point",
-                    expected_args={
-                        "x": self.args.x,
-                        "y": self.args.y,
-                        "z": self.args.z,
-                        "task": self.args.task,
-                    },
-                )
-
-        if not self.result.errors:
-            self.result.success = True
+        return f"Move the arm to a point x={self.move_to_tool_input.x}, y={self.move_to_tool_input.y}, z={self.move_to_tool_input.z} to {self.move_to_tool_input.task} an object."
 
 
 class GetObjectPositionsTask(Task):
@@ -115,17 +136,15 @@ class GetObjectPositionsTask(Task):
 
     def __init__(
         self,
-        objects: Dict[str, List[dict[str, float]]],
+        objects: Dict[str, List[Position]],
+        validators: List[Validator],
+        extra_tool_calls: int = 0,
         logger: loggers_type | None = None,
     ) -> None:
+        super().__init__(
+            validators=validators, extra_tool_calls=extra_tool_calls, logger=logger
+        )
         """Task to get the positions of the objects
-
-        Parameters
-        ----------
-        objects : Dict[str, List[dict[str, float]]]
-            Dictionary containing the object types and their positions. Object type should be passed as singular.
-        logger : loggers_type | None, optional
-            Logger, by default None
 
         Examples
         --------
@@ -134,8 +153,11 @@ class GetObjectPositionsTask(Task):
             "cube": [(0.7, 0.8, 0.9)],
         }
         """
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
+        self.objects = objects
+
+    @property
+    def available_tools(self) -> List[BaseTool]:
+        return [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
                     "topic: /pointcloud\ntype: sensor_msgs/msg/PointCloud2\n",
@@ -144,12 +166,8 @@ class GetObjectPositionsTask(Task):
                     "topic: /tf\ntype: tf2_msgs/msg/TFMessage\n",
                 ]
             ),
-            MockGetObjectPositionsTool(mock_objects=objects),
+            MockGetObjectPositionsTool(mock_objects=self.objects),
         ]
-        self.objects = objects
-
-    def get_system_prompt(self) -> str:
-        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
 
     def get_prompt(self) -> str:
         """Generates a prompt based on the objects provided in the task. If there is more than one object, the object in the prompt will be pluralized.
@@ -170,100 +188,19 @@ class GetObjectPositionsTask(Task):
             objects_list = formatted_objects[0]
         return f"Get the {objects_list} positions."
 
-    def verify_tool_calls(self, response: dict[str, Any]):
-        """It is expected that the agent will request the tool for each object type to get its positions.
 
-        Parameters
-        ----------
-        response : dict[str, Any]
-            The response from the agent
-        """
-        messages = response["messages"]
-        ai_messages: Sequence[AIMessage] = [
-            message for message in messages if isinstance(message, AIMessage)
-        ]
-
-        if not ai_messages:
-            self.log_error(msg="No AI messages found in the response.")
-        else:
-            ai_message = ai_messages[0]
-            self._check_multiple_tool_calls(
-                message=ai_message,
-                expected_tool_calls=[
-                    {
-                        "name": "get_object_positions",
-                        "args": {"object_name": object_type},
-                    }
-                    for object_type in self.objects
-                ],
-            )
-        if not self.result.errors:
-            self.result.success = True
-
-
-class GrabExistingObjectTask(Task):
+class GrabExistingObjectTask(GrabTask):
     complexity = "medium"
-
-    """Task to grab an object
+    """
+    Task to grab an object.
 
     Parameters
     ----------
     objects : Dict[str, List[dict[str, float]]]
-        Dictionary containing the object types and their positions. Object type should be passed as singular.
+        Dictionary of object types and their positions.
     object_to_grab : str
-        Object to grab. Object type should be passed as singular. Object to be grabbed should be defined in the objects argument with only one instance (one position).
-    logger : loggers_type | None, optional
-        Logger, by default None
-
-    Examples
-    --------
-    objects = {
-        "banana": [(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
-        "cube": [(0.7, 0.8, 0.9)],
-    }
-    object_to_grab = "cube"
+        The object to be grabbed (must have a single position).
     """
-
-    def __init__(
-        self,
-        objects: Dict[str, List[dict[str, float]]],
-        object_to_grab: str,
-        logger: loggers_type | None = None,
-    ) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
-            MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
-                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
-                ]
-            ),
-            MockGetObjectPositionsTool(
-                target_frame="panda_link0",
-                source_frame="RGBDCamera5",
-                camera_topic="/color_image5",
-                depth_topic="/depth_image5",
-                camera_info_topic="/color_camera_info5",
-                mock_objects=objects,
-            ),
-            MockMoveToPointTool(manipulator_frame="panda_link0"),
-        ]
-        self.objects = objects
-        self.object_to_grab = object_to_grab
-        self._verify_args()
-
-    def get_system_prompt(self) -> str:
-        return """
-        You are a robotic arm with interfaces to detect and manipulate objects.
-        Here are the coordinates information:
-        x - front to back (positive is forward)
-        y - left to right (positive is right)
-        z - up to down (positive is up).
-        """
 
     def get_prompt(self) -> str:
         return f"Grab {self.object_to_grab}."
@@ -279,112 +216,19 @@ class GrabExistingObjectTask(Task):
             self.log_error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
-    def verify_tool_calls(self, response: Dict[str, Any]):
-        """It is expected that the agent will request:
-        1. The tool get_object_positions to get the position of the object to grab.
-        2. The tool move_to_point to move to the position of the object to grab.
 
-        Parameters
-        ----------
-        response : Dict[str, Any]
-            The response from the agent
-        """
-        messages = response["messages"]
-        ai_messages: Sequence[AIMessage] = [
-            message for message in messages if isinstance(message, AIMessage)
-        ]
-        expected_num_ai_messages = 3
-        if len(ai_messages) != expected_num_ai_messages:
-            self.log_error(
-                msg=f"Expected {expected_num_ai_messages} AI messages, but got {len(ai_messages)}."
-            )
-
-        if ai_messages:
-            if self._check_tool_calls_num_in_ai_message(ai_messages[0], expected_num=1):
-                self._check_tool_call(
-                    tool_call=ai_messages[0].tool_calls[0],
-                    expected_name="get_object_positions",
-                    expected_args={"object_name": self.object_to_grab},
-                )
-
-        if len(ai_messages) > 1:
-            if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
-                obj_to_grab: dict[str, Any] = copy.deepcopy(
-                    self.objects[self.object_to_grab][0]
-                )
-                obj_to_grab.update({"task": "grab"})
-                self._check_tool_call(
-                    tool_call=ai_messages[1].tool_calls[0],
-                    expected_name="move_to_point",
-                    expected_args=obj_to_grab,
-                )
-        if not self.result.errors:
-            self.result.success = True
-
-
-class GrabNotExistingObjectTask(Task):
-    """Task to grab an object that does not exist
+class GrabNotExistingObjectTask(GrabTask):
+    complexity = "medium"
+    """
+    Task to attempt grabbing an object that does not exist.
 
     Parameters
     ----------
     objects : Dict[str, List[dict[str, float]]]
-        Dictionary containing the object types and their positions. Object type should be passed as singular.
+        Available objects and their positions.
     object_to_grab : str
-        Object to grab. Object type should be passed as singular. Object to be grabbed should NOT be defined in the objects argument.
-    logger : loggers_type | None, optional
-        Logger, by default None
-
-    Examples
-    --------
-    objects = {
-        "banana": [(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
-        "cube": [(0.7, 0.8, 0.9)],
-    }
-    object_to_grab = "apple"
+        Object that should not be present in the list.
     """
-
-    complexity = "medium"
-
-    def __init__(
-        self,
-        objects: Dict[str, List[dict[str, float]]],
-        object_to_grab: str,
-        logger: loggers_type | None = None,
-    ) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
-            MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
-                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
-                ]
-            ),
-            MockGetObjectPositionsTool(
-                target_frame="panda_link0",
-                source_frame="RGBDCamera5",
-                camera_topic="/color_image5",
-                depth_topic="/depth_image5",
-                camera_info_topic="/color_camera_info5",
-                mock_objects=objects,
-            ),
-            MockMoveToPointTool(manipulator_frame="panda_link0"),
-        ]
-        self.objects = objects
-        self.object_to_grab = object_to_grab
-        self._verify_args()
-
-    def get_system_prompt(self) -> str:
-        return """
-        You are a robotic arm with interfaces to detect and manipulate objects.
-        Here are the coordinates information:
-        x - front to back (positive is forward)
-        y - left to right (positive is right)
-        z - up to down (positive is up).
-        """
 
     def get_prompt(self) -> str:
         return f"Grab {self.object_to_grab}."
@@ -395,37 +239,8 @@ class GrabNotExistingObjectTask(Task):
             self.log_error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
-    def verify_tool_calls(self, response: Dict[str, Any]):
-        """It is expected that the agent will request the tool get_object_positions to get the position of the object to grab.
-        It is expected that no positions are returned and agent will not request any more tool.
 
-        Parameters
-        ----------
-        response : Dict[str, Any]
-            The response from the agent
-        """
-        messages = response["messages"]
-        ai_messages: Sequence[AIMessage] = [
-            message for message in messages if isinstance(message, AIMessage)
-        ]
-        expected_num_ai_messages = 2
-        if len(ai_messages) != expected_num_ai_messages:
-            self.log_error(
-                msg=f"Expected {expected_num_ai_messages} AI messages, but got {len(ai_messages)}."
-            )
-        if ai_messages:
-            if self._check_tool_calls_num_in_ai_message(ai_messages[0], expected_num=1):
-                self._check_tool_call(
-                    tool_call=ai_messages[0].tool_calls[0],
-                    expected_name="get_object_positions",
-                    expected_args={"object_name": self.object_to_grab},
-                )
-
-        if not self.result.errors:
-            self.result.success = True
-
-
-class MoveExistingObjectLeftTask(Task):
+class MoveExistingObjectLeftTask(GrabTask):
     """Task to move an existing object to the left.
 
     Parameters
@@ -448,47 +263,6 @@ class MoveExistingObjectLeftTask(Task):
 
     complexity = "medium"
 
-    def __init__(
-        self,
-        objects: Dict[str, List[dict[str, float]]],
-        object_to_grab: str,
-        logger: loggers_type | None = None,
-    ) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
-            MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
-                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                ]
-            ),
-            MockGetObjectPositionsTool(
-                target_frame="panda_link0",
-                source_frame="RGBDCamera5",
-                camera_topic="/color_image5",
-                depth_topic="/depth_image5",
-                camera_info_topic="/color_camera_info5",
-                mock_objects=objects,
-            ),
-            MockMoveToPointTool(manipulator_frame="panda_link0"),
-        ]
-        self.objects = objects
-        self.object_to_grab = object_to_grab
-        self._verify_args()
-
-    def get_system_prompt(self) -> str:
-        return """
-        You are a robotic arm with interfaces to detect and manipulate objects.
-        Here are the coordinates information:
-        x - front to back (positive is forward)
-        y - left to right (positive is right)
-        z - up to down (positive is up).
-        Coordinates are in meters.
-        """
-
     def get_prompt(self) -> str:
         return f"Move {self.object_to_grab} 20 cm to the left."
 
@@ -503,64 +277,8 @@ class MoveExistingObjectLeftTask(Task):
             self.log_error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
-    def verify_tool_calls(self, response: Dict[str, Any]):
-        """It is expected that the agent will request:
-        1. get_object_positions for the object to grab
-        2. move_to_point for the object to grab with the coordinates of the object to grab specified in the task
-        3. move_to_point for the the same object but with the task set to "drop" and y coordinate smaller by 0.6
 
-        Parameters
-        ----------
-        response : Dict[str, Any]
-            The response from the agent
-        """
-        messages = response["messages"]
-        ai_messages: Sequence[AIMessage] = [
-            message for message in messages if isinstance(message, AIMessage)
-        ]
-        expected_num_ai_messages = 4
-        if len(ai_messages) != expected_num_ai_messages:
-            self.log_error(
-                msg=f"Expected {expected_num_ai_messages} AI messages, but got {len(ai_messages)}."
-            )
-        if ai_messages:
-            if self._check_tool_calls_num_in_ai_message(ai_messages[0], expected_num=1):
-                self._check_tool_call(
-                    tool_call=ai_messages[0].tool_calls[0],
-                    expected_name="get_object_positions",
-                    expected_args={"object_name": self.object_to_grab},
-                )
-
-        if len(ai_messages) > 1:
-            if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
-                obj_to_grab: dict[str, Any] = copy.deepcopy(
-                    self.objects[self.object_to_grab][0]
-                )
-                obj_to_grab.update({"task": "grab"})
-                self._check_tool_call(
-                    tool_call=ai_messages[1].tool_calls[0],
-                    expected_name="move_to_point",
-                    expected_args=obj_to_grab,
-                )
-
-        if len(ai_messages) > 2:
-            if self._check_tool_calls_num_in_ai_message(ai_messages[2], expected_num=1):
-                obj_to_drop: dict[str, Any] = copy.deepcopy(
-                    self.objects[self.object_to_grab][0]
-                )
-                obj_to_drop.update({"task": "drop"})
-                obj_to_drop["y"] = obj_to_drop["y"] - 0.2
-                self._check_tool_call(
-                    tool_call=ai_messages[2].tool_calls[0],
-                    expected_name="move_to_point",
-                    expected_args=obj_to_drop,
-                )
-
-        if not self.result.errors:
-            self.result.success = True
-
-
-class MoveExistingObjectFrontTask(Task):
+class MoveExistingObjectFrontTask(GrabTask):
     """Task to move an existing object to the front
 
     Parameters
@@ -575,45 +293,6 @@ class MoveExistingObjectFrontTask(Task):
 
     complexity = "medium"
 
-    def __init__(
-        self,
-        objects: Dict[str, List[dict[str, float]]],
-        object_to_grab: str,
-        logger: loggers_type | None = None,
-    ) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
-            MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
-                ]
-            ),
-            MockGetObjectPositionsTool(
-                target_frame="panda_link0",
-                source_frame="RGBDCamera5",
-                camera_topic="/color_image5",
-                depth_topic="/depth_image5",
-                camera_info_topic="/color_camera_info5",
-                mock_objects=objects,
-            ),
-            MockMoveToPointTool(manipulator_frame="panda_link0"),
-        ]
-        self.objects = objects
-        self.object_to_grab = object_to_grab
-        self._verify_args()
-
-    def get_system_prompt(self) -> str:
-        return """
-        You are a robotic arm with interfaces to detect and manipulate objects.
-        Here are the coordinates information:
-        x - front to back (positive is forward)
-        y - left to right (positive is right)
-        z - up to down (positive is up).
-        Coordinates are in meters.
-        """
-
     def get_prompt(self) -> str:
         return f"Move {self.object_to_grab} 60 cm to the front."
 
@@ -627,63 +306,6 @@ class MoveExistingObjectFrontTask(Task):
             error_message = f"Requested object to grab {self.object_to_grab} has more than one position in defined objects: {self.objects[self.object_to_grab]}."
             self.log_error(msg=error_message)
             raise TaskParametrizationError(error_message)
-
-    def verify_tool_calls(self, response: Dict[str, Any]):
-        """It is expected that the agent will request:
-        1. get_object_positions for the object to grab
-        2. move_to_point for the object to grab with the coordinates of the object to grab specified in the task
-        3. move_to_point for the the same object but with the task set to "drop" and x coordinate bigger by 0.6
-
-        Parameters
-        ----------
-        response : Dict[str, Any]
-            The response from the agent
-        """
-        messages = response["messages"]
-        ai_messages: Sequence[AIMessage] = [
-            message for message in messages if isinstance(message, AIMessage)
-        ]
-        expected_num_ai_messages = 4
-        if len(ai_messages) != expected_num_ai_messages:
-            self.log_error(
-                msg=f"Expected {expected_num_ai_messages} AI messages, but got {len(ai_messages)}."
-            )
-
-        if ai_messages:
-            if self._check_tool_calls_num_in_ai_message(ai_messages[0], expected_num=1):
-                self._check_tool_call(
-                    tool_call=ai_messages[0].tool_calls[0],
-                    expected_name="get_object_positions",
-                    expected_args={"object_name": self.object_to_grab},
-                )
-
-        if len(ai_messages) > 1:
-            if self._check_tool_calls_num_in_ai_message(ai_messages[1], expected_num=1):
-                obj_to_grab: dict[str, Any] = copy.deepcopy(
-                    self.objects[self.object_to_grab][0]
-                )
-                obj_to_grab.update({"task": "grab"})
-                self._check_tool_call(
-                    tool_call=ai_messages[1].tool_calls[0],
-                    expected_name="move_to_point",
-                    expected_args=obj_to_grab,
-                )
-
-        if len(ai_messages) > 2:
-            if self._check_tool_calls_num_in_ai_message(ai_messages[2], expected_num=1):
-                obj_to_drop: dict[str, Any] = copy.deepcopy(
-                    self.objects[self.object_to_grab][0]
-                )
-                obj_to_drop.update({"task": "drop"})
-                obj_to_drop["x"] = obj_to_drop["x"] + 0.6
-                self._check_tool_call(
-                    tool_call=ai_messages[2].tool_calls[0],
-                    expected_name="move_to_point",
-                    expected_args=obj_to_drop,
-                )
-
-        if not self.result.errors:
-            self.result.success = True
 
 
 class SwapObjectsTask(Task):
@@ -713,17 +335,32 @@ class SwapObjectsTask(Task):
 
     def __init__(
         self,
-        objects: Dict[str, List[Dict[str, float]]],
-        objects_to_swap: List[str],
+        objects: Dict[str, List[Position]],
+        objects_to_swap: str,
+        validators: List[Validator],
+        extra_tool_calls: int = 0,
         logger: loggers_type | None = None,
     ) -> None:
-        super().__init__(logger=logger)
-        self.expected_tools: List[BaseTool] = [
+        super().__init__(
+            validators=validators,
+            extra_tool_calls=extra_tool_calls,
+            logger=logger,
+        )
+        self.objects = objects
+        self.objects_to_swap = objects_to_swap
+        self._verify_args()
+
+    @property
+    def available_tools(self) -> List[BaseTool]:
+        return [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
                     "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
                     "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
                     "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
+                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
+                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
+                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
                 ]
             ),
             MockGetObjectPositionsTool(
@@ -732,13 +369,10 @@ class SwapObjectsTask(Task):
                 camera_topic="/color_image5",
                 depth_topic="/depth_image5",
                 camera_info_topic="/color_camera_info5",
-                mock_objects=objects,
+                mock_objects=self.objects,
             ),
             MockMoveToPointTool(manipulator_frame="panda_link0"),
         ]
-        self.objects = objects
-        self.objects_to_swap = objects_to_swap
-        self._verify_args()
 
     def _verify_args(self):
         for obj in self.objects_to_swap:
@@ -755,148 +389,138 @@ class SwapObjectsTask(Task):
             self.log_error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
-    def get_system_prompt(self) -> str:
-        return """
-        You are a robotic arm with interfaces to detect and manipulate objects in physical environment.
-        Here are the coordinates information:
-        x - front to back (positive is forward)
-        y - left to right (positive is right)
-        z - up to down (positive is up).
-        Coordinates are in meters.
-        """
-
     def get_prompt(self) -> str:
         return f"Move {self.objects_to_swap[0]} to the initial position of {self.objects_to_swap[1]}, and move {self.objects_to_swap[1]} to the initial position of {self.objects_to_swap[0]}."
 
-    def verify_tool_calls(self, response: Dict[str, Any]):
-        """It is expected that the agent will request:
-        1. get_object_positions for both objects to be swapped
-        2. move_to_point for one object to some temporary position to make place to second object
-        3. move_to_point for the second object to the position of the first object
-        4. move_to_point for the first object to the position of the second object
+    # def verify_tool_calls(self, response: Dict[str, Any]):
+    #     """It is expected that the agent will request:
+    #     1. get_object_positions for both objects to be swapped
+    #     2. move_to_point for one object to some temporary position to make place to second object
+    #     3. move_to_point for the second object to the position of the first object
+    #     4. move_to_point for the first object to the position of the second object
 
-        Parameters
-        ----------
-        response : Dict[str, Any]
-            The response from the agent
-        """
+    #     Parameters
+    #     ----------
+    #     response : Dict[str, Any]
+    #         The response from the agent
+    #     """
 
-        messages = response["messages"]
-        ai_messages: Sequence[AIMessage] = [
-            message for message in messages if isinstance(message, AIMessage)
-        ]
-        actual_tool_calls = [
-            tool_call for msg in ai_messages for tool_call in msg.tool_calls
-        ]
+    #     messages = response["messages"]
+    #     ai_messages: Sequence[AIMessage] = [
+    #         message for message in messages if isinstance(message, AIMessage)
+    #     ]
+    #     actual_tool_calls = [
+    #         tool_call for msg in ai_messages for tool_call in msg.tool_calls
+    #     ]
 
-        expected_num_tool_calls = 8
-        if len(actual_tool_calls) < expected_num_tool_calls:
-            self.log_error(
-                msg=f"Expected at least {expected_num_tool_calls} tool calls, but got {len(actual_tool_calls)}."
-            )
-            return None
+    #     expected_num_tool_calls = 8
+    #     if len(actual_tool_calls) < expected_num_tool_calls:
+    #         self.log_error(
+    #             msg=f"Expected at least {expected_num_tool_calls} tool calls, but got {len(actual_tool_calls)}."
+    #         )
+    #         return None
 
-        obj1, obj2 = self.objects_to_swap
-        obj1_pos, obj2_pos = self.objects[obj1][0], self.objects[obj2][0]
+    #     obj1, obj2 = self.objects_to_swap
+    #     obj1_pos, obj2_pos = self.objects[obj1][0], self.objects[obj2][0]
 
-        # find a temporary position if exists
-        move_to_point_args: Sequence[Dict[str, Any]] = [
-            call["args"]
-            for call in actual_tool_calls
-            if call["name"] == "move_to_point"
-        ]
-        positions = copy.deepcopy(move_to_point_args)
-        for arg in positions:
-            arg.pop("task")
-        temp_position = None
-        for position in positions:
-            if position != obj1_pos and position != obj2_pos:
-                temp_position = position
-                break
+    #     # find a temporary position if exists
+    #     move_to_point_args: Sequence[Dict[str, Any]] = [
+    #         call["args"]
+    #         for call in actual_tool_calls
+    #         if call["name"] == "move_to_point"
+    #     ]
+    #     positions = copy.deepcopy(move_to_point_args)
+    #     for arg in positions:
+    #         arg.pop("task")
+    #     temp_position = None
+    #     for position in positions:
+    #         if position != obj1_pos and position != obj2_pos:
+    #             temp_position = position
+    #             break
 
-        if temp_position is None:
-            self.log_error(msg="No temporary position found.")
-        else:
-            get_position_permutations = list(
-                permutations(
-                    [
-                        {"name": "get_object_positions", "args": {"object_name": obj1}},
-                        {"name": "get_object_positions", "args": {"object_name": obj2}},
-                    ]
-                )
-            )
+    #     if temp_position is None:
+    #         self.log_error(msg="No temporary position found.")
+    #     else:
+    #         get_position_permutations = list(
+    #             permutations(
+    #                 [
+    #                     {"name": "get_object_positions", "args": {"object_name": obj1}},
+    #                     {"name": "get_object_positions", "args": {"object_name": obj2}},
+    #                 ]
+    #             )
+    #         )
 
-            obj_moves_options: List[List[dict[str, Any]]] = [
-                [
-                    {"name": "move_to_point", "args": {**obj1_pos, "task": "grab"}},
-                    {
-                        "name": "move_to_point",
-                        "args": {**temp_position, "task": "drop"},
-                    },
-                    {"name": "move_to_point", "args": {**obj2_pos, "task": "grab"}},
-                    {"name": "move_to_point", "args": {**obj1_pos, "task": "drop"}},
-                    {
-                        "name": "move_to_point",
-                        "args": {**temp_position, "task": "grab"},
-                    },
-                    {"name": "move_to_point", "args": {**obj2_pos, "task": "drop"}},
-                ],
-                [
-                    {"name": "move_to_point", "args": {**obj2_pos, "task": "grab"}},
-                    {
-                        "name": "move_to_point",
-                        "args": {**temp_position, "task": "drop"},
-                    },
-                    {"name": "move_to_point", "args": {**obj1_pos, "task": "grab"}},
-                    {"name": "move_to_point", "args": {**obj2_pos, "task": "drop"}},
-                    {
-                        "name": "move_to_point",
-                        "args": {**temp_position, "task": "grab"},
-                    },
-                    {"name": "move_to_point", "args": {**obj1_pos, "task": "drop"}},
-                ],
-            ]
+    #         obj_moves_options: List[List[dict[str, Any]]] = [
+    #             [
+    #                 {"name": "move_to_point", "args": {**obj1_pos, "task": "grab"}},
+    #                 {
+    #                     "name": "move_to_point",
+    #                     "args": {**temp_position, "task": "drop"},
+    #                 },
+    #                 {"name": "move_to_point", "args": {**obj2_pos, "task": "grab"}},
+    #                 {"name": "move_to_point", "args": {**obj1_pos, "task": "drop"}},
+    #                 {
+    #                     "name": "move_to_point",
+    #                     "args": {**temp_position, "task": "grab"},
+    #                 },
+    #                 {"name": "move_to_point", "args": {**obj2_pos, "task": "drop"}},
+    #             ],
+    #             [
+    #                 {"name": "move_to_point", "args": {**obj2_pos, "task": "grab"}},
+    #                 {
+    #                     "name": "move_to_point",
+    #                     "args": {**temp_position, "task": "drop"},
+    #                 },
+    #                 {"name": "move_to_point", "args": {**obj1_pos, "task": "grab"}},
+    #                 {"name": "move_to_point", "args": {**obj2_pos, "task": "drop"}},
+    #                 {
+    #                     "name": "move_to_point",
+    #                     "args": {**temp_position, "task": "grab"},
+    #                 },
+    #                 {"name": "move_to_point", "args": {**obj1_pos, "task": "drop"}},
+    #             ],
+    #         ]
 
-            valid_sequences: List[List[dict[str, Any]]] = []
-            for get_positions in get_position_permutations:
-                for obj_moves in obj_moves_options:
-                    valid_sequences.append(list(get_positions) + obj_moves)
+    #         valid_sequences: List[List[dict[str, Any]]] = []
+    #         for get_positions in get_position_permutations:
+    #             for obj_moves in obj_moves_options:
+    #                 valid_sequences.append(list(get_positions) + obj_moves)
 
-            if not any(
-                self._matches_sequence(actual_tool_calls, seq)
-                for seq in valid_sequences
-            ):
-                self.log_error(
-                    msg="The tool calls are in an invalid sequence for object swapping."
-                )
+    #         if not any(
+    #             self._matches_sequence(actual_tool_calls, seq)
+    #             for seq in valid_sequences
+    #         ):
+    #             self.log_error(
+    #                 msg="The tool calls are in an invalid sequence for object swapping."
+    #             )
 
-        if not self.result.errors:
-            self.result.success = True
+    #     if not self.result.errors:
+    #         self.result.success = True
 
-    def _matches_sequence(
-        self,
-        actual_tool_calls_seq: Sequence[ToolCall],
-        expected_tool_calls_seq: Sequence[dict[str, Any]],
-    ) -> bool:
-        """
-        Helper method to check if actual tool calls sequence match expected tool calls in terms of sequence and arguments.
+    # def _matches_sequence(
+    #     self,
+    #     actual_tool_calls_seq: Sequence[ToolCall],
+    #     expected_tool_calls_seq: Sequence[dict[str, Any]],
+    # ) -> bool:
+    #     """
+    #     Helper method to check if actual tool calls sequence match expected tool calls in terms of sequence and arguments.
 
-        Parameters
-        ----------
-        actual_tool_calls_seq : Sequence[ToolCall]
-            Sequence of tool calls requested by agent.
-        expected_tool_calls_seq : Sequence[dict[str, Any]]
-            Sequence of expected tool calls.
+    #     Parameters
+    #     ----------
+    #     actual_tool_calls_seq : Sequence[ToolCall]
+    #         Sequence of tool calls requested by agent.
+    #     expected_tool_calls_seq : Sequence[dict[str, Any]]
+    #         Sequence of expected tool calls.
 
-        Returns
-        -------
-        bool
-            True if actual tool calls sequence matches expected tool calls sequence, False otherwise
-        """
-        if len(actual_tool_calls_seq) < len(expected_tool_calls_seq):
-            return False
-        it = iter(actual_tool_calls_seq)
-        return all(
-            any(call["name"] == e["name"] and call["args"] == e["args"] for call in it)
-            for e in expected_tool_calls_seq
-        )
+    #     Returns
+    #     -------
+    #     bool
+    #         True if actual tool calls sequence matches expected tool calls sequence, False otherwise
+    #     """
+    #     if len(actual_tool_calls_seq) < len(expected_tool_calls_seq):
+    #         return False
+    #     it = iter(actual_tool_calls_seq)
+    #     return all(
+    #         any(call["name"] == e["name"] and call["args"] == e["args"] for call in it)
+    #         for e in expected_tool_calls_seq
+    #     )
