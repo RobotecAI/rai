@@ -23,7 +23,6 @@ import numpy as np
 from numpy.typing import NDArray
 from rai.agents.base import BaseAgent
 from rai.communication import (
-    HRIPayload,
     ROS2ARIConnector,
     ROS2ARIMessage,
     ROS2HRIConnector,
@@ -275,8 +274,8 @@ class SpeechRecognitionAgent(BaseAgent):
                 self.logger.error(f"Error sending message to {topic}: {e}")
         else:
             msg = ROS2HRIMessage(
-                HRIPayload(text=data),
-                "human",
-                ROS2HRIMessage.generate_conversation_id(),
+                text=data,
+                message_author="human",
+                communication_id=ROS2HRIMessage.generate_conversation_id(),
             )
             self.connectors["ros2_hri"].send_message(msg, topic)

@@ -41,12 +41,8 @@ class ROS2ActionMixin:
         msg_type: str,
         **kwargs: Any,
     ) -> str:
-        if not isinstance(action_data, ROS2ARIMessage) and not isinstance(
-            action_data, ROS2HRIMessage
-        ):
-            raise ValueError(
-                "Action data must be of type ROS2ARIMessage or ROS2HRIMessage"
-            )
+        if not isinstance(action_data, ROS2ARIMessage):
+            raise ValueError("Action data must be of type ROS2ARIMessage")
         accepted, handle = self._actions_api.send_goal(
             action_name=target,
             action_type=msg_type,

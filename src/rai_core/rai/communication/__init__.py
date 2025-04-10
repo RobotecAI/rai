@@ -14,7 +14,7 @@
 
 from .ari_connector import ARIConnector, ARIMessage
 from .base_connector import BaseConnector, BaseMessage
-from .hri_connector import HRIConnector, HRIMessage, HRIPayload
+from .hri_connector import HRIConnector, HRIMessage
 from .ros2 import (
     ROS2ARIConnector,
     ROS2ARIMessage,
@@ -36,7 +36,6 @@ __all__ = [
     "BaseMessage",
     "HRIConnector",
     "HRIMessage",
-    "HRIPayload",
     "ROS2ARIConnector",
     "ROS2ARIMessage",
     "ROS2HRIConnector",

@@ -18,7 +18,6 @@ import numpy as np
 import pytest
 import sounddevice
 from pydub import AudioSegment
-from rai.communication import HRIPayload
 from rai.communication.sound_device import SoundDeviceConfig, SoundDeviceError
 from rai.communication.sound_device.connector import (  # Replace with actual module name
     SoundDeviceConnector,
@@ -101,10 +100,9 @@ def binary_audio():
 
 def test_send_message_play_audio(connector, mock_sound_device_api, sine_wav):
     message = SoundDeviceMessage(
-        payload=HRIPayload(
-            text="",
-            audios=[sine_wav],
-        )
+        text="",
+        audios=[sine_wav],
+        message_author="human",
     )
     connector.send_message(message, "speaker")
     connector.devices["speaker"].write.assert_called_once()
@@ -126,7 +124,7 @@ def test_send_message_read_error(connector):
 
 
 def test_service_call_play_audio(connector, mock_sound_device_api, sine_wav):
-    message = SoundDeviceMessage(payload=HRIPayload(text="", audios=[sine_wav]))
+    message = SoundDeviceMessage(text="", audios=[sine_wav], message_author="ai")
     result = connector.service_call(message, "speaker")
     mock_sound_device_api.write.assert_called_once()
     assert isinstance(result, SoundDeviceMessage)

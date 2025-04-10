@@ -16,23 +16,13 @@ from abc import abstractmethod
 from typing import Any, Callable, Dict, Generic, Optional, TypeVar
 from uuid import uuid4
 
+from pydantic import BaseModel, ConfigDict, Field
 
-class BaseMessage:
-    payload: Any
-    metadata: Dict[str, Any]
 
-    def __init__(
-        self,
-        payload: Any,
-        metadata: Optional[Dict[str, Any]] = None,
-        *args: Any,
-        **kwargs: Any,
-    ):
-        self.payload = payload
-        if metadata is None:
-            self.metadata = {}
-        else:
-            self.metadata = metadata
+class BaseMessage(BaseModel):
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 T = TypeVar("T", bound=BaseMessage)

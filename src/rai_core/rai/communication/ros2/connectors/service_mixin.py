@@ -15,7 +15,7 @@
 from typing import Any
 
 from rai.communication.ros2.api import ROS2ServiceAPI
-from rai.communication.ros2.messages import ROS2ARIMessage, ROS2HRIMessage
+from rai.communication.ros2.messages import ROS2ARIMessage
 
 
 class ROS2ServiceMixin:
@@ -24,7 +24,7 @@ class ROS2ServiceMixin:
             raise AttributeError(
                 f"{self.__class__.__name__} instance must have an attribute '_service_api' of type ROS2ServiceAPI"
             )
-        self._service_api = self._service_api
+        self._service_api: ROS2ServiceAPI
         if not isinstance(self._service_api, ROS2ServiceAPI):
             raise AttributeError(
                 f"{self.__class__.__name__} instance must have an attribute '_service_api' of type ROS2ServiceAPI"
@@ -32,13 +32,13 @@ class ROS2ServiceMixin:
 
     def service_call(
         self,
-        message: ROS2ARIMessage | ROS2HRIMessage,
+        message: ROS2ARIMessage,
         target: str,
         timeout_sec: float = 1.0,
         *,
         msg_type: str,
         **kwargs: Any,
-    ) -> ROS2ARIMessage | ROS2HRIMessage:
+    ) -> ROS2ARIMessage:
         msg = self._service_api.call_service(
             service_name=target,
             service_type=msg_type,

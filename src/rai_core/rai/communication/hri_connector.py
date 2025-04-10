@@ -14,14 +14,14 @@
 
 import base64
 import uuid
-from dataclasses import dataclass, field
 from io import BytesIO
-from typing import Any, Dict, Generic, Literal, Optional, Sequence, TypeVar, get_args
+from typing import Generic, Literal, Optional, Sequence, TypeVar, get_args
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.messages import BaseMessage as LangchainBaseMessage
 from PIL import Image
 from PIL.Image import Image as ImageType
+from pydantic import Field
 from pydub import AudioSegment
 
 from rai.messages import AiMultimodalMessage, HumanMultimodalMessage
@@ -35,40 +35,16 @@ class HRIException(Exception):
         super().__init__(msg)
 
 
-@dataclass
-class HRIPayload:
-    text: str
-    images: list[ImageType] = field(default_factory=list)
-    audios: list[AudioSegment] = field(default_factory=list)
-
-    def __post_init__(self):
-        if not isinstance(self.text, str):
-            raise TypeError(f"Text should be of type str, got {type(self.text)}")
-        if not isinstance(self.images, list):
-            raise TypeError(f"Images should be of type list, got {type(self.images)}")
-        if not isinstance(self.audios, list):
-            raise TypeError(f"Audios should be of type list, got {type(self.audios)}")
-
-
 class HRIMessage(BaseMessage):
-    def __init__(
-        self,
-        payload: HRIPayload,
-        metadata: Optional[Dict[str, Any]] = None,
-        message_author: Literal["ai", "human"] = "ai",
-        communication_id: Optional[str] = None,
-        seq_no: int = 0,
-        seq_end: bool = False,
-        **kwargs,
-    ):
-        super().__init__(payload, metadata)
-        self.message_author = message_author
-        self.text = payload.text
-        self.images = payload.images
-        self.audios = payload.audios
-        self.communication_id = communication_id
-        self.seq_no = seq_no
-        self.seq_end = seq_end
+    text: str = Field(default="")
+    images: list[ImageType] = Field(default_factory=list)
+    audios: list[AudioSegment] = Field(default_factory=list)
+    message_author: Optional[Literal["ai", "human", "unspecified"]] = Field(
+        default="unspecified"
+    )
+    communication_id: Optional[str] = Field(default=None)
+    seq_no: int = Field(default=0)
+    seq_end: bool = Field(default=False)
 
     def __bool__(self) -> bool:
         return bool(self.text or self.images or self.audios)
@@ -97,6 +73,8 @@ class HRIMessage(BaseMessage):
         return AudioSegment.from_file(BytesIO(audio_data), format="wav")
 
     def to_langchain(self) -> LangchainBaseMessage:
+        if self.message_author == "unspecified":
+            raise ValueError("Message author is not compatible with Langchain.")
         base64_images = [self._image_to_base64(image) for image in self.images]
         base64_audios = [self._audio_to_base64(audio) for audio in self.audios]
         match self.message_author:
@@ -135,14 +113,12 @@ class HRIMessage(BaseMessage):
         if message.type not in ["ai", "human"]:
             raise ValueError(f"Invalid message type: {message.type} for {cls.__name__}")
         return cls(
-            payload=HRIPayload(
-                text=text,
-                images=(
-                    [cls._base64_to_image(image) for image in images] if images else []
-                ),
-                audios=(
-                    [cls._base64_to_audio(audio) for audio in audios] if audios else []
-                ),
+            text=text,
+            images=(
+                [cls._base64_to_image(image) for image in images] if images else []
+            ),
+            audios=(
+                [cls._base64_to_audio(audio) for audio in audios] if audios else []
             ),
             message_author=message.type,  # type: ignore
             communication_id=communication_id,
