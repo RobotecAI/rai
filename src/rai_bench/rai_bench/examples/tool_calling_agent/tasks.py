@@ -25,9 +25,7 @@ from rai_bench.tool_calling_agent.tasks.basic import (
     GetROS2TopicsTask,
 )
 from rai_bench.tool_calling_agent.tasks.subtasks import (
-    GetROS2ImageSubTask,
-    GetROS2TopicNamesAndTypesSubTask,
-    ReceiveROSMessageSubTask,
+    CheckToolCallSubTask,
 )
 from rai_bench.tool_calling_agent.validators import (
     NotOrderedCallsValidator,
@@ -35,15 +33,31 @@ from rai_bench.tool_calling_agent.validators import (
 )
 
 ########## subtasks
-get_topics_subtask = GetROS2TopicNamesAndTypesSubTask()
+get_topics_subtask = CheckToolCallSubTask(
+    expected_tool_name="get_ros2_topics_names_and_types"
+)
 
-color_image_subtask = GetROS2ImageSubTask(expected_topic="/camera_image_color")
-depth_image_subtask = GetROS2ImageSubTask(expected_topic="/camera_image_depth")
-color_image5_subtask = GetROS2ImageSubTask(expected_topic="/color_image5")
-depth_image5_subtask = GetROS2ImageSubTask(expected_topic="/depth_image5")
+color_image_subtask = CheckToolCallSubTask(
+    expected_tool_name="get_ros2_image", expected_args={"topic": "/camera_image_color"}
+)
+depth_image_subtask = CheckToolCallSubTask(
+    expected_tool_name="get_ros2_image", expected_args={"topic": "/camera_image_depth"}
+)
+color_image5_subtask = CheckToolCallSubTask(
+    expected_tool_name="get_ros2_image", expected_args={"topic": "/color_image5"}
+)
+depth_image5_subtask = CheckToolCallSubTask(
+    expected_tool_name="get_ros2_image", expected_args={"topic": "/depth_image5"}
+)
 
-receive_robot_desc_subtask = ReceiveROSMessageSubTask(
-    expected_topic="/robot_description"
+receive_robot_desc_subtask = CheckToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/robot_description"},
+)
+
+move_to_point_subtask = CheckToolCallSubTask(
+    expected_tool_name="move_to_point",
+    expected_args={"x": 1.0, "y": 2.0, "z": 3.0, "task": "grab"},
 )
 ######### validators
 topics_ord_val = OrderedCallsValidator(subtasks=[get_topics_subtask])
@@ -62,6 +76,7 @@ all_depth_images_notord_val = NotOrderedCallsValidator(
     subtasks=[depth_image_subtask, depth_image5_subtask]
 )
 
+# validators=
 ######### tasks
 tasks: Sequence[Task] = [
     # 3 options to validate same task:
@@ -83,6 +98,9 @@ tasks: Sequence[Task] = [
     # GetRobotDescriptionTask(validators=)
     # GetROS2TopicsTask2(),
     # GetROS2MessageTask(),
+    # MoveToPointTask(
+    #     move_to_tool_input=MoveToPointToolInput(x=1.0, y=2.0, z=3.0, task="grab"), validators=
+    # ),
     # MoveToPointTask(args={"x": 1.0, "y": 2.0, "z": 3.0, "task": "grab"}),
     # MoveToPointTask(args={"x": 1.2, "y": 2.3, "z": 3.4, "task": "drop"}),
     # GetObjectPositionsTask(

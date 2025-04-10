@@ -12,43 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any
+from typing import Any, Dict
 
 from langchain_core.messages import ToolCall
 
 from rai_bench.tool_calling_agent.interfaces import SubTask
 
 
-class GetROS2TopicNamesAndTypesSubTask(SubTask):
-    def validate(self, tool_call: ToolCall, **kwargs: Any) -> bool:
+class CheckToolCallSubTask(SubTask):
+    def __init__(
+        self,
+        expected_tool_name: str,
+        expected_args: Dict[str, Any] = {},
+        expected_optional_args: Dict[str, Any] = {},
+    ):
+        self.expected_tool_name = expected_tool_name
+        self.expected_args = expected_args
+        self.expected_optional_args = expected_optional_args
+
+    def validate(
+        self,
+        tool_call: ToolCall,
+    ) -> bool:
         return self._check_tool_call(
             tool_call=tool_call,
-            expected_name="get_ros2_topics_names_and_types",
-            expected_args={},
-        )
-
-
-class GetROS2ImageSubTask(SubTask):
-    def __init__(self, expected_topic: str):
-        self.expected_topic = expected_topic
-
-    def validate(self, tool_call: ToolCall) -> bool:
-        return self._check_tool_call(
-            tool_call=tool_call,
-            expected_name="get_ros2_image",
-            expected_args={"topic": self.expected_topic},
-            expected_optional_args={"timeout": {}},
-        )
-
-
-class ReceiveROSMessageSubTask(SubTask):
-    def __init__(self, expected_topic: str):
-        self.expected_topic = expected_topic
-
-    def validate(self, tool_call: ToolCall) -> bool:
-        return self._check_tool_call(
-            tool_call=tool_call,
-            expected_name="receive_ros2_message",
-            expected_args={"topic": self.expected_topic},
-            expected_optional_args={"timeout": {}},
+            expected_name=self.expected_tool_name,
+            expected_args=self.expected_args,
+            expected_optional_args=self.expected_optional_args,
         )
