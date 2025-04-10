@@ -35,14 +35,22 @@ class ScoreTracingHandler:
 
     @staticmethod
     def send_score(
-        callback: BaseCallbackHandler, run_id: UUID, score: float, errors: List[str]
+        callback: BaseCallbackHandler,
+        run_id: UUID,
+        score: float,
+        errors: List[List[str]],
     ) -> None:
+        comment = (
+            "; ".join(", ".join(error_group) for error_group in errors)
+            if errors
+            else ""
+        )
         if isinstance(callback, CallbackHandler):
             callback.langfuse.score(
                 trace_id=str(run_id),
                 name="tool calls result",
                 value=float(score),
-                comment="; ".join(errors) if errors else "",
+                comment=comment,
             )
             return None
         if isinstance(callback, LangChainTracer):
@@ -50,7 +58,7 @@ class ScoreTracingHandler:
                 run_id=run_id,
                 key="tool calls result",
                 score=float(score),
-                comment="; ".join(errors) if errors else "",
+                comment=comment,
             )
             return None
         raise NotImplementedError(

@@ -18,7 +18,7 @@ import statistics
 import time
 import uuid
 from pathlib import Path
-from typing import Dict, Iterator, List, Sequence, Tuple
+from typing import Any, Dict, Iterator, List, Sequence, Tuple
 from uuid import UUID
 
 from langchain_core.runnables.config import RunnableConfig
@@ -40,18 +40,20 @@ class TaskResult(BaseModel):
     system_prompt: str = Field(..., description="The system prompt.")
     complexity: str = Field(..., description="Complexity of the task.")
     model_name: str = Field(..., description="Name of the LLM.")
-    validation: List[str] = Field(
+    validators: List[List[Dict[str, Any]]] = Field(
         ..., description="List of validators with theirs' subtasks."
     )
-    # success: bool = Field(
-    #     ..., description="Whether the task was successfully completed."
-    # )
+    passed: List[bool] = Field(
+        ...,
+        description="for every validator - True when passed, False when not",
+    )
     score: float = Field(
         ...,
-        description="Value between 0 and 1, describing how many steps of a task were done correctly.",
+        description="Value between 0 and 1, describing how many validation setps passed",
     )
-    errors: List[str] = Field(
-        ..., description="List of errors that occurred during the task execution."
+    errors: List[List[str]] = Field(
+        ...,
+        description="List of errors that occurred during the task validation, separate for every validator",
     )
     total_time: float = Field(..., description="Total time taken to complete the task.")
     run_id: UUID = Field(..., description="UUID of the task run.")
@@ -126,7 +128,8 @@ class ToolCallingAgentBenchmark:
 
     @staticmethod
     def csv_writerow(filename: Path, base_model_instance: BaseModel):
-        """Write a single row to a CSV file based on a Pydantic model instance contents.
+        """Write a single row to a CSV file based on a Pydantic model instance contents,
+        ensuring that multiline strings are converted to one-line strings by replacing newlines.
 
         Parameters
         ----------
@@ -135,11 +138,18 @@ class ToolCallingAgentBenchmark:
         base_model_instance : BaseModel
             Pydantic model instance which contains the data to be written to the CSV file.
         """
+        row = base_model_instance.model_dump()
+
+        for key, value in row.items():
+            if isinstance(value, str):
+                # Replace newline characters with a single space so they dont break csv
+                row[key] = " ".join(value.split())
+
         with open(filename, mode="a", newline="", encoding="utf-8") as file:
             writer = csv.DictWriter(
                 file, fieldnames=base_model_instance.__annotations__.keys()
             )
-            writer.writerow(base_model_instance.model_dump())
+            writer.writerow(row)
 
     def run_next(self, agent: CompiledStateGraph, model_name: str) -> None:
         """Runs the next task of the benchmark.
@@ -175,7 +185,7 @@ class ToolCallingAgentBenchmark:
             toll_calls = task.get_tool_calls(response=response)
             task.validate(tool_calls=toll_calls)
         except GraphRecursionError as e:
-            task.log_error(msg=f"Graph Recursion Error: {e}")
+            self.logger.error(msg=f"Graph Recursion Error: {e}")
         te = time.perf_counter()
         total_time = te - ts
         result = task.result
@@ -188,14 +198,17 @@ class ToolCallingAgentBenchmark:
                 errors=result.errors,
             )
 
-        self.logger.info(f"TASK SCORE: {result.score}, TOTAL TIME: {total_time:.3f}")
+        self.logger.info(
+            f"TASK VALIDATORS PASSED: {result.passed}, TOTAL TIME: {total_time:.3f}"
+        )
 
         task_result = TaskResult(
             task_prompt=task.get_prompt(),
             system_prompt=task.get_system_prompt(),
             complexity=task.complexity,
             model_name=model_name,
-            validation=task.get_validators_string_list(),
+            validators=task.dump_validators(),
+            passed=result.passed,
             score=result.score,
             errors=result.errors if result.errors else [],
             total_time=total_time,

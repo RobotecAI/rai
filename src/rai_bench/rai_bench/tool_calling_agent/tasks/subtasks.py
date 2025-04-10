@@ -40,3 +40,10 @@ class CheckToolCallSubTask(SubTask):
             expected_args=self.expected_args,
             expected_optional_args=self.expected_optional_args,
         )
+
+    def dump(self) -> Dict[str, Any]:
+        return {
+            "expected_tool_name": self.expected_tool_name,
+            "expected_args": self.expected_args,
+            "expected_optional_args": self.expected_args,
+        }

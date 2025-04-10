@@ -13,21 +13,35 @@
 # limitations under the License.
 
 import logging
+import queue
 from abc import ABC, abstractmethod
-from typing import Any, List, Literal, Tuple
+from queue import Queue
+from typing import Any, Dict, List, Literal, Tuple
 
 from langchain_core.messages import AIMessage, ToolCall
 from langchain_core.runnables.config import DEFAULT_RECURSION_LIMIT
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel
 
 loggers_type = logging.Logger
 
 
-class Result(BaseModel):
-    # success: bool = False
-    score: float = 0.0
-    errors: list[str] = []
+class Result:
+    def __init__(self):
+        # bool for every validator
+        self.passed: List[bool] = []
+        # list for every validator
+        self.errors: List[List[str]] = [[]]
+
+    @property
+    def score(self) -> float:
+        """
+        Counted as number of validators
+        passed divided by numer of all validators
+        """
+        if self.passed:
+            return sum(self.passed) / len(self.passed)
+        else:
+            return 0.0
 
 
 class SubTaskValidationError(Exception):
@@ -42,6 +56,10 @@ class SubTask(ABC):
 
     @abstractmethod
     def validate(self, tool_call: ToolCall) -> bool:
+        pass
+
+    @abstractmethod
+    def dump(self) -> Dict[str, Any]:
         pass
 
     def _check_tool_call(
@@ -108,6 +126,7 @@ class Validator(ABC):
         self, subtasks: List[SubTask], logger: loggers_type | None = None
     ) -> None:
         self.subtasks = subtasks
+        self.errors_queue: queue.Queue[str] = Queue()
         if logger:
             self.logger = logger
         else:
@@ -115,15 +134,17 @@ class Validator(ABC):
 
     def log_error(self, msg: str):
         self.logger.error(msg)
+        self.errors_queue.put(msg)
 
-    def as_string(self) -> str:
-        """Represent subtasks of this validator as string"""
-        string = ""
-        for i, subt in enumerate(self.subtasks):
-            string += f"{subt.__class__.__name__}"
-            if not i + 1 == len(self.subtasks):
-                string += ", "
-        return string
+    def dump(self) -> List[Dict[str, Any]]:
+        return [subt.dump() for subt in self.subtasks]
+
+    def get_all_errors(self):
+        """Get all errors from queue"""
+        errors: List[str] = []
+        while not self.errors_queue.empty():
+            errors.append(self.errors_queue.get())
+        return errors
 
     @abstractmethod
     def validate(self, tool_calls: List[ToolCall]) -> Tuple[bool, List[ToolCall]]:
@@ -170,9 +191,8 @@ class Task(ABC):
                 tool_calls.extend(msg.tool_calls)
         return tool_calls
 
-    def get_validators_string_list(self) -> List[str]:
-        """Represent validators and list of strings, where strings are subtask in very validator"""
-        return [val.as_string() for val in self.validators]
+    def dump_validators(self) -> List[List[Dict[str, Any]]]:
+        return [val.dump() for val in self.validators]
 
     @property
     @abstractmethod
@@ -210,10 +230,6 @@ class Task(ABC):
         """
         pass
 
-    def log_error(self, msg: str):
-        self.logger.error(msg)
-        self.result.errors.append(msg)
-
     def validate(self, tool_calls: List[ToolCall]):
         self.logger.debug(
             f"required_calls: {self.required_calls}, extra_calls {self.extra_tool_calls}"
@@ -230,8 +246,11 @@ class Task(ABC):
             )
             if if_success:
                 done_properly += 1
-
-        self.result.score = done_properly / len(self.validators)
+                self.result.passed.append(True)
+            else:
+                self.result.passed.append(False)
+                # get all errors from queue
+                self.result.errors.append(validator.get_all_errors())
 
     # def _check_multiple_tool_calls(
     #     self, tool_calls: List[ToolCall], expected_tool_calls: list[dict[str, Any]]

@@ -50,7 +50,7 @@ class ManipulationTask(Task, ABC):
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
 
 
-class GrabTask(Task, ABC):
+class GrabTask(ManipulationTask, ABC):
     def __init__(
         self,
         objects: Dict[str, List[Position]],

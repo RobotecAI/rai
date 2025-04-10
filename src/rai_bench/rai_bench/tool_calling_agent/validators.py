@@ -31,21 +31,29 @@ class OrderedCallsValidator(Validator):
         self, subtasks: List[SubTask], logger: loggers_type | None = None
     ) -> None:
         super().__init__(subtasks=subtasks, logger=logger)
+        if len(self.subtasks) < 1:
+            raise ValueError("Validator must have at least 1 subtask.")
         self.subtask_iter = iter(subtasks)
 
     def validate(self, tool_calls: List[ToolCall]) -> Tuple[bool, List[ToolCall]]:
-        for i, tool_call in enumerate(tool_calls):
-            try:
-                subtask = next(self.subtask_iter)
-                subtask.validate(tool_call=tool_call)
-            except SubTaskValidationError as e:
-                self.log_error(msg=str(e))
-                continue
-            except StopIteration:
-                return True, tool_calls[i:]
+        if len(tool_calls) < 1:
+            self.log_error("Not a single tool call to validate")
+            return False, tool_calls
 
-        self.log_error(msg="Failed to validate")
-        return False, []
+        else:
+            subtask = next(self.subtask_iter)
+            for i, tool_call in enumerate(tool_calls):
+                try:
+                    subtask = next(self.subtask_iter)
+                    if subtask.validate(tool_call=tool_call):
+                        subtask = next(self.subtask_iter)
+                except SubTaskValidationError as e:
+                    self.log_error(msg=str(e))
+                    return False, tool_calls[i:]
+                except StopIteration:
+                    return True, tool_calls[i:]
+
+            return False, []
 
 
 class NotOrderedCallsValidator(Validator):
@@ -55,6 +63,8 @@ class NotOrderedCallsValidator(Validator):
         super().__init__(subtasks=subtasks, logger=logger)
 
     def validate(self, tool_calls: List[ToolCall]) -> Tuple[bool, List[ToolCall]]:
+        if len(tool_calls) < 1:
+            self.log_error("Not a single tool call to validate")
         to_be_done = self.subtasks.copy()
         for i, tool_call in enumerate(tool_calls):
             if not to_be_done:
