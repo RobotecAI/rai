@@ -36,7 +36,7 @@ class ReActAgent(BaseAgent):
         state: Optional[ReActAgentState] = None,
         system_prompt: Optional[str] = None,
     ):
-        super().__init__(connectors=connectors)
+        super().__init__()
         self.logger = logging.getLogger(__name__)
         self.agent = create_react_runnable(
             llm=llm, tools=tools, system_prompt=system_prompt

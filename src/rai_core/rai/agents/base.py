@@ -14,19 +14,9 @@
 
 
 from abc import ABC, abstractmethod
-from typing import Optional
-
-from rai.communication import BaseConnector
 
 
 class BaseAgent(ABC):
-    def __init__(
-        self, connectors: Optional[dict[str, BaseConnector]] = None, *args, **kwargs
-    ):
-        if connectors is None:
-            connectors = {}
-        self.connectors: dict[str, BaseConnector] = connectors
-
     @abstractmethod
     def run(self):
         pass

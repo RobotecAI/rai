@@ -101,7 +101,8 @@ class TextToSpeechAgent(BaseAgent):
         self.node_base_name = ros2_name
         self.model = tts
         ros2_connector = self._setup_ros2_connector()
-        super().__init__(connectors={"ros2": ros2_connector, "speaker": speaker})
+        self.connectors = {"ros2": ros2_connector, "speaker": speaker}
+        super().__init__()
 
         self.current_transcription_id = str(uuid4())[0:8]
         self.current_speech_id = None
