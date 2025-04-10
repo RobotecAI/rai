@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from abc import abstractmethod
 from typing import Any, Callable, Dict, Generic, Optional, TypeVar
 from uuid import uuid4
@@ -29,6 +30,9 @@ T = TypeVar("T", bound=BaseMessage)
 
 
 class BaseConnector(Generic[T]):
+    def __init__(self):
+        self.logger = logging.getLogger(self.__class__.__name__)
+
     def _generate_handle(self) -> str:
         return str(uuid4())
 

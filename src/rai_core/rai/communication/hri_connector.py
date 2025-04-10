@@ -145,6 +145,7 @@ class HRIConnector(Generic[T], BaseConnector[T]):
     def __init__(
         self, configured_targets: Sequence[str], configured_sources: Sequence[str]
     ):
+        super().__init__()
         self.configured_targets = configured_targets
         self.configured_sources = configured_sources
         if not hasattr(self, "__orig_bases__"):
