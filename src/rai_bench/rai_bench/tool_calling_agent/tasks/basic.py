@@ -136,7 +136,7 @@ class GetROS2RGBCameraTask(BasicTask):
                     "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
                 ]
             ),
-            MockGetROS2ImageTool(avilable_topics=["/camera_image_color"]),
+            MockGetROS2ImageTool(available_topics=["/camera_image_color"]),
         ]
 
     def get_prompt(self) -> str:
@@ -161,7 +161,7 @@ class GetROS2DepthCameraTask(BasicTask):
                     "topic: /depth_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
                 ]
             ),
-            MockGetROS2ImageTool(avilable_topics=["/camera_image_depth"]),
+            MockGetROS2ImageTool(available_topics=["/camera_image_depth"]),
         ]
 
     def get_prompt(self) -> str:
@@ -189,7 +189,7 @@ class GetAllROS2RGBCamerasTask(BasicTask):
                 ]
             ),
             MockGetROS2ImageTool(
-                avilable_topics=["/camera_image_color", "/color_image5"]
+                available_topics=["/camera_image_color", "/color_image5"]
             ),
         ]
 
@@ -217,7 +217,7 @@ class GetAllROS2DepthCamerasTask(BasicTask):
                 ]
             ),
             MockGetROS2ImageTool(
-                avilable_topics=["/camera_image_depth", "/depth_image5"]
+                available_topics=["/camera_image_depth", "/depth_image5"]
             ),
         ]
 

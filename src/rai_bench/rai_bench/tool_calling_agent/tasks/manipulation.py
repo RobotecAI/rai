@@ -208,12 +208,12 @@ class GrabExistingObjectTask(GrabTask):
     def _verify_args(self):
         if self.object_to_grab not in self.objects:
             error_message = f"Requested object to grab {self.object_to_grab} is not present in defined objects: {self.objects}."
-            self.log_error(msg=error_message)
+            self.logger.error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
         if len(self.objects[self.object_to_grab]) > 1:
             error_message = f"Requested object to grab {self.object_to_grab} has more than one position in defined objects: {self.objects[self.object_to_grab]}."
-            self.log_error(msg=error_message)
+            self.logger.error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
 
@@ -236,7 +236,7 @@ class GrabNotExistingObjectTask(GrabTask):
     def _verify_args(self):
         if self.object_to_grab in self.objects:
             error_message = f"Requested object to grab {self.object_to_grab} is present in defined objects: {self.objects} but should not be."
-            self.log_error(msg=error_message)
+            self.logger.error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
 
@@ -269,12 +269,12 @@ class MoveExistingObjectLeftTask(GrabTask):
     def _verify_args(self):
         if self.object_to_grab not in self.objects:
             error_message = f"Requested object to grab {self.object_to_grab} is not present in defined objects: {self.objects}."
-            self.log_error(msg=error_message)
+            self.logger.error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
         if len(self.objects[self.object_to_grab]) > 1:
             error_message = f"Requested object to grab {self.object_to_grab} has more than one position in defined objects: {self.objects[self.object_to_grab]}."
-            self.log_error(msg=error_message)
+            self.logger.error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
 
@@ -299,12 +299,12 @@ class MoveExistingObjectFrontTask(GrabTask):
     def _verify_args(self):
         if self.object_to_grab not in self.objects:
             error_message = f"Requested object to grab {self.object_to_grab} is not present in defined objects: {self.objects}."
-            self.log_error(msg=error_message)
+            self.logger.error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
         if len(self.objects[self.object_to_grab]) > 1:
             error_message = f"Requested object to grab {self.object_to_grab} has more than one position in defined objects: {self.objects[self.object_to_grab]}."
-            self.log_error(msg=error_message)
+            self.logger.error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
 
@@ -378,15 +378,15 @@ class SwapObjectsTask(Task):
         for obj in self.objects_to_swap:
             if obj not in self.objects:
                 error_message = f"Requested object to swap {obj} is not present in defined objects: {self.objects}."
-                self.log_error(msg=error_message)
+                self.logger.error(msg=error_message)
                 raise TaskParametrizationError(error_message)
             if len(self.objects[obj]) != 1:
                 error_message = f"Number of positions for object to swap ({obj}) should be equal to 1."
-                self.log_error(msg=error_message)
+                self.logger.error(msg=error_message)
                 raise TaskParametrizationError(error_message)
         if len(self.objects_to_swap) != 2:
             error_message = f"Number of requested objects to swap {len(self.objects_to_swap)} should be equal to 2."
-            self.log_error(msg=error_message)
+            self.logger.error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
     def get_prompt(self) -> str:
@@ -415,7 +415,7 @@ class SwapObjectsTask(Task):
 
     #     expected_num_tool_calls = 8
     #     if len(actual_tool_calls) < expected_num_tool_calls:
-    #         self.log_error(
+    #         self.logger.error(
     #             msg=f"Expected at least {expected_num_tool_calls} tool calls, but got {len(actual_tool_calls)}."
     #         )
     #         return None
@@ -439,7 +439,7 @@ class SwapObjectsTask(Task):
     #             break
 
     #     if temp_position is None:
-    #         self.log_error(msg="No temporary position found.")
+    #         self.logger.error(msg="No temporary position found.")
     #     else:
     #         get_position_permutations = list(
     #             permutations(
@@ -490,7 +490,7 @@ class SwapObjectsTask(Task):
     #             self._matches_sequence(actual_tool_calls, seq)
     #             for seq in valid_sequences
     #         ):
-    #             self.log_error(
+    #             self.logger.error(
     #                 msg="The tool calls are in an invalid sequence for object swapping."
     #             )
 
