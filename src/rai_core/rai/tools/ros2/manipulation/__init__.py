@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .manipulation import GetObjectPositionsTool, MoveToPointTool, MoveToPointToolInput
+from .custom import GetObjectPositionsTool, MoveToPointTool, MoveToPointToolInput
 
 __all__ = [
     "GetObjectPositionsTool",

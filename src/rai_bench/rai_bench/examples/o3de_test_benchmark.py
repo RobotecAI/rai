@@ -24,11 +24,9 @@ from langchain.tools import BaseTool
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.ros2 import (
+    GetObjectPositionsTool,
     GetROS2ImageTool,
     GetROS2TopicsNamesAndTypesTool,
-)
-from rai.tools.ros2.moveit2 import (
-    GetObjectPositionsTool,
     MoveToPointTool,
 )
 from rai.utils.model_initialization import get_llm_model

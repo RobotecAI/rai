@@ -21,13 +21,11 @@ from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.communication.ros2.messages import ROS2ARIMessage
 from rai.messages import MultimodalArtifact, preprocess_image
 from rai.tools.ros2 import (
+    GetObjectPositionsTool,
     GetROS2ImageTool,
     GetROS2TopicsNamesAndTypesTool,
-    ReceiveROS2MessageTool,
-)
-from rai.tools.ros2.moveit2 import (
-    GetObjectPositionsTool,
     MoveToPointTool,
+    ReceiveROS2MessageTool,
 )
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
