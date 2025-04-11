@@ -31,13 +31,13 @@ import rclpy.subscription
 import rclpy.task
 from rclpy.service import Service
 
-from rai.communication.ros2.api.common import (
-    build_ros2_service_request,
+from rai.communication.ros2.api.base import (
+    BaseROS2API,
 )
 from rai.tools.ros.utils import import_message_from_str
 
 
-class ROS2ServiceAPI:
+class ROS2ServiceAPI(BaseROS2API):
     """Handles ROS2 service operations including calling services."""
 
     def __init__(self, node: rclpy.node.Node) -> None:
@@ -63,7 +63,7 @@ class ROS2ServiceAPI:
         Returns:
             The response message
         """
-        srv_msg, srv_cls = build_ros2_service_request(service_type, request)
+        srv_msg, srv_cls = self.build_ros2_service_request(service_type, request)
         service_client = self.node.create_client(srv_cls, service_name)  # type: ignore
         client_ready = service_client.wait_for_service(timeout_sec=timeout_sec)
         if not client_ready:

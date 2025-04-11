@@ -43,15 +43,14 @@ from rclpy.qos import (
 )
 from rclpy.topic_endpoint_info import TopicEndpointInfo
 
-from rai.communication.ros2.api.common import (
+from rai.communication.ros2.api.base import (
+    BaseROS2API,
     IROS2Message,
-    adapt_requests_to_offers,
-    build_ros2_msg,
 )
 from rai.tools.ros.utils import import_message_from_str
 
 
-class ROS2TopicAPI:
+class ROS2TopicAPI(BaseROS2API):
     """Handles ROS2 topic operations including publishing and subscribing to messages.
 
     This class provides a high-level interface for ROS2 topic operations with automatic
@@ -119,7 +118,7 @@ class ROS2TopicAPI:
             topic, auto_qos_matching, qos_profile, for_publisher=True
         )
 
-        msg = build_ros2_msg(msg_type, msg_content)
+        msg = self.build_ros2_msg(msg_type, msg_content)
         publisher = self._get_or_create_publisher(topic, type(msg), qos_profile)
         publisher.publish(msg)
 
@@ -307,7 +306,7 @@ class ROS2TopicAPI:
                 if for_publisher
                 else self._node.get_publishers_info_by_topic(topic)
             )
-            return adapt_requests_to_offers(endpoint_info)
+            return self.adapt_requests_to_offers(endpoint_info)
 
         if qos_profile is not None:
             return qos_profile
@@ -478,7 +477,7 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
         except Exception as e:
             raise ValueError(f"{topic} has not been configured for publishing") from e
         msg_type = publisher.msg_type
-        msg = build_ros2_msg(msg_type, msg_content)  # type: ignore
+        msg = self.build_ros2_msg(msg_type, msg_content)  # type: ignore
         publisher.publish(msg)
 
     def receive(

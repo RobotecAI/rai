@@ -57,7 +57,8 @@ from rclpy.qos import (
 )
 from rclpy.task import Future
 
-from rai.communication.ros2.api.common import (
+from rai.communication.ros2.api.base import (
+    BaseROS2API,
     IROS2Message,
 )
 from rai.tools.ros.utils import import_message_from_str
@@ -71,7 +72,7 @@ class ROS2ActionData(TypedDict):
     feedbacks: List[Any]
 
 
-class ROS2ActionAPI:
+class ROS2ActionAPI(BaseROS2API):
     def __init__(self, node: rclpy.node.Node) -> None:
         self.node = node
         self._logger = node.get_logger()

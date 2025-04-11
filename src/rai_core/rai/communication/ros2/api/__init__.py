@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from .action import ROS2ActionAPI
-from .common import IROS2Message
+from .base import IROS2Message
 from .service import ROS2ServiceAPI
 from .topic import ConfigurableROS2TopicAPI, ROS2TopicAPI, TopicConfig
 
