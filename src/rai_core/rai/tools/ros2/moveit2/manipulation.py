@@ -17,11 +17,10 @@ from typing import Literal, Type
 
 import numpy as np
 from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
-from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 from tf2_geometry_msgs import do_transform_pose
 
-from rai.communication.ros2.connectors import ROS2ARIConnector
+from rai.tools.ros2.base import BaseROS2Tool
 from rai.tools.utils import TF2TransformFetcher
 from rai.utils.ros_async import get_future_result
 
@@ -50,7 +49,7 @@ class MoveToPointToolInput(BaseModel):
     )
 
 
-class MoveToPointTool(BaseTool):
+class MoveToPointTool(BaseROS2Tool):
     name: str = "move_to_point"
     description: str = (
         "Guide the robot's end effector to a specific point within the manipulator's operational space. "
@@ -58,8 +57,6 @@ class MoveToPointTool(BaseTool):
         "While it confirms successful positioning, please note that it doesn't provide feedback on the "
         "success of grabbing or releasing objects. Use additional sensors or tools for that information."
     )
-
-    connector: ROS2ARIConnector = Field(..., exclude=True)
 
     manipulator_frame: str = Field(..., description="Manipulator frame")
     min_z: float = Field(default=0.135, description="Minimum z coordinate [m]")
@@ -137,7 +134,7 @@ class GetObjectPositionsToolInput(BaseModel):
     )
 
 
-class GetObjectPositionsTool(BaseTool):
+class GetObjectPositionsTool(BaseROS2Tool):
     name: str = "get_object_positions"
     description: str = (
         "Retrieve the positions of all objects of a specified type in the target frame. "
@@ -150,7 +147,6 @@ class GetObjectPositionsTool(BaseTool):
     camera_topic: str  # rgb camera topic
     depth_topic: str
     camera_info_topic: str  # rgb camera info topic
-    connector: ROS2ARIConnector = Field(..., exclude=True)
     get_grabbing_point_tool: "GetGrabbingPointTool"
 
     args_schema: Type[GetObjectPositionsToolInput] = GetObjectPositionsToolInput
