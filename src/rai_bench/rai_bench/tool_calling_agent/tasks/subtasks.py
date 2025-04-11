@@ -19,7 +19,7 @@ from langchain_core.messages import ToolCall
 from rai_bench.tool_calling_agent.interfaces import SubTask
 
 
-class CheckToolCallSubTask(SubTask):
+class CheckArgsToolCallSubTask(SubTask):
     def __init__(
         self,
         expected_tool_name: str,
@@ -46,4 +46,84 @@ class CheckToolCallSubTask(SubTask):
             "expected_tool_name": self.expected_tool_name,
             "expected_args": self.expected_args,
             "expected_optional_args": self.expected_args,
+        }
+
+
+class CheckTopicFieldsToolCallSubTask(SubTask):
+    def __init__(
+        self,
+        expected_tool_name: str,
+        expected_topic: str,
+        expected_message_type: str,
+        expected_fields: Dict[str, Any] = {},
+        expected_optional_args: Dict[str, Any] = {},
+    ):
+        self.expected_tool_name = expected_tool_name
+        self.expected_fields = expected_fields
+        self.expected_optional_args = expected_optional_args
+        self.expected_topic = expected_topic
+        self.expected_message_type = expected_message_type
+
+    def validate(
+        self,
+        tool_call: ToolCall,
+    ) -> bool:
+        for field, value in self.expected_fields.items():
+            if not self._check_topic_tool_call_field(
+                tool_call=tool_call,
+                expected_name=self.expected_tool_name,
+                expected_topic=self.expected_topic,
+                expected_message_type=self.expected_message_type,
+                field_path=field,
+                expected_value=value,
+            ):
+                return False
+        return True
+
+    def dump(self) -> Dict[str, Any]:
+        return {
+            "expected_tool_name": self.expected_tool_name,
+            "expected_topic": self.expected_topic,
+            "expected_message_type": self.expected_message_type,
+            "expected_fields": self.expected_fields,
+        }
+
+
+class CheckServiceFieldsToolCallSubTask(SubTask):
+    def __init__(
+        self,
+        expected_tool_name: str,
+        expected_service: str,
+        expected_service_type: str,
+        expected_fields: Dict[str, Any] = {},
+        expected_optional_args: Dict[str, Any] = {},
+    ):
+        self.expected_tool_name = expected_tool_name
+        self.expected_fields = expected_fields
+        self.expected_optional_args = expected_optional_args
+        self.expected_service = expected_service
+        self.expected_service_type = expected_service_type
+
+    def validate(
+        self,
+        tool_call: ToolCall,
+    ) -> bool:
+        for field, value in self.expected_fields.items():
+            if not self._check_service_tool_call_field(
+                tool_call=tool_call,
+                expected_name=self.expected_tool_name,
+                expected_service=self.expected_service,
+                expected_service_type=self.expected_service_type,
+                field_path=field,
+                expected_value=value,
+            ):
+                return False
+        return True
+
+    def dump(self) -> Dict[str, Any]:
+        return {
+            "expected_tool_name": self.expected_tool_name,
+            "expected_service": self.expected_service,
+            "expected_service_type": self.expected_service_type,
+            "expected_fields": self.expected_fields,
         }

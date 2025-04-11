@@ -120,6 +120,164 @@ class SubTask(ABC):
                         )
         return True
 
+    def _check_topic_tool_call_field(
+        self,
+        tool_call: ToolCall,
+        expected_name: str,
+        expected_topic: str,
+        expected_message_type: str,
+        field_path: str,
+        expected_value: Any,
+    ) -> bool:
+        """
+        Verifies a tool call for a topic publishing operation.
+
+        Parameters
+        ----------
+        tool_call : ToolCall
+            The tool call dictionary containing keys such as "name" and "args".
+        expected_name : str
+            The expected tool call name (e.g., "publish_ros2_message").
+        expected_topic : str
+            The expected topic name in the tool call's arguments.
+        expected_message_type : str
+            The expected message type (e.g., "rai_interfaces/msg/HRIMessage").
+        field_path : str
+            Dot-separated path to the field inside the message (e.g., "header.frame_id").
+        expected_value : Any
+            The expected value at the given field path.
+
+        Returns
+        -------
+        bool
+            True if all conditions are met; False otherwise.
+        """
+        # Check tool call name.
+        if tool_call.get("name") != expected_name:
+            raise SubTaskValidationError(
+                f"Expected tool call name '{expected_name}', but got '{tool_call.get('name')}'."
+            )
+
+        args = tool_call.get("args", {})
+
+        # Check topic.
+        if args.get("topic") != expected_topic:
+            raise SubTaskValidationError(
+                f"Expected topic '{expected_topic}', but got '{args.get('topic')}'."
+            )
+
+        # Check message type.
+        if args.get("message_type") != expected_message_type:
+            raise SubTaskValidationError(
+                f"Expected message type '{expected_message_type}', but got '{args.get('message_type')}'."
+            )
+
+        # Traverse the message field.
+        message = args.get("message")
+        if message is None:
+            raise SubTaskValidationError(
+                "Tool call does not contain a 'message' argument."
+            )
+
+        keys = field_path.split(".")
+        value: Any = message
+        for key in keys:
+            if isinstance(value, dict) and key in value:
+                value = value[key]
+            else:
+                raise SubTaskValidationError(
+                    f"Field path '{field_path}' not found in the message."
+                )
+
+        if value != expected_value:
+            raise SubTaskValidationError(
+                f"Expected value for field '{field_path}' is '{expected_value}', but got '{value}'."
+            )
+
+        return True
+
+    def _check_service_tool_call_field(
+        self,
+        tool_call: ToolCall,
+        expected_name: str,
+        expected_service: str,
+        expected_service_type: str,
+        field_path: str,
+        expected_value: Any,
+    ) -> bool:
+        """
+        Verifies a tool call for a service call.
+
+        Parameters
+        ----------
+        tool_call : ToolCall
+            The tool call dictionary containing keys such as "name" and "args".
+        expected_name : str
+            The expected tool call name (e.g., "call_ros2_service").
+        expected_service : str
+            The expected service name in the tool call's arguments.
+        expected_message_type : str
+            The expected message type.
+        field_path : str
+            Dot-separated path to the field inside the message.
+        expected_value : Any
+            The expected value at the given field path.
+
+        Returns
+        -------
+        bool
+            True if all conditions are met; False otherwise.
+        """
+        if tool_call.get("name") != expected_name:
+            raise SubTaskValidationError(
+                f"Expected tool call name '{expected_name}', but got '{tool_call.get('name')}'."
+            )
+
+        args = tool_call.get("args", {})
+
+        # Check service.
+        if args.get("service_name") != expected_service:
+            raise SubTaskValidationError(
+                f"Expected service '{expected_service}', but got '{args.get('service')}'."
+            )
+
+        # Check message type.
+        if args.get("service_type") != expected_service_type:
+            raise SubTaskValidationError(
+                f"Expected message type '{expected_service_type}', but got '{args.get('service_type')}'."
+            )
+
+        service_args = args.get("service_args")
+        if service_args is None:
+            raise SubTaskValidationError(
+                "Tool call does not contain a 'service_args' argument."
+            )
+
+        if field_path == "":
+            if service_args == {}:
+                return True
+            else:
+                raise SubTaskValidationError(
+                    f"Expected empty service_args, but got: {service_args}"
+                )
+
+        keys = field_path.split(".")
+        value: Any = service_args
+        for key in keys:
+            if isinstance(value, dict) and key in value:
+                value = value[key]
+            else:
+                raise SubTaskValidationError(
+                    f"Field path '{field_path}' not found in the message."
+                )
+
+        if value != expected_value:
+            raise SubTaskValidationError(
+                f"Expected value for field '{field_path}' is '{expected_value}', but got '{value}'."
+            )
+
+        return True
+
 
 class Validator(ABC):
     def __init__(

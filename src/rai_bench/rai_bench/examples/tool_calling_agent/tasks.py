@@ -17,15 +17,12 @@ from typing import Sequence
 from rai_bench.tool_calling_agent.interfaces import (
     Task,
 )
-from rai_bench.tool_calling_agent.tasks.basic import (
-    GetAllROS2DepthCamerasTask,
-    GetAllROS2RGBCamerasTask,
-    GetROS2DepthCameraTask,
-    GetROS2RGBCameraTask,
-    GetROS2TopicsTask,
+from rai_bench.tool_calling_agent.tasks.custom_interfaces import (
+    PublishROS2HRIMessageTextTask,
 )
 from rai_bench.tool_calling_agent.tasks.subtasks import (
-    CheckToolCallSubTask,
+    CheckArgsToolCallSubTask,
+    CheckTopicFieldsToolCallSubTask,
 )
 from rai_bench.tool_calling_agent.validators import (
     NotOrderedCallsValidator,
@@ -33,31 +30,38 @@ from rai_bench.tool_calling_agent.validators import (
 )
 
 ########## subtasks
-get_topics_subtask = CheckToolCallSubTask(
+get_topics_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="get_ros2_topics_names_and_types"
 )
 
-color_image_subtask = CheckToolCallSubTask(
+color_image_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="get_ros2_image", expected_args={"topic": "/camera_image_color"}
 )
-depth_image_subtask = CheckToolCallSubTask(
+depth_image_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="get_ros2_image", expected_args={"topic": "/camera_image_depth"}
 )
-color_image5_subtask = CheckToolCallSubTask(
+color_image5_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="get_ros2_image", expected_args={"topic": "/color_image5"}
 )
-depth_image5_subtask = CheckToolCallSubTask(
+depth_image5_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="get_ros2_image", expected_args={"topic": "/depth_image5"}
 )
 
-receive_robot_desc_subtask = CheckToolCallSubTask(
+receive_robot_desc_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="receive_ros2_message",
     expected_args={"topic": "/robot_description"},
 )
 
-move_to_point_subtask = CheckToolCallSubTask(
+move_to_point_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="move_to_point",
     expected_args={"x": 1.0, "y": 2.0, "z": 3.0, "task": "grab"},
+)
+
+check_HRIMessage_text_subtask = CheckTopicFieldsToolCallSubTask(
+    expected_tool_name="publish_ros2_message",
+    expected_topic="/to_human",
+    expected_message_type="rai_interfaces/msg/HRIMessage",
+    expected_fields={"text": "Hello!"},
 )
 ######### validators
 topics_ord_val = OrderedCallsValidator(subtasks=[get_topics_subtask])
@@ -76,30 +80,35 @@ all_depth_images_notord_val = NotOrderedCallsValidator(
     subtasks=[depth_image_subtask, depth_image5_subtask]
 )
 
-# validators=
+move_to_point_ord_val = OrderedCallsValidator(subtasks=[move_to_point_subtask])
+
+pub_HRIMessage_text_ord_val = OrderedCallsValidator(
+    subtasks=[check_HRIMessage_text_subtask]
+)
 ######### tasks
 tasks: Sequence[Task] = [
     # 3 options to validate same task:
     # most strict, agent has to call both tool correctly to pass this validator
-    GetROS2RGBCameraTask(validators=[topics_and_color_image_ord_val]),
-    # verifing only if the GetCameraImage call was made properly
-    GetROS2RGBCameraTask(validators=[color_image_ord_val]),
-    # Soft verification. verifing in separate vaidators the list topic and get image.
-    #  agent can get 0.5 score by only calling list topics
-    GetROS2RGBCameraTask(validators=[topics_ord_val, color_image_ord_val]),
-    # we can also add extra tool calls to allow model to correct itself
-    GetROS2RGBCameraTask(
-        validators=[topics_ord_val, color_image_ord_val], extra_tool_calls=3
-    ),
-    GetROS2TopicsTask(validators=[topics_ord_val]),
-    GetROS2DepthCameraTask(validators=[depth_image_ord_val]),
-    GetAllROS2RGBCamerasTask(validators=[all_color_images_notord_val]),
-    GetAllROS2DepthCamerasTask(validators=[all_depth_images_notord_val]),
+    # GetROS2RGBCameraTask(validators=[topics_and_color_image_ord_val]),
+    # # verifing only if the GetCameraImage call was made properly
+    # GetROS2RGBCameraTask(validators=[color_image_ord_val]),
+    # # Soft verification. verifing in separate vaidators the list topic and get image.
+    # #  agent can get 0.5 score by only calling list topics
+    # GetROS2RGBCameraTask(validators=[topics_ord_val, color_image_ord_val]),
+    # # we can also add extra tool calls to allow model to correct itself
+    # GetROS2RGBCameraTask(
+    #     validators=[topics_ord_val, color_image_ord_val], extra_tool_calls=3
+    # ),
+    # GetROS2TopicsTask(validators=[topics_ord_val]),
+    # GetROS2DepthCameraTask(validators=[depth_image_ord_val]),
+    # GetAllROS2RGBCamerasTask(validators=[all_color_images_notord_val]),
+    # GetAllROS2DepthCamerasTask(validators=[all_depth_images_notord_val]),
     # GetRobotDescriptionTask(validators=)
     # GetROS2TopicsTask2(),
     # GetROS2MessageTask(),
     # MoveToPointTask(
-    #     move_to_tool_input=MoveToPointToolInput(x=1.0, y=2.0, z=3.0, task="grab"), validators=
+    #     move_to_tool_input=MoveToPointToolInput(x=1.0, y=2.0, z=3.0, task="grab"),
+    #     validators=[move_to_point_ord_val],
     # ),
     # MoveToPointTask(args={"x": 1.0, "y": 2.0, "z": 3.0, "task": "grab"}),
     # MoveToPointTask(args={"x": 1.2, "y": 2.3, "z": 3.4, "task": "drop"}),
@@ -160,4 +169,10 @@ tasks: Sequence[Task] = [
     #     },
     #     objects_to_swap=["banana", "apple"],
     # ),
+    PublishROS2HRIMessageTextTask(
+        topic="/to_human",
+        text="Hello!",
+        validators=[pub_HRIMessage_text_ord_val],
+        extra_tool_calls=2,
+    ),
 ]
