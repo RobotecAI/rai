@@ -97,7 +97,7 @@ def test_to_langchain_ai_multimodal(image, audio):
     ):  # NOTE: update when https://github.com/RobotecAI/rai/issues/370 is resolved
         _ = message.to_langchain()
 
-    # assert isinstance(langchain_message, AiMultimodalMessage)
+    # assert isinstance(langchain_message, AIMultimodalMessage)
     # assert langchain_message.content == "Response"
     # assert langchain_message.images == ["img"]
     # assert langchain_message.audios == ["audio"]

@@ -24,7 +24,7 @@ from PIL.Image import Image as ImageType
 from pydantic import Field
 from pydub import AudioSegment
 
-from rai.messages import AiMultimodalMessage, HumanMultimodalMessage
+from rai.messages import AIMultimodalMessage, HumanMultimodalMessage
 from rai.messages.multimodal import MultimodalMessage as RAIMultimodalMessage
 
 from .base_connector import BaseConnector, BaseMessage
@@ -88,7 +88,7 @@ class HRIMessage(BaseMessage):
             case "ai":
                 if self.images == [] and self.audios == []:
                     return AIMessage(content=self.text)
-                return AiMultimodalMessage(
+                return AIMultimodalMessage(
                     content=self.text, images=base64_images, audios=base64_images
                 )
             case _:

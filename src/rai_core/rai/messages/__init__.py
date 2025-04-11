@@ -14,7 +14,7 @@
 
 
 from .multimodal import (
-    AiMultimodalMessage,
+    AIMultimodalMessage,
     HumanMultimodalMessage,
     MultimodalArtifact,
     SystemMultimodalMessage,
@@ -23,7 +23,7 @@ from .multimodal import (
 from .utils import preprocess_image
 
 __all__ = [
-    "AiMultimodalMessage",
+    "AIMultimodalMessage",
     "HumanMultimodalMessage",
     "MultimodalArtifact",
     "SystemMultimodalMessage",
