@@ -44,12 +44,10 @@ class OrderedCallsValidator(Validator):
             subtask = next(self.subtask_iter)
             for i, tool_call in enumerate(tool_calls):
                 try:
-                    subtask = next(self.subtask_iter)
                     if subtask.validate(tool_call=tool_call):
                         subtask = next(self.subtask_iter)
                 except SubTaskValidationError as e:
                     self.log_error(msg=str(e))
-                    return False, tool_calls[i:]
                 except StopIteration:
                     return True, tool_calls[i:]
 
