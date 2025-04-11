@@ -746,7 +746,8 @@ elif st.session_state.current_step == 7:
             model_name = st.session_state.config[vendor_name][f"{model_type}_model"]
 
             if vendor_name == "openai":
-                return ChatOpenAI(model=model_name)
+                base_url = st.session_state.config["openai"]["base_url"]
+                return ChatOpenAI(model=model_name, base_url=base_url)
             elif vendor_name == "aws":
                 return ChatBedrock(model_id=model_name)
             elif vendor_name == "ollama":
