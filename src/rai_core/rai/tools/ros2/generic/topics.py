@@ -31,10 +31,10 @@ from pydantic import BaseModel, Field
 from sensor_msgs.msg import CompressedImage, Image
 
 from rai.communication.ros2 import ROS2ARIConnector, ROS2ARIMessage
+from rai.communication.ros2.api.utils import ros2_message_to_dict
 from rai.messages.multimodal import MultimodalArtifact
 from rai.messages.utils import preprocess_image
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
-from rai.tools.ros2.utils import ros2_message_to_dict
 
 
 class ROS2TopicsToolkit(BaseROS2Toolkit):

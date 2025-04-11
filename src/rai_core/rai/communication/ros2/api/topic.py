@@ -47,7 +47,7 @@ from rai.communication.ros2.api.base import (
     BaseROS2API,
     IROS2Message,
 )
-from rai.tools.ros2.utils import import_message_from_str
+from rai.communication.ros2.api.utils import import_message_from_str
 
 
 class ROS2TopicAPI(BaseROS2API):

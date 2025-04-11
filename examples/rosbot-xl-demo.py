@@ -20,14 +20,15 @@ from langchain_core.tools import BaseTool
 from rai.agents import ReActAgent
 from rai.communication.ros2 import ROS2ARIConnector
 from rai.frontend.streamlit import run_streamlit_app
-from rai.tools.ros.manipulation import GetGrabbingPointTool, GetObjectPositionsTool
 from rai.tools.ros2 import (
     GetROS2ImageConfiguredTool,
     GetROS2TransformConfiguredTool,
     Nav2Toolkit,
 )
+from rai.tools.ros2.moveit2 import GetObjectPositionsTool
 from rai.tools.time import WaitForSecondsTool
 from rai.utils.model_initialization import get_llm_model
+from rai_open_set_vision.tools import GetGrabbingPointTool
 
 # Set page configuration first
 st.set_page_config(

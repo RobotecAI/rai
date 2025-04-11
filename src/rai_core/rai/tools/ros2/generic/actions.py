@@ -30,7 +30,7 @@ from langchain_core.utils import stringify_dict
 from pydantic import BaseModel, Field
 from rclpy.action import CancelResponse
 
-from rai.communication.ros2 import ROS2ARIConnector, ROS2ARIMessage
+from rai.communication.ros2 import ROS2ARIMessage
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
 
 internal_action_id_mapping: Dict[str, str] = {}
@@ -162,7 +162,6 @@ class StartROS2ActionToolInput(BaseModel):
 
 
 class StartROS2ActionTool(BaseROS2Tool):
-    connector: ROS2ARIConnector
     feedback_callback: Callable[[Any, str], None] = lambda _, __: None
     on_done_callback: Callable[[Any, str], None] = lambda _, __: None
     internal_action_id_mapping: Dict[str, str] = Field(
