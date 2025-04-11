@@ -154,3 +154,8 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
         else:
             self.devices[target].close_write_stream()
         del self.action_handles[action_handle]
+
+    def shutdown(self):
+        for target in self.devices:
+            self.devices[target].close_read_stream()
+            self.devices[target].close_write_stream()
