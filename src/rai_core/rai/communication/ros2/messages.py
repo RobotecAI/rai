@@ -14,7 +14,8 @@
 
 import logging
 from collections import OrderedDict
-from typing import Any, Dict, List, Literal, Optional, cast
+from typing import Any, List, Literal, cast
+from uuid import uuid4
 
 import numpy as np
 import rosidl_runtime_py.convert
@@ -24,7 +25,7 @@ from pydub import AudioSegment
 from sensor_msgs.msg import Image as ROS2Image
 
 from rai.communication.ari_connector import ARIMessage
-from rai.communication.hri_connector import HRIMessage, HRIPayload
+from rai.communication.hri_connector import HRIMessage
 
 try:
     import rai_interfaces.msg
@@ -37,21 +38,10 @@ except ImportError:
 
 
 class ROS2ARIMessage(ARIMessage):
-    def __init__(self, payload: Any, metadata: Optional[Dict[str, Any]] = None):
-        super().__init__(payload, metadata)
+    pass
 
 
 class ROS2HRIMessage(HRIMessage):
-    def __init__(
-        self,
-        payload: HRIPayload,
-        message_author: Literal["ai", "human"],
-        communication_id: Optional[str] = None,
-        seq_no: int = 0,
-        seq_end: bool = False,
-    ):
-        super().__init__(payload, {}, message_author, communication_id, seq_no, seq_end)
-
     @classmethod
     def from_ros2(
         cls,
@@ -75,7 +65,9 @@ class ROS2HRIMessage(HRIMessage):
         ]
         communication_id = msg.communication_id if msg.communication_id != "" else None
         return ROS2HRIMessage(
-            payload=HRIPayload(text=msg.text, images=pil_images, audios=audio_segments),
+            text=msg.text,
+            images=pil_images,
+            audios=audio_segments,
             message_author=message_author,
             communication_id=communication_id,
             seq_no=msg.seq_no,
@@ -84,10 +76,8 @@ class ROS2HRIMessage(HRIMessage):
 
     def to_ros2_dict(self) -> OrderedDict[str, Any]:
         cv_bridge = CvBridge()
-        assert isinstance(self.payload, HRIPayload)
         img_msgs = [
-            cv_bridge.cv2_to_imgmsg(np.array(img), "rgb8")
-            for img in self.payload.images
+            cv_bridge.cv2_to_imgmsg(np.array(img), "rgb8") for img in self.images
         ]
         audio_msgs = [
             ROS2HRIMessage__Audio(
@@ -95,14 +85,14 @@ class ROS2HRIMessage(HRIMessage):
                 sample_rate=audio.frame_rate,
                 channels=audio.channels,
             )
-            for audio in self.payload.audios
+            for audio in self.audios
         ]
 
         return cast(
             OrderedDict[str, Any],
             rosidl_runtime_py.convert.message_to_ordereddict(
                 ROS2HRIMessage_(
-                    text=self.payload.text,
+                    text=self.text,
                     images=img_msgs,
                     audios=audio_msgs,
                     communication_id=self.communication_id or "",
@@ -111,3 +101,7 @@ class ROS2HRIMessage(HRIMessage):
                 )
             ),
         )
+
+    @staticmethod
+    def generate_conversation_id() -> str:
+        return str(uuid4())

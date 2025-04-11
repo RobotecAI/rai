@@ -13,9 +13,9 @@
 # limitations under the License.
 
 
-from typing import Callable, Literal, NamedTuple, Optional, Tuple
+from typing import Callable, NamedTuple, Optional, Tuple
 
-from rai.communication import HRIConnector, HRIMessage, HRIPayload
+from rai.communication import HRIConnector, HRIMessage
 from rai.communication.sound_device import (
     SoundDeviceAPI,
     SoundDeviceConfig,
@@ -27,21 +27,6 @@ class SoundDeviceMessage(HRIMessage):
     read: bool = False
     stop: bool = False
     duration: Optional[float] = None
-
-    def __init__(
-        self,
-        payload: Optional[HRIPayload] = None,
-        message_author: Literal["ai", "human"] = "human",
-        read: bool = False,
-        stop: bool = False,
-        duration: Optional[float] = None,
-    ):
-        if payload is None:
-            payload = HRIPayload(text="")
-        super().__init__(payload, message_author)
-        self.read = read
-        self.stop = stop
-        self.duration = duration
 
 
 class AudioParams(NamedTuple):
@@ -125,17 +110,15 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
         elif message.read:
             recording = self.devices[target].read(duration, blocking=True)
 
-            payload = HRIPayload(
-                text="",
-                audios=[recording],
+            ret = SoundDeviceMessage(
+                text="", audios=[recording], message_author="human"
             )
-            ret = SoundDeviceMessage(payload)
         else:
             if message.audios is not None:
                 self.devices[target].write(message.audios[0], blocking=True)
             else:
                 raise SoundDeviceError("Failed to provice audios in message to play")
-            ret = SoundDeviceMessage()
+            ret = SoundDeviceMessage(message_author="human")
         return ret
 
     def start_action(
@@ -171,3 +154,8 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
         else:
             self.devices[target].close_write_stream()
         del self.action_handles[action_handle]
+
+    def shutdown(self):
+        for target in self.devices:
+            self.devices[target].close_read_stream()
+            self.devices[target].close_write_stream()

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Generic, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 from .base_connector import BaseConnector, BaseMessage
 
@@ -24,14 +24,7 @@ class ARIMessage(BaseMessage):
     Inherit from this class to create specific ARI message types.
     """
 
-    def __init__(
-        self,
-        payload: Any,
-        metadata: Optional[Dict[str, Any]] = None,
-        *args: Any,
-        **kwargs: Any,
-    ):
-        super().__init__(payload, metadata, *args, **kwargs)
+    payload: Any
 
 
 T = TypeVar("T", bound=ARIMessage)

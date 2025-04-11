@@ -65,7 +65,8 @@ class LLMTextHandler(BaseCallbackHandler):
 
 class S2SConversationalAgent(BaseAgent):
     def __init__(self, connectors: Dict[str, BaseConnector]):  # type: ignore
-        super().__init__(connectors=connectors)
+        super().__init__()
+        self.connectors = connectors
         self.message_history: List[HumanMessage | AIMessage | SystemMessage] = [
             SystemMessage(
                 content="Pretend you are a robot. Answer as if you were a robot."

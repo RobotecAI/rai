@@ -23,7 +23,7 @@ from langchain_core.tools import BaseTool
 from rai.agents.base import BaseAgent
 from rai.agents.langchain import HRICallbackHandler, create_react_runnable
 from rai.agents.langchain.runnables import ReActAgentState
-from rai.communication.hri_connector import HRIConnector, HRIMessage, HRIPayload
+from rai.communication.hri_connector import HRIConnector, HRIMessage
 from rai.utils.model_initialization import get_tracing_callbacks
 
 
@@ -36,7 +36,7 @@ class ReActAgent(BaseAgent):
         state: Optional[ReActAgentState] = None,
         system_prompt: Optional[str] = None,
     ):
-        super().__init__(connectors=connectors)
+        super().__init__()
         self.logger = logging.getLogger(__name__)
         self.agent = create_react_runnable(
             llm=llm, tools=tools, system_prompt=system_prompt
@@ -96,11 +96,18 @@ class ReActAgent(BaseAgent):
     def _reduce_messages(
         self, received_messages: Dict[str, Dict[str, HRIMessage]]
     ) -> HRIMessage:
-        hri_payload = HRIPayload(text="", images=[], audios=[])
+        text = ""
+        images = []
+        audios = []
         for connector_name, connector_sources in received_messages.items():
-            hri_payload.text += f"{connector_name}\n"
+            text += f"{connector_name}\n"
             for source_name, source_message in connector_sources.items():
-                hri_payload.text += f"{source_name}: {source_message.text}\n"
-                hri_payload.images.extend(source_message.images)
-                hri_payload.audios.extend(source_message.audios)
-        return HRIMessage(payload=hri_payload, message_author="human")
+                text += f"{source_name}: {source_message.text}\n"
+                images.extend(source_message.images)
+                audios.extend(source_message.audios)
+        return HRIMessage(
+            text=text,
+            images=images,
+            audios=audios,
+            message_author="human",
+        )

@@ -18,7 +18,7 @@ from langchain_core.messages import BaseMessage as LangchainBaseMessage
 from langchain_core.messages import HumanMessage
 from PIL import Image
 from pydub import AudioSegment
-from rai.communication import HRIMessage, HRIPayload
+from rai.communication import HRIMessage
 from rai.messages.multimodal import MultimodalMessage as RAIMultimodalMessage
 
 
@@ -35,9 +35,10 @@ def audio():
 
 
 def test_initialization(image, audio):
-    payload = HRIPayload(text="Hello", images=[image], audios=[audio])
     message = HRIMessage(
-        payload=payload,
+        text="Hello",
+        images=[image],
+        audios=[audio],
         message_author="human",
         communication_id=HRIMessage.generate_communication_id(),
         seq_no=0,
@@ -51,10 +52,9 @@ def test_initialization(image, audio):
 
 
 def test_repr():
-    payload = HRIPayload(text="Hello")
     comm_id = HRIMessage.generate_communication_id()
     message = HRIMessage(
-        payload=payload,
+        text="Hello",
         message_author="ai",
         communication_id=comm_id,
         seq_no=0,
@@ -68,9 +68,8 @@ def test_repr():
 
 
 def test_to_langchain_human():
-    payload = HRIPayload(text="Hi there", images=[], audios=[])
     message = HRIMessage(
-        payload=payload,
+        text="Hi there",
         message_author="human",
         communication_id=HRIMessage.generate_communication_id(),
         seq_no=0,
@@ -83,9 +82,10 @@ def test_to_langchain_human():
 
 
 def test_to_langchain_ai_multimodal(image, audio):
-    payload = HRIPayload(text="Response", images=[image], audios=[audio])
     message = HRIMessage(
-        payload=payload,
+        text="Response",
+        images=[image],
+        audios=[audio],
         message_author="ai",
         communication_id=HRIMessage.generate_communication_id(),
         seq_no=0,
@@ -97,7 +97,7 @@ def test_to_langchain_ai_multimodal(image, audio):
     ):  # NOTE: update when https://github.com/RobotecAI/rai/issues/370 is resolved
         _ = message.to_langchain()
 
-    # assert isinstance(langchain_message, AiMultimodalMessage)
+    # assert isinstance(langchain_message, AIMultimodalMessage)
     # assert langchain_message.content == "Response"
     # assert langchain_message.images == ["img"]
     # assert langchain_message.audios == ["audio"]
@@ -122,9 +122,8 @@ def test_from_langchain_invalid_type():
         HRIMessage.from_langchain(langchain_message)
 
 
-def test_to_langchain_invalid_author():
-    payload = HRIPayload(text="Test")
-    message = HRIMessage(payload=payload, message_author="invalid")
+def test_to_langchain_unspecified_author():
+    message = HRIMessage(text="Test", message_author="unspecified")
     with pytest.raises(ValueError):
         message.to_langchain()
 

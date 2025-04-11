@@ -12,20 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import logging
 from abc import ABC, abstractmethod
-from typing import Optional
-
-from rai.communication import BaseConnector
 
 
 class BaseAgent(ABC):
-    def __init__(
-        self, connectors: Optional[dict[str, BaseConnector]] = None, *args, **kwargs
-    ):
-        if connectors is None:
-            connectors = {}
-        self.connectors: dict[str, BaseConnector] = connectors
+    def __init__(self):
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     @abstractmethod
     def run(self):

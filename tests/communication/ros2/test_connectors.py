@@ -20,7 +20,6 @@ import pytest
 from nav2_msgs.action import NavigateToPose
 from PIL import Image
 from pydub import AudioSegment
-from rai.communication import HRIPayload
 from rai.communication.ros2 import (
     ROS2ARIConnector,
     ROS2ARIMessage,
@@ -183,9 +182,12 @@ def test_ros2hri_default_message_publish(
         images = [Image.new("RGB", (100, 100), color="red")]
         audios = [AudioSegment.silent(duration=1000)]
         text = "Hello, HRI!"
-        payload = HRIPayload(images=images, audios=audios, text=text)
         message = ROS2HRIMessage(
-            payload=payload, message_author="ai", communication_id=""
+            text=text,
+            images=images,
+            audios=audios,
+            message_author="ai",
+            communication_id=ROS2HRIMessage.generate_conversation_id(),
         )
         connector.send_message(message, target=topic_name)
         time.sleep(1)  # wait for the message to be received

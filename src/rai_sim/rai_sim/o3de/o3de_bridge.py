@@ -105,7 +105,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             )
 
     def get_available_spawnable_names(self) -> list[str]:
-        msg = ROS2ARIMessage({})
+        msg = ROS2ARIMessage(payload={})
         response = self._try_service_call(
             msg,
             target="get_available_spawnable_names",

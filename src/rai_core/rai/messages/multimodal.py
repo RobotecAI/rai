@@ -135,7 +135,7 @@ class ToolMultimodalMessage(ToolMessage, MultimodalMessage):
         return ToolMessage(tool_call_id=self.tool_call_id, content=content)
 
 
-class AiMultimodalMessage(AIMessage, MultimodalMessage):
+class AIMultimodalMessage(AIMessage, MultimodalMessage):
     pass
 
 
