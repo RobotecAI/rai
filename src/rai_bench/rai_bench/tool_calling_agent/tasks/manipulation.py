@@ -131,7 +131,7 @@ class MoveToPointTask(ManipulationTask):
         return f"Move the arm to a point x={self.move_to_tool_input.x}, y={self.move_to_tool_input.y}, z={self.move_to_tool_input.z} to {self.move_to_tool_input.task} an object."
 
 
-class GetObjectPositionsTask(Task):
+class GetObjectPositionsTask(ManipulationTask):
     complexity = "easy"
 
     def __init__(

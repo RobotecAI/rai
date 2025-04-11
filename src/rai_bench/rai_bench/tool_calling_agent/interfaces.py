@@ -96,11 +96,11 @@ class SubTask(ABC):
         for arg_name, arg_value in expected_args.items():
             if arg_name in tool_call["args"]:
                 if tool_call["args"][arg_name] != arg_value:
-                    SubTaskValidationError(
+                    raise SubTaskValidationError(
                         f"Expected argument '{arg_name}' should have value '{arg_value}', but got '{tool_call['args'][arg_name]}'"
                     )
             else:
-                SubTaskValidationError(
+                raise SubTaskValidationError(
                     f"Required argument '{arg_name}' missing in tool call {expected_name}."
                 )
 
@@ -109,13 +109,13 @@ class SubTask(ABC):
             if arg_name not in expected_args:
                 # If this argument is not required, check if it's an allowed optional argument
                 if not expected_optional_args or arg_name not in expected_optional_args:
-                    SubTaskValidationError(
+                    raise SubTaskValidationError(
                         f"Unexpected argument '{arg_name}' found in tool call {expected_name}."
                     )
                 # If optional argument has expected value, check if the value is correct
                 elif expected_optional_args[arg_name]:
                     if expected_optional_args[arg_name] != arg_value:
-                        SubTaskValidationError(
+                        raise SubTaskValidationError(
                             f"Optional argument '{arg_name}' has incorrect value '{arg_value}' in tool call {expected_name}."
                         )
         return True

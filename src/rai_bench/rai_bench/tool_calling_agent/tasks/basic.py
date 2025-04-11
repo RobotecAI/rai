@@ -14,14 +14,18 @@
 
 import logging
 from abc import ABC
-from typing import List
+from typing import Dict, List
 
+import inflect
 from langchain_core.tools import BaseTool
 
 from rai_bench.tool_calling_agent.interfaces import (
     Task,
+    Validator,
 )
+from rai_bench.tool_calling_agent.messages.base import Position
 from rai_bench.tool_calling_agent.mocked_tools import (
+    MockGetObjectPositionsTool,
     MockGetROS2ImageTool,
     MockGetROS2TopicsNamesAndTypesTool,
     MockReceiveROS2MessageTool,
@@ -295,3 +299,61 @@ class GetPointcloudTask(BasicTask):
 
     def get_prompt(self) -> str:
         return "Get the pointcloud."
+
+
+class GetObjectPositionsTask(Task):
+    complexity = "easy"
+
+    def __init__(
+        self,
+        objects: Dict[str, List[Position]],
+        validators: List[Validator],
+        extra_tool_calls: int = 0,
+        logger: loggers_type | None = None,
+    ) -> None:
+        super().__init__(
+            validators=validators, extra_tool_calls=extra_tool_calls, logger=logger
+        )
+        """Task to get the positions of the objects
+
+        Examples
+        --------
+        objects = {
+            "banana": [(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
+            "cube": [(0.7, 0.8, 0.9)],
+        }
+        """
+        self.objects = objects
+
+    @property
+    def available_tools(self) -> List[BaseTool]:
+        return [
+            MockGetROS2TopicsNamesAndTypesTool(
+                mock_topics_names_and_types=[
+                    "topic: /pointcloud\ntype: sensor_msgs/msg/PointCloud2\n",
+                    "topic: /robot_description\ntype: std_msgs/msg/String\n",
+                    "topic: /rosout\ntype: rcl_interfaces/msg/Log\n",
+                    "topic: /tf\ntype: tf2_msgs/msg/TFMessage\n",
+                ]
+            ),
+            MockGetObjectPositionsTool(mock_objects=self.objects),
+        ]
+
+    def get_prompt(self) -> str:
+        """Generates a prompt based on the objects provided in the task. If there is more than one object, the object in the prompt will be pluralized.
+        Returns:
+            str: Formatted prompt for the task
+        """
+        inflector = inflect.engine()
+        object_counts = {obj: len(positions) for obj, positions in self.objects.items()}
+        formatted_objects = [
+            inflector.plural(obj) if count > 1 else obj
+            for obj, count in object_counts.items()
+        ]
+        if len(formatted_objects) > 1:
+            objects_list = (
+                ", ".join(formatted_objects[:-1]) + f", and {formatted_objects[-1]}"
+            )
+        else:
+            objects_list = formatted_objects[0]
+        return f"Get the {objects_list} positions."

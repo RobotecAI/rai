@@ -49,7 +49,7 @@ class ScoreTracingHandler:
             callback.langfuse.score(
                 trace_id=str(run_id),
                 name="tool calls result",
-                value=float(score),
+                value=score,
                 comment=comment,
             )
             return None
@@ -57,7 +57,7 @@ class ScoreTracingHandler:
             callback.client.create_feedback(
                 run_id=run_id,
                 key="tool calls result",
-                score=float(score),
+                score=score,
                 comment=comment,
             )
             return None
