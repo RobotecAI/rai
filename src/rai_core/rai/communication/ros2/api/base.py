@@ -42,7 +42,7 @@ from rclpy.qos import (
 )
 from rclpy.topic_endpoint_info import TopicEndpointInfo
 
-from rai.tools.ros.utils import import_message_from_str
+from rai.communication.ros2.api.utils import import_message_from_str
 
 
 @runtime_checkable
