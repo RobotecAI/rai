@@ -16,7 +16,7 @@ from subprocess import PIPE, Popen
 from threading import Timer
 from typing import List, Literal, Optional
 
-from langchain_core.tools import tool
+from langchain_core.tools import BaseTool, BaseToolkit, tool
 
 FORBIDDEN_CHARACTERS = ["&", ";", "|", "&&", "||", "(", ")", "<", ">", ">>", "<<"]
 
@@ -50,6 +50,18 @@ def run_command(cmd: List[str], timeout: int = 5):
     else:
         output["stderr"] = "Command returned no stderr output"
     return str(output)
+
+
+class ROS2CLIToolkit(BaseToolkit):
+    def get_tools(self) -> List[BaseTool]:
+        return [
+            ros2_action,
+            ros2_service,
+            ros2_node,
+            ros2_param,
+            ros2_interface,
+            ros2_topic,
+        ]
 
 
 @tool
