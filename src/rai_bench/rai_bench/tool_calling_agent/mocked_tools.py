@@ -84,7 +84,7 @@ class MockGetROS2ImageTool(GetROS2ImageTool):
         ValueError
             If the passed topic is not correct.
         """
-        if topic not in self.avilable_topics:
+        if topic not in self.available_topics:
             raise ValueError(
                 f"Topic {topic} is not available within {timeout_sec} seconds. Check if the topic exists."
             )
@@ -333,7 +333,7 @@ class MockStartROS2ActionTool(StartROS2ActionTool):
     connector: ROS2Connector = MagicMock(spec=ROS2Connector)
     available_actions: List[str] = []
     available_action_types: List[str] = []
-    available_action_models: List[Type[BaseModel]]
+    available_action_models: Dict[str, Type[BaseModel]]
 
     def _run(
         self, action_name: str, action_type: str, action_args: Dict[str, Any]
@@ -346,13 +346,12 @@ class MockStartROS2ActionTool(StartROS2ActionTool):
             raise TypeError(
                 f"Expected one of action types: {self.available_action_types}, got {action_type}"
             )
-        for action_model in self.available_action_models:
-            if (
-                action_model.model_fields["action_name"].default == action_name
-                and action_model.model_fields["action_type"].default == action_type
-            ):
-                goal = action_model.__annotations__["goal"]
-                goal.model_validate(action_args)
+        model = self.available_action_models[action_type]
+        try:
+            model.model_validate(action_args)
+        except ValidationError as e:
+            raise ValueError(f"Failed to populate fields: {e}")
+
         action_id = str(uuid.uuid4())
         response = action_id
         self.internal_action_id_mapping[response] = action_id
