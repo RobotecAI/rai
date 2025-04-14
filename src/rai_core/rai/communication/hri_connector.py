@@ -101,6 +101,8 @@ class HRIMessage(BaseMessage):
         cls,
         message: LangchainBaseMessage | RAIMultimodalMessage,
         communication_id: Optional[str] = None,
+        seq_no: int = 0,
+        seq_end: bool = False,
     ) -> "HRIMessage":
         if isinstance(message, RAIMultimodalMessage):
             text = message.text
@@ -122,6 +124,8 @@ class HRIMessage(BaseMessage):
             ),
             message_author=message.type,  # type: ignore
             communication_id=communication_id,
+            seq_no=seq_no,
+            seq_end=seq_end,
         )
 
     @classmethod
