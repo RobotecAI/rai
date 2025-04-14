@@ -195,7 +195,8 @@ TODO(docs): add link to the BaseAgent docs (regarding distributed setup)
 from rai.agents import ReActAgent
 from rai.communication import ROS2ARIConnector, ROS2HRIConnector
 from rai.tools.ros2 import ROS2Toolkit
-from rai.utils import ROS2Context, wait_for_shutdown
+from rai.communication.ros2 import ROS2Context
+from rai import AgentRunner
 
 @ROS2Context()
 def main() -> None:
@@ -206,8 +207,8 @@ def main() -> None:
         connectors={"hri": connector},
         tools=initialize_tools(connector=ari_connector),
     )
-    agent.run()
-    wait_for_shutdown([agent])
+    runner = AgentRunner([agent])
+    runner.run_and_wait_for_shutdown()
 
 # Example:
 # ros2 topic pub /from_human rai_interfaces/msg/HRIMessage "{\"text\": \"What do you see?\"}"
@@ -221,7 +222,7 @@ def main() -> None:
 ```python
 from rai.agents.langchain import create_react_runnable
 from langchain.schema import HumanMessage
-from rai.utils import ROS2Context, wait_for_shutdown
+from rai.communication.ros2 import ROS2Context
 
 @ROS2Context()
 def main():

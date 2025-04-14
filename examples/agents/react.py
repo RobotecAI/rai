@@ -13,9 +13,8 @@
 # limitations under the License.
 
 from rai.agents import AgentRunner, ReActAgent
-from rai.communication.ros2 import ROS2ARIConnector, ROS2HRIConnector
+from rai.communication.ros2 import ROS2ARIConnector, ROS2Context, ROS2HRIConnector
 from rai.tools.ros2 import ROS2Toolkit
-from rai.utils import ROS2Context
 
 
 @ROS2Context()
