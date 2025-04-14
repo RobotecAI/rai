@@ -34,7 +34,7 @@ from rclpy.service import Service
 from rai.communication.ros2.api.base import (
     BaseROS2API,
 )
-from rai.communication.ros2.api.utils import import_message_from_str
+from rai.communication.ros2.api.conversion import import_message_from_str
 
 
 class ROS2ServiceAPI(BaseROS2API):

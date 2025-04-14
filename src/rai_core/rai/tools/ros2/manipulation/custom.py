@@ -21,7 +21,6 @@ from pydantic import BaseModel, Field
 from tf2_geometry_msgs import do_transform_pose
 
 from rai.tools.ros2.base import BaseROS2Tool
-from rai.tools.utils import TF2TransformFetcher
 from rai.utils.ros_async import get_future_result
 
 try:
@@ -156,9 +155,9 @@ class GetObjectPositionsTool(BaseROS2Tool):
         return f"Centroid(x={pose.position.x:.2f}, y={pose.position.y:2f}, z={pose.position.z:2f})"
 
     def _run(self, object_name: str):
-        transform = TF2TransformFetcher(
+        transform = self.connector.get_transform(
             target_frame=self.target_frame, source_frame=self.source_frame
-        ).get_data()
+        )
 
         results = self.get_grabbing_point_tool._run(
             camera_topic=self.camera_topic,
