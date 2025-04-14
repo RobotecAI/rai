@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel
+
+from rai_bench.tool_calling_agent.messages.base import PoseStamped, Time
 
 
 class TaskGoal(BaseModel):
@@ -38,3 +40,42 @@ class LoadMapRequest(BaseModel):
 
 class LoadMapResponse(BaseModel):
     success: Optional[bool] = False
+
+
+class NavigateToPoseGoal(BaseModel):
+    pose: Optional[PoseStamped] = None
+    behavior_tree: Optional[str] = None
+
+
+class ActionResult(BaseModel):
+    result: Optional[Dict[str, Any]] = None
+
+
+class NavigateToPoseFeedback(BaseModel):
+    current_pose: Optional[PoseStamped] = None
+    navigation_time: Optional[Time] = None
+    estimated_time_remaining: Optional[Time] = None
+    number_of_recoveries: Optional[int] = None
+    distance_remaining: Optional[float] = None
+
+
+class NavigateToPoseAction(BaseModel):
+    goal: Optional[NavigateToPoseGoal] = None
+    result: Optional[ActionResult] = None
+    feedback: Optional[NavigateToPoseFeedback] = None
+
+
+class SpinGoal(BaseModel):
+    target_yaw: Optional[float] = None
+    time_allowance: Optional[Time] = None
+
+
+class SpinFeedback(BaseModel):
+    angle_turned: Optional[float] = None
+    remaining_yaw: Optional[float] = None
+
+
+class SpinAction(BaseModel):
+    goal: Optional[SpinGoal] = None
+    result: Optional[ActionResult] = None
+    feedback: Optional[SpinFeedback] = None
