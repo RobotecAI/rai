@@ -85,9 +85,13 @@ class RAIConfig:
     tracing: TracingConfig
 
 
-def load_config() -> RAIConfig:
-    with open("config.toml", "rb") as f:
-        config_dict = tomli.load(f)
+def load_config(config_path: Optional[str] = None) -> RAIConfig:
+    if config_path is None:
+        with open("config.toml", "rb") as f:
+            config_dict = tomli.load(f)
+    else:
+        with open(config_path, "rb") as f:
+            config_dict = tomli.load(f)
     return RAIConfig(
         vendor=VendorConfig(**config_dict["vendor"]),
         aws=AWSConfig(**config_dict["aws"]),
@@ -104,8 +108,9 @@ def load_config() -> RAIConfig:
 def get_llm_model_config_and_vendor(
     model_type: Literal["simple_model", "complex_model"],
     vendor: Optional[str] = None,
+    config_path: Optional[str] = None,
 ) -> Tuple[str, str]:
-    config = load_config()
+    config = load_config(config_path)
     if vendor is None:
         if model_type == "simple_model":
             vendor = config.vendor.simple_model
@@ -119,9 +124,12 @@ def get_llm_model_config_and_vendor(
 def get_llm_model(
     model_type: Literal["simple_model", "complex_model"],
     vendor: Optional[str] = None,
+    config_path: Optional[str] = None,
     **kwargs,
 ):
-    model_config, vendor = get_llm_model_config_and_vendor(model_type, vendor)
+    model_config, vendor = get_llm_model_config_and_vendor(
+        model_type, vendor, config_path
+    )
     model = getattr(model_config, model_type)
     logger.info(f"Initializing {model_type}: Vendor: {vendor}, Model: {model}")
     if vendor == "openai":
@@ -149,8 +157,8 @@ def get_llm_model(
         raise ValueError(f"Unknown LLM vendor: {vendor}")
 
 
-def get_embeddings_model(vendor: str = None):
-    config = load_config()
+def get_embeddings_model(vendor: str = None, config_path: Optional[str] = None):
+    config = load_config(config_path)
     if vendor is None:
         vendor = config.vendor.embeddings_model
 
