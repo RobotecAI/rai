@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import signal
 from threading import Event
 from typing import List
 
 from rai.agents.base import BaseAgent
+
+logger = logging.getLogger(__name__)
 
 
 def wait_for_shutdown(agents: List[BaseAgent]):
@@ -50,6 +53,11 @@ def run_agents(agents: List[BaseAgent]):
     Args:
         agents: List of agent instances
     """
+    logger.info(
+        "run_agents is an experimental function. \
+                   If you believe that your agents are not running properly, \
+                   please run them separately (in different processes)."
+    )
     for agent in agents:
         agent.run()
 
@@ -63,8 +71,14 @@ class AgentRunner:
 
     def __init__(self, agents: List[BaseAgent]):
         self.agents = agents
+        self.logger = logging.getLogger(__name__)
 
     def run(self):
+        self.logger.info(
+            f"{self.__class__.__name__}.{self.run.__name__} is an experimental function. \
+                            If you believe that your agents are not running properly, \
+                            please run them separately (in different processes)."
+        )
         for agent in self.agents:
             agent.run()
 
