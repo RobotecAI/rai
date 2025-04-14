@@ -18,8 +18,8 @@ import numpy as np
 import sensor_msgs.msg
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
-from rai.communication.ros2.connectors import ROS2ARIConnector
-from rai.tools.ros.utils import convert_ros_img_to_ndarray
+from rai.communication.ros2 import ROS2ARIConnector
+from rai.communication.ros2.api import convert_ros_img_to_ndarray
 from rai.utils.ros_async import get_future_result
 from rclpy.exceptions import (
     ParameterNotDeclaredException,

@@ -29,7 +29,12 @@ from .generic import (
     ROS2TopicsToolkit,
     StartROS2ActionTool,
 )
-from .nav2 import (
+from .manipulation.custom import (
+    GetObjectPositionsTool,
+    MoveToPointTool,
+    MoveToPointToolInput,
+)
+from .navigation.nav2 import (
     CancelNavigateToPoseTool,
     GetNavigateToPoseFeedbackTool,
     GetNavigateToPoseResultTool,
@@ -47,6 +52,7 @@ __all__ = [
     "CancelROS2ActionTool",
     "GetNavigateToPoseFeedbackTool",
     "GetNavigateToPoseResultTool",
+    "GetObjectPositionsTool",
     "GetROS2ActionsNamesAndTypesTool",
     "GetROS2ImageConfiguredTool",
     "GetROS2ImageTool",
@@ -55,6 +61,8 @@ __all__ = [
     "GetROS2TopicsNamesAndTypesTool",
     "GetROS2TransformConfiguredTool",
     "GetROS2TransformTool",
+    "MoveToPointTool",
+    "MoveToPointToolInput",
     "Nav2Toolkit",
     "NavigateToPoseTool",
     "PublishROS2MessageTool",

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+from .conversion import preprocess_image
 from .multimodal import (
     AIMultimodalMessage,
     HumanMultimodalMessage,
@@ -20,7 +21,6 @@ from .multimodal import (
     SystemMultimodalMessage,
     ToolMultimodalMessage,
 )
-from .utils import preprocess_image
 
 __all__ = [
     "AIMultimodalMessage",

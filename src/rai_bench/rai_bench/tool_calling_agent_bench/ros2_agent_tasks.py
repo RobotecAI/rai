@@ -21,7 +21,7 @@ import inflect
 from langchain_core.messages import AIMessage
 from langchain_core.messages.tool import ToolCall
 from langchain_core.tools import BaseTool
-from rai.tools.ros.manipulation import MoveToPointToolInput
+from rai.tools.ros2 import MoveToPointToolInput
 
 from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
     ROS2ToolCallingAgentTask,

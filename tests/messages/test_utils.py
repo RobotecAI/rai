@@ -18,7 +18,7 @@ from io import BytesIO
 import numpy as np
 import pytest
 from PIL import Image
-from rai.messages.utils import preprocess_image
+from rai.messages import preprocess_image
 
 
 def decode_image(base64_string: str) -> Image.Image:

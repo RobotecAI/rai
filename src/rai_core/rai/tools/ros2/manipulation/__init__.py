@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Robotec.AI
+# Copyright (C) 2025 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,3 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from .custom import GetObjectPositionsTool, MoveToPointTool, MoveToPointToolInput
+
+__all__ = [
+    "GetObjectPositionsTool",
+    "MoveToPointTool",
+    "MoveToPointToolInput",
+]

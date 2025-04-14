@@ -14,6 +14,13 @@
 
 from .action import ROS2ActionAPI
 from .base import IROS2Message
+from .conversion import (
+    convert_ros_img_to_base64,
+    convert_ros_img_to_cv2mat,
+    convert_ros_img_to_ndarray,
+    import_message_from_str,
+    ros2_message_to_dict,
+)
 from .service import ROS2ServiceAPI
 from .topic import ConfigurableROS2TopicAPI, ROS2TopicAPI, TopicConfig
 
@@ -24,4 +31,9 @@ __all__ = [
     "ROS2ServiceAPI",
     "ROS2TopicAPI",
     "TopicConfig",
+    "convert_ros_img_to_base64",
+    "convert_ros_img_to_cv2mat",
+    "convert_ros_img_to_ndarray",
+    "import_message_from_str",
+    "ros2_message_to_dict",
 ]

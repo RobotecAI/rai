@@ -61,7 +61,7 @@ from rai.communication.ros2.api.base import (
     BaseROS2API,
     IROS2Message,
 )
-from rai.tools.ros.utils import import_message_from_str
+from rai.communication.ros2.api.conversion import import_message_from_str
 
 
 class ROS2ActionData(TypedDict):
