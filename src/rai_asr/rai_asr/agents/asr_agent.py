@@ -22,11 +22,13 @@ from uuid import uuid4
 import numpy as np
 from numpy.typing import NDArray
 from rai.agents.base import BaseAgent
-from rai.communication import (
+from rai.communication.ros2 import (
     ROS2ARIConnector,
     ROS2ARIMessage,
     ROS2HRIConnector,
     ROS2HRIMessage,
+)
+from rai.communication.sound_device import (
     SoundDeviceConfig,
     SoundDeviceConnector,
     SoundDeviceMessage,
@@ -80,13 +82,12 @@ class SpeechRecognitionAgent(BaseAgent):
         )
         ros2_hri_connector = ROS2HRIConnector(ros2_name, targets=["/from_human"])
         ros2_ari_connector = ROS2ARIConnector(ros2_name + "ari")
-        super().__init__(
-            connectors={
-                "microphone": microphone,
-                "ros2_hri": ros2_hri_connector,
-                "ros2_ari": ros2_ari_connector,
-            }
-        )
+        self.connectors = {
+            "microphone": microphone,
+            "ros2_hri": ros2_hri_connector,
+            "ros2_ari": ros2_ari_connector,
+        }
+        super().__init__()
         self.should_record_pipeline: List[BaseVoiceDetectionModel] = []
         self.should_stop_pipeline: List[BaseVoiceDetectionModel] = []
 

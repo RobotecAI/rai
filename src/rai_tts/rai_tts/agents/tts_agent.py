@@ -22,14 +22,13 @@ from uuid import uuid4
 from numpy._typing import NDArray
 from pydub import AudioSegment
 from rai.agents.base import BaseAgent
-from rai.communication import (
+from rai.communication.ros2 import (
+    IROS2Message,
     ROS2HRIConnector,
-    SoundDeviceConfig,
-    SoundDeviceConnector,
+    ROS2HRIMessage,
     TopicConfig,
 )
-from rai.communication.ros2 import ROS2HRIMessage
-from rai.communication.ros2.api import IROS2Message
+from rai.communication.sound_device import SoundDeviceConfig, SoundDeviceConnector
 from rai.communication.sound_device.connector import SoundDeviceMessage
 from std_msgs.msg import String
 
