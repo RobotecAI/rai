@@ -48,6 +48,7 @@ class ReActAgent(BaseAgent):
         self.state = state or ReActAgentState(messages=[])
         self.thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
+        self.connectors = connectors
 
     def run(self):
         if self.thread is not None:
