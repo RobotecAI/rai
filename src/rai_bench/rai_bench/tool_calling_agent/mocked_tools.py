@@ -38,7 +38,10 @@ from rai.tools.ros2 import (
     ReceiveROS2MessageTool,
     StartROS2ActionTool,
 )
-from rai_open_set_vision.tools import GetGrabbingPointTool
+from rai_open_set_vision.tools.gdino_tools import (
+    DistanceMeasurement,
+    GetDistanceToObjectsTool,
+)
 
 from rai_bench.tool_calling_agent.messages.base import Position
 
@@ -405,3 +408,41 @@ class MockGetROS2ActionIDsTool(GetROS2ActionIDsTool):
 
     def _run(self) -> str:
         return str(list(self.internal_action_id_mapping.keys()))
+
+
+class MockGetDistanceToObjectsTool(GetDistanceToObjectsTool):
+    connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
+    node: MagicMock = MagicMock()
+    mock_distance_measurements: List[DistanceMeasurement] = []
+    available_topics: List[str]
+
+    def _run(self, camera_topic: str, depth_topic: str, object_names: list[str]):
+        """Method that returns a mock message with the distance to the objects.
+
+        Parameters
+        ----------
+        camera_topic : str
+            Topic with the camera image
+        depth_topic : str
+            Topic with the depth image
+        object_names : list[str]
+            List of object names to get the distance to
+
+        Returns
+        -------
+        str
+            Message from the tool
+        """
+        if camera_topic not in self.available_topics:
+            return f"Topic {camera_topic} is not available within 1.0 seconds. Check if the topic exists."
+        if depth_topic not in self.available_topics:
+            return f"Topic {depth_topic} is not available within 1.0 seconds. Check if the topic exists."
+        measurement_string = ", ".join(
+            [
+                f"{measurement[0]}: {measurement[1]:.2f}m away"
+                for measurement in self.mock_distance_measurements
+                if measurement[0] in object_names
+            ]
+        )
+
+        return f"I have detected the following items in the picture {measurement_string or 'no objects'}"
