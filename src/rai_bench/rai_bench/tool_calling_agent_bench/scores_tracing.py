@@ -19,7 +19,7 @@ from uuid import UUID
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.tracers.langchain import LangChainTracer
 from langfuse.callback import CallbackHandler
-from rai.utils.model_initialization import get_tracing_callbacks
+from rai.initialization import get_tracing_callbacks
 
 
 class ScoreTracingHandler:

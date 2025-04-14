@@ -13,16 +13,10 @@
 # limitations under the License.
 
 
-from typing import Any, Dict, List, Literal, Optional, TypedDict, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.messages.base import BaseMessage, get_msg_title_repr
-from langchain_core.tools import BaseTool
-
-
-class MultimodalArtifact(TypedDict):
-    images: List[str]  # base64 encoded images
-    audios: List[str]
 
 
 class MultimodalMessage(BaseMessage):
@@ -137,32 +131,3 @@ class ToolMultimodalMessage(ToolMessage, MultimodalMessage):
 
 class AIMultimodalMessage(AIMessage, MultimodalMessage):
     pass
-
-
-class FutureAiMessage:
-    """
-    Class to represent a response from the AI that is not yet available.
-    """
-
-    def __init__(self, tools: List[BaseTool], max_tokens: int = 4096):
-        self.tools = tools
-        self.max_tokens = max_tokens
-
-
-class AgentLoop:
-    """
-    Class to represent a loop of agent actions.
-    """
-
-    def __init__(
-        self,
-        tools: List[BaseTool],
-        stop_tool: Optional[str] = None,
-        stop_iters: int = 10,
-    ):
-        self.stop_tool = stop_tool
-        self.stop_iters = stop_iters
-        if self.stop_tool is not None:
-            if not any([tool.__class__.__name__ == stop_tool for tool in tools]):
-                raise ValueError("Stop tool not in tools")
-        self.tools: List[BaseTool] = tools

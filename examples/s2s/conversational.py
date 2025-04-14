@@ -23,10 +23,10 @@ from typing import Dict, List
 import rclpy
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from rai import get_llm_model
 from rai.agents.base import BaseAgent
 from rai.communication import BaseConnector
 from rai.communication.ros2 import IROS2Message, ROS2HRIConnector, TopicConfig
-from rai.utils.model_initialization import get_llm_model
 
 from rai_interfaces.msg import HRIMessage as InterfacesHRIMessage
 

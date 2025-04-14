@@ -28,8 +28,7 @@ from langgraph.utils.runnable import RunnableCallable
 from pydantic import ValidationError
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from rai.messages import MultimodalArtifact, ToolMultimodalMessage
-from rai.utils.artifacts import store_artifacts
+from rai.messages import MultimodalArtifact, ToolMultimodalMessage, store_artifacts
 
 
 class ToolRunner(RunnableCallable):

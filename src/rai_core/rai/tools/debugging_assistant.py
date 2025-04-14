@@ -17,6 +17,7 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.agents.integrations.streamlit import get_streamlit_cb, streamlit_invoke
+from rai.initialization import get_llm_model
 from rai.tools.ros2.cli import (
     ros2_action,
     ros2_interface,
@@ -25,7 +26,6 @@ from rai.tools.ros2.cli import (
     ros2_service,
     ros2_topic,
 )
-from rai.utils.model_initialization import get_llm_model
 
 
 @st.cache_resource

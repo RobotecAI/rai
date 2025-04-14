@@ -132,7 +132,7 @@ from myrobot import robot
 
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.agents.state_based import create_state_based_agent
-from rai.utils.model_initialization import get_llm_model
+from rai import get_llm_model
 
 SYSTEM_PROMPT = "You are a robot with interfaces..."
 

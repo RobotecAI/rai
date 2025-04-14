@@ -16,11 +16,11 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from rai.agents.conversational_agent import create_conversational_agent
-from rai.utils.model_initialization import (
+from rai import (
     get_llm_model,
     get_llm_model_config_and_vendor,
 )
+from rai.agents.conversational_agent import create_conversational_agent
 
 from rai_bench.examples.tool_calling_agent_bench_tasks import tasks
 from rai_bench.tool_calling_agent_bench.agent_bench import ToolCallingAgentBenchmark

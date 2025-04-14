@@ -23,7 +23,7 @@ from langgraph.graph import START, StateGraph
 from langgraph.prebuilt.tool_node import tools_condition
 
 from rai.agents.tool_runner import ToolRunner
-from rai.utils.model_initialization import get_llm_model
+from rai.initialization import get_llm_model
 
 
 class ReActAgentState(TypedDict):

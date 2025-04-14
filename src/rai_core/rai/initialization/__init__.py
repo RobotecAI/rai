@@ -12,7 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .agents import wait_for_shutdown
-from .ros import ROS2Context
+from .model_initialization import (
+    get_embeddings_model,
+    get_llm_model,
+    get_llm_model_config_and_vendor,
+    get_tracing_callbacks,
+)
 
-__all__ = ["ROS2Context", "wait_for_shutdown"]
+__all__ = [
+    "get_embeddings_model",
+    "get_llm_model",
+    "get_llm_model_config_and_vendor",
+    "get_tracing_callbacks",
+]

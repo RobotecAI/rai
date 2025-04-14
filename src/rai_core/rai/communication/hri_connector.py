@@ -25,7 +25,7 @@ from pydantic import Field
 from pydub import AudioSegment
 
 from rai.messages import AIMultimodalMessage, HumanMultimodalMessage
-from rai.messages.multimodal import MultimodalMessage as RAIMultimodalMessage
+from rai.messages import MultimodalMessage as RAIMultimodalMessage
 
 from .base_connector import BaseConnector, BaseMessage
 

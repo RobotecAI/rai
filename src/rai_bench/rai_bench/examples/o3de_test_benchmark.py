@@ -23,13 +23,13 @@ import rclpy
 from langchain.tools import BaseTool
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.communication.ros2.connectors import ROS2ARIConnector
+from rai.initialization import get_llm_model
 from rai.tools.ros2 import (
     GetObjectPositionsTool,
     GetROS2ImageTool,
     GetROS2TopicsNamesAndTypesTool,
     MoveToPointTool,
 )
-from rai.utils.model_initialization import get_llm_model
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
 from rai_bench.benchmark_model import Benchmark
