@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-try:
-    pass
-except ImportError:
+import importlib.util
+
+if importlib.util.find_spec("rclpy") is None:
     raise ImportError(
         "This is a ROS2 feature. Make sure ROS2 is installed and sourced."
     )
