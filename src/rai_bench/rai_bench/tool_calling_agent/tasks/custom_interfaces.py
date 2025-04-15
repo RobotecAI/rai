@@ -899,25 +899,7 @@ class CustomInterfacesServiceTask(Task, ABC):
         ]
 
 
-# TODO (jm) actions Tasks
-# class CustomInterfacesActionTask(Task, ABC):
-#     action_strings = [
-#         f"action: {action}\ntype: {msg_type}\n"
-#         for action, msg_type in ACTIONS_AND_TYPES.items()
-#     ]
-
-#     def __init__(self, logger: loggers_type | None = None) -> None:
-#         super().__init__(logger=logger)
-#         self.expected_tools: List[BaseTool] = [
-#             MockGetROS2ActionsNamesAndTypesTool(
-#                 mock_actions_names_and_types=self.action_strings
-#             ),
-#             MockGetROS2MessageInterfaceTool(mock_interfaces=MOCK_INTERFACES),
-#             MockStartROS2ActionTool(
-#                 available_actions=list(self.ACTIONS_AND_TYPES.keys()),
-#                 available_action_types=list(self.ACTIONS_AND_TYPES.values()),
-#             ),
-#         ]
+# TODO (jm) add actions Tasks
 
 
 # TODO (jm) should we and how to parametrize these classes?
