@@ -14,16 +14,15 @@
 
 from typing import List, Optional
 
-from pydantic import BaseModel
-
 from rai_bench.tool_calling_agent.messages.base import (
     Detection2D,
     Header,
     RegionOfInterest,
+    Ros2BaseModel,
 )
 
 
-class CameraInfo(BaseModel):
+class CameraInfo(Ros2BaseModel):
     header: Optional[Header] = Header()
     height: Optional[int] = 0
     width: Optional[int] = 0
@@ -37,7 +36,7 @@ class CameraInfo(BaseModel):
     roi: Optional[RegionOfInterest] = RegionOfInterest()
 
 
-class Image(BaseModel):
+class Image(Ros2BaseModel):
     header: Optional[Header] = Header()
     height: Optional[int] = 0
     width: Optional[int] = 0
@@ -47,13 +46,13 @@ class Image(BaseModel):
     data: Optional[List[int]] = []
 
 
-class AudioMessage(BaseModel):
+class AudioMessage(Ros2BaseModel):
     audio: Optional[List[int]] = []
     sample_rate: Optional[int] = 0
     channels: Optional[int] = 0
 
 
-class HRIMessage(BaseModel):
+class HRIMessage(Ros2BaseModel):
     header: Optional[Header] = Header()
     text: Optional[str] = ""
     images: Optional[List[Image]] = []
@@ -63,7 +62,7 @@ class HRIMessage(BaseModel):
     seq_end: Optional[bool] = False
 
 
-class RAIDetectionArray(BaseModel):
+class RAIDetectionArray(Ros2BaseModel):
     header: Optional[Header] = Header()
     detections: Optional[List[Detection2D]] = []
     detection_classes: Optional[List[str]] = []

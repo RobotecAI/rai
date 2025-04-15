@@ -14,44 +14,50 @@
 
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel
+from pydantic import ConfigDict
 
-from rai_bench.tool_calling_agent.messages.base import PoseStamped, Time
+from rai_bench.tool_calling_agent.messages.base import PoseStamped, Ros2BaseModel, Time
 
 
-class TaskGoal(BaseModel):
+class TaskGoal(Ros2BaseModel):
+    model_config = ConfigDict(extra="forbid")
     task: Optional[str] = ""
     description: Optional[str] = ""
     priority: Optional[str] = ""
 
 
-class TaskResult(BaseModel):
+class TaskResult(Ros2BaseModel):
+    model_config = ConfigDict(extra="forbid")
     success: Optional[bool] = False
     report: Optional[str] = ""
 
 
-class TaskFeedback(BaseModel):
+class TaskFeedback(Ros2BaseModel):
+    model_config = ConfigDict(extra="forbid")
     current_status: Optional[str] = ""
 
 
-class LoadMapRequest(BaseModel):
+class LoadMapRequest(Ros2BaseModel):
+    model_config = ConfigDict(extra="forbid")
     filename: Optional[str] = ""
 
 
-class LoadMapResponse(BaseModel):
+class LoadMapResponse(Ros2BaseModel):
+    model_config = ConfigDict(extra="forbid")
     success: Optional[bool] = False
 
 
-class NavigateToPoseGoal(BaseModel):
+class NavigateToPoseGoal(Ros2BaseModel):
+    model_config = ConfigDict(extra="forbid")
     pose: Optional[PoseStamped] = None
     behavior_tree: Optional[str] = None
 
 
-class ActionResult(BaseModel):
+class ActionResult(Ros2BaseModel):
     result: Optional[Dict[str, Any]] = None
 
 
-class NavigateToPoseFeedback(BaseModel):
+class NavigateToPoseFeedback(Ros2BaseModel):
     current_pose: Optional[PoseStamped] = None
     navigation_time: Optional[Time] = None
     estimated_time_remaining: Optional[Time] = None
@@ -59,23 +65,23 @@ class NavigateToPoseFeedback(BaseModel):
     distance_remaining: Optional[float] = None
 
 
-class NavigateToPoseAction(BaseModel):
+class NavigateToPoseAction(Ros2BaseModel):
     goal: Optional[NavigateToPoseGoal] = None
     result: Optional[ActionResult] = None
     feedback: Optional[NavigateToPoseFeedback] = None
 
 
-class SpinGoal(BaseModel):
+class SpinGoal(Ros2BaseModel):
     target_yaw: Optional[float] = None
     time_allowance: Optional[Time] = None
 
 
-class SpinFeedback(BaseModel):
+class SpinFeedback(Ros2BaseModel):
     angle_turned: Optional[float] = None
     remaining_yaw: Optional[float] = None
 
 
-class SpinAction(BaseModel):
+class SpinAction(Ros2BaseModel):
     goal: Optional[SpinGoal] = None
     result: Optional[ActionResult] = None
     feedback: Optional[SpinFeedback] = None
