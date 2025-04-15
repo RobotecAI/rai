@@ -13,19 +13,18 @@
 # limitations under the License.
 
 import random
-from typing import List, Sequence
+from typing import List
 
+from rai_bench.tool_calling_agent.interfaces import Task
 from rai_bench.tool_calling_agent.tasks.navigation import (
     MoveToBedTask,
     MoveToFrontTask,
     NavigateToPointTask,
-    NavigationTask,
     SpinAroundTask,
 )
 from rai_bench.tool_calling_agent.tasks.spatial import (
     BoolImageTask,
     BoolImageTaskInput,
-    SpatialReasoningAgentTask,
 )
 from rai_bench.tool_calling_agent.tasks.subtasks import (
     CheckActionFieldsToolCallSubTask,
@@ -138,18 +137,18 @@ start_navigate_action_ord_val = OrderedCallsValidator(
 start_spin_action_ord_val = OrderedCallsValidator(subtasks=[start_spin_action_subtask])
 move_ahead_ord_val = OrderedCallsValidator(subtasks=[start_move_front_action_subtask])
 ########## tasks
-true_tasks: Sequence[SpatialReasoningAgentTask] = [
+true_tasks: List[Task] = [
     BoolImageTask(
         task_input=input_item, validators=[ret_true_ord_val], extra_tool_calls=0
     )
     for input_item in true_response_inputs
 ]
-false_tasks: Sequence[SpatialReasoningAgentTask] = [
+false_tasks: List[Task] = [
     BoolImageTask(task_input=input_item, validators=[ret_false_ord_val])
     for input_item in false_response_inputs
 ]
 
-nav_tasks: Sequence[NavigationTask] = [
+nav_tasks: List[Task] = [
     NavigateToPointTask(validators=[start_navigate_action_ord_val], extra_tool_calls=5),
     SpinAroundTask(validators=[start_spin_action_ord_val], extra_tool_calls=5),
     MoveToBedTask(validators=[move_ahead_ord_val], extra_tool_calls=5),

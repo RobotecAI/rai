@@ -12,15 +12,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Sequence
+import random
+from typing import List
+
+from rai.tools.ros.manipulation import MoveToPointToolInput
 
 from rai_bench.tool_calling_agent.interfaces import (
     Task,
 )
+from rai_bench.tool_calling_agent.tasks.basic import (
+    GetAllROS2DepthCamerasTask,
+    GetAllROS2RGBCamerasTask,
+    GetROS2DepthCameraTask,
+    GetROS2RGBCameraTask,
+    GetROS2TopicsTask,
+)
 from rai_bench.tool_calling_agent.tasks.custom_interfaces import (
     PublishROS2HRIMessageTextTask,
 )
+from rai_bench.tool_calling_agent.tasks.manipulation import (
+    MoveToPointTask,
+)
+from rai_bench.tool_calling_agent.tasks.navigation import (
+    MoveToBedTask,
+    MoveToFrontTask,
+    NavigateToPointTask,
+    SpinAroundTask,
+)
+from rai_bench.tool_calling_agent.tasks.spatial import (
+    BoolImageTask,
+    BoolImageTaskInput,
+)
 from rai_bench.tool_calling_agent.tasks.subtasks import (
+    CheckActionFieldsToolCallSubTask,
     CheckArgsToolCallSubTask,
     CheckTopicFieldsToolCallSubTask,
 )
@@ -29,7 +53,68 @@ from rai_bench.tool_calling_agent.validators import (
     OrderedCallsValidator,
 )
 
-########## subtasks
+true_response_inputs: List[BoolImageTaskInput] = [
+    BoolImageTaskInput(
+        question="Is the door on the left from the desk?",
+        images_paths=["src/rai_bench/rai_bench/examples/images/image_1.jpg"],
+    ),
+    BoolImageTaskInput(
+        question="Is the light on in the room?",
+        images_paths=["src/rai_bench/rai_bench/examples/images/image_2.jpg"],
+    ),
+    BoolImageTaskInput(
+        question="Do you see the plant?",
+        images_paths=["src/rai_bench/rai_bench/examples/images/image_2.jpg"],
+    ),
+    BoolImageTaskInput(
+        question="Are there any pictures on the wall?",
+        images_paths=["src/rai_bench/rai_bench/examples/images/image_3.jpg"],
+    ),
+    BoolImageTaskInput(
+        question="Are there 3 pictures on the wall?",
+        images_paths=["src/rai_bench/rai_bench/examples/images/image_4.jpg"],
+    ),
+    BoolImageTaskInput(
+        question="Is there a plant behind the rack?",
+        images_paths=["src/rai_bench/rai_bench/examples/images/image_5.jpg"],
+    ),
+    BoolImageTaskInput(
+        question="Is there a pillow on the armchain?",
+        images_paths=["src/rai_bench/rai_bench/examples/images/image_7.jpg"],
+    ),
+]
+false_response_inputs: List[BoolImageTaskInput] = [
+    BoolImageTaskInput(
+        question="Is the door open?",
+        images_paths=["src/rai_bench/rai_bench/examples/images/image_1.jpg"],
+    ),
+    BoolImageTaskInput(
+        question="Is someone in the room?",
+        images_paths=["src/rai_bench/rai_bench/examples/images/image_1.jpg"],
+    ),
+    BoolImageTaskInput(
+        question="Do you see the plant?",
+        images_paths=["src/rai_bench/rai_bench/examples/images/image_3.jpg"],
+    ),
+    BoolImageTaskInput(
+        question="Are there 4 pictures on the wall?",
+        images_paths=["src/rai_bench/rai_bench/examples/images/image_4.jpg"],
+    ),
+    BoolImageTaskInput(
+        question="Is there a rack on the left from the sofa?",
+        images_paths=["src/rai_bench/rai_bench/examples/images/image_4.jpg"],
+    ),
+    BoolImageTaskInput(
+        question="Is there a plant on the right from the window?",
+        images_paths=["src/rai_bench/rai_bench/examples/images/image_6.jpg"],
+    ),
+    BoolImageTaskInput(
+        question="Is there a red pillow on the armchair?",
+        images_paths=["src/rai_bench/rai_bench/examples/images/image_7.jpg"],
+    ),
+]
+
+########## SUBTASKS #######################################################################################
 get_topics_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="get_ros2_topics_names_and_types"
 )
@@ -57,13 +142,54 @@ move_to_point_subtask = CheckArgsToolCallSubTask(
     expected_args={"x": 1.0, "y": 2.0, "z": 3.0, "task": "grab"},
 )
 
-check_HRIMessage_text_subtask = CheckTopicFieldsToolCallSubTask(
+pub_HRIMessage_text_subtask = CheckTopicFieldsToolCallSubTask(
     expected_tool_name="publish_ros2_message",
     expected_topic="/to_human",
     expected_message_type="rai_interfaces/msg/HRIMessage",
     expected_fields={"text": "Hello!"},
 )
-######### validators
+
+get_tohuman_interface_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="get_ros2_message_interface",
+    expected_args={"msg_type": "rai_interfaces/msg/HRIMessage"},
+)
+
+
+return_true_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="return_bool_response", expected_args={"response": True}
+)
+return_false_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="return_bool_response", expected_args={"response": False}
+)
+
+start_nav_action_subtask = CheckActionFieldsToolCallSubTask(
+    expected_tool_name="start_ros2_action",
+    expected_action="/navigate_to_pose",
+    expected_action_type="nav2_msgs/action/NavigateToPose",
+    expected_fields={
+        "pose": {
+            "header": {"frame_id": "map"},
+            "pose": {
+                "position": {"x": 2.0, "y": 2.0, "z": 0.0},
+            },
+        },
+    },
+)
+start_spin_action_subtask = CheckActionFieldsToolCallSubTask(
+    expected_tool_name="start_ros2_action",
+    expected_action="/spin",
+    expected_action_type="nav2_msgs/action/Spin",
+    expected_fields={"target_yaw": 3},
+)
+start_move_front_action_subtask = CheckActionFieldsToolCallSubTask(
+    expected_tool_name="start_ros2_action",
+    expected_action="/drive_on_heading",
+    expected_action_type="nav2_msgs/action/DriveOnHeading",
+    expected_fields={
+        "target": {"y": 0.0, "z": 0.0},
+    },
+)
+######### VALIDATORS #########################################################################################
 topics_ord_val = OrderedCallsValidator(subtasks=[get_topics_subtask])
 topics_and_color_image_ord_val = OrderedCallsValidator(
     subtasks=[
@@ -83,96 +209,94 @@ all_depth_images_notord_val = NotOrderedCallsValidator(
 move_to_point_ord_val = OrderedCallsValidator(subtasks=[move_to_point_subtask])
 
 pub_HRIMessage_text_ord_val = OrderedCallsValidator(
-    subtasks=[check_HRIMessage_text_subtask]
+    subtasks=[pub_HRIMessage_text_subtask]
 )
-######### tasks
-tasks: Sequence[Task] = [
+
+list_topic_get_interface_publish_ord_val = OrderedCallsValidator(
+    subtasks=[
+        get_topics_subtask,
+        get_tohuman_interface_subtask,
+        pub_HRIMessage_text_subtask,
+    ]
+)
+
+ret_true_ord_val = OrderedCallsValidator(subtasks=[return_true_subtask])
+ret_false_ord_val = OrderedCallsValidator(subtasks=[return_false_subtask])
+
+start_navigate_action_ord_val = OrderedCallsValidator(
+    subtasks=[start_nav_action_subtask]
+)
+start_spin_action_ord_val = OrderedCallsValidator(subtasks=[start_spin_action_subtask])
+move_ahead_ord_val = OrderedCallsValidator(subtasks=[start_move_front_action_subtask])
+
+######### TASKS ############################################################################################
+basic_tasks: List[Task] = [
     # 3 options to validate same task:
     # most strict, agent has to call both tool correctly to pass this validator
-    # GetROS2RGBCameraTask(validators=[topics_and_color_image_ord_val]),
-    # # verifing only if the GetCameraImage call was made properly
-    # GetROS2RGBCameraTask(validators=[color_image_ord_val]),
-    # # Soft verification. verifing in separate vaidators the list topic and get image.
-    # #  agent can get 0.5 score by only calling list topics
-    # GetROS2RGBCameraTask(validators=[topics_ord_val, color_image_ord_val]),
-    # # we can also add extra tool calls to allow model to correct itself
-    # GetROS2RGBCameraTask(
-    #     validators=[topics_ord_val, color_image_ord_val], extra_tool_calls=3
-    # ),
-    # GetROS2TopicsTask(validators=[topics_ord_val]),
-    # GetROS2DepthCameraTask(validators=[depth_image_ord_val]),
-    # GetAllROS2RGBCamerasTask(validators=[all_color_images_notord_val]),
-    # GetAllROS2DepthCamerasTask(validators=[all_depth_images_notord_val]),
-    # GetRobotDescriptionTask(validators=)
-    # GetROS2TopicsTask2(),
-    # GetROS2MessageTask(),
-    # MoveToPointTask(
-    #     move_to_tool_input=MoveToPointToolInput(x=1.0, y=2.0, z=3.0, task="grab"),
-    #     validators=[move_to_point_ord_val],
-    # ),
-    # MoveToPointTask(args={"x": 1.0, "y": 2.0, "z": 3.0, "task": "grab"}),
-    # MoveToPointTask(args={"x": 1.2, "y": 2.3, "z": 3.4, "task": "drop"}),
-    # GetObjectPositionsTask(
-    #     objects={
-    #         "carrot": [{"x": 1.0, "y": 2.0, "z": 3.0}],
-    #         "apple": [{"x": 4.0, "y": 5.0, "z": 6.0}],
-    #         "banana": [
-    #             {"x": 7.0, "y": 8.0, "z": 9.0},
-    #             {"x": 10.0, "y": 11.0, "z": 12.0},
-    #         ],
-    #     },
-    # ),
-    # GrabExistingObjectTask(
-    #     object_to_grab="banana",
-    #     objects={
-    #         "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
-    #         "apple": [
-    #             {"x": 4.0, "y": 5.0, "z": 6.0},
-    #             {"x": 10.0, "y": 11.0, "z": 12.0},
-    #         ],
-    #     },
-    # ),
-    # GrabNotExistingObjectTask(
-    #     object_to_grab="apple",
-    #     objects={
-    #         "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
-    #         "cube": [
-    #             {"x": 4.0, "y": 5.0, "z": 6.0},
-    #             {"x": 10.0, "y": 11.0, "z": 12.0},
-    #         ],
-    #     },
-    # ),
-    # MoveExistingObjectLeftTask(
-    #     object_to_grab="banana",
-    #     objects={
-    #         "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
-    #         "apple": [
-    #             {"x": 4.0, "y": 5.0, "z": 6.0},
-    #             {"x": 10.0, "y": 11.0, "z": 12.0},
-    #         ],
-    #     },
-    # ),
-    # MoveExistingObjectFrontTask(
-    #     object_to_grab="banana",
-    #     objects={
-    #         "banana": [{"x": 7.0, "y": 8.0, "z": 9.0}],
-    #         "apple": [
-    #             {"x": 4.0, "y": 5.0, "z": 6.0},
-    #             {"x": 10.0, "y": 11.0, "z": 12.0},
-    #         ],
-    #     },
-    # ),
-    # SwapObjectsTask(
-    #     objects={
-    #         "banana": [{"x": 1.0, "y": 2.0, "z": 3.0}],
-    #         "apple": [{"x": 4.0, "y": 5.0, "z": 6.0}],
-    #     },
-    #     objects_to_swap=["banana", "apple"],
-    # ),
+    GetROS2RGBCameraTask(validators=[topics_and_color_image_ord_val]),
+    # verifing only if the GetCameraImage call was made properly
+    GetROS2RGBCameraTask(validators=[color_image_ord_val]),
+    # Soft verification. verifing in separate vaidators the list topic and get image.
+    #  agent can get 0.5 score by only calling list topics
+    GetROS2RGBCameraTask(validators=[topics_ord_val, color_image_ord_val]),
+    # we can also add extra tool calls to allow model to correct itself
+    GetROS2RGBCameraTask(
+        validators=[topics_ord_val, color_image_ord_val], extra_tool_calls=3
+    ),
+    GetROS2TopicsTask(validators=[topics_ord_val]),
+    GetROS2DepthCameraTask(validators=[depth_image_ord_val]),
+    GetAllROS2RGBCamerasTask(validators=[all_color_images_notord_val]),
+    GetAllROS2DepthCamerasTask(validators=[all_depth_images_notord_val]),
+]
+manipulation_tasks: List[Task] = [
+    MoveToPointTask(
+        move_to_tool_input=MoveToPointToolInput(x=1.0, y=2.0, z=3.0, task="grab"),
+        validators=[move_to_point_ord_val],
+    ),
+    MoveToPointTask(
+        move_to_tool_input=MoveToPointToolInput(x=1.2, y=2.3, z=3.4, task="drop"),
+        validators=[move_to_point_ord_val],
+    ),
+]
+
+custom_interfaces_tasks: List[Task] = [
     PublishROS2HRIMessageTextTask(
         topic="/to_human",
         text="Hello!",
         validators=[pub_HRIMessage_text_ord_val],
         extra_tool_calls=2,
     ),
+    PublishROS2HRIMessageTextTask(
+        topic="/to_human",
+        text="Hello!",
+        validators=[list_topic_get_interface_publish_ord_val],
+    ),
 ]
+
+true_spatial_tasks: List[Task] = [
+    BoolImageTask(
+        task_input=input_item, validators=[ret_true_ord_val], extra_tool_calls=0
+    )
+    for input_item in true_response_inputs
+]
+false_spatial_tasks: List[Task] = [
+    BoolImageTask(task_input=input_item, validators=[ret_false_ord_val])
+    for input_item in false_response_inputs
+]
+
+navigation_tasks: List[Task] = [
+    NavigateToPointTask(validators=[start_navigate_action_ord_val], extra_tool_calls=5),
+    SpinAroundTask(validators=[start_spin_action_ord_val], extra_tool_calls=5),
+    MoveToBedTask(validators=[move_ahead_ord_val], extra_tool_calls=5),
+    MoveToFrontTask(validators=[move_ahead_ord_val], extra_tool_calls=5),
+]
+
+all_tasks = (
+    navigation_tasks
+    + true_spatial_tasks
+    + false_spatial_tasks
+    + custom_interfaces_tasks
+    + manipulation_tasks
+    + basic_tasks
+)
+random.shuffle(all_tasks)

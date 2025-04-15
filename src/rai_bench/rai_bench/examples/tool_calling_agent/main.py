@@ -22,8 +22,7 @@ from rai import (
 )
 from rai.agents.conversational_agent import create_conversational_agent
 
-# from rai_bench.examples.tool_calling_agent.tasks import tasks
-from rai_bench.examples.tool_calling_agent.spatial_reasoning_tasks import all_tasks
+from rai_bench.examples.tool_calling_agent.tasks import all_tasks
 from rai_bench.tool_calling_agent.benchmark import ToolCallingAgentBenchmark
 
 if __name__ == "__main__":
@@ -50,19 +49,18 @@ if __name__ == "__main__":
     agent_logger.setLevel(logging.INFO)
     agent_logger.addHandler(file_handler)
 
-    tasks_to_run = all_tasks
-    for task in tasks_to_run:
+    for task in all_tasks:
         task.set_logger(bench_logger)
 
     benchmark = ToolCallingAgentBenchmark(
-        tasks=tasks_to_run, logger=bench_logger, results_filename=results_filename
+        tasks=all_tasks, logger=bench_logger, results_filename=results_filename
     )
 
     model_type = "complex_model"
     model_config = get_llm_model_config_and_vendor(model_type=model_type)[0]
     model_name = getattr(model_config, model_type)
 
-    for task in tasks_to_run:
+    for task in all_tasks:
         agent = create_conversational_agent(
             llm=get_llm_model(model_type=model_type),
             tools=task.available_tools,
