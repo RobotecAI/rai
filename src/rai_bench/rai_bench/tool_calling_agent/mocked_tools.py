@@ -19,9 +19,9 @@ from unittest.mock import MagicMock
 
 import numpy as np
 import numpy.typing as npt
+from pydantic import BaseModel, ValidationError
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.communication.ros2.messages import ROS2Message
-from pydantic import BaseModel, ValidationError
 from rai.messages import MultimodalArtifact, preprocess_image
 from rai.tools.ros2 import (
     CallROS2ServiceTool,
@@ -38,12 +38,7 @@ from rai.tools.ros2 import (
     ReceiveROS2MessageTool,
     StartROS2ActionTool,
 )
-from rai_open_set_vision.tools.gdino_tools import (
-    DistanceMeasurement,
-    GetDistanceToObjectsTool,
-)
-
-from rai_bench.tool_calling_agent.messages.base import Position
+from rai_open_set_vision.tools import GetGrabbingPointTool
 
 
 class MockGetROS2TopicsNamesAndTypesTool(GetROS2TopicsNamesAndTypesTool):
@@ -87,7 +82,7 @@ class MockGetROS2ImageTool(GetROS2ImageTool):
         ValueError
             If the passed topic is not correct.
         """
-        if topic not in self.available_topics:
+        if topic not in self.avilable_topics:
             raise ValueError(
                 f"Topic {topic} is not available within {timeout_sec} seconds. Check if the topic exists."
             )
@@ -174,7 +169,7 @@ class MockGetObjectPositionsTool(GetObjectPositionsTool):
     depth_topic: str = MagicMock(spec=str)
     camera_info_topic: str = MagicMock(spec=str)
     get_grabbing_point_tool: GetGrabbingPointTool = MagicMock(spec=GetGrabbingPointTool)
-    mock_objects: dict[str, List[Position]]
+    mock_objects: dict[str, List[dict[str, float]]]
 
     def _run(self, object_name: str) -> str:
         """Method that returns a mock message with the object positions if the object_name is present in the mock_objects dictionary.
@@ -336,7 +331,7 @@ class MockStartROS2ActionTool(StartROS2ActionTool):
     connector: ROS2Connector = MagicMock(spec=ROS2Connector)
     available_actions: List[str] = []
     available_action_types: List[str] = []
-    available_action_models: Dict[str, Type[BaseModel]]
+    available_action_models: List[Type[BaseModel]]
 
     def _run(
         self, action_name: str, action_type: str, action_args: Dict[str, Any]
@@ -349,12 +344,13 @@ class MockStartROS2ActionTool(StartROS2ActionTool):
             raise TypeError(
                 f"Expected one of action types: {self.available_action_types}, got {action_type}"
             )
-        model = self.available_action_models[action_type]
-        try:
-            model.model_validate(action_args)
-        except ValidationError as e:
-            raise ValueError(f"Failed to populate fields: {e}")
-
+        for action_model in self.available_action_models:
+            if (
+                action_model.model_fields["action_name"].default == action_name
+                and action_model.model_fields["action_type"].default == action_type
+            ):
+                goal = action_model.__annotations__["goal"]
+                goal.model_validate(action_args)
         action_id = str(uuid.uuid4())
         response = action_id
         self.internal_action_id_mapping[response] = action_id
@@ -408,41 +404,3 @@ class MockGetROS2ActionIDsTool(GetROS2ActionIDsTool):
 
     def _run(self) -> str:
         return str(list(self.internal_action_id_mapping.keys()))
-
-
-class MockGetDistanceToObjectsTool(GetDistanceToObjectsTool):
-    connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
-    node: MagicMock = MagicMock()
-    mock_distance_measurements: List[DistanceMeasurement] = []
-    available_topics: List[str]
-
-    def _run(self, camera_topic: str, depth_topic: str, object_names: list[str]):
-        """Method that returns a mock message with the distance to the objects.
-
-        Parameters
-        ----------
-        camera_topic : str
-            Topic with the camera image
-        depth_topic : str
-            Topic with the depth image
-        object_names : list[str]
-            List of object names to get the distance to
-
-        Returns
-        -------
-        str
-            Message from the tool
-        """
-        if camera_topic not in self.available_topics:
-            return f"Topic {camera_topic} is not available within 1.0 seconds. Check if the topic exists."
-        if depth_topic not in self.available_topics:
-            return f"Topic {depth_topic} is not available within 1.0 seconds. Check if the topic exists."
-        measurement_string = ", ".join(
-            [
-                f"{measurement[0]}: {measurement[1]:.2f}m away"
-                for measurement in self.mock_distance_measurements
-                if measurement[0] in object_names
-            ]
-        )
-
-        return f"I have detected the following items in the picture {measurement_string or 'no objects'}"
