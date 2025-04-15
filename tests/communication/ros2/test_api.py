@@ -152,9 +152,9 @@ def test_ros2_single_message_receive_no_discovery_time_configurable(
 ) -> None:
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
-    message_receiver = MessageSubscriber(topic_name)
+    message_publisher = MessagePublisher(topic_name)
     node = Node(node_name)
-    executors, threads = multi_threaded_spinner([message_receiver, node])
+    executors, threads = multi_threaded_spinner([message_publisher, node])
 
     try:
         topic_api = ConfigurableROS2TopicAPI(node)
