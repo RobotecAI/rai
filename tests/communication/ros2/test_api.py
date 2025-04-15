@@ -146,6 +146,26 @@ def test_ros2_single_message_publish_configured_no_config(
     finally:
         shutdown_executors_and_threads(executors, threads)
 
+def test_ros2_single_message_receive_no_discovery_time_configurable(
+    ros_setup: None, request: pytest.FixtureRequest
+)-> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    message_receiver = MessageSubscriber(topic_name)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([message_receiver, node])
+
+    try:
+        topic_api = ConfigurableROS2TopicAPI(node)
+        msg = topic_api.receive(
+            topic_name,
+            msg_type="std_msgs/msg/String",
+            timeout_sec=3.0,
+            auto_topic_type=False,
+        )
+        assert msg.data == "Hello, ROS2!"
+    finally:
+        shutdown_executors_and_threads(executors, threads)
 
 def test_ros2_single_message_publish_wrong_msg_type(
     ros_setup: None, request: pytest.FixtureRequest
@@ -212,8 +232,9 @@ def test_ros2_single_message_publish_wrong_qos_setup(
         shutdown_executors_and_threads(executors, threads)
 
 
+@pytest.mark.parametrize("destroy_subscribers", [False, True])
 def test_ros2_single_message_receive_no_discovery_time(
-    ros_setup: None, request: pytest.FixtureRequest
+    ros_setup: None, request: pytest.FixtureRequest, destroy_subscribers: bool, configurable_api: bool
 ) -> None:
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
@@ -222,7 +243,7 @@ def test_ros2_single_message_receive_no_discovery_time(
     executors, threads = multi_threaded_spinner([message_publisher, node])
 
     try:
-        topic_api = ROS2TopicAPI(node)
+        topic_api = ROS2TopicAPI(node, destroy_subscribers=destroy_subscribers)
         msg = topic_api.receive(
             topic_name,
             msg_type="std_msgs/msg/String",
