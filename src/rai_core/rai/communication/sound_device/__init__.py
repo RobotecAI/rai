@@ -12,6 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import importlib.util
+
+if importlib.util.find_spec("sounddevice") is None:
+    raise ImportError(
+        "This feature is based on sounddevice. Make sure sounddevice is installed."
+    )
+
 from .api import SoundDeviceAPI, SoundDeviceConfig, SoundDeviceError
 from .connector import SoundDeviceConnector, SoundDeviceMessage
 

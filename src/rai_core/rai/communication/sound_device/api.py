@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
 import numpy as np
+import sounddevice as sd
 from numpy._typing import NDArray
 from pydub import AudioSegment
 from scipy.signal import resample
@@ -85,10 +86,6 @@ class SoundDeviceAPI:
         self.device_name = ""
 
         self.config = config
-        try:
-            import sounddevice as sd
-        except ImportError:
-            raise SoundDeviceError("SoundDeviceAPI requires sound_device module!")
         sd.default.latency = ("low", "low")  # type: ignore
         if config.device_name:
             self.device_name = config.device_name
@@ -143,10 +140,7 @@ class SoundDeviceAPI:
         """
         if not self.write_flag:
             raise SoundDeviceError(f"{self.device_name} does not support writing!")
-        try:
-            import sounddevice as sd
-        except ImportError:
-            raise SoundDeviceError("SoundDeviceAPI requires sound_device module!")
+
         audio = np.array(data.get_array_of_samples())
         sd.play(
             audio,
@@ -187,10 +181,7 @@ class SoundDeviceAPI:
 
         if not self.read_flag:
             raise SoundDeviceError(f"{self.device_name} does not support reading!")
-        try:
-            import sounddevice as sd
-        except ImportError:
-            raise SoundDeviceError("SoundDeviceAPI requires sound_device module!")
+
         frames = int(time * self.sample_rate)
         recording = sd.rec(
             frames=frames,
@@ -217,10 +208,6 @@ class SoundDeviceAPI:
         - This is a convenience function to stop the sound device from playing or recording.
         - It will stop any sound that is currently playing and any recording currently happening.
         """
-        try:
-            import sounddevice as sd
-        except ImportError:
-            raise SoundDeviceError("SoundDeviceAPI requires sound_device module!")
         sd.stop()
 
     def wait(self):
@@ -232,10 +219,6 @@ class SoundDeviceAPI:
         - This is a convenience function to wait for the sound device to finish playing or recording.
         - It will block until the sound is played or recorded.
         """
-        try:
-            import sounddevice as sd
-        except ImportError:
-            raise SoundDeviceError("SoundDeviceAPI requires sound_device module!")
         sd.wait()
 
     def open_write_stream(
@@ -250,10 +233,6 @@ class SoundDeviceAPI:
                 f"{self.device_name} does not support streaming writing!"
             )
 
-        try:
-            import sounddevice as sd
-        except ImportError:
-            raise SoundDeviceError("SoundDeviceAPI requires sound_device module!")
         from sounddevice import CallbackFlags
 
         def callback(indata: NDArray, frames: int, time: Any, status: CallbackFlags):
@@ -323,10 +302,6 @@ class SoundDeviceAPI:
             }
             on_feedback(indata, flag_dict)
 
-        try:
-            import sounddevice as sd
-        except ImportError:
-            raise SoundDeviceError("SoundDeviceAPI requires sound_device module!")
         try:
             if self.config.consumer_sampling_rate is None:
                 window_size_samples = self.config.block_size * self.sample_rate
