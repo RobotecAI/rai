@@ -278,6 +278,89 @@ class SubTask(ABC):
 
         return True
 
+    def _check_action_tool_call_field(
+        self,
+        tool_call: ToolCall,
+        expected_name: str,
+        expected_action: str,
+        expected_action_type: str,
+        field_path: str,
+        expected_value: Any,
+    ) -> bool:
+        """
+        Verifies a tool call for an action call.
+
+        Parameters
+        ----------
+        tool_call : ToolCall
+            The tool call dictionary containing keys such as "name" and "args".
+        expected_name : str
+            The expected tool call name (e.g., "call_ros2_action").
+        expected_action_name : str
+            The expected action name in the tool call's arguments.
+        expected_action_type : str
+            The expected action type.
+        field_path : str
+            Dot-separated path to the field inside the goal.
+        expected_value : Any
+            The expected value at the given field path.
+
+        Returns
+        -------
+        bool
+            True if all conditions are met; False otherwise.
+        """
+        if tool_call.get("name") != expected_name:
+            raise SubTaskValidationError(
+                f"Expected tool call name '{expected_name}', but got '{tool_call.get('name')}'."
+            )
+
+        args = tool_call.get("args", {})
+
+        # Check action name
+        if args.get("action_name") != expected_action:
+            raise SubTaskValidationError(
+                f"Expected action name '{expected_action}', but got '{args.get('action_name')}'."
+            )
+
+        # Check action type
+        if args.get("action_type") != expected_action_type:
+            raise SubTaskValidationError(
+                f"Expected action type '{expected_action_type}', but got '{args.get('action_type')}'."
+            )
+
+        action_args = args.get("action_args")
+        if action_args is None:
+            raise SubTaskValidationError(
+                "Tool call does not contain an 'action_args' argument."
+            )
+
+        if field_path == "":
+            if action_args == {}:
+                return True
+            else:
+                raise SubTaskValidationError(
+                    f"Expected empty action_args, but got: {action_args}"
+                )
+
+        # Traverse nested keys
+        keys = field_path.split(".")
+        value: Any = action_args
+        for key in keys:
+            if isinstance(value, dict) and key in value:
+                value = value[key]
+            else:
+                raise SubTaskValidationError(
+                    f"Field path '{field_path}' not found in the action_args."
+                )
+
+        if value != expected_value:
+            raise SubTaskValidationError(
+                f"Expected value for field '{field_path}' is '{expected_value}', but got '{value}'."
+            )
+
+        return True
+
 
 class Validator(ABC):
     def __init__(
