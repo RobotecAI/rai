@@ -24,9 +24,8 @@ from langchain_community.vectorstores import FAISS
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from rai.apps.talk_to_docs import ingest_documentation
-from rai.messages import preprocess_image
-from rai.messages.multimodal import HumanMultimodalMessage
-from rai.utils.model_initialization import get_embeddings_model, get_llm_model
+from rai.initialization import get_embeddings_model, get_llm_model
+from rai.messages import HumanMultimodalMessage, preprocess_image
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

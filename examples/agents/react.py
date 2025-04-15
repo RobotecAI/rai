@@ -12,10 +12,9 @@
 # See the License for the specific language goveself.rning permissions and
 # limitations under the License.
 
-from rai.agents import ReActAgent
-from rai.communication.ros2 import ROS2ARIConnector, ROS2HRIConnector
+from rai.agents import AgentRunner, ReActAgent
+from rai.communication.ros2 import ROS2ARIConnector, ROS2Context, ROS2HRIConnector
 from rai.tools.ros2 import ROS2Toolkit
-from rai.utils import ROS2Context, wait_for_shutdown
 
 
 @ROS2Context()
@@ -26,8 +25,8 @@ def main():
         connectors={"hri": connector},
         tools=ROS2Toolkit(connector=ari_connector).get_tools(),
     )  # type: ignore
-    agent.run()
-    wait_for_shutdown([agent])
+    runner = AgentRunner([agent])
+    runner.run_and_wait_for_shutdown()
 
 
 if __name__ == "__main__":

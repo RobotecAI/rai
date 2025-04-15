@@ -13,11 +13,12 @@
 # limitations under the License.
 
 
+from .artifacts import MultimodalArtifact, get_stored_artifacts, store_artifacts
 from .conversion import preprocess_image
 from .multimodal import (
     AIMultimodalMessage,
     HumanMultimodalMessage,
-    MultimodalArtifact,
+    MultimodalMessage,
     SystemMultimodalMessage,
     ToolMultimodalMessage,
 )
@@ -26,7 +27,10 @@ __all__ = [
     "AIMultimodalMessage",
     "HumanMultimodalMessage",
     "MultimodalArtifact",
+    "MultimodalMessage",
     "SystemMultimodalMessage",
     "ToolMultimodalMessage",
+    "get_stored_artifacts",
     "preprocess_image",
+    "store_artifacts",
 ]

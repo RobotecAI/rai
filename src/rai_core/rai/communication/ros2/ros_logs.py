@@ -32,7 +32,7 @@ except ImportError:
     logging.warning(
         "rai_interfaces is not installed, RaiStateLogsParser will not work."
     )
-from rai.utils.ros_async import get_future_result
+from rai.communication.ros2.ros_async import get_future_result
 
 
 class BaseLogsParser:

@@ -24,7 +24,7 @@ from rai.agents.base import BaseAgent
 from rai.agents.langchain import HRICallbackHandler, create_react_runnable
 from rai.agents.langchain.runnables import ReActAgentState
 from rai.communication.hri_connector import HRIConnector, HRIMessage
-from rai.utils.model_initialization import get_tracing_callbacks
+from rai.initialization import get_tracing_callbacks
 
 
 class ReActAgent(BaseAgent):

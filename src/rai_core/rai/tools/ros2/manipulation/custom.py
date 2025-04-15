@@ -20,8 +20,8 @@ from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
 from pydantic import BaseModel, Field
 from tf2_geometry_msgs import do_transform_pose
 
+from rai.communication.ros2.ros_async import get_future_result
 from rai.tools.ros2.base import BaseROS2Tool
-from rai.utils.ros_async import get_future_result
 
 try:
     from rai_interfaces.srv import ManipulatorMoveTo

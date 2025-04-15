@@ -17,12 +17,14 @@ from .api import (
     TopicConfig,  # TODO: TopicConfig should not be a part of the public API
 )
 from .connectors import ROS2ARIConnector, ROS2HRIConnector
+from .context import ROS2Context
 from .messages import ROS2ARIMessage, ROS2HRIMessage
 
 __all__ = [
     "IROS2Message",
     "ROS2ARIConnector",
     "ROS2ARIMessage",
+    "ROS2Context",
     "ROS2HRIConnector",
     "ROS2HRIMessage",
     "TopicConfig",

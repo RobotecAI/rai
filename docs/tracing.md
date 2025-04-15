@@ -40,7 +40,7 @@ To enable tracing in your RAI application, you need to import the get_tracing_ca
 1. First, import the get_tracing_callbacks() function:
 
 ```python
-from rai.utils.model_initialization import get_tracing_callbacks
+from rai import get_tracing_callbacks
 ```
 
 2. Then, add it to the configuration when invoking your agent or model:

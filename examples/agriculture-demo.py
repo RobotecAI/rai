@@ -17,11 +17,11 @@ import argparse
 import rclpy
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import Runnable
+from rai import get_llm_model
 from rai.agents.conversational_agent import State, create_conversational_agent
 from rai.communication.ros2.connectors import ROS2ARIConnector
 from rai.tools.ros2 import ROS2ServicesToolkit, ROS2TopicsToolkit
 from rai.tools.time import WaitForSecondsTool
-from rai.utils.model_initialization import get_llm_model
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node

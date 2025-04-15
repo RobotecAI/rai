@@ -25,7 +25,7 @@ from rai.communication.ros2.api import (
     convert_ros_img_to_ndarray,
 )
 from rai.communication.ros2.connectors import ROS2ARIConnector
-from rai.utils.ros_async import get_future_result
+from rai.communication.ros2.ros_async import get_future_result
 from rclpy import Future
 from rclpy.exceptions import (
     ParameterNotDeclaredException,

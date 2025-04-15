@@ -12,6 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from .cli import (
+    ROS2CLIToolkit,
+    ros2_action,
+    ros2_interface,
+    ros2_node,
+    ros2_param,
+    ros2_service,
+    ros2_topic,
+)
 from .generic import (
     CallROS2ServiceTool,
     CancelROS2ActionTool,
@@ -67,9 +76,16 @@ __all__ = [
     "NavigateToPoseTool",
     "PublishROS2MessageTool",
     "ROS2ActionToolkit",
+    "ROS2CLIToolkit",
     "ROS2ServicesToolkit",
     "ROS2Toolkit",
     "ROS2TopicsToolkit",
     "ReceiveROS2MessageTool",
     "StartROS2ActionTool",
+    "ros2_action",
+    "ros2_interface",
+    "ros2_node",
+    "ros2_param",
+    "ros2_service",
+    "ros2_topic",
 ]

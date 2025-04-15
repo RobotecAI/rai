@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Robotec.AI
+# Copyright (C) 2025 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,12 @@
 
 import pickle
 from pathlib import Path
-from typing import Any, List
+from typing import Any, List, TypedDict
+
+
+class MultimodalArtifact(TypedDict):
+    images: List[str]  # base64 encoded images
+    audios: List[str]
 
 
 def store_artifacts(

@@ -22,7 +22,7 @@ The ROS 2 Debugging Assistant is an interactive tool that helps developers inspe
 
 ```sh
 source setup_shell.sh
-streamlit run src/rai_core/rai/tools/debugging_assistant.py
+streamlit run examples/debugging_assistant.py
 ```
 
 ## Usage Examples

@@ -28,7 +28,7 @@ from tf_transformations import euler_from_quaternion, quaternion_from_euler
 
 from rai.communication.ros2 import ROS2ARIMessage
 from rai.communication.ros2.connectors import ROS2ARIConnector
-from rai.messages.multimodal import MultimodalArtifact
+from rai.messages import MultimodalArtifact
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
 
 action_client: Optional[ActionClient] = None

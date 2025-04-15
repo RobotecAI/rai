@@ -25,7 +25,7 @@ from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, Field
-from rai.messages.multimodal import HumanMultimodalMessage
+from rai.messages import HumanMultimodalMessage
 
 from rai_bench.tool_calling_agent_bench.agent_tasks_interfaces import (
     ToolCallingAgentTask,
