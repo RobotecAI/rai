@@ -15,14 +15,23 @@
 import random
 from typing import List, Sequence
 
+from rai_bench.tool_calling_agent.tasks.navigation import (
+    MoveToBedTask,
+    MoveToFrontTask,
+    NavigateToPointTask,
+    NavigationTask,
+    SpinAroundTask,
+)
 from rai_bench.tool_calling_agent.tasks.spatial import (
     BoolImageTask,
     BoolImageTaskInput,
     SpatialReasoningAgentTask,
 )
-
-from ...tool_calling_agent.tasks.subtasks import CheckArgsToolCallSubTask
-from ...tool_calling_agent.validators import OrderedCallsValidator
+from rai_bench.tool_calling_agent.tasks.subtasks import (
+    CheckActionFieldsToolCallSubTask,
+    CheckArgsToolCallSubTask,
+)
+from rai_bench.tool_calling_agent.validators import OrderedCallsValidator
 
 true_response_inputs: List[BoolImageTaskInput] = [
     BoolImageTaskInput(
@@ -91,10 +100,43 @@ return_true_subtask = CheckArgsToolCallSubTask(
 return_false_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="return_bool_response", expected_args={"response": False}
 )
+
+start_nav_action_subtask = CheckActionFieldsToolCallSubTask(
+    expected_tool_name="start_ros2_action",
+    expected_action="/navigate_to_pose",
+    expected_action_type="nav2_msgs/action/NavigateToPose",
+    expected_fields={
+        "pose": {
+            "header": {"frame_id": "map"},
+            "pose": {
+                "position": {"x": 2.0, "y": 2.0, "z": 0.0},
+            },
+        },
+    },
+)
+start_spin_action_subtask = CheckActionFieldsToolCallSubTask(
+    expected_tool_name="start_ros2_action",
+    expected_action="/spin",
+    expected_action_type="nav2_msgs/action/Spin",
+    expected_fields={"target_yaw": 3},
+)
+start_move_front_action_subtask = CheckActionFieldsToolCallSubTask(
+    expected_tool_name="start_ros2_action",
+    expected_action="/drive_on_heading",
+    expected_action_type="nav2_msgs/action/DriveOnHeading",
+    expected_fields={
+        "target": {"y": 0.0, "z": 0.0},
+    },
+)
 ########## validators
 ret_true_ord_val = OrderedCallsValidator(subtasks=[return_true_subtask])
 ret_false_ord_val = OrderedCallsValidator(subtasks=[return_false_subtask])
 
+start_navigate_action_ord_val = OrderedCallsValidator(
+    subtasks=[start_nav_action_subtask]
+)
+start_spin_action_ord_val = OrderedCallsValidator(subtasks=[start_spin_action_subtask])
+move_ahead_ord_val = OrderedCallsValidator(subtasks=[start_move_front_action_subtask])
 ########## tasks
 true_tasks: Sequence[SpatialReasoningAgentTask] = [
     BoolImageTask(
@@ -103,11 +145,17 @@ true_tasks: Sequence[SpatialReasoningAgentTask] = [
     for input_item in true_response_inputs
 ]
 false_tasks: Sequence[SpatialReasoningAgentTask] = [
-    BoolImageTask(
-        task_input=input_item, validators=[ret_false_ord_val], extra_tool_calls=0
-    )
+    BoolImageTask(task_input=input_item, validators=[ret_false_ord_val])
     for input_item in false_response_inputs
 ]
 
-all_tasks = true_tasks + false_tasks
+nav_tasks: Sequence[NavigationTask] = [
+    NavigateToPointTask(validators=[start_navigate_action_ord_val], extra_tool_calls=5),
+    SpinAroundTask(validators=[start_spin_action_ord_val], extra_tool_calls=5),
+    MoveToBedTask(validators=[move_ahead_ord_val], extra_tool_calls=5),
+    MoveToFrontTask(validators=[move_ahead_ord_val], extra_tool_calls=5),
+]
+
+
+all_tasks = nav_tasks
 random.shuffle(all_tasks)
