@@ -45,7 +45,7 @@ class CheckArgsToolCallSubTask(SubTask):
         return {
             "expected_tool_name": self.expected_tool_name,
             "expected_args": self.expected_args,
-            "expected_optional_args": self.expected_args,
+            "expected_optional_args": self.expected_optional_args,
         }
 
 

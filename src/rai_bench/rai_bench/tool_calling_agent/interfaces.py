@@ -67,6 +67,7 @@ class SubTask(ABC):
         tool_call: ToolCall,
         expected_name: str,
         expected_args: dict[str, Any],
+        # NOTE (jm) a bit weird logic with the expected_optional_args, take a look if can be done differently
         expected_optional_args: dict[str, Any] = {},
     ) -> bool:
         """Helper method to check if a tool call has the expected name and arguments.
@@ -80,7 +81,8 @@ class SubTask(ABC):
         expected_args : dict[str, Any]
             The expected arguments dictionary that must be present
         expected_optional_args : dict[str, Any], optional
-            Optional arguments dictionary that can be present but don't need to be (e.g. timeout). If value of an optional argument does not matter, set it to {}
+            Optional arguments dictionary that can be present but don't need to be.
+            Values define the expected type (use type or tuple of types, or None to accept any type)
 
         Returns
         -------
@@ -112,11 +114,12 @@ class SubTask(ABC):
                     raise SubTaskValidationError(
                         f"Unexpected argument '{arg_name}' found in tool call {expected_name}."
                     )
-                # If optional argument has expected value, check if the value is correct
-                elif expected_optional_args[arg_name]:
-                    if expected_optional_args[arg_name] != arg_value:
+                # If optional argument has an expected type, check if the value matches that type
+                elif expected_optional_args[arg_name] is not None:
+                    expected_type = expected_optional_args[arg_name]
+                    if not isinstance(arg_value, expected_type):
                         raise SubTaskValidationError(
-                            f"Optional argument '{arg_name}' has incorrect value '{arg_value}' in tool call {expected_name}."
+                            f"Optional argument '{arg_name}' has incorrect type. Expected {expected_type.__name__}, but got {type(arg_value).__name__} in tool call {expected_name}."
                         )
         return True
 
@@ -373,14 +376,17 @@ class Validator(ABC):
         else:
             self.logger = logging.getLogger(__name__)
 
-    def log_error(self, msg: str):
+    def validation_error(self, msg: str):
+        """
+        Call when error results in fail of the validator.
+        """
         self.logger.error(msg)
         self.errors_queue.put(msg)
 
     def dump(self) -> List[Dict[str, Any]]:
         return [subt.dump() for subt in self.subtasks]
 
-    def get_all_errors(self):
+    def get_all_validation_errors(self):
         """Get all errors from queue"""
         errors: List[str] = []
         while not self.errors_queue.empty():
@@ -501,4 +507,4 @@ class Task(ABC):
             else:
                 self.result.passed.append(False)
                 # get all errors from queue
-                self.result.errors.append(validator.get_all_errors())
+                self.result.errors.append(validator.get_all_validation_errors())
