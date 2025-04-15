@@ -513,7 +513,8 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
             ValueError: For unconfigured topics, inherits parent class exceptions
         """
         if topic not in self.topic_msg_queue:
-            super().receive(
+            print(f"Running receive for {topic}")
+            return super().receive(
                 topic,
                 auto_topic_type=auto_topic_type,
                 msg_type=msg_type,
@@ -523,6 +524,7 @@ class ConfigurableROS2TopicAPI(ROS2TopicAPI):
                 retry_count=retry_count,
             )
         else:
+            print(f"Running receive for {topic} queue")
             ts = time.time()
             while time.time() - ts < timeout_sec:
                 with self.topic_queue_locks[topic]:
