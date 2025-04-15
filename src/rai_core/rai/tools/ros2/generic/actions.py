@@ -12,13 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib.util
-
-if importlib.util.find_spec("rclpy") is None:
-    raise ImportError(
-        "This is a ROS2 feature. Make sure ROS2 is installed and sourced."
-    )
-
 import uuid
 from collections import defaultdict
 from functools import partial

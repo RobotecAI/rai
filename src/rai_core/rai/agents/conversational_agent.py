@@ -15,7 +15,7 @@
 
 import logging
 from functools import partial
-from typing import List, Optional, TypedDict, Union
+from typing import List, Optional, TypedDict
 
 from langchain.chat_models.base import BaseChatModel
 from langchain_core.messages import BaseMessage, SystemMessage
@@ -23,18 +23,15 @@ from langchain_core.tools import BaseTool
 from langgraph.graph import START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt.tool_node import tools_condition
-from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai.agents.tool_runner import ToolRunner
-
-loggers_type = Union[RcutilsLogger, logging.Logger]
 
 
 class State(TypedDict):
     messages: List[BaseMessage]
 
 
-def agent(llm: BaseChatModel, logger: loggers_type, system_prompt: str, state: State):
+def agent(llm: BaseChatModel, logger: logging.Logger, system_prompt: str, state: State):
     logger.info("Running thinker")
 
     # If there are no messages, do nothing
@@ -53,7 +50,7 @@ def create_conversational_agent(
     llm: BaseChatModel,
     tools: List[BaseTool],
     system_prompt: str,
-    logger: Optional[RcutilsLogger | logging.Logger] = None,
+    logger: Optional[logging.Logger] = None,
     debug=False,
 ) -> CompiledStateGraph:
     _logger = None

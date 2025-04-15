@@ -27,12 +27,9 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.graph import CompiledGraph
 from langgraph.prebuilt.tool_node import msg_content_output
 from pydantic import BaseModel, Field, ValidationError
-from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai.agents.tool_runner import ToolRunner
 from rai.messages import HumanMultimodalMessage
-
-loggers_type = Union[RcutilsLogger, logging.Logger]
 
 
 class State(TypedDict):
@@ -68,7 +65,7 @@ def tools_condition(
     return "reporter"
 
 
-def thinker(llm: BaseChatModel, logger: loggers_type, state: State):
+def thinker(llm: BaseChatModel, logger: logging.Logger, state: State):
     logger.info("Running thinker")
     prompt = (
         "Based on the data provided, reason about the situation. "
@@ -81,7 +78,7 @@ def thinker(llm: BaseChatModel, logger: loggers_type, state: State):
 
 
 def decider(
-    llm: Runnable[LanguageModelInput, BaseMessage], logger: loggers_type, state: State
+    llm: Runnable[LanguageModelInput, BaseMessage], logger: logging.Logger, state: State
 ):
     logger.info("Running decider")
     prompt = (
@@ -98,7 +95,7 @@ def decider(
     return state
 
 
-def reporter(llm: BaseChatModel, logger: loggers_type, state: State):
+def reporter(llm: BaseChatModel, logger: logging.Logger, state: State):
     logger.info("Summarizing the conversation")
     prompt = (
         "You are the reporter. Your task is to summarize what happened previously. "
@@ -126,7 +123,7 @@ def reporter(llm: BaseChatModel, logger: loggers_type, state: State):
 
 
 def retriever_wrapper(
-    state_retriever: Callable[[], Dict[str, Any]], logger: loggers_type, state: State
+    state_retriever: Callable[[], Dict[str, Any]], logger: logging.Logger, state: State
 ):
     """This wrapper is used to retrieve multimodal information from the output of state_retriever."""
     ts = time.perf_counter()
@@ -150,10 +147,10 @@ def create_state_based_agent(
     llm: BaseChatModel,
     tools: List[BaseTool],
     state_retriever: Callable[[], Dict[str, Any]],
-    logger: Optional[RcutilsLogger | logging.Logger] = None,
+    logger: Optional[logging.Logger] = None,
 ) -> CompiledGraph:
     _logger = None
-    if isinstance(logger, RcutilsLogger):
+    if isinstance(logger, logging.Logger):
         _logger = logger
     else:
         _logger = logging.getLogger(__name__)
