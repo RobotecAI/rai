@@ -471,6 +471,16 @@ class Task(ABC):
         """
         pass
 
+    def fail_rest_of_validators(self):
+        """
+        All remaining validators are marked as failed.
+        Can be used when validation cannot be continued for whatever reason
+        """
+        if len(self.result.passed) < len(self.validators):
+            self.result.passed.extend(
+                [False] * (len(self.validators) - len(self.result.passed))
+            )
+
     def validate(self, tool_calls: List[ToolCall]):
         self.logger.debug(
             f"required_calls: {self.required_calls}, extra_calls {self.extra_tool_calls}"

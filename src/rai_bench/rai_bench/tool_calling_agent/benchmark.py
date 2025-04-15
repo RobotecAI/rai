@@ -202,6 +202,8 @@ class ToolCallingAgentBenchmark:
             task.validate(tool_calls=toll_calls)
         except GraphRecursionError as e:
             self.logger.error(msg=f"Graph Recursion Error: {e}")
+            # count not done validators as failed
+            task.fail_rest_of_validators()
         te = time.perf_counter()
         total_time = te - ts
         result = task.result
