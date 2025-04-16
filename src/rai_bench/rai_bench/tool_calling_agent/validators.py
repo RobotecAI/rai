@@ -56,8 +56,7 @@ class OrderedCallsValidator(Validator):
                 except SubTaskValidationError as e:
                     # TODO (jm) should we log every error to results, even if its not causing validator failure?
                     # for now we log subtask errors to log file, but not to results.csv
-                    self.logger.error(str(e))
-                    # self.log_error(msg=str(e))
+                    self.validation_error(msg=str(e))
                 except StopIteration:
                     return True, tool_calls[i + 1 :]
 
