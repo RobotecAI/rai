@@ -15,7 +15,7 @@
 import random
 from typing import List
 
-from rai.tools.ros.manipulation import MoveToPointToolInput
+from rai.tools.ros2 import MoveToPointToolInput
 
 from rai_bench.tool_calling_agent.interfaces import (
     Task,

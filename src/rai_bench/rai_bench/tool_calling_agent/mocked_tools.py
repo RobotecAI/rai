@@ -26,6 +26,8 @@ from rai.messages import MultimodalArtifact, preprocess_image
 from rai.tools.ros2 import (
     CallROS2ServiceTool,
     CancelROS2ActionTool,
+    GetGrabbingPointTool,
+    GetObjectPositionsTool,
     GetROS2ActionFeedbackTool,
     GetROS2ActionIDsTool,
     GetROS2ActionResultTool,
@@ -34,6 +36,7 @@ from rai.tools.ros2 import (
     GetROS2MessageInterfaceTool,
     GetROS2ServicesNamesAndTypesTool,
     GetROS2TopicsNamesAndTypesTool,
+    MoveToPointTool,
     PublishROS2MessageTool,
     ReceiveROS2MessageTool,
     StartROS2ActionTool,

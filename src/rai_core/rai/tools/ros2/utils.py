@@ -14,13 +14,10 @@
 
 
 import typing
-from typing import Any, OrderedDict
 
 import rosidl_adapter
 import rosidl_adapter.parser
 import rosidl_runtime_py.convert
-import rosidl_runtime_py.set_message
-import rosidl_runtime_py.utilities
 from rosidl_adapter.parser import (
     ACTION_REQUEST_RESPONSE_SEPARATOR,
     SERVICE_REQUEST_RESPONSE_SEPARATOR,
@@ -28,24 +25,6 @@ from rosidl_adapter.parser import (
     MessageSpecification,
     parse_message_string,
 )
-
-
-def ros2_message_to_dict(message: Any) -> OrderedDict[str, Any]:
-    """Convert any ROS2 message into a dictionary.
-
-    Args:
-        message: A ROS2 message instance
-
-    Returns:
-        A dictionary representation of the message
-
-    Raises:
-        TypeError: If the input is not a valid ROS2 message
-    """
-    msg_dict: OrderedDict[str, Any] = rosidl_runtime_py.convert.message_to_ordereddict(
-        message
-    )  # type: ignore
-    return msg_dict
 
 
 class InterfaceTextLine:
