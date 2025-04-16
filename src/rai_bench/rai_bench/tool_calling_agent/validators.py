@@ -27,6 +27,11 @@ loggers_type = logging.Logger
 
 
 class OrderedCallsValidator(Validator):
+    """
+    Validator that requires a strict order of subtaks
+    The next subtask will be validate only when the previous one was completed
+    """
+
     def __init__(
         self, subtasks: List[SubTask], logger: loggers_type | None = None
     ) -> None:
@@ -63,6 +68,11 @@ class OrderedCallsValidator(Validator):
 
 
 class NotOrderedCallsValidator(Validator):
+    """
+    Validator that don't enforce order of subtaks
+    Every subtask will be validated against every tool call
+    """
+
     def __init__(
         self, subtasks: List[SubTask], logger: loggers_type | None = None
     ) -> None:

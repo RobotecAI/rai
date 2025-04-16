@@ -1098,26 +1098,3 @@ class CallWhatISeeTask(CustomInterfacesServiceTask):
             "4. Construct the request message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
             f"5. Call the service '{self.service}' using the correct message type and interface.\n"
         )
-
-
-# class CallROS2CustomActionTask(CustomInterfacesActionTask):
-#     complexity = "easy"
-
-#     expected_task = "Where are you?"
-#     expected_description = ""
-#     expected_priority = "10"
-
-#     def get_system_prompt(self) -> str:
-#         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
-
-#     @property
-#     def expected_action(self) -> str:
-#         return "/perform_task"
-
-#     @property
-#     def expected_message(self) -> Dict[str, Any]:
-#         expected = DEFAULT_MESSAGES[self.expected_action_type].copy()
-#         expected["goal"]["task"] = self.expected_task
-#         expected["goal"]["description"] = self.expected_description
-#         expected["goal"]["priority "] = self.expected_priority
-#         return expected

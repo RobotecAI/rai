@@ -52,6 +52,19 @@ class SubTask(ABC):
     def __init__(
         self,
     ) -> None:
+        """
+        Abstract base class representing the smallest validation unit for a single tool call.
+
+        Each SubTask is responsible for validating a specific aspect of a tool call,
+        such as its name, arguments, or expected behavior.
+
+        Methods
+        -------
+        validate(tool_call)
+            Abstract method that subclasses must implement to validate a specific tool call.
+        dump()
+            Abstract method that subclasses must implement to serialize the subtask configuration.
+        """
         pass
 
     @abstractmethod
@@ -155,7 +168,6 @@ class SubTask(ABC):
         bool
             True if all conditions are met; False otherwise.
         """
-        # Check tool call name.
         if tool_call.get("name") != expected_name:
             raise SubTaskValidationError(
                 f"Expected tool call name '{expected_name}', but got '{tool_call.get('name')}'."
@@ -163,19 +175,16 @@ class SubTask(ABC):
 
         args = tool_call.get("args", {})
 
-        # Check topic.
         if args.get("topic") != expected_topic:
             raise SubTaskValidationError(
                 f"Expected topic '{expected_topic}', but got '{args.get('topic')}'."
             )
 
-        # Check message type.
         if args.get("message_type") != expected_message_type:
             raise SubTaskValidationError(
                 f"Expected message type '{expected_message_type}', but got '{args.get('message_type')}'."
             )
 
-        # Traverse the message field.
         message = args.get("message")
         if message is None:
             raise SubTaskValidationError(
@@ -238,13 +247,11 @@ class SubTask(ABC):
 
         args = tool_call.get("args", {})
 
-        # Check service.
         if args.get("service_name") != expected_service:
             raise SubTaskValidationError(
                 f"Expected service '{expected_service}', but got '{args.get('service')}'."
             )
 
-        # Check message type.
         if args.get("service_type") != expected_service_type:
             raise SubTaskValidationError(
                 f"Expected message type '{expected_service_type}', but got '{args.get('service_type')}'."
@@ -320,13 +327,11 @@ class SubTask(ABC):
 
         args = tool_call.get("args", {})
 
-        # Check action name
         if args.get("action_name") != expected_action:
             raise SubTaskValidationError(
                 f"Expected action name '{expected_action}', but got '{args.get('action_name')}'."
             )
 
-        # Check action type
         if args.get("action_type") != expected_action_type:
             raise SubTaskValidationError(
                 f"Expected action type '{expected_action_type}', but got '{args.get('action_type')}'."
@@ -346,7 +351,6 @@ class SubTask(ABC):
                     f"Expected empty action_args, but got: {action_args}"
                 )
 
-        # Traverse nested keys
         keys = field_path.split(".")
         value: Any = action_args
         for key in keys:
@@ -369,6 +373,33 @@ class Validator(ABC):
     def __init__(
         self, subtasks: List[SubTask], logger: loggers_type | None = None
     ) -> None:
+        """
+        Abstract base class that groups SubTasks and validates them together.
+
+        A Validator consists of multiple SubTasks and defines how they should be validated
+        collectively. Different Validator implementations can enforce different validation
+        strategies (e.g., sequential, parallel, conditional).
+
+        Attributes
+        ----------
+        subtasks : List[SubTask]
+            The list of subtasks that this validator will check.
+        errors_queue : Queue[str]
+            Queue for collecting validation error messages.
+        logger : logging.Logger
+            Logger for recording validation results and errors.
+
+        Methods
+        -------
+        validation_error(msg)
+            Records an error message and logs it.
+        dump()
+            Serializes all subtasks' configurations.
+        get_all_validation_errors()
+            Retrieves all error messages from the queue.
+        validate(tool_calls)
+            Abstract method that subclasses must implement to validate tool calls.
+        """
         self.subtasks = subtasks
         self.errors_queue: queue.Queue[str] = Queue()
         if logger:
@@ -409,13 +440,22 @@ class Task(ABC):
         logger: loggers_type | None = None,
     ) -> None:
         """
+        Abstract base class representing a complete task to be validated.
 
-        Parameters
+        A Task consists of multiple Validators, where each Validator can be treated as a single
+        step that is scored atomically. Each Task has a consistent prompt and available tools,
+        with validation methods that can be parameterized.
+
+        Attributes
         ----------
         validators : List[Validator]
-            Every validator can be treated as single step of validation.
+            List of validators that will be applied in sequence.
         extra_tool_calls : int
-            How many extra tool calls agent can make to still pass test
+            Number of additional tool calls allowed beyond the minimum required.
+        logger : logging.Logger
+            Logger for recording task validation results and errors.
+        result : Result
+            Object tracking the validation results across all validators.
         """
         if logger:
             self.logger = logger
@@ -488,6 +528,7 @@ class Task(ABC):
             )
 
     def validate(self, tool_calls: List[ToolCall]):
+        """Validate a list of tool calls against all validators in sequence"""
         self.logger.debug(
             f"required_calls: {self.required_calls}, extra_calls {self.extra_tool_calls}"
         )
