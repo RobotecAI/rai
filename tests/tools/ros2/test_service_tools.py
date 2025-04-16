@@ -22,7 +22,7 @@ except ImportError:
     pytest.skip("ROS2 is not installed", allow_module_level=True)
 
 
-from rai.communication.ros2.connectors import ROS2ARIConnector
+from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2 import CallROS2ServiceTool
 
 from tests.communication.ros2.helpers import (
@@ -37,7 +37,7 @@ _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
 
 def test_service_call_tool(ros_setup: None, request: pytest.FixtureRequest) -> None:
     service_name = f"{request.node.originalname}_service"  # type: ignore
-    connector = ROS2ARIConnector()
+    connector = ROS2Connector()
     server = ServiceServer(service_name=service_name)
     executors, threads = multi_threaded_spinner([server])
     tool = CallROS2ServiceTool(connector=connector)
@@ -57,7 +57,7 @@ def test_service_call_tool_with_forbidden_service(
     ros_setup: None, request: pytest.FixtureRequest
 ) -> None:
     service_name = f"{request.node.originalname}_service"  # type: ignore
-    connector = ROS2ARIConnector()
+    connector = ROS2Connector()
     tool = CallROS2ServiceTool(connector=connector, forbidden=[service_name])
     with pytest.raises(ValueError):
         tool._run(
@@ -71,7 +71,7 @@ def test_service_call_tool_with_writable_service(
     ros_setup: None, request: pytest.FixtureRequest
 ) -> None:
     service_name = f"{request.node.originalname}_service"  # type: ignore
-    connector = ROS2ARIConnector()
+    connector = ROS2Connector()
     server = ServiceServer(service_name=service_name)
     executors, threads = multi_threaded_spinner([server])
     tool = CallROS2ServiceTool(connector=connector, writable=[service_name])

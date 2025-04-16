@@ -22,7 +22,7 @@ except ImportError:
     pytest.skip("ROS2 is not installed", allow_module_level=True)
 
 
-from rai.communication.ros2 import ROS2ARIConnector
+from rai.communication.ros2 import ROS2Connector
 from rai.tools.ros2 import CancelROS2ActionTool, StartROS2ActionTool
 
 from tests.communication.ros2.helpers import (
@@ -37,7 +37,7 @@ _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
 
 def test_action_call_tool(ros_setup: None, request: pytest.FixtureRequest) -> None:
     action_name = f"{request.node.originalname}_action"  # type: ignore
-    connector = ROS2ARIConnector()
+    connector = ROS2Connector()
     server = TestActionServer(action_name=action_name)
     executors, threads = multi_threaded_spinner([server])
     tool = StartROS2ActionTool(connector=connector)
@@ -57,7 +57,7 @@ def test_action_call_tool_with_forbidden_action(
     ros_setup: None, request: pytest.FixtureRequest
 ) -> None:
     action_name = f"{request.node.originalname}_action"  # type: ignore
-    connector = ROS2ARIConnector()
+    connector = ROS2Connector()
     tool = StartROS2ActionTool(connector=connector, forbidden=[action_name])
     with pytest.raises(ValueError):
         tool._run(  # type: ignore
@@ -71,7 +71,7 @@ def test_action_call_tool_with_writable_action(
     ros_setup: None, request: pytest.FixtureRequest
 ) -> None:
     action_name = f"{request.node.originalname}_action"  # type: ignore
-    connector = ROS2ARIConnector()
+    connector = ROS2Connector()
     server = TestActionServer(action_name=action_name)
     executors, threads = multi_threaded_spinner([server])
     tool = StartROS2ActionTool(connector=connector, writable=[action_name])
@@ -89,7 +89,7 @@ def test_action_call_tool_with_writable_action(
 
 def test_cancel_action_tool(ros_setup: None, request: pytest.FixtureRequest) -> None:
     action_name = f"{request.node.originalname}_action"  # type: ignore
-    connector = ROS2ARIConnector()
+    connector = ROS2Connector()
     server = TestActionServer(action_name=action_name)
     executors, threads = multi_threaded_spinner([server])
     start_tool = StartROS2ActionTool(connector=connector)

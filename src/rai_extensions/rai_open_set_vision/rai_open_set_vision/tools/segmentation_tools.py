@@ -24,7 +24,7 @@ from rai.communication.ros2.api import (
     convert_ros_img_to_base64,
     convert_ros_img_to_ndarray,
 )
-from rai.communication.ros2.connectors import ROS2ARIConnector
+from rai.communication.ros2.connectors import ROS2Connector
 from rai.communication.ros2.ros_async import get_future_result
 from rclpy import Future
 from rclpy.exceptions import (
@@ -68,7 +68,7 @@ class GetGrabbingPointInput(BaseModel):
 
 # --------------------- Tools ---------------------
 class GetSegmentationTool:
-    connector: ROS2ARIConnector = Field(..., exclude=True)
+    connector: ROS2Connector = Field(..., exclude=True)
 
     name: str = ""
     description: str = ""
@@ -195,7 +195,7 @@ def depth_to_point_cloud(
 
 
 class GetGrabbingPointTool(BaseTool):
-    connector: ROS2ARIConnector = Field(..., exclude=True)
+    connector: ROS2Connector = Field(..., exclude=True)
 
     name: str = "GetGrabbingPointTool"
     description: str = "Get the grabbing point of an object"

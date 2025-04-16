@@ -37,7 +37,7 @@ except ImportError:
     logging.warning("rai_interfaces is not installed, ROS 2 HRIMessage will not work.")
 
 
-class ROS2ARIMessage(BaseMessage):
+class ROS2Message(BaseMessage):
     pass
 
 

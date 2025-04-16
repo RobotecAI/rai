@@ -23,10 +23,10 @@ import numpy as np
 from numpy.typing import NDArray
 from rai.agents.base import BaseAgent
 from rai.communication.ros2 import (
-    ROS2ARIConnector,
-    ROS2ARIMessage,
+    ROS2Connector,
     ROS2HRIConnector,
     ROS2HRIMessage,
+    ROS2Message,
 )
 from rai.communication.sound_device import (
     SoundDeviceConfig,
@@ -81,7 +81,7 @@ class SpeechRecognitionAgent(BaseAgent):
             targets=[], sources=[("microphone", microphone_config)]
         )
         ros2_hri_connector = ROS2HRIConnector(ros2_name, targets=["/from_human"])
-        ros2_ari_connector = ROS2ARIConnector(ros2_name + "ari")
+        ros2_ari_connector = ROS2Connector(ros2_name + "ari")
         self.connectors = {
             "microphone": microphone,
             "ros2_hri": ros2_hri_connector,
@@ -266,7 +266,7 @@ class SpeechRecognitionAgent(BaseAgent):
     def _send_ros2_message(self, data: str, topic: str):
         self.logger.debug(f"Sending message to {topic}: {data}")
         if topic == "/voice_commands":
-            msg = ROS2ARIMessage({"data": data})
+            msg = ROS2Message({"data": data})
             try:
                 self.connectors["ros2_ari"].send_message(
                     msg, topic, msg_type="std_msgs/msg/String"

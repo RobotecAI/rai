@@ -13,13 +13,13 @@
 # limitations under the License.
 
 from .action_mixin import ROS2ActionMixin
-from .ari_connector import ROS2ARIConnector
+from .ari_connector import ROS2Connector
 from .hri_connector import ROS2HRIConnector
 from .service_mixin import ROS2ServiceMixin
 
 __all__ = [
-    "ROS2ARIConnector",
     "ROS2ActionMixin",
+    "ROS2Connector",
     "ROS2HRIConnector",
     "ROS2ServiceMixin",
 ]

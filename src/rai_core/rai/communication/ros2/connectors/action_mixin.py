@@ -15,7 +15,7 @@
 from typing import Any, Callable, Optional
 
 from rai.communication.ros2.api import ROS2ActionAPI
-from rai.communication.ros2.messages import ROS2ARIMessage, ROS2HRIMessage
+from rai.communication.ros2.messages import ROS2HRIMessage, ROS2Message
 
 
 class ROS2ActionMixin:
@@ -32,7 +32,7 @@ class ROS2ActionMixin:
 
     def start_action(
         self,
-        action_data: Optional[ROS2ARIMessage | ROS2HRIMessage],
+        action_data: Optional[ROS2Message | ROS2HRIMessage],
         target: str,
         on_feedback: Callable[[Any], None] = lambda _: None,
         on_done: Callable[[Any], None] = lambda _: None,
@@ -41,8 +41,8 @@ class ROS2ActionMixin:
         msg_type: str,
         **kwargs: Any,
     ) -> str:
-        if not isinstance(action_data, ROS2ARIMessage):
-            raise ValueError("Action data must be of type ROS2ARIMessage")
+        if not isinstance(action_data, ROS2Message):
+            raise ValueError("Action data must be of type ROS2Message")
         accepted, handle = self._actions_api.send_goal(
             action_name=target,
             action_type=msg_type,

@@ -15,7 +15,7 @@
 from typing import Any
 
 from rai.communication.ros2.api import ROS2ServiceAPI
-from rai.communication.ros2.messages import ROS2ARIMessage
+from rai.communication.ros2.messages import ROS2Message
 
 
 class ROS2ServiceMixin:
@@ -32,19 +32,19 @@ class ROS2ServiceMixin:
 
     def service_call(
         self,
-        message: ROS2ARIMessage,
+        message: ROS2Message,
         target: str,
         timeout_sec: float = 1.0,
         *,
         msg_type: str,
         **kwargs: Any,
-    ) -> ROS2ARIMessage:
+    ) -> ROS2Message:
         msg = self._service_api.call_service(
             service_name=target,
             service_type=msg_type,
             request=message.payload,
             timeout_sec=timeout_sec,
         )
-        return ROS2ARIMessage(
+        return ROS2Message(
             payload=msg, metadata={"msg_type": str(type(msg)), "service": target}
         )

@@ -36,12 +36,10 @@ from rai.communication.ros2.api import (
 )
 from rai.communication.ros2.connectors.action_mixin import ROS2ActionMixin
 from rai.communication.ros2.connectors.service_mixin import ROS2ServiceMixin
-from rai.communication.ros2.messages import ROS2ARIMessage
+from rai.communication.ros2.messages import ROS2Message
 
 
-class ROS2ARIConnector(
-    ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[ROS2ARIMessage]
-):
+class ROS2Connector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[ROS2Message]):
     """ROS2-specific implementation of the ARIConnector.
 
     This connector provides functionality for ROS2 communication through topics,
@@ -112,9 +110,9 @@ class ROS2ARIConnector(
         self._thread.start()
 
         # cache for last received messages
-        self.last_msg: Dict[str, ROS2ARIMessage] = {}
+        self.last_msg: Dict[str, ROS2Message] = {}
 
-    def last_message_callback(self, source: str, msg: ROS2ARIMessage):
+    def last_message_callback(self, source: str, msg: ROS2Message):
         self.last_msg[source] = msg
 
     def get_topics_names_and_types(self) -> List[Tuple[str, List[str]]]:
@@ -128,7 +126,7 @@ class ROS2ARIConnector(
 
     def send_message(
         self,
-        message: ROS2ARIMessage,
+        message: ROS2Message,
         target: str,
         *,
         msg_type: str,  # TODO: allow msg_type to be None, add auto topic type detection
@@ -145,14 +143,12 @@ class ROS2ARIConnector(
         )
 
     def general_callback_preprocessor(self, message: Any):
-        return ROS2ARIMessage(
-            payload=message, metadata={"msg_type": str(type(message))}
-        )
+        return ROS2Message(payload=message, metadata={"msg_type": str(type(message))})
 
     def register_callback(
         self,
         source: str,
-        callback: Callable[[ROS2ARIMessage], None],
+        callback: Callable[[ROS2Message], None],
         *,
         msg_type: Optional[str] = None,
         qos_profile: Optional[QoSProfile] = None,
@@ -179,7 +175,7 @@ class ROS2ARIConnector(
         qos_profile: Optional[QoSProfile] = None,
         auto_qos_matching: bool = True,
         **kwargs: Any,
-    ) -> ROS2ARIMessage:
+    ) -> ROS2Message:
         if self._topic_api.subscriber_exists(source):
             # trying to hit cache first
             if source in self.last_msg:

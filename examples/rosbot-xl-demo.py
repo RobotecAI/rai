@@ -19,7 +19,7 @@ import streamlit as st
 from langchain_core.tools import BaseTool
 from rai import get_llm_model
 from rai.agents import ReActAgent
-from rai.communication.ros2 import ROS2ARIConnector
+from rai.communication.ros2 import ROS2Connector
 from rai.frontend.streamlit import run_streamlit_app
 from rai.tools.ros2 import (
     GetObjectPositionsTool,
@@ -56,7 +56,7 @@ def initialize_agent():
     Your job is to transform user intent into meaningful, goal-driven behavior within the physical world.
     """
 
-    connector = ROS2ARIConnector()
+    connector = ROS2Connector()
     tools: List[BaseTool] = [
         GetROS2TransformConfiguredTool(
             connector=connector,

@@ -17,7 +17,7 @@ from typing import Annotated, List, Optional
 from langchain_core.tools import BaseTool, BaseToolkit
 from pydantic import ConfigDict
 
-from rai.communication.ros2.connectors import ROS2ARIConnector
+from rai.communication.ros2.connectors import ROS2Connector
 
 
 class BaseROS2Tool(BaseTool):
@@ -26,7 +26,7 @@ class BaseROS2Tool(BaseTool):
 
     Parameters
     ----------
-    connector : ROS2ARIConnector
+    connector : ROS2Connector
         The connector to the ROS2 system.
     readable : Optional[List[str]]
         The topics that can be read. If the list is not provided, all topics can be read.
@@ -36,7 +36,7 @@ class BaseROS2Tool(BaseTool):
         The names (topics/actions/services) that are forbidden to read and write.
     """
 
-    connector: ROS2ARIConnector
+    connector: ROS2Connector
     readable: Optional[List[str]] = None
     writable: Optional[List[str]] = None
     forbidden: Optional[List[str]] = None
@@ -65,7 +65,7 @@ class BaseROS2Toolkit(BaseToolkit):
 
     Parameters
     ----------
-    connector : ROS2ARIConnector
+    connector : ROS2Connector
         The connector to the ROS2 system.
     readable : Optional[List[str]]
         The topics that can be read. If the list is not provided, all topics can be read.
@@ -75,7 +75,7 @@ class BaseROS2Toolkit(BaseToolkit):
         The names (topics/actions/services) that are forbidden to read and write.
     """
 
-    connector: ROS2ARIConnector
+    connector: ROS2Connector
     readable: Optional[
         Annotated[
             List[str],

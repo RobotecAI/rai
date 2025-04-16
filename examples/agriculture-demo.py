@@ -19,7 +19,7 @@ from langchain_core.messages import HumanMessage
 from langchain_core.runnables import Runnable
 from rai import get_llm_model
 from rai.agents.conversational_agent import State, create_conversational_agent
-from rai.communication.ros2.connectors import ROS2ARIConnector
+from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2 import ROS2ServicesToolkit, ROS2TopicsToolkit
 from rai.tools.time import WaitForSecondsTool
 from rclpy.callback_groups import ReentrantCallbackGroup
@@ -103,7 +103,7 @@ def main():
 
     Important: You must call only one service. The tractor can only handle one service call.
     """
-    connector = ROS2ARIConnector()
+    connector = ROS2Connector()
     agent = create_conversational_agent(
         llm=get_llm_model("complex_model"),
         system_prompt=SYSTEM_PROMPT,

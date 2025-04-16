@@ -22,7 +22,7 @@ from typing import List
 import rclpy
 from langchain.tools import BaseTool
 from rai.agents.conversational_agent import create_conversational_agent
-from rai.communication.ros2.connectors import ROS2ARIConnector
+from rai.communication.ros2.connectors import ROS2Connector
 from rai.initialization import get_llm_model
 from rai.tools.ros2 import (
     GetObjectPositionsTool,
@@ -46,7 +46,7 @@ from rai_sim.o3de.o3de_bridge import (
 
 if __name__ == "__main__":
     rclpy.init()
-    connector = ROS2ARIConnector()
+    connector = ROS2Connector()
     node = connector.node
     node.declare_parameter("conversion_ratio", 1.0)
 
