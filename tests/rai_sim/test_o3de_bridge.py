@@ -323,7 +323,8 @@ class TestROS2ARIConnectorInterface(unittest.TestCase):
             "source": str,
             "timeout_sec": float,
             "msg_type": Optional[str],
-            "auto_topic_type": bool,
+            "qos_profile": Optional[QoSProfile],
+            "auto_qos_matching": bool,
         }
 
         self.assertListEqual(

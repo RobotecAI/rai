@@ -13,15 +13,28 @@
 # limitations under the License.
 
 import logging
-from abc import abstractmethod
-from typing import Any, Callable, Dict, Generic, Optional, TypeVar
+import time
+from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class ConnectorException(Exception):
+    """Base exception for all connector exceptions."""
+
+    pass
+
+
 class BaseMessage(BaseModel):
+    payload: Any = Field(
+        default=None,
+        description="Payload is meant for non-validated data if such data is present.",
+    )
     metadata: Dict[str, Any] = Field(default_factory=dict)
+    timestamp: float = Field(default_factory=time.time)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -30,58 +43,78 @@ T = TypeVar("T", bound=BaseMessage)
 
 
 class BaseConnector(Generic[T]):
-    """Base class for communication connectors in the RAI framework.
-
-    This class provides a generic interface for different communication protocols.
-    While the interface is designed to be flexible, it's important to note that:
-    1. Only the message type 'T' is strictly enforced through generics
-    2. Not all communication protocols may support every method in this interface
-    3. Implementations should focus on supporting the methods that make sense
-       for their specific communication protocol
-    4. The interface is intentionally broad to accommodate various communication
-       patterns (messages, services, actions) but concrete implementations
-       may choose to support only a subset of these features
-    5. Subclasses should prioritize implementing correct behavior for their
-       specific communication protocol over maintaining exact parameter signatures.
-       The method signatures in this base class serve as a guideline rather than
-       a strict contract.
-    6. Each method can be extended through **kwargs to support protocol-specific
-       parameters and configurations
-    7. Connectors based on this class are NOT meant to be interchangeable.
-       Different communication protocols (e.g., ROS 2, MQTT, HTTP) have different
-       requirements, capabilities, and parameter needs. While they share a common
-       interface structure, the actual parameters and behaviors will vary
-       significantly between implementations.
-
-    The generic type T represents the message type that the connector will handle,
-    which must be a subclass of BaseMessage.
-    """
-
-    def __init__(self):
+    def __init__(self, callback_max_workers: int = 4):
+        self.callback_max_workers = callback_max_workers
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.registered_callbacks: Dict[str, List[Callable[[T], None]]] = defaultdict(
+            list
+        )
+        self.callback_executor = ThreadPoolExecutor(
+            max_workers=self.callback_max_workers
+        )
 
     def _generate_handle(self) -> str:
         return str(uuid4())
 
-    @abstractmethod
-    def send_message(self, message: T, target: str, **kwargs: Any):
+    def send_message(self, message: T, target: str, **kwargs: Any) -> None:
         """Implements publish pattern.
 
         Sends a message to one or more subscribers. The target parameter
         can be used to specify the destination or topic.
-        """
-        pass
 
-    @abstractmethod
+        Raises:
+            ConnectorException: If the message cannot be sent.
+        """
+        raise NotImplementedError("This method should be implemented by the subclass.")
+
     def receive_message(self, source: str, timeout_sec: float, **kwargs: Any) -> T:
         """Implements subscribe pattern.
 
         Receives a message from a publisher. The source parameter
         can be used to specify the source or topic to subscribe to.
-        """
-        pass
 
-    @abstractmethod
+        Raises:
+            ConnectorException: If the message cannot be received.
+        """
+        raise NotImplementedError("This method should be implemented by the subclass.")
+
+    def register_callback(
+        self, source: str, callback: Callable[[T], None], **kwargs: Any
+    ) -> None:
+        """Implements register callback.
+
+        Registers a callback to be called when a message is received from a source.
+
+        Raises:
+            ConnectorException: If the callback cannot be registered.
+        """
+        self.registered_callbacks[source].append(callback)
+
+    def _safe_callback_wrapper(self, callback: Callable[[T], None], message: T) -> None:
+        """Safely execute a callback with error handling.
+
+        Args:
+            callback: The callback function to execute
+            message: The message to pass to the callback
+        """
+        try:
+            callback(message)
+        except Exception as e:
+            self.logger.error(f"Error in callback: {str(e)}")
+
+    def general_callback(self, source: str, message: Any) -> None:
+        """General callback for all messages.
+        Use through functools.partial to pass source."""
+        processed_message = self.general_callback_preprocessor(message)
+        for callback in self.registered_callbacks.get(source, []):
+            self.callback_executor.submit(
+                self._safe_callback_wrapper, callback, processed_message
+            )
+
+    def general_callback_preprocessor(self, message: Any) -> T:
+        """Preprocessor for general callback used to transform any message to a BaseMessage."""
+        raise NotImplementedError("This method should be implemented by the subclass.")
+
     def service_call(
         self, message: T, target: str, timeout_sec: float, **kwargs: Any
     ) -> BaseMessage:
@@ -89,10 +122,12 @@ class BaseConnector(Generic[T]):
 
         Sends a request and waits for a response. The target parameter
         specifies the service endpoint to call.
-        """
-        pass
 
-    @abstractmethod
+        Raises:
+            ConnectorException: If the service call cannot be made.
+        """
+        raise NotImplementedError("This method should be implemented by the subclass.")
+
     def create_service(
         self,
         service_name: str,
@@ -105,10 +140,12 @@ class BaseConnector(Generic[T]):
         Creates a service that can receive and process requests.
         The on_request callback handles incoming requests,
         and on_done (if provided) is called when the service is terminated.
-        """
-        pass
 
-    @abstractmethod
+        Raises:
+            ConnectorException: If the service cannot be created.
+        """
+        raise NotImplementedError("This method should be implemented by the subclass.")
+
     def create_action(
         self,
         action_name: str,
@@ -120,10 +157,12 @@ class BaseConnector(Generic[T]):
         Creates an action that can be started and monitored.
         The generate_feedback_callback is used to provide progress updates
         during the action's execution.
-        """
-        pass
 
-    @abstractmethod
+        Raises:
+            ConnectorException: If the action cannot be created.
+        """
+        raise NotImplementedError("This method should be implemented by the subclass.")
+
     def start_action(
         self,
         action_data: Optional[T],
@@ -138,19 +177,23 @@ class BaseConnector(Generic[T]):
         Starts an action and provides callbacks for feedback and completion.
         The on_feedback callback receives progress updates,
         and on_done is called when the action completes.
-        """
-        pass
 
-    @abstractmethod
-    def terminate_action(self, action_handle: str, **kwargs: Any):
+        Raises:
+            ConnectorException: If the action cannot be started.
+        """
+        raise NotImplementedError("This method should be implemented by the subclass.")
+
+    def terminate_action(self, action_handle: str, **kwargs: Any) -> Any:
         """Cancels an ongoing action.
 
         Stops the execution of a previously started action.
         The action_handle identifies which action to terminate.
-        """
-        pass
 
-    @abstractmethod
+        Raises:
+            ConnectorException: If the action cannot be terminated.
+        """
+        raise NotImplementedError("This method should be implemented by the subclass.")
+
     def shutdown(self):
         """Shuts down the connector and releases all resources."""
-        pass
+        self.callback_executor.shutdown(wait=True)

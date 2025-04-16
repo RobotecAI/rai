@@ -24,7 +24,7 @@ from PIL import Image
 from pydub import AudioSegment
 from sensor_msgs.msg import Image as ROS2Image
 
-from rai.communication.ari_connector import ARIMessage
+from rai.communication.base_connector import BaseMessage
 from rai.communication.hri_connector import HRIMessage
 
 try:
@@ -37,7 +37,7 @@ except ImportError:
     logging.warning("rai_interfaces is not installed, ROS 2 HRIMessage will not work.")
 
 
-class ROS2ARIMessage(ARIMessage):
+class ROS2ARIMessage(BaseMessage):
     pass
 
 
