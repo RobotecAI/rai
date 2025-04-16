@@ -27,7 +27,7 @@ from rai.communication.ros2 import ROS2Connector, ROS2Message
 from rai.communication.ros2.api.conversion import ros2_message_to_dict
 from rai.messages import MultimodalArtifact, preprocess_image
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
-from rai.tools.ros2.utils import render_interface_string
+from rai.tools.ros2.generic.interface_parser import render_interface_string
 
 
 class ROS2TopicsToolkit(BaseROS2Toolkit):
