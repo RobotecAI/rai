@@ -14,41 +14,33 @@
 
 from typing import Any, Dict, Optional
 
-from pydantic import ConfigDict
-
 from rai_bench.tool_calling_agent.messages.base import PoseStamped, Ros2BaseModel, Time
 
 
 class TaskGoal(Ros2BaseModel):
-    model_config = ConfigDict(extra="forbid")
     task: Optional[str] = ""
     description: Optional[str] = ""
     priority: Optional[str] = ""
 
 
 class TaskResult(Ros2BaseModel):
-    model_config = ConfigDict(extra="forbid")
     success: Optional[bool] = False
     report: Optional[str] = ""
 
 
 class TaskFeedback(Ros2BaseModel):
-    model_config = ConfigDict(extra="forbid")
     current_status: Optional[str] = ""
 
 
 class LoadMapRequest(Ros2BaseModel):
-    model_config = ConfigDict(extra="forbid")
     filename: Optional[str] = ""
 
 
 class LoadMapResponse(Ros2BaseModel):
-    model_config = ConfigDict(extra="forbid")
     success: Optional[bool] = False
 
 
 class NavigateToPoseGoal(Ros2BaseModel):
-    model_config = ConfigDict(extra="forbid")
     pose: Optional[PoseStamped] = None
     behavior_tree: Optional[str] = None
 
