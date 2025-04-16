@@ -4,7 +4,7 @@ The RAI Bench is a package including benchmarks and providing frame for creating
 
 ## Manipulation O3DE Benchmark
 
-The Manipulation O3DE Benchmark [manipulation_o3de_benchmark_module](./rai_bench/manipulation_o3de_bench) provides tasks and scene configurations for robotic arm manipulation simulation in O3DE. The tasks use a common `ManipulationTask` logic and can be parameterized, which allows for many task variants. The current tasks include:
+The Manipulation O3DE Benchmark [manipulation_o3de_benchmark_module](./rai_bench//manipulation_o3de/) provides tasks and scene configurations for robotic arm manipulation simulation in O3DE. The tasks use a common `ManipulationTask` logic and can be parameterized, which allows for many task variants. The current tasks include:
 
 - **MoveObjectToLeftTask**
 - **GroupObjectsTask**
@@ -14,37 +14,13 @@ The Manipulation O3DE Benchmark [manipulation_o3de_benchmark_module](./rai_bench
 
 The result of a task is a value between 0 and 1, calculated like initially_misplaced_now_correct / initially_misplaced. This score is calculated at the end of each scenario.
 
-Current O3DE simulation binaries:
-
 ### Frame Components
 
 - `Task`
 - `Scenario`
 - `Benchmark`
 
-For more information about these classes go to -> [benchmark](./rai_bench/manipulation_o3de_bench/benchmark.py)
-
-### Running
-
-1. Download O3DE simulation binary and unzip it.
-
-   - [ros2-humble](https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIManipulationDemo_jammyhumble.zip)
-   - [ros2-jazzy](https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIManipulationDemo_noblejazzy.zip)
-
-2. Follow step 2 from [Manipulation demo Setup section](../../docs/demos/manipulation.md#setup)
-
-3. Adjust the path to the binary in: [o3de_config.yaml](./rai_bench/examples/manipulation_o3de/configs/o3de_config.yaml)
-4. Run benchmark with:
-
-   ```bash
-   cd rai
-   source setup_shell.sh
-   python src/rai_bench/rai_bench/examples/manipulation_o3de/main.py
-   ```
-
-> [!NOTE]
-> For now benchmark runs all available scenarios (~160). See [Examples](#example-usege)
-> section for details.
+For more information about these classes go to -> [benchmark](./rai_bench//manipulation_o3de/benchmark.py) and [Task](./rai_bench//manipulation_o3de//interfaces.py) and
 
 ### Example usage
 
@@ -94,6 +70,28 @@ vh_scenarios = very_hard_scenarios(
 which are grouped by their subjective difficulty. For now there are 10 trivial, 42 easy, 23 medium, 38 hard and 47 very hard scenarios.
 Check docstrings and code in [scenarios_packets](rai_bench/examples/manipulation_o3de/scenarios.py) if you want to know how scenarios are assigned to difficulty level.
 
+### Running
+
+1. Download O3DE simulation binary and unzip it.
+
+   - [ros2-humble](https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIManipulationDemo_jammyhumble.zip)
+   - [ros2-jazzy](https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIManipulationDemo_noblejazzy.zip)
+
+2. Follow step 2 from [Manipulation demo Setup section](../../docs/demos/manipulation.md#setup)
+
+3. Adjust the path to the binary in: [o3de_config.yaml](./rai_bench/examples/manipulation_o3de/configs/o3de_config.yaml)
+4. Run benchmark with:
+
+   ```bash
+   cd rai
+   source setup_shell.sh
+   python src/rai_bench/rai_bench/examples/manipulation_o3de/main.py
+   ```
+
+> [!NOTE]
+> For now benchmark runs all available scenarios (~160). See [Examples](#example-usege)
+> section for details.
+
 ### Development
 
 When creating new task or changing existing ones, make sure to add unit tests for score calculation in [rai_bench_tests](../../tests/rai_bench/manipulation_o3de/tasks/).
@@ -105,15 +103,43 @@ The number of scenarios can be easily extened without writing new tasks, by incr
 
 The Tool Calling Agent Benchmark is the benchmark for LangChain tool calling agents. It includes a set of tasks and a benchmark that evaluates the performance of the agent on those tasks by verifying the correctness of the tool calls requested by the agent. The benchmark is integrated with LangSmith and Langfuse tracing backends to easily track the performance of the agents.
 
-#### Frame Components
+### Frame Components
 
-- [Tool Calling Agent Benchmark](rai_bench/tool_calling_agent_bench/benchmark.py) - Benchmark for LangChain tool calling agents
-- [Tasks Interfaces](rai_bench/tool_calling_agent_bench/interfaces.py) - Interfaces for tool calling agent tasks
+- [Tool Calling Agent Benchmark](rai_bench//tool_calling_agent/benchmark.py) - Benchmark for LangChain tool calling agents
 - [Scores tracing](rai_bench/tool_calling_agent_bench/scores_tracing.py) - Component handling sending scores to tracing backends
-
-#### Benchmark Example with ROS2 Tools
+- [Interfaces](rai_bench//tool_calling_agent/interfaces.py) - Interfaces for validation classes - Task, Validator, SubTask
+  For detailed description of validation visit -> [Validation](../../docs/developer_guide/tool_calling_agent_benchmark_validation.md)
 
 [tool_calling_agent_test_bench.py](rai_bench/examples/tool_calling_agent/main.py) - Script providing benchmark on tasks based on the ROS2 tools usage.
+
+### Example Usage
+
+Validators can be constructed from any SubTasks, Tasks can be validated by any numer of Validators, which makes whole validation process incredibly versital.
+
+```python
+# subtasks
+get_topics_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="get_ros2_topics_names_and_types"
+)
+color_image_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="get_ros2_image", expected_args={"topic": "/camera_image_color"}
+)
+# validators - consist of subtasks
+topics_ord_val = OrderedCallsValidator(subtasks=[get_topics_subtask])
+color_image_ord_val = OrderedCallsValidator(subtasks=[color_image_subtask])
+topics_and_color_image_ord_val = OrderedCallsValidator(
+    subtasks=[
+        get_topics_subtask,
+        color_image_subtask,
+    ]
+)
+# tasks - validated by list of validators
+GetROS2TopicsTask(validators=[topics_ord_val])
+GetROS2RGBCameraTask(validators=[topics_and_color_image_ord_val]),
+GetROS2RGBCameraTask(validators=[topics_ord_val, color_image_ord_val]),
+```
+
+### Running
 
 To set up tracing backends, please follow the instructions in the [tracing.md](../../docs/tracing.md) document.
 
@@ -123,7 +149,13 @@ To run the benchmark:
 cd rai
 source setup_shell.sh
 python src/rai_bench/rai_bench/examples/tool_calling_agent/main.py
+```
+
+There is also flags to declare model type and vendor:
+
+```bash
+python src/rai_bench/rai_bench/examples/tool_calling_agent/main.py --model-type simple_model --vendor ollama
+```
 
 > [!NOTE]
-> The `simple_model` from [config.toml](../../config.toml) is currently set up in the example benchmark script. Change it to `complex_model` in the script if needed.
-```
+> The `simple_model` or `complex_model are defined in [config.toml](../../config.toml) Change ithem if needed.
