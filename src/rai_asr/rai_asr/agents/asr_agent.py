@@ -81,11 +81,11 @@ class SpeechRecognitionAgent(BaseAgent):
             targets=[], sources=[("microphone", microphone_config)]
         )
         ros2_hri_connector = ROS2HRIConnector(ros2_name, targets=["/from_human"])
-        ros2_ari_connector = ROS2Connector(ros2_name + "ari")
+        ros2_connector = ROS2Connector(ros2_name + "ari")
         self.connectors = {
             "microphone": microphone,
             "ros2_hri": ros2_hri_connector,
-            "ros2_ari": ros2_ari_connector,
+            "ros2": ros2_connector,
         }
         super().__init__()
         self.should_record_pipeline: List[BaseVoiceDetectionModel] = []
@@ -268,7 +268,7 @@ class SpeechRecognitionAgent(BaseAgent):
         if topic == "/voice_commands":
             msg = ROS2Message({"data": data})
             try:
-                self.connectors["ros2_ari"].send_message(
+                self.connectors["ros2"].send_message(
                     msg, topic, msg_type="std_msgs/msg/String"
                 )
             except Exception as e:

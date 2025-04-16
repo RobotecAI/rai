@@ -26,8 +26,8 @@ from rai.tools.ros2 import ROS2Toolkit
 @st.cache_resource
 def initialize_graph():
     rclpy.init()
-    ari_connector = ROS2Connector()
-    tools = ROS2Toolkit(connector=ari_connector).get_tools()
+    ros2_connector = ROS2Connector()
+    tools = ROS2Toolkit(connector=ros2_connector).get_tools()
     agent = ReActAgent(connectors={}, tools=tools).agent
     return agent
 

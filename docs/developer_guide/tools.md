@@ -152,14 +152,14 @@ Refer to the [BaseROS2Tool source code](../../src/rai_core/rai/tools/ros2/base.p
 Tools can be initialized with parameters such as a connector, enabling custom configurations for ROS 2 environments.
 
 ```python
-from rai.communication.ros2 import ROS2ARIConnector
+from rai.communication.ros2 import ROS2Connector
 from rai.tools.ros2 import (
     GetROS2ImageTool,
     GetROS2TopicsNamesAndTypesTool,
     PublishROS2MessageTool,
 )
 
-def initialize_tools(connector: ROS2ARIConnector):
+def initialize_tools(connector: ROS2Connector):
     """Initialize and configure ROS 2 tools.
 
     Returns:
@@ -193,7 +193,7 @@ TODO(docs): add link to the BaseAgent docs (regarding distributed setup)
 
 ```python
 from rai.agents import ReActAgent
-from rai.communication import ROS2ARIConnector, ROS2HRIConnector
+from rai.communication import ROS2Connector, ROS2HRIConnector
 from rai.tools.ros2 import ROS2Toolkit
 from rai.communication.ros2 import ROS2Context
 from rai import AgentRunner
@@ -202,10 +202,10 @@ from rai import AgentRunner
 def main() -> None:
     """Initialize and run the RAI agent with configured tools."""
     connector = ROS2HRIConnector(sources=["/from_human"], targets=["/to_human"])
-    ari_connector = ROS2ARIConnector()
+    ros2_connector = ROS2Connector()
     agent = ReActAgent(
         connectors={"hri": connector},
-        tools=initialize_tools(connector=ari_connector),
+        tools=initialize_tools(connector=ros2_connector),
     )
     runner = AgentRunner([agent])
     runner.run_and_wait_for_shutdown()
@@ -226,9 +226,9 @@ from rai.communication.ros2 import ROS2Context
 
 @ROS2Context()
 def main():
-    ari_connector = ROS2ARIConnector()
+    ros2_connector = ROS2Connector()
     agent = create_react_runnable(
-        tools=initialize_tools(connector=ari_connector),
+        tools=initialize_tools(connector=ros2_connector),
         system_prompt="You are a helpful assistant that can answer questions and help with tasks.",
     )
     state = {'messages': []}
@@ -244,5 +244,5 @@ def main():
 ## Related Topics
 
 - [Connectors](../communication/connectors.md)
-- [ROS2ARIConnector](../communication/ros2.md)
+- [ROS2Connector](../communication/ros2.md)
 - [ROS2HRIConnector](../communication/ros2.md)

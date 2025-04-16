@@ -93,7 +93,7 @@ class ROS2Connector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[ROS2Message
 
     def __init__(
         self,
-        node_name: str = f"rai_ros2_ari_connector_{str(uuid.uuid4())[-12:]}",
+        node_name: str = f"rai_ros2_connector_{str(uuid.uuid4())[-12:]}",
         destroy_subscribers: bool = False,
     ):
         super().__init__()
