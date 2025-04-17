@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from rai.agents.base import BaseAgent
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.agents.react_agent import ReActAgent
 from rai.agents.runner import AgentRunner, wait_for_shutdown
@@ -20,6 +21,7 @@ from rai.agents.tool_runner import ToolRunner
 
 __all__ = [
     "AgentRunner",
+    "BaseAgent",
     "ReActAgent",
     "ToolRunner",
     "create_conversational_agent",

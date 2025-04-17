@@ -14,36 +14,16 @@
 
 
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
-from launch.launch_description_sources import AnyLaunchDescriptionSource
-from launch.substitutions import PathJoinSubstitution
-from launch_ros.substitutions import FindPackageShare
+from launch.actions import ExecuteProcess
 
 
 def generate_launch_description():
     return LaunchDescription(
         [
-            IncludeLaunchDescription(
-                AnyLaunchDescriptionSource(
-                    PathJoinSubstitution(
-                        [
-                            FindPackageShare("rai_open_set_vision"),
-                            "launch",
-                            "gdino_launch.xml",
-                        ]
-                    )
-                )
-            ),
-            IncludeLaunchDescription(
-                AnyLaunchDescriptionSource(
-                    PathJoinSubstitution(
-                        [
-                            FindPackageShare("rai_open_set_vision"),
-                            "launch",
-                            "gsam_launch.xml",
-                        ]
-                    )
-                )
+            ExecuteProcess(
+                cmd=["python", "run_vision_agents.py"],
+                cwd="src/rai_extensions/rai_open_set_vision/scripts",
+                output="screen",
             ),
         ]
     )

@@ -12,22 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-from .agents.grounded_sam import GSAM_NODE_NAME, GSAM_SERVICE_NAME, GroundedSamAgent
-from .agents.grounding_dino import (
-    GDINO_NODE_NAME,
-    GDINO_SERVICE_NAME,
-    GroundingDinoAgent,
-)
-from .tools import GetDetectionTool, GetDistanceToObjectsTool
+from .base_vision_agent import BaseVisionAgent
+from .grounded_sam import GroundedSamAgent
+from .grounding_dino import GroundingDinoAgent
 
 __all__ = [
-    "GDINO_NODE_NAME",
-    "GDINO_SERVICE_NAME",
-    "GSAM_NODE_NAME",
-    "GSAM_SERVICE_NAME",
-    "GetDetectionTool",
-    "GetDistanceToObjectsTool",
+    "BaseVisionAgent",
     "GroundedSamAgent",
     "GroundingDinoAgent",
 ]

@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Robotec.AI
+# Copyright (C) 2025 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,3 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+
+import rclpy
+from rai.utils import wait_for_shutdown
+from rai_open_set_vision.agents import GroundedSamAgent, GroundingDinoAgent
+
+
+def main():
+    rclpy.init()
+    agent1 = GroundingDinoAgent()
+    agent2 = GroundedSamAgent()
+    agent1.run()
+    agent2.run()
+    wait_for_shutdown([agent1, agent2])
+    rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
