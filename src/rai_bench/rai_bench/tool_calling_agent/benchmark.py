@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterator, List, Sequence, Tuple
 from uuid import UUID
 
+from langchain_core.messages import BaseMessage
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
@@ -175,13 +176,14 @@ class ToolCallingAgentBenchmark:
             "run_id": run_id,
             "callbacks": callbacks,
             "tags": [task.complexity, model_name],
-            "recursion_limit": task.recursion_limit,
+            "recursion_limit": 4 * task.max_tool_calls_number,
         }
 
         ts = time.perf_counter()
+        messages: List[BaseMessage] = []
         try:
             if isinstance(task, SpatialReasoningAgentTask):
-                response = agent.invoke(
+                for event in agent.stream(
                     {
                         "messages": [
                             HumanMultimodalMessage(
@@ -190,20 +192,25 @@ class ToolCallingAgentBenchmark:
                         ]
                     },
                     config=config,
-                )
+                ):
+                    flattened = {k: v for d in event.values() for k, v in d.items()}
+                    # cos = event.values()
+                    messages.extend(flattened["messages"])
             else:
-                response = agent.invoke(
+                for event in agent.stream(
                     {"messages": [HumanMultimodalMessage(content=task.get_prompt())]},
                     config=config,
-                )
+                ):
+                    flattened = {k: v for d in event.values() for k, v in d.items()}
+                    messages.extend(flattened["messages"])
 
-            self.logger.debug(response)
-            toll_calls = task.get_tool_calls(response=response)
-            task.validate(tool_calls=toll_calls)
         except GraphRecursionError as e:
-            self.logger.error(msg=f"Graph Recursion Error: {e}")
-            # count not done validators as failed
-            task.fail_rest_of_validators()
+            self.logger.error(msg=f"Reached recursion limit {e}")
+            # task.fail_rest_of_validators()
+
+        self.logger.debug(messages)
+        toll_calls = task.get_tool_calls_from_messages(messages=messages)
+        task.validate(tool_calls=toll_calls)
         te = time.perf_counter()
         total_time = te - ts
         result = task.result

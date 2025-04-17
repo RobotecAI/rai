@@ -18,7 +18,7 @@ from abc import ABC, abstractmethod
 from queue import Queue
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
-from langchain_core.messages import AIMessage, ToolCall
+from langchain_core.messages import AIMessage, BaseMessage, ToolCall
 from langchain_core.runnables.config import DEFAULT_RECURSION_LIMIT
 from langchain_core.tools import BaseTool
 
@@ -469,10 +469,20 @@ class Task(ABC):
         for validator in self.validators:
             validator.logger = logger
 
-    def get_tool_calls(self, response: dict[str, Any]) -> list[ToolCall]:
+    def get_tool_calls_from_invoke(self, response: dict[str, Any]) -> list[ToolCall]:
         """Extracts all tool calls from the response, flattened across all AI messages."""
         tool_calls: List[ToolCall] = []
         for msg in response["messages"]:
+            if isinstance(msg, AIMessage):
+                tool_calls.extend(msg.tool_calls)
+        return tool_calls
+
+    def get_tool_calls_from_messages(
+        self, messages: List[BaseMessage]
+    ) -> list[ToolCall]:
+        """Extracts all tool calls from the response, flattened across all AI messages."""
+        tool_calls: List[ToolCall] = []
+        for msg in messages:
             if isinstance(msg, AIMessage):
                 tool_calls.extend(msg.tool_calls)
         return tool_calls
