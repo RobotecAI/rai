@@ -80,13 +80,16 @@ Check docstrings and code in [scenarios_packets](rai_bench/examples/manipulation
 2. Follow step 2 from [Manipulation demo Setup section](../../docs/demos/manipulation.md#setup)
 
 3. Adjust the path to the binary in: [o3de_config.yaml](./rai_bench/examples/manipulation_o3de/configs/o3de_config.yaml)
-4. Run benchmark with:
+4. Chose the model you want to run and a vendor.
+   > [!NOTE]
+   > The configs of vendors are defined in [config.toml](../../config.toml) Change ithem if needed.
+5. Run benchmark with:
 
-   ```bash
-   cd rai
-   source setup_shell.sh
-   python src/rai_bench/rai_bench/examples/manipulation_o3de/main.py
-   ```
+```bash
+cd rai
+source setup_shell.sh
+python src/rai_bench/rai_bench/examples/manipulation_o3de/main.py --model-name llama3.2  --vendor ollama
+```
 
 > [!NOTE]
 > For now benchmark runs all available scenarios (~160). See [Examples](#example-usege)
@@ -108,7 +111,7 @@ The Tool Calling Agent Benchmark is the benchmark for LangChain tool calling age
 - [Tool Calling Agent Benchmark](rai_bench//tool_calling_agent/benchmark.py) - Benchmark for LangChain tool calling agents
 - [Scores tracing](rai_bench/tool_calling_agent_bench/scores_tracing.py) - Component handling sending scores to tracing backends
 - [Interfaces](rai_bench//tool_calling_agent/interfaces.py) - Interfaces for validation classes - Task, Validator, SubTask
-  For detailed description of validation visit -> [Validation](../../docs/developer_guide/tool_calling_agent_benchmark_validation.md)
+  For detailed description of validation visit -> [Validation](.//rai_bench/docs/tool_calling_agent_benchmark.md)
 
 [tool_calling_agent_test_bench.py](rai_bench/examples/tool_calling_agent/main.py) - Script providing benchmark on tasks based on the ROS2 tools usage.
 
@@ -154,8 +157,27 @@ python src/rai_bench/rai_bench/examples/tool_calling_agent/main.py
 There is also flags to declare model type and vendor:
 
 ```bash
-python src/rai_bench/rai_bench/examples/tool_calling_agent/main.py --model-type simple_model --vendor ollama
+python src/rai_bench/rai_bench/examples/tool_calling_agent/main.py --model-name llama3.2 --vendor ollama
 ```
 
 > [!NOTE]
-> The `simple_model` or `complex_model are defined in [config.toml](../../config.toml) Change ithem if needed.
+> The configs of vendors are defined in [config.toml](../../config.toml) Change ithem if needed.
+
+
+
+## Testing Models
+
+To test multiple models, different benchamrks or couple repeats in one go - use script [test_models](./rai_bench/examples/test_models.py)
+
+Modify these params:
+```python
+models_name = ["llama3.2", "qwen2.5:7b"]
+vendors = ["ollama", "ollama"]
+benchmarks = ["tool_calling_agent"]
+repeats = 1
+```
+to your liking and run the script!
+
+```bash
+python src/rai_bench/rai_bench/examples/test_models.py 
+```
