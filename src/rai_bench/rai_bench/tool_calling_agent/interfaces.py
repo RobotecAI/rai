@@ -16,7 +16,7 @@ import logging
 import queue
 from abc import ABC, abstractmethod
 from queue import Queue
-from typing import Any, Dict, List, Literal, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from langchain_core.messages import AIMessage, ToolCall
 from langchain_core.runnables.config import DEFAULT_RECURSION_LIMIT
@@ -80,8 +80,7 @@ class SubTask(ABC):
         tool_call: ToolCall,
         expected_name: str,
         expected_args: dict[str, Any],
-        # NOTE (jm) a bit weird logic with the expected_optional_args, take a look if can be done differently
-        expected_optional_args: dict[str, Any] = {},
+        expected_optional_args: Optional[dict[str, Any]] = None,
     ) -> bool:
         """Helper method to check if a tool call has the expected name and arguments.
 
@@ -409,7 +408,7 @@ class Validator(ABC):
 
     def validation_error(self, msg: str):
         """
-        Call when error results in fail of the validator.
+        Logs the error and puts in in queue that will be saved in results
         """
         self.logger.error(msg)
         self.errors_queue.put(msg)
@@ -488,6 +487,10 @@ class Task(ABC):
         pass
 
     @property
+    def max_tool_calls_number(self) -> int:
+        return self.required_calls + self.extra_tool_calls
+
+    @property
     def required_calls(self):
         """Minimal number of calls required to complete task"""
         total = 0
@@ -532,9 +535,7 @@ class Task(ABC):
         self.logger.debug(
             f"required_calls: {self.required_calls}, extra_calls {self.extra_tool_calls}"
         )
-        remaining_tool_calls = tool_calls[
-            : self.required_calls + self.extra_tool_calls
-        ].copy()
+        remaining_tool_calls = tool_calls[: self.max_tool_calls_number].copy()
         self.logger.debug(f"Tool calls to validate: {remaining_tool_calls}")
 
         done_properly = 0

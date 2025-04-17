@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from langchain_core.messages import ToolCall
 
@@ -23,8 +23,8 @@ class CheckArgsToolCallSubTask(SubTask):
     def __init__(
         self,
         expected_tool_name: str,
-        expected_args: Dict[str, Any] = {},
-        expected_optional_args: Dict[str, Any] = {},
+        expected_args: Dict[str, Any],
+        expected_optional_args: Optional[Dict[str, Any]] = None,
     ):
         self.expected_tool_name = expected_tool_name
         self.expected_args = expected_args
@@ -55,12 +55,10 @@ class CheckTopicFieldsToolCallSubTask(SubTask):
         expected_tool_name: str,
         expected_topic: str,
         expected_message_type: str,
-        expected_fields: Dict[str, Any] = {},
-        expected_optional_args: Dict[str, Any] = {},
+        expected_fields: Dict[str, Any],
     ):
         self.expected_tool_name = expected_tool_name
         self.expected_fields = expected_fields
-        self.expected_optional_args = expected_optional_args
         self.expected_topic = expected_topic
         self.expected_message_type = expected_message_type
 
@@ -95,12 +93,10 @@ class CheckServiceFieldsToolCallSubTask(SubTask):
         expected_tool_name: str,
         expected_service: str,
         expected_service_type: str,
-        expected_fields: Dict[str, Any] = {},
-        expected_optional_args: Dict[str, Any] = {},
+        expected_fields: Dict[str, Any],
     ):
         self.expected_tool_name = expected_tool_name
         self.expected_fields = expected_fields
-        self.expected_optional_args = expected_optional_args
         self.expected_service = expected_service
         self.expected_service_type = expected_service_type
 
@@ -135,12 +131,10 @@ class CheckActionFieldsToolCallSubTask(SubTask):
         expected_tool_name: str,
         expected_action: str,
         expected_action_type: str,
-        expected_fields: Dict[str, Any] = {},
-        expected_optional_args: Dict[str, Any] = {},
+        expected_fields: Dict[str, Any],
     ):
         self.expected_tool_name = expected_tool_name
         self.expected_fields = expected_fields
-        self.expected_optional_args = expected_optional_args
         self.expected_action = expected_action
         self.expected_action_type = expected_action_type
 

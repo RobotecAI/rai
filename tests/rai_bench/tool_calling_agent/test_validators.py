@@ -37,7 +37,7 @@ class DummySubTask:
 
     def validate(self, tool_call):
         if not self.should_pass:
-            raise SubTaskValidationError(f"Validation failed for {self.name}")
+            raise SubTaskValidationError(f"error in {self.name}")
 
         if self.specific_tool and tool_call.name != self.specific_tool:
             raise SubTaskValidationError(
@@ -138,7 +138,11 @@ class TestOrderedCallsValidator:
 
         assert success
         assert remaining == []
-        assert validator.get_all_validation_errors() == []
+        assert validator.get_all_validation_errors() == [
+            "Expected tool tool1, got extra_tool",
+            "Expected tool tool1, got extra_tool2",
+            "Expected tool tool1, got extra_tool3",
+        ]
 
     def test_validate_failure_wrong_order(self):
         subtasks = [
@@ -152,7 +156,10 @@ class TestOrderedCallsValidator:
 
         assert not success
         assert remaining == []
-        assert len(validator.get_all_validation_errors()) == 1
+        assert validator.get_all_validation_errors() == [
+            "Expected tool tool1, got tool2",
+            "Validation failed for task 2",
+        ]
 
     def test_validate_missing_subtasks(self):
         subtasks = [
@@ -167,9 +174,7 @@ class TestOrderedCallsValidator:
 
         assert not success
         assert remaining == []
-        assert validator.get_all_validation_errors() == [
-            "Not all subtasks were completed in given tool calls."
-        ]
+        assert validator.get_all_validation_errors() == ["Validation failed for task 3"]
 
     def test_validate_subtask_failed(self):
         subtasks = [
@@ -185,7 +190,8 @@ class TestOrderedCallsValidator:
         assert not success
         assert remaining == []
         assert validator.get_all_validation_errors() == [
-            "Not all subtasks were completed in given tool calls."
+            "error in task2",
+            "Validation failed for task 2",
         ]
 
 
@@ -265,7 +271,7 @@ class TestNotOrderedCallsValidator:
         assert not success
         assert remaining == []
         assert (
-            "Not all subtasks were completed"
+            "Validation failed for tasks: [2]"
             in validator.get_all_validation_errors()[0]
         )
 

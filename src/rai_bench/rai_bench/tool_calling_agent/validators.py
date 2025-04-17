@@ -42,17 +42,17 @@ class OrderedCallsValidator(Validator):
     def validate(self, tool_calls: List[ToolCall]) -> Tuple[bool, List[ToolCall]]:
         # Before validation create new iterator, in case validator
         # was used before in other task
-        subtask_iter = iter(self.subtasks)
+        subtask_iter = iter(enumerate(self.subtasks))
         if len(tool_calls) < 1:
             self.validation_error("Not a single tool call to validate")
             return False, tool_calls
 
         else:
-            subtask = next(subtask_iter)
+            u, subtask = next(subtask_iter)
             for i, tool_call in enumerate(tool_calls):
                 try:
                     if subtask.validate(tool_call=tool_call):
-                        subtask = next(subtask_iter)
+                        u, subtask = next(subtask_iter)
                 except SubTaskValidationError as e:
                     # TODO (jm) should we log every error to results, even if its not causing validator failure?
                     # for now we log subtask errors to log file, but not to results.csv
@@ -60,9 +60,7 @@ class OrderedCallsValidator(Validator):
                 except StopIteration:
                     return True, tool_calls[i + 1 :]
 
-            self.validation_error(
-                "Not all subtasks were completed in given tool calls."
-            )
+            self.validation_error(f"Validation failed for task {u + 1}")
             return False, []
 
 
@@ -81,22 +79,26 @@ class NotOrderedCallsValidator(Validator):
         if len(tool_calls) < 1:
             self.validation_error("Not a single tool call to validate")
             return False, tool_calls
-        to_be_done = self.subtasks.copy()
+        # to_be_done = self.subtasks.copy()
+        # for saving to result which tasks where not done
+        to_be_done_idx = list(range(len(self.subtasks)))
         for i, tool_call in enumerate(tool_calls):
-            if not to_be_done:
+            if not to_be_done_idx:
                 # all subtask completed
                 return True, tool_calls[i + 1 :]
-            for u, subtask in enumerate(to_be_done):
+            for u in to_be_done_idx:
                 try:
-                    subtask.validate(tool_call=tool_call)
-                    to_be_done.pop(u)
+                    self.subtasks[u].validate(tool_call=tool_call)
+                    to_be_done_idx.remove(u)
                     break
                 except SubTaskValidationError as e:
                     self.logger.error(str(e))
 
-        if not to_be_done:
+        if not to_be_done_idx:
             # all tool calls iterated
             # all subtask completed
             return True, []
-        self.validation_error("Not all subtasks were completed in given tool calls.")
+        self.validation_error(
+            f"Validation failed for tasks: {[idx + 1 for idx in to_be_done_idx]}"
+        )
         return False, []

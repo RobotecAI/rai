@@ -116,7 +116,7 @@ false_response_inputs: List[BoolImageTaskInput] = [
 
 ########## SUBTASKS #######################################################################################
 get_topics_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="get_ros2_topics_names_and_types"
+    expected_tool_name="get_ros2_topics_names_and_types", expected_args={}
 )
 
 color_image_subtask = CheckArgsToolCallSubTask(
