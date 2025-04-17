@@ -41,7 +41,7 @@ class ROS2Message(BaseMessage):
     pass
 
 
-class ROS2HRIMessage(HRIMessage):
+class ROS2HRIMessage(HRIMessage, ROS2Message):
     @classmethod
     def from_ros2(
         cls,

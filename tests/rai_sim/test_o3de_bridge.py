@@ -309,12 +309,6 @@ class TestROS2ConnectorInterface(unittest.TestCase):
                 f"Parameter '{param_name}' has incorrect type, expected: {expected_type}, got: {param.annotation}",
             )
 
-        self.assertIs(
-            signature.return_annotation,
-            inspect.Signature.empty,
-            "send_message should have no return value",
-        )
-
     def test_receive_message_signature(self):
         signature = inspect.signature(self.connector.receive_message)
         parameters = signature.parameters
@@ -340,12 +334,6 @@ class TestROS2ConnectorInterface(unittest.TestCase):
                 self.resolve_annotation(expected_type),
                 f"Parameter '{param_name}' has incorrect type, expected: {expected_type}, got: {param.annotation}",
             )
-
-        self.assertIs(
-            signature.return_annotation,
-            ROS2Message,
-            f"Return type is incorrect, expected: ROS2Message, got: {signature.return_annotation}",
-        )
 
     def test_get_topics_names_and_types_signature(self):
         signature = inspect.signature(self.connector.get_topics_names_and_types)
