@@ -18,7 +18,7 @@ import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from rai.agents.integrations.streamlit import get_streamlit_cb, streamlit_invoke
 from rai.agents.react_agent import ReActAgent
-from rai.communication.ros2 import ROS2ARIConnector
+from rai.communication.ros2 import ROS2Connector
 from rai.messages import HumanMultimodalMessage
 from rai.tools.ros2 import ROS2Toolkit
 
@@ -26,8 +26,8 @@ from rai.tools.ros2 import ROS2Toolkit
 @st.cache_resource
 def initialize_graph():
     rclpy.init()
-    ari_connector = ROS2ARIConnector()
-    tools = ROS2Toolkit(connector=ari_connector).get_tools()
+    ros2_connector = ROS2Connector()
+    tools = ROS2Toolkit(connector=ros2_connector).get_tools()
     agent = ReActAgent(connectors={}, tools=tools).agent
     return agent
 

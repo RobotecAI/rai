@@ -21,10 +21,10 @@ from nav2_msgs.action import NavigateToPose
 from PIL import Image
 from pydub import AudioSegment
 from rai.communication.ros2 import (
-    ROS2ARIConnector,
-    ROS2ARIMessage,
+    ROS2Connector,
     ROS2HRIConnector,
     ROS2HRIMessage,
+    ROS2Message,
 )
 from std_msgs.msg import String
 from std_srvs.srv import SetBool
@@ -45,15 +45,13 @@ from .helpers import (
 _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
 
 
-def test_ros2ari_connector_send_message(
-    ros_setup: None, request: pytest.FixtureRequest
-):
+def test_ros2_connector_send_message(ros_setup: None, request: pytest.FixtureRequest):
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     message_receiver = MessageSubscriber(topic_name)
     executors, threads = multi_threaded_spinner([message_receiver])
-    connector = ROS2ARIConnector()
+    connector = ROS2Connector()
     try:
-        message = ROS2ARIMessage(
+        message = ROS2Message(
             payload={"data": "Hello, world!"},
             metadata={"msg_type": "std_msgs/msg/String"},
         )
@@ -67,13 +65,13 @@ def test_ros2ari_connector_send_message(
         shutdown_executors_and_threads(executors, threads)
 
 
-def test_ros2ari_connector_receive_message(
+def test_ros2_connector_receive_message(
     ros_setup: None, request: pytest.FixtureRequest
 ):
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     message_publisher = MessagePublisher(topic_name)
     executors, threads = multi_threaded_spinner([message_publisher])
-    connector = ROS2ARIConnector()
+    connector = ROS2Connector()
     try:
         message = connector.receive_message(topic_name, timeout_sec=1.0)
         assert message.payload == String(data="Hello, ROS2!")
@@ -82,15 +80,13 @@ def test_ros2ari_connector_receive_message(
         shutdown_executors_and_threads(executors, threads)
 
 
-def test_ros2ari_connector_service_call(
-    ros_setup: None, request: pytest.FixtureRequest
-):
+def test_ros2_connector_service_call(ros_setup: None, request: pytest.FixtureRequest):
     service_name = f"{request.node.originalname}_service"  # type: ignore
     message_receiver = ServiceServer(service_name)
     executors, threads = multi_threaded_spinner([message_receiver])
-    connector = ROS2ARIConnector()
+    connector = ROS2Connector()
     try:
-        message = ROS2ARIMessage(payload={"data": True})
+        message = ROS2Message(payload={"data": True})
         response = connector.service_call(
             message, target=service_name, msg_type="std_srvs/srv/SetBool"
         )
@@ -102,13 +98,13 @@ def test_ros2ari_connector_service_call(
         shutdown_executors_and_threads(executors, threads)
 
 
-def test_ros2ari_connector_send_goal(ros_setup: None, request: pytest.FixtureRequest):
+def test_ros2_connector_send_goal(ros_setup: None, request: pytest.FixtureRequest):
     action_name = f"{request.node.originalname}_action"  # type: ignore
     action_server = TestActionServer(action_name)
     executors, threads = multi_threaded_spinner([action_server])
-    connector = ROS2ARIConnector()
+    connector = ROS2Connector()
     try:
-        message = ROS2ARIMessage(
+        message = ROS2Message(
             payload={},
         )
         handle = connector.start_action(
@@ -122,16 +118,16 @@ def test_ros2ari_connector_send_goal(ros_setup: None, request: pytest.FixtureReq
         shutdown_executors_and_threads(executors, threads)
 
 
-def test_ros2ari_connector_send_goal_and_terminate_action(
+def test_ros2_connector_send_goal_and_terminate_action(
     ros_setup: None, request: pytest.FixtureRequest
 ):
     action_name = f"{request.node.originalname}_action"  # type: ignore
     action_server = TestActionServer(action_name)
     executors, threads = multi_threaded_spinner([action_server])
-    connector = ROS2ARIConnector()
+    connector = ROS2Connector()
     feedbacks: List[Any] = []
     try:
-        message = ROS2ARIMessage(payload={})
+        message = ROS2Message(payload={})
         handle = connector.start_action(
             action_data=message,
             target=action_name,
@@ -149,15 +145,15 @@ def test_ros2ari_connector_send_goal_and_terminate_action(
         shutdown_executors_and_threads(executors, threads)
 
 
-def test_ros2ari_connector_send_goal_erronous_callback(
+def test_ros2_connector_send_goal_erronous_callback(
     ros_setup: None, request: pytest.FixtureRequest
 ):
     action_name = f"{request.node.originalname}_action"  # type: ignore
     action_server = TestActionServer(action_name)
     executors, threads = multi_threaded_spinner([action_server])
-    connector = ROS2ARIConnector()
+    connector = ROS2Connector()
     try:
-        message = ROS2ARIMessage(payload={})
+        message = ROS2Message(payload={})
         handle = connector.start_action(
             action_data=message,
             target=action_name,
@@ -218,10 +214,8 @@ def test_ros2hri_default_message_publish(
         shutdown_executors_and_threads(executors, threads)
 
 
-def test_ros2ari_connector_create_service(
-    ros_setup: None, request: pytest.FixtureRequest
-):
-    connector = ROS2ARIConnector()
+def test_ros2_connector_create_service(ros_setup: None, request: pytest.FixtureRequest):
+    connector = ROS2Connector()
     mock_callback = MagicMock()
     mock_callback.return_value = SetBool.Response()
 
@@ -242,9 +236,9 @@ def test_ros2ari_connector_create_service(
         shutdown_executors_and_threads(executors, threads)
 
 
-def test_ros2ari_connector_action_call(ros_setup: None, request: pytest.FixtureRequest):
+def test_ros2_connector_action_call(ros_setup: None, request: pytest.FixtureRequest):
     action_name = "navigate_to_pose"
-    connector = ROS2ARIConnector()
+    connector = ROS2Connector()
     mock_callback = MagicMock()
     mock_callback.return_value = NavigateToPose.Result()
 

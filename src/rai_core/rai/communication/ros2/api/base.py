@@ -31,6 +31,7 @@ import rclpy.node
 import rclpy.qos
 import rclpy.subscription
 import rclpy.task
+import rosidl_runtime_py.convert
 import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
 from rclpy.qos import (
@@ -41,6 +42,9 @@ from rclpy.qos import (
     ReliabilityPolicy,
 )
 from rclpy.topic_endpoint_info import TopicEndpointInfo
+from rosidl_parser.definition import NamespacedType
+from rosidl_runtime_py.import_message import import_message_from_namespaced_type
+from rosidl_runtime_py.utilities import get_namespaced_type
 
 from rai.communication.ros2.api.conversion import import_message_from_str
 
@@ -53,6 +57,8 @@ class IROS2Message(Protocol):
 
 
 class BaseROS2API:
+    node: rclpy.node.Node
+
     @staticmethod
     def adapt_requests_to_offers(publisher_info: List[TopicEndpointInfo]) -> QoSProfile:
         if not publisher_info:
@@ -122,3 +128,17 @@ class BaseROS2API:
         msg = msg_cls.Request()
         rosidl_runtime_py.set_message.set_message_fields(msg, service_request_args)
         return msg, msg_cls  # type: ignore
+
+    @staticmethod
+    def import_message_from_str(msg_type: str) -> Type[object]:
+        msg_namespaced_type: NamespacedType = get_namespaced_type(msg_type)
+        return import_message_from_namespaced_type(msg_namespaced_type)
+
+    def get_topic_type(self, topic: str) -> str:
+        names_and_types = self.node.get_topic_names_and_types(no_demangle=False)
+        for name, types in names_and_types:
+            if name == (topic if topic.startswith("/") else f"/{topic}"):
+                if len(types) != 1:
+                    raise ValueError(f"Topic {topic} has multiple types: {types}")
+                return types[0]
+        raise ValueError(f"Topic {topic} not found")

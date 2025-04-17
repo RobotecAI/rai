@@ -24,7 +24,7 @@ import rclpy
 import rclpy.qos
 from geometry_msgs.msg import Point, Quaternion, TransformStamped
 from geometry_msgs.msg import Pose as ROS2Pose
-from rai.communication.ros2 import ROS2ARIConnector, ROS2ARIMessage
+from rai.communication.ros2 import ROS2Connector, ROS2Message
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
 
@@ -67,7 +67,7 @@ def test_load_config(sample_base_yaml_config: Path, sample_o3dexros2_config: Pat
 
 class TestO3DExROS2Bridge(unittest.TestCase):
     def setUp(self):
-        self.mock_connector = MagicMock(spec=ROS2ARIConnector)
+        self.mock_connector = MagicMock(spec=ROS2Connector)
         self.mock_logger = MagicMock()
         self.bridge = O3DExROS2Bridge(
             connector=self.mock_connector, logger=self.mock_logger
@@ -213,19 +213,19 @@ class TestO3DExROS2Bridge(unittest.TestCase):
         self.assertEqual(pose.rotation.w, 0.4)
 
 
-class TestROS2ARIConnectorInterface(unittest.TestCase):
-    """Tests to ensure the ROS2ARIConnector interface meets the expectations of O3DExROS2Bridge."""
+class TestROS2ConnectorInterface(unittest.TestCase):
+    """Tests to ensure the ROS2Connector interface meets the expectations of O3DExROS2Bridge."""
 
     def setUp(self):
         rclpy.init()
-        self.connector = ROS2ARIConnector()
+        self.connector = ROS2Connector()
 
     def tearDown(self):
         rclpy.shutdown()
 
     def test_connector_required_methods_exist(self):
-        """Test that all required methods exist on the ROS2ARIConnector."""
-        connector = ROS2ARIConnector()
+        """Test that all required methods exist on the ROS2Connector."""
+        connector = ROS2Connector()
 
         # Check that all required methods exist
         self.assertTrue(
@@ -288,7 +288,7 @@ class TestROS2ARIConnectorInterface(unittest.TestCase):
         parameters = signature.parameters
 
         expected_params: dict[str, type] = {
-            "message": ROS2ARIMessage,
+            "message": ROS2Message,
             "target": str,
             "msg_type": str,
             "auto_qos_matching": bool,
@@ -323,7 +323,8 @@ class TestROS2ARIConnectorInterface(unittest.TestCase):
             "source": str,
             "timeout_sec": float,
             "msg_type": Optional[str],
-            "auto_topic_type": bool,
+            "qos_profile": Optional[QoSProfile],
+            "auto_qos_matching": bool,
         }
 
         self.assertListEqual(
@@ -342,8 +343,8 @@ class TestROS2ARIConnectorInterface(unittest.TestCase):
 
         self.assertIs(
             signature.return_annotation,
-            ROS2ARIMessage,
-            f"Return type is incorrect, expected: ROS2ARIMessage, got: {signature.return_annotation}",
+            ROS2Message,
+            f"Return type is incorrect, expected: ROS2Message, got: {signature.return_annotation}",
         )
 
     def test_get_topics_names_and_types_signature(self):

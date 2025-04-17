@@ -33,7 +33,6 @@ from std_srvs.srv import SetBool
 
 from .helpers import (
     HRIMessageSubscriber,
-    MessagePublisher,
     MessageSubscriber,
     ServiceServer,
     TestActionClient,
@@ -207,70 +206,6 @@ def test_ros2_single_message_publish_wrong_qos_setup(
                 msg_type="std_msgs/msg/String",
                 auto_qos_matching=False,
                 qos_profile=None,
-            )
-    finally:
-        shutdown_executors_and_threads(executors, threads)
-
-
-def test_ros2_single_message_receive_no_discovery_time(
-    ros_setup: None, request: pytest.FixtureRequest
-) -> None:
-    topic_name = f"{request.node.originalname}_topic"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    message_publisher = MessagePublisher(topic_name)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([message_publisher, node])
-
-    try:
-        topic_api = ROS2TopicAPI(node)
-        msg = topic_api.receive(
-            topic_name,
-            msg_type="std_msgs/msg/String",
-            timeout_sec=3.0,
-            auto_topic_type=False,
-        )
-        assert msg.data == "Hello, ROS2!"
-    finally:
-        shutdown_executors_and_threads(executors, threads)
-
-
-def test_ros2_single_message_receive_wrong_msg_type(
-    ros_setup: None, request: pytest.FixtureRequest
-) -> None:
-    topic_name = f"{request.node.originalname}_topic"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    message_publisher = MessagePublisher(topic_name)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([message_publisher, node])
-
-    try:
-        topic_api = ROS2TopicAPI(node)
-        with pytest.raises(AttributeError):
-            topic_api.receive(
-                topic_name,
-                msg_type="std_msgs/msg/NotExistingMessage",
-                auto_topic_type=False,
-            )
-    finally:
-        shutdown_executors_and_threads(executors, threads)
-
-
-def test_ros2_single_message_receive_wrong_topic_name(
-    ros_setup: None, request: pytest.FixtureRequest
-) -> None:
-    topic_name = f"{request.node.originalname}_topic"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    message_publisher = MessagePublisher(topic_name)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([message_publisher, node])
-
-    try:
-        topic_api = ROS2TopicAPI(node)
-        with pytest.raises(ValueError):
-            topic_api.receive(
-                f"{topic_name}/wrong_topic_name",
-                msg_type="std_msgs/msg/String",
-                auto_topic_type=False,
             )
     finally:
         shutdown_executors_and_threads(executors, threads)

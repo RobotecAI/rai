@@ -23,7 +23,7 @@ from langchain_core.utils import stringify_dict
 from pydantic import BaseModel, Field
 from sensor_msgs.msg import CompressedImage, Image
 
-from rai.communication.ros2 import ROS2ARIConnector, ROS2ARIMessage
+from rai.communication.ros2 import ROS2Connector, ROS2Message
 from rai.communication.ros2.api.conversion import ros2_message_to_dict
 from rai.messages import MultimodalArtifact, preprocess_image
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
@@ -88,7 +88,7 @@ class PublishROS2MessageTool(BaseROS2Tool):
     def _run(self, topic: str, message: Dict[str, Any], message_type: str) -> str:
         if not self.is_writable(topic):
             raise ValueError(f"Topic {topic} is not writable")
-        ros_message = ROS2ARIMessage(
+        ros_message = ROS2Message(
             payload=message,
             metadata={"topic": topic},
         )
@@ -102,7 +102,7 @@ class ReceiveROS2MessageToolInput(BaseModel):
 
 
 class ReceiveROS2MessageTool(BaseROS2Tool):
-    connector: ROS2ARIConnector
+    connector: ROS2Connector
     name: str = "receive_ros2_message"
     description: str = "Receive a message from a ROS2 topic"
     args_schema: Type[ReceiveROS2MessageToolInput] = ReceiveROS2MessageToolInput
@@ -120,7 +120,7 @@ class GetROS2ImageToolInput(BaseModel):
 
 
 class GetROS2ImageTool(BaseROS2Tool):
-    connector: ROS2ARIConnector
+    connector: ROS2Connector
     name: str = "get_ros2_image"
     description: str = "Get an image from a ROS2 topic"
     args_schema: Type[GetROS2ImageToolInput] = GetROS2ImageToolInput
@@ -151,7 +151,7 @@ class GetROS2ImageTool(BaseROS2Tool):
 
 
 class GetROS2TopicsNamesAndTypesTool(BaseROS2Tool):
-    connector: ROS2ARIConnector
+    connector: ROS2Connector
     name: str = "get_ros2_topics_names_and_types"
     description: str = "Get the names and types of all ROS2 topics"
 
@@ -206,7 +206,7 @@ class GetROS2MessageInterfaceToolInput(BaseModel):
 
 
 class GetROS2MessageInterfaceTool(BaseROS2Tool):
-    connector: ROS2ARIConnector
+    connector: ROS2Connector
     name: str = "get_ros2_message_interface"
     description: str = "Get the interface of a ROS2 message"
     args_schema: Type[GetROS2MessageInterfaceToolInput] = (
@@ -238,7 +238,7 @@ class GetROS2TransformToolInput(BaseModel):
 
 
 class GetROS2TransformTool(BaseROS2Tool):
-    connector: ROS2ARIConnector
+    connector: ROS2Connector
     name: str = "get_ros2_transform"
     description: str = "Get the transform between two frames"
     args_schema: Type[GetROS2TransformToolInput] = GetROS2TransformToolInput

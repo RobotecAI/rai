@@ -23,7 +23,7 @@ from langchain_core.utils import stringify_dict
 from pydantic import BaseModel, Field
 from rclpy.action import CancelResponse
 
-from rai.communication.ros2 import ROS2ARIMessage
+from rai.communication.ros2 import ROS2Message
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
 
 internal_action_id_mapping: Dict[str, str] = {}
@@ -169,7 +169,7 @@ class StartROS2ActionTool(BaseROS2Tool):
     ) -> str:
         if not self.is_writable(action_name):
             raise ValueError(f"Action {action_name} is not writable")
-        message = ROS2ARIMessage(payload=action_args)
+        message = ROS2Message(payload=action_args)
         action_id = str(uuid.uuid4())
         response = self.connector.start_action(
             message,

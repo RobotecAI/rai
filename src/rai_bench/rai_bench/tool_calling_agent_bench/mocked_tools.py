@@ -17,8 +17,8 @@ from unittest.mock import MagicMock
 
 import numpy as np
 import numpy.typing as npt
-from rai.communication.ros2.connectors import ROS2ARIConnector
-from rai.communication.ros2.messages import ROS2ARIMessage
+from rai.communication.ros2.connectors import ROS2Connector
+from rai.communication.ros2.messages import ROS2Message
 from rai.messages import MultimodalArtifact, preprocess_image
 from rai.tools.ros2 import (
     GetObjectPositionsTool,
@@ -31,7 +31,7 @@ from rai_open_set_vision.tools import GetGrabbingPointTool
 
 
 class MockGetROS2TopicsNamesAndTypesTool(GetROS2TopicsNamesAndTypesTool):
-    connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
+    connector: ROS2Connector = MagicMock(spec=ROS2Connector)
     mock_topics_names_and_types: list[str]
 
     def _run(self) -> str:
@@ -46,7 +46,7 @@ class MockGetROS2TopicsNamesAndTypesTool(GetROS2TopicsNamesAndTypesTool):
 
 
 class MockGetROS2ImageTool(GetROS2ImageTool):
-    connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
+    connector: ROS2Connector = MagicMock(spec=ROS2Connector)
     expected_topics: List[str]
 
     def _run(
@@ -95,7 +95,7 @@ class MockGetROS2ImageTool(GetROS2ImageTool):
 
 
 class MockReceiveROS2MessageTool(ReceiveROS2MessageTool):
-    connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
+    connector: ROS2Connector = MagicMock(spec=ROS2Connector)
     expected_topics: List[str]
 
     def _run(self, topic: str) -> str:
@@ -120,14 +120,14 @@ class MockReceiveROS2MessageTool(ReceiveROS2MessageTool):
             raise ValueError(
                 f"Topic {topic} is not available within 1.0 seconds. Check if the topic exists."
             )
-        message: ROS2ARIMessage = MagicMock(spec=ROS2ARIMessage)
+        message: ROS2Message = MagicMock(spec=ROS2Message)
         message.payload = {"mock": "payload"}
         message.metadata = {"mock": "metadata"}
         return str({"payload": message.payload, "metadata": message.metadata})
 
 
 class MockMoveToPointTool(MoveToPointTool):
-    connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
+    connector: ROS2Connector = MagicMock(spec=ROS2Connector)
 
     def _run(self, x: float, y: float, z: float, task: str) -> str:
         """Method that return a mock message with the end effector position.
@@ -149,7 +149,7 @@ class MockMoveToPointTool(MoveToPointTool):
 
 
 class MockGetObjectPositionsTool(GetObjectPositionsTool):
-    connector: ROS2ARIConnector = MagicMock(spec=ROS2ARIConnector)
+    connector: ROS2Connector = MagicMock(spec=ROS2Connector)
 
     # Create mock instances for the arguments
     target_frame: str = MagicMock(spec=str)

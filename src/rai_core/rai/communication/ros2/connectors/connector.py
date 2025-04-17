@@ -15,7 +15,8 @@
 import threading
 import time
 import uuid
-from typing import Any, Callable, List, Optional, Tuple
+from functools import partial
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import rclpy
 import rclpy.executors
@@ -27,7 +28,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile
 from tf2_ros import Buffer, LookupException, TransformListener, TransformStamped
 
-from rai.communication import ARIConnector
+from rai.communication import BaseConnector
 from rai.communication.ros2.api import (
     ROS2ActionAPI,
     ROS2ServiceAPI,
@@ -35,10 +36,10 @@ from rai.communication.ros2.api import (
 )
 from rai.communication.ros2.connectors.action_mixin import ROS2ActionMixin
 from rai.communication.ros2.connectors.service_mixin import ROS2ServiceMixin
-from rai.communication.ros2.messages import ROS2ARIMessage
+from rai.communication.ros2.messages import ROS2Message
 
 
-class ROS2ARIConnector(ROS2ActionMixin, ROS2ServiceMixin, ARIConnector[ROS2ARIMessage]):
+class ROS2Connector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[ROS2Message]):
     """ROS2-specific implementation of the ARIConnector.
 
     This connector provides functionality for ROS2 communication through topics,
@@ -92,7 +93,7 @@ class ROS2ARIConnector(ROS2ActionMixin, ROS2ServiceMixin, ARIConnector[ROS2ARIMe
 
     def __init__(
         self,
-        node_name: str = f"rai_ros2_ari_connector_{str(uuid.uuid4())[-12:]}",
+        node_name: str = f"rai_ros2_connector_{str(uuid.uuid4())[-12:]}",
         destroy_subscribers: bool = False,
     ):
         super().__init__()
@@ -108,6 +109,12 @@ class ROS2ARIConnector(ROS2ActionMixin, ROS2ServiceMixin, ARIConnector[ROS2ARIMe
         self._thread = threading.Thread(target=self._executor.spin)
         self._thread.start()
 
+        # cache for last received messages
+        self.last_msg: Dict[str, ROS2Message] = {}
+
+    def last_message_callback(self, source: str, msg: ROS2Message):
+        self.last_msg[source] = msg
+
     def get_topics_names_and_types(self) -> List[Tuple[str, List[str]]]:
         return self._topic_api.get_topic_names_and_types()
 
@@ -119,7 +126,7 @@ class ROS2ARIConnector(ROS2ActionMixin, ROS2ServiceMixin, ARIConnector[ROS2ARIMe
 
     def send_message(
         self,
-        message: ROS2ARIMessage,
+        message: ROS2Message,
         target: str,
         *,
         msg_type: str,  # TODO: allow msg_type to be None, add auto topic type detection
@@ -135,24 +142,66 @@ class ROS2ARIConnector(ROS2ActionMixin, ROS2ServiceMixin, ARIConnector[ROS2ARIMe
             qos_profile=qos_profile,
         )
 
+    def general_callback_preprocessor(self, message: Any):
+        return ROS2Message(payload=message, metadata={"msg_type": str(type(message))})
+
+    def register_callback(
+        self,
+        source: str,
+        callback: Callable[[ROS2Message | Any], None],
+        raw: bool = False,
+        *,
+        msg_type: Optional[str] = None,
+        qos_profile: Optional[QoSProfile] = None,
+        auto_qos_matching: bool = True,
+        **kwargs: Any,
+    ):
+        exists = self._topic_api.subscriber_exists(source)
+        if not exists:
+            self._topic_api.create_subscriber(
+                topic=source,
+                msg_type=msg_type,
+                callback=partial(self.general_callback, source),
+                qos_profile=qos_profile,
+                auto_qos_matching=auto_qos_matching,
+            )
+        super().register_callback(source, callback, raw=raw)
+
     def receive_message(
         self,
         source: str,
         timeout_sec: float = 1.0,
         *,
         msg_type: Optional[str] = None,
-        auto_topic_type: bool = True,
+        qos_profile: Optional[QoSProfile] = None,
+        auto_qos_matching: bool = True,
         **kwargs: Any,
-    ) -> ROS2ARIMessage:
-        msg = self._topic_api.receive(
-            topic=source,
-            timeout_sec=timeout_sec,
-            msg_type=msg_type,
-            auto_topic_type=auto_topic_type,
-        )
-        return ROS2ARIMessage(
-            payload=msg, metadata={"msg_type": str(type(msg)), "topic": source}
-        )
+    ) -> ROS2Message:
+        if self._topic_api.subscriber_exists(source):
+            # trying to hit cache first
+            if source in self.last_msg:
+                if self.last_msg[source].timestamp > time.time() - timeout_sec:
+                    return self.last_msg[source]
+        else:
+            self._topic_api.create_subscriber(
+                topic=source,
+                callback=partial(self.general_callback, source),
+                msg_type=msg_type,
+                qos_profile=qos_profile,
+                auto_qos_matching=auto_qos_matching,
+            )
+            self.register_callback(source, partial(self.last_message_callback, source))
+
+        start_time = time.time()
+        # wait for the message to be received
+        while time.time() - start_time < timeout_sec:
+            if source in self.last_msg:
+                return self.last_msg[source]
+            time.sleep(0.1)
+        else:
+            raise TimeoutError(
+                f"Message from {source} not received in {timeout_sec} seconds"
+            )
 
     @staticmethod
     def wait_for_transform(

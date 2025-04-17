@@ -26,8 +26,8 @@ from pydantic import BaseModel, Field
 from rclpy.action import ActionClient
 from tf_transformations import euler_from_quaternion, quaternion_from_euler
 
-from rai.communication.ros2 import ROS2ARIMessage
-from rai.communication.ros2.connectors import ROS2ARIConnector
+from rai.communication.ros2 import ROS2Message
+from rai.communication.ros2.connectors import ROS2Connector
 from rai.messages import MultimodalArtifact
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
 
@@ -38,7 +38,7 @@ current_result: Optional[NavigateToPose.Result] = None
 
 
 class Nav2Toolkit(BaseROS2Toolkit):
-    connector: ROS2ARIConnector
+    connector: ROS2Connector
     frame_id: str = Field(
         default="map", description="The frame id of the Nav2 stack (map, odom, etc.)"
     )
@@ -121,7 +121,7 @@ class NavigateToPoseTool(BaseROS2Tool):
             }
         }
 
-        msg = ROS2ARIMessage(payload=goal)
+        msg = ROS2Message(payload=goal)
         action_id = self.connector.start_action(
             action_data=msg,
             target=self.action_name,

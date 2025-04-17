@@ -18,7 +18,7 @@ import rclpy.qos
 from langchain_core.messages import HumanMessage
 from rai import get_llm_model
 from rai.agents.conversational_agent import create_conversational_agent
-from rai.communication.ros2.connectors import ROS2ARIConnector
+from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2 import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
 from rai.tools.ros2.manipulation import GetObjectPositionsTool, MoveToPointTool
 from rai_open_set_vision.tools import GetGrabbingPointTool
@@ -26,7 +26,7 @@ from rai_open_set_vision.tools import GetGrabbingPointTool
 
 def create_agent():
     rclpy.init()
-    connector = ROS2ARIConnector()
+    connector = ROS2Connector()
     node = connector.node
     node.declare_parameter("conversion_ratio", 1.0)
 

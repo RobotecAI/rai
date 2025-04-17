@@ -41,6 +41,7 @@ from rclpy.publisher import Publisher
 from rclpy.qos import (
     QoSProfile,
 )
+from rclpy.subscription import Subscription
 from rclpy.topic_endpoint_info import TopicEndpointInfo
 
 from rai.communication.ros2.api.base import (
@@ -82,6 +83,62 @@ class ROS2TopicAPI(BaseROS2API):
         self._last_msg: Dict[str, Tuple[float, Any]] = {}
         self._subscriptions: Dict[str, rclpy.node.Subscription] = {}
         self._destroy_subscribers: bool = destroy_subscribers
+        self.node = node
+        self.subscriptions: Dict[str, Subscription] = {}
+        self.publishers: Dict[str, Publisher] = {}
+
+    def subscriber_exists(self, topic: str) -> bool:
+        return topic in self.subscriptions
+
+    def publisher_exists(self, topic: str) -> bool:
+        return topic in self.publishers
+
+    def create_subscriber(
+        self,
+        topic: str,
+        callback: Callable[[Any], None],
+        msg_type: Optional[str] = None,
+        qos_profile: Optional[QoSProfile] = None,
+        auto_qos_matching: bool = True,
+    ):
+        if msg_type is None:
+            msg_type = self.get_topic_type(topic)
+        msg_cls = self.import_message_from_str(msg_type)
+        if auto_qos_matching:
+            qos = self.adapt_requests_to_offers(
+                self.node.get_publishers_info_by_topic(topic)
+            )
+        elif qos_profile is not None:
+            qos = qos_profile
+        else:
+            raise ValueError("Either qos_profile or auto_qos_matching must be provided")
+        subscription = self.node.create_subscription(
+            topic=topic, msg_type=msg_cls, callback=callback, qos_profile=qos
+        )
+        self.subscriptions[topic] = subscription
+        return subscription
+
+    def create_publisher(
+        self,
+        topic: str,
+        msg_type: str,
+        qos_profile: Optional[QoSProfile] = None,
+        auto_qos_matching: bool = True,
+    ):
+        msg_cls = self.import_message_from_str(msg_type)
+        if auto_qos_matching:
+            qos = self.adapt_requests_to_offers(
+                self.node.get_subscriptions_info_by_topic(topic)
+            )
+        elif qos_profile is not None:
+            qos = qos_profile
+        else:
+            raise ValueError("Either qos_profile or auto_qos_matching must be provided")
+        publisher = self.node.create_publisher(
+            topic=topic, msg_type=msg_cls, qos_profile=qos
+        )
+        self.publishers[topic] = publisher
+        return publisher
 
     def get_topic_names_and_types(
         self, no_demangle: bool = False
@@ -130,140 +187,8 @@ class ROS2TopicAPI(BaseROS2API):
         if not auto_topic_type and msg_type is None:
             raise ValueError("msg_type must be provided if auto_topic_type is False")
 
-    def receive(
-        self,
-        topic: str,
-        *,
-        auto_topic_type: bool = True,
-        msg_type: Optional[str] = None,
-        timeout_sec: float = 1.0,
-        auto_qos_matching: bool = True,
-        qos_profile: Optional[QoSProfile] = None,
-        retry_count: int = 3,
-    ) -> Any:
-        """Receive a single message from a ROS2 topic.
-
-        Args:
-            topic: Name of the topic to receive from
-            msg_type: ROS2 message type as string
-            timeout_sec: How long to wait for a message
-            auto_qos_matching: Whether to automatically match QoS with publishers
-            qos_profile: Optional custom QoS profile to use
-
-        Returns:
-            The received message
-
-        Raises:
-            ValueError: If no publisher exists or no message is received within timeout
-            ValueError: If auto_topic_type is False and msg_type is not provided
-            ValueError: If auto_topic_type is True and msg_type is provided
-        """
-        self._verify_receive_args(topic, auto_topic_type, msg_type)
-        topic_endpoints = self._verify_publisher_exists(topic)
-
-        # TODO: Verify publishers topic type consistency
-        if auto_topic_type:
-            msg_type = topic_endpoints[0].topic_type
-        else:
-            if msg_type is None:
-                raise ValueError(
-                    "msg_type must be provided if auto_topic_type is False"
-                )
-
-        qos_profile = self._resolve_qos_profile(
-            topic, auto_qos_matching, qos_profile, for_publisher=False
-        )
-
-        msg_cls = self._get_message_class(msg_type)
-        if not self._is_topic_available(topic, timeout_sec):
-            raise ValueError(
-                f"Topic {topic} is not available within {timeout_sec} seconds. Check if the topic exists."
-            )
-
-        for _ in range(retry_count):
-            success, msg = self._wait_for_message(
-                msg_cls,
-                self._node,
-                topic,
-                qos_profile=qos_profile,
-                timeout_sec=timeout_sec / retry_count,
-            )
-            if success:
-                return msg
-        else:
-            raise ValueError(
-                f"No message received from topic: {topic} within {timeout_sec} seconds"
-            )
-
     def _generic_callback(self, topic: str, msg: Any) -> None:
         self._last_msg[topic] = (time.time(), msg)
-
-    def _wait_for_message_once(
-        self,
-        msg_cls: Type[Any],
-        node: rclpy.node.Node,
-        topic: str,
-        qos_profile: QoSProfile,
-        timeout_sec: float,
-    ) -> Tuple[bool, Any]:
-        ts = time.time()
-        success = False
-        msg = None
-
-        def callback(received_msg: Any):
-            nonlocal success, msg
-            success = True
-            msg = received_msg
-
-        sub = node.create_subscription(
-            msg_cls,
-            topic,
-            callback,
-            qos_profile=qos_profile,
-        )
-        while not success and time.time() - ts < timeout_sec:
-            time.sleep(0.01)
-        node.destroy_subscription(sub)
-        return success, msg
-
-    def _wait_for_message_persistent(
-        self,
-        msg_cls: Type[Any],
-        node: rclpy.node.Node,
-        topic: str,
-        qos_profile: QoSProfile,
-        timeout_sec: float,
-    ) -> Tuple[bool, Any]:
-        if topic not in self._subscriptions:
-            self._subscriptions[topic] = node.create_subscription(
-                msg_cls,
-                topic,
-                partial(self._generic_callback, topic),
-                qos_profile=qos_profile,
-            )
-        ts = time.time()
-        while time.time() - ts < timeout_sec:
-            if topic in self._last_msg:
-                if self._last_msg[topic][0] + timeout_sec > time.time():
-                    return True, self._last_msg[topic][1]
-            time.sleep(0.01)
-        return False, None
-
-    def _wait_for_message(
-        self,
-        msg_cls: Type[Any],
-        node: rclpy.node.Node,
-        topic: str,
-        qos_profile: QoSProfile,
-        timeout_sec: float,
-    ) -> Tuple[bool, Any]:
-        if self._destroy_subscribers:
-            return self._wait_for_message_once(
-                msg_cls, node, topic, qos_profile, timeout_sec
-            )
-        return self._wait_for_message_persistent(
-            msg_cls, node, topic, qos_profile, timeout_sec
-        )
 
     def _is_topic_available(self, topic: str, timeout_sec: float) -> bool:
         ts = time.time()

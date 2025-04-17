@@ -18,7 +18,7 @@ import numpy as np
 import sensor_msgs.msg
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
-from rai.communication.ros2 import ROS2ARIConnector
+from rai.communication.ros2 import ROS2Connector
 from rai.communication.ros2.api import convert_ros_img_to_ndarray
 from rai.communication.ros2.ros_async import get_future_result
 from rclpy.exceptions import (
@@ -79,7 +79,7 @@ class DistanceMeasurement(NamedTuple):
 
 # --------------------- Tools ---------------------
 class GroundingDinoBaseTool(BaseTool):
-    connector: ROS2ARIConnector = Field(..., exclude=True)
+    connector: ROS2Connector = Field(..., exclude=True)
 
     box_threshold: float = Field(default=0.35, description="Box threshold for GDINO")
     text_threshold: float = Field(default=0.45, description="Text threshold for GDINO")

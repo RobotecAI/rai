@@ -18,7 +18,7 @@ from langchain_core.tools import BaseTool
 from langchain_core.utils import stringify_dict
 from pydantic import BaseModel, Field
 
-from rai.communication.ros2 import ROS2ARIMessage
+from rai.communication.ros2 import ROS2Message
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
 
 
@@ -97,7 +97,7 @@ class CallROS2ServiceTool(BaseROS2Tool):
     ) -> str:
         if not self.is_writable(service_name):
             raise ValueError(f"Service {service_name} is not writable")
-        message = ROS2ARIMessage(payload=service_args)
+        message = ROS2Message(payload=service_args)
         response = self.connector.service_call(
             message, service_name, msg_type=service_type
         )

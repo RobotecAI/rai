@@ -23,7 +23,7 @@ from typing import Any, Dict, List, Optional, Set
 import yaml
 from geometry_msgs.msg import Point, PoseStamped, Quaternion
 from geometry_msgs.msg import Pose as ROS2Pose
-from rai.communication.ros2 import ROS2ARIConnector, ROS2ARIMessage
+from rai.communication.ros2 import ROS2Connector, ROS2Message
 from rai.communication.ros2.ros_async import get_future_result
 from std_msgs.msg import Header
 from tf2_geometry_msgs import do_transform_pose
@@ -61,7 +61,7 @@ class O3DExROS2SimulationConfig(SimulationConfig):
 
 class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
     def __init__(
-        self, connector: ROS2ARIConnector, logger: Optional[logging.Logger] = None
+        self, connector: ROS2Connector, logger: Optional[logging.Logger] = None
     ):
         super().__init__(logger=logger)
         self.connector = connector
@@ -105,7 +105,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             )
 
     def get_available_spawnable_names(self) -> list[str]:
-        msg = ROS2ARIMessage(payload={})
+        msg = ROS2Message(payload={})
         response = self._try_service_call(
             msg,
             target="get_available_spawnable_names",
@@ -143,7 +143,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             },
         }
 
-        msg = ROS2ARIMessage(payload=msg_content)
+        msg = ROS2Message(payload=msg_content)
         response = self._try_service_call(
             msg, target="spawn_entity", msg_type="gazebo_msgs/srv/SpawnEntity"
         )
@@ -159,7 +159,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
     def _despawn_entity(self, entity: SpawnedEntity):
         msg_content = {"name": entity.id}
 
-        msg = ROS2ARIMessage(payload=msg_content)
+        msg = ROS2Message(payload=msg_content)
 
         response = self._try_service_call(
             msg, target="delete_entity", msg_type="gazebo_msgs/srv/DeleteEntity"
@@ -329,8 +329,8 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         return False
 
     def _try_service_call(
-        self, msg: ROS2ARIMessage, target: str, msg_type: str, n_retries: int = 3
-    ) -> ROS2ARIMessage:
+        self, msg: ROS2Message, target: str, msg_type: str, n_retries: int = 3
+    ) -> ROS2Message:
         if n_retries < 1:
             raise ValueError("Number of retries must be at least 1")
         for _ in range(n_retries):
@@ -396,7 +396,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
 class O3DEngineArmManipulationBridge(O3DExROS2Bridge):
     def reset_arm(self):
         self.connector.service_call(
-            ROS2ARIMessage(payload={}),
+            ROS2Message(payload={}),
             target="/reset_manipulator",
             msg_type="std_srvs/srv/Trigger",
         )

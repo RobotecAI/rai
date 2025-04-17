@@ -20,7 +20,7 @@ from typing import List
 import numpy as np
 import pytest
 import rclpy
-from rai.communication.ros2.connectors import ROS2ARIConnector
+from rai.communication.ros2.connectors import ROS2Connector
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import QoSPresetProfiles, QoSProfile
@@ -98,7 +98,7 @@ def test_transport(qos_profile: str):
     thread = threading.Thread(target=executor.spin)
     thread.start()
 
-    connector = ROS2ARIConnector(
+    connector = ROS2Connector(
         node_name="test_transport_" + str(uuid.uuid4()).replace("-", "")
     )
 
