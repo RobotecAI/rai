@@ -13,14 +13,12 @@
 # limitations under the License.
 
 
-import logging
 import os
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 from rai.agents import BaseAgent
-from rai.communication import ROS2ARIConnector
+from rai.communication.ros2 import ROS2Connector
 
 
 class BaseVisionAgent(BaseAgent):
@@ -31,15 +29,13 @@ class BaseVisionAgent(BaseAgent):
         self,
         weights_path: str | Path = Path.home() / Path(".cache/rai/"),
         ros2_name: str = "",
-        logger: Optional[logging.Logger] = None,
     ):
+        super().__init__()
         self._weights_path = Path(weights_path)
         os.makedirs(self._weights_path, exist_ok=True)
         self._init_weight_path()
-        self._logger = logger if logger else logging.getLogger(__name__)
-        ros2_connector = ROS2ARIConnector(ros2_name)
-
-        super().__init__(connectors={"ros2": ros2_connector})
+        self.weight_path = self._weights_path
+        self.ros2_connector = ROS2Connector(ros2_name)
 
     def _init_weight_path(self):
         try:
@@ -57,7 +53,7 @@ class BaseVisionAgent(BaseAgent):
                 self._weights_path = install_path
 
         except Exception:
-            self._logger.error("Could not find package path")
+            self.logger.error("Could not find package path")
             raise Exception("Could not find package path")
 
     def _download_weights(self, path: Path):
@@ -73,7 +69,7 @@ class BaseVisionAgent(BaseAgent):
                 ]
             )
         except Exception:
-            self._logger.error("Could not download weights")
+            self.logger.error("Could not download weights")
             raise Exception("Could not download weights")
 
     def _remove_weights(self, path: Path):
@@ -81,5 +77,4 @@ class BaseVisionAgent(BaseAgent):
             os.remove(path)
 
     def stop(self):
-        assert isinstance(self.connectors["ros2"], ROS2ARIConnector)
-        self.connectors["ros2"].shutdown()
+        self.ros2_connector.shutdown()

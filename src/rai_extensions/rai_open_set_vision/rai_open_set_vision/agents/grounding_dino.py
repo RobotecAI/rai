@@ -13,11 +13,7 @@
 # limitations under the License.
 
 
-import logging
 from pathlib import Path
-from typing import Optional
-
-from rai.communication.ros2 import ROS2ARIConnector
 
 from rai_interfaces.msg import RAIDetectionArray
 from rai_open_set_vision.agents.base_vision_agent import BaseVisionAgent
@@ -35,13 +31,12 @@ class GroundingDinoAgent(BaseVisionAgent):
         self,
         weights_path: str | Path = Path.home() / Path(".cache/rai"),
         ros2_name: str = GDINO_NODE_NAME,
-        logger: Optional[logging.Logger] = None,
     ):
-        super().__init__(weights_path, ros2_name, logger)
+        super().__init__(weights_path, ros2_name)
         try:
             self._boxer = GDBoxer(self._weights_path)
         except Exception:
-            self.get_logger().error(
+            self.logger.error(
                 "Could not load model. The weights might be corrupted. Redownloading..."
             )
             self._remove_weights(self.weight_path)
@@ -49,14 +44,14 @@ class GroundingDinoAgent(BaseVisionAgent):
             self.segmenter = GDBoxer(self.weight_path)
 
     def run(self):
-        self.connectors["ros2"].create_service(
+        self.ros2_connector.create_service(
             GDINO_SERVICE_NAME,
             self._classify_callback,
             service_type="rai_interfaces/srv/RAIGroundingDino",
         )
 
     def _classify_callback(self, request, response: RAIDetectionArray):
-        self._logger.info(
+        self.logger.info(
             f"Request received: {request.classes}, {request.box_threshold}, {request.text_threshold}"
         )
 
@@ -71,8 +66,7 @@ class GroundingDinoAgent(BaseVisionAgent):
             request.text_threshold,
         )
 
-        assert isinstance(self.connectors["ros2"], ROS2ARIConnector)
-        ts = self.connectors["ros2"]._node.get_clock().now().to_msg()
+        ts = self.ros2_connector._node.get_clock().now().to_msg()
         response.detections.detections = [  # type: ignore
             box.to_detection_msg(class_dict, ts)  # type: ignore
             for box in boxes

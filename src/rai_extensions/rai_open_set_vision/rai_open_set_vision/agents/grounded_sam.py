@@ -13,9 +13,7 @@
 # limitations under the License.
 
 
-import logging
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 from cv_bridge import CvBridge
@@ -38,13 +36,12 @@ class GroundedSamAgent(BaseVisionAgent):
         self,
         weights_path: str | Path = Path.home() / Path(".cache/rai"),
         ros2_name: str = GSAM_NODE_NAME,
-        logger: Optional[logging.Logger] = None,
     ):
-        super().__init__(weights_path, ros2_name, logger)
+        super().__init__(weights_path, ros2_name)
         try:
             self._segmenter = GDSegmenter(self._weights_path)
         except Exception:
-            self.get_logger().error(
+            self.logger.error(
                 "Could not load model. The weights might be corrupted. Redownloading..."
             )
             self._remove_weights(self.weight_path)
@@ -52,7 +49,7 @@ class GroundedSamAgent(BaseVisionAgent):
             self.segmenter = GDSegmenter(self.weight_path)
 
     def run(self):
-        self.connectors["ros2"].create_service(
+        self.ros2_connector.create_service(
             service_name=GSAM_SERVICE_NAME,
             on_request=self._segment_callback,
             service_type="rai_interfaces/srv/RAIGroundedSam",
