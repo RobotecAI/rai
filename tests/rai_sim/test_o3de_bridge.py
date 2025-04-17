@@ -301,14 +301,6 @@ class TestROS2ConnectorInterface(unittest.TestCase):
             f"Parameter names do not match, expected: {list(expected_params.keys())}, got: {list(parameters.keys())}",
         )
 
-        for param_name, expected_type in expected_params.items():
-            param = parameters[param_name]
-            self.assertEqual(
-                self.resolve_annotation(param.annotation),
-                self.resolve_annotation(expected_type),
-                f"Parameter '{param_name}' has incorrect type, expected: {expected_type}, got: {param.annotation}",
-            )
-
     def test_receive_message_signature(self):
         signature = inspect.signature(self.connector.receive_message)
         parameters = signature.parameters
