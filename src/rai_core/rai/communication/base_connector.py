@@ -46,6 +46,7 @@ class ParametrizedCallback(BaseModel, Generic[T]):
     # Callback is of type T if raw is False, otherwise it is of type Any
     callback: Callable[[T | Any], None]
     raw: bool
+    id: str = Field(default_factory=lambda: str(uuid4()))
 
 
 class BaseConnector(Generic[T]):
@@ -90,7 +91,7 @@ class BaseConnector(Generic[T]):
         callback: Callable[[T | Any], None],
         raw: bool = False,
         **kwargs: Any,
-    ) -> None:
+    ) -> str:
         """Implements register callback.
 
         Registers a callback to be called when a message is received from a source.
@@ -100,9 +101,22 @@ class BaseConnector(Generic[T]):
         Raises:
             ConnectorException: If the callback cannot be registered.
         """
-        self.registered_callbacks[source].append(
-            ParametrizedCallback(callback=callback, raw=raw)
-        )
+        parametrized_callback = ParametrizedCallback[T](callback=callback, raw=raw)
+        self.registered_callbacks[source].append(parametrized_callback)
+        return parametrized_callback.id
+
+    def unregister_callback(self, callback_id: str) -> bool:
+        """Unregisters a callback from a source.
+
+        Args:
+            callback_id: The id of the callback to unregister.
+        """
+        for source in self.registered_callbacks:
+            for parametrized_callback in self.registered_callbacks[source]:
+                if parametrized_callback.id == callback_id:
+                    self.registered_callbacks[source].remove(parametrized_callback)
+                    return True
+        return False
 
     def _safe_callback_wrapper(self, callback: Callable[[T], None], message: T) -> None:
         """Safely execute a callback with error handling.
