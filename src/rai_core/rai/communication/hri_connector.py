@@ -15,7 +15,7 @@
 import base64
 import uuid
 from io import BytesIO
-from typing import Generic, Literal, Optional, Sequence, TypeVar, get_args
+from typing import Generic, Literal, Optional, TypeVar
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.messages import BaseMessage as LangchainBaseMessage
@@ -143,22 +143,6 @@ class HRIConnector(Generic[T], BaseConnector[T]):
     Used for sending and receiving messages between human and robot from various sources.
     """
 
-    configured_targets: Sequence[str]
-    configured_sources: Sequence[str]
-
-    def __init__(
-        self, configured_targets: Sequence[str], configured_sources: Sequence[str]
-    ):
-        super().__init__()
-        self.configured_targets = configured_targets
-        self.configured_sources = configured_sources
-        if not hasattr(self, "__orig_bases__"):
-            self.__orig_bases__ = {}
-            raise HRIException(
-                f"Error while instantiating {str(self.__class__)}: Message type T derived from HRIMessage needs to be provided e.g. Connector[MessageType]()"
-            )
-        self.T_class = get_args(self.__orig_bases__[-1])[0]
-
     def _build_message(
         self,
         message: LangchainBaseMessage | RAIMultimodalMessage,
@@ -166,22 +150,4 @@ class HRIConnector(Generic[T], BaseConnector[T]):
         seq_no: int = 0,
         seq_end: bool = False,
     ) -> T:
-        return self.T_class.from_langchain(message, communication_id, seq_no, seq_end)
-
-    def send_all_targets(
-        self,
-        message: LangchainBaseMessage | RAIMultimodalMessage,
-        communication_id: Optional[str] = None,
-        seq_no: int = 0,
-        seq_end: bool = False,
-    ):
-        for target in self.configured_targets:
-            to_send = self._build_message(message, communication_id, seq_no, seq_end)
-            self.send_message(to_send, target)
-
-    def receive_all_sources(self, timeout_sec: float = 1.0) -> dict[str, T]:
-        ret = {}
-        for source in self.configured_sources:
-            received = self.receive_message(source, timeout_sec)
-            ret[source] = received
-        return ret
+        return self.T_class.from_langchain(message, communication_id, seq_no, seq_end)  # type: ignore

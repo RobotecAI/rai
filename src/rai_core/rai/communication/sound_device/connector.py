@@ -48,8 +48,6 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
         targets: list[Tuple[str, SoundDeviceConfig]],
         sources: list[Tuple[str, SoundDeviceConfig]],
     ):
-        configured_targets = [target[0] for target in targets]
-        configured_sources = [source[0] for source in sources]
         self.devices: dict[str, SoundDeviceAPI] = {}
         self.action_handles: dict[str, Tuple[str, bool]] = {}
 
@@ -60,7 +58,7 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
         for dev_target, dev_config in zip(all_names, all_configs):
             self.configure_device(dev_target, dev_config)
 
-        super().__init__(configured_targets, configured_sources)
+        super().__init__()
 
     def get_audio_params(self, target: str) -> AudioParams:
         return AudioParams(
