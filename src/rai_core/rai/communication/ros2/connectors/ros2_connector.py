@@ -12,16 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .action_mixin import ROS2ActionMixin
-from .base import ROS2BaseConnector
-from .hri_connector import ROS2HRIConnector
-from .ros2_connector import ROS2Connector
-from .service_mixin import ROS2ServiceMixin
+from rai.communication.ros2.connectors.base import ROS2BaseConnector
+from rai.communication.ros2.messages import ROS2Message
 
-__all__ = [
-    "ROS2ActionMixin",
-    "ROS2BaseConnector",
-    "ROS2Connector",
-    "ROS2HRIConnector",
-    "ROS2ServiceMixin",
-]
+
+class ROS2Connector(ROS2BaseConnector[ROS2Message]):
+    pass

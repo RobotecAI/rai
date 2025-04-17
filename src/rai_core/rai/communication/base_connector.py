@@ -22,7 +22,9 @@ from typing import (
     Dict,
     Generic,
     Optional,
+    Type,
     TypeVar,
+    get_args,
 )
 from uuid import uuid4
 
@@ -67,6 +69,15 @@ class BaseConnector(Generic[T]):
         self.callback_executor = ThreadPoolExecutor(
             max_workers=self.callback_max_workers
         )
+
+        if not hasattr(self, "__orig_bases__"):
+            self.__orig_bases__ = {}
+            raise ConnectorException(
+                f"Error while instantiating {str(self.__class__)}: "
+                "Message type T derived from BaseMessage needs to be provided"
+                " e.g. Connector[MessageType]()"
+            )
+        self.T_class: Type[T] = get_args(self.__orig_bases__[-1])[0]
 
     def _generate_handle(self) -> str:
         return str(uuid4())

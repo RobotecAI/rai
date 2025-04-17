@@ -13,22 +13,14 @@
 # limitations under the License.
 
 import logging
-import threading
 import uuid
 from typing import Any, Callable, List, Literal, Optional, Tuple, Union
 
-from rclpy.executors import MultiThreadedExecutor
-from rclpy.node import Node
-
-from rai.communication import HRIConnector
 from rai.communication.ros2.api import (
     ConfigurableROS2TopicAPI,
-    ROS2ActionAPI,
-    ROS2ServiceAPI,
     TopicConfig,
 )
-from rai.communication.ros2.connectors.action_mixin import ROS2ActionMixin
-from rai.communication.ros2.connectors.service_mixin import ROS2ServiceMixin
+from rai.communication.ros2.connectors.base import ROS2BaseConnector
 from rai.communication.ros2.messages import ROS2HRIMessage
 
 try:
@@ -37,7 +29,7 @@ except ImportError:
     logging.warning("rai_interfaces is not installed, ROS 2 HRIMessage will not work.")
 
 
-class ROS2HRIConnector(ROS2ActionMixin, ROS2ServiceMixin, HRIConnector[ROS2HRIMessage]):
+class ROS2HRIConnector(ROS2BaseConnector[ROS2HRIMessage]):
     def __init__(
         self,
         node_name: str = f"rai_ros2_hri_connector_{str(uuid.uuid4())[-12:]}",
@@ -50,6 +42,8 @@ class ROS2HRIConnector(ROS2ActionMixin, ROS2ServiceMixin, HRIConnector[ROS2HRIMe
         configured_sources = [
             source[0] if isinstance(source, tuple) else source for source in sources
         ]
+        self.configured_targets = configured_targets
+        self.configured_sources = configured_sources
 
         _targets = [
             (
@@ -67,21 +61,10 @@ class ROS2HRIConnector(ROS2ActionMixin, ROS2ServiceMixin, HRIConnector[ROS2HRIMe
             )
             for source in sources
         ]
-
-        self._node = Node(node_name)
+        super().__init__(node_name=node_name)
         self._topic_api = ConfigurableROS2TopicAPI(self._node)
-        self._service_api = ROS2ServiceAPI(self._node)
-        self._actions_api = ROS2ActionAPI(self._node)
-
         self._configure_publishers(_targets)
         self._configure_subscribers(_sources)
-
-        super().__init__(configured_targets, configured_sources)
-
-        self._executor = MultiThreadedExecutor()
-        self._executor.add_node(self._node)
-        self._thread = threading.Thread(target=self._executor.spin)
-        self._thread.start()
 
     def _configure_publishers(self, targets: List[Tuple[str, TopicConfig]]):
         for target in targets:

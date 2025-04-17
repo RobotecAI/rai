@@ -16,7 +16,7 @@ import threading
 import time
 import uuid
 from functools import partial
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar
 
 import rclpy
 import rclpy.executors
@@ -38,8 +38,10 @@ from rai.communication.ros2.connectors.action_mixin import ROS2ActionMixin
 from rai.communication.ros2.connectors.service_mixin import ROS2ServiceMixin
 from rai.communication.ros2.messages import ROS2Message
 
+T = TypeVar("T", bound=ROS2Message)
 
-class ROS2Connector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[ROS2Message]):
+
+class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
     """ROS2-specific implementation of the ARIConnector.
 
     This connector provides functionality for ROS2 communication through topics,
@@ -110,9 +112,9 @@ class ROS2Connector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[ROS2Message
         self._thread.start()
 
         # cache for last received messages
-        self.last_msg: Dict[str, ROS2Message] = {}
+        self.last_msg: Dict[str, T] = {}
 
-    def last_message_callback(self, source: str, msg: ROS2Message):
+    def last_message_callback(self, source: str, msg: T):
         self.last_msg[source] = msg
 
     def get_topics_names_and_types(self) -> List[Tuple[str, List[str]]]:
@@ -126,7 +128,7 @@ class ROS2Connector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[ROS2Message
 
     def send_message(
         self,
-        message: ROS2Message,
+        message: T,
         target: str,
         *,
         msg_type: str,  # TODO: allow msg_type to be None, add auto topic type detection
@@ -143,19 +145,19 @@ class ROS2Connector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[ROS2Message
         )
 
     def general_callback_preprocessor(self, message: Any):
-        return ROS2Message(payload=message, metadata={"msg_type": str(type(message))})
+        return self.T_class(payload=message, metadata={"msg_type": str(type(message))})
 
     def register_callback(
         self,
         source: str,
-        callback: Callable[[ROS2Message | Any], None],
+        callback: Callable[[T | Any], None],
         raw: bool = False,
         *,
         msg_type: Optional[str] = None,
         qos_profile: Optional[QoSProfile] = None,
         auto_qos_matching: bool = True,
         **kwargs: Any,
-    ):
+    ) -> str:
         exists = self._topic_api.subscriber_exists(source)
         if not exists:
             self._topic_api.create_subscriber(
@@ -165,7 +167,7 @@ class ROS2Connector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[ROS2Message
                 qos_profile=qos_profile,
                 auto_qos_matching=auto_qos_matching,
             )
-        super().register_callback(source, callback, raw=raw)
+        return super().register_callback(source, callback, raw=raw)
 
     def receive_message(
         self,
@@ -176,7 +178,7 @@ class ROS2Connector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[ROS2Message
         qos_profile: Optional[QoSProfile] = None,
         auto_qos_matching: bool = True,
         **kwargs: Any,
-    ) -> ROS2Message:
+    ) -> T:
         if self._topic_api.subscriber_exists(source):
             # trying to hit cache first
             if source in self.last_msg:
