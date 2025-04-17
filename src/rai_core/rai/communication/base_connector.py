@@ -16,7 +16,14 @@ import logging
 import time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    Optional,
+    TypeVar,
+)
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -46,15 +53,17 @@ class ParametrizedCallback(BaseModel, Generic[T]):
     # Callback is of type T if raw is False, otherwise it is of type Any
     callback: Callable[[T | Any], None]
     raw: bool
+    id: str = Field(default_factory=lambda: str(uuid4()))
 
 
 class BaseConnector(Generic[T]):
     def __init__(self, callback_max_workers: int = 4):
         self.callback_max_workers = callback_max_workers
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.registered_callbacks: Dict[str, List[ParametrizedCallback[T]]] = (
-            defaultdict(list)
+        self.registered_callbacks: Dict[str, Dict[str, ParametrizedCallback[T]]] = (
+            defaultdict(dict)
         )
+        self.callback_id_mapping: Dict[str, tuple[str, ParametrizedCallback[T]]] = {}
         self.callback_executor = ThreadPoolExecutor(
             max_workers=self.callback_max_workers
         )
@@ -90,7 +99,7 @@ class BaseConnector(Generic[T]):
         callback: Callable[[T | Any], None],
         raw: bool = False,
         **kwargs: Any,
-    ) -> None:
+    ) -> str:
         """Implements register callback.
 
         Registers a callback to be called when a message is received from a source.
@@ -100,9 +109,31 @@ class BaseConnector(Generic[T]):
         Raises:
             ConnectorException: If the callback cannot be registered.
         """
-        self.registered_callbacks[source].append(
-            ParametrizedCallback(callback=callback, raw=raw)
+        parametrized_callback = ParametrizedCallback[T](callback=callback, raw=raw)
+        self.registered_callbacks[source][parametrized_callback.id] = (
+            parametrized_callback
         )
+        self.callback_id_mapping[parametrized_callback.id] = (
+            source,
+            parametrized_callback,
+        )
+        return parametrized_callback.id
+
+    def unregister_callback(self, callback_id: str) -> None:
+        """Unregisters a callback from a source.
+
+        Args:
+            callback_id: The id of the callback to unregister.
+
+        Raises:
+            ConnectorException: If the callback cannot be unregistered.
+        """
+        if callback_id not in self.callback_id_mapping:
+            raise ConnectorException(f"Callback with id {callback_id} not found.")
+
+        source, _ = self.callback_id_mapping[callback_id]
+        del self.registered_callbacks[source][callback_id]
+        del self.callback_id_mapping[callback_id]
 
     def _safe_callback_wrapper(self, callback: Callable[[T], None], message: T) -> None:
         """Safely execute a callback with error handling.
@@ -120,7 +151,7 @@ class BaseConnector(Generic[T]):
         """General callback for all messages.
         Use through functools.partial to pass source."""
         processed_message = self.general_callback_preprocessor(message)
-        for parametrized_callback in self.registered_callbacks.get(source, []):
+        for parametrized_callback in self.registered_callbacks.get(source, {}).values():
             payload = message if parametrized_callback.raw else processed_message
             self.callback_executor.submit(
                 self._safe_callback_wrapper, parametrized_callback.callback, payload
