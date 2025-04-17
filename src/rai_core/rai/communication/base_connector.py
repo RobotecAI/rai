@@ -73,7 +73,9 @@ class BaseConnector(Generic[T]):
         if not hasattr(self, "__orig_bases__"):
             self.__orig_bases__ = {}
             raise ConnectorException(
-                f"Error while instantiating {str(self.__class__)}: Message type T derived from BaseMessage needs to be provided e.g. Connector[MessageType]()"
+                f"Error while instantiating {str(self.__class__)}: "
+                "Message type T derived from BaseMessage needs to be provided"
+                " e.g. Connector[MessageType]()"
             )
         self.T_class: Type[T] = get_args(self.__orig_bases__[-1])[0]
 
