@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-########### EXAMPLE USAGE ###########
+import argparse
 import logging
 import time
 from datetime import datetime
@@ -23,7 +23,7 @@ import rclpy
 from langchain.tools import BaseTool
 from rai.agents.conversational_agent import create_conversational_agent
 from rai.communication.ros2.connectors import ROS2Connector
-from rai.initialization import get_llm_model
+from rai.initialization import get_llm_model_direct
 from rai.tools.ros2 import (
     GetObjectPositionsTool,
     GetROS2ImageTool,
@@ -44,14 +44,29 @@ from rai_sim.o3de.o3de_bridge import (
     O3DEngineArmManipulationBridge,
 )
 
-if __name__ == "__main__":
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Run the Tool Calling Agent Benchmark")
+    parser.add_argument(
+        "--model-name",
+        type=str,
+        help="Model name to use for benchmarking",
+    )
+    parser.add_argument(
+        "--vendor", type=str, default=None, help="Vendor of the model (optional)"
+    )
+    return parser.parse_args()
+
+
+def run_benchmark(model_name: str, vendor: str):
     rclpy.init()
     connector = ROS2Connector()
     node = connector.node
     node.declare_parameter("conversion_ratio", 1.0)
 
     # define model
-    llm = get_llm_model(model_type="complex_model", streaming=True)
+
+    llm = get_llm_model_direct(model_name=model_name, vendor=vendor)
 
     system_prompt = """
     You are a robotic arm with interfaces to detect and manipulate objects.
@@ -169,7 +184,7 @@ if __name__ == "__main__":
             logger=bench_logger,
             results_filename=results_filename,
         )
-        for i in range(len(all_scenarios)):
+        for _ in range(len(all_scenarios)):
             agent = create_conversational_agent(
                 llm, tools, system_prompt, logger=agent_logger
             )
@@ -188,3 +203,8 @@ if __name__ == "__main__":
         connector.shutdown()
         o3de.shutdown()
         rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    run_benchmark(model_name=args.model_name, vendor=args.vendor)

@@ -17,10 +17,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from rai import (
-    get_llm_model,
-    get_llm_model_config_and_vendor,
-)
+from rai import get_llm_model_direct
 from rai.agents.conversational_agent import create_conversational_agent
 
 from rai_bench.examples.tool_calling_agent.tasks import all_tasks
@@ -30,10 +27,9 @@ from rai_bench.tool_calling_agent.benchmark import ToolCallingAgentBenchmark
 def parse_args():
     parser = argparse.ArgumentParser(description="Run the Tool Calling Agent Benchmark")
     parser.add_argument(
-        "--model-type",
+        "--model-name",
         type=str,
-        default="complex_model",
-        help="Model type to use for benchmarking",
+        help="Model name to use for benchmarking",
     )
     parser.add_argument(
         "--vendor", type=str, default=None, help="Vendor of the model (optional)"
@@ -41,8 +37,7 @@ def parse_args():
     return parser.parse_args()
 
 
-if __name__ == "__main__":
-    args = parse_args()
+def run_benchmark(model_name: str, vendor: str):
     now = datetime.now()
     experiment_dir = Path(
         "src/rai_bench/rai_bench/experiments/tool_calling_agent"
@@ -59,7 +54,7 @@ if __name__ == "__main__":
     file_handler.setFormatter(formatter)
 
     bench_logger = logging.getLogger("Benchmark logger")
-    bench_logger.setLevel(logging.DEBUG)
+    bench_logger.setLevel(logging.INFO)
     bench_logger.addHandler(file_handler)
 
     agent_logger = logging.getLogger("Agent logger")
@@ -73,16 +68,17 @@ if __name__ == "__main__":
         tasks=all_tasks, logger=bench_logger, results_filename=results_filename
     )
 
-    # model_type = "complex_model"
-    model_config = get_llm_model_config_and_vendor(
-        model_type=args.model_type, vendor=args.vendor
-    )[0]
-    model_name = getattr(model_config, args.model_type)
+    llm = get_llm_model_direct(model_name=model_name, vendor=vendor)
     for task in all_tasks:
         agent = create_conversational_agent(
-            llm=get_llm_model(model_type=args.model_type, vendor=args.vendor),
+            llm=llm,
             tools=task.available_tools,
             system_prompt=task.get_system_prompt(),
             logger=agent_logger,
         )
         benchmark.run_next(agent=agent, model_name=model_name)
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    run_benchmark(model_name=args.model_name, vendor=args.vendor)
