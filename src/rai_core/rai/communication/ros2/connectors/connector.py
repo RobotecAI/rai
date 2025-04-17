@@ -148,7 +148,8 @@ class ROS2Connector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[ROS2Message
     def register_callback(
         self,
         source: str,
-        callback: Callable[[ROS2Message], None],
+        callback: Callable[[ROS2Message | Any], None],
+        raw: bool = False,
         *,
         msg_type: Optional[str] = None,
         qos_profile: Optional[QoSProfile] = None,
@@ -164,7 +165,7 @@ class ROS2Connector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[ROS2Message
                 qos_profile=qos_profile,
                 auto_qos_matching=auto_qos_matching,
             )
-        super().register_callback(source, callback)
+        super().register_callback(source, callback, raw=raw)
 
     def receive_message(
         self,

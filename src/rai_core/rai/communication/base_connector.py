@@ -42,12 +42,18 @@ class BaseMessage(BaseModel):
 T = TypeVar("T", bound=BaseMessage)
 
 
+class ParametrizedCallback(BaseModel, Generic[T]):
+    # Callback is of type T if raw is False, otherwise it is of type Any
+    callback: Callable[[T | Any], None]
+    raw: bool
+
+
 class BaseConnector(Generic[T]):
     def __init__(self, callback_max_workers: int = 4):
         self.callback_max_workers = callback_max_workers
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.registered_callbacks: Dict[str, List[Callable[[T], None]]] = defaultdict(
-            list
+        self.registered_callbacks: Dict[str, List[ParametrizedCallback[T]]] = (
+            defaultdict(list)
         )
         self.callback_executor = ThreadPoolExecutor(
             max_workers=self.callback_max_workers
@@ -79,16 +85,24 @@ class BaseConnector(Generic[T]):
         raise NotImplementedError("This method should be implemented by the subclass.")
 
     def register_callback(
-        self, source: str, callback: Callable[[T], None], **kwargs: Any
+        self,
+        source: str,
+        callback: Callable[[T | Any], None],
+        raw: bool = False,
+        **kwargs: Any,
     ) -> None:
         """Implements register callback.
 
         Registers a callback to be called when a message is received from a source.
+        If raw is False, the callback will receive a T object.
+        If raw is True, the callback will receive the raw message.
 
         Raises:
             ConnectorException: If the callback cannot be registered.
         """
-        self.registered_callbacks[source].append(callback)
+        self.registered_callbacks[source].append(
+            ParametrizedCallback(callback=callback, raw=raw)
+        )
 
     def _safe_callback_wrapper(self, callback: Callable[[T], None], message: T) -> None:
         """Safely execute a callback with error handling.
@@ -106,9 +120,10 @@ class BaseConnector(Generic[T]):
         """General callback for all messages.
         Use through functools.partial to pass source."""
         processed_message = self.general_callback_preprocessor(message)
-        for callback in self.registered_callbacks.get(source, []):
+        for parametrized_callback in self.registered_callbacks.get(source, []):
+            payload = message if parametrized_callback.raw else processed_message
             self.callback_executor.submit(
-                self._safe_callback_wrapper, callback, processed_message
+                self._safe_callback_wrapper, parametrized_callback.callback, payload
             )
 
     def general_callback_preprocessor(self, message: Any) -> T:
