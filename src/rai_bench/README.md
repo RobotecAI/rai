@@ -163,21 +163,21 @@ python src/rai_bench/rai_bench/examples/tool_calling_agent/main.py --model-name 
 > [!NOTE]
 > The configs of vendors are defined in [config.toml](../../config.toml) Change ithem if needed.
 
-
-
 ## Testing Models
 
 To test multiple models, different benchamrks or couple repeats in one go - use script [test_models](./rai_bench/examples/test_models.py)
 
 Modify these params:
+
 ```python
 models_name = ["llama3.2", "qwen2.5:7b"]
 vendors = ["ollama", "ollama"]
 benchmarks = ["tool_calling_agent"]
 repeats = 1
 ```
+
 to your liking and run the script!
 
 ```bash
-python src/rai_bench/rai_bench/examples/test_models.py 
+python src/rai_bench/rai_bench/examples/test_models.py
 ```

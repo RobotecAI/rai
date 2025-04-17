@@ -49,7 +49,6 @@ from .generic import (
     StartROS2ActionTool,
 )
 from .manipulation.custom import (
-    GetGrabbingPointTool,
     GetObjectPositionsTool,
     MoveToPointTool,
     MoveToPointToolInput,
@@ -70,7 +69,6 @@ __all__ = [
     "CallROS2ServiceTool",
     "CancelNavigateToPoseTool",
     "CancelROS2ActionTool",
-    "GetGrabbingPointTool",
     "GetNavigateToPoseFeedbackTool",
     "GetNavigateToPoseResultTool",
     "GetObjectPositionsTool",

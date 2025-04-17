@@ -19,6 +19,7 @@ from unittest.mock import MagicMock
 
 import numpy as np
 import numpy.typing as npt
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ValidationError
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.communication.ros2.messages import ROS2Message
@@ -26,7 +27,6 @@ from rai.messages import MultimodalArtifact, preprocess_image
 from rai.tools.ros2 import (
     CallROS2ServiceTool,
     CancelROS2ActionTool,
-    GetGrabbingPointTool,
     GetObjectPositionsTool,
     GetROS2ActionFeedbackTool,
     GetROS2ActionIDsTool,
@@ -39,9 +39,14 @@ from rai.tools.ros2 import (
     MoveToPointTool,
     PublishROS2MessageTool,
     ReceiveROS2MessageTool,
+    ROS2ActionToolkit,
     StartROS2ActionTool,
 )
-from rai_open_set_vision.tools import GetGrabbingPointTool
+from rai_open_set_vision.tools import (
+    DistanceMeasurement,
+    GetDistanceToObjectsTool,
+    GetGrabbingPointTool,
+)
 
 
 class MockGetROS2TopicsNamesAndTypesTool(GetROS2TopicsNamesAndTypesTool):
@@ -61,7 +66,7 @@ class MockGetROS2TopicsNamesAndTypesTool(GetROS2TopicsNamesAndTypesTool):
 
 class MockGetROS2ImageTool(GetROS2ImageTool):
     connector: ROS2Connector = MagicMock(spec=ROS2Connector)
-    avilable_topics: List[str]
+    available_topics: List[str]
 
     def _run(
         self, topic: str, timeout_sec: float = 1.0
@@ -85,7 +90,7 @@ class MockGetROS2ImageTool(GetROS2ImageTool):
         ValueError
             If the passed topic is not correct.
         """
-        if topic not in self.avilable_topics:
+        if topic not in self.available_topics:
             raise ValueError(
                 f"Topic {topic} is not available within {timeout_sec} seconds. Check if the topic exists."
             )
@@ -334,7 +339,7 @@ class MockStartROS2ActionTool(StartROS2ActionTool):
     connector: ROS2Connector = MagicMock(spec=ROS2Connector)
     available_actions: List[str] = []
     available_action_types: List[str] = []
-    available_action_models: List[Type[BaseModel]]
+    available_action_models: Dict[str, Type[BaseModel]]
 
     def _run(
         self, action_name: str, action_type: str, action_args: Dict[str, Any]
@@ -347,13 +352,12 @@ class MockStartROS2ActionTool(StartROS2ActionTool):
             raise TypeError(
                 f"Expected one of action types: {self.available_action_types}, got {action_type}"
             )
-        for action_model in self.available_action_models:
-            if (
-                action_model.model_fields["action_name"].default == action_name
-                and action_model.model_fields["action_type"].default == action_type
-            ):
-                goal = action_model.__annotations__["goal"]
-                goal.model_validate(action_args)
+        model = self.available_action_models[action_type]
+        try:
+            model.model_validate(action_args)
+        except ValidationError as e:
+            raise ValueError(f"Failed to populate fields: {e}")
+
         action_id = str(uuid.uuid4())
         response = action_id
         self.internal_action_id_mapping[response] = action_id
@@ -407,3 +411,67 @@ class MockGetROS2ActionIDsTool(GetROS2ActionIDsTool):
 
     def _run(self) -> str:
         return str(list(self.internal_action_id_mapping.keys()))
+
+
+class MockActionsToolkit(ROS2ActionToolkit):
+    connector: ROS2Connector = MagicMock(spec=ROS2Connector)
+    mock_actions_names_and_types: list[str] = []
+    available_actions: List[str] = []
+    available_action_types: List[str] = []
+    available_action_models: Dict[str, Type[BaseModel]] = {}
+
+    def get_tools(self) -> List[BaseTool]:
+        return [
+            MockStartROS2ActionTool(
+                available_actions=self.available_actions,
+                feedback_callback=self._generic_feedback_callback,
+                on_done_callback=self._generic_on_done_callback,
+                available_action_types=self.available_action_types,
+                available_action_models=self.available_action_models,
+            ),
+            MockCancelROS2ActionTool(),
+            MockGetROS2ActionFeedbackTool(),
+            MockGetROS2ActionResultTool(),
+            MockGetROS2ActionIDsTool(),
+            MockGetROS2ActionsNamesAndTypesTool(
+                mock_actions_names_and_types=self.mock_actions_names_and_types
+            ),
+        ]
+
+
+class MockGetDistanceToObjectsTool(GetDistanceToObjectsTool):
+    connector: ROS2Connector = MagicMock(spec=ROS2Connector)
+    node: MagicMock = MagicMock()
+    mock_distance_measurements: List[DistanceMeasurement] = []
+    available_topics: List[str]
+
+    def _run(self, camera_topic: str, depth_topic: str, object_names: list[str]):
+        """Method that returns a mock message with the distance to the objects.
+
+        Parameters
+        ----------
+        camera_topic : str
+            Topic with the camera image
+        depth_topic : str
+            Topic with the depth image
+        object_names : list[str]
+            List of object names to get the distance to
+
+        Returns
+        -------
+        str
+            Message from the tool
+        """
+        if camera_topic not in self.available_topics:
+            return f"Topic {camera_topic} is not available within 1.0 seconds. Check if the topic exists."
+        if depth_topic not in self.available_topics:
+            return f"Topic {depth_topic} is not available within 1.0 seconds. Check if the topic exists."
+        measurement_string = ", ".join(
+            [
+                f"{measurement[0]}: {measurement[1]:.2f}m away"
+                for measurement in self.mock_distance_measurements
+                if measurement[0] in object_names
+            ]
+        )
+
+        return f"I have detected the following items in the picture {measurement_string or 'no objects'}"
