@@ -82,7 +82,7 @@ class BaseConnector(Generic[T]):
     def _generate_handle(self) -> str:
         return str(uuid4())
 
-    def send_message(self, message: T, target: str, **kwargs: Any) -> None:
+    def send_message(self, message: T, target: str, **kwargs: Optional[Any]) -> None:
         """Implements publish pattern.
 
         Sends a message to one or more subscribers. The target parameter
@@ -93,7 +93,9 @@ class BaseConnector(Generic[T]):
         """
         raise NotImplementedError("This method should be implemented by the subclass.")
 
-    def receive_message(self, source: str, timeout_sec: float, **kwargs: Any) -> T:
+    def receive_message(
+        self, source: str, timeout_sec: float, **kwargs: Optional[Any]
+    ) -> T:
         """Implements subscribe pattern.
 
         Receives a message from a publisher. The source parameter
@@ -109,7 +111,7 @@ class BaseConnector(Generic[T]):
         source: str,
         callback: Callable[[T | Any], None],
         raw: bool = False,
-        **kwargs: Any,
+        **kwargs: Optional[Any],
     ) -> str:
         """Implements register callback.
 
@@ -173,7 +175,7 @@ class BaseConnector(Generic[T]):
         raise NotImplementedError("This method should be implemented by the subclass.")
 
     def service_call(
-        self, message: T, target: str, timeout_sec: float, **kwargs: Any
+        self, message: T, target: str, timeout_sec: float, **kwargs: Optional[Any]
     ) -> BaseMessage:
         """Implements request-response pattern.
 
@@ -190,7 +192,7 @@ class BaseConnector(Generic[T]):
         service_name: str,
         on_request: Callable,
         on_done: Optional[Callable] = None,
-        **kwargs: Any,
+        **kwargs: Optional[Any],
     ) -> str:
         """Sets up a service endpoint for handling requests.
 
@@ -207,7 +209,7 @@ class BaseConnector(Generic[T]):
         self,
         action_name: str,
         generate_feedback_callback: Callable,
-        **kwargs: Any,
+        **kwargs: Optional[Any],
     ) -> str:
         """Sets up an action endpoint for long-running operations.
 
@@ -227,7 +229,7 @@ class BaseConnector(Generic[T]):
         on_feedback: Callable,
         on_done: Callable,
         timeout_sec: float,
-        **kwargs: Any,
+        **kwargs: Optional[Any],
     ) -> str:
         """Initiates a long-running operation with feedback.
 
@@ -240,7 +242,7 @@ class BaseConnector(Generic[T]):
         """
         raise NotImplementedError("This method should be implemented by the subclass.")
 
-    def terminate_action(self, action_handle: str, **kwargs: Any) -> Any:
+    def terminate_action(self, action_handle: str, **kwargs: Optional[Any]) -> Any:
         """Cancels an ongoing action.
 
         Stops the execution of a previously started action.
