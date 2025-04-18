@@ -15,32 +15,31 @@
 import logging
 import threading
 import time
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, Optional, TypedDict, cast
 
-from langchain_core.language_models import BaseChatModel
-from langchain_core.tools import BaseTool
+from langchain_core.runnables import Runnable
 
 from rai.agents.base import BaseAgent
-from rai.agents.langchain import HRICallbackHandler, create_react_runnable
+from rai.agents.langchain import HRICallbackHandler
 from rai.agents.langchain.runnables import ReActAgentState
 from rai.communication.hri_connector import HRIConnector, HRIMessage
 from rai.initialization import get_tracing_callbacks
 
 
-class ReActAgent(BaseAgent):
+class BaseState(TypedDict):
+    pass
+
+
+class LangChainAgent(BaseAgent):
     def __init__(
         self,
         connectors: dict[str, HRIConnector[HRIMessage]],
-        llm: Optional[BaseChatModel] = None,
-        tools: Optional[List[BaseTool]] = None,
-        state: Optional[ReActAgentState] = None,
-        system_prompt: Optional[str] = None,
+        runnable: Runnable,
+        state: BaseState | None = None,
     ):
         super().__init__()
         self.logger = logging.getLogger(__name__)
-        self.agent = create_react_runnable(
-            llm=llm, tools=tools, system_prompt=system_prompt
-        )
+        self.agent = runnable
         self.callback = HRICallbackHandler(
             connectors=connectors, aggregate_chunks=True, logger=self.logger
         )
