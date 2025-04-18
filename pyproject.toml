@@ -74,4 +74,4 @@ markers = [
 ]
 addopts = "-m 'not billable and not ci_only' --ignore=src"
 log_cli = true
-log_cli_level = "DEBUG"
+log_cli_level = "INFO"
