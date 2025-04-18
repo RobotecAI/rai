@@ -12,21 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 
 from rai.agents.langchain import create_react_runnable
-from rai.agents.langchain.base_agent import LangChainAgent
+from rai.agents.langchain.agent import LangChainAgent
 from rai.agents.langchain.runnables import ReActAgentState
-from rai.communication.hri_connector import HRIConnector, HRIMessage
+from rai.communication.hri_connector import HRIConnector
 
 
 class ReActAgent(LangChainAgent):
     def __init__(
         self,
-        connectors: dict[str, HRIConnector[HRIMessage]],
+        target_connectors: Dict[str, HRIConnector],
+        source_connector: Tuple[str, HRIConnector],
         llm: Optional[BaseChatModel] = None,
         tools: Optional[List[BaseTool]] = None,
         state: Optional[ReActAgentState] = None,
@@ -36,7 +37,8 @@ class ReActAgent(LangChainAgent):
             llm=llm, tools=tools, system_prompt=system_prompt
         )
         super().__init__(
-            connectors=connectors,
+            target_connectors=target_connectors,
+            source_connector=source_connector,
             runnable=runnable,
             state=state,
         )

@@ -152,7 +152,7 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
             qos_profile=qos_profile,
         )
 
-    def general_callback_preprocessor(self, message: Any):
+    def general_callback_preprocessor(self, message: Any) -> T:
         return self.T_class(payload=message, metadata={"msg_type": str(type(message))})
 
     def register_callback(

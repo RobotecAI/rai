@@ -12,17 +12,22 @@
 # See the License for the specific language goveself.rning permissions and
 # limitations under the License.
 
-from rai.agents import AgentRunner, ReActAgent
-from rai.communication.ros2 import ROS2Connector, ROS2Context, ROS2HRIConnector
+from rai.agents import AgentRunner
+from rai.agents.langchain.react_agent import ReActAgent
+from rai.communication.ros2 import ROS2Connector, ROS2Context
+from rai.communication.ros2.connectors.hri_connector import ROS2HRIConnector
 from rai.tools.ros2 import ROS2Toolkit
 
 
 @ROS2Context()
 def main():
-    connector = ROS2HRIConnector(sources=["/from_human"], targets=["/to_human"])
     ros2_connector = ROS2Connector()
+    hri_connector = ROS2HRIConnector()
+    target_connectors = {"/to_human": hri_connector}
+    source_connector = ("/from_human", hri_connector)
     agent = ReActAgent(
-        connectors={"hri": connector},
+        target_connectors=target_connectors,
+        source_connector=source_connector,
         tools=ROS2Toolkit(connector=ros2_connector).get_tools(),
     )  # type: ignore
     runner = AgentRunner([agent])

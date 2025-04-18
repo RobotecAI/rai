@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import importlib.util
 import logging
 from collections import OrderedDict
 from typing import Any, List, Literal, cast
@@ -27,14 +28,14 @@ from sensor_msgs.msg import Image as ROS2Image
 from rai.communication.base_connector import BaseMessage
 from rai.communication.hri_connector import HRIMessage
 
-try:
+if importlib.util.find_spec("rai_interfaces.msg") is None:
+    logging.warning("rai_interfaces is not installed, ROS 2 HRIMessage will not work.")
+else:
     import rai_interfaces.msg
     from rai_interfaces.msg import HRIMessage as ROS2HRIMessage_
     from rai_interfaces.msg._audio_message import (
         AudioMessage as ROS2HRIMessage__Audio,
     )
-except ImportError:
-    logging.warning("rai_interfaces is not installed, ROS 2 HRIMessage will not work.")
 
 
 class ROS2Message(BaseMessage):

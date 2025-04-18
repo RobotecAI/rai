@@ -15,9 +15,12 @@
 import logging
 import threading
 import time
-from typing import Any, Dict, Optional, TypedDict, cast
+from collections import deque
+from typing import Deque, Dict, List, Optional, Tuple, TypedDict
 
+from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
+from pydantic import BaseModel
 
 from rai.agents.base import BaseAgent
 from rai.agents.langchain import HRICallbackHandler
@@ -27,27 +30,42 @@ from rai.initialization import get_tracing_callbacks
 
 
 class BaseState(TypedDict):
-    pass
+    messages: List[BaseMessage]
+
+
+class HRIConfig(BaseModel):
+    source: str
+    targets: List[str]
 
 
 class LangChainAgent(BaseAgent):
     def __init__(
         self,
-        connectors: dict[str, HRIConnector[HRIMessage]],
+        target_connectors: Dict[str, HRIConnector],
+        source_connector: Tuple[str, HRIConnector],
         runnable: Runnable,
         state: BaseState | None = None,
     ):
         super().__init__()
         self.logger = logging.getLogger(__name__)
         self.agent = runnable
-        self.callback = HRICallbackHandler(
-            connectors=connectors, aggregate_chunks=True, logger=self.logger
-        )
         self.tracing_callbacks = get_tracing_callbacks()
         self.state = state or ReActAgentState(messages=[])
         self.thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
-        self.connectors = connectors
+        self.source_connector = source_connector
+        self.callback = HRICallbackHandler(
+            connectors=target_connectors,
+            aggregate_chunks=True,
+            logger=self.logger,
+        )
+
+        self.source, self.source_connector = source_connector
+        self.source_connector.register_callback(
+            self.source, self.source_callback, msg_type="rai_interfaces/msg/HRIMessage"
+        )
+        self.received_messages: Deque[HRIMessage] = deque()
+        self.max_size = 100
 
     def run(self):
         if self.thread is not None:
@@ -55,24 +73,27 @@ class LangChainAgent(BaseAgent):
         self.thread = threading.Thread(target=self._run_loop)
         self.thread.start()
 
+    def source_callback(self, msg: HRIMessage):
+        if self.max_size is not None and len(self.received_messages) >= self.max_size:
+            self.logger.warning("Buffer overflow. Dropping olders message")
+            self.received_messages.popleft()
+        self.logger.info(f"Received message: {msg}, {type(msg)}")
+        self.received_messages.append(msg)
+
     def _run_loop(self):
         while not self._stop_event.is_set():
-            received_messages = {}
-            try:
-                received_messages = self.receive_all_connectors()
-            except ValueError:
+            if len(self.received_messages) == 0:
                 self.logger.info("Waiting for messages...")
-            if received_messages:
-                self.logger.info("Received messages")
-                reduced_message = self._reduce_messages(received_messages)
-                langchain_message = reduced_message.to_langchain()
-                self.state["messages"].append(langchain_message)
-                # callback is used to send messages to the connectors
-                self.agent.invoke(
-                    self.state,
-                    config={"callbacks": [self.callback, *self.tracing_callbacks]},
-                )
-            time.sleep(0.3)
+                time.sleep(1.0)
+                continue
+            reduced_message = self._reduce_messages()
+            langchain_message = reduced_message.to_langchain()
+            self.state["messages"].append(langchain_message)
+            # callback is used to send messages to the connectors
+            self.agent.invoke(
+                self.state,
+                config={"callbacks": [self.callback, *self.tracing_callbacks]},
+            )
 
     def stop(self):
         self._stop_event.set()
@@ -82,29 +103,15 @@ class LangChainAgent(BaseAgent):
             self.thread = None
             self.logger.info("Agent stopped")
 
-    def receive_all_connectors(self) -> Dict[str, Dict[str, HRIMessage]]:
-        received_messages: Dict[str, Any] = {}
-        for connector_name, connector in self.connectors.items():
-            received_message = cast(
-                HRIConnector[HRIMessage], connector
-            ).receive_all_sources()
-            received_message = {k: v for k, v in received_message.items() if v}
-            if received_message:
-                received_messages[connector_name] = received_message
-        return received_messages
-
-    def _reduce_messages(
-        self, received_messages: Dict[str, Dict[str, HRIMessage]]
-    ) -> HRIMessage:
+    def _reduce_messages(self) -> HRIMessage:
         text = ""
         images = []
         audios = []
-        for connector_name, connector_sources in received_messages.items():
-            text += f"{connector_name}\n"
-            for source_name, source_message in connector_sources.items():
-                text += f"{source_name}: {source_message.text}\n"
-                images.extend(source_message.images)
-                audios.extend(source_message.audios)
+        while len(self.received_messages) > 0:
+            source_message = self.received_messages.popleft()
+            text += f"{source_message.text}\n"
+            images.extend(source_message.images)
+            audios.extend(source_message.audios)
         return HRIMessage(
             text=text,
             images=images,
