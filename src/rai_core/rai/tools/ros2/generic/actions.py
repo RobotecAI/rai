@@ -28,9 +28,9 @@ from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
 
 internal_action_id_mapping: Dict[str, str] = {}
 action_results_store: Dict[str, Any] = {}
-action_results_store_lock: Lock = Lock()
+action_results_store_lock: Any = Lock()
 action_feedbacks_store: Dict[str, List[Any]] = defaultdict(list)
-action_feedbacks_store_lock: Lock = Lock()
+action_feedbacks_store_lock: Any = Lock()
 
 
 def get_internal_action_id_mapping():
@@ -60,13 +60,13 @@ class ROS2ActionToolkit(BaseROS2Toolkit):
     action_results_store: Dict[str, Any] = Field(
         default_factory=get_action_results_store
     )
-    action_results_store_lock: Lock = Field(
+    action_results_store_lock: Any = Field(
         default_factory=get_action_results_store_lock
     )
     action_feedbacks_store: Dict[str, List[Any]] = Field(
         default_factory=get_action_feedbacks_store
     )
-    action_feedbacks_store_lock: Lock = Field(
+    action_feedbacks_store_lock: Any = Field(
         default_factory=get_action_feedbacks_store_lock
     )
 
@@ -194,7 +194,7 @@ class GetROS2ActionFeedbackTool(BaseROS2Tool):
     action_feedbacks_store: Dict[str, List[Any]] = Field(
         default_factory=get_action_feedbacks_store
     )
-    action_feedbacks_store_lock: Lock = Field(
+    action_feedbacks_store_lock: Any = Field(
         default_factory=get_action_feedbacks_store_lock
     )
     internal_action_id_mapping: Dict[str, str] = Field(
@@ -223,7 +223,7 @@ class GetROS2ActionResultTool(BaseTool):
     action_results_store: Dict[str, Any] = Field(
         default_factory=get_action_results_store
     )
-    action_results_store_lock: Lock = Field(
+    action_results_store_lock: Any = Field(
         default_factory=get_action_results_store_lock
     )
     internal_action_id_mapping: Dict[str, str] = Field(

@@ -99,6 +99,14 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         destroy_subscribers: bool = False,
     ):
         super().__init__()
+
+        if not rclpy.ok():
+            rclpy.init()
+            self.logger.warning(
+                "Auto-initializing ROS2, but manual initialization is recommended. "
+                "For better control and predictability, call rclpy.init() or ROS2Context before creating this connector."
+            )
+
         self._node = Node(node_name)
         self._topic_api = ROS2TopicAPI(self._node, destroy_subscribers)
         self._service_api = ROS2ServiceAPI(self._node)
