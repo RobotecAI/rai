@@ -40,8 +40,6 @@ class HRIConfig(BaseModel):
 
 
 class LangChainAgent(BaseAgent):
-    MAX_WORKERS = 10
-
     def __init__(
         self,
         target_connectors: Dict[str, HRIConnector],
@@ -55,7 +53,7 @@ class LangChainAgent(BaseAgent):
             "interuppt_take_all",
             "interuppt_keep_last",
         ] = "interuppt_keep_last",
-        max_workers: int = MAX_WORKERS,
+        max_size: int = 100,
     ):
         super().__init__()
         self.logger = logging.getLogger(__name__)
@@ -63,8 +61,6 @@ class LangChainAgent(BaseAgent):
         self.new_message_behavior = new_message_behavior
         self.tracing_callbacks = get_tracing_callbacks()
         self.state = state or ReActAgentState(messages=[])
-        self.thread: Optional[threading.Thread] = None
-        self._stop_event = threading.Event()
         self.source_connector = source_connector
         self.callback = HRICallbackHandler(
             connectors=target_connectors,
@@ -76,39 +72,42 @@ class LangChainAgent(BaseAgent):
         self.source_connector.register_callback(
             self.source, self.source_callback, msg_type="rai_interfaces/msg/HRIMessage"
         )
-        self.received_messages: Deque[HRIMessage] = deque()
-        self.max_size = 100
-        self.executor = ThreadPoolExecutor(max_workers=1)
-        self.interupt_event = threading.Event()
-        self.agent_ready_event = threading.Event()
+        self._received_messages: Deque[HRIMessage] = deque()
+        self.max_size = max_size
+
+        self.thread: Optional[threading.Thread] = None
+        self._stop_event = threading.Event()
+        self._executor = ThreadPoolExecutor(max_workers=1)
+        self._interupt_event = threading.Event()
+        self._agent_ready_event = threading.Event()
 
     def run(self):
         if self.thread is not None:
             raise RuntimeError("Agent is already running")
         self.thread = threading.Thread(target=self._run_loop)
         self.thread.start()
-        self.agent_ready_event.set()
+        self._agent_ready_event.set()
 
     def source_callback(self, msg: HRIMessage):
-        if self.max_size is not None and len(self.received_messages) >= self.max_size:
+        if self.max_size is not None and len(self._received_messages) >= self.max_size:
             self.logger.warning("Buffer overflow. Dropping olders message")
-            self.received_messages.popleft()
+            self._received_messages.popleft()
         if "interuppt" in self.new_message_behavior:
-            self.executor.submit(self.interuppt_agent_and_run)
+            self._executor.submit(self.interuppt_agent_and_run)
         self.logger.info(f"Received message: {msg}, {type(msg)}")
-        self.received_messages.append(msg)
+        self._received_messages.append(msg)
 
     def interuppt_agent_and_run(self):
         self.logger.info("Interuppting agent...")
-        self.interupt_event.set()
-        self.agent_ready_event.wait()
-        self.interupt_event.clear()
+        self._interupt_event.set()
+        self._agent_ready_event.wait()
+        self._interupt_event.clear()
         self.logger.info("Interuppting agent: DONE")
 
     def run_agent(self):
-        self.agent_ready_event.clear()
+        self._agent_ready_event.clear()
         try:
-            if len(self.received_messages) == 0:
+            if len(self._received_messages) == 0:
                 self.logger.info("Waiting for messages...")
                 time.sleep(0.5)
                 return
@@ -120,21 +119,21 @@ class LangChainAgent(BaseAgent):
                 self.state,
                 config={"callbacks": [self.callback, *self.tracing_callbacks]},
             ):
-                if self.interupt_event.is_set():
+                if self._interupt_event.is_set():
                     break
         finally:
-            self.agent_ready_event.set()
+            self._agent_ready_event.set()
 
     def _run_loop(self):
         while not self._stop_event.is_set():
             time.sleep(0.01)
-            if self.agent_ready_event.is_set():
+            if self._agent_ready_event.is_set():
                 self.run_agent()
 
     def stop(self):
         self._stop_event.set()
-        self.interupt_event.set()
-        self.agent_ready_event.wait()
+        self._interupt_event.set()
+        self._agent_ready_event.wait()
         if self.thread is not None:
             self.logger.info("Stopping the agent. Please wait...")
             self.thread.join()
@@ -145,29 +144,26 @@ class LangChainAgent(BaseAgent):
         text = ""
         images = []
         audios = []
+        source_messages = list()
         if "take_all" in self.new_message_behavior:
-            while len(self.received_messages) > 0:
-                source_message = self.received_messages.popleft()
-                text += f"{source_message.text}\n"
-                images.extend(source_message.images)
-                audios.extend(source_message.audios)
+            # Take all starting from the oldest
+            while len(self._received_messages) > 0:
+                source_messages.append(self._received_messages.popleft())
         elif "keep_last" in self.new_message_behavior:
             # Take the recently added message
-            source_message = self.received_messages.pop()
-            text += f"{source_message.text}\n"
-            images.extend(source_message.images)
-            audios.extend(source_message.audios)
-            self.received_messages.clear()
+            source_messages.append(self._received_messages.pop())
+            self._received_messages.clear()
         elif self.new_message_behavior == "queue":
             # Take the first message from the queue. Let other messages wait.
-            source_message = self.received_messages.popleft()
-            text += f"{source_message.text}\n"
-            images.extend(source_message.images)
-            audios.extend(source_message.audios)
+            source_messages.append(self._received_messages.popleft())
         else:
             raise ValueError(
                 f"Invalid new_message_behavior: {self.new_message_behavior}"
             )
+        for source_message in source_messages:
+            text += f"{source_message.text}\n"
+            images.extend(source_message.images)
+            audios.extend(source_message.audios)
         return HRIMessage(
             text=text,
             images=images,
