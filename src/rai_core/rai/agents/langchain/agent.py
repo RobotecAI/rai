@@ -16,7 +16,8 @@ import logging
 import threading
 import time
 from collections import deque
-from typing import Deque, Dict, List, Optional, Tuple, TypedDict
+from concurrent.futures import ThreadPoolExecutor
+from typing import Deque, Dict, List, Literal, Optional, Tuple, TypedDict
 
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
@@ -39,16 +40,27 @@ class HRIConfig(BaseModel):
 
 
 class LangChainAgent(BaseAgent):
+    MAX_WORKERS = 10
+
     def __init__(
         self,
         target_connectors: Dict[str, HRIConnector],
         source_connector: Tuple[str, HRIConnector],
         runnable: Runnable,
         state: BaseState | None = None,
+        new_message_behavior: Literal[
+            "take_all",
+            "keep_last",
+            "queue",
+            "interuppt_take_all",
+            "interuppt_keep_last",
+        ] = "interuppt_keep_last",
+        max_workers: int = MAX_WORKERS,
     ):
         super().__init__()
         self.logger = logging.getLogger(__name__)
         self.agent = runnable
+        self.new_message_behavior = new_message_behavior
         self.tracing_callbacks = get_tracing_callbacks()
         self.state = state or ReActAgentState(messages=[])
         self.thread: Optional[threading.Thread] = None
@@ -66,37 +78,63 @@ class LangChainAgent(BaseAgent):
         )
         self.received_messages: Deque[HRIMessage] = deque()
         self.max_size = 100
+        self.executor = ThreadPoolExecutor(max_workers=1)
+        self.interupt_event = threading.Event()
+        self.agent_ready_event = threading.Event()
 
     def run(self):
         if self.thread is not None:
             raise RuntimeError("Agent is already running")
         self.thread = threading.Thread(target=self._run_loop)
         self.thread.start()
+        self.agent_ready_event.set()
 
     def source_callback(self, msg: HRIMessage):
         if self.max_size is not None and len(self.received_messages) >= self.max_size:
             self.logger.warning("Buffer overflow. Dropping olders message")
             self.received_messages.popleft()
+        if "interuppt" in self.new_message_behavior:
+            self.executor.submit(self.interuppt_agent_and_run)
         self.logger.info(f"Received message: {msg}, {type(msg)}")
         self.received_messages.append(msg)
 
-    def _run_loop(self):
-        while not self._stop_event.is_set():
+    def interuppt_agent_and_run(self):
+        self.logger.info("Interuppting agent...")
+        self.interupt_event.set()
+        self.agent_ready_event.wait()
+        self.interupt_event.clear()
+        self.logger.info("Interuppting agent: DONE")
+
+    def run_agent(self):
+        self.agent_ready_event.clear()
+        try:
             if len(self.received_messages) == 0:
                 self.logger.info("Waiting for messages...")
-                time.sleep(1.0)
-                continue
+                time.sleep(0.5)
+                return
+            self.logger.info("Running agent...")
             reduced_message = self._reduce_messages()
             langchain_message = reduced_message.to_langchain()
             self.state["messages"].append(langchain_message)
-            # callback is used to send messages to the connectors
-            self.agent.invoke(
+            for _ in self.agent.stream(
                 self.state,
                 config={"callbacks": [self.callback, *self.tracing_callbacks]},
-            )
+            ):
+                if self.interupt_event.is_set():
+                    break
+        finally:
+            self.agent_ready_event.set()
+
+    def _run_loop(self):
+        while not self._stop_event.is_set():
+            time.sleep(0.01)
+            if self.agent_ready_event.is_set():
+                self.run_agent()
 
     def stop(self):
         self._stop_event.set()
+        self.interupt_event.set()
+        self.agent_ready_event.wait()
         if self.thread is not None:
             self.logger.info("Stopping the agent. Please wait...")
             self.thread.join()
@@ -107,11 +145,29 @@ class LangChainAgent(BaseAgent):
         text = ""
         images = []
         audios = []
-        while len(self.received_messages) > 0:
+        if "take_all" in self.new_message_behavior:
+            while len(self.received_messages) > 0:
+                source_message = self.received_messages.popleft()
+                text += f"{source_message.text}\n"
+                images.extend(source_message.images)
+                audios.extend(source_message.audios)
+        elif "keep_last" in self.new_message_behavior:
+            # Take the recently added message
+            source_message = self.received_messages.pop()
+            text += f"{source_message.text}\n"
+            images.extend(source_message.images)
+            audios.extend(source_message.audios)
+            self.received_messages.clear()
+        elif self.new_message_behavior == "queue":
+            # Take the first message from the queue. Let other messages wait.
             source_message = self.received_messages.popleft()
             text += f"{source_message.text}\n"
             images.extend(source_message.images)
             audios.extend(source_message.audios)
+        else:
+            raise ValueError(
+                f"Invalid new_message_behavior: {self.new_message_behavior}"
+            )
         return HRIMessage(
             text=text,
             images=images,
