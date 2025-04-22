@@ -241,23 +241,27 @@ class EmbodimentInfo(BaseModel):
     def _to_xml(self) -> str:
         content = f"<description>\n{self.description}\n</description>\n"
         if self.rules is not None:
-            content += f"<rules>\n{'\n'.join(self.rules)}\n</rules>\n"
+            rules = "\n".join(self.rules)
+            content += f"<rules>\n{rules}\n</rules>\n"
         if self.capabilities is not None:
-            content += (
-                f"<capabilities>\n{'\n'.join(self.capabilities)}\n</capabilities>\n"
-            )
+            capabilities = "\n".join(self.capabilities)
+            content += f"<capabilities>\n{capabilities}\n</capabilities>\n"
         if self.behaviors is not None:
-            content += f"<behaviors>\n{'\n'.join(self.behaviors)}\n</behaviors>"
+            behaviors = "\n".join(self.behaviors)
+            content += f"<behaviors>\n{behaviors}\n</behaviors>\n"
         return content
 
     def _to_markdown(self) -> str:
         content = f"# Description\n{self.description}\n"
         if self.rules is not None:
-            content += f"# Rules\n{'\n'.join(self.rules)}\n"
+            rules = "\n".join(self.rules)
+            content += f"# Rules\n{rules}\n"
         if self.capabilities is not None:
-            content += f"# Capabilities\n{'\n'.join(self.capabilities)}\n"
+            capabilities = "\n".join(self.capabilities)
+            content += f"# Capabilities\n{capabilities}\n"
         if self.behaviors is not None:
-            content += f"# Behaviors\n{'\n'.join(self.behaviors)}\n"
+            behaviors = "\n".join(self.behaviors)
+            content += f"# Behaviors\n{behaviors}\n"
         return content
 
     def __add__(self, other: "EmbodimentInfo") -> "EmbodimentInfo":
