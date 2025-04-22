@@ -36,7 +36,6 @@ class ValidatorResult(BaseModel):
     type: str
     subtasks: List[SubTaskResult]
     extra_tool_calls: int
-    # errors: List[List[str]]
     passed: bool
 
 
