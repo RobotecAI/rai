@@ -14,13 +14,13 @@
 
 from .loaders import EmbodimentInfo, EmbodimentSource
 from .pipeline import Pipeline, PipelineBuilder
-from .processors import DEFAULT_POSTPROCESSORS, DEFAULT_PREPROCESSORS
+from .processors import get_default_postprocessors, get_default_preprocessors
 
 __all__ = [
-    "DEFAULT_POSTPROCESSORS",
-    "DEFAULT_PREPROCESSORS",
     "EmbodimentInfo",
     "EmbodimentSource",
     "Pipeline",
     "PipelineBuilder",
+    "get_default_postprocessors",
+    "get_default_preprocessors",
 ]

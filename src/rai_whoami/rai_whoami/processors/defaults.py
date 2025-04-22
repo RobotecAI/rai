@@ -25,11 +25,16 @@ from rai_whoami.processors.preprocessors import (
 )
 from rai_whoami.processors.preprocessors.base import DataPreProcessor
 
-DEFAULT_PREPROCESSORS: List[DataPreProcessor] = [
-    ImagePreProcessor(),
-    DocsPreProcessor(),
-]
-DEFAULT_POSTPROCESSORS: List[DataPostProcessor] = [
-    CompressorPostProcessor(),
-    StylePostProcessor(),
-]
+
+def get_default_preprocessors() -> List[DataPreProcessor]:
+    return [
+        ImagePreProcessor(),
+        DocsPreProcessor(),
+    ]
+
+
+def get_default_postprocessors() -> List[DataPostProcessor]:
+    return [
+        CompressorPostProcessor(),
+        StylePostProcessor(),
+    ]

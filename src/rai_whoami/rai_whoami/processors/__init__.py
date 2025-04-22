@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .defaults import DEFAULT_POSTPROCESSORS, DEFAULT_PREPROCESSORS
+from .defaults import get_default_postprocessors, get_default_preprocessors
 from .postprocessors import CompressorPostProcessor, StylePostProcessor
 from .preprocessors import DocsPreProcessor, ImagePreProcessor
 
 __all__ = [
-    "DEFAULT_POSTPROCESSORS",
-    "DEFAULT_PREPROCESSORS",
     "CompressorPostProcessor",
     "DocsPreProcessor",
     "ImagePreProcessor",
     "StylePostProcessor",
+    "get_default_postprocessors",
+    "get_default_preprocessors",
 ]

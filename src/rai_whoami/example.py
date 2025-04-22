@@ -14,16 +14,16 @@
 
 
 from rai_whoami import (
-    DEFAULT_POSTPROCESSORS,
-    DEFAULT_PREPROCESSORS,
     EmbodimentSource,
     PipelineBuilder,
+    get_default_postprocessors,
+    get_default_preprocessors,
 )
 
 pipeline = (
     PipelineBuilder()
-    .add_preprocessors(DEFAULT_PREPROCESSORS)
-    .add_postprocessors(DEFAULT_POSTPROCESSORS)
+    .add_preprocessors(get_default_preprocessors())
+    .add_postprocessors(get_default_postprocessors())
     .build()
 )
 
