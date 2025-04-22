@@ -19,15 +19,20 @@ from typing import Any, Callable, Union
 import cv2
 import numpy as np
 import requests
+from PIL.Image import Image
 
 
 def preprocess_image(
-    image: Union[str, bytes, np.ndarray[Any, np.dtype[np.uint8 | np.float_]]],
+    image: Union[Image, str, bytes, np.ndarray[Any, np.dtype[np.uint8 | np.float_]]],
     encoding_function: Callable[[Any], str] = lambda x: base64.b64encode(x).decode(
         "utf-8"
     ),
 ) -> str:
-    if isinstance(image, str) and image.startswith(("http://", "https://")):
+    if isinstance(image, Image):
+        image = np.array(image)
+        _, image_data = cv2.imencode(".png", image)
+        encoding_function = lambda x: base64.b64encode(x).decode("utf-8")
+    elif isinstance(image, str) and image.startswith(("http://", "https://")):
         response = requests.get(image)
         response.raise_for_status()
         image_data = response.content

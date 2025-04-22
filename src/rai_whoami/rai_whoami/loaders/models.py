@@ -1,0 +1,273 @@
+# Copyright (C) 2025 Robotec.AI
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import base64
+import glob
+import logging
+import os
+import uuid
+from enum import Enum
+from pathlib import Path
+from typing import Annotated, Dict, List, Literal, Optional
+
+from langchain_community.document_loaders import (
+    Docx2txtLoader,
+    PyPDFLoader,
+    TextLoader,
+)
+from langchain_core.documents import Document
+from PIL import Image
+from pydantic import BaseModel, Field
+from rai.messages import preprocess_image
+from rai.messages.multimodal import SystemMultimodalMessage
+
+
+class EmbodimentInfoDirectoryStructure(Enum):
+    RULES = "./rules.txt"
+    CAPABILITIES = "./capabilities.txt"
+    BEHAVIORS = "./behaviors.txt"
+    DESCRIPTION = "./description.txt"
+    IMAGES = "./images"
+
+
+class DocumentLoader(Enum):
+    PDF = PyPDFLoader
+    DOCX = Docx2txtLoader
+    TXT = TextLoader
+
+
+class EmbodimentSourceDirectoryStructure(Enum):
+    DOCUMENTATION = Path("./documentation")
+    IMAGES = Path("./images")
+    URDFS = Path("./urdfs")
+
+
+ALLOWED_EXTENSIONS = {
+    ".pdf": DocumentLoader.PDF,
+    ".docx": DocumentLoader.DOCX,
+    ".doc": DocumentLoader.DOCX,
+    ".txt": DocumentLoader.TXT,
+    ".md": DocumentLoader.TXT,
+    ".urdf": DocumentLoader.TXT,
+    ".xacro": DocumentLoader.TXT,
+}
+
+
+class EmbodimentSourceLoader:
+    def __init__(
+        self,
+        root_dir: str | Path,
+        extension_to_loader: Optional[Dict[str, "DocumentLoader"]] = None,
+    ):
+        if isinstance(root_dir, str):
+            root_dir = Path(root_dir)
+        self.root_dir = root_dir
+        self.logger = logging.getLogger(__name__)
+        self.extension_to_loader = extension_to_loader or ALLOWED_EXTENSIONS
+
+    def load(self) -> "EmbodimentSource":
+        return EmbodimentSource(
+            documentation=self.load_documentation(),
+            images=self.load_images(),
+            urdfs=self.load_urdfs(),
+        )
+
+    def load_documentation(self) -> List[Document]:
+        extension_to_paths: Dict[str, List[str]] = {}
+        for extension in self.extension_to_loader:
+            extension_to_paths[extension] = glob.glob(
+                os.path.join(
+                    self.root_dir
+                    / EmbodimentSourceDirectoryStructure.DOCUMENTATION.value,
+                    "**/*" + extension,
+                ),
+                recursive=True,
+            )
+        documents: List[Document] = []
+        for extension, files in extension_to_paths.items():
+            for file in files:
+                if extension not in self.extension_to_loader:
+                    self.logger.warning(
+                        f"Skipping file {file} because it has an unsupported extension {extension}"
+                    )
+                    continue
+                loader = self.extension_to_loader[extension].value(file_path=file)
+                documents.extend(loader.load())
+        return documents
+
+    def load_images(self) -> List[str]:
+        files = glob.glob(
+            os.path.join(
+                self.root_dir / EmbodimentSourceDirectoryStructure.IMAGES.value,
+                "**/*",
+            ),
+            recursive=True,
+        )
+        image_files = [
+            file
+            for file in files
+            if file.endswith(".png") or file.endswith(".jpg") or file.endswith(".jpeg")
+        ]
+        return [preprocess_image(Image.open(file)) for file in image_files]
+
+    def load_urdfs(self) -> List[Document]:
+        files = glob.glob(
+            os.path.join(
+                self.root_dir / EmbodimentSourceDirectoryStructure.URDFS.value,
+                "**/*",
+            ),
+            recursive=True,
+        )
+        urdf_files = [
+            Path(file)
+            for file in files
+            if file.endswith(".urdf") or file.endswith(".xacro")
+        ]
+        documents: List[Document] = []
+        for file in urdf_files:
+            loader = self.extension_to_loader[file.suffix].value(file_path=file)
+            documents.extend(loader.load())
+        return documents
+
+
+class EmbodimentInfoLoader:
+    def __init__(self, root_dir: str | Path):
+        if isinstance(root_dir, str):
+            root_dir = Path(root_dir)
+        self.root_dir = root_dir
+
+    def load(self) -> "EmbodimentInfo":
+        return EmbodimentInfo(
+            rules=self.load_rules(),
+            capabilities=self.load_capabilities(),
+            behaviors=self.load_behaviors(),
+            description=self.load_description(),
+            images=self.load_images(),
+        )
+
+    def load_rules(self) -> List[str]:
+        return open(
+            self.root_dir / EmbodimentInfoDirectoryStructure.RULES.value
+        ).readlines()
+
+    def load_capabilities(self) -> List[str]:
+        return open(
+            self.root_dir / EmbodimentInfoDirectoryStructure.CAPABILITIES.value
+        ).readlines()
+
+    def load_behaviors(self) -> List[str]:
+        return open(
+            self.root_dir / EmbodimentInfoDirectoryStructure.BEHAVIORS.value
+        ).readlines()
+
+    def load_description(self) -> str:
+        return open(
+            self.root_dir / EmbodimentInfoDirectoryStructure.DESCRIPTION.value
+        ).read()
+
+    def load_images(self) -> List[str]:
+        files = glob.glob(
+            os.path.join(
+                self.root_dir / EmbodimentInfoDirectoryStructure.IMAGES.value,
+                "**/*",
+            ),
+            recursive=True,
+        )
+        image_files = [
+            file
+            for file in files
+            if file.endswith(".png") or file.endswith(".jpg") or file.endswith(".jpeg")
+        ]
+        return [preprocess_image(Image.open(file)) for file in image_files]
+
+
+class EmbodimentSource(BaseModel):
+    documentation: List[Document]
+    images: List[str] = Field(..., exclude=True)
+    urdfs: List[Document]
+
+    @classmethod
+    def from_directory(cls, directory: Path | str) -> "EmbodimentSource":
+        loader = EmbodimentSourceLoader(directory)
+        return loader.load()
+
+
+class EmbodimentInfo(BaseModel):
+    rules: Optional[List[str]] = None
+    capabilities: Optional[List[str]] = None
+    behaviors: Optional[List[str]] = None
+    description: Optional[str] = None
+    images: Optional[Annotated[List[str], "base64 encodedpng images"]] = None
+
+    @classmethod
+    def from_directory(cls, directory: Path | str) -> "EmbodimentInfo":
+        loader = EmbodimentInfoLoader(directory)
+        return loader.load()
+
+    def to_directory(self, directory: Path | str):
+        if isinstance(directory, str):
+            directory = Path(directory)
+        if not directory.exists():
+            directory.mkdir(parents=True)
+        if self.images is not None:
+            for image in self.images:
+                with open(directory / f"{uuid.uuid4()}.png", "wb") as f:
+                    f.write(base64.b64decode(image))
+
+    def to_langchain(
+        self, style: Literal["xml_tags", "markdown"] = "xml_tags"
+    ) -> SystemMultimodalMessage:
+        if style == "xml_tags":
+            content = self._to_xml()
+        elif style == "markdown":
+            content = self._to_markdown()
+        else:
+            raise ValueError(f"Invalid style: {style}")
+        return SystemMultimodalMessage(content=content, images=self.images)
+
+    def _to_xml(self) -> str:
+        content = f"<description>\n{self.description}\n</description>\n"
+        if self.rules is not None:
+            content += f"<rules>\n{'\n'.join(self.rules)}\n</rules>\n"
+        if self.capabilities is not None:
+            content += (
+                f"<capabilities>\n{'\n'.join(self.capabilities)}\n</capabilities>\n"
+            )
+        if self.behaviors is not None:
+            content += f"<behaviors>\n{'\n'.join(self.behaviors)}\n</behaviors>"
+        return content
+
+    def _to_markdown(self) -> str:
+        content = f"# Description\n{self.description}\n"
+        if self.rules is not None:
+            content += f"# Rules\n{'\n'.join(self.rules)}\n"
+        if self.capabilities is not None:
+            content += f"# Capabilities\n{'\n'.join(self.capabilities)}\n"
+        if self.behaviors is not None:
+            content += f"# Behaviors\n{'\n'.join(self.behaviors)}\n"
+        return content
+
+    def __add__(self, other: "EmbodimentInfo") -> "EmbodimentInfo":
+        rules = (self.rules or []) + (other.rules or [])
+        capabilities = (self.capabilities or []) + (other.capabilities or [])
+        behaviors = (self.behaviors or []) + (other.behaviors or [])
+        description = (self.description or "") + (other.description or "")
+        images = (self.images or []) + (other.images or [])
+        return EmbodimentInfo(
+            rules=rules,
+            capabilities=capabilities,
+            behaviors=behaviors,
+            description=description,
+            images=images,
+        )
