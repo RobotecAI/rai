@@ -12,15 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .loaders import EmbodimentInfo, EmbodimentSource
-from .pipeline import Pipeline, PipelineBuilder
-from .processors import DEFAULT_POSTPROCESSORS, DEFAULT_PREPROCESSORS
+from typing import List
 
-__all__ = [
-    "DEFAULT_POSTPROCESSORS",
-    "DEFAULT_PREPROCESSORS",
-    "EmbodimentInfo",
-    "EmbodimentSource",
-    "Pipeline",
-    "PipelineBuilder",
+from rai_whoami.processors.postprocessors import (
+    CompressorPostProcessor,
+    StylePostProcessor,
+)
+from rai_whoami.processors.postprocessors.base import DataPostProcessor
+from rai_whoami.processors.preprocessors import (
+    DocsPreProcessor,
+    ImagePreProcessor,
+)
+from rai_whoami.processors.preprocessors.base import DataPreProcessor
+
+DEFAULT_PREPROCESSORS: List[DataPreProcessor] = [
+    ImagePreProcessor(),
+    DocsPreProcessor(),
+]
+DEFAULT_POSTPROCESSORS: List[DataPostProcessor] = [
+    CompressorPostProcessor(),
+    StylePostProcessor(),
 ]

@@ -220,6 +220,8 @@ class EmbodimentInfo(BaseModel):
             directory = Path(directory)
         if not directory.exists():
             directory.mkdir(parents=True)
+        with open(directory / "info.json", "w") as f:
+            f.write(self.model_dump_json(indent=4))
         if self.images is not None:
             for image in self.images:
                 with open(directory / f"{uuid.uuid4()}.png", "wb") as f:

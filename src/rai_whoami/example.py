@@ -13,21 +13,17 @@
 # limitations under the License.
 
 
-from rai_whoami.loaders import EmbodimentSource
-from rai_whoami.pipeline import PipelineBuilder
-from rai_whoami.processors import (
-    CompressorPostProcessor,
-    DocsPreProcessor,
-    ImagePreProcessor,
-    StylePostProcessor,
+from rai_whoami import (
+    DEFAULT_POSTPROCESSORS,
+    DEFAULT_PREPROCESSORS,
+    EmbodimentSource,
+    PipelineBuilder,
 )
 
 pipeline = (
     PipelineBuilder()
-    .add_preprocessor(ImagePreProcessor())
-    .add_preprocessor(DocsPreProcessor())
-    .add_postprocessor(CompressorPostProcessor())
-    .add_postprocessor(StylePostProcessor())
+    .add_preprocessors(DEFAULT_PREPROCESSORS)
+    .add_postprocessors(DEFAULT_POSTPROCESSORS)
     .build()
 )
 

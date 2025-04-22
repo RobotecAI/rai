@@ -53,6 +53,15 @@ class PipelineBuilder:
         self._preprocessors.append(processor)
         return self
 
+    def add_preprocessors(
+        self, processors: List[DataPreProcessor]
+    ) -> "PipelineBuilder":
+        """
+        Add a list of preprocessors to the pipeline.
+        """
+        self._preprocessors.extend(processors)
+        return self
+
     def add_postprocessor(self, processor: DataPostProcessor) -> "PipelineBuilder":
         """
         Add a postprocessor to the pipeline.
@@ -64,6 +73,15 @@ class PipelineBuilder:
             self for method chaining
         """
         self._postprocessors.append(processor)
+        return self
+
+    def add_postprocessors(
+        self, processors: List[DataPostProcessor]
+    ) -> "PipelineBuilder":
+        """
+        Add a list of postprocessors to the pipeline.
+        """
+        self._postprocessors.extend(processors)
         return self
 
     def set_aggregate_strategy(self, strategy: Literal["merge"]) -> "PipelineBuilder":
