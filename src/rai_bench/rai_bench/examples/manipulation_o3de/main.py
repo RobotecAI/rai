@@ -55,10 +55,17 @@ def parse_args():
     parser.add_argument(
         "--vendor", type=str, default=None, help="Vendor of the model (optional)"
     )
+    now = datetime.now()
+    parser.add_argument(
+        "--out_dir",
+        type=str,
+        default=f"src/rai_bench/rai_bench/experiments/o3de_manipulation/{now.strftime('%Y-%m-%d_%H-%M-%S')}",
+        help="Output directory for results and logs",
+    )
     return parser.parse_args()
 
 
-def run_benchmark(model_name: str, vendor: str):
+def run_benchmark(model_name: str, vendor: str, out_dir: str):
     rclpy.init()
     connector = ROS2Connector()
     node = connector.node
@@ -92,10 +99,8 @@ def run_benchmark(model_name: str, vendor: str):
         GetROS2TopicsNamesAndTypesTool(connector=connector),
     ]
     # define loggers
-    now = datetime.now()
-    experiment_dir = f"src/rai_bench/rai_bench/experiments/o3de_manipulation/{now.strftime('%Y-%m-%d_%H-%M-%S')}"
-    Path(experiment_dir).mkdir(parents=True, exist_ok=True)
-    log_file = f"{experiment_dir}/benchmark.log"
+    Path(out_dir).mkdir(parents=True, exist_ok=True)
+    log_file = f"{out_dir}/benchmark.log"
     file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(logging.DEBUG)
 
@@ -177,7 +182,7 @@ def run_benchmark(model_name: str, vendor: str):
     o3de = O3DEngineArmManipulationBridge(connector, logger=agent_logger)
     try:
         # define benchamrk
-        results_filename = f"{experiment_dir}/results.csv"
+        results_filename = f"{out_dir}/results.csv"
         benchmark = Benchmark(
             simulation_bridge=o3de,
             scenarios=all_scenarios,
@@ -207,4 +212,4 @@ def run_benchmark(model_name: str, vendor: str):
 
 if __name__ == "__main__":
     args = parse_args()
-    run_benchmark(model_name=args.model_name, vendor=args.vendor)
+    run_benchmark(model_name=args.model_name, vendor=args.vendor, out_dir=args.out_dir)

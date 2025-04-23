@@ -30,18 +30,21 @@ def parse_args():
         "--model-name",
         type=str,
         help="Model name to use for benchmarking",
+        required=True,
     )
+    parser.add_argument("--vendor", type=str, help="Vendor of the model", required=True)
+    now = datetime.now()
     parser.add_argument(
-        "--vendor", type=str, default=None, help="Vendor of the model (optional)"
+        "--out_dir",
+        type=str,
+        default=f"src/rai_bench/rai_bench/experiments/o3de_manipulation/{now.strftime('%Y-%m-%d_%H-%M-%S')}",
+        help="Output directory for results and logs",
     )
     return parser.parse_args()
 
 
-def run_benchmark(model_name: str, vendor: str):
-    now = datetime.now()
-    experiment_dir = Path(
-        "src/rai_bench/rai_bench/experiments/tool_calling_agent"
-    ) / now.strftime("%Y-%m-%d_%H-%M-%S")
+def run_benchmark(model_name: str, vendor: str, out_dir: str):
+    experiment_dir = Path(out_dir)
     experiment_dir.mkdir(parents=True, exist_ok=True)
     log_filename = experiment_dir / "benchmark.log"
     results_filename = experiment_dir / "results.csv"
@@ -81,4 +84,4 @@ def run_benchmark(model_name: str, vendor: str):
 
 if __name__ == "__main__":
     args = parse_args()
-    run_benchmark(model_name=args.model_name, vendor=args.vendor)
+    run_benchmark(model_name=args.model_name, vendor=args.vendor, out_dir=args.out_dir)
