@@ -31,6 +31,8 @@ class FAISSBuilder(VectorDBBuilder):
         self.embedding = embedding or get_embeddings_model()
 
     def build(self, data: EmbodimentSource):
+        if len(data.documentation) == 0:
+            raise ValueError("No documents found")
         os.makedirs(self.root_dir, exist_ok=True)
         db = FAISS.from_documents(data.documentation, self.embedding)
         db.save_local(self.root_dir)

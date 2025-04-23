@@ -19,6 +19,12 @@ PyYAML = "*"
 langchain = "*"
 PyPDF2 = "*"
 Pillow = "*"
+faiss-cpu = "*"
+
+[tool.poetry.scripts]
+build-whoami = "rai_whoami.build_whoami:build_whoami"
+
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

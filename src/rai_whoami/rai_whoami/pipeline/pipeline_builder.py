@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, List, Literal
+from typing import TYPE_CHECKING, List, Literal, Optional
 
 from rai_whoami.processors.postprocessors.base import DataPostProcessor
 from rai_whoami.processors.preprocessors.base import DataPreProcessor
@@ -40,6 +40,7 @@ class PipelineBuilder:
         self._preprocessors: List[DataPreProcessor] = []
         self._postprocessors: List[DataPostProcessor] = []
         self._aggregate: Literal["merge"] = "merge"
+        self._vector_db_builder: Optional[VectorDBBuilder] = None
 
     def add_preprocessor(self, processor: DataPreProcessor) -> "PipelineBuilder":
         """

@@ -35,6 +35,8 @@ class DocsPreProcessor(DataPreProcessor):
         self.system_prompt = system_prompt or self.SYSTEM_PROMPT
 
     def process(self, input: EmbodimentSource) -> EmbodimentInfo:
+        if len(input.documentation) == 0:
+            return EmbodimentInfo()
         context = [
             SystemMessage(content=self.system_prompt),
             HumanMessage(
