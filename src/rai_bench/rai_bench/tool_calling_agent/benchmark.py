@@ -18,8 +18,7 @@ import statistics
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Sequence, Tuple
-from uuid import UUID
+from typing import Dict, Iterator, List, Sequence, Tuple
 
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables.config import RunnableConfig
@@ -31,36 +30,15 @@ from rai.messages import HumanMultimodalMessage
 from rai_bench.tool_calling_agent.interfaces import (
     Task,
 )
-from rai_bench.tool_calling_agent.scores_tracing import ScoreTracingHandler
+from rai_bench.tool_calling_agent.scores_tracing import (
+    ScoreTracingHandler,
+    TaskResult,
+)
 from rai_bench.tool_calling_agent.tasks.spatial import (
     SpatialReasoningAgentTask,
 )
 
 loggers_type = logging.Logger
-
-
-class TaskResult(BaseModel):
-    task_prompt: str = Field(..., description="The task prompt.")
-    system_prompt: str = Field(..., description="The system prompt.")
-    complexity: str = Field(..., description="Complexity of the task.")
-    model_name: str = Field(..., description="Name of the LLM.")
-    validators: List[List[Dict[str, Any]]] = Field(
-        ..., description="List of validators with theirs' subtasks."
-    )
-    passed: List[bool] = Field(
-        ...,
-        description="for every validator - True when passed, False when not",
-    )
-    score: float = Field(
-        ...,
-        description="Value between 0 and 1, describing how many validation setps passed",
-    )
-    errors: List[List[str]] = Field(
-        ...,
-        description="List of errors that occurred during the task validation, separate for every validator",
-    )
-    total_time: float = Field(..., description="Total time taken to complete the task.")
-    run_id: UUID = Field(..., description="UUID of the task run.")
 
 
 class BenchmarkSummary(BaseModel):
@@ -215,32 +193,34 @@ class ToolCallingAgentBenchmark:
 
         self.logger.debug(messages)
         toll_calls = task.get_tool_calls_from_messages(messages=messages)
-        task.validate(tool_calls=toll_calls)
+        score = task.validate(tool_calls=toll_calls)
         te = time.perf_counter()
         total_time = te - ts
-        result = task.result
+
+        validation_info = task.dump_validators()
+        errors = [
+            s.errors
+            for validator_info in validation_info
+            for s in validator_info.subtasks
+        ]
 
         for callback in callbacks:
             self.score_tracing_handler.send_score(
                 callback=callback,
                 run_id=run_id,
-                score=result.score,
-                errors=result.errors,
+                score=score,
+                errors=errors,
             )
 
-        self.logger.info(
-            f"TASK VALIDATORS PASSED: {result.passed}, TOTAL TIME: {total_time:.3f}"
-        )
+        self.logger.info(f"TASK SCORE: {score}, TOTAL TIME: {total_time:.3f}")
 
         task_result = TaskResult(
             task_prompt=task.get_prompt(),
             system_prompt=task.get_system_prompt(),
             complexity=task.complexity,
             model_name=model_name,
-            validators=task.dump_validators(),
-            passed=result.passed,
-            score=result.score,
-            errors=result.errors if result.errors else [],
+            validation_info=validation_info,
+            score=score,
             total_time=total_time,
             run_id=run_id,
         )

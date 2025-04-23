@@ -13,35 +13,16 @@
 # limitations under the License.
 
 import logging
-import queue
 from abc import ABC, abstractmethod
-from queue import Queue
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from langchain_core.messages import AIMessage, BaseMessage, ToolCall
 from langchain_core.runnables.config import DEFAULT_RECURSION_LIMIT
 from langchain_core.tools import BaseTool
 
+from rai_bench.tool_calling_agent.scores_tracing import SubTaskResult, ValidatorResult
+
 loggers_type = logging.Logger
-
-
-class Result:
-    def __init__(self):
-        # bool for every validator
-        self.passed: List[bool] = []
-        # list for every validator
-        self.errors: List[List[str]] = [[]]
-
-    @property
-    def score(self) -> float:
-        """
-        Counted as number of validators
-        passed divided by numer of all validators
-        """
-        if self.passed:
-            return sum(self.passed) / len(self.passed)
-        else:
-            return 0.0
 
 
 class SubTaskValidationError(Exception):
@@ -65,14 +46,15 @@ class SubTask(ABC):
         dump()
             Abstract method that subclasses must implement to serialize the subtask configuration.
         """
-        pass
 
     @abstractmethod
     def validate(self, tool_call: ToolCall) -> bool:
         pass
 
+    @property
     @abstractmethod
-    def dump(self) -> Dict[str, Any]:
+    def info(self) -> Dict[str, Any]:
+        """Return info about the Subtask validation args"""
         pass
 
     def _check_tool_call(
@@ -383,8 +365,6 @@ class Validator(ABC):
         ----------
         subtasks : List[SubTask]
             The list of subtasks that this validator will check.
-        errors_queue : Queue[str]
-            Queue for collecting validation error messages.
         logger : logging.Logger
             Logger for recording validation results and errors.
 
@@ -400,28 +380,60 @@ class Validator(ABC):
             Abstract method that subclasses must implement to validate tool calls.
         """
         self.subtasks = subtasks
-        self.errors_queue: queue.Queue[str] = Queue()
+
+        # for every subtask, one list
+        self.subtasks_errors: List[List[str]] = [[] for _ in range(len(subtasks))]
+        self.subtasks_passed: List[bool] = [False for _ in range(len(subtasks))]
+        self.extra_calls_used: int = 0
+        self.passed = None
         if logger:
             self.logger = logger
         else:
             self.logger = logging.getLogger(__name__)
 
-    def validation_error(self, msg: str):
-        """
-        Logs the error and puts in in queue that will be saved in results
-        """
-        self.logger.error(msg)
-        self.errors_queue.put(msg)
+    @property
+    @abstractmethod
+    def type(self) -> str:
+        pass
 
-    def dump(self) -> List[Dict[str, Any]]:
-        return [subt.dump() for subt in self.subtasks]
+    def add_subtask_errors(self, idx: int, msgs: List[str]):
+        """
+        Logs the errors, that will be saved in results, to the specific subtask
+        """
+        for msg in msgs:
+            self.logger.error(msg)
+        self.subtasks_errors[idx].extend(msgs)
 
-    def get_all_validation_errors(self):
-        """Get all errors from queue"""
-        errors: List[str] = []
-        while not self.errors_queue.empty():
-            errors.append(self.errors_queue.get())
-        return errors
+    def reset(self):
+        """
+        reset all values refering previous validation
+        before next validation
+        """
+        self.subtasks_errors = [[] for _ in range(len(self.subtasks))]
+        self.subtasks_passed: List[bool] = [False for _ in range(len(self.subtasks))]
+        self.extra_calls_used = 0
+        self.passed = None
+
+    def dump_results(self) -> ValidatorResult:
+        if self.passed is None:
+            raise ValueError("Run validator validation before dumping results")
+        subtasks_results: List[SubTaskResult] = []
+        for i, subt in enumerate(self.subtasks):
+            subtasks_results.append(
+                SubTaskResult(
+                    args=subt.info,
+                    errors=self.subtasks_errors[i],
+                    passed=self.subtasks_passed[i],
+                )
+            )
+        result = ValidatorResult(
+            type=self.type,
+            subtasks=subtasks_results,
+            extra_tool_calls=self.extra_calls_used,
+            passed=self.passed,
+        )
+        self.reset()
+        return result
 
     @abstractmethod
     def validate(self, tool_calls: List[ToolCall]) -> Tuple[bool, List[ToolCall]]:
@@ -462,7 +474,6 @@ class Task(ABC):
             self.logger = logging.getLogger(__name__)
         self.validators = validators
         self.extra_tool_calls = extra_tool_calls
-        self.result = Result()
 
     def set_logger(self, logger: loggers_type):
         self.logger = logger
@@ -487,8 +498,8 @@ class Task(ABC):
                 tool_calls.extend(msg.tool_calls)
         return tool_calls
 
-    def dump_validators(self) -> List[List[Dict[str, Any]]]:
-        return [val.dump() for val in self.validators]
+    def dump_validators(self) -> List[ValidatorResult]:
+        return [val.dump_results() for val in self.validators]
 
     @property
     @abstractmethod
@@ -530,16 +541,6 @@ class Task(ABC):
         """
         pass
 
-    def fail_rest_of_validators(self):
-        """
-        All remaining validators are marked as failed.
-        Can be used when validation cannot be continued for whatever reason
-        """
-        if len(self.result.passed) < len(self.validators):
-            self.result.passed.extend(
-                [False] * (len(self.validators) - len(self.result.passed))
-            )
-
     def validate(self, tool_calls: List[ToolCall]):
         """Validate a list of tool calls against all validators in sequence"""
         self.logger.debug(
@@ -553,10 +554,8 @@ class Task(ABC):
             if_success, remaining_tool_calls = validator.validate(
                 tool_calls=remaining_tool_calls
             )
+
             if if_success:
                 done_properly += 1
-                self.result.passed.append(True)
-            else:
-                self.result.passed.append(False)
-                # get all errors from queue
-                self.result.errors.append(validator.get_all_validation_errors())
+
+        return done_properly / len(self.validators)
