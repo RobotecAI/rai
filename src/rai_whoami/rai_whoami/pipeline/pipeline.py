@@ -13,11 +13,12 @@
 # limitations under the License.
 
 import logging
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 from rai_whoami.loaders import EmbodimentInfo, EmbodimentSource
 from rai_whoami.processors.postprocessors.base import DataPostProcessor
 from rai_whoami.processors.preprocessors.base import DataPreProcessor
+from rai_whoami.vector_db.builder import VectorDBBuilder
 
 
 def merge_intermediate_outputs(
@@ -37,13 +38,20 @@ class Pipeline:
         preprocessors: List[DataPreProcessor],
         postprocessors: List[DataPostProcessor],
         aggregate: Literal["merge"] = "merge",
+        vector_db_builder: Optional[VectorDBBuilder] = None,
     ):
         self.preprocessors = preprocessors
         self.postprocessors = postprocessors
         self.aggregate = aggregate
+        self.vector_db_builder = vector_db_builder
         self.logger = logging.getLogger(__name__)
 
     def process(self, input: EmbodimentSource) -> EmbodimentInfo:
+        if self.vector_db_builder is not None:
+            self.logger.info("Building vector database.")
+            self.vector_db_builder.build(input)
+            self.logger.info("Vector database built.")
+
         self.logger.info(
             f"Processing input started. Total preprocessors: {len(self.preprocessors)}."
         )
@@ -71,4 +79,5 @@ class Pipeline:
             )
             output = processor.process(output)
         self.logger.info("Processing output completed.")
+
         return output

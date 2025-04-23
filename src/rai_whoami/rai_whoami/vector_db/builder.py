@@ -12,27 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from abc import ABC, abstractmethod
+from typing import Any
 
-from rai_whoami import (
-    EmbodimentSource,
-    PipelineBuilder,
-    get_default_postprocessors,
-    get_default_preprocessors,
-)
-from rai_whoami.vector_db import FAISSBuilder
+from langchain_core.embeddings import Embeddings
+from langchain_core.vectorstores import VectorStore
 
-pipeline = (
-    PipelineBuilder()
-    .add_preprocessors(get_default_preprocessors())
-    .add_postprocessors(get_default_postprocessors())
-    .add_vector_db_builder(FAISSBuilder())
-    .build()
-)
+from rai_whoami.loaders.models import EmbodimentSource
 
-loader = EmbodimentSource.from_directory("robodoc/")
 
-output = pipeline.process(loader)
+class VectorDBBuilder(ABC):
+    def __init__(self, embedding: Embeddings, **kwargs: Any):
+        self.embedding = embedding
 
-output.to_directory("robodoc/output")
-
-print(output.to_langchain().content[0]["text"])
+    @abstractmethod
+    def build(self, data: EmbodimentSource) -> VectorStore:
+        """
+        Build a vector database from an EmbodimentSource.
+        """

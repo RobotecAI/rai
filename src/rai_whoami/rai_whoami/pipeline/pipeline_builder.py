@@ -19,6 +19,7 @@ from rai_whoami.processors.preprocessors.base import DataPreProcessor
 
 if TYPE_CHECKING:
     from rai_whoami.pipeline.pipeline import Pipeline
+    from rai_whoami.vector_db.builder import VectorDBBuilder
 
 
 class PipelineBuilder:
@@ -103,6 +104,13 @@ class PipelineBuilder:
         self._aggregate = strategy
         return self
 
+    def add_vector_db_builder(self, builder: "VectorDBBuilder") -> "PipelineBuilder":
+        """
+        Add a vector database builder to the pipeline.
+        """
+        self._vector_db_builder = builder
+        return self
+
     def build(self) -> "Pipeline":
         """
         Build and return a new Pipeline instance with the configured components.
@@ -116,6 +124,7 @@ class PipelineBuilder:
             preprocessors=self._preprocessors,
             postprocessors=self._postprocessors,
             aggregate=self._aggregate,
+            vector_db_builder=self._vector_db_builder,
         )
 
     def reset(self) -> "PipelineBuilder":

@@ -12,27 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from .builder import VectorDBBuilder
+from .faiss import FAISSBuilder
 
-from rai_whoami import (
-    EmbodimentSource,
-    PipelineBuilder,
-    get_default_postprocessors,
-    get_default_preprocessors,
-)
-from rai_whoami.vector_db import FAISSBuilder
-
-pipeline = (
-    PipelineBuilder()
-    .add_preprocessors(get_default_preprocessors())
-    .add_postprocessors(get_default_postprocessors())
-    .add_vector_db_builder(FAISSBuilder())
-    .build()
-)
-
-loader = EmbodimentSource.from_directory("robodoc/")
-
-output = pipeline.process(loader)
-
-output.to_directory("robodoc/output")
-
-print(output.to_langchain().content[0]["text"])
+__all__ = ["FAISSBuilder", "VectorDBBuilder"]
