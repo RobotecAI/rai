@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .gdino_tools import GetDetectionTool, GetDistanceToObjectsTool
+from .gdino_tools import DistanceMeasurement, GetDetectionTool, GetDistanceToObjectsTool
 from .segmentation_tools import GetGrabbingPointTool, GetSegmentationTool
 
 __all__ = [
+    "DistanceMeasurement",
     "GetDetectionTool",
     "GetDistanceToObjectsTool",
     "GetGrabbingPointTool",

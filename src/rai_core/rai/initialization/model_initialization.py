@@ -15,12 +15,15 @@
 import logging
 import os
 from dataclasses import dataclass
-from typing import List, Literal, Optional, Tuple, cast
+from typing import Any, List, Literal, Optional, Tuple, cast
 
 import coloredlogs
 import tomli
+from langchain_aws import ChatBedrock
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.tracers.langchain import LangChainTracer
+from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from langsmith import Client
 
 logger = logging.getLogger(__name__)
@@ -125,8 +128,8 @@ def get_llm_model(
     model_type: Literal["simple_model", "complex_model"],
     vendor: Optional[str] = None,
     config_path: Optional[str] = None,
-    **kwargs,
-):
+    **kwargs: Any,
+) -> ChatOpenAI | ChatBedrock | ChatOllama:
     model_config, vendor = get_llm_model_config_and_vendor(
         model_type, vendor, config_path
     )
@@ -153,6 +156,41 @@ def get_llm_model(
 
         model_config = cast(OllamaConfig, model_config)
         return ChatOllama(model=model, base_url=model_config.base_url, **kwargs)
+    else:
+        raise ValueError(f"Unknown LLM vendor: {vendor}")
+
+
+def get_llm_model_direct(
+    model_name: str,
+    vendor: str,
+    config_path: Optional[str] = None,
+    **kwargs: Any,
+) -> ChatOpenAI | ChatBedrock | ChatOllama:
+    config = load_config(config_path)
+    model_config = getattr(config, vendor)
+
+    logger.info(f"Initializing Model: {model_name}, Vendor: {vendor}")
+    if vendor == "openai":
+        from langchain_openai import ChatOpenAI
+
+        model_config = cast(OpenAIConfig, model_config)
+
+        return ChatOpenAI(model=model_name, base_url=model_config.base_url, **kwargs)
+    elif vendor == "aws":
+        from langchain_aws import ChatBedrock
+
+        model_config = cast(AWSConfig, model_config)
+
+        return ChatBedrock(
+            model_id=model_name,
+            region_name=model_config.region_name,
+            **kwargs,
+        )
+    elif vendor == "ollama":
+        from langchain_ollama import ChatOllama
+
+        model_config = cast(OllamaConfig, model_config)
+        return ChatOllama(model=model_name, base_url=model_config.base_url, **kwargs)
     else:
         raise ValueError(f"Unknown LLM vendor: {vendor}")
 
