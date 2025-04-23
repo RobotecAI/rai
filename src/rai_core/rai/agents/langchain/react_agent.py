@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
@@ -27,7 +27,6 @@ class ReActAgent(LangChainAgent):
     def __init__(
         self,
         target_connectors: Dict[str, HRIConnector],
-        source_connector: Tuple[str, HRIConnector],
         llm: Optional[BaseChatModel] = None,
         tools: Optional[List[BaseTool]] = None,
         state: Optional[ReActAgentState] = None,
@@ -38,7 +37,6 @@ class ReActAgent(LangChainAgent):
         )
         super().__init__(
             target_connectors=target_connectors,
-            source_connector=source_connector,
             runnable=runnable,
             state=state,
         )

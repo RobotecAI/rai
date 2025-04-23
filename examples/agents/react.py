@@ -24,12 +24,13 @@ def main():
     ros2_connector = ROS2Connector()
     hri_connector = ROS2HRIConnector()
     target_connectors = {"/to_human": hri_connector}
-    source_connector = ("/from_human", hri_connector)
     agent = ReActAgent(
         target_connectors=target_connectors,
-        source_connector=source_connector,
         tools=ROS2Toolkit(connector=ros2_connector).get_tools(),
-    )  # type: ignore
+    )
+    hri_connector.register_callback(
+        "/from_human", agent, msg_type="rai_interfaces/msg/HRIMessage"
+    )
     runner = AgentRunner([agent])
     runner.run_and_wait_for_shutdown()
 

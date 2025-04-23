@@ -17,7 +17,7 @@ import threading
 import time
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
-from typing import Deque, Dict, List, Literal, Optional, Tuple, TypedDict
+from typing import Deque, Dict, List, Literal, Optional, TypedDict
 
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
@@ -26,7 +26,8 @@ from pydantic import BaseModel
 from rai.agents.base import BaseAgent
 from rai.agents.langchain import HRICallbackHandler
 from rai.agents.langchain.runnables import ReActAgentState
-from rai.communication.hri_connector import HRIConnector, HRIMessage
+from rai.communication.base_connector import BaseConnector
+from rai.communication.hri_connector import HRIMessage
 from rai.initialization import get_tracing_callbacks
 
 
@@ -42,8 +43,7 @@ class HRIConfig(BaseModel):
 class LangChainAgent(BaseAgent):
     def __init__(
         self,
-        target_connectors: Dict[str, HRIConnector],
-        source_connector: Tuple[str, HRIConnector],
+        target_connectors: Dict[str, BaseConnector],
         runnable: Runnable,
         state: BaseState | None = None,
         new_message_behavior: Literal[
@@ -61,17 +61,12 @@ class LangChainAgent(BaseAgent):
         self.new_message_behavior = new_message_behavior
         self.tracing_callbacks = get_tracing_callbacks()
         self.state = state or ReActAgentState(messages=[])
-        self.source_connector = source_connector
         self.callback = HRICallbackHandler(
             connectors=target_connectors,
             aggregate_chunks=True,
             logger=self.logger,
         )
 
-        self.source, self.source_connector = source_connector
-        self.source_connector.register_callback(
-            self.source, self.source_callback, msg_type="rai_interfaces/msg/HRIMessage"
-        )
         self._received_messages: Deque[HRIMessage] = deque()
         self.max_size = max_size
 
@@ -81,14 +76,7 @@ class LangChainAgent(BaseAgent):
         self._interupt_event = threading.Event()
         self._agent_ready_event = threading.Event()
 
-    def run(self):
-        if self.thread is not None:
-            raise RuntimeError("Agent is already running")
-        self.thread = threading.Thread(target=self._run_loop)
-        self.thread.start()
-        self._agent_ready_event.set()
-
-    def source_callback(self, msg: HRIMessage):
+    def __call__(self, msg: HRIMessage):
         if self.max_size is not None and len(self._received_messages) >= self.max_size:
             self.logger.warning("Buffer overflow. Dropping olders message")
             self._received_messages.popleft()
@@ -97,7 +85,18 @@ class LangChainAgent(BaseAgent):
         self.logger.info(f"Received message: {msg}, {type(msg)}")
         self._received_messages.append(msg)
 
+    def run(self):
+        if self.thread is not None:
+            raise RuntimeError("Agent is already running")
+        self.thread = threading.Thread(target=self._run_loop)
+        self.thread.start()
+        self._agent_ready_event.set()
+        self.logger.info("Agent started")
+
     def interuppt_agent_and_run(self):
+        if self._agent_ready_event.is_set():
+            self.logger.info("Agent is ready. No need to interuppt it.")
+            return
         self.logger.info("Interuppting agent...")
         self._interupt_event.set()
         self._agent_ready_event.wait()
@@ -105,12 +104,13 @@ class LangChainAgent(BaseAgent):
         self.logger.info("Interuppting agent: DONE")
 
     def run_agent(self):
+        if len(self._received_messages) == 0:
+            self._agent_ready_event.set()
+            self.logger.info("Waiting for messages...")
+            time.sleep(0.5)
+            return
         self._agent_ready_event.clear()
         try:
-            if len(self._received_messages) == 0:
-                self.logger.info("Waiting for messages...")
-                time.sleep(0.5)
-                return
             self.logger.info("Running agent...")
             reduced_message = self._reduce_messages()
             langchain_message = reduced_message.to_langchain()
