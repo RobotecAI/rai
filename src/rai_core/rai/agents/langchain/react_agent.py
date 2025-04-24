@@ -20,13 +20,13 @@ from langchain_core.tools import BaseTool
 from rai.agents.langchain import create_react_runnable
 from rai.agents.langchain.agent import LangChainAgent
 from rai.agents.langchain.runnables import ReActAgentState
-from rai.communication.hri_connector import HRIConnector
+from rai.communication.hri_connector import HRIConnector, HRIMessage
 
 
 class ReActAgent(LangChainAgent):
     def __init__(
         self,
-        target_connectors: Dict[str, HRIConnector],
+        target_connectors: Dict[str, HRIConnector[HRIMessage]],
         llm: Optional[BaseChatModel] = None,
         tools: Optional[List[BaseTool]] = None,
         state: Optional[ReActAgentState] = None,

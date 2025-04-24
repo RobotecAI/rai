@@ -19,7 +19,7 @@ from typing import Any, Optional
 
 from rclpy.qos import QoSProfile
 
-from rai.communication.hri_connector import HRIConnector
+from rai.communication import HRIConnector
 from rai.communication.ros2.connectors.base import ROS2BaseConnector
 from rai.communication.ros2.messages import ROS2HRIMessage
 

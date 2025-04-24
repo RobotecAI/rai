@@ -143,7 +143,7 @@ class HRIConnector(Generic[T], BaseConnector[T]):
     Used for sending and receiving messages between human and robot from various sources.
     """
 
-    def _build_message(
+    def build_message(
         self,
         message: LangchainBaseMessage | RAIMultimodalMessage,
         communication_id: Optional[str] = None,

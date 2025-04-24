@@ -21,13 +21,11 @@ from typing import Deque, Dict, List, Literal, Optional, TypedDict
 
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
-from pydantic import BaseModel
 
 from rai.agents.base import BaseAgent
 from rai.agents.langchain import HRICallbackHandler
 from rai.agents.langchain.runnables import ReActAgentState
-from rai.communication.base_connector import BaseConnector
-from rai.communication.hri_connector import HRIMessage
+from rai.communication.hri_connector import HRIConnector, HRIMessage
 from rai.initialization import get_tracing_callbacks
 
 
@@ -35,15 +33,10 @@ class BaseState(TypedDict):
     messages: List[BaseMessage]
 
 
-class HRIConfig(BaseModel):
-    source: str
-    targets: List[str]
-
-
 class LangChainAgent(BaseAgent):
     def __init__(
         self,
-        target_connectors: Dict[str, BaseConnector],
+        target_connectors: Dict[str, HRIConnector[HRIMessage]],
         runnable: Runnable,
         state: BaseState | None = None,
         new_message_behavior: Literal[
@@ -61,7 +54,7 @@ class LangChainAgent(BaseAgent):
         self.new_message_behavior = new_message_behavior
         self.tracing_callbacks = get_tracing_callbacks()
         self.state = state or ReActAgentState(messages=[])
-        self.callback = HRICallbackHandler(
+        self._langchain_callback = HRICallbackHandler(
             connectors=target_connectors,
             aggregate_chunks=True,
             logger=self.logger,
@@ -76,7 +69,13 @@ class LangChainAgent(BaseAgent):
         self._interupt_event = threading.Event()
         self._agent_ready_event = threading.Event()
 
-    def __call__(self, msg: HRIMessage):
+    def subscribe_source(self, source: str, connector: HRIConnector[HRIMessage]):
+        connector.register_callback(
+            source,
+            self.source_callback,
+        )
+
+    def source_callback(self, msg: HRIMessage):
         if self.max_size is not None and len(self._received_messages) >= self.max_size:
             self.logger.warning("Buffer overflow. Dropping olders message")
             self._received_messages.popleft()
@@ -117,7 +116,9 @@ class LangChainAgent(BaseAgent):
             self.state["messages"].append(langchain_message)
             for _ in self.agent.stream(
                 self.state,
-                config={"callbacks": [self.callback, *self.tracing_callbacks]},
+                config={
+                    "callbacks": [self._langchain_callback, *self.tracing_callbacks]
+                },
             ):
                 if self._interupt_event.is_set():
                     break

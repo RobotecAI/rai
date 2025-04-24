@@ -50,7 +50,7 @@ class HRICallbackHandler(BaseCallbackHandler):
         for target, connector in self.connectors.items():
             self.logger.info(f"Sending {len(tokens)} tokens to targer: {target}")
             try:
-                to_send = connector.T_class.from_langchain(
+                to_send: HRIMessage = connector.build_message(
                     AIMessage(content=tokens),
                     self.current_conversation_id,
                     self.current_chunk_id,

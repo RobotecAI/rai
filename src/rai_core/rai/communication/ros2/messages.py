@@ -65,7 +65,7 @@ class ROS2HRIMessage(HRIMessage, ROS2Message):
             for audio_msg in cast(List[ROS2HRIMessage__Audio], msg.audios)
         ]
         communication_id = msg.communication_id if msg.communication_id != "" else None
-        return ROS2HRIMessage(
+        return cls(
             text=msg.text,
             images=pil_images,
             audios=audio_segments,
