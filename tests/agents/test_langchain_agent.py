@@ -25,8 +25,8 @@ from rai.agents.langchain.agent import LangChainAgent, newMessageBehaviorType
         ("take_all", [1, 2, 3], [], [1, 2, 3]),
         ("keep_last", [1, 2, 3], [], [3]),
         ("queue", [1, 2, 3], [2, 3], [1]),
-        ("interuppt_take_all", [1, 2, 3], [], [1, 2, 3]),
-        ("interuppt_keep_last", [1, 2, 3], [], [3]),
+        ("interupt_take_all", [1, 2, 3], [], [1, 2, 3]),
+        ("interupt_keep_last", [1, 2, 3], [], [3]),
     ],
 )
 def test_reduce_messages(

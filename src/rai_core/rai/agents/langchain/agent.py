@@ -37,8 +37,8 @@ newMessageBehaviorType = Literal[
     "take_all",
     "keep_last",
     "queue",
-    "interuppt_take_all",
-    "interuppt_keep_last",
+    "interrupt_take_all",
+    "interrupt_keep_last",
 ]
 
 
@@ -48,7 +48,7 @@ class LangChainAgent(BaseAgent):
         target_connectors: Dict[str, HRIConnector[HRIMessage]],
         runnable: Runnable,
         state: BaseState | None = None,
-        new_message_behavior: newMessageBehaviorType = "interuppt_keep_last",
+        new_message_behavior: newMessageBehaviorType = "interrupt_keep_last",
         max_size: int = 100,
     ):
         super().__init__()
@@ -69,7 +69,7 @@ class LangChainAgent(BaseAgent):
         self.thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
         self._executor = ThreadPoolExecutor(max_workers=1)
-        self._interupt_event = threading.Event()
+        self._interrupt_event = threading.Event()
         self._agent_ready_event = threading.Event()
 
     def subscribe_source(self, source: str, connector: HRIConnector[HRIMessage]):
@@ -82,8 +82,8 @@ class LangChainAgent(BaseAgent):
         if self.max_size is not None and len(self._received_messages) >= self.max_size:
             self.logger.warning("Buffer overflow. Dropping olders message")
             self._received_messages.popleft()
-        if "interuppt" in self.new_message_behavior:
-            self._executor.submit(self.interuppt_agent_and_run)
+        if "interrupt" in self.new_message_behavior:
+            self._executor.submit(self.interrupt_agent_and_run)
         self.logger.info(f"Received message: {msg}, {type(msg)}")
         self._received_messages.append(msg)
 
@@ -95,15 +95,15 @@ class LangChainAgent(BaseAgent):
         self._agent_ready_event.set()
         self.logger.info("Agent started")
 
-    def interuppt_agent_and_run(self):
+    def interrupt_agent_and_run(self):
         if self._agent_ready_event.is_set():
-            self.logger.info("Agent is ready. No need to interuppt it.")
+            self.logger.info("Agent is ready. No need to interrupt it.")
             return
-        self.logger.info("Interuppting agent...")
-        self._interupt_event.set()
+        self.logger.info("Interrupting agent...")
+        self._interrupt_event.set()
         self._agent_ready_event.wait()
-        self._interupt_event.clear()
-        self.logger.info("Interuppting agent: DONE")
+        self._interrupt_event.clear()
+        self.logger.info("Interrupting agent: DONE")
 
     def run_agent(self):
         if len(self._received_messages) == 0:
@@ -123,7 +123,7 @@ class LangChainAgent(BaseAgent):
                     "callbacks": [self._langchain_callback, *self.tracing_callbacks]
                 },
             ):
-                if self._interupt_event.is_set():
+                if self._interrupt_event.is_set():
                     break
         finally:
             self._agent_ready_event.set()
@@ -136,7 +136,7 @@ class LangChainAgent(BaseAgent):
 
     def stop(self):
         self._stop_event.set()
-        self._interupt_event.set()
+        self._interrupt_event.set()
         self._agent_ready_event.wait()
         if self.thread is not None:
             self.logger.info("Stopping the agent. Please wait...")
