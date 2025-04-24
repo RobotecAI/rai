@@ -43,6 +43,32 @@ newMessageBehaviorType = Literal[
 
 
 class LangChainAgent(BaseAgent):
+    """
+    Agent pareametrized by LangGraph runnable that communicates with environment using
+    `HRIConnector`.
+
+    Parameters
+    ----------
+    target_connectors : Dict[str, HRIConnector[HRIMessage]]
+        Dict of target_name: connector. Agent will send it's output to these targets using connectors.
+    runnable : Runnable
+        LangChain runnable that will be used to generate output.
+    state : BaseState | None, optional
+        State to seed the LangChain runnable. If None - empty state is used.
+    new_message_behavior : newMessageBehaviorType, optional
+        Describes how to handle new messages and interact with LangChain runnable. There are 2 main options:
+        1. Agent waits for LangChain runnable to finish processing:
+            - "take_all": all messages from the queue are concatenated and processed.
+            - "keep_last": only the last received message is processed, others are dropped.
+            - "queue": only the first message from the queue is processed, others are kept in the queue.
+        2. Agent interrupts LangChain runnable:
+            - "interrupt_take_all": same as "take_all"
+            - "interrupt_keep_last": same as "keep_last"
+    max_size : int, optional
+        Maximum number of messages to keep in the agent's queue. If exceeded, oldest messages are dropped.
+
+    """
+
     def __init__(
         self,
         target_connectors: Dict[str, HRIConnector[HRIMessage]],
@@ -67,7 +93,7 @@ class LangChainAgent(BaseAgent):
         self._buffer_lock = threading.Lock()
         self.max_size = max_size
 
-        self.thread: Optional[threading.Thread] = None
+        self._thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
         self._executor = ThreadPoolExecutor(max_workers=1)
         self._interrupt_event = threading.Event()
@@ -93,10 +119,10 @@ class LangChainAgent(BaseAgent):
             self._received_messages.append(msg)
 
     def run(self):
-        if self.thread is not None:
+        if self._thread is not None:
             raise RuntimeError("Agent is already running")
-        self.thread = threading.Thread(target=self._run_loop)
-        self.thread.start()
+        self._thread = threading.Thread(target=self._run_loop)
+        self._thread.start()
         self._agent_ready_event.set()
         self.logger.info("Agent started")
 
@@ -142,10 +168,10 @@ class LangChainAgent(BaseAgent):
         self._stop_event.set()
         self._interrupt_event.set()
         self._agent_ready_event.wait()
-        if self.thread is not None:
+        if self._thread is not None:
             self.logger.info("Stopping the agent. Please wait...")
-            self.thread.join()
-            self.thread = None
+            self._thread.join()
+            self._thread = None
             self.logger.info("Agent stopped")
 
     @staticmethod
