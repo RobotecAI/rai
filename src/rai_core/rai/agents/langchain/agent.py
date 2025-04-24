@@ -33,25 +33,28 @@ class BaseState(TypedDict):
     messages: List[BaseMessage]
 
 
+newMessageBehaviorType = Literal[
+    "take_all",
+    "keep_last",
+    "queue",
+    "interuppt_take_all",
+    "interuppt_keep_last",
+]
+
+
 class LangChainAgent(BaseAgent):
     def __init__(
         self,
         target_connectors: Dict[str, HRIConnector[HRIMessage]],
         runnable: Runnable,
         state: BaseState | None = None,
-        new_message_behavior: Literal[
-            "take_all",
-            "keep_last",
-            "queue",
-            "interuppt_take_all",
-            "interuppt_keep_last",
-        ] = "interuppt_keep_last",
+        new_message_behavior: newMessageBehaviorType = "interuppt_keep_last",
         max_size: int = 100,
     ):
         super().__init__()
         self.logger = logging.getLogger(__name__)
         self.agent = runnable
-        self.new_message_behavior = new_message_behavior
+        self.new_message_behavior: newMessageBehaviorType = new_message_behavior
         self.tracing_callbacks = get_tracing_callbacks()
         self.state = state or ReActAgentState(messages=[])
         self._langchain_callback = HRICallbackHandler(
@@ -141,26 +144,33 @@ class LangChainAgent(BaseAgent):
             self.thread = None
             self.logger.info("Agent stopped")
 
+    @staticmethod
+    def _apply_reduction_behavior(
+        method: newMessageBehaviorType, buffer: Deque
+    ) -> List:
+        output = list()
+        if "take_all" in method:
+            # Take all starting from the oldest
+            while len(buffer) > 0:
+                output.append(buffer.popleft())
+        elif "keep_last" in method:
+            # Take the recently added message
+            output.append(buffer.pop())
+            buffer.clear()
+        elif method == "queue":
+            # Take the first message from the queue. Let other messages wait.
+            output.append(buffer.popleft())
+        else:
+            raise ValueError(f"Invalid new_message_behavior: {method}")
+        return output
+
     def _reduce_messages(self) -> HRIMessage:
         text = ""
         images = []
         audios = []
-        source_messages = list()
-        if "take_all" in self.new_message_behavior:
-            # Take all starting from the oldest
-            while len(self._received_messages) > 0:
-                source_messages.append(self._received_messages.popleft())
-        elif "keep_last" in self.new_message_behavior:
-            # Take the recently added message
-            source_messages.append(self._received_messages.pop())
-            self._received_messages.clear()
-        elif self.new_message_behavior == "queue":
-            # Take the first message from the queue. Let other messages wait.
-            source_messages.append(self._received_messages.popleft())
-        else:
-            raise ValueError(
-                f"Invalid new_message_behavior: {self.new_message_behavior}"
-            )
+        source_messages = self._apply_reduction_behavior(
+            self.new_message_behavior, self._received_messages
+        )
         for source_message in source_messages:
             text += f"{source_message.text}\n"
             images.extend(source_message.images)
