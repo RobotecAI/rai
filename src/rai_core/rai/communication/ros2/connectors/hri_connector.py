@@ -15,7 +15,7 @@
 import importlib.util
 import logging
 import uuid
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from rclpy.qos import QoSProfile
 
@@ -51,6 +51,29 @@ class ROS2HRIConnector(ROS2BaseConnector[ROS2HRIMessage], HRIConnector[ROS2HRIMe
             msg_type="rai_interfaces/msg/HRIMessage",
             auto_qos_matching=auto_qos_matching,
             qos_profile=qos_profile,
+        )
+
+    def register_callback(
+        self,
+        source: str,
+        callback: Callable[[ROS2HRIMessage], None],
+        raw: bool = False,
+        *,
+        msg_type: Optional[str] = None,
+        qos_profile: Optional[QoSProfile] = None,
+        auto_qos_matching: bool = True,
+        **kwargs: Any,
+    ) -> str:
+        if msg_type is None:
+            msg_type = "rai_interfaces/msg/HRIMessage"
+        return super().register_callback(
+            source,
+            callback,
+            raw,
+            msg_type=msg_type,
+            qos_profile=qos_profile,
+            auto_qos_matching=auto_qos_matching,
+            **kwargs,
         )
 
     def general_callback_preprocessor(self, message: Any) -> ROS2HRIMessage:
