@@ -170,7 +170,7 @@ def test_ros2hri_default_message_publish(
     ros_setup: None, request: pytest.FixtureRequest
 ):
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
-    connector = ROS2HRIConnector(targets=[topic_name])
+    connector = ROS2HRIConnector()
     hri_message_receiver = HRIMessageSubscriber(topic_name)
     executors, threads = multi_threaded_spinner([hri_message_receiver])
 
