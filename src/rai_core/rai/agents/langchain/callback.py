@@ -48,7 +48,7 @@ class HRICallbackHandler(BaseCallbackHandler):
 
     def _send_all_targets(self, tokens: str, done: bool = False):
         for target, connector in self.connectors.items():
-            self.logger.info(f"Sending {len(tokens)} tokens to targer: {target}")
+            self.logger.info(f"Sending {len(tokens)} tokens to target: {target}")
             try:
                 to_send: HRIMessage = connector.build_message(
                     AIMessage(content=tokens),
