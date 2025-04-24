@@ -64,6 +64,7 @@ class LangChainAgent(BaseAgent):
         )
 
         self._received_messages: Deque[HRIMessage] = deque()
+        self._buffer_lock = threading.Lock()
         self.max_size = max_size
 
         self.thread: Optional[threading.Thread] = None
@@ -79,13 +80,17 @@ class LangChainAgent(BaseAgent):
         )
 
     def source_callback(self, msg: HRIMessage):
-        if self.max_size is not None and len(self._received_messages) >= self.max_size:
-            self.logger.warning("Buffer overflow. Dropping olders message")
-            self._received_messages.popleft()
-        if "interrupt" in self.new_message_behavior:
-            self._executor.submit(self.interrupt_agent_and_run)
-        self.logger.info(f"Received message: {msg}, {type(msg)}")
-        self._received_messages.append(msg)
+        with self._buffer_lock:
+            if (
+                self.max_size is not None
+                and len(self._received_messages) >= self.max_size
+            ):
+                self.logger.warning("Buffer overflow. Dropping olders message")
+                self._received_messages.popleft()
+            if "interrupt" in self.new_message_behavior:
+                self._executor.submit(self.interrupt_agent_and_run)
+            self.logger.info(f"Received message: {msg}, {type(msg)}")
+            self._received_messages.append(msg)
 
     def run(self):
         if self.thread is not None:
@@ -168,9 +173,10 @@ class LangChainAgent(BaseAgent):
         text = ""
         images = []
         audios = []
-        source_messages = self._apply_reduction_behavior(
-            self.new_message_behavior, self._received_messages
-        )
+        with self._buffer_lock:
+            source_messages = self._apply_reduction_behavior(
+                self.new_message_behavior, self._received_messages
+            )
         for source_message in source_messages:
             text += f"{source_message.text}\n"
             images.extend(source_message.images)
