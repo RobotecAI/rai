@@ -25,7 +25,7 @@ from rai.communication.ros2.messages import ROS2HRIMessage
 
 if importlib.util.find_spec("rai_interfaces.msg") is None:
     logging.warning(
-        "This feature is based on sounddevice. Make sure sounddevice is installed."
+        "This feature is based on rai_interfaces.msg. Make sure rai_interfaces is installed."
     )
 
 
