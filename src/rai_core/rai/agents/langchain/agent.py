@@ -146,8 +146,8 @@ class LangChainAgent(BaseAgent):
 
     @staticmethod
     def _apply_reduction_behavior(
-        method: newMessageBehaviorType, buffer: Deque
-    ) -> List:
+        method: newMessageBehaviorType, buffer: Deque[HRIMessage]
+    ) -> List[HRIMessage]:
         output = list()
         if "take_all" in method:
             # Take all starting from the oldest
