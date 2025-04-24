@@ -52,6 +52,10 @@ class SpatialReasoningAgentTask(Task):
         self.question: str
         self.images_paths: List[str]
 
+    @property
+    def type(self) -> str:
+        return "spatial_reasoning"
+
     @abstractmethod
     def get_images(self) -> List[str]:
         """Get the images related to the task.

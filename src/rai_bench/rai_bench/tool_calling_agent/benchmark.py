@@ -217,6 +217,7 @@ class ToolCallingAgentBenchmark:
         task_result = TaskResult(
             task_prompt=task.get_prompt(),
             system_prompt=task.get_system_prompt(),
+            type=task.type,
             complexity=task.complexity,
             model_name=model_name,
             validation_info=validation_info,

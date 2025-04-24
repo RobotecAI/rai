@@ -199,16 +199,10 @@ def display_performance_across_tasks(
         all_detailed_dfs = [r["detailed_df"] for r in repeats]
         combined_detailed_df = pd.concat(all_detailed_dfs)
 
-        task_success = (
-            combined_detailed_df.groupby("task_prompt")["score"]  # type: ignore
-            .mean()
-            .reset_index(name="avg_score")
-        )
-
-        task_time = (
-            combined_detailed_df.groupby("task_prompt")["total_time"]  # type: ignore
-            .mean()
-            .reset_index(name="avg_time")
+        task_type_success = (
+            combined_detailed_df.groupby("type")  # type: ignore
+            .agg(avg_score=("score", "mean"), avg_time=("total_time", "mean"))
+            .reset_index()
         )
 
         # # TODO (jm) when total tool calls will be available count them here
@@ -218,47 +212,68 @@ def display_performance_across_tasks(
         #     .size()
         #     .reset_index(name="run_count")
         # )
-
-        # TODO (jm) extra calls used
-        task_stats = pd.merge(task_success, task_time, on="task_prompt").replace(
-            0, 0.01
-        )
-        fig_task = px.bar(
-            task_stats,
-            x="task_prompt",
+        fig_type_task = px.bar(
+            task_type_success,
+            x="type",
             y="avg_score",
             title=f"Success Rate by Task - Aggregated across {len(repeats)} runs",
             labels={
                 "avg_score": "Avg Score",
-                "task_prompt": "Task",
+                "type": "Task Type",
             },
-            custom_data=["task_prompt"],
         )
-        short_labels = [
-            text[:30] + "..." if len(text) > 30 else text
-            for text in task_stats["task_prompt"]
+        st.plotly_chart(fig_type_task, use_container_width=True)
+
+        task_types = combined_detailed_df["type"].unique().tolist()  # type: ignore
+        selected_type = st.selectbox("Select Task Type", sorted(task_types))
+
+        filtered_df = combined_detailed_df[
+            combined_detailed_df["type"] == selected_type
         ]
 
-        fig_task.update_xaxes(ticktext=short_labels, tickvals=task_stats["task_prompt"])
-        fig_task.update_traces(hovertemplate="<b>Task:</b> %{customdata[0]}")
-        fig_task.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig_task, use_container_width=True)
+        # TODO (jm) extra calls used
+        task_stats = (
+            filtered_df.groupby("task_prompt")  # type: ignore
+            .agg(
+                avg_score=("score", "mean"),
+                avg_time=("total_time", "mean"),
+            )
+            .reset_index()
+        ).replace(0, 0.01)
 
-        fig_time = px.bar(
-            task_stats,
-            x="task_prompt",
-            y="avg_time",
-            title=f"Average Time by Task - Aggregated across {len(repeats)} runs",
-            labels={
-                "avg_time": "Avg Time (seconds)",
-                "task_prompt": "Task",
-            },
-            custom_data=["task_prompt"],
-        )
-        fig_time.update_xaxes(ticktext=short_labels, tickvals=task_stats["task_prompt"])
-        fig_time.update_traces(hovertemplate="<b>Task:</b> %{customdata[0]}")
-        fig_time.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig_time, use_container_width=True)
+    short_labels = [
+        (t[:30] + "...") if len(t) > 30 else t for t in task_stats["task_prompt"]
+    ]
+
+    # 4) Plot success rate by task for the selected type
+    fig_task = px.bar(
+        task_stats,
+        x="task_prompt",
+        y="avg_score",
+        title=f"Avg Score for '{selected_type}' Tasks ({len(repeats)} runs)",
+        labels={"avg_score": "Avg Score", "task_prompt": "Task"},
+        custom_data=["task_prompt"],
+    )
+    fig_task.update_xaxes(ticktext=short_labels, tickvals=task_stats["task_prompt"])
+    fig_task.update_yaxes(range=[0, 1])
+    fig_task.update_traces(hovertemplate="<b>Task:</b> %{customdata[0]}")
+    fig_task.update_layout(xaxis_tickangle=-45)
+    st.plotly_chart(fig_task, use_container_width=True)
+
+    # 5) Plot average time by task
+    fig_time = px.bar(
+        task_stats,
+        x="task_prompt",
+        y="avg_time",
+        title=f"Avg Time for '{selected_type}' Tasks ({len(repeats)} runs)",
+        labels={"avg_time": "Avg Time (s)", "task_prompt": "Task"},
+        custom_data=["task_prompt"],
+    )
+    fig_time.update_xaxes(ticktext=short_labels, tickvals=task_stats["task_prompt"])
+    fig_time.update_yaxes(range=[0, 1])
+    fig_time.update_traces(hovertemplate="<b>Task:</b> %{customdata[0]}")
+    fig_time.update_layout(xaxis_tickangle=-45)
+    st.plotly_chart(fig_time, use_container_width=True)
 
 
 def validators_analysis(run: Dict[str, Dict[str, List[Dict[str, pd.DataFrame]]]]):

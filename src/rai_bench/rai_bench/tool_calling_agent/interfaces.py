@@ -508,6 +508,12 @@ class Task(ABC):
         pass
 
     @property
+    @abstractmethod
+    def type(self) -> str:
+        """Type of task, for example: manipulation"""
+        pass
+
+    @property
     def max_tool_calls_number(self) -> int:
         return self.required_calls + self.extra_tool_calls
 
