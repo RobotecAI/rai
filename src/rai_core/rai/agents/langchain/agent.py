@@ -135,8 +135,7 @@ class LangChainAgent(BaseAgent):
 
     def _run_loop(self):
         while not self._stop_event.is_set():
-            time.sleep(0.01)
-            if self._agent_ready_event.is_set():
+            if self._agent_ready_event.wait(0.01):
                 self.run_agent()
 
     def stop(self):
