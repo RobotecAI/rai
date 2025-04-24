@@ -67,6 +67,40 @@ class LangChainAgent(BaseAgent):
     max_size : int, optional
         Maximum number of messages to keep in the agent's queue. If exceeded, oldest messages are dropped.
 
+
+    Agent can be started using `run` method. Then it is triggered by `HRIMessage`s submited
+    by `__call__` method. They can be submitted in 2 ways:
+    - manually using `__call__` method.
+    - by subscribing to specific source using HRIConnector with `subscribe_source` method.
+
+    Agent can be stopped using `stop` method.
+
+    Due to asynchronous processing of the Agent, it is adviced to handle it's lifetime
+    with `AgentRunner`.
+
+    Examples:
+    ```python
+    from rai.agents import AgentRunner
+    # ROS2 Example - manual agent trigger
+    hri_connector = ROS2HRIConnector()
+    runnable = create_langgraph()
+    agent = LangChainAgent(
+        target_connectors={"/to_human": hri_connector},
+        runnable=runnable,
+    )
+    runner = AgentRunner([agent])
+    runner.run()
+    agent(HRIMessage(text="Hello!"))
+    runner.wait_for_shutdown()
+
+    # ROS2 Example - triggered by messages on ros2 topic
+    ...
+    runner = AgentRunner([agent])
+    runner.run()
+    agent.source_callback("/from_human", hri_connector)
+    runner.wait_for_shutdown()
+
+    # Agent will act messages published to rai_interfaces.msg.HRIMessage sent to /from_human topic
     """
 
     def __init__(
@@ -102,10 +136,10 @@ class LangChainAgent(BaseAgent):
     def subscribe_source(self, source: str, connector: HRIConnector[HRIMessage]):
         connector.register_callback(
             source,
-            self.source_callback,
+            self.__call__,
         )
 
-    def source_callback(self, msg: HRIMessage):
+    def __call__(self, msg: HRIMessage):
         with self._buffer_lock:
             if (
                 self.max_size is not None
@@ -114,7 +148,7 @@ class LangChainAgent(BaseAgent):
                 self.logger.warning("Buffer overflow. Dropping olders message")
                 self._received_messages.popleft()
             if "interrupt" in self.new_message_behavior:
-                self._executor.submit(self.interrupt_agent_and_run)
+                self._executor.submit(self._interrupt_agent_and_run)
             self.logger.info(f"Received message: {msg}, {type(msg)}")
             self._received_messages.append(msg)
 
@@ -126,8 +160,17 @@ class LangChainAgent(BaseAgent):
         self._agent_ready_event.set()
         self.logger.info("Agent started")
 
-    def interrupt_agent_and_run(self):
-        if self._agent_ready_event.is_set():
+    def ready(self):
+        return self._agent_ready_event.is_set() and len(self._received_messages) == 0
+
+    def wait(self):
+        while len(self._received_messages) > 0:
+            time.sleep(0.1)
+
+        return self._agent_ready_event.wait()
+
+    def _interrupt_agent_and_run(self):
+        if self.ready():
             self.logger.info("Agent is ready. No need to interrupt it.")
             return
         self.logger.info("Interrupting agent...")
@@ -136,7 +179,7 @@ class LangChainAgent(BaseAgent):
         self._interrupt_event.clear()
         self.logger.info("Interrupting agent: DONE")
 
-    def run_agent(self):
+    def _run_agent(self):
         if len(self._received_messages) == 0:
             self._agent_ready_event.set()
             self.logger.info("Waiting for messages...")
@@ -162,7 +205,7 @@ class LangChainAgent(BaseAgent):
     def _run_loop(self):
         while not self._stop_event.is_set():
             if self._agent_ready_event.wait(0.01):
-                self.run_agent()
+                self._run_agent()
 
     def stop(self):
         self._stop_event.set()
