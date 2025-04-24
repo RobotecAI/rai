@@ -36,6 +36,6 @@ def test_reduce_messages(
     output: List,
 ):
     buffer = deque(in_buffer)
-    output = LangChainAgent._apply_reduction_behavior(new_message_behavior, buffer)
-    assert output == output
+    output_ = LangChainAgent._apply_reduction_behavior(new_message_behavior, buffer)
+    assert output == output_
     assert buffer == deque(out_buffer)
