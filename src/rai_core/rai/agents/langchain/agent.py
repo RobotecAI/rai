@@ -76,22 +76,22 @@ class LangChainAgent(BaseAgent):
     Agent can be stopped using `stop` method.
 
     Due to asynchronous processing of the Agent, it is adviced to handle it's lifetime
-    with `AgentRunner`.
+    with :py:class:`rai.agents.AgentRunner` when source is subscribed.
 
     Examples:
     ```python
+    # ROS2 Example - agent triggered manually
     from rai.agents import AgentRunner
-    # ROS2 Example - manual agent trigger
     hri_connector = ROS2HRIConnector()
     runnable = create_langgraph()
     agent = LangChainAgent(
         target_connectors={"/to_human": hri_connector},
         runnable=runnable,
     )
-    runner = AgentRunner([agent])
-    runner.run()
+    agent.run()
     agent(HRIMessage(text="Hello!"))
-    runner.wait_for_shutdown()
+    agent.wait()
+    agent.stop()
 
     # ROS2 Example - triggered by messages on ros2 topic
     ...
