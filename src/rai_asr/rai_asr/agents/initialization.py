@@ -22,13 +22,14 @@ import tomli
 class VADConfig:
     model_name: Literal["SileroVAD"] = "SileroVAD"
     threshold: float = 0.5
-    sampling_rate: int = 1600
+    silence_grace_period: float = 0.3
 
 
 @dataclass
 class WWConfig:
     model_name: Literal["OpenWakeWord"] = "OpenWakeWord"
     threshold: float = 0.01
+    is_used: bool = False
 
 
 @dataclass
@@ -36,6 +37,7 @@ class TranscribeConfig:
     model_name: Literal["LocalWhisper", "FasterWhisper", "OpenAIWhisper"] = (
         "LocalWhisper"
     )
+    language: str = "en"
 
 
 @dataclass
@@ -60,18 +62,19 @@ def load_config(config_path: Optional[str] = None) -> ASRAgentConfig:
             config_dict = tomli.load(f)
     return ASRAgentConfig(
         voice_activity_detection=VADConfig(
-            model_name=config_dict["voice_activity_detection"]["model_name"],
-            threshold=config_dict["voice_activity_detection"]["threshold"],
-            sampling_rate=config_dict["voice_activity_detection"]["sampling_rate"],
+            model_name=config_dict["asr"]["vad_model"],
+            threshold=config_dict["asr"]["vad_threshold"],
+            silence_grace_period=config_dict["asr"]["silence_grace_period"],
         ),
         wakeword=WWConfig(
-            model_name=config_dict["wakeword"]["model_name"],
-            threshold=config_dict["wakeword"]["threshold"],
+            model_name=config_dict["asr"]["wake_word_model"],
+            threshold=config_dict["asr"]["wake_word_threshold"],
+            is_used=config_dict["asr"]["use_wake_word"],
         ),
         transcribe=TranscribeConfig(
-            model_name=config_dict["transcribe"]["model_name"],
+            model_name=config_dict["asr"]["transcription_model"],
         ),
         microphone=MicrophoneConfig(
-            device_name=config_dict["microphone"]["device_name"],
+            device_name=config_dict["asr"]["recording_device_name"],
         ),
     )
