@@ -181,9 +181,10 @@ class ToolCallingAgentBenchmark:
 
         ts = time.perf_counter()
         messages: List[BaseMessage] = []
+        prev_count: int = 0
         try:
             if isinstance(task, SpatialReasoningAgentTask):
-                for event in agent.stream(
+                for state in agent.stream(
                     {
                         "messages": [
                             HumanMultimodalMessage(
@@ -193,20 +194,24 @@ class ToolCallingAgentBenchmark:
                     },
                     config=config,
                 ):
-                    flattened = {k: v for d in event.values() for k, v in d.items()}
-                    # cos = event.values()
-                    messages.extend(flattened["messages"])
+                    node = next(iter(state))
+                    all_messages = state[node]["messages"]
+                    for new_msg in all_messages[prev_count:]:
+                        messages.append(new_msg)
+                    prev_count = len(messages)
             else:
-                for event in agent.stream(
+                for state in agent.stream(
                     {"messages": [HumanMultimodalMessage(content=task.get_prompt())]},
                     config=config,
                 ):
-                    flattened = {k: v for d in event.values() for k, v in d.items()}
-                    messages.extend(flattened["messages"])
+                    node = next(iter(state))
+                    all_messages = state[node]["messages"]
+                    for new_msg in all_messages[prev_count:]:
+                        messages.append(new_msg)
+                    prev_count = len(messages)
 
         except GraphRecursionError as e:
             self.logger.error(msg=f"Reached recursion limit {e}")
-            # task.fail_rest_of_validators()
 
         self.logger.debug(messages)
         toll_calls = task.get_tool_calls_from_messages(messages=messages)
@@ -251,11 +256,6 @@ class ToolCallingAgentBenchmark:
         completed_tasks = sum(len(results) for results in self.model_results.values())
         if completed_tasks == self.num_tasks:
             self._compute_and_save_summary()
-
-        # except StopIteration:
-        #     if self.task_results:
-        #         self._compute_and_save_summary()
-        #     print("No more scenarios left to run.")
 
     def _compute_and_save_summary(self):
         self.logger.info("Computing and saving average results...")
