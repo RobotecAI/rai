@@ -25,14 +25,6 @@ from rai_whoami.processors import (
 )
 from rai_whoami.vector_db import FAISSBuilder
 
-parser = argparse.ArgumentParser()
-parser.add_argument("documentation_dir", type=Path)
-parser.add_argument("--build-vector-db", default=False, action="store_true")
-parser.add_argument("--output_dir", type=Path, default=None)
-parser.add_argument("--compress", default=False, action="store_true")
-parser.add_argument("--style", default=False, action="store_true")
-args = parser.parse_args()
-
 
 def build_whoami() -> None:
     builder = PipelineBuilder()
@@ -53,4 +45,11 @@ def build_whoami() -> None:
 
 
 if __name__ == "__main__":
-    build_whoami()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("documentation_dir", type=Path)
+    parser.add_argument("--build-vector-db", default=False, action="store_true")
+    parser.add_argument("--output_dir", type=Path, default=None)
+    parser.add_argument("--compress", default=False, action="store_true")
+    parser.add_argument("--style", default=False, action="store_true")
+    args = parser.parse_args()
+    build_whoami(args)
