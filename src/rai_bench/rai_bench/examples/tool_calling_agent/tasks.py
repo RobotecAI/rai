@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import random
-from typing import List
+from typing import List, Sequence
 
 from rai.tools.ros2 import MoveToPointToolInput
 
@@ -291,12 +291,125 @@ navigation_tasks: List[Task] = [
     MoveToFrontTask(validators=[move_ahead_ord_val], extra_tool_calls=5),
 ]
 
-all_tasks = (
-    navigation_tasks
-    + true_spatial_tasks
-    + false_spatial_tasks
-    + custom_interfaces_tasks
-    + manipulation_tasks
-    + basic_tasks
-)
-random.shuffle(all_tasks)
+
+def get_basic_tasks(extra_tool_calls: int = 0) -> List[Task]:
+    return [
+        # 3 options to validate same task:
+        # most strict, agent has to call both tool correctly to pass this validator
+        GetROS2RGBCameraTask(
+            validators=[topics_and_color_image_ord_val],
+            extra_tool_calls=extra_tool_calls,
+        ),
+        # verifing only if the GetCameraImage call was made properly
+        GetROS2RGBCameraTask(
+            validators=[color_image_ord_val], extra_tool_calls=extra_tool_calls
+        ),
+        # Soft verification. verifing in separate vaidators the list topic and get image.
+        #  agent can get 0.5 score by only calling list topics
+        GetROS2RGBCameraTask(
+            validators=[topics_ord_val, color_image_ord_val],
+            extra_tool_calls=extra_tool_calls,
+        ),
+        # we can also add extra tool calls to allow model to correct itself
+        GetROS2RGBCameraTask(
+            validators=[topics_ord_val, color_image_ord_val],
+            extra_tool_calls=extra_tool_calls,
+        ),
+        GetROS2TopicsTask(
+            validators=[topics_ord_val], extra_tool_calls=extra_tool_calls
+        ),
+        GetROS2DepthCameraTask(
+            validators=[depth_image_ord_val], extra_tool_calls=extra_tool_calls
+        ),
+        GetAllROS2RGBCamerasTask(
+            validators=[all_color_images_notord_val], extra_tool_calls=extra_tool_calls
+        ),
+        GetAllROS2DepthCamerasTask(
+            validators=[all_depth_images_notord_val], extra_tool_calls=extra_tool_calls
+        ),
+    ]
+
+
+def get_navigation_tasks(extra_tool_calls: int = 0) -> List[Task]:
+    return [
+        NavigateToPointTask(
+            validators=[start_navigate_action_ord_val],
+            extra_tool_calls=extra_tool_calls,
+        ),
+        SpinAroundTask(
+            validators=[start_spin_action_ord_val],
+            extra_tool_calls=extra_tool_calls,
+        ),
+        MoveToBedTask(
+            validators=[move_ahead_ord_val],
+            extra_tool_calls=extra_tool_calls,
+        ),
+        MoveToFrontTask(
+            validators=[move_ahead_ord_val],
+            extra_tool_calls=extra_tool_calls,
+        ),
+    ]
+
+
+def get_manipulation_tasks(extra_tool_calls: int = 0) -> List[Task]:
+    return [
+        MoveToPointTask(
+            move_to_tool_input=MoveToPointToolInput(x=1.0, y=2.0, z=3.0, task="grab"),
+            validators=[move_to_point_ord_val],
+            extra_tool_calls=extra_tool_calls,
+        ),
+        MoveToPointTask(
+            move_to_tool_input=MoveToPointToolInput(x=1.2, y=2.3, z=3.4, task="drop"),
+            validators=[move_to_point_ord_val],
+            extra_tool_calls=extra_tool_calls,
+        ),
+    ]
+
+
+def get_custom_interfaces_tasks(extra_tool_calls: int = 0) -> List[Task]:
+    return [
+        PublishROS2HRIMessageTextTask(
+            topic="/to_human",
+            text="Hello!",
+            validators=[pub_HRIMessage_text_ord_val],
+            extra_tool_calls=extra_tool_calls,
+        ),
+        PublishROS2HRIMessageTextTask(
+            topic="/to_human",
+            text="Hello!",
+            validators=[list_topic_get_interface_publish_ord_val],
+            extra_tool_calls=extra_tool_calls,
+        ),
+    ]
+
+
+def get_spatial_tasks(extra_tool_calls: int = 0) -> Sequence[Task]:
+    true_tasks = [
+        BoolImageTask(
+            task_input=input_item,
+            validators=[ret_true_ord_val],
+            extra_tool_calls=extra_tool_calls,
+        )
+        for input_item in true_response_inputs
+    ]
+    false_tasks = [
+        BoolImageTask(
+            task_input=input_item,
+            validators=[ret_false_ord_val],
+            extra_tool_calls=extra_tool_calls,
+        )
+        for input_item in false_response_inputs
+    ]
+    return true_tasks + false_tasks
+
+
+def get_all_tasks(extra_tool_calls: int = 0) -> List[Task]:
+    tasks: List[Task] = []
+    tasks += get_basic_tasks(extra_tool_calls=extra_tool_calls)
+    tasks += get_custom_interfaces_tasks(extra_tool_calls=extra_tool_calls)
+    tasks += get_manipulation_tasks(extra_tool_calls=extra_tool_calls)
+    tasks += get_navigation_tasks(extra_tool_calls=extra_tool_calls)
+    tasks += get_spatial_tasks(extra_tool_calls=extra_tool_calls)
+
+    random.shuffle(tasks)
+    return tasks

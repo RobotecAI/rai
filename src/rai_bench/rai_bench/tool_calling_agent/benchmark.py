@@ -192,8 +192,8 @@ class ToolCallingAgentBenchmark:
             self.logger.error(msg=f"Reached recursion limit {e}")
 
         self.logger.debug(messages)
-        toll_calls = task.get_tool_calls_from_messages(messages=messages)
-        score = task.validate(tool_calls=toll_calls)
+        tool_calls = task.get_tool_calls_from_messages(messages=messages)
+        score = task.validate(tool_calls=tool_calls)
         te = time.perf_counter()
         total_time = te - ts
 
@@ -218,6 +218,7 @@ class ToolCallingAgentBenchmark:
             task_prompt=task.get_prompt(),
             system_prompt=task.get_system_prompt(),
             type=task.type,
+            extra_tool_calls=task.extra_tool_calls,
             complexity=task.complexity,
             model_name=model_name,
             validation_info=validation_info,

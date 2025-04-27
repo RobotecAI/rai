@@ -396,6 +396,10 @@ class Validator(ABC):
     def type(self) -> str:
         pass
 
+    @property
+    def required_calls(self) -> int:
+        return len(self.subtasks)
+
     def add_subtask_errors(self, idx: int, msgs: List[str]):
         """
         Logs the errors, that will be saved in results, to the specific subtask
@@ -429,7 +433,7 @@ class Validator(ABC):
         result = ValidatorResult(
             type=self.type,
             subtasks=subtasks_results,
-            extra_tool_calls=self.extra_calls_used,
+            extra_tool_calls_used=self.extra_calls_used,
             passed=self.passed,
         )
         self.reset()

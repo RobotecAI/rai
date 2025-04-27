@@ -35,7 +35,7 @@ class SubTaskResult(BaseModel):
 class ValidatorResult(BaseModel):
     type: str
     subtasks: List[SubTaskResult]
-    extra_tool_calls: int
+    extra_tool_calls_used: int
     passed: bool
 
 
@@ -47,6 +47,10 @@ class TaskResult(BaseModel):
     model_name: str = Field(..., description="Name of the LLM.")
     validation_info: List[ValidatorResult] = Field(
         ..., description="Validation structure, errors, etc."
+    )
+    extra_tool_calls: int = Field(
+        ...,
+        description="Maximum number of extra tool calls agent can make and still pass a task",
     )
     score: float = Field(
         ...,

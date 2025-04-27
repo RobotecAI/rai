@@ -19,7 +19,8 @@ import rai_bench.examples.tool_calling_agent.main as tool_calling_agent_bench
 if __name__ == "__main__":
     models_name = ["llama3.2", "qwen2.5:7b"]
     vendors = ["ollama", "ollama"]
-    benchmarks = ["tool_calling_agent"]
+    benchmarks = ["manipulation_o3de"]
+    extra_tool_calls = [5]
     repeats = 1
 
     now = datetime.now()
@@ -32,24 +33,33 @@ if __name__ == "__main__":
     else:
         for benchmark in benchmarks:
             for i, model_name in enumerate(models_name):
-                for u in range(repeats):
-                    curr_out_dir = out_dir + benchmark + "/" + model_name + "/" + str(u)
-                    # try:
-                    if benchmark == "tool_calling_agent":
-                        tool_calling_agent_bench.run_benchmark(
-                            model_name=model_name,
-                            vendor=vendors[i],
-                            out_dir=curr_out_dir,
+                for extra_calls in extra_tool_calls:
+                    for u in range(repeats):
+                        curr_out_dir = (
+                            out_dir
+                            + benchmark
+                            + "/"
+                            + model_name
+                            + "/"
+                            + f"{extra_calls}_{u}"
                         )
-                    elif benchmark == "manipulation_o3de":
-                        manipulation_o3de_bench.run_benchmark(
-                            model_name=model_name,
-                            vendor=vendors[i],
-                            out_dir=curr_out_dir,
-                        )
-                    else:
-                        print(f"No benchmark named: {benchmark}")
-                    # except Exception as e:
-                    #     print(
-                    #         f"Failed to run {benchmark} benchmark for {model_name}, vendor: {vendors[i]}, execution number: {u + 1}, because: {str(e)}"
-                    #     )
+                        try:
+                            if benchmark == "tool_calling_agent":
+                                tool_calling_agent_bench.run_benchmark(
+                                    model_name=model_name,
+                                    vendor=vendors[i],
+                                    out_dir=curr_out_dir,
+                                    extra_tool_calls=extra_calls,
+                                )
+                            elif benchmark == "manipulation_o3de":
+                                manipulation_o3de_bench.run_benchmark(
+                                    model_name=model_name,
+                                    vendor=vendors[i],
+                                    out_dir=curr_out_dir,
+                                )
+                            else:
+                                print(f"No benchmark named: {benchmark}")
+                        except Exception as e:
+                            print(
+                                f"Failed to run {benchmark} benchmark for {model_name}, vendor: {vendors[i]}, execution number: {u + 1}, because: {str(e)}"
+                            )

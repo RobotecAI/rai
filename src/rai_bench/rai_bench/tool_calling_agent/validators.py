@@ -43,10 +43,6 @@ class OrderedCallsValidator(Validator):
     def type(self) -> str:
         return "ordered"
 
-    @property
-    def required_calls(self) -> int:
-        return len(self.subtasks)
-
     def validate(self, tool_calls: List[ToolCall]) -> Tuple[bool, List[ToolCall]]:
         # Before validation create new iterator, in case validator
         # was used before in other task
@@ -74,6 +70,7 @@ class OrderedCallsValidator(Validator):
 
             self.logger.error(f"Validation failed for task {u + 1}")
             self.passed = False
+            self.extra_calls_used += len(tool_calls) - self.required_calls
             return False, []
 
 
@@ -105,6 +102,7 @@ class NotOrderedCallsValidator(Validator):
             if not to_be_done_idx:
                 # all subtask completed
                 self.passed = True
+                self.extra_calls_used = i + 1 - self.required_calls
                 return True, tool_calls[i + 1 :]
 
             matched = False
@@ -131,9 +129,12 @@ class NotOrderedCallsValidator(Validator):
             # all tool calls iterated
             # all subtask completed
             self.passed = True
+            self.extra_calls_used += len(tool_calls) - self.required_calls
             return True, []
+
         self.logger.error(
             f"Validation failed for tasks: {[idx + 1 for idx in to_be_done_idx]}"
         )
         self.passed = False
+        self.extra_calls_used += len(tool_calls) - self.required_calls
         return False, []
