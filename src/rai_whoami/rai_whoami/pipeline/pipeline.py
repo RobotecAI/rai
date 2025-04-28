@@ -15,7 +15,7 @@
 import logging
 from typing import List, Literal, Optional
 
-from rai_whoami.loaders import EmbodimentInfo, EmbodimentSource
+from rai_whoami.models import EmbodimentInfo, EmbodimentSource
 from rai_whoami.processors.postprocessors.base import DataPostProcessor
 from rai_whoami.processors.preprocessors.base import DataPreProcessor
 from rai_whoami.vector_db.builder import VectorDBBuilder

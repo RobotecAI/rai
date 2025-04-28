@@ -141,57 +141,6 @@ class EmbodimentSourceLoader:
         return documents
 
 
-class EmbodimentInfoLoader:
-    def __init__(self, root_dir: str | Path):
-        if isinstance(root_dir, str):
-            root_dir = Path(root_dir)
-        self.root_dir = root_dir
-
-    def load(self) -> "EmbodimentInfo":
-        return EmbodimentInfo(
-            rules=self.load_rules(),
-            capabilities=self.load_capabilities(),
-            behaviors=self.load_behaviors(),
-            description=self.load_description(),
-            images=self.load_images(),
-        )
-
-    def load_rules(self) -> List[str]:
-        return open(
-            self.root_dir / EmbodimentInfoDirectoryStructure.RULES.value
-        ).readlines()
-
-    def load_capabilities(self) -> List[str]:
-        return open(
-            self.root_dir / EmbodimentInfoDirectoryStructure.CAPABILITIES.value
-        ).readlines()
-
-    def load_behaviors(self) -> List[str]:
-        return open(
-            self.root_dir / EmbodimentInfoDirectoryStructure.BEHAVIORS.value
-        ).readlines()
-
-    def load_description(self) -> str:
-        return open(
-            self.root_dir / EmbodimentInfoDirectoryStructure.DESCRIPTION.value
-        ).read()
-
-    def load_images(self) -> List[str]:
-        files = glob.glob(
-            os.path.join(
-                self.root_dir / EmbodimentInfoDirectoryStructure.IMAGES.value,
-                "**/*",
-            ),
-            recursive=True,
-        )
-        image_files = [
-            file
-            for file in files
-            if file.endswith(".png") or file.endswith(".jpg") or file.endswith(".jpeg")
-        ]
-        return [preprocess_image(Image.open(file)) for file in image_files]
-
-
 class EmbodimentSource(BaseModel):
     documentation: List[Document]
     images: List[str] = Field(..., exclude=True)

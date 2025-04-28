@@ -18,7 +18,7 @@ from langchain_core.language_models import BaseChatModel
 from rai.initialization import get_llm_model
 from rai.messages import HumanMultimodalMessage, SystemMessage
 
-from rai_whoami.loaders import EmbodimentInfo, EmbodimentSource
+from rai_whoami.models import EmbodimentInfo, EmbodimentSource
 
 from .base import DataPreProcessor
 

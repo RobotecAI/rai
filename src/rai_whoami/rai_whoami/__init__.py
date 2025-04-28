@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .loaders import EmbodimentInfo, EmbodimentSource
+from .models import EmbodimentInfo, EmbodimentSource
 from .pipeline import Pipeline, PipelineBuilder
 from .processors import get_default_postprocessors, get_default_preprocessors
 

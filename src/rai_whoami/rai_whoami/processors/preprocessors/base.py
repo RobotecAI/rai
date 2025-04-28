@@ -14,7 +14,7 @@
 
 from abc import ABC, abstractmethod
 
-from rai_whoami.loaders import EmbodimentInfo, EmbodimentSource
+from rai_whoami.models import EmbodimentInfo, EmbodimentSource
 
 
 class DataPreProcessor(ABC):
