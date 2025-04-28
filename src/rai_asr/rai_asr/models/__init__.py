@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from rai_asr.models.base import BaseTranscriptionModel, BaseVoiceDetectionModel
-from rai_asr.models.local_whisper import LocalWhisper
+from rai_asr.models.local_whisper import LocalWhisper, FasterWhisper
 from rai_asr.models.open_ai_whisper import OpenAIWhisper
 from rai_asr.models.open_wake_word import OpenWakeWord
 from rai_asr.models.silero_vad import SileroVAD
@@ -22,6 +22,7 @@ __all__ = [
     "BaseTranscriptionModel",
     "BaseVoiceDetectionModel",
     "LocalWhisper",
+    "FasterWhisper",
     "OpenAIWhisper",
     "OpenWakeWord",
     "SileroVAD",

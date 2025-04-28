@@ -17,6 +17,7 @@ import logging
 import time
 from threading import Event, Lock, Thread
 from typing import Any, List, Optional, TypedDict
+from typing_extensions import Self
 from uuid import uuid4
 
 import numpy as np
@@ -35,6 +36,7 @@ from rai.communication.sound_device import (
 )
 
 from rai_asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
+from .initialization import ASRAgentConfig, load_config
 
 
 class ThreadData(TypedDict):
@@ -108,6 +110,53 @@ class SpeechRecognitionAgent(BaseAgent):
         self.transcription_threads: dict[str, ThreadData] = {}
         self.transcription_buffers: dict[str, list[NDArray]] = {}
         self.is_playing = True
+
+    @classmethod
+    def from_config(cls, cfg_path: Optional[str] = None) -> Self:
+        cfg = load_config(cfg_path)
+        microphone_configuration = SoundDeviceConfig(
+            stream=True,
+            channels=1,
+            device_name=cfg.microphone.device_name,
+            block_size=1280,
+            consumer_sampling_rate=16000,
+            dtype="int16",
+            device_number=None,
+            is_input=True,
+            is_output=False,
+        )
+        match cfg.transcribe.model_name:
+            case "LocalWhisper (Free)":
+                from rai_asr.models import LocalWhisper
+
+                model = LocalWhisper("tiny", 16000, language=cfg.transcribe.language)
+            case "FasterWhisper (Free)":
+                from rai_asr.models import FasterWhisper
+
+                model = FasterWhisper("tiny", 16000, language=cfg.transcribe.language)
+            case "OpenAI (Cloud)":
+                from rai_asr.models import OpenAIWhisper
+
+                model = OpenAIWhisper("tiny", 16000, language=cfg.transcribe.language)
+            case _:
+                raise ValueError(f"Unknown model name f{cfg.transcribe.model_name}")
+
+        match cfg.voice_activity_detection.model_name:
+            case "SileroVAD":
+                from rai_asr.models import SileroVAD
+
+                vad = SileroVAD(16000, cfg.voice_activity_detection.threshold)
+
+        agent = cls(microphone_configuration, "rai_auto_asr_agent", model, vad)
+        if cfg.wakeword.is_used:
+            match cfg.wakeword.model_name:
+                case "OpenWakeWord":
+                    from rai_asr.models import OpenWakeWord
+
+                    agent.add_detection_model(
+                        OpenWakeWord("hey jarvis", cfg.wakeword.threshold)
+                    )
+        return agent
 
     def __call__(self):
         self.run()
