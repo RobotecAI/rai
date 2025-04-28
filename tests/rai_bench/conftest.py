@@ -23,6 +23,8 @@ def create_entity(
     z: float,
     orientation: Quaternion | None = None,
 ) -> Entity:
+    if orientation is None:
+        orientation = Quaternion()
     return Entity(
         name=name,
         prefab_name=prefab,

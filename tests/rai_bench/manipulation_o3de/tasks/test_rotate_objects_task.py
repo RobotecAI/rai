@@ -14,16 +14,17 @@
 
 import math
 
+from rai.types import Quaternion
+
 from rai_bench.manipulation_o3de.tasks import RotateObjectTask
-from rai_sim.simulation_bridge import Rotation
 from tests.rai_bench.conftest import create_entity
 
 
 def test_calculate_perfect_match() -> None:
-    target = Rotation(x=0.0, y=0.0, z=0.0, w=1.0)
+    target = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
     task = RotateObjectTask(["apple"], target_quaternion=target)
     e1 = create_entity(
-        "obj1", "apple", 0.3, 0.0, 0.05, Rotation(x=0.0, y=0.0, z=0.0, w=1.0)
+        "obj1", "apple", 0.3, 0.0, 0.05, Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
     )
     correct, incorrect = task.calculate_correct([e1], allowable_rotation_error=5.0)
     assert correct == 1
@@ -31,10 +32,10 @@ def test_calculate_perfect_match() -> None:
 
 
 def test_calculate_error_under_threshold() -> None:
-    target = Rotation(x=0.0, y=0.0, z=0.0, w=1.0)
+    target = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
     task = RotateObjectTask(["apple"], target_quaternion=target)
     half_angle = math.radians(3.0)
-    current_rotation = Rotation(
+    current_rotation = Quaternion(
         x=0.0, y=0.0, z=math.sin(half_angle), w=math.cos(half_angle)
     )
     e1 = create_entity("obj1", "apple", 0.3, 0.0, 0.05, current_rotation)
@@ -45,10 +46,10 @@ def test_calculate_error_under_threshold() -> None:
 
 
 def test_calculate_multiple_types() -> None:
-    target = Rotation(x=0.0, y=0.0, z=0.0, w=1.0)
+    target = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
     task = RotateObjectTask(["apple", "carrot"], target_quaternion=target)
     half_angle = math.radians(1.0)
-    current_rotation = Rotation(
+    current_rotation = Quaternion(
         x=0.0, y=0.0, z=math.sin(half_angle), w=math.cos(half_angle)
     )
     e1 = create_entity("obj1", "apple", 0.3, 0.0, 0.05, current_rotation)
@@ -62,10 +63,10 @@ def test_calculate_multiple_types() -> None:
 
 
 def test_calculate_mixed_types() -> None:
-    target = Rotation(x=0.0, y=0.0, z=0.0, w=1.0)
+    target = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
     task = RotateObjectTask(["yellow_cube", "carrot"], target_quaternion=target)
     half_angle = math.radians(1.0)
-    current_rotation = Rotation(
+    current_rotation = Quaternion(
         x=0.0, y=0.0, z=math.sin(half_angle), w=math.cos(half_angle)
     )
     e1 = create_entity("obj1", "apple", 0.3, 0.0, 0.05, current_rotation)
@@ -79,10 +80,10 @@ def test_calculate_mixed_types() -> None:
 
 
 def test_calculate_error_above_threshold() -> None:
-    target = Rotation(x=0.0, y=0.0, z=0.0, w=1.0)
+    target = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
     task = RotateObjectTask(["apple"], target_quaternion=target)
     half_angle = math.radians(5)
-    current_rotation = Rotation(
+    current_rotation = Quaternion(
         x=0.0, y=0.0, z=math.sin(half_angle), w=math.cos(half_angle)
     )
     e1 = create_entity("obj1", "apple", 0.3, 0.0, 0.05, current_rotation)

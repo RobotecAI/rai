@@ -14,8 +14,9 @@
 
 from typing import Any, Dict, List, Set
 
+from rai.types import Entity, Point, Pose
+
 from rai_bench.manipulation_o3de.interfaces import Task
-from rai_sim.simulation_bridge import Entity, Pose, Translation
 from tests.rai_bench.conftest import create_entity
 
 
@@ -31,7 +32,7 @@ class DummyTask(Task):
 
 
 def create_pose(x: float, y: float, z: float) -> Pose:
-    return Pose(translation=Translation(x=x, y=y, z=z))
+    return Pose(position=Point(x=x, y=y, z=z))
 
 
 def test_build_neighbourhood_list() -> None:
