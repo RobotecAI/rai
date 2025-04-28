@@ -18,6 +18,7 @@ from typing import Any, Dict, List
 
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objs as go
 import streamlit as st
 
 st.set_page_config(layout="wide", page_title="LLM Task Results Visualizer")
@@ -25,6 +26,40 @@ st.set_page_config(layout="wide", page_title="LLM Task Results Visualizer")
 EXPERIMENT_DIR = "./src/rai_bench/rai_bench/experiments"
 DETAILED_FILE_NAME: str = "results.csv"
 SUMMARY_FILE_NAME: str = "results_summary.csv"
+
+
+def adjust_bar_width(
+    fig: go.Figure,
+    max_full_width_bars: int = 10,
+    base_width: float = 0.8,
+    bargap: float = 0.1,
+) -> go.Figure:
+    """
+    Adjust bar width dynamically based on number of bars in the figure.
+
+    Parameters
+    ----------
+    fig : go.Figure
+        A Plotly figure containing one or more bar traces.
+    max_full_width_bars : int, optional
+        Number of bars to display at full base_width before scaling kicks in.
+    base_width : float, optional
+        Width of each bar (as a fraction of its category slot) when few bars.
+    bargap : float, optional
+        Fractional gap between bars (0 to 1).
+
+    """
+    try:
+        first_bar = next(trace for trace in fig.data if trace.type == "bar")
+        n_bars = len(first_bar.x)
+    except StopIteration:
+        return fig
+
+    scale = min(n_bars, max_full_width_bars) / max_full_width_bars
+    width = base_width * scale
+    fig.update_traces(selector={"type": "bar"}, width=width, offset=0)
+    fig.update_layout(xaxis_type="category", bargap=bargap)
+    return fig
 
 
 def safely_parse_json_like_string(s: Any) -> List[Any]:
@@ -115,7 +150,7 @@ def load_single_run(path: str) -> None | Dict[str, pd.DataFrame]:
     return run_data
 
 
-def compute_avg_summary_stats(
+def compute_summ_models_stats(
     run: Dict[str, Dict[str, List[Dict[str, pd.DataFrame]]]],
 ) -> Dict[str, Dict[str, Any]]:
     """
@@ -127,38 +162,61 @@ def compute_avg_summary_stats(
     for benchmark, models_dict in run.items():
         models_stats[benchmark] = {}
         for model, repeats in models_dict.items():
-            combined_df = pd.concat([r["summary_df"] for r in repeats])
+            combined_summ_df = pd.concat([r["summary_df"] for r in repeats])
             models_stats[benchmark][model] = {
-                "avg_success_rate": combined_df["success_rate"].mean(),
-                "avg_time": combined_df["avg_time"].mean(),
+                "avg_success_rate": combined_summ_df["success_rate"].mean(),
+                "avg_time": combined_summ_df["avg_time"].mean(),
+                "total_extra_tool_calls_used": combined_summ_df[
+                    "total_extra_tool_calls_used"
+                ].mean(),
             }
 
     return models_stats
 
 
-def display_model_performance_tab(
-    models_stats: Dict[str, Dict[str, Any]],
-) -> None:
-    """Display overall model performance visualizations"""
-    st.header("Model Performance")
+def compute_det_models_stats(
+    run: Dict[str, Dict[str, List[Dict[str, pd.DataFrame]]]],
+) -> Dict[str, Dict[str, Any]]:
+    models_stats: Dict[str, Dict[str, Any]] = {}
+    for benchmark, models_dict in run.items():
+        models_stats[benchmark] = {}
+        for model, repeats in models_dict.items():
+            combined_det_df = pd.concat([r["detailed_df"] for r in repeats])
+            grouped = (
+                combined_det_df.groupby("extra_tool_calls")  # type: ignore
+                .agg(
+                    avg_score=("score", "mean"),
+                    avg_time=("total_time", "mean"),
+                    avg_extra_tool_calls=("extra_tool_calls_used", "mean"),
+                )
+                .reset_index()
+            )
+            for _, row in grouped.iterrows():  # type: ignore
+                num: int = int(row["extra_tool_calls"])
+                models_stats[benchmark].setdefault(num, {})[model] = {
+                    "avg_success_rate": row["avg_score"],
+                    "avg_time": row["avg_time"],
+                    "avg_extra_tool_calls": grouped["avg_extra_tool_calls"],
+                }
+    return models_stats
 
-    bench_selected: str = st.radio("Benchmark:", list(models_stats.keys()), key=0)
-    viz_data: List[Dict[str, Any]] = []
-    data = models_stats[bench_selected]
-    for model_name, stats in data.items():
-        viz_data.append(
-            {
-                "model_name": model_name,
-                "avg_success_rate": stats["avg_success_rate"],
-                "avg_time": stats["avg_time"],
-            }
-        )
 
-    viz_df = pd.DataFrame(viz_data)
+def display_models_summ_data(summ_data: Dict[str, Any]):
+    if summ_data:
+        summ_viz_df: List[Dict[str, Any]] = []
+        for model_name, stats in summ_data.items():
+            summ_viz_df.append(
+                {
+                    "model_name": model_name,
+                    "avg_success_rate": stats["avg_success_rate"],
+                    "avg_time": stats["avg_time"],
+                    "total_extra_tool_calls_used": stats["total_extra_tool_calls_used"],
+                }
+            )
+        summ_viz_df = pd.DataFrame(summ_viz_df)
 
-    if not viz_df.empty:
         fig1 = px.bar(  # type: ignore
-            viz_df,
+            summ_viz_df,
             x="model_name",
             y="avg_success_rate",
             title="Success Rate by Model",
@@ -170,10 +228,11 @@ def display_model_performance_tab(
             barmode="group",
         )
         fig1.update_layout(xaxis_tickangle=-45)  # type: ignore
+        fig1 = adjust_bar_width(fig=fig1)
         st.plotly_chart(fig1, use_container_width=True)  # type: ignore
 
         fig2 = px.bar(  # type: ignore
-            viz_df,
+            summ_viz_df,
             x="model_name",
             y="avg_time",
             title="Average Completion Time by Model",
@@ -182,7 +241,98 @@ def display_model_performance_tab(
             barmode="group",
         )
         fig2.update_layout(xaxis_tickangle=-45)  # type: ignore
+        fig2 = adjust_bar_width(fig=fig2)
         st.plotly_chart(fig2, use_container_width=True)  # type: ignore
+
+        fig3 = px.bar(  # type: ignore
+            summ_viz_df,
+            x="model_name",
+            y="total_extra_tool_calls_used",
+            title="Total extra tool calls used by Model",
+            labels={
+                "total_extra_tool_calls_used": "Total extra tool calls",
+                "model_name": "Model Name",
+            },
+            color="model_name",
+            barmode="group",
+        )
+        fig3.update_layout(xaxis_tickangle=-45)  # type: ignore
+        fig3 = adjust_bar_width(fig=fig3)
+        st.plotly_chart(fig3, use_container_width=True)  # type: ignore
+
+
+def display_models_extra_calls_data(
+    det_extra_calls_data: Dict[str, Any], extra_calls: int
+):
+    if det_extra_calls_data:
+        viz_rows: List[Dict[str, Any]] = []
+        for model, stats in det_extra_calls_data.items():
+            viz_rows.append(
+                {
+                    "extra_tool_calls": extra_calls,
+                    "model_name": model,
+                    "avg_success_rate": stats["avg_success_rate"],
+                    "avg_time": stats["avg_time"],
+                }
+            )
+        df_calls = pd.DataFrame(viz_rows)
+
+        # Success Rate by Calls and Model
+        fig1 = px.bar(
+            df_calls,
+            x="model_name",
+            y="avg_success_rate",
+            color="model_name",
+            barmode="group",
+            title="Success Rate by Extra Tool Calls",
+            labels={
+                "model_name": "Model Name",
+                "avg_success_rate": "Success Rate (%)",
+            },
+        )
+        fig1.update_layout(xaxis_tickangle=-45)
+        fig1 = adjust_bar_width(fig1)
+        st.plotly_chart(fig1, use_container_width=True)
+
+        # Average Time by Calls and Model
+        fig2 = px.bar(
+            df_calls,
+            x="model_name",
+            y="avg_time",
+            color="model_name",
+            barmode="group",
+            title="Avg Completion Time by Extra Tool Calls",
+            labels={
+                "model_name": "Model Name",
+                "avg_time": "Avg Time (s)",
+            },
+        )
+        fig2.update_layout(xaxis_tickangle=-45)
+        fig2 = adjust_bar_width(fig2)
+        st.plotly_chart(fig2, use_container_width=True)
+
+
+def display_overall_models_performance_tab(
+    summ_models_stats: Dict[str, Dict[str, Any]],
+    det_models_stats: Dict[str, Dict[str, Any]],
+) -> None:
+    """Display overall model performance visualizations"""
+    st.header("Model Performance")
+
+    bench_selected: str = st.radio("Benchmark:", list(summ_models_stats.keys()), key=0)
+
+    summ_data = summ_models_stats[bench_selected]
+    det_data = det_models_stats[bench_selected]
+
+    display_models_summ_data(summ_data=summ_data)
+
+    extra_tool_calls_num_selected: str = st.radio(
+        "Maxiumum extra tool calls:", list(det_data.keys())
+    )
+    display_models_extra_calls_data(
+        det_extra_calls_data=det_data[extra_tool_calls_num_selected],
+        extra_calls=extra_tool_calls_num_selected,
+    )
 
 
 def display_performance_across_tasks(
@@ -198,40 +348,99 @@ def display_performance_across_tasks(
         # Combine detailed data from all runs for this model
         all_detailed_dfs = [r["detailed_df"] for r in repeats]
         combined_detailed_df = pd.concat(all_detailed_dfs)
-
-        task_type_success = (
-            combined_detailed_df.groupby("type")  # type: ignore
-            .agg(avg_score=("score", "mean"), avg_time=("total_time", "mean"))
+        ##############################################################################
+        task_complexity_df = (
+            combined_detailed_df.groupby("complexity")  # type: ignore
+            .agg(
+                avg_score=("score", "mean"),
+                avg_time=("total_time", "mean"),
+                avg_extra_tool_calls=("extra_tool_calls_used", "mean"),
+            )
             .reset_index()
         )
 
-        # # TODO (jm) when total tool calls will be available count them here
-        # # Count number of times each task was run
-        # task_count = (
-        #     combined_detailed_df.groupby("task_prompt")
-        #     .size()
-        #     .reset_index(name="run_count")
-        # )
-        fig_type_task = px.bar(
-            task_type_success,
+        task_type_df = (
+            combined_detailed_df.groupby("type")  # type: ignore
+            .agg(
+                avg_score=("score", "mean"),
+                avg_time=("total_time", "mean"),
+                avg_extra_tool_calls=("extra_tool_calls_used", "mean"),
+            )
+            .reset_index()
+        )
+        ##############################################################################
+        fig_type_score_task = px.bar(
+            task_type_df,
             x="type",
             y="avg_score",
-            title=f"Success Rate by Task - Aggregated across {len(repeats)} runs",
+            title=f"Success Rate by Task Type - Aggregated across {len(repeats)} runs",
             labels={
                 "avg_score": "Avg Score",
                 "type": "Task Type",
             },
         )
-        st.plotly_chart(fig_type_task, use_container_width=True)
+        fig_type_score_task = adjust_bar_width(fig=fig_type_score_task)
+        st.plotly_chart(fig_type_score_task, use_container_width=True)
 
+        fig_type_extracalls_task = px.bar(
+            task_type_df,
+            x="type",
+            y="avg_extra_tool_calls",
+            title=f"Avg Extra Tool Calls Used by Task Type - Aggregated across {len(repeats)} runs",
+            labels={
+                "avg_extra_tool_calls": "Avg Extra Tool Calls Used",
+                "type": "Task Type",
+            },
+        )
+        fig_type_extracalls_task = adjust_bar_width(fig=fig_type_extracalls_task)
+        st.plotly_chart(fig_type_extracalls_task, use_container_width=True)
+        ##############################################################################
+        fig_complexity_score_task = px.bar(
+            task_complexity_df,
+            x="complexity",
+            y="avg_score",
+            title=f"Success Rate by Task Complexity - Aggregated across {len(repeats)} runs",
+            labels={
+                "avg_score": "Avg Score",
+                "complexity": "Task Complexity",
+            },
+        )
+        fig_complexity_score_task = adjust_bar_width(fig=fig_complexity_score_task)
+        st.plotly_chart(fig_complexity_score_task, use_container_width=True)
+
+        fig_complexity_extracalls_task = px.bar(
+            task_complexity_df,
+            x="complexity",
+            y="avg_extra_tool_calls",
+            title=f"Avg Extra Tool Calls Used by Task Complexity - Aggregated across {len(repeats)} runs",
+            labels={
+                "avg_extra_tool_calls": "Avg Extra Tool Calls Used",
+                "complexity": "Task Complexity",
+            },
+        )
+        fig_complexity_extracalls_task = adjust_bar_width(
+            fig=fig_complexity_extracalls_task
+        )
+        st.plotly_chart(fig_complexity_extracalls_task, use_container_width=True)
+
+        ###########################################################################
+        #### PER TASK TYPE ########################################################
         task_types = combined_detailed_df["type"].unique().tolist()  # type: ignore
         selected_type = st.selectbox("Select Task Type", sorted(task_types))
 
         filtered_df = combined_detailed_df[
             combined_detailed_df["type"] == selected_type
         ]
+        filtered_df_by_complexity = (
+            filtered_df.groupby("complexity")  # type: ignore
+            .agg(
+                avg_score=("score", "mean"),
+                avg_time=("total_time", "mean"),
+                avg_extra_tool_calls=("extra_tool_calls_used", "mean"),
+            )
+            .reset_index()
+        )
 
-        # TODO (jm) extra calls used
         task_stats = (
             filtered_df.groupby("task_prompt")  # type: ignore
             .agg(
@@ -241,39 +450,54 @@ def display_performance_across_tasks(
             .reset_index()
         ).replace(0, 0.01)
 
-    short_labels = [
-        (t[:30] + "...") if len(t) > 30 else t for t in task_stats["task_prompt"]
-    ]
+        short_labels = [
+            (t[:30] + "...") if len(t) > 30 else t for t in task_stats["task_prompt"]
+        ]
 
-    # 4) Plot success rate by task for the selected type
-    fig_task = px.bar(
-        task_stats,
-        x="task_prompt",
-        y="avg_score",
-        title=f"Avg Score for '{selected_type}' Tasks ({len(repeats)} runs)",
-        labels={"avg_score": "Avg Score", "task_prompt": "Task"},
-        custom_data=["task_prompt"],
-    )
-    fig_task.update_xaxes(ticktext=short_labels, tickvals=task_stats["task_prompt"])
-    fig_task.update_yaxes(range=[0, 1])
-    fig_task.update_traces(hovertemplate="<b>Task:</b> %{customdata[0]}")
-    fig_task.update_layout(xaxis_tickangle=-45)
-    st.plotly_chart(fig_task, use_container_width=True)
+        # Plot - succes rate in ceratin type of subtask per complexity
+        fig_complexity_score_task = px.bar(
+            filtered_df_by_complexity,
+            x="complexity",
+            y="avg_score",
+            title=f"Success Rate by Task Complexity - Aggregated across {len(repeats)} runs",
+            labels={
+                "avg_score": "Avg Score",
+                "complexity": "Task Complexity",
+            },
+        )
+        fig_complexity_score_task = adjust_bar_width(fig=fig_complexity_score_task)
+        st.plotly_chart(fig_complexity_score_task, use_container_width=True)
+        # 4 Plot success rate by task for the selected type
+        fig_task = px.bar(
+            task_stats,
+            x="task_prompt",
+            y="avg_score",
+            title=f"Avg Score for '{selected_type}' Tasks ({len(repeats)} runs)",
+            labels={"avg_score": "Avg Score", "task_prompt": "Task"},
+            custom_data=["task_prompt"],
+        )
+        fig_task.update_xaxes(ticktext=short_labels, tickvals=task_stats["task_prompt"])
+        fig_task.update_yaxes(range=[0, 1])
+        fig_task.update_traces(hovertemplate="<b>Task:</b> %{customdata[0]}", width=0.3)
+        fig_task.update_layout(xaxis_tickangle=-45)
+        fig_task = adjust_bar_width(fig=fig_task)
+        st.plotly_chart(fig_task, use_container_width=True)
 
-    # 5) Plot average time by task
-    fig_time = px.bar(
-        task_stats,
-        x="task_prompt",
-        y="avg_time",
-        title=f"Avg Time for '{selected_type}' Tasks ({len(repeats)} runs)",
-        labels={"avg_time": "Avg Time (s)", "task_prompt": "Task"},
-        custom_data=["task_prompt"],
-    )
-    fig_time.update_xaxes(ticktext=short_labels, tickvals=task_stats["task_prompt"])
-    fig_time.update_yaxes(range=[0, 1])
-    fig_time.update_traces(hovertemplate="<b>Task:</b> %{customdata[0]}")
-    fig_time.update_layout(xaxis_tickangle=-45)
-    st.plotly_chart(fig_time, use_container_width=True)
+        # 5 Plot average time by task
+        fig_time = px.bar(
+            task_stats,
+            x="task_prompt",
+            y="avg_time",
+            title=f"Avg Time for '{selected_type}' Tasks ({len(repeats)} runs)",
+            labels={"avg_time": "Avg Time (s)", "task_prompt": "Task"},
+            custom_data=["task_prompt"],
+        )
+        fig_time.update_xaxes(ticktext=short_labels, tickvals=task_stats["task_prompt"])
+        fig_time.update_yaxes(range=[0, 1])
+        fig_time.update_traces(hovertemplate="<b>Task:</b> %{customdata[0]}", width=0.3)
+        fig_time.update_layout(xaxis_tickangle=-45)
+        fig_time = adjust_bar_width(fig=fig_time)
+        st.plotly_chart(fig_time, use_container_width=True)
 
 
 def validators_analysis(run: Dict[str, Dict[str, List[Dict[str, pd.DataFrame]]]]):
@@ -387,7 +611,7 @@ def subtasks_analysis(run: Dict[str, Dict[str, List[Dict[str, pd.DataFrame]]]]):
     ).reset_index()
     st.markdown("### Subtasks")
     st.dataframe(summary_df, use_container_width=True)
-    st.markdown("### Subtasks grouped dby tool name")
+    st.markdown("### Subtasks grouped by tool name")
     st.dataframe(grouped_by_tool_name_df, use_container_width=True)
     st.markdown("### Errors by subtask")
     st.dataframe(errors_df, use_container_width=True)
@@ -407,7 +631,8 @@ if __name__ == "__main__":
         run = load_all_run_data(results_dir)
 
     if run:
-        models_stats = compute_avg_summary_stats(run)
+        summ_models_stats = compute_summ_models_stats(run)
+        det_models_stats = compute_det_models_stats(run=run)
 
         tab1, tab2, tab3, tab4 = st.tabs(
             [
@@ -419,7 +644,9 @@ if __name__ == "__main__":
         )
 
         with tab1:
-            display_model_performance_tab(models_stats)
+            display_overall_models_performance_tab(
+                summ_models_stats=summ_models_stats, det_models_stats=det_models_stats
+            )
 
         with tab2:
             display_performance_across_tasks(run)

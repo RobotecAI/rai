@@ -24,13 +24,14 @@ from langchain_core.messages import BaseMessage
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from rai.messages import HumanMultimodalMessage
 
 from rai_bench.tool_calling_agent.interfaces import (
     Task,
 )
 from rai_bench.tool_calling_agent.scores_tracing import (
+    BenchmarkSummary,
     ScoreTracingHandler,
     TaskResult,
 )
@@ -39,15 +40,6 @@ from rai_bench.tool_calling_agent.tasks.spatial import (
 )
 
 loggers_type = logging.Logger
-
-
-class BenchmarkSummary(BaseModel):
-    model_name: str = Field(..., description="Name of the LLM.")
-    success_rate: float = Field(
-        ..., description="Percentage of successfully completed tasks."
-    )
-    avg_time: float = Field(..., description="Average time taken across all tasks.")
-    total_tasks: int = Field(..., description="Total number of executed tasks.")
 
 
 class ToolCallingAgentBenchmark:
@@ -203,7 +195,9 @@ class ToolCallingAgentBenchmark:
             for validator_info in validation_info
             for s in validator_info.subtasks
         ]
-
+        total_extra_calls: int = 0
+        for validator_info in validation_info:
+            total_extra_calls += validator_info.extra_tool_calls_used
         for callback in callbacks:
             self.score_tracing_handler.send_score(
                 callback=callback,
@@ -219,6 +213,7 @@ class ToolCallingAgentBenchmark:
             system_prompt=task.get_system_prompt(),
             type=task.type,
             extra_tool_calls=task.extra_tool_calls,
+            extra_tool_calls_used=total_extra_calls,
             complexity=task.complexity,
             model_name=model_name,
             validation_info=validation_info,
@@ -248,11 +243,13 @@ class ToolCallingAgentBenchmark:
             success_count = sum(1 for r in results if r.score)
             success_rate = success_count / len(results) * 100
             avg_time = statistics.mean(r.total_time for r in results)
+            total_extra_calls = sum(r.extra_tool_calls_used for r in results)
 
             summary = BenchmarkSummary(
                 model_name=model_name,
                 success_rate=round(success_rate, 2),
                 avg_time=round(avg_time, 3),
+                total_extra_tool_calls_used=total_extra_calls,
                 total_tasks=len(results),
             )
 

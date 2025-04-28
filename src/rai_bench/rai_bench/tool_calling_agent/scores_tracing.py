@@ -52,10 +52,14 @@ class TaskResult(BaseModel):
         ...,
         description="Maximum number of extra tool calls agent can make and still pass a task",
     )
+    extra_tool_calls_used: int = Field(
+        ..., description="Total number of extra tool calls used in this Task"
+    )
     score: float = Field(
         ...,
         description="Value between 0 and 1, describing how many validation setps passed",
     )
+
     total_time: float = Field(..., description="Total time taken to complete the task.")
     run_id: UUID = Field(..., description="UUID of the task run.")
 
@@ -66,6 +70,9 @@ class BenchmarkSummary(BaseModel):
         ..., description="Percentage of successfully completed tasks."
     )
     avg_time: float = Field(..., description="Average time taken across all tasks.")
+    total_extra_tool_calls_used: int = Field(
+        ..., description="Total number of extra tool calls used in this Task"
+    )
     total_tasks: int = Field(..., description="Total number of executed tasks.")
 
 
