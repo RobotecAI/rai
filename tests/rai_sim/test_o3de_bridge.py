@@ -24,18 +24,17 @@ import rclpy
 from geometry_msgs.msg import TransformStamped as ROS2TransformStamped
 from rai.communication.ros2 import ROS2Connector, ROS2Message
 from rai.types import (
-    Entity,
     Header,
     Point,
     Pose,
     PoseStamped,
     Quaternion,
-    SpawnedEntity,
 )
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
 
 from rai_sim.o3de.o3de_bridge import O3DExROS2Bridge, O3DExROS2SimulationConfig
+from rai_sim.simulation_bridge import Entity, SpawnedEntity
 
 
 def test_load_config(sample_base_yaml_config: Path, sample_o3dexros2_config: Path):

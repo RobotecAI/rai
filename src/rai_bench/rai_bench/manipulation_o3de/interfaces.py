@@ -17,7 +17,6 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Dict, List, Set, Tuple, TypeVar, Union
 
-from rai.types import SpawnedEntity
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai_sim.simulation_bridge import (
@@ -26,6 +25,7 @@ from rai_sim.simulation_bridge import (
     SimulationBridge,
     SimulationConfig,
     SimulationConfigT,
+    SpawnedEntity,
 )
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
