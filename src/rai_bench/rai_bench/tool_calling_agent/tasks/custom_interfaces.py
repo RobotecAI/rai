@@ -18,21 +18,20 @@ from typing import Any, Dict, List, Type
 
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
-
-from rai_bench.tool_calling_agent.interfaces import Task, Validator
-from rai_bench.tool_calling_agent.messages.base import (
+from rai.types import (
     BoundingBox2D,
-    Clock,
     Detection2D,
     Header,
-    Orientation,
-    Point2D,
+    Point,
     Pose,
     Pose2D,
     PoseStamped,
-    Position,
+    Quaternion,
     Time,
 )
+
+from rai_bench.tool_calling_agent.interfaces import Task, Validator
+from rai_bench.tool_calling_agent.messages.base import Clock
 from rai_bench.tool_calling_agent.messages.services import (
     ManipulatorMoveToRequest,
     RAIGroundedSamRequest,
@@ -376,9 +375,8 @@ vision_msgs/Detection2D[] detections
 			float64[36] covariance
 	BoundingBox2D bbox
 		vision_msgs/Pose2D center
-			vision_msgs/Point2D position
-				float64 x
-				float64 y
+            float64 x
+            float64 y
 			float64 theta
 		float64 size_x
 		float64 size_y
@@ -476,9 +474,8 @@ RAIDetectionArray detections
 				float64[36] covariance
 		BoundingBox2D bbox
 			vision_msgs/Pose2D center
-				vision_msgs/Point2D position
-					float64 x
-					float64 y
+                float64 x
+                float64 y
 				float64 theta
 			float64 size_x
 			float64 size_y
@@ -605,9 +602,8 @@ RAIDetectionArray detections
 				float64[36] covariance
 		BoundingBox2D bbox
 			vision_msgs/Pose2D center
-				vision_msgs/Point2D position
-					float64 x
-					float64 y
+                float64 x
+                float64 y
 				float64 theta
 			float64 size_x
 			float64 size_y
@@ -955,7 +951,7 @@ class PublishROS2DetectionArrayTask(CustomInterfacesTopicTask):
     expected_detections: List[Detection2D] = [
         Detection2D(
             bbox=BoundingBox2D(
-                center=Pose2D(position=Point2D(x=320.0, y=240.0), theta=0.0),
+                center=Pose2D(x=320.0, y=240.0, theta=0.0),
                 size_x=50.0,
                 size_y=50.0,
             )
@@ -982,8 +978,8 @@ class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
     expected_final_gripper_state = False
     expected_target_pose: PoseStamped = PoseStamped(
         pose=Pose(
-            position=Position(x=1.0, y=2.0, z=3.0),
-            orientation=Orientation(x=0.0, y=0.0, z=0.0, w=1.0),
+            position=Point(x=1.0, y=2.0, z=3.0),
+            orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
         )
     )
 
@@ -1084,8 +1080,8 @@ class CallWhatISeeTask(CustomInterfacesServiceTask):
     )
 
     expected_pose: Pose = Pose(
-        position=Position(x=1.0, y=2.0, z=0.5),
-        orientation=Orientation(x=0.0, y=0.0, z=0.0, w=1.0),
+        position=Point(x=1.0, y=2.0, z=0.5),
+        orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
     )
 
     def get_prompt(self) -> str:

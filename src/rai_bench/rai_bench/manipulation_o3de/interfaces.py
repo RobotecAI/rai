@@ -338,15 +338,16 @@ class Task(ABC):
         """
 
         entities = sorted(
-            entities, key=lambda ent: (ent.pose.translation.x, ent.pose.translation.y)
+            entities,
+            key=lambda ent: (ent.pose.pose.position.x, ent.pose.pose.position.y),
         )
 
         groups: List[List[EntityT]] = []
         for entity in entities:
             placed = False
             for group in groups:
-                dx = group[0].pose.translation.x - entity.pose.translation.x
-                dy = group[0].pose.translation.y - entity.pose.translation.y
+                dx = group[0].pose.pose.position.x - entity.pose.pose.position.x
+                dy = group[0].pose.pose.position.y - entity.pose.pose.position.y
                 if math.sqrt(dx * dx + dy * dy) <= margin:
                     group.append(entity)
                     placed = True

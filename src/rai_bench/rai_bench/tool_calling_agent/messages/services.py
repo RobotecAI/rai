@@ -14,7 +14,9 @@
 
 from typing import List, Optional
 
-from rai_bench.tool_calling_agent.messages.base import Pose, PoseStamped, Ros2BaseModel
+from rai.types import Pose, PoseStamped
+
+from rai_bench.tool_calling_agent.messages.base import Ros2BaseModel
 from rai_bench.tool_calling_agent.messages.topics import Image, RAIDetectionArray
 
 

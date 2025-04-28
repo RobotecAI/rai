@@ -12,10 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from pydantic import Field
 
-from rai.types import RaiBaseModel, Time
+from . import RaiBaseModel
 
 
-class Clock(RaiBaseModel):
-    clock: Optional[Time] = Time()
+class Time(RaiBaseModel):
+    sec: int = 0
+    nanosec: int = 0
+
+
+class Header(RaiBaseModel):
+    frame_id: str = Field(default="", description="Reference frame of the message")
+    stamp: Time = Time()

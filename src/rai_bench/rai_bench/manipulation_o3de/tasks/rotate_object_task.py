@@ -21,7 +21,7 @@ from rclpy.impl.rcutils_logger import RcutilsLogger
 from rai_bench.manipulation_o3de.interfaces import (
     ManipulationTask,
 )
-from rai_sim.simulation_bridge import Entity, Rotation, SimulationConfig
+from rai_sim.simulation_bridge import Entity, Quaternion, SimulationConfig
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
 
@@ -30,7 +30,7 @@ class RotateObjectTask(ManipulationTask):
     def __init__(
         self,
         obj_types: List[str],
-        target_quaternion: Rotation,
+        target_quaternion: Quaternion,
         logger: loggers_type | None = None,
     ):
         # NOTE (jmatejcz) for now manipulaiton tool does not support passing rotation
@@ -103,14 +103,14 @@ class RotateObjectTask(ManipulationTask):
         incorrect = 0
         for entity in entities:
             if entity.prefab_name in self.obj_types:
-                if not entity.pose.rotation:
+                if not entity.pose.pose.orientation:
                     ValueError("Entity has no rotation defined.")
                 else:
                     dot = (
-                        entity.pose.rotation.x * self.target_quaternion.x
-                        + entity.pose.rotation.y * self.target_quaternion.y
-                        + entity.pose.rotation.z * self.target_quaternion.z
-                        + entity.pose.rotation.w * self.target_quaternion.w
+                        entity.pose.pose.orientation.x * self.target_quaternion.x
+                        + entity.pose.pose.orientation.y * self.target_quaternion.y
+                        + entity.pose.pose.orientation.z * self.target_quaternion.z
+                        + entity.pose.pose.orientation.w * self.target_quaternion.w
                     )
                     # Account for the double cover: q and -q represent the same rotation.
                     dot = abs(dot)

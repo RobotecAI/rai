@@ -18,12 +18,12 @@ from typing import Dict, List
 
 import inflect
 from langchain_core.tools import BaseTool
+from rai.types import Point
 
 from rai_bench.tool_calling_agent.interfaces import (
     Task,
     Validator,
 )
-from rai_bench.tool_calling_agent.messages.base import Position
 from rai_bench.tool_calling_agent.mocked_tools import (
     MockGetObjectPositionsTool,
     MockGetROS2ImageTool,
@@ -306,7 +306,7 @@ class GetObjectPositionsTask(Task):
 
     def __init__(
         self,
-        objects: Dict[str, List[Position]],
+        objects: Dict[str, List[Point]],
         validators: List[Validator],
         extra_tool_calls: int = 0,
         logger: loggers_type | None = None,

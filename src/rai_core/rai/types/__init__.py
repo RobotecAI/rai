@@ -12,26 +12,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .base import (
-    Entity,
-    Field,
-    Header,
-    Point,
-    Pose,
-    PoseStamped,
-    Quaternion,
-    SpawnedEntity,
-    SpawnEntityService,
+
+from .base import RaiBaseModel
+from .gazebo import Entity, SpawnedEntity, SpawnEntityService
+from .geometry import Point, Pose, Pose2D, PoseStamped, PoseWithCovariance, Quaternion
+from .std import Header, Time
+from .vision import (
+    BoundingBox2D,
+    Detection2D,
+    ObjectHypothesis,
+    ObjectHypothesisWithPose,
+    RegionOfInterest,
 )
 
 __all__ = [
+    "BoundingBox2D",
+    "Detection2D",
     "Entity",
-    "Field",
     "Header",
+    "ObjectHypothesis",
+    "ObjectHypothesisWithPose",
     "Point",
     "Pose",
+    "Pose2D",
     "PoseStamped",
+    "PoseWithCovariance",
     "Quaternion",
+    "RaiBaseModel",
+    "RegionOfInterest",
     "SpawnEntityService",
     "SpawnedEntity",
+    "Time",
 ]
