@@ -18,7 +18,7 @@ from typing import Any
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
 
-from rai_whoami.loaders.models import EmbodimentSource
+from rai_whoami.models import EmbodimentSource
 
 
 class VectorDBBuilder(ABC):

@@ -19,7 +19,7 @@ from langchain_community.vectorstores import FAISS
 from langchain_core.embeddings import Embeddings
 from rai.initialization import get_embeddings_model
 
-from rai_whoami.loaders.models import EmbodimentSource
+from rai_whoami.models import EmbodimentSource
 from rai_whoami.vector_db.builder import VectorDBBuilder
 
 

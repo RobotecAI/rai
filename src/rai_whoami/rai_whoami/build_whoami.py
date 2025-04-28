@@ -26,7 +26,7 @@ from rai_whoami.processors import (
 from rai_whoami.vector_db import FAISSBuilder
 
 
-def build_whoami() -> None:
+def build_whoami(args: argparse.Namespace) -> None:
     builder = PipelineBuilder()
     builder.add_preprocessor(DocsPreProcessor())
     builder.add_preprocessor(ImagePreProcessor())
