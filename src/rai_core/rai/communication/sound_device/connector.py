@@ -61,6 +61,20 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
         super().__init__()
 
     def get_audio_params(self, target: str) -> AudioParams:
+        """
+        Retrieve audio parameters for a specified device.
+
+        Parameters
+        ----------
+        target : str
+            The name of the device for which to retrieve audio parameters.
+
+        Returns
+        -------
+        AudioParams
+            An `AudioParams` object containing the sample rate, input channels,
+            and output channels of the specified device.
+        """
         return AudioParams(
             self.devices[target].sample_rate,
             self.devices[target].in_channels,
@@ -72,9 +86,47 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
         target: str,
         config: SoundDeviceConfig,
     ):
+        """
+        Configure and register a new audio device.
+
+        Parameters
+        ----------
+        target : str
+            The name identifier for the device to configure.
+        config : SoundDeviceConfig
+            The configuration settings to initialize the device with.
+
+        Notes
+        -----
+        The configured device is stored in `self.devices` under the given target name.
+        """
         self.devices[target] = SoundDeviceAPI(config)
 
     def send_message(self, message: SoundDeviceMessage, target: str, **kwargs) -> None:
+        """
+        Send an audio message to a specified device.
+
+        Parameters
+        ----------
+        message : SoundDeviceMessage
+            The message containing audio data or control commands (e.g., stop or read request).
+        target : str
+            The name of the target device to which the message will be sent.
+        **kwargs
+            Additional keyword arguments (currently unused).
+
+        Raises
+        ------
+        SoundDeviceError
+            If the message requests reading (unsupported) or if no audio data is provided
+            when attempting to play audio.
+
+        Notes
+        -----
+        - If `message.stop` is `True`, the device will be stopped.
+        - If `message.read` is `True`, an error is raised (reading must use actions or services).
+        - Otherwise, attempts to write audio data to the device.
+        """
         if message.stop:
             self.devices[target].stop()
         elif message.read:
@@ -90,6 +142,10 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
     def receive_message(
         self, source: str, timeout_sec: float = 1.0, **kwargs
     ) -> SoundDeviceMessage:
+        """
+        SoundDeviceConnector does not support receiving messages. For recording use start_action or service_call with read=True.
+
+        """
         raise SoundDeviceError(
             "SoundDeviceConnector does not support receiving messages. For recording use start_action or service_call with read=True."
         )
@@ -103,6 +159,41 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
         duration: float = 1.0,
         **kwargs,
     ) -> SoundDeviceMessage:
+        """
+        Perform a blocking service call to a sound device for playback or recording.
+
+        Depending on the message content, either records audio from the device or plays
+        provided audio data in a blocking manner.
+
+        Parameters
+        ----------
+        message : SoundDeviceMessage
+            The message specifying the operation: playback (with audio data) or recording (read flag).
+        target : str
+            The name of the target device on which to perform the action.
+        timeout_sec : float, optional
+            Timeout for the operation in seconds. Currently unused. Defaults to `1.0`.
+        duration : float, optional
+            Duration for recording audio in seconds. Only relevant when reading. Defaults to `1.0`.
+        **kwargs
+            Additional keyword arguments (currently unused).
+
+        Returns
+        -------
+        SoundDeviceMessage
+            A new message containing recorded audio if reading, or an empty message after successful playback.
+
+        Raises
+        ------
+        SoundDeviceError
+            If stopping is requested (unsupported in this method) or if playback is attempted
+            without providing audio data.
+
+        Notes
+        -----
+        - To stop a device, use `send_message` with `stop=True` instead.
+        - Audio recording is done synchronously with `blocking=True`.
+        """
         if message.stop:
             raise SoundDeviceError("For stopping use send_message with stop=True.")
         elif message.read:
@@ -128,6 +219,46 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
         timeout_sec: float = 1.0,
         **kwargs,
     ) -> str:
+        """
+        Start an asynchronous streaming action on a sound device.
+
+        Depending on the action data, either opens a read (recording) or write (playback)
+        audio stream. Handles for ongoing actions are tracked internally.
+
+        Parameters
+        ----------
+        action_data : SoundDeviceMessage, optional
+            The action request containing operation details. Must not be `None`.
+            If `read` is `True`, a read (recording) stream is opened; otherwise, a write (playback) stream.
+        target : str
+            The name of the target device to interact with.
+        on_feedback : Callable
+            Callback function to handle feedback during the stream.
+        on_done : Callable
+            Callback function called upon stream completion.
+        timeout_sec : float, optional
+            Timeout for starting the stream, in seconds. Defaults to `1.0`. (Currently unused.)
+        **kwargs
+            Additional parameters:
+            - `sample_rate` (int, optional): Desired sample rate for playback streams.
+            - `channels` (int, optional): Number of channels for playback streams.
+
+        Returns
+        -------
+        str
+            A unique handle identifying the started action.
+
+        Raises
+        ------
+        SoundDeviceError
+            If `action_data` is not provided (`None`).
+
+        Notes
+        -----
+        - For recording streams, `open_read_stream` is used.
+        - For playback streams, `open_write_stream` is used, optionally customized by `sample_rate` and `channels`.
+        - Started actions are stored in `self.action_handles` with the handle as the key.
+        """
         handle = self._generate_handle()
         if action_data is None:
             raise SoundDeviceError("action_data must be provided")
