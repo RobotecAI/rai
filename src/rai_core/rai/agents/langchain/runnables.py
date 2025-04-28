@@ -24,6 +24,7 @@ from langgraph.prebuilt.tool_node import tools_condition
 
 from rai.agents.tool_runner import ToolRunner
 from rai.initialization import get_llm_model
+from rai.messages.multimodal import SystemMultimodalMessage
 
 
 class ReActAgentState(TypedDict):
@@ -38,7 +39,11 @@ class ReActAgentState(TypedDict):
     messages: List[BaseMessage]
 
 
-def llm_node(llm: BaseChatModel, system_prompt: Optional[str], state: ReActAgentState):
+def llm_node(
+    llm: BaseChatModel,
+    system_prompt: Optional[str | SystemMultimodalMessage],
+    state: ReActAgentState,
+):
     """Process messages using the LLM.
 
     Parameters
@@ -58,7 +63,10 @@ def llm_node(llm: BaseChatModel, system_prompt: Optional[str], state: ReActAgent
     ValueError
         If state is invalid or LLM processing fails
     """
-    if system_prompt:
+    if isinstance(system_prompt, SystemMultimodalMessage):
+        if not isinstance(state["messages"][0], SystemMessage):
+            state["messages"].insert(0, system_prompt)
+    elif system_prompt:
         # at this point, state['messages'] length should at least be 1
         if not isinstance(state["messages"][0], SystemMessage):
             state["messages"].insert(0, SystemMessage(content=system_prompt))
@@ -69,7 +77,7 @@ def llm_node(llm: BaseChatModel, system_prompt: Optional[str], state: ReActAgent
 def create_react_runnable(
     llm: Optional[BaseChatModel] = None,
     tools: Optional[List[BaseTool]] = None,
-    system_prompt: Optional[str] = None,
+    system_prompt: Optional[str | SystemMultimodalMessage] = None,
 ) -> Runnable[ReActAgentState, ReActAgentState]:
     """Create a react agent that can process messages and optionally use tools.
 

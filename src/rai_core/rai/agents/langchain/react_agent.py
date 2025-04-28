@@ -21,6 +21,7 @@ from rai.agents.langchain import create_react_runnable
 from rai.agents.langchain.agent import LangChainAgent
 from rai.agents.langchain.runnables import ReActAgentState
 from rai.communication.hri_connector import HRIConnector, HRIMessage
+from rai.messages.multimodal import SystemMultimodalMessage
 
 
 class ReActAgent(LangChainAgent):
@@ -30,7 +31,7 @@ class ReActAgent(LangChainAgent):
         llm: Optional[BaseChatModel] = None,
         tools: Optional[List[BaseTool]] = None,
         state: Optional[ReActAgentState] = None,
-        system_prompt: Optional[str] = None,
+        system_prompt: Optional[str | SystemMultimodalMessage] = None,
     ):
         runnable = create_react_runnable(
             llm=llm, tools=tools, system_prompt=system_prompt
