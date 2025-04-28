@@ -12,12 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai_sim.simulation_bridge import (
-    Entity,
-    Pose,
-    Rotation,
-    Translation,
-)
+from rai.types import Entity, Header, Point, Pose, PoseStamped, Quaternion
 
 
 def create_entity(
@@ -26,10 +21,13 @@ def create_entity(
     x: float,
     y: float,
     z: float,
-    rotation: Rotation | None = None,
+    orientation: Quaternion | None = None,
 ) -> Entity:
     return Entity(
         name=name,
         prefab_name=prefab,
-        pose=Pose(translation=Translation(x=x, y=y, z=z), rotation=rotation),
+        pose=PoseStamped(
+            pose=Pose(position=Point(x=x, y=y, z=z), orientation=orientation),
+            header=Header(frame_id="/test_frame"),
+        ),
     )

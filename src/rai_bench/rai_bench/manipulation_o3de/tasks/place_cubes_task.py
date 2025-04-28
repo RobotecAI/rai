@@ -14,12 +14,13 @@
 import logging
 from typing import List, Tuple, Union
 
+from rai.types import Entity
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai_bench.manipulation_o3de.interfaces import (
     ManipulationTask,
 )
-from rai_sim.simulation_bridge import Entity, SimulationConfig
+from rai_sim.simulation_bridge import SimulationConfig
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
 
@@ -89,8 +90,8 @@ class PlaceCubesTask(ManipulationTask):
             1
             for ent in entities
             if self.is_adjacent_to_any(
-                ent.pose,
-                [e.pose for e in entities if e != ent],
+                ent.pose.pose,
+                [e.pose.pose for e in entities if e != ent],
                 self.threshold_distance,
             )
         )

@@ -73,7 +73,7 @@ class MoveObjectsToLeftTask(ManipulationTask):
             entities=entities, object_types=self.obj_types
         )
         correct = sum(
-            1 for ent in selected_type_objects if ent.pose.translation.y > 0.0
+            1 for ent in selected_type_objects if ent.pose.pose.position.y > 0.0
         )
         incorrect: int = len(selected_type_objects) - correct
         return correct, incorrect

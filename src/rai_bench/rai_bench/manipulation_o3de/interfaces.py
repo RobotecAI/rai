@@ -17,6 +17,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Dict, List, Set, Tuple, TypeVar, Union
 
+from rai.types.base import SpawnedEntity
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai_sim.simulation_bridge import (
@@ -114,9 +115,9 @@ class Task(ABC):
     def euclidean_distance(self, pos1: Pose, pos2: Pose) -> float:
         """Calculate euclidean distance between 2 positions"""
         return (
-            (pos1.translation.x - pos2.translation.x) ** 2
-            + (pos1.translation.y - pos2.translation.y) ** 2
-            + (pos1.translation.z - pos2.translation.z) ** 2
+            (pos1.position.x - pos2.position.x) ** 2
+            + (pos1.position.y - pos2.position.y) ** 2
+            + (pos1.position.z - pos2.position.z) ** 2
         ) ** 0.5
 
     def is_adjacent(self, pos1: Pose, pos2: Pose, threshold_distance: float):
@@ -217,7 +218,9 @@ class Task(ABC):
                 other
                 for other in entities
                 if entity != other
-                and self.is_adjacent(entity.pose, other.pose, threshold_distance)
+                and self.is_adjacent(
+                    entity.pose.pose, other.pose.pose, threshold_distance
+                )
             ]
         return neighbourhood_graph
 
@@ -424,12 +427,14 @@ class ManipulationTask(Task, ABC):
             return False
 
     @abstractmethod
-    def calculate_correct(self, entities: List[EntityT]) -> Tuple[int, int]:
+    def calculate_correct(
+        self, entities: List[Entity] | List[SpawnedEntity]
+    ) -> Tuple[int, int]:
         """Method to calculate how many objects are placed correctly
 
         Parameters
         ----------
-        entities : List[EntityT]
+        entities : List[Entity]
             list of ALL entities present in the simulaiton scene
 
         Returns

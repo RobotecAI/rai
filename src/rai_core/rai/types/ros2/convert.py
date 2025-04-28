@@ -18,7 +18,7 @@ from typing import Any
 import rosidl_runtime_py
 from pydantic import BaseModel
 
-from rai.tools.ros.utils import import_message_from_str
+from rai.communication.ros2.api.conversion import import_message_from_str
 
 
 def to_ros2_msg(base_model: BaseModel) -> Any:

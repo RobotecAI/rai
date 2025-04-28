@@ -16,12 +16,13 @@ import logging
 import math
 from typing import List, Tuple, Union
 
+from rai.types import Entity
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai_bench.manipulation_o3de.interfaces import (
     ManipulationTask,
 )
-from rai_sim.simulation_bridge import Entity, SimulationConfig
+from rai_sim.simulation_bridge import SimulationConfig
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
 
@@ -90,8 +91,8 @@ class PlaceObjectAtCoordTask(ManipulationTask):
         correct = 0
 
         for ent in target_objects:
-            dx = ent.pose.translation.x - self.target_position[0]
-            dy = ent.pose.translation.y - self.target_position[1]
+            dx = ent.pose.pose.position.x - self.target_position[0]
+            dy = ent.pose.pose.position.y - self.target_position[1]
             distance = math.sqrt(dx**2 + dy**2)
             if distance <= self.allowable_displacement:
                 correct = 1  # Only one correct placement is needed.
