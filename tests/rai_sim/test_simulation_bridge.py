@@ -75,14 +75,6 @@ def test_pose():
     assert pose.orientation.w == 0.4
 
 
-def test_optional_quaternion():
-    position = Point(x=1.1, y=2.2, z=3.3)
-    pose = Pose(position=position)
-
-    assert isinstance(pose.position, Point)
-    assert pose.orientation is None
-
-
 @pytest.fixture
 def pose() -> PoseStamped:
     position = Point(x=1.1, y=2.2, z=3.3)
@@ -213,7 +205,7 @@ class TestSimulationBridge(unittest.TestCase):
             prefab_name="test_prefab2",
             pose=PoseStamped(
                 header=header,
-                pose=Pose(position=Point(x=4.0, y=5.0, z=6.0), orientation=None),
+                pose=Pose(position=Point(x=4.0, y=5.0, z=6.0)),
             ),
         )
 
@@ -258,7 +250,10 @@ class TestSimulationBridge(unittest.TestCase):
         self.assertEqual(pose2.position.x, 4.0)
         self.assertEqual(pose2.position.y, 5.0)
         self.assertEqual(pose2.position.z, 6.0)
-        self.assertIsNone(pose2.orientation)
+        self.assertEqual(pose2.orientation.x, 0.0)
+        self.assertEqual(pose2.orientation.y, 0.0)
+        self.assertEqual(pose2.orientation.z, 0.0)
+        self.assertEqual(pose2.orientation.w, 1.0)
 
     def test_spawn_entity(self):
         self.bridge._spawn_entity(self.test_entity1)  # type: ignore
