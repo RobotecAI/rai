@@ -70,7 +70,8 @@ class OrderedCallsValidator(Validator):
 
             self.logger.error(f"Validation failed for task {u + 1}")
             self.passed = False
-            self.extra_calls_used += len(tool_calls) - self.required_calls
+            if len(tool_calls) > self.required_calls:
+                self.extra_calls_used += len(tool_calls) - self.required_calls
             return False, []
 
 
@@ -84,6 +85,8 @@ class NotOrderedCallsValidator(Validator):
         self, subtasks: List[SubTask], logger: loggers_type | None = None
     ) -> None:
         super().__init__(subtasks=subtasks, logger=logger)
+        if len(self.subtasks) < 1:
+            raise ValueError("Validator must have at least 1 subtask.")
 
     @property
     def type(self) -> str:
@@ -102,8 +105,8 @@ class NotOrderedCallsValidator(Validator):
             if not to_be_done_idx:
                 # all subtask completed
                 self.passed = True
-                self.extra_calls_used = i + 1 - self.required_calls
-                return True, tool_calls[i + 1 :]
+                self.extra_calls_used = i - self.required_calls
+                return True, tool_calls[i:]
 
             matched = False
             possible_errors: Dict[int, str] = {}
@@ -136,5 +139,6 @@ class NotOrderedCallsValidator(Validator):
             f"Validation failed for tasks: {[idx + 1 for idx in to_be_done_idx]}"
         )
         self.passed = False
-        self.extra_calls_used += len(tool_calls) - self.required_calls
+        if len(tool_calls) > self.required_calls:
+            self.extra_calls_used += len(tool_calls) - self.required_calls
         return False, []
