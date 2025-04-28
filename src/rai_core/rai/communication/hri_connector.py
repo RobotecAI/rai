@@ -150,4 +150,27 @@ class HRIConnector(Generic[T], BaseConnector[T]):
         seq_no: int = 0,
         seq_end: bool = False,
     ) -> T:
+        """
+        Build a new message object from a given input message.
+
+        Parameters
+        ----------
+        message : LangchainBaseMessage or RAIMultimodalMessage
+            The source message to transform into the target type.
+        communication_id : str, optional
+            An optional identifier for the communication session. Defaults to `None`.
+        seq_no : int, optional
+            The sequence number of the message in the communication stream. Defaults to `0`.
+        seq_end : bool, optional
+            Flag indicating whether this message is the final one in the sequence. Defaults to `False`.
+
+        Returns
+        -------
+        T
+            A message instance of type `T` compatible with the Connector, created from the provided input.
+
+        Notes
+        -----
+        This method uses `self.T_class.from_langchain` for conversion and assumes compatibility.
+        """
         return self.T_class.from_langchain(message, communication_id, seq_no, seq_end)  # type: ignore
