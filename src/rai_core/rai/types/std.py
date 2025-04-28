@@ -14,14 +14,18 @@
 
 from pydantic import Field
 
-from . import RaiBaseModel
+from . import Ros2BaseModel
 
 
-class Time(RaiBaseModel):
+class BaseStdModel(Ros2BaseModel):
+    _prefix: str = "std_msgs/msg"
+
+
+class Time(BaseStdModel):
     sec: int = 0
     nanosec: int = 0
 
 
-class Header(RaiBaseModel):
+class Header(BaseStdModel):
     frame_id: str = Field(default="", description="Reference frame of the message")
     stamp: Time = Time()

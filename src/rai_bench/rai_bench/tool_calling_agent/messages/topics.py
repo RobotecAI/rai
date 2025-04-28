@@ -17,12 +17,13 @@ from typing import List, Optional
 from rai.types import (
     Detection2D,
     Header,
-    RaiBaseModel,
     RegionOfInterest,
+    Ros2BaseModel,
 )
 
 
-class CameraInfo(RaiBaseModel):
+class CameraInfo(Ros2BaseModel):
+    prefix: str = "sensor_msgs/msg"
     header: Optional[Header] = Header()
     height: Optional[int] = 0
     width: Optional[int] = 0
@@ -36,7 +37,8 @@ class CameraInfo(RaiBaseModel):
     roi: Optional[RegionOfInterest] = RegionOfInterest()
 
 
-class Image(RaiBaseModel):
+class Image(Ros2BaseModel):
+    prefix: str = "sensor_msgs/msg"
     header: Optional[Header] = Header()
     height: Optional[int] = 0
     width: Optional[int] = 0
@@ -46,13 +48,15 @@ class Image(RaiBaseModel):
     data: Optional[List[int]] = []
 
 
-class AudioMessage(RaiBaseModel):
+class AudioMessage(Ros2BaseModel):
+    prefix: str = "rai_interfaces/msg"
     audio: Optional[List[int]] = []
     sample_rate: Optional[int] = 0
     channels: Optional[int] = 0
 
 
-class HRIMessage(RaiBaseModel):
+class HRIMessage(Ros2BaseModel):
+    prefix: str = "rai_interfaces/msg"
     header: Optional[Header] = Header()
     text: Optional[str] = ""
     images: Optional[List[Image]] = []
@@ -62,7 +66,8 @@ class HRIMessage(RaiBaseModel):
     seq_end: Optional[bool] = False
 
 
-class RAIDetectionArray(RaiBaseModel):
+class RAIDetectionArray(Ros2BaseModel):
+    prefix: str = "rai_interfaces/msg"
     header: Optional[Header] = Header()
     detections: Optional[List[Detection2D]] = []
     detection_classes: Optional[List[str]] = []

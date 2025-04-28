@@ -16,13 +16,14 @@ import importlib
 from typing import Any
 
 import rosidl_runtime_py
-from pydantic import BaseModel
 
 from rai.communication.ros2.api.conversion import import_message_from_str
 
+from ..base import Ros2BaseModel
 
-def to_ros2_msg(base_model: BaseModel) -> Any:
-    msg_name = base_model.__class__.__name__
+
+def to_ros2_msg(base_model: Ros2BaseModel) -> Any:
+    msg_name = base_model.get_msg_name()
     ros2_msg_cls = import_message_from_str(msg_name)
     msg_args = base_model.model_dump()
     ros2_msg = ros2_msg_cls()
@@ -30,9 +31,9 @@ def to_ros2_msg(base_model: BaseModel) -> Any:
     return ros2_msg
 
 
-def from_ros2_msg(msg: Any) -> BaseModel:
+def from_ros2_msg(msg: Any) -> Ros2BaseModel:
     msg_name = msg.__class__.__name__
     types_module = importlib.import_module("rai.types")
-    base_model_cls: BaseModel = getattr(types_module, msg_name)
+    base_model_cls: Ros2BaseModel = getattr(types_module, msg_name)
     msg_dict = rosidl_runtime_py.message_to_ordereddict(msg)
     return base_model_cls.model_validate(msg_dict)

@@ -14,35 +14,39 @@
 
 from typing import List
 
-from .base import RaiBaseModel
+from .base import Ros2BaseModel
 from .geometry import Pose2D, PoseWithCovariance
 from .std import Header
 
 
-class ObjectHypothesis(RaiBaseModel):
+class BaseVisionModel(Ros2BaseModel):
+    _prefix: str = "vision_msgs/msg"
+
+
+class ObjectHypothesis(BaseVisionModel):
     class_id: str = ""
     score: float = 0.0
 
 
-class ObjectHypothesisWithPose(RaiBaseModel):
+class ObjectHypothesisWithPose(BaseVisionModel):
     hypothesis: ObjectHypothesis = ObjectHypothesis()
     pose: PoseWithCovariance = PoseWithCovariance()
 
 
-class BoundingBox2D(RaiBaseModel):
+class BoundingBox2D(BaseVisionModel):
     center: Pose2D = Pose2D()
     size_x: float = 0.0
     size_y: float = 0.0
 
 
-class Detection2D(RaiBaseModel):
+class Detection2D(BaseVisionModel):
     header: Header = Header()
     results: List[ObjectHypothesisWithPose] = []
     bbox: BoundingBox2D = BoundingBox2D()
     id: str = ""
 
 
-class RegionOfInterest(RaiBaseModel):
+class RegionOfInterest(BaseVisionModel):
     x_offset: int = 0
     y_offset: int = 0
     height: int = 0

@@ -14,8 +14,9 @@
 
 from typing import Optional
 
-from rai.types import RaiBaseModel, Time
+from rai.types import Ros2BaseModel, Time
 
 
-class Clock(RaiBaseModel):
+class Clock(Ros2BaseModel):
+    _prefix: str = "rosgraph_msgs/msg"
     clock: Optional[Time] = Time()

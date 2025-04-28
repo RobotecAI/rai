@@ -23,14 +23,14 @@ from typing import Any, List, Optional, Set, cast
 import yaml
 from geometry_msgs.msg import Pose as ROS2Pose
 from geometry_msgs.msg import PoseStamped as ROS2PoseStamped
+from pydantic import Field
 from rai.communication.ros2 import ROS2Connector, ROS2Message
 from rai.communication.ros2.ros_async import get_future_result
 from rai.types import (
-    Entity,
     Header,
     Pose,
     PoseStamped,
-    SpawnedEntity,
+    RaiBaseModel,
     SpawnEntityService,
 )
 from rai.types.ros2 import from_ros2_msg, to_ros2_msg
@@ -38,6 +38,37 @@ from tf2_geometry_msgs import do_transform_pose, do_transform_pose_stamped
 
 from rai_interfaces.srv import ManipulatorMoveTo
 from rai_sim.simulation_bridge import SceneState, SimulationBridge, SimulationConfig
+
+
+class Entity(RaiBaseModel):
+    """
+    Entity that can be spawned in the simulation environment.
+    """
+
+    name: str = Field(description="Unique name for the entity")
+    prefab_name: str = Field(
+        description="Name of the prefab resource to use for spawning this entity"
+    )
+    pose: PoseStamped = Field(description="Initial pose of the entity")
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, Entity) or isinstance(other, SpawnedEntity):
+            return self.name == other.name
+        else:
+            return False
+
+
+class SpawnedEntity(Entity):
+    """
+    Entity that has been spawned in the simulation environment.
+    """
+
+    id: str = Field(
+        description="Unique identifier assigned to the spawned entity instance"
+    )
 
 
 class O3DExROS2SimulationConfig(SimulationConfig):

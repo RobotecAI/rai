@@ -14,39 +14,43 @@
 
 from typing import List
 
-from .base import RaiBaseModel
+from .base import Ros2BaseModel
 from .std import Header
 
 
-class Point(RaiBaseModel):
+class BaseGeometryModel(Ros2BaseModel):
+    _prefix: str = "geometry_msgs/msg"
+
+
+class Point(BaseGeometryModel):
     x: float = 0.0
     y: float = 0.0
     z: float = 0.0
 
 
-class Quaternion(RaiBaseModel):
+class Quaternion(BaseGeometryModel):
     x: float = 0.0
     y: float = 0.0
     z: float = 0.0
     w: float = 1.0
 
 
-class Pose(RaiBaseModel):
+class Pose(BaseGeometryModel):
     position: Point = Point()
     orientation: Quaternion = Quaternion()
 
 
-class PoseStamped(RaiBaseModel):
+class PoseStamped(BaseGeometryModel):
     header: Header = Header()
     pose: Pose = Pose()
 
 
-class PoseWithCovariance(RaiBaseModel):
+class PoseWithCovariance(BaseGeometryModel):
     pose: Pose = Pose()
     covariance: List[float] = [0.0] * 36
 
 
-class Pose2D(RaiBaseModel):
+class Pose2D(BaseGeometryModel):
     x: float = 0.0
     y: float = 0.0
     theta: float = 0.0

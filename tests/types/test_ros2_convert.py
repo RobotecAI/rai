@@ -14,6 +14,7 @@
 
 from typing import cast
 
+import numpy as np
 from geometry_msgs.msg import Point as ROS2Point
 from geometry_msgs.msg import Pose as ROS2Pose
 from geometry_msgs.msg import Quaternion as ROS2Quaternion
@@ -26,7 +27,7 @@ from rai_sim.simulation_bridge import (
 )
 
 
-def test_to_ros2_pose(self):
+def test_to_ros2_pose():
     # Create a pose
     pose = Pose(
         position=Point(x=1.0, y=2.0, z=3.0),
@@ -37,16 +38,16 @@ def test_to_ros2_pose(self):
     ros2_pose = to_ros2_msg(pose)
 
     # Check the conversion
-    self.assertEqual(ros2_pose.position.x, 1.0)
-    self.assertEqual(ros2_pose.position.y, 2.0)
-    self.assertEqual(ros2_pose.position.z, 3.0)
-    self.assertEqual(ros2_pose.orientation.x, 0.1)
-    self.assertEqual(ros2_pose.orientation.y, 0.2)
-    self.assertEqual(ros2_pose.orientation.z, 0.3)
-    self.assertEqual(ros2_pose.orientation.w, 0.4)
+    np.isclose(ros2_pose.position.x, 1.0)
+    np.isclose(ros2_pose.position.y, 2.0)
+    np.isclose(ros2_pose.position.z, 3.0)
+    np.isclose(ros2_pose.orientation.x, 0.1)
+    np.isclose(ros2_pose.orientation.y, 0.2)
+    np.isclose(ros2_pose.orientation.z, 0.3)
+    np.isclose(ros2_pose.orientation.w, 0.4)
 
 
-def test_from_ros2_pose(self):
+def test_from_ros2_pose():
     # Create a ROS2 pose
     position = ROS2Point(x=1.0, y=2.0, z=3.0)
     orientation = ROS2Quaternion(x=0.1, y=0.2, z=0.3, w=0.4)
@@ -56,10 +57,10 @@ def test_from_ros2_pose(self):
     pose = cast(Pose, from_ros2_msg(ros2_pose))
 
     # Check the conversion
-    self.assertEqual(pose.position.x, 1.0)
-    self.assertEqual(pose.position.y, 2.0)
-    self.assertEqual(pose.position.z, 3.0)
-    self.assertEqual(pose.orientation.x, 0.1)
-    self.assertEqual(pose.orientation.y, 0.2)
-    self.assertEqual(pose.orientation.z, 0.3)
-    self.assertEqual(pose.orientation.w, 0.4)
+    np.isclose(pose.position.x, 1.0)
+    np.isclose(pose.position.y, 2.0)
+    np.isclose(pose.position.z, 3.0)
+    np.isclose(pose.orientation.x, 0.1)
+    np.isclose(pose.orientation.y, 0.2)
+    np.isclose(pose.orientation.z, 0.3)
+    np.isclose(pose.orientation.w, 0.4)

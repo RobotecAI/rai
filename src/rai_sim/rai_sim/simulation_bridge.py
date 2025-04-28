@@ -19,15 +19,38 @@ from typing import Generic, List, Optional, TypeVar
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
-from rai.types import (
-    Entity,
-    Header,
-    Point,
-    Pose,
-    PoseStamped,
-    Quaternion,
-    SpawnedEntity,
-)
+from rai.types import Header, Point, Pose, PoseStamped, Quaternion, RaiBaseModel
+
+
+class Entity(RaiBaseModel):
+    """
+    Entity that can be spawned in the simulation environment.
+    """
+
+    name: str = Field(description="Unique name for the entity")
+    prefab_name: str = Field(
+        description="Name of the prefab resource to use for spawning this entity"
+    )
+    pose: PoseStamped = Field(description="Initial pose of the entity")
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, Entity) or isinstance(other, SpawnedEntity):
+            return self.name == other.name
+        else:
+            return False
+
+
+class SpawnedEntity(Entity):
+    """
+    Entity that has been spawned in the simulation environment.
+    """
+
+    id: str = Field(
+        description="Unique identifier assigned to the spawned entity instance"
+    )
 
 
 class SimulationConfig(BaseModel):

@@ -14,9 +14,10 @@
 
 from typing import Any, Dict, List, Set
 
-from rai.types import Entity, Point, Pose
+from rai.types import Point, Pose
 
 from rai_bench.manipulation_o3de.interfaces import Task
+from rai_sim.o3de.o3de_bridge import Entity
 from tests.rai_bench.conftest import create_entity
 
 

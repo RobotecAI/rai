@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai.types import Entity, Header, Point, Pose, PoseStamped, Quaternion
+from rai.types import Header, Point, Pose, PoseStamped, Quaternion
+
+from rai_sim.simulation_bridge import Entity
 
 
 def create_entity(
