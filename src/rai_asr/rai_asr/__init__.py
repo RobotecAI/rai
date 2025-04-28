@@ -25,6 +25,7 @@ from rai_asr.agents.initialization import (
     VADConfig,
     WWConfig,
     load_config,
+    TRANSCRIBE_MODELS,
 )
 
 __all__ = [
@@ -35,4 +36,5 @@ __all__ = [
     "VADConfig",
     "WWConfig",
     "load_config",
+    "TRANSCRIBE_MODELS",
 ]

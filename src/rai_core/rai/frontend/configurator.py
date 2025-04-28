@@ -27,64 +27,16 @@ from langchain_aws import BedrockEmbeddings, ChatBedrock
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
-# Initialize session state for tracking steps if not exists
-if "current_step" not in st.session_state:
-    st.session_state.current_step = 1
-if "config" not in st.session_state:
-    # Load initial config from TOML file
-    try:
-        with open("config.toml", "rb") as f:
-            st.session_state.config = tomli.load(f)
-    except FileNotFoundError:
-        raise FileNotFoundError("config.toml not found. Please recreate it.")
 
-# Sidebar progress tracker
-st.sidebar.title("Configuration Progress")
-steps = {
-    1: "👋 Welcome",
-    2: "🤖 Model Selection",
-    3: "📊 Tracing",
-    4: "🎙️ Speech Recognition",
-    5: "🔊 Text to Speech",
-    6: "🎯 Additional Features",
-    7: "✅ Review & Save",
-}
-
-# Replace the existing step display with clickable elements
-for step_num, step_name in steps.items():
-    if step_num == st.session_state.current_step:
-        # Current step is bold and has an arrow
-        if st.sidebar.button(
-            step_name, key=f"step_{step_num}", use_container_width=True
-        ):
-            st.session_state.current_step = step_num
-    else:
-        # Other steps are clickable but not highlighted
-        if st.sidebar.button(
-            step_name, key=f"step_{step_num}", use_container_width=True
-        ):
-            st.session_state.current_step = step_num
-
-
-# Navigation buttons
-def next_step():
-    st.session_state.current_step = st.session_state.current_step + 1
-
-
-def prev_step():
-    st.session_state.current_step = st.session_state.current_step - 1
-
-
-# Main content based on current step
-if st.session_state.current_step == 1:
+def welcome():
     st.title("Welcome to RAI Configurator! 👋")
     st.markdown(
         """
     This wizard will help you set up your RAI environment step by step:
     1. Configure your AI models and vendor
     2. Set up model tracing and monitoring
-    3. Configure speech recognition (ASR)
-    4. Set up text-to-speech (TTS)
+    3. Configure speech recognition (ASR) (if installed)
+    4. Set up text-to-speech (TTS) (if installed)
     5. Enable additional features
     6. Review and save your configuration
 
@@ -94,7 +46,8 @@ if st.session_state.current_step == 1:
 
     st.button("Begin Configuration →", on_click=next_step)
 
-elif st.session_state.current_step == 2:
+
+def model_selection():
     st.title("Model Configuration")
     st.info(
         """
@@ -302,7 +255,8 @@ elif st.session_state.current_step == 2:
     with col2:
         st.button("Next →", on_click=next_step)
 
-elif st.session_state.current_step == 3:
+
+def tracing():
     st.title("Tracing Configuration")
     st.info(
         """
@@ -394,7 +348,9 @@ elif st.session_state.current_step == 3:
     with col2:
         st.button("Next →", on_click=next_step)
 
-elif st.session_state.current_step == 4:
+
+def asr():
+    from rai_asr import TRANSCRIBE_MODELS
 
     def on_recording_device_change():
         st.session_state.config["asr"]["recording_device_name"] = (
@@ -407,7 +363,7 @@ elif st.session_state.current_step == 4:
             if st.session_state.asr_vendor_select == "Local Whisper (Free)"
             else "openai"
         )
-        st.session_state.config["asr"]["vendor"] = vendor
+        st.session_state.config["asr"]["transcription_model"] = vendor
 
     def on_language_change():
         st.session_state.config["asr"]["language"] = st.session_state.language_input
@@ -485,30 +441,29 @@ elif st.session_state.current_step == 4:
         recording_devices = get_recording_devices(reinitialize=True)
 
     # Get the current vendor from config and convert to display name
-    current_vendor = st.session_state.config.get("asr", {}).get("vendor", "whisper")
-    vendor_display_name = (
-        "Local Whisper (Free)" if current_vendor == "whisper" else "OpenAI (Cloud)"
+    current_vendor = st.session_state.config.get("asr", {}).get(
+        "transciption_model", TRANSCRIBE_MODELS[0]
     )
 
     asr_vendor = st.selectbox(
         "Choose your ASR vendor",
-        ["Local Whisper (Free)", "OpenAI (Cloud)"],
+        TRANSCRIBE_MODELS,
         placeholder="Select vendor",
-        index=["Local Whisper (Free)", "OpenAI (Cloud)"].index(vendor_display_name),
+        index=TRANSCRIBE_MODELS.index(current_vendor),
         key="asr_vendor_select",
         on_change=on_asr_vendor_change,
     )
 
-    if asr_vendor == "Local Whisper (Free)":
-        st.info(
-            """
-        Local Whisper is recommended to use when Nvidia GPU is available.
-        """
-        )
-    elif asr_vendor == "OpenAI (Cloud)":
+    if asr_vendor == "OpenAI (Cloud)":
         st.info(
             """
         OpenAI ASR uses the OpenAI API. Make sure to set `OPENAI_API_KEY` environment variable.
+        """
+        )
+    else:
+        st.info(
+            f"""
+        {asr_vendor} is recommended to use when Nvidia GPU is available.
         """
         )
 
@@ -577,8 +532,8 @@ elif st.session_state.current_step == 4:
     with col2:
         st.button("Next →", on_click=next_step)
 
-elif st.session_state.current_step == 5:
 
+def tts():
     def on_tts_vendor_change():
         vendor = (
             "elevenlabs"
@@ -663,7 +618,8 @@ elif st.session_state.current_step == 5:
     with col2:
         st.button("Next →", on_click=next_step)
 
-elif st.session_state.current_step == 6:
+
+def additional_features():
     st.title("Additional Features Configuration")
     st.info(
         """
@@ -718,7 +674,8 @@ elif st.session_state.current_step == 6:
     with col2:
         st.button("Next →", on_click=next_step)
 
-elif st.session_state.current_step == 7:
+
+def review_and_save():
     st.title("Review & Save Configuration")
     st.write(
         """
@@ -913,3 +870,74 @@ elif st.session_state.current_step == 7:
             with open("config.toml", "wb") as f:
                 tomli_w.dump(st.session_state.config, f)
             st.success("Configuration saved successfully!")
+
+
+@st.cache_data
+def setup_steps():
+    step_names = ["👋 Welcome", "🤖 Model Selection", "📊 Tracing"]
+    step_render = [welcome, model_selection, tracing]
+
+    try:
+        from rai_asr import TRANSCRIBE_MODELS
+
+        step_names.append("🎙️ Speech Recognition")
+        step_render.append(asr)
+    except ImportError:
+        pass
+
+    step_names.extend(
+        [
+            "🔊 Text to Speech",
+            "🎯 Additional Features",
+            "✅ Review & Save",
+        ]
+    )
+    step_render.extend([tts, additional_features, review_and_save])
+
+    steps = dict(enumerate(step_names))
+    step_renderer = dict(enumerate(step_render))
+    return steps, step_renderer
+
+
+# Initialize session state for tracking steps if not exists
+if "current_step" not in st.session_state:
+    st.session_state.current_step = 1
+if "config" not in st.session_state:
+    # Load initial config from TOML file
+    try:
+        with open("config.toml", "rb") as f:
+            st.session_state.config = tomli.load(f)
+    except FileNotFoundError:
+        raise FileNotFoundError("config.toml not found. Please recreate it.")
+
+# Sidebar progress tracker
+st.sidebar.title("Configuration Progress")
+steps, step_renderer = setup_steps()
+
+# Replace the existing step display with clickable elements
+for step_num, step_name in steps.items():
+    if step_num == st.session_state.current_step:
+        # Current step is bold and has an arrow
+        if st.sidebar.button(
+            step_name, key=f"step_{step_num}", use_container_width=True
+        ):
+            st.session_state.current_step = step_num
+    else:
+        # Other steps are clickable but not highlighted
+        if st.sidebar.button(
+            step_name, key=f"step_{step_num}", use_container_width=True
+        ):
+            st.session_state.current_step = step_num
+
+
+# Navigation buttons
+def next_step():
+    st.session_state.current_step = st.session_state.current_step + 1
+
+
+def prev_step():
+    st.session_state.current_step = st.session_state.current_step - 1
+
+
+# Main content based on current step
+step_renderer[st.session_state.current_step]()

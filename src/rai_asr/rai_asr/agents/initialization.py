@@ -32,12 +32,17 @@ class WWConfig:
     is_used: bool = False
 
 
+TRANSCRIBE_MODELS = ["LocalWhisper (Free)", "FasterWhisper (Free)", "OpenAI (Cloud)"]
+
+
 @dataclass
 class TranscribeConfig:
-    model_name: Literal["LocalWhisper", "FasterWhisper", "OpenAIWhisper"] = (
-        "LocalWhisper"
-    )
+    model_name: str = TRANSCRIBE_MODELS[0]
     language: str = "en"
+
+    def __post_init__(self):
+        if self.model_name not in TRANSCRIBE_MODELS:
+            raise ValueError(f"model_name must be one of {TRANSCRIBE_MODELS}")
 
 
 @dataclass
@@ -73,6 +78,7 @@ def load_config(config_path: Optional[str] = None) -> ASRAgentConfig:
         ),
         transcribe=TranscribeConfig(
             model_name=config_dict["asr"]["transcription_model"],
+            language=config_dict["asr"]["language"],
         ),
         microphone=MicrophoneConfig(
             device_name=config_dict["asr"]["recording_device_name"],
