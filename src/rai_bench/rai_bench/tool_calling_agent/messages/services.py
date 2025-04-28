@@ -14,78 +14,77 @@
 
 from typing import List, Optional
 
-from rai.types import Pose, PoseStamped
+from rai.types import Pose, PoseStamped, RaiBaseModel
 
-from rai_bench.tool_calling_agent.messages.base import Ros2BaseModel
 from rai_bench.tool_calling_agent.messages.topics import Image, RAIDetectionArray
 
 
-class ManipulatorMoveToRequest(Ros2BaseModel):
+class ManipulatorMoveToRequest(RaiBaseModel):
     initial_gripper_state: Optional[bool] = False
     final_gripper_state: Optional[bool] = False
     target_pose: Optional[PoseStamped] = PoseStamped()
 
 
-class ManipulatorMoveToResponse(Ros2BaseModel):
+class ManipulatorMoveToResponse(RaiBaseModel):
     success: Optional[bool] = False
 
 
-class RAIGroundedSamRequest(Ros2BaseModel):
+class RAIGroundedSamRequest(RaiBaseModel):
     detections: Optional[RAIDetectionArray] = RAIDetectionArray()
     source_img: Optional[Image] = Image()
 
 
-class RAIGroundedSamResponse(Ros2BaseModel):
+class RAIGroundedSamResponse(RaiBaseModel):
     masks: Optional[List[Image]] = []
 
 
-class RAIGroundingDinoRequest(Ros2BaseModel):
+class RAIGroundingDinoRequest(RaiBaseModel):
     classes: Optional[str] = ""
     box_threshold: Optional[float] = 0.0
     text_threshold: Optional[float] = 0.0
     source_img: Optional[Image] = Image()
 
 
-class RAIGroundingDinoResponse(Ros2BaseModel):
+class RAIGroundingDinoResponse(RaiBaseModel):
     detections: Optional[RAIDetectionArray] = RAIDetectionArray()
 
 
-class StringListRequest(Ros2BaseModel):
+class StringListRequest(RaiBaseModel):
     pass
 
 
-class StringListResponse(Ros2BaseModel):
+class StringListResponse(RaiBaseModel):
     success: Optional[bool] = False
     string_list: Optional[List[str]] = []
 
 
-class VectorStoreRetrievalRequest(Ros2BaseModel):
+class VectorStoreRetrievalRequest(RaiBaseModel):
     query: Optional[str] = ""
 
 
-class VectorStoreRetrievalResponse(Ros2BaseModel):
+class VectorStoreRetrievalResponse(RaiBaseModel):
     success: Optional[bool] = False
     message: Optional[str] = ""
     documents: Optional[List[str]] = []
     scores: Optional[List[float]] = []
 
 
-class WhatISeeRequest(Ros2BaseModel):
+class WhatISeeRequest(RaiBaseModel):
     pass
 
 
-class WhatISeeResponse(Ros2BaseModel):
+class WhatISeeResponse(RaiBaseModel):
     observations: Optional[List[str]] = []
     perception_source: Optional[str] = ""
     image: Optional[Image] = Image()
     pose: Optional[Pose] = Pose()
 
 
-class PlannerInterfaceDescription(Ros2BaseModel):
+class PlannerInterfaceDescription(RaiBaseModel):
     name: Optional[str] = ""
     pipeline_id: Optional[str] = ""
     planner_ids: Optional[List[str]] = []
 
 
-class QueryPlannerInterfaceResponse(Ros2BaseModel):
+class QueryPlannerInterfaceResponse(RaiBaseModel):
     planner_interfaces: Optional[List[PlannerInterfaceDescription]] = []

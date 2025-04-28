@@ -14,15 +14,15 @@
 
 from typing import List, Optional
 
-from rai_bench.tool_calling_agent.messages.base import (
+from rai.types import (
     Detection2D,
     Header,
+    RaiBaseModel,
     RegionOfInterest,
-    Ros2BaseModel,
 )
 
 
-class CameraInfo(Ros2BaseModel):
+class CameraInfo(RaiBaseModel):
     header: Optional[Header] = Header()
     height: Optional[int] = 0
     width: Optional[int] = 0
@@ -36,7 +36,7 @@ class CameraInfo(Ros2BaseModel):
     roi: Optional[RegionOfInterest] = RegionOfInterest()
 
 
-class Image(Ros2BaseModel):
+class Image(RaiBaseModel):
     header: Optional[Header] = Header()
     height: Optional[int] = 0
     width: Optional[int] = 0
@@ -46,13 +46,13 @@ class Image(Ros2BaseModel):
     data: Optional[List[int]] = []
 
 
-class AudioMessage(Ros2BaseModel):
+class AudioMessage(RaiBaseModel):
     audio: Optional[List[int]] = []
     sample_rate: Optional[int] = 0
     channels: Optional[int] = 0
 
 
-class HRIMessage(Ros2BaseModel):
+class HRIMessage(RaiBaseModel):
     header: Optional[Header] = Header()
     text: Optional[str] = ""
     images: Optional[List[Image]] = []
@@ -62,7 +62,7 @@ class HRIMessage(Ros2BaseModel):
     seq_end: Optional[bool] = False
 
 
-class RAIDetectionArray(Ros2BaseModel):
+class RAIDetectionArray(RaiBaseModel):
     header: Optional[Header] = Header()
     detections: Optional[List[Detection2D]] = []
     detection_classes: Optional[List[str]] = []
