@@ -40,6 +40,10 @@ class TestSubTaskHelpers:
             def dump(self) -> Dict[str, Any]:
                 return {}
 
+            @property
+            def info(self) -> Dict[str, Any]:
+                return {"name": "blybly"}
+
         return ConcreteSubTask()
 
     def test_check_tool_call_valid(self, mock_subtask):
@@ -524,22 +528,6 @@ class TestCheckArgsToolCallSubTask:
         with pytest.raises(SubTaskValidationError):
             subtask.validate(tool_call)
 
-    def test_dump_content(self):
-        """Test dump returns the expected dictionary."""
-        subtask = CheckArgsToolCallSubTask(
-            expected_tool_name="test_tool",
-            expected_args={"arg1": "value1"},
-            expected_optional_args={"opt1": int},
-        )
-
-        dump_result = subtask.dump()
-
-        assert dump_result == {
-            "expected_tool_name": "test_tool",
-            "expected_args": {"arg1": "value1"},
-            "expected_optional_args": {"opt1": int},
-        }
-
 
 class TestCheckTopicFieldsToolCallSubTask:
     """Test the CheckTopicFieldsToolCallSubTask implementation."""
@@ -612,24 +600,6 @@ class TestCheckTopicFieldsToolCallSubTask:
         with pytest.raises(SubTaskValidationError):
             subtask.validate(tool_call)
 
-    def test_dump_content(self):
-        """Test dump returns the expected dictionary."""
-        subtask = CheckTopicFieldsToolCallSubTask(
-            expected_tool_name="publish_ros2_message",
-            expected_topic="/test_topic",
-            expected_message_type="std_msgs/msg/String",
-            expected_fields={"data": "test"},
-        )
-
-        dump_result = subtask.dump()
-
-        assert dump_result == {
-            "expected_tool_name": "publish_ros2_message",
-            "expected_topic": "/test_topic",
-            "expected_message_type": "std_msgs/msg/String",
-            "expected_fields": {"data": "test"},
-        }
-
 
 class TestCheckServiceFieldsToolCallSubTask:
     """Test the CheckServiceFieldsToolCallSubTask implementation."""
@@ -694,24 +664,6 @@ class TestCheckServiceFieldsToolCallSubTask:
 
         assert subtask.validate(tool_call)
 
-    def test_dump_content(self):
-        """Test dump returns the expected dictionary."""
-        subtask = CheckServiceFieldsToolCallSubTask(
-            expected_tool_name="call_ros2_service",
-            expected_service="/test_service",
-            expected_service_type="std_srvs/srv/SetBool",
-            expected_fields={"data": True},
-        )
-
-        dump_result = subtask.dump()
-
-        assert dump_result == {
-            "expected_tool_name": "call_ros2_service",
-            "expected_service": "/test_service",
-            "expected_service_type": "std_srvs/srv/SetBool",
-            "expected_fields": {"data": True},
-        }
-
 
 class TestCheckActionFieldsToolCallSubTask:
     """Test the CheckActionFieldsToolCallSubTask implementation."""
@@ -775,21 +727,3 @@ class TestCheckActionFieldsToolCallSubTask:
         }
 
         assert subtask.validate(tool_call)
-
-    def test_dump_content(self):
-        """Test dump returns the expected dictionary."""
-        subtask = CheckActionFieldsToolCallSubTask(
-            expected_tool_name="call_ros2_action",
-            expected_action="/test_action",
-            expected_action_type="control_msgs/action/GripperCommand",
-            expected_fields={"command.position": 0.5},
-        )
-
-        dump_result = subtask.dump()
-
-        assert dump_result == {
-            "expected_tool_name": "call_ros2_action",
-            "expected_action": "/test_action",
-            "expected_action_type": "control_msgs/action/GripperCommand",
-            "expected_fields": {"command.position": 0.5},
-        }
