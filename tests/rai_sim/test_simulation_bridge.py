@@ -19,19 +19,19 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 from rai.types import (
-    Entity,
     Header,
     Point,
     Pose,
     PoseStamped,
     Quaternion,
-    SpawnedEntity,
 )
 
 from rai_sim.simulation_bridge import (
+    Entity,
     SceneState,
     SimulationBridge,
     SimulationConfig,
+    SpawnedEntity,
 )
 
 
