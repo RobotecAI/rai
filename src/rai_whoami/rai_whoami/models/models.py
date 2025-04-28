@@ -34,11 +34,11 @@ from rai.messages.multimodal import SystemMultimodalMessage
 
 
 class EmbodimentInfoDirectoryStructure(Enum):
-    RULES = "./rules.txt"
-    CAPABILITIES = "./capabilities.txt"
-    BEHAVIORS = "./behaviors.txt"
-    DESCRIPTION = "./description.txt"
-    IMAGES = "./images"
+    RULES = "rules.txt"
+    CAPABILITIES = "capabilities.txt"
+    BEHAVIORS = "behaviors.txt"
+    DESCRIPTION = "description.txt"
+    IMAGES = "images"
 
 
 class DocumentLoader(Enum):

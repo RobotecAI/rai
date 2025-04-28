@@ -35,13 +35,12 @@ def build_whoami(args: argparse.Namespace) -> None:
     if args.style:
         builder.add_postprocessor(StylePostProcessor())
     if args.build_vector_db:
-        builder.add_vector_db_builder(FAISSBuilder())
+        builder.add_vector_db_builder(FAISSBuilder(args.output_dir))
     pipeline = builder.build()
 
     source = EmbodimentSource.from_directory(args.documentation_dir)
     info = pipeline.process(source)
-    output_dir = args.output_dir or (args.documentation_dir / "generated")
-    info.to_directory(output_dir)
+    info.to_directory(args.output_dir)
 
 
 if __name__ == "__main__":
@@ -52,4 +51,6 @@ if __name__ == "__main__":
     parser.add_argument("--compress", default=False, action="store_true")
     parser.add_argument("--style", default=False, action="store_true")
     args = parser.parse_args()
+    if args.output_dir is None:
+        args.output_dir = args.documentation_dir / "generated"
     build_whoami(args)
