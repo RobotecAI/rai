@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .vector_store_retrieval import ROS2VectorStoreRetrievalAgent
+from .embodiment_info_agent import ROS2EmbodimentInfoAgent
+from .vector_store_retrieval_agent import ROS2VectorStoreRetrievalAgent
 
-__all__ = ["ROS2VectorStoreRetrievalAgent"]
+__all__ = ["ROS2EmbodimentInfoAgent", "ROS2VectorStoreRetrievalAgent"]

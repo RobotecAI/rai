@@ -136,3 +136,22 @@ With the agent running, you can query the vector database through a ROS 2 servic
 ```bash
 ros2 service call /rai_whoami_documentation_service rai_interfaces/srv/VectorStoreRetrieval "query:  'maximum load'"
 ```
+
+## Using ROS2 Embodiment Info Agent
+
+The `ROS2EmbodimentInfoAgent` is a ROS2 agent that can be used to retrieve information from the embodiment info through a ROS 2 service.
+
+```python
+from rai_whoami.agents import ROS2EmbodimentInfoAgent
+
+agent = ROS2EmbodimentInfoAgent(
+    service_name="rai_whoami_embodiment_info_service",
+    root_dir="output_dir/generated/",
+)
+```
+
+With the agent running, you can query the embodiment info through a ROS 2 service:
+
+```bash
+ros2 service call /rai_whoami_embodiment_info_service rai_interfaces/srv/EmbodimentInfo
+```

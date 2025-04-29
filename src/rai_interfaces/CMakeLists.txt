@@ -19,6 +19,7 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/ManipulatorMoveTo.srv"
   "srv/VectorStoreRetrieval.srv"
+  "srv/EmbodimentInfo.srv"
   "srv/StringList.srv"
   "msg/RAIDetectionArray.msg"
   "msg/AudioMessage.msg"
