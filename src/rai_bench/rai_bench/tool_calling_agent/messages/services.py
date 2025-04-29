@@ -14,39 +14,7 @@
 
 from typing import List
 
-from rai.types import Pose, PoseStamped, Ros2BaseModel
-
-from rai_bench.tool_calling_agent.messages.topics import Image, RAIDetectionArray
-
-
-class ManipulatorMoveToRequest(Ros2BaseModel):
-    initial_gripper_state: bool = False
-    final_gripper_state: bool = False
-    target_pose: PoseStamped = PoseStamped()
-
-
-class ManipulatorMoveToResponse(Ros2BaseModel):
-    success: bool = False
-
-
-class RAIGroundedSamRequest(Ros2BaseModel):
-    detections: RAIDetectionArray = RAIDetectionArray()
-    source_img: Image = Image()
-
-
-class RAIGroundedSamResponse(Ros2BaseModel):
-    masks: List[Image] = []
-
-
-class RAIGroundingDinoRequest(Ros2BaseModel):
-    classes: str = ""
-    box_threshold: float = 0.0
-    text_threshold: float = 0.0
-    source_img: Image = Image()
-
-
-class RAIGroundingDinoResponse(Ros2BaseModel):
-    detections: RAIDetectionArray = RAIDetectionArray()
+from rai.types import Image, Pose, Ros2BaseModel
 
 
 class StringListRequest(Ros2BaseModel):

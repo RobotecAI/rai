@@ -15,6 +15,7 @@
 
 from .base import RaiBaseModel, Ros2BaseModel
 from .geometry import Point, Pose, Pose2D, PoseStamped, PoseWithCovariance, Quaternion
+from .sensor import CameraInfo, Image
 from .std import Header, Time
 from .vision import (
     BoundingBox2D,
@@ -26,8 +27,10 @@ from .vision import (
 
 __all__ = [
     "BoundingBox2D",
+    "CameraInfo",
     "Detection2D",
     "Header",
+    "Image",
     "ObjectHypothesis",
     "ObjectHypothesisWithPose",
     "Point",

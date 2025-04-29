@@ -20,6 +20,14 @@ class RaiBaseModel(BaseModel):
 
 
 class Ros2BaseModel(RaiBaseModel):
+    """
+    Base model for messages replicated from ros2
+
+    Attributes:
+    _prefix: str
+        Prefix of the ros2 message, for example std_msgs/msg
+    """
+
     _prefix: str
 
     def get_msg_name(self) -> str:

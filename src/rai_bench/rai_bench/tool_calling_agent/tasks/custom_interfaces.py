@@ -20,8 +20,10 @@ from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 from rai.types import (
     BoundingBox2D,
+    CameraInfo,
     Detection2D,
     Header,
+    Image,
     Point,
     Pose,
     Pose2D,
@@ -29,23 +31,21 @@ from rai.types import (
     Quaternion,
     Time,
 )
+from rai.types.rai_interfaces import (
+    AudioMessage,
+    HRIMessage,
+    ManipulatorMoveToRequest,
+    RAIDetectionArray,
+    RAIGroundedSamRequest,
+    RAIGroundingDinoRequest,
+)
 
 from rai_bench.tool_calling_agent.interfaces import Task, Validator
 from rai_bench.tool_calling_agent.messages.base import Clock
 from rai_bench.tool_calling_agent.messages.services import (
-    ManipulatorMoveToRequest,
-    RAIGroundedSamRequest,
-    RAIGroundingDinoRequest,
     StringListRequest,
     VectorStoreRetrievalRequest,
     WhatISeeRequest,
-)
-from rai_bench.tool_calling_agent.messages.topics import (
-    AudioMessage,
-    CameraInfo,
-    HRIMessage,
-    Image,
-    RAIDetectionArray,
 )
 from rai_bench.tool_calling_agent.mocked_tools import (
     MockCallROS2ServiceTool,

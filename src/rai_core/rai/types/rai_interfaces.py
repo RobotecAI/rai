@@ -14,38 +14,13 @@
 
 from typing import List
 
-from rai.types import (
-    Detection2D,
+from .geometry import PoseStamped
+from .sensor import Image
+from .std import (
     Header,
-    RegionOfInterest,
     Ros2BaseModel,
 )
-
-
-class CameraInfo(Ros2BaseModel):
-    _prefix: str = "sensor_msgs/msg"
-    header: Header = Header()
-    height: int = 0
-    width: int = 0
-    distortion_model: str = ""
-    d: List[float] = []
-    k: List[float] = [0.0] * 9
-    r: List[float] = [0.0] * 9
-    p: List[float] = [0.0] * 12
-    binning_x: int = 0
-    binning_y: int = 0
-    roi: RegionOfInterest = RegionOfInterest()
-
-
-class Image(Ros2BaseModel):
-    _prefix: str = "sensor_msgs/msg"
-    header: Header = Header()
-    height: int = 0
-    width: int = 0
-    encoding: str = ""
-    is_bigendian: int = 0
-    step: int = 0
-    data: List[int] = []
+from .vision import Detection2D
 
 
 class AudioMessage(Ros2BaseModel):
@@ -71,3 +46,39 @@ class RAIDetectionArray(Ros2BaseModel):
     header: Header = Header()
     detections: List[Detection2D] = []
     detection_classes: List[str] = []
+
+
+class ManipulatorMoveToRequest(Ros2BaseModel):
+    _prefix: str = "rai_interfaces/srv"
+    initial_gripper_state: bool = False
+    final_gripper_state: bool = False
+    target_pose: PoseStamped = PoseStamped()
+
+
+class ManipulatorMoveToResponse(Ros2BaseModel):
+    _prefix: str = "rai_interfaces/srv"
+    success: bool = False
+
+
+class RAIGroundedSamRequest(Ros2BaseModel):
+    _prefix: str = "rai_interfaces/srv"
+    detections: RAIDetectionArray = RAIDetectionArray()
+    source_img: Image = Image()
+
+
+class RAIGroundedSamResponse(Ros2BaseModel):
+    _prefix: str = "rai_interfaces/srv"
+    masks: List[Image] = []
+
+
+class RAIGroundingDinoRequest(Ros2BaseModel):
+    _prefix: str = "rai_interfaces/srv"
+    classes: str = ""
+    box_threshold: float = 0.0
+    text_threshold: float = 0.0
+    source_img: Image = Image()
+
+
+class RAIGroundingDinoResponse(Ros2BaseModel):
+    _prefix: str = "rai_interfaces/srv"
+    detections: RAIDetectionArray = RAIDetectionArray()
