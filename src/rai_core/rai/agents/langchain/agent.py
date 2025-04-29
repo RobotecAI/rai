@@ -209,6 +209,7 @@ class LangChainAgent(BaseAgent):
                 self._run_agent()
 
     def stop(self):
+        """Stop the agent's execution loop."""
         self._stop_event.set()
         self._interrupt_event.set()
         self._agent_ready_event.wait()
@@ -217,6 +218,7 @@ class LangChainAgent(BaseAgent):
             self._thread.join()
             self._thread = None
             self.logger.info("Agent stopped")
+        self._stop_event.clear()
 
     @staticmethod
     def _apply_reduction_behavior(

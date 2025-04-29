@@ -165,16 +165,18 @@ class BaseStateBasedAgent(LangChainAgent, ABC):
 
     def stop(self):
         """Stop the agent's execution loop."""
-        self.logger.info("Stopping the agent. Please wait...")
         self._stop_event.set()
-        if self.thread is not None:
-            self.thread.join()
-            self.thread = None
+        self._interrupt_event.set()
+        self._agent_ready_event.wait()
+        if self._thread is not None:
+            self.logger.info("Stopping the agent. Please wait...")
+            self._thread.join()
+            self._thread = None
         if self._aggregation_thread is not None:
             self._aggregation_thread.join()
             self._aggregation_thread = None
-        self._stop_event.clear()
         for callback_id in self._registered_callbacks:
             self._connector.unregister_callback(callback_id)
+        self._stop_event.clear()
         self._connector.shutdown()
         self.logger.info("Agent stopped")
