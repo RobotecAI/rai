@@ -34,7 +34,9 @@ def main():
 
     config = StateBasedConfig(
         aggregators={
-            "/camera/camera/color/image_raw": [ROS2ImgVLMDiffAggregator()],
+            ("/camera/camera/color/image_raw", "sensor_msgs/msg/Image"): [
+                ROS2ImgVLMDiffAggregator()
+            ],
             "/rosout": [ROS2LogsAggregator()],
         }
     )

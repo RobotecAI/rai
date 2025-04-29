@@ -16,7 +16,7 @@ import threading
 import time
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage
@@ -33,7 +33,9 @@ from .runnables import ReActAgentState, create_state_based_runnable
 
 
 class StateBasedConfig(BaseModel):
-    aggregators: Dict[str, List[BaseAggregator]]
+    aggregators: Dict[Union[str, Tuple[str, str]], List[BaseAggregator]] = Field(
+        description="Dict of topic : aggregator or (topic, msg_type) : aggragator"
+    )
     time_interval: float = Field(default=5.0)
     max_workers: int = 8
 
@@ -96,9 +98,13 @@ class BaseStateBasedAgent(LangChainAgent, ABC):
 
     def _configure_state_sources(self):
         for source, aggregators in self.config.aggregators.items():
+            if isinstance(source, tuple):
+                source, msg_type = source
+            else:
+                msg_type = None
             for aggregator in aggregators:
                 callback_id = self._connector.register_callback(
-                    source, aggregator, raw=True
+                    source, aggregator, raw=True, msg_type=msg_type
                 )
                 self._registered_callbacks.add(callback_id)
 
