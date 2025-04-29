@@ -28,30 +28,33 @@ class RAIDetectionArray(ROS2BaseModel):
     detection_classes: List[str] = []
 
 
-class ManipulatorMoveToRequest(ROS2BaseModel):
+class BaseRaiSrv(ROS2BaseModel):
     _prefix: str = "rai_interfaces/srv"
+
+
+class ManipulatorMoveToRequest(BaseRaiSrv):
     initial_gripper_state: bool = False
     final_gripper_state: bool = False
     target_pose: PoseStamped = PoseStamped()
 
 
-class ManipulatorMoveToResponse(ROS2BaseModel):
+class ManipulatorMoveToResponse(BaseRaiSrv):
     _prefix: str = "rai_interfaces/srv"
     success: bool = False
 
 
-class RAIGroundedSamRequest(ROS2BaseModel):
+class RAIGroundedSamRequest(BaseRaiSrv):
     _prefix: str = "rai_interfaces/srv"
     detections: RAIDetectionArray = RAIDetectionArray()
     source_img: Image = Image()
 
 
-class RAIGroundedSamResponse(ROS2BaseModel):
+class RAIGroundedSamResponse(BaseRaiSrv):
     _prefix: str = "rai_interfaces/srv"
     masks: List[Image] = []
 
 
-class RAIGroundingDinoRequest(ROS2BaseModel):
+class RAIGroundingDinoRequest(BaseRaiSrv):
     _prefix: str = "rai_interfaces/srv"
     classes: str = ""
     box_threshold: float = 0.0
@@ -59,6 +62,6 @@ class RAIGroundingDinoRequest(ROS2BaseModel):
     source_img: Image = Image()
 
 
-class RAIGroundingDinoResponse(ROS2BaseModel):
+class RAIGroundingDinoResponse(BaseRaiSrv):
     _prefix: str = "rai_interfaces/srv"
     detections: RAIDetectionArray = RAIDetectionArray()

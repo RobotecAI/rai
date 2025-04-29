@@ -18,9 +18,12 @@ from .std import Header
 from .vision import RegionOfInterest
 
 
-class CameraInfo(ROS2BaseModel):
+class BaseSensorModel(ROS2BaseModel):
     _prefix: str = "sensor_msgs/msg"
     header: Header = Header()
+
+
+class CameraInfo(BaseSensorModel):
     height: int = 0
     width: int = 0
     distortion_model: str = ""
@@ -33,9 +36,7 @@ class CameraInfo(ROS2BaseModel):
     roi: RegionOfInterest = RegionOfInterest()
 
 
-class Image(ROS2BaseModel):
-    _prefix: str = "sensor_msgs/msg"
-    header: Header = Header()
+class Image(BaseSensorModel):
     height: int = 0
     width: int = 0
     encoding: str = ""
