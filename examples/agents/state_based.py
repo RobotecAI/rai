@@ -37,7 +37,9 @@ def main():
             ("/camera/camera/color/image_raw", "sensor_msgs/msg/Image"): [
                 ROS2ImgVLMDiffAggregator()
             ],
-            "/rosout": [ROS2LogsAggregator()],
+            "/rosout": [
+                ROS2LogsAggregator()
+            ],  # if msg_type is not provided, topic has to exist
         }
     )
 
