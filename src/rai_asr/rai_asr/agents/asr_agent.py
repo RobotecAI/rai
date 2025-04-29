@@ -17,7 +17,6 @@ import logging
 import time
 from threading import Event, Lock, Thread
 from typing import Any, List, Optional, TypedDict
-from typing_extensions import Self
 from uuid import uuid4
 
 import numpy as np
@@ -34,9 +33,11 @@ from rai.communication.sound_device import (
     SoundDeviceConnector,
     SoundDeviceMessage,
 )
+from typing_extensions import Self
 
 from rai_asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
-from .initialization import ASRAgentConfig, load_config
+
+from .initialization import load_config
 
 
 class ThreadData(TypedDict):

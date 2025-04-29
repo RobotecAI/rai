@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from rai_tts.agents.initialization import TTS_MODELS, TTSAgentConfig, load_config
 from rai_tts.agents.tts_agent import TextToSpeechAgent
-from rai_tts.agents.initialization import TTS_MODELS, load_config, TTSAgentConfig
 
-__all__ = ["TextToSpeechAgent", "TTSAgentConfig", "load_config", "TTS_MODELS"]
+__all__ = ["TTS_MODELS", "TTSAgentConfig", "TextToSpeechAgent", "load_config"]

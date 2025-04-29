@@ -27,8 +27,6 @@ from langchain_aws import BedrockEmbeddings, ChatBedrock
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
-from rai.communication import sound_device
-
 
 def get_sound_devices(
     reinitialize: bool = False, output: bool = False
@@ -948,7 +946,7 @@ def setup_steps():
 
         step_names.append("🔊 Text to Speech")
         step_render.append(tts)
-    except ImportError as e:
+    except ImportError:
         pass
 
     step_names.extend(

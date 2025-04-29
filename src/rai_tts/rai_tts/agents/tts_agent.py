@@ -17,7 +17,6 @@ import logging
 from dataclasses import dataclass
 from threading import Event, Thread
 from typing import TYPE_CHECKING, Optional
-from typing_extensions import Self
 from uuid import uuid4
 
 from numpy._typing import NDArray
@@ -32,6 +31,7 @@ from rai.communication.ros2 import (
 from rai.communication.sound_device import SoundDeviceConfig, SoundDeviceConnector
 from rai.communication.sound_device.connector import SoundDeviceMessage
 from std_msgs.msg import String
+from typing_extensions import Self
 
 from rai_interfaces.msg._hri_message import HRIMessage
 from rai_tts.models.base import TTSModel
