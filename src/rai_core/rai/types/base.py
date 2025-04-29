@@ -19,7 +19,7 @@ class RaiBaseModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class Ros2BaseModel(RaiBaseModel):
+class ROS2BaseModel(RaiBaseModel):
     """
     Base model for messages replicated from ros2
 

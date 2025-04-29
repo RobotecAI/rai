@@ -14,12 +14,12 @@
 
 from typing import List
 
-from .base import Ros2BaseModel
+from .base import ROS2BaseModel
 from .geometry import Pose2D, PoseWithCovariance
 from .std import Header
 
 
-class BaseVisionModel(Ros2BaseModel):
+class BaseVisionModel(ROS2BaseModel):
     _prefix: str = "vision_msgs/msg"
 
 

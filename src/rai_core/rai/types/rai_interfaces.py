@@ -18,19 +18,19 @@ from .geometry import PoseStamped
 from .sensor import Image
 from .std import (
     Header,
-    Ros2BaseModel,
+    ROS2BaseModel,
 )
 from .vision import Detection2D
 
 
-class AudioMessage(Ros2BaseModel):
+class AudioMessage(ROS2BaseModel):
     _prefix: str = "rai_interfaces/msg"
     audio: List[int] = []
     sample_rate: int = 0
     channels: int = 0
 
 
-class HRIMessage(Ros2BaseModel):
+class HRIMessage(ROS2BaseModel):
     _prefix: str = "rai_interfaces/msg"
     header: Header = Header()
     text: str = ""
@@ -41,37 +41,37 @@ class HRIMessage(Ros2BaseModel):
     seq_end: bool = False
 
 
-class RAIDetectionArray(Ros2BaseModel):
+class RAIDetectionArray(ROS2BaseModel):
     _prefix: str = "rai_interfaces/msg"
     header: Header = Header()
     detections: List[Detection2D] = []
     detection_classes: List[str] = []
 
 
-class ManipulatorMoveToRequest(Ros2BaseModel):
+class ManipulatorMoveToRequest(ROS2BaseModel):
     _prefix: str = "rai_interfaces/srv"
     initial_gripper_state: bool = False
     final_gripper_state: bool = False
     target_pose: PoseStamped = PoseStamped()
 
 
-class ManipulatorMoveToResponse(Ros2BaseModel):
+class ManipulatorMoveToResponse(ROS2BaseModel):
     _prefix: str = "rai_interfaces/srv"
     success: bool = False
 
 
-class RAIGroundedSamRequest(Ros2BaseModel):
+class RAIGroundedSamRequest(ROS2BaseModel):
     _prefix: str = "rai_interfaces/srv"
     detections: RAIDetectionArray = RAIDetectionArray()
     source_img: Image = Image()
 
 
-class RAIGroundedSamResponse(Ros2BaseModel):
+class RAIGroundedSamResponse(ROS2BaseModel):
     _prefix: str = "rai_interfaces/srv"
     masks: List[Image] = []
 
 
-class RAIGroundingDinoRequest(Ros2BaseModel):
+class RAIGroundingDinoRequest(ROS2BaseModel):
     _prefix: str = "rai_interfaces/srv"
     classes: str = ""
     box_threshold: float = 0.0
@@ -79,6 +79,6 @@ class RAIGroundingDinoRequest(Ros2BaseModel):
     source_img: Image = Image()
 
 
-class RAIGroundingDinoResponse(Ros2BaseModel):
+class RAIGroundingDinoResponse(ROS2BaseModel):
     _prefix: str = "rai_interfaces/srv"
     detections: RAIDetectionArray = RAIDetectionArray()

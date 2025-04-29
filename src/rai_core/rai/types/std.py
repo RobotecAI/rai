@@ -14,10 +14,10 @@
 
 from pydantic import Field
 
-from . import Ros2BaseModel
+from . import ROS2BaseModel
 
 
-class BaseStdModel(Ros2BaseModel):
+class BaseStdModel(ROS2BaseModel):
     _prefix: str = "std_msgs/msg"
 
 

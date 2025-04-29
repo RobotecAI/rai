@@ -13,12 +13,12 @@
 # limitations under the License.
 from typing import List
 
-from .base import Ros2BaseModel
+from .base import ROS2BaseModel
 from .std import Header
 from .vision import RegionOfInterest
 
 
-class CameraInfo(Ros2BaseModel):
+class CameraInfo(ROS2BaseModel):
     _prefix: str = "sensor_msgs/msg"
     header: Header = Header()
     height: int = 0
@@ -33,7 +33,7 @@ class CameraInfo(Ros2BaseModel):
     roi: RegionOfInterest = RegionOfInterest()
 
 
-class Image(Ros2BaseModel):
+class Image(ROS2BaseModel):
     _prefix: str = "sensor_msgs/msg"
     header: Header = Header()
     height: int = 0

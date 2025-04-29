@@ -26,7 +26,7 @@ from rai.types import (
     PoseStamped,
     Quaternion,
     RaiBaseModel,
-    Ros2BaseModel,
+    ROS2BaseModel,
 )
 
 
@@ -61,7 +61,7 @@ class SpawnedEntity(Entity):
     )
 
 
-class SpawnEntityService(Ros2BaseModel):
+class SpawnEntityService(ROS2BaseModel):
     _prefix: str = "gazebo_msgs/srv"
     name: str
     robot_namespace: str

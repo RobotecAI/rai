@@ -14,45 +14,45 @@
 
 from typing import List
 
-from rai.types import Image, Pose, Ros2BaseModel
+from rai.types import Image, Pose, ROS2BaseModel
 
 
-class StringListRequest(Ros2BaseModel):
+class StringListRequest(ROS2BaseModel):
     pass
 
 
-class StringListResponse(Ros2BaseModel):
+class StringListResponse(ROS2BaseModel):
     success: bool = False
     string_list: List[str] = []
 
 
-class VectorStoreRetrievalRequest(Ros2BaseModel):
+class VectorStoreRetrievalRequest(ROS2BaseModel):
     query: str = ""
 
 
-class VectorStoreRetrievalResponse(Ros2BaseModel):
+class VectorStoreRetrievalResponse(ROS2BaseModel):
     success: bool = False
     message: str = ""
     documents: List[str] = []
     scores: List[float] = []
 
 
-class WhatISeeRequest(Ros2BaseModel):
+class WhatISeeRequest(ROS2BaseModel):
     pass
 
 
-class WhatISeeResponse(Ros2BaseModel):
+class WhatISeeResponse(ROS2BaseModel):
     observations: List[str] = []
     perception_source: str = ""
     image: Image = Image()
     pose: Pose = Pose()
 
 
-class PlannerInterfaceDescription(Ros2BaseModel):
+class PlannerInterfaceDescription(ROS2BaseModel):
     name: str = ""
     pipeline_id: str = ""
     planner_ids: List[str] = []
 
 
-class QueryPlannerInterfaceResponse(Ros2BaseModel):
+class QueryPlannerInterfaceResponse(ROS2BaseModel):
     planner_interfaces: List[PlannerInterfaceDescription] = []

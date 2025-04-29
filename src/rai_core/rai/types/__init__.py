@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from .base import RaiBaseModel, Ros2BaseModel
+from .base import RaiBaseModel, ROS2BaseModel
 from .geometry import Point, Pose, Pose2D, PoseStamped, PoseWithCovariance, Quaternion
 from .sensor import CameraInfo, Image
 from .std import Header, Time
@@ -39,8 +39,8 @@ __all__ = [
     "PoseStamped",
     "PoseWithCovariance",
     "Quaternion",
+    "ROS2BaseModel",
     "RaiBaseModel",
     "RegionOfInterest",
-    "Ros2BaseModel",
     "Time",
 ]
