@@ -1,7 +1,7 @@
 # RAI
 
 > [!IMPORTANT]  
-> **Development Status**: RAI is currently undergoing significant development on the development branch, focusing on version 2.0. This major version update will introduce substantial improvements and is not backward compatible with version 1.0. For the latest stable release, please refer to the [main branch](https://github.com/RobotecAI/rai/tree/main).
+> **Development Status**: RAI is currently undergoing significant development on the development branch, focusing on version 2.0. This major version update will introduce substantial improvements and is not backward compatible with version 1.0. We are targeting an early May 2025 release for RAI 2.0. For the latest stable release, please refer to the [main branch](https://github.com/RobotecAI/rai/tree/main).
 
 RAI is a flexible AI agent framework to develop and deploy Embodied AI features for your robots.
 
@@ -30,57 +30,55 @@ RAI is a flexible AI agent framework to develop and deploy Embodied AI features 
 
 ---
 
-## Overview
+## 🎯 Overview
 
-The RAI framework aims to:
+The RAI framework is designed to revolutionize robotics by:
 
-- Supply a general multi-agent system, bringing Gen AI features to your robots.
-- Add human interactivity, flexibility in problem-solving, and out-of-box AI features to existing robot stacks.
-- Provide first-class support for multi-modalities, enabling interaction with various data types.
+🤖 **Empowering Multi-Agent Systems**
 
-## Limitations
+- Seamlessly integrate Gen AI capabilities into your robots
+- Enable sophisticated agent-based architectures
 
-- Limitations of LLMs and VLMs in use apply: poor spatial reasoning, hallucinations, jailbreaks, latencies, costs, ...
-- Resource use (memory, CPU) is not addressed yet.​
-- Requires connectivity and / or an edge platform.​
+🔄 **Enhancing Robot Intelligence**
+
+- Add natural human-robot interaction capabilities
+- Bring flexible problem-solving to your existing stack
+- Provide ready-to-use AI features out of the box
+
+🌟 **Supporting Multi-Modal Interaction**
+
+- Handle diverse data types natively
+- Enable rich sensory integration
+- Process multiple input/output modalities simultaneously
 
 ## Table of Contents
 
-- [Features](#features)
-- [Setup (docker)](#setup-docker)
-- [Setup (local)](#setup)
+- [Framework](#rai-framework)
+- [Setup](#setup)
 - [Usage examples (demos)](#simulation-demos)
-- [Debugging Assistant](#debugging-assistant)
+- [Communication Protocols](#communication-protocols)
 - [Developer resources](#developer-resources)
 
-## Features
+## RAI framework
 
-- [x] Voice interaction (both ways).
-- [x] Customizable robot identity, including constitution (ethical code) and documentation (understanding own capabilities).
-- [x] Accessing camera ("What do you see?"), utilizing VLMs.
-- [x] Summarizing own state through ROS logs.
-- [x] ROS 2 action calling and other interfaces. The Agent can dynamically list interfaces, check their message type, and publish.
-- [x] Integration with LangChain to abstract vendors and access convenient AI tools.
-- [x] Tasks in natural language to nav2 goals.
-- [x] [NoMaD](https://general-navigation-models.github.io/nomad/) integration.
-- [x] Tracing.
-- [x] Grounded SAM 2 integration.
-- [x] Improved Human-Robot Interaction with voice and text.
-- [x] Additional tooling such as GroundingDino.
-- [x] Support for at least 3 different AI vendors.
-- [x] Debugging assistant for ROS 2.
-- [ ] SDK for RAI developers.
-- [ ] UI for configuration to select features and tools relevant for your deployment.
+- [x] rai core: Core functionality for multi-agent system, human-robot interaction and multi-modalities.
+- [x] rai whoami: Tool to extract and synthesize robot embodiment information from a structured directory of documentation, images, and URDFs.
+- [x] rai_asr: Speech-to-text models and tools.
+- [x] rai_tts: Text-to-speech models and tools.
+- [x] rai_sim: Package for connecting RAI to simulation environments.
+- [x] rai_bench: Benchmarking suite for RAI. Test agents, models, tools, simulators, etc.
+- [x] rai_openset: Openset detection models and tools.
+- [x] rai_nomad: Integration with NoMaD for navigation.
+- [ ] rai_finetune: Finetune LLMs on your embodied data.
 
-## Setup (docker)
-
-Currently, docker images are experimental. See the [docker](docs/setup_docker.md) for instructions.
-
-## Setup (local)
+## Setup
 
 Before going further, make sure you have ROS 2 (Jazzy or Humble) installed and sourced on your system.
 If you don't have ROS 2 follow the installation documentation for [Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html) or [Jazzy](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html).
 Make sure that `ros-dev-tools` are installed.
+
+> [!TIP]  
+> RAI has experimental docker images. See the [docker](docs/setup_docker.md) for instructions.
 
 ### 1. Setting up the workspace:
 
@@ -117,7 +115,7 @@ rosdep install --from-paths src --ignore-src -r -y
 
 #### 1.4 Configure RAI
 
-Run the configuration tool to set up your vendor and other settings:
+Run the configuration tool to set up your LLM vendor and other settings:
 
 ```bash
 poetry run streamlit run src/rai_core/rai/frontend/configurator.py
@@ -145,6 +143,7 @@ source ./setup_shell.sh
 RAI is vendor-agnostic. Use the configuration in [config.toml](./config.toml) to set up your vendor of choice for RAI modules.
 Vendor choices for RAI and our recommendations are summarized in [Vendors Overview](docs/vendors_overview.md).
 
+> [!TIP]  
 > We strongly recommend you to use of best-performing AI models to get the most out of RAI!
 
 Pick your local solution or service provider and follow one of these guides:
@@ -155,15 +154,21 @@ Pick your local solution or service provider and follow one of these guides:
 
 ## What's next?
 
-Once you know your way around RAI, try the following challenges, with the aid the [developer guide](docs/developer_guide.md):
+RAI provides a comprehensive set of tools and capabilities for your robotic applications. With the help of our [developer guide](docs/developer_guide.md), you can:
 
-- Run RAI on your own robot and talk to it, asking questions about what is in its documentation (and others!).
-- Implement additional tools and use them in your interaction.
-- Try a complex, multi-step task for your robot, such as going to several points to perform observations!
+- Deploy RAI on your robot and engage in natural conversations about its documentation and capabilities
+- Extend the framework with custom tools and integrate them into your interactions
+- Implement complex, multi-step tasks that leverage RAI's reasoning and planning capabilities
 
-## Debugging Assistant
+## Communication Protocols
 
-Use the [debugging assistant](./docs/debugging_assistant.md) to inspect ROS 2 network state and troubleshoot issues.
+RAI provides first-class support for ROS 2 Humble and Jazzy distributions. While ROS 2 serves as our Tier 1 communication protocol, RAI's architecture includes a powerful abstraction layer that:
+
+- Simplifies communication across different networks and protocols
+- Enables seamless integration with various communication backends
+- Allows for future protocol extensions while maintaining a consistent interface
+
+This design philosophy means that while RAI is fully compatible with ROS 2, most of its features can be utilized independently of the ROS 2 environment. The framework's modular architecture makes it suitable not only for different robotic platforms but also for non-robotic applications, offering flexibility in deployment across various domains.
 
 ### Simulation demos
 

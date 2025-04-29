@@ -23,7 +23,7 @@ To enable Langfuse tracing:
 2. Set the `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` environment variables with your Langfuse credentials.
 3. Optionally, you can specify a custom Langfuse host by modifying the `host` field under `[tracing.langfuse]`.
 
-### LangSmith (closed-source, paid)
+### LangSmith (closed-source, paid, limited free tier)
 
 [LangSmith](https://www.langchain.com/langsmith) is a platform for debugging, testing, and monitoring LangChain applications.
 

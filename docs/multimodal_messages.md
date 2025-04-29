@@ -1,7 +1,7 @@
 # Message Types
 
-RAI implements `MultimodalMessage` that allows using image and audio* information.\
-*audio is currently added as a placeholder
+RAI implements `MultimodalMessage` that allows using image and audio* information in langchain.
+*audio is currently added as a placeholder for future implementation.
 
 ## Usage
 
@@ -23,7 +23,7 @@ from rai import get_llm_model
 base64_image = preprocess_image('https://raw.githubusercontent.com/RobotecAI/RobotecGPULidar/develop/docs/image/rgl-logo.png')
 
 llm = get_llm_model(model_type='complex_model') # initialize your vendor of choice in config.toml
-msg = [HumanMultimodalMessage(content='This is an example', images=[base64_image])]
+msg = [HumanMultimodalMessage(content='Describe the image', images=[base64_image])]
 llm.invoke(msg).pretty_print()
 
 # "The image contains the words "Robotec," "GPU," and "Lidar" written in a stylized,

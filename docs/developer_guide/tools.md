@@ -201,10 +201,10 @@ from rai import AgentRunner
 @ROS2Context()
 def main() -> None:
     """Initialize and run the RAI agent with configured tools."""
-    connector = ROS2HRIConnector(sources=["/from_human"], targets=["/to_human"])
+    connector = ROS2HRIConnector()
     ros2_connector = ROS2Connector()
     agent = ReActAgent(
-        connectors={"hri": connector},
+        connectors={"/to_human": connector},
         tools=initialize_tools(connector=ros2_connector),
     )
     runner = AgentRunner([agent])
