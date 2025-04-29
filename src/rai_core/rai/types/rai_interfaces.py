@@ -14,11 +14,11 @@
 
 from typing import List
 
-from .base import ROS2BaseModel
-from .geometry import PoseStamped
-from .sensor import Image
-from .std import Header
-from .vision import Detection2D
+from rai.types.base import ROS2BaseModel
+from rai.types.geometry import PoseStamped
+from rai.types.sensor import Image
+from rai.types.std import Header
+from rai.types.vision import Detection2D
 
 
 class RAIDetectionArray(ROS2BaseModel):

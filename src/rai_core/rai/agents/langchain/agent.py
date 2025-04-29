@@ -22,12 +22,11 @@ from typing import Deque, Dict, List, Literal, Optional, TypedDict
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
 
+from rai.agents.base import BaseAgent
+from rai.agents.langchain.callback import HRICallbackHandler
+from rai.agents.langchain.runnables import ReActAgentState
 from rai.communication.hri_connector import HRIConnector, HRIMessage
 from rai.initialization import get_tracing_callbacks
-
-from ..base import BaseAgent
-from .callback import HRICallbackHandler
-from .runnables import ReActAgentState
 
 
 class BaseState(TypedDict):

@@ -14,8 +14,8 @@
 
 from typing import List
 
-from .base import ROS2BaseModel
-from .std import Header
+from rai.types.base import ROS2BaseModel
+from rai.types.std import Header
 
 
 class BaseGeometryModel(ROS2BaseModel):
