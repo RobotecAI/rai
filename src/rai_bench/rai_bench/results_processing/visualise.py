@@ -258,6 +258,28 @@ def display_task_complexity_performance(model_results: ModelResults):
     st.plotly_chart(fig_complexity_calls, use_container_width=True)  # type: ignore
 
 
+def wrap_text(text: str, max_width: int = 50):
+    """Wrap text to multiple lines if it's too long"""
+    words = text.split()
+    lines: List[str] = []
+    current_line = []
+    current_length = 0
+
+    for word in words:
+        if current_length + len(word) + len(current_line) <= max_width:
+            current_line.append(word)
+            current_length += len(word)
+        else:
+            lines.append(" ".join(current_line))
+            current_line = [word]
+            current_length = len(word)
+
+    if current_line:
+        lines.append(" ".join(current_line))
+
+    return "<br>".join(lines)
+
+
 def display_detailed_task_type_analysis(
     model_results: ModelResults, selected_type: str
 ):
@@ -295,6 +317,9 @@ def display_detailed_task_type_analysis(
 
     # Replace zero scores with a small value to enable hover
     task_stats = task_stats.replace(0, 0.01)  # type: ignore
+
+    # wrapped text column for hover, so that text is multiline
+    task_stats["wrapped_prompt"] = task_stats["task_prompt"].apply(wrap_text)  # type: ignore
     task_stats["score"] = task_stats["score"].round(2)
     task_stats["total_time"] = task_stats["total_time"].round(2)
     # Create short labels for x-axis
@@ -311,7 +336,7 @@ def display_detailed_task_type_analysis(
         title=f"Avg Score for '{selected_type}' Tasks",
         x_label="Task",
         y_label="Avg Score",
-        custom_data=["task_prompt", "score"],
+        custom_data=["wrapped_prompt", "score"],
         hover_template="<b>Task:</b> %{customdata[0]}\n <b>Score:</b> %{customdata[1]}",
         y_range=(0.0, 1.0),
         x_tickvals=task_stats["task_prompt"].tolist(),
@@ -326,7 +351,7 @@ def display_detailed_task_type_analysis(
         title=f"Avg Time for '{selected_type}' Tasks",
         x_label="Task",
         y_label="Avg Time (s)",
-        custom_data=["task_prompt", "total_time"],
+        custom_data=["wrapped_prompt", "total_time"],
         hover_template="<b>Task:</b> %{customdata[0]}\n <b>Time:</b> %{customdata[1]}",
         x_tickvals=task_stats["task_prompt"].tolist(),
         x_ticktext=short_labels,
