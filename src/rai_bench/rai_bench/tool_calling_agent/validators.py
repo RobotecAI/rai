@@ -44,6 +44,7 @@ class OrderedCallsValidator(Validator):
         return "ordered"
 
     def validate(self, tool_calls: List[ToolCall]) -> Tuple[bool, List[ToolCall]]:
+        self.reset()
         # Before validation create new iterator, in case validator
         # was used before in other task
         subtask_iter = iter(enumerate(self.subtasks))
@@ -93,6 +94,7 @@ class NotOrderedCallsValidator(Validator):
         return "not ordered"
 
     def validate(self, tool_calls: List[ToolCall]) -> Tuple[bool, List[ToolCall]]:
+        self.reset()
         if len(tool_calls) < 1:
             self.logger.error("Not a single tool call to validate")
             self.passed = False

@@ -410,15 +410,26 @@ class Validator(ABC):
 
     def reset(self):
         """
-        reset all values refering previous validation
-        before next validation
+        resets all values refering previous validation.
+        Use it before next validation.
         """
         self.subtasks_errors = [[] for _ in range(len(self.subtasks))]
-        self.subtasks_passed: List[bool] = [False for _ in range(len(self.subtasks))]
+        self.subtasks_passed = [False for _ in range(len(self.subtasks))]
         self.extra_calls_used = 0
         self.passed = None
 
     def dump_results(self) -> ValidatorResult:
+        """Get results for last validate() call
+
+        Returns
+        -------
+        ValidatorResult
+
+        Raises
+        ------
+        ValueError
+            When called before validate()
+        """
         if self.passed is None:
             raise ValueError("Run validator validation before dumping results")
         subtasks_results: List[SubTaskResult] = []
@@ -436,7 +447,6 @@ class Validator(ABC):
             extra_tool_calls_used=self.extra_calls_used,
             passed=self.passed,
         )
-        self.reset()
         return result
 
     @abstractmethod

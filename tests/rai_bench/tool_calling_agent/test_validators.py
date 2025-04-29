@@ -443,6 +443,43 @@ class TestOrderedCallsValidator:
             expected_errors_counts=[0, 5],
         )
 
+    def test_validate_reset(self):
+        subtasks = [
+            DummySubTask("task1"),
+            DummySubTask("task2", outcomes=10 * [False]),
+        ]
+        validator = OrderedCallsValidator(subtasks=subtasks)
+
+        tool_calls = [
+            ToolCall(name="tool1"),
+            ToolCall(name="tool2"),
+            ToolCall(name="tool2"),
+            ToolCall(name="tool2"),
+            ToolCall(name="tool2"),
+            ToolCall(name="tool2"),
+        ]
+        # additional call
+        validator.validate(tool_calls=tool_calls)
+        success, remaining = validator.validate(tool_calls=tool_calls)
+
+        assert not success
+        assert remaining == []
+        assert validator.subtasks_passed[0] is True
+        assert validator.subtasks_passed[1] is False
+        assert len(validator.subtasks_errors[1]) == 5
+        assert "error in task2" in validator.subtasks_errors[1][0]
+        assert validator.passed is False
+        assert validator.extra_calls_used == 4
+
+        assert_dumped(
+            validator,
+            expected_type="ordered",
+            expected_passed=False,
+            expected_extra_calls=4,
+            expected_subtasks_passed=[True, False],
+            expected_errors_counts=[0, 5],
+        )
+
 
 class TestNotOrderedCallsValidator:
     def test_init_with_empty_subtasks(self):
@@ -590,6 +627,35 @@ class TestNotOrderedCallsValidator:
         validator = NotOrderedCallsValidator(subtasks=subtasks)
         tool_calls = [ToolCall(), ToolCall()]
 
+        success, remaining = validator.validate(tool_calls=tool_calls)
+
+        assert not success
+        assert remaining == []
+        assert all(not passed for passed in validator.subtasks_passed)
+        assert len(validator.subtasks_errors[0]) == 2
+        assert len(validator.subtasks_errors[1]) == 2
+        assert validator.passed is False
+        assert validator.extra_calls_used == 0
+
+        assert_dumped(
+            validator,
+            expected_type="not ordered",
+            expected_passed=False,
+            expected_extra_calls=0,
+            expected_subtasks_passed=[False, False],
+            expected_errors_counts=[2, 2],
+        )
+
+    def test_validate_reset(self):
+        subtasks = [
+            DummySubTask("task1", outcomes=4 * [False]),
+            DummySubTask("task2", outcomes=4 * [False]),
+        ]
+        validator = NotOrderedCallsValidator(subtasks=subtasks)
+        tool_calls = [ToolCall(), ToolCall()]
+
+        # additional call
+        validator.validate(tool_calls=tool_calls)
         success, remaining = validator.validate(tool_calls=tool_calls)
 
         assert not success
