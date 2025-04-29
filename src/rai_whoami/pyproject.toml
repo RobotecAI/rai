@@ -20,6 +20,7 @@ langchain = "*"
 PyPDF2 = "*"
 Pillow = "*"
 faiss-cpu = "*"
+pypdf = "^5.4.0"
 
 [tool.poetry.scripts]
 build-whoami = "rai_whoami.build_whoami:build_whoami"

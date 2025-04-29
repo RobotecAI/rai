@@ -4,8 +4,6 @@ RAI Agent needs to understand what kind of robot it is running on.
 This includes its looks, purpose, ethical code, equipment, capabilities and documentation.
 To configure RAI for your robot, provide contents for your robot's so called `whoami` package.
 
-Your robot's `whoami` package serves as a configuration package for the `rai_whoami` node.
-
 ## Configuration example - Franka Emika Panda arm
 
 1. Setup the repository using 1st and 2nd step from [Setup](../README.md#setup)
