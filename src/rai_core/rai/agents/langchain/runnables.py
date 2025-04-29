@@ -31,10 +31,9 @@ from langchain_core.tools import BaseTool
 from langgraph.graph import START, StateGraph
 from langgraph.prebuilt.tool_node import tools_condition
 
-from rai.agents.tool_runner import ToolRunner
-from rai.initialization import get_llm_model
-from rai.messages import HumanMultimodalMessage
 from rai.agents import ToolRunner
+from rai.initialization import get_llm_model
+from rai.messages import HumanMultimodalMessage, SystemMultimodalMessage
 
 
 class ReActAgentState(TypedDict):
