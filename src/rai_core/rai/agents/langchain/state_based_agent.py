@@ -22,16 +22,14 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
-from rclpy.callback_groups import ReentrantCallbackGroup
-from rclpy.subscription import Subscription
 
-from rai.agents.langchain import create_state_based_runnable
 from rai.aggregators import BaseAggregator
 from rai.communication.base_connector import BaseConnector
 from rai.communication.hri_connector import HRIConnector, HRIMessage
 from rai.messages.multimodal import HumanMultimodalMessage
 
-from .langchain import ReActAgent, ReActAgentState, create_state_based_runnable
+from .agent import LangChainAgent, newMessageBehaviorType
+from .runnables import ReActAgentState, create_state_based_runnable
 
 
 class StateBasedConfig(BaseModel):
@@ -44,7 +42,7 @@ class StateBasedConfig(BaseModel):
     )
 
 
-class BaseStateBasedAgent(ReActAgent, ABC):
+class BaseStateBasedAgent(LangChainAgent, ABC):
     """
     Agent that runs aggregators (config.aggregators) every config.time_interval seconds.
     Aggregators are registered to their sources using
@@ -59,12 +57,14 @@ class BaseStateBasedAgent(ReActAgent, ABC):
 
     def __init__(
         self,
-        connectors: dict[str, HRIConnector[HRIMessage]],
         config: StateBasedConfig,
+        target_connectors: Dict[str, HRIConnector[HRIMessage]],
         llm: Optional[BaseChatModel] = None,
         tools: Optional[List[BaseTool]] = None,
         state: Optional[ReActAgentState] = None,
         system_prompt: Optional[str] = None,
+        new_message_behavior: newMessageBehaviorType = "interrupt_keep_last",
+        max_size: int = 100,
     ):
         runnable = create_state_based_runnable(
             llm=llm,
@@ -73,12 +73,13 @@ class BaseStateBasedAgent(ReActAgent, ABC):
             state_retriever=self.get_state,
         )
         super().__init__(
-            connectors, llm, tools, state, system_prompt, runnable=runnable
+            target_connectors=target_connectors,
+            runnable=runnable,
+            state=state,
+            new_message_behavior=new_message_behavior,
+            max_size=max_size,
         )
         self.config = config
-
-        self._callback_group = ReentrantCallbackGroup()
-        self._subscriptions: Dict[str, Subscription] = dict()
 
         self._aggregation_results: Dict[str, HumanMessage | HumanMultimodalMessage] = (
             dict()

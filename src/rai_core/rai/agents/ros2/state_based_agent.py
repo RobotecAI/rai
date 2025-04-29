@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai.agents import BaseStateBasedAgent
 from rai.communication.ros2 import ROS2Connector
+
+from ..langchain import BaseStateBasedAgent
 
 
 class ROS2StateBasedAgent(BaseStateBasedAgent):

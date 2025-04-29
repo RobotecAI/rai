@@ -21,7 +21,7 @@ from rcl_interfaces.msg import Log
 from sensor_msgs.msg import CompressedImage, Image
 
 from rai.aggregators import BaseAggregator
-from rai.communication.ros2.api.conversion import encode_ros2_img_to_base64
+from rai.communication.ros2.api import convert_ros_img_to_base64
 from rai.initialization.model_initialization import get_llm_model
 from rai.messages import HumanMultimodalMessage
 
@@ -61,7 +61,7 @@ class ROS2GetLastImageAggregator(BaseAggregator[Image | CompressedImage]):
         if len(msgs) == 0:
             return None
         ros2_img = msgs[-1]
-        b64_image = encode_ros2_img_to_base64(ros2_img)
+        b64_image = convert_ros_img_to_base64(ros2_img)
         self.clear_buffer()
         return HumanMultimodalMessage(content="", images=[b64_image])
 
@@ -87,7 +87,7 @@ class ROS2ImgVLMDescriptionAggregator(BaseAggregator[Image | CompressedImage]):
         if len(msgs) == 0:
             return None
 
-        b64_images: List[str] = [encode_ros2_img_to_base64(msg) for msg in msgs]
+        b64_images: List[str] = [convert_ros_img_to_base64(msg) for msg in msgs]
         self.clear_buffer()
 
         class ROS2ImgDescription(BaseModel):
@@ -141,7 +141,7 @@ class ROS2ImgVLMDiffAggregator(BaseAggregator[Image | CompressedImage]):
         if len(msgs) == 0:
             return None
 
-        b64_images = [encode_ros2_img_to_base64(msg) for msg in msgs]
+        b64_images = [convert_ros_img_to_base64(msg) for msg in msgs]
 
         self.clear_buffer()
 
