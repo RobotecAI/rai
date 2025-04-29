@@ -16,8 +16,9 @@ from typing import Type
 
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
+from rai.types import Pose
 
-from rai_sim.simulation_bridge import Pose, SimulationBridge
+from rai_sim.simulation_bridge import SimulationBridge
 
 
 class GetObjectPositionsGroundTruthToolInput(BaseModel):

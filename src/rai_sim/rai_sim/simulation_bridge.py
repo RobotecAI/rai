@@ -19,7 +19,15 @@ from typing import Generic, List, Optional, TypeVar
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
-from rai.types import Header, Point, Pose, PoseStamped, Quaternion, RaiBaseModel
+from rai.types import (
+    Header,
+    Point,
+    Pose,
+    PoseStamped,
+    Quaternion,
+    RaiBaseModel,
+    Ros2BaseModel,
+)
 
 
 class Entity(RaiBaseModel):
@@ -51,6 +59,15 @@ class SpawnedEntity(Entity):
     id: str = Field(
         description="Unique identifier assigned to the spawned entity instance"
     )
+
+
+class SpawnEntityService(Ros2BaseModel):
+    _prefix: str = "gazebo_msgs/srv"
+    name: str
+    robot_namespace: str
+    reference_frame: str
+    initial_pose: Pose
+    xml: str = Field(default="")
 
 
 class SimulationConfig(BaseModel):

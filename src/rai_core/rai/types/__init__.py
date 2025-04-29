@@ -14,7 +14,6 @@
 
 
 from .base import RaiBaseModel, Ros2BaseModel
-from .gazebo import SpawnEntityService
 from .geometry import Point, Pose, Pose2D, PoseStamped, PoseWithCovariance, Quaternion
 from .std import Header, Time
 from .vision import (
@@ -40,6 +39,5 @@ __all__ = [
     "RaiBaseModel",
     "RegionOfInterest",
     "Ros2BaseModel",
-    "SpawnEntityService",
     "Time",
 ]

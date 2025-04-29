@@ -15,16 +15,17 @@
 from typing import cast
 
 import numpy as np
+import pytest
 from geometry_msgs.msg import Point as ROS2Point
 from geometry_msgs.msg import Pose as ROS2Pose
 from geometry_msgs.msg import Quaternion as ROS2Quaternion
-from rai.types.ros2.convert import from_ros2_msg, to_ros2_msg
-
-from rai_sim.simulation_bridge import (
+from rai.types import (
     Point,
     Pose,
     Quaternion,
 )
+from rai.types.base import RaiBaseModel
+from rai.types.ros2.convert import from_ros2_msg, to_ros2_msg
 
 
 def test_to_ros2_pose():
@@ -45,6 +46,18 @@ def test_to_ros2_pose():
     np.isclose(ros2_pose.orientation.y, 0.2)
     np.isclose(ros2_pose.orientation.z, 0.3)
     np.isclose(ros2_pose.orientation.w, 0.4)
+
+
+def test_to_ros2_msg_wrong_input_type():
+    class MyBaseModel(RaiBaseModel):
+        a: int
+        b: int
+
+    msg = MyBaseModel(a=1, b=2)
+
+    # rai.types.Ros2BaseModel is required
+    with pytest.raises(TypeError):
+        to_ros2_msg(msg)
 
 
 def test_from_ros2_pose():

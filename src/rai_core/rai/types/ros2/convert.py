@@ -23,6 +23,8 @@ from ..base import Ros2BaseModel
 
 
 def to_ros2_msg(base_model: Ros2BaseModel) -> Any:
+    if not isinstance(base_model, Ros2BaseModel):
+        raise TypeError(f"Expected Ros2BaseModel, got {type(base_model)}")
     msg_name = base_model.get_msg_name()
     ros2_msg_cls = import_message_from_str(msg_name)
     msg_args = base_model.model_dump()
