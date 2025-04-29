@@ -16,6 +16,7 @@ import logging
 import unittest
 from pathlib import Path
 
+import numpy as np
 import pytest
 from pydantic import ValidationError
 from rai.types import (
@@ -43,9 +44,9 @@ def test_position():
     assert isinstance(position.y, float)
     assert isinstance(position.z, float)
 
-    assert position.x == 1.1
-    assert position.y == 2.2
-    assert position.z == 3.3
+    assert np.isclose(position.x, 1.1)
+    assert np.isclose(position.y, 2.2)
+    assert np.isclose(position.z, 3.3)
 
 
 def test_quaternion():
@@ -56,10 +57,10 @@ def test_quaternion():
     assert isinstance(quaternion.z, float)
     assert isinstance(quaternion.w, float)
 
-    assert quaternion.x == 0.1
-    assert quaternion.y == 0.2
-    assert quaternion.z == 0.3
-    assert quaternion.w == 0.4
+    assert np.isclose(quaternion.x, 0.1)
+    assert np.isclose(quaternion.y, 0.2)
+    assert np.isclose(quaternion.z, 0.3)
+    assert np.isclose(quaternion.w, 0.4)
 
 
 def test_pose():
@@ -71,8 +72,8 @@ def test_pose():
     assert isinstance(pose.position, Point)
     assert isinstance(pose.orientation, Quaternion)
 
-    assert pose.position.x == 1.1
-    assert pose.orientation.w == 0.4
+    assert np.isclose(pose.position.x, 1.1)
+    assert np.isclose(pose.orientation.w, 0.4)
 
 
 @pytest.fixture
@@ -235,25 +236,25 @@ class TestSimulationBridge(unittest.TestCase):
         pose1 = self.bridge.spawned_entities[0].pose.pose
         self.assertEqual(self.bridge.spawned_entities[0].name, "test_entity1")
         self.assertEqual(self.bridge.spawned_entities[0].prefab_name, "test_prefab1")
-        self.assertEqual(pose1.position.x, 1.0)
-        self.assertEqual(pose1.position.y, 2.0)
-        self.assertEqual(pose1.position.z, 3.0)
+        assert np.isclose(pose1.position.x, 1.0)
+        assert np.isclose(pose1.position.y, 2.0)
+        assert np.isclose(pose1.position.z, 3.0)
         assert pose1.orientation
-        self.assertEqual(pose1.orientation.x, 0.0)
-        self.assertEqual(pose1.orientation.y, 0.0)
-        self.assertEqual(pose1.orientation.z, 0.0)
-        self.assertEqual(pose1.orientation.w, 1.0)
+        assert np.isclose(pose1.orientation.x, 0.0)
+        assert np.isclose(pose1.orientation.y, 0.0)
+        assert np.isclose(pose1.orientation.z, 0.0)
+        assert np.isclose(pose1.orientation.w, 1.0)
 
         pose2 = self.bridge.spawned_entities[1].pose.pose
         self.assertEqual(self.bridge.spawned_entities[1].name, "test_entity2")
         self.assertEqual(self.bridge.spawned_entities[1].prefab_name, "test_prefab2")
-        self.assertEqual(pose2.position.x, 4.0)
-        self.assertEqual(pose2.position.y, 5.0)
-        self.assertEqual(pose2.position.z, 6.0)
-        self.assertEqual(pose2.orientation.x, 0.0)
-        self.assertEqual(pose2.orientation.y, 0.0)
-        self.assertEqual(pose2.orientation.z, 0.0)
-        self.assertEqual(pose2.orientation.w, 1.0)
+        assert np.isclose(pose2.position.x, 4.0)
+        assert np.isclose(pose2.position.y, 5.0)
+        assert np.isclose(pose2.position.z, 6.0)
+        assert np.isclose(pose2.orientation.x, 0.0)
+        assert np.isclose(pose2.orientation.y, 0.0)
+        assert np.isclose(pose2.orientation.z, 0.0)
+        assert np.isclose(pose2.orientation.w, 1.0)
 
     def test_spawn_entity(self):
         self.bridge._spawn_entity(self.test_entity1)  # type: ignore
@@ -282,14 +283,14 @@ class TestSimulationBridge(unittest.TestCase):
 
         # Check if the pose matches
         pose = pose_stamped.pose
-        self.assertEqual(pose.position.x, 1.0)
-        self.assertEqual(pose.position.y, 2.0)
-        self.assertEqual(pose.position.z, 3.0)
+        assert np.isclose(pose.position.x, 1.0)
+        assert np.isclose(pose.position.y, 2.0)
+        assert np.isclose(pose.position.z, 3.0)
         assert pose.orientation
-        self.assertEqual(pose.orientation.x, 0.0)
-        self.assertEqual(pose.orientation.y, 0.0)
-        self.assertEqual(pose.orientation.z, 0.0)
-        self.assertEqual(pose.orientation.w, 1.0)
+        assert np.isclose(pose.orientation.x, 0.0)
+        assert np.isclose(pose.orientation.y, 0.0)
+        assert np.isclose(pose.orientation.z, 0.0)
+        assert np.isclose(pose.orientation.w, 1.0)
 
         # Test for non-existent entity
         non_existent_entity = SpawnedEntity(
