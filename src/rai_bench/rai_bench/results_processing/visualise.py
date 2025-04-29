@@ -145,6 +145,7 @@ def display_models_summ_data(df: pd.DataFrame):
         x_label="Model Name",
         y_label="Success Rate (%)",
         color_column="model_name",
+        y_range=(0.0, 100.0),
     )
     st.plotly_chart(fig1, use_container_width=True)  # type: ignore
 
@@ -185,6 +186,7 @@ def display_models_extra_calls_data(df: pd.DataFrame, extra_calls: int):
         x_label="Model Name",
         y_label="Success Rate (%)",
         color_column="model_name",
+        y_range=(0.0, 1.0),
     )
     st.plotly_chart(fig1, use_container_width=True)  # type: ignore
 
@@ -215,6 +217,7 @@ def display_task_type_performance(model_results: ModelResults):
         title="Success Rate by Task Type",
         x_label="Task Type",
         y_label="Avg Score",
+        y_range=(0.0, 1.0),
     )
     st.plotly_chart(fig_type_score, use_container_width=True)  # type: ignore
 
@@ -244,6 +247,7 @@ def display_task_complexity_performance(model_results: ModelResults):
         title="Success Rate by Task Complexity",
         x_label="Task Complexity",
         y_label="Avg Score",
+        y_range=(0.0, 1.0),
     )
     st.plotly_chart(fig_complexity_score, use_container_width=True)  # type: ignore
 
@@ -284,8 +288,21 @@ def display_detailed_task_type_analysis(
     model_results: ModelResults, selected_type: str
 ):
     """Display detailed analysis for a specific task type."""
-    # Get task data for the selected type
-    filtered_by_complexity = create_task_metrics_dataframe(model_results, "complexity")
+    # first, get only the tasks of the selected type
+    tasks_for_type_df = create_task_details_dataframe(model_results, selected_type)
+    if tasks_for_type_df.empty:
+        st.warning(f"No tasks of type {selected_type} found.")
+        return
+    # Now aggregate by complexity for that type
+    filtered_by_complexity = (
+        tasks_for_type_df.groupby("complexity")  # type: ignore
+        .agg(
+            avg_score=("score", "mean"),
+            avg_time=("total_time", "mean"),
+            avg_extra_tool_calls=("extra_tool_calls_used", "mean"),
+        )
+        .reset_index()
+    )
     filtered_by_complexity = filtered_by_complexity[
         filtered_by_complexity["complexity"].notna()
     ]
@@ -299,6 +316,7 @@ def display_detailed_task_type_analysis(
             title=f"Success Rate by Task Complexity for '{selected_type}' Tasks",
             x_label="Task Complexity",
             y_label="Avg Score",
+            y_range=(0.0, 1.0),
         )
         st.plotly_chart(fig_complexity_score, use_container_width=True)  # type: ignore
 
@@ -631,7 +649,11 @@ def main():
     st.set_page_config(layout="wide", page_title="LLM Task Results Visualizer")
     st.title("RAI BENCHMARK RESULTS")
 
-    run_folders = get_available_runs(EXPERIMENT_DIR)
+    try:
+        run_folders = get_available_runs(EXPERIMENT_DIR)
+    except FileNotFoundError:
+        st.error(f"Experiments directory '{EXPERIMENT_DIR}' not found.")
+        return
 
     if not run_folders:
         st.warning("No benchmark runs found in the experiments directory.")
