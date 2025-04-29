@@ -10,6 +10,7 @@ It is easily extendable, allowing developers to adapt and integrate new function
    and formatting (it uses [../.pre-commit-config.yaml](../.pre-commit-config.yaml)).
 
    ```bash
+   sudo apt install shellcheck
    pre-commit install
    ```
 
