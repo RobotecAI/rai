@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai_whoami.tools.vector_db import QueryDatabaseTool
+from .vector_store_retrieval import ROS2VectorStoreRetrievalAgent
 
-__all__ = ["QueryDatabaseTool"]
+__all__ = ["ROS2VectorStoreRetrievalAgent"]

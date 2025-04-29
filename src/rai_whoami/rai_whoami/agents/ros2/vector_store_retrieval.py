@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import importlib.util
 
 if importlib.util.find_spec("rclpy") is None:
@@ -65,4 +66,7 @@ class ROS2VectorStoreRetrievalAgent(BaseAgent):
         return response
 
     def run(self):
+        pass
+
+    def stop(self):
         pass
