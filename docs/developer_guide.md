@@ -132,7 +132,7 @@ Choose the conversational_agent when beginning with RAI, and consider upgrading 
 from myrobot import robot
 
 from rai.agents.conversational_agent import create_conversational_agent
-from rai.agents.state_based import create_state_based_agent
+from rai.agents.langchain import create_state_based_runnable
 from rai import get_llm_model
 
 SYSTEM_PROMPT = "You are a robot with interfaces..."
@@ -144,7 +144,7 @@ tools = [pick_up_object, scan_object, SayTool(robot=robot)]
 conversational_agent = create_conversational_agent(
     llm=llm, tools=tools, system_prompt=SYSTEM_PROMPT
 )
-state_based_agent = create_state_based_agent(
+state_based_agent = create_state_based_runnable(
     llm=llm, state_retriever=state_retriever, tools=tools
 )
 

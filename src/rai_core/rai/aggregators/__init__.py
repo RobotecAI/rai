@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Robotec.AI
+# Copyright (C) 2025 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,17 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai.agents.base import BaseAgent
-from rai.agents.conversational_agent import create_conversational_agent
-from rai.agents.langchain.react_agent import ReActAgent
-from rai.agents.runner import AgentRunner, wait_for_shutdown
-from rai.agents.tool_runner import ToolRunner
+from .base import BaseAggregator
 
-__all__ = [
-    "AgentRunner",
-    "BaseAgent",
-    "ReActAgent",
-    "ToolRunner",
-    "create_conversational_agent",
-    "wait_for_shutdown",
-]
+__all__ = ["BaseAggregator"]

@@ -22,11 +22,12 @@ from typing import Deque, Dict, List, Literal, Optional, TypedDict
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
 
-from rai.agents.base import BaseAgent
-from rai.agents.langchain import HRICallbackHandler
-from rai.agents.langchain.runnables import ReActAgentState
 from rai.communication.hri_connector import HRIConnector, HRIMessage
 from rai.initialization import get_tracing_callbacks
+
+from ..base import BaseAgent
+from .callback import HRICallbackHandler
+from .runnables import ReActAgentState
 
 
 class BaseState(TypedDict):
@@ -208,6 +209,7 @@ class LangChainAgent(BaseAgent):
                 self._run_agent()
 
     def stop(self):
+        """Stop the agent's execution loop."""
         self._stop_event.set()
         self._interrupt_event.set()
         self._agent_ready_event.wait()
@@ -216,6 +218,7 @@ class LangChainAgent(BaseAgent):
             self._thread.join()
             self._thread = None
             self.logger.info("Agent stopped")
+        self._stop_event.clear()
 
     @staticmethod
     def _apply_reduction_behavior(
