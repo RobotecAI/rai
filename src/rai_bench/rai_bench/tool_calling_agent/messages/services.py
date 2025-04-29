@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional
+from typing import List
 
 from rai.types import Pose, PoseStamped, Ros2BaseModel
 
@@ -20,33 +20,33 @@ from rai_bench.tool_calling_agent.messages.topics import Image, RAIDetectionArra
 
 
 class ManipulatorMoveToRequest(Ros2BaseModel):
-    initial_gripper_state: Optional[bool] = False
-    final_gripper_state: Optional[bool] = False
-    target_pose: Optional[PoseStamped] = PoseStamped()
+    initial_gripper_state: bool = False
+    final_gripper_state: bool = False
+    target_pose: PoseStamped = PoseStamped()
 
 
 class ManipulatorMoveToResponse(Ros2BaseModel):
-    success: Optional[bool] = False
+    success: bool = False
 
 
 class RAIGroundedSamRequest(Ros2BaseModel):
-    detections: Optional[RAIDetectionArray] = RAIDetectionArray()
-    source_img: Optional[Image] = Image()
+    detections: RAIDetectionArray = RAIDetectionArray()
+    source_img: Image = Image()
 
 
 class RAIGroundedSamResponse(Ros2BaseModel):
-    masks: Optional[List[Image]] = []
+    masks: List[Image] = []
 
 
 class RAIGroundingDinoRequest(Ros2BaseModel):
-    classes: Optional[str] = ""
-    box_threshold: Optional[float] = 0.0
-    text_threshold: Optional[float] = 0.0
-    source_img: Optional[Image] = Image()
+    classes: str = ""
+    box_threshold: float = 0.0
+    text_threshold: float = 0.0
+    source_img: Image = Image()
 
 
 class RAIGroundingDinoResponse(Ros2BaseModel):
-    detections: Optional[RAIDetectionArray] = RAIDetectionArray()
+    detections: RAIDetectionArray = RAIDetectionArray()
 
 
 class StringListRequest(Ros2BaseModel):
@@ -54,19 +54,19 @@ class StringListRequest(Ros2BaseModel):
 
 
 class StringListResponse(Ros2BaseModel):
-    success: Optional[bool] = False
-    string_list: Optional[List[str]] = []
+    success: bool = False
+    string_list: List[str] = []
 
 
 class VectorStoreRetrievalRequest(Ros2BaseModel):
-    query: Optional[str] = ""
+    query: str = ""
 
 
 class VectorStoreRetrievalResponse(Ros2BaseModel):
-    success: Optional[bool] = False
-    message: Optional[str] = ""
-    documents: Optional[List[str]] = []
-    scores: Optional[List[float]] = []
+    success: bool = False
+    message: str = ""
+    documents: List[str] = []
+    scores: List[float] = []
 
 
 class WhatISeeRequest(Ros2BaseModel):
@@ -74,17 +74,17 @@ class WhatISeeRequest(Ros2BaseModel):
 
 
 class WhatISeeResponse(Ros2BaseModel):
-    observations: Optional[List[str]] = []
-    perception_source: Optional[str] = ""
-    image: Optional[Image] = Image()
-    pose: Optional[Pose] = Pose()
+    observations: List[str] = []
+    perception_source: str = ""
+    image: Image = Image()
+    pose: Pose = Pose()
 
 
 class PlannerInterfaceDescription(Ros2BaseModel):
-    name: Optional[str] = ""
-    pipeline_id: Optional[str] = ""
-    planner_ids: Optional[List[str]] = []
+    name: str = ""
+    pipeline_id: str = ""
+    planner_ids: List[str] = []
 
 
 class QueryPlannerInterfaceResponse(Ros2BaseModel):
-    planner_interfaces: Optional[List[PlannerInterfaceDescription]] = []
+    planner_interfaces: List[PlannerInterfaceDescription] = []

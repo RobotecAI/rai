@@ -12,11 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
-
 from rai.types import Ros2BaseModel, Time
 
 
 class Clock(Ros2BaseModel):
     _prefix: str = "rosgraph_msgs/msg"
-    clock: Optional[Time] = Time()
+    clock: Time = Time()
