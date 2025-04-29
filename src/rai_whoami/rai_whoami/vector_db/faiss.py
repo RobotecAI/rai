@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
+import json
 import os
+from importlib import import_module
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, cast
 
@@ -52,3 +55,32 @@ class FAISSBuilder(VectorDBBuilder):
         self.model_kwargs = new_kwargs
         self.dump_model_kwargs()
         return db
+
+
+def get_class_from_string(class_path: str) -> type:
+    module_path, class_name = class_path.rsplit(".", 1)
+    module = import_module(module_path)
+    return getattr(module, class_name)
+
+
+def initialize_embeddings(class_path: str, **kwargs: Any) -> Embeddings:
+    c = get_class_from_string(class_path)
+    kwargs = {k: kwargs[k] for k in inspect.signature(c).parameters if k in kwargs}
+    return c(**kwargs)
+
+
+def get_faiss_client(
+    root_dir: str, embeddings_model: Embeddings | None = None
+) -> FAISS:
+    if embeddings_model is None:
+        vdb_kwargs = json.load(open(Path(root_dir) / "vdb_kwargs.json"))
+        embeddings_model = initialize_embeddings(
+            vdb_kwargs["embeddings"]["class"], **vdb_kwargs
+        )
+
+    vdb_client = FAISS.load_local(
+        folder_path=root_dir,
+        embeddings=embeddings_model,
+        allow_dangerous_deserialization=True,
+    )
+    return vdb_client

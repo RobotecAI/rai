@@ -252,8 +252,8 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
     def create_service(
         self,
         service_name: str,
-        on_request: Callable,
-        on_done: Optional[Callable] = None,
+        on_request: Callable[[Any, Any], Any],
+        on_done: Optional[Callable[[Any, Any], Any]] = None,
         *,
         service_type: str,
         **kwargs: Any,
