@@ -23,24 +23,6 @@ from .std import (
 from .vision import Detection2D
 
 
-class AudioMessage(ROS2BaseModel):
-    _prefix: str = "rai_interfaces/msg"
-    audio: List[int] = []
-    sample_rate: int = 0
-    channels: int = 0
-
-
-class HRIMessage(ROS2BaseModel):
-    _prefix: str = "rai_interfaces/msg"
-    header: Header = Header()
-    text: str = ""
-    images: List[Image] = []
-    audios: List[AudioMessage] = []
-    communication_id: str = ""
-    seq_no: int = 0
-    seq_end: bool = False
-
-
 class RAIDetectionArray(ROS2BaseModel):
     _prefix: str = "rai_interfaces/msg"
     header: Header = Header()

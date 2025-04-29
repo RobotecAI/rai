@@ -32,8 +32,6 @@ from rai.types import (
     Time,
 )
 from rai.types.rai_interfaces import (
-    AudioMessage,
-    HRIMessage,
     ManipulatorMoveToRequest,
     RAIDetectionArray,
     RAIGroundedSamRequest,
@@ -47,6 +45,7 @@ from rai_bench.tool_calling_agent.messages.services import (
     VectorStoreRetrievalRequest,
     WhatISeeRequest,
 )
+from rai_bench.tool_calling_agent.messages.topics import AudioMessage, HRIMessage
 from rai_bench.tool_calling_agent.mocked_tools import (
     MockCallROS2ServiceTool,
     MockGetROS2MessageInterfaceTool,
