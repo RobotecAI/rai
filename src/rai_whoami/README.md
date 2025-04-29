@@ -70,9 +70,9 @@ agent = ReActAgent(
     target_connectors={"/to_human": connector},
     system_prompt=system_prompt,
 )
+agent.subscribe_source("/from_human", connector)
 
 agent.run()
-connector.register_callback("/from_human", agent)
 wait_for_shutdown([agent])
 ```
 
@@ -111,8 +111,8 @@ connector = ROS2HRIConnector()
 agent = ReActAgent(
     target_connectors={"/to_human": connector}, system_prompt="", tools=[query_tool]
 )
-agent.run()
-connector.register_callback("/from_human", agent)
-wait_for_shutdown([agent])
+agent.subscribe_source("/from_human", connector)
 
+agent.run()
+wait_for_shutdown([agent])
 ```
