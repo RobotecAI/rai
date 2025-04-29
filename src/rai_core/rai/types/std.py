@@ -14,7 +14,7 @@
 
 from pydantic import Field
 
-from . import ROS2BaseModel
+from rai.types.base import ROS2BaseModel
 
 
 class BaseStdModel(ROS2BaseModel):

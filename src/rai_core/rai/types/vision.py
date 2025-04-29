@@ -14,9 +14,9 @@
 
 from typing import List
 
-from .base import ROS2BaseModel
-from .geometry import Pose2D, PoseWithCovariance
-from .std import Header
+from rai.types.base import ROS2BaseModel
+from rai.types.geometry import Pose2D, PoseWithCovariance
+from rai.types.std import Header
 
 
 class BaseVisionModel(ROS2BaseModel):
