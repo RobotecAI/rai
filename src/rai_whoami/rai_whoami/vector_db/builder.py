@@ -52,6 +52,4 @@ class VectorDBBuilder(ABC):
         """
 
     def dump_model_kwargs(self):
-        (self.root_dir / "embeddings_kwargs.json").write_text(
-            json.dumps(self.model_kwargs)
-        )
+        (self.root_dir / "vdb_kwargs.json").write_text(json.dumps(self.model_kwargs))

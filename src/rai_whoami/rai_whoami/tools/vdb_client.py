@@ -60,11 +60,9 @@ class QueryDatabaseTool(BaseTool):
             from langchain_community.vectorstores import FAISS
 
             if self.embeddings_model is None:
-                embeddings_kwargs = json.load(
-                    open(Path(self.root_dir) / "embeddings_kwargs.json")
-                )
+                vdb_kwargs = json.load(open(Path(self.root_dir) / "vdb_kwargs.json"))
                 self.embeddings_model = initialize_embeddings(
-                    embeddings_kwargs["class"], **embeddings_kwargs
+                    vdb_kwargs["embeddings"]["class"], **vdb_kwargs
                 )
 
             self.vdb_client = FAISS.load_local(
