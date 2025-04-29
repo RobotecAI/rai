@@ -377,9 +377,9 @@ vision_msgs/Detection2D[] detections
 		vision_msgs/Pose2D center
             float64 x
             float64 y
-			float64 theta
-		float64 size_x
-		float64 size_y
+            float64 theta
+        float64 size_x
+        float64 size_y
 	string id
 # a list of classes being detected
 string[] detection_classes
@@ -473,7 +473,7 @@ RAIDetectionArray detections
 						float64 w 1
 				float64[36] covariance
 		BoundingBox2D bbox
-			vision_msgs/Pose2D center
+            vision_msgs/Pose2D center
                 float64 x
                 float64 y
 				float64 theta
