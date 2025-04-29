@@ -12,57 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional
+from typing import List
 
-from rai_bench.tool_calling_agent.messages.base import (
-    Detection2D,
-    Header,
-    RegionOfInterest,
-    Ros2BaseModel,
-)
+from rai.types import Header, Image, ROS2BaseModel
 
 
-class CameraInfo(Ros2BaseModel):
-    header: Optional[Header] = Header()
-    height: Optional[int] = 0
-    width: Optional[int] = 0
-    distortion_model: Optional[str] = ""
-    d: Optional[List[float]] = []
-    k: Optional[List[float]] = [0.0] * 9
-    r: Optional[List[float]] = [0.0] * 9
-    p: Optional[List[float]] = [0.0] * 12
-    binning_x: Optional[int] = 0
-    binning_y: Optional[int] = 0
-    roi: Optional[RegionOfInterest] = RegionOfInterest()
+class AudioMessage(ROS2BaseModel):
+    _prefix: str = "rai_interfaces/msg"
+    audio: List[int] = []
+    sample_rate: int = 0
+    channels: int = 0
 
 
-class Image(Ros2BaseModel):
-    header: Optional[Header] = Header()
-    height: Optional[int] = 0
-    width: Optional[int] = 0
-    encoding: Optional[str] = ""
-    is_bigendian: Optional[int] = 0
-    step: Optional[int] = 0
-    data: Optional[List[int]] = []
-
-
-class AudioMessage(Ros2BaseModel):
-    audio: Optional[List[int]] = []
-    sample_rate: Optional[int] = 0
-    channels: Optional[int] = 0
-
-
-class HRIMessage(Ros2BaseModel):
-    header: Optional[Header] = Header()
-    text: Optional[str] = ""
-    images: Optional[List[Image]] = []
-    audios: Optional[List[AudioMessage]] = []
-    communication_id: Optional[str] = ""
-    seq_no: Optional[int] = 0
-    seq_end: Optional[bool] = False
-
-
-class RAIDetectionArray(Ros2BaseModel):
-    header: Optional[Header] = Header()
-    detections: Optional[List[Detection2D]] = []
-    detection_classes: Optional[List[str]] = []
+# NOTE(boczekbartek): this message is duplicated here only for benchmarking purposes.
+#                     for communication in rai please use rai.communication.ros2.ROS2HRIMessage
+class HRIMessage(ROS2BaseModel):
+    _prefix: str = "rai_interfaces/msg"
+    header: Header = Header()
+    text: str = ""
+    images: List[Image] = []
+    audios: List[AudioMessage] = []
+    communication_id: str = ""
+    seq_no: int = 0
+    seq_end: bool = False

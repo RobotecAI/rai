@@ -14,42 +14,42 @@
 
 from typing import Any, Dict, Optional
 
-from rai_bench.tool_calling_agent.messages.base import PoseStamped, Ros2BaseModel, Time
+from rai.types import PoseStamped, ROS2BaseModel, Time
 
 
-class TaskGoal(Ros2BaseModel):
+class TaskGoal(ROS2BaseModel):
     task: Optional[str] = ""
     description: Optional[str] = ""
     priority: Optional[str] = ""
 
 
-class TaskResult(Ros2BaseModel):
+class TaskResult(ROS2BaseModel):
     success: Optional[bool] = False
     report: Optional[str] = ""
 
 
-class TaskFeedback(Ros2BaseModel):
+class TaskFeedback(ROS2BaseModel):
     current_status: Optional[str] = ""
 
 
-class LoadMapRequest(Ros2BaseModel):
+class LoadMapRequest(ROS2BaseModel):
     filename: Optional[str] = ""
 
 
-class LoadMapResponse(Ros2BaseModel):
+class LoadMapResponse(ROS2BaseModel):
     success: Optional[bool] = False
 
 
-class NavigateToPoseGoal(Ros2BaseModel):
+class NavigateToPoseGoal(ROS2BaseModel):
     pose: Optional[PoseStamped] = None
     behavior_tree: Optional[str] = None
 
 
-class ActionResult(Ros2BaseModel):
+class ActionResult(ROS2BaseModel):
     result: Optional[Dict[str, Any]] = None
 
 
-class NavigateToPoseFeedback(Ros2BaseModel):
+class NavigateToPoseFeedback(ROS2BaseModel):
     current_pose: Optional[PoseStamped] = None
     navigation_time: Optional[Time] = None
     estimated_time_remaining: Optional[Time] = None
@@ -57,23 +57,23 @@ class NavigateToPoseFeedback(Ros2BaseModel):
     distance_remaining: Optional[float] = None
 
 
-class NavigateToPoseAction(Ros2BaseModel):
+class NavigateToPoseAction(ROS2BaseModel):
     goal: Optional[NavigateToPoseGoal] = None
     result: Optional[ActionResult] = None
     feedback: Optional[NavigateToPoseFeedback] = None
 
 
-class SpinGoal(Ros2BaseModel):
+class SpinGoal(ROS2BaseModel):
     target_yaw: Optional[float] = None
     time_allowance: Optional[Time] = None
 
 
-class SpinFeedback(Ros2BaseModel):
+class SpinFeedback(ROS2BaseModel):
     angle_turned: Optional[float] = None
     remaining_yaw: Optional[float] = None
 
 
-class SpinAction(Ros2BaseModel):
+class SpinAction(ROS2BaseModel):
     goal: Optional[SpinGoal] = None
     result: Optional[ActionResult] = None
     feedback: Optional[SpinFeedback] = None

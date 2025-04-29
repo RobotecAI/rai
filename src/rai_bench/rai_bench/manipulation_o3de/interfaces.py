@@ -17,14 +17,15 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Dict, List, Set, Tuple, TypeVar, Union
 
+from rai.types import Pose
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai_sim.simulation_bridge import (
     Entity,
-    Pose,
     SimulationBridge,
     SimulationConfig,
     SimulationConfigT,
+    SpawnedEntity,
 )
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
@@ -114,9 +115,9 @@ class Task(ABC):
     def euclidean_distance(self, pos1: Pose, pos2: Pose) -> float:
         """Calculate euclidean distance between 2 positions"""
         return (
-            (pos1.translation.x - pos2.translation.x) ** 2
-            + (pos1.translation.y - pos2.translation.y) ** 2
-            + (pos1.translation.z - pos2.translation.z) ** 2
+            (pos1.position.x - pos2.position.x) ** 2
+            + (pos1.position.y - pos2.position.y) ** 2
+            + (pos1.position.z - pos2.position.z) ** 2
         ) ** 0.5
 
     def is_adjacent(self, pos1: Pose, pos2: Pose, threshold_distance: float):
@@ -217,7 +218,9 @@ class Task(ABC):
                 other
                 for other in entities
                 if entity != other
-                and self.is_adjacent(entity.pose, other.pose, threshold_distance)
+                and self.is_adjacent(
+                    entity.pose.pose, other.pose.pose, threshold_distance
+                )
             ]
         return neighbourhood_graph
 
@@ -335,15 +338,16 @@ class Task(ABC):
         """
 
         entities = sorted(
-            entities, key=lambda ent: (ent.pose.translation.x, ent.pose.translation.y)
+            entities,
+            key=lambda ent: (ent.pose.pose.position.x, ent.pose.pose.position.y),
         )
 
         groups: List[List[EntityT]] = []
         for entity in entities:
             placed = False
             for group in groups:
-                dx = group[0].pose.translation.x - entity.pose.translation.x
-                dy = group[0].pose.translation.y - entity.pose.translation.y
+                dx = group[0].pose.pose.position.x - entity.pose.pose.position.x
+                dy = group[0].pose.pose.position.y - entity.pose.pose.position.y
                 if math.sqrt(dx * dx + dy * dy) <= margin:
                     group.append(entity)
                     placed = True
@@ -424,12 +428,14 @@ class ManipulationTask(Task, ABC):
             return False
 
     @abstractmethod
-    def calculate_correct(self, entities: List[EntityT]) -> Tuple[int, int]:
+    def calculate_correct(
+        self, entities: List[Entity] | List[SpawnedEntity]
+    ) -> Tuple[int, int]:
         """Method to calculate how many objects are placed correctly
 
         Parameters
         ----------
-        entities : List[EntityT]
+        entities : List[Entity]
             list of ALL entities present in the simulaiton scene
 
         Returns

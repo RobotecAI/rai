@@ -12,26 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai.types import Header, Point, Pose, PoseStamped, Quaternion
+import importlib.util
 
-from rai_sim.simulation_bridge import Entity
-
-
-def create_entity(
-    name: str,
-    prefab: str,
-    x: float,
-    y: float,
-    z: float,
-    orientation: Quaternion | None = None,
-) -> Entity:
-    if orientation is None:
-        orientation = Quaternion()
-    return Entity(
-        name=name,
-        prefab_name=prefab,
-        pose=PoseStamped(
-            pose=Pose(position=Point(x=x, y=y, z=z), orientation=orientation),
-            header=Header(frame_id="/test_frame"),
-        ),
+if importlib.util.find_spec("rosidl_runtime_py") is None:
+    raise ImportError(
+        "This is a ROS2 feature. Make sure ROS2 is installed and sourced."
     )
+
+from .convert import from_ros2_msg, to_ros2_msg
+
+__all__ = ["from_ros2_msg", "to_ros2_msg"]

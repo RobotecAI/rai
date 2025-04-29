@@ -12,26 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai.types import Header, Point, Pose, PoseStamped, Quaternion
+from pydantic import Field
 
-from rai_sim.simulation_bridge import Entity
+from . import ROS2BaseModel
 
 
-def create_entity(
-    name: str,
-    prefab: str,
-    x: float,
-    y: float,
-    z: float,
-    orientation: Quaternion | None = None,
-) -> Entity:
-    if orientation is None:
-        orientation = Quaternion()
-    return Entity(
-        name=name,
-        prefab_name=prefab,
-        pose=PoseStamped(
-            pose=Pose(position=Point(x=x, y=y, z=z), orientation=orientation),
-            header=Header(frame_id="/test_frame"),
-        ),
-    )
+class BaseStdModel(ROS2BaseModel):
+    _prefix: str = "std_msgs/msg"
+
+
+class Time(BaseStdModel):
+    sec: int = 0
+    nanosec: int = 0
+
+
+class Header(BaseStdModel):
+    frame_id: str = Field(default="", description="Reference frame of the message")
+    stamp: Time = Time()

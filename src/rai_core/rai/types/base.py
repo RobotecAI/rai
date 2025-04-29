@@ -12,26 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai.types import Header, Point, Pose, PoseStamped, Quaternion
-
-from rai_sim.simulation_bridge import Entity
+from pydantic import BaseModel, ConfigDict
 
 
-def create_entity(
-    name: str,
-    prefab: str,
-    x: float,
-    y: float,
-    z: float,
-    orientation: Quaternion | None = None,
-) -> Entity:
-    if orientation is None:
-        orientation = Quaternion()
-    return Entity(
-        name=name,
-        prefab_name=prefab,
-        pose=PoseStamped(
-            pose=Pose(position=Point(x=x, y=y, z=z), orientation=orientation),
-            header=Header(frame_id="/test_frame"),
-        ),
-    )
+class RaiBaseModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class ROS2BaseModel(RaiBaseModel):
+    """
+    Base model for messages replicated from ros2
+
+    Attributes:
+    _prefix: str
+        Prefix of the ros2 message, for example std_msgs/msg
+    """
+
+    _prefix: str
+
+    def get_msg_name(self) -> str:
+        return f"{self._prefix}/{self.__class__.__name__}"

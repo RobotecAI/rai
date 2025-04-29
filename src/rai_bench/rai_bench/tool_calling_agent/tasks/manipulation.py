@@ -19,9 +19,9 @@ from typing import Dict, List
 import inflect
 from langchain_core.tools import BaseTool
 from rai.tools.ros2 import MoveToPointToolInput
+from rai.types import Point
 
 from rai_bench.tool_calling_agent.interfaces import Task, Validator
-from rai_bench.tool_calling_agent.messages.base import Position
 from rai_bench.tool_calling_agent.mocked_tools import (
     MockGetObjectPositionsTool,
     MockGetROS2TopicsNamesAndTypesTool,
@@ -53,7 +53,7 @@ class ManipulationTask(Task, ABC):
 class GrabTask(ManipulationTask, ABC):
     def __init__(
         self,
-        objects: Dict[str, List[Position]],
+        objects: Dict[str, List[Point]],
         object_to_grab: str,
         validators: List[Validator],
         extra_tool_calls: int = 0,
@@ -136,7 +136,7 @@ class GetObjectPositionsTask(ManipulationTask):
 
     def __init__(
         self,
-        objects: Dict[str, List[Position]],
+        objects: Dict[str, List[Point]],
         validators: List[Validator],
         extra_tool_calls: int = 0,
         logger: loggers_type | None = None,
@@ -335,7 +335,7 @@ class SwapObjectsTask(Task):
 
     def __init__(
         self,
-        objects: Dict[str, List[Position]],
+        objects: Dict[str, List[Point]],
         objects_to_swap: str,
         validators: List[Validator],
         extra_tool_calls: int = 0,

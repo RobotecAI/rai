@@ -22,11 +22,7 @@ from rai.messages import HumanMultimodalMessage
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai_bench.manipulation_o3de.interfaces import Task
-from rai_sim.simulation_bridge import (
-    Entity,
-    SimulationBridge,
-    SimulationConfigT,
-)
+from rai_sim.simulation_bridge import Entity, SimulationBridge, SimulationConfigT
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
 EntityT = TypeVar("EntityT", bound=Entity)

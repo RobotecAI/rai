@@ -16,8 +16,9 @@ from typing import Type
 
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
+from rai.types import Pose
 
-from rai_sim.simulation_bridge import Pose, SimulationBridge
+from rai_sim.simulation_bridge import SimulationBridge
 
 
 class GetObjectPositionsGroundTruthToolInput(BaseModel):
@@ -42,7 +43,7 @@ class GetObjectPositionsGroundTruthTool(BaseTool):
 
     @staticmethod
     def format_pose(pose: Pose) -> str:
-        return f"Centroid(x={pose.translation.x:.2f}, y={pose.translation.y:2f}, z={pose.translation.z:2f})"
+        return f"Centroid(x={pose.position.x:.2f}, y={pose.position.y:.2f}, z={pose.position.z:.2f})"
 
     @staticmethod
     def match_name(object_name: str, prefab_name: str) -> bool:

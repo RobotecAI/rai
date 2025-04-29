@@ -90,8 +90,8 @@ class PlaceObjectAtCoordTask(ManipulationTask):
         correct = 0
 
         for ent in target_objects:
-            dx = ent.pose.translation.x - self.target_position[0]
-            dy = ent.pose.translation.y - self.target_position[1]
+            dx = ent.pose.pose.position.x - self.target_position[0]
+            dy = ent.pose.pose.position.y - self.target_position[1]
             distance = math.sqrt(dx**2 + dy**2)
             if distance <= self.allowable_displacement:
                 correct = 1  # Only one correct placement is needed.

@@ -15,105 +15,89 @@
 import logging
 import unittest
 from pathlib import Path
-from typing import Optional
 
 import pytest
 from pydantic import ValidationError
+from rai.types import (
+    Header,
+    Point,
+    Pose,
+    PoseStamped,
+    Quaternion,
+)
 
 from rai_sim.simulation_bridge import (
     Entity,
-    Pose,
-    Rotation,
     SceneState,
     SimulationBridge,
     SimulationConfig,
     SpawnedEntity,
-    Translation,
 )
 
 
-# Helper Functions
-def create_translation(x: float, y: float, z: float) -> Translation:
-    return Translation(x=x, y=y, z=z)
-
-
-def create_rotation(x: float, y: float, z: float, w: float) -> Rotation:
-    return Rotation(x=x, y=y, z=z, w=w)
-
-
-def create_pose(translation: Translation, rotation: Optional[Rotation] = None) -> Pose:
-    return Pose(translation=translation, rotation=rotation)
-
-
 # Test Cases
-def test_translation():
-    translation = create_translation(x=1.1, y=2.2, z=3.3)
+def test_position():
+    position = Point(x=1.1, y=2.2, z=3.3)
 
-    assert isinstance(translation.x, float)
-    assert isinstance(translation.y, float)
-    assert isinstance(translation.z, float)
+    assert isinstance(position.x, float)
+    assert isinstance(position.y, float)
+    assert isinstance(position.z, float)
 
-    assert translation.x == 1.1
-    assert translation.y == 2.2
-    assert translation.z == 3.3
+    assert position.x == 1.1
+    assert position.y == 2.2
+    assert position.z == 3.3
 
 
-def test_rotation():
-    rotation = Rotation(x=0.1, y=0.2, z=0.3, w=0.4)
+def test_quaternion():
+    quaternion = Quaternion(x=0.1, y=0.2, z=0.3, w=0.4)
 
-    assert isinstance(rotation.x, float)
-    assert isinstance(rotation.y, float)
-    assert isinstance(rotation.z, float)
-    assert isinstance(rotation.w, float)
+    assert isinstance(quaternion.x, float)
+    assert isinstance(quaternion.y, float)
+    assert isinstance(quaternion.z, float)
+    assert isinstance(quaternion.w, float)
 
-    assert rotation.x == 0.1
-    assert rotation.y == 0.2
-    assert rotation.z == 0.3
-    assert rotation.w == 0.4
+    assert quaternion.x == 0.1
+    assert quaternion.y == 0.2
+    assert quaternion.z == 0.3
+    assert quaternion.w == 0.4
 
 
 def test_pose():
-    translation = create_translation(x=1.1, y=2.2, z=3.3)
-    rotation = Rotation(x=0.1, y=0.2, z=0.3, w=0.4)
+    position = Point(x=1.1, y=2.2, z=3.3)
+    quaternion = Quaternion(x=0.1, y=0.2, z=0.3, w=0.4)
 
-    pose = Pose(translation=translation, rotation=rotation)
+    pose = Pose(position=position, orientation=quaternion)
 
-    assert isinstance(pose.translation, Translation)
-    assert isinstance(pose.rotation, Rotation)
+    assert isinstance(pose.position, Point)
+    assert isinstance(pose.orientation, Quaternion)
 
-    assert pose.translation.x == 1.1
-    assert pose.rotation.w == 0.4
-
-
-def test_optional_rotation():
-    translation = create_translation(x=1.1, y=2.2, z=3.3)
-    pose = create_pose(translation=translation)
-
-    assert isinstance(pose.translation, Translation)
-    assert pose.rotation is None
+    assert pose.position.x == 1.1
+    assert pose.orientation.w == 0.4
 
 
-def test_entity():
-    translation = create_translation(x=1.1, y=2.2, z=3.3)
-    rotation = create_rotation(x=0.1, y=0.2, z=0.3, w=0.4)
-    pose = create_pose(translation=translation, rotation=rotation)
+@pytest.fixture
+def pose() -> PoseStamped:
+    position = Point(x=1.1, y=2.2, z=3.3)
+    quaternion = Quaternion(x=0.1, y=0.2, z=0.3, w=0.4)
+    header = Header(frame_id="test_frame")
+    return PoseStamped(
+        header=header, pose=Pose(position=position, orientation=quaternion)
+    )
 
+
+def test_entity(pose: PoseStamped):
     entity = Entity(name="test_cube", prefab_name="cube", pose=pose)
 
     assert isinstance(entity.name, str)
     assert isinstance(entity.prefab_name, str)
-    assert isinstance(entity.pose, Pose)
+    assert isinstance(entity.pose, PoseStamped)
 
     assert entity.name == "test_cube"
     assert entity.prefab_name == "cube"
     assert entity.pose == pose
 
 
-def test_spawned_entity():
-    translation = create_translation(x=1.1, y=2.2, z=3.3)
-    rotation = create_rotation(x=0.1, y=0.2, z=0.3, w=0.4)
-    pose = create_pose(translation=translation, rotation=rotation)
-
+def test_spawned_entity(pose: PoseStamped):
     spawned_entity = SpawnedEntity(
         name="test_cube",
         prefab_name="cube",
@@ -123,17 +107,13 @@ def test_spawned_entity():
 
     assert isinstance(spawned_entity.name, str)
     assert isinstance(spawned_entity.prefab_name, str)
-    assert isinstance(spawned_entity.pose, Pose)
+    assert isinstance(spawned_entity.pose, PoseStamped)
     assert isinstance(spawned_entity.id, str)
 
     assert spawned_entity.id == "id_123"
 
 
-def test_simulation_config_unique_names():
-    translation = create_translation(x=1.1, y=2.2, z=3.3)
-    rotation = create_rotation(x=0.1, y=0.2, z=0.3, w=0.4)
-    pose = create_pose(translation=translation, rotation=rotation)
-
+def test_simulation_config_unique_names(pose):
     entities = [
         Entity(name="entity1", prefab_name="cube", pose=pose),
         Entity(name="entity2", prefab_name="carrot", pose=pose),
@@ -147,11 +127,7 @@ def test_simulation_config_unique_names():
     assert len(config.entities) == 2
 
 
-def test_simulation_config_duplicate_names():
-    translation = create_translation(x=1.1, y=2.2, z=3.3)
-    rotation = create_rotation(x=0.1, y=0.2, z=0.3, w=0.4)
-    pose = create_pose(translation=translation, rotation=rotation)
-
+def test_simulation_config_duplicate_names(pose):
     entities = [
         Entity(name="duplicate", prefab_name="cube", pose=pose),
         Entity(name="duplicate", prefab_name="carrot", pose=pose),
@@ -192,7 +168,7 @@ class MockSimulationBridge(SimulationBridge[SimulationConfig]):
         """Mock implementation of _despawn_entity."""
         self.spawned_entities = [e for e in self.spawned_entities if e.id != entity.id]
 
-    def get_object_pose(self, entity: SpawnedEntity) -> Pose:
+    def get_object_pose(self, entity: SpawnedEntity) -> PoseStamped:
         """Mock implementation of get_object_pose."""
         for spawned_entity in self.spawned_entities:
             if spawned_entity.id == entity.id:
@@ -211,19 +187,26 @@ class TestSimulationBridge(unittest.TestCase):
         self.bridge = MockSimulationBridge(logger=self.logger)
 
         # Create test entities
+        header = Header(frame_id="test_frame")
         self.test_entity1: Entity = Entity(
             name="test_entity1",
             prefab_name="test_prefab1",
-            pose=Pose(
-                translation=Translation(x=1.0, y=2.0, z=3.0),
-                rotation=Rotation(x=0.0, y=0.0, z=0.0, w=1.0),
+            pose=PoseStamped(
+                header=header,
+                pose=Pose(
+                    position=Point(x=1.0, y=2.0, z=3.0),
+                    orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
+                ),
             ),
         )
 
         self.test_entity2: Entity = Entity(
             name="test_entity2",
             prefab_name="test_prefab2",
-            pose=Pose(translation=Translation(x=4.0, y=5.0, z=6.0), rotation=None),
+            pose=PoseStamped(
+                header=header,
+                pose=Pose(position=Point(x=4.0, y=5.0, z=6.0)),
+            ),
         )
 
         # Create a test configuration
@@ -249,23 +232,28 @@ class TestSimulationBridge(unittest.TestCase):
         self.assertEqual(len(self.bridge.spawned_entities), 2)
 
         # Check if the spawned entities have correct properties
+        pose1 = self.bridge.spawned_entities[0].pose.pose
         self.assertEqual(self.bridge.spawned_entities[0].name, "test_entity1")
         self.assertEqual(self.bridge.spawned_entities[0].prefab_name, "test_prefab1")
-        self.assertEqual(self.bridge.spawned_entities[0].pose.translation.x, 1.0)
-        self.assertEqual(self.bridge.spawned_entities[0].pose.translation.y, 2.0)
-        self.assertEqual(self.bridge.spawned_entities[0].pose.translation.z, 3.0)
-        assert self.bridge.spawned_entities[0].pose.rotation
-        self.assertEqual(self.bridge.spawned_entities[0].pose.rotation.x, 0.0)
-        self.assertEqual(self.bridge.spawned_entities[0].pose.rotation.y, 0.0)
-        self.assertEqual(self.bridge.spawned_entities[0].pose.rotation.z, 0.0)
-        self.assertEqual(self.bridge.spawned_entities[0].pose.rotation.w, 1.0)
+        self.assertEqual(pose1.position.x, 1.0)
+        self.assertEqual(pose1.position.y, 2.0)
+        self.assertEqual(pose1.position.z, 3.0)
+        assert pose1.orientation
+        self.assertEqual(pose1.orientation.x, 0.0)
+        self.assertEqual(pose1.orientation.y, 0.0)
+        self.assertEqual(pose1.orientation.z, 0.0)
+        self.assertEqual(pose1.orientation.w, 1.0)
 
+        pose2 = self.bridge.spawned_entities[1].pose.pose
         self.assertEqual(self.bridge.spawned_entities[1].name, "test_entity2")
         self.assertEqual(self.bridge.spawned_entities[1].prefab_name, "test_prefab2")
-        self.assertEqual(self.bridge.spawned_entities[1].pose.translation.x, 4.0)
-        self.assertEqual(self.bridge.spawned_entities[1].pose.translation.y, 5.0)
-        self.assertEqual(self.bridge.spawned_entities[1].pose.translation.z, 6.0)
-        self.assertIsNone(self.bridge.spawned_entities[1].pose.rotation)
+        self.assertEqual(pose2.position.x, 4.0)
+        self.assertEqual(pose2.position.y, 5.0)
+        self.assertEqual(pose2.position.z, 6.0)
+        self.assertEqual(pose2.orientation.x, 0.0)
+        self.assertEqual(pose2.orientation.y, 0.0)
+        self.assertEqual(pose2.orientation.z, 0.0)
+        self.assertEqual(pose2.orientation.w, 1.0)
 
     def test_spawn_entity(self):
         self.bridge._spawn_entity(self.test_entity1)  # type: ignore
@@ -288,24 +276,30 @@ class TestSimulationBridge(unittest.TestCase):
         self.bridge._spawn_entity(self.test_entity1)  # type: ignore
 
         # Get the pose
-        pose = self.bridge.get_object_pose(self.bridge.spawned_entities[0])
+        pose_stamped: PoseStamped = self.bridge.get_object_pose(
+            self.bridge.spawned_entities[0]
+        )
 
         # Check if the pose matches
-        self.assertEqual(pose.translation.x, 1.0)
-        self.assertEqual(pose.translation.y, 2.0)
-        self.assertEqual(pose.translation.z, 3.0)
-        assert pose.rotation
-        self.assertEqual(pose.rotation.x, 0.0)
-        self.assertEqual(pose.rotation.y, 0.0)
-        self.assertEqual(pose.rotation.z, 0.0)
-        self.assertEqual(pose.rotation.w, 1.0)
+        pose = pose_stamped.pose
+        self.assertEqual(pose.position.x, 1.0)
+        self.assertEqual(pose.position.y, 2.0)
+        self.assertEqual(pose.position.z, 3.0)
+        assert pose.orientation
+        self.assertEqual(pose.orientation.x, 0.0)
+        self.assertEqual(pose.orientation.y, 0.0)
+        self.assertEqual(pose.orientation.z, 0.0)
+        self.assertEqual(pose.orientation.w, 1.0)
 
         # Test for non-existent entity
         non_existent_entity = SpawnedEntity(
             id="non_existent",
             name="non_existent",
             prefab_name="non_existent",
-            pose=Pose(translation=Translation(x=0.0, y=0.0, z=0.0)),
+            pose=PoseStamped(
+                header=Header(frame_id="test_frame"),
+                pose=Pose(position=Point(x=0.0, y=0.0, z=0.0)),
+            ),
         )
 
         with self.assertRaises(ValueError):

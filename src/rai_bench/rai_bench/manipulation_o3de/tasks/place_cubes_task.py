@@ -89,8 +89,8 @@ class PlaceCubesTask(ManipulationTask):
             1
             for ent in entities
             if self.is_adjacent_to_any(
-                ent.pose,
-                [e.pose for e in entities if e != ent],
+                ent.pose.pose,
+                [e.pose.pose for e in entities if e != ent],
                 self.threshold_distance,
             )
         )
