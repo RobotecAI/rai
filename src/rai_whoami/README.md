@@ -116,3 +116,23 @@ agent.subscribe_source("/from_human", connector)
 agent.run()
 wait_for_shutdown([agent])
 ```
+
+## Using ROS2 Vector Store Retrieval Agent
+
+The `ROS2VectorStoreRetrievalAgent` is a ROS2 agent that can be used to retrieve information from the vector database through a ROS 2 service.
+
+```python
+from rai_whoami.agents import ROS2VectorStoreRetrievalAgent
+
+agent = ROS2VectorStoreRetrievalAgent(
+    service_name="rai_whoami_documentation_service",
+    root_dir="output_dir/generated/",
+    k=4,
+)
+```
+
+With the agent running, you can query the vector database through a ROS 2 service:
+
+```bash
+ros2 service call /rai_whoami_documentation_service rai_interfaces/srv/VectorStoreRetrieval "query:  'maximum load'"
+```
