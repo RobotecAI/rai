@@ -184,33 +184,36 @@ class Benchmark:
             tool_calls_num = 0
 
             ts = time.perf_counter()
+            prev_count: int = 0
             for state in agent.stream(
                 {"messages": [HumanMessage(content=scenario.task.get_prompt())]},
                 {
                     "recursion_limit": 100
                 },  # NOTE (jmatejcz) what should be recursion limit?
             ):
-                graph_node_name = list(state.keys())[0]
-                msg = state[graph_node_name]["messages"][-1]
+                node = next(iter(state))
+                new_messages = state[node]["messages"][prev_count:]
+                prev_count = len(state[node]["messages"])
 
-                if isinstance(msg, HumanMultimodalMessage):
-                    last_msg = msg.text
-                elif isinstance(msg, BaseMessage):
-                    if isinstance(msg.content, list):
-                        if len(msg.content) == 1:
-                            if type(msg.content[0]) is dict:
-                                last_msg = msg.content[0].get("text", "")
+                for msg in new_messages:
+                    if isinstance(msg, HumanMultimodalMessage):
+                        last_msg = msg.text
+                    elif isinstance(msg, BaseMessage):
+                        if isinstance(msg.content, list):
+                            if len(msg.content) == 1:
+                                if type(msg.content[0]) is dict:
+                                    last_msg = msg.content[0].get("text", "")
+                        else:
+                            last_msg = msg.content
+                            self._logger.debug(f"{node}: {last_msg}")  # type: ignore
+
                     else:
-                        last_msg = msg.content
-                        self._logger.debug(f"{graph_node_name}: {last_msg}")  # type: ignore
+                        raise ValueError(f"Unexpected type of message: {type(msg)}")
 
-                else:
-                    raise ValueError(f"Unexpected type of message: {type(msg)}")
+                    if isinstance(msg, AIMessage):
+                        tool_calls_num += len(msg.tool_calls)
 
-                if isinstance(msg, AIMessage):
-                    tool_calls_num += len(msg.tool_calls)
-
-                self._logger.info(f"AI Message: {msg}")  # type: ignore
+                    self._logger.info(f"AI Message: {msg}")  # type: ignore
 
             te = time.perf_counter()
             try:

@@ -14,7 +14,7 @@
 
 
 import rclpy
-from rai.utils import wait_for_shutdown
+from rai.agents import wait_for_shutdown
 from rai_open_set_vision.agents import GroundedSamAgent, GroundingDinoAgent
 
 
