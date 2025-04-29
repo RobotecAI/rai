@@ -132,7 +132,7 @@ class NotOrderedCallsValidator(Validator):
             # all tool calls iterated
             # all subtask completed
             self.passed = True
-            self.extra_calls_used += len(tool_calls) - self.required_calls
+            self.extra_calls_used = len(tool_calls) - self.required_calls
             return True, []
 
         self.logger.error(
@@ -140,5 +140,5 @@ class NotOrderedCallsValidator(Validator):
         )
         self.passed = False
         if len(tool_calls) > self.required_calls:
-            self.extra_calls_used += len(tool_calls) - self.required_calls
+            self.extra_calls_used = len(tool_calls) - self.required_calls
         return False, []
