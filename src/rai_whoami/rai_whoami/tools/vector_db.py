@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
 from typing import Any, Literal, Type
 
 from langchain_community.vectorstores import VectorStore
@@ -43,7 +44,9 @@ class QueryDatabaseTool(BaseTool):
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
         if self.database_type == "faiss":
-            self.vdb_client = get_faiss_client(self.root_dir, self.embeddings_model)
+            self.vdb_client = get_faiss_client(
+                str(Path(self.root_dir) / "generated"), self.embeddings_model
+            )
         else:
             raise ValueError(f"Unsupported database type: {self.database_type}")
 

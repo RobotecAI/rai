@@ -29,11 +29,13 @@ from rai_whoami.models import EmbodimentInfo
 class ROS2EmbodimentInfoAgent(BaseAgent):
     def __init__(self, root_dir: str, service_name: str):
         super().__init__()
+        self.root_dir = root_dir
+        self.service_name = service_name
         self.connector = ROS2Connector()
-        self.embodiment_info = EmbodimentInfo.from_directory(root_dir)
+        self.embodiment_info = EmbodimentInfo.from_directory(self.root_dir)
 
         self.connector.create_service(
-            service_name=service_name,
+            service_name=self.service_name,
             service_type="rai_interfaces/srv/EmbodimentInfo",
             on_request=self.service_callback,
         )

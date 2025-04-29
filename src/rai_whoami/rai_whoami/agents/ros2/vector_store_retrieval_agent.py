@@ -19,6 +19,7 @@ if importlib.util.find_spec("rclpy") is None:
         "This is a ROS2 feature. Make sure ROS2 is installed and sourced."
     )
 
+from pathlib import Path
 from typing import Annotated
 
 from langchain_core.embeddings import Embeddings
@@ -43,7 +44,9 @@ class ROS2VectorStoreRetrievalAgent(BaseAgent):
         self.root_dir = root_dir
         self.embeddings_model = embeddings_model
         self.k = k
-        self.vdb_client = get_faiss_client(self.root_dir, self.embeddings_model)
+        self.vdb_client = get_faiss_client(
+            str(Path(self.root_dir) / "generated"), self.embeddings_model
+        )
 
         self.connector.create_service(
             service_name=service_name,

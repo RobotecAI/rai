@@ -40,7 +40,7 @@ To generate the system prompt from your documentation directory:
 python src/rai_whoami/rai_whoami/build_whoami.py documentation_dir [--output_dir output_dir] [--build-vector-db]
 ```
 
-Generated files will be saved in the `output_dir / generated directory` or `documentation_dir / generated` if not specified.
+Generated files will be saved in the `output_dir / generated` directory or `documentation_dir / generated` if not specified.
 
 ---
 
@@ -87,7 +87,7 @@ from langchain_core.messages import HumanMessage
 from rai_whoami.tools import QueryDatabaseTool
 from rai.agents.langchain import create_react_runnable
 
-query_tool = QueryDatabaseTool(root_dir="output_dir/generated")
+query_tool = QueryDatabaseTool(root_dir="output_dir")
 
 react_agent = create_react_runnable(tools=[query_tool])
 print(
@@ -105,7 +105,7 @@ from rai.communication.ros2 import ROS2HRIConnector
 
 from rai_whoami.tools import QueryDatabaseTool
 
-query_tool = QueryDatabaseTool(root_dir="output_dir/generated")
+query_tool = QueryDatabaseTool(root_dir="output_dir")
 
 connector = ROS2HRIConnector()
 agent = ReActAgent(
@@ -126,7 +126,7 @@ from rai_whoami.agents import ROS2VectorStoreRetrievalAgent
 
 agent = ROS2VectorStoreRetrievalAgent(
     service_name="rai_whoami_documentation_service",
-    root_dir="output_dir/generated/",
+    root_dir="output_dir",
     k=4,
 )
 ```
@@ -146,7 +146,7 @@ from rai_whoami.agents import ROS2EmbodimentInfoAgent
 
 agent = ROS2EmbodimentInfoAgent(
     service_name="rai_whoami_embodiment_info_service",
-    root_dir="output_dir/generated/",
+    root_dir="output_dir",
 )
 ```
 

@@ -163,7 +163,9 @@ class EmbodimentInfo(BaseModel):
     def from_directory(cls, directory: Path | str) -> "EmbodimentInfo":
         if isinstance(directory, str):
             directory = Path(directory)
-        return cls.model_validate_json((directory / "output" / "info.json").read_text())
+        return cls.model_validate_json(
+            (directory / "generated" / "info.json").read_text()
+        )
 
     def to_directory(self, directory: Path | str):
         if isinstance(directory, str):

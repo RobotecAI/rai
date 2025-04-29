@@ -37,11 +37,18 @@ After running the build command, inspect the generated files in the `panda/gener
 - `description`: Description of the robot
 - `images`: Base64 encoded images
 
-## Testing
+## Testing (ROS 2)
 
 You can test the generated package by using the RAI Whoami services:
 
 1. Using the RAI Whoami services:
+
+Run the RAI Whoami services:
+
+```bash
+python src/rai_whoami/rai_whoami/scripts/ros2_embodiment_service.py panda/ &
+python src/rai_whoami/rai_whoami/scripts/ros2_vector_store_retrieval_service.py panda/
+```
 
 ```shell
 # Get robot's identity
