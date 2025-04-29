@@ -181,3 +181,30 @@ to your liking and run the script!
 ```bash
 python src/rai_bench/rai_bench/examples/test_models.py
 ```
+
+### Results and Visualization
+
+All results from running benchmarks will be saved to folder [experiments](./rai_bench/experiments/)
+
+If you run single benchmark test like:
+When you run a test via:
+
+```bash
+python src/rai_bench/rai_bench/examples/<benchmark_name>/main.py
+```
+
+Results will be saved to dedicated directory named `<benchmark_name>`
+
+When you run a test via:
+
+```bash
+python src/rai_bench/rai_bench/examples/test_models.py
+```
+
+results will be saved to separate folder in [results](./rai_bench/experiments/), with prefix `run_`
+
+To visualise the results run:
+
+```bash
+streamlit run src/rai_bench/rai_bench/results_processing/visualise.py
+```
