@@ -125,19 +125,25 @@ class SpeechRecognitionAgent(BaseAgent):
             is_input=True,
             is_output=False,
         )
-        match cfg.transcribe.model_name:
+        match cfg.transcribe.model_type:
             case "LocalWhisper (Free)":
                 from rai_asr.models import LocalWhisper
 
-                model = LocalWhisper("tiny", 16000, language=cfg.transcribe.language)
+                model = LocalWhisper(
+                    cfg.transcribe.model_name, 16000, language=cfg.transcribe.language
+                )
             case "FasterWhisper (Free)":
                 from rai_asr.models import FasterWhisper
 
-                model = FasterWhisper("tiny", 16000, language=cfg.transcribe.language)
+                model = FasterWhisper(
+                    cfg.transcribe.model_name, 16000, language=cfg.transcribe.language
+                )
             case "OpenAI (Cloud)":
                 from rai_asr.models import OpenAIWhisper
 
-                model = OpenAIWhisper("tiny", 16000, language=cfg.transcribe.language)
+                model = OpenAIWhisper(
+                    cfg.transcribe.model_name, 16000, language=cfg.transcribe.language
+                )
             case _:
                 raise ValueError(f"Unknown model name f{cfg.transcribe.model_name}")
 
@@ -149,12 +155,12 @@ class SpeechRecognitionAgent(BaseAgent):
 
         agent = cls(microphone_configuration, "rai_auto_asr_agent", model, vad)
         if cfg.wakeword.is_used:
-            match cfg.wakeword.model_name:
+            match cfg.wakeword.model_type:
                 case "OpenWakeWord":
                     from rai_asr.models import OpenWakeWord
 
                     agent.add_detection_model(
-                        OpenWakeWord("hey jarvis", cfg.wakeword.threshold)
+                        OpenWakeWord(cfg.wakeword.model_name, cfg.wakeword.threshold)
                     )
         return agent
 

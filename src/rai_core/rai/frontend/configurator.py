@@ -358,12 +358,14 @@ def asr():
         )
 
     def on_asr_vendor_change():
-        vendor = (
-            "whisper"
-            if st.session_state.asr_vendor_select == "Local Whisper (Free)"
-            else "openai"
+        st.session_state.config["asr"]["transcription_model"] = (
+            st.session_state.asr_vendor_select
         )
-        st.session_state.config["asr"]["transcription_model"] = vendor
+
+    def on_model_name_change():
+        st.session_state.config["asr"]["transcription_model_name"] = (
+            st.session_state.model_name_input
+        )
 
     def on_language_change():
         st.session_state.config["asr"]["language"] = st.session_state.language_input
@@ -386,6 +388,11 @@ def asr():
     def on_wake_word_model_change():
         st.session_state.config["asr"]["wake_word_model"] = (
             st.session_state.wake_word_model_input
+        )
+
+    def on_wake_word_model_name_change():
+        st.session_state.config["asr"]["wake_word_model_name"] = (
+            st.session_state.wake_word_model_name_input
         )
 
     def on_wake_word_threshold_change():
@@ -454,7 +461,7 @@ def asr():
         on_change=on_asr_vendor_change,
     )
 
-    if asr_vendor == "OpenAI (Cloud)":
+    if asr_vendor == "OpenAI":
         st.info(
             """
         OpenAI ASR uses the OpenAI API. Make sure to set `OPENAI_API_KEY` environment variable.
@@ -469,6 +476,14 @@ def asr():
 
     # Add ASR parameters
     st.subheader("ASR Parameters")
+
+    model_name = st.text_input(
+        "Model name",
+        value=st.session_state.config.get("asr", {}).get("model_name", "tiny"),
+        help="Particular model architecture of the provided type, e.g. 'tiny'",
+        key="model_name_input",
+        on_change=on_model_name_change,
+    )
 
     language = st.text_input(
         "Language code",
@@ -510,10 +525,21 @@ def asr():
         wake_word_model = st.text_input(
             "Wake word model",
             value=st.session_state.config.get("asr", {}).get("wake_word_model", ""),
-            help="Wake word model to use",
+            help="Wake word model type to use",
             key="wake_word_model_input",
             on_change=on_wake_word_model_change,
         )
+
+        wake_word_model = st.text_input(
+            "Wake word model name",
+            value=st.session_state.config.get("asr", {}).get(
+                "wake_word_model_name", ""
+            ),
+            help="Specific wake word model to use",
+            key="wake_word_model_name_input",
+            on_change=on_wake_word_model_name_change,
+        )
+
         wake_word_threshold = st.slider(
             "Wake word threshold",
             min_value=0.0,

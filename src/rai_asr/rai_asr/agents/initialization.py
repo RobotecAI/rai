@@ -27,22 +27,26 @@ class VADConfig:
 
 @dataclass
 class WWConfig:
-    model_name: Literal["OpenWakeWord"] = "OpenWakeWord"
+    model_name: str = "hey jarvis"
+    model_type: Literal["OpenWakeWord"] = "OpenWakeWord"
     threshold: float = 0.01
     is_used: bool = False
 
 
-TRANSCRIBE_MODELS = ["LocalWhisper (Free)", "FasterWhisper (Free)", "OpenAI (Cloud)"]
+TRANSCRIBE_MODELS = ["LocalWhisper", "FasterWhisper", "OpenAI"]
 
 
 @dataclass
 class TranscribeConfig:
-    model_name: str = TRANSCRIBE_MODELS[0]
+    model_type: str = TRANSCRIBE_MODELS[0]
+    model_name: str = "tiny"
     language: str = "en"
 
     def __post_init__(self):
-        if self.model_name not in TRANSCRIBE_MODELS:
-            raise ValueError(f"model_name must be one of {TRANSCRIBE_MODELS}")
+        if self.model_type not in TRANSCRIBE_MODELS:
+            raise ValueError(
+                f"unknown model_type: {self.model_type}. Must be one of {TRANSCRIBE_MODELS}"
+            )
 
 
 @dataclass
@@ -72,12 +76,14 @@ def load_config(config_path: Optional[str] = None) -> ASRAgentConfig:
             silence_grace_period=config_dict["asr"]["silence_grace_period"],
         ),
         wakeword=WWConfig(
-            model_name=config_dict["asr"]["wake_word_model"],
+            model_type=config_dict["asr"]["wake_word_model"],
+            model_name=config_dict["asr"]["wake_word_model_name"],
             threshold=config_dict["asr"]["wake_word_threshold"],
             is_used=config_dict["asr"]["use_wake_word"],
         ),
         transcribe=TranscribeConfig(
-            model_name=config_dict["asr"]["transcription_model"],
+            model_type=config_dict["asr"]["transcription_model"],
+            model_name=config_dict["asr"]["transcription_model_name"],
             language=config_dict["asr"]["language"],
         ),
         microphone=MicrophoneConfig(

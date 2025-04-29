@@ -42,6 +42,8 @@ vad_threshold = 0.3
 use_wake_word = false
 wake_word_model = ""
 wake_word_threshold = 0.5
+wake_word_model_name = ""
+transcription_model_name = "tiny"
 
 [tts]
 vendor = "elevenlabs"
