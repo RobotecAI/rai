@@ -240,7 +240,7 @@ class ToolCallingAgentBenchmark:
             if not results:
                 continue
 
-            success_count = sum(1 for r in results if r.score)
+            success_count = sum(1 for r in results if r.score == 1.0)
             success_rate = success_count / len(results) * 100
             avg_time = statistics.mean(r.total_time for r in results)
             total_extra_calls = sum(r.extra_tool_calls_used for r in results)
