@@ -92,20 +92,28 @@ def convert_ros_img_to_cv2mat(msg: sensor_msgs.msg.Image) -> cv2.typing.MatLike:
     return cv_image
 
 
-def convert_ros_img_to_base64(msg: sensor_msgs.msg.Image) -> str:
+def convert_ros_img_to_base64(
+    msg: sensor_msgs.msg.Image | sensor_msgs.msg.CompressedImage,
+) -> str:
     bridge = CvBridge()
-    cv_image = cast(cv2.Mat, bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"))  # type: ignore
+    msg_type = type(msg)
+    if msg_type == sensor_msgs.msg.Image:
+        cv_image = bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
+    elif msg_type == sensor_msgs.msg.CompressedImage:
+        cv_image = bridge.compressed_imgmsg_to_cv2(msg, desired_encoding="passthrough")
+    else:
+        raise ValueError(f"Unsupported message type: {msg_type}")
+
     if cv_image.shape[-1] == 4:
         cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGRA2RGB)
         return base64.b64encode(bytes(cv2.imencode(".png", cv_image)[1])).decode(
             "utf-8"
         )
     elif cv_image.shape[-1] == 1:
-        cv_image = cv2.cvtColor(cv_image, cv2.GRAY2RGB)
+        cv_image = cv2.cvtColor(cv_image, cv2.COLOR_GRAY2RGB)
         return base64.b64encode(bytes(cv2.imencode(".png", cv_image)[1])).decode(
             "utf-8"
         )
-
     else:
         cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
         image_data = cv2.imencode(".png", cv_image)[1].tostring()  # type: ignore
