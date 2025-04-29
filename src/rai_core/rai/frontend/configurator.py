@@ -27,6 +27,26 @@ from langchain_aws import BedrockEmbeddings, ChatBedrock
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
+from rai.communication import sound_device
+
+
+def get_sound_devices(
+    reinitialize: bool = False, output: bool = False
+) -> List[Dict[str, str | int]]:
+    if reinitialize:
+        sd._terminate()
+        sd._initialize()
+    devices: List[Dict[str, str | int]] = sd.query_devices()
+    if output:
+        recording_devices = [
+            device for device in devices if device.get("max_output_channels", 0) > 0
+        ]
+    else:
+        recording_devices = [
+            device for device in devices if device.get("max_input_channels", 0) > 0
+        ]
+    return recording_devices
+
 
 def welcome():
     st.title("Welcome to RAI Configurator! 👋")
@@ -413,17 +433,7 @@ def asr():
     """
     )
 
-    def get_recording_devices(reinitialize: bool = False) -> List[Dict[str, str | int]]:
-        if reinitialize:
-            sd._terminate()
-            sd._initialize()
-        devices: List[Dict[str, str | int]] = sd.query_devices()
-        recording_devices = [
-            device for device in devices if device.get("max_input_channels", 0) > 0
-        ]
-        return recording_devices
-
-    recording_devices = get_recording_devices()
+    recording_devices = get_sound_devices()
     currently_selected_device_name = st.session_state.config.get("asr", {}).get(
         "recording_device_name", ""
     )
@@ -445,7 +455,7 @@ def asr():
 
     refresh_devices = st.button("Refresh devices")
     if refresh_devices:
-        recording_devices = get_recording_devices(reinitialize=True)
+        recording_devices = get_sound_devices(reinitialize=True)
 
     # Get the current vendor from config and convert to display name
     current_vendor = st.session_state.config.get("asr", {}).get(
@@ -560,17 +570,17 @@ def asr():
 
 
 def tts():
-    def on_tts_vendor_change():
-        vendor = (
-            "elevenlabs"
-            if st.session_state.tts_vendor_select == "ElevenLabs (Cloud)"
-            else "opentts"
-        )
-        st.session_state.config["tts"]["vendor"] = vendor
+    from rai_tts import TTS_MODELS
 
-    def on_keep_speaker_busy_change():
-        st.session_state.config["tts"]["keep_speaker_busy"] = (
-            st.session_state.keep_speaker_busy_checkbox
+    def on_tts_vendor_change():
+        st.session_state.config["tts"]["vendor"] = st.session_state.tts_vendor_select
+
+    def on_voice_change():
+        st.session_state.config["tts"]["voice"] = st.session_state.tts_voice_input
+
+    def on_sound_device_change():
+        st.session_state.config["tts"]["speaker_device_name"] = (
+            st.session_state.sound_device_select
         )
 
     # Ensure tts config exists
@@ -586,22 +596,43 @@ def tts():
     """
     )
 
-    # Get the current vendor from config and convert to display name
-    current_vendor = st.session_state.config.get("tts", {}).get("vendor", "elevenlabs")
-    vendor_display_name = (
-        "ElevenLabs (Cloud)" if current_vendor == "elevenlabs" else "OpenTTS (Local)"
+    sound_devices = get_sound_devices(output=True)
+    currently_selected_device_name = st.session_state.config.get("tts", {}).get(
+        "speaker_device_name", ""
     )
+    try:
+        device_index = [device["name"] for device in sound_devices].index(
+            currently_selected_device_name
+        )
+    except ValueError:
+        device_index = None
+
+    recording_device_name = st.selectbox(
+        "Default speaker device",
+        [device["name"] for device in sound_devices],
+        placeholder="Select device",
+        index=device_index,
+        key="sound_device_select",
+        on_change=on_sound_device_change,
+    )
+
+    refresh_devices = st.button("Refresh devices")
+    if refresh_devices:
+        recording_devices = get_sound_devices(reinitialize=True, output=True)
+
+    # Get the current vendor from config and convert to display name
+    current_vendor = st.session_state.config.get("tts", {}).get("vendor", TTS_MODELS[0])
 
     tts_vendor = st.selectbox(
         "Choose your TTS vendor",
-        ["ElevenLabs (Cloud)", "OpenTTS (Local)"],
+        TTS_MODELS,
         placeholder="Select vendor",
-        index=["ElevenLabs (Cloud)", "OpenTTS (Local)"].index(vendor_display_name),
+        index=TTS_MODELS.index(current_vendor),
         key="tts_vendor_select",
         on_change=on_tts_vendor_change,
     )
 
-    if tts_vendor == "ElevenLabs (Cloud)":
+    if tts_vendor == "ElevenLabs":
         st.info(
             """
         Please ensure you have the following environment variable set:
@@ -612,7 +643,7 @@ def tts():
         To get your API key, follow the instructions [here](https://elevenlabs.io/docs/api-reference/getting-started)
         """
         )
-    elif tts_vendor == "OpenTTS (Local)":
+    elif tts_vendor == "OpenTTS":
         st.info(
             """
         Please ensure you have the Docker container running:
@@ -624,11 +655,12 @@ def tts():
         """
         )
 
-    keep_speaker_busy = st.checkbox(
-        "Keep speaker busy",
-        value=st.session_state.config.get("tts", {}).get("keep_speaker_busy", False),
-        key="keep_speaker_busy_checkbox",
-        on_change=on_keep_speaker_busy_change,
+    model_name = st.text_input(
+        "Voice",
+        value=st.session_state.config.get("asr", {}).get("voice", ""),
+        help="Voice compatible with selected vendor. If left empty RAI will select a deafault value.",
+        key="tts_voice_input",
+        on_change=on_voice_change,
     )
 
     st.info(
@@ -911,14 +943,21 @@ def setup_steps():
     except ImportError:
         pass
 
+    try:
+        from rai_tts import TTS_MODELS
+
+        step_names.append("🔊 Text to Speech")
+        step_render.append(tts)
+    except ImportError as e:
+        pass
+
     step_names.extend(
         [
-            "🔊 Text to Speech",
             "🎯 Additional Features",
             "✅ Review & Save",
         ]
     )
-    step_render.extend([tts, additional_features, review_and_save])
+    step_render.extend([additional_features, review_and_save])
 
     steps = dict(enumerate(step_names))
     step_renderer = dict(enumerate(step_render))

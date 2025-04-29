@@ -46,5 +46,6 @@ wake_word_model_name = ""
 transcription_model_name = "tiny"
 
 [tts]
-vendor = "elevenlabs"
-keep_speaker_busy = false
+vendor = "ElevenLabs"
+voice = ""
+speaker_device_name = "default"
