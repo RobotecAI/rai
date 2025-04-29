@@ -16,6 +16,7 @@ import logging
 import unittest
 from pathlib import Path
 
+import numpy as np
 import pytest
 from pydantic import ValidationError
 from rai.types import (
@@ -43,9 +44,9 @@ def test_position():
     assert isinstance(position.y, float)
     assert isinstance(position.z, float)
 
-    assert position.x == 1.1
-    assert position.y == 2.2
-    assert position.z == 3.3
+    assert np.isclose(position.x, 1.1)
+    assert np.isclose(position.y, 2.2)
+    assert np.isclose(position.z, 3.3)
 
 
 def test_quaternion():
@@ -56,10 +57,10 @@ def test_quaternion():
     assert isinstance(quaternion.z, float)
     assert isinstance(quaternion.w, float)
 
-    assert quaternion.x == 0.1
-    assert quaternion.y == 0.2
-    assert quaternion.z == 0.3
-    assert quaternion.w == 0.4
+    assert np.isclose(quaternion.x, 0.1)
+    assert np.isclose(quaternion.y, 0.2)
+    assert np.isclose(quaternion.z, 0.3)
+    assert np.isclose(quaternion.w, 0.4)
 
 
 def test_pose():
@@ -71,8 +72,8 @@ def test_pose():
     assert isinstance(pose.position, Point)
     assert isinstance(pose.orientation, Quaternion)
 
-    assert pose.position.x == 1.1
-    assert pose.orientation.w == 0.4
+    assert np.isclose(pose.position.x, 1.1)
+    assert np.isclose(pose.orientation.w, 0.4)
 
 
 @pytest.fixture
