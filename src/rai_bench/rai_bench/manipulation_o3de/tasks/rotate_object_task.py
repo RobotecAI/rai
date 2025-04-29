@@ -16,12 +16,13 @@ import logging
 import math
 from typing import List, Tuple, Union
 
+from rai.types import Quaternion
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai_bench.manipulation_o3de.interfaces import (
     ManipulationTask,
 )
-from rai_sim.simulation_bridge import Entity, Quaternion, SimulationConfig
+from rai_sim.simulation_bridge import Entity, SimulationConfig
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
 

@@ -39,13 +39,13 @@ def test_to_ros2_pose():
     ros2_pose = to_ros2_msg(pose)
 
     # Check the conversion
-    np.isclose(ros2_pose.position.x, 1.0)
-    np.isclose(ros2_pose.position.y, 2.0)
-    np.isclose(ros2_pose.position.z, 3.0)
-    np.isclose(ros2_pose.orientation.x, 0.1)
-    np.isclose(ros2_pose.orientation.y, 0.2)
-    np.isclose(ros2_pose.orientation.z, 0.3)
-    np.isclose(ros2_pose.orientation.w, 0.4)
+    assert np.isclose(ros2_pose.position.x, 1.0)
+    assert np.isclose(ros2_pose.position.y, 2.0)
+    assert np.isclose(ros2_pose.position.z, 3.0)
+    assert np.isclose(ros2_pose.orientation.x, 0.1)
+    assert np.isclose(ros2_pose.orientation.y, 0.2)
+    assert np.isclose(ros2_pose.orientation.z, 0.3)
+    assert np.isclose(ros2_pose.orientation.w, 0.4)
 
 
 def test_to_ros2_msg_wrong_input_type():
@@ -70,10 +70,10 @@ def test_from_ros2_pose():
     pose = cast(Pose, from_ros2_msg(ros2_pose))
 
     # Check the conversion
-    np.isclose(pose.position.x, 1.0)
-    np.isclose(pose.position.y, 2.0)
-    np.isclose(pose.position.z, 3.0)
-    np.isclose(pose.orientation.x, 0.1)
-    np.isclose(pose.orientation.y, 0.2)
-    np.isclose(pose.orientation.z, 0.3)
-    np.isclose(pose.orientation.w, 0.4)
+    assert np.isclose(pose.position.x, 1.0)
+    assert np.isclose(pose.position.y, 2.0)
+    assert np.isclose(pose.position.z, 3.0)
+    assert np.isclose(pose.orientation.x, 0.1)
+    assert np.isclose(pose.orientation.y, 0.2)
+    assert np.isclose(pose.orientation.z, 0.3)
+    assert np.isclose(pose.orientation.w, 0.4)

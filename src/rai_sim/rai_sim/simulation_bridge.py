@@ -127,13 +127,12 @@ class SimulationConfig(BaseModel):
         with open(base_config_path) as f:
             content = yaml.safe_load(f)
         frame_id = content["frame_id"]
-        header = Header(frame_id=frame_id)
         entities = [
             Entity(
                 name=entity["name"],
                 prefab_name=entity["prefab_name"],
                 pose=PoseStamped(
-                    header=header,
+                    header=Header(frame_id=frame_id),
                     pose=Pose(
                         position=Point(
                             **entity["pose"]["translation"]

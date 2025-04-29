@@ -34,8 +34,15 @@ def to_ros2_msg(base_model: ROS2BaseModel) -> Any:
 
 
 def from_ros2_msg(msg: Any) -> ROS2BaseModel:
+    if not hasattr(msg, "__class__"):
+        raise TypeError(f"Expected ROS2 message, got {type(msg)}")
     msg_name = msg.__class__.__name__
     types_module = importlib.import_module("rai.types")
-    base_model_cls: ROS2BaseModel = getattr(types_module, msg_name)
+    try:
+        base_model_cls: ROS2BaseModel = getattr(types_module, msg_name)
+    except AttributeError:
+        raise ImportError(
+            f"Could not find ROS2BaseModel class for {msg_name} in rai.types module"
+        )
     msg_dict = rosidl_runtime_py.message_to_ordereddict(msg)
     return base_model_cls.model_validate(msg_dict)

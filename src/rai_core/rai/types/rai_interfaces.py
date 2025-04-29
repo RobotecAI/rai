@@ -14,12 +14,10 @@
 
 from typing import List
 
+from .base import ROS2BaseModel
 from .geometry import PoseStamped
 from .sensor import Image
-from .std import (
-    Header,
-    ROS2BaseModel,
-)
+from .std import Header
 from .vision import Detection2D
 
 
