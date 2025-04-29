@@ -13,9 +13,9 @@
 # limitations under the License.
 from typing import List
 
-from .base import ROS2BaseModel
-from .std import Header
-from .vision import RegionOfInterest
+from rai.types.base import ROS2BaseModel
+from rai.types.std import Header
+from rai.types.vision import RegionOfInterest
 
 
 class BaseSensorModel(ROS2BaseModel):

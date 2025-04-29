@@ -24,10 +24,9 @@ from PIL.Image import Image as ImageType
 from pydantic import Field
 from pydub import AudioSegment
 
+from rai.communication.base_connector import BaseConnector, BaseMessage
 from rai.messages import AIMultimodalMessage, HumanMultimodalMessage
 from rai.messages import MultimodalMessage as RAIMultimodalMessage
-
-from .base_connector import BaseConnector, BaseMessage
 
 
 class HRIException(Exception):
