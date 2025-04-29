@@ -19,6 +19,7 @@ if importlib.util.find_spec("rclpy") is None:
         "This is a ROS2 feature. Make sure ROS2 is installed and sourced."
     )
 
+import logging
 from pathlib import Path
 from typing import Annotated
 
@@ -39,6 +40,7 @@ class ROS2VectorStoreRetrievalAgent(BaseAgent):
         k: Annotated[int, "The number of results to return"] = 4,
     ):
         super().__init__()
+        self.logger = logging.getLogger(__name__)
         self.connector = ROS2Connector()
         self.service_name = service_name
         self.root_dir = root_dir
@@ -53,12 +55,16 @@ class ROS2VectorStoreRetrievalAgent(BaseAgent):
             service_type="rai_interfaces/srv/VectorStoreRetrieval",
             on_request=self.service_callback,
         )
+        self.logger.info(
+            f"Vector store retrieval agent initialized with service name {service_name}"
+        )
 
     def service_callback(
         self,
         request: VectorStoreRetrieval.Request,
         response: VectorStoreRetrieval.Response,
     ):
+        self.logger.info(f"Received request: {request.query}")
         vdb_results = self.vdb_client.similarity_search_with_score(
             request.query, k=self.k
         )
@@ -66,10 +72,11 @@ class ROS2VectorStoreRetrievalAgent(BaseAgent):
         response.message = "Success"
         response.documents = [result[0].page_content for result in vdb_results]
         response.scores = [result[1] for result in vdb_results]
+        self.logger.info(f"Sending response to query: {request.query}")
         return response
 
     def run(self):
         pass
 
     def stop(self):
-        pass
+        self.connector.shutdown()

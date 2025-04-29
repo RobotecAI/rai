@@ -122,13 +122,16 @@ wait_for_shutdown([agent])
 The `ROS2VectorStoreRetrievalAgent` is a ROS2 agent that can be used to retrieve information from the vector database through a ROS 2 service.
 
 ```python
-from rai_whoami.agents import ROS2VectorStoreRetrievalAgent
+from rai_whoami.agents.ros2 import ROS2VectorStoreRetrievalAgent
+from rai.agents import wait_for_shutdown
 
 agent = ROS2VectorStoreRetrievalAgent(
     service_name="rai_whoami_documentation_service",
     root_dir="output_dir",
     k=4,
 )
+agent.run()
+wait_for_shutdown([agent])
 ```
 
 With the agent running, you can query the vector database through a ROS 2 service:
@@ -142,12 +145,15 @@ ros2 service call /rai_whoami_documentation_service rai_interfaces/srv/VectorSto
 The `ROS2EmbodimentInfoAgent` is a ROS2 agent that can be used to retrieve information from the embodiment info through a ROS 2 service.
 
 ```python
-from rai_whoami.agents import ROS2EmbodimentInfoAgent
+from rai_whoami.agents.ros2 import ROS2EmbodimentInfoAgent
+from rai.agents import wait_for_shutdown
 
 agent = ROS2EmbodimentInfoAgent(
     service_name="rai_whoami_embodiment_info_service",
     root_dir="output_dir",
 )
+agent.run()
+wait_for_shutdown([agent])
 ```
 
 With the agent running, you can query the embodiment info through a ROS 2 service:
