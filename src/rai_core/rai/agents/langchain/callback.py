@@ -14,7 +14,7 @@
 
 import logging
 import threading
-from typing import Dict, List, Optional
+from typing import List, Optional
 from uuid import UUID
 
 from langchain_core.callbacks import BaseCallbackHandler
@@ -27,7 +27,7 @@ from rai.communication.hri_connector import HRIConnector, HRIMessage
 class HRICallbackHandler(BaseCallbackHandler):
     def __init__(
         self,
-        connectors: Dict[str, HRIConnector[HRIMessage]],
+        connectors: dict[str, HRIConnector[HRIMessage]],
         aggregate_chunks: bool = False,
         splitting_chars: Optional[List[str]] = None,
         max_buffer_size: int = 200,
@@ -47,20 +47,21 @@ class HRICallbackHandler(BaseCallbackHandler):
         return token in self.splitting_chars
 
     def _send_all_targets(self, tokens: str, done: bool = False):
-        for target, connector in self.connectors.items():
-            self.logger.info(f"Sending {len(tokens)} tokens to target: {target}")
+        self.logger.info(
+            f"Sending {len(tokens)} tokens to {len(self.connectors)} connectors"
+        )
+        for connector_name, connector in self.connectors.items():
             try:
-                to_send: HRIMessage = connector.build_message(
+                connector.send_all_targets(
                     AIMessage(content=tokens),
                     self.current_conversation_id,
                     self.current_chunk_id,
                     done,
                 )
-                connector.send_message(to_send, target)
-                self.logger.debug(f"Sent {len(tokens)} tokens to hri_connector.")
+                self.logger.debug(f"Sent {len(tokens)} tokens to {connector_name}")
             except Exception as e:
                 self.logger.error(
-                    f"Failed to send {len(tokens)} tokens to hri_connector: {e}"
+                    f"Failed to send {len(tokens)} tokens to {connector_name}: {e}"
                 )
 
     def on_llm_new_token(self, token: str, *, run_id: UUID, **kwargs):

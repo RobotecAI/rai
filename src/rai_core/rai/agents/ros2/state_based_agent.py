@@ -12,16 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .agent import BaseState, LangChainAgent
-from .callback import HRICallbackHandler
-from .react_agent import ReActAgent
-from .runnables import ReActAgentState, create_react_runnable
+from rai.agents import BaseStateBasedAgent
+from rai.communication.ros2 import ROS2Connector
 
-__all__ = [
-    "BaseState",
-    "HRICallbackHandler",
-    "LangChainAgent",
-    "ReActAgent",
-    "ReActAgentState",
-    "create_react_runnable",
-]
+
+class ROS2StateBasedAgent(BaseStateBasedAgent):
+    def setup_connector(self):
+        return ROS2Connector()
