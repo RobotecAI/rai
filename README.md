@@ -1,13 +1,8 @@
 # RAI
 
-> [!IMPORTANT]  
-> **Development Status**: RAI is currently undergoing significant development on the development
-> branch, focusing on version 2.0. This major version update will introduce substantial improvements
-> and is not backward compatible with version 1.0. We are targeting an early May 2025 release for
-> RAI 2.0. For the latest stable release, please refer to the
-> [main branch](https://github.com/RobotecAI/rai/tree/main).
-
 RAI is a flexible AI agent framework to develop and deploy Embodied AI features for your robots.
+
+📚 For the latest documentation and tutorials including setup guide, visit [robotecai.github.io/rai](https://robotecai.github.io/rai/)
 
 ---
 
@@ -55,14 +50,6 @@ The RAI framework is designed to revolutionize robotics by:
 - Enable rich sensory integration
 - Process multiple input/output modalities simultaneously
 
-## Table of Contents
-
-- [Framework](#rai-framework)
-- [Setup](#setup)
-- [Usage examples (demos)](#simulation-demos)
-- [Communication Protocols](#communication-protocols)
-- [Developer resources](#developer-resources)
-
 ## RAI framework
 
 - [x] rai core: Core functionality for multi-agent system, human-robot interaction and
@@ -76,117 +63,6 @@ The RAI framework is designed to revolutionize robotics by:
 - [x] rai_openset: Openset detection models and tools.
 - [x] rai_nomad: Integration with NoMaD for navigation.
 - [ ] rai_finetune: Finetune LLMs on your embodied data.
-
-## Setup
-
-Before going further, make sure you have ROS 2 (Jazzy or Humble) installed and sourced on your
-system. If you don't have ROS 2 follow the installation documentation for
-[Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html) or
-[Jazzy](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html). Make sure that
-`ros-dev-tools` are installed.
-
-> [!TIP]  
-> RAI has experimental docker images. See the [docker](docs/setup_docker.md) for instructions.
-
-### 1. Setting up the workspace:
-
-#### 1.1 Install poetry
-
-RAI uses [Poetry](https://python-poetry.org/) for python packaging and dependency management.
-Install poetry with the following line:
-
-```bash
-curl -sSL https://install.python-poetry.org | python3 -
-```
-
-Alternatively, you can opt to do so by following the
-[official docs](https://python-poetry.org/docs/#installation).
-
-#### 1.2 Clone the repository:
-
-```bash
-git clone https://github.com/RobotecAI/rai.git
-cd rai
-```
-
-#### 1.3 Create poetry virtual environment and install dependencies:
-
-```bash
-poetry install
-rosdep install --from-paths src --ignore-src -r -y
-```
-
-> [!TIP]  
-> RAI is modular. If you want to use features such as speech-to-speech, simulation and benchmarking
-> suite, openset detection, or NoMaD integration, install additional dependencies:
->
-> ```bash
-> poetry install --with openset,nomad,s2s,simbench
-> ```
-
-#### 1.4 Configure RAI
-
-Run the configuration tool to set up your LLM vendor and other settings:
-
-```bash
-poetry run streamlit run src/rai_core/rai/frontend/configurator.py
-```
-
-> [!TIP]  
-> If the web browser does not open automatically, open the URL displayed in the terminal manually.
-
-### 2. Build the project:
-
-#### 2.1 Build RAI workspace
-
-```bash
-colcon build --symlink-install
-```
-
-#### 2.2 Activate the virtual environment:
-
-```bash
-source ./setup_shell.sh
-```
-
-### 3. Setting up vendors
-
-RAI is vendor-agnostic. Use the configuration in [config.toml](./config.toml) to set up your vendor
-of choice for RAI modules. Vendor choices for RAI and our recommendations are summarized in
-[Vendors Overview](docs/vendors_overview.md).
-
-> [!TIP]  
-> We strongly recommend you to use of best-performing AI models to get the most out of RAI!
-
-Pick your local solution or service provider and follow one of these guides:
-
-- **[Ollama](https://ollama.com/download)**
-- **[OpenAI](https://platform.openai.com/docs/quickstart)**
-- **[AWS Bedrock](https://console.aws.amazon.com/bedrock/home?#/overview)**
-
-## What's next?
-
-RAI provides a comprehensive set of tools and capabilities for your robotic applications. With the
-help of our [developer guide](docs/developer_guide.md), you can:
-
-- Deploy RAI on your robot and engage in natural conversations about its documentation and
-  capabilities
-- Extend the framework with custom tools and integrate them into your interactions
-- Implement complex, multi-step tasks that leverage RAI's reasoning and planning capabilities
-
-## Communication Protocols
-
-RAI provides first-class support for ROS 2 Humble and Jazzy distributions. While ROS 2 serves as our
-Tier 1 communication protocol, RAI's architecture includes a powerful abstraction layer that:
-
-- Simplifies communication across different networks and protocols
-- Enables seamless integration with various communication backends
-- Allows for future protocol extensions while maintaining a consistent interface
-
-This design philosophy means that while RAI is fully compatible with ROS 2, most of its features can
-be utilized independently of the ROS 2 environment. The framework's modular architecture makes it
-suitable not only for different robotic platforms but also for non-robotic applications, offering
-flexibility in deployment across various domains.
 
 ### Simulation demos
 
