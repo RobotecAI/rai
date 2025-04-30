@@ -47,7 +47,8 @@ class GroupObjectsTask(ManipulationTask):
         self.obj_types = obj_types
         self.threshold_distance = threshold_distance
 
-    def get_prompt(self) -> str:
+    @property
+    def task_prompt(self) -> str:
         obj_names = ", ".join(obj + "s" for obj in self.obj_types).replace(
             "_", " "
         )  # create prompt, add s for plural form

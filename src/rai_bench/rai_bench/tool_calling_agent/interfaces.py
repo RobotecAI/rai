@@ -20,7 +20,7 @@ from langchain_core.messages import AIMessage, BaseMessage, ToolCall
 from langchain_core.runnables.config import DEFAULT_RECURSION_LIMIT
 from langchain_core.tools import BaseTool
 
-from rai_bench.tool_calling_agent.scores_tracing import SubTaskResult, ValidatorResult
+from rai_bench.tool_calling_agent.results_tracking import SubTaskResult, ValidatorResult
 
 loggers_type = logging.Logger
 

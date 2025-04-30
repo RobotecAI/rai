@@ -19,7 +19,7 @@ import rai_bench.examples.tool_calling_agent.main as tool_calling_agent_bench
 if __name__ == "__main__":
     models_name = ["llama3.2", "qwen2.5:7b"]
     vendors = ["ollama", "ollama"]
-    benchmarks = ["manipulation_o3de"]
+    benchmarks = ["tool_calling_agent", "manipulation_o3de"]
     extra_tool_calls = [5]
     repeats = 1
 

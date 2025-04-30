@@ -41,9 +41,8 @@ class Task(ABC):
     Abstract of a Task. Provides utility functions for common calculations
     that can be helfull when creating metrics.
     Specific child classes should implement:
-    - get_prompt method
     - validate_config
-    - calculate_result
+    - calculate_score
     """
 
     def __init__(
@@ -55,8 +54,14 @@ class Task(ABC):
         else:
             self.logger = logging.getLogger(__name__)
 
+    @property
     @abstractmethod
-    def get_prompt(self) -> str:
+    def system_prompt(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def task_prompt(self) -> str:
         """
         Returns the task instruction - the prompt that will be passed to agent
         """
@@ -74,11 +79,11 @@ class Task(ABC):
         pass
 
     @abstractmethod
-    def calculate_result(
+    def calculate_score(
         self, simulation_bridge: SimulationBridge[SimulationConfigT]
     ) -> float:
         """
-        Calculate the task result (score) based on the simulation information.
+        Calculate the task score based on the simulation information.
 
         Parameters
         ----------
@@ -372,6 +377,17 @@ class ManipulationTask(Task, ABC):
 
     obj_types: List[str] = []
 
+    @property
+    def system_prompt(self) -> str:
+        return """
+    You are a robotic arm with interfaces to detect and manipulate objects.
+    Here are the coordinates information:
+    x - front to back (positive is forward)
+    y - left to right (positive is right)
+    z - up to down (positive is up)
+    Before starting the task, make sure to grab the camera image to understand the environment.
+    """
+
     @abstractmethod
     def check_if_required_objects_present(
         self, simulation_config: SimulationConfig
@@ -473,7 +489,7 @@ class ManipulationTask(Task, ABC):
         )
         return current_correct, current_incorrect
 
-    def calculate_result(
+    def calculate_score(
         self, simulation_bridge: SimulationBridge[SimulationConfig]
     ) -> float:
         """

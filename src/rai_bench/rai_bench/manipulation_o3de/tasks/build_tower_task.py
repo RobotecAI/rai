@@ -75,7 +75,8 @@ class BuildCubeTowerTask(ManipulationTask):
         self.obj_types = obj_types
         self.allowable_displacement = allowable_displacement
 
-    def get_prompt(self) -> str:
+    @property
+    def task_prompt(self) -> str:
         cube_names = ", ".join(obj + "s" for obj in self.obj_types).replace("_", " ")
         return f"Manipulate objects so that all {cube_names} form a single vertical tower. Other types of objects cannot be included in a tower."
 

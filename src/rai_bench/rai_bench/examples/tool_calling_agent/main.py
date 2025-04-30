@@ -54,7 +54,6 @@ def run_benchmark(model_name: str, vendor: str, out_dir: str, extra_tool_calls: 
     experiment_dir = Path(out_dir)
     experiment_dir.mkdir(parents=True, exist_ok=True)
     log_filename = experiment_dir / "benchmark.log"
-    results_filename = experiment_dir / "results.csv"
 
     file_handler = logging.FileHandler(log_filename)
     file_handler.setLevel(logging.DEBUG)
@@ -76,7 +75,10 @@ def run_benchmark(model_name: str, vendor: str, out_dir: str, extra_tool_calls: 
         task.set_logger(bench_logger)
 
     benchmark = ToolCallingAgentBenchmark(
-        tasks=all_tasks, logger=bench_logger, results_filename=results_filename
+        tasks=all_tasks,
+        logger=bench_logger,
+        model_name=model_name,
+        results_dir=experiment_dir,
     )
 
     llm = get_llm_model_direct(model_name=model_name, vendor=vendor)
@@ -87,7 +89,7 @@ def run_benchmark(model_name: str, vendor: str, out_dir: str, extra_tool_calls: 
             system_prompt=task.get_system_prompt(),
             logger=agent_logger,
         )
-        benchmark.run_next(agent=agent, model_name=model_name)
+        benchmark.run_next(agent=agent)
 
 
 if __name__ == "__main__":

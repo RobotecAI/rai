@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 import plotly.express as px
@@ -20,10 +20,11 @@ import plotly.graph_objs as go
 import streamlit as st
 
 from rai_bench.results_processing.data_loading import (
+    BenchmarkResults,
     ModelResults,
     RunResults,
     get_available_runs,
-    load_benchmark_results,
+    load_run_results,
 )
 from rai_bench.results_processing.data_processing import (
     analyze_subtasks,
@@ -34,7 +35,7 @@ from rai_bench.results_processing.data_processing import (
     get_available_extra_tool_calls,
     get_unique_values_from_results,
 )
-from rai_bench.tool_calling_agent.scores_tracing import (
+from rai_bench.tool_calling_agent.results_tracking import (
     TaskResult,
 )
 
@@ -129,6 +130,139 @@ def create_bar_chart(
         fig.update_xaxes(tickvals=x_tickvals, ticktext=x_ticktext)  # type: ignore
 
     return adjust_bar_width(fig=fig)
+
+
+def create_aggregate_model_metrics(run_results: RunResults) -> pd.DataFrame:
+    """
+    Create a dataframe with aggregated metrics for each model across all benchmarks.
+
+    Parameters
+    ----------
+    run_results : RunResults
+        The RunResults object containing all benchmark data
+
+    Returns
+    -------
+    pd.DataFrame
+        A dataframe with aggregated metrics for each model
+    """
+    # Dictionary to store aggregated metrics for each model
+    model_metrics: Dict[str, Dict[str, Any]] = {}
+
+    # Track total counts for averaging
+    model_counts: Dict[str, int] = {}
+
+    # Collect metrics from all benchmarks
+    for benchmark_name, benchmark in run_results.benchmarks.items():
+        for model_name, model_results in benchmark.models.items():
+            if not model_results.check_if_summaries_present():
+                continue
+
+            if model_name not in model_metrics:
+                model_metrics[model_name] = {
+                    "success_rate_sum": 0.0,
+                    "time_sum": 0.0,
+                    "extra_tool_calls_sum": 0.0,
+                    "total_extra_tool_calls_used": 0,
+                    "count": 0,
+                }
+                model_counts[model_name] = 0
+
+            # Sum up metrics for this model from this benchmark
+            metrics = model_metrics[model_name]
+            metrics["success_rate_sum"] += (
+                model_results.avg_success_rate * model_results.count
+            )
+            metrics["time_sum"] += model_results.avg_time * model_results.count
+            metrics["extra_tool_calls_sum"] += (
+                model_results.avg_extra_tool_calls * model_results.count
+            )
+
+            # Sum up total extra tool calls used (not averaged)
+            for run in model_results.runs:
+                for summary in run.benchmark_summaries:
+                    metrics["total_extra_tool_calls_used"] += (
+                        summary.total_extra_tool_calls_used
+                    )
+
+            # Add to the count for this model
+            metrics["count"] += model_results.count
+            model_counts[model_name] += model_results.count
+
+    # Convert to dataframe and calculate averages
+    result_data = []
+    for model_name, metrics in model_metrics.items():
+        count = metrics["count"]
+        if count > 0:
+            result_data.append(
+                {
+                    "model_name": model_name,
+                    "avg_success_rate": (metrics["success_rate_sum"] / count),
+                    "avg_time": metrics["time_sum"] / count,
+                    "avg_extra_tool_calls": metrics["extra_tool_calls_sum"] / count,
+                    "total_extra_tool_calls_used": metrics[
+                        "total_extra_tool_calls_used"
+                    ],
+                    "total_tasks": count,
+                }
+            )
+
+    return pd.DataFrame(result_data)
+
+
+def display_aggregate_model_metrics(df: pd.DataFrame):
+    """Display aggregate model metrics across all benchmarks."""
+    if df.empty:
+        st.warning("No aggregate data available for visualization.")
+        return
+
+    fig1 = create_bar_chart(
+        df=df,
+        x_column="model_name",
+        y_column="avg_success_rate",
+        title="Average Success Rate by Model (Across All Benchmarks)",
+        x_label="Model Name",
+        y_label="Success Rate (%)",
+        color_column="model_name",
+        y_range=(0.0, 100.0),
+    )
+    st.plotly_chart(fig1, use_container_width=True)  # type: ignore
+
+    fig2 = create_bar_chart(
+        df=df,
+        x_column="model_name",
+        y_column="avg_time",
+        title="Average Completion Time by Model (Across All Benchmarks)",
+        x_label="Model Name",
+        y_label="Avg Time (seconds)",
+        color_column="model_name",
+    )
+    st.plotly_chart(fig2, use_container_width=True)  # type: ignore
+
+    fig3 = create_bar_chart(
+        df=df,
+        x_column="model_name",
+        y_column="avg_extra_tool_calls",
+        title="Average Extra Tool Calls by Model (Across All Benchmarks)",
+        x_label="Model Name",
+        y_label="Avg Extra Tool Calls",
+        color_column="model_name",
+    )
+    st.plotly_chart(fig3, use_container_width=True)  # type: ignore
+
+
+def render_overall_performance(run_results: RunResults):
+    """Render the overall performance summary across all benchmarks."""
+    aggregate_df = create_aggregate_model_metrics(run_results)
+
+    if aggregate_df.empty:
+        st.warning("No aggregate data available.")
+    else:
+        st.subheader("Aggregate Performance Metrics")
+        st.write(
+            "These charts show average metrics across all benchmarks for each model"
+        )
+        display_aggregate_model_metrics(aggregate_df)
 
 
 def display_models_summ_data(df: pd.DataFrame):
@@ -450,36 +584,16 @@ def display_validator_results(task_result: TaskResult):
             else:
                 col2.info("No subtasks in this validator.")
 
-    # # Display errors if any
-    # if any(v.errors for v in task_result.validation_info):
-    #     st.markdown("#### Errors")
-    #     for validator in task_result.validation_info:
-    #         for error in validator.errors:
-    #             st.error(error)
 
-
-#
-# TAB RENDERING FUNCTIONS
-#
-
-
-def render_model_performance_tab(run_results: RunResults):
+def render_model_performance_tab(bench_results: BenchmarkResults):
     st.header("Model Performance")
 
-    benchmark_names = list(run_results.benchmarks.keys())
-    if not benchmark_names:
-        st.warning("No benchmark data available.")
-        return
-
-    bench_selected = st.radio("Benchmark:", benchmark_names, key="perf_benchmark")
-    benchmark = run_results.benchmarks[bench_selected]
-
-    summ_df = create_model_summary_dataframe(benchmark)
+    summ_df = create_model_summary_dataframe(bench_results)
     display_models_summ_data(summ_df)
 
     # Extra tool calls analysis
     st.subheader("Performance by Extra Tool Calls")
-    extra_calls_values = get_available_extra_tool_calls(benchmark)
+    extra_calls_values = get_available_extra_tool_calls(bench_results)
 
     if not extra_calls_values:
         st.warning("No extra tool calls data available.")
@@ -490,7 +604,7 @@ def render_model_performance_tab(run_results: RunResults):
     )
 
     extra_calls_df = create_extra_calls_dataframe(
-        benchmark=benchmark, extra_calls=extra_tool_calls_selected
+        benchmark=bench_results, extra_calls=extra_tool_calls_selected
     )
 
     display_models_extra_calls_data(
@@ -498,27 +612,17 @@ def render_model_performance_tab(run_results: RunResults):
     )
 
 
-def render_task_performance_tab(run_results: RunResults):
+def render_task_performance_tab(bench_results: BenchmarkResults):
     """Render the task performance across models tab."""
     st.header("Performance Across Tasks")
 
-    # Benchmark selection
-    benchmark_names = list(run_results.benchmarks.keys())
-    if not benchmark_names:
-        st.warning("No benchmark data available.")
-        return
-
-    bench_selected = st.radio("Benchmark:", benchmark_names, key="task_benchmark")
-    benchmark = run_results.benchmarks[bench_selected]
-
-    # Model selection
-    model_names = list(benchmark.models.keys())
+    model_names = list(bench_results.models.keys())
     if not model_names:
-        st.warning(f"No models available for benchmark: {bench_selected}")
+        st.warning(f"No models available for benchmark: {bench_results.benchmark_name}")
         return
 
     model_selected = st.radio("Model:", model_names, key="task_model")
-    model_results = benchmark.models[model_selected]
+    model_results = bench_results.models[model_selected]
 
     st.subheader(f"Model: {model_selected}")
     st.write(f"Data aggregated across {len(model_results.runs)} runs")
@@ -545,28 +649,18 @@ def render_task_performance_tab(run_results: RunResults):
     display_detailed_task_type_analysis(model_results, selected_type)
 
 
-def render_validator_analysis_tab(run_results: RunResults):
+def render_validator_analysis_tab(bench_results: BenchmarkResults):
     """Render the validator analysis tab."""
     st.header("Validator Analysis")
     st.info("This tab provides detailed information about validation results.")
 
-    # Benchmark selection
-    benchmark_names = list(run_results.benchmarks.keys())
-    if not benchmark_names:
-        st.warning("No benchmark data available.")
-        return
-
-    bench_selected = st.selectbox("Benchmark", benchmark_names, key="val_bench")
-    benchmark = run_results.benchmarks[bench_selected]
-
-    # Model selection
-    model_names = list(benchmark.models.keys())
+    model_names = list(bench_results.models.keys())
     if not model_names:
-        st.warning(f"No models available for benchmark: {bench_selected}")
+        st.warning(f"No models available for benchmark: {bench_results.benchmark_name}")
         return
 
     model_selected = st.selectbox("Model", model_names, key="val_model")
-    model_results = benchmark.models[model_selected]
+    model_results = bench_results.models[model_selected]
 
     # Run selection (if there are multiple runs)
     if len(model_results.runs) > 1:
@@ -586,23 +680,14 @@ def render_validator_analysis_tab(run_results: RunResults):
             display_validator_results(task_result)
 
 
-def render_subtask_analysis_tab(run_results: RunResults):
+def render_subtask_analysis_tab(bench_results: BenchmarkResults):
     """Render the subtask analysis tab."""
     st.header("Subtask Analysis")
 
-    # Benchmark selection
-    benchmark_names = list(run_results.benchmarks.keys())
-    if not benchmark_names:
-        st.warning("No benchmark data available.")
-        return
-
-    bench_selected = st.selectbox("Benchmark", benchmark_names, key="sub_bench")
-    benchmark_results = run_results.benchmarks[bench_selected]
-
     # Model selection
-    model_names = list(benchmark_results.models.keys())
+    model_names = list(bench_results.models.keys())
     if not model_names:
-        st.warning(f"No models available for benchmark: {bench_selected}")
+        st.warning(f"No models available for benchmark: {bench_results.benchmark_name}")
         return
 
     model_selected = st.selectbox("Model", model_names, key="sub_model")
@@ -610,7 +695,7 @@ def render_subtask_analysis_tab(run_results: RunResults):
     # Analyze subtasks
     with st.spinner("Analyzing subtasks..."):
         subtask_df, tool_name_df, error_df = analyze_subtasks(
-            benchmark_results, model_selected
+            bench_results, model_selected
         )
 
     # Display results
@@ -645,15 +730,43 @@ def render_subtask_analysis_tab(run_results: RunResults):
         st.dataframe(error_by_tool_df, use_container_width=True)  # type:ignore
 
 
+def render_manipulation_o3de(bench_results: BenchmarkResults): ...
+
+
+def render_tool_calling_agent(bench_results: BenchmarkResults):
+    tabs = st.tabs(
+        [
+            "Model Performance",
+            "Task Performance",
+            "Validator Analysis",
+            "Subtask Analysis",
+        ]
+    )
+
+    with tabs[0]:
+        render_model_performance_tab(bench_results)
+
+    with tabs[1]:
+        render_task_performance_tab(bench_results)
+
+    with tabs[2]:
+        render_validator_analysis_tab(bench_results)
+
+    with tabs[3]:
+        render_subtask_analysis_tab(bench_results)
+
+
+BENCHMARK_SECTIONS: Dict[str, Any] = {
+    "manipulation_o3de": render_manipulation_o3de,
+    "tool_calling_agent": render_tool_calling_agent,
+}
+
+
 def main():
     st.set_page_config(layout="wide", page_title="LLM Task Results Visualizer")
     st.title("RAI BENCHMARK RESULTS")
 
-    try:
-        run_folders = get_available_runs(EXPERIMENT_DIR)
-    except FileNotFoundError:
-        st.error(f"Experiments directory '{EXPERIMENT_DIR}' not found.")
-        return
+    run_folders = get_available_runs(EXPERIMENT_DIR)
 
     if not run_folders:
         st.warning("No benchmark runs found in the experiments directory.")
@@ -661,13 +774,14 @@ def main():
 
     if "run_results" not in st.session_state:
         st.session_state.run_results = None
+    if "selected_benchmark" not in st.session_state:
+        st.session_state.selected_benchmark = None
 
     selected = st.selectbox("Select run folder", run_folders)
-
     if st.button("Load Run Data") or st.session_state.run_results is None:
         results_dir = os.path.join(EXPERIMENT_DIR, selected)
         with st.spinner("Loading run data..."):
-            st.session_state.run_results = load_benchmark_results(results_dir)
+            st.session_state.run_results = load_run_results(results_dir)
 
     run_results: Optional[RunResults] = st.session_state.run_results
 
@@ -675,26 +789,37 @@ def main():
         st.error("No valid benchmark data found in the selected run.")
         return
 
-    tabs = st.tabs(
-        [
-            "Model Performance",
-            "Performance Across Tasks",
-            "Validator Analysis",
-            "Subtask Analysis",
-        ]
+    # Create tabs
+    st.markdown("---")
+    st.header("Overview")
+
+    # Display overall performance summary across all benchmarks
+    render_overall_performance(run_results)
+
+    # Benchmark selection
+    st.markdown("---")
+    st.header("Benchmark-Specific Analysis")
+
+    benchmark_names = list(run_results.benchmarks.keys())
+    if not benchmark_names:
+        st.warning("No benchmarks available in this run.")
+        return
+
+    selected_benchmark_name = st.selectbox(
+        "Select a benchmark for detailed analysis:",
+        benchmark_names,
+        index=(
+            benchmark_names.index(st.session_state.selected_benchmark)
+            if st.session_state.selected_benchmark in benchmark_names
+            else 0
+        ),
     )
 
-    with tabs[0]:
-        render_model_performance_tab(run_results)
+    # Store the selected benchmark in session state
+    st.session_state.selected_benchmark = selected_benchmark_name
+    selected_benchmark = run_results.benchmarks[selected_benchmark_name]
 
-    with tabs[1]:
-        render_task_performance_tab(run_results)
-
-    with tabs[2]:
-        render_validator_analysis_tab(run_results)
-
-    with tabs[3]:
-        render_subtask_analysis_tab(run_results)
+    BENCHMARK_SECTIONS[selected_benchmark_name](selected_benchmark)
 
 
 if __name__ == "__main__":

@@ -37,7 +37,8 @@ class MoveObjectsToLeftTask(ManipulationTask):
         super().__init__(logger=logger)
         self.obj_types = obj_types
 
-    def get_prompt(self) -> str:
+    @property
+    def task_prompt(self) -> str:
         obj_names = ", ".join(obj + "s" for obj in self.obj_types).replace("_", " ")
         # NOTE (jmatejcz) specifing (positive y) might not be the best way to tell agent what to do,
         # but 'left side' is depending on where camera is positioned so it might not be enough

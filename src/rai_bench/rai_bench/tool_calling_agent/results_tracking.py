@@ -64,18 +64,6 @@ class TaskResult(BaseModel):
     run_id: UUID = Field(..., description="UUID of the task run.")
 
 
-class BenchmarkSummary(BaseModel):
-    model_name: str = Field(..., description="Name of the LLM.")
-    success_rate: float = Field(
-        ..., description="Percentage of successfully completed tasks."
-    )
-    avg_time: float = Field(..., description="Average time taken across all tasks.")
-    total_extra_tool_calls_used: int = Field(
-        ..., description="Total number of extra tool calls used in this Task"
-    )
-    total_tasks: int = Field(..., description="Total number of executed tasks.")
-
-
 class ScoreTracingHandler:
     """
     Class to handle sending scores to tracing backends.
