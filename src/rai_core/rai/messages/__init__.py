@@ -13,6 +13,13 @@
 # limitations under the License.
 
 
+from langchain_core.messages import (
+    AIMessage,
+    HumanMessage,
+    SystemMessage,
+    ToolMessage,
+)
+
 from .artifacts import MultimodalArtifact, get_stored_artifacts, store_artifacts
 from .conversion import preprocess_image
 from .multimodal import (
@@ -24,11 +31,15 @@ from .multimodal import (
 )
 
 __all__ = [
+    "AIMessage",
     "AIMultimodalMessage",
+    "HumanMessage",
     "HumanMultimodalMessage",
     "MultimodalArtifact",
     "MultimodalMessage",
+    "SystemMessage",
     "SystemMultimodalMessage",
+    "ToolMessage",
     "ToolMultimodalMessage",
     "get_stored_artifacts",
     "preprocess_image",

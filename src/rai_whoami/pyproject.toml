@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "rai_whoami"
+version = "0.0.1"
+description = "Package to extract embodiment information from robot documentation"
+authors = ["Maciej Majek <maciej.majek@robotec.ai>"]
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+]
+packages = [
+    { include = "rai_whoami", from = "." },
+]
+
+[tool.poetry.dependencies]
+python = "^3.10, <3.13"
+PyYAML = "*"
+langchain = "*"
+PyPDF2 = "*"
+Pillow = "*"
+faiss-cpu = "*"
+pypdf = "^5.4.0"
+
+[tool.poetry.scripts]
+build-whoami = "rai_whoami.build_whoami:build_whoami"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

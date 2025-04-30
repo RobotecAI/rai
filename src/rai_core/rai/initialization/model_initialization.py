@@ -15,12 +15,13 @@
 import logging
 import os
 from dataclasses import dataclass
-from typing import Any, List, Literal, Optional, Tuple, cast
+from typing import Any, Dict, List, Literal, Optional, Tuple, cast
 
 import coloredlogs
 import tomli
 from langchain_aws import ChatBedrock
 from langchain_core.callbacks.base import BaseCallbackHandler
+from langchain_core.embeddings import Embeddings
 from langchain_core.tracers.langchain import LangChainTracer
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
@@ -195,10 +196,12 @@ def get_llm_model_direct(
         raise ValueError(f"Unknown LLM vendor: {vendor}")
 
 
-def get_embeddings_model(vendor: str = None, config_path: Optional[str] = None):
+def get_embeddings_model(
+    config_path: Optional[str] = None,
+    return_kwargs: bool = False,
+) -> Embeddings | Tuple[Embeddings, Dict[str, Any]]:
     config = load_config(config_path)
-    if vendor is None:
-        vendor = config.vendor.embeddings_model
+    vendor = config.vendor.embeddings_model
 
     model_config = getattr(config, vendor)
 
@@ -206,19 +209,65 @@ def get_embeddings_model(vendor: str = None, config_path: Optional[str] = None):
     if vendor == "openai":
         from langchain_openai import OpenAIEmbeddings
 
-        return OpenAIEmbeddings(model=model_config.embeddings_model)
+        model_config = cast(OpenAIConfig, model_config)
+        embeddings = OpenAIEmbeddings(model=model_config.embeddings_model)
+        if return_kwargs:
+            c = (
+                str(embeddings.__class__)
+                .strip("<>")
+                .replace("class '", "")
+                .replace("'", "")
+            )
+            return embeddings, {
+                "class": c,
+                "model": model_config.embeddings_model,
+                "vendor": vendor,
+            }
+        return embeddings
+
     elif vendor == "aws":
         from langchain_aws import BedrockEmbeddings
 
-        return BedrockEmbeddings(
+        model_config = cast(AWSConfig, model_config)
+        embeddings = BedrockEmbeddings(
             model_id=model_config.embeddings_model, region_name=model_config.region_name
         )
+        if return_kwargs:
+            c = (
+                str(embeddings.__class__)
+                .strip("<>")
+                .replace("class '", "")
+                .replace("'", "")
+            )
+            return embeddings, {
+                "class": c,
+                "model_id": model_config.embeddings_model,
+                "region_name": model_config.region_name,
+                "vendor": vendor,
+            }
+        return embeddings
+
     elif vendor == "ollama":
         from langchain_ollama import OllamaEmbeddings
 
-        return OllamaEmbeddings(
+        model_config = cast(OllamaConfig, model_config)
+        embeddings = OllamaEmbeddings(
             model=model_config.embeddings_model, base_url=model_config.base_url
         )
+        if return_kwargs:
+            c = (
+                str(embeddings.__class__)
+                .strip("<>")
+                .replace("class '", "")
+                .replace("'", "")
+            )
+            return embeddings, {
+                "class": c,
+                "model": model_config.embeddings_model,
+                "base_url": model_config.base_url,
+                "vendor": vendor,
+            }
+        return embeddings
     else:
         raise ValueError(f"Unknown embeddings vendor: {vendor}")
 
