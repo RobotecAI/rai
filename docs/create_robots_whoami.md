@@ -8,7 +8,7 @@ To configure RAI for your robot, provide contents for your robot's so called `wh
 
 1. Setup the repository using 1st and 2nd step from [Setup](../README.md#setup)
 
-2. Fill in the `src/examples/panda_whoami/description` folder with data:
+2. Fill in the `panda/` folder with data:
 
    2.1. Save [this image](https://robodk.com/robot/img/Franka-Emika-Panda-robot.png) into `panda/images`
 

@@ -132,7 +132,7 @@ poetry run streamlit run src/rai_core/rai/frontend/configurator.py
 colcon build --symlink-install
 ```
 
-#### 2.2 Activate a virtual environment:
+#### 2.2 Activate the virtual environment:
 
 ```bash
 source ./setup_shell.sh
