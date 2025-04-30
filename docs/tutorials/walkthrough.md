@@ -256,6 +256,7 @@ The agent exposes two main communication channels:
    ```
 
 2. **Receiving Responses**
+
    ```bash
    ros2 topic echo /to_human rai_interfaces/msg/HRIMessage
    ```

@@ -6,7 +6,7 @@ contents for your robot's so called `whoami` package.
 
 ## Configuration example - Franka Emika Panda arm
 
-1. Setup the repository using [quick setup guide](setup/install.md)
+1. Setup the repository using [quick setup guide](../setup/install.md)
 
 2. Fill in the `panda/` folder with data:
 
@@ -32,7 +32,7 @@ python src/rai_whoami/rai_whoami/build_whoami.py panda/ --build-vector-db
     Building the vector database with cloud vendors might lead to costs. Consider using
     the local `ollama` provider for this task. The embedding model can be configured in
     `config.toml` (`ollama` works locally, see
-    [docs/setup/vendors.md](./setup/vendors.md#ollama)).
+    [docs/setup/vendors.md](../setup/vendors.md#ollama)).
 
 4. Examine the generated files
 

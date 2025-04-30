@@ -157,5 +157,5 @@ class CustomAggregator(BaseAggregator[CustomMessage]):
 ## See Also
 
 - [StateBasedAgent](state_based.md): For using aggregators in state-based agents
-- [ROS2Connector](ros2.md): For ROS2 message handling
-- [LangChain](langchain.md): LangChain's role in RAI
+- [ROS2Connector](../API_documentation/connectors.md#ros-2-connectors): For ROS2 message handling
+- [LangChain](../API_documentation/langchain.md): LangChain's role in RAI
