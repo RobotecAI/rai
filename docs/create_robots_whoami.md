@@ -1,20 +1,25 @@
-# Your robot identity in RAI
+# Robot's identity within RAI
 
-RAI Agent needs to understand what kind of robot it is running on.
-This includes its looks, purpose, ethical code, equipment, capabilities and documentation.
-To configure RAI for your robot, provide contents for your robot's so called `whoami` package.
+RAI Agent needs to understand what kind of robot it is running on. This includes its looks, purpose,
+ethical code, equipment, capabilities and documentation. To configure RAI for your robot, provide
+contents for your robot's so called `whoami` package.
 
 ## Configuration example - Franka Emika Panda arm
 
-1. Setup the repository using 1st and 2nd step from [Setup](../README.md#setup)
+1. Setup the repository using [quick setup guide](install.md)
 
 2. Fill in the `panda/` folder with data:
 
-   2.1. Save [this image](https://robodk.com/robot/img/Franka-Emika-Panda-robot.png) into `panda/images`
+   2.1. Save [this image](https://robodk.com/robot/img/Franka-Emika-Panda-robot.png) into
+   `panda/images`
 
-   2.2. Save [this document](https://github.com/user-attachments/files/16417196/Franka.Emika.Panda.robot.-.RoboDK.pdf) in `panda/documentation`
+   2.2. Save
+   [this document](https://github.com/user-attachments/files/16417196/Franka.Emika.Panda.robot.-.RoboDK.pdf)
+   in `panda/documentation`
 
-   2.3. Save [this urdf](https://github.com/frankaemika/franka_ros/blob/develop/franka_description/robots/panda/panda.urdf.xacro) in `panda/urdf`
+   2.3. Save
+   [this urdf](https://github.com/frankaemika/franka_ros/blob/develop/franka_description/robots/panda/panda.urdf.xacro)
+   in `panda/urdf`
 
 3. Build the embodiment info using `build_whoami.py`:
 
@@ -22,14 +27,17 @@ To configure RAI for your robot, provide contents for your robot's so called `wh
 python src/rai_whoami/rai_whoami/build_whoami.py panda/ --build-vector-db
 ```
 
-> [!IMPORTANT]
-> Building the vector database with cloud vendors might lead to costs. Consider using the
-> local `ollama` provider for this task. The embedding model can be configured in
-> [config.toml](../config.toml) (`ollama` works locally, see [docs/vendors.md](./vendors.md#ollama)).
+!!! important "Vector database"
+
+    Building the vector database with cloud vendors might lead to costs. Consider using
+    the local `ollama` provider for this task. The embedding model can be configured in
+    [config.toml](../config.toml) (`ollama` works locally, see
+    [docs/vendors.md](./vendors.md#ollama)).
 
 4. Examine the generated files
 
-After running the build command, inspect the generated files in the `panda/generated` directory. The folder should contain a info.json file containing:
+After running the build command, inspect the generated files in the `panda/generated` directory. The
+folder should contain a info.json file containing:
 
 - `rules`: List of rules
 - `capabilities`: List of capabilities
@@ -58,7 +66,8 @@ ros2 service call /rai_whoami_embodiment_info_service rai_interfaces/srv/Embodim
 ros2 service call /rai_whoami_documentation_service rai_interfaces/srv/VectorStoreRetrieval "query: 'maximum load'"
 ```
 
-If your service calls succeed and you can access the embodiment info and vector database, your robot's whoami package has been properly initialized.
+If your service calls succeed and you can access the embodiment info and vector database, your
+robot's whoami package has been properly initialized.
 
 2. Alternatively, you can use the RAI Whoami tools directly in your Python code:
 

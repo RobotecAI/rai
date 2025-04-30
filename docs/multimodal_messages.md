@@ -30,6 +30,8 @@ llm.invoke(msg).pretty_print()
 # colorful font against a black background. The text appears to be composed of red, green, and blue lines that create a 3D effect..."
 ```
 
-Implementation of the following messages is identical: HumanMultimodalMessage, SystemMultimodalMessage, AiMultimodalMessage.
+Implementation of the following messages is identical: HumanMultimodalMessage,
+SystemMultimodalMessage, AiMultimodalMessage.
 
-ToolMultimodalMessage has an addition of postprocess method, which converts the ToolMultimodalMessage into format that is compatible with a chosen vendor.
+ToolMultimodalMessage has an addition of postprocess method, which converts the
+ToolMultimodalMessage into format that is compatible with a chosen vendor.

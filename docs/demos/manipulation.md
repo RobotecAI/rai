@@ -1,6 +1,9 @@
 # Manipulation tasks with natural language
 
-This demo showcases the capabilities of RAI in performing manipulation tasks using natural language commands. The demo utilizes a robot arm (Franka Emika Panda) in a simulated environment, demonstrating how RAI can interpret complex instructions and execute them using advanced vision and manipulation techniques.
+This demo showcases the capabilities of RAI in performing manipulation tasks using natural language
+commands. The demo utilizes a robot arm (Franka Emika Panda) in a simulated environment,
+demonstrating how RAI can interpret complex instructions and execute them using advanced vision and
+manipulation techniques.
 
 ![Manipulation Demo](../imgs/manipulation_demo.gif)
 
@@ -56,7 +59,8 @@ This demo showcases the capabilities of RAI in performing manipulation tasks usi
    streamlit run examples/manipulation-demo-streamlit.py
    ```
 
-   Alternatively, you can run the simpler command-line version, which also serves as an example of how to use the RAI API for you own applications:
+   Alternatively, you can run the simpler command-line version, which also serves as an example of
+   how to use the RAI API for you own applications:
 
    ```shell
    python examples/manipulation-demo.py
@@ -82,5 +86,7 @@ The main logic of the demo is implemented in the `ManipulationDemo` class, which
 examples/manipulation-demo.py
 ```
 
-> [!TIP]
-> If you are having trouble running the binary, you can build it from source [here](https://github.com/RobotecAI/rai-manipulation-demo).
+!!! tip "Building from source"
+
+    If you are having trouble running the binary, you can build it from source
+    [here](https://github.com/RobotecAI/rai-manipulation-demo).

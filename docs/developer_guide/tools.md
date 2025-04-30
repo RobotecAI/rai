@@ -1,8 +1,13 @@
-# Tools
+# Tool use and development
 
-Tools are a fundamental concept in LangChain that allow AI models to interact with external systems and perform specific operations. Think of tools as callable functions that bridge the gap between natural language understanding and system execution.
+Tools are a fundamental concept in LangChain that allow AI models to interact with external systems
+and perform specific operations. Think of tools as callable functions that bridge the gap between
+natural language understanding and system execution.
 
-RAI offers a comprehensive set of pre-built tools, including both general-purpose and ROS 2-specific tools [here](../../src/rai_core/rai/tools/ros2). However, in some cases, you may need to develop custom tools tailored to specific robots or applications. This guide demonstrates how to create custom tools in RAI using the [LangChain framework](https://python.langchain.com/docs/).
+RAI offers a comprehensive set of pre-built tools, including both general-purpose and ROS 2-specific
+tools [here](../../src/rai_core/rai/tools/ros2). However, in some cases, you may need to develop
+custom tools tailored to specific robots or applications. This guide demonstrates how to create
+custom tools in RAI using the [LangChain framework](https://python.langchain.com/docs/).
 
 RAI supports two primary approaches for implementing tools, each with distinct advantages:
 
@@ -19,7 +24,8 @@ RAI supports two primary approaches for implementing tools, each with distinct a
 - Minimizes boilerplate code
 - Suited for simple, single-purpose tools
 
-Use the `BaseTool` class when state management, or extensive configuration is required. Choose the `@tool` decorator for simple, stateless functionality where conciseness is preferred.
+Use the `BaseTool` class when state management, or extensive configuration is required. Choose the
+`@tool` decorator for simple, stateless functionality where conciseness is preferred.
 
 ---
 
@@ -27,7 +33,9 @@ Use the `BaseTool` class when state management, or extensive configuration is re
 
 LangChain tools typically return either a string or a tuple containing a string and an artifact.
 
-RAI extends LangChain’s tool capabilities by supporting **multimodal tools**—tools that return not only text but also other content types, such as images, audio, or structured data. This is achieved using a special object called `MultimodalArtifact` along with a custom `ToolRunner` class.
+RAI extends LangChain’s tool capabilities by supporting **multimodal tools**—tools that return not
+only text but also other content types, such as images, audio, or structured data. This is achieved
+using a special object called `MultimodalArtifact` along with a custom `ToolRunner` class.
 
 ---
 
@@ -80,7 +88,10 @@ def grab_object(object_name: str) -> str:
 
 ### Multimodal Tool (Text + Image Output)
 
-RAI supports multimodal tools through the `rai.agents.tool_runner.ToolRunner` class. These tools must use this runner either directly or via agents such as [`create_react_runnable`](../../src/rai_core/rai/agents/langchain/runnables.py) to handle multimedia output correctly.
+RAI supports multimodal tools through the `rai.agents.tool_runner.ToolRunner` class. These tools
+must use this runner either directly or via agents such as
+[`create_react_runnable`](../../src/rai_core/rai/agents/langchain/runnables.py) to handle multimedia
+output correctly.
 
 ```python
 from langchain_core.tools import BaseTool
@@ -113,7 +124,9 @@ class Get360ImageTool(BaseTool):
 
 ### ROS 2 Tools
 
-RAI includes a base class for ROS 2 tools, supporting configuration of readable, writable, and forbidden topics/actions/services, as well as ROS 2 connector. TODO(docs): link docs to the ARIConnector.
+RAI includes a base class for ROS 2 tools, supporting configuration of readable, writable, and
+forbidden topics/actions/services, as well as ROS 2 connector. TODO(docs): link docs to the
+ARIConnector.
 
 ```python
 from rai.tools.ros2.base import BaseROS2Tool
@@ -143,13 +156,15 @@ class GetROS2LidarDataTool(BaseROS2Tool):
             return f"Failed to process LiDAR data: {str(e)}"
 ```
 
-Refer to the [BaseROS2Tool source code](../../src/rai_core/rai/tools/ros2/base.py) for more information.
+Refer to the [BaseROS2Tool source code](../../src/rai_core/rai/tools/ros2/base.py) for more
+information.
 
 ---
 
 ## Tool Initialization
 
-Tools can be initialized with parameters such as a connector, enabling custom configurations for ROS 2 environments.
+Tools can be initialized with parameters such as a connector, enabling custom configurations for ROS
+2 environments.
 
 ```python
 from rai.communication.ros2 import ROS2Connector

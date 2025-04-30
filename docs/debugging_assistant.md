@@ -1,6 +1,8 @@
 # ROS 2 Debugging Assistant
 
-The ROS 2 Debugging Assistant is an interactive tool that helps developers inspect and troubleshoot their ROS 2 systems using natural language. It provides a chat-like interface powered by Streamlit where you can ask questions about your ROS 2 setup and execute common debugging commands.
+The ROS 2 Debugging Assistant is an interactive tool that helps developers inspect and troubleshoot
+their ROS 2 systems using natural language. It provides a chat-like interface powered by Streamlit
+where you can ask questions about your ROS 2 setup and execute common debugging commands.
 
 ## Features
 
@@ -16,7 +18,8 @@ The ROS 2 Debugging Assistant is an interactive tool that helps developers inspe
 
 ## Running the Assistant
 
-1. Make sure you have RAI installed and configured according to the [setup instructions](../README.md#setup)
+1. Make sure you have RAI installed and configured according to the
+   [setup instructions](../README.md#setup)
 
 2. Launch the debugging assistant:
 
@@ -37,7 +40,8 @@ Here are some example queries you can try:
 
 ## How it Works
 
-The debugging assistant uses RAI's conversational agent capabilities combined with ROS 2 debugging tools. The key components are:
+The debugging assistant uses RAI's conversational agent capabilities combined with ROS 2 debugging
+tools. The key components are:
 
 1. **Streamlit Interface**: Provides the chat UI and displays tool execution results
 2. **ROS 2 Tools**: Collection of debugging tools that wrap common ROS 2 CLI commands

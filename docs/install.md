@@ -1,0 +1,92 @@
+# Quick setup guide
+
+Before going further, make sure you have ROS 2 (Jazzy or Humble) installed and sourced on your
+system. If you don't have ROS 2 follow the installation documentation for
+[Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html) or
+[Jazzy](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html). Make sure that
+`ros-dev-tools` are installed.
+
+!!! tip "Docker images"
+
+    RAI has experimental docker images. See the [docker](setup_docker.md) for
+    instructions.
+
+## 1. Setting up the workspace:
+
+### 1.1 Install poetry
+
+RAI uses [Poetry](https://python-poetry.org/) for python packaging and dependency management.
+Install poetry with the following line:
+
+```bash
+curl -sSL https://install.python-poetry.org | python3 -
+```
+
+Alternatively, you can opt to do so by following the
+[official docs](https://python-poetry.org/docs/#installation).
+
+### 1.2 Clone the repository:
+
+```bash
+git clone https://github.com/RobotecAI/rai.git
+cd rai
+```
+
+### 1.3 Create poetry virtual environment and install dependencies:
+
+```bash
+poetry install
+rosdep install --from-paths src --ignore-src -r -y
+```
+
+!!! tip "Additional dependencies"
+
+    RAI is modular. If you want to use features such as
+    speech-to-speech, simulation and benchmarking suite, openset detection, or NoMaD integration,
+    install additional dependencies:
+
+    ```bash
+    poetry install --with openset,nomad,s2s,simbench
+    ```
+
+### 1.4 Configure RAI
+
+Run the configuration tool to set up your LLM vendor and other settings:
+
+```bash
+poetry run streamlit run src/rai_core/rai/frontend/configurator.py
+```
+
+!!! tip "Web browser"
+
+    If the web browser does not open automatically, open the URL displayed in the terminal manually.
+
+## 2. Build the project:
+
+### 2.1 Build RAI workspace
+
+```bash
+colcon build --symlink-install
+```
+
+### 2.2 Activate the virtual environment:
+
+```bash
+source ./setup_shell.sh
+```
+
+## 3. Setting up vendors
+
+RAI is vendor-agnostic. Use the configuration in [config.toml](./config.toml) to set up your vendor
+of choice for RAI modules. Vendor choices for RAI and our recommendations are summarized in
+[Vendors Overview](vendors_overview.md).
+
+!!! tip "Best-performing AI models"
+
+    We strongly recommend you to use of best-performing AI models to get the most out of RAI!
+
+Pick your local solution or service provider and follow one of these guides:
+
+- **[Ollama](https://ollama.com/download)**
+- **[OpenAI](https://platform.openai.com/docs/quickstart)**
+- **[AWS Bedrock](https://console.aws.amazon.com/bedrock/home?#/overview)**

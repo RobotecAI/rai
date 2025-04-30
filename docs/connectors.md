@@ -1,12 +1,15 @@
-# RAI Connectors
+# Connectors
 
 ![connectors](./imgs/connectors.png)
 
-RAI Connectors are a set of abstract interfaces and implementations designed to provide a unified way to interact with various communication systems, including robot middleware like ROS2, sound devices, and other I/O systems.
+Connectors are a set of abstract interfaces and implementations designed to provide a unified way to
+interact with various communication systems, including robot middleware like ROS2, sound devices,
+and other I/O systems.
 
 ## Connector Architecture
 
-The connector architecture is built on a hierarchy of abstract base classes and concrete implementations:
+The connector architecture is built on a hierarchy of abstract base classes and concrete
+implementations:
 
 ### Base Classes
 
@@ -37,7 +40,8 @@ ROS 2 connectors provide integration with the ROS 2 middleware:
 
 - **ROS2Connector**: A concrete implementation of ROS2BaseConnector using standard ROS 2 messages
 
-- **ROS2HRIConnector**: Combines ROS2BaseConnector and HRIConnector to provide human-robot interaction capabilities over ROS2
+- **ROS2HRIConnector**: Combines ROS2BaseConnector and HRIConnector to provide human-robot
+  interaction capabilities over ROS2
 
 ROS 2 connectors use a mixin-based design with specialized components:
 
@@ -78,7 +82,8 @@ Connectors support multiple communication patterns:
    - `service_call(message, target, timeout_sec, **kwargs)`: Make a synchronous service call
 
 3. **Actions**
-   - `start_action(action_data, target, on_feedback, on_done, timeout_sec, **kwargs)`: Start a long-running action
+   - `start_action(action_data, target, on_feedback, on_done, timeout_sec, **kwargs)`: Start a
+     long-running action
    - `terminate_action(action_handle, **kwargs)`: Cancel an ongoing action
    - `create_action(action_name, generate_feedback_callback, **kwargs)`: Create an action server
 

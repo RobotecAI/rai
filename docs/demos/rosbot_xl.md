@@ -1,18 +1,23 @@
 # Husarion Robot XL demo
 
-This demo utilizes Open 3D Engine simulation and allows you to work with RAI on a small mobile platform in a nice apartment.
+This demo utilizes Open 3D Engine simulation and allows you to work with RAI on a small mobile
+platform in a nice apartment.
 
 ![Screenshot1](../imgs/o3deSimulation.png)
 
 ## Quick start
 
-> [!TIP]
-> The demo uses the `complex_model` LLM configured in [../../config.toml](../../config.toml). The model should be a multimodal, tool-calling model.
+!!! tip "LLM model"
+
+    The demo uses the `complex_model` LLM configured in `config.toml`. The model should be a
+    multimodal, tool-calling model.
 
 1. Download the newest binary release:
 
-- Ubuntu 22.04 & ros2 humble: [link](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIROSBotDemo_1.0.0_jammyhumble.zip)
-- Ubuntu 24.04 & ros2 jazzy: [link](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIROSBotDemo_1.0.0_noblejazzy.zip)
+- Ubuntu 22.04 & ros2 humble:
+  [link](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIROSBotDemo_1.0.0_jammyhumble.zip)
+- Ubuntu 24.04 & ros2 jazzy:
+  [link](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIROSBotDemo_1.0.0_noblejazzy.zip)
 
 2. Install and download required packages
 
@@ -34,9 +39,9 @@ This demo utilizes Open 3D Engine simulation and allows you to work with RAI on 
 ## Alternative: Demo source build
 
 If you would like more freedom to adapt the simulation to your needs, you can make changes using
-[O3DE Editor](https://www.docs.o3de.org/docs/welcome-guide/) and build the project
-yourself.
-Please refer to [rai husarion rosbot xl demo](https://github.com/RobotecAI/rai-rosbot-xl-demo) for more details.
+[O3DE Editor](https://www.docs.o3de.org/docs/welcome-guide/) and build the project yourself. Please
+refer to [rai husarion rosbot xl demo](https://github.com/RobotecAI/rai-rosbot-xl-demo) for more
+details.
 
 # Running RAI
 
@@ -59,5 +64,7 @@ Please refer to [rai husarion rosbot xl demo](https://github.com/RobotecAI/rai-r
    - What is the position of bed?
    - Navigate to the kitchen.
 
-> [!TIP]
-> If you are having trouble running the binary, you can build it from source [here](https://github.com/RobotecAI/rai-rosbot-xl-demo).
+!!! tip "Building from source"
+
+    If you are having trouble running the binary, you can build it from source
+    [here](https://github.com/RobotecAI/rai-rosbot-xl-demo).

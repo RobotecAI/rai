@@ -4,7 +4,8 @@
 
 ## Overview
 
-This guide demonstrates how to create and deploy a RAI agent on a ROS 2 enabled robot. You'll learn how to:
+This guide demonstrates how to create and deploy a RAI agent on a ROS 2 enabled robot. You'll learn
+how to:
 
 - Create a new, custom RAI Agent from scratch
 - Implement a platform-specific tool for robot control
@@ -20,9 +21,13 @@ Before proceeding, ensure you have:
 
 ## Creating a Custom Agent
 
-In this section, we'll create a new agent from scratch using the ReAct agent. While pre-built ROS 2-compatible agents exist in RAI, this example will help you understand the underlying architecture and customization options.
+In this section, we'll create a new agent from scratch using the ReAct agent. While pre-built ROS
+2-compatible agents exist in RAI, this example will help you understand the underlying architecture
+and customization options.
 
-The underlying ReAct agent combines language models with a set of tools to solve complex problems. Our Agent implementation adds robot status monitoring, which controls agent execution based on the robot's state.
+The underlying ReAct agent combines language models with a set of tools to solve complex problems.
+Our Agent implementation adds robot status monitoring, which controls agent execution based on the
+robot's state.
 
 ```python
 from typing import List
@@ -112,9 +117,11 @@ class PandaAgent(BaseAgent):
 
 ## Implementing Platform-Specific Tools
 
-This section demonstrates how to implement a custom tool for safely shutting down the robot arm. The tool showcases how to integrate platform-specific functionality into the RAI framework.
+This section demonstrates how to implement a custom tool for safely shutting down the robot arm. The
+tool showcases how to integrate platform-specific functionality into the RAI framework.
 
-For comprehensive information about tool implementation in RAI, refer to the [tools documentation](./tools.md).
+For comprehensive information about tool implementation in RAI, refer to the
+[tools documentation](./tools.md).
 
 ```python
 from typing import Literal, Type
@@ -163,15 +170,15 @@ class ShutdownArmTool(BaseROS2Tool):
 
 ## Building the System Prompt
 
-The `rai whoami` utility generates a system prompt based on your robot's specifications. It requires a directory containing:
+The `rai whoami` utility generates a system prompt based on your robot's specifications. It requires
+a directory containing:
 
 - Documentation
 - Images
 - URDF files
 
-> [!TIP]
-> While each directory is optional, providing comprehensive information about your robot will result
-> in a more accurate and effective system prompt.
+!!! tip "Directories are optional" While each directory is optional, providing comprehensive
+information about your robot will result in a more accurate and effective system prompt.
 
 ### Setting Up the Robot Directory
 
@@ -183,10 +190,14 @@ Create a `panda/` directory with the following structure:
 
 2. **Documentation**
 
-   - Save [this document](https://github.com/user-attachments/files/16417196/Franka.Emika.Panda.robot.-.RoboDK.pdf) in `panda/documentation`
+   - Save
+     [this document](https://github.com/user-attachments/files/16417196/Franka.Emika.Panda.robot.-.RoboDK.pdf)
+     in `panda/documentation`
 
 3. **URDF**
-   - Save [this URDF](https://github.com/frankaemika/franka_ros/blob/develop/franka_description/robots/panda/panda.urdf.xacro) in `panda/urdf`
+   - Save
+     [this URDF](https://github.com/frankaemika/franka_ros/blob/develop/franka_description/robots/panda/panda.urdf.xacro)
+     in `panda/urdf`
 
 ### Building the Whoami
 

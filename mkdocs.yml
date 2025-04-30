@@ -1,0 +1,20 @@
+site_name: RAI documentation
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.expand
+    - toc.integrate
+    - toc.follow
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.tasklist
+  - toc:
+      permalink: true
+      toc_depth: 2
+
+extra_css:
+  - stylesheets/extra.css
