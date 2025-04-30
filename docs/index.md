@@ -71,7 +71,7 @@ Experience RAI in action through our interactive demos. These showcase real-worl
 
 ### Option 2: Build Your Own Solution
 
-Follow our comprehensive [walkthrough](tutorials/walkthrough.md) to:
+Follow our comprehensive [**walkthrough**](tutorials/walkthrough.md) to:
 
 - Deploy RAI on your robot and enable natural language interactions
 - Extend the framework with custom tools and capabilities
@@ -106,3 +106,11 @@ You are welcome to contribute to RAI! Please see our [Contribution Guide](CONTRI
     ### RAI Q&A
 
     Please take a look at [Q&A](https://github.com/RobotecAI/rai/discussions/categories/q-a).
+
+??? info "RAI at ROSCon 2024"
+
+    <div style="padding:56.25% 0 0 0;position:relative;"><iframe src="https://player.vimeo.com/video/1026029511?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media" style="position:absolute;top:0;left:0;width:100%;height:100%;" title="Agent-based AI Framework for ROS 2"></iframe></div><script src="https://player.vimeo.com/api/player.js"></script>
+
+??? info "RAI demos at ROSCon 2024"
+
+    <div style="padding:56.25% 0 0 0;position:relative;"><iframe src="https://player.vimeo.com/video/1023325961?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media" style="position:absolute;top:0;left:0;width:100%;height:100%;" title="Agent-based AI Framework for ROS 2"></iframe></div><script src="https://player.vimeo.com/api/player.js"></script>
