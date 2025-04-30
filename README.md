@@ -2,7 +2,8 @@
 
 RAI is a flexible AI agent framework to develop and deploy Embodied AI features for your robots.
 
-📚 For the latest documentation and tutorials including setup guide, visit [robotecai.github.io/rai](https://robotecai.github.io/rai/)
+📚 Visit [robotecai.github.io/rai](https://robotecai.github.io/rai/) for the latest documentation, setup
+guide and tutorials. 📚
 
 ---
 
@@ -31,24 +32,11 @@ RAI is a flexible AI agent framework to develop and deploy Embodied AI features 
 
 ## 🎯 Overview
 
-The RAI framework is designed to revolutionize robotics by:
-
-🤖 **Empowering Multi-Agent Systems**
-
-- Seamlessly integrate Gen AI capabilities into your robots
-- Enable sophisticated agent-based architectures
-
-🔄 **Enhancing Robot Intelligence**
-
-- Add natural human-robot interaction capabilities
-- Bring flexible problem-solving to your existing stack
-- Provide ready-to-use AI features out of the box
-
-🌟 **Supporting Multi-Modal Interaction**
-
-- Handle diverse data types natively
-- Enable rich sensory integration
-- Process multiple input/output modalities simultaneously
+| Category                       | Description                                       | Features                                                                                                                                                           |
+| ------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 🤖 **Multi-Agent Systems**     | Empowering robotics with advanced AI capabilities | • Seamlessly integrate Gen AI capabilities into your robots<br>• Enable sophisticated agent-based architectures                                                    |
+| 🔄 **Robot Intelligence**      | Enhancing robotic systems with smart features     | • Add natural human-robot interaction capabilities<br>• Bring flexible problem-solving to your existing stack<br>• Provide ready-to-use AI features out of the box |
+| 🌟 **Multi-Modal Interaction** | Supporting diverse interaction capabilities       | • Handle diverse data types natively<br>• Enable rich sensory integration<br>• Process multiple input/output modalities simultaneously                             |
 
 ## RAI framework
 
