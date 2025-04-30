@@ -1,4 +1,4 @@
-# Message Types
+# Multimodality support
 
 RAI implements `MultimodalMessage` that allows using image and audio* information in langchain.
 *audio is currently added as a placeholder for future implementation.

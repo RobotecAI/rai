@@ -57,6 +57,7 @@ Run the RAI Whoami services:
 python src/rai_whoami/rai_whoami/scripts/ros2_embodiment_service.py panda/ &
 python src/rai_whoami/rai_whoami/scripts/ros2_vector_store_retrieval_service.py panda/
 ```
+
 With the services running, you can query the robot's identity and vector database:
 
 ```shell
