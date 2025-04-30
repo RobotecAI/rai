@@ -258,6 +258,6 @@ def main():
 
 ## Related Topics
 
-- [Connectors](../communication/connectors.md)
-- [ROS2Connector](../communication/ros2.md)
-- [ROS2HRIConnector](../communication/ros2.md)
+- [Connectors](../API_documentation/connectors.md)
+- [ROS2Connector](../API_documentation/connectors.md)
+- [ROS2HRIConnector](../API_documentation/connectors.md)

@@ -9,7 +9,7 @@ manipulation techniques.
 
 ## Setup
 
-1. Follow the RAI setup instructions in the [main README](../../README.md#setup).
+1. Follow the RAI setup instructions in the [quick setup guide](../setup/install.md).
 2. Download additional dependencies:
 
    ```shell

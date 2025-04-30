@@ -56,7 +56,7 @@ The framework's components work in perfect harmony to deliver a robust foundatio
 
 ## Getting Started
 
-Ready to dive into RAI? Start with a [quick-setup guide](install.md).
+Ready to dive into RAI? Start with a [quick-setup guide](setup/install.md).
 
 Here are two ways to begin your journey:
 
@@ -67,12 +67,11 @@ Experience RAI in action through our interactive demos. These showcase real-worl
 - 🚜 [Agricultural Robotics](demos/agriculture.md) - See how RAI handles complex decision-making in orchard environments
 - 🤖 [Manipulation Tasks](demos/manipulation.md) - Watch RAI control a Franka Panda arm using natural language
 - 🚗 [Autonomous Navigation](demos/rosbot_xl.md) - Explore RAI's capabilities with the ROSbot XL platform
-- 🐢 [Turtlebot Integration](demos/turtlebot.md) - Learn how RAI works with the popular Turtlebot platform
 - 🎤 [Speech Interaction](demos/taxi.md) - Experience RAI's speech-to-speech capabilities in an autonomous taxi scenario
 
 ### Option 2: Build Your Own Solution
 
-Follow our comprehensive [walkthrough](developer_guide/walkthrough.md) to:
+Follow our comprehensive [walkthrough](tutorials/walkthrough.md) to:
 
 - Deploy RAI on your robot and enable natural language interactions
 - Extend the framework with custom tools and capabilities

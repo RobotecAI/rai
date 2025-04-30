@@ -1,6 +1,6 @@
 # Connectors
 
-![connectors](./imgs/connectors.png)
+![connectors](../imgs/connectors.png)
 
 Connectors are a set of abstract interfaces and implementations designed to provide a unified way to
 interact with various communication systems, including robot middleware like ROS2, sound devices,
