@@ -1,10 +1,8 @@
 # RAI introduction
 
-!!! abstract "Development Status"
-
-    RAI is currently undergoing significant development on the development branch, focusing on version 2.0. This major version update will introduce substantial improvements and is not backward compatible with version 1.0. We are targeting an early May 2025 release for RAI 2.0. For the latest stable release, please refer to the [main branch](https://github.com/RobotecAI/rai/tree/main).
-
 RAI is a flexible AI agent framework to develop and deploy Embodied AI features for your robots.
+
+In simple terms, RAI adds natural language control and AI-powered perception to your robotic systems, integrating with existing robotics stack to create more capable solutions.
 
 ---
 

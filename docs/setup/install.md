@@ -46,8 +46,16 @@ rosdep install --from-paths src --ignore-src -r -y
     install additional dependencies:
 
     ```bash
-    poetry install --with openset,nomad,s2s,simbench
+    poetry install --with openset,nomad,s2s,simbench # or `--all-groups` for full setup
     ```
+
+    | Group Name | Description | Dependencies |
+    |------------|-------------|--------------|
+    | s2s | Speech-to-Speech functionality | rai_asr, rai_tts |
+    | simbench | Simulation and benchmarking tools | rai_sim, rai_bench |
+    | openset | Open-set detection capabilities | groundingdino, groundedsam |
+    | nomad | Visual Navigation - NoMaD integration | visualnav_transformer |
+    | docs | Documentation-related dependencies | mkdocs, mkdocs-material, pymdown-extensions |
 
 ### 1.4 Configure RAI
 

@@ -13,47 +13,40 @@ implementations:
 
 ### Base Classes
 
-- **BaseConnector\<T>**: The foundation interface that defines common communication patterns:
+**BaseConnector[T]**: The foundation interface that defines common communication patterns:
 
-  - Message passing (publish/subscribe)
-  - Service calls (request/response)
-  - Actions (long-running operations with feedback)
-  - Callback registration for asynchronous notifications
+- Message passing (publish/subscribe)
+- Service calls (request/response)
+- Actions (long-running operations with feedback)
+- Callback registration for asynchronous notifications
 
-- **HRIConnector\<T>**: Extends BaseConnector with Human-Robot Interaction capabilities:
-  - Supports multimodal messages (text, images, audio)
-  - Provides conversion to/from Langchain message formats
-  - Handles message sequencing and conversation IDs
+**HRIConnector[T]**: Extends BaseConnector with Human-Robot Interaction capabilities:
+
+- Supports multimodal messages (text, images, audio)
+- Provides conversion to/from Langchain message formats
+- Handles message sequencing and conversation IDs
 
 ### Concrete Implementations
 
-#### ROS 2 Connectors
+---
 
-ROS 2 connectors provide integration with the ROS 2 middleware:
+#### 🤖 ROS 2 Connectors
 
-- **ROS2BaseConnector\<T>**: Core implementation for ROS 2 communication
+| Connector                | Description                                                                                                                                                                                |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **ROS2BaseConnector[T]** | Core implementation for ROS 2 communication:<br>• Manages node lifecycle & threading<br>• Topic-based message passing<br>• TF (Transform) support<br>• MultiThreadedExecutor for async ops |
+| **ROS2Connector**        | Concrete implementation using standard ROS 2 messages                                                                                                                                      |
+| **ROS2HRIConnector**     | Combines ROS2BaseConnector & HRIConnector for human-robot interaction over ROS2                                                                                                            |
 
-  - Manages ROS 2 node lifecycle and threading
-  - Implements topic-based message passing
-  - Provides TF (Transform) functionality
-  - Uses a MultiThreadedExecutor for async operations
+---
 
-- **ROS2Connector**: A concrete implementation of ROS2BaseConnector using standard ROS 2 messages
+#### 🔊 Sound Device Connector
 
-- **ROS2HRIConnector**: Combines ROS2BaseConnector and HRIConnector to provide human-robot
-  interaction capabilities over ROS2
+| Connector                | Description                                                                                                                                                         |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **SoundDeviceConnector** | • Audio streaming via `sounddevice` library<br>• Audio playback & recording<br>• Implements HRIConnector for audio interaction<br>• Supports sync & async audio ops |
 
-ROS 2 connectors use a mixin-based design with specialized components:
-
-- **ROS2ActionMixin**: Implements action client/server functionality
-- **ROS2ServiceMixin**: Implements service client/server functionality
-
-#### Sound Device Connector
-
-- **SoundDeviceConnector**: Provides audio streaming capabilities using the sounddevice library
-  - Supports audio playback and recording
-  - Implements the HRIConnector interface for human-robot audio interaction
-  - Supports both synchronous and asynchronous audio operations
+---
 
 ## Key Features
 
@@ -71,21 +64,22 @@ Connectors are generic over message types derived from BaseMessage:
 
 Connectors support multiple communication patterns:
 
-1. **Publish/Subscribe**
+1.  **Publish/Subscribe**
 
-   - `send_message(message, target, **kwargs)`: Send a message to a target
-   - `receive_message(source, timeout_sec, **kwargs)`: Receive a message from a source
-   - `register_callback(source, callback, **kwargs)`: Register for asynchronous notifications
+    - `send_message(message, target, **kwargs)`: Send a message to a target
+    - `receive_message(source, timeout_sec, **kwargs)`: Receive a message from a source
+    - `register_callback(source, callback, **kwargs)`: Register for asynchronous notifications
 
-2. **Request/Response**
+2.  **Request/Response**
 
-   - `service_call(message, target, timeout_sec, **kwargs)`: Make a synchronous service call
+    - `service_call(message, target, timeout_sec, **kwargs)`: Make a synchronous service call
 
-3. **Actions**
-   - `start_action(action_data, target, on_feedback, on_done, timeout_sec, **kwargs)`: Start a
-     long-running action
-   - `terminate_action(action_handle, **kwargs)`: Cancel an ongoing action
-   - `create_action(action_name, generate_feedback_callback, **kwargs)`: Create an action server
+3.  **Actions**
+
+    - `start_action(action_data, target, on_feedback, on_done, timeout_sec, **kwargs)`: Start a
+      long-running action
+    - `terminate_action(action_handle, **kwargs)`: Cancel an ongoing action
+    - `create_action(action_name, generate_feedback_callback, **kwargs)`: Create an action server
 
 ## Threading Model
 

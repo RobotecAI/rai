@@ -7,17 +7,17 @@
 This guide demonstrates how to create and deploy a RAI agent on a ROS 2 enabled robot. You'll learn
 how to:
 
-- Create a new, custom RAI Agent from scratch
-- Implement a platform-specific tool for robot control
-- Build a system prompt using rai whoami
-- Deploy and interact with the agent
+1. Create a new, custom RAI Agent from scratch
+2. Implement a platform-specific tool for robot control
+3. Build a optimized system prompt using rai whoami
+4. Deploy and interact with the agent
 
 ### Prerequisites
 
 Before proceeding, ensure you have:
 
+- ROS 2 (humble or jazzy) installed and properly set up
 - RAI installed and configured
-- ROS 2 installed and properly set up
 
 ## Creating a Custom Agent
 
