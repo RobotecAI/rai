@@ -32,6 +32,10 @@ RAI leverages LangChain to bridge the gap between large language models and robo
 
 Enables image support in LangChain messages.
 
+### [Runners](runners.md)
+
+Manages the lifecycle of agents.
+
 ## Getting Started
 
 For practical examples and tutorials on using RAI, refer to the tutorials section. The API documentation provides detailed information about each component, its purpose, and usage patterns.
