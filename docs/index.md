@@ -6,7 +6,7 @@ In simple terms, RAI adds natural language control and AI-powered perception to 
 
 ---
 
-![rai-image](../imgs/RAI_simple_diagram_medium.png)
+![rai-image](imgs/RAI_simple_diagram_medium.png)
 
 ---
 
@@ -50,7 +50,7 @@ Our comprehensive suite of integrated packages enables developers to seamlessly 
 
 The framework's components work in perfect harmony to deliver a robust foundation for your robotics projects:
 
-<div style="text-align: center;"><img src="../imgs/rai_packages.png" width="80%" alt="rai-packages"></div>
+<div style="text-align: center;"><img src="imgs/rai_packages.png" width="80%" alt="rai-packages"></div>
 
 ## Getting Started
 
@@ -105,14 +105,10 @@ You are welcome to contribute to RAI! Please see our [Contribution Guide](contri
 
     Please take a look at [FAQ](faq/faq.md).
 
-### RAI at ROSCon 2024
-
-??? info "RAI at ROSCon 2024"
+??? tip "RAI at ROSCon 2024"
 
     <div style="padding:56.25% 0 0 0;position:relative;"><iframe src="https://player.vimeo.com/video/1026029511?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media" style="position:absolute;top:0;left:0;width:100%;height:100%;" title="Agent-based AI Framework for ROS 2"></iframe></div><script src="https://player.vimeo.com/api/player.js"></script>
 
-### RAI demos at ROSCon 2024
-
-??? info "RAI demos at ROSCon 2024"
+??? tip "RAI demos at ROSCon 2024"
 
     <div style="padding:56.25% 0 0 0;position:relative;"><iframe src="https://player.vimeo.com/video/1023328281?h=1700a3cb57&amp;badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media" style="position:absolute;top:0;left:0;width:100%;height:100%;" title="RAI - Roscon &#039;24 reel demo"></iframe></div><script src="https://player.vimeo.com/api/player.js"></script>

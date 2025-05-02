@@ -74,7 +74,7 @@ Used to replan the path/skip the alley.
 -   The tractor performs the action and the demo continues.
 
 For more details on configuring RAI for specific robots, refer to the
-[RAI documentation](../create_robots_whoami.md).
+[API documentation](../API_documentation/overview.md).
 
 !!! tip "Building from source"
 

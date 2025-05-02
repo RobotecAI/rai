@@ -16,7 +16,7 @@ Whether you're building industrial automation solutions, educational robots, or 
 
 ## How does RAI work?
 
-<div style="text-align: center;"><img src="../../imgs/rai_steps.png" width="80%" alt="rai-steps"></div>
+<div style="text-align: center;"><img src="../../imgs/rai_steps.png" alt="rai-steps"></div>
 
 RAI connects human instructions to robot actions in four simple steps:
 
@@ -92,8 +92,8 @@ Follow our [step-by-step walkthrough](../tutorials/walkthrough.md) to:
 
 ## Community & Support
 
--   [Contribution Guide](../CONTRIBUTING.md)
--   [Q&A](https://github.com/RobotecAI/rai/discussions/categories/q-a)
+-   [Contribution Guide](../contributing/CONTRIBUTING.md)
+-   [FAQ](../faq/faq.md)
 -   [Join our Discord](https://discord.gg/3PGHgTaJSB)
 -   [Embodied AI Community Group](https://github.com/ros-wg-embodied-ai)
 

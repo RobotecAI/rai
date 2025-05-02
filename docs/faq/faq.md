@@ -8,7 +8,7 @@
 
     ??? question "How does RAI work?"
 
-        <div style="text-align: center;"><img src="../../imgs/rai_steps.png" width="80%" alt="rai-steps"></div>
+        <div style="text-align: center;"><img src="../../imgs/rai_steps.png" alt="rai-steps"></div>
 
         RAI connects human instructions to robot actions in four simple steps:
 
