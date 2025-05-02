@@ -8,6 +8,7 @@ theme:
     - toc.follow
     - navigation.tabs
     - navigation.tabs.sticky
+    - content.code.copy
 
 markdown_extensions:
   - admonition
@@ -18,12 +19,16 @@ markdown_extensions:
   - toc:
       permalink: true
       toc_depth: 3
+  - attr_list
+  - pymdownx.emoji
 
 extra_css:
   - stylesheets/extra.css
 
 nav:
-  - Home: index.md
+  - Home:
+    - Overview: intro/index.md
+    - Is RAI a good fit for me?: intro/what_is_rai.md
   - Getting started:
     - Local setup: setup/install.md
     - Docker setup: setup/setup_docker.md
@@ -35,6 +40,17 @@ nav:
     - Robotic arm: demos/manipulation.md
     - Autonomous vehicle: demos/rosbot_xl.md
     - Voice controlled taxi: demos/taxi.md
+  - ROS 2:
+    - Overview: ROS_2/overview.md
+    - Debugging assistant: ROS_2/debugging_assistant.md
+    - Additional packages: ROS_2/ros_packages.md
+    - Langchain tools: ROS_2/tools.md
+  - Tutorials:
+    - Overview: tutorials/overview.md
+    - Complete walkthrough: tutorials/walkthrough.md
+    - Create Robot's Whoami: tutorials/create_robots_whoami.md
+    - Tools: tutorials/tools.md
+    - Voice Interface: tutorials/voice_interface.md
   - API documentation:
       - Overview: API_documentation/overview.md
       - Agents: API_documentation/agents.md
@@ -42,3 +58,13 @@ nav:
       - Aggregators: API_documentation/aggregators.md
       - LangChain: API_documentation/langchain.md
       - Multimodal messages: API_documentation/multimodal_messages.md
+      - Runners: API_documentation/runners.md
+  - Simulation and benchmarking:
+    - Overview: simulation_and_benchmarking/overview.md
+    - RAI Sim: simulation_and_benchmarking/rai_sim.md
+    - RAI Bench: simulation_and_benchmarking/rai_bench.md
+    - Simulators: simulation_and_benchmarking/simulators.md
+  - Contributing:
+    - Overview: contributing/CONTRIBUTING.md
+    - Code of conduct: contributing/CODE_OF_CONDUCT.md
+    - Security policy: contributing/SECURITY.md

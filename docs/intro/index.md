@@ -6,7 +6,7 @@ In simple terms, RAI adds natural language control and AI-powered perception to 
 
 ---
 
-![rai-image](./imgs/RAI_simple_diagram_medium.png)
+![rai-image](../imgs/RAI_simple_diagram_medium.png)
 
 ---
 
@@ -50,11 +50,11 @@ Our comprehensive suite of integrated packages enables developers to seamlessly 
 
 The framework's components work in perfect harmony to deliver a robust foundation for your robotics projects:
 
-<div style="text-align: center;"><img src="./imgs/rai_packages.png" width="80%" alt="rai-packages"></div>
+<div style="text-align: center;"><img src="../imgs/rai_packages.png" width="80%" alt="rai-packages"></div>
 
 ## Getting Started
 
-Ready to dive into RAI? Start with a [quick-setup guide](setup/install.md).
+Ready to dive into RAI? Start with a [quick-setup guide](../setup/install.md).
 
 Here are two ways to begin your journey:
 
@@ -62,14 +62,14 @@ Here are two ways to begin your journey:
 
 Experience RAI in action through our interactive demos. These showcase real-world applications across different robotic platforms:
 
--   🚜 [Agricultural Robotics](demos/agriculture.md) - See how RAI handles complex decision-making in orchard environments
--   🤖 [Manipulation Tasks](demos/manipulation.md) - Watch RAI control a Franka Panda arm using natural language
--   🚗 [Autonomous Navigation](demos/rosbot_xl.md) - Explore RAI's capabilities with the ROSbot XL platform
--   🎤 [Speech Interaction](demos/taxi.md) - Experience RAI's speech-to-speech capabilities in an autonomous taxi scenario
+-   🚜 [Agricultural Robotics](../demos/agriculture.md) - See how RAI handles complex decision-making in orchard environments
+-   🤖 [Manipulation Tasks](../demos/manipulation.md) - Watch RAI control a Franka Panda arm using natural language
+-   🚗 [Autonomous Navigation](../demos/rosbot_xl.md) - Explore RAI's capabilities with the ROSbot XL platform
+-   🎤 [Speech Interaction](../demos/taxi.md) - Experience RAI's speech-to-speech capabilities in an autonomous taxi scenario
 
 ### Option 2: Build Your Own Solution
 
-Follow our comprehensive [**walkthrough**](tutorials/walkthrough.md) to:
+Follow our comprehensive [**walkthrough**](../tutorials/walkthrough.md) to:
 
 -   Deploy RAI on your robot and enable natural language interactions
 -   Extend the framework with custom tools and capabilities
@@ -87,7 +87,7 @@ This design philosophy means that while RAI is fully compatible with ROS 2, most
 
 ### Contributing
 
-You are welcome to contribute to RAI! Please see our [Contribution Guide](CONTRIBUTING.md).
+You are welcome to contribute to RAI! Please see our [Contribution Guide](../CONTRIBUTING.md).
 
 !!! tip "Want to know more?"
 

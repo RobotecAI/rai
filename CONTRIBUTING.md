@@ -41,7 +41,7 @@ This can be done by creating Issues and RFCs on github.
 
 ### Setting up the development environment
 
-Set up your development environment following [the instructions](setup/install.md).
+Set up your development environment following [the instructions](../setup/install.md).
 
 Additionally, setup the pre-commit:
 
@@ -51,10 +51,18 @@ pre-commit install
 pre-commit run -a # Run the checks before committing
 ```
 
+Optionally, install all RAI dependencies and run the tests:
+
+```bash
+poetry install --all-groups
+colcon build --symlink-install
+pytest tests/
+```
+
 ### Starting the discussion
 
 Always try to engage in discussion first. Browse Issues and RFCs or start a discussion on
-[RAI Discord](https://discord.gg/GZGfejUSjt) to see if a feature you want to propose (or a similar
+[ROS Embodied AI Community Group Discord](https://discord.gg/3PGHgTaJSB) to see if a feature you want to propose (or a similar
 one) has already been mentioned. If that is the case feel free to offer that you'll work on it, and
 propose what changes/additions you will make. One of the project maintainers will assign the issue
 to you, and you can start working on the code.

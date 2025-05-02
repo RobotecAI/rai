@@ -52,17 +52,49 @@ At the heart of this integration is the `rai.communication.ros2.ROS2Connector`, 
 ## Integration Examples
 
 ```python
-from rai.communication.ros2 import ROS2Connector, ROS2Context
+from rai.communication.ros2 import ROS2Connector, ROS2Context, ROS2Message
+
 
 @ROS2Context()
 def main():
     connector = ROS2Connector()
+
     # Subscribe to a topic
-    connector.register_callback("/topic", callback_function)
+    def my_custom_callback(message: ROS2Message):
+        message.payload  # actual ROS 2 message
+
+    connector.register_callback("/topic", my_custom_callback)
+
+    # Receive a message
+    message = connector.receive_message("/topic")
+    message.payload  # actual ROS 2 message
+
     # Publish a message
-    connector.send_message(message, "/topic")
+    message = ROS2Message(payload={"data": "Hello, ROS 2!"})
+    connector.send_message(message, "/topic", msg_type="std_msgs/msg/String")
+
     # Call a service
-    response = connector.call_service("/service", request)
+    request = ROS2Message(payload={"data": True})
+    response = connector.service_call(
+        message=request, target="/service", msg_type="std_srvs/msg/SetBool"
+    )
+
+    # Start an action
+    def my_custom_feedback_callback(feedback: ROS2Message):
+        feedback.payload  # actual ROS 2 feedback
+
+    message = ROS2Message(
+        payload={"pose": {"position": {"x": 1.0, "y": 2.0, "z": 0.0}}}
+    )
+    action_id = connector.start_action(
+        action_data=message,
+        target="/navigate_to_pose",
+        msg_type="nav2_msgs/action/NavigateToPose",
+        feedback_callback=my_custom_feedback_callback,
+    )
+
+    # Cancel an action
+    connector.terminate_action(action_id)
 ```
 
 ## Best Practices
@@ -78,26 +110,20 @@ def main():
     - Handle exceptions appropriately
 
 3. **Performance Considerations**
+
     - Use appropriate QoS profiles
-    - Consider using the destroy_subscribers parameter carefully
+    - Consider deregistering callbacks when not needed
 
 ## Common Use Cases
 
-1. **Human-Robot Interaction**
-
-    - Voice commands and responses
-    - Natural language processing
-    - Multi-modal communication
-
-2. **Robot Control**
+1. **Robot Control**
 
     - Navigation commands
     - Manipulation tasks
     - Sensor data processing
 
-3. **System Integration**
+2. **System Integration**
     - Connecting AI components to ROS 2
-    - Bridging different communication protocols
     - Multi-agent coordination
 
 ## Troubleshooting
