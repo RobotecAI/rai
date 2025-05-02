@@ -6,6 +6,8 @@ rai core provides a comprehensive set of tools and components for developing int
 
 ## Core Components
 
+<div style="text-align: center;"><img src="../../imgs/rai_api.png" alt="rai-api"></div>
+
 RAI consists of several key components that work together to create intelligent robotic systems:
 
 ### [Agents](agents.md)
