@@ -27,7 +27,7 @@ extra_css:
 
 nav:
   - Home:
-    - Overview: intro/index.md
+    - Overview: index.md
     - Is RAI a good fit for me?: intro/what_is_rai.md
   - Getting started:
     - Local setup: setup/install.md
@@ -68,3 +68,4 @@ nav:
     - Overview: contributing/CONTRIBUTING.md
     - Code of conduct: contributing/CODE_OF_CONDUCT.md
     - Security policy: contributing/SECURITY.md
+  - FAQ: faq/faq.md
