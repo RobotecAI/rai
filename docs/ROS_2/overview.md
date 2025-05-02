@@ -38,16 +38,16 @@ At the heart of this integration is the `rai.communication.ros2.ROS2Connector`, 
 
 ## Key Features
 
-- **Unified Communication Interface**: Simple, generic interface for ROS 2 topics, services, and actions
-- **Automatic QoS Matching**: Handles Quality of Service profiles automatically
-- **Thread-Safe Operations**: Built-in thread safety for concurrent operations
+-   **Unified Communication Interface**: Simple, generic interface for ROS 2 topics, services, and actions
+-   **Automatic QoS Matching**: Handles Quality of Service profiles automatically
+-   **Thread-Safe Operations**: Built-in thread safety for concurrent operations
 
 ## Supported ROS 2 Features
 
-- Topics (publish/subscribe)
-- Services (request/response)
-- Actions (long-running operations with feedback)
-- TF2 transforms
+-   Topics (publish/subscribe)
+-   Services (request/response)
+-   Actions (long-running operations with feedback)
+-   TF2 transforms
 
 ## Integration Examples
 
@@ -69,36 +69,36 @@ def main():
 
 1. **Context Management**
 
-   - Always use `ROS2Context` as a decorator or context manager
-   - Ensures proper initialization and cleanup
+    - Always use `ROS2Context` as a decorator or context manager
+    - Ensures proper initialization and cleanup
 
 2. **Resource Management**
 
-   - Use the connector's shutdown method when done
-   - Handle exceptions appropriately
+    - Use the connector's shutdown method when done
+    - Handle exceptions appropriately
 
 3. **Performance Considerations**
-   - Use appropriate QoS profiles
-   - Consider using the destroy_subscribers parameter carefully
+    - Use appropriate QoS profiles
+    - Consider using the destroy_subscribers parameter carefully
 
 ## Common Use Cases
 
 1. **Human-Robot Interaction**
 
-   - Voice commands and responses
-   - Natural language processing
-   - Multi-modal communication
+    - Voice commands and responses
+    - Natural language processing
+    - Multi-modal communication
 
 2. **Robot Control**
 
-   - Navigation commands
-   - Manipulation tasks
-   - Sensor data processing
+    - Navigation commands
+    - Manipulation tasks
+    - Sensor data processing
 
 3. **System Integration**
-   - Connecting AI components to ROS 2
-   - Bridging different communication protocols
-   - Multi-agent coordination
+    - Connecting AI components to ROS 2
+    - Bridging different communication protocols
+    - Multi-agent coordination
 
 ## Troubleshooting
 
@@ -106,21 +106,21 @@ Common issues and their solutions:
 
 1. **Connection Problems**
 
-   - Check ROS 2 network configuration
-   - Verify topic/service names
-   - Ensure proper QoS matching
+    - Check ROS 2 network configuration
+    - Verify topic/service names
+    - Ensure proper QoS matching
 
 2. **Performance Issues**
 
-   - Monitor thread usage
-   - Check QoS settings
-   - Verify message sizes
+    - Monitor thread usage
+    - Check QoS settings
+    - Verify message sizes
 
 3. **Resource Management**
-   - Proper cleanup of resources
-   - Handling of node lifecycle
-   - Memory management
+    - Proper cleanup of resources
+    - Handling of node lifecycle
+    - Memory management
 
 ## Future Developments
 
-- Performance optimizations
+-   Performance optimizations

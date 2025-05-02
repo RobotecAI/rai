@@ -28,10 +28,10 @@ class BaseAgent(ABC):
 
 The `BaseAgent` class serves as the cornerstone of RAI's agent architecture, establishing a uniform interface for various agent implementations. This enables:
 
-- Consistent lifecycle management (starting/stopping)
-- Standardized logging mechanisms
-- Interoperability between different agent types
-- Integration with management utilities like `AgentRunner`
+-   Consistent lifecycle management (starting/stopping)
+-   Standardized logging mechanisms
+-   Interoperability between different agent types
+-   Integration with management utilities like `AgentRunner`
 
 ### Core Methods
 
@@ -59,13 +59,13 @@ Abstract method that must be implemented by all subclasses. Gracefully terminate
 
 In the RAI framework, agents typically interact with:
 
-- **Connectors**: For communication (ROS2, audio devices, etc.)
-- **Aggregators**: For processing and summarizing input data
-- **Models**: For AI capabilities (LLMs, vision models, speech recognition)
-- **Tools**: For implementing specific actions an agent can take
+-   **Connectors**: For communication (ROS2, audio devices, etc.)
+-   **Aggregators**: For processing and summarizing input data
+-   **Models**: For AI capabilities (LLMs, vision models, speech recognition)
+-   **Tools**: For implementing specific actions an agent can take
 
 ## See Also
 
-- [AgentRunner](runner.md): For managing multiple agents
-- [LangChainAgent](langchain.md): For LLM-powered agents
-- [StateBasedAgent](state_based.md): For agents that maintain state through periodic aggregation
+-   [AgentRunner](runner.md): For managing multiple agents
+-   [LangChainAgent](langchain.md): For LLM-powered agents
+-   [StateBasedAgent](state_based.md): For agents that maintain state through periodic aggregation

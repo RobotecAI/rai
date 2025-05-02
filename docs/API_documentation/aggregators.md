@@ -37,10 +37,10 @@ class BaseAggregator(ABC, Generic[T]):
 
 The `BaseAggregator` class serves as the foundation for message aggregation in RAI, providing:
 
-- A buffer for collecting messages
-- Size management to prevent memory overflow
-- A consistent interface for processing and returning aggregated results
-- Type safety through generics
+-   A buffer for collecting messages
+-   Size management to prevent memory overflow
+-   A consistent interface for processing and returning aggregated results
+-   Type safety through generics
 
 ### Core Methods
 
@@ -123,10 +123,10 @@ aggregated_message = image_aggregator.get()
 
 This approach is useful when you need to:
 
-- Process messages from specific topics independently
-- Combine multiple aggregators for the same topic
-- Use aggregators in non-state-based agents
-- Have more control over when aggregation occurs
+-   Process messages from specific topics independently
+-   Combine multiple aggregators for the same topic
+-   Use aggregators in non-state-based agents
+-   Have more control over when aggregation occurs
 
 ## Best Practices
 
@@ -156,6 +156,6 @@ class CustomAggregator(BaseAggregator[CustomMessage]):
 
 ## See Also
 
-- [StateBasedAgent](state_based.md): For using aggregators in state-based agents
-- [ROS2Connector](../API_documentation/connectors.md#ros-2-connectors): For ROS2 message handling
-- [LangChain](../API_documentation/langchain.md): LangChain's role in RAI
+-   [StateBasedAgent](state_based.md): For using aggregators in state-based agents
+-   [ROS2Connector](../API_documentation/connectors.md#ros-2-connectors): For ROS2 message handling
+-   [LangChain](../API_documentation/langchain.md): LangChain's role in RAI

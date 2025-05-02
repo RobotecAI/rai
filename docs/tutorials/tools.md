@@ -13,16 +13,16 @@ RAI supports two primary approaches for implementing tools, each with distinct a
 
 ### `BaseTool` Class
 
-- Offers full control over tool behavior and lifecycle
-- Allows configuration parameters
-- Supports stateful operations (e.g., maintaining ROS 2 connector instances)
+-   Offers full control over tool behavior and lifecycle
+-   Allows configuration parameters
+-   Supports stateful operations (e.g., maintaining ROS 2 connector instances)
 
 ### `@tool` Decorator
 
-- Provides a lightweight, functional approach
-- Ideal for stateless operations
-- Minimizes boilerplate code
-- Suited for simple, single-purpose tools
+-   Provides a lightweight, functional approach
+-   Ideal for stateless operations
+-   Minimizes boilerplate code
+-   Suited for simple, single-purpose tools
 
 Use the `BaseTool` class when state management, or extensive configuration is required. Choose the
 `@tool` decorator for simple, stateless functionality where conciseness is preferred.
@@ -258,6 +258,6 @@ def main():
 
 ## Related Topics
 
-- [Connectors](../API_documentation/connectors.md)
-- [ROS2Connector](../API_documentation/connectors.md)
-- [ROS2HRIConnector](../API_documentation/connectors.md)
+-   [Connectors](../API_documentation/connectors.md)
+-   [ROS2Connector](../API_documentation/connectors.md)
+-   [ROS2HRIConnector](../API_documentation/connectors.md)

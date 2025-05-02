@@ -17,6 +17,8 @@ repos:
     rev: v2.7.1
     hooks:
       - id: prettier
+        args: [--tab-width=4]
+        files: \.md$
 
   - repo: https://github.com/gruntwork-io/pre-commit
     rev: v0.1.23

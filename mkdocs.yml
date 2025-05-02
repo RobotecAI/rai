@@ -6,6 +6,9 @@ theme:
     - navigation.expand
     - toc.integrate
     - toc.follow
+    - navigation.tabs
+    - navigation.tabs.sticky
+
 markdown_extensions:
   - admonition
   - pymdownx.details
@@ -14,7 +17,28 @@ markdown_extensions:
   - pymdownx.tasklist
   - toc:
       permalink: true
-      toc_depth: 2
+      toc_depth: 3
 
 extra_css:
   - stylesheets/extra.css
+
+nav:
+  - Home: index.md
+  - Getting started:
+    - Local setup: setup/install.md
+    - Docker setup: setup/setup_docker.md
+    - Tracing setup: setup/tracing.md
+    - Vendor setup: setup/vendors.md
+  - Demos:
+    - Overview: demos/overview.md
+    - Autonomous tractor: demos/agriculture.md
+    - Robotic arm: demos/manipulation.md
+    - Autonomous vehicle: demos/rosbot_xl.md
+    - Voice controlled taxi: demos/taxi.md
+  - API documentation:
+      - Overview: API_documentation/overview.md
+      - Agents: API_documentation/agents.md
+      - Connectors: API_documentation/connectors.md
+      - Aggregators: API_documentation/aggregators.md
+      - LangChain: API_documentation/langchain.md
+      - Multimodal messages: API_documentation/multimodal_messages.md

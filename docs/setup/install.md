@@ -95,6 +95,6 @@ of choice for RAI modules. Vendor choices for RAI and our recommendations are su
 
 Pick your local solution or service provider and follow one of these guides:
 
-- **[Ollama](https://ollama.com/download)**
-- **[OpenAI](https://platform.openai.com/docs/quickstart)**
-- **[AWS Bedrock](https://console.aws.amazon.com/bedrock/home?#/overview)**
+-   **[Ollama](https://ollama.com/download)**
+-   **[OpenAI](https://platform.openai.com/docs/quickstart)**
+-   **[AWS Bedrock](https://console.aws.amazon.com/bedrock/home?#/overview)**

@@ -16,8 +16,8 @@ how to:
 
 Before proceeding, ensure you have:
 
-- ROS 2 (humble or jazzy) installed and properly set up
-- RAI installed and configured
+-   ROS 2 (humble or jazzy) installed and properly set up
+-   RAI installed and configured
 
 ## Creating a Custom Agent
 
@@ -173,9 +173,9 @@ class ShutdownArmTool(BaseROS2Tool):
 The `rai whoami` utility generates a system prompt based on your robot's specifications. It requires
 a directory containing:
 
-- Documentation
-- Images
-- URDF files
+-   Documentation
+-   Images
+-   URDF files
 
 !!! tip "Directories are optional" While each directory is optional, providing comprehensive
 information about your robot will result in a more accurate and effective system prompt.
@@ -186,18 +186,18 @@ Create a `panda/` directory with the following structure:
 
 1. **Images**
 
-   - Save [this image](https://robodk.com/robot/img/Franka-Emika-Panda-robot.png) in `panda/images`
+    - Save [this image](https://robodk.com/robot/img/Franka-Emika-Panda-robot.png) in `panda/images`
 
 2. **Documentation**
 
-   - Save
-     [this document](https://github.com/user-attachments/files/16417196/Franka.Emika.Panda.robot.-.RoboDK.pdf)
-     in `panda/documentation`
+    - Save
+      [this document](https://github.com/user-attachments/files/16417196/Franka.Emika.Panda.robot.-.RoboDK.pdf)
+      in `panda/documentation`
 
 3. **URDF**
-   - Save
-     [this URDF](https://github.com/frankaemika/franka_ros/blob/develop/franka_description/robots/panda/panda.urdf.xacro)
-     in `panda/urdf`
+    - Save
+      [this URDF](https://github.com/frankaemika/franka_ros/blob/develop/franka_description/robots/panda/panda.urdf.xacro)
+      in `panda/urdf`
 
 ### Building the Whoami
 
@@ -251,12 +251,12 @@ The agent exposes two main communication channels:
 
 1. **Sending Commands**
 
-   ```bash
-   ros2 topic pub /from_human rai_interfaces/msg/HRIMessage "{\"text\": \"Move the arm to 0, 0, 0?\"}"
-   ```
+    ```bash
+    ros2 topic pub /from_human rai_interfaces/msg/HRIMessage "{\"text\": \"Move the arm to 0, 0, 0?\"}"
+    ```
 
 2. **Receiving Responses**
 
-   ```bash
-   ros2 topic echo /to_human rai_interfaces/msg/HRIMessage
-   ```
+    ```bash
+    ros2 topic echo /to_human rai_interfaces/msg/HRIMessage
+    ```

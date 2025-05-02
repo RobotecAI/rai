@@ -41,12 +41,12 @@ The RAI Framework represents a complete, end-to-end solution for developing and 
 
 Our comprehensive suite of integrated packages enables developers to seamlessly transition from concept to production, offering:
 
-- **Complete Development Lifecycle**: From initial agent development to deployment and fine-tuning
-- **Modular Architecture**: Choose and combine components based on your specific needs
-- **Production-Ready Tools**: Enterprise-grade packages for simulation, testing, and deployment
-- **Extensible Platform**: Easy integration with existing robotics infrastructure and custom solutions
-- **Advanced Human-Robot Interaction**: Natural language processing, speech recognition, and intuitive interfaces
-- **Rich Multimodal Capabilities**: Seamless integration of voice, vision, and sensor data with real-time processing of multiple input/output streams, native handling of diverse data types, and unified multi-sensory perception and action framework.
+-   **Complete Development Lifecycle**: From initial agent development to deployment and fine-tuning
+-   **Modular Architecture**: Choose and combine components based on your specific needs
+-   **Production-Ready Tools**: Enterprise-grade packages for simulation, testing, and deployment
+-   **Extensible Platform**: Easy integration with existing robotics infrastructure and custom solutions
+-   **Advanced Human-Robot Interaction**: Natural language processing, speech recognition, and intuitive interfaces
+-   **Rich Multimodal Capabilities**: Seamless integration of voice, vision, and sensor data with real-time processing of multiple input/output streams, native handling of diverse data types, and unified multi-sensory perception and action framework.
 
 The framework's components work in perfect harmony to deliver a robust foundation for your robotics projects:
 
@@ -62,26 +62,26 @@ Here are two ways to begin your journey:
 
 Experience RAI in action through our interactive demos. These showcase real-world applications across different robotic platforms:
 
-- 🚜 [Agricultural Robotics](demos/agriculture.md) - See how RAI handles complex decision-making in orchard environments
-- 🤖 [Manipulation Tasks](demos/manipulation.md) - Watch RAI control a Franka Panda arm using natural language
-- 🚗 [Autonomous Navigation](demos/rosbot_xl.md) - Explore RAI's capabilities with the ROSbot XL platform
-- 🎤 [Speech Interaction](demos/taxi.md) - Experience RAI's speech-to-speech capabilities in an autonomous taxi scenario
+-   🚜 [Agricultural Robotics](demos/agriculture.md) - See how RAI handles complex decision-making in orchard environments
+-   🤖 [Manipulation Tasks](demos/manipulation.md) - Watch RAI control a Franka Panda arm using natural language
+-   🚗 [Autonomous Navigation](demos/rosbot_xl.md) - Explore RAI's capabilities with the ROSbot XL platform
+-   🎤 [Speech Interaction](demos/taxi.md) - Experience RAI's speech-to-speech capabilities in an autonomous taxi scenario
 
 ### Option 2: Build Your Own Solution
 
 Follow our comprehensive [**walkthrough**](tutorials/walkthrough.md) to:
 
-- Deploy RAI on your robot and enable natural language interactions
-- Extend the framework with custom tools and capabilities
-- Implement complex, multi-step tasks using RAI's advanced reasoning
+-   Deploy RAI on your robot and enable natural language interactions
+-   Extend the framework with custom tools and capabilities
+-   Implement complex, multi-step tasks using RAI's advanced reasoning
 
 ## Communication Protocols
 
 RAI provides first-class support for ROS 2 Humble and Jazzy distributions. While ROS 2 serves as our Tier 1 communication protocol, RAI's architecture includes a powerful abstraction layer that:
 
-- Simplifies communication across different networks and protocols
-- Enables seamless integration with various communication backends
-- Allows for future protocol extensions while maintaining a consistent interface
+-   Simplifies communication across different networks and protocols
+-   Enables seamless integration with various communication backends
+-   Allows for future protocol extensions while maintaining a consistent interface
 
 This design philosophy means that while RAI is fully compatible with ROS 2, most of its features can be utilized independently of the ROS 2 environment. The framework's modular architecture makes it suitable not only for different robotic platforms but also for non-robotic applications, offering flexibility in deployment across various domains.
 

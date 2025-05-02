@@ -25,9 +25,9 @@ If applicable, add screenshots to help explain your problem.
 
 **Platform**
 
-- OS: [e.g. Ubuntu 24.04]
-- ROS 2 Version [e.g. Jazzy]
-- Other information you think might be relevant such as graphic card, drivers etc.
+-   OS: [e.g. Ubuntu 24.04]
+-   ROS 2 Version [e.g. Jazzy]
+-   Other information you think might be relevant such as graphic card, drivers etc.
 
 **Version**
 Release number or commit hash.

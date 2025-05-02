@@ -14,27 +14,27 @@ platform in a nice apartment.
 
 1. Download the newest binary release:
 
-- Ubuntu 22.04 & ros2 humble:
-  [link](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIROSBotDemo_1.0.0_jammyhumble.zip)
-- Ubuntu 24.04 & ros2 jazzy:
-  [link](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIROSBotDemo_1.0.0_noblejazzy.zip)
+-   Ubuntu 22.04 & ros2 humble:
+    [link](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIROSBotDemo_1.0.0_jammyhumble.zip)
+-   Ubuntu 24.04 & ros2 jazzy:
+    [link](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIROSBotDemo_1.0.0_noblejazzy.zip)
 
 2. Install and download required packages
 
-   ```bash
-   vcs import < demos.repos
-   rosdep install --from-paths src --ignore-src -r -y
-   poetry install --with openset
-   ```
+    ```bash
+    vcs import < demos.repos
+    rosdep install --from-paths src --ignore-src -r -y
+    poetry install --with openset
+    ```
 
 3. Unpack the binary with the simulation:
 
-   ```bash
-   # u24
-   unzip RAIROSBotDemo_1.0.0_noblejazzy.zip
-   # u22
-   unzip RAIROSBotDemo_1.0.0_jammyhumble.zip
-   ```
+    ```bash
+    # u24
+    unzip RAIROSBotDemo_1.0.0_noblejazzy.zip
+    # u22
+    unzip RAIROSBotDemo_1.0.0_jammyhumble.zip
+    ```
 
 ## Alternative: Demo source build
 
@@ -47,22 +47,22 @@ details.
 
 1. Running rai nodes and agents, navigation stack and O3DE simulation.
 
-   ```bash
-   ros2 launch ./examples/rosbot-xl.launch.py game_launcher:=path/to/RAIROSBotXLDemo.GameLauncher
-   ```
+    ```bash
+    ros2 launch ./examples/rosbot-xl.launch.py game_launcher:=path/to/RAIROSBotXLDemo.GameLauncher
+    ```
 
 2. Run streamlit gui:
 
-   ```bash
-   streamlit run examples/rosbot-xl-demo.py
-   ```
+    ```bash
+    streamlit run examples/rosbot-xl-demo.py
+    ```
 
 3. Play with the demo, prompting the agent to perform tasks. Here are some examples:
 
-   - Where are you now?
-   - What do you see?
-   - What is the position of bed?
-   - Navigate to the kitchen.
+    - Where are you now?
+    - What do you see?
+    - What is the position of bed?
+    - Navigate to the kitchen.
 
 !!! tip "Building from source"
 

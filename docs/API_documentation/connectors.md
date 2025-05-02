@@ -15,16 +15,16 @@ implementations:
 
 **BaseConnector[T]**: The foundation interface that defines common communication patterns:
 
-- Message passing (publish/subscribe)
-- Service calls (request/response)
-- Actions (long-running operations with feedback)
-- Callback registration for asynchronous notifications
+-   Message passing (publish/subscribe)
+-   Service calls (request/response)
+-   Actions (long-running operations with feedback)
+-   Callback registration for asynchronous notifications
 
 **HRIConnector[T]**: Extends BaseConnector with Human-Robot Interaction capabilities:
 
-- Supports multimodal messages (text, images, audio)
-- Provides conversion to/from Langchain message formats
-- Handles message sequencing and conversation IDs
+-   Supports multimodal messages (text, images, audio)
+-   Provides conversion to/from Langchain message formats
+-   Handles message sequencing and conversation IDs
 
 ### Concrete Implementations
 
@@ -54,11 +54,11 @@ implementations:
 
 Connectors are generic over message types derived from BaseMessage:
 
-- **BaseMessage**: Foundation message type with payload and metadata
-- **ROS2Message**: Message type for ROS 2 communication
-- **HRIMessage**: Multimodal message type with text, images, and audio
-- **ROS2HRIMessage**: HRIMessage specialized for ROS 2 transport
-- **SoundDeviceMessage**: Specialized message for audio operations
+-   **BaseMessage**: Foundation message type with payload and metadata
+-   **ROS2Message**: Message type for ROS 2 communication
+-   **HRIMessage**: Multimodal message type with text, images, and audio
+-   **ROS2HRIMessage**: HRIMessage specialized for ROS 2 transport
+-   **SoundDeviceMessage**: Specialized message for audio operations
 
 ### Communication Patterns
 
@@ -66,29 +66,29 @@ Connectors support multiple communication patterns:
 
 1.  **Publish/Subscribe**
 
-    - `send_message(message, target, **kwargs)`: Send a message to a target
-    - `receive_message(source, timeout_sec, **kwargs)`: Receive a message from a source
-    - `register_callback(source, callback, **kwargs)`: Register for asynchronous notifications
+    -   `send_message(message, target, **kwargs)`: Send a message to a target
+    -   `receive_message(source, timeout_sec, **kwargs)`: Receive a message from a source
+    -   `register_callback(source, callback, **kwargs)`: Register for asynchronous notifications
 
 2.  **Request/Response**
 
-    - `service_call(message, target, timeout_sec, **kwargs)`: Make a synchronous service call
+    -   `service_call(message, target, timeout_sec, **kwargs)`: Make a synchronous service call
 
 3.  **Actions**
 
-    - `start_action(action_data, target, on_feedback, on_done, timeout_sec, **kwargs)`: Start a
-      long-running action
-    - `terminate_action(action_handle, **kwargs)`: Cancel an ongoing action
-    - `create_action(action_name, generate_feedback_callback, **kwargs)`: Create an action server
+    -   `start_action(action_data, target, on_feedback, on_done, timeout_sec, **kwargs)`: Start a
+        long-running action
+    -   `terminate_action(action_handle, **kwargs)`: Cancel an ongoing action
+    -   `create_action(action_name, generate_feedback_callback, **kwargs)`: Create an action server
 
 ## Threading Model
 
 Connectors implement thread-safe operations:
 
-- ROS 2 connectors use a dedicated thread with MultiThreadedExecutor
-- Callbacks are executed in a ThreadPoolExecutor for concurrent processing
-- Proper synchronization for shared resources
-- Clean shutdown handling for all resources
+-   ROS 2 connectors use a dedicated thread with MultiThreadedExecutor
+-   Callbacks are executed in a ThreadPoolExecutor for concurrent processing
+-   Proper synchronization for shared resources
+-   Clean shutdown handling for all resources
 
 ## Usage Examples
 
@@ -153,7 +153,7 @@ connector.shutdown()
 
 Connectors implement robust error handling:
 
-- All operations have appropriate timeout parameters
-- Exceptions are properly propagated and documented
-- Callbacks are executed in a protected manner to prevent crashes
-- Resources are properly cleaned up during shutdown
+-   All operations have appropriate timeout parameters
+-   Exceptions are properly propagated and documented
+-   Callbacks are executed in a protected manner to prevent crashes
+-   Resources are properly cleaned up during shutdown

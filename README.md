@@ -40,17 +40,17 @@ guide and tutorials. 📚
 
 ## RAI framework
 
-- [x] rai core: Core functionality for multi-agent system, human-robot interaction and
-      multi-modalities.
-- [x] rai whoami: Tool to extract and synthesize robot embodiment information from a structured
-      directory of documentation, images, and URDFs.
-- [x] rai_asr: Speech-to-text models and tools.
-- [x] rai_tts: Text-to-speech models and tools.
-- [x] rai_sim: Package for connecting RAI to simulation environments.
-- [x] rai_bench: Benchmarking suite for RAI. Test agents, models, tools, simulators, etc.
-- [x] rai_openset: Openset detection models and tools.
-- [x] rai_nomad: Integration with NoMaD for navigation.
-- [ ] rai_finetune: Finetune LLMs on your embodied data.
+-   [x] rai core: Core functionality for multi-agent system, human-robot interaction and
+        multi-modalities.
+-   [x] rai whoami: Tool to extract and synthesize robot embodiment information from a structured
+        directory of documentation, images, and URDFs.
+-   [x] rai_asr: Speech-to-text models and tools.
+-   [x] rai_tts: Text-to-speech models and tools.
+-   [x] rai_sim: Package for connecting RAI to simulation environments.
+-   [x] rai_bench: Benchmarking suite for RAI. Test agents, models, tools, simulators, etc.
+-   [x] rai_openset: Openset detection models and tools.
+-   [x] rai_nomad: Integration with NoMaD for navigation.
+-   [ ] rai_finetune: Finetune LLMs on your embodied data.
 
 ### Simulation demos
 
@@ -73,7 +73,7 @@ next meeting, look for it in the
 
 ### Publicity
 
-- A talk about [RAI at ROSCon 2024](https://vimeo.com/1026029511).
+-   A talk about [RAI at ROSCon 2024](https://vimeo.com/1026029511).
 
 ### RAI Q&A
 

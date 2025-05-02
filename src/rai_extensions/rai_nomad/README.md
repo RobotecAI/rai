@@ -42,10 +42,10 @@ The model will be loaded and ready, but it will not run until you call the `/rai
 
 ### Parameters
 
-- `model_path`: Path to where the model should be downloaded. By default it will be downloaded into the package's `share` directory.
-- `image_topic`: The topic where the camera images are being published.
-- `cmd_vel_topic`: The topic where the velocity commands are being published. Default: `/cmd_vel`.
-- `linear_vel`: Linear velocity scaling of the model output.
-- `angular_vel`: Angular velocity scaling of the model output.
-- `max_v` and `max_w`: Maximum linear and angular velocities that the model can output.
-- `rate`: The rate at which the model will run.
+-   `model_path`: Path to where the model should be downloaded. By default it will be downloaded into the package's `share` directory.
+-   `image_topic`: The topic where the camera images are being published.
+-   `cmd_vel_topic`: The topic where the velocity commands are being published. Default: `/cmd_vel`.
+-   `linear_vel`: Linear velocity scaling of the model output.
+-   `angular_vel`: Angular velocity scaling of the model output.
+-   `max_v` and `max_w`: Maximum linear and angular velocities that the model can output.
+-   `rate`: The rate at which the model will run.

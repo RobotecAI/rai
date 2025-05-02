@@ -10,20 +10,20 @@ Langchain provides a robust foundation for building AI applications with several
 
 1. **Standardized Interfaces**
 
-   - Consistent API across different LLM providers
-   - Simplified model switching and comparison
-   - Reduced vendor lock-in
+    - Consistent API across different LLM providers
+    - Simplified model switching and comparison
+    - Reduced vendor lock-in
 
 2. **Rich Tool Ecosystem**
 
-   - Pre-built components for common tasks
-   - Extensible tool framework
-   - Integration with external systems
+    - Pre-built components for common tasks
+    - Extensible tool framework
+    - Integration with external systems
 
 3. **Advanced Capabilities**
-   - Memory and context management
-   - Agent-based reasoning
-   - Retrieval-augmented generation
+    - Memory and context management
+    - Agent-based reasoning
+    - Retrieval-augmented generation
 
 ## RAI's Extension of Langchain
 
@@ -33,19 +33,19 @@ RAI extends Langchain's capabilities to meet the unique requirements of robotic 
 
 1. **Multimodal Communication**
 
-   - Rich media support (images, audio)
-   - Real-time sensor data integration
-   - Enhanced human-robot interaction
+    - Rich media support (images, audio)
+    - Real-time sensor data integration
+    - Enhanced human-robot interaction
 
 2. **Robotic Integration**
 
-   - ROS 2 communication layer
-   - ROS 2 toolset
+    - ROS 2 communication layer
+    - ROS 2 toolset
 
 3. **Enhanced Agent Capabilities**
-   - Extended tool runners for robotic (multimodal) operations
-   - Specialized agent types for robotic tasks
-   - Integration with robotic perception systems
+    - Extended tool runners for robotic (multimodal) operations
+    - Specialized agent types for robotic tasks
+    - Integration with robotic perception systems
 
 ## Key Benefits
 
@@ -53,20 +53,20 @@ The integration of Langchain in RAI provides several strategic advantages:
 
 1. **Flexibility**
 
-   - Work with any Langchain-compatible LLM
-   - Extend existing Langchain applications
-   - Mix and match components as needed
+    - Work with any Langchain-compatible LLM
+    - Extend existing Langchain applications
+    - Mix and match components as needed
 
 2. **Robustness**
 
-   - Battle-tested framework
-   - Large community support
-   - Regular updates and improvements
+    - Battle-tested framework
+    - Large community support
+    - Regular updates and improvements
 
 3. **Extensibility**
-   - Easy to add new capabilities
-   - Customizable components
-   - Integration with existing systems
+    - Easy to add new capabilities
+    - Customizable components
+    - Integration with existing systems
 
 ## Using Langchain in RAI
 
@@ -143,20 +143,20 @@ llm = get_llm_model(model_type='complex_model')
 
 1. **Message Handling**
 
-   - Use appropriate message types
-   - Handle media content carefully
-   - Consider performance implications
+    - Use appropriate message types
+    - Handle media content carefully
+    - Consider performance implications
 
 2. **Tool Development**
 
-   - Follow Langchain's tool patterns
-   - Implement proper error handling
-   - Document tool capabilities
+    - Follow Langchain's tool patterns
+    - Implement proper error handling
+    - Document tool capabilities
 
 3. **Agent Design**
-   - Keep agents focused and specialized
-   - Use appropriate tools for tasks
-   - Consider real-time requirements
+    - Keep agents focused and specialized
+    - Use appropriate tools for tasks
+    - Consider real-time requirements
 
 ## When to Use Langchain in RAI
 
@@ -164,20 +164,20 @@ Langchain integration is particularly valuable in these scenarios:
 
 1. **Complex AI Applications**
 
-   - Multi-step reasoning
-   - Tool usage
-   - Memory and context management
+    - Multi-step reasoning
+    - Tool usage
+    - Memory and context management
 
 2. **Flexible LLM Integration**
 
-   - Support for multiple LLM providers
-   - Easy switching between models
-   - Custom model integration
+    - Support for multiple LLM providers
+    - Easy switching between models
+    - Custom model integration
 
 3. **Robotic Intelligence**
-   - Natural language interaction
-   - Complex decision making
-   - Multi-modal perception
+    - Natural language interaction
+    - Complex decision making
+    - Multi-modal perception
 
 ## Limitations and Considerations
 
@@ -185,20 +185,20 @@ Understanding the limitations helps in making informed design decisions:
 
 1. **Performance**
 
-   - Consider latency in robotic applications
-   - Handle large media content carefully
-   - Optimize for real-time requirements
+    - Consider latency in robotic applications
+    - Handle large media content carefully
+    - Optimize for real-time requirements
 
 2. **Complexity**
 
-   - Balance between flexibility and simplicity
-   - Consider learning curve
-   - Document custom extensions
+    - Balance between flexibility and simplicity
+    - Consider learning curve
+    - Document custom extensions
 
 3. **Integration**
-   - Test thoroughly with robotic systems
-   - Consider hardware limitations
-   - Plan for error handling
+    - Test thoroughly with robotic systems
+    - Consider hardware limitations
+    - Plan for error handling
 
 ## Future Directions
 
@@ -206,22 +206,22 @@ The integration continues to evolve with these focus areas:
 
 1. **Enhanced Capabilities**
 
-   - More specialized robotic tools
-   - Improved media handling
-   - Better real-time support
+    - More specialized robotic tools
+    - Improved media handling
+    - Better real-time support
 
 2. **Integration Improvements**
 
-   - More robotic platforms
-   - Additional sensor types
-   - Enhanced perception systems
+    - More robotic platforms
+    - Additional sensor types
+    - Enhanced perception systems
 
 3. **Performance Optimizations**
-   - Caching and optimization
-   - Real-time improvements
-   - Resource management
+    - Caching and optimization
+    - Real-time improvements
+    - Resource management
 
 ## Additional Resources
 
-- [Langchain Documentation](https://python.langchain.com/docs/get_started/introduction)
-- [Tooling Guide](../tutorials/tools.md)
+-   [Langchain Documentation](https://python.langchain.com/docs/get_started/introduction)
+-   [Tooling Guide](../tutorials/tools.md)

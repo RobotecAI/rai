@@ -81,5 +81,5 @@ If you encounter issues with tracing:
 
 For more detailed information on using these tracing tools, refer to their respective documentation:
 
-- [LangSmith Documentation](https://docs.langchain.com/docs/langsmith)
-- [Langfuse Documentation](https://langfuse.com/docs)
+-   [LangSmith Documentation](https://docs.langchain.com/docs/langsmith)
+-   [Langfuse Documentation](https://langfuse.com/docs)

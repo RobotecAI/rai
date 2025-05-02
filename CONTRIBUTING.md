@@ -9,26 +9,26 @@ guidelines have been therefore strongly influenced by the
 
 ## Tenets
 
-- Engage Robotec.ai as early as possible
+-   Engage Robotec.ai as early as possible
 
-  - Start discussions with Robotec.ai and the community early. Long time RAI contributors may have a
-    clearer vision of the big picture. If you implement a feature and send a pull request without
-    discussing with the community first, you are taking the risk of it being rejected, or you may be
-    asked to largely rethink your design.
-  - Opening issues or using Discourse to socialize an idea before starting the implementation is
-    generally preferable.
+    -   Start discussions with Robotec.ai and the community early. Long time RAI contributors may have a
+        clearer vision of the big picture. If you implement a feature and send a pull request without
+        discussing with the community first, you are taking the risk of it being rejected, or you may be
+        asked to largely rethink your design.
+    -   Opening issues or using Discourse to socialize an idea before starting the implementation is
+        generally preferable.
 
-- Adopt community best-practices whenever possible instead of ad-hoc processes
+-   Adopt community best-practices whenever possible instead of ad-hoc processes
 
-  Think about the end-users experience when developing and contributing. Features accessible to a
-  larger amount of potential users, utilising widely available solutions are more likely to be
-  accepted.
+    Think about the end-users experience when developing and contributing. Features accessible to a
+    larger amount of potential users, utilising widely available solutions are more likely to be
+    accepted.
 
-- Think about the community as a whole
+-   Think about the community as a whole
 
-  Think about the bigger picture. There are developers building different robots with different
-  constraints. The landscape of available AI models is rapidly changing, coming with different
-  capabilities and constraints. RAI wants to accommodate requirements of the whole community.
+    Think about the bigger picture. There are developers building different robots with different
+    constraints. The landscape of available AI models is rapidly changing, coming with different
+    capabilities and constraints. RAI wants to accommodate requirements of the whole community.
 
 There are a number of ways you can contribute to the RAI project.
 
@@ -65,9 +65,9 @@ To submit a change begin by forking this repository and making the changes on th
 changes are ready to be proposed create a pull request back to the repository. In order to maintain
 a linear and clear commit history please:
 
-- make sure that all commits have meaningful messages
-- if batches of "cleanup" or similar commits are present - squash them together
-- rebase onto the main branch of repository before making the PR
+-   make sure that all commits have meaningful messages
+-   if batches of "cleanup" or similar commits are present - squash them together
+-   rebase onto the main branch of repository before making the PR
 
 Always make sure that both all tests are passing before making the PR. Once this is done open your
 PR describing what changes have been made and how to test if it's working. Request review from the

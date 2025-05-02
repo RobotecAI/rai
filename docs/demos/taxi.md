@@ -22,10 +22,10 @@ Before running this demo, ensure you have the following prerequisites installed:
 
 2. Run the taxi demo:
 
-   ```bash
-   source ./setup_shell.sh
-   ros2 launch examples/taxi-demo.launch.py
-   ```
+    ```bash
+    source ./setup_shell.sh
+    ros2 launch examples/taxi-demo.launch.py
+    ```
 
 3. To interact with the taxi using speech, speak your destination into your microphone. The system
    will process your request and plan the route for the autonomous taxi.

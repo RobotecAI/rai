@@ -6,19 +6,19 @@ The RAI Bench is a package including benchmarks and providing frame for creating
 
 The Manipulation O3DE Benchmark [manipulation_o3de_benchmark_module](./rai_bench//manipulation_o3de/) provides tasks and scene configurations for robotic arm manipulation simulation in O3DE. The tasks use a common `ManipulationTask` logic and can be parameterized, which allows for many task variants. The current tasks include:
 
-- **MoveObjectToLeftTask**
-- **GroupObjectsTask**
-- **BuildCubeTowerTask**
-- **PlaceObjectAtCoordTask**
-- **RotateObjectTask** (currently not applicable due to limitations in the ManipulatorMoveTo tool)
+-   **MoveObjectToLeftTask**
+-   **GroupObjectsTask**
+-   **BuildCubeTowerTask**
+-   **PlaceObjectAtCoordTask**
+-   **RotateObjectTask** (currently not applicable due to limitations in the ManipulatorMoveTo tool)
 
 The result of a task is a value between 0 and 1, calculated like initially_misplaced_now_correct / initially_misplaced. This score is calculated at the end of each scenario.
 
 ### Frame Components
 
-- `Task`
-- `Scenario`
-- `Benchmark`
+-   `Task`
+-   `Scenario`
+-   `Benchmark`
 
 For more information about these classes go to -> [benchmark](./rai_bench//manipulation_o3de/benchmark.py) and [Task](./rai_bench//manipulation_o3de//interfaces.py) and
 
@@ -74,15 +74,15 @@ Check docstrings and code in [scenarios_packets](rai_bench/examples/manipulation
 
 1. Download O3DE simulation binary and unzip it.
 
-   - [ros2-humble](https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIManipulationDemo_jammyhumble.zip)
-   - [ros2-jazzy](https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIManipulationDemo_noblejazzy.zip)
+    - [ros2-humble](https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIManipulationDemo_jammyhumble.zip)
+    - [ros2-jazzy](https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIManipulationDemo_noblejazzy.zip)
 
 2. Follow step 2 from [Manipulation demo Setup section](../../docs/demos/manipulation.md#setup)
 
 3. Adjust the path to the binary in: [o3de_config.yaml](./rai_bench/examples/manipulation_o3de/configs/o3de_config.yaml)
 4. Chose the model you want to run and a vendor.
-   > [!NOTE]
-   > The configs of vendors are defined in [config.toml](../../config.toml) Change ithem if needed.
+    > [!NOTE]
+    > The configs of vendors are defined in [config.toml](../../config.toml) Change ithem if needed.
 5. Run benchmark with:
 
 ```bash
@@ -108,10 +108,10 @@ The Tool Calling Agent Benchmark is the benchmark for LangChain tool calling age
 
 ### Frame Components
 
-- [Tool Calling Agent Benchmark](rai_bench//tool_calling_agent/benchmark.py) - Benchmark for LangChain tool calling agents
-- [Scores tracing](rai_bench/tool_calling_agent_bench/scores_tracing.py) - Component handling sending scores to tracing backends
-- [Interfaces](rai_bench//tool_calling_agent/interfaces.py) - Interfaces for validation classes - Task, Validator, SubTask
-  For detailed description of validation visit -> [Validation](.//rai_bench/docs/tool_calling_agent_benchmark.md)
+-   [Tool Calling Agent Benchmark](rai_bench//tool_calling_agent/benchmark.py) - Benchmark for LangChain tool calling agents
+-   [Scores tracing](rai_bench/tool_calling_agent_bench/scores_tracing.py) - Component handling sending scores to tracing backends
+-   [Interfaces](rai_bench//tool_calling_agent/interfaces.py) - Interfaces for validation classes - Task, Validator, SubTask
+    For detailed description of validation visit -> [Validation](.//rai_bench/docs/tool_calling_agent_benchmark.md)
 
 [tool_calling_agent_test_bench.py](rai_bench/examples/tool_calling_agent/main.py) - Script providing benchmark on tasks based on the ROS2 tools usage.
 

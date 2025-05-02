@@ -6,15 +6,15 @@ where you can ask questions about your ROS 2 setup and execute common debugging 
 
 ## Features
 
-- Interactive chat interface for debugging ROS 2 systems
-- Real-time streaming of responses and tool executions
-- Support for common ROS 2 debugging commands:
-  - `ros2 topic`: topic inspection and manipulation
-  - `ros2 service`: service inspection and calling
-  - `ros2 node`: node information
-  - `ros2 action`: action server details and goal sending
-  - `ros2 interface`: interface inspection
-  - `ros2 param`: checking and setting parameters
+-   Interactive chat interface for debugging ROS 2 systems
+-   Real-time streaming of responses and tool executions
+-   Support for common ROS 2 debugging commands:
+    -   `ros2 topic`: topic inspection and manipulation
+    -   `ros2 service`: service inspection and calling
+    -   `ros2 node`: node information
+    -   `ros2 action`: action server details and goal sending
+    -   `ros2 interface`: interface inspection
+    -   `ros2 param`: checking and setting parameters
 
 ## Running the Assistant
 
@@ -32,11 +32,11 @@ streamlit run examples/debugging_assistant.py
 
 Here are some example queries you can try:
 
-- "What topics are currently available?"
-- "Show me the message type for /cmd_vel"
-- "List all active nodes"
-- "What services does the /robot_state_publisher node provide?"
-- "Show me information about the /navigate_to_pose action"
+-   "What topics are currently available?"
+-   "Show me the message type for /cmd_vel"
+-   "List all active nodes"
+-   "What services does the /robot_state_publisher node provide?"
+-   "Show me information about the /navigate_to_pose action"
 
 ## How it Works
 
@@ -49,6 +49,6 @@ tools. The key components are:
 
 ## Limitations
 
-- The assistant can only execute safe, read-only commands by default
-- Some complex debugging scenarios may require manual intervention
-- Performance depends on the chosen LLM vendor and model
+-   The assistant can only execute safe, read-only commands by default
+-   Some complex debugging scenarios may require manual intervention
+-   Performance depends on the chosen LLM vendor and model

@@ -10,16 +10,16 @@ contents for your robot's so called `whoami` package.
 
 2. Fill in the `panda/` folder with data:
 
-   2.1. Save [this image](https://robodk.com/robot/img/Franka-Emika-Panda-robot.png) into
-   `panda/images`
+    2.1. Save [this image](https://robodk.com/robot/img/Franka-Emika-Panda-robot.png) into
+    `panda/images`
 
-   2.2. Save
-   [this document](https://github.com/user-attachments/files/16417196/Franka.Emika.Panda.robot.-.RoboDK.pdf)
-   in `panda/documentation`
+    2.2. Save
+    [this document](https://github.com/user-attachments/files/16417196/Franka.Emika.Panda.robot.-.RoboDK.pdf)
+    in `panda/documentation`
 
-   2.3. Save
-   [this urdf](https://github.com/frankaemika/franka_ros/blob/develop/franka_description/robots/panda/panda.urdf.xacro)
-   in `panda/urdf`
+    2.3. Save
+    [this urdf](https://github.com/frankaemika/franka_ros/blob/develop/franka_description/robots/panda/panda.urdf.xacro)
+    in `panda/urdf`
 
 3. Build the embodiment info using `build_whoami.py`:
 
@@ -39,11 +39,11 @@ python src/rai_whoami/rai_whoami/build_whoami.py panda/ --build-vector-db
 After running the build command, inspect the generated files in the `panda/generated` directory. The
 folder should contain a info.json file containing:
 
-- `rules`: List of rules
-- `capabilities`: List of capabilities
-- `behaviors`: List of behaviors
-- `description`: Description of the robot
-- `images`: Base64 encoded images
+-   `rules`: List of rules
+-   `capabilities`: List of capabilities
+-   `behaviors`: List of behaviors
+-   `description`: Description of the robot
+-   `images`: Base64 encoded images
 
 ## Testing (ROS 2)
 
