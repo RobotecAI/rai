@@ -42,7 +42,7 @@ T = TypeVar("T", bound=ROS2Message)
 
 
 class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
-    """ROS2-specific implementation of the ARIConnector.
+    """ROS2-specific implementation of the BaseConnector.
 
     This connector provides functionality for ROS2 communication through topics,
     services, and actions, as well as TF (Transform) operations.

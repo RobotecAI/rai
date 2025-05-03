@@ -23,14 +23,18 @@ logger = logging.getLogger(__name__)
 
 
 def wait_for_shutdown(agents: List[BaseAgent]):
-    """Blocks execution until shutdown signal (SIGINT/SIGTERM) is received.
+    """Block until a shutdown signal (SIGINT or SIGTERM) is received, ensuring graceful termination.
 
-    Args:
-        agent: Agent instance implementing stop() method
+    Parameters
+    ----------
+    agents : List[BaseAgent]
+        List of running agents to be stopped on shutdown.
 
-    Note:
-        Ensures graceful shutdown of the agent and ROS2 node on interrupt.
-        Handles both SIGINT (Ctrl+C) and SIGTERM signals.
+    Notes
+    -----
+    This method ensures a graceful shutdown of both the agent and the ROS2 node upon receiving
+    an interrupt signal (SIGINT, e.g., Ctrl+C) or SIGTERM. It installs signal handlers to
+    capture these events and invokes the agent's ``stop()`` method as part of the shutdown process.
     """
     shutdown_event = Event()
 
@@ -65,8 +69,10 @@ def run_agents(agents: List[BaseAgent]):
 class AgentRunner:
     """Runs the agents in the background.
 
-    Args:
-        agents: List of agent instances
+    Parameters
+    ----------
+    agents : List[BaseAgent]
+        List of agent instances
     """
 
     def __init__(self, agents: List[BaseAgent]):
@@ -87,15 +93,6 @@ class AgentRunner:
         self.wait_for_shutdown()
 
     def wait_for_shutdown(self):
-        """Blocks execution until shutdown signal (SIGINT/SIGTERM) is received.
-
-        Args:
-            agent: Agent instance implementing stop() method
-
-        Note:
-            Ensures graceful shutdown of the agent and ROS2 node on interrupt.
-            Handles both SIGINT (Ctrl+C) and SIGTERM signals.
-        """
         shutdown_event = Event()
 
         def signal_handler(signum, frame):

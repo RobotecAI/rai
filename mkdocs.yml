@@ -6,7 +6,6 @@ theme:
     - navigation.expand
     - navigation.instant
     - navigation.instant.prefetch
-    - toc.integrate
     - toc.follow
     - navigation.tabs
     - navigation.tabs.sticky
@@ -23,6 +22,15 @@ markdown_extensions:
       toc_depth: 2
   - attr_list
   - pymdownx.emoji
+
+plugins:
+- search
+- mkdocstrings:
+    handlers:
+      python:
+        options:
+          docstring_style: numpy
+          show_root_heading: true
 
 extra_css:
   - stylesheets/extra.css

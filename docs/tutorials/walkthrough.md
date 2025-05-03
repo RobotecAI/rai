@@ -29,7 +29,7 @@ The underlying ReAct agent combines language models with a set of tools to solve
 Our Agent implementation adds robot status monitoring, which controls agent execution based on the
 robot's state.
 
-```python
+```python title="PandaAgent implementation"
 from typing import List
 
 from langchain_core.runnables import RunnableConfig
@@ -105,7 +105,10 @@ class PandaAgent(BaseAgent):
             self.logger.warning("Arm is not ready, skipping the message")
 
     def run(self):
-        """Start the agent's main execution loop."""
+        """Main execution loop for the agent.
+
+        This implementation does not require any background processing, so the method is intentionally left empty.
+        """
         pass
 
     def stop(self):
@@ -123,7 +126,7 @@ tool showcases how to integrate platform-specific functionality into the RAI fra
 For comprehensive information about tool implementation in RAI, refer to the
 [tools documentation](./tools.md).
 
-```python
+```python title="Tools specific to the robot"
 from typing import Literal, Type
 
 from pydantic import BaseModel, Field
@@ -147,14 +150,7 @@ class ShutdownArmTool(BaseROS2Tool):
     args_schema: Type[ShutdownArmToolInput] = ShutdownArmToolInput
 
     def _run(self, level: Literal["soft", "hard"]) -> str:
-        """Execute the arm shutdown command.
-
-        Args:
-            level: The shutdown level - "soft" for graceful shutdown, "hard" for immediate shutdown
-
-        Returns:
-            str: Status message indicating success or failure
-        """
+        """Execute the arm shutdown command."""
         response = self.connector.service_call(
             ROS2Message(
                 payload={"level": level}

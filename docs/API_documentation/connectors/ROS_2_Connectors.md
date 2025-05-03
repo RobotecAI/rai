@@ -11,6 +11,16 @@ RAI provides robust connectors for interacting with ROS 2 middleware, supporting
 
 The `ROS2Connector` is the main interface for publishing, subscribing, and calling services/actions in a ROS 2 system. It is a concrete implementation of `ROS2BaseConnector` for standard ROS 2 messages.
 
+### Class definition
+
+??? info "ROS2BaseConnector class definition"
+
+    !!! info "ROS2Connector vs ROS2BaseConnector"
+
+        `ROS2Connector` is a simple alias for `ROS2BaseConnector`. It exists mainly to provide a more intuitive and consistent class name for users, but does not add any new functionality.
+
+    ::: rai.communication.ros2.connectors.base.ROS2BaseConnector
+
 ### Key Features
 
 -   Manages ROS 2 node lifecycle and threading (via MultiThreadedExecutor)
@@ -123,4 +133,5 @@ agent.subscribe_source("/from_human", hri_connector)
 ## See Also
 
 -   [Connectors Overview](./overview.md)
--   [ROS2 Aggregators](../aggregators/ROS_2_Aggregators.md)
+-   [ROS 2 Aggregators](../aggregators/ROS_2_Aggregators.md)
+-   [ROS 2 Tools](../langchain_integration/ROS_2_tools.md)

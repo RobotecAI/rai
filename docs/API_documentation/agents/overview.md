@@ -10,19 +10,9 @@ Agents in RAI are modular components that encapsulate specific functionalities a
 
 ### Class Definition
 
-```python
-class BaseAgent(ABC):
-    def __init__(self):
-        self.logger = logging.getLogger(self.__class__.__name__)
+??? info "BaseAgent class definition"
 
-    @abstractmethod
-    def run(self):
-        pass
-
-    @abstractmethod
-    def stop(self):
-        pass
-```
+    ::: rai.agents.base.BaseAgent
 
 ### Purpose
 
@@ -32,20 +22,6 @@ The `BaseAgent` class serves as the cornerstone of RAI's agent architecture, est
 -   Standardized logging mechanisms
 -   Interoperability between different agent types
 -   Integration with management utilities like `AgentRunner`
-
-### Core Methods
-
-#### `__init__()`
-
-Initializes a new agent instance and sets up logging with the class name.
-
-#### `run()`
-
-Abstract method that must be implemented by all subclasses. Starts the agent's main execution loop. In some cases, concrete run implementation may not be needed. In that case use `pass` as a placeholder.
-
-#### `stop()`
-
-Abstract method that must be implemented by all subclasses. Gracefully terminates the agent's execution and cleans up resources.
 
 ## Best Practices
 

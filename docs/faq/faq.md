@@ -20,11 +20,11 @@
 
     ??? question "Who is RAI for?"
 
-        RAI is for robotics developers, researchers, educators, startups, companies, and hobbyists who want to add AI and natural language capabilities to robots, whether using ROS 2 or other robotics stacks.
+        RAI is for robotics developers, researchers, educators, startups, companies, and hobbyists who want to add AI and natural language capabilities to robots, whether using ROS 2 or other robotics stacks. And anyone who’s ever looked at a robot and thought, “I wish you understood me.”
 
     ??? question "What can I do with RAI?"
 
-        With RAI, you can control robots using voice or text, integrate vision, speech, and sensor data, build and test complex robot behaviors, use ready-made demos, develop multi-agent systems, create custom tools, implement real-time decision making, and design interactive scenarios for human-robot interaction.
+        With RAI, you can control robots using voice or text, integrate vision, speech, and sensor data, build and test complex robot behaviors, use ready-made demos, develop multi-agent systems, create custom tools, implement real-time decision making, and design interactive scenarios for human-robot interaction. Or just teach your robot to bring you snacks. We don’t judge.
 
     ??? question "What demos are available for RAI?"
 
@@ -75,11 +75,11 @@
 
     ??? question "Contributtion guide"
 
-        To develop RAI, we use pre-commit and that is pretty much it. For more information, see the [Contribution Guide](../faq/contributing/CONTRIBUTING.md).
+        To develop RAI, you just need to know how to run `pre-commit` (spoiler alert: just type `pre-commit`), and you’re basically a core developer. For anything more complicated (or if you like reading rules), see the [Contribution Guide](../faq/contributing/CONTRIBUTING.md).
 
-    ??? question "Existing issues"
+    ??? question "Existing issues/bugs/something is missings"
 
-        If you find an issue, please check the [existing issues](https://github.com/RobotecAI/rai/issues) and if it is not already reported, create a new one.
+        If you find an issue/bug/feature missing, please check the [existing issues](https://github.com/RobotecAI/rai/issues) and if it is not already reported, create a new one.
 
     ??? question "I would like to contribute, but I don't know what"
 
@@ -114,7 +114,7 @@
 
     !!! question "Do I even need a robot?"
 
-        No, you can also run the demos on your computer or in custom-made simulations.
+        No, you can also run the demos on your computer or in custom-made simulations. Or just pretend. We won’t tell.
 
 ??? tip "RAI outside of robotics"
 

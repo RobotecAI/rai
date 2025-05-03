@@ -10,28 +10,7 @@ Aggregators in RAI are components that collect and process messages from various
 
 ### Class Definition
 
-```python
-class BaseAggregator(ABC, Generic[T]):
-    def __init__(self, max_size: int | None = None) -> None:
-        self._buffer: Deque[T] = deque()
-        self.max_size = max_size
-
-    def __call__(self, msg: T) -> None:
-        if self.max_size is not None and len(self._buffer) >= self.max_size:
-            self._buffer.popleft()
-        self._buffer.append(msg)
-
-    @abstractmethod
-    def get(self) -> BaseMessage | None:
-        """Returns the aggregated message"""
-        pass
-
-    def clear_buffer(self) -> None:
-        self._buffer.clear()
-
-    def get_buffer(self) -> List[T]:
-        return list(self._buffer)
-```
+::: rai.aggregators.base.BaseAggregator
 
 ### Purpose
 
@@ -41,28 +20,6 @@ The `BaseAggregator` class serves as the foundation for message aggregation in R
 -   Size management to prevent memory overflow
 -   A consistent interface for processing and returning aggregated results
 -   Type safety through generics
-
-### Core Methods
-
-#### `__init__(max_size: int | None = None)`
-
-Initializes a new aggregator with an optional maximum buffer size.
-
-#### `__call__(msg: T)`
-
-Adds a new message to the buffer. If max_size is set and exceeded, removes the oldest message.
-
-#### `get() -> BaseMessage | None`
-
-Abstract method that must be implemented by subclasses. Processes the buffered messages and returns a summary or analysis.
-
-#### `clear_buffer()`
-
-Clears all messages from the buffer.
-
-#### `get_buffer() -> List[T]`
-
-Returns a copy of the current buffer contents.
 
 ## Usage in State-Based Agents
 

@@ -13,14 +13,26 @@ implementations:
 
 ### Base Classes
 
-**BaseConnector[T]**: The foundation interface that defines common communication patterns:
+#### BaseConnector[T]
+
+??? info "BaseConnector class definition"
+
+    ::: rai.communication.base_connector.BaseConnector
+
+The foundation interface that defines common communication patterns:
 
 -   Message passing (publish/subscribe)
 -   Service calls (request/response)
 -   Actions (long-running operations with feedback)
 -   Callback registration for asynchronous notifications
 
-**HRIConnector[T]**: Extends BaseConnector with Human-Robot Interaction capabilities:
+#### HRIConnector[T]
+
+??? info "HRIConnector class definition"
+
+    ::: rai.communication.hri_connector.HRIConnector
+
+Extends BaseConnector with Human-Robot Interaction capabilities:
 
 -   Supports multimodal messages (text, images, audio)
 -   Provides conversion to/from Langchain message formats

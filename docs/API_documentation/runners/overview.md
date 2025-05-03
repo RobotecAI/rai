@@ -9,7 +9,15 @@ There are two ways to manage the agents in RAI:
 
     You can start and stop the agents manually for more control over the agents lifecycle.
 
-## Usage
+## AgentRunner class definition
+
+::: rai.agents.runner.AgentRunner
+
+## wait_for_shutdown function definition
+
+::: rai.agents.runner.wait_for_shutdown
+
+## Usage examples
 
 ### AgentRunner
 

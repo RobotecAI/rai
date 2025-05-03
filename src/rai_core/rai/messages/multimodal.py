@@ -20,6 +20,17 @@ from langchain_core.messages.base import BaseMessage, get_msg_title_repr
 
 
 class MultimodalMessage(BaseMessage):
+    """
+    Base class for multimodal messages.
+
+    Parameters
+    ----------
+    images : Optional[List[str]]
+        List of base64 encoded images.
+    audios : Optional[Any]
+        List of base64 encoded audios.
+    """
+
     images: Optional[List[str]] = None
     audios: Optional[Any] = None
 
@@ -86,6 +97,17 @@ class SystemMultimodalMessage(SystemMessage, MultimodalMessage):
 
 
 class ToolMultimodalMessage(ToolMessage, MultimodalMessage):
+    """
+
+    Note
+    ----
+    When any subclass of this class is used with LangGraph agents, use
+    `rai.agents.tool_runner.ToolRunner` as the tool runner, as it automatically
+    handles multimodal ToolMessages as well as converts them to a format
+    that is compatible with the vendor.
+    ::: rai.agents.tool_runner.ToolRunner
+    """
+
     def postprocess(self, format: Literal["openai", "bedrock"] = "openai"):
         if format == "openai":
             return self._postprocess_openai()

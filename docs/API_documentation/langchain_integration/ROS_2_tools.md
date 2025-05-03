@@ -2,9 +2,15 @@
 
 RAI provides various ROS 2 tools, both generic (mimics ros2cli) and specific (e.g., nav2, moveit2, etc.)
 
-## Interface
+## Class Definition
 
 `BaseROS2Tool` is the base class for all ROS 2 tools. It provides a common interface for all ROS 2 tools including name allowlist/blocklist for all the communication protocols (messages, services, actions)
+
+### Class Definition
+
+::: rai.tools.ros2.base.BaseROS2Tool
+
+### Usage example
 
 ```python
 from rai.communication.ros2 import ROS2Connector
@@ -12,7 +18,7 @@ from rai.tools.ros2.base import BaseROS2Tool
 
 connector = ROS2Connector()
 
-BaseROS2Tool(
+BaseROS2Tool( # BaseROS2Tool cannot be used directly, this is just an example
     connector=connector,
     readable=["/odom", "/scan"], # readable topics, services and actions
     writable=["/robot_position"], # writable topics, services and actions

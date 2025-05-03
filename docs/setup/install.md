@@ -11,6 +11,18 @@ system. If you don't have ROS 2 follow the installation documentation for
     RAI has experimental docker images. See the [docker](setup_docker.md) for
     instructions.
 
+??? tip "RAI outside of ROS 2"
+
+    RAI can be used outside of ROS 2. This means that no ROS 2 related features will be available.
+
+    You can still use RAI's core agent framework, tool system, message passing, and integrations such as LangChain, even if ROS 2 is not installed or sourced on your machine. This is useful for:
+
+    - Developing and testing AI logic, tools, and workflows independently of any robotics middleware
+    - Running RAI agents in simulation or cloud environments where ROS 2 is not present
+    - Using RAI as a generic multimodal agent framework for non-robotic applications
+
+    If you later decide to integrate with ROS 2, you can simply install and source ROS 2, and all ROS 2-specific RAI features (such as connectors, aggregators, and tools) will become available automatically.
+
 ## 1. Setting up the workspace:
 
 ### 1.1 Install poetry

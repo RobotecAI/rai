@@ -10,33 +10,19 @@ rai core provides a comprehensive set of tools and components for developing int
 
 RAI consists of several key components that work together to create intelligent robotic systems:
 
-### [Agents](agents/overview.md)
+| Component                              | Description                                                                                                               |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| [Agents](agents/overview.md)           | Agents are the central components that encapsulate specific functionalities and behaviors.                                |
+| [Connectors](connectors/overview.md)   | Connectors provide a unified way to interact with various communication systems e.g., ROS 2.                              |
+| [Aggregators](aggregators/overview.md) | Aggregators collect and process messages from various sources, transforming them into summarized or analyzed information. |
+| [Runners](runners/overview.md)         | Manages the lifecycle of agents.                                                                                          |
 
-Agents are the central components that encapsulate specific functionalities and behaviors.
+On top of that, RAI implements two major integrations: ROS 2 and LangChain.
 
-### [Connectors](connectors/overview.md)
-
-Connectors provide a unified way to interact with various communication systems e.g., ROS 2.
-
-### [Aggregators](aggregators/overview.md)
-
-Aggregators collect and process messages from various sources, transforming them into summarized or analyzed information.
-
-### [LangChain Integration](langchain_integration/overview.md)
-
-RAI leverages LangChain to bridge the gap between large language models and robotic systems:
-
--   Standardized interfaces across different LLM providers
--   Rich tool ecosystem for complex tasks
--   Enhanced agent capabilities tailored for robotics
-
-### [Multimodal Messages](langchain_integration/multimodal_messages.md)
-
-Enables image support in LangChain messages.
-
-### [Runners](runners/overview.md)
-
-Manages the lifecycle of agents.
+| Component                                                  | Description                                                                                                                                                  |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [ROS 2 Integration](connectors/ROS_2_Connectors.md)        | RAI provides a set of tools to interact with ROS 2.                                                                                                          |
+| [LangChain Integration](langchain_integration/overview.md) | RAI leverages LangChain to bridge the gap between large language models and robotic systems. RAI extends LangChain with seamless multimodal message support. |
 
 ## Getting Started
 

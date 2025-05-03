@@ -6,6 +6,25 @@ RAI implements `MultimodalMessage` that allows using image and audio\* informati
 
     Audio is currently added as a placeholder for future implementation.
 
+## Class Definition
+
+LangChain supports multimodal data by default. This is done by expanding the content section from string to dictionary, containing specific keys.
+To make it easier to use, RAI implements a `MultimodalMessage` class, which is a wrapper around the `BaseMessage` class.
+
+### Class Definition
+
+::: rai.messages.multimodal.MultimodalMessage
+
+#### Subclasses
+
+::: rai.messages.multimodal.HumanMultimodalMessage
+
+::: rai.messages.multimodal.AIMultimodalMessage
+
+::: rai.messages.multimodal.SystemMultimodalMessage
+
+::: rai.messages.multimodal.ToolMultimodalMessage
+
 ## Usage
 
 Example:
