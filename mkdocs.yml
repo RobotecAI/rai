@@ -20,7 +20,7 @@ markdown_extensions:
   - pymdownx.tasklist
   - toc:
       permalink: true
-      toc_depth: 3
+      toc_depth: 2
   - attr_list
   - pymdownx.emoji
 
@@ -36,38 +36,48 @@ nav:
     - Docker setup: setup/setup_docker.md
     - Tracing setup: setup/tracing.md
     - Vendor setup: setup/vendors.md
-  - Demos:
-    - Overview: demos/overview.md
-    - Autonomous tractor: demos/agriculture.md
-    - Robotic arm: demos/manipulation.md
-    - Autonomous vehicle: demos/rosbot_xl.md
-    - Voice controlled taxi: demos/taxi.md
-  - ROS 2:
-    - Overview: ROS_2/overview.md
-    - Debugging assistant: ROS_2/debugging_assistant.md
-    - Additional packages: ROS_2/ros_packages.md
-    - Langchain tools: ROS_2/tools.md
+  # - ROS 2:
+  #   - Debugging assistant: ROS_2/debugging_assistant.md
+  #   - Additional packages: ROS_2/ros_packages.md
+  - API documentation:
+      - Overview: API_documentation/overview.md
+      - Agents:
+        - Overview: API_documentation/agents/overview.md
+        # - ROS 2 Agents: API_documentation/agents/ROS_2_Agents.md
+      - Connectors:
+        - Overview: API_documentation/connectors/overview.md
+        - ROS 2 Connectors: API_documentation/connectors/ROS_2_Connectors.md
+        - Sound Device Connector: API_documentation/connectors/sounddevice.md
+      - Aggregators:
+        - Overview: API_documentation/aggregators/overview.md
+        - ROS 2 Aggregators: API_documentation/aggregators/ROS_2_Aggregators.md
+      - LangChain:
+        - Overview: API_documentation/langchain_integration/overview.md
+        - Multimodal messages: API_documentation/langchain_integration/multimodal_messages.md
+        - ROS 2 Tools: API_documentation/langchain_integration/ROS_2_tools.md
+      - Runners:
+        - Overview: API_documentation/runners/overview.md
   - Tutorials:
     - Overview: tutorials/overview.md
     - Complete walkthrough: tutorials/walkthrough.md
     - Create Robot's Whoami: tutorials/create_robots_whoami.md
     - Tools: tutorials/tools.md
     - Voice Interface: tutorials/voice_interface.md
-  - API documentation:
-      - Overview: API_documentation/overview.md
-      - Agents: API_documentation/agents.md
-      - Connectors: API_documentation/connectors.md
-      - Aggregators: API_documentation/aggregators.md
-      - LangChain: API_documentation/langchain.md
-      - Multimodal messages: API_documentation/multimodal_messages.md
-      - Runners: API_documentation/runners.md
+  - Demos:
+    - Overview: demos/overview.md
+    - Autonomous tractor: demos/agriculture.md
+    - Robotic arm: demos/manipulation.md
+    - Autonomous vehicle: demos/rosbot_xl.md
+    - Voice controlled taxi: demos/taxi.md
   - Simulation and benchmarking:
     - Overview: simulation_and_benchmarking/overview.md
     - RAI Sim: simulation_and_benchmarking/rai_sim.md
     - RAI Bench: simulation_and_benchmarking/rai_bench.md
     - Simulators: simulation_and_benchmarking/simulators.md
-  - Contributing:
-    - Overview: contributing/CONTRIBUTING.md
-    - Code of conduct: contributing/CODE_OF_CONDUCT.md
-    - Security policy: contributing/SECURITY.md
-  - FAQ: faq/faq.md
+  - FAQ:
+    - Overview: faq/faq.md
+    - ROS 2: faq/ROS_2_Overview.md
+    - Contributing:
+      - Overview: faq/contributing/CONTRIBUTING.md
+      - Code of conduct: faq/contributing/CODE_OF_CONDUCT.md
+      - Security policy: faq/contributing/SECURITY.md

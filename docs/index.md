@@ -87,7 +87,7 @@ This design philosophy means that while RAI is fully compatible with ROS 2, most
 
 ### Contributing
 
-You are welcome to contribute to RAI! Please see our [Contribution Guide](contributing/CONTRIBUTING.md).
+You are welcome to contribute to RAI! Please see our [Contribution Guide](faq/contributing/CONTRIBUTING.md).
 
 !!! tip "Want to know more?"
 

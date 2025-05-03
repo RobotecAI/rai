@@ -75,7 +75,7 @@
 
     ??? question "Contributtion guide"
 
-        To develop RAI, we use pre-commit and that is pretty much it. For more information, see the [Contribution Guide](../contributing/CONTRIBUTING.md).
+        To develop RAI, we use pre-commit and that is pretty much it. For more information, see the [Contribution Guide](../faq/contributing/CONTRIBUTING.md).
 
     ??? question "Existing issues"
 
@@ -87,7 +87,7 @@
 
     ??? question "I've never contributed to open source before, how do I start?"
 
-        Welcome! We love helping newcomers get started with open source. The RAI community is friendly and supportive—no prior experience with RAI required. Check out our [Contribution Guide](../contributing/CONTRIBUTING.md) for step-by-step instructions, and feel free to join our [Discord](https://discord.gg/3PGHgTaJSB) to ask questions or get guidance. We're here to help you every step of the way!
+        Welcome! We love helping newcomers get started with open source. The RAI community is friendly and supportive—no prior experience with RAI required. Check out our [Contribution Guide](../faq/contributing/CONTRIBUTING.md) for step-by-step instructions, and feel free to join our [Discord](https://discord.gg/3PGHgTaJSB) to ask questions or get guidance. We're here to help you every step of the way!
 
 ??? tip "How do I get support for RAI?"
 
@@ -97,7 +97,7 @@
 
     !!! question "Where can I get support?"
 
-        You can find support and more information in the [Contribution Guide](../contributing/CONTRIBUTING.md), on the [Q&A forum](https://github.com/RobotecAI/rai/discussions/categories/q-a), [issues](https://github.com/RobotecAI/rai/issues), by joining our [Discord](https://discord.gg/3PGHgTaJSB), or visiting the [Embodied AI Community Group](https://github.com/ros-wg-embodied-ai). For talks and demos, see the ROSCon 2024 links in the documentation.
+        You can find support and more information in the [Contribution Guide](../faq/contributing/CONTRIBUTING.md), on the [Q&A forum](https://github.com/RobotecAI/rai/discussions/categories/q-a), [issues](https://github.com/RobotecAI/rai/issues), by joining our [Discord](https://discord.gg/3PGHgTaJSB), or visiting the [Embodied AI Community Group](https://github.com/ros-wg-embodied-ai). For talks and demos, see the ROSCon 2024 links in the documentation.
 
 ??? tip "What do I need to get started with RAI?"
 

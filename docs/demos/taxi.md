@@ -14,7 +14,7 @@ Before running this demo, ensure you have the following prerequisites installed:
 
 1. Autoware and AWSIM [link](https://tier4.github.io/AWSIM/GettingStarted/QuickStartDemo/) as well
    as you have configured the speech to speech as in
-   [speech to speech doc](../human_robot_interface/voice_interface.md)
+   [speech to speech doc](../tutorials/voice_interface.md)
 
 ## Running the Demo
 

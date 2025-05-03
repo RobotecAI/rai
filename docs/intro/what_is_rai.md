@@ -92,7 +92,7 @@ Follow our [step-by-step walkthrough](../tutorials/walkthrough.md) to:
 
 ## Community & Support
 
--   [Contribution Guide](../contributing/CONTRIBUTING.md)
+-   [Contribution Guide](../faq/contributing/CONTRIBUTING.md)
 -   [FAQ](../faq/faq.md)
 -   [Join our Discord](https://discord.gg/3PGHgTaJSB)
 -   [Embodied AI Community Group](https://github.com/ros-wg-embodied-ai)

@@ -125,8 +125,7 @@ class Get360ImageTool(BaseTool):
 ### ROS 2 Tools
 
 RAI includes a base class for ROS 2 tools, supporting configuration of readable, writable, and
-forbidden topics/actions/services, as well as ROS 2 connector. TODO(docs): link docs to the
-ARIConnector.
+forbidden topics/actions/services, as well as [ROS 2 connector](../API_documentation/connectors/ROS_2_Connectors.md).
 
 ```python
 from rai.tools.ros2.base import BaseROS2Tool
@@ -258,6 +257,6 @@ def main():
 
 ## Related Topics
 
--   [Connectors](../API_documentation/connectors.md)
--   [ROS2Connector](../API_documentation/connectors.md)
--   [ROS2HRIConnector](../API_documentation/connectors.md)
+-   [Connectors](../API_documentation/connectors/overview.md)
+-   [ROS2Connector](../API_documentation/connectors/ROS_2_Connectors.md#ros2connector)
+-   [ROS2HRIConnector](../API_documentation/connectors/ROS_2_Connectors.md#ros2hriconnector)

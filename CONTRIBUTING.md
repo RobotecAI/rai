@@ -41,7 +41,7 @@ This can be done by creating Issues and RFCs on github.
 
 ### Setting up the development environment
 
-Set up your development environment following [the instructions](../setup/install.md).
+Set up your development environment following [the instructions](../../setup/install.md).
 
 Additionally, setup the pre-commit:
 

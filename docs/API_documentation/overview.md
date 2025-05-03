@@ -10,19 +10,19 @@ rai core provides a comprehensive set of tools and components for developing int
 
 RAI consists of several key components that work together to create intelligent robotic systems:
 
-### [Agents](agents.md)
+### [Agents](agents/overview.md)
 
 Agents are the central components that encapsulate specific functionalities and behaviors.
 
-### [Connectors](connectors.md)
+### [Connectors](connectors/overview.md)
 
 Connectors provide a unified way to interact with various communication systems e.g., ROS 2.
 
-### [Aggregators](aggregators.md)
+### [Aggregators](aggregators/overview.md)
 
 Aggregators collect and process messages from various sources, transforming them into summarized or analyzed information.
 
-### [LangChain Integration](langchain.md)
+### [LangChain Integration](langchain_integration/overview.md)
 
 RAI leverages LangChain to bridge the gap between large language models and robotic systems:
 
@@ -30,11 +30,11 @@ RAI leverages LangChain to bridge the gap between large language models and robo
 -   Rich tool ecosystem for complex tasks
 -   Enhanced agent capabilities tailored for robotics
 
-### [Multimodal Messages](multimodal_messages.md)
+### [Multimodal Messages](langchain_integration/multimodal_messages.md)
 
 Enables image support in LangChain messages.
 
-### [Runners](runners.md)
+### [Runners](runners/overview.md)
 
 Manages the lifecycle of agents.
 

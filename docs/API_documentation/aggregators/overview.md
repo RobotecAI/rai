@@ -64,17 +64,6 @@ Clears all messages from the buffer.
 
 Returns a copy of the current buffer contents.
 
-## ROS2 Aggregators
-
-RAI provides several specialized aggregators for ROS2 messages:
-
-| Aggregator                        | Description                                                                      | Example Usage                                                  |
-| --------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `ROS2LogsAggregator`              | Processes ROS2 log messages, removing duplicates while maintaining order         | `aggregator = ROS2LogsAggregator()`                            |
-| `ROS2GetLastImageAggregator`      | Returns the most recent image from the buffer as a base64-encoded string         | `aggregator = ROS2GetLastImageAggregator()`                    |
-| `ROS2ImgVLMDescriptionAggregator` | Uses a Vision Language Model to analyze and describe the most recent image       | `aggregator = ROS2ImgVLMDescriptionAggregator(llm=chat_model)` |
-| `ROS2ImgVLMDiffAggregator`        | Compares multiple images (first, middle, and last) to identify changes over time | `aggregator = ROS2ImgVLMDiffAggregator(llm=chat_model)`        |
-
 ## Usage in State-Based Agents
 
 Aggregators are typically used in state-based agents to maintain and update the agent's state:
@@ -156,8 +145,9 @@ class CustomAggregator(BaseAggregator[CustomMessage]):
 
 ## See Also
 
--   [Agents](agents.md): For more information on the different types of agents in RAI
--   [Connectors](connectors.md): For more information on the different types of connectors in RAI
--   [Langchain Integration](langchain.md): For more information on the different types of connectors in RAI
--   [Multimodal messages](multimodal_messages.md): For more information on the different types of connectors in RAI
--   [Runners](runners.md): For more information on the different types of runners in RAI
+-   [ROS 2 Aggregators](ROS_2_Aggregators.md): For more information on the different types of ROS 2 aggregators in RAI
+-   [Agents](../agents/overview.md): For more information on the different types of agents in RAI
+-   [Connectors](../connectors/overview.md): For more information on the different types of connectors in RAI
+-   [Langchain Integration](../langchain_integration/overview.md): For more information on the different types of connectors in RAI
+-   [Multimodal messages](../langchain_integration/multimodal_messages.md): For more information on the different types of connectors in RAI
+-   [Runners](../runners/overview.md): For more information on the different types of runners in RAI
