@@ -28,6 +28,7 @@ optional = true
 mkdocs = "*"
 mkdocs-material = "*"
 pymdown-extensions = "*"
+mkdocstrings-python = "*"
 
 [tool.poetry.group.s2s]
 optional = true
