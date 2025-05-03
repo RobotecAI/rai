@@ -1,8 +1,8 @@
 # RAI introduction
 
-RAI is a flexible AI agent framework to develop and deploy Embodied AI features for your robots.
+RAI is a flexible agentic framework for developing and deploying Embodied AI features for your robots.
 
-In simple terms, RAI adds natural language control and AI-powered perception to your robotic systems, integrating with existing robotics stack to create more capable solutions.
+RAI enables you to control your robots using natural language and helps them perceive and understand the world with AI. It integrates seamlessly with your current robotics stack to enhance your robots' capabilities.
 
 ---
 
@@ -37,9 +37,9 @@ In simple terms, RAI adds natural language control and AI-powered perception to 
 
 ## RAI Framework
 
-The RAI Framework represents a complete, end-to-end solution for developing and deploying sophisticated AI-powered robotic systems. It supports the full lifecycle of embodied AI development, from initial configuration and testing to deployment and continuous improvement.
+The RAI Framework provides a comprehensive, end-to-end solution for developing and deploying sophisticated AI-powered robotic systems. It supports the full lifecycle of embodied AI development, from initial configuration and testing to deployment and continuous improvement.
 
-Our comprehensive suite of integrated packages enables developers to seamlessly transition from concept to production, offering:
+Our suite of integrated packages enables developers to seamlessly transition from concept to production, offering:
 
 -   **Complete Development Lifecycle**: From initial agent development to deployment and fine-tuning
 -   **Modular Architecture**: Choose and combine components based on your specific needs
