@@ -4,6 +4,8 @@ theme:
   features:
     - navigation.sections
     - navigation.expand
+    - navigation.instant
+    - navigation.instant.prefetch
     - toc.integrate
     - toc.follow
     - navigation.tabs
