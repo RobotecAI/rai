@@ -76,36 +76,67 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         self._shutdown_binary()
         self._shutdown_robotic_stack()
 
-    def _shutdown_binary(self):
-        if not self.current_sim_process:
+    def _shutdown_process(
+        self,
+        process: subprocess.Popen[bytes] | None,
+        process_name: str,
+        timeout: int = 15,
+    ) -> None:
+        """Shutdown a subprocess with escalating signals if needed.
+
+        This function attempts to gracefully terminate a subprocess by first sending
+        SIGINT, then SIGTERM, and finally SIGKILL if necessary. It waits for the
+        specified timeout between each attempt.
+
+        Args:
+            process: The subprocess.Popen object to terminate. If None, function returns immediately.
+            process_name: A descriptive name for the process (for logging purposes).
+            timeout: Time in seconds to wait for the process to terminate after each signal.
+                Default is 5 seconds.
+
+        Returns:
+            None
+        """
+        if not process:
             return
-        self.current_sim_process.send_signal(signal.SIGINT)
-        self.current_sim_process.wait()
 
-        if self.current_sim_process.poll() is None:
+        # Try SIGINT with timeout
+        process.send_signal(signal.SIGINT)
+        try:
+            process.wait(timeout=timeout)
+            return  # Process terminated successfully
+        except subprocess.TimeoutExpired:
+            self.logger.warning(
+                f"{process_name} PID: {process.pid} didn't terminate after {timeout}s with SIGINT, escalating to SIGTERM"
+            )
+
+        # Escalate to SIGTERM with timeout
+        process.send_signal(signal.SIGTERM)
+        try:
+            process.wait(timeout=timeout)
+            return  # Process terminated successfully
+        except subprocess.TimeoutExpired:
             self.logger.error(
-                f"Parent process PID: {self.current_sim_process.pid} is still running."
-            )
-            raise RuntimeError(
-                f"Failed to terminate main process PID {self.current_sim_process.pid}"
+                f"{process_name} PID: {process.pid} didn't terminate after {timeout}s with SIGTERM, escalating to SIGKILL"
             )
 
-        self.current_sim_process = None
+        # Last resort: SIGKILL
+        process.kill()
+        try:
+            process.wait(timeout=timeout)
+            return  # Process terminated successfully
+        except subprocess.TimeoutExpired:
+            self.logger.critical(
+                f"{process_name} PID: {process.pid} couldn't be killed! This should not happen."
+            )
+
+    def _shutdown_binary(self):
+        self._shutdown_process(process=self.current_sim_process, process_name="binary")
 
     def _shutdown_robotic_stack(self):
-        if not self.current_robotic_stack_process:
-            return
-
-        self.current_robotic_stack_process.send_signal(signal.SIGINT)
-        self.current_robotic_stack_process.wait()
-
-        if self.current_robotic_stack_process.poll() is None:
-            self.logger.error(
-                f"Parent process PID: {self.current_robotic_stack_process.pid} is still running."
-            )
-            raise RuntimeError(
-                f"Failed to terminate robotic stack process PID {self.current_robotic_stack_process.pid}"
-            )
+        self._shutdown_process(
+            process=self.current_robotic_stack_process, process_name="robotic_stack"
+        )
 
     def get_available_spawnable_names(self) -> list[str]:
         msg = ROS2Message(payload={})
@@ -128,13 +159,13 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         )
 
         msg_content = SpawnEntityService(
-            name=entity.name,
+            name=entity.prefab_name,
             robot_namespace=entity.name,
             reference_frame=pose.header.frame_id,
             initial_pose=cast(Pose, from_ros2_msg(pose.pose)),
         )
 
-        msg = ROS2Message(payload=msg_content)
+        msg = ROS2Message(payload=msg_content.model_dump())
         response = self._try_service_call(
             msg, target="spawn_entity", msg_type="gazebo_msgs/srv/SpawnEntity"
         )
