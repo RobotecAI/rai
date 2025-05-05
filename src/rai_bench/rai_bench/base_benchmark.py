@@ -42,20 +42,20 @@ class BaseBenchmark(ABC):
         results_dir: Path,
         logger: logging.Logger | None = None,
     ) -> None:
-        """Initialize the base benchmark.
+        """Initialize the benchmark with model information and output locations.
 
         Parameters
         ----------
         model_name : str
-            Name of the LLM model.
-        logger : Optional[loggers_type]
-            Logger instance.
-        results_filename : str
-            Path to the results file.
-        summary_filename : Optional[str]
-            Path to the summary file.
+            Name of the LLM model being benchmarked.
+        results_dir : Path
+            Directory path where benchmark results will be stored.
+        logger : logging.Logger | None, optional
+            Logger instance for tracking benchmark execution. If None,
+            a default logger will be created.
         """
         self.model_name = model_name
+        results_dir.mkdir(parents=True, exist_ok=True)
         self.results_filename = results_dir / "results.csv"
         self.summary_filename = results_dir / "results_summary.csv"
 

@@ -44,7 +44,7 @@ class DummySubTask:
         # list of bools if subtask passed or not for given validate iteration
         self._outcomes = iter(outcomes) if outcomes is not None else None
 
-    def validate(self, tool_call: Dict[str, Any]) -> bool:
+    def validate(self, tool_call: ToolCall) -> bool:
         if self.specific_tool and tool_call.name != self.specific_tool:
             raise SubTaskValidationError(
                 f"Expected tool {self.specific_tool}, got {tool_call.name}"

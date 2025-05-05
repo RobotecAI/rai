@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 import streamlit as st
+from pydantic import BaseModel
 
 from rai_bench.base_benchmark import BenchmarkSummary
 from rai_bench.manipulation_o3de.results_tracking import ScenarioResult
@@ -107,7 +108,7 @@ def convert_row_to_scenario_result(row: pd.Series) -> ScenarioResult:
     )
 
 
-BECNMARKS_CONVERTERS: Dict[str, Any] = {
+BENCHMARKS_CONVERTERS: Dict[str, Any] = {
     "tool_calling_agent": convert_row_to_task_result,
     "manipulation_o3de": convert_row_to_scenario_result,
 }
@@ -233,11 +234,11 @@ def convert_row_to_benchmark_summary(row: pd.Series) -> BenchmarkSummary:
     )
 
 
-def load_detailed_data(file_path: str, benchmark: str) -> List[TaskResult]:
+def load_detailed_data(file_path: str, benchmark: str) -> List[BaseModel]:
     df = pd.read_csv(file_path)  # type: ignore
     task_results: List[TaskResult] = []
 
-    converter = BECNMARKS_CONVERTERS[benchmark]
+    converter = BENCHMARKS_CONVERTERS[benchmark]
     for _, row in df.iterrows():  # type: ignore
         task_result = converter(row)
         task_results.append(task_result)
