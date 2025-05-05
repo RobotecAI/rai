@@ -69,7 +69,8 @@ class GroundingDinoAgent(BaseVisionAgent):
 
         ts = self.ros2_connector._node.get_clock().now().to_msg()
         response.detections.detections = [  # type: ignore
-            box.to_detection_msg(class_dict, ts) for box in boxes  # type: ignore
+            box.to_detection_msg(class_dict, ts)
+            for box in boxes  # type: ignore
         ]
         response.detections.header.stamp = ts  # type: ignore
         response.detections.detection_classes = class_array  # type: ignore
