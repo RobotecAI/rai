@@ -35,9 +35,9 @@ class GroundingDinoAgent(BaseVisionAgent):
         super().__init__(weights_path, ros2_name)
         try:
             self._boxer = GDBoxer(self._weights_path)
-        except Exception:
+        except Exception as e:
             self.logger.error(
-                "Could not load model. The weights might be corrupted. Redownloading..."
+                f"Could not load model: {e}, The weights might be corrupted. Redownloading..."
             )
             self._remove_weights(self.weight_path)
             self._init_weight_path()
@@ -68,8 +68,7 @@ class GroundingDinoAgent(BaseVisionAgent):
 
         ts = self.ros2_connector._node.get_clock().now().to_msg()
         response.detections.detections = [  # type: ignore
-            box.to_detection_msg(class_dict, ts)  # type: ignore
-            for box in boxes
+            box.to_detection_msg(class_dict, ts) for box in boxes  # type: ignore
         ]
         response.detections.header.stamp = ts  # type: ignore
         response.detections.detection_classes = class_array  # type: ignore
