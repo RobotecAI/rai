@@ -86,21 +86,26 @@ def run_benchmark(model_name: str, vendor: str, out_dir: str):
         GetROS2TopicsNamesAndTypesTool(connector=connector),
     ]
     # define loggers
-    Path(out_dir).mkdir(parents=True, exist_ok=True)
-    log_file = f"{out_dir}/benchmark.log"
+    experiment_dir = Path(out_dir)
+    experiment_dir.mkdir(parents=True, exist_ok=True)
+    log_file = experiment_dir / "benchmark.log"
+
     file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(logging.DEBUG)
-
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     file_handler.setFormatter(formatter)
 
     bench_logger = logging.getLogger("Benchmark logger")
+    for handler in bench_logger.handlers:
+        bench_logger.removeHandler(handler)
     bench_logger.setLevel(logging.INFO)
     bench_logger.addHandler(file_handler)
 
     agent_logger = logging.getLogger("Agent logger")
+    for handler in agent_logger.handlers:
+        agent_logger.removeHandler(handler)
     agent_logger.setLevel(logging.INFO)
     agent_logger.addHandler(file_handler)
 
@@ -174,7 +179,7 @@ def run_benchmark(model_name: str, vendor: str, out_dir: str):
             simulation_bridge=o3de,
             scenarios=all_scenarios,
             logger=bench_logger,
-            results_dir=Path(out_dir),
+            results_dir=experiment_dir,
         )
         for scenario in all_scenarios:
             agent = create_conversational_agent(

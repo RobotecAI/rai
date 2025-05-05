@@ -53,9 +53,9 @@ def parse_args():
 def run_benchmark(model_name: str, vendor: str, out_dir: str, extra_tool_calls: int):
     experiment_dir = Path(out_dir)
     experiment_dir.mkdir(parents=True, exist_ok=True)
-    log_filename = experiment_dir / "benchmark.log"
+    log_file = experiment_dir / "benchmark.log"
 
-    file_handler = logging.FileHandler(log_filename)
+    file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(logging.DEBUG)
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -63,10 +63,14 @@ def run_benchmark(model_name: str, vendor: str, out_dir: str, extra_tool_calls: 
     file_handler.setFormatter(formatter)
 
     bench_logger = logging.getLogger("Benchmark logger")
+    for handler in bench_logger.handlers:
+        bench_logger.removeHandler(handler)
     bench_logger.setLevel(logging.INFO)
     bench_logger.addHandler(file_handler)
 
     agent_logger = logging.getLogger("Agent logger")
+    for handler in agent_logger.handlers:
+        agent_logger.removeHandler(handler)
     agent_logger.setLevel(logging.INFO)
     agent_logger.addHandler(file_handler)
 

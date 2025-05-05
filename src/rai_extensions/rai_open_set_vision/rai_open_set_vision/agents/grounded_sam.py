@@ -40,9 +40,9 @@ class GroundedSamAgent(BaseVisionAgent):
         super().__init__(weights_path, ros2_name)
         try:
             self._segmenter = GDSegmenter(self._weights_path)
-        except Exception:
+        except Exception as e:
             self.logger.error(
-                "Could not load model. The weights might be corrupted. Redownloading..."
+                f"Could not load model : {e}. The weights might be corrupted. Redownloading..."
             )
             self._remove_weights(self.weight_path)
             self._init_weight_path()

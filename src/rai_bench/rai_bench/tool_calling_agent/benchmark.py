@@ -78,7 +78,10 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         """
         # try:
         i, task = next(self._tasks)
-        self.logger.info(  # type: ignore
+        self.logger.info(
+            "======================================================================================"
+        )
+        self.logger.info(
             f"RUNNING TASK NUMBER {i + 1} / {self.num_tasks}, TASK {task.get_prompt()}"
         )
         callbacks = self.score_tracing_handler.get_callbacks()
@@ -124,7 +127,6 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         except GraphRecursionError as e:
             self.logger.error(msg=f"Reached recursion limit {e}")
 
-        self.logger.debug(messages)
         tool_calls = task.get_tool_calls_from_messages(messages=messages)
         score = task.validate(tool_calls=tool_calls)
         te = time.perf_counter()
