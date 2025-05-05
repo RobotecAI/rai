@@ -234,9 +234,9 @@ class TestROS2ConnectorInterface(unittest.TestCase):
             "timeout_sec": float,
         }
 
-        assert list(parameters.keys()) == list(expected_params.keys()), (
-            f"Parameter names do not match, expected: {list(expected_params.keys())}, got: {list(parameters.keys())}"
-        )
+        assert list(parameters.keys()) == list(
+            expected_params.keys()
+        ), f"Parameter names do not match, expected: {list(expected_params.keys())}, got: {list(parameters.keys())}"
 
         for param_name, expected_type in expected_params.items():
             param = parameters[param_name]
@@ -247,9 +247,9 @@ class TestROS2ConnectorInterface(unittest.TestCase):
             )
 
         # Check return type explicitly
-        assert signature.return_annotation is ROS2TransformStamped, (
-            f"Return type is incorrect, expected: TransformStamped, got: {signature.return_annotation}"
-        )
+        assert (
+            signature.return_annotation is ROS2TransformStamped
+        ), f"Return type is incorrect, expected: TransformStamped, got: {signature.return_annotation}"
 
     def test_send_message_signature(self):
         signature = inspect.signature(self.connector.send_message)
@@ -301,9 +301,9 @@ class TestROS2ConnectorInterface(unittest.TestCase):
 
         expected_params: dict[str, type] = {}
 
-        assert list(parameters.keys()) == list(expected_params.keys()), (
-            f"Parameter names do not match, expected: {list(expected_params.keys())}, got: {list(parameters.keys())}"
-        )
+        assert list(parameters.keys()) == list(
+            expected_params.keys()
+        ), f"Parameter names do not match, expected: {list(expected_params.keys())}, got: {list(parameters.keys())}"
 
         for param_name, expected_type in expected_params.items():
             param = parameters[param_name]
