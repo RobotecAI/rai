@@ -36,6 +36,17 @@ extra_css:
   - stylesheets/extra.css
 
 extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Robotecai/rai
+      name: RAI on GitHub
+    - icon: fontawesome/brands/discord
+      link: https://discord.com/invite/3PGHgTaJSB
+      name: ROS Embodied AI Community Group Discord
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/company/robotec-ai
+      name: Robotec.ai on LinkedIn
+
   analytics:
     provider: google
     property: G-R1ZPP9YFFV
