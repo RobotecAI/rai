@@ -42,6 +42,7 @@ from rai.tools.ros2 import (
     ROS2ActionToolkit,
     StartROS2ActionTool,
 )
+from rai.types import Point
 from rai_open_set_vision.tools import (
     DistanceMeasurement,
     GetDistanceToObjectsTool,
@@ -137,7 +138,7 @@ class MockReceiveROS2MessageTool(ReceiveROS2MessageTool):
         """
         if topic not in self.available_topics:
             raise ValueError(
-                f"Topic {topic} is not available within 1.0 seconds. Check if the topic exists."
+                f"Topic {topic} is not available within {timeout_sec} seconds. Check if the topic exists."
             )
         message: ROS2Message = MagicMock(spec=ROS2Message)
         message.payload = {"mock": "payload"}
@@ -177,7 +178,7 @@ class MockGetObjectPositionsTool(GetObjectPositionsTool):
     depth_topic: str = MagicMock(spec=str)
     camera_info_topic: str = MagicMock(spec=str)
     get_grabbing_point_tool: GetGrabbingPointTool = MagicMock(spec=GetGrabbingPointTool)
-    mock_objects: dict[str, List[dict[str, float]]]
+    mock_objects: dict[str, List[Point]]
 
     def _run(self, object_name: str) -> str:
         """Method that returns a mock message with the object positions if the object_name is present in the mock_objects dictionary.
