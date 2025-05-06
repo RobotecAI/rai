@@ -29,7 +29,7 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from rai.messages import HumanMultimodalMessage
 
-from rai_bench.base_benchmark import BaseBenchmark, BenchmarkSummary
+from rai_bench.base_benchmark import BaseBenchmark, BenchmarkSummary, TimeoutException
 from rai_bench.manipulation_o3de.interfaces import Task
 from rai_bench.manipulation_o3de.results_tracking import ScenarioResult
 from rai_sim.o3de.o3de_bridge import (
@@ -226,35 +226,40 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
             ts = time.perf_counter()
             prev_count: int = 0
             try:
-                for state in agent.stream(
-                    {"messages": [HumanMessage(content=scenario.task.task_prompt)]},
-                    {
-                        "recursion_limit": 100
-                    },  # NOTE (jmatejcz) what should be recursion limit?
-                ):
-                    node = next(iter(state))
-                    new_messages = state[node]["messages"][prev_count:]
-                    prev_count = len(state[node]["messages"])
+                with self.time_limit(90):
+                    for state in agent.stream(
+                        {"messages": [HumanMessage(content=scenario.task.task_prompt)]},
+                        {
+                            "recursion_limit": 100
+                        },  # NOTE (jmatejcz) what should be recursion limit?
+                    ):
+                        node = next(iter(state))
+                        new_messages = state[node]["messages"][prev_count:]
+                        prev_count = len(state[node]["messages"])
 
-                    for msg in new_messages:
-                        if isinstance(msg, HumanMultimodalMessage):
-                            last_msg = msg.text
-                        elif isinstance(msg, BaseMessage):
-                            if isinstance(msg.content, list):
-                                if len(msg.content) == 1:
-                                    if type(msg.content[0]) is dict:
-                                        last_msg = msg.content[0].get("text", "")
+                        for msg in new_messages:
+                            if isinstance(msg, HumanMultimodalMessage):
+                                last_msg = msg.text
+                            elif isinstance(msg, BaseMessage):
+                                if isinstance(msg.content, list):
+                                    if len(msg.content) == 1:
+                                        if type(msg.content[0]) is dict:
+                                            last_msg = msg.content[0].get("text", "")
+                                else:
+                                    last_msg = msg.content
+                                    self.logger.debug(f"{node}: {last_msg}")
+
                             else:
-                                last_msg = msg.content
-                                self.logger.debug(f"{node}: {last_msg}")
+                                raise ValueError(
+                                    f"Unexpected type of message: {type(msg)}"
+                                )
 
-                        else:
-                            raise ValueError(f"Unexpected type of message: {type(msg)}")
+                            if isinstance(msg, AIMessage):
+                                tool_calls_num += len(msg.tool_calls)
 
-                        if isinstance(msg, AIMessage):
-                            tool_calls_num += len(msg.tool_calls)
-
-                        self.logger.info(f"AI Message: {msg}")
+                            self.logger.info(f"AI Message: {msg}")
+            except TimeoutException as e:
+                self.logger.error(msg=f"Task timeout: {e}")
             except GraphRecursionError as e:
                 self.logger.error(msg=f"Reached recursion limit {e}")
 

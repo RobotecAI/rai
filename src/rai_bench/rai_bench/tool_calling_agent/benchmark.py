@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import logging
 import statistics
 import time
@@ -25,7 +24,7 @@ from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
 from rai.messages import HumanMultimodalMessage
 
-from rai_bench.base_benchmark import BaseBenchmark, BenchmarkSummary
+from rai_bench.base_benchmark import BaseBenchmark, BenchmarkSummary, TimeoutException
 from rai_bench.tool_calling_agent.interfaces import (
     Task,
 )
@@ -97,33 +96,39 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         messages: List[BaseMessage] = []
         prev_count: int = 0
         try:
-            if isinstance(task, SpatialReasoningAgentTask):
-                for state in agent.stream(
-                    {
-                        "messages": [
-                            HumanMultimodalMessage(
-                                content=task.get_prompt(), images=task.get_images()
-                            )
-                        ]
-                    },
-                    config=config,
-                ):
-                    node = next(iter(state))
-                    all_messages = state[node]["messages"]
-                    for new_msg in all_messages[prev_count:]:
-                        messages.append(new_msg)
-                    prev_count = len(messages)
-            else:
-                for state in agent.stream(
-                    {"messages": [HumanMultimodalMessage(content=task.get_prompt())]},
-                    config=config,
-                ):
-                    node = next(iter(state))
-                    all_messages = state[node]["messages"]
-                    for new_msg in all_messages[prev_count:]:
-                        messages.append(new_msg)
-                    prev_count = len(messages)
-
+            with self.time_limit(90):
+                if isinstance(task, SpatialReasoningAgentTask):
+                    for state in agent.stream(
+                        {
+                            "messages": [
+                                HumanMultimodalMessage(
+                                    content=task.get_prompt(), images=task.get_images()
+                                )
+                            ]
+                        },
+                        config=config,
+                    ):
+                        node = next(iter(state))
+                        all_messages = state[node]["messages"]
+                        for new_msg in all_messages[prev_count:]:
+                            messages.append(new_msg)
+                        prev_count = len(messages)
+                else:
+                    for state in agent.stream(
+                        {
+                            "messages": [
+                                HumanMultimodalMessage(content=task.get_prompt())
+                            ]
+                        },
+                        config=config,
+                    ):
+                        node = next(iter(state))
+                        all_messages = state[node]["messages"]
+                        for new_msg in all_messages[prev_count:]:
+                            messages.append(new_msg)
+                        prev_count = len(messages)
+        except TimeoutException as e:
+            self.logger.error(msg=f"Task timeout: {e}")
         except GraphRecursionError as e:
             self.logger.error(msg=f"Reached recursion limit {e}")
 

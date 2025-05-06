@@ -14,8 +14,12 @@
 
 import csv
 import logging
+import signal
+import types
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Optional
 
 from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, Field
@@ -31,6 +35,10 @@ class BenchmarkSummary(BaseModel):
         ..., description="Total number of extra tool calls used in this Task"
     )
     total_tasks: int = Field(..., description="Total number of executed tasks.")
+
+
+class TimeoutException(Exception):
+    pass
 
 
 class BaseBenchmark(ABC):
@@ -123,3 +131,18 @@ class BaseBenchmark(ABC):
         pass
 
     # TODO (jm) this can be probably same for all benchmark in the future
+
+    @contextmanager
+    def time_limit(self, seconds: int):
+        def signal_handler(signum: int, frame: Optional[types.FrameType]):
+            raise TimeoutException(f"Timed out after {seconds} seconds!")
+
+        # Set the timeout handler
+        signal.signal(signal.SIGALRM, signal_handler)
+        signal.alarm(seconds)
+
+        try:
+            yield
+        finally:
+            # Reset the alarm
+            signal.alarm(0)
