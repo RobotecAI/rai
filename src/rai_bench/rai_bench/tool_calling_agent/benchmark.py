@@ -188,8 +188,3 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         )
         self.csv_initialize(self.summary_filename, BenchmarkSummary)
         self.csv_writerow(self.summary_filename, summary)
-
-        self.logger.info(
-            f"Summary for model {self.model_name}: Success rate {success_rate:.2f}%, "
-            f"Average time {avg_time:.3f}s, Total tasks: {len(self.task_results)}"
-        )
