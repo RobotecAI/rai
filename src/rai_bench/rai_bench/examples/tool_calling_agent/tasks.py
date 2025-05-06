@@ -113,33 +113,35 @@ false_response_inputs: List[BoolImageTaskInput] = [
         images_paths=["src/rai_bench/rai_bench/examples/images/image_7.jpg"],
     ),
 ]
-
 ########## SUBTASKS #######################################################################################
 get_topics_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="get_ros2_topics_names_and_types", expected_args={}
 )
 
-color_image_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="get_ros2_image", expected_args={"topic": "/camera_image_color"}
-)
-depth_image_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="get_ros2_image", expected_args={"topic": "/camera_image_depth"}
-)
 color_image5_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="get_ros2_image", expected_args={"topic": "/color_image5"}
+    expected_tool_name="get_ros2_image",
+    expected_args={"topic": "/color_image5"},
+    expected_optional_args={"timeout_sec": int},
 )
 depth_image5_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="get_ros2_image", expected_args={"topic": "/depth_image5"}
+    expected_tool_name="get_ros2_image",
+    expected_args={"topic": "/depth_image5"},
+    expected_optional_args={"timeout_sec": int},
 )
 
 receive_robot_desc_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="receive_ros2_message",
     expected_args={"topic": "/robot_description"},
+    expected_optional_args={"timeout_sec": int},
 )
 
-move_to_point_subtask = CheckArgsToolCallSubTask(
+move_to_point_subtask_grab = CheckArgsToolCallSubTask(
     expected_tool_name="move_to_point",
     expected_args={"x": 1.0, "y": 2.0, "z": 3.0, "task": "grab"},
+)
+move_to_point_subtask_drop = CheckArgsToolCallSubTask(
+    expected_tool_name="move_to_point",
+    expected_args={"x": 1.2, "y": 2.3, "z": 3.4, "task": "drop"},
 )
 
 pub_HRIMessage_text_subtask = CheckTopicFieldsToolCallSubTask(
@@ -194,19 +196,24 @@ topics_ord_val = OrderedCallsValidator(subtasks=[get_topics_subtask])
 topics_and_color_image_ord_val = OrderedCallsValidator(
     subtasks=[
         get_topics_subtask,
-        color_image_subtask,
+        color_image5_subtask,
     ]
 )
-color_image_ord_val = OrderedCallsValidator(subtasks=[color_image_subtask])
-depth_image_ord_val = OrderedCallsValidator(subtasks=[depth_image_subtask])
+color_image_ord_val = OrderedCallsValidator(subtasks=[color_image5_subtask])
+depth_image_ord_val = OrderedCallsValidator(subtasks=[depth_image5_subtask])
 all_color_images_notord_val = NotOrderedCallsValidator(
-    subtasks=[color_image_subtask, color_image5_subtask]
+    subtasks=[color_image5_subtask, color_image5_subtask]
 )
 all_depth_images_notord_val = NotOrderedCallsValidator(
-    subtasks=[depth_image_subtask, depth_image5_subtask]
+    subtasks=[depth_image5_subtask, depth_image5_subtask]
 )
 
-move_to_point_ord_val = OrderedCallsValidator(subtasks=[move_to_point_subtask])
+move_to_point_ord_val_grab = OrderedCallsValidator(
+    subtasks=[move_to_point_subtask_grab]
+)
+move_to_point_ord_val_drop = OrderedCallsValidator(
+    subtasks=[move_to_point_subtask_drop]
+)
 
 pub_HRIMessage_text_ord_val = OrderedCallsValidator(
     subtasks=[pub_HRIMessage_text_subtask]
@@ -251,11 +258,11 @@ basic_tasks: List[Task] = [
 manipulation_tasks: List[Task] = [
     MoveToPointTask(
         move_to_tool_input=MoveToPointToolInput(x=1.0, y=2.0, z=3.0, task="grab"),
-        validators=[move_to_point_ord_val],
+        validators=[move_to_point_ord_val_drop],
     ),
     MoveToPointTask(
         move_to_tool_input=MoveToPointToolInput(x=1.2, y=2.3, z=3.4, task="drop"),
-        validators=[move_to_point_ord_val],
+        validators=[move_to_point_ord_val_drop],
     ),
 ]
 
@@ -355,12 +362,12 @@ def get_manipulation_tasks(extra_tool_calls: int = 0) -> List[Task]:
     return [
         MoveToPointTask(
             move_to_tool_input=MoveToPointToolInput(x=1.0, y=2.0, z=3.0, task="grab"),
-            validators=[move_to_point_ord_val],
+            validators=[move_to_point_ord_val_grab],
             extra_tool_calls=extra_tool_calls,
         ),
         MoveToPointTask(
             move_to_tool_input=MoveToPointToolInput(x=1.2, y=2.3, z=3.4, task="drop"),
-            validators=[move_to_point_ord_val],
+            validators=[move_to_point_ord_val_drop],
             extra_tool_calls=extra_tool_calls,
         ),
     ]
