@@ -1,0 +1,83 @@
+# Copyright (C) 2025 Robotec.AI
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import argparse
+import logging
+from datetime import datetime
+from pathlib import Path
+from typing import Tuple
+
+from rai.initialization import get_llm_model_direct
+
+
+def parse_benchmark_args():
+    parser = argparse.ArgumentParser(description="Run the Tool Calling Agent Benchmark")
+    parser.add_argument(
+        "--model-name",
+        type=str,
+        help="Model name to use for benchmarking",
+        required=True,
+    )
+    parser.add_argument("--vendor", type=str, help="Vendor of the model", required=True)
+    parser.add_argument(
+        "--extra-tool-calls",
+        type=int,
+        help="Number of extra tools calls agent can make and still pass the task",
+        default=0,
+    )
+    now = datetime.now()
+    parser.add_argument(
+        "--out_dir",
+        type=str,
+        default=f"src/rai_bench/rai_bench/experiments/o3de_manipulation/{now.strftime('%Y-%m-%d_%H-%M-%S')}",
+        help="Output directory for results and logs",
+    )
+
+    return parser.parse_args()
+
+
+def define_benchmark_loggers(out_dir: Path) -> Tuple[logging.Logger, logging.Logger]:
+    log_file = out_dir / "benchmark.log"
+
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    file_handler.setFormatter(formatter)
+
+    bench_logger = logging.getLogger("Benchmark logger")
+    for handler in bench_logger.handlers:
+        bench_logger.removeHandler(handler)
+    bench_logger.setLevel(logging.INFO)
+    bench_logger.addHandler(file_handler)
+
+    agent_logger = logging.getLogger("Agent logger")
+    for handler in agent_logger.handlers:
+        agent_logger.removeHandler(handler)
+    agent_logger.setLevel(logging.INFO)
+    agent_logger.addHandler(file_handler)
+
+    return bench_logger, agent_logger
+
+
+def get_llm_for_benchmark(
+    model_name: str,
+    vendor: str,
+):
+    if vendor == "ollama":
+        llm = get_llm_model_direct(model_name=model_name, vendor=vendor, keep_alive=10)
+    else:
+        llm = get_llm_model_direct(model_name=model_name, vendor=vendor)
+    return llm
