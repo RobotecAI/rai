@@ -42,6 +42,19 @@ Example of tool calls:
 - get_ros2_message_interface, args: {'msg_type': 'turtlesim/srv/TeleportAbsolute'}
 - publish_ros2_message, args: {'topic': '/turtle1/teleport_absolute', 'message_type': 'turtlesim/srv/TeleportAbsolute', 'message': {x: 5.0, y: 2.0, theta: 1.57}}"""
 
+CAMERA_TOPICS_AND_TYPES = [
+    "topic: /color_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
+    "topic: /color_image5\ntype: sensor_msgs/msg/Image\n",
+    "topic: /depth_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
+    "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
+]
+CAMERA_TOPICS = [
+    "/color_camera_info5",
+    "/color_image5",
+    "/depth_camera_info5",
+    "/depth_image5",
+]
+
 
 class BasicTask(Task, ABC):
     @property
@@ -61,15 +74,8 @@ class GetROS2TopicsTask(BasicTask):
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
                     "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
                     "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
                     "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /color_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /color_image5\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /depth_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
                     "topic: /display_contacts\ntype: visualization_msgs/msg/MarkerArray\n",
                     "topic: /display_planned_path\ntype: moveit_msgs/msg/DisplayTrajectory\n",
                     "topic: /execute_trajectory/_action/feedback\ntype: moveit_msgs/action/ExecuteTrajectory_FeedbackMessage\n",
@@ -94,6 +100,7 @@ class GetROS2TopicsTask(BasicTask):
                     "topic: /tf_static\ntype: tf2_msgs/msg/TFMessage\n",
                     "topic: /trajectory_execution_event\ntype: std_msgs/msg/String\n",
                 ]
+                + CAMERA_TOPICS_AND_TYPES
             )
         ]
 
@@ -110,10 +117,9 @@ class GetROS2TopicsTask2(BasicTask):
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
                     "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
                     "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
                 ]
+                + CAMERA_TOPICS_AND_TYPES
             )
         ]
 
@@ -130,17 +136,12 @@ class GetROS2RGBCameraTask(BasicTask):
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
                     "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
                     "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
                     "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /color_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /depth_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
                 ]
+                + CAMERA_TOPICS_AND_TYPES
             ),
-            MockGetROS2ImageTool(available_topics=["/camera_image_color"]),
+            MockGetROS2ImageTool(available_topics=CAMERA_TOPICS),
         ]
 
     def get_prompt(self) -> str:
@@ -160,12 +161,10 @@ class GetROS2DepthCameraTask(BasicTask):
                     "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
                     "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
                     "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /color_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /depth_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
                 ]
+                + CAMERA_TOPICS_AND_TYPES
             ),
-            MockGetROS2ImageTool(available_topics=["/camera_image_depth"]),
+            MockGetROS2ImageTool(available_topics=CAMERA_TOPICS),
         ]
 
     def get_prompt(self) -> str:
@@ -181,20 +180,12 @@ class GetAllROS2RGBCamerasTask(BasicTask):
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
                     "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
                     "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
                     "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /color_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /color_image5\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /depth_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
                 ]
+                + CAMERA_TOPICS_AND_TYPES
             ),
-            MockGetROS2ImageTool(
-                available_topics=["/camera_image_color", "/color_image5"]
-            ),
+            MockGetROS2ImageTool(available_topics=CAMERA_TOPICS),
         ]
 
     def get_prompt(self) -> str:
@@ -209,20 +200,12 @@ class GetAllROS2DepthCamerasTask(BasicTask):
         return [
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
                     "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
                     "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /color_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /color_image5\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /depth_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
                 ]
+                + CAMERA_TOPICS_AND_TYPES
             ),
-            MockGetROS2ImageTool(
-                available_topics=["/camera_image_depth", "/depth_image5"]
-            ),
+            MockGetROS2ImageTool(available_topics=CAMERA_TOPICS),
         ]
 
     def get_prompt(self) -> str:
@@ -239,17 +222,12 @@ class GetROS2MessageTask(BasicTask):
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=[
                     "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
                     "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
                     "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /color_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /depth_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-                    "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
                 ]
+                + CAMERA_TOPICS_AND_TYPES
             ),
-            MockReceiveROS2MessageTool(available_topics=["/camera_image_color"]),
+            MockReceiveROS2MessageTool(available_topics=CAMERA_TOPICS),
         ]
 
     def get_system_prompt(self) -> str:
