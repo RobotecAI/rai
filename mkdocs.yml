@@ -31,6 +31,8 @@ plugins:
         options:
           docstring_style: numpy
           show_root_heading: true
+- markdownextradata:
+
 
 extra_css:
   - stylesheets/extra.css
@@ -46,6 +48,7 @@ extra:
     - icon: fontawesome/brands/linkedin
       link: https://www.linkedin.com/company/robotec-ai
       name: Robotec.ai on LinkedIn
+  branch: development
 
   analytics:
     provider: google

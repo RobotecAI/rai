@@ -67,6 +67,6 @@ This approach is useful when you need to:
 -   [Aggregators Overview](../overview.md): For more information on the base aggregator class
 -   [Agents](../agents/overview.md): For more information on the different types of agents in RAI
 -   [Connectors](../connectors/overview.md): For more information on the different types of connectors in RAI
--   [Langchain Integration](../langchain_integration/overview.md): For more information on the different types of connectors in RAI
--   [Multimodal messages](../langchain_integration/multimodal_messages.md): For more information on the different types of connectors in RAI
+-   [Langchain Integration](../langchain_integration/overview.md): For more information on the LangChain integration within RAI
+-   [Multimodal messages](../langchain_integration/multimodal_messages.md): For more information on the multimodal LangChain messages in RAI
 -   [Runners](../runners/overview.md): For more information on the different types of runners in RAI

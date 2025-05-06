@@ -102,6 +102,6 @@ Follow our [step-by-step walkthrough](../tutorials/walkthrough.md) to:
 ## Learn More
 
 -   [RAI at ROSCon 2024 (Talk)](https://vimeo.com/1026029511)
--   [RAI Demos at ROSCon 2024](https://vimeo.com/1023325961)
+-   [RAI Demos at ROSCon 2024](https://vimeo.com/user222230448/rai-roscon24-reel)
 
 ---

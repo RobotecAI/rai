@@ -5,7 +5,7 @@ and perform specific operations. Think of tools as callable functions that bridg
 natural language understanding and system execution.
 
 RAI offers a comprehensive set of pre-built tools, including both general-purpose and ROS 2-specific
-tools [here](../../src/rai_core/rai/tools/ros2). However, in some cases, you may need to develop
+tools [here](https://github.com/RobotecAI/rai/tree/{{branch}}/src/rai_core/rai/tools/ros2). However, in some cases, you may need to develop
 custom tools tailored to specific robots or applications. This guide demonstrates how to create
 custom tools in RAI using the [LangChain framework](https://python.langchain.com/docs/).
 
@@ -89,9 +89,7 @@ def grab_object(object_name: str) -> str:
 ### Multimodal Tool (Text + Image Output)
 
 RAI supports multimodal tools through the `rai.agents.tool_runner.ToolRunner` class. These tools
-must use this runner either directly or via agents such as
-[`create_react_runnable`](../../src/rai_core/rai/agents/langchain/runnables.py) to handle multimedia
-output correctly.
+must use this runner either directly or via agents such as [create_react_runnable](https://github.com/RobotecAI/rai/blob/{{branch}}/src/rai_core/rai/agents/langchain/runnables.py#L86) to handle multimedia output correctly.
 
 ```python
 from langchain_core.tools import BaseTool
@@ -155,8 +153,9 @@ class GetROS2LidarDataTool(BaseROS2Tool):
             return f"Failed to process LiDAR data: {str(e)}"
 ```
 
-Refer to the [BaseROS2Tool source code](../../src/rai_core/rai/tools/ros2/base.py) for more
-information.
+??? note "For more information on BaseROS2Tool refer to the source code"
+
+    ::: rai.tools.ros2.base.BaseROS2Tool
 
 ---
 
@@ -202,8 +201,6 @@ def initialize_tools(connector: ROS2Connector):
 ---
 
 ### Using Tools in a RAI Agent (Distributed Setup)
-
-TODO(docs): add link to the BaseAgent docs (regarding distributed setup)
 
 ```python
 from rai.agents import ReActAgent

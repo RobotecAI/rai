@@ -81,7 +81,7 @@ Please take a look at [Q&A](https://github.com/RobotecAI/rai/discussions/categor
 
 ### Developer Resources
 
-See our [Developer Guide](docs/developer_guide.md) for a deeper dive into RAI, including
+See our [documentation](https://robotecai.github.io/rai/) for a deeper dive into RAI, including
 instructions on creating a configuration specifically for your robot.
 
 ### Contributing
