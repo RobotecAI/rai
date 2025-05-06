@@ -69,7 +69,7 @@ manipulation techniques.
 3. Interact with the robot arm using natural language commands. For example:
 
     ```
-    Enter a prompt: Pick up the red cube and drop it on other cube
+    Enter a prompt: Pick up the red cube and drop it on another cube
     ```
 
 ## How it works

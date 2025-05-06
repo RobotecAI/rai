@@ -173,8 +173,10 @@ a directory containing:
 -   Images
 -   URDF files
 
-!!! tip "Directories are optional" While each directory is optional, providing comprehensive
-information about your robot will result in a more accurate and effective system prompt.
+!!! tip "Directories are optional"
+
+    While each directory is optional, providing comprehensive
+    information about your robot will result in a more accurate and effective system prompt.
 
 ### Setting Up the Robot Directory
 

@@ -15,7 +15,7 @@ RAI consists of several key components that work together to create intelligent 
 | [Agents](agents/overview.md)           | Agents are the central components that encapsulate specific functionalities and behaviors.                                |
 | [Connectors](connectors/overview.md)   | Connectors provide a unified way to interact with various communication systems e.g., ROS 2.                              |
 | [Aggregators](aggregators/overview.md) | Aggregators collect and process messages from various sources, transforming them into summarized or analyzed information. |
-| [Runners](runners/overview.md)         | Manages the lifecycle of agents.                                                                                          |
+| [Runners](runners/overview.md)         | Manage the lifecycle of agents.                                                                                          |
 
 On top of that, RAI implements two major integrations: ROS 2 and LangChain.
 
