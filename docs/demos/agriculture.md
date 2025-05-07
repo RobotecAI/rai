@@ -10,9 +10,10 @@ optimally by calling the RAI agent to decide what to do.
 
 ## Quick Start
 
-!!! note "Remain in sourced shell"
+!!! tip "Remain in sourced shell"
 
     Ensure that every command is run in a sourced shell using `source setup_shell.sh`
+    Ensure ROS 2 is sourced.
 
 1. **Download the Latest Release**
 

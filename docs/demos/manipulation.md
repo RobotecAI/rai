@@ -9,6 +9,10 @@ manipulation techniques.
 
 ## Setup
 
+!!! tip "ROS 2 Sourced"
+
+    Make sure ROS 2 is sourced.
+
 1. Follow the RAI setup instructions in the [quick setup guide](../setup/install.md).
 2. Download additional dependencies:
 

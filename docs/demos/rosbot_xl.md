@@ -12,12 +12,15 @@ platform in a nice apartment.
 > The demo uses the `complex_model` LLM configured in `config.toml`. The model should be a
 > multimodal, tool-calling model. See [Vendors](../setup/vendors.md#llm-model-configuration-in-rai).
 
+!!! tip "ROS 2 Sourced"
+
+    Make sure ROS 2 is sourced.
+
 1. Download the newest binary release:
 
--   Ubuntu 22.04 & ros2 humble:
-    [link](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIROSBotDemo_1.0.0_jammyhumble.zip)
--   Ubuntu 24.04 & ros2 jazzy:
-    [link](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIROSBotDemo_1.0.0_noblejazzy.zip)
+    ```bash
+    ./scripts/download_demo.sh rosbot
+    ```
 
 2. Install and download required packages
 
@@ -25,15 +28,6 @@ platform in a nice apartment.
     vcs import < demos.repos
     rosdep install --from-paths src --ignore-src -r -y
     poetry install --with openset
-    ```
-
-3. Unpack the binary with the simulation:
-
-    ```bash
-    # u24
-    unzip RAIROSBotDemo_1.0.0_noblejazzy.zip
-    # u22
-    unzip RAIROSBotDemo_1.0.0_jammyhumble.zip
     ```
 
 ## Alternative: Demo source build
@@ -48,7 +42,7 @@ details.
 1. Running rai nodes and agents, navigation stack and O3DE simulation.
 
     ```bash
-    ros2 launch ./examples/rosbot-xl.launch.py game_launcher:=path/to/RAIROSBotXLDemo.GameLauncher
+    ros2 launch ./examples/rosbot-xl.launch.py game_launcher:=demo_assets/rosbot/RAIROSBotXLDemo.GameLauncher
     ```
 
 2. Run streamlit gui:
