@@ -97,10 +97,6 @@ You are welcome to contribute to RAI! Please see our [Contribution Guide](faq/co
 
     RAI is one of the main projects in focus of the [Embodied AI Community Group](https://github.com/ros-wg-embodied-ai). If you would like to join the next meeting, look for it in the [ROS Community Calendar](https://calendar.google.com/calendar/u/0/embed?src=c_3fc5c4d6ece9d80d49f136c1dcd54d7f44e1acefdbe87228c92ff268e85e2ea0@group.calendar.google.com&ctz=Etc/UTC).
 
-    ### Publicity
-
-    - A talk about [RAI at ROSCon 2024](https://vimeo.com/1026029511).
-
     ### RAI FAQ
 
     Please take a look at [FAQ](faq/faq.md).
