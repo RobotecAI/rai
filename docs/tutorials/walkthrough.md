@@ -178,6 +178,8 @@ a directory containing:
     While each directory is optional, providing comprehensive
     information about your robot will result in a more accurate and effective system prompt.
 
+For extended guide on `rai whoami` see [Create Robot's Whoami](./create_robots_whoami.md)
+
 ### Setting Up the Robot Directory
 
 Create a `panda/` directory with the following structure:
