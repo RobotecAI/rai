@@ -213,8 +213,13 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
         """
         try:
             i, scenario = next(self.scenarios)  # Get the next scenario
-
-            self.simulation_bridge.setup_scene(scenario.scene_config)
+            try:
+                with self.time_limit(30):
+                    # NOTE (jm) sometimes spawning objects freezes
+                    self.simulation_bridge.setup_scene(scenario.scene_config)
+            except TimeoutException as e:
+                self.logger.error(msg=f"Setup scene timeout: {e}")
+                return
             self.logger.info(
                 "======================================================================================"
             )
@@ -226,7 +231,7 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
             ts = time.perf_counter()
             prev_count: int = 0
             try:
-                with self.time_limit(90):
+                with self.time_limit(210):
                     for state in agent.stream(
                         {"messages": [HumanMessage(content=scenario.task.task_prompt)]},
                         {

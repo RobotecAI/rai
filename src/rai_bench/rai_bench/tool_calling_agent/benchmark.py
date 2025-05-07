@@ -96,7 +96,7 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         messages: List[BaseMessage] = []
         prev_count: int = 0
         try:
-            with self.time_limit(90):
+            with self.time_limit(45):
                 if isinstance(task, SpatialReasoningAgentTask):
                     for state in agent.stream(
                         {

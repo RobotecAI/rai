@@ -77,7 +77,7 @@ def get_llm_for_benchmark(
     vendor: str,
 ):
     if vendor == "ollama":
-        llm = get_llm_model_direct(model_name=model_name, vendor=vendor, keep_alive=10)
+        llm = get_llm_model_direct(model_name=model_name, vendor=vendor, keep_alive=20)
     else:
         llm = get_llm_model_direct(model_name=model_name, vendor=vendor)
     return llm
