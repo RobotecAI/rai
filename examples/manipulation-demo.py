@@ -22,9 +22,11 @@ from rai import get_llm_model
 from rai.agents.langchain.core import create_conversational_agent
 from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
-from rai.tools.ros2 import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
 from rai.tools.ros2.manipulation import GetObjectPositionsTool, MoveToPointTool
+from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
 from rai_open_set_vision.tools import GetGrabbingPointTool
+
+from rai_whoami.models import EmbodimentInfo
 
 logger = logging.getLogger(__name__)
 
@@ -52,22 +54,12 @@ def create_agent():
             get_grabbing_point_tool=GetGrabbingPointTool(connector=connector),
         ),
         MoveToPointTool(connector=connector, manipulator_frame="panda_link0"),
-        GetROS2ImageTool(connector=connector),
-        GetROS2TopicsNamesAndTypesTool(connector=connector),
+        GetROS2ImageConfiguredTool(connector=connector, topic="/color_image5"),
     ]
 
     llm = get_llm_model(model_type="complex_model", streaming=True)
-
-    system_prompt = """
-    You are a robotic arm with interfaces to detect and manipulate objects.
-    Here are the coordinates information:
-    x - front to back (positive is forward)
-    y - left to right (positive is right)
-    z - up to down (positive is up)
-
-    Before starting the task, make sure to grab the camera image to understand the environment.
-    """
-
+    embodiment_info = EmbodimentInfo.from_file("examples/manipulation_embodiment.json")
+    system_prompt = embodiment_info.to_langchain()
     agent = create_conversational_agent(
         llm=llm,
         tools=tools,

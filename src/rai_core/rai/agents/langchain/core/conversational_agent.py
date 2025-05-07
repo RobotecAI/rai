@@ -31,7 +31,12 @@ class State(TypedDict):
     messages: List[BaseMessage]
 
 
-def agent(llm: BaseChatModel, logger: logging.Logger, system_prompt: str, state: State):
+def agent(
+    llm: BaseChatModel,
+    logger: logging.Logger,
+    system_prompt: str | SystemMessage,
+    state: State,
+):
     logger.info("Running thinker")
 
     # If there are no messages, do nothing
@@ -40,7 +45,12 @@ def agent(llm: BaseChatModel, logger: logging.Logger, system_prompt: str, state:
 
     # Insert system message if not already present
     if not isinstance(state["messages"][0], SystemMessage):
-        state["messages"].insert(0, SystemMessage(content=system_prompt))
+        system_msg = (
+            SystemMessage(content=system_prompt)
+            if isinstance(system_prompt, str)
+            else system_prompt
+        )
+        state["messages"].insert(0, system_msg)
     ai_msg = llm.invoke(state["messages"])
     state["messages"].append(ai_msg)
     return state
@@ -49,7 +59,7 @@ def agent(llm: BaseChatModel, logger: logging.Logger, system_prompt: str, state:
 def create_conversational_agent(
     llm: BaseChatModel,
     tools: List[BaseTool],
-    system_prompt: str,
+    system_prompt: str | SystemMessage,
     logger: Optional[logging.Logger] = None,
     debug=False,
 ) -> CompiledStateGraph:
