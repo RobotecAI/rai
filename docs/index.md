@@ -41,11 +41,11 @@ The RAI Framework provides a comprehensive, end-to-end solution for developing a
 
 Our suite of integrated packages enables developers to seamlessly transition from concept to production, offering:
 
--   **Complete Development Lifecycle**: From initial agent development to deployment and fine-tuning
+-   **Complete Development Lifecycle**: From initial agent development to deployment
 -   **Modular Architecture**: Choose and combine components based on your specific needs
 -   **Production-Ready Tools**: Enterprise-grade packages for simulation, testing, and deployment
 -   **Extensible Platform**: Easy integration with existing robotics infrastructure and custom solutions
--   **Advanced Human-Robot Interaction**: Natural language processing, speech recognition, and intuitive interfaces
+-   **Advanced Human-Robot Interaction**: Through text, speech, and multimodal interfaces
 -   **Rich Multimodal Capabilities**: Seamless integration of voice, vision, and sensor data with real-time processing of multiple input/output streams, native handling of diverse data types, and unified multi-sensory perception and action framework.
 
 The framework's components work in perfect harmony to deliver a robust foundation for your robotics projects:
