@@ -34,7 +34,7 @@ from std_msgs.msg import String
 from typing_extensions import Self
 
 from rai_interfaces.msg._hri_message import HRIMessage
-from rai_tts.models.base import TTSModel
+from rai_s2s.tts.models import TTSModel
 
 from .initialization import load_config
 

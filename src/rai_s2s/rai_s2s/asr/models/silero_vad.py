@@ -18,7 +18,7 @@ import numpy as np
 import torch
 from numpy.typing import NDArray
 
-from rai_asr.models import BaseVoiceDetectionModel
+from rai_s2s.asr.models import BaseVoiceDetectionModel
 
 
 class SileroVAD(BaseVoiceDetectionModel):

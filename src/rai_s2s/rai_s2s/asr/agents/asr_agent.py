@@ -35,7 +35,7 @@ from rai.communication.sound_device import (
 )
 from typing_extensions import Self
 
-from rai_asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
+from rai_s2s.asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
 
 from .initialization import load_config
 
