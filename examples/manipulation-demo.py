@@ -14,10 +14,12 @@
 
 
 import logging
+from typing import List
 
 import rclpy
 import rclpy.qos
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.tools import BaseTool
 from rai import get_llm_model
 from rai.agents.langchain.core import create_conversational_agent
 from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
@@ -43,7 +45,7 @@ def create_agent():
     node = connector.node
     node.declare_parameter("conversion_ratio", 1.0)
 
-    tools = [
+    tools: List[BaseTool] = [
         GetObjectPositionsTool(
             connector=connector,
             target_frame="panda_link0",
@@ -70,7 +72,8 @@ def create_agent():
 
 def main():
     agent = create_agent()
-    messages = []
+    messages: List[BaseMessage] = []
+
     while True:
         prompt = input("Enter a prompt: ")
         messages.append(HumanMessage(content=prompt))
