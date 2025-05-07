@@ -31,9 +31,12 @@ from rai.communication.ros2 import (
 from rai.communication.sound_device import SoundDeviceConfig, SoundDeviceConnector
 from rai.communication.sound_device.connector import SoundDeviceMessage
 from std_msgs.msg import String
+from typing_extensions import Self
 
 from rai_interfaces.msg._hri_message import HRIMessage
 from rai_tts.models.base import TTSModel
+
+from .initialization import load_config
 
 if TYPE_CHECKING:
     from rai.communication.sound_device.api import SoundDeviceConfig
@@ -118,6 +121,33 @@ class TextToSpeechAgent(BaseAgent):
         self.running = False
 
         self.playback_data = PlayData()
+
+    @classmethod
+    def from_config(cls, cfg_path: Optional[str] = None) -> Self:
+        cfg = load_config(cfg_path)
+        config = SoundDeviceConfig(
+            stream=True,
+            is_output=True,
+            device_name=cfg.speaker.device_name,
+        )
+        match cfg.text_to_speech.model_type:
+            case "ElevenLabs":
+                from rai_tts.models import ElevenLabsTTS
+
+                if cfg.text_to_speech.voice != "":
+                    model = ElevenLabsTTS(voice=cfg.text_to_speech.voice)
+                else:
+                    raise ValueError("ElevenLabs [tts] vendor required voice to be set")
+            case "OpenTTS":
+                from rai_tts.models import OpenTTS
+
+                if cfg.text_to_speech.voice != "":
+                    model = OpenTTS(voice=cfg.text_to_speech.voice)
+                else:
+                    model = OpenTTS()
+            case _:
+                raise ValueError(f"Unknown model_type: {cfg.text_to_speech.model_type}")
+        return cls(config, "rai_auto_tts", model)
 
     def __call__(self):
         self.run()

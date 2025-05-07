@@ -12,7 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .agents import TextToSpeechAgent
+from .agents import TTS_MODELS, TextToSpeechAgent, TTSAgentConfig, load_config
 from .models import ElevenLabsTTS, OpenTTS
 
-__all__ = ["ElevenLabsTTS", "OpenTTS", "TextToSpeechAgent"]
+__all__ = [
+    "TTS_MODELS",
+    "ElevenLabsTTS",
+    "OpenTTS",
+    "TTSAgentConfig",
+    "TextToSpeechAgent",
+    "TextToSpeechAgent",
+    "load_config",
+]

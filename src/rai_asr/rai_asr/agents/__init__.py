@@ -13,7 +13,23 @@
 # limitations under the License.
 
 from rai_asr.agents.asr_agent import SpeechRecognitionAgent
+from rai_asr.agents.initialization import (
+    TRANSCRIBE_MODELS,
+    ASRAgentConfig,
+    MicrophoneConfig,
+    TranscribeConfig,
+    VADConfig,
+    WWConfig,
+    load_config,
+)
 
 __all__ = [
+    "TRANSCRIBE_MODELS",
+    "ASRAgentConfig",
+    "MicrophoneConfig",
     "SpeechRecognitionAgent",
+    "TranscribeConfig",
+    "VADConfig",
+    "WWConfig",
+    "load_config",
 ]

@@ -27,64 +27,34 @@ from langchain_aws import BedrockEmbeddings, ChatBedrock
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
-# Initialize session state for tracking steps if not exists
-if "current_step" not in st.session_state:
-    st.session_state.current_step = 1
-if "config" not in st.session_state:
-    # Load initial config from TOML file
-    try:
-        with open("config.toml", "rb") as f:
-            st.session_state.config = tomli.load(f)
-    except FileNotFoundError:
-        raise FileNotFoundError("config.toml not found. Please recreate it.")
 
-# Sidebar progress tracker
-st.sidebar.title("Configuration Progress")
-steps = {
-    1: "👋 Welcome",
-    2: "🤖 Model Selection",
-    3: "📊 Tracing",
-    4: "🎙️ Speech Recognition",
-    5: "🔊 Text to Speech",
-    6: "🎯 Additional Features",
-    7: "✅ Review & Save",
-}
-
-# Replace the existing step display with clickable elements
-for step_num, step_name in steps.items():
-    if step_num == st.session_state.current_step:
-        # Current step is bold and has an arrow
-        if st.sidebar.button(
-            step_name, key=f"step_{step_num}", use_container_width=True
-        ):
-            st.session_state.current_step = step_num
+def get_sound_devices(
+    reinitialize: bool = False, output: bool = False
+) -> List[Dict[str, str | int]]:
+    if reinitialize:
+        sd._terminate()
+        sd._initialize()
+    devices: List[Dict[str, str | int]] = sd.query_devices()
+    if output:
+        recording_devices = [
+            device for device in devices if device.get("max_output_channels", 0) > 0
+        ]
     else:
-        # Other steps are clickable but not highlighted
-        if st.sidebar.button(
-            step_name, key=f"step_{step_num}", use_container_width=True
-        ):
-            st.session_state.current_step = step_num
+        recording_devices = [
+            device for device in devices if device.get("max_input_channels", 0) > 0
+        ]
+    return recording_devices
 
 
-# Navigation buttons
-def next_step():
-    st.session_state.current_step = st.session_state.current_step + 1
-
-
-def prev_step():
-    st.session_state.current_step = st.session_state.current_step - 1
-
-
-# Main content based on current step
-if st.session_state.current_step == 1:
+def welcome():
     st.title("Welcome to RAI Configurator! 👋")
     st.markdown(
         """
     This wizard will help you set up your RAI environment step by step:
     1. Configure your AI models and vendor
     2. Set up model tracing and monitoring
-    3. Configure speech recognition (ASR)
-    4. Set up text-to-speech (TTS)
+    3. Configure speech recognition (ASR) (if installed)
+    4. Set up text-to-speech (TTS) (if installed)
     5. Enable additional features
     6. Review and save your configuration
 
@@ -94,7 +64,8 @@ if st.session_state.current_step == 1:
 
     st.button("Begin Configuration →", on_click=next_step)
 
-elif st.session_state.current_step == 2:
+
+def model_selection():
     st.title("Model Configuration")
     st.info(
         """
@@ -302,7 +273,8 @@ elif st.session_state.current_step == 2:
     with col2:
         st.button("Next →", on_click=next_step)
 
-elif st.session_state.current_step == 3:
+
+def tracing():
     st.title("Tracing Configuration")
     st.info(
         """
@@ -394,7 +366,9 @@ elif st.session_state.current_step == 3:
     with col2:
         st.button("Next →", on_click=next_step)
 
-elif st.session_state.current_step == 4:
+
+def asr():
+    from rai_asr import TRANSCRIBE_MODELS
 
     def on_recording_device_change():
         st.session_state.config["asr"]["recording_device_name"] = (
@@ -402,12 +376,14 @@ elif st.session_state.current_step == 4:
         )
 
     def on_asr_vendor_change():
-        vendor = (
-            "whisper"
-            if st.session_state.asr_vendor_select == "Local Whisper (Free)"
-            else "openai"
+        st.session_state.config["asr"]["transcription_model"] = (
+            st.session_state.asr_vendor_select
         )
-        st.session_state.config["asr"]["vendor"] = vendor
+
+    def on_model_name_change():
+        st.session_state.config["asr"]["transcription_model_name"] = (
+            st.session_state.model_name_input
+        )
 
     def on_language_change():
         st.session_state.config["asr"]["language"] = st.session_state.language_input
@@ -432,6 +408,11 @@ elif st.session_state.current_step == 4:
             st.session_state.wake_word_model_input
         )
 
+    def on_wake_word_model_name_change():
+        st.session_state.config["asr"]["wake_word_model_name"] = (
+            st.session_state.wake_word_model_name_input
+        )
+
     def on_wake_word_threshold_change():
         st.session_state.config["asr"]["wake_word_threshold"] = (
             st.session_state.wake_word_threshold_input
@@ -450,17 +431,7 @@ elif st.session_state.current_step == 4:
     """
     )
 
-    def get_recording_devices(reinitialize: bool = False) -> List[Dict[str, str | int]]:
-        if reinitialize:
-            sd._terminate()
-            sd._initialize()
-        devices: List[Dict[str, str | int]] = sd.query_devices()
-        recording_devices = [
-            device for device in devices if device.get("max_input_channels", 0) > 0
-        ]
-        return recording_devices
-
-    recording_devices = get_recording_devices()
+    recording_devices = get_sound_devices()
     currently_selected_device_name = st.session_state.config.get("asr", {}).get(
         "recording_device_name", ""
     )
@@ -482,38 +453,45 @@ elif st.session_state.current_step == 4:
 
     refresh_devices = st.button("Refresh devices")
     if refresh_devices:
-        recording_devices = get_recording_devices(reinitialize=True)
+        recording_devices = get_sound_devices(reinitialize=True)
 
     # Get the current vendor from config and convert to display name
-    current_vendor = st.session_state.config.get("asr", {}).get("vendor", "whisper")
-    vendor_display_name = (
-        "Local Whisper (Free)" if current_vendor == "whisper" else "OpenAI (Cloud)"
+    current_vendor = st.session_state.config.get("asr", {}).get(
+        "transciption_model", TRANSCRIBE_MODELS[0]
     )
 
     asr_vendor = st.selectbox(
         "Choose your ASR vendor",
-        ["Local Whisper (Free)", "OpenAI (Cloud)"],
+        TRANSCRIBE_MODELS,
         placeholder="Select vendor",
-        index=["Local Whisper (Free)", "OpenAI (Cloud)"].index(vendor_display_name),
+        index=TRANSCRIBE_MODELS.index(current_vendor),
         key="asr_vendor_select",
         on_change=on_asr_vendor_change,
     )
 
-    if asr_vendor == "Local Whisper (Free)":
-        st.info(
-            """
-        Local Whisper is recommended to use when Nvidia GPU is available.
-        """
-        )
-    elif asr_vendor == "OpenAI (Cloud)":
+    if asr_vendor == "OpenAI":
         st.info(
             """
         OpenAI ASR uses the OpenAI API. Make sure to set `OPENAI_API_KEY` environment variable.
         """
         )
+    else:
+        st.info(
+            f"""
+        {asr_vendor} is recommended to use when Nvidia GPU is available.
+        """
+        )
 
     # Add ASR parameters
     st.subheader("ASR Parameters")
+
+    model_name = st.text_input(
+        "Model name",
+        value=st.session_state.config.get("asr", {}).get("model_name", "tiny"),
+        help="Particular model architecture of the provided type, e.g. 'tiny'",
+        key="model_name_input",
+        on_change=on_model_name_change,
+    )
 
     language = st.text_input(
         "Language code",
@@ -555,10 +533,21 @@ elif st.session_state.current_step == 4:
         wake_word_model = st.text_input(
             "Wake word model",
             value=st.session_state.config.get("asr", {}).get("wake_word_model", ""),
-            help="Wake word model to use",
+            help="Wake word model type to use",
             key="wake_word_model_input",
             on_change=on_wake_word_model_change,
         )
+
+        wake_word_model = st.text_input(
+            "Wake word model name",
+            value=st.session_state.config.get("asr", {}).get(
+                "wake_word_model_name", ""
+            ),
+            help="Specific wake word model to use",
+            key="wake_word_model_name_input",
+            on_change=on_wake_word_model_name_change,
+        )
+
         wake_word_threshold = st.slider(
             "Wake word threshold",
             min_value=0.0,
@@ -577,19 +566,19 @@ elif st.session_state.current_step == 4:
     with col2:
         st.button("Next →", on_click=next_step)
 
-elif st.session_state.current_step == 5:
+
+def tts():
+    from rai_tts import TTS_MODELS
 
     def on_tts_vendor_change():
-        vendor = (
-            "elevenlabs"
-            if st.session_state.tts_vendor_select == "ElevenLabs (Cloud)"
-            else "opentts"
-        )
-        st.session_state.config["tts"]["vendor"] = vendor
+        st.session_state.config["tts"]["vendor"] = st.session_state.tts_vendor_select
 
-    def on_keep_speaker_busy_change():
-        st.session_state.config["tts"]["keep_speaker_busy"] = (
-            st.session_state.keep_speaker_busy_checkbox
+    def on_voice_change():
+        st.session_state.config["tts"]["voice"] = st.session_state.tts_voice_input
+
+    def on_sound_device_change():
+        st.session_state.config["tts"]["speaker_device_name"] = (
+            st.session_state.sound_device_select
         )
 
     # Ensure tts config exists
@@ -605,22 +594,43 @@ elif st.session_state.current_step == 5:
     """
     )
 
-    # Get the current vendor from config and convert to display name
-    current_vendor = st.session_state.config.get("tts", {}).get("vendor", "elevenlabs")
-    vendor_display_name = (
-        "ElevenLabs (Cloud)" if current_vendor == "elevenlabs" else "OpenTTS (Local)"
+    sound_devices = get_sound_devices(output=True)
+    currently_selected_device_name = st.session_state.config.get("tts", {}).get(
+        "speaker_device_name", ""
     )
+    try:
+        device_index = [device["name"] for device in sound_devices].index(
+            currently_selected_device_name
+        )
+    except ValueError:
+        device_index = None
+
+    recording_device_name = st.selectbox(
+        "Default speaker device",
+        [device["name"] for device in sound_devices],
+        placeholder="Select device",
+        index=device_index,
+        key="sound_device_select",
+        on_change=on_sound_device_change,
+    )
+
+    refresh_devices = st.button("Refresh devices")
+    if refresh_devices:
+        recording_devices = get_sound_devices(reinitialize=True, output=True)
+
+    # Get the current vendor from config and convert to display name
+    current_vendor = st.session_state.config.get("tts", {}).get("vendor", TTS_MODELS[0])
 
     tts_vendor = st.selectbox(
         "Choose your TTS vendor",
-        ["ElevenLabs (Cloud)", "OpenTTS (Local)"],
+        TTS_MODELS,
         placeholder="Select vendor",
-        index=["ElevenLabs (Cloud)", "OpenTTS (Local)"].index(vendor_display_name),
+        index=TTS_MODELS.index(current_vendor),
         key="tts_vendor_select",
         on_change=on_tts_vendor_change,
     )
 
-    if tts_vendor == "ElevenLabs (Cloud)":
+    if tts_vendor == "ElevenLabs":
         st.info(
             """
         Please ensure you have the following environment variable set:
@@ -631,7 +641,7 @@ elif st.session_state.current_step == 5:
         To get your API key, follow the instructions [here](https://elevenlabs.io/docs/api-reference/getting-started)
         """
         )
-    elif tts_vendor == "OpenTTS (Local)":
+    elif tts_vendor == "OpenTTS":
         st.info(
             """
         Please ensure you have the Docker container running:
@@ -643,11 +653,12 @@ elif st.session_state.current_step == 5:
         """
         )
 
-    keep_speaker_busy = st.checkbox(
-        "Keep speaker busy",
-        value=st.session_state.config.get("tts", {}).get("keep_speaker_busy", False),
-        key="keep_speaker_busy_checkbox",
-        on_change=on_keep_speaker_busy_change,
+    model_name = st.text_input(
+        "Voice",
+        value=st.session_state.config.get("asr", {}).get("voice", ""),
+        help="Voice compatible with selected vendor. If left empty RAI will select a deafault value.",
+        key="tts_voice_input",
+        on_change=on_voice_change,
     )
 
     st.info(
@@ -663,7 +674,8 @@ elif st.session_state.current_step == 5:
     with col2:
         st.button("Next →", on_click=next_step)
 
-elif st.session_state.current_step == 6:
+
+def additional_features():
     st.title("Additional Features Configuration")
     st.info(
         """
@@ -718,7 +730,8 @@ elif st.session_state.current_step == 6:
     with col2:
         st.button("Next →", on_click=next_step)
 
-elif st.session_state.current_step == 7:
+
+def review_and_save():
     st.title("Review & Save Configuration")
     st.write(
         """
@@ -913,3 +926,81 @@ elif st.session_state.current_step == 7:
             with open("config.toml", "wb") as f:
                 tomli_w.dump(st.session_state.config, f)
             st.success("Configuration saved successfully!")
+
+
+@st.cache_data
+def setup_steps():
+    step_names = ["👋 Welcome", "🤖 Model Selection", "📊 Tracing"]
+    step_render = [welcome, model_selection, tracing]
+
+    try:
+        from rai_asr import TRANSCRIBE_MODELS
+
+        step_names.append("🎙️ Speech Recognition")
+        step_render.append(asr)
+    except ImportError:
+        pass
+
+    try:
+        from rai_tts import TTS_MODELS
+
+        step_names.append("🔊 Text to Speech")
+        step_render.append(tts)
+    except ImportError:
+        pass
+
+    step_names.extend(
+        [
+            "🎯 Additional Features",
+            "✅ Review & Save",
+        ]
+    )
+    step_render.extend([additional_features, review_and_save])
+
+    steps = dict(enumerate(step_names))
+    step_renderer = dict(enumerate(step_render))
+    return steps, step_renderer
+
+
+# Initialize session state for tracking steps if not exists
+if "current_step" not in st.session_state:
+    st.session_state.current_step = 1
+if "config" not in st.session_state:
+    # Load initial config from TOML file
+    try:
+        with open("config.toml", "rb") as f:
+            st.session_state.config = tomli.load(f)
+    except FileNotFoundError:
+        raise FileNotFoundError("config.toml not found. Please recreate it.")
+
+# Sidebar progress tracker
+st.sidebar.title("Configuration Progress")
+steps, step_renderer = setup_steps()
+
+# Replace the existing step display with clickable elements
+for step_num, step_name in steps.items():
+    if step_num == st.session_state.current_step:
+        # Current step is bold and has an arrow
+        if st.sidebar.button(
+            step_name, key=f"step_{step_num}", use_container_width=True
+        ):
+            st.session_state.current_step = step_num
+    else:
+        # Other steps are clickable but not highlighted
+        if st.sidebar.button(
+            step_name, key=f"step_{step_num}", use_container_width=True
+        ):
+            st.session_state.current_step = step_num
+
+
+# Navigation buttons
+def next_step():
+    st.session_state.current_step = st.session_state.current_step + 1
+
+
+def prev_step():
+    st.session_state.current_step = st.session_state.current_step - 1
+
+
+# Main content based on current step
+step_renderer[st.session_state.current_step]()
