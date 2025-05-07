@@ -35,6 +35,7 @@ manipulation techniques.
 !!! note "Remain in sourced shell"
 
     Ensure that every command is run in a sourced shell using `source setup_shell.sh`
+    Ensure ROS 2 is sourced.
 
 1. Start the demo
 
