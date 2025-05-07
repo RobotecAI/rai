@@ -13,20 +13,31 @@
 # limitations under the License.
 
 
+import logging
+
 import rclpy
 import rclpy.qos
 from langchain_core.messages import HumanMessage
 from rai import get_llm_model
 from rai.agents.langchain.core import create_conversational_agent
+from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2 import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
 from rai.tools.ros2.manipulation import GetObjectPositionsTool, MoveToPointTool
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
+logger = logging.getLogger(__name__)
+
 
 def create_agent():
     rclpy.init()
     connector = ROS2Connector()
+
+    required_services = ["/grounded_sam_segment", "/grounding_dino_classify"]
+    required_topics = ["/color_image5", "/depth_image5", "/color_camera_info5"]
+    wait_for_ros2_services(connector, required_services)
+    wait_for_ros2_topics(connector, required_topics)
+
     node = connector.node
     node.declare_parameter("conversion_ratio", 1.0)
 

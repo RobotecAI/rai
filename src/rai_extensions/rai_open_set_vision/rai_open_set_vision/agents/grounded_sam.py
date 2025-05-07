@@ -47,6 +47,7 @@ class GroundedSamAgent(BaseVisionAgent):
             self._remove_weights(self.weight_path)
             self._init_weight_path()
             self.segmenter = GDSegmenter(self.weight_path)
+        self.logger.info(f"{self.__class__.__name__} initialized")
 
     def run(self):
         self.ros2_connector.create_service(

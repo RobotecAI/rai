@@ -18,26 +18,13 @@ manipulation techniques.
     rosdep install --from-paths src/examples/rai-manipulation-demo/ros2_ws/src --ignore-src -r -y
     ```
 
-3. Download the latest binary release for your ROS 2 distribution:
-
-    - [ros2-humble-manipulation-demo](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIManipulationDemo_1.0.0_jammyhumble.zip)
-    - [ros2-jazzy-manipulation-demo](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIManipulationDemo_1.0.0_noblejazzy.zip)
-
-4. Unpack the binary:
-
-    For Humble:
+3. Download the latest binary release
 
     ```bash
-    unzip RAIManipulationDemo_1.0.0_jammyhumble.zip
+    ./scripts/download_demo.sh manipulation
     ```
 
-    For Jazzy:
-
-    ```bash
-    unzip RAIManipulationDemo_1.0.0_noblejazzy.zip
-    ```
-
-5. Build the ROS 2 workspace:
+4. Build the ROS 2 workspace:
 
     ```bash
     colcon build --symlink-install
@@ -45,12 +32,14 @@ manipulation techniques.
 
 ## Running the Demo
 
-> **Note**: Ensure that every command is run in a sourced shell using `source setup_shell.sh`
+!!! note "Remain in sourced shell"
+
+    Ensure that every command is run in a sourced shell using `source setup_shell.sh`
 
 1. Start the demo
 
     ```shell
-    ros2 launch examples/manipulation-demo.launch.py game_launcher:=path/to/RAIManipulationDemo.GameLauncher
+    ros2 launch examples/manipulation-demo.launch.py game_launcher:=demo_assets/manipulation/RAIManipulationDemoGamePackage/RAIManipulationDemo.GameLauncher
     ```
 
 2. In the second terminal, run the streamlit interface:
