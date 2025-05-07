@@ -496,6 +496,10 @@ SERVICE_STRINGS = [
 
 
 class NavigationTask(Task):
+    @property
+    def type(self) -> str:
+        return "navigation"
+
     def get_system_prompt(self) -> str:
         return ROBOT_NAVIGATION_SYSTEM_PROMPT
 

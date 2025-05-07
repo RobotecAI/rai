@@ -49,7 +49,8 @@ class RotateObjectTask(ManipulationTask):
         self.obj_types = obj_types
         self.target_quaternion = target_quaternion
 
-    def get_prompt(self) -> str:
+    @property
+    def task_prompt(self) -> str:
         object_names = ", ".join(obj.replace("_", " ") for obj in self.obj_types)
         return (
             f"Rotate each {object_names} to the target orientation specified by the quaternion "

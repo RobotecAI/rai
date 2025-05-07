@@ -13,13 +13,55 @@
 # limitations under the License.
 
 
-from typing import List
+import logging
+from typing import Any, Dict, List
 from uuid import UUID
 
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.tracers.langchain import LangChainTracer
 from langfuse.callback import CallbackHandler
+from pydantic import BaseModel, Field
 from rai.initialization import get_tracing_callbacks
+
+loggers_type = logging.Logger
+
+
+class SubTaskResult(BaseModel):
+    args: Dict[str, Any]
+    errors: List[str]
+    passed: bool
+
+
+class ValidatorResult(BaseModel):
+    type: str
+    subtasks: List[SubTaskResult]
+    extra_tool_calls_used: int
+    passed: bool
+
+
+class TaskResult(BaseModel):
+    task_prompt: str = Field(..., description="The task prompt.")
+    system_prompt: str = Field(..., description="The system prompt.")
+    complexity: str = Field(..., description="Complexity of the task.")
+    type: str = Field(..., description="Type of task, for example: manipulation")
+    model_name: str = Field(..., description="Name of the LLM.")
+    validation_info: List[ValidatorResult] = Field(
+        ..., description="Validation structure, errors, etc."
+    )
+    extra_tool_calls: int = Field(
+        ...,
+        description="Maximum number of extra tool calls agent can make and still pass a task",
+    )
+    extra_tool_calls_used: int = Field(
+        ..., description="Total number of extra tool calls used in this Task"
+    )
+    score: float = Field(
+        ...,
+        description="Value between 0 and 1, describing how many validation setps passed",
+    )
+
+    total_time: float = Field(..., description="Total time taken to complete the task.")
+    run_id: UUID = Field(..., description="UUID of the task run.")
 
 
 class ScoreTracingHandler:

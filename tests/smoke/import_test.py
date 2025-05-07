@@ -36,6 +36,7 @@ def rai_python_modules():
 @pytest.mark.parametrize("module", rai_python_modules())
 def test_can_import_all_modules_pathlib(module: ModuleType) -> None:
     def import_submodules(package: ModuleType) -> None:
+        ignored_modules = ["rai_bench.experiments"]
         package_path = pathlib.Path(package.__file__).parent  # type: ignore
 
         importables = set()
@@ -50,6 +51,9 @@ def test_can_import_all_modules_pathlib(module: ModuleType) -> None:
             subpage_name = relative_path.replace(os.path.sep, ".").replace(".py", "")
 
             module_prefix = f"{package_path.name}.{subpage_name}"
+            if any(module_prefix.startswith(ignored) for ignored in ignored_modules):
+                print(f"Skipping {module_prefix} (in ignore list)")
+                continue
             importables.add(module_prefix)
 
         for full_name in sorted(list(importables)):

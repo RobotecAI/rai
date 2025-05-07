@@ -829,7 +829,13 @@ Example of tool calls:
 - publish_ros2_message, args: {'topic': '/turtle1/teleport_absolute', 'message_type': 'turtlesim/srv/TeleportAbsolute', 'message': {x: 5.0, y: 2.0, theta: 1.57}}"""
 
 
-class CustomInterfacesTopicTask(Task, ABC):
+class CustomInterfaceTask(Task, ABC):
+    @property
+    def type(self) -> str:
+        return "custom_interface"
+
+
+class CustomInterfacesTopicTask(CustomInterfaceTask, ABC):
     def __init__(
         self,
         topic: str,
@@ -862,7 +868,7 @@ class CustomInterfacesTopicTask(Task, ABC):
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
 
 
-class CustomInterfacesServiceTask(Task, ABC):
+class CustomInterfacesServiceTask(CustomInterfaceTask, ABC):
     def __init__(
         self,
         service: str,

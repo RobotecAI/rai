@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import logging
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from langchain_core.messages import ToolCall
 
@@ -39,12 +39,18 @@ class OrderedCallsValidator(Validator):
         if len(self.subtasks) < 1:
             raise ValueError("Validator must have at least 1 subtask.")
 
+    @property
+    def type(self) -> str:
+        return "ordered"
+
     def validate(self, tool_calls: List[ToolCall]) -> Tuple[bool, List[ToolCall]]:
+        self.reset()
         # Before validation create new iterator, in case validator
         # was used before in other task
         subtask_iter = iter(enumerate(self.subtasks))
         if len(tool_calls) < 1:
-            self.validation_error("Not a single tool call to validate")
+            self.logger.error("Not a single tool call to validate")
+            self.passed = False
             return False, tool_calls
 
         else:
@@ -52,15 +58,21 @@ class OrderedCallsValidator(Validator):
             for i, tool_call in enumerate(tool_calls):
                 try:
                     if subtask.validate(tool_call=tool_call):
+                        self.subtasks_passed[u] = True
+                        # go to next subtask
                         u, subtask = next(subtask_iter)
                 except SubTaskValidationError as e:
-                    # TODO (jm) should we log every error to results, even if its not causing validator failure?
-                    # for now we log subtask errors to log file, but not to results.csv
-                    self.validation_error(msg=str(e))
+                    self.add_subtask_errors(idx=u, msgs=[str(e)])
+
                 except StopIteration:
+                    self.passed = True
+                    self.extra_calls_used = i + 1 - self.required_calls
                     return True, tool_calls[i + 1 :]
 
-            self.validation_error(f"Validation failed for task {u + 1}")
+            self.logger.error(f"Validation failed for task {u + 1}")
+            self.passed = False
+            if len(tool_calls) > self.required_calls:
+                self.extra_calls_used += len(tool_calls) - self.required_calls
             return False, []
 
 
@@ -74,31 +86,61 @@ class NotOrderedCallsValidator(Validator):
         self, subtasks: List[SubTask], logger: loggers_type | None = None
     ) -> None:
         super().__init__(subtasks=subtasks, logger=logger)
+        if len(self.subtasks) < 1:
+            raise ValueError("Validator must have at least 1 subtask.")
+
+    @property
+    def type(self) -> str:
+        return "not ordered"
 
     def validate(self, tool_calls: List[ToolCall]) -> Tuple[bool, List[ToolCall]]:
+        self.reset()
         if len(tool_calls) < 1:
-            self.validation_error("Not a single tool call to validate")
+            self.logger.error("Not a single tool call to validate")
+            self.passed = False
             return False, tool_calls
-        # to_be_done = self.subtasks.copy()
+
         # for saving to result which tasks where not done
         to_be_done_idx = list(range(len(self.subtasks)))
+
         for i, tool_call in enumerate(tool_calls):
             if not to_be_done_idx:
                 # all subtask completed
-                return True, tool_calls[i + 1 :]
+                self.passed = True
+                self.extra_calls_used = i - self.required_calls
+                return True, tool_calls[i:]
+
+            matched = False
+            possible_errors: Dict[int, str] = {}
             for u in to_be_done_idx:
                 try:
-                    self.subtasks[u].validate(tool_call=tool_call)
-                    to_be_done_idx.remove(u)
-                    break
+                    if self.subtasks[u].validate(tool_call=tool_call):
+                        to_be_done_idx.remove(u)
+                        self.subtasks_passed[u] = True
+                        matched = True
+                        break
                 except SubTaskValidationError as e:
-                    self.logger.error(str(e))
+                    possible_errors[u] = str(e)
+
+            if not matched:
+                # tool call did not match any subtask
+                # so add recent error from every subtask
+                # NOTE (jm) this can make multiple errors from 1 tool call in results
+
+                for idx, error in possible_errors.items():
+                    self.add_subtask_errors(idx=idx, msgs=[error])
 
         if not to_be_done_idx:
             # all tool calls iterated
             # all subtask completed
+            self.passed = True
+            self.extra_calls_used = len(tool_calls) - self.required_calls
             return True, []
-        self.validation_error(
+
+        self.logger.error(
             f"Validation failed for tasks: {[idx + 1 for idx in to_be_done_idx]}"
         )
+        self.passed = False
+        if len(tool_calls) > self.required_calls:
+            self.extra_calls_used = len(tool_calls) - self.required_calls
         return False, []

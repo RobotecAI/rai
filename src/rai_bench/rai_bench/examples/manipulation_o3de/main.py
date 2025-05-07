@@ -33,13 +33,9 @@ from rai.tools.ros2 import (
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
 from rai_bench.examples.manipulation_o3de.scenarios import (
-    easy_scenarios,
-    hard_scenarios,
-    medium_scenarios,
     trivial_scenarios,
-    very_hard_scenarios,
 )
-from rai_bench.manipulation_o3de.benchmark import Benchmark
+from rai_bench.manipulation_o3de.benchmark import ManipulationO3DEBenchmark
 from rai_sim.o3de.o3de_bridge import (
     O3DEngineArmManipulationBridge,
 )
@@ -55,27 +51,25 @@ def parse_args():
     parser.add_argument(
         "--vendor", type=str, default=None, help="Vendor of the model (optional)"
     )
+    now = datetime.now()
+    parser.add_argument(
+        "--out_dir",
+        type=str,
+        default=f"src/rai_bench/rai_bench/experiments/o3de_manipulation/{now.strftime('%Y-%m-%d_%H-%M-%S')}",
+        help="Output directory for results and logs",
+    )
     return parser.parse_args()
 
 
-def run_benchmark(model_name: str, vendor: str):
+def run_benchmark(model_name: str, vendor: str, out_dir: str):
     rclpy.init()
     connector = ROS2Connector()
     node = connector.node
     node.declare_parameter("conversion_ratio", 1.0)
 
     # define model
-
     llm = get_llm_model_direct(model_name=model_name, vendor=vendor)
 
-    system_prompt = """
-    You are a robotic arm with interfaces to detect and manipulate objects.
-    Here are the coordinates information:
-    x - front to back (positive is forward)
-    y - left to right (positive is right)
-    z - up to down (positive is up)
-    Before starting the task, make sure to grab the camera image to understand the environment.
-    """
     # define tools
     tools: List[BaseTool] = [
         GetObjectPositionsTool(
@@ -92,10 +86,8 @@ def run_benchmark(model_name: str, vendor: str):
         GetROS2TopicsNamesAndTypesTool(connector=connector),
     ]
     # define loggers
-    now = datetime.now()
-    experiment_dir = f"src/rai_bench/rai_bench/experiments/o3de_manipulation/{now.strftime('%Y-%m-%d_%H-%M-%S')}"
-    Path(experiment_dir).mkdir(parents=True, exist_ok=True)
-    log_file = f"{experiment_dir}/benchmark.log"
+    Path(out_dir).mkdir(parents=True, exist_ok=True)
+    log_file = f"{out_dir}/benchmark.log"
     file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(logging.DEBUG)
 
@@ -160,33 +152,33 @@ def run_benchmark(model_name: str, vendor: str):
     t_scenarios = trivial_scenarios(
         configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
     )
-    e_scenarios = easy_scenarios(
-        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
-    )
-    m_scenarios = medium_scenarios(
-        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
-    )
-    h_scenarios = hard_scenarios(
-        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
-    )
-    vh_scenarios = very_hard_scenarios(
-        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
-    )
+    # e_scenarios = easy_scenarios(
+    #     configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    # )
+    # m_scenarios = medium_scenarios(
+    #     configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    # )
+    # h_scenarios = hard_scenarios(
+    #     configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    # )
+    # vh_scenarios = very_hard_scenarios(
+    #     configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    # )
 
-    all_scenarios = t_scenarios + e_scenarios + m_scenarios + h_scenarios + vh_scenarios
+    all_scenarios = t_scenarios
     o3de = O3DEngineArmManipulationBridge(connector, logger=agent_logger)
     try:
         # define benchamrk
-        results_filename = f"{experiment_dir}/results.csv"
-        benchmark = Benchmark(
+        benchmark = ManipulationO3DEBenchmark(
+            model_name=model_name,
             simulation_bridge=o3de,
             scenarios=all_scenarios,
             logger=bench_logger,
-            results_filename=results_filename,
+            results_dir=Path(out_dir),
         )
-        for _ in range(len(all_scenarios)):
+        for scenario in all_scenarios:
             agent = create_conversational_agent(
-                llm, tools, system_prompt, logger=agent_logger
+                llm, tools, scenario.task.system_prompt, logger=agent_logger
             )
             benchmark.run_next(agent=agent)
             o3de.reset_arm()
@@ -207,4 +199,4 @@ def run_benchmark(model_name: str, vendor: str):
 
 if __name__ == "__main__":
     args = parse_args()
-    run_benchmark(model_name=args.model_name, vendor=args.vendor)
+    run_benchmark(model_name=args.model_name, vendor=args.vendor, out_dir=args.out_dir)

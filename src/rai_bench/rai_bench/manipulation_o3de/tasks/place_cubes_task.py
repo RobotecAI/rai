@@ -45,7 +45,8 @@ class PlaceCubesTask(ManipulationTask):
         super().__init__(logger)
         self.threshold_distance = threshold_distance
 
-    def get_prompt(self) -> str:
+    @property
+    def task_prompt(self) -> str:
         return "Manipulate objects, so that all cubes are adjacent to at least one cube"
 
     def check_if_required_objects_present(

@@ -22,13 +22,18 @@ from tests.rai_bench.conftest import create_entity
 
 
 class DummyTask(Task):
-    def get_prompt(self) -> str:
+    @property
+    def task_prompt(self) -> str:
+        return "dummy prompt"
+
+    @property
+    def system_prompt(self) -> str:
         return "dummy prompt"
 
     def validate_config(self, simulation_config: Any) -> bool:
         return True
 
-    def calculate_result(self, simulation_bridge: Any) -> float:
+    def calculate_score(self, simulation_bridge: Any) -> float:
         return 1.0
 
 

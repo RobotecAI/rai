@@ -26,6 +26,7 @@ class CheckArgsToolCallSubTask(SubTask):
         expected_args: Dict[str, Any],
         expected_optional_args: Optional[Dict[str, Any]] = None,
     ):
+        super().__init__()
         self.expected_tool_name = expected_tool_name
         self.expected_args = expected_args
         self.expected_optional_args = expected_optional_args
@@ -41,7 +42,8 @@ class CheckArgsToolCallSubTask(SubTask):
             expected_optional_args=self.expected_optional_args,
         )
 
-    def dump(self) -> Dict[str, Any]:
+    @property
+    def info(self) -> Dict[str, Any]:
         return {
             "expected_tool_name": self.expected_tool_name,
             "expected_args": self.expected_args,
@@ -57,6 +59,7 @@ class CheckTopicFieldsToolCallSubTask(SubTask):
         expected_message_type: str,
         expected_fields: Dict[str, Any],
     ):
+        super().__init__()
         self.expected_tool_name = expected_tool_name
         self.expected_fields = expected_fields
         self.expected_topic = expected_topic
@@ -78,7 +81,8 @@ class CheckTopicFieldsToolCallSubTask(SubTask):
                 return False
         return True
 
-    def dump(self) -> Dict[str, Any]:
+    @property
+    def info(self) -> Dict[str, Any]:
         return {
             "expected_tool_name": self.expected_tool_name,
             "expected_topic": self.expected_topic,
@@ -95,6 +99,7 @@ class CheckServiceFieldsToolCallSubTask(SubTask):
         expected_service_type: str,
         expected_fields: Dict[str, Any],
     ):
+        super().__init__()
         self.expected_tool_name = expected_tool_name
         self.expected_fields = expected_fields
         self.expected_service = expected_service
@@ -116,7 +121,8 @@ class CheckServiceFieldsToolCallSubTask(SubTask):
                 return False
         return True
 
-    def dump(self) -> Dict[str, Any]:
+    @property
+    def info(self) -> Dict[str, Any]:
         return {
             "expected_tool_name": self.expected_tool_name,
             "expected_service": self.expected_service,
@@ -133,6 +139,7 @@ class CheckActionFieldsToolCallSubTask(SubTask):
         expected_action_type: str,
         expected_fields: Dict[str, Any],
     ):
+        super().__init__()
         self.expected_tool_name = expected_tool_name
         self.expected_fields = expected_fields
         self.expected_action = expected_action
@@ -154,7 +161,8 @@ class CheckActionFieldsToolCallSubTask(SubTask):
                 return False
         return True
 
-    def dump(self) -> Dict[str, Any]:
+    @property
+    def info(self) -> Dict[str, Any]:
         return {
             "expected_tool_name": self.expected_tool_name,
             "expected_action": self.expected_action,

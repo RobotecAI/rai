@@ -18,7 +18,7 @@ from typing import List, Union
 
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
-from rai_bench.manipulation_o3de.benchmark import Benchmark, Scenario
+from rai_bench.manipulation_o3de.benchmark import ManipulationO3DEBenchmark, Scenario
 from rai_bench.manipulation_o3de.interfaces import Task
 from rai_bench.manipulation_o3de.tasks import (
     BuildCubeTowerTask,
@@ -86,7 +86,7 @@ def trivial_scenarios(
                 place_object_tasks.append(
                     PlaceObjectAtCoordTask(obj, coord, disp, logger=logger)
                 )
-    easy_place_objects_scenarios = Benchmark.create_scenarios(
+    easy_place_objects_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=place_object_tasks,
         simulation_configs=simulations_configs,
         simulation_configs_paths=simulation_configs_paths,
@@ -99,7 +99,7 @@ def trivial_scenarios(
         for objects in object_groups
     ]
 
-    easy_move_to_left_scenarios = Benchmark.create_scenarios(
+    easy_move_to_left_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=move_to_left_tasks,
         simulation_configs=simulations_configs,
         simulation_configs_paths=simulation_configs_paths,
@@ -168,7 +168,7 @@ def easy_scenarios(
                 place_object_tasks.append(
                     PlaceObjectAtCoordTask(obj, coord, disp, logger=logger)
                 )
-    easy_place_objects_scenarios = Benchmark.create_scenarios(
+    easy_place_objects_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=place_object_tasks,
         simulation_configs=simulations_configs,
         simulation_configs_paths=simulation_configs_paths,
@@ -188,7 +188,7 @@ def easy_scenarios(
         for objects in object_groups
     ]
 
-    easy_move_to_left_scenarios = Benchmark.create_scenarios(
+    easy_move_to_left_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=move_to_left_tasks,
         simulation_configs=simulations_configs,
         simulation_configs_paths=simulation_configs_paths,
@@ -196,7 +196,7 @@ def easy_scenarios(
 
     # place cubes
     task = PlaceCubesTask(threshold_distance=0.2, logger=logger)
-    easy_place_cubes_scenarios = Benchmark.create_scenarios(
+    easy_place_cubes_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=[task],
         simulation_configs=simulations_configs,
         simulation_configs_paths=simulation_configs_paths,
@@ -284,7 +284,7 @@ def medium_scenarios(
         for objects in object_groups
     ]
 
-    move_to_left_scenarios = Benchmark.create_scenarios(
+    move_to_left_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=move_to_left_tasks,
         simulation_configs=medium_simulations_configs,
         simulation_configs_paths=medium_simulation_configs_paths,
@@ -293,7 +293,7 @@ def medium_scenarios(
 
     # place cubes
     task = PlaceCubesTask(threshold_distance=0.1, logger=logger)
-    easy_place_cubes_scenarios = Benchmark.create_scenarios(
+    easy_place_cubes_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=[task],
         simulation_configs=medium_simulations_configs,
         simulation_configs_paths=medium_simulation_configs_paths,
@@ -310,7 +310,7 @@ def medium_scenarios(
         for objects in object_groups
     ]
 
-    build_tower_scenarios = Benchmark.create_scenarios(
+    build_tower_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=build_tower_tasks,
         simulation_configs=easy_simulations_configs,
         simulation_configs_paths=easy_simulation_configs_paths,
@@ -330,7 +330,7 @@ def medium_scenarios(
         GroupObjectsTask(obj_types=objects, logger=logger) for objects in object_groups
     ]
 
-    group_object_scenarios = Benchmark.create_scenarios(
+    group_object_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=group_object_tasks,
         simulation_configs=easy_simulations_configs,
         simulation_configs_paths=easy_simulation_configs_paths,
@@ -418,7 +418,7 @@ def hard_scenarios(
         for objects in object_groups
     ]
 
-    move_to_left_scenarios = Benchmark.create_scenarios(
+    move_to_left_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=move_to_left_tasks,
         simulation_configs=hard_simulations_configs,
         simulation_configs_paths=hard_simulation_configs_paths,
@@ -426,7 +426,7 @@ def hard_scenarios(
 
     # place cubes
     task = PlaceCubesTask(threshold_distance=0.1, logger=logger)
-    easy_place_cubes_scenarios = Benchmark.create_scenarios(
+    easy_place_cubes_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=[task],
         simulation_configs=hard_simulations_configs,
         simulation_configs_paths=hard_simulation_configs_paths,
@@ -442,7 +442,7 @@ def hard_scenarios(
         for objects in object_groups
     ]
 
-    build_tower_scenarios = Benchmark.create_scenarios(
+    build_tower_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=build_tower_tasks,
         simulation_configs=medium_simulations_configs,
         simulation_configs_paths=medium_simulation_configs_paths,
@@ -464,7 +464,7 @@ def hard_scenarios(
         GroupObjectsTask(obj_types=objects, logger=logger) for objects in object_groups
     ]
 
-    group_object_scenarios = Benchmark.create_scenarios(
+    group_object_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=group_object_tasks,
         simulation_configs=medium_simulations_configs,
         simulation_configs_paths=medium_simulation_configs_paths,
@@ -534,7 +534,7 @@ def very_hard_scenarios(
         for objects in object_groups
     ]
 
-    build_tower_scenarios = Benchmark.create_scenarios(
+    build_tower_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=build_tower_tasks,
         simulation_configs=hard_simulations_configs,
         simulation_configs_paths=hard_simulation_configs_paths,
@@ -555,7 +555,7 @@ def very_hard_scenarios(
         GroupObjectsTask(obj_types=objects, logger=logger) for objects in object_groups
     ]
 
-    group_object_scenarios = Benchmark.create_scenarios(
+    group_object_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=group_object_tasks,
         simulation_configs=hard_simulations_configs,
         simulation_configs_paths=hard_simulation_configs_paths,

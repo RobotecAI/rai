@@ -44,6 +44,10 @@ Example of tool calls:
 
 
 class BasicTask(Task, ABC):
+    @property
+    def type(self) -> str:
+        return "basic"
+
     def get_system_prompt(self) -> str:
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
 

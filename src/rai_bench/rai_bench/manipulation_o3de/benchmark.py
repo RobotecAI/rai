@@ -11,20 +11,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import csv
 import logging
+import statistics
 import time
-from typing import Any, Dict, Generic, List, TypeVar, Union
+from pathlib import Path
+from typing import Generic, List, TypeVar
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langgraph.graph.state import CompiledStateGraph
 from rai.messages import HumanMultimodalMessage
-from rclpy.impl.rcutils_logger import RcutilsLogger
 
+from rai_bench.base_benchmark import BaseBenchmark, BenchmarkSummary
 from rai_bench.manipulation_o3de.interfaces import Task
-from rai_sim.simulation_bridge import Entity, SimulationBridge, SimulationConfigT
+from rai_bench.manipulation_o3de.results_tracking import ScenarioResult
+from rai_sim.simulation_bridge import (
+    Entity,
+    SimulationBridge,
+    SimulationConfigT,
+)
 
-loggers_type = Union[RcutilsLogger, logging.Logger]
 EntityT = TypeVar("EntityT", bound=Entity)
 
 
@@ -68,38 +73,32 @@ class Scenario(Generic[SimulationConfigT]):
         self.simulation_config_path = simulation_config_path
 
 
-class Benchmark:
+class ManipulationO3DEBenchmark(BaseBenchmark):
     """
-    Benchmark represents a set of Scenarios to be executed and evaluated.
+    ManipulationO3DEBenchmark represents a set of Scenarios to be executed and evaluated.
     It manages the execution, logs results, and provides functionality
     for tracking and exporting performance metrics.
     """
 
     def __init__(
         self,
+        model_name: str,
         simulation_bridge: SimulationBridge[SimulationConfigT],
         scenarios: List[Scenario[SimulationConfigT]],
-        logger: loggers_type | None = None,
-        results_filename: str = "benchmark_results.csv",
+        results_dir: Path,
+        logger: logging.Logger | None = None,
     ) -> None:
+        super().__init__(
+            model_name=model_name,
+            results_dir=results_dir,
+            logger=logger,
+        )
         self.simulation_bridge = simulation_bridge
         self.num_of_scenarios = len(scenarios)
         self.scenarios = enumerate(iter(scenarios))
-        self.results: List[Dict[str, Any]] = []
-        self.results_filename = results_filename
-        if logger:
-            self._logger = logger
-        else:
-            self._logger = logging.getLogger(__name__)
 
-        self.fieldnames = [
-            "task",
-            "simulation_config",
-            "final_score",
-            "total_time",
-            "number_of_tool_calls",
-        ]
-        self._initialize_results_file()
+        self.scenario_results: List[ScenarioResult] = []
+        self.csv_initialize(self.results_filename, ScenarioResult)
 
     @classmethod
     def create_scenarios(
@@ -107,7 +106,7 @@ class Benchmark:
         tasks: List[Task],
         simulation_configs: List[SimulationConfigT],
         simulation_configs_paths: List[str],
-        logger: loggers_type | None = None,
+        logger: logging.Logger | None = None,
     ) -> List[Scenario[SimulationConfigT]]:
         """
         Create scenarios by pairing each task with each suitable simulation configuration.
@@ -142,18 +141,10 @@ class Benchmark:
                         )
                     )
                 else:
-                    logger.debug(  # type: ignore
-                        f"Simulation config: {sim_path} is not suitable for task: {task.get_prompt()}"
+                    logger.debug(
+                        f"Simulation config: {sim_path} is not suitable for task: {task.task_prompt}"
                     )
         return scenarios
-
-    def _initialize_results_file(self):
-        """Initialize the CSV file with headers."""
-        with open(
-            self.results_filename, mode="w", newline="", encoding="utf-8"
-        ) as file:
-            writer = csv.DictWriter(file, fieldnames=self.fieldnames)
-            writer.writeheader()
 
     def run_next(self, agent: CompiledStateGraph) -> None:
         """
@@ -171,18 +162,18 @@ class Benchmark:
             i, scenario = next(self.scenarios)  # Get the next scenario
 
             self.simulation_bridge.setup_scene(scenario.simulation_config)
-            self._logger.info(  # type: ignore
+            self.logger.info(
                 "======================================================================================"
             )
-            self._logger.info(  # type: ignore
-                f"RUNNING SCENARIO NUMBER {i + 1} / {self.num_of_scenarios}\n TASK: {scenario.task.get_prompt()}\n SIMULATION_CONFIG: {scenario.simulation_config_path}"
+            self.logger.info(
+                f"RUNNING SCENARIO NUMBER {i + 1} / {self.num_of_scenarios}\n TASK: {scenario.task.task_prompt}\n SIMULATION_CONFIG: {scenario.simulation_config_path}"
             )
             tool_calls_num = 0
 
             ts = time.perf_counter()
             prev_count: int = 0
             for state in agent.stream(
-                {"messages": [HumanMessage(content=scenario.task.get_prompt())]},
+                {"messages": [HumanMessage(content=scenario.task.task_prompt)]},
                 {
                     "recursion_limit": 100
                 },  # NOTE (jmatejcz) what should be recursion limit?
@@ -201,7 +192,7 @@ class Benchmark:
                                     last_msg = msg.content[0].get("text", "")
                         else:
                             last_msg = msg.content
-                            self._logger.debug(f"{node}: {last_msg}")  # type: ignore
+                            self.logger.debug(f"{node}: {last_msg}")
 
                     else:
                         raise ValueError(f"Unexpected type of message: {type(msg)}")
@@ -209,37 +200,66 @@ class Benchmark:
                     if isinstance(msg, AIMessage):
                         tool_calls_num += len(msg.tool_calls)
 
-                    self._logger.info(f"AI Message: {msg}")  # type: ignore
+                    self.logger.info(f"AI Message: {msg}")
 
             te = time.perf_counter()
             try:
-                result = scenario.task.calculate_result(self.simulation_bridge)
+                score = scenario.task.calculate_score(self.simulation_bridge)
                 total_time = te - ts
-                self._logger.info(  # type: ignore
-                    f"TASK SCORE: {result}, TOTAL TIME: {total_time:.3f}, NUM_OF_TOOL_CALLS: {tool_calls_num}"
+                self.logger.info(
+                    f"TASK SCORE: {score}, TOTAL TIME: {total_time:.3f}, NUM_OF_TOOL_CALLS: {tool_calls_num}"
                 )
-                scenario_result: Dict[str, Any] = {
-                    "task": scenario.task.get_prompt(),
-                    "simulation_config": scenario.simulation_config_path,
-                    "final_score": result,
-                    "total_time": f"{total_time:.3f}",
-                    "number_of_tool_calls": tool_calls_num,
-                }
-                self.results.append(scenario_result)
-                self._save_scenario_result_to_csv(scenario_result)
+
+                scenario_result = ScenarioResult(
+                    task_prompt=scenario.task.task_prompt,
+                    system_prompt=scenario.task.system_prompt,
+                    simulation_config_path=scenario.simulation_config_path,
+                    model_name=self.model_name,
+                    score=score,
+                    total_time=total_time,
+                    number_of_tool_calls=tool_calls_num,
+                )
+                self.scenario_results.append(scenario_result)
+                self.csv_writerow(self.results_filename, scenario_result)
+                self.compute_and_save_summary()
             except EntitiesMismatchException as e:
-                self._logger.error(e)  # type: ignore
+                self.logger.error(e)
 
         except StopIteration:
             print("No more scenarios left to run.")
 
-    def _save_scenario_result_to_csv(self, result: Dict[str, Any]) -> None:
-        """Save a single scenario result to the CSV file."""
-        with open(
-            self.results_filename, mode="a", newline="", encoding="utf-8"
-        ) as file:
-            writer = csv.DictWriter(file, fieldnames=self.fieldnames)
-            writer.writerow(result)
+    def compute_and_save_summary(self) -> None:
+        """Compute summary statistics and save them to the summary file."""
+        self.logger.info("Computing and saving average results...")
 
-    def get_results(self) -> List[Dict[str, Any]]:
-        return self.results
+        success_count = sum(1 for r in self.scenario_results if r.score == 1.0)
+        success_rate = (
+            success_count / len(self.scenario_results) * 100
+            if self.scenario_results
+            else 0
+        )
+        avg_time = (
+            statistics.mean(r.total_time for r in self.scenario_results)
+            if self.scenario_results
+            else 0
+        )
+
+        # TODO (jm) extend this bechmark to implement extra tool calls
+        # since this benchmark doesn't have the concept of "extra tool calls",
+        # we use the total number of tool calls instead
+        total_tool_calls = sum(r.number_of_tool_calls for r in self.scenario_results)
+
+        summary = BenchmarkSummary(
+            model_name=self.model_name,
+            success_rate=round(success_rate, 2),
+            avg_time=round(avg_time, 3),
+            total_extra_tool_calls_used=total_tool_calls,
+            total_tasks=len(self.scenario_results),
+        )
+        self.csv_initialize(self.summary_filename, BenchmarkSummary)
+        self.csv_writerow(self.summary_filename, summary)
+
+        self.logger.info(
+            f"Summary for model {self.model_name}: Success rate {success_rate:.2f}%, "
+            f"Average time {avg_time:.3f}s, Total tasks: {len(self.scenario_results)}"
+        )

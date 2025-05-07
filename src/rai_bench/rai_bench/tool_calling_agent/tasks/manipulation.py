@@ -46,6 +46,10 @@ class TaskParametrizationError(Exception):
 
 
 class ManipulationTask(Task, ABC):
+    @property
+    def type(self) -> str:
+        return "manipulation"
+
     def get_system_prompt(self) -> str:
         return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
 

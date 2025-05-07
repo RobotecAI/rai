@@ -53,7 +53,8 @@ class PlaceObjectAtCoordTask(ManipulationTask):
         self.target_position = target_position
         self.allowable_displacement = allowable_displacement
 
-    def get_prompt(self) -> str:
+    @property
+    def task_prompt(self) -> str:
         x, y = self.target_position
         return (
             f"Manipulate one {self.obj_type.replace('_', ' ')} so that it is placed at "
