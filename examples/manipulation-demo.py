@@ -60,7 +60,9 @@ def create_agent():
     ]
 
     llm = get_llm_model(model_type="complex_model", streaming=True)
-    embodiment_info = EmbodimentInfo.from_file("examples/manipulation_embodiment.json")
+    embodiment_info = EmbodimentInfo.from_file(
+        "examples/embodiments/manipulation_embodiment.json"
+    )
     system_prompt = embodiment_info.to_langchain()
     agent = create_conversational_agent(
         llm=llm,

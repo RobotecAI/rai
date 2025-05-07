@@ -23,14 +23,15 @@ from rai.agents.langchain.core import (
     create_conversational_agent,
 )
 from rai.communication.ros2.connectors import ROS2Connector
-from rai.tools.ros2 import ROS2ServicesToolkit, ROS2TopicsToolkit
+from rai.tools.ros2 import ROS2ServicesToolkit
+from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
 from rai.tools.time import WaitForSecondsTool
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from std_srvs.srv import Trigger
 
-from rai_interfaces.action import Task
+from rai_whoami.models import EmbodimentInfo
 
 
 class MockBehaviorTreeNode(Node):
@@ -42,7 +43,7 @@ class MockBehaviorTreeNode(Node):
         super().__init__(f"mock_behavior_tree_node_{tractor_number}")
         self.tractor_number = tractor_number
         self.agent = agent
-
+        self.working = False
         # Create a callback group for concurrent execution
         self.callback_group = ReentrantCallbackGroup()
 
@@ -68,20 +69,22 @@ class MockBehaviorTreeNode(Node):
 
         self.get_logger().info(f"Current state: {response.message}")
 
-        if "STOPPED" in response.message:
+        if "STOPPED" in response.message and not self.working:
             self.get_logger().info(
-                "The tractor has stopped. Calling RaiNode to decide what to do."
+                "The tractor has stopped. Calling RAI Agent to decide what to do."
             )
 
-            # Send goal to perform_task action server
-            goal_msg = Task.Goal()
-            goal_msg.priority = "high"
-            goal_msg.description = ""
-            goal_msg.task = "Anomaly detected. Please decide what to do."
-
+            self.working = True
             self.agent.invoke(
-                ConversationalAgentState(messages=[HumanMessage(content=str(goal_msg))])
+                ConversationalAgentState(
+                    messages=[
+                        HumanMessage(
+                            content="Anomaly has been detected. The tractor has stopped. Please decide what to do."
+                        )
+                    ]
+                )
             )
+            self.working = False
 
 
 def main():
@@ -99,26 +102,28 @@ def main():
 
     rclpy.init()
 
-    SYSTEM_PROMPT = f"""
-    You are autonomous tractor {tractor_number} operating in an agricultural field. You are activated whenever the tractor stops due to an unexpected situation. Your task is to call a service based on your assessment of the situation.
-
-    The system is not perfect, so it may stop you unnecessarily at times.
-
-    You are to call one of the following services based on the situation:
-    1. continue - If you believe the stop was unnecessary.
-    2. current_state - If you want to check the current state of the tractor.
-    3. flash - If you want to flash the lights to signal possible animals to move out of the way.
-    4. replan - If you want to replan the path due to an obstacle in front of you.
-
-    Important: You must call only one service. The tractor can only handle one service call.
-    """
+    system_prompt = EmbodimentInfo.from_file(
+        "examples/embodiments/agriculture_embodiment.json"
+    ).to_langchain()
     connector = ROS2Connector()
     agent = create_conversational_agent(
         llm=get_llm_model("complex_model"),
-        system_prompt=SYSTEM_PROMPT,
+        system_prompt=system_prompt,
         tools=[
-            *ROS2TopicsToolkit(connector=connector).get_tools(),
-            *ROS2ServicesToolkit(connector=connector).get_tools(),
+            GetROS2ImageConfiguredTool(
+                connector=connector,
+                topic=f"/tractor{args.tractor_number}/camera_image_color",
+            ),
+            *ROS2ServicesToolkit(
+                connector=connector,
+                writable=[
+                    f"/tractor{args.tractor_number}/continue",
+                    f"/tractor{args.tractor_number}/current_state",
+                    f"/tractor{args.tractor_number}/flash",
+                    f"/tractor{args.tractor_number}/replan",
+                    f"/tractor{args.tractor_number}/stop",
+                ],
+            ).get_tools(),
             WaitForSecondsTool(),
         ],
     )
