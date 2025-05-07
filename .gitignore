@@ -176,3 +176,6 @@ artifact_database.pkl
 imgui.ini
 
 src/rai_bench/rai_bench/experiments
+
+# Demo assets
+demo_assets/
