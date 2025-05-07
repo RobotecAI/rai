@@ -187,7 +187,6 @@ python src/rai_bench/rai_bench/examples/test_models.py
 All results from running benchmarks will be saved to folder [experiments](./rai_bench/experiments/)
 
 If you run single benchmark test like:
-When you run a test via:
 
 ```bash
 python src/rai_bench/rai_bench/examples/<benchmark_name>/main.py
