@@ -4,3 +4,8 @@
 :root  > * {
   --md-primary-fg-color:        #1A88AB;
 }
+
+table td code {
+  white-space: nowrap;
+  word-break: keep-all;
+}
