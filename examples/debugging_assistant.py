@@ -18,6 +18,8 @@ from rai.agents.langchain.core import create_conversational_agent
 from rai.frontend import run_streamlit_app
 from rai.tools.ros2 import ROS2CLIToolkit
 
+from rai_whoami import EmbodimentInfo
+
 
 @st.cache_resource
 def initialize_agent():
@@ -25,9 +27,9 @@ def initialize_agent():
     agent = create_conversational_agent(
         llm,
         ROS2CLIToolkit().get_tools(),
-        system_prompt="""You are a ROS 2 expert helping a user with their ROS 2 questions. You have access to various tools that allow you to query the ROS 2 system.
-                Be proactive and use the tools to answer questions. Retrieve as much information from the ROS 2 system as possible.
-                """,
+        system_prompt=EmbodimentInfo.from_file(
+            "examples/embodiments/ros2_debugging_assistant_embodiment.json"
+        ).to_langchain(),
     )
     return agent
 
