@@ -15,7 +15,7 @@ Add required ROS dependencies:
 rosdep install --from-paths src --ignore-src -r
 ```
 
-### Build and run
+## Build and run
 
 In the base directory of the `RAI` package install dependencies:
 
@@ -62,67 +62,69 @@ These agents can be triggered by ROS2 services:
 > [!NOTE]
 > The weights will be downloaded to `~/.cache/rai` directory.
 
-### RAI Tools
+## RAI Tools
 
 `rai_open_set_vision` package contains tools that can be used by [RAI LLM agents](../tutorials/walkthrough.md)
 enhance their perception capabilities. For more information on RAI Tools see
 [Tool use and development](../tutorials/tools.md) tutorial.
 
--   `GetDetectionTool`
-    This tool calls the grounding dino service to use the model to see if the message from the provided camera topic contains objects from a comma separated prompt.
+### `GetDetectionTool`
+
+This tool calls the grounding dino service to use the model to see if the message from the provided camera topic contains objects from a comma separated prompt.
 
 > [!TIP]
 >
 > You can try example below with [ROSBotXL Demo](../demos/rosbot_xl.md) binary.
 > The binary exposes `/camera/camera/color/image_raw` and `/camera/camera/depth/image_raw` topics.
 
-    **Example call**
+**Example call**
 
-    ```
-    from rai_open_set_vision.tools import GetDetectionTool
-    from rai.communication.ros2 import ROS2Connector, ROS2Context
+```
+from rai_open_set_vision.tools import GetDetectionTool
+from rai.communication.ros2 import ROS2Connector, ROS2Context
 
-    with ROS2Context():
-        connector=ROS2Connector(node_name="test_node")
-        x = GetDetectionTool(connector=connector)._run(
-            camera_topic="/camera/camera/color/image_raw",
-            object_names=["chair", "human", "plushie", "box", "ball"],
-        )
-    ```
+with ROS2Context():
+    connector=ROS2Connector(node_name="test_node")
+    x = GetDetectionTool(connector=connector)._run(
+        camera_topic="/camera/camera/color/image_raw",
+        object_names=["chair", "human", "plushie", "box", "ball"],
+    )
+```
 
-    **Example output**
+**Example output**
 
-    ```
-    I have detected the following items in the picture - chair, human
-    ```
+```
+I have detected the following items in the picture - chair, human
+```
 
--   `GetDistanceToObjectsTool`
-    This tool calls the grounding dino service to use the model to see if the message from the provided camera topic contains objects from a comma separated prompt. Then it utilises messages from depth camera to create an estimation of distance to a detected object.
+### `GetDistanceToObjectsTool`
 
-    **Example call**
+This tool calls the grounding dino service to use the model to see if the message from the provided camera topic contains objects from a comma separated prompt. Then it utilises messages from depth camera to create an estimation of distance to a detected object.
 
-    ```
-    from rai_open_set_vision.tools import GetDetectionTool
-    from rai.communication.ros2 import ROS2Connector, ROS2Context
+**Example call**
 
-    with ROS2Context():
-        connector=ROS2Connector(node_name="test_node")
-        connector.node.declare_parameter("conversion_ratio", 1.0)
-        x = GetDistanceToObjectsTool(connector=connector)._run(
-            camera_topic="/camera/camera/color/image_raw",
-            depth_topic="/camera/camera/depth/image_rect_raw",
-            object_names=["chair", "human", "plushie", "box", "ball"],
-        )
+```python
+from rai_open_set_vision.tools import GetDetectionTool
+from rai.communication.ros2 import ROS2Connector, ROS2Context
 
-    ```
+with ROS2Context():
+    connector=ROS2Connector(node_name="test_node")
+    connector.node.declare_parameter("conversion_ratio", 1.0)
+    x = GetDistanceToObjectsTool(connector=connector)._run(
+        camera_topic="/camera/camera/color/image_raw",
+        depth_topic="/camera/camera/depth/image_rect_raw",
+        object_names=["chair", "human", "plushie", "box", "ball"],
+    )
 
-    **Example output**
+```
 
-    ```
-    I have detected the following items in the picture human: 3.77m away
-    ```
+**Example output**
 
-### Simple ROS2 Client Node Example
+```
+I have detected the following items in the picture human: 3.77m away
+```
+
+## Simple ROS2 Client Node Example
 
 An example client is provided with the package as `rai_open_set_vision/talker.py`
 
