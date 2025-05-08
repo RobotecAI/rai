@@ -63,10 +63,10 @@ rosdep install --from-paths src --ignore-src -r -y
 
     | Group Name | Description | Dependencies |
     |------------|-------------|--------------|
-    | s2s | Speech-to-Speech functionality | rai_asr, rai_tts |
-    | simbench | Simulation and benchmarking tools | rai_sim, rai_bench |
-    | openset | Open-set detection capabilities | groundingdino, groundedsam |
-    | nomad | Visual Navigation - NoMaD integration | visualnav_transformer |
+    | [s2s][s2s] | Speech-to-Speech functionality | rai_asr, rai_tts |
+    | [simbench][simbench] | Simulation and benchmarking tools | rai_sim, rai_bench |
+    | [openset][openset] | Open-set detection capabilities | groundingdino, groundedsam |
+    | [nomad][nomad] | Visual Navigation - NoMaD integration | visualnav_transformer |
     | docs | Documentation-related dependencies | mkdocs, mkdocs-material, pymdown-extensions |
 
 ### 1.4 Configure RAI
@@ -110,3 +110,8 @@ Pick your local solution or service provider and follow one of these guides:
 -   **[Ollama](https://ollama.com/download)**
 -   **[OpenAI](https://platform.openai.com/docs/quickstart)**
 -   **[AWS Bedrock](https://console.aws.amazon.com/bedrock/home?#/overview)**
+
+[s2s]: ../tutorials/voice_interface.md
+[simbench]: ../simulation_and_benchmarking/overview.md
+[openset]: ../extensions/openset-readme-link.md
+[nomad]: ../extensions/nomad-readme-link.md

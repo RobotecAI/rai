@@ -1,8 +1,8 @@
 # Tracing Configuration
 
-RAI supports tracing capabilities to help monitor and analyze the performance of your AI models, at
-a minor performance cost. By default, tracing is off. This document outlines how to configure
-tracing for your RAI project.
+RAI supports tracing capabilities to help monitor and analyze the performance of your
+LLM applications, at a minor performance cost. By default, tracing is off. This document
+outlines how to configure tracing for your RAI project.
 
 ## Configuration
 
@@ -44,9 +44,11 @@ To enable LangSmith tracing:
 3. Optionally, you can specify a custom LangSmith host by modifying the `host` field under
    `[tracing.langsmith]`.
 
+    For deployment details please refer to [LangFuse documentation](https://langfuse.com/docs/get-started)
+
 ## Usage
 
-To enable tracing in your RAI application, you need to import the get_tracing_callbacks() function
+To enable tracing in your RAI application, you need to import the [`rai.get_tracing_callbacks`](rai.get_tracing_callbacks) function
 and add it to the configuration when invoking your agent or model. Here's how to do it:
 
 1. First, import the get_tracing_callbacks() function:
