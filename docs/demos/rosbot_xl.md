@@ -7,10 +7,10 @@ platform in a nice apartment.
 
 ## Quick start
 
-!!! tip "LLM model"
-
-    The demo uses the `complex_model` LLM configured in `config.toml`. The model should be a
-    multimodal, tool-calling model.
+> [!TIP] LLM model
+>
+> The demo uses the `complex_model` LLM configured in `config.toml`. The model should be a
+> multimodal, tool-calling model. See [Vendors](../setup/vendors.md#llm-model-configuration-in-rai).
 
 1. Download the newest binary release:
 

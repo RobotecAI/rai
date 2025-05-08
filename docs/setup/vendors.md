@@ -16,10 +16,10 @@ The table summarizes vendor alternative for core AI service and optional RAI mod
 | **Optional:** [Text to speech](#text-to-speech) | OpenTTS     | ElevenLabs              | Arguably, significantly better voice synthesis                           | <li> [OpenTTS GitHub](https://github.com/synesthesiam/opentts) </li><li> [RAI voice interface][s2s] </li> |
 | **Optional:** [Speech to text](#speech-to-text) | Whisper     | OpenAI Whisper (hosted) | When suitable local GPU is not an option                                 | <li> [Whisper GitHub](https://github.com/openai/whisper) </li><li> [RAI voice interface][s2s] </li>       |
 
-!!! tip "Best-performing AI models"
-
-    Our recommendation, if your environment allows it, is to go with _OpenAI_ _GPT4o_ model,
-    _ElevenLabs_ for TTS, locally-hosted _Whisper_, and Langsmith.
+> [!TIP] Best-performing AI models
+>
+> Our recommendation, if your environment allows it, is to go with _OpenAI_ _GPT4o_ model,
+> _ElevenLabs_ for TTS, locally-hosted _Whisper_, and Langsmith.
 
 ## LLM Model Configuration in RAI
 
