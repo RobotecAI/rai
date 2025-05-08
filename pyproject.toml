@@ -30,6 +30,7 @@ mkdocs-material = "*"
 pymdown-extensions = "*"
 mkdocstrings-python = "*"
 mkdocs-markdownextradata-plugin = "*"
+mkdocs-callouts = "*"
 
 [tool.poetry.group.s2s]
 optional = true

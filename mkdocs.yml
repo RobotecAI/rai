@@ -22,6 +22,10 @@ markdown_extensions:
       toc_depth: 2
   - attr_list
   - pymdownx.emoji
+  - nl2br
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
 
 plugins:
 - search
@@ -32,6 +36,7 @@ plugins:
           docstring_style: numpy
           show_root_heading: true
 - markdownextradata:
+- callouts
 
 
 extra_css:
