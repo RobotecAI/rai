@@ -152,7 +152,6 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
             - self.last_executor_performance_time
             - self._executor_performance_time_delta
         )
-        print(f"Time behind: {time_behind}")
         threshold = (
             self._executor_performance_time_delta
             * self._performance_warning_threshold_multiplier
