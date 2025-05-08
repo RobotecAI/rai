@@ -108,9 +108,9 @@ def main():
     args = parser.parse_args()
 
     # Load the system prompt
-    system_prompt = EmbodimentInfo.from_file(
+    embodiment_info = EmbodimentInfo.from_file(
         "examples/embodiments/agriculture_embodiment.json"
-    ).to_langchain()
+    )
 
     # Initialize ROS 2 Communication
     connector = ROS2Connector()
@@ -118,7 +118,7 @@ def main():
     # Initialize LangGraph Agent
     agent = create_conversational_agent(
         llm=get_llm_model("complex_model"),
-        system_prompt=system_prompt,
+        system_prompt=embodiment_info.to_langchain(),
         tools=[
             GetROS2ImageConfiguredTool(
                 connector=connector,

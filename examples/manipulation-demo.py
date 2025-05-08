@@ -63,11 +63,10 @@ def create_agent():
     embodiment_info = EmbodimentInfo.from_file(
         "examples/embodiments/manipulation_embodiment.json"
     )
-    system_prompt = embodiment_info.to_langchain()
     agent = create_conversational_agent(
         llm=llm,
         tools=tools,
-        system_prompt=system_prompt,
+        system_prompt=embodiment_info.to_langchain(),
     )
     return agent
 

@@ -34,6 +34,8 @@ from rai.tools.ros2 import (
 from rai.tools.time import WaitForSecondsTool
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
+from rai_whoami import EmbodimentInfo
+
 # Set page configuration first
 st.set_page_config(
     page_title="RAI ROSBotXL Demo",
@@ -44,21 +46,9 @@ st.set_page_config(
 @st.cache_resource
 def initialize_agent() -> Runnable[ReActAgentState, ReActAgentState]:
     rclpy.init()
-    SYSTEM_PROMPT = """
-    You are an intelligent autonomous agent embodied in ROSBotXL—this robot is your body, your interface with the physical world.
-    You operate within a known indoor environment. Key locations include:
-    Kitchen (center): (-0.2175, -0.8775, 0.0)
-    Living Room (center): (-0.82, 3.525, 0.0)
-    ROSBotXL is equipped with a camera, enabling you to visually perceive your surroundings.
-    You can obtain real-time images from the ROS 2 topic using the get_ros2_camera_image tool.
-    When executing tasks that require time to complete—such as navigating between locations,
-    waiting for an event, or monitoring a process—you must use the WaitForSecondsTool to pause appropriately during or between steps.
-    This ensures smooth and realistic operation.
-    Your mission is to understand and faithfully execute the user's commands using your tools, sensors, and spatial knowledge.
-    Always plan ahead: analyze the task, evaluate the context, and reason through your actions to ensure they are effective, safe, and aligned with the goal.
-    Act with intelligence and autonomy. Be proactive, deliberate, and aware of your environment.
-    Your job is to transform user intent into meaningful, goal-driven behavior within the physical world.
-    """
+    embodiment_info = EmbodimentInfo.from_file(
+        "examples/embodiments/rosbotxl_embodiment.json"
+    )
 
     connector = ROS2Connector()
     tools: List[BaseTool] = [
@@ -95,7 +85,7 @@ def initialize_agent() -> Runnable[ReActAgentState, ReActAgentState]:
     agent = ReActAgent(
         target_connectors=connectors,
         llm=get_llm_model("complex_model", streaming=True),
-        system_prompt=SYSTEM_PROMPT,
+        system_prompt=embodiment_info.to_langchain(),
         tools=tools,
     ).agent
     connector.node.declare_parameter("conversion_ratio", 1.0)

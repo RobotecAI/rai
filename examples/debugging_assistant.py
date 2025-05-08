@@ -24,12 +24,13 @@ from rai_whoami import EmbodimentInfo
 @st.cache_resource
 def initialize_agent():
     llm = get_llm_model(model_type="complex_model", streaming=True)
+    embodiment_info = EmbodimentInfo.from_file(
+        "examples/embodiments/ros2_debugging_assistant_embodiment.json"
+    )
     agent = create_conversational_agent(
         llm,
         ROS2CLIToolkit().get_tools(),
-        system_prompt=EmbodimentInfo.from_file(
-            "examples/embodiments/ros2_debugging_assistant_embodiment.json"
-        ).to_langchain(),
+        system_prompt=embodiment_info.to_langchain(),
     )
     return agent
 
