@@ -101,12 +101,15 @@ def main():
     )
     args = parser.parse_args()
 
-    tractor_number = args.tractor_number
-
+    # Load the system prompt
     system_prompt = EmbodimentInfo.from_file(
         "examples/embodiments/agriculture_embodiment.json"
     ).to_langchain()
+
+    # Initialize ROS 2 Communication
     connector = ROS2Connector()
+
+    # Initialize LangGraph Agent
     agent = create_conversational_agent(
         llm=get_llm_model("complex_model"),
         system_prompt=system_prompt,
@@ -130,7 +133,8 @@ def main():
         ],
     )
 
-    safety_agent = SafetyAgent(agent, connector, tractor_number)
+    # Run the safety agent
+    safety_agent = SafetyAgent(agent, connector, args.tractor_number)
     safety_agent.run()
     wait_for_shutdown([safety_agent])
 
