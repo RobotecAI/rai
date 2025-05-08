@@ -1,9 +1,9 @@
 # RAI
 
-> [!IMPORTANT]  
-> **Development Status**: RAI is currently undergoing significant development on the development branch, focusing on version 2.0. This major version update will introduce substantial improvements and is not backward compatible with version 1.0. For the latest stable release, please refer to the [main branch](https://github.com/RobotecAI/rai/tree/main).
-
 RAI is a flexible AI agent framework to develop and deploy Embodied AI features for your robots.
+
+📚 Visit [robotecai.github.io/rai](https://robotecai.github.io/rai/) for the latest documentation, setup
+guide and tutorials. 📚
 
 ---
 
@@ -30,161 +30,50 @@ RAI is a flexible AI agent framework to develop and deploy Embodied AI features 
 
 ---
 
-## Overview
+## 🎯 Overview
 
-The RAI framework aims to:
+| Category                       | Description                                       | Features                                                                                                                                                           |
+| ------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 🤖 **Multi-Agent Systems**     | Empowering robotics with advanced AI capabilities | • Seamlessly integrate Gen AI capabilities into your robots<br>• Enable sophisticated agent-based architectures                                                    |
+| 🔄 **Robot Intelligence**      | Enhancing robotic systems with smart features     | • Add natural human-robot interaction capabilities<br>• Bring flexible problem-solving to your existing stack<br>• Provide ready-to-use AI features out of the box |
+| 🌟 **Multi-Modal Interaction** | Supporting diverse interaction capabilities       | • Handle diverse data types natively<br>• Enable rich sensory integration<br>• Process multiple input/output modalities simultaneously                             |
 
-- Supply a general multi-agent system, bringing Gen AI features to your robots.
-- Add human interactivity, flexibility in problem-solving, and out-of-box AI features to existing robot stacks.
-- Provide first-class support for multi-modalities, enabling interaction with various data types.
+## RAI framework
 
-## Limitations
-
-- Limitations of LLMs and VLMs in use apply: poor spatial reasoning, hallucinations, jailbreaks, latencies, costs, ...
-- Resource use (memory, CPU) is not addressed yet.​
-- Requires connectivity and / or an edge platform.​
-
-## Table of Contents
-
-- [Features](#features)
-- [Setup (docker)](#setup-docker)
-- [Setup (local)](#setup)
-- [Usage examples (demos)](#simulation-demos)
-- [Debugging Assistant](#debugging-assistant)
-- [Developer resources](#developer-resources)
-
-## Features
-
-- [x] Voice interaction (both ways).
-- [x] Customizable robot identity, including constitution (ethical code) and documentation (understanding own capabilities).
-- [x] Accessing camera ("What do you see?"), utilizing VLMs.
-- [x] Summarizing own state through ROS logs.
-- [x] ROS 2 action calling and other interfaces. The Agent can dynamically list interfaces, check their message type, and publish.
-- [x] Integration with LangChain to abstract vendors and access convenient AI tools.
-- [x] Tasks in natural language to nav2 goals.
-- [x] [NoMaD](https://general-navigation-models.github.io/nomad/) integration.
-- [x] Tracing.
-- [x] Grounded SAM 2 integration.
-- [x] Improved Human-Robot Interaction with voice and text.
-- [x] Additional tooling such as GroundingDino.
-- [x] Support for at least 3 different AI vendors.
-- [x] Debugging assistant for ROS 2.
-- [ ] SDK for RAI developers.
-- [ ] UI for configuration to select features and tools relevant for your deployment.
-
-## Setup (docker)
-
-Currently, docker images are experimental. See the [docker](docs/setup_docker.md) for instructions.
-
-## Setup (local)
-
-Before going further, make sure you have ROS 2 (Jazzy or Humble) installed and sourced on your system.
-If you don't have ROS 2 follow the installation documentation for [Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html) or [Jazzy](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html).
-Make sure that `ros-dev-tools` are installed.
-
-### 1. Setting up the workspace:
-
-#### 1.1 Install poetry
-
-RAI uses [Poetry](https://python-poetry.org/) for python packaging and dependency management. Install poetry with the following line:
-
-```bash
-curl -sSL https://install.python-poetry.org | python3 -
-```
-
-Alternatively, you can opt to do so by following the [official docs](https://python-poetry.org/docs/#installation).
-
-#### 1.2 Clone the repository:
-
-```bash
-git clone https://github.com/RobotecAI/rai.git
-cd rai
-```
-
-#### 1.3 Create poetry virtual environment and install dependencies:
-
-```bash
-poetry install
-rosdep install --from-paths src --ignore-src -r -y
-```
-
-> [!TIP]  
-> RAI is modular. If you want to use features such as speech-to-speech, simulation and benchmarking suite, openset detection, or NoMaD integration, install additional dependencies:
->
-> ```bash
-> poetry install --with openset,nomad,s2s,simbench
-> ```
-
-#### 1.4 Configure RAI
-
-Run the configuration tool to set up your vendor and other settings:
-
-```bash
-poetry run streamlit run src/rai_core/rai/frontend/configurator.py
-```
-
-> [!TIP]  
-> If the web browser does not open automatically, open the URL displayed in the terminal manually.
-
-### 2. Build the project:
-
-#### 2.1 Build RAI workspace
-
-```bash
-colcon build --symlink-install
-```
-
-#### 2.2 Activate a virtual environment:
-
-```bash
-source ./setup_shell.sh
-```
-
-### 3. Setting up vendors
-
-RAI is vendor-agnostic. Use the configuration in [config.toml](./config.toml) to set up your vendor of choice for RAI modules.
-Vendor choices for RAI and our recommendations are summarized in [Vendors Overview](docs/vendors_overview.md).
-
-> We strongly recommend you to use of best-performing AI models to get the most out of RAI!
-
-Pick your local solution or service provider and follow one of these guides:
-
-- **[Ollama](https://ollama.com/download)**
-- **[OpenAI](https://platform.openai.com/docs/quickstart)**
-- **[AWS Bedrock](https://console.aws.amazon.com/bedrock/home?#/overview)**
-
-## What's next?
-
-Once you know your way around RAI, try the following challenges, with the aid the [developer guide](docs/developer_guide.md):
-
-- Run RAI on your own robot and talk to it, asking questions about what is in its documentation (and others!).
-- Implement additional tools and use them in your interaction.
-- Try a complex, multi-step task for your robot, such as going to several points to perform observations!
-
-## Debugging Assistant
-
-Use the [debugging assistant](./docs/debugging_assistant.md) to inspect ROS 2 network state and troubleshoot issues.
+-   [x] rai core: Core functionality for multi-agent system, human-robot interaction and
+        multi-modalities.
+-   [x] rai whoami: Tool to extract and synthesize robot embodiment information from a structured
+        directory of documentation, images, and URDFs.
+-   [x] rai_asr: Speech-to-text models and tools.
+-   [x] rai_tts: Text-to-speech models and tools.
+-   [x] rai_sim: Package for connecting RAI to simulation environments.
+-   [x] rai_bench: Benchmarking suite for RAI. Test agents, models, tools, simulators, etc.
+-   [x] rai_openset: Openset detection models and tools.
+-   [x] rai_nomad: Integration with NoMaD for navigation.
+-   [ ] rai_finetune: Finetune LLMs on your embodied data.
 
 ### Simulation demos
 
 Try RAI yourself with these demos:
 | Application | Robot | Description | Docs Link |
 | ------------------------------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
-| Mission and obstacle reasoning in orchards | Autonomous tractor | In a beautiful scene of a virtual orchard, RAI goes beyond obstacle detection to analyze best course of action for a given unexpected situation. | [link](docs/demos/agriculture.md) |
-| Manipulation tasks with natural language | Robot Arm (Franka Panda) | Complete flexible manipulation tasks thanks to RAI and Grounded SAM 2 | [link](docs/demos/manipulation.md) |
-| Autonomous mobile robot demo | Husarion ROSbot XL | Demonstrate RAI's interaction with an autonomous mobile robot platform for navigation and control | [link](docs/demos/rosbot_xl.md) |
-| Turtlebot demo | Turtlebot | Showcase RAI's capabilities with the popular Turtlebot platform | [link](docs/demos/turtlebot.md) |
-| Speech-to-speech interaction with autonomous taxi | Simulated car | Demonstrate RAI's speech-to-speech interaction capabilities for specifying destinations to an autonomous taxi in awsim with autoware environment | [link](docs/demos/taxi.md) |
+| Mission and obstacle reasoning in orchards | Autonomous tractor | In a beautiful scene of a virtual orchard, RAI goes beyond obstacle detection to analyze best course of action for a given unexpected situation. | [link](https://robotecai.github.io/rai/demos/agriculture/) |
+| Manipulation tasks with natural language | Robot Arm (Franka Panda) | Complete flexible manipulation tasks thanks to RAI and Grounded SAM 2 | [link](https://robotecai.github.io/rai/demos/manipulation/) |
+| Autonomous mobile robot demo | Husarion ROSbot XL | Demonstrate RAI's interaction with an autonomous mobile robot platform for navigation and control | [link](https://robotecai.github.io/rai/demos/rosbot_xl/) |
+| Speech-to-speech interaction with autonomous taxi | Simulated car | Demonstrate RAI's speech-to-speech interaction capabilities for specifying destinations to an autonomous taxi in awsim with autoware environment | [link](https://robotecai.github.io/rai/demos/taxi/) |
 
 ## Community
 
 ### Embodied AI Community Group
 
-RAI is one of the main projects in focus of the [Embodied AI Community Group](https://github.com/ros-wg-embodied-ai). If you would like to join the next meeting, look for it in the [ROS Community Calendar](https://calendar.google.com/calendar/u/0/embed?src=c_3fc5c4d6ece9d80d49f136c1dcd54d7f44e1acefdbe87228c92ff268e85e2ea0@group.calendar.google.com&ctz=Etc/UTC).
+RAI is one of the main projects in focus of the
+[Embodied AI Community Group](https://github.com/ros-wg-embodied-ai). If you would like to join the
+next meeting, look for it in the
+[ROS Community Calendar](https://calendar.google.com/calendar/u/0/embed?src=c_3fc5c4d6ece9d80d49f136c1dcd54d7f44e1acefdbe87228c92ff268e85e2ea0@group.calendar.google.com&ctz=Etc/UTC).
 
 ### Publicity
 
-- A talk about [RAI at ROSCon 2024](https://vimeo.com/1026029511).
+-   A talk about [RAI at ROSCon 2024](https://vimeo.com/1026029511).
 
 ### RAI Q&A
 
@@ -192,7 +81,8 @@ Please take a look at [Q&A](https://github.com/RobotecAI/rai/discussions/categor
 
 ### Developer Resources
 
-See our [Developer Guide](docs/developer_guide.md) for a deeper dive into RAI, including instructions on creating a configuration specifically for your robot.
+See our [documentation](https://robotecai.github.io/rai/) for a deeper dive into RAI, including
+instructions on creating a configuration specifically for your robot.
 
 ### Contributing
 

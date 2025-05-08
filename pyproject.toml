@@ -21,6 +21,16 @@ tabulate = "^0.9.0"
 pytest = "^8.2.0"
 pytest-timeout = "^2.3.1"
 
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+mkdocs = "*"
+mkdocs-material = "*"
+pymdown-extensions = "*"
+mkdocstrings-python = "*"
+mkdocs-markdownextradata-plugin = "*"
+
 [tool.poetry.group.s2s]
 optional = true
 

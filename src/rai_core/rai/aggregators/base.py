@@ -24,9 +24,6 @@ T = TypeVar("T")
 class BaseAggregator(ABC, Generic[T]):
     """
     Interface for aggregators.
-
-    `__call__` method receives a message and appends it to the buffer.
-    `get` method returns the aggregated message.
     """
 
     def __init__(self, max_size: int | None = None) -> None:
@@ -41,13 +38,15 @@ class BaseAggregator(ABC, Generic[T]):
 
     @abstractmethod
     def get(self) -> BaseMessage | None:
-        """Returns the aggregated message"""
+        """Returns the outcome of processing the aggregated message"""
         pass
 
     def clear_buffer(self) -> None:
+        """Clears the buffer of messages"""
         self._buffer.clear()
 
     def get_buffer(self) -> List[T]:
+        """Returns a copy of the buffer of messages"""
         return list(self._buffer)
 
     def __str__(self) -> str:

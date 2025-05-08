@@ -13,11 +13,11 @@ It generates a comprehensive system prompt (embodiment info) for robots controll
 
 Given a directory containing robot documentation (documents, images, URDFs), RAI Whoami processes these resources to produce a structured representation of the robot, including:
 
-- **Rules**: Extracted operational or safety rules.
-- **Behaviors**: Descriptions of robot behaviors.
-- **Capabilities**: Functional and physical capabilities.
-- **Images**: Visual representations.
-- **Vector Database**: Embeddings of the robot's documentation. (optional)
+-   **Rules**: Extracted operational or safety rules.
+-   **Behaviors**: Descriptions of robot behaviors.
+-   **Capabilities**: Functional and physical capabilities.
+-   **Images**: Visual representations.
+-   **Vector Database**: Embeddings of the robot's documentation. (optional)
 
 This embodiment info is then used to create a system prompt for LLM-based agents, enabling them to reason about and interact with the robot effectively.
 

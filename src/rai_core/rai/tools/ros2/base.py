@@ -27,7 +27,7 @@ class BaseROS2Tool(BaseTool):
     Parameters
     ----------
     connector : ROS2Connector
-        The connector to the ROS2 system.
+        The connector to the ROS 2 system.
     readable : Optional[List[str]]
         The topics that can be read. If the list is not provided, all topics can be read.
     writable : Optional[List[str]]

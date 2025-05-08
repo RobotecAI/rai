@@ -18,12 +18,17 @@ from abc import ABC, abstractmethod
 
 class BaseAgent(ABC):
     def __init__(self):
+        """Initializes a new agent instance and sets up logging with the class name."""
         self.logger = logging.getLogger(self.__class__.__name__)
 
     @abstractmethod
     def run(self):
+        """Starts the agent's main execution loop.
+        In some cases, concrete run implementation may not be needed.
+        In that case use pass as a placeholder."""
         pass
 
     @abstractmethod
     def stop(self):
+        """Gracefully terminates the agent's execution and cleans up resources."""
         pass
