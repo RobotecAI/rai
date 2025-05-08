@@ -1,3 +1,5 @@
+<!--- --8<-- [start:sec1] -->
+
 # RAI Open Set Vision
 
 This package provides a ROS2 Node which is an interface to the [Idea-Research GroundingDINO Model](https://github.com/IDEA-Research/GroundingDINO).
@@ -48,7 +50,9 @@ Run the `GroundedSamAgent` and `GroundingDinoAgent` agents.
 python run_vision_agents.py
 ```
 
-Agents create two ROS 2 Nodes: `grounding_dino` and `grounded_sam` using [ROS2Connector](../API_documentation/connectors/ROS_2_Connectors.md).
+<!--- --8<-- [end:sec1] -->
+
+Agents create two ROS 2 Nodes: `grounding_dino` and `grounded_sam` using [ROS2Connector](../../../docs/API_documentation/connectors/ROS_2_Connectors.md).
 These agents can be triggered by ROS2 services:
 
 -   `grounding_dino_classify`: `rai_interfaces/srv/RAIGroundingDino`
@@ -64,18 +68,24 @@ These agents can be triggered by ROS2 services:
 
 ## RAI Tools
 
-`rai_open_set_vision` package contains tools that can be used by [RAI LLM agents](../tutorials/walkthrough.md)
+`rai_open_set_vision` package contains tools that can be used by [RAI LLM agents](../../../docs/tutorials/walkthrough.md)
 enhance their perception capabilities. For more information on RAI Tools see
 [Tool use and development](../tutorials/tools.md) tutorial.
+
+<!--- --8<-- [start:sec3] -->
 
 ### `GetDetectionTool`
 
 This tool calls the grounding dino service to use the model to see if the message from the provided camera topic contains objects from a comma separated prompt.
 
+<!--- --8<-- [end:sec3] -->
+
 > [!TIP]
 >
-> You can try example below with [ROSBotXL Demo](../demos/rosbot_xl.md) binary.
+> you can try example below with [rosbotxl demo](../demos/rosbot_xl.md) binary.
 > The binary exposes `/camera/camera/color/image_raw` and `/camera/camera/depth/image_raw` topics.
+
+<!--- --8<-- [start:sec4] -->
 
 **Example call**
 
@@ -137,3 +147,5 @@ ros2 run rai_open_set_vision talker --ros-args -p image_path:=src/rai_extensions
 ```
 
 If everything was set up properly you should see a couple of detections with classes `dinosaur`, `dragon`, and `lizard`.
+
+<!--- --8<-- [end:sec4] -->

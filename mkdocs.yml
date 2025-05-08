@@ -26,6 +26,7 @@ markdown_extensions:
   - admonition
   - pymdownx.details
   - pymdownx.superfences
+  - pymdownx.snippets
 
 plugins:
 - search
@@ -118,8 +119,8 @@ nav:
     - RAI Bench: simulation_and_benchmarking/rai_bench.md
     - Simulators: simulation_and_benchmarking/simulators.md
   - Extensions:
-    - OpenSet Vision: extensions/openset-readme-link.md
-    - NoMaD Visual Navigation: extensions/nomad-readme-link.md
+    - OpenSet Vision: extensions/openset.md
+    - NoMaD Visual Navigation: extensions/nomad.md
   - FAQ:
     - Overview: faq/faq.md
     - ROS 2: faq/ROS_2_Overview.md

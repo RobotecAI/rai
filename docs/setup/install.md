@@ -113,5 +113,5 @@ Pick your local solution or service provider and follow one of these guides:
 
 [s2s]: ../tutorials/voice_interface.md
 [simbench]: ../simulation_and_benchmarking/overview.md
-[openset]: ../extensions/openset-readme-link.md
-[nomad]: ../extensions/nomad-readme-link.md
+[openset]: ../extensions/openset.md
+[nomad]: ../extensions/nomad.md
