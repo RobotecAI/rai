@@ -79,7 +79,7 @@ This tool calls the grounding dino service to use the model to see if the messag
 
 **Example call**
 
-```
+```python
 from rai_open_set_vision.tools import GetDetectionTool
 from rai.communication.ros2 import ROS2Connector, ROS2Context
 
