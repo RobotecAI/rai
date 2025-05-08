@@ -27,7 +27,13 @@ from rai.tools.ros2 import ROS2ServicesToolkit
 from langchain_core.runnables import Runnable, RunnableConfig
 from rai import get_llm_model, get_tracing_callbacks
 from rai.agents import BaseAgent, wait_for_shutdown
-from rai.communication.ros2 import ROS2Connector, ROS2Context, ROS2Message
+from rai.communication.ros2 import (
+    ROS2Connector,
+    ROS2Context,
+    ROS2Message,
+    wait_for_ros2_services,
+    wait_for_ros2_topics,
+)
 from rai.tools.ros2 import GetROS2MessageInterfaceTool, ROS2ServicesToolkit
 from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
 from rai.tools.time import WaitForSecondsTool
@@ -39,7 +45,7 @@ from rai_whoami.models import EmbodimentInfo
 class SafetyAgent(BaseAgent):
     def __init__(
         self,
-        agent: Runnable[State, State],
+        agent: Runnable[ConversationalAgentState, ConversationalAgentState],
         connector: ROS2Connector,
         tractor_number: int,
     ):
@@ -132,6 +138,12 @@ def main():
             WaitForSecondsTool(),
         ],
     )
+
+    # [Optional] wait for ROS 2 topics and services to be available
+    wait_for_ros2_topics(
+        connector, [f"/tractor{args.tractor_number}/camera_image_color"]
+    )
+    wait_for_ros2_services(connector, [f"/tractor{args.tractor_number}/current_state"])
 
     # Run the safety agent
     safety_agent = SafetyAgent(agent, connector, args.tractor_number)
