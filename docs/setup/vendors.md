@@ -9,10 +9,10 @@ Alternatively vendors can be configured manually in `config.toml` file.
 
 The table summarizes vendor alternative for core AI service and optional RAI modules:
 
-| Module                       | Open source | Alternative             | Why to consider alternative?                                             | More information                                                                                                                      |
-| ---------------------------- | ----------- | ----------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| [LLM service](#llm-model-configuration-in-rai)                  | Ollama      | OpenAI, Bedrock         | Overall performance of the LLM models, supported modalities and features | [LangChain models](https://docs.langchain4j.dev/integrations/language-models/)                                                        |
-| **Optional:** [Tracing tool](./tracing.md)   | Langfuse    | LangSmith               | Better integration with LangChain                                        | [Comparison](https://langfuse.com/faq/all/langsmith-alternative)                                                                      |
+| Module                                          | Open source | Alternative             | Why to consider alternative?                                             | More information                                                                                          |
+| ----------------------------------------------- | ----------- | ----------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| [LLM service](#llm-model-configuration-in-rai)  | Ollama      | OpenAI, Bedrock         | Overall performance of the LLM models, supported modalities and features | [LangChain models](https://docs.langchain4j.dev/integrations/language-models/)                            |
+| **Optional:** [Tracing tool](./tracing.md)      | Langfuse    | LangSmith               | Better integration with LangChain                                        | [Comparison](https://langfuse.com/faq/all/langsmith-alternative)                                          |
 | **Optional:** [Text to speech](#text-to-speech) | OpenTTS     | ElevenLabs              | Arguably, significantly better voice synthesis                           | <li> [OpenTTS GitHub](https://github.com/synesthesiam/opentts) </li><li> [RAI voice interface][s2s] </li> |
 | **Optional:** [Speech to text](#speech-to-text) | Whisper     | OpenAI Whisper (hosted) | When suitable local GPU is not an option                                 | <li> [Whisper GitHub](https://github.com/openai/whisper) </li><li> [RAI voice interface][s2s] </li>       |
 
@@ -24,8 +24,9 @@ The table summarizes vendor alternative for core AI service and optional RAI mod
 ## LLM Model Configuration in RAI
 
 In RAI you can configure 2 models: `simple model` and `complex model`:
-- `complex model` should be used for sophisticated tasks like multi-step reasoning.
-- `simple model` is more suitable for simpler tasks for example image description.
+
+-   `complex model` should be used for sophisticated tasks like multi-step reasoning.
+-   `simple model` is more suitable for simpler tasks for example image description.
 
 ```python
 from rai import get_llm_model
@@ -45,15 +46,13 @@ Ollama can be used to host models locally.
 3. Choose LLM model and endpoint type. Ollama server deliveres 2 endpoints:
     - Ollama endpoint: [RAI Configurator][configurator] -> `Model Selection` -> `ollama` vendor
     - OpenAI endpoint: [RAI Configurator][configurator] -> `Model Selection` -> `openai` vendor -> `Use OpenAI compatible API`
-    Both endpoints should work interchangeably and decision is only dedicated by user's convenience.
+      Both endpoints should work interchangeably and decision is only dedicated by user's convenience.
 
 ### OpenAI
 
 1. Setup your [OpenAI account](https://platform.openai.com/docs/overview), generate
-and set the API key:
-    ```bash
-    export OPENAI_API_KEY="sk-..."
-    ```
+   and set the API key:
+   `bash export OPENAI_API_KEY="sk-..." `
 2. Use [RAI Configurator][configurator] -> `Model Selection` -> `ollama` vendor
 
 ### AWS Bedrock
