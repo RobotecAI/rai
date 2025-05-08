@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from .asr_agent import SpeechRecognitionAgent
 from .initialization import (
     TRANSCRIBE_MODELS,
     ASRAgentConfig,
@@ -21,7 +22,6 @@ from .initialization import (
     WWConfig,
     load_config,
 )
-from .asr_agent import SpeechRecognitionAgent
 
 __all__ = [
     "TRANSCRIBE_MODELS",

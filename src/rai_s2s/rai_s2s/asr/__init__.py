@@ -13,8 +13,6 @@
 # limitations under the License.
 
 from .agents import SpeechRecognitionAgent
-from .models import FasterWhisper, LocalWhisper, OpenAIWhisper, OpenWakeWord, SileroVAD
-
 from .agents.initialization import (
     TRANSCRIBE_MODELS,
     ASRAgentConfig,
@@ -24,20 +22,21 @@ from .agents.initialization import (
     WWConfig,
     load_config,
 )
+from .models import FasterWhisper, LocalWhisper, OpenAIWhisper, OpenWakeWord, SileroVAD
 
 __all__ = [
     "TRANSCRIBE_MODELS",
     "ASRAgentConfig",
+    "FasterWhisper",
+    "LocalWhisper",
     "MicrophoneConfig",
+    "OpenAIWhisper",
+    "OpenWakeWord",
+    "SileroVAD",
+    "SpeechRecognitionAgent",
     "SpeechRecognitionAgent",
     "TranscribeConfig",
     "VADConfig",
     "WWConfig",
     "load_config",
-    "FasterWhisper",
-    "LocalWhisper",
-    "OpenAIWhisper",
-    "OpenWakeWord",
-    "SileroVAD",
-    "SpeechRecognitionAgent",
 ]

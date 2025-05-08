@@ -40,13 +40,13 @@ rai_s2s = {path = "src/rai_s2s", develop = true}
 
 # [tool.poetry.group.asr]
 # optional = true
-# 
+#
 # [tool.poetry.group.asr.dependencies]
 # rai_asr = {path = "src/rai_asr", develop = true}
-# 
+#
 # [tool.poetry.group.tts]
 # optional = true
-# 
+#
 # [tool.poetry.group.tts.dependencies]
 # rai_tts = {path = "src/rai_tts", develop = true}
 
