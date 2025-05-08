@@ -50,7 +50,7 @@ def initialize_agent() -> Runnable[ReActAgentState, ReActAgentState]:
         "examples/embodiments/rosbotxl_embodiment.json"
     )
 
-    connector = ROS2Connector()
+    connector = ROS2Connector(executor_type="multi_threaded")
     tools: List[BaseTool] = [
         GetROS2TransformConfiguredTool(
             connector=connector,
@@ -61,7 +61,6 @@ def initialize_agent() -> Runnable[ReActAgentState, ReActAgentState]:
         GetROS2ImageConfiguredTool(
             connector=connector,
             topic="/camera/camera/color/image_raw",
-            response_format="content_and_artifact",
         ),
         WaitForSecondsTool(),
         GetObjectPositionsTool(
@@ -77,13 +76,9 @@ def initialize_agent() -> Runnable[ReActAgentState, ReActAgentState]:
         ),
         *Nav2Toolkit(connector=connector).get_tools(),
     ]
-    # Initialize an empty connectors dictionary since we're using the agent in direct mode
-    # In a distributed setup, connectors would be used to handle communication between
-    # components, routing agent inputs/outputs through the distributed system
-    connectors = {}
 
     agent = ReActAgent(
-        target_connectors=connectors,
+        target_connectors={},  # empty dict, since we're using the agent in direct mode
         llm=get_llm_model("complex_model", streaming=True),
         system_prompt=embodiment_info.to_langchain(),
         tools=tools,

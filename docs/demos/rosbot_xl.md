@@ -42,7 +42,7 @@ details.
 1. Running rai nodes and agents, navigation stack and O3DE simulation.
 
     ```bash
-    ros2 launch ./examples/rosbot-xl.launch.py game_launcher:=demo_assets/rosbot/RAIROSBotXLDemo.GameLauncher
+    ros2 launch ./examples/rosbot-xl.launch.py game_launcher:=demo_assets/rosbot/RAIROSBotXLDemoGamePackage/RAIROSBotXLDemo.GameLauncher
     ```
 
 2. Run streamlit gui:
