@@ -71,10 +71,10 @@ enhance their perception capabilities. For more information on RAI Tools see
 -   `GetDetectionTool`
     This tool calls the grounding dino service to use the model to see if the message from the provided camera topic contains objects from a comma separated prompt.
 
-    > [!TIP]
-    >
-    > You can try example below with [ROSBotXL Demo](../demos/rosbot_xl.md) binary.
-    > The binary exposes `/camera/camera/color/image_raw` and `/camera/camera/depth/image_raw` topics.
+> [!TIP]
+>
+> You can try example below with [ROSBotXL Demo](../demos/rosbot_xl.md) binary.
+> The binary exposes `/camera/camera/color/image_raw` and `/camera/camera/depth/image_raw` topics.
 
     **Example call**
 
