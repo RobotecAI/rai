@@ -92,7 +92,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             process: The subprocess.Popen object to terminate. If None, function returns immediately.
             process_name: A descriptive name for the process (for logging purposes).
             timeout: Time in seconds to wait for the process to terminate after each signal.
-                Default is 5 seconds.
+                Default is 15 seconds.
 
         Returns:
             None
@@ -104,7 +104,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         process.send_signal(signal.SIGINT)
         try:
             process.wait(timeout=timeout)
-            return  # Process terminated successfully
+            return
         except subprocess.TimeoutExpired:
             self.logger.warning(
                 f"{process_name} PID: {process.pid} didn't terminate after {timeout}s with SIGINT, escalating to SIGTERM"
@@ -114,7 +114,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         process.send_signal(signal.SIGTERM)
         try:
             process.wait(timeout=timeout)
-            return  # Process terminated successfully
+            return
         except subprocess.TimeoutExpired:
             self.logger.error(
                 f"{process_name} PID: {process.pid} didn't terminate after {timeout}s with SIGTERM, escalating to SIGKILL"
@@ -124,19 +124,22 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         process.kill()
         try:
             process.wait(timeout=timeout)
-            return  # Process terminated successfully
-        except subprocess.TimeoutExpired:
+            return
+        except subprocess.TimeoutExpired as e:
             self.logger.critical(
                 f"{process_name} PID: {process.pid} couldn't be killed! This should not happen."
             )
+            raise e
 
     def _shutdown_binary(self):
         self._shutdown_process(process=self.current_sim_process, process_name="binary")
+        self.current_sim_process = None
 
     def _shutdown_robotic_stack(self):
         self._shutdown_process(
             process=self.current_robotic_stack_process, process_name="robotic_stack"
         )
+        self.current_robotic_stack_process = None
 
     def get_available_spawnable_names(self) -> list[str]:
         msg = ROS2Message(payload={})

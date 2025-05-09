@@ -159,15 +159,16 @@ class TestO3DExROS2Bridge(unittest.TestCase):
         self.assertIsNone(self.bridge.current_sim_process)
 
     def test_shutdown_robotic_stack(self):
-        self.bridge.current_robotic_stack_process = MagicMock()
-        self.bridge.current_robotic_stack_process.poll.return_value = 0
+        mock_process = MagicMock()
+        mock_process.poll.return_value = 0
+
+        self.bridge.current_robotic_stack_process = mock_process
 
         self.bridge._shutdown_robotic_stack()
 
-        self.bridge.current_robotic_stack_process.send_signal.assert_called_once_with(
-            signal.SIGINT
-        )
-        self.bridge.current_robotic_stack_process.wait.assert_called_once()
+        mock_process.send_signal.assert_called_once_with(signal.SIGINT)
+        mock_process.wait.assert_called_once()
+        self.assertIsNone(self.bridge.current_robotic_stack_process)
 
     def test_get_available_spawnable_names(self):
         # Mock the response
