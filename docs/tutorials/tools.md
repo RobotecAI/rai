@@ -9,6 +9,26 @@ tools [here](https://github.com/RobotecAI/rai/tree/{{branch}}/src/rai_core/rai/t
 custom tools tailored to specific robots or applications. This guide demonstrates how to create
 custom tools in RAI using the [LangChain framework](https://python.langchain.com/docs/).
 
+## How LLMs Understand Tools
+
+When an LLM is given access to tools, it needs to understand:
+
+1. What tools are available
+2. What each tool does
+3. What inputs each tool accepts
+
+This understanding is achieved through the tool's metadata fields, which are automatically processed by LangChain and made available to the LLM. The LLM uses this information to:
+
+-   Determine which tool to use for a given task
+-   Format the correct input arguments
+-   Interpret the tool's output
+
+The key fields that enable this understanding are:
+
+-   `name`: A unique identifier for the tool, does not have to be equal to the function/class name
+-   `description`: A natural language explanation of what the tool does
+-   `args_schema`: A structured definition of the tool's input parameters
+
 RAI supports two primary approaches for implementing tools, each with distinct advantages:
 
 ### `BaseTool` Class
@@ -33,7 +53,7 @@ Use the `BaseTool` class when state management, or extensive configuration is re
 
 LangChain tools typically return either a string or a tuple containing a string and an artifact.
 
-RAI extends LangChain’s tool capabilities by supporting **multimodal tools**—tools that return not
+RAI extends LangChain's tool capabilities by supporting **multimodal tools**—tools that return not
 only text but also other content types, such as images, audio, or structured data. This is achieved
 using a special object called `MultimodalArtifact` along with a custom `ToolRunner` class.
 
@@ -41,7 +61,14 @@ using a special object called `MultimodalArtifact` along with a custom `ToolRunn
 
 ### Single-Modal Tool (Text Output)
 
-Here’s an example of a single-modal tool implemented using class inheritance:
+Here's an example of a single-modal tool implemented using class inheritance:
+
+!!! tip "Class-based tools"
+
+    Class-based tools provide more control and flexibility compared to function-based tools:
+
+    - Allow passing additional parameters (e.g., connectors, configuration)
+    - Support stateful operations
 
 ```python
 from langchain_core.tools import BaseTool
@@ -50,35 +77,56 @@ from typing import Type
 
 
 class GrabObjectToolInput(BaseModel):
-    """Input schema for the GrabObjectTool."""
+    """Input schema for the GrabObjectTool.
+
+    This schema defines the expected input parameters for the tool.
+    The Field class provides additional metadata that helps the LLM understand
+    the parameter's purpose and constraints.
+    Fields must include a type annotation.
+    """
     object_name: str = Field(description="The name of the object to grab")
 
 
 class GrabObjectTool(BaseTool):
-    """Tool for grabbing objects using a robot."""
+    """Tool for grabbing objects using a robot.
+
+    The following fields are crucial for LLM understanding:
+
+    name: A unique identifier that the LLM uses to reference this tool
+    description: A natural language explanation that helps the LLM understand when to use this tool
+    args_schema: Links to the input schema, helping the LLM understand required parameters
+    """
     name: str = "grab_object"
     description: str = "Grabs a specified object using the robot's manipulator"
     args_schema: Type[GrabObjectToolInput] = GrabObjectToolInput
 
+    robot_arm: RobotArm # custom parameter for dependency injection
+
     def _run(self, object_name: str) -> str:
-        """Execute the object grabbing operation."""
+        """Execute the object grabbing operation.
+
+        The LLM will receive this output and can use it to:
+        1. Determine if the operation was successful
+        2. Extract relevant information
+        3. Decide on next steps
+        """
         try:
-            status = robot.grab_object(object_name)
+            status = self.robot_arm.grab_object(object_name)
             return f"Successfully grabbed object: {object_name}, status: {status}"
         except Exception as e:
             return f"Failed to grab object: {object_name}, error: {str(e)}"
 ```
 
-Alternatively, using the `@tool` decorator:
+Alternatively, using the `@tool` decorator for simpler, stateless operations:
 
 ```python
 from langchain_core.tools import tool
 
 @tool
-def grab_object(object_name: str) -> str:
-    """Grabs a specified object using the robot's manipulator."""
+def grab_object(object_name: str) -> str:  # function name is equal to name in class API
+    """Grabs a specified object using the robot's manipulator."""  # equal to description in class API
     try:
-        status = robot.grab_object(object_name)
+        status = robot_arm.grab_object(object_name)
         return f"Successfully grabbed object: {object_name}, status: {status}"
     except Exception as e:
         return f"Failed to grab object: {object_name}, error: {str(e)}"
