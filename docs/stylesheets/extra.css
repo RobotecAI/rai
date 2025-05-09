@@ -9,3 +9,9 @@ table td code {
   white-space: nowrap;
   word-break: keep-all;
 }
+
+pre, pre code, .highlight pre, .highlight code {
+  white-space: pre-wrap !important;
+  word-break: normal !important;
+  overflow-x: auto;
+}

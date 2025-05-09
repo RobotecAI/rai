@@ -86,7 +86,7 @@ def main(args=None):
         rclpy.spin_once(gdino_client)
         if gdino_client.future.done():
             try:
-                response = gdino_client.future.result()
+                response: RAIGroundingDino.Response = gdino_client.future.result()  # type: ignore
             except Exception as e:
                 gdino_client.get_logger().info("Service call failed %r" % (e,))
             else:
@@ -101,13 +101,13 @@ def main(args=None):
         if gsam_client.future.done():
             try:
                 gsam_client.get_logger().info("request finished")
-                response = gsam_client.future.result()
+                response: RAIGroundedSam.Response = gsam_client.future.result()  # type: ignore
                 gsam_client.get_logger().info(f"response: {response}")
             except Exception as e:
                 gsam_client.get_logger().info("Service call failed %r" % (e,))
             else:
                 assert response is not None
-                gsam_client.get_logger().info(f"{response.detections}")  # CHANGE
+                gsam_client.get_logger().info(f"{response.masks}")  # CHANGE
             break
 
     gdino_client.destroy_node()

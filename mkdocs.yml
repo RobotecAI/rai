@@ -22,6 +22,11 @@ markdown_extensions:
       toc_depth: 2
   - attr_list
   - pymdownx.emoji
+  - nl2br
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.snippets
 
 plugins:
 - search
@@ -32,6 +37,7 @@ plugins:
           docstring_style: numpy
           show_root_heading: true
 - markdownextradata:
+- callouts
 
 
 extra_css:
@@ -112,6 +118,9 @@ nav:
     - RAI Sim: simulation_and_benchmarking/rai_sim.md
     - RAI Bench: simulation_and_benchmarking/rai_bench.md
     - Simulators: simulation_and_benchmarking/simulators.md
+  - Extensions:
+    - OpenSet Vision: extensions/openset.md
+    - NoMaD Visual Navigation: extensions/nomad.md
   - FAQ:
     - Overview: faq/faq.md
     - ROS 2: faq/ROS_2_Overview.md

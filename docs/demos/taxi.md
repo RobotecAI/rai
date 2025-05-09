@@ -4,9 +4,9 @@ This demo showcases a speech-to-speech interaction with an autonomous taxi using
 environment with Autoware. Users can specify destinations verbally, and the system will process the
 request, plan the route, and navigate the taxi accordingly.
 
-!!! note "Work in progress"
-
-    This readme is a work in progress.
+> [!NOTE] "Work in progress"
+>
+> This readme is a work in progress.
 
 ## Prerequisites
 
