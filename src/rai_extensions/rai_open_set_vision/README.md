@@ -81,7 +81,7 @@ This tool calls the grounding dino service to use the model to see if the messag
 
 > [!TIP]
 >
-> you can try example below with [rosbotxl demo](../demos/rosbot_xl.md) binary.
+> you can try example below with [rosbotxl demo](../../../docs/demos/rosbot_xl.md) binary.
 > The binary exposes `/camera/camera/color/image_raw` and `/camera/camera/depth/image_raw` topics.
 
 <!--- --8<-- [start:sec4] -->
