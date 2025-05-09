@@ -119,7 +119,7 @@ from rai.communication.ros2 import ROS2Connector, ROS2Context
 
 with ROS2Context():
     connector=ROS2Connector(node_name="test_node")
-    connector.node.declare_parameter("conversion_ratio", 1.0)
+    connector.node.declare_parameter("conversion_ratio", 1.0) # scale parameter for the depth map
     x = GetDistanceToObjectsTool(connector=connector)._run(
         camera_topic="/camera/camera/color/image_raw",
         depth_topic="/camera/camera/depth/image_rect_raw",
