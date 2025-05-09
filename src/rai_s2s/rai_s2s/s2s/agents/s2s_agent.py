@@ -14,6 +14,7 @@
 
 import logging
 import time
+from datetime import datetime
 from queue import Empty, Queue
 from threading import Event, Lock, Thread
 from typing import Any, List, Optional
@@ -28,6 +29,7 @@ from rai.communication.sound_device import (
     SoundDeviceConnector,
     SoundDeviceMessage,
 )
+from scipy.io import wavfile
 
 from rai_s2s.asr.agents.asr_agent import ThreadData
 from rai_s2s.asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
@@ -78,6 +80,7 @@ class SpeechToSpeechAgent(BaseAgent):
 
         self.vad: BaseVoiceDetectionModel = vad
         self.grace_period = grace_period
+        self.grace_period_start = 0
 
         self.sample_buffer = []
         self.sample_buffer_lock = Lock()
@@ -85,15 +88,36 @@ class SpeechToSpeechAgent(BaseAgent):
         self.active_thread = ""
         self.transcription_threads: dict[str, ThreadData] = {}
         self.transcription_buffers: dict[str, list[NDArray]] = {}
-        self.is_playing = True
+        self.is_playing = False
 
         self.recording_started = False
         # self.ran_setup = False
 
         self.hri_connector = self._setup_hri_connector()
 
+        self.microphone_samples: Optional[np.ndarray] = None
+        self.save_flag = False
+
     def _setup_hri_connector(self):
         return None
+
+    def save_audio(self, audio_data: NDArray[np.int16], filename: str | None = None):
+        """
+        Saves the received audio data as a WAV file.
+
+        Parameters
+        ----------
+        audio_data : NDArray[np.int16]
+            The audio data to save (should be int16 format).
+        filename : str, optional
+            The filename to save the audio as. If None, a timestamp-based name is generated.
+        """
+        if filename is None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"recording_{timestamp}.wav"
+
+        wavfile.write(filename, self.vad.sampling_rate, audio_data)
+        print(f"Audio saved to {filename}")
 
     def run(self):
         """
@@ -101,7 +125,6 @@ class SpeechToSpeechAgent(BaseAgent):
         """
         self.running = True
         self.logger.info("Starting SpeechToSpeechAgent...")
-        self.setup_debug()
 
         msg = SoundDeviceMessage(read=False)
         self.player_handle = self.sound_connector.start_action(
@@ -119,52 +142,13 @@ class SpeechToSpeechAgent(BaseAgent):
         )
         self.logger.info("SpeechToSpeechAgent Started!")
 
-    def setup_debug(self):
-        from pydub import AudioSegment
-
-        duration_ms = 10000  # 1 second
-        frequency = 261.63  # C4
-        sample_rate = 44100  # Samples per second
-        channels = 1  # Mono
-
-        # Generate sine wave
-        t = np.linspace(
-            0, duration_ms / 1000, int(sample_rate * duration_ms / 1000), endpoint=False
-        )
-
-        sine_1 = 0.5 * np.sin(4 * np.pi * frequency * t)  # amplitude range [-0.5, 0.5]
-        sine_2 = 0.5 * np.sin(
-            2 / 3 * np.pi * frequency * t
-        )  # amplitude range [-0.5, 0.5]
-        sine_3 = 0.5 * np.sin(
-            7 / 5 * np.pi * frequency * t
-        )  # amplitude range [-0.5, 0.5]
-
-        sine_wave = (sine_1 + sine_2 + sine_3) / 3
-
-        # Convert to 16-bit PCM
-        audio_data = (sine_wave * 32767).astype(np.int16)
-        print(audio_data)
-
-        audio_segment = AudioSegment(
-            audio_data.tobytes(),
-            frame_rate=sample_rate,
-            sample_width=2,  # 2 bytes for 16-bit audio
-            channels=channels,
-        )
-
-        self.playback_data.playing = True
-        self.playback_data.current_segment = audio_segment
-        self.playback_data.data = np.array(
-            self.playback_data.current_segment.get_array_of_samples()  # type: ignore
-        ).reshape(-1, self.playback_data.channels)
-
     def _speaker_callback(self, outdata, frames, time, status_dict):
         set_flags = [flag for flag, status in status_dict.items() if status]
 
         if set_flags:
             self.logger.warning("Flags set:" + ", ".join(set_flags))
         if self.playback_data.playing:
+            print("beep")
             if self.playback_data.current_segment is None:
                 try:
                     self.playback_data.current_segment = self.audio_queues[
@@ -192,6 +176,20 @@ class SpeechToSpeechAgent(BaseAgent):
                     self.playback_data.current_frame += chunksize
 
     def _on_microphone_sample(self, indata: np.ndarray, status_flags: dict[str, Any]):
+        print(indata)
+        if self.save_flag:
+            return
+        if self.microphone_samples is None:
+            self.microphone_samples = indata
+        else:
+            self.microphone_samples = np.concatenate(
+                (self.microphone_samples, indata), axis=0
+            )
+
+        if self.microphone_samples.shape[0] > 100000:
+            self.save_audio(self.microphone_samples, "data_go.wav")
+            self.save_flag = True
+
         sample_time = time.time()
         with self.sample_buffer_lock:
             self.sample_buffer.append(indata)
@@ -205,7 +203,7 @@ class SpeechToSpeechAgent(BaseAgent):
                 self.transcription_threads[thread_id]["joined"] = True
 
         voice_detected, output_parameters = self.vad(indata, {})
-        self.logger.debug(f"Voice detected: {voice_detected}: {output_parameters}")
+        self.logger.info(f"Voice detected: {voice_detected}: {output_parameters}")
         should_record = False
         if voice_detected and not self.recording_started:
             should_record = self._should_record(indata, output_parameters)
@@ -228,7 +226,7 @@ class SpeechToSpeechAgent(BaseAgent):
             }
 
         if voice_detected:
-            self.logger.debug("Voice detected... resetting grace period")
+            self.logger.info("Voice detected... resetting grace period")
             self.grace_period_start = sample_time
             self._send_hri_message("pause", "/voice_commands")
             self.is_playing = False
