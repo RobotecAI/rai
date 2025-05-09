@@ -1,5 +1,5 @@
 --8<-- "src/rai_extensions/rai_open_set_vision/README.md:sec1"
-Agents create two ROS 2 Nodes: `grounding_dino` and `grounded_sam` using [ROS2Connector](../../../docs/API_documentation/connectors/ROS_2_Connectors.md).
+Agents create two ROS 2 Nodes: `grounding_dino` and `grounded_sam` using [ROS2Connector](../API_documentation/connectors/ROS_2_Connectors.md).
 These agents can be triggered by ROS2 services:
 
 -   `grounding_dino_classify`: `rai_interfaces/srv/RAIGroundingDino`
@@ -15,7 +15,7 @@ These agents can be triggered by ROS2 services:
 
 ## RAI Tools
 
-`rai_open_set_vision` package contains tools that can be used by [RAI LLM agents](../../../docs/tutorials/walkthrough.md)
+`rai_open_set_vision` package contains tools that can be used by [RAI LLM agents](../tutorials/walkthrough.md)
 enhance their perception capabilities. For more information on RAI Tools see
 [Tool use and development](../tutorials/tools.md) tutorial.
 
