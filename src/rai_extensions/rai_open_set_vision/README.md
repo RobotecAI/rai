@@ -22,7 +22,6 @@ rosdep install --from-paths src --ignore-src -r
 In the base directory of the `RAI` package install dependencies:
 
 ```
-cd rai
 poetry install --with openset
 ```
 
@@ -142,7 +141,7 @@ You can see it working by running:
 
 ```
 python run_vision_agents.py
-cd rai
+cd rai # rai repo BASE directory
 ros2 run rai_open_set_vision talker --ros-args -p image_path:=src/rai_extensions/rai_open_set_vision/images/sample.jpg
 ```
 
