@@ -69,7 +69,7 @@ These agents can be triggered by ROS2 services:
 
 `rai_open_set_vision` package contains tools that can be used by [RAI LLM agents](../../../docs/tutorials/walkthrough.md)
 enhance their perception capabilities. For more information on RAI Tools see
-[Tool use and development](../tutorials/tools.md) tutorial.
+[Tool use and development](../../../docs/tutorials/tools.md) tutorial.
 
 <!--- --8<-- [start:sec3] -->
 
