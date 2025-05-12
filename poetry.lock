@@ -6388,6 +6388,8 @@ develop = true
 [package.dependencies]
 inflect = "7.5.0"
 plotly = "^6.0.1"
+rai_core = ">=2.0.0.a2,<3.0.0"
+rai_sim = ">=0.0.2,<1.0.0"
 
 [package.source]
 type = "directory"
@@ -6435,7 +6437,7 @@ url = "src/rai_core"
 
 [[package]]
 name = "rai-sim"
-version = "0.0.1"
+version = "0.0.2"
 description = "Package to run simulations"
 optional = false
 python-versions = "^3.10, <3.13"
