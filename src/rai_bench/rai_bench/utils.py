@@ -16,7 +16,6 @@ import argparse
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Tuple
 
 from rai.initialization import get_llm_model_direct
 
@@ -47,7 +46,7 @@ def parse_benchmark_args():
     return parser.parse_args()
 
 
-def define_benchmark_loggers(out_dir: Path) -> Tuple[logging.Logger, logging.Logger]:
+def define_benchmark_logger(out_dir: Path) -> logging.Logger:
     log_file = out_dir / "benchmark.log"
 
     file_handler = logging.FileHandler(log_file)
@@ -63,13 +62,7 @@ def define_benchmark_loggers(out_dir: Path) -> Tuple[logging.Logger, logging.Log
     bench_logger.setLevel(logging.INFO)
     bench_logger.addHandler(file_handler)
 
-    agent_logger = logging.getLogger("Agent logger")
-    for handler in agent_logger.handlers:
-        agent_logger.removeHandler(handler)
-    agent_logger.setLevel(logging.INFO)
-    agent_logger.addHandler(file_handler)
-
-    return bench_logger, agent_logger
+    return bench_logger
 
 
 def get_llm_for_benchmark(

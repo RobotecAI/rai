@@ -22,6 +22,7 @@ from langchain_core.messages import BaseMessage
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
+from rai.agents.conversational_agent import create_conversational_agent
 from rai.messages import HumanMultimodalMessage
 
 from rai_bench.base_benchmark import BaseBenchmark, BenchmarkSummary, TimeoutException
@@ -35,8 +36,9 @@ from rai_bench.tool_calling_agent.results_tracking import (
 from rai_bench.tool_calling_agent.tasks.spatial import (
     SpatialReasoningAgentTask,
 )
-
-loggers_type = logging.Logger
+from rai_bench.utils import (
+    get_llm_for_benchmark,
+)
 
 
 class ToolCallingAgentBenchmark(BaseBenchmark):
@@ -193,3 +195,35 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         )
         self.csv_initialize(self.summary_filename, BenchmarkSummary)
         self.csv_writerow(self.summary_filename, summary)
+
+
+def run_benchmark(
+    model_name: str,
+    vendor: str,
+    out_dir: str,
+    tasks: List[Task],
+    bench_logger: logging.Logger,
+):
+    experiment_dir = Path(out_dir)
+    experiment_dir.mkdir(parents=True, exist_ok=True)
+
+    benchmark = ToolCallingAgentBenchmark(
+        tasks=tasks,
+        logger=bench_logger,
+        model_name=model_name,
+        results_dir=experiment_dir,
+    )
+
+    llm = get_llm_for_benchmark(model_name=model_name, vendor=vendor)
+    for task in tasks:
+        agent = create_conversational_agent(
+            llm=llm,
+            tools=task.available_tools,
+            system_prompt=task.get_system_prompt(),
+            logger=bench_logger,
+        )
+        benchmark.run_next(agent=agent)
+
+    bench_logger.info("===============================================================")
+    bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
+    bench_logger.info("===============================================================")

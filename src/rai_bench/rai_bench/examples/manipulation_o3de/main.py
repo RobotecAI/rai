@@ -12,110 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
-from pathlib import Path
-from typing import List
 
-import rclpy
-from langchain.tools import BaseTool
-from rai.agents.langchain.core import create_conversational_agent
-from rai.communication.ros2.connectors import ROS2Connector
-from rai.tools.ros2 import (
-    GetObjectPositionsTool,
-    GetROS2ImageTool,
-    GetROS2TopicsNamesAndTypesTool,
-    MoveToPointTool,
-)
-from rai_open_set_vision.tools import GetGrabbingPointTool
+from pathlib import Path
 
 from rai_bench.examples.manipulation_o3de.scenarios import (
     trivial_scenarios,
 )
-from rai_bench.manipulation_o3de.benchmark import ManipulationO3DEBenchmark
-from rai_bench.utils import (
-    define_benchmark_loggers,
-    get_llm_for_benchmark,
-    parse_benchmark_args,
+from rai_bench.manipulation_o3de.benchmark import (
+    run_benchmark,
 )
-from rai_sim.o3de.o3de_bridge import (
-    O3DEngineArmManipulationBridge,
-    O3DExROS2SimulationConfig,
-)
+from rai_bench.utils import define_benchmark_logger, parse_benchmark_args
 
-
-def run_benchmark(model_name: str, vendor: str, out_dir: str):
-    experiment_dir = Path(out_dir)
+if __name__ == "__main__":
+    args = parse_benchmark_args()
+    experiment_dir = Path(args.out_dir)
     experiment_dir.mkdir(parents=True, exist_ok=True)
-    bench_logger, agent_logger = define_benchmark_loggers(out_dir=experiment_dir)
-
-    rclpy.init()
-    connector = ROS2Connector()
-    node = connector.node
-    node.declare_parameter("conversion_ratio", 1.0)
-
-    # define model
-    llm = get_llm_for_benchmark(model_name=model_name, vendor=vendor)
-
-    # define tools
-    tools: List[BaseTool] = [
-        GetObjectPositionsTool(
-            connector=connector,
-            target_frame="panda_link0",
-            source_frame="RGBDCamera5",
-            camera_topic="/color_image5",
-            depth_topic="/depth_image5",
-            camera_info_topic="/color_camera_info5",
-            get_grabbing_point_tool=GetGrabbingPointTool(connector=connector),
-        ),
-        MoveToPointTool(connector=connector, manipulator_frame="panda_link0"),
-        GetROS2ImageTool(connector=connector),
-        GetROS2TopicsNamesAndTypesTool(connector=connector),
-    ]
+    bench_logger = define_benchmark_logger(out_dir=experiment_dir)
 
     configs_dir = "src/rai_bench/rai_bench/examples/manipulation_o3de/configs/"
     connector_path = configs_dir + "o3de_config.yaml"
-    #### Create scenarios manually
-    # load different scenes
-    # one_carrot_simulation_config = O3DExROS2SimulationConfig.load_config(
-    #     base_config_path=Path(configs_dir + "scene1.yaml"),
-    #     connector_config_path=Path(connector_path),
-    # )
-    # multiple_carrot_simulation_config = O3DExROS2SimulationConfig.load_config(
-    #     base_config_path=Path(configs_dir + "scene2.yaml"),
-    #     connector_config_path=Path(connector_path),
-    # )
-    # red_cubes_simulation_config = O3DExROS2SimulationConfig.load_config(
-    #     base_config_path=Path(configs_dir + "scene3.yaml"),
-    #     connector_config_path=Path(connector_path),
-    # )
-    # multiple_cubes_simulation_config = O3DExROS2SimulationConfig.load_config(
-    #     base_config_path=Path(configs_dir + "scene4.yaml"),
-    #     connector_config_path=Path(connector_path),
-    # )
-    # # combine different scene configs with the tasks to create various scenarios
-    # scenarios = [
-    #     Scenario(
-    #         task=GrabCarrotTask(logger=bench_logger),
-    #         simulation_config=one_carrot_simulation_config,
-    #         simulation_config_path=configs_dir + "scene1.yaml",
-    #     ),
-    #     Scenario(
-    #         task=GrabCarrotTask(logger=bench_logger),
-    #         simulation_config=multiple_carrot_simulation_config,
-    #         simulation_config_path=configs_dir + "scene2.yaml",
-    #     ),
-    #     Scenario(
-    #         task=PlaceCubesTask(logger=bench_logger),
-    #         simulation_config=red_cubes_simulation_config,
-    #         simulation_config_path=configs_dir + "scene3.yaml",
-    #     ),
-    #     Scenario(
-    #         task=PlaceCubesTask(logger=bench_logger),
-    #         simulation_config=multiple_cubes_simulation_config,
-    #         simulation_config_path=configs_dir + "scene4.yaml",
-    #     ),
-    # ]
-
     ### import ready scenarios
     t_scenarios = trivial_scenarios(configs_dir=configs_dir, logger=bench_logger)
     # e_scenarios = easy_scenarios(
@@ -132,42 +47,10 @@ def run_benchmark(model_name: str, vendor: str, out_dir: str):
     # )
 
     all_scenarios = t_scenarios
-    simulation_config = O3DExROS2SimulationConfig.load_config(
-        config_path=Path(connector_path)
+    run_benchmark(
+        model_name=args.model_name,
+        vendor=args.vendor,
+        out_dir=experiment_dir,
+        scenarios=all_scenarios,
+        bench_logger=bench_logger,
     )
-    o3de = O3DEngineArmManipulationBridge(connector, logger=agent_logger)
-    try:
-        # define benchamrk
-        benchmark = ManipulationO3DEBenchmark(
-            model_name=model_name,
-            simulation_config=simulation_config,
-            simulation_bridge=o3de,
-            scenarios=all_scenarios,
-            logger=bench_logger,
-            results_dir=experiment_dir,
-        )
-        for scenario in all_scenarios:
-            agent = create_conversational_agent(
-                llm, tools, scenario.task.system_prompt, logger=agent_logger
-            )
-            benchmark.run_next(agent=agent)
-            o3de.reset_arm()
-            time.sleep(0.2)  # admire the end position for a second ;)
-
-        time.sleep(3)
-        bench_logger.info(
-            "==============================================================="
-        )
-        bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
-        bench_logger.info(
-            "==============================================================="
-        )
-    finally:
-        connector.shutdown()
-        o3de.shutdown()
-        rclpy.shutdown()
-
-
-if __name__ == "__main__":
-    args = parse_benchmark_args()
-    run_benchmark(model_name=args.model_name, vendor=args.vendor, out_dir=args.out_dir)

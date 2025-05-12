@@ -17,6 +17,8 @@ import time
 from pathlib import Path
 from typing import List, TypeVar
 
+import rclpy
+from langchain.tools import BaseTool
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
@@ -27,11 +29,23 @@ from launch.actions import (
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+from rai.agents.langchain.core import create_conversational_agent
+from rai.communication.ros2.connectors import ROS2Connector
 from rai.messages import HumanMultimodalMessage
+from rai.tools.ros2 import (
+    GetObjectPositionsTool,
+    GetROS2ImageTool,
+    GetROS2TopicsNamesAndTypesTool,
+    MoveToPointTool,
+)
+from rai_open_set_vision.tools import GetGrabbingPointTool
 
 from rai_bench.base_benchmark import BaseBenchmark, BenchmarkSummary, TimeoutException
 from rai_bench.manipulation_o3de.interfaces import Task
 from rai_bench.manipulation_o3de.results_tracking import ScenarioResult
+from rai_bench.utils import (
+    get_llm_for_benchmark,
+)
 from rai_sim.o3de.o3de_bridge import (
     O3DEngineArmManipulationBridge,
     O3DExROS2SimulationConfig,
@@ -325,3 +339,72 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
         )
         self.csv_initialize(self.summary_filename, BenchmarkSummary)
         self.csv_writerow(self.summary_filename, summary)
+
+
+def run_benchmark(
+    model_name: str,
+    vendor: str,
+    out_dir: Path,
+    o3de_config_path: str,
+    scenarios: List[Scenario],
+    bench_logger: logging.Logger,
+):
+    rclpy.init()
+    connector = ROS2Connector()
+    node = connector.node
+    node.declare_parameter("conversion_ratio", 1.0)
+
+    # define model
+    llm = get_llm_for_benchmark(model_name=model_name, vendor=vendor)
+
+    # define tools
+    tools: List[BaseTool] = [
+        GetObjectPositionsTool(
+            connector=connector,
+            target_frame="panda_link0",
+            source_frame="RGBDCamera5",
+            camera_topic="/color_image5",
+            depth_topic="/depth_image5",
+            camera_info_topic="/color_camera_info5",
+            get_grabbing_point_tool=GetGrabbingPointTool(connector=connector),
+        ),
+        MoveToPointTool(connector=connector, manipulator_frame="panda_link0"),
+        GetROS2ImageTool(connector=connector),
+        GetROS2TopicsNamesAndTypesTool(connector=connector),
+    ]
+    # define o3de bridge
+    simulation_config = O3DExROS2SimulationConfig.load_config(
+        config_path=Path(o3de_config_path)
+    )
+    o3de = O3DEngineArmManipulationBridge(connector, logger=bench_logger)
+    # define benchmark
+    benchmark = ManipulationO3DEBenchmark(
+        model_name=model_name,
+        simulation_bridge=o3de,
+        simulation_config=simulation_config,
+        scenarios=scenarios,
+        logger=bench_logger,
+        results_dir=out_dir,
+    )
+    try:
+        for scenario in scenarios:
+            # create new agent for each scenario so its independent from previous ones.
+            agent = create_conversational_agent(
+                llm, tools, scenario.task.system_prompt, logger=bench_logger
+            )
+            benchmark.run_next(agent=agent)
+            o3de.reset_arm()
+            time.sleep(0.2)  # admire the end position for a second ;)
+
+        time.sleep(3)
+        bench_logger.info(
+            "==============================================================="
+        )
+        bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
+        bench_logger.info(
+            "==============================================================="
+        )
+    finally:
+        connector.shutdown()
+        o3de.shutdown()
+        rclpy.shutdown()
