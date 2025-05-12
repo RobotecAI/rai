@@ -2,7 +2,7 @@
 name = "rai-bench"
 version = "0.1.0"
 description = "Package for running and creating benchmarks."
-authors = ["jmatejcz <jakub.matejczyk@robotec.ai>", "Magdalena Kotynia <magdalena.kotynia@robotec.ai>"]
+authors = ["Jakub Matejczyk <jakub.matejczyk@robotec.ai>", "Magdalena Kotynia <magdalena.kotynia@robotec.ai>"]
 readme = "README.md"
 
 packages = [
@@ -12,7 +12,8 @@ packages = [
 python = "^3.10"
 inflect = "7.5.0"
 plotly = "^6.0.1"
-
+rai_core = ">=2.0.0.a2,<3.0.0"
+rai_sim = ">=0.0.2,<1.0.0"
 
 [build-system]
 requires = ["poetry-core"]
