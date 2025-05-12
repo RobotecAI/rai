@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "rai-sim"
-version = "0.0.1"
+version = "0.0.2"
 description = "Package to run simulations"
-authors = ["Magdalena Kotynia <magdalena.kotynia@robotec.ai>", "Kacper Dąbrowski <kacper.dabrowski@robotec.ai>", "Jakub Matejczyk <jakub.matejczyk@robotec.ai>"]
+authors = ["Jakub Matejczyk <jakub.matejczyk@robotec.ai>", "Magdalena Kotynia <magdalena.kotynia@robotec.ai>", "Kacper Dąbrowski <kacper.dabrowski@robotec.ai>"]
 readme = "README.md"
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -16,7 +16,7 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.10, <3.13"
 PyYAML = "*"
-
+rai_core = ">=2.0.0.a2,<3.0.0"
 
 [build-system]
 requires = ["poetry-core"]
