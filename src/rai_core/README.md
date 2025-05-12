@@ -9,7 +9,7 @@ guide and tutorials. 📚
 
 <div align="center">
 
-![rai-image](./docs/imgs/RAI_simple_diagram_medium.png)
+![rai-image](https://raw.githubusercontent.com/RobotecAI/rai/refs/heads/development/docs/imgs/RAI_simple_diagram_medium.png)
 
 ---
 
