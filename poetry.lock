@@ -2043,7 +2043,7 @@ description = "Lightweight in-process concurrent programming"
 optional = false
 python-versions = ">=3.7"
 groups = ["main"]
-markers = "sys_platform == \"darwin\" and (platform_machine == \"x86_64\" or platform_machine == \"aarch64\" or platform_machine == \"ppc64le\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"win32\" or platform_machine == \"WIN32\") or platform_machine == \"aarch64\" or platform_machine == \"ppc64le\" or platform_machine == \"x86_64\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"win32\" or platform_machine == \"WIN32\""
+markers = "platform_machine == \"x86_64\" or platform_machine == \"aarch64\" or platform_machine == \"ppc64le\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"win32\" or platform_machine == \"WIN32\""
 files = [
     {file = "greenlet-3.1.1-cp310-cp310-macosx_11_0_universal2.whl", hash = "sha256:0bbae94a29c9e5c7e4a2b7f0aae5c17e8e90acbfd3bf6270eeba60c39fce3563"},
     {file = "greenlet-3.1.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:0fde093fb93f35ca72a556cf72c92ea3ebfda3d79fc35bb19fbe685853869a83"},
@@ -6354,45 +6354,6 @@ files = [
 cffi = {version = "*", markers = "implementation_name == \"pypy\""}
 
 [[package]]
-name = "rai"
-version = "1.0.0"
-description = "Core functionality for RAI framework"
-optional = false
-python-versions = "^3.10, <3.13"
-groups = ["main"]
-files = []
-develop = true
-
-[package.dependencies]
-coloredlogs = "^15.0.1"
-deprecated = "^1.2.14"
-langchain = "*"
-langchain-aws = "*"
-langchain-community = "*"
-langchain-core = "^0.3"
-langchain-ollama = "*"
-langchain-openai = "*"
-langfuse = "^2.60.2"
-langgraph = "*"
-langgraph-prebuilt = "*"
-lark = "^1.1.9"
-opencv-python = "^4.9.0.80"
-pillow = "^11.0.0"
-pydub = "^0.25.1"
-requests = "^2.32.2"
-scipy = "^1.14.0"
-sounddevice = "^0.4.7"
-streamlit = "^1.44"
-tomli = "^2.0.1"
-tomli-w = "^1.1.0"
-tqdm = "^4.66.4"
-transforms3d = "^0.4.1"
-
-[package.source]
-type = "directory"
-url = "src/rai_core"
-
-[[package]]
 name = "rai-asr"
 version = "1.0.0"
 description = "Automatic Speech Recognition module for RAI framework"
@@ -6431,6 +6392,45 @@ plotly = "^6.0.1"
 [package.source]
 type = "directory"
 url = "src/rai_bench"
+
+[[package]]
+name = "rai-core"
+version = "2.0.0.a0"
+description = "Core functionality for RAI framework"
+optional = false
+python-versions = "^3.10, <3.13"
+groups = ["main"]
+files = []
+develop = true
+
+[package.dependencies]
+coloredlogs = "^15.0.1"
+deprecated = "^1.2.14"
+langchain = "*"
+langchain-aws = "*"
+langchain-community = "*"
+langchain-core = "^0.3"
+langchain-ollama = "*"
+langchain-openai = "*"
+langfuse = "^2.60.2"
+langgraph = "*"
+langgraph-prebuilt = "*"
+lark = "^1.1.9"
+opencv-python = "^4.9.0.80"
+pillow = "^11.0.0"
+pydub = "^0.25.1"
+requests = "^2.32.2"
+scipy = "^1.14.0"
+sounddevice = "^0.4.7"
+streamlit = "^1.44"
+tomli = "^2.0.1"
+tomli-w = "^1.1.0"
+tqdm = "^4.66.4"
+transforms3d = "^0.4.1"
+
+[package.source]
+type = "directory"
+url = "src/rai_core"
 
 [[package]]
 name = "rai-sim"
@@ -9140,4 +9140,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10, <3.13"
-content-hash = "38d2294534833e6805a2938b2c9c01a998653b79143e7aee41b8070b201171be"
+content-hash = "25353c06a088640c80a9f4a610f22b0c9f461ef8a55d66cb73836928e5a966b3"

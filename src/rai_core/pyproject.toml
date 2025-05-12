@@ -3,8 +3,8 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-name = "rai"
-version = "1.0.0"
+name = "rai_core"
+version = "2.0.0.a0"
 description = "Core functionality for RAI framework"
 authors = ["Maciej Majek <maciej.majek@robotec.ai>", "Bartłomiej Boczek <bartlomiej.boczek@robotec.ai>", "Kajetan Rachwał <kajetan.rachwal@robotec.ai>"]
 readme = "README.md"
