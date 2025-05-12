@@ -77,6 +77,26 @@ a linear and clear commit history please:
 -   if batches of "cleanup" or similar commits are present - squash them together
 -   rebase onto the main branch of repository before making the PR
 
+We follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification for our commit messages. This means that each commit message should be structured as follows:
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+Common types include:
+
+-   `feat`: A new feature
+-   `fix`: A bug fix
+-   `docs`: Documentation changes
+-   `style`: Changes that do not affect the meaning of the code
+-   `refactor`: A code change that neither fixes a bug nor adds a feature
+-   `test`: Adding missing tests or correcting existing tests
+-   `chore`: Changes to the build process or auxiliary tools
+
 Always make sure that both all tests are passing before making the PR. Once this is done open your
 PR describing what changes have been made and how to test if it's working. Request review from the
 maintainer who assigned you the issue.
