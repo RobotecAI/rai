@@ -14,16 +14,17 @@
 
 import logging
 import time
+from abc import abstractmethod
 from datetime import datetime
 from queue import Empty, Queue
 from threading import Event, Lock, Thread
-from typing import Any, List, Optional
+from typing import Any, List, Literal, Optional
 from uuid import uuid4
 
 import numpy as np
 from numpy.typing import NDArray
 from rai.agents.base import BaseAgent
-from rai.communication import HRIMessage
+from rai.communication import HRIConnector, HRIMessage
 from rai.communication.sound_device import (
     SoundDeviceConfig,
     SoundDeviceConnector,
@@ -59,6 +60,10 @@ class SpeechToSpeechAgent(BaseAgent):
             targets=[("speaker", speaker_config)],
             sources=[("microphone", microphone_config)],
         )
+
+        self.from_human_topic = from_human_topic
+        self.to_human_topic = to_human_topic
+
         sample_rate, _, out_channels = self.sound_connector.get_audio_params("speaker")
         tts.sample_rate = sample_rate
         tts.channels = out_channels
@@ -93,13 +98,13 @@ class SpeechToSpeechAgent(BaseAgent):
         self.recording_started = False
         # self.ran_setup = False
 
-        self.hri_connector = self._setup_hri_connector()
+        self.hri_connector: HRIConnector = self._setup_hri_connector()
 
         self.microphone_samples: Optional[np.ndarray] = None
         self.save_flag = False
 
-    def _setup_hri_connector(self):
-        return None
+    @abstractmethod
+    def _setup_hri_connector(self) -> HRIConnector: ...
 
     def save_audio(self, audio_data: NDArray[np.int16], filename: str | None = None):
         """
@@ -148,7 +153,6 @@ class SpeechToSpeechAgent(BaseAgent):
         if set_flags:
             self.logger.warning("Flags set:" + ", ".join(set_flags))
         if self.playback_data.playing:
-            print("beep")
             if self.playback_data.current_segment is None:
                 try:
                     self.playback_data.current_segment = self.audio_queues[
@@ -176,19 +180,19 @@ class SpeechToSpeechAgent(BaseAgent):
                     self.playback_data.current_frame += chunksize
 
     def _on_microphone_sample(self, indata: np.ndarray, status_flags: dict[str, Any]):
-        print(indata)
-        if self.save_flag:
-            return
-        if self.microphone_samples is None:
-            self.microphone_samples = indata
-        else:
-            self.microphone_samples = np.concatenate(
-                (self.microphone_samples, indata), axis=0
-            )
+        # print(indata)
+        # if self.save_flag:
+        #     return
+        # if self.microphone_samples is None:
+        #     self.microphone_samples = indata
+        # else:
+        #     self.microphone_samples = np.concatenate(
+        #         (self.microphone_samples, indata), axis=0
+        #     )
 
-        if self.microphone_samples.shape[0] > 100000:
-            self.save_audio(self.microphone_samples, "data_go.wav")
-            self.save_flag = True
+        # if self.microphone_samples.shape[0] > 100000:
+        #     self.save_audio(self.microphone_samples, "data_go.wav")
+        #     self.save_flag = True
 
         sample_time = time.time()
         with self.sample_buffer_lock:
@@ -203,7 +207,7 @@ class SpeechToSpeechAgent(BaseAgent):
                 self.transcription_threads[thread_id]["joined"] = True
 
         voice_detected, output_parameters = self.vad(indata, {})
-        self.logger.info(f"Voice detected: {voice_detected}: {output_parameters}")
+        self.logger.debug(f"Voice detected: {voice_detected}: {output_parameters}")
         should_record = False
         if voice_detected and not self.recording_started:
             should_record = self._should_record(indata, output_parameters)
@@ -226,9 +230,10 @@ class SpeechToSpeechAgent(BaseAgent):
             }
 
         if voice_detected:
-            self.logger.info("Voice detected... resetting grace period")
+            self.logger.debug("Voice detected... resetting grace period")
             self.grace_period_start = sample_time
             self._send_hri_message("pause", "/voice_commands")
+            self.set_playback_state("pause")
             self.is_playing = False
         if (
             self.recording_started
@@ -245,11 +250,13 @@ class SpeechToSpeechAgent(BaseAgent):
             self.transcription_threads[self.active_thread]["thread"].start()
             self.active_thread = ""
             self._send_hri_message("stop", "/voice_commands")
+            self.set_playback_state("stop")
             self.is_playing = False
         elif not self.is_playing and (
             sample_time - self.grace_period_start > self.grace_period
         ):
             self._send_hri_message("play", "/voice_commands")
+            self.set_playback_state("play")
             self.is_playing = True
 
     def _should_record(
@@ -272,12 +279,12 @@ class SpeechToSpeechAgent(BaseAgent):
             self.transcription_lock
         ):  # this is only necessary for the local model... TODO: fix this somehow
             transcription = self.transcription_model.transcribe(audio_data)
-        self._send_hri_message(transcription, "/from_human")
+        self._send_from_human_message(transcription)
         self.transcription_threads[identifier]["transcription"] = transcription
         self.transcription_threads[identifier]["event"].set()
 
-    def _send_hri_message(self, data: str, topic: str):
-        print(data)
+    @abstractmethod
+    def _send_from_human_message(self, data: str): ...
 
     def _on_to_human_message(self, message: HRIMessage):
         self.logger.info(f"Receieved message from human: {message.text}")
@@ -296,6 +303,30 @@ class SpeechToSpeechAgent(BaseAgent):
         if self.current_speech_id == message.communication_id:
             self.text_queues[self.current_transcription_id].put(message.text)
         self.playback_data.playing = True
+
+    def set_playback_state(self, state: Literal["play", "pause", "stop"]):
+        if state == "play":
+            self.playback_data.playing = True
+        elif state == "pause":
+            self.playback_data.playing = False
+        elif state == "stop":
+            self.current_speech_id = None
+            self.playback_data.playing = False
+            previous_id = self.current_transcription_id
+            self.logger.warning(f"Stopping playback, previous id: {previous_id}")
+            self.current_transcription_id = str(uuid4())[0:8]
+            self.audio_queues[self.current_transcription_id] = Queue()
+            self.text_queues[self.current_transcription_id] = Queue()
+            try:
+                del self.audio_queues[previous_id]
+                del self.text_queues[previous_id]
+            except KeyError:
+                pass
+            self.playback_data.data = None
+            self.playback_data.current_frame = 0
+            self.playback_data.current_segment = None
+
+        self.logger.debug(f"Current status is: {self.playback_data.playing}")
 
     def stop(self):
         self.sound_connector.shutdown()

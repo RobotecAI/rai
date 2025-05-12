@@ -72,9 +72,9 @@ Publishes to topic `/to_human: [HRIMessage]`:
 
 Publishes to topic `/voice_commands: [std_msgs/msg/String]`:
 
-- `"pause"` - when voice is detected but the `detection_pipeline` didn't return detection (for interruptive S2S)
-- `"play"` - when voice is not detected, but there was previously a transcription sent
-- `"stop"` - when voice is detected and the `detection_pipeline` returned a detection (or is empty)
+-   `"pause"` - when voice is detected but the `detection_pipeline` didn't return detection (for interruptive S2S)
+-   `"play"` - when voice is not detected, but there was previously a transcription sent
+-   `"stop"` - when voice is detected and the `detection_pipeline` returned a detection (or is empty)
 
 ## RAI Text To Speech
 
@@ -134,7 +134,7 @@ Subscription topic `/to_human: [rai_interfaces/msg/HRIMessage]`:
 Subscription topic `/voice_commands: [std_msgs/msg/String]`:
 The following values are accepted:
 
-- `"play"`: allow for playing the voice through the speaker (if voice queue is not empty)
-- `"pause"`: pause the playing of the voice through the speaker
-- `"stop"`: stop the current playback and clear the queue
-- `"tog_play"`: toggle between play and pause
+-   `"play"`: allow for playing the voice through the speaker (if voice queue is not empty)
+-   `"pause"`: pause the playing of the voice through the speaker
+-   `"stop"`: stop the current playback and clear the queue
+-   `"tog_play"`: toggle between play and pause
