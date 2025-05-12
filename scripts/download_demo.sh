@@ -18,12 +18,12 @@ if [ -z "$ROS_DISTRO" ]; then
     exit 1
 fi
 
-MANIPULATION_HUMBLE="https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIManipulationDemo_1.0.0_jammyhumble.zip"
-MANIPULATION_JAZZY="https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIManipulationDemo_1.0.0_noblejazzy.zip"
-ROSBOT_HUMBLE="https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIROSBotDemo_1.0.0_jammyhumble.zip"
-ROSBOT_JAZZY="https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIROSBotDemo_1.0.0_noblejazzy.zip"
-AGRICULTURE_HUMBLE="https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIAgricultureDemo_1.0.0_jammyhumble.zip"
-AGRICULTURE_JAZZY="https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIAgricultureDemo_1.0.0_noblejazzy.zip"
+MANIPULATION_HUMBLE="https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIManipulationDemo_jammyhumble.zip"
+MANIPULATION_JAZZY="https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIManipulationDemo_noblejazzy.zip"
+ROSBOT_HUMBLE="https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIROSBotXLDemo_jammyhumble.zip"
+ROSBOT_JAZZY="https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIROSBotXLDemo_noblejazzy.zip"
+AGRICULTURE_HUMBLE="https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIAgricultureDemo_jammyhumble.zip"
+AGRICULTURE_JAZZY="https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIAgricultureDemo_noblejazzy.zip"
 
 case "$DEMO_NAME" in
     manipulation)
