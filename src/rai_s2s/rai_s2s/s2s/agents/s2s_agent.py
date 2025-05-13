@@ -76,6 +76,9 @@ class SpeechToSpeechAgent(BaseAgent):
         self.current_transcription_id = str(uuid4())[0:8]
         self.current_speech_id = None
         self.text_queues: dict[str, Queue] = {self.current_transcription_id: Queue()}
+
+        self.audio_generating_thread = Thread(target=self._audio_gen_thread)
+        self.audio_generating_thread.start()
         self.audio_queues: dict[str, Queue] = {self.current_transcription_id: Queue()}
         self.remembered_speech_ids: list[str] = []
 
@@ -101,10 +104,29 @@ class SpeechToSpeechAgent(BaseAgent):
         self.hri_connector: HRIConnector = self._setup_hri_connector()
 
         self.microphone_samples: Optional[np.ndarray] = None
+        self.terminate_agent = Event()
         self.save_flag = False
 
     @abstractmethod
     def _setup_hri_connector(self) -> HRIConnector: ...
+
+    def _audio_gen_thread(self):
+        while not self.terminate_agent.wait(timeout=0.01):
+            if self.current_transcription_id in self.text_queues:
+                try:
+                    data = self.text_queues[self.current_transcription_id].get(
+                        block=False
+                    )
+                except Empty:
+                    continue
+                audio = self.tts_model.get_speech(data)
+                try:
+                    self.audio_queues[self.current_transcription_id].put(audio)
+                except KeyError as e:
+                    self.logger.error(
+                        f"Could not find queue for {self.current_transcription_id}: queuse: {self.audio_queues.keys()}"
+                    )
+                    raise e
 
     def save_audio(self, audio_data: NDArray[np.int16], filename: str | None = None):
         """
@@ -180,20 +202,6 @@ class SpeechToSpeechAgent(BaseAgent):
                     self.playback_data.current_frame += chunksize
 
     def _on_microphone_sample(self, indata: np.ndarray, status_flags: dict[str, Any]):
-        # print(indata)
-        # if self.save_flag:
-        #     return
-        # if self.microphone_samples is None:
-        #     self.microphone_samples = indata
-        # else:
-        #     self.microphone_samples = np.concatenate(
-        #         (self.microphone_samples, indata), axis=0
-        #     )
-
-        # if self.microphone_samples.shape[0] > 100000:
-        #     self.save_audio(self.microphone_samples, "data_go.wav")
-        #     self.save_flag = True
-
         sample_time = time.time()
         with self.sample_buffer_lock:
             self.sample_buffer.append(indata)
@@ -326,4 +334,12 @@ class SpeechToSpeechAgent(BaseAgent):
         self.logger.debug(f"Current status is: {self.playback_data.playing}")
 
     def stop(self):
+        """
+        Clean exit the speech-to-speech agent, terminating playback and joining the transcription thread.
+        """
         self.sound_connector.shutdown()
+
+        self.logger.info("Stopping TextToSpeechAgent")
+        self.terminate_agent.set()
+        if self.audio_generating_thread is not None:
+            self.audio_generating_thread.join()
