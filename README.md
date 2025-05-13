@@ -16,6 +16,7 @@ guide and tutorials. 📚
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 ![GitHub Release](https://img.shields.io/github/v/release/RobotecAI/rai)
 ![Contributors](https://img.shields.io/github/contributors/robotecai/rai)
+[![arXiv](https://img.shields.io/badge/arXiv-2505.07532-b31b1b.svg)](https://arxiv.org/abs/2505.07532)
 
 ![Static Badge](https://img.shields.io/badge/Ubuntu-24.04-orange)
 ![Static Badge](https://img.shields.io/badge/Ubuntu-22.04-orange)
@@ -87,3 +88,19 @@ instructions on creating a configuration specifically for your robot.
 ### Contributing
 
 You are welcome to contribute to RAI! Please see our [Contribution Guide](CONTRIBUTING.md).
+
+### Citation
+
+If you find our work helpful for your research, please consider citing the following BibTeX entry.
+
+```bibtex
+@misc{rachwał2025raiflexibleagentframework,
+      title={RAI: Flexible Agent Framework for Embodied AI},
+      author={Kajetan Rachwał and Maciej Majek and Bartłomiej Boczek and Kacper Dąbrowski and Paweł Liberadzki and Adam Dąbrowski and Maria Ganzha},
+      year={2025},
+      eprint={2505.07532},
+      archivePrefix={arXiv},
+      primaryClass={cs.MA},
+      url={https://arxiv.org/abs/2505.07532},
+}
+```
