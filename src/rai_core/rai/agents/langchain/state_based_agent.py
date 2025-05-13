@@ -24,7 +24,10 @@ from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
 from rai.agents.langchain.agent import LangChainAgent, newMessageBehaviorType
-from rai.agents.langchain.runnables import ReActAgentState, create_state_based_runnable
+from rai.agents.langchain.core import (
+    ReActAgentState,
+    create_state_based_runnable,
+)
 from rai.aggregators import BaseAggregator
 from rai.communication.base_connector import BaseConnector
 from rai.communication.hri_connector import HRIConnector, HRIMessage

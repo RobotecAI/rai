@@ -18,7 +18,10 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 
 from rai.agents.langchain.agent import LangChainAgent
-from rai.agents.langchain.runnables import ReActAgentState, create_react_runnable
+from rai.agents.langchain.core import (
+    ReActAgentState,
+    create_react_runnable,
+)
 from rai.communication.hri_connector import HRIConnector, HRIMessage
 from rai.messages.multimodal import SystemMultimodalMessage
 

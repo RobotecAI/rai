@@ -18,7 +18,7 @@ from datetime import datetime
 from pathlib import Path
 
 from rai import get_llm_model_direct
-from rai.agents.conversational_agent import create_conversational_agent
+from rai.agents.langchain.core import create_conversational_agent
 
 from rai_bench.examples.tool_calling_agent.tasks import get_all_tasks
 from rai_bench.tool_calling_agent.benchmark import ToolCallingAgentBenchmark
