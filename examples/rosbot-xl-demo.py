@@ -12,13 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
+from typing import List, cast
 
 import rclpy
 import streamlit as st
+from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
 from rai import get_llm_model
-from rai.agents import ReActAgent
+from rai.agents.langchain import (
+    ReActAgent,
+    ReActAgentState,
+)
 from rai.communication.ros2 import ROS2Connector
 from rai.frontend.streamlit import run_streamlit_app
 from rai.tools.ros2 import (
@@ -38,7 +42,7 @@ st.set_page_config(
 
 
 @st.cache_resource
-def initialize_agent():
+def initialize_agent() -> Runnable[ReActAgentState, ReActAgentState]:
     rclpy.init()
     SYSTEM_PROMPT = """
     You are an intelligent autonomous agent embodied in ROSBotXL—this robot is your body, your interface with the physical world.
@@ -89,14 +93,14 @@ def initialize_agent():
     connectors = {}
 
     agent = ReActAgent(
-        connectors=connectors,
+        target_connectors=connectors,
         llm=get_llm_model("complex_model", streaming=True),
         system_prompt=SYSTEM_PROMPT,
         tools=tools,
     ).agent
     connector.node.declare_parameter("conversion_ratio", 1.0)
 
-    return agent
+    return cast(Runnable[ReActAgentState, ReActAgentState], agent)
 
 
 def main():

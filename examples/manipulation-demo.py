@@ -17,7 +17,7 @@ import rclpy
 import rclpy.qos
 from langchain_core.messages import HumanMessage
 from rai import get_llm_model
-from rai.agents.conversational_agent import create_conversational_agent
+from rai.agents.langchain.core import create_conversational_agent
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2 import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
 from rai.tools.ros2.manipulation import GetObjectPositionsTool, MoveToPointTool

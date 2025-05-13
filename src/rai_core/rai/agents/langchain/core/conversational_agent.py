@@ -24,7 +24,7 @@ from langgraph.graph import START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt.tool_node import tools_condition
 
-from rai.agents.tool_runner import ToolRunner
+from rai.agents.langchain.core.tool_runner import ToolRunner
 
 
 class State(TypedDict):

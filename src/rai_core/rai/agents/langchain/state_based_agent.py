@@ -16,7 +16,7 @@ import threading
 import time
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage
@@ -24,7 +24,7 @@ from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
 from rai.agents.langchain.agent import LangChainAgent, newMessageBehaviorType
-from rai.agents.langchain.runnables import ReActAgentState, create_state_based_runnable
+from rai.agents.langchain.core import ReActAgentState, create_state_based_runnable
 from rai.aggregators import BaseAggregator
 from rai.communication.base_connector import BaseConnector
 from rai.communication.hri_connector import HRIConnector, HRIMessage
@@ -32,7 +32,7 @@ from rai.messages.multimodal import HumanMultimodalMessage
 
 
 class StateBasedConfig(BaseModel):
-    aggregators: Dict[Union[str, Tuple[str, str]], List[BaseAggregator]] = Field(
+    aggregators: Dict[Union[str, Tuple[str, str]], List[BaseAggregator[Any]]] = Field(
         description="Dict of topic : aggregator or (topic, msg_type) : aggragator"
     )
     time_interval: float = Field(default=5.0)
@@ -136,7 +136,7 @@ class BaseStateBasedAgent(LangChainAgent, ABC):
         """Runs aggregation on collected data"""
 
         def process_aggregator(
-            source: str, aggregator: BaseAggregator
+            source: str, aggregator: BaseAggregator[Any]
         ) -> Tuple[str, BaseMessage | None]:
             self.logger.info(
                 f"Running aggregator: {aggregator}(source={source}) on {len(aggregator.get_buffer())} messages"

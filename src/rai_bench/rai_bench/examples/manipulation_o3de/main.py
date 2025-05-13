@@ -21,7 +21,7 @@ from typing import List
 
 import rclpy
 from langchain.tools import BaseTool
-from rai.agents.conversational_agent import create_conversational_agent
+from rai.agents.langchain.core import create_conversational_agent
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.initialization import get_llm_model_direct
 from rai.tools.ros2 import (

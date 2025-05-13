@@ -18,7 +18,10 @@ import rclpy
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import Runnable
 from rai import get_llm_model
-from rai.agents.conversational_agent import State, create_conversational_agent
+from rai.agents.langchain.core import (
+    ConversationalAgentState,
+    create_conversational_agent,
+)
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2 import ROS2ServicesToolkit, ROS2TopicsToolkit
 from rai.tools.time import WaitForSecondsTool
@@ -31,7 +34,11 @@ from rai_interfaces.action import Task
 
 
 class MockBehaviorTreeNode(Node):
-    def __init__(self, tractor_number: int, agent: Runnable[State, State]):
+    def __init__(
+        self,
+        tractor_number: int,
+        agent: Runnable[ConversationalAgentState, ConversationalAgentState],
+    ):
         super().__init__(f"mock_behavior_tree_node_{tractor_number}")
         self.tractor_number = tractor_number
         self.agent = agent
@@ -72,7 +79,9 @@ class MockBehaviorTreeNode(Node):
             goal_msg.description = ""
             goal_msg.task = "Anomaly detected. Please decide what to do."
 
-            self.agent.invoke(State(messages=[HumanMessage(content=str(goal_msg))]))
+            self.agent.invoke(
+                ConversationalAgentState(messages=[HumanMessage(content=str(goal_msg))])
+            )
 
 
 def main():
