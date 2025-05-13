@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from .conversational_agent import State as ConversationalAgentState
 from .conversational_agent import create_conversational_agent
 from .runnables import (
     ReActAgentState,
@@ -21,6 +22,7 @@ from .runnables import (
 from .tool_runner import ToolRunner
 
 __all__ = [
+    "ConversationalAgentState",
     "ReActAgentState",
     "ToolRunner",
     "create_conversational_agent",

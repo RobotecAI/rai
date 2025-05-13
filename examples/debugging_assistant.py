@@ -14,7 +14,7 @@
 
 import streamlit as st
 from rai import get_llm_model
-from rai.agents import create_conversational_agent
+from rai.agents.langchain.core import create_conversational_agent
 from rai.frontend import run_streamlit_app
 from rai.tools.ros2 import ROS2CLIToolkit
 
