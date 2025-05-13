@@ -16,14 +16,14 @@ import threading
 import time
 import uuid
 from functools import partial
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar
+from typing import Any, Callable, Dict, Final, List, Literal, Optional, Tuple, TypeVar
 
 import rclpy
 import rclpy.executors
 import rclpy.node
 import rclpy.time
 from rclpy.duration import Duration
-from rclpy.executors import MultiThreadedExecutor
+from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
 from tf2_ros import Buffer, LookupException, TransformListener, TransformStamped
@@ -97,6 +97,7 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         self,
         node_name: str = f"rai_ros2_connector_{str(uuid.uuid4())[-12:]}",
         destroy_subscribers: bool = False,
+        executor_type: Literal["single_threaded", "multi_threaded"] = "multi_threaded",
     ):
         super().__init__()
 
@@ -106,7 +107,7 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
                 "Auto-initializing ROS2, but manual initialization is recommended. "
                 "For better control and predictability, call rclpy.init() or ROS2Context before creating this connector."
             )
-
+        self._executor_type = executor_type
         self._node = Node(node_name)
         self._topic_api = ROS2TopicAPI(self._node, destroy_subscribers)
         self._service_api = ROS2ServiceAPI(self._node)
@@ -114,13 +115,60 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         self._tf_buffer = Buffer(node=self._node)
         self._tf_listener = TransformListener(self._tf_buffer, self._node)
 
-        self._executor = MultiThreadedExecutor()
+        self._executor_performance_time_delta = 1.0
+        self._executor_performance_timer = self._node.create_timer(
+            self._executor_performance_time_delta, self._executor_performance_callback
+        )
+        self._performance_warning_threshold_multiplier: Final[float] = 1.1
+        self._available_executors: Final[set[str]] = {
+            "MultiThreadedExecutor",
+            "SingleThreadedExecutor",
+        }
+        if self._executor_type == "multi_threaded":
+            self._executor = MultiThreadedExecutor()
+        elif self._executor_type == "single_threaded":
+            self._executor = SingleThreadedExecutor()
+        else:
+            raise ValueError(f"Invalid executor type: {self._executor_type}")
+
         self._executor.add_node(self._node)
         self._thread = threading.Thread(target=self._executor.spin)
         self._thread.start()
+        self.last_executor_performance_time = time.time()
 
         # cache for last received messages
         self.last_msg: Dict[str, T] = {}
+
+    def _executor_performance_callback(self) -> None:
+        """Monitor executor performance and log warnings if it falls behind schedule.
+
+        This callback checks if the executor is running slower than expected and logs
+        a warning with suggestions for alternative executors if performance issues
+        are detected.
+        """
+        current_time = time.time()
+        time_behind = (
+            current_time
+            - self.last_executor_performance_time
+            - self._executor_performance_time_delta
+        )
+        threshold = (
+            self._executor_performance_time_delta
+            * self._performance_warning_threshold_multiplier
+        )
+
+        if time_behind > threshold:
+            alternative_executors = self._available_executors - {
+                self._executor.__class__.__name__
+            }
+
+            self.logger.warning(
+                f"{self._executor.__class__.__name__} is {time_behind:.2f} seconds behind. "
+                f"If you see this message frequently, consider switching to {', '.join(alternative_executors)}."
+            )
+            self.last_executor_performance_time = current_time
+        else:
+            self.last_executor_performance_time = current_time
 
     def last_message_callback(self, source: str, msg: T):
         self.last_msg[source] = msg

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, List, Type
+from typing import Any, Dict, List, Optional, Type
 
 from langchain_core.tools import BaseTool
 from langchain_core.utils import stringify_dict
@@ -80,10 +80,11 @@ class GetROS2ServicesNamesAndTypesTool(BaseROS2Tool):
 
 
 class CallROS2ServiceToolInput(BaseModel):
-    service_name: str = Field(..., description="The service to call")
-    service_type: str = Field(..., description="The type of the service")
-    service_args: Dict[str, Any] = Field(
-        ..., description="The arguments to pass to the service"
+    service_name: str = Field(description="The service to call")
+    service_type: str = Field(description="The type of the service")
+    service_args: Optional[Dict[str, Any]] = Field(
+        default={},
+        description="A dictionary mapping each field name of the service request message to its value. For example, for std_srvs/srv/SetBool use {'data': True}.",
     )
 
 
@@ -93,10 +94,15 @@ class CallROS2ServiceTool(BaseROS2Tool):
     args_schema: Type[CallROS2ServiceToolInput] = CallROS2ServiceToolInput
 
     def _run(
-        self, service_name: str, service_type: str, service_args: Dict[str, Any]
+        self,
+        service_name: str,
+        service_type: str,
+        service_args: Optional[Dict[str, Any]] = None,
     ) -> str:
         if not self.is_writable(service_name):
             raise ValueError(f"Service {service_name} is not writable")
+        if service_args is None:
+            service_args = {}
         message = ROS2Message(payload=service_args)
         response = self.connector.service_call(
             message, service_name, msg_type=service_type

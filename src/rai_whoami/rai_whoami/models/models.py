@@ -160,6 +160,12 @@ class EmbodimentInfo(BaseModel):
     images: Optional[Annotated[List[str], "base64 encodedpng images"]] = None
 
     @classmethod
+    def from_file(cls, file: Path | str) -> "EmbodimentInfo":
+        if isinstance(file, str):
+            file = Path(file)
+        return cls.model_validate_json(file.read_text())
+
+    @classmethod
     def from_directory(cls, directory: Path | str) -> "EmbodimentInfo":
         if isinstance(directory, str):
             directory = Path(directory)

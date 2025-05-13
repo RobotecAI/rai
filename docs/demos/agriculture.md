@@ -6,34 +6,25 @@ environment, the tractor may encounter unexpected situations. The conventional s
 to handle these situations and usually ends up replanning the path. The tractor can handle this
 optimally by calling the RAI agent to decide what to do.
 
-![Tractor in field meets an obstacle](../imgs/agriculture_demo.gif)
+<div style="text-align: center;"><img src="../../imgs/agriculture_demo.gif" alt="agriculture-demo"></div>
 
 ## Quick Start
 
+!!! tip "Remain in sourced shell"
+
+    Ensure that every command is run in a sourced shell using `source setup_shell.sh`
+    Ensure ROS 2 is sourced.
+
 1. **Download the Latest Release**
 
-    Download the latest binary release for your ROS 2 distribution.
-
-    - [ros2-humble-agriculture-demo](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIAgricultureDemo_1.0.0_jammyhumble.zip)
-    - [ros2-jazzy-agriculture-demo](https://robotec-ml-roscon2024-demos.s3.eu-central-1.amazonaws.com/ROSCON_Release/RAIAgricultureDemo_1.0.0_noblejazzy.zip)
-
-2. **Unpack the Binary and Run the Simulation** Unpack the binary
-
-    - For Jazzy:
-
     ```bash
-    unzip RAIAgricultureDemo_1.0.0_noblejazzy.zip
+    ./scripts/download_demo.sh agriculture
     ```
 
-    - For Humble:
+2. **Run the Simulation**
 
     ```bash
-    unzip RAIAgricultureDemo_1.0.0_jammyhumble.zip
-    ```
-
-    ```bash
-    . /opt/ros/${ROS_DISTRO}/setup.bash
-    ./RAIAgricultureDemoGamePackage/RAIAgricultureDemo.GameLauncher -bg_ConnectToAssetProcessor=0
+    ./demo_assets/agriculture/RAIAgricultureDemoGamePackage/RAIAgricultureDemo.GameLauncher -bg_ConnectToAssetProcessor=0
     ```
 
 3. **Start the Tractor Node**

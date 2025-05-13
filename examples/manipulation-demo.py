@@ -13,24 +13,39 @@
 # limitations under the License.
 
 
+import logging
+from typing import List
+
 import rclpy
 import rclpy.qos
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.tools import BaseTool
 from rai import get_llm_model
 from rai.agents.langchain.core import create_conversational_agent
+from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
-from rai.tools.ros2 import GetROS2ImageTool, GetROS2TopicsNamesAndTypesTool
 from rai.tools.ros2.manipulation import GetObjectPositionsTool, MoveToPointTool
+from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
 from rai_open_set_vision.tools import GetGrabbingPointTool
+
+from rai_whoami.models import EmbodimentInfo
+
+logger = logging.getLogger(__name__)
 
 
 def create_agent():
     rclpy.init()
     connector = ROS2Connector()
+
+    required_services = ["/grounded_sam_segment", "/grounding_dino_classify"]
+    required_topics = ["/color_image5", "/depth_image5", "/color_camera_info5"]
+    wait_for_ros2_services(connector, required_services)
+    wait_for_ros2_topics(connector, required_topics)
+
     node = connector.node
     node.declare_parameter("conversion_ratio", 1.0)
 
-    tools = [
+    tools: List[BaseTool] = [
         GetObjectPositionsTool(
             connector=connector,
             target_frame="panda_link0",
@@ -41,33 +56,25 @@ def create_agent():
             get_grabbing_point_tool=GetGrabbingPointTool(connector=connector),
         ),
         MoveToPointTool(connector=connector, manipulator_frame="panda_link0"),
-        GetROS2ImageTool(connector=connector),
-        GetROS2TopicsNamesAndTypesTool(connector=connector),
+        GetROS2ImageConfiguredTool(connector=connector, topic="/color_image5"),
     ]
 
     llm = get_llm_model(model_type="complex_model", streaming=True)
-
-    system_prompt = """
-    You are a robotic arm with interfaces to detect and manipulate objects.
-    Here are the coordinates information:
-    x - front to back (positive is forward)
-    y - left to right (positive is right)
-    z - up to down (positive is up)
-
-    Before starting the task, make sure to grab the camera image to understand the environment.
-    """
-
+    embodiment_info = EmbodimentInfo.from_file(
+        "examples/embodiments/manipulation_embodiment.json"
+    )
     agent = create_conversational_agent(
         llm=llm,
         tools=tools,
-        system_prompt=system_prompt,
+        system_prompt=embodiment_info.to_langchain(),
     )
     return agent
 
 
 def main():
     agent = create_agent()
-    messages = []
+    messages: List[BaseMessage] = []
+
     while True:
         prompt = input("Enter a prompt: ")
         messages.append(HumanMessage(content=prompt))

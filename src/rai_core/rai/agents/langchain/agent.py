@@ -17,7 +17,7 @@ import threading
 import time
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
-from typing import Deque, Dict, List, Literal, Optional, TypedDict
+from typing import Any, Deque, Dict, List, Literal, Optional, TypedDict
 
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
@@ -106,7 +106,7 @@ class LangChainAgent(BaseAgent):
     def __init__(
         self,
         target_connectors: Dict[str, HRIConnector[HRIMessage]],
-        runnable: Runnable,
+        runnable: Runnable[Any, Any],
         state: BaseState | None = None,
         new_message_behavior: newMessageBehaviorType = "interrupt_keep_last",
         max_size: int = 100,

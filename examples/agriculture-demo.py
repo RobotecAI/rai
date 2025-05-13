@@ -13,77 +13,85 @@
 # limitations under the License.
 
 import argparse
+from threading import Timer
 
-import rclpy
 from langchain_core.messages import HumanMessage
-from langchain_core.runnables import Runnable
-from rai import get_llm_model
+from langchain_core.runnables import Runnable, RunnableConfig
+from rai import get_llm_model, get_tracing_callbacks
+from rai.agents import BaseAgent, wait_for_shutdown
 from rai.agents.langchain.core import (
     ConversationalAgentState,
     create_conversational_agent,
 )
-from rai.communication.ros2.connectors import ROS2Connector
-from rai.tools.ros2 import ROS2ServicesToolkit, ROS2TopicsToolkit
+from rai.communication.ros2 import (
+    ROS2Connector,
+    ROS2Context,
+    ROS2Message,
+    wait_for_ros2_services,
+    wait_for_ros2_topics,
+)
+from rai.tools.ros2 import GetROS2MessageInterfaceTool, ROS2ServicesToolkit
+from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
 from rai.tools.time import WaitForSecondsTool
-from rclpy.callback_groups import ReentrantCallbackGroup
-from rclpy.executors import MultiThreadedExecutor
-from rclpy.node import Node
 from std_srvs.srv import Trigger
 
-from rai_interfaces.action import Task
+from rai_whoami.models import EmbodimentInfo
 
 
-class MockBehaviorTreeNode(Node):
+class SafetyAgent(BaseAgent):
     def __init__(
         self,
-        tractor_number: int,
         agent: Runnable[ConversationalAgentState, ConversationalAgentState],
+        connector: ROS2Connector,
+        tractor_number: int,
     ):
-        super().__init__(f"mock_behavior_tree_node_{tractor_number}")
-        self.tractor_number = tractor_number
+        super().__init__()
         self.agent = agent
+        self.connector = connector
+        self.tractor_number = tractor_number
+        self.working = False
+        self.langchain_callbacks = get_tracing_callbacks()
 
-        # Create a callback group for concurrent execution
-        self.callback_group = ReentrantCallbackGroup()
+        self.timer = Timer(interval=1.0, function=self.check_tractor_state)
+        self.logger.info(f"{self.__class__.__name__} initialized")
 
-        # Create service client
-        self.current_state_client = self.create_client(
-            Trigger,
-            f"/tractor{tractor_number}/current_state",
-            callback_group=self.callback_group,
-        )
+    def run(self):
+        self.logger.info(f"{self.__class__.__name__} running")
+        self.timer.start()
 
-        # Create timer for periodic checks
-        self.create_timer(
-            5.0, self.check_tractor_state, callback_group=self.callback_group
-        )
+    def stop(self):
+        self.logger.info(f"{self.__class__.__name__} stopping")
+        self.timer.cancel()
+        self.logger.info(f"{self.__class__.__name__} stopped")
 
-        self.get_logger().info(
-            f"Mock Behavior Tree Node for Tractor {tractor_number} initialized"
-        )
+    def check_tractor_state(self):
+        """Check the current state of the tractor and call the RAI agent if the tractor has stopped."""
+        response: Trigger.Response = self.connector.service_call(
+            msg_type="std_srvs/srv/Trigger",
+            message=ROS2Message(payload={}),
+            target=f"/tractor{self.tractor_number}/current_state",
+        ).payload
+        if not self.working:
+            self.logger.info(f"Tractor {self.tractor_number} state: {response.message}")
 
-    async def check_tractor_state(self):
-        # Call the current_state service
-        response = await self.current_state_client.call_async(Trigger.Request())
-
-        self.get_logger().info(f"Current state: {response.message}")
-
-        if "STOPPED" in response.message:
-            self.get_logger().info(
-                "The tractor has stopped. Calling RaiNode to decide what to do."
-            )
-
-            # Send goal to perform_task action server
-            goal_msg = Task.Goal()
-            goal_msg.priority = "high"
-            goal_msg.description = ""
-            goal_msg.task = "Anomaly detected. Please decide what to do."
-
+        if "STOPPED" in response.message and not self.working:
+            self.logger.info("---------- RAI Agent invoked ----------")
+            self.working = True
             self.agent.invoke(
-                ConversationalAgentState(messages=[HumanMessage(content=str(goal_msg))])
+                ConversationalAgentState(
+                    messages=[
+                        HumanMessage(
+                            content="Anomaly has been detected. The tractor has stopped. Please decide what to do."
+                        )
+                    ]
+                ),
+                config=RunnableConfig(callbacks=self.langchain_callbacks),
             )
+            self.working = False
+            self.logger.info("---------- RAI Agent done ----------")
 
 
+@ROS2Context()
 def main():
     parser = argparse.ArgumentParser(description="Autonomous Tractor Demo")
     parser.add_argument(
@@ -95,48 +103,48 @@ def main():
     )
     args = parser.parse_args()
 
-    tractor_number = args.tractor_number
+    # Load the system prompt
+    embodiment_info = EmbodimentInfo.from_file(
+        "examples/embodiments/agriculture_embodiment.json"
+    )
 
-    rclpy.init()
-
-    SYSTEM_PROMPT = f"""
-    You are autonomous tractor {tractor_number} operating in an agricultural field. You are activated whenever the tractor stops due to an unexpected situation. Your task is to call a service based on your assessment of the situation.
-
-    The system is not perfect, so it may stop you unnecessarily at times.
-
-    You are to call one of the following services based on the situation:
-    1. continue - If you believe the stop was unnecessary.
-    2. current_state - If you want to check the current state of the tractor.
-    3. flash - If you want to flash the lights to signal possible animals to move out of the way.
-    4. replan - If you want to replan the path due to an obstacle in front of you.
-
-    Important: You must call only one service. The tractor can only handle one service call.
-    """
+    # Initialize ROS 2 Communication
     connector = ROS2Connector()
+
+    # Initialize LangGraph Agent
     agent = create_conversational_agent(
         llm=get_llm_model("complex_model"),
-        system_prompt=SYSTEM_PROMPT,
+        system_prompt=embodiment_info.to_langchain(),
         tools=[
-            *ROS2TopicsToolkit(connector=connector).get_tools(),
-            *ROS2ServicesToolkit(connector=connector).get_tools(),
+            GetROS2ImageConfiguredTool(
+                connector=connector,
+                topic=f"/tractor{args.tractor_number}/camera_image_color",
+            ),
+            *ROS2ServicesToolkit(
+                connector=connector,
+                writable=[
+                    f"/tractor{args.tractor_number}/continue",
+                    f"/tractor{args.tractor_number}/current_state",
+                    f"/tractor{args.tractor_number}/flash",
+                    f"/tractor{args.tractor_number}/replan",
+                    f"/tractor{args.tractor_number}/stop",
+                ],
+            ).get_tools(),
+            GetROS2MessageInterfaceTool(connector=connector),
             WaitForSecondsTool(),
         ],
     )
 
-    mock_node = MockBehaviorTreeNode(tractor_number, agent)
+    # [Optional] wait for ROS 2 topics and services to be available
+    wait_for_ros2_topics(
+        connector, [f"/tractor{args.tractor_number}/camera_image_color"]
+    )
+    wait_for_ros2_services(connector, [f"/tractor{args.tractor_number}/current_state"])
 
-    # Use a MultiThreadedExecutor to allow for concurrent execution
-    executor = MultiThreadedExecutor()
-    executor.add_node(mock_node)
-
-    try:
-        executor.spin()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        connector.shutdown()
-        mock_node.destroy_node()
-        rclpy.shutdown()
+    # Run the safety agent
+    safety_agent = SafetyAgent(agent, connector, args.tractor_number)
+    safety_agent.run()
+    wait_for_shutdown([safety_agent])
 
 
 if __name__ == "__main__":
