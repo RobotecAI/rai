@@ -20,6 +20,9 @@ RAI enables you to control your robots using natural language and helps them per
     <a href="https://github.com/robotecai/rai/graphs/contributors">
         <img src="https://img.shields.io/github/contributors/robotecai/rai" alt="Contributors">
     </a>
+    <a href="https://arxiv.org/abs/2505.07532">
+        <img src="https://img.shields.io/badge/arXiv-2505.07532-b31b1b.svg" alt="arXiv: 2505.07532">
+    </a>
     <br>
     <img src="https://img.shields.io/badge/Ubuntu-24.04-orange" alt="Ubuntu 24.04">
     <img src="https://img.shields.io/badge/Python-3.12-blue" alt="Python 3.12">
@@ -88,6 +91,22 @@ This design philosophy means that while RAI is fully compatible with ROS 2, most
 ### Contributing
 
 You are welcome to contribute to RAI! Please see our [Contribution Guide](faq/contributing/CONTRIBUTING.md).
+
+### Citation
+
+If you find our work helpful for your research, please consider citing the following BibTeX entry.
+
+```bibtex
+@misc{rachwał2025raiflexibleagentframework,
+      title={RAI: Flexible Agent Framework for Embodied AI},
+      author={Kajetan Rachwał and Maciej Majek and Bartłomiej Boczek and Kacper Dąbrowski and Paweł Liberadzki and Adam Dąbrowski and Maria Ganzha},
+      year={2025},
+      eprint={2505.07532},
+      archivePrefix={arXiv},
+      primaryClass={cs.MA},
+      url={https://arxiv.org/abs/2505.07532},
+}
+```
 
 !!! tip "Want to know more?"
 
