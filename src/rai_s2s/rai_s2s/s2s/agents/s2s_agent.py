@@ -232,7 +232,6 @@ class SpeechToSpeechAgent(BaseAgent):
         if voice_detected:
             self.logger.debug("Voice detected... resetting grace period")
             self.grace_period_start = sample_time
-            self._send_hri_message("pause", "/voice_commands")
             self.set_playback_state("pause")
             self.is_playing = False
         if (
@@ -249,13 +248,11 @@ class SpeechToSpeechAgent(BaseAgent):
                 self.sample_buffer = []
             self.transcription_threads[self.active_thread]["thread"].start()
             self.active_thread = ""
-            self._send_hri_message("stop", "/voice_commands")
             self.set_playback_state("stop")
             self.is_playing = False
         elif not self.is_playing and (
             sample_time - self.grace_period_start > self.grace_period
         ):
-            self._send_hri_message("play", "/voice_commands")
             self.set_playback_state("play")
             self.is_playing = True
 

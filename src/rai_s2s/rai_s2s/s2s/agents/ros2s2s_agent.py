@@ -15,8 +15,7 @@
 import logging
 from typing import Optional
 
-from rai.communication import HRIMessage
-from rai.communication.ros2 import ROS2HRIConnector
+from rai.communication.ros2 import ROS2HRIConnector, ROS2HRIMessage
 from rai.communication.sound_device import (
     SoundDeviceConfig,
 )
@@ -60,4 +59,11 @@ class ROS2S2SAgent(SpeechToSpeechAgent):
         return hri_connector
 
     def _send_from_human_message(self, data: str):
-        self.hri_connector.send_message(HRIMessage(text=data), self.from_human_topic)
+        print(f"Sending message to {self.from_human_topic}")
+        self.hri_connector.send_message(
+            ROS2HRIMessage(text=data), self.from_human_topic
+        )
+
+    def _send_to_human_message(self, data: str):
+        print(f"Sending message to {self.to_human_topic}")
+        self.hri_connector.send_message(ROS2HRIMessage(text=data), self.to_human_topic)
