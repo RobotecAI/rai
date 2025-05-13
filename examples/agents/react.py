@@ -13,10 +13,9 @@
 # limitations under the License.
 
 
-from rai.agents.langchain.react_agent import ReActAgent
+from rai.agents.langchain import ReActAgent
 from rai.communication.hri_connector import HRIMessage
-from rai.communication.ros2 import ROS2Connector, ROS2Context
-from rai.communication.ros2.connectors.hri_connector import ROS2HRIConnector
+from rai.communication.ros2 import ROS2Connector, ROS2Context, ROS2HRIConnector
 from rai.tools.ros2 import ROS2Toolkit
 
 
@@ -28,7 +27,7 @@ def main():
     agent = ReActAgent(
         target_connectors={
             "/to_human": hri_connector,
-        },  # agnet's output is sent to /to_human ros2 topic
+        },  # agent's output is sent to /to_human ros2 topic
         tools=ROS2Toolkit(connector=ros2_connector).get_tools(),
     )
     agent.run()
