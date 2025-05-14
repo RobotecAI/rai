@@ -53,6 +53,8 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         Name of the ROS2 node. If not provided, generates a unique name with UUID.
     destroy_subscribers : bool, optional
         Whether to destroy subscribers after receiving a message, by default False.
+    executor_type : Literal["single_threaded", "multi_threaded"], optional
+        Type of executor to use for processing ROS2 callbacks, by default "multi_threaded".
 
     Methods
     -------
@@ -80,7 +82,7 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
     Notes
     -----
     Threading Model:
-        The connector creates a MultiThreadedExecutor that runs in a dedicated thread.
+        The connector creates an executor that runs in a dedicated thread.
         This executor processes all ROS2 callbacks and operations asynchronously.
 
     Subscriber Lifecycle:
@@ -99,6 +101,22 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         destroy_subscribers: bool = False,
         executor_type: Literal["single_threaded", "multi_threaded"] = "multi_threaded",
     ):
+        """Initialize the ROS2BaseConnector.
+
+        Parameters
+        ----------
+        node_name : str, optional
+            Name of the ROS2 node. If not provided, generates a unique name with UUID.
+        destroy_subscribers : bool, optional
+            Whether to destroy subscribers after receiving a message, by default False.
+        executor_type : Literal["single_threaded", "multi_threaded"], optional
+            Type of executor to use for processing ROS2 callbacks, by default "multi_threaded".
+
+        Raises
+        ------
+        ValueError
+            If an invalid executor type is provided.
+        """
         super().__init__()
 
         if not rclpy.ok():
@@ -170,16 +188,46 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         else:
             self.last_executor_performance_time = current_time
 
-    def last_message_callback(self, source: str, msg: T):
+    def _last_message_callback(self, source: str, msg: T):
+        """Store the last received message for a given source.
+
+        Parameters
+        ----------
+        source : str
+            The topic source identifier.
+        msg : T
+            The received message.
+        """
         self.last_msg[source] = msg
 
     def get_topics_names_and_types(self) -> List[Tuple[str, List[str]]]:
+        """Get list of available topics and their message types.
+
+        Returns
+        -------
+        List[Tuple[str, List[str]]]
+            List of tuples containing topic names and their corresponding message types.
+        """
         return self._topic_api.get_topic_names_and_types()
 
     def get_services_names_and_types(self) -> List[Tuple[str, List[str]]]:
+        """Get list of available services and their types.
+
+        Returns
+        -------
+        List[Tuple[str, List[str]]]
+            List of tuples containing service names and their corresponding types.
+        """
         return self._service_api.get_service_names_and_types()
 
     def get_actions_names_and_types(self) -> List[Tuple[str, List[str]]]:
+        """Get list of available actions and their types.
+
+        Returns
+        -------
+        List[Tuple[str, List[str]]]
+            List of tuples containing action names and their corresponding types.
+        """
         return self._actions_api.get_action_names_and_types()
 
     def send_message(
@@ -187,11 +235,28 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         message: T,
         target: str,
         *,
-        msg_type: str,  # TODO: allow msg_type to be None, add auto topic type detection
+        msg_type: str,
         auto_qos_matching: bool = True,
         qos_profile: Optional[QoSProfile] = None,
         **kwargs: Any,
     ):
+        """Send a message to a specified topic.
+
+        Parameters
+        ----------
+        message : T
+            The message to send.
+        target : str
+            The target topic name.
+        msg_type : str
+            The ROS2 message type.
+        auto_qos_matching : bool, optional
+            Whether to automatically match QoS profiles, by default True.
+        qos_profile : Optional[QoSProfile], optional
+            Custom QoS profile to use, by default None.
+        **kwargs : Any
+            Additional keyword arguments.
+        """
         self._topic_api.publish(
             topic=target,
             msg_content=message.payload,
@@ -201,6 +266,18 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         )
 
     def general_callback_preprocessor(self, message: Any) -> T:
+        """Preprocess a raw ROS2 message into a connector message.
+
+        Parameters
+        ----------
+        message : Any
+            The raw ROS2 message.
+
+        Returns
+        -------
+        T
+            The preprocessed message.
+        """
         return self.T_class(payload=message, metadata={"msg_type": str(type(message))})
 
     def register_callback(
@@ -214,6 +291,30 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         auto_qos_matching: bool = True,
         **kwargs: Any,
     ) -> str:
+        """Register a callback for a topic.
+
+        Parameters
+        ----------
+        source : str
+            The topic to subscribe to.
+        callback : Callable[[T | Any], None]
+            The callback function to execute when a message is received.
+        raw : bool, optional
+            Whether to pass raw messages to the callback, by default False.
+        msg_type : Optional[str], optional
+            The ROS2 message type, by default None.
+        qos_profile : Optional[QoSProfile], optional
+            Custom QoS profile to use, by default None.
+        auto_qos_matching : bool, optional
+            Whether to automatically match QoS profiles, by default True.
+        **kwargs : Any
+            Additional keyword arguments.
+
+        Returns
+        -------
+        str
+            The callback ID.
+        """
         exists = self._topic_api.subscriber_exists(source)
         if not exists:
             self._topic_api.create_subscriber(
@@ -235,6 +336,33 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         auto_qos_matching: bool = True,
         **kwargs: Any,
     ) -> T:
+        """Receive a message from a topic.
+
+        Parameters
+        ----------
+        source : str
+            The topic to receive from.
+        timeout_sec : float, optional
+            Timeout in seconds, by default 1.0.
+        msg_type : Optional[str], optional
+            The ROS2 message type, by default None.
+        qos_profile : Optional[QoSProfile], optional
+            Custom QoS profile to use, by default None.
+        auto_qos_matching : bool, optional
+            Whether to automatically match QoS profiles, by default True.
+        **kwargs : Any
+            Additional keyword arguments.
+
+        Returns
+        -------
+        T
+            The received message.
+
+        Raises
+        ------
+        TimeoutError
+            If no message is received within the timeout period.
+        """
         if self._topic_api.subscriber_exists(source):
             # trying to hit cache first
             if source in self.last_msg:
@@ -248,7 +376,7 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
                 qos_profile=qos_profile,
                 auto_qos_matching=auto_qos_matching,
             )
-            self.register_callback(source, partial(self.last_message_callback, source))
+            self.register_callback(source, partial(self._last_message_callback, source))
 
         start_time = time.time()
         # wait for the message to be received
@@ -268,6 +396,24 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         source_frame: str,
         timeout_sec: float = 1.0,
     ) -> bool:
+        """Wait for a transform to become available.
+
+        Parameters
+        ----------
+        tf_buffer : Buffer
+            The TF buffer to check.
+        target_frame : str
+            The target frame.
+        source_frame : str
+            The source frame.
+        timeout_sec : float, optional
+            Timeout in seconds, by default 1.0.
+
+        Returns
+        -------
+        bool
+            True if the transform is available, False otherwise.
+        """
         start_time = time.time()
         while time.time() - start_time < timeout_sec:
             if tf_buffer.can_transform(target_frame, source_frame, rclpy.time.Time()):
@@ -281,6 +427,27 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         source_frame: str,
         timeout_sec: float = 5.0,
     ) -> TransformStamped:
+        """Get the transform between two frames.
+
+        Parameters
+        ----------
+        target_frame : str
+            The target frame.
+        source_frame : str
+            The source frame.
+        timeout_sec : float, optional
+            Timeout in seconds, by default 5.0.
+
+        Returns
+        -------
+        TransformStamped
+            The transform between the frames.
+
+        Raises
+        ------
+        LookupException
+            If the transform is not available within the timeout period.
+        """
         transform_available = self.wait_for_transform(
             self._tf_buffer, target_frame, source_frame, timeout_sec
         )
@@ -306,6 +473,26 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         service_type: str,
         **kwargs: Any,
     ) -> str:
+        """Create a ROS2 service.
+
+        Parameters
+        ----------
+        service_name : str
+            The name of the service.
+        on_request : Callable[[Any, Any], Any]
+            Callback function to handle service requests.
+        on_done : Optional[Callable[[Any, Any], Any]], optional
+            Callback function called when service is terminated, by default None.
+        service_type : str
+            The ROS2 service type.
+        **kwargs : Any
+            Additional keyword arguments.
+
+        Returns
+        -------
+        str
+            The service handle.
+        """
         return self._service_api.create_service(
             service_name=service_name,
             callback=on_request,
@@ -321,6 +508,24 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         action_type: str,
         **kwargs: Any,
     ) -> str:
+        """Create a ROS2 action server.
+
+        Parameters
+        ----------
+        action_name : str
+            The name of the action.
+        generate_feedback_callback : Callable
+            Callback function to generate feedback during action execution.
+        action_type : str
+            The ROS2 action type.
+        **kwargs : Any
+            Additional keyword arguments.
+
+        Returns
+        -------
+        str
+            The action handle.
+        """
         return self._actions_api.create_action_server(
             action_name=action_name,
             action_type=action_type,
@@ -330,9 +535,26 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
 
     @property
     def node(self) -> Node:
+        """Get the ROS2 node.
+
+        Returns
+        -------
+        Node
+            The ROS2 node instance.
+        """
         return self._node
 
     def shutdown(self):
+        """Shutdown the connector and clean up resources.
+
+        This method:
+        1. Unregisters the TF listener
+        2. Destroys the ROS2 node
+        3. Shuts down the action API
+        4. Shuts down the topic API
+        5. Shuts down the executor
+        6. Joins the executor thread
+        """
         self._tf_listener.unregister()
         self._node.destroy_node()
         self._actions_api.shutdown()
