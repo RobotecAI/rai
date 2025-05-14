@@ -55,7 +55,7 @@ python src/rai_whoami/rai_whoami/scripts/ros2_vector_store_retrieval_service.py 
 
 With the services running, you can query the robot's identity and vector database:
 
-```shell
+```bash
 # Get robot's identity
 ros2 service call /rai_whoami_embodiment_info_service rai_interfaces/srv/EmbodimentInfo
 
