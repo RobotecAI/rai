@@ -6,9 +6,9 @@ contents for your robot's so called `whoami` package.
 
 ## Configuration example - Franka Emika Panda arm
 
-1. Setup the repository using [quick setup guide](../setup/install.md)
+1.  Setup the repository using [quick setup guide](../setup/install.md)
 
-2. Fill in the `panda/` folder with data:
+2.  Fill in the `panda/` folder with data:
 
     2.1. Save [this image](https://robodk.com/robot/img/Franka-Emika-Panda-robot.png) into `panda/images`
 
@@ -16,20 +16,20 @@ contents for your robot's so called `whoami` package.
 
     2.3. Save [this urdf](https://github.com/frankaemika/franka_ros/blob/develop/franka_description/robots/panda/panda.urdf.xacro) in `panda/urdf`
 
-3. Build the embodiment info using `build_whoami.py`:
+3.  Build the embodiment info using `build_whoami.py`:
 
-```shell
-python src/rai_whoami/rai_whoami/build_whoami.py panda/ --build-vector-db
-```
+    ```shell
+    python src/rai_whoami/rai_whoami/build_whoami.py panda/ --build-vector-db
+    ```
 
-!!! important "Vector database"
+    !!! important "Vector database"
 
-    Building the vector database with cloud vendors might lead to costs. Consider using
-    the local `ollama` provider for this task. The embedding model can be configured in
-    `config.toml` (`ollama` works locally, see
-    [docs/setup/vendors.md](../setup/vendors.md#ollama)).
+        Building the vector database with cloud vendors might lead to costs. Consider using
+        the local `ollama` provider for this task. The embedding model can be configured in
+        `config.toml` (`ollama` works locally, see
+        [docs/setup/vendors.md](../setup/vendors.md#ollama)).
 
-4. Examine the generated files
+4.  Examine the generated files
 
 After running the build command, inspect the generated files in the `panda/generated` directory. The
 folder should contain a info.json file containing:
