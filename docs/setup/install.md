@@ -1,7 +1,10 @@
 # Quick setup guide
 
 Before going further, make sure you have ROS 2 (Jazzy or Humble) installed and sourced on your
-system. If you don't have ROS 2 follow the installation documentation for [Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html) or [Jazzy](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html). Make sure that `ros-dev-tools` are installed.
+system. If you don't have ROS 2 follow the installation documentation for
+[Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html) or
+[Jazzy](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html). Make sure that
+`ros-dev-tools` are installed.
 
 !!! tip "Docker images"
 
