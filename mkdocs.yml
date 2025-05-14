@@ -22,7 +22,6 @@ markdown_extensions:
       toc_depth: 2
   - attr_list
   - pymdownx.emoji
-  - nl2br
   - admonition
   - pymdownx.details
   - pymdownx.superfences
