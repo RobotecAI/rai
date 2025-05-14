@@ -75,7 +75,8 @@ class BaseVisionAgent(BaseAgent):
             raise Exception("Could not download weights")
 
     def _remove_weights(self, path: str):
-        # NOTE (jm) sometimes downloding weights bugs and creates a dir
+        # Sometimes redownloding weights bugged and created a dir
+        # so check also for dir and remove it in both cases
         if os.path.isdir(path):
             shutil.rmtree(path)
         elif os.path.isfile(path):
