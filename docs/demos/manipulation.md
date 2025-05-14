@@ -71,6 +71,10 @@ manipulation techniques.
     Enter a prompt: Pick up the red cube and drop it on another cube
     ```
 
+!!! tip "Changing camera view"
+
+    To change camera in the simulation use 1-7 keys on your keyboard.
+
 ## How it works
 
 The manipulation demo utilizes several components:
