@@ -71,6 +71,13 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         self.current_sim_process = None
         self.current_binary_path = None
 
+    def init_simulation(self, simulation_config: O3DExROS2SimulationConfig):
+        if self.current_binary_path != simulation_config.binary_path:
+            if self.current_sim_process:
+                self.shutdown()
+            self._launch_binary(simulation_config)
+            self.current_binary_path = simulation_config.binary_path
+
     def shutdown(self):
         self._shutdown_binary()
         self._shutdown_robotic_stack()
@@ -136,10 +143,6 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
 
     def _shutdown_robotic_stack(self):
         self.manager.shutdown()
-        # self._shutdown_process(
-        #     process=self.current_robotic_stack_process, process_name="robotic_stack"
-        # )
-        # self.current_robotic_stack_process = None
 
     def get_available_spawnable_names(self) -> list[str]:
         msg = ROS2Message(payload={})
@@ -294,13 +297,6 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
             "Maximum number of retries reached. Required ROS2 stack components are not fully available."
         )
         return False
-
-    def init_simulation(self, simulation_config: O3DExROS2SimulationConfig):
-        if self.current_binary_path != simulation_config.binary_path:
-            if self.current_sim_process:
-                self.shutdown()
-            self._launch_binary(simulation_config)
-            self.current_binary_path = simulation_config.binary_path
 
     def setup_scene(
         self,
