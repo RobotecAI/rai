@@ -126,7 +126,7 @@ class SimulationConfig(BaseModel):
         """
         with open(base_config_path) as f:
             content = yaml.safe_load(f)
-        frame_id = content["frame_id"]
+        frame_id = content.get("frame_id", "odom")
         entities = [
             Entity(
                 name=entity["name"],

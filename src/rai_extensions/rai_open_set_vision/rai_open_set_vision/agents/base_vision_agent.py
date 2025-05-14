@@ -14,6 +14,7 @@
 
 
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -46,9 +47,10 @@ class BaseVisionAgent(BaseAgent):
                 self._weights_path / "vision" / "weights" / self.WEIGHTS_FILENAME
             )
             # make sure the file exists
-            if install_path.exists():
+            if install_path.exists() and install_path.is_file():
                 self._weights_path = install_path
             else:
+                self._remove_weights(path=install_path)
                 self._download_weights(install_path)
                 self._weights_path = install_path
 
@@ -72,8 +74,12 @@ class BaseVisionAgent(BaseAgent):
             self.logger.error("Could not download weights")
             raise Exception("Could not download weights")
 
-    def _remove_weights(self, path: Path):
-        if path.exists():
+    def _remove_weights(self, path: str):
+        # Sometimes redownloding weights bugged and created a dir
+        # so check also for dir and remove it in both cases
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        elif os.path.isfile(path):
             os.remove(path)
 
     def stop(self):

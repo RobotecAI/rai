@@ -78,7 +78,10 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         """
         # try:
         i, task = next(self._tasks)
-        self.logger.info(  # type: ignore
+        self.logger.info(
+            "======================================================================================"
+        )
+        self.logger.info(
             f"RUNNING TASK NUMBER {i + 1} / {self.num_tasks}, TASK {task.get_prompt()}"
         )
         callbacks = self.score_tracing_handler.get_callbacks()
@@ -124,7 +127,6 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         except GraphRecursionError as e:
             self.logger.error(msg=f"Reached recursion limit {e}")
 
-        self.logger.debug(messages)
         tool_calls = task.get_tool_calls_from_messages(messages=messages)
         score = task.validate(tool_calls=tool_calls)
         te = time.perf_counter()
@@ -186,8 +188,3 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         )
         self.csv_initialize(self.summary_filename, BenchmarkSummary)
         self.csv_writerow(self.summary_filename, summary)
-
-        self.logger.info(
-            f"Summary for model {self.model_name}: Success rate {success_rate:.2f}%, "
-            f"Average time {avg_time:.3f}s, Total tasks: {len(self.task_results)}"
-        )

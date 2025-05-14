@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Generic, List, TypeVar
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
 from rai.messages import HumanMultimodalMessage
 
@@ -172,35 +173,38 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
 
             ts = time.perf_counter()
             prev_count: int = 0
-            for state in agent.stream(
-                {"messages": [HumanMessage(content=scenario.task.task_prompt)]},
-                {
-                    "recursion_limit": 100
-                },  # NOTE (jmatejcz) what should be recursion limit?
-            ):
-                node = next(iter(state))
-                new_messages = state[node]["messages"][prev_count:]
-                prev_count = len(state[node]["messages"])
+            try:
+                for state in agent.stream(
+                    {"messages": [HumanMessage(content=scenario.task.task_prompt)]},
+                    {
+                        "recursion_limit": 100
+                    },  # NOTE (jmatejcz) what should be recursion limit?
+                ):
+                    node = next(iter(state))
+                    new_messages = state[node]["messages"][prev_count:]
+                    prev_count = len(state[node]["messages"])
 
-                for msg in new_messages:
-                    if isinstance(msg, HumanMultimodalMessage):
-                        last_msg = msg.text
-                    elif isinstance(msg, BaseMessage):
-                        if isinstance(msg.content, list):
-                            if len(msg.content) == 1:
-                                if type(msg.content[0]) is dict:
-                                    last_msg = msg.content[0].get("text", "")
+                    for msg in new_messages:
+                        if isinstance(msg, HumanMultimodalMessage):
+                            last_msg = msg.text
+                        elif isinstance(msg, BaseMessage):
+                            if isinstance(msg.content, list):
+                                if len(msg.content) == 1:
+                                    if type(msg.content[0]) is dict:
+                                        last_msg = msg.content[0].get("text", "")
+                            else:
+                                last_msg = msg.content
+                                self.logger.debug(f"{node}: {last_msg}")
+
                         else:
-                            last_msg = msg.content
-                            self.logger.debug(f"{node}: {last_msg}")
+                            raise ValueError(f"Unexpected type of message: {type(msg)}")
 
-                    else:
-                        raise ValueError(f"Unexpected type of message: {type(msg)}")
+                        if isinstance(msg, AIMessage):
+                            tool_calls_num += len(msg.tool_calls)
 
-                    if isinstance(msg, AIMessage):
-                        tool_calls_num += len(msg.tool_calls)
-
-                    self.logger.info(f"AI Message: {msg}")
+                        self.logger.info(f"AI Message: {msg}")
+            except GraphRecursionError as e:
+                self.logger.error(msg=f"Reached recursion limit {e}")
 
             te = time.perf_counter()
             try:
@@ -221,6 +225,7 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
                 )
                 self.scenario_results.append(scenario_result)
                 self.csv_writerow(self.results_filename, scenario_result)
+                # computing after every iteration in case of early stopping
                 self.compute_and_save_summary()
             except EntitiesMismatchException as e:
                 self.logger.error(e)
@@ -258,8 +263,3 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
         )
         self.csv_initialize(self.summary_filename, BenchmarkSummary)
         self.csv_writerow(self.summary_filename, summary)
-
-        self.logger.info(
-            f"Summary for model {self.model_name}: Success rate {success_rate:.2f}%, "
-            f"Average time {avg_time:.3f}s, Total tasks: {len(self.scenario_results)}"
-        )

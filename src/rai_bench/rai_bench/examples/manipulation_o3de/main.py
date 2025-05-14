@@ -12,10 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import argparse
-import logging
 import time
-from datetime import datetime
 from pathlib import Path
 from typing import List
 
@@ -23,7 +20,6 @@ import rclpy
 from langchain.tools import BaseTool
 from rai.agents.langchain.core import create_conversational_agent
 from rai.communication.ros2.connectors import ROS2Connector
-from rai.initialization import get_llm_model_direct
 from rai.tools.ros2 import (
     GetObjectPositionsTool,
     GetROS2ImageTool,
@@ -36,39 +32,28 @@ from rai_bench.examples.manipulation_o3de.scenarios import (
     trivial_scenarios,
 )
 from rai_bench.manipulation_o3de.benchmark import ManipulationO3DEBenchmark
+from rai_bench.utils import (
+    define_benchmark_loggers,
+    get_llm_for_benchmark,
+    parse_benchmark_args,
+)
 from rai_sim.o3de.o3de_bridge import (
     O3DEngineArmManipulationBridge,
 )
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Run the Tool Calling Agent Benchmark")
-    parser.add_argument(
-        "--model-name",
-        type=str,
-        help="Model name to use for benchmarking",
-    )
-    parser.add_argument(
-        "--vendor", type=str, default=None, help="Vendor of the model (optional)"
-    )
-    now = datetime.now()
-    parser.add_argument(
-        "--out_dir",
-        type=str,
-        default=f"src/rai_bench/rai_bench/experiments/o3de_manipulation/{now.strftime('%Y-%m-%d_%H-%M-%S')}",
-        help="Output directory for results and logs",
-    )
-    return parser.parse_args()
-
-
 def run_benchmark(model_name: str, vendor: str, out_dir: str):
+    experiment_dir = Path(out_dir)
+    experiment_dir.mkdir(parents=True, exist_ok=True)
+    bench_logger, agent_logger = define_benchmark_loggers(out_dir=experiment_dir)
+
     rclpy.init()
     connector = ROS2Connector()
     node = connector.node
     node.declare_parameter("conversion_ratio", 1.0)
 
     # define model
-    llm = get_llm_model_direct(model_name=model_name, vendor=vendor)
+    llm = get_llm_for_benchmark(model_name=model_name, vendor=vendor)
 
     # define tools
     tools: List[BaseTool] = [
@@ -85,24 +70,6 @@ def run_benchmark(model_name: str, vendor: str, out_dir: str):
         GetROS2ImageTool(connector=connector),
         GetROS2TopicsNamesAndTypesTool(connector=connector),
     ]
-    # define loggers
-    Path(out_dir).mkdir(parents=True, exist_ok=True)
-    log_file = f"{out_dir}/benchmark.log"
-    file_handler = logging.FileHandler(log_file)
-    file_handler.setLevel(logging.DEBUG)
-
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    file_handler.setFormatter(formatter)
-
-    bench_logger = logging.getLogger("Benchmark logger")
-    bench_logger.setLevel(logging.INFO)
-    bench_logger.addHandler(file_handler)
-
-    agent_logger = logging.getLogger("Agent logger")
-    agent_logger.setLevel(logging.INFO)
-    agent_logger.addHandler(file_handler)
 
     configs_dir = "src/rai_bench/rai_bench/examples/manipulation_o3de/configs/"
     connector_path = configs_dir + "o3de_config.yaml"
@@ -174,7 +141,7 @@ def run_benchmark(model_name: str, vendor: str, out_dir: str):
             simulation_bridge=o3de,
             scenarios=all_scenarios,
             logger=bench_logger,
-            results_dir=Path(out_dir),
+            results_dir=experiment_dir,
         )
         for scenario in all_scenarios:
             agent = create_conversational_agent(
@@ -184,6 +151,7 @@ def run_benchmark(model_name: str, vendor: str, out_dir: str):
             o3de.reset_arm()
             time.sleep(0.2)  # admire the end position for a second ;)
 
+        time.sleep(3)
         bench_logger.info(
             "==============================================================="
         )
@@ -198,5 +166,5 @@ def run_benchmark(model_name: str, vendor: str, out_dir: str):
 
 
 if __name__ == "__main__":
-    args = parse_args()
+    args = parse_benchmark_args()
     run_benchmark(model_name=args.model_name, vendor=args.vendor, out_dir=args.out_dir)

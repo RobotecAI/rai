@@ -12,63 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import argparse
-import logging
-from datetime import datetime
 from pathlib import Path
 
-from rai import get_llm_model_direct
 from rai.agents.langchain.core import create_conversational_agent
 
 from rai_bench.examples.tool_calling_agent.tasks import get_all_tasks
 from rai_bench.tool_calling_agent.benchmark import ToolCallingAgentBenchmark
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description="Run the Tool Calling Agent Benchmark")
-    parser.add_argument(
-        "--model-name",
-        type=str,
-        help="Model name to use for benchmarking",
-        required=True,
-    )
-    parser.add_argument("--vendor", type=str, help="Vendor of the model", required=True)
-    parser.add_argument(
-        "--extra-tool-calls",
-        type=int,
-        help="Number of extra tools calls agent can make and still pass the task",
-        default=0,
-    )
-    now = datetime.now()
-    parser.add_argument(
-        "--out_dir",
-        type=str,
-        default=f"src/rai_bench/rai_bench/experiments/o3de_manipulation/{now.strftime('%Y-%m-%d_%H-%M-%S')}",
-        help="Output directory for results and logs",
-    )
-
-    return parser.parse_args()
+from rai_bench.utils import (
+    define_benchmark_loggers,
+    get_llm_for_benchmark,
+    parse_benchmark_args,
+)
 
 
 def run_benchmark(model_name: str, vendor: str, out_dir: str, extra_tool_calls: int):
     experiment_dir = Path(out_dir)
     experiment_dir.mkdir(parents=True, exist_ok=True)
-    log_filename = experiment_dir / "benchmark.log"
-
-    file_handler = logging.FileHandler(log_filename)
-    file_handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    file_handler.setFormatter(formatter)
-
-    bench_logger = logging.getLogger("Benchmark logger")
-    bench_logger.setLevel(logging.INFO)
-    bench_logger.addHandler(file_handler)
-
-    agent_logger = logging.getLogger("Agent logger")
-    agent_logger.setLevel(logging.INFO)
-    agent_logger.addHandler(file_handler)
+    bench_logger, agent_logger = define_benchmark_loggers(out_dir=experiment_dir)
 
     all_tasks = get_all_tasks(extra_tool_calls=extra_tool_calls)
     for task in all_tasks:
@@ -81,7 +41,7 @@ def run_benchmark(model_name: str, vendor: str, out_dir: str, extra_tool_calls: 
         results_dir=experiment_dir,
     )
 
-    llm = get_llm_model_direct(model_name=model_name, vendor=vendor)
+    llm = get_llm_for_benchmark(model_name=model_name, vendor=vendor)
     for task in all_tasks:
         agent = create_conversational_agent(
             llm=llm,
@@ -91,9 +51,13 @@ def run_benchmark(model_name: str, vendor: str, out_dir: str, extra_tool_calls: 
         )
         benchmark.run_next(agent=agent)
 
+    bench_logger.info("===============================================================")
+    bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
+    bench_logger.info("===============================================================")
+
 
 if __name__ == "__main__":
-    args = parse_args()
+    args = parse_benchmark_args()
     run_benchmark(
         model_name=args.model_name,
         vendor=args.vendor,
