@@ -17,10 +17,9 @@ import signal
 import time
 
 import rclpy
-from rai.communication.sound_device.api import SoundDeviceConfig
 
-from rai_asr.agents import SpeechRecognitionAgent
-from rai_asr.models import LocalWhisper, OpenWakeWord, SileroVAD
+from rai_s2s.asr import LocalWhisper, OpenWakeWord, SileroVAD, SpeechRecognitionAgent
+from rai_s2s.sound_device import SoundDeviceConfig
 
 VAD_THRESHOLD = 0.8  # Note that this might be different depending on your device
 OWW_THRESHOLD = 0.1  # Note that this might be different depending on your device

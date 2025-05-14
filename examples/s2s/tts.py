@@ -17,9 +17,9 @@ import signal
 import time
 
 import rclpy
-from rai.communication.sound_device import SoundDeviceConfig
 
 from rai_s2s import OpenTTS, TextToSpeechAgent
+from rai_s2s.sound_device import SoundDeviceConfig
 
 
 def parse_arguments():
