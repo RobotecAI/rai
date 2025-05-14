@@ -38,6 +38,18 @@ class ConnectorException(Exception):
 
 
 class BaseMessage(BaseModel):
+    """Base class for all messages in the connector system.
+
+    Attributes
+    ----------
+    payload : Any, optional
+        Payload is meant for non-validated data if such data is present.
+    metadata : Dict[str, Any], optional
+        Dictionary containing message metadata.
+    timestamp : float, optional
+        Timestamp of message creation.
+    """
+
     payload: Any = Field(
         default=None,
         description="Payload is meant for non-validated data if such data is present.",
@@ -88,8 +100,21 @@ class BaseConnector(Generic[T]):
         Sends a message to one or more subscribers. The target parameter
         can be used to specify the destination or topic.
 
-        Raises:
-            ConnectorException: If the message cannot be sent.
+        Parameters
+        ----------
+        message : T
+            The message to send.
+        target : str
+            The destination or topic to send the message to.
+        **kwargs : Optional[Any]
+            Additional keyword arguments.
+
+        Raises
+        ------
+        ConnectorException
+            If the message cannot be sent.
+        NotImplementedError
+            If the method is not implemented by the subclass.
         """
         raise NotImplementedError("This method should be implemented by the subclass.")
 
@@ -101,8 +126,26 @@ class BaseConnector(Generic[T]):
         Receives a message from a publisher. The source parameter
         can be used to specify the source or topic to subscribe to.
 
-        Raises:
-            ConnectorException: If the message cannot be received.
+        Parameters
+        ----------
+        source : str
+            The source or topic to receive the message from.
+        timeout_sec : float
+            Timeout in seconds for receiving the message.
+        **kwargs : Optional[Any]
+            Additional keyword arguments.
+
+        Returns
+        -------
+        T
+            The received message.
+
+        Raises
+        ------
+        ConnectorException
+            If the message cannot be received.
+        NotImplementedError
+            If the method is not implemented by the subclass.
         """
         raise NotImplementedError("This method should be implemented by the subclass.")
 
@@ -119,8 +162,26 @@ class BaseConnector(Generic[T]):
         If raw is False, the callback will receive a T object.
         If raw is True, the callback will receive the raw message.
 
-        Raises:
-            ConnectorException: If the callback cannot be registered.
+        Parameters
+        ----------
+        source : str
+            The source to register the callback for.
+        callback : Callable[[T | Any], None]
+            The callback function to register.
+        raw : bool, optional
+            Whether to pass raw message to callback, by default False.
+        **kwargs : Optional[Any]
+            Additional keyword arguments.
+
+        Returns
+        -------
+        str
+            The ID of the registered callback.
+
+        Raises
+        ------
+        ConnectorException
+            If the callback cannot be registered.
         """
         parametrized_callback = ParametrizedCallback[T](callback=callback, raw=raw)
         self.registered_callbacks[source][parametrized_callback.id] = (
@@ -135,11 +196,15 @@ class BaseConnector(Generic[T]):
     def unregister_callback(self, callback_id: str) -> None:
         """Unregisters a callback from a source.
 
-        Args:
-            callback_id: The id of the callback to unregister.
+        Parameters
+        ----------
+        callback_id : str
+            The id of the callback to unregister.
 
-        Raises:
-            ConnectorException: If the callback cannot be unregistered.
+        Raises
+        ------
+        ConnectorException
+            If the callback cannot be unregistered.
         """
         if callback_id not in self.callback_id_mapping:
             raise ConnectorException(f"Callback with id {callback_id} not found.")
@@ -151,9 +216,12 @@ class BaseConnector(Generic[T]):
     def _safe_callback_wrapper(self, callback: Callable[[T], None], message: T) -> None:
         """Safely execute a callback with error handling.
 
-        Args:
-            callback: The callback function to execute
-            message: The message to pass to the callback
+        Parameters
+        ----------
+        callback : Callable[[T], None]
+            The callback function to execute.
+        message : T
+            The message to pass to the callback.
         """
         try:
             callback(message)
@@ -161,8 +229,6 @@ class BaseConnector(Generic[T]):
             self.logger.error(f"Error in callback: {str(e)}")
 
     def general_callback(self, source: str, message: Any) -> None:
-        """General callback for all messages.
-        Use through functools.partial to pass source."""
         processed_message = self.general_callback_preprocessor(message)
         for parametrized_callback in self.registered_callbacks.get(source, {}).values():
             payload = message if parametrized_callback.raw else processed_message
@@ -171,7 +237,23 @@ class BaseConnector(Generic[T]):
             )
 
     def general_callback_preprocessor(self, message: Any) -> T:
-        """Preprocessor for general callback used to transform any message to a BaseMessage."""
+        """Preprocessor for general callback used to transform any message to a BaseMessage.
+
+        Parameters
+        ----------
+        message : Any
+            The message to preprocess.
+
+        Returns
+        -------
+        T
+            The preprocessed message.
+
+        Raises
+        ------
+        NotImplementedError
+            If the method is not implemented by the subclass.
+        """
         raise NotImplementedError("This method should be implemented by the subclass.")
 
     def service_call(
@@ -182,8 +264,28 @@ class BaseConnector(Generic[T]):
         Sends a request and waits for a response. The target parameter
         specifies the service endpoint to call.
 
-        Raises:
-            ConnectorException: If the service call cannot be made.
+        Parameters
+        ----------
+        message : T
+            The request message to send.
+        target : str
+            The service endpoint to call.
+        timeout_sec : float
+            Timeout in seconds for the service call.
+        **kwargs : Optional[Any]
+            Additional keyword arguments.
+
+        Returns
+        -------
+        BaseMessage
+            The response message.
+
+        Raises
+        ------
+        ConnectorException
+            If the service call cannot be made.
+        NotImplementedError
+            If the method is not implemented by the subclass.
         """
         raise NotImplementedError("This method should be implemented by the subclass.")
 
@@ -200,8 +302,28 @@ class BaseConnector(Generic[T]):
         The on_request callback handles incoming requests,
         and on_done (if provided) is called when the service is terminated.
 
-        Raises:
-            ConnectorException: If the service cannot be created.
+        Parameters
+        ----------
+        service_name : str
+            Name of the service to create.
+        on_request : Callable
+            Callback function to handle incoming requests.
+        on_done : Optional[Callable], optional
+            Callback function called when service is terminated, by default None.
+        **kwargs : Optional[Any]
+            Additional keyword arguments.
+
+        Returns
+        -------
+        str
+            The handle of the created service.
+
+        Raises
+        ------
+        ConnectorException
+            If the service cannot be created.
+        NotImplementedError
+            If the method is not implemented by the subclass.
         """
         raise NotImplementedError("This method should be implemented by the subclass.")
 
@@ -217,8 +339,26 @@ class BaseConnector(Generic[T]):
         The generate_feedback_callback is used to provide progress updates
         during the action's execution.
 
-        Raises:
-            ConnectorException: If the action cannot be created.
+        Parameters
+        ----------
+        action_name : str
+            Name of the action to create.
+        generate_feedback_callback : Callable
+            Callback function to generate feedback during action execution.
+        **kwargs : Optional[Any]
+            Additional keyword arguments.
+
+        Returns
+        -------
+        str
+            The handle of the created action.
+
+        Raises
+        ------
+        ConnectorException
+            If the action cannot be created.
+        NotImplementedError
+            If the method is not implemented by the subclass.
         """
         raise NotImplementedError("This method should be implemented by the subclass.")
 
@@ -237,8 +377,32 @@ class BaseConnector(Generic[T]):
         The on_feedback callback receives progress updates,
         and on_done is called when the action completes.
 
-        Raises:
-            ConnectorException: If the action cannot be started.
+        Parameters
+        ----------
+        action_data : Optional[T]
+            Data to pass to the action.
+        target : str
+            The action endpoint to start.
+        on_feedback : Callable
+            Callback function to receive progress updates.
+        on_done : Callable
+            Callback function called when action completes.
+        timeout_sec : float
+            Timeout in seconds for the action.
+        **kwargs : Optional[Any]
+            Additional keyword arguments.
+
+        Returns
+        -------
+        str
+            The handle of the started action.
+
+        Raises
+        ------
+        ConnectorException
+            If the action cannot be started.
+        NotImplementedError
+            If the method is not implemented by the subclass.
         """
         raise NotImplementedError("This method should be implemented by the subclass.")
 
@@ -248,8 +412,24 @@ class BaseConnector(Generic[T]):
         Stops the execution of a previously started action.
         The action_handle identifies which action to terminate.
 
-        Raises:
-            ConnectorException: If the action cannot be terminated.
+        Parameters
+        ----------
+        action_handle : str
+            The handle of the action to terminate.
+        **kwargs : Optional[Any]
+            Additional keyword arguments.
+
+        Returns
+        -------
+        Any
+            Result of the termination operation.
+
+        Raises
+        ------
+        ConnectorException
+            If the action cannot be terminated.
+        NotImplementedError
+            If the method is not implemented by the subclass.
         """
         raise NotImplementedError("This method should be implemented by the subclass.")
 
