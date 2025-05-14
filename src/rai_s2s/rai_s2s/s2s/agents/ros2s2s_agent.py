@@ -16,12 +16,10 @@ import logging
 from typing import Optional
 
 from rai.communication.ros2 import ROS2HRIConnector, ROS2HRIMessage
-from rai.communication.sound_device import (
-    SoundDeviceConfig,
-)
 
 from rai_s2s.asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
 from rai_s2s.s2s.agents.s2s_agent import SpeechToSpeechAgent
+from rai_s2s.sound_device import SoundDeviceConfig
 from rai_s2s.tts.models.base import TTSModel
 
 

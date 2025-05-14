@@ -24,14 +24,14 @@ import numpy as np
 from numpy.typing import NDArray
 from rai.agents.base import BaseAgent
 from rai.communication import HRIConnector, HRIMessage
-from rai.communication.sound_device import (
+
+from rai_s2s.asr.agents.asr_agent import ThreadData
+from rai_s2s.asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
+from rai_s2s.sound_device import (
     SoundDeviceConfig,
     SoundDeviceConnector,
     SoundDeviceMessage,
 )
-
-from rai_s2s.asr.agents.asr_agent import ThreadData
-from rai_s2s.asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
 from rai_s2s.tts.agents.tts_agent import PlayData
 from rai_s2s.tts.models.base import TTSModel
 

@@ -18,12 +18,13 @@ import numpy as np
 import pytest
 import sounddevice
 from pydub import AudioSegment
-from rai.communication.sound_device import (
+from scipy.io import wavfile
+
+from rai_s2s.sound_device import (
     SoundDeviceAPI,
     SoundDeviceConfig,
     SoundDeviceError,
 )
-from scipy.io import wavfile
 
 
 def audio_to_numpy(audio):

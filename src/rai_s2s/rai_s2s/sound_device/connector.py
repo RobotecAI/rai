@@ -16,7 +16,8 @@
 from typing import Callable, NamedTuple, Optional, Tuple
 
 from rai.communication import HRIConnector, HRIMessage
-from rai.communication.sound_device import (
+
+from rai_s2s.sound_device.api import (
     SoundDeviceAPI,
     SoundDeviceConfig,
     SoundDeviceError,

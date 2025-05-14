@@ -18,17 +18,19 @@ import numpy as np
 import pytest
 import sounddevice
 from pydub import AudioSegment
-from rai.communication.sound_device import SoundDeviceConfig, SoundDeviceError
-from rai.communication.sound_device.connector import (  # Replace with actual module name
+from scipy.io import wavfile
+
+from rai_s2s.sound_device import (
+    SoundDeviceConfig,
     SoundDeviceConnector,
+    SoundDeviceError,
     SoundDeviceMessage,
 )
-from scipy.io import wavfile
 
 
 @pytest.fixture
 def mock_sound_device_api():
-    with patch("rai.communication.sound_device.api.SoundDeviceAPI") as mock:
+    with patch("rai_s2s.sound_device.api.SoundDeviceAPI") as mock:
         mock_instance = MagicMock()
         mock_instance.write = MagicMock()
         mock_instance.rec = MagicMock()
