@@ -15,7 +15,6 @@
 import logging
 import time
 from abc import abstractmethod
-from datetime import datetime
 from queue import Empty, Queue
 from threading import Event, Lock, Thread
 from typing import Any, List, Literal, Optional
@@ -30,7 +29,6 @@ from rai.communication.sound_device import (
     SoundDeviceConnector,
     SoundDeviceMessage,
 )
-from scipy.io import wavfile
 
 from rai_s2s.asr.agents.asr_agent import ThreadData
 from rai_s2s.asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
@@ -77,6 +75,8 @@ class SpeechToSpeechAgent(BaseAgent):
         self.current_speech_id = None
         self.text_queues: dict[str, Queue] = {self.current_transcription_id: Queue()}
 
+        self.terminate_agent = Event()
+
         self.audio_generating_thread = Thread(target=self._audio_gen_thread)
         self.audio_generating_thread.start()
         self.audio_queues: dict[str, Queue] = {self.current_transcription_id: Queue()}
@@ -104,7 +104,6 @@ class SpeechToSpeechAgent(BaseAgent):
         self.hri_connector: HRIConnector = self._setup_hri_connector()
 
         self.microphone_samples: Optional[np.ndarray] = None
-        self.terminate_agent = Event()
         self.save_flag = False
 
     @abstractmethod
@@ -127,24 +126,6 @@ class SpeechToSpeechAgent(BaseAgent):
                         f"Could not find queue for {self.current_transcription_id}: queuse: {self.audio_queues.keys()}"
                     )
                     raise e
-
-    def save_audio(self, audio_data: NDArray[np.int16], filename: str | None = None):
-        """
-        Saves the received audio data as a WAV file.
-
-        Parameters
-        ----------
-        audio_data : NDArray[np.int16]
-            The audio data to save (should be int16 format).
-        filename : str, optional
-            The filename to save the audio as. If None, a timestamp-based name is generated.
-        """
-        if filename is None:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"recording_{timestamp}.wav"
-
-        wavfile.write(filename, self.vad.sampling_rate, audio_data)
-        print(f"Audio saved to {filename}")
 
     def run(self):
         """
