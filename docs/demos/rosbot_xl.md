@@ -32,10 +32,7 @@ platform in a nice apartment.
 
 ## Alternative: Demo source build
 
-If you would like more freedom to adapt the simulation to your needs, you can make changes using
-[O3DE Editor](https://www.docs.o3de.org/docs/welcome-guide/) and build the project yourself. Please
-refer to [rai husarion rosbot xl demo](https://github.com/RobotecAI/rai-rosbot-xl-demo) for more
-details.
+If you would like more freedom to adapt the simulation to your needs, you can make changes using [O3DE Editor](https://www.docs.o3de.org/docs/welcome-guide/) and build the project yourself. Please refer to [rai husarion rosbot xl demo](https://github.com/RobotecAI/rai-rosbot-xl-demo) for more details.
 
 # Running RAI
 
