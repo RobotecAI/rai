@@ -74,11 +74,16 @@ The manipulation demo utilizes several components:
 2. RAI agent to process the request and plan the manipulation sequence.
 3. Robot arm control for executing the planned movements.
 
-The main logic of the demo is implemented in the `ManipulationDemo` class, which can be found in:
+The main logic of the demo is implemented in the `create_agent` function, which can be found in:
 
 ```python
 examples/manipulation-demo.py
 ```
+
+## Known Limitations
+
+-   `Grounding DINO` can't distinguish colors.
+-   VLMs tend to struggle with spatial understanding (for example left/right concepts).
 
 !!! tip "Building from source"
 
