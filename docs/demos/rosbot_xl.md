@@ -34,12 +34,12 @@ platform in a nice apartment.
 
 If you would like more freedom to adapt the simulation to your needs, you can make changes using [O3DE Editor](https://www.docs.o3de.org/docs/welcome-guide/) and build the project yourself. Please refer to [rai husarion rosbot xl demo](https://github.com/RobotecAI/rai-rosbot-xl-demo) for more details.
 
-# Running RAI
+## Running RAI
 
 1. Running rai nodes and agents, navigation stack and O3DE simulation.
 
     ```bash
-    ros2 launch ./examples/rosbot-xl.launch.py game_launcher:=demo_assets/rosbot/RAIROSBotXLDemoGamePackage/RAIROSBotXLDemo.GameLauncher
+    ros2 launch ./examples/rosbot-xl.launch.py game_launcher:=demo_assets/rosbot/RAIROSBotXLDemo/RAIROSBotXLDemo.GameLauncher
     ```
 
 2. Run streamlit gui:
