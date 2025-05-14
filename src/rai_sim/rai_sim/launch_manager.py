@@ -14,12 +14,18 @@
 
 import asyncio
 import multiprocessing
+from multiprocessing.synchronize import Event
+from typing import Optional
 
 from launch import LaunchDescription, LaunchService
 
 
 class Ros2LaunchManager:
-    def start(self, launch_description: LaunchDescription):
+    def __init__(self) -> None:
+        self._stop_event: Optional[Event] = None
+        self._process: Optional[multiprocessing.Process] = None
+
+    def start(self, launch_description: LaunchDescription) -> None:
         self._stop_event = multiprocessing.Event()
         self._process = multiprocessing.Process(
             target=self._run_process,
@@ -28,11 +34,15 @@ class Ros2LaunchManager:
         )
         self._process.start()
 
-    def shutdown(self):
-        self._stop_event.set()
-        self._process.join()
+    def shutdown(self) -> None:
+        if self._stop_event:
+            self._stop_event.set()
+        if self._process:
+            self._process.join()
 
-    def _run_process(self, stop_event, launch_description: LaunchDescription):
+    def _run_process(
+        self, stop_event: Event, launch_description: LaunchDescription
+    ) -> None:
         loop = asyncio.get_event_loop()
         asyncio.set_event_loop(loop)
         launch_service = LaunchService()
@@ -44,8 +54,8 @@ class Ros2LaunchManager:
         if not launch_task.done():
             # XXX (jmatejcz) the shutdown function sends shutdown signal to all
             # nodes launch with launch description which should do the trick
-            # but some nodes are stubborn and  there is a posiibility
-            # that they don't close. If this will happed sending PKILL for all
+            # but some nodes are stubborn and there is a possibility
+            # that they don't close. If this will happen sending PKILL for all
             # ros nodes will be needed
             shutdown_task = loop.create_task(
                 launch_service.shutdown(),
