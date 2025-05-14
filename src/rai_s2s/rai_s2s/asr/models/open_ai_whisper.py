@@ -22,7 +22,7 @@ from numpy.typing import NDArray
 from openai import OpenAI
 from scipy.io import wavfile
 
-from rai_asr.models.base import BaseTranscriptionModel
+from rai_s2s.asr.models import BaseTranscriptionModel
 
 
 class OpenAIWhisper(BaseTranscriptionModel):

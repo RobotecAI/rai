@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai_asr.agents.asr_agent import SpeechRecognitionAgent
-from rai_asr.agents.initialization import (
+from .asr_agent import SpeechRecognitionAgent
+from .initialization import (
     TRANSCRIBE_MODELS,
     ASRAgentConfig,
     MicrophoneConfig,

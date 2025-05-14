@@ -28,16 +28,15 @@ from rai.communication.ros2 import (
     ROS2HRIMessage,
     ROS2Message,
 )
-from rai.communication.sound_device import (
+from typing_extensions import Self
+
+from rai_s2s.asr.agents.initialization import load_config
+from rai_s2s.asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
+from rai_s2s.sound_device import (
     SoundDeviceConfig,
     SoundDeviceConnector,
     SoundDeviceMessage,
 )
-from typing_extensions import Self
-
-from rai_asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
-
-from .initialization import load_config
 
 
 class ThreadData(TypedDict):

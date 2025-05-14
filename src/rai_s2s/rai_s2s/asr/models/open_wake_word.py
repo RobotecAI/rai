@@ -18,7 +18,7 @@ from numpy.typing import NDArray
 from openwakeword.model import Model as OWWModel
 from openwakeword.utils import download_models
 
-from rai_asr.models import BaseVoiceDetectionModel
+from rai_s2s.asr.models import BaseVoiceDetectionModel
 
 
 class OpenWakeWord(BaseVoiceDetectionModel):

@@ -12,13 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""RAI ASR package."""
-
-__version__ = "0.1.0"
-
-
-from rai_asr.agents.asr_agent import SpeechRecognitionAgent
-from rai_asr.agents.initialization import (
+from .agents import SpeechRecognitionAgent
+from .agents.initialization import (
     TRANSCRIBE_MODELS,
     ASRAgentConfig,
     MicrophoneConfig,
@@ -27,11 +22,18 @@ from rai_asr.agents.initialization import (
     WWConfig,
     load_config,
 )
+from .models import FasterWhisper, LocalWhisper, OpenAIWhisper, OpenWakeWord, SileroVAD
 
 __all__ = [
     "TRANSCRIBE_MODELS",
     "ASRAgentConfig",
+    "FasterWhisper",
+    "LocalWhisper",
     "MicrophoneConfig",
+    "OpenAIWhisper",
+    "OpenWakeWord",
+    "SileroVAD",
+    "SpeechRecognitionAgent",
     "SpeechRecognitionAgent",
     "TranscribeConfig",
     "VADConfig",

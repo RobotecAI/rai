@@ -15,10 +15,12 @@
 
 import logging
 from dataclasses import dataclass
+from queue import Empty, Queue
 from threading import Event, Thread
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 from uuid import uuid4
 
+import numpy as np
 from numpy._typing import NDArray
 from pydub import AudioSegment
 from rai.agents.base import BaseAgent
@@ -28,22 +30,18 @@ from rai.communication.ros2 import (
     ROS2HRIMessage,
     TopicConfig,
 )
-from rai.communication.sound_device import SoundDeviceConfig, SoundDeviceConnector
-from rai.communication.sound_device.connector import SoundDeviceMessage
 from std_msgs.msg import String
 from typing_extensions import Self
 
 from rai_interfaces.msg._hri_message import HRIMessage
-from rai_tts.models.base import TTSModel
+from rai_s2s.sound_device import (
+    SoundDeviceConfig,
+    SoundDeviceConnector,
+    SoundDeviceMessage,
+)
+from rai_s2s.tts.models import TTSModel
 
 from .initialization import load_config
-
-if TYPE_CHECKING:
-    from rai.communication.sound_device.api import SoundDeviceConfig
-
-from queue import Empty, Queue
-
-import numpy as np
 
 # This file contains every concurrent programming antipattern known to man
 # The words callback hell are insufficient to describe the cacophony of function calls

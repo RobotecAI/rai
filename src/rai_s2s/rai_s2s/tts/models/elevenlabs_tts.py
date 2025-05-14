@@ -21,7 +21,7 @@ from elevenlabs.types import Voice
 from elevenlabs.types.voice_settings import VoiceSettings
 from pydub import AudioSegment
 
-from rai_tts.models import TTSModel, TTSModelError
+from rai_s2s.tts.models import TTSModel, TTSModelError
 
 
 class ElevenLabsTTS(TTSModel):

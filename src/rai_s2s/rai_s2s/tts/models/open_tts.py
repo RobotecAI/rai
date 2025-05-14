@@ -20,7 +20,7 @@ import requests
 from pydub import AudioSegment
 from scipy.io.wavfile import read
 
-from rai_tts.models import TTSModel, TTSModelError
+from rai_s2s.tts.models import TTSModel, TTSModelError
 
 
 class OpenTTS(TTSModel):

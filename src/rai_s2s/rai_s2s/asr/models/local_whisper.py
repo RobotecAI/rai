@@ -21,7 +21,7 @@ import whisper
 from faster_whisper import WhisperModel
 from numpy._typing import NDArray
 
-from rai_asr.models.base import BaseTranscriptionModel
+from rai_s2s.asr.models import BaseTranscriptionModel
 
 
 class LocalWhisper(BaseTranscriptionModel):

@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Robotec.AI
+# Copyright (C) 2024 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai_tts.agents.initialization import TTS_MODELS, TTSAgentConfig, load_config
-from rai_tts.agents.tts_agent import TextToSpeechAgent
+from .base import BaseTranscriptionModel, BaseVoiceDetectionModel
+from .local_whisper import FasterWhisper, LocalWhisper
+from .open_ai_whisper import OpenAIWhisper
+from .open_wake_word import OpenWakeWord
+from .silero_vad import SileroVAD
 
-__all__ = ["TTS_MODELS", "TTSAgentConfig", "TextToSpeechAgent", "load_config"]
+__all__ = [
+    "BaseTranscriptionModel",
+    "BaseVoiceDetectionModel",
+    "FasterWhisper",
+    "LocalWhisper",
+    "OpenAIWhisper",
+    "OpenWakeWord",
+    "SileroVAD",
+]
