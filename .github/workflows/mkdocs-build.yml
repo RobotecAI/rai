@@ -1,0 +1,44 @@
+name: build mkdocs
+
+on:
+  pull_request:
+    branches:
+      - development
+      - main
+
+jobs:
+  build-mkdocs:
+    if: github.event.pull_request.draft == false
+
+    runs-on:
+      - ubuntu-latest
+    container:
+      image: python:3.12-slim
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          clean: true
+
+      - name: Cache Poetry and pip
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            ~/.cache/pip
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 2.1.1
+
+      - name: Install python dependencies
+        run: poetry install --with docs
+
+      - name: Build docs
+        shell: bash
+        run: |
+          poetry run mkdocs build --strict
