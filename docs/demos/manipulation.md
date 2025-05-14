@@ -9,6 +9,11 @@ manipulation techniques.
 
 ## Setup
 
+> [!TIP] LLM model
+>
+> The demo uses the `complex_model` LLM configured in `config.toml`. The model should be a
+> multimodal, tool-calling model. See [Vendors](../setup/vendors.md#llm-model-configuration-in-rai).
+
 !!! tip "ROS 2 Sourced"
 
     Make sure ROS 2 is sourced. (e.g. `source /opt/ros/humble/setup.bash`)
