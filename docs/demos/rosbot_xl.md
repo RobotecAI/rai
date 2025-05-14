@@ -68,5 +68,6 @@ The rosbot demo utilizes several components:
 2. RAI agent to process the request and interact with environment via [tool-calling](https://python.langchain.com/docs/concepts/tool_calling/) mechanism.
 3. Navigation is enabled via [nav2 toolkit](../API_documentation/langchain_integration/ROS_2_tools.md#nav2), which interacts with [ROS 2 nav2](https://docs.nav2.org/) asynchronously by calling [ros2 actions](https://docs.ros.org/en/jazzy/Tutorials/Beginner-CLI-Tools/Understanding-ROS2-Actions/Understanding-ROS2-Actions.html).
 4. Embodiment of the Rosbot is achieved using [RAI Whoami](../tutorials/create_robots_whoami.md) module. This makes RAI agent aware of the hardware platform and its capabilities.
+5. Key informations can be provided to the agent in [RAI Whoami](../tutorials/create_robots_whoami.md). In this demo coordinates of `Kitchen` and `Living Room` are provided as `capabilities`.
 
 The details of the demo can be checked in `examples/rosbot-xl-demo.py`.
