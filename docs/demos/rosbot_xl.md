@@ -58,7 +58,7 @@ platform in a nice apartment.
 
 !!! tip "Changing camera view"
 
-    To change camera in the simulation use 1,2,3 keys on your keyboard.
+    To change camera in the simulation use 1,2,3 keys on your keyboard once it's window is focused.
 
 ## How it works
 
