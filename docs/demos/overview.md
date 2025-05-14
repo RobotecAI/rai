@@ -6,7 +6,6 @@ This document provides an overview of the available RAI demos. Each demo showcas
 | ------------------------------------ | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------ | ----------------------- |
 | [Manipulation](manipulation.md)      | Robot arm manipulation using natural language        | - Object detection and segmentation<br>- Natural language command processing<br>- Robotic manipulation planning | ROS 2, Franka Emika Panda            | [link](manipulation.md) |
 | [ROSbot XL](rosbot_xl.md)            | Mobile robot operating in an apartment environment   | - Natural language interaction<br>- Navigation and perception<br>- Streamlit GUI interface                      | ROS 2, Open 3D Engine                | [link](rosbot_xl.md)    |
-| [Speech Interaction](taxi.md)        | Speech-to-speech interaction with autonomous taxi    | - Speech recognition and synthesis<br>- Natural language processing<br>- Autonomous navigation                  | ROS 2, AWSIM, Autoware               | [link](taxi.md)         |
 | [Autonomous Tractor](agriculture.md) | Autonomous agricultural tractor operating in a field | - Path planning and navigation<br>- Anomaly detection and handling<br>- RAI agent decision making               | ROS 2, Agricultural field simulation | [link](agriculture.md)  |
 
 ## Common Requirements
