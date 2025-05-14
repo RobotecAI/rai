@@ -283,11 +283,13 @@ def get_available_runs(experiment_dir: str) -> List[str]:
     List[str]
         List of run folder names
     """
-    return [
+    run_folders = [
         d
         for d in os.listdir(experiment_dir)
         if os.path.isdir(os.path.join(experiment_dir, d)) and d.startswith("run_")
     ]
+    # sort by date
+    return sorted(run_folders, key=lambda x: x.split("run_")[1])
 
 
 def load_single_run(
