@@ -53,6 +53,10 @@ guide and tutorials. 📚
 -   [x] rai_nomad: Integration with NoMaD for navigation.
 -   [ ] rai_finetune: Finetune LLMs on your embodied data.
 
+### Getting started
+
+See [https://robotecai.github.io/rai/setup/install](https://robotecai.github.io/rai/setup/install).
+
 ### Simulation demos
 
 Try RAI yourself with these demos:
