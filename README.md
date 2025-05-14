@@ -55,7 +55,7 @@ guide and tutorials. 📚
 
 ### Getting started
 
-See [https://robotecai.github.io/rai/setup/install](https://robotecai.github.io/rai/setup/install).
+See [Quick setup guide](https://robotecai.github.io/rai/setup/install).
 
 ### Simulation demos
 
