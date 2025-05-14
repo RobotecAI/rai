@@ -14,7 +14,7 @@ platform in a nice apartment.
 
 !!! tip "ROS 2 Sourced"
 
-    Make sure ROS 2 is sourced.
+    Make sure ROS 2 is sourced. (e.g. `source /opt/ros/humble/setup.bash`)
 
 1. Download the newest binary release:
 
@@ -25,6 +25,7 @@ platform in a nice apartment.
 2. Install and download required packages
 
     ```bash
+    sudo apt install ros-${ROS_DISTRO}-navigation2 ros-${ROS_DISTRO}-nav2-bringup
     vcs import < demos.repos
     rosdep install --from-paths src --ignore-src -r -y
     poetry install --with openset
