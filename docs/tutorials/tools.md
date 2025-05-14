@@ -136,7 +136,7 @@ def grab_object(object_name: str) -> str:  # function name is equal to name in c
 
 ### Multimodal Tool (Text + Image Output)
 
-RAI supports multimodal tools through the `rai.agents.tool_runner.ToolRunner` class. These tools
+RAI supports multimodal tools through the `rai.agents.langchain.core.ToolRunner` class. These tools
 must use this runner either directly or via agents such as [create_react_runnable](https://github.com/RobotecAI/rai/blob/{{branch}}/src/rai_core/rai/agents/langchain/runnables.py#L86) to handle multimedia output correctly.
 
 ```python

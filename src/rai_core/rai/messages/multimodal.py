@@ -102,10 +102,10 @@ class ToolMultimodalMessage(ToolMessage, MultimodalMessage):
     Note
     ----
     When any subclass of this class is used with LangGraph agents, use
-    `rai.agents.tool_runner.ToolRunner` as the tool runner, as it automatically
+    `rai.agents.langchain.core import ToolRunner` as the tool runner, as it automatically
     handles multimodal ToolMessages as well as converts them to a format
     that is compatible with the vendor.
-    ::: rai.agents.tool_runner.ToolRunner
+    ::: rai.agents.langchain.core.ToolRunner
     """
 
     def postprocess(self, format: Literal["openai", "bedrock"] = "openai"):
