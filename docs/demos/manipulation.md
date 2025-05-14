@@ -11,7 +11,7 @@ manipulation techniques.
 
 !!! tip "ROS 2 Sourced"
 
-    Make sure ROS 2 is sourced.
+    Make sure ROS 2 is sourced. (e.g. `source /opt/ros/humble/setup.bash`)
 
 1. Follow the RAI setup instructions in the [quick setup guide](../setup/install.md).
 2. Download additional dependencies:
@@ -44,7 +44,7 @@ manipulation techniques.
 1. Start the demo
 
     ```shell
-    ros2 launch examples/manipulation-demo.launch.py game_launcher:=demo_assets/manipulation/RAIManipulationDemoGamePackage/RAIManipulationDemo.GameLauncher
+    ros2 launch examples/manipulation-demo.launch.py game_launcher:=demo_assets/manipulation/RAIManipulationDemo/RAIManipulationDemo.GameLauncher
     ```
 
 2. In the second terminal, run the streamlit interface:
