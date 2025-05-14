@@ -70,7 +70,7 @@ class SpawnEntityService(ROS2BaseModel):
     xml: str = Field(default="")
 
 
-class SimulationConfig(BaseModel):
+class SceneConfig(BaseModel):
     """
     Setup of simulation - arrangement of objects in the environment.
 
@@ -110,7 +110,7 @@ class SimulationConfig(BaseModel):
         return entities
 
     @classmethod
-    def load_base_config(cls, base_config_path: Path) -> "SimulationConfig":
+    def load_base_config(cls, base_config_path: Path) -> "SceneConfig":
         """
         Loads a simulation configuration from a YAML file.
 
@@ -164,6 +164,9 @@ class SceneState(BaseModel):
     )
 
 
+class SimulationConfig(BaseModel): ...
+
+
 SimulationConfigT = TypeVar("SimulationConfigT", bound=SimulationConfig)
 
 
@@ -182,7 +185,15 @@ class SimulationBridge(ABC, Generic[SimulationConfigT]):
             self.logger = logger
 
     @abstractmethod
-    def setup_scene(self, simulation_config: SimulationConfigT):
+    def init_simulation(self, simulation_config: SimulationConfigT):
+        """
+        Initialize simulation binary and all other required processes,
+        for example ros2 nodes
+        """
+        pass
+
+    @abstractmethod
+    def setup_scene(self, scene_config: SceneConfig):
         """
         Runs and sets up the simulation scene according to the provided configuration.
 

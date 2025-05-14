@@ -22,8 +22,8 @@ from rclpy.impl.rcutils_logger import RcutilsLogger
 
 from rai_sim.simulation_bridge import (
     Entity,
+    SceneConfig,
     SimulationBridge,
-    SimulationConfig,
     SimulationConfigT,
     SpawnedEntity,
 )
@@ -68,7 +68,7 @@ class Task(ABC):
         pass
 
     @abstractmethod
-    def validate_config(self, simulation_config: SimulationConfig) -> bool:
+    def validate_config(self, simulation_config: SceneConfig) -> bool:
         """Task should be able to verify if given config is suitable for specific task
 
         Args:
@@ -389,9 +389,7 @@ class ManipulationTask(Task, ABC):
     """
 
     @abstractmethod
-    def check_if_required_objects_present(
-        self, simulation_config: SimulationConfig
-    ) -> bool:
+    def check_if_required_objects_present(self, simulation_config: SceneConfig) -> bool:
         """
         Check if the required objects are present in the simulation configuration.
 
@@ -402,9 +400,7 @@ class ManipulationTask(Task, ABC):
         """
         return True
 
-    def check_if_any_placed_incorrectly(
-        self, simulation_config: SimulationConfig
-    ) -> bool:
+    def check_if_any_placed_incorrectly(self, simulation_config: SceneConfig) -> bool:
         """
         Check if any object is placed incorrectly in the simulation configuration.
         Save number of initially correctly and incorrectly placed objects for
@@ -418,7 +414,7 @@ class ManipulationTask(Task, ABC):
         _, incorrect = self.calculate_correct(entities=simulation_config.entities)
         return incorrect > 0
 
-    def validate_config(self, simulation_config: SimulationConfig) -> bool:
+    def validate_config(self, simulation_config: SceneConfig) -> bool:
         """
         Validate the simulation configuration.
 
@@ -490,7 +486,7 @@ class ManipulationTask(Task, ABC):
         return current_correct, current_incorrect
 
     def calculate_score(
-        self, simulation_bridge: SimulationBridge[SimulationConfig]
+        self, simulation_bridge: SimulationBridge[SceneConfig]
     ) -> float:
         """
         Calculate the task score based on the difference between initial and current placements.

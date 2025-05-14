@@ -15,20 +15,30 @@ import logging
 import statistics
 import time
 from pathlib import Path
-from typing import Generic, List, TypeVar
+from typing import List, TypeVar
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
+from launch import LaunchDescription
+from launch.actions import (
+    IncludeLaunchDescription,
+)
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
 from rai.messages import HumanMultimodalMessage
 
 from rai_bench.base_benchmark import BaseBenchmark, BenchmarkSummary
 from rai_bench.manipulation_o3de.interfaces import Task
 from rai_bench.manipulation_o3de.results_tracking import ScenarioResult
+from rai_sim.o3de.o3de_bridge import (
+    O3DEngineArmManipulationBridge,
+    O3DExROS2SimulationConfig,
+)
 from rai_sim.simulation_bridge import (
     Entity,
-    SimulationBridge,
-    SimulationConfigT,
+    SceneConfig,
 )
 
 EntityT = TypeVar("EntityT", bound=Entity)
@@ -38,7 +48,7 @@ class EntitiesMismatchException(Exception):
     pass
 
 
-class Scenario(Generic[SimulationConfigT]):
+class Scenario:
     """
     A Scenario are defined by a pair of Task and Simlation Config.
     Each Scenario is executed separatly by a Benchmark.
@@ -47,8 +57,8 @@ class Scenario(Generic[SimulationConfigT]):
     def __init__(
         self,
         task: Task,
-        simulation_config: SimulationConfigT,
-        simulation_config_path: str,
+        scene_config: SceneConfig,
+        scene_config_path: str,
     ) -> None:
         """
         Initialize a Scenario.
@@ -57,21 +67,21 @@ class Scenario(Generic[SimulationConfigT]):
         ----------
         task : Task
             The task to be executed.
-        simulation_config : SimulationConfigT
-            The simulation configuration for the scenario.
-        simulation_config_path : str
-            The file path to the simulation configuration.
+        scene_config : SceneConfig
+            The scene configuration for the scenario.
+        scene_config_path : str
+            The file path to the scene configuration.
 
         Raises
         ------
         ValueError
-            If the provided simulation configuration is not valid for the task.
+            If the provided scene configuration is not valid for the task.
         """
         self.task = task
-        self.simulation_config = simulation_config
+        self.scene_config = scene_config
         # NOTE (jmatejcz) needed for logging which config was used,
         # there probably is better way to do it
-        self.simulation_config_path = simulation_config_path
+        self.scene_config_path = scene_config_path
 
 
 class ManipulationO3DEBenchmark(BaseBenchmark):
@@ -84,8 +94,9 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
     def __init__(
         self,
         model_name: str,
-        simulation_bridge: SimulationBridge[SimulationConfigT],
-        scenarios: List[Scenario[SimulationConfigT]],
+        simulation_bridge: O3DEngineArmManipulationBridge,
+        simulation_config: O3DExROS2SimulationConfig,
+        scenarios: List[Scenario],
         results_dir: Path,
         logger: logging.Logger | None = None,
     ) -> None:
@@ -95,20 +106,61 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
             logger=logger,
         )
         self.simulation_bridge = simulation_bridge
+        self.simulation_bridge.init_simulation(simulation_config=simulation_config)
+        self.simulation_bridge.launch_robotic_stack(
+            required_robotic_ros2_interfaces=simulation_config.required_robotic_ros2_interfaces,
+            launch_description=self.launch_description,
+        )
         self.num_of_scenarios = len(scenarios)
         self.scenarios = enumerate(iter(scenarios))
 
         self.scenario_results: List[ScenarioResult] = []
         self.csv_initialize(self.results_filename, ScenarioResult)
 
+    @property
+    def launch_description(self):
+        launch_moveit = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                [
+                    "src/examples/rai-manipulation-demo/Project/Examples/panda_moveit_config_demo.launch.py",
+                ]
+            )
+        )
+
+        launch_robotic_manipulation = Node(
+            package="robotic_manipulation",
+            executable="robotic_manipulation",
+            output="screen",
+            parameters=[
+                {"use_sim_time": True},
+            ],
+        )
+
+        launch_openset = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                [
+                    FindPackageShare("rai_bringup"),
+                    "/launch/openset.launch.py",
+                ]
+            ),
+        )
+
+        return LaunchDescription(
+            [
+                launch_openset,
+                launch_moveit,
+                launch_robotic_manipulation,
+            ]
+        )
+
     @classmethod
     def create_scenarios(
         cls,
         tasks: List[Task],
-        simulation_configs: List[SimulationConfigT],
-        simulation_configs_paths: List[str],
+        scene_configs: List[SceneConfig],
+        scene_configs_paths: List[str],
         logger: logging.Logger | None = None,
-    ) -> List[Scenario[SimulationConfigT]]:
+    ) -> List[Scenario]:
         """
         Create scenarios by pairing each task with each suitable simulation configuration.
 
@@ -128,22 +180,22 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
         """
         # NOTE (jmatejcz) hacky_fix, taking paths as args here, not the best solution,
         # but more changes to code would be required
-        scenarios: List[Scenario[SimulationConfigT]] = []
+        scenarios: List[Scenario] = []
         if not logger:
             logger = logging.getLogger(__name__)
         for task in tasks:
-            for sim_conf, sim_path in zip(simulation_configs, simulation_configs_paths):
-                if task.validate_config(simulation_config=sim_conf):
+            for scene_conf, scene_path in zip(scene_configs, scene_configs_paths):
+                if task.validate_config(simulation_config=scene_conf):
                     scenarios.append(
                         Scenario(
                             task=task,
-                            simulation_config=sim_conf,
-                            simulation_config_path=sim_path,
+                            scene_config=scene_conf,
+                            scene_config_path=scene_path,
                         )
                     )
                 else:
                     logger.debug(
-                        f"Simulation config: {sim_path} is not suitable for task: {task.task_prompt}"
+                        f"Simulation config: {scene_path} is not suitable for task: {task.task_prompt}"
                     )
         return scenarios
 
@@ -162,12 +214,12 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
         try:
             i, scenario = next(self.scenarios)  # Get the next scenario
 
-            self.simulation_bridge.setup_scene(scenario.simulation_config)
+            self.simulation_bridge.setup_scene(scenario.scene_config)
             self.logger.info(
                 "======================================================================================"
             )
             self.logger.info(
-                f"RUNNING SCENARIO NUMBER {i + 1} / {self.num_of_scenarios}\n TASK: {scenario.task.task_prompt}\n SIMULATION_CONFIG: {scenario.simulation_config_path}"
+                f"RUNNING SCENARIO NUMBER {i + 1} / {self.num_of_scenarios}\n TASK: {scenario.task.task_prompt}\n SIMULATION_CONFIG: {scenario.scene_config_path}"
             )
             tool_calls_num = 0
 
@@ -217,7 +269,7 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
                 scenario_result = ScenarioResult(
                     task_prompt=scenario.task.task_prompt,
                     system_prompt=scenario.task.system_prompt,
-                    simulation_config_path=scenario.simulation_config_path,
+                    scene_config_path=scenario.scene_config_path,
                     model_name=self.model_name,
                     score=score,
                     total_time=total_time,

@@ -20,7 +20,7 @@ from rclpy.impl.rcutils_logger import RcutilsLogger
 from rai_bench.manipulation_o3de.interfaces import (
     ManipulationTask,
 )
-from rai_sim.simulation_bridge import Entity, SimulationConfig
+from rai_sim.simulation_bridge import Entity, SceneConfig
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
 
@@ -80,9 +80,7 @@ class BuildCubeTowerTask(ManipulationTask):
         cube_names = ", ".join(obj + "s" for obj in self.obj_types).replace("_", " ")
         return f"Manipulate objects so that all {cube_names} form a single vertical tower. Other types of objects cannot be included in a tower."
 
-    def check_if_required_objects_present(
-        self, simulation_config: SimulationConfig
-    ) -> bool:
+    def check_if_required_objects_present(self, simulation_config: SceneConfig) -> bool:
         """
         Validate that at least two cubes of the specified types are present.
 

@@ -39,6 +39,7 @@ from rai_bench.utils import (
 )
 from rai_sim.o3de.o3de_bridge import (
     O3DEngineArmManipulationBridge,
+    O3DExROS2SimulationConfig,
 )
 
 
@@ -116,28 +117,30 @@ def run_benchmark(model_name: str, vendor: str, out_dir: str):
     # ]
 
     ### import ready scenarios
-    t_scenarios = trivial_scenarios(
-        configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
-    )
+    t_scenarios = trivial_scenarios(configs_dir=configs_dir, logger=bench_logger)
     # e_scenarios = easy_scenarios(
-    #     configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    #     configs_dir=configs_dir, logger=bench_logger
     # )
     # m_scenarios = medium_scenarios(
-    #     configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    #     configs_dir=configs_dir, logger=bench_logger
     # )
     # h_scenarios = hard_scenarios(
-    #     configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    #     configs_dir=configs_dir, logger=bench_logger
     # )
     # vh_scenarios = very_hard_scenarios(
-    #     configs_dir=configs_dir, connector_path=connector_path, logger=bench_logger
+    #     configs_dir=configs_dir, logger=bench_logger
     # )
 
     all_scenarios = t_scenarios
+    simulation_config = O3DExROS2SimulationConfig.load_config(
+        config_path=Path(connector_path)
+    )
     o3de = O3DEngineArmManipulationBridge(connector, logger=agent_logger)
     try:
         # define benchamrk
         benchmark = ManipulationO3DEBenchmark(
             model_name=model_name,
+            simulation_config=simulation_config,
             simulation_bridge=o3de,
             scenarios=all_scenarios,
             logger=bench_logger,

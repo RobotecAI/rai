@@ -22,7 +22,7 @@ from rclpy.impl.rcutils_logger import RcutilsLogger
 from rai_bench.manipulation_o3de.interfaces import (
     ManipulationTask,
 )
-from rai_sim.simulation_bridge import Entity, SimulationConfig
+from rai_sim.simulation_bridge import Entity, SceneConfig
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
 
@@ -58,9 +58,7 @@ class RotateObjectTask(ManipulationTask):
             "Remember to rotate the gripper when grabbing objects."
         )
 
-    def check_if_required_objects_present(
-        self, simulation_config: SimulationConfig
-    ) -> bool:
+    def check_if_required_objects_present(self, simulation_config: SceneConfig) -> bool:
         """
         Validate that at least one object of the specified types is present.
 
