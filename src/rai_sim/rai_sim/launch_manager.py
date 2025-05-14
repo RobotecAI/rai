@@ -42,6 +42,11 @@ class Ros2LaunchManager:
         # when stop event set
         loop.run_until_complete(loop.run_in_executor(None, stop_event.wait))
         if not launch_task.done():
+            # XXX (jmatejcz) the shutdown function sends shutdown signal to all
+            # nodes launch with launch description which should do the trick
+            # but some nodes are stubborn and  there is a posiibility
+            # that they don't close. If this will happed sending PKILL for all
+            # ros nodes will be needed
             shutdown_task = loop.create_task(
                 launch_service.shutdown(),
             )
