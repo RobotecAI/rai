@@ -191,7 +191,6 @@ def test_get_topics_names_and_types_tool_with_readable_topic(
     connector = ROS2Connector()
     tool = GetROS2TopicsNamesAndTypesTool(connector=connector, readable=["/rosout"])
     response = tool._run()
-    print(response)
     assert response != ""
     assert "/rosout" in response
 
