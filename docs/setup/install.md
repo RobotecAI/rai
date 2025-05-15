@@ -99,7 +99,7 @@ source ./setup_shell.sh
 
 RAI is vendor-agnostic. Use the configuration in `config.toml` to set up your vendor
 of choice for RAI modules. Vendor choices for RAI and our recommendations are summarized in
-[Vendors Overview](vendors_overview.md).
+[Vendors Overview](vendors.md).
 
 !!! tip "Best-performing AI models"
 
