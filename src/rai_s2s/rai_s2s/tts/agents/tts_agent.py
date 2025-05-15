@@ -25,15 +25,13 @@ from numpy._typing import NDArray
 from pydub import AudioSegment
 from rai.agents.base import BaseAgent
 from rai.communication.ros2 import (
-    IROS2Message,
+    ROS2Connector,
     ROS2HRIConnector,
     ROS2HRIMessage,
-    TopicConfig,
+    ROS2Message,
 )
-from std_msgs.msg import String
 from typing_extensions import Self
 
-from rai_interfaces.msg._hri_message import HRIMessage
 from rai_s2s.sound_device import (
     SoundDeviceConfig,
     SoundDeviceConnector,
@@ -91,17 +89,16 @@ class TextToSpeechAgent(BaseAgent):
         else:
             self.logger = logger
 
-        speaker = SoundDeviceConnector(
+        self.speaker = SoundDeviceConnector(
             targets=[("speaker", speaker_config)], sources=[]
         )
-        sample_rate, _, out_channels = speaker.get_audio_params("speaker")
+        sample_rate, _, out_channels = self.speaker.get_audio_params("speaker")
         tts.sample_rate = sample_rate
         tts.channels = out_channels
 
         self.node_base_name = ros2_name
         self.model = tts
-        ros2_connector = self._setup_ros2_connector()
-        self.connectors = {"ros2": ros2_connector, "speaker": speaker}
+        self.ros2_connector = self._setup_ros2_connector()
         super().__init__()
 
         self.current_transcription_id = str(uuid4())[0:8]
@@ -130,14 +127,14 @@ class TextToSpeechAgent(BaseAgent):
         )
         match cfg.text_to_speech.model_type:
             case "ElevenLabs":
-                from rai_tts.models import ElevenLabsTTS
+                from rai_s2s.tts.models import ElevenLabsTTS
 
                 if cfg.text_to_speech.voice != "":
                     model = ElevenLabsTTS(voice=cfg.text_to_speech.voice)
                 else:
                     raise ValueError("ElevenLabs [tts] vendor required voice to be set")
             case "OpenTTS":
-                from rai_tts.models import OpenTTS
+                from rai_s2s.tts.models import OpenTTS
 
                 if cfg.text_to_speech.voice != "":
                     model = OpenTTS(voice=cfg.text_to_speech.voice)
@@ -160,8 +157,7 @@ class TextToSpeechAgent(BaseAgent):
         self.transcription_thread.start()
 
         msg = SoundDeviceMessage(read=False)
-        assert isinstance(self.connectors["speaker"], SoundDeviceConnector)
-        self.connectors["speaker"].start_action(
+        self.speaker.start_action(
             msg,
             "speaker",
             on_feedback=self._speaker_callback,
@@ -231,55 +227,46 @@ class TextToSpeechAgent(BaseAgent):
                     raise e
 
     def _setup_ros2_connector(self):
-        to_human = TopicConfig(
-            msg_type="rai_interfaces/msg/HRIMessage",
-            auto_qos_matching=True,
-            is_subscriber=True,
-            subscriber_callback=self._on_to_human_message,
-            source_author="ai",
+        self.hri_ros2_connector = ROS2HRIConnector(
+            self.node_base_name  # , "single_threaded"
         )
-        voice_commands = TopicConfig(
-            msg_type="std_msgs/msg/String",
-            auto_qos_matching=True,
-            is_subscriber=True,
-            subscriber_callback=self._on_command_message,
-            source_author="human",
+        self.hri_ros2_connector.register_callback(
+            "/to_human", self._on_to_human_message
         )
-        return ROS2HRIConnector(
-            node_name=self.node_base_name,
-            sources=[("/to_human", to_human), ("/voice_commands", voice_commands)],
+        self.ros2_connector = ROS2Connector(
+            self.node_base_name  # , False, "single_threaded"
+        )
+        self.ros2_connector.register_callback(
+            "/voice_commands", self._on_command_message, msg_type="std_msgs/msg/String"
         )
 
-    def _on_to_human_message(self, message: IROS2Message):
-        assert isinstance(message, HRIMessage)
-        msg = ROS2HRIMessage.from_ros2(message, "ai")
-        self.logger.info(f"Receieved message from human: {message.text}")
+    def _on_to_human_message(self, msg: ROS2HRIMessage):
+        self.logger.debug(f"Receieved message from human: {msg.text}")
         self.logger.warning(
             f"Starting playback, current id: {self.current_transcription_id}"
         )
         if (
             self.current_speech_id is None
-            and msg.conversation_id is not None
-            and msg.conversation_id not in self.remembered_speech_ids
+            and msg.communication_id is not None
+            and msg.communication_id not in self.remembered_speech_ids
         ):
-            self.current_speech_id = msg.conversation_id
+            self.current_speech_id = msg.communication_id
             self.remembered_speech_ids.append(self.current_speech_id)
             if len(self.remembered_speech_ids) > 64:
                 self.remembered_speech_ids.pop(0)
-        if self.current_speech_id == msg.conversation_id:
+        if self.current_speech_id == msg.communication_id:
             self.text_queues[self.current_transcription_id].put(msg.text)
         self.playback_data.playing = True
 
-    def _on_command_message(self, message: IROS2Message):
-        assert isinstance(message, String)
-        self.logger.debug(f"Receieved status message: {message}")
-        if message.data == "tog_play":
+    def _on_command_message(self, message: ROS2Message):
+        self.logger.info(f"Receieved status message: {message}")
+        if message.payload.data == "tog_play":
             self.playback_data.playing = not self.playback_data.playing
-        elif message.data == "play":
+        elif message.payload.data == "play":
             self.playback_data.playing = True
-        elif message.data == "pause":
+        elif message.payload.data == "pause":
             self.playback_data.playing = False
-        elif message.data == "stop":
+        elif message.payload.data == "stop":
             self.current_speech_id = None
             self.playback_data.playing = False
             previous_id = self.current_transcription_id
