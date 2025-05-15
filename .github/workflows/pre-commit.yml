@@ -9,15 +9,34 @@ on:
 
 jobs:
   pre-commit:
-    runs-on: ubuntu-24.04
+    runs-on:
+      - self-hosted
+
+    container:
+      image: osrf/ros:humble-desktop-full
 
     steps:
+
+      - name: Install pre-commit
+        run: |
+          apt update && apt install -y python3-pip shellcheck
+          python3 -m pip install pre-commit
+
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Run pre-commit
-        uses: pre-commit/action@v3.0.1
-        with:
-          extra_args: "--all-files"
+      - name: Install ROS 2 package dependencies
+        shell: bash
+        run: |
+          vcs import . < ros_deps.repos
+
+      - run: |
+          git config --global --add safe.directory /__w/rai/rai
+      - run: |
+          git branch
+          ls .git
+
+      - shell: bash
+        run: |
+          pre-commit install
+          pre-commit run --all-files --show-diff-on-failure --color=always
