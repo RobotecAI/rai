@@ -53,6 +53,8 @@ class LangChainAgent(BaseAgent):
         Dict of target_name: connector. Agent will send it's output to these targets using connectors.
     runnable : Runnable
         LangChain runnable that will be used to generate output.
+    stream_response : bool, optional
+        If True, the agent will stream the response to the target connectors. Make sure that the runnable is configured to stream.
     state : BaseState | None, optional
         State to seed the LangChain runnable. If None - empty state is used.
     new_message_behavior : newMessageBehaviorType, optional
