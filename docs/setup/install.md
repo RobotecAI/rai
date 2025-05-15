@@ -44,7 +44,13 @@ git clone https://github.com/RobotecAI/rai.git
 cd rai
 ```
 
-### 1.3 Create poetry virtual environment and install dependencies:
+### 1.3 Import ROS 2 Dependencies (e.g. [rai_interfaces](https://github.com/RobotecAI/rai_interfaces))
+
+```bash
+vcs import < ros_deps.repos
+```
+
+### 1.4 Create poetry virtual environment and install dependencies:
 
 ```bash
 poetry install
@@ -69,7 +75,7 @@ rosdep install --from-paths src --ignore-src -r -y
     | [nomad][nomad] | Visual Navigation - NoMaD integration | visualnav_transformer |
     | docs | Documentation-related dependencies | mkdocs, mkdocs-material, pymdown-extensions |
 
-### 1.4 Configure RAI
+### 1.5 Configure RAI
 
 Run the configuration tool to set up your LLM vendor and other settings:
 
