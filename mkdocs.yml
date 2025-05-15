@@ -111,6 +111,7 @@ nav:
     - Robotic arm: demos/manipulation.md
     - Autonomous vehicle: demos/rosbot_xl.md
     - Autonomous tractor: demos/agriculture.md
+    - Debugging assistant: demos/debugging_assistant.md
   - Simulation and benchmarking:
     - Overview: simulation_and_benchmarking/overview.md
     - RAI Sim: simulation_and_benchmarking/rai_sim.md

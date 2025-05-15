@@ -65,10 +65,9 @@ RAI connects human instructions to robot actions in four simple steps:
 
 See RAI in action:
 
--   🤖 [Manipulation Tasks](demos/manipulation.md) - Watch RAI control a Franka Panda arm using natural language
--   🚗 [Autonomous Navigation](demos/rosbot_xl.md) - Explore RAI's capabilities with the ROSbot XL platform
--   🎤 [Speech Interaction](demos/taxi.md) - Experience RAI's speech-to-speech capabilities in an autonomous taxi scenario
--   🚜 [Agricultural Robotics](demos/agriculture.md) - See how RAI handles complex decision-making in orchard environments
+-   🤖 [Manipulation Tasks](../demos/manipulation.md) - Watch RAI control a Franka Panda arm using natural language
+-   🚗 [Autonomous Navigation](../demos/rosbot_xl.md) - Explore RAI's capabilities with the ROSbot XL platform
+-   🚜 [Agricultural Robotics](../demos/agriculture.md) - See how RAI handles complex decision-making in orchard environments
 
 ---
 
