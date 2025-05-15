@@ -11,7 +11,7 @@ jobs:
     if: github.event.pull_request.draft == false
 
     runs-on:
-      - ubuntu-latest
+      - ubuntu-24.04
     container:
       image: python:3.12-slim
 
