@@ -30,10 +30,10 @@ from rai.communication.ros2 import (
     ROS2HRIMessage,
     TopicConfig,
 )
+from rai_interfaces.msg._hri_message import HRIMessage
 from std_msgs.msg import String
 from typing_extensions import Self
 
-from rai_interfaces.msg._hri_message import HRIMessage
 from rai_s2s.sound_device import (
     SoundDeviceConfig,
     SoundDeviceConnector,

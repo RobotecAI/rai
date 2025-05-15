@@ -31,9 +31,9 @@ from rai.types import (
     PoseStamped,
 )
 from rai.types.ros2 import from_ros2_msg, to_ros2_msg
+from rai_interfaces.srv import ManipulatorMoveTo
 from tf2_geometry_msgs import do_transform_pose, do_transform_pose_stamped
 
-from rai_interfaces.srv import ManipulatorMoveTo
 from rai_sim.launch_manager import ROS2LaunchManager
 from rai_sim.simulation_bridge import (
     Entity,
