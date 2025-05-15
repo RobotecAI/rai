@@ -13,17 +13,9 @@ jobs:
   publish-mkdocs:
     runs-on:
       - ubuntu-24.04
-    container:
-      image: python:3.12-slim
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          clean: true
-
-      - name: Install Git
-        run: apt-get update && apt-get install -y git
-
       - name: Configure Git Credentials
         run: |
           git config user.name github-actions[bot]
