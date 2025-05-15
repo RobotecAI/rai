@@ -28,7 +28,7 @@
 
     ??? question "What demos are available for RAI?"
 
-        RAI offers demos for [agricultural robotics](../demos/agriculture.md), [manipulation tasks](../demos/manipulation.md), [autonomous navigation with ROSbot XL](../demos/rosbot_xl.md), and [voice-controlled taxi scenarios](../demos/taxi.md). See the documentation for details on each demo.
+        RAI offers demos for [manipulation tasks](../demos/manipulation.md), [autonomous navigation with ROSbot XL](../demos/rosbot_xl.md) and [agricultural robotics](../demos/agriculture.md). See the documentation for details on each demo.
 
         !!! info "Demos from ROSCon 2024"
 
