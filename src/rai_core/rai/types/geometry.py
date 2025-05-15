@@ -54,3 +54,9 @@ class Pose2D(BaseGeometryModel):
     x: float = 0.0
     y: float = 0.0
     theta: float = 0.0
+
+
+class Path(ROS2BaseModel):
+    _prefix: str = "nav_msgs/msg"
+    header: Header = Header()
+    poses: List[Pose] = []

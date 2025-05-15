@@ -14,7 +14,15 @@
 
 
 from .base import RaiBaseModel, ROS2BaseModel
-from .geometry import Point, Pose, Pose2D, PoseStamped, PoseWithCovariance, Quaternion
+from .geometry import (
+    Path,
+    Point,
+    Pose,
+    Pose2D,
+    PoseStamped,
+    PoseWithCovariance,
+    Quaternion,
+)
 from .sensor import CameraInfo, Image
 from .std import Header, Time
 from .vision import (
@@ -33,6 +41,7 @@ __all__ = [
     "Image",
     "ObjectHypothesis",
     "ObjectHypothesisWithPose",
+    "Path",
     "Point",
     "Pose",
     "Pose2D",
