@@ -1,9 +1,10 @@
 name: publish mkdocs
 
 on:
-  push:
-    branches:
-      - main
+    pull_request:
+      branches:
+        - development
+        - main
 
 jobs:
   publish-mkdocs:
