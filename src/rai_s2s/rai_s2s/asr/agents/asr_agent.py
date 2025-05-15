@@ -79,16 +79,11 @@ class SpeechRecognitionAgent(BaseAgent):
             self.logger = logging.getLogger(__name__)
         else:
             self.logger = logger
-        microphone = SoundDeviceConnector(
+        self.microphone = SoundDeviceConnector(
             targets=[], sources=[("microphone", microphone_config)]
         )
-        ros2_hri_connector = ROS2HRIConnector(ros2_name, targets=["/from_human"])
-        ros2_connector = ROS2Connector(ros2_name + "ari")
-        self.connectors = {
-            "microphone": microphone,
-            "ros2_hri": ros2_hri_connector,
-            "ros2": ros2_connector,
-        }
+        self.ros2_hri_connector = ROS2HRIConnector(ros2_name)
+        self.ros2_connector = ROS2Connector(ros2_name + "ari")
         super().__init__()
         self.should_record_pipeline: List[BaseVoiceDetectionModel] = []
         self.should_stop_pipeline: List[BaseVoiceDetectionModel] = []
@@ -127,19 +122,19 @@ class SpeechRecognitionAgent(BaseAgent):
         )
         match cfg.transcribe.model_type:
             case "LocalWhisper (Free)":
-                from rai_asr.models import LocalWhisper
+                from rai_s2s.asr.models import LocalWhisper
 
                 model = LocalWhisper(
                     cfg.transcribe.model_name, 16000, language=cfg.transcribe.language
                 )
             case "FasterWhisper (Free)":
-                from rai_asr.models import FasterWhisper
+                from rai_s2s.asr.models import FasterWhisper
 
                 model = FasterWhisper(
                     cfg.transcribe.model_name, 16000, language=cfg.transcribe.language
                 )
             case "OpenAI (Cloud)":
-                from rai_asr.models import OpenAIWhisper
+                from rai_s2s.asr.models import OpenAIWhisper
 
                 model = OpenAIWhisper(
                     cfg.transcribe.model_name, 16000, language=cfg.transcribe.language
@@ -149,7 +144,7 @@ class SpeechRecognitionAgent(BaseAgent):
 
         match cfg.voice_activity_detection.model_name:
             case "SileroVAD":
-                from rai_asr.models import SileroVAD
+                from rai_s2s.asr.models import SileroVAD
 
                 vad = SileroVAD(16000, cfg.voice_activity_detection.threshold)
 
@@ -157,7 +152,7 @@ class SpeechRecognitionAgent(BaseAgent):
         if cfg.wakeword.is_used:
             match cfg.wakeword.model_type:
                 case "OpenWakeWord":
-                    from rai_asr.models import OpenWakeWord
+                    from rai_s2s.asr.models import OpenWakeWord
 
                     agent.add_detection_model(
                         OpenWakeWord(cfg.wakeword.model_name, cfg.wakeword.threshold)
@@ -199,9 +194,8 @@ class SpeechRecognitionAgent(BaseAgent):
         Start the voice recognition agent, initializing the microphone and handling incoming audio samples.
         """
         self.running = True
-        assert isinstance(self.connectors["microphone"], SoundDeviceConnector)
         msg = SoundDeviceMessage(read=True)
-        self.listener_handle = self.connectors["microphone"].start_action(
+        self.listener_handle = self.microphone.start_action(
             action_data=msg,
             target="microphone",
             on_feedback=self._on_new_sample,
@@ -215,9 +209,9 @@ class SpeechRecognitionAgent(BaseAgent):
         """
         self.logger.info("Stopping Voice Agent")
         self.running = False
-        self.connectors["microphone"].terminate_action(self.listener_handle)
-        assert isinstance(self.connectors["ros2_hri"], ROS2HRIConnector)
-        self.connectors["ros2_hri"].shutdown()
+        self.microphone.terminate_action(self.listener_handle)
+        self.ros2_hri_connector.shutdown()
+        self.ros2_connector.shutdown()
         while not all(
             [thread["joined"] for thread in self.transcription_threads.values()]
         ):
@@ -310,9 +304,9 @@ class SpeechRecognitionAgent(BaseAgent):
     def _transcription_thread(self, identifier: str):
         self.logger.info(f"transcription thread {identifier} started")
         audio_data = np.concatenate(self.transcription_buffers[identifier])
-        with (
-            self.transcription_lock
-        ):  # this is only necessary for the local model... TODO: fix this somehow
+
+        # NOTE: this is only necessary for the local model, but it seems to cause no relevant performance drops in case of cloud models
+        with self.transcription_lock:
             transcription = self.transcription_model.transcribe(audio_data)
         self._send_ros2_message(transcription, "/from_human")
         self.transcription_threads[identifier]["transcription"] = transcription
@@ -321,9 +315,9 @@ class SpeechRecognitionAgent(BaseAgent):
     def _send_ros2_message(self, data: str, topic: str):
         self.logger.debug(f"Sending message to {topic}: {data}")
         if topic == "/voice_commands":
-            msg = ROS2Message({"data": data})
+            msg = ROS2Message(payload={"data": data})
             try:
-                self.connectors["ros2"].send_message(
+                self.ros2_connector.send_message(
                     msg, topic, msg_type="std_msgs/msg/String"
                 )
             except Exception as e:
@@ -334,4 +328,4 @@ class SpeechRecognitionAgent(BaseAgent):
                 message_author="human",
                 communication_id=ROS2HRIMessage.generate_conversation_id(),
             )
-            self.connectors["ros2_hri"].send_message(msg, topic)
+            self.ros2_hri_connector.send_message(msg, topic)
