@@ -34,7 +34,7 @@ jobs:
           version: 2.1.1
 
       - name: Install python dependencies
-        run: poetry install --all-groups
+        run: poetry install --with docs
 
       - name: Build and Deploy
         shell: bash
