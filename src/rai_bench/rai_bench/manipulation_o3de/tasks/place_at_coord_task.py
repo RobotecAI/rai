@@ -21,7 +21,7 @@ from rclpy.impl.rcutils_logger import RcutilsLogger
 from rai_bench.manipulation_o3de.interfaces import (
     ManipulationTask,
 )
-from rai_sim.simulation_bridge import Entity, SimulationConfig
+from rai_sim.simulation_bridge import Entity, SceneConfig
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
 
@@ -61,9 +61,7 @@ class PlaceObjectAtCoordTask(ManipulationTask):
             f"the coordinates (x: {x}, y: {y})."
         )
 
-    def check_if_required_objects_present(
-        self, simulation_config: SimulationConfig
-    ) -> bool:
+    def check_if_required_objects_present(self, simulation_config: SceneConfig) -> bool:
         count = sum(
             1 for ent in simulation_config.entities if ent.prefab_name == self.obj_type
         )

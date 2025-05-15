@@ -21,8 +21,8 @@ class ScenarioResult(BaseModel):
     task_prompt: str = Field(..., description="The task prompt.")
     system_prompt: str = Field(..., description="The system prompt.")
     model_name: str = Field(..., description="Name of the LLM.")
-    simulation_config_path: str = Field(
-        ..., description="Path to the simulation configuration file."
+    scene_config_path: str = Field(
+        ..., description="Path to the scene configuration file."
     )
     score: float = Field(
         ..., description="Value between 0 and 1, describing the task score."

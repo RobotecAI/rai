@@ -29,6 +29,7 @@ from rai.types import (
 
 from rai_sim.simulation_bridge import (
     Entity,
+    SceneConfig,
     SceneState,
     SimulationBridge,
     SimulationConfig,
@@ -114,13 +115,13 @@ def test_spawned_entity(pose: PoseStamped):
     assert spawned_entity.id == "id_123"
 
 
-def test_simulation_config_unique_names(pose):
+def test_scene_config_unique_names(pose: PoseStamped):
     entities = [
         Entity(name="entity1", prefab_name="cube", pose=pose),
         Entity(name="entity2", prefab_name="carrot", pose=pose),
     ]
 
-    config = SimulationConfig(entities=entities)
+    config = SceneConfig(entities=entities)
 
     assert isinstance(config.entities, list)
     assert all(isinstance(e, Entity) for e in config.entities)
@@ -128,18 +129,18 @@ def test_simulation_config_unique_names(pose):
     assert len(config.entities) == 2
 
 
-def test_simulation_config_duplicate_names(pose):
+def test_scene_config_duplicate_names(pose: PoseStamped):
     entities = [
         Entity(name="duplicate", prefab_name="cube", pose=pose),
         Entity(name="duplicate", prefab_name="carrot", pose=pose),
     ]
 
     with pytest.raises(ValidationError):
-        SimulationConfig(entities=entities)
+        SceneConfig(entities=entities)
 
 
 def test_load_base_config(sample_base_yaml_config: Path):
-    config = SimulationConfig.load_base_config(sample_base_yaml_config)
+    config = SceneConfig.load_base_config(sample_base_yaml_config)
 
     assert isinstance(config.entities, list)
     assert all(isinstance(e, Entity) for e in config.entities)
@@ -150,9 +151,12 @@ def test_load_base_config(sample_base_yaml_config: Path):
 class MockSimulationBridge(SimulationBridge[SimulationConfig]):
     """Mock implementation of SimulationBridge for testing."""
 
-    def setup_scene(self, simulation_config: SimulationConfig):
+    def init_simulation(self, simulation_config: SimulationConfig):
+        pass
+
+    def setup_scene(self, scene_config: SceneConfig):
         """Mock implementation of setup_scene."""
-        for entity in simulation_config.entities:
+        for entity in scene_config.entities:
             self._spawn_entity(entity)
 
     def _spawn_entity(self, entity: Entity):
@@ -211,9 +215,7 @@ class TestSimulationBridge(unittest.TestCase):
         )
 
         # Create a test configuration
-        self.test_config = SimulationConfig(
-            entities=[self.test_entity1, self.test_entity2]
-        )
+        self.test_config = SceneConfig(entities=[self.test_entity1, self.test_entity2])
 
     def test_init(self):
         # Test with provided logger

@@ -101,7 +101,7 @@ def convert_row_to_scenario_result(row: pd.Series) -> ScenarioResult:
         task_prompt=row["task_prompt"],
         system_prompt=row["system_prompt"],
         model_name=row["model_name"],
-        simulation_config_path=row["simulation_config_path"],
+        scene_config_path=row["scene_config_path"],
         score=float(row["score"]),
         total_time=float(row["total_time"]),
         number_of_tool_calls=int(row["number_of_tool_calls"]),

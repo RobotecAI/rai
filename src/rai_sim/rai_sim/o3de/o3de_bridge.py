@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import logging
-import shlex
 import signal
 import subprocess
 import time
@@ -23,6 +22,7 @@ from typing import Any, List, Optional, Set, cast
 import yaml
 from geometry_msgs.msg import Pose as ROS2Pose
 from geometry_msgs.msg import PoseStamped as ROS2PoseStamped
+from launch import LaunchDescription
 from rai.communication.ros2 import ROS2Connector, ROS2Message
 from rai.communication.ros2.ros_async import get_future_result
 from rai.types import (
@@ -34,8 +34,10 @@ from rai.types.ros2 import from_ros2_msg, to_ros2_msg
 from tf2_geometry_msgs import do_transform_pose, do_transform_pose_stamped
 
 from rai_interfaces.srv import ManipulatorMoveTo
+from rai_sim.launch_manager import ROS2LaunchManager
 from rai_sim.simulation_bridge import (
     Entity,
+    SceneConfig,
     SceneState,
     SimulationBridge,
     SimulationConfig,
@@ -47,19 +49,16 @@ from rai_sim.simulation_bridge import (
 class O3DExROS2SimulationConfig(SimulationConfig):
     binary_path: Path
     level: Optional[str] = None
-    robotic_stack_command: str
     required_simulation_ros2_interfaces: dict[str, List[str]]
     required_robotic_ros2_interfaces: dict[str, List[str]]
 
-    @classmethod
-    def load_config(
-        cls, base_config_path: Path, connector_config_path: Path
-    ) -> "O3DExROS2SimulationConfig":
-        base_config = SimulationConfig.load_base_config(base_config_path)
+    model_config = {"arbitrary_types_allowed": True}
 
-        with open(connector_config_path) as f:
+    @classmethod
+    def load_config(cls, config_path: Path) -> "O3DExROS2SimulationConfig":
+        with open(config_path) as f:
             connector_content: dict[str, Any] = yaml.safe_load(f)
-        return cls(**base_config.model_dump(), **connector_content)
+        return cls(**connector_content)
 
 
 class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
@@ -68,9 +67,16 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
     ):
         super().__init__(logger=logger)
         self.connector = connector
+        self.manager = ROS2LaunchManager()
         self.current_sim_process = None
-        self.current_robotic_stack_process = None
         self.current_binary_path = None
+
+    def init_simulation(self, simulation_config: O3DExROS2SimulationConfig):
+        if self.current_binary_path != simulation_config.binary_path:
+            if self.current_sim_process:
+                self.shutdown()
+            self._launch_binary(simulation_config)
+            self.current_binary_path = simulation_config.binary_path
 
     def shutdown(self):
         self._shutdown_binary()
@@ -136,10 +142,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         self.current_sim_process = None
 
     def _shutdown_robotic_stack(self):
-        self._shutdown_process(
-            process=self.current_robotic_stack_process, process_name="robotic_stack"
-        )
-        self.current_robotic_stack_process = None
+        self.manager.shutdown()
 
     def get_available_spawnable_names(self) -> list[str]:
         msg = ROS2Message(payload={})
@@ -297,21 +300,13 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
 
     def setup_scene(
         self,
-        simulation_config: O3DExROS2SimulationConfig,
+        scene_config: SceneConfig,
     ):
-        if self.current_binary_path != simulation_config.binary_path:
-            if self.current_sim_process:
-                self.shutdown()
-            self._launch_binary(simulation_config)
-            self._launch_robotic_stack(simulation_config)
-            self.current_binary_path = simulation_config.binary_path
+        while self.spawned_entities:
+            self._despawn_entity(self.spawned_entities[0])
+        self.logger.info(f"Entities after despawn: {self.spawned_entities}")
 
-        else:
-            while self.spawned_entities:
-                self._despawn_entity(self.spawned_entities[0])
-            self.logger.info(f"Entities after despawn: {self.spawned_entities}")
-
-        for entity in simulation_config.entities:
+        for entity in scene_config.entities:
             self._spawn_entity(entity)
 
     def _launch_binary(
@@ -334,16 +329,15 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
         ):
             raise RuntimeError("ROS2 stack is not ready in time.")
 
-    def _launch_robotic_stack(self, simulation_config: O3DExROS2SimulationConfig):
-        command = shlex.split(simulation_config.robotic_stack_command)
-        self.logger.info(f"Running command: {command}")
-        self.current_robotic_stack_process = subprocess.Popen(
-            command,
-        )
-        if not self._has_process_started(self.current_robotic_stack_process):
-            raise RuntimeError("Process did not start in time.")
+    def launch_robotic_stack(
+        self,
+        required_robotic_ros2_interfaces: dict[str, List[str]],
+        launch_description: LaunchDescription,
+    ):
+        self.manager.start(launch_description=launch_description)
+
         if not self._is_ros2_stack_ready(
-            required_ros2_stack=simulation_config.required_robotic_ros2_interfaces
+            required_ros2_stack=required_robotic_ros2_interfaces
         ):
             raise RuntimeError("ROS2 stack is not ready in time.")
 

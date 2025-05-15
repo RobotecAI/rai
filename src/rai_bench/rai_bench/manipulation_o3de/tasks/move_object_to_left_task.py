@@ -19,7 +19,7 @@ from rclpy.impl.rcutils_logger import RcutilsLogger
 from rai_bench.manipulation_o3de.interfaces import (
     ManipulationTask,
 )
-from rai_sim.simulation_bridge import Entity, SimulationConfig
+from rai_sim.simulation_bridge import Entity, SceneConfig
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
 
@@ -44,9 +44,7 @@ class MoveObjectsToLeftTask(ManipulationTask):
         # but 'left side' is depending on where camera is positioned so it might not be enough
         return f"Manipulate objects, so that all of the {obj_names} are on the left side of the table (positive y)"
 
-    def check_if_required_objects_present(
-        self, simulation_config: SimulationConfig
-    ) -> bool:
+    def check_if_required_objects_present(self, simulation_config: SceneConfig) -> bool:
         """Validate if any object present"""
         object_types_present = self.group_entities_by_type(
             entities=simulation_config.entities

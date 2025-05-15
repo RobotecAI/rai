@@ -14,9 +14,7 @@
 
 import logging
 from pathlib import Path
-from typing import List, Union
-
-from rclpy.impl.rcutils_logger import RcutilsLogger
+from typing import List
 
 from rai_bench.manipulation_o3de.benchmark import ManipulationO3DEBenchmark, Scenario
 from rai_bench.manipulation_o3de.interfaces import Task
@@ -27,16 +25,12 @@ from rai_bench.manipulation_o3de.tasks import (
     PlaceCubesTask,
     PlaceObjectAtCoordTask,
 )
-from rai_sim.o3de.o3de_bridge import (
-    O3DExROS2SimulationConfig,
-)
-
-loggers_type = Union[RcutilsLogger, logging.Logger]
+from rai_sim.simulation_bridge import SceneConfig
 
 
 def trivial_scenarios(
-    configs_dir: str, connector_path: str, logger: loggers_type | None
-) -> List[Scenario[O3DExROS2SimulationConfig]]:
+    configs_dir: str, logger: logging.Logger | None
+) -> List[Scenario]:
     """Packet of trivial scenarios. The grading is subjective.
     This packet contains easy variants of 'easy' tasks with minimalistic scenes setups(1 object).
 
@@ -59,18 +53,17 @@ def trivial_scenarios(
     List[Scenario[O3DExROS2SimulationConfig]]
         list of trivial scenarios
     """
-    simulation_configs_paths: List[str] = [
+    scene_configs_paths: List[str] = [
         configs_dir + "1a.yaml",
         configs_dir + "1rc.yaml",
         configs_dir + "1t.yaml",
         configs_dir + "1yc.yaml",
         configs_dir + "1carrot.yaml",
     ]
-    simulations_configs = [
-        O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
-        for path in simulation_configs_paths
+    scene_configs = [
+        SceneConfig.load_base_config(Path(path)) for path in scene_configs_paths
     ]
-    # place object at coords
+    # place object at coordss
     place_obj_types = [
         "apple",
         "carrot",
@@ -88,8 +81,8 @@ def trivial_scenarios(
                 )
     easy_place_objects_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=place_object_tasks,
-        simulation_configs=simulations_configs,
-        simulation_configs_paths=simulation_configs_paths,
+        scene_configs=scene_configs,
+        scene_configs_paths=scene_configs_paths,
     )
     # move objects to the left
     object_groups = [["carrot"], ["red_cube"], ["tomato"], ["yellow_cube"]]
@@ -101,16 +94,14 @@ def trivial_scenarios(
 
     easy_move_to_left_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=move_to_left_tasks,
-        simulation_configs=simulations_configs,
-        simulation_configs_paths=simulation_configs_paths,
+        scene_configs=scene_configs,
+        scene_configs_paths=scene_configs_paths,
     )
 
     return [*easy_move_to_left_scenarios, *easy_place_objects_scenarios]
 
 
-def easy_scenarios(
-    configs_dir: str, connector_path: str, logger: loggers_type | None
-) -> List[Scenario[O3DExROS2SimulationConfig]]:
+def easy_scenarios(configs_dir: str, logger: logging.Logger | None) -> List[Scenario]:
     """Packet of easy scenarios. The grading is subjective.
     This packet contains easy variants of 'easy' tasks with scenes containg no more than 3 objects
 
@@ -135,7 +126,7 @@ def easy_scenarios(
     List[Scenario[O3DExROS2SimulationConfig]]
         list of easy scenarios
     """
-    simulation_configs_paths: List[str] = [
+    scene_configs_paths: List[str] = [
         configs_dir + "1a_1t.yaml",
         configs_dir + "1a_2bc.yaml",
         configs_dir + "1bc_1rc_1yc.yaml",
@@ -147,9 +138,8 @@ def easy_scenarios(
         configs_dir + "2a_1bc.yaml",
         configs_dir + "1carrot_1t_1rc.yaml",
     ]
-    simulations_configs = [
-        O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
-        for path in simulation_configs_paths
+    scene_configs = [
+        SceneConfig.load_base_config(Path(path)) for path in scene_configs_paths
     ]
     # place object at coords
     place_obj_types = [
@@ -170,8 +160,8 @@ def easy_scenarios(
                 )
     easy_place_objects_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=place_object_tasks,
-        simulation_configs=simulations_configs,
-        simulation_configs_paths=simulation_configs_paths,
+        scene_configs=scene_configs,
+        scene_configs_paths=scene_configs_paths,
         logger=logger,
     )
     # move objects to the left
@@ -190,16 +180,16 @@ def easy_scenarios(
 
     easy_move_to_left_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=move_to_left_tasks,
-        simulation_configs=simulations_configs,
-        simulation_configs_paths=simulation_configs_paths,
+        scene_configs=scene_configs,
+        scene_configs_paths=scene_configs_paths,
     )
 
     # place cubes
     task = PlaceCubesTask(threshold_distance=0.2, logger=logger)
     easy_place_cubes_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=[task],
-        simulation_configs=simulations_configs,
-        simulation_configs_paths=simulation_configs_paths,
+        scene_configs=scene_configs,
+        scene_configs_paths=scene_configs_paths,
     )
 
     return [
@@ -209,9 +199,7 @@ def easy_scenarios(
     ]
 
 
-def medium_scenarios(
-    configs_dir: str, connector_path: str, logger: loggers_type | None
-) -> List[Scenario[O3DExROS2SimulationConfig]]:
+def medium_scenarios(configs_dir: str, logger: logging.Logger | None) -> List[Scenario]:
     """Packet of medium scenarios. The grading is subjective.
     This packet contains harder variants of 'easy' tasks with scenes containg 4-7 objects
     and easy variants of 'hard' tasks with scenes contating 2-3 objects
@@ -239,7 +227,7 @@ def medium_scenarios(
     List[Scenario[O3DExROS2SimulationConfig]]
         list of easy scenarios
     """
-    medium_simulation_configs_paths: List[str] = [
+    medium_scene_configs_paths: List[str] = [
         configs_dir + "1rc_2bc_3yc.yaml",
         configs_dir + "2carrots_2a.yaml",
         configs_dir + "2yc_1bc_1rc.yaml",
@@ -249,7 +237,7 @@ def medium_scenarios(
         configs_dir + "2a_1c_2rc.yaml",
     ]
 
-    easy_simulation_configs_paths: List[str] = [
+    easy_scene_configs_paths: List[str] = [
         configs_dir + "1a_1t.yaml",
         configs_dir + "1a_2bc.yaml",
         configs_dir + "1bc_1rc_1yc.yaml",
@@ -261,13 +249,11 @@ def medium_scenarios(
         configs_dir + "2a_1bc.yaml",
         configs_dir + "1carrot_1t_1rc.yaml",
     ]
-    medium_simulations_configs = [
-        O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
-        for path in medium_simulation_configs_paths
+    medium_scene_configs = [
+        SceneConfig.load_base_config(Path(path)) for path in medium_scene_configs_paths
     ]
-    easy_simulations_configs = [
-        O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
-        for path in easy_simulation_configs_paths
+    easy_scene_configs = [
+        SceneConfig.load_base_config(Path(path)) for path in easy_scene_configs_paths
     ]
     # move objects to the left
     object_groups = [
@@ -286,8 +272,8 @@ def medium_scenarios(
 
     move_to_left_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=move_to_left_tasks,
-        simulation_configs=medium_simulations_configs,
-        simulation_configs_paths=medium_simulation_configs_paths,
+        scene_configs=medium_scene_configs,
+        scene_configs_paths=medium_scene_configs_paths,
         logger=logger,
     )
 
@@ -295,8 +281,8 @@ def medium_scenarios(
     task = PlaceCubesTask(threshold_distance=0.1, logger=logger)
     easy_place_cubes_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=[task],
-        simulation_configs=medium_simulations_configs,
-        simulation_configs_paths=medium_simulation_configs_paths,
+        scene_configs=medium_scene_configs,
+        scene_configs_paths=medium_scene_configs_paths,
         logger=logger,
     )
 
@@ -312,8 +298,8 @@ def medium_scenarios(
 
     build_tower_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=build_tower_tasks,
-        simulation_configs=easy_simulations_configs,
-        simulation_configs_paths=easy_simulation_configs_paths,
+        scene_configs=easy_scene_configs,
+        scene_configs_paths=easy_scene_configs_paths,
     )
 
     # group object task
@@ -332,8 +318,8 @@ def medium_scenarios(
 
     group_object_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=group_object_tasks,
-        simulation_configs=easy_simulations_configs,
-        simulation_configs_paths=easy_simulation_configs_paths,
+        scene_configs=easy_scene_configs,
+        scene_configs_paths=easy_scene_configs_paths,
     )
     return [
         *move_to_left_scenarios,
@@ -343,9 +329,7 @@ def medium_scenarios(
     ]
 
 
-def hard_scenarios(
-    configs_dir: str, connector_path: str, logger: loggers_type | None
-) -> List[Scenario[O3DExROS2SimulationConfig]]:
+def hard_scenarios(configs_dir: str, logger: logging.Logger | None) -> List[Scenario]:
     """Packet of hard scenarios. The grading is subjective.
     This packet contains harder variants of 'easy' tasks with majority of scenes containg 8+ objects,
     Objects can be positioned in an unusual way, for example stacked.
@@ -374,7 +358,7 @@ def hard_scenarios(
     List[Scenario[O3DExROS2SimulationConfig]]
         list of easy scenarios
     """
-    medium_simulation_configs_paths: List[str] = [
+    medium_scene_configs_paths: List[str] = [
         configs_dir + "1rc_2bc_3yc.yaml",
         configs_dir + "2carrots_2a.yaml",
         configs_dir + "2yc_1bc_1rc.yaml",
@@ -384,7 +368,7 @@ def hard_scenarios(
         configs_dir + "2a_1c_2rc.yaml",
     ]
 
-    hard_simulation_configs_paths: List[str] = [
+    hard_scene_configs_paths: List[str] = [
         configs_dir + "3carrots_1a_1t_2bc_2yc.yaml",
         configs_dir + "1carrot_1a_2t_1bc_1rc_3yc_stacked.yaml",
         configs_dir + "2carrots_1a_1t_1bc_1rc_1yc_1corn.yaml",
@@ -395,13 +379,11 @@ def hard_scenarios(
         configs_dir + "3carrots_1a_2bc_1rc_1yc_1corn.yaml",
         configs_dir + "3rc_3bc_stacked.yaml",
     ]
-    medium_simulations_configs = [
-        O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
-        for path in medium_simulation_configs_paths
+    medium_scene_configs = [
+        SceneConfig.load_base_config(Path(path)) for path in medium_scene_configs_paths
     ]
-    hard_simulations_configs = [
-        O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
-        for path in hard_simulation_configs_paths
+    hard_scene_configs = [
+        SceneConfig.load_base_config(Path(path)) for path in hard_scene_configs_paths
     ]
     # move objects to the left
     object_groups = [
@@ -420,16 +402,16 @@ def hard_scenarios(
 
     move_to_left_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=move_to_left_tasks,
-        simulation_configs=hard_simulations_configs,
-        simulation_configs_paths=hard_simulation_configs_paths,
+        scene_configs=hard_scene_configs,
+        scene_configs_paths=hard_scene_configs_paths,
     )
 
     # place cubes
     task = PlaceCubesTask(threshold_distance=0.1, logger=logger)
     easy_place_cubes_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=[task],
-        simulation_configs=hard_simulations_configs,
-        simulation_configs_paths=hard_simulation_configs_paths,
+        scene_configs=hard_scene_configs,
+        scene_configs_paths=hard_scene_configs_paths,
     )
 
     # build tower task
@@ -444,9 +426,8 @@ def hard_scenarios(
 
     build_tower_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=build_tower_tasks,
-        simulation_configs=medium_simulations_configs,
-        simulation_configs_paths=medium_simulation_configs_paths,
-        logger=logger,
+        scene_configs=medium_scene_configs,
+        scene_configs_paths=medium_scene_configs_paths,
     )
 
     # group object task
@@ -466,8 +447,8 @@ def hard_scenarios(
 
     group_object_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=group_object_tasks,
-        simulation_configs=medium_simulations_configs,
-        simulation_configs_paths=medium_simulation_configs_paths,
+        scene_configs=medium_scene_configs,
+        scene_configs_paths=medium_scene_configs_paths,
     )
     return [
         *move_to_left_scenarios,
@@ -478,8 +459,8 @@ def hard_scenarios(
 
 
 def very_hard_scenarios(
-    configs_dir: str, connector_path: str, logger: loggers_type | None
-) -> List[Scenario[O3DExROS2SimulationConfig]]:
+    configs_dir: str, logger: logging.Logger | None
+) -> List[Scenario]:
     """Packet of very_hard scenarios. The grading is subjective.
     This packet contains harder variants of 'hard' tasks with majority of scenes containg 8+ objects,
     Objects can be positioned in an unusual way, for example stacked.
@@ -504,7 +485,7 @@ def very_hard_scenarios(
     List[Scenario[O3DExROS2SimulationConfig]]
         list of easy scenarios
     """
-    hard_simulation_configs_paths: List[str] = [
+    hard_scene_configs_paths: List[str] = [
         configs_dir + "3carrots_1a_1t_2bc_2yc.yaml",
         configs_dir + "1carrot_1a_2t_1bc_1rc_3yc_stacked.yaml",
         configs_dir + "2carrots_1a_1t_1bc_1rc_1yc_1corn.yaml",
@@ -515,9 +496,8 @@ def very_hard_scenarios(
         configs_dir + "3carrots_1a_2bc_1rc_1yc_1corn.yaml",
         configs_dir + "3rc_3bc_stacked.yaml",
     ]
-    hard_simulations_configs = [
-        O3DExROS2SimulationConfig.load_config(Path(path), Path(connector_path))
-        for path in hard_simulation_configs_paths
+    hard_scene_configs = [
+        SceneConfig.load_base_config(Path(path)) for path in hard_scene_configs_paths
     ]
     # build tower task
     object_groups = [
@@ -536,8 +516,8 @@ def very_hard_scenarios(
 
     build_tower_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=build_tower_tasks,
-        simulation_configs=hard_simulations_configs,
-        simulation_configs_paths=hard_simulation_configs_paths,
+        scene_configs=hard_scene_configs,
+        scene_configs_paths=hard_scene_configs_paths,
         logger=logger,
     )
 
@@ -557,8 +537,8 @@ def very_hard_scenarios(
 
     group_object_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=group_object_tasks,
-        simulation_configs=hard_simulations_configs,
-        simulation_configs_paths=hard_simulation_configs_paths,
+        scene_configs=hard_scene_configs,
+        scene_configs_paths=hard_scene_configs_paths,
     )
     return [
         *build_tower_scenarios,
