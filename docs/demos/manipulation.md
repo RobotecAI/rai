@@ -9,9 +9,14 @@ manipulation techniques.
 
 ## Setup
 
+> [!TIP] LLM model
+>
+> The demo uses the `complex_model` LLM configured in `config.toml`. The model should be a
+> multimodal, tool-calling model. See [Vendors](../setup/vendors.md#llm-model-configuration-in-rai).
+
 !!! tip "ROS 2 Sourced"
 
-    Make sure ROS 2 is sourced.
+    Make sure ROS 2 is sourced. (e.g. `source /opt/ros/humble/setup.bash`)
 
 1. Follow the RAI setup instructions in the [quick setup guide](../setup/install.md).
 2. Download additional dependencies:
@@ -44,7 +49,7 @@ manipulation techniques.
 1. Start the demo
 
     ```shell
-    ros2 launch examples/manipulation-demo.launch.py game_launcher:=demo_assets/manipulation/RAIManipulationDemoGamePackage/RAIManipulationDemo.GameLauncher
+    ros2 launch examples/manipulation-demo.launch.py game_launcher:=demo_assets/manipulation/RAIManipulationDemo/RAIManipulationDemo.GameLauncher
     ```
 
 2. In the second terminal, run the streamlit interface:
@@ -66,6 +71,10 @@ manipulation techniques.
     Enter a prompt: Pick up the red cube and drop it on another cube
     ```
 
+!!! tip "Changing camera view"
+
+    To change camera in the simulation use 1-7 keys on your keyboard once it's window is focused.
+
 ## How it works
 
 The manipulation demo utilizes several components:
@@ -74,11 +83,16 @@ The manipulation demo utilizes several components:
 2. RAI agent to process the request and plan the manipulation sequence.
 3. Robot arm control for executing the planned movements.
 
-The main logic of the demo is implemented in the `ManipulationDemo` class, which can be found in:
+The main logic of the demo is implemented in the `create_agent` function, which can be found in:
 
 ```python
 examples/manipulation-demo.py
 ```
+
+## Known Limitations
+
+-   `Grounding DINO` can't distinguish colors.
+-   VLMs tend to struggle with spatial understanding (for example left/right concepts).
 
 !!! tip "Building from source"
 

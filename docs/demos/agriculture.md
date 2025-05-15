@@ -24,7 +24,7 @@ optimally by calling the RAI agent to decide what to do.
 2. **Run the Simulation**
 
     ```bash
-    ./demo_assets/agriculture/RAIAgricultureDemoGamePackage/RAIAgricultureDemo.GameLauncher -bg_ConnectToAssetProcessor=0
+    ./demo_assets/agriculture/RAIAgricultureDemo/RAIAgricultureDemo.GameLauncher -bg_ConnectToAssetProcessor=0
     ```
 
 3. **Start the Tractor Node**

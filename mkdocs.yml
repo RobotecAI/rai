@@ -22,7 +22,6 @@ markdown_extensions:
       toc_depth: 2
   - attr_list
   - pymdownx.emoji
-  - nl2br
   - admonition
   - pymdownx.details
   - pymdownx.superfences
@@ -109,10 +108,10 @@ nav:
     - Voice Interface: tutorials/voice_interface.md
   - Demos:
     - Overview: demos/overview.md
-    - Autonomous tractor: demos/agriculture.md
     - Robotic arm: demos/manipulation.md
     - Autonomous vehicle: demos/rosbot_xl.md
-    - Voice controlled taxi: demos/taxi.md
+    - Autonomous tractor: demos/agriculture.md
+    - Debugging assistant: demos/debugging_assistant.md
   - Simulation and benchmarking:
     - Overview: simulation_and_benchmarking/overview.md
     - RAI Sim: simulation_and_benchmarking/rai_sim.md

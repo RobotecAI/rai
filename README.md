@@ -53,6 +53,10 @@ guide and tutorials. 📚
 -   [x] rai_nomad: Integration with NoMaD for navigation.
 -   [ ] rai_finetune: Finetune LLMs on your embodied data.
 
+### Getting started
+
+See [Quick setup guide](https://robotecai.github.io/rai/setup/install).
+
 ### Simulation demos
 
 Try RAI yourself with these demos:
@@ -61,7 +65,6 @@ Try RAI yourself with these demos:
 | Mission and obstacle reasoning in orchards | Autonomous tractor | In a beautiful scene of a virtual orchard, RAI goes beyond obstacle detection to analyze best course of action for a given unexpected situation. | [link](https://robotecai.github.io/rai/demos/agriculture/) |
 | Manipulation tasks with natural language | Robot Arm (Franka Panda) | Complete flexible manipulation tasks thanks to RAI and Grounded SAM 2 | [link](https://robotecai.github.io/rai/demos/manipulation/) |
 | Autonomous mobile robot demo | Husarion ROSbot XL | Demonstrate RAI's interaction with an autonomous mobile robot platform for navigation and control | [link](https://robotecai.github.io/rai/demos/rosbot_xl/) |
-| Speech-to-speech interaction with autonomous taxi | Simulated car | Demonstrate RAI's speech-to-speech interaction capabilities for specifying destinations to an autonomous taxi in awsim with autoware environment | [link](https://robotecai.github.io/rai/demos/taxi/) |
 
 ## Community
 

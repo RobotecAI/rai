@@ -48,23 +48,23 @@ To enable LangSmith tracing:
 
 ## Usage
 
-To enable tracing in your RAI application, you need to import the [`rai.get_tracing_callbacks`](rai.get_tracing_callbacks) function
+To enable tracing in your RAI application, you need to import the `rai.get_tracing_callbacks` function
 and add it to the configuration when invoking your agent or model. Here's how to do it:
 
-1. First, import the get_tracing_callbacks() function:
+1. First, import the `get_tracing_callbacks()` function:
 
-```python
-from rai import get_tracing_callbacks
-```
+    ```python
+    from rai import get_tracing_callbacks
+    ```
 
 2. Then, add it to the configuration when invoking your agent or model:
 
-```python
-response = agent.invoke(
-    input_dict,
-    config={"callbacks": get_tracing_callbacks()}
-)
-```
+    ```python
+    response = agent.invoke(
+        input_dict,
+        config={"callbacks": get_tracing_callbacks()}
+    )
+    ```
 
 By adding the get_tracing_callbacks() to the config parameter, you enable tracing for that specific
 invocation. The get_tracing_callbacks() function returns a list of callback handlers based on your
