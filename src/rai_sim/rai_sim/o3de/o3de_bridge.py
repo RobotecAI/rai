@@ -34,7 +34,7 @@ from rai.types.ros2 import from_ros2_msg, to_ros2_msg
 from tf2_geometry_msgs import do_transform_pose, do_transform_pose_stamped
 
 from rai_interfaces.srv import ManipulatorMoveTo
-from rai_sim.launch_manager import Ros2LaunchManager
+from rai_sim.launch_manager import ROS2LaunchManager
 from rai_sim.simulation_bridge import (
     Entity,
     SceneConfig,
@@ -67,7 +67,7 @@ class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
     ):
         super().__init__(logger=logger)
         self.connector = connector
-        self.manager = Ros2LaunchManager()
+        self.manager = ROS2LaunchManager()
         self.current_sim_process = None
         self.current_binary_path = None
 

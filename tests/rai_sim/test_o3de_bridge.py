@@ -35,7 +35,7 @@ from rai.types import (
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
 
-from rai_sim.launch_manager import Ros2LaunchManager
+from rai_sim.launch_manager import ROS2LaunchManager
 from rai_sim.o3de.o3de_bridge import O3DExROS2Bridge, O3DExROS2SimulationConfig
 from rai_sim.simulation_bridge import Entity, SceneConfig, SpawnedEntity
 
@@ -69,12 +69,12 @@ def test_load_scene_config(sample_base_yaml_config: Path):
 
 
 class TestO3DExROS2Bridge(unittest.TestCase):
-    @patch("rai_sim.o3de.o3de_bridge.Ros2LaunchManager")
+    @patch("rai_sim.o3de.o3de_bridge.ROS2LaunchManager")
     def setUp(self, mock_launch_manager_class):
         self.mock_connector = MagicMock(spec=ROS2Connector)
         self.mock_logger = MagicMock()
 
-        self.mock_launch_manager = MagicMock(spec=Ros2LaunchManager)
+        self.mock_launch_manager = MagicMock(spec=ROS2LaunchManager)
         mock_launch_manager_class.return_value = self.mock_launch_manager
 
         self.bridge = O3DExROS2Bridge(

@@ -20,7 +20,7 @@ from typing import Optional
 from launch import LaunchDescription, LaunchService
 
 
-class Ros2LaunchManager:
+class ROS2LaunchManager:
     def __init__(self) -> None:
         self._stop_event: Optional[Event] = None
         self._process: Optional[multiprocessing.Process] = None
