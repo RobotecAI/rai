@@ -1,10 +1,9 @@
 name: publish mkdocs
 
 on:
-    pull_request:
-      branches:
-        - development
-        - main
+  push:
+    branches:
+      - main
 
 permissions:
   contents: write
