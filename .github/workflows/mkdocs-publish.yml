@@ -42,4 +42,4 @@ jobs:
       - name: Build and Deploy
         shell: bash
         run: |
-          poetry run mkdocs gh-deploy
+          poetry run mkdocs gh-deploy --force
