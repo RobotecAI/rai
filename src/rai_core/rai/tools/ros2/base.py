@@ -24,7 +24,7 @@ class BaseROS2Tool(BaseTool):
     """
     Base class for all ROS2 tools.
 
-    Parameters
+    Attributes
     ----------
     connector : ROS2Connector
         The connector to the ROS 2 system.
@@ -34,6 +34,10 @@ class BaseROS2Tool(BaseTool):
         The names (topics/actions/services) that can be written. If the list is not provided, all topics can be written.
     forbidden : Optional[List[str]]
         The names (topics/actions/services) that are forbidden to read and write.
+    name : str
+        The name of the tool.
+    description : str
+        The description of the tool.
     """
 
     connector: ROS2Connector

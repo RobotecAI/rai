@@ -23,7 +23,7 @@ class MultimodalMessage(BaseMessage):
     """
     Base class for multimodal messages.
 
-    Parameters
+    Attributes
     ----------
     images : Optional[List[str]]
         List of base64 encoded images.
