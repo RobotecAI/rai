@@ -21,7 +21,6 @@ if importlib.util.find_spec("rclpy") is None:
 
 from .api import (
     IROS2Message,  # TODO: IROS2Message should not be a part of the public API
-    TopicConfig,  # TODO: TopicConfig should not be a part of the public API
 )
 from .connectors import ROS2Connector, ROS2HRIConnector
 from .context import ROS2Context
@@ -35,7 +34,6 @@ __all__ = [
     "ROS2HRIConnector",
     "ROS2HRIMessage",
     "ROS2Message",
-    "TopicConfig",
     "wait_for_ros2_actions",
     "wait_for_ros2_services",
     "wait_for_ros2_topics",
