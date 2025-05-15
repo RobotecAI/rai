@@ -23,11 +23,11 @@ The `ROS2Connector` is the main interface for publishing, subscribing, and calli
 
 ### Key Features
 
--   Manages ROS 2 node lifecycle and threading (via MultiThreadedExecutor)
--   Supports topic-based message passing (publish/subscribe)
--   Service calls (request/response)
--   Actions (long-running operations with feedback)
--   TF (Transform) operations
+-   Manages ROS 2 node lifecycle and threading (via `MultiThreadedExecutor`, see [ROS 2 Executors](https://docs.ros.org/en/jazzy/Concepts/Intermediate/About-Executors.html))
+-   Supports topic-based message passing (publish/subscribe, see [ROS 2 Topics](https://docs.ros.org/en/jazzy/Concepts/Basic/About-Topics.html))
+-   Service calls (request/response, see [ROS 2 Services](https://docs.ros.org/en/jazzy/Concepts/Basic/About-Services.html))
+-   Actions (long-running operations with feedback, see [ROS 2 Actions](https://docs.ros.org/en/jazzy/Concepts/Basic/About-Actions.html))
+-   TF (Transform) operations, see [ROS 2 TF](https://docs.ros.org/en/jazzy/Tutorials/Intermediate/Tf2/Introduction-To-Tf2.html)
 -   Callback registration for asynchronous notifications
 
 ### Example Usage
