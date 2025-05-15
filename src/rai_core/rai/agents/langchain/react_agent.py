@@ -34,6 +34,7 @@ class ReActAgent(LangChainAgent):
         tools: Optional[List[BaseTool]] = None,
         state: Optional[ReActAgentState] = None,
         system_prompt: Optional[str | SystemMultimodalMessage] = None,
+        stream_response: bool = True,
     ):
         runnable = create_react_runnable(
             llm=llm, tools=tools, system_prompt=system_prompt
@@ -42,4 +43,5 @@ class ReActAgent(LangChainAgent):
             target_connectors=target_connectors,
             runnable=runnable,
             state=state,
+            stream_response=stream_response,
         )

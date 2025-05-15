@@ -14,7 +14,7 @@
 
 import logging
 import threading
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from langchain_core.callbacks import BaseCallbackHandler
@@ -32,9 +32,11 @@ class HRICallbackHandler(BaseCallbackHandler):
         splitting_chars: Optional[List[str]] = None,
         max_buffer_size: int = 200,
         logger: Optional[logging.Logger] = None,
+        stream_response: bool = True,
     ):
         self.connectors = connectors
         self.aggregate_chunks = aggregate_chunks
+        self.stream_response = stream_response
         self.splitting_chars = splitting_chars or ["\n", ".", "!", "?"]
         self.chunks_buffer = ""
         self.max_buffer_size = max_buffer_size
@@ -42,6 +44,8 @@ class HRICallbackHandler(BaseCallbackHandler):
         self.logger = logger or logging.getLogger(__name__)
         self.current_conversation_id = None
         self.current_chunk_id = 0
+        self.working = False
+        self.hit_on_llm_new_token = False
 
     def _should_split(self, token: str) -> bool:
         return token in self.splitting_chars
@@ -63,8 +67,22 @@ class HRICallbackHandler(BaseCallbackHandler):
                     f"Failed to send {len(tokens)} tokens to hri_connector: {e}"
                 )
 
+    def on_llm_start(
+        self,
+        serialized: dict[str, Any],
+        prompts: list[str],
+        *,
+        run_id: UUID,
+        parent_run_id: Optional[UUID] = None,
+        tags: Optional[list[str]] = None,
+        metadata: Optional[dict[str, Any]] = None,
+        **kwargs: Any,
+    ) -> Any:
+        self.working = True
+
     def on_llm_new_token(self, token: str, *, run_id: UUID, **kwargs):
-        if token == "":
+        self.hit_on_llm_new_token = True
+        if token == "" or not self.stream_response:
             return
         if self.current_conversation_id != str(run_id):
             self.current_conversation_id = str(run_id)
@@ -93,7 +111,22 @@ class HRICallbackHandler(BaseCallbackHandler):
         **kwargs,
     ):
         self.current_conversation_id = str(run_id)
-        if self.aggregate_chunks and self.chunks_buffer:
+        if self.stream_response and not self.hit_on_llm_new_token:
+            self.logger.error(
+                (
+                    "No tokens were sent to the callback handler. "
+                    "LLM did not stream response. "
+                    "Is your BaseChatModel configured to stream? "
+                    "Sending generated text as a single message."
+                )
+            )
+            msg = response.generations[0][0].message
+            self._send_all_targets(msg.content, done=True)
+        elif not self.stream_response:
+            msg = response.generations[0][0].message
+            self._send_all_targets(msg.content, done=True)
+        elif self.aggregate_chunks and self.chunks_buffer:
             with self._buffer_lock:
                 self._send_all_targets(self.chunks_buffer, done=True)
                 self.chunks_buffer = ""
+        self.working = False
