@@ -49,6 +49,11 @@ jobs:
         run: |
           rosdep update
 
+      - name: Import ros2 dependencies
+        shell: bash
+        run: |
+          vcs import . < ros_deps.repos
+
       - name: Install ROS 2 package dependencies
         shell: bash
         run: |

@@ -9,13 +9,29 @@ on:
 
 jobs:
   pre-commit:
-    runs-on: ubuntu-24.04
+    runs-on:
+      - self-hosted
+
+    container:
+      image: osrf/ros:humble-desktop-full
 
     steps:
+      - name: Install pre-commit
+        run: |
+          apt update && apt install -y python3-pip shellcheck python-is-python3
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - run: |
+           git config --global --add safe.directory /__w/rai/rai
+
+      - name: Import ros2 dependencies
+        shell: bash
+        run: |
+          vcs import . < ros_deps.repos
 
       - name: Run pre-commit
         uses: pre-commit/action@v3.0.1
