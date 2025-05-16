@@ -90,7 +90,6 @@ nav:
       - Connectors:
         - Overview: API_documentation/connectors/overview.md
         - ROS 2 Connectors: API_documentation/connectors/ROS_2_Connectors.md
-        - Sound Device Connector: API_documentation/connectors/sounddevice.md
       - Aggregators:
         - Overview: API_documentation/aggregators/overview.md
         - ROS 2 Aggregators: API_documentation/aggregators/ROS_2_Aggregators.md
