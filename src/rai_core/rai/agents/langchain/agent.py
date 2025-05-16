@@ -109,7 +109,7 @@ class LangChainAgent(BaseAgent):
         self,
         target_connectors: Dict[str, HRIConnector[HRIMessage]],
         runnable: Runnable[Any, Any],
-        stream_response: bool,
+        stream_response: bool = True,
         state: BaseState | None = None,
         new_message_behavior: newMessageBehaviorType = "interrupt_keep_last",
         max_size: int = 100,
