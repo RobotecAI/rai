@@ -40,8 +40,11 @@ if __name__ == "__main__":
         ],
         repeats=1,
     )
+
+    out_dir = "src/rai_bench/rai_bench/experiments"
     test_models(
         model_names=model_names,
         vendors=vendors,
         benchmark_configs=[man_conf, tool_conf],
+        out_dir=out_dir,
     )

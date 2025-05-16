@@ -24,7 +24,7 @@ from rai_bench.results_processing.data_loading import (
     ModelResults,
     RunResults,
     get_available_runs,
-    load_run_results,
+    load_multiple_runs,
 )
 from rai_bench.results_processing.data_processing import (
     analyze_subtasks,
@@ -777,49 +777,47 @@ def main():
     if "selected_benchmark" not in st.session_state:
         st.session_state.selected_benchmark = None
 
-    selected = st.selectbox("Select run folder", run_folders)
-    if st.button("Load Run Data") or st.session_state.run_results is None:
-        results_dir = os.path.join(EXPERIMENT_DIR, selected)
+    selected = st.multiselect("Select run folder", run_folders, default=[])
+    if selected and st.button("Load Run Data"):
+        selected_dirs: List[str] = []
+        for folder in selected:
+            selected_dirs.append(os.path.join(EXPERIMENT_DIR, folder))
         with st.spinner("Loading run data..."):
-            st.session_state.run_results = load_run_results(results_dir)
+            st.session_state.run_results = load_multiple_runs(selected_dirs)
 
-    run_results: Optional[RunResults] = st.session_state.run_results
+        run_results: Optional[RunResults] = st.session_state.run_results
 
-    if run_results is None:
-        st.error("No valid benchmark data found in the selected run.")
-        return
+        # Create tabs
+        st.markdown("---")
+        st.header("Overview")
 
-    # Create tabs
-    st.markdown("---")
-    st.header("Overview")
+        # Display overall performance summary across all benchmarks
+        render_overall_performance(run_results)
 
-    # Display overall performance summary across all benchmarks
-    render_overall_performance(run_results)
+        # Benchmark selection
+        st.markdown("---")
+        st.header("Benchmark-Specific Analysis")
 
-    # Benchmark selection
-    st.markdown("---")
-    st.header("Benchmark-Specific Analysis")
+        benchmark_names = list(run_results.benchmarks.keys())
+        if not benchmark_names:
+            st.warning("No benchmarks available in this run.")
+            return
 
-    benchmark_names = list(run_results.benchmarks.keys())
-    if not benchmark_names:
-        st.warning("No benchmarks available in this run.")
-        return
+        selected_benchmark_name = st.selectbox(
+            "Select a benchmark for detailed analysis:",
+            benchmark_names,
+            index=(
+                benchmark_names.index(st.session_state.selected_benchmark)
+                if st.session_state.selected_benchmark in benchmark_names
+                else 0
+            ),
+        )
 
-    selected_benchmark_name = st.selectbox(
-        "Select a benchmark for detailed analysis:",
-        benchmark_names,
-        index=(
-            benchmark_names.index(st.session_state.selected_benchmark)
-            if st.session_state.selected_benchmark in benchmark_names
-            else 0
-        ),
-    )
+        # Store the selected benchmark in session state
+        st.session_state.selected_benchmark = selected_benchmark_name
+        selected_benchmark = run_results.benchmarks[selected_benchmark_name]
 
-    # Store the selected benchmark in session state
-    st.session_state.selected_benchmark = selected_benchmark_name
-    selected_benchmark = run_results.benchmarks[selected_benchmark_name]
-
-    BENCHMARK_SECTIONS[selected_benchmark_name](selected_benchmark)
+        BENCHMARK_SECTIONS[selected_benchmark_name](selected_benchmark)
 
 
 if __name__ == "__main__":

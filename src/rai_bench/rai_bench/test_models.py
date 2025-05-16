@@ -75,12 +75,12 @@ class ToolCallingAgentBenchmarkConfig(BenchmarkConfig):
 
 
 def test_models(
-    model_names: List[str], vendors: List[str], benchmark_configs: List[BenchmarkConfig]
+    model_names: List[str],
+    vendors: List[str],
+    benchmark_configs: List[BenchmarkConfig],
+    out_dir: str,
 ):
     now = datetime.now()
-    out_dir = (
-        f"src/rai_bench/rai_bench/experiments/run_{now.strftime('%Y-%m-%d_%H-%M-%S')}/"
-    )
 
     if len(model_names) != len(vendors):
         raise ValueError("Number of passed models must match number of passed vendors")
@@ -89,8 +89,17 @@ def test_models(
             for i, model_name in enumerate(model_names):
                 # for extra_calls in extra_tool_calls:
                 for u in range(bench_conf.repeats):
+                    run_name = f"run_{now.strftime('%Y-%m-%d_%H-%M-%S')}"
                     curr_out_dir = (
-                        out_dir + bench_conf.name + "/" + model_name + "/" + str(u)
+                        out_dir
+                        + "/"
+                        + run_name
+                        + "/"
+                        + bench_conf.name
+                        + "/"
+                        + model_name
+                        + "/"
+                        + str(u)
                     )
                     bench_logger = define_benchmark_logger(out_dir=Path(curr_out_dir))
                     try:

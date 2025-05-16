@@ -188,6 +188,26 @@ class BenchmarkResults:
         """Get results for a specific model."""
         return self.models.get(model_name)
 
+    def merge(self, other: "BenchmarkResults") -> None:
+        """
+        Merge another BenchmarkResults object into this one.
+
+        Parameters
+        ----------
+        other : BenchmarkResults
+            The other BenchmarkResults object to merge
+        """
+        if other.benchmark_name != self.benchmark_name:
+            raise ValueError(
+                f"Cannot merge benchmark results with different names: {self.benchmark_name} vs {other.benchmark_name}"
+            )
+
+        for model_name, other_model_results in other.models.items():
+            if model_name in self.models:
+                self.models[model_name].runs.extend(other_model_results.runs)
+            else:
+                self.models[model_name] = other_model_results
+
 
 class RunResults:
     """Container for all benchmark results in a run."""
@@ -199,6 +219,24 @@ class RunResults:
     def get_benchmark_results(self, benchmark_name: str) -> Optional[BenchmarkResults]:
         """Get results for a specific benchmark."""
         return self.benchmarks.get(benchmark_name)
+
+    def merge(self, other: "RunResults") -> None:
+        """
+        Merge another RunResults object into this one.
+
+        Parameters
+        ----------
+        other : RunResults
+            The other RunResults object to merge
+        """
+        # Merge benchmarks
+        for benchmark_name, other_benchmark in other.benchmarks.items():
+            if benchmark_name in self.benchmarks:
+                # Merge the benchmark results
+                self.benchmarks[benchmark_name].merge(other_benchmark)
+            else:
+                # Add the new benchmark
+                self.benchmarks[benchmark_name] = other_benchmark
 
 
 def safely_parse_json_like_string(s: Any) -> List[Any]:
@@ -236,7 +274,7 @@ def convert_row_to_benchmark_summary(row: pd.Series) -> BenchmarkSummary:
 
 def load_detailed_data(file_path: str, benchmark: str) -> List[BaseModel]:
     df = pd.read_csv(file_path)  # type: ignore
-    task_results: List[TaskResult] = []
+    task_results: List[BaseModel] = []
 
     converter = BENCHMARKS_CONVERTERS[benchmark]
     for _, row in df.iterrows():  # type: ignore
@@ -294,7 +332,7 @@ def get_available_runs(experiment_dir: str) -> List[str]:
 
 def load_single_run(
     path: str, benchmark: str
-) -> Optional[Tuple[List[TaskResult], List[BenchmarkSummary]]]:
+) -> Tuple[List[BaseModel], List[BenchmarkSummary]]:
     """
     Load task results and benchmark summaries from a single run directory.
     Returns
@@ -302,47 +340,49 @@ def load_single_run(
     Optional[Tuple[List[TaskResult], List[BenchmarkSummary]]]
         Tuple of task results and benchmark summaries, or None if loading fails
     """
+
     detailed_path = os.path.join(path, DETAILED_FILE_NAME)
     summary_path = os.path.join(path, SUMMARY_FILE_NAME)
 
-    if not os.path.exists(detailed_path) or not os.path.exists(summary_path):
-        st.warning(f"Missing files in run directory: {path}")
-        return None
+    if not os.path.exists(detailed_path):
+        raise RuntimeError(f"Detailed {detailed_path} doesn't exist, cannot load data.")
+    if not os.path.exists(summary_path):
+        raise RuntimeError(
+            f"Summary dir {summary_path} doesn't exist, cannot load data."
+        )
 
-    task_results = load_detailed_data(detailed_path, benchmark=benchmark)
+    detailed_data = load_detailed_data(detailed_path, benchmark=benchmark)
     benchmark_summaries = load_summary_data(summary_path)
 
-    if not task_results or not benchmark_summaries:
-        st.warning(f"Results empty for run: {path}, skipping...")
-        return None
-
     # Verify data consistency
-    if task_results and benchmark_summaries:
-        task_model_name = task_results[0].model_name
-        summary_model_name = benchmark_summaries[0].model_name
+    task_model_name = detailed_data[0].model_name
+    summary_model_name = benchmark_summaries[0].model_name
 
-        if task_model_name != summary_model_name:
-            st.warning(f"Data mismatch in run {path} - model names don't match")
-            return None
+    if task_model_name != summary_model_name:
+        st.warning(f"Data mismatch in run {path} - model names don't match")
+        raise ValueError("Model name between detailed and summary data doesn't match.")
 
-    return task_results, benchmark_summaries
+    return detailed_data, benchmark_summaries
 
 
-def load_run_results(parent_dir: str) -> Optional[RunResults]:
+def load_run_results(run_dir: str) -> RunResults:
     """
     Load all benchmark results from a run directory.
-
-    Returns
-    -------
-    Optional[RunResults]
-        RunResults object containing all benchmark data, or None if loading fails
     """
-    run_id = os.path.basename(parent_dir)
-    run_results = RunResults(run_id=run_id)
+    run_name = os.path.basename(run_dir)
+    run_results = RunResults(run_id=run_name)
 
-    # List all benchmarks dirs
-    for bench_name in os.listdir(parent_dir):
-        bench_dir = os.path.join(parent_dir, bench_name)
+    bench_name = os.listdir(run_dir)[0]
+    bench_dir = os.path.join(run_dir, bench_name)
+
+    if not os.path.isdir(bench_dir):
+        raise RuntimeError(f"Bench dir {bench_dir} is not dir, cannot load data.")
+
+    benchmark_results = BenchmarkResults(benchmark_name=bench_name)
+
+    # List all model dirs in benchmark folder
+    for bench_name in os.listdir(run_dir):
+        bench_dir = os.path.join(run_dir, bench_name)
         if not os.path.isdir(bench_dir):
             continue
 
@@ -388,3 +428,63 @@ def load_run_results(parent_dir: str) -> Optional[RunResults]:
         return None
 
     return run_results
+
+
+def load_multiple_runs(run_dirs: List[str]) -> RunResults:
+    """
+    Load and merge results from multiple run directories.
+
+    Parameters
+    ----------
+    run_dirs : List[str]
+        List of paths to run directories to load
+
+    Returns
+    -------
+    Optional[RunResults]
+        A merged RunResults object containing data from all runs, or None if loading fails
+    """
+
+    # Load the first run to initialize the merged results
+    merged_results = load_run_results(run_dirs[0])
+
+    # Merge additional runs
+    for run_dir in run_dirs[1:]:
+        run_results = load_run_results(run_dir)
+        merged_results.merge(run_results)
+
+    return merged_results
+
+
+def get_unique_benchmarks(run_results: RunResults) -> List[str]:
+    """
+    Get a list of unique benchmark names from a RunResults object.
+
+    Parameters
+    ----------
+    run_results : RunResults
+        The RunResults object to extract benchmark names from
+
+    Returns
+    -------
+    List[str]
+        A list of unique benchmark names
+    """
+    return list(run_results.benchmarks.keys())
+
+
+def get_models_for_benchmark(bench_results: BenchmarkResults) -> List[str]:
+    """
+    Get a list of model names for a specific benchmark.
+
+    Parameters
+    ----------
+    bench_results : BenchmarkResults
+        The BenchmarkResults object to extract model names from
+
+    Returns
+    -------
+    List[str]
+        A list of model names
+    """
+    return list(bench_results.models.keys())
