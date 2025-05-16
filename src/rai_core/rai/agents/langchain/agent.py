@@ -53,6 +53,8 @@ class LangChainAgent(BaseAgent):
         Dict of target_name: connector. Agent will send it's output to these targets using connectors.
     runnable : Runnable
         LangChain runnable that will be used to generate output.
+    stream_response : bool, optional
+        If True, the agent will stream the response to the target connectors. Make sure that the runnable is configured to stream.
     state : BaseState | None, optional
         State to seed the LangChain runnable. If None - empty state is used.
     new_message_behavior : newMessageBehaviorType, optional
@@ -107,6 +109,7 @@ class LangChainAgent(BaseAgent):
         self,
         target_connectors: Dict[str, HRIConnector[HRIMessage]],
         runnable: Runnable[Any, Any],
+        stream_response: bool = True,
         state: BaseState | None = None,
         new_message_behavior: newMessageBehaviorType = "interrupt_keep_last",
         max_size: int = 100,
@@ -114,6 +117,7 @@ class LangChainAgent(BaseAgent):
         super().__init__()
         self.logger = logging.getLogger(__name__)
         self.agent = runnable
+        self.stream_response = stream_response
         self.new_message_behavior: newMessageBehaviorType = new_message_behavior
         self.tracing_callbacks = get_tracing_callbacks()
         self.state = state or ReActAgentState(messages=[])
@@ -121,6 +125,7 @@ class LangChainAgent(BaseAgent):
             connectors=target_connectors,
             aggregate_chunks=True,
             logger=self.logger,
+            stream_response=stream_response,
         )
 
         self._received_messages: Deque[HRIMessage] = deque()
@@ -182,8 +187,8 @@ class LangChainAgent(BaseAgent):
     def _run_agent(self):
         if len(self._received_messages) == 0:
             self._agent_ready_event.set()
-            self.logger.info("Waiting for messages...")
-            time.sleep(0.5)
+            self.logger.debug("Waiting for messages...")
+            time.sleep(0.1)
             return
         self._agent_ready_event.clear()
         try:
