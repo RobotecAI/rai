@@ -22,7 +22,7 @@ from langchain_core.messages import BaseMessage
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
-from rai.agents.conversational_agent import create_conversational_agent
+from rai.agents.langchain.core import create_conversational_agent
 from rai.messages import HumanMultimodalMessage
 
 from rai_bench.base_benchmark import BaseBenchmark, BenchmarkSummary, TimeoutException

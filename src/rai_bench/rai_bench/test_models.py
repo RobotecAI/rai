@@ -95,7 +95,6 @@ def test_models(
                             )
                         elif isinstance(bench_conf, ManipulationO3DEBenchmarkConfig):
                             manipulation_o3de_scenarios = get_all_scenarios(
-                                connector_path=bench_conf.o3de_config_path,
                                 levels=bench_conf.levels,
                                 logger=bench_logger,
                             )
@@ -103,6 +102,7 @@ def test_models(
                                 model_name=model_name,
                                 vendor=vendors[i],
                                 out_dir=Path(curr_out_dir),
+                                o3de_config_path=bench_conf.o3de_config_path,
                                 scenarios=manipulation_o3de_scenarios,
                                 bench_logger=bench_logger,
                             )

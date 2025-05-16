@@ -27,7 +27,6 @@ from rai_bench.manipulation_o3de.tasks import (
 )
 from rai_sim.simulation_bridge import SceneConfig
 
-
 CONFIGS_DIR = "src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/"
 
 
@@ -512,7 +511,6 @@ def very_hard_scenarios(logger: logging.Logger | None) -> List[Scenario]:
 
 
 def get_all_scenarios(
-    connector_path: str,
     levels: List[Literal["trivial", "easy", "medium", "hard", "very_hard"]],
     logger: logging.Logger | None,
 ):

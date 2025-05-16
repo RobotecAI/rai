@@ -31,20 +31,18 @@ if __name__ == "__main__":
     configs_dir = "src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/"
     connector_path = configs_dir + "o3de_config.yaml"
     ### import ready scenarios
-    t_scenarios = trivial_scenarios(
-        o3de_config_path=connector_path, logger=bench_logger
-    )
+    t_scenarios = trivial_scenarios(logger=bench_logger)
     # e_scenarios = easy_scenarios(
-    #     o3de_config_path=connector_path, logger=bench_logger
+    #     logger=bench_logger
     # )
     # m_scenarios = medium_scenarios(
-    #     o3de_config_path=connector_path, logger=bench_logger
+    #      logger=bench_logger
     # )
     # h_scenarios = hard_scenarios(
-    #     o3de_config_path=connector_path, logger=bench_logger
+    #      logger=bench_logger
     # )
     # vh_scenarios = very_hard_scenarios(
-    #     o3de_config_path=connector_path, logger=bench_logger
+    #      logger=bench_logger
     # )
 
     all_scenarios = t_scenarios
