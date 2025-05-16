@@ -20,14 +20,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          clean: true
 
       - name: Install ROS 2 package dependencies
         shell: bash
         run: |
           vcs import . < ros_deps.repos
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v3
         with:
           python-version: '3.10'
 
