@@ -21,18 +21,15 @@ from action_msgs.msg import GoalStatus
 from action_msgs.srv import CancelGoal
 from nav2_msgs.action import NavigateToPose
 from rai.communication.ros2.api import (
-    ConfigurableROS2TopicAPI,
     ROS2ActionAPI,
     ROS2ServiceAPI,
     ROS2TopicAPI,
-    TopicConfig,
 )
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from std_srvs.srv import SetBool
 
 from .helpers import (
-    HRIMessageSubscriber,
     MessageSubscriber,
     ServiceServer,
     TestActionClient,
@@ -65,83 +62,6 @@ def test_ros2_single_message_publish(
         time.sleep(1)
         assert len(message_receiver.received_messages) == 1
         assert message_receiver.received_messages[0].data == "Hello, ROS2!"
-    finally:
-        shutdown_executors_and_threads(executors, threads)
-
-
-def test_ros2_configure_publisher(ros_setup: None, request: pytest.FixtureRequest):
-    topic_name = f"{request.node.originalname}_topic"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([node])
-    try:
-        topic_api = ConfigurableROS2TopicAPI(node)
-        cfg = TopicConfig()
-        topic_api.configure_publisher(topic_name, cfg)
-        assert topic_api._publishers[topic_name] is not None
-    finally:
-        shutdown_executors_and_threads(executors, threads)
-
-
-def test_ros2_configure_subscriber(ros_setup, request: pytest.FixtureRequest):
-    topic_name = f"{request.node.originalname}_topic"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([node])
-    try:
-        topic_api = ConfigurableROS2TopicAPI(node)
-        cfg = TopicConfig(
-            is_subscriber=True,
-            subscriber_callback=lambda _: None,
-        )
-        topic_api.configure_subscriber(topic_name, cfg)
-        assert topic_api._subscribtions[topic_name] is not None
-    finally:
-        shutdown_executors_and_threads(executors, threads)
-
-
-def test_ros2_single_message_publish_configured(
-    ros_setup: None, request: pytest.FixtureRequest
-) -> None:
-    topic_name = f"{request.node.originalname}_topic"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    message_receiver = HRIMessageSubscriber(topic_name)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([message_receiver, node])
-
-    try:
-        topic_api = ConfigurableROS2TopicAPI(node)
-        cfg = TopicConfig(
-            is_subscriber=False,
-        )
-        topic_api.configure_publisher(topic_name, cfg)
-        topic_api.publish_configured(
-            topic_name,
-            {"text": "Hello, ROS2!"},
-        )
-        time.sleep(1)
-        assert len(message_receiver.received_messages) == 1
-        assert message_receiver.received_messages[0].text == "Hello, ROS2!"
-    finally:
-        shutdown_executors_and_threads(executors, threads)
-
-
-def test_ros2_single_message_publish_configured_no_config(
-    ros_setup: None, request: pytest.FixtureRequest
-) -> None:
-    topic_name = f"{request.node.originalname}_topic"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    message_receiver = MessageSubscriber(topic_name)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([message_receiver, node])
-
-    try:
-        topic_api = ConfigurableROS2TopicAPI(node)
-        with pytest.raises(ValueError):
-            topic_api.publish_configured(
-                topic_name,
-                {"data": "Hello, ROS2!"},
-            )
     finally:
         shutdown_executors_and_threads(executors, threads)
 
