@@ -18,10 +18,8 @@ from typing import List, Literal
 
 from pydantic import BaseModel
 
-import rai_bench.examples.manipulation_o3de as manipulation_o3de_bench
-import rai_bench.examples.tool_calling_agent as tool_calling_agent_bench
-from rai_bench.manipulation_o3de.predefined.scenarios import get_all_scenarios
-from rai_bench.tool_calling_agent.predefined.tasks import get_all_tasks
+import rai_bench.manipulation_o3de as manipulation_o3de
+import rai_bench.tool_calling_agent as tool_calling_agent
 from rai_bench.utils import (
     define_benchmark_logger,
 )
@@ -54,10 +52,22 @@ class ManipulationO3DEBenchmarkConfig(BenchmarkConfig):
 
 class ToolCallingAgentBenchmarkConfig(BenchmarkConfig):
     extra_tool_calls: int = 0
-    ...
-    # TODO (jmatejcz)
-    # by type
-    # by complexity
+    complexities: List[Literal["easy", "medium", "hard"]] = ["easy", "medium", "hard"]
+    task_types: List[
+        Literal[
+            "basic",
+            "manipulation",
+            "navigation",
+            "custom_interfaces",
+            "spatial_reasoning",
+        ]
+    ] = [
+        "basic",
+        "manipulation",
+        "navigation",
+        "custom_interfaces",
+        "spatial_reasoning",
+    ]
 
     @property
     def name(self) -> str:
@@ -72,7 +82,6 @@ def test_models(
         f"src/rai_bench/rai_bench/experiments/run_{now.strftime('%Y-%m-%d_%H-%M-%S')}/"
     )
 
-    tool_calling_tasks = get_all_tasks(extra_tool_calls=5)
     if len(model_names) != len(vendors):
         raise ValueError("Number of passed models must match number of passed vendors")
     else:
@@ -86,7 +95,12 @@ def test_models(
                     bench_logger = define_benchmark_logger(out_dir=Path(curr_out_dir))
                     try:
                         if isinstance(bench_conf, ToolCallingAgentBenchmarkConfig):
-                            tool_calling_agent_bench.run_benchmark(
+                            tool_calling_tasks = tool_calling_agent.get_tasks(
+                                extra_tool_calls=bench_conf.extra_tool_calls,
+                                complexities=bench_conf.complexities,
+                                task_types=bench_conf.task_types,
+                            )
+                            tool_calling_agent.run_benchmark(
                                 model_name=model_name,
                                 vendor=vendors[i],
                                 out_dir=curr_out_dir,
@@ -94,11 +108,13 @@ def test_models(
                                 bench_logger=bench_logger,
                             )
                         elif isinstance(bench_conf, ManipulationO3DEBenchmarkConfig):
-                            manipulation_o3de_scenarios = get_all_scenarios(
-                                levels=bench_conf.levels,
-                                logger=bench_logger,
+                            manipulation_o3de_scenarios = (
+                                manipulation_o3de.get_scenarios(
+                                    levels=bench_conf.levels,
+                                    logger=bench_logger,
+                                )
                             )
-                            manipulation_o3de_bench.run_benchmark(
+                            manipulation_o3de.run_benchmark(
                                 model_name=model_name,
                                 vendor=vendors[i],
                                 out_dir=Path(curr_out_dir),
@@ -110,4 +126,3 @@ def test_models(
                         print(
                             f"Failed to run {bench_conf.name} benchmark for {model_name}, vendor: {vendors[i]}, execution number: {u + 1}, because: {str(e)}"
                         )
-                    continue

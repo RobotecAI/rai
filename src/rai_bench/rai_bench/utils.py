@@ -48,6 +48,7 @@ def parse_benchmark_args():
 
 def define_benchmark_logger(out_dir: Path) -> logging.Logger:
     log_file = out_dir / "benchmark.log"
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(logging.DEBUG)

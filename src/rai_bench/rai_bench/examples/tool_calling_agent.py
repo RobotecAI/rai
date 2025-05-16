@@ -14,13 +14,13 @@
 
 from pathlib import Path
 
-from rai_bench.tool_calling_agent.benchmark import (
-    run_benchmark,
-)
-from rai_bench.tool_calling_agent.predefined.tasks import get_all_tasks
-from rai_bench.utils import (
+from rai_bench import (
     define_benchmark_logger,
     parse_benchmark_args,
+)
+from rai_bench.tool_calling_agent import (
+    get_tasks,
+    run_benchmark,
 )
 
 if __name__ == "__main__":
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     experiment_dir.mkdir(parents=True, exist_ok=True)
     bench_logger = define_benchmark_logger(out_dir=experiment_dir)
 
-    all_tasks = get_all_tasks(extra_tool_calls=args.extra_tool_calls)
+    all_tasks = get_tasks(extra_tool_calls=args.extra_tool_calls)
     for task in all_tasks:
         task.set_logger(bench_logger)
     run_benchmark(

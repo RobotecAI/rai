@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import random
-from typing import List, Sequence
+from typing import List, Literal, Sequence
 
 from rai.tools.ros2 import MoveToPointToolInput
 
@@ -411,13 +411,37 @@ def get_spatial_tasks(extra_tool_calls: int = 0) -> Sequence[Task]:
     return true_tasks + false_tasks
 
 
-def get_all_tasks(extra_tool_calls: int = 0) -> List[Task]:
+def get_tasks(
+    extra_tool_calls: int = 0,
+    complexities: List[Literal["easy", "medium", "hard"]] = ["easy", "medium", "hard"],
+    task_types: List[
+        Literal[
+            "basic",
+            "manipulation",
+            "navigation",
+            "custom_interfaces",
+            "spatial_reasoning",
+        ]
+    ] = [
+        "basic",
+        "manipulation",
+        "navigation",
+        "custom_interfaces",
+        "spatial_reasoning",
+    ],
+) -> List[Task]:
+    # TODO (jmatejcz) implement complexity sorting
     tasks: List[Task] = []
-    tasks += get_basic_tasks(extra_tool_calls=extra_tool_calls)
-    tasks += get_custom_interfaces_tasks(extra_tool_calls=extra_tool_calls)
-    tasks += get_manipulation_tasks(extra_tool_calls=extra_tool_calls)
-    tasks += get_navigation_tasks(extra_tool_calls=extra_tool_calls)
-    tasks += get_spatial_tasks(extra_tool_calls=extra_tool_calls)
+    if "basic" in task_types:
+        tasks += get_basic_tasks(extra_tool_calls=extra_tool_calls)
+    if "custom_interfaces" in task_types:
+        tasks += get_custom_interfaces_tasks(extra_tool_calls=extra_tool_calls)
+    if "manipulation" in task_types:
+        tasks += get_manipulation_tasks(extra_tool_calls=extra_tool_calls)
+    if "navigation" in task_types:
+        tasks += get_navigation_tasks(extra_tool_calls=extra_tool_calls)
+    if "spatial_reasoning" in task_types:
+        tasks += get_spatial_tasks(extra_tool_calls=extra_tool_calls)
 
     random.shuffle(tasks)
     return tasks

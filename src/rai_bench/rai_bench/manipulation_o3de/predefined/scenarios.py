@@ -510,9 +510,15 @@ def very_hard_scenarios(logger: logging.Logger | None) -> List[Scenario]:
     ]
 
 
-def get_all_scenarios(
-    levels: List[Literal["trivial", "easy", "medium", "hard", "very_hard"]],
-    logger: logging.Logger | None,
+def get_scenarios(
+    levels: List[Literal["trivial", "easy", "medium", "hard", "very_hard"]] = [
+        "trivial",
+        "easy",
+        "medium",
+        "hard",
+        "very_hard",
+    ],
+    logger: logging.Logger | None = None,
 ):
     scenarios: List[Scenario] = []
     if "trivial" in levels:
