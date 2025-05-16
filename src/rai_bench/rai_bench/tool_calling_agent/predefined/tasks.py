@@ -53,64 +53,65 @@ from rai_bench.tool_calling_agent.validators import (
     OrderedCallsValidator,
 )
 
+IMG_PATH = "src/rai_bench/rai_bench/tool_calling_agent/predefined/images/"
 true_response_inputs: List[BoolImageTaskInput] = [
     BoolImageTaskInput(
         question="Is the door on the left from the desk?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_1.jpg"],
+        images_paths=[IMG_PATH + "image_1.jpg"],
     ),
     BoolImageTaskInput(
         question="Is the light on in the room?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_2.jpg"],
+        images_paths=[IMG_PATH + "image_2.jpg"],
     ),
     BoolImageTaskInput(
         question="Do you see the plant?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_2.jpg"],
+        images_paths=[IMG_PATH + "image_2.jpg"],
     ),
     BoolImageTaskInput(
         question="Are there any pictures on the wall?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_3.jpg"],
+        images_paths=[IMG_PATH + "image_3.jpg"],
     ),
     BoolImageTaskInput(
         question="Are there 3 pictures on the wall?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_4.jpg"],
+        images_paths=[IMG_PATH + "image_4.jpg"],
     ),
     BoolImageTaskInput(
         question="Is there a plant behind the rack?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_5.jpg"],
+        images_paths=[IMG_PATH + "image_5.jpg"],
     ),
     BoolImageTaskInput(
         question="Is there a pillow on the armchain?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_7.jpg"],
+        images_paths=[IMG_PATH + "image_7.jpg"],
     ),
 ]
 false_response_inputs: List[BoolImageTaskInput] = [
     BoolImageTaskInput(
         question="Is the door open?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_1.jpg"],
+        images_paths=[IMG_PATH + "image_1.jpg"],
     ),
     BoolImageTaskInput(
         question="Is someone in the room?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_1.jpg"],
+        images_paths=[IMG_PATH + "image_1.jpg"],
     ),
     BoolImageTaskInput(
         question="Do you see the plant?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_3.jpg"],
+        images_paths=[IMG_PATH + "image_3.jpg"],
     ),
     BoolImageTaskInput(
         question="Are there 4 pictures on the wall?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_4.jpg"],
+        images_paths=[IMG_PATH + "image_4.jpg"],
     ),
     BoolImageTaskInput(
         question="Is there a rack on the left from the sofa?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_4.jpg"],
+        images_paths=[IMG_PATH + "image_4.jpg"],
     ),
     BoolImageTaskInput(
         question="Is there a plant on the right from the window?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_6.jpg"],
+        images_paths=[IMG_PATH + "image_6.jpg"],
     ),
     BoolImageTaskInput(
         question="Is there a red pillow on the armchair?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_7.jpg"],
+        images_paths=[IMG_PATH + "image_7.jpg"],
     ),
 ]
 ########## SUBTASKS #######################################################################################

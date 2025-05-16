@@ -12,14 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from pathlib import Path
 
-from rai_bench.examples.manipulation_o3de.scenarios import (
-    trivial_scenarios,
-)
 from rai_bench.manipulation_o3de.benchmark import (
     run_benchmark,
+)
+from rai_bench.manipulation_o3de.predefined.scenarios import (
+    trivial_scenarios,
 )
 from rai_bench.utils import define_benchmark_logger, parse_benchmark_args
 
@@ -29,21 +28,23 @@ if __name__ == "__main__":
     experiment_dir.mkdir(parents=True, exist_ok=True)
     bench_logger = define_benchmark_logger(out_dir=experiment_dir)
 
-    configs_dir = "src/rai_bench/rai_bench/examples/manipulation_o3de/configs/"
+    configs_dir = "src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/"
     connector_path = configs_dir + "o3de_config.yaml"
     ### import ready scenarios
-    t_scenarios = trivial_scenarios(configs_dir=configs_dir, logger=bench_logger)
+    t_scenarios = trivial_scenarios(
+        o3de_config_path=connector_path, logger=bench_logger
+    )
     # e_scenarios = easy_scenarios(
-    #     configs_dir=configs_dir, logger=bench_logger
+    #     o3de_config_path=connector_path, logger=bench_logger
     # )
     # m_scenarios = medium_scenarios(
-    #     configs_dir=configs_dir, logger=bench_logger
+    #     o3de_config_path=connector_path, logger=bench_logger
     # )
     # h_scenarios = hard_scenarios(
-    #     configs_dir=configs_dir, logger=bench_logger
+    #     o3de_config_path=connector_path, logger=bench_logger
     # )
     # vh_scenarios = very_hard_scenarios(
-    #     configs_dir=configs_dir, logger=bench_logger
+    #     o3de_config_path=connector_path, logger=bench_logger
     # )
 
     all_scenarios = t_scenarios
@@ -51,6 +52,7 @@ if __name__ == "__main__":
         model_name=args.model_name,
         vendor=args.vendor,
         out_dir=experiment_dir,
+        o3de_config_path=connector_path,
         scenarios=all_scenarios,
         bench_logger=bench_logger,
     )

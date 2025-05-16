@@ -14,10 +14,10 @@
 
 from pathlib import Path
 
-from rai_bench.examples.tool_calling_agent.tasks import get_all_tasks
 from rai_bench.tool_calling_agent.benchmark import (
     run_benchmark,
 )
+from rai_bench.tool_calling_agent.predefined.tasks import get_all_tasks
 from rai_bench.utils import (
     define_benchmark_logger,
     parse_benchmark_args,
