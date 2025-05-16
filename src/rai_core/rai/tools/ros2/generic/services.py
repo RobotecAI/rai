@@ -86,6 +86,10 @@ class CallROS2ServiceToolInput(BaseModel):
         default={},
         description="A dictionary mapping each field name of the service request message to its value. For example, for std_srvs/srv/SetBool use {'data': True}.",
     )
+    timeout_sec: float = Field(
+        default=5.0,
+        description="The timeout for the service call in seconds",
+    )
 
 
 class CallROS2ServiceTool(BaseROS2Tool):
@@ -98,6 +102,7 @@ class CallROS2ServiceTool(BaseROS2Tool):
         service_name: str,
         service_type: str,
         service_args: Optional[Dict[str, Any]] = None,
+        timeout_sec: float = 5.0,
     ) -> str:
         if not self.is_writable(service_name):
             raise ValueError(f"Service {service_name} is not writable")
@@ -105,7 +110,7 @@ class CallROS2ServiceTool(BaseROS2Tool):
             service_args = {}
         message = ROS2Message(payload=service_args)
         response = self.connector.service_call(
-            message, service_name, msg_type=service_type
+            message, service_name, msg_type=service_type, timeout_sec=timeout_sec
         )
         return str(
             {

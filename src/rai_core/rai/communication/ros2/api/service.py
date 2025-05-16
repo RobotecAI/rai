@@ -50,7 +50,7 @@ class ROS2ServiceAPI(BaseROS2API):
         service_name: str,
         service_type: str,
         request: Any,
-        timeout_sec: float = 1.0,
+        timeout_sec: float = 5.0,
     ) -> Any:
         """
         Call a ROS2 service.
@@ -71,7 +71,7 @@ class ROS2ServiceAPI(BaseROS2API):
                 f"Service {service_name} not ready within {timeout_sec} seconds. "
                 "Try increasing the timeout or check if the service is running."
             )
-        return service_client.call(srv_msg)
+        return service_client.call(srv_msg, timeout_sec=timeout_sec)
 
     def get_service_names_and_types(self) -> List[Tuple[str, List[str]]]:
         return self.node.get_service_names_and_types()

@@ -34,7 +34,7 @@ class ROS2ServiceMixin:
         self,
         message: ROS2Message,
         target: str,
-        timeout_sec: float = 1.0,
+        timeout_sec: float = 5.0,
         *,
         msg_type: str,
         **kwargs: Any,
