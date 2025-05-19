@@ -25,13 +25,14 @@ from langgraph.graph.state import CompiledStateGraph
 from rai.agents.langchain.core import create_conversational_agent
 from rai.messages import HumanMultimodalMessage
 
-from rai_bench.base_benchmark import BaseBenchmark, BenchmarkSummary, TimeoutException
+from rai_bench.base_benchmark import BaseBenchmark, TimeoutException
 from rai_bench.results_processing.langfuse_scores_tracing import ScoreTracingHandler
 from rai_bench.tool_calling_agent.interfaces import (
     Task,
 )
 from rai_bench.tool_calling_agent.results_tracking import (
     TaskResult,
+    ToolCallingAgentRunSummary,
 )
 from rai_bench.tool_calling_agent.tasks.spatial import (
     SpatialReasoningAgentTask,
@@ -187,14 +188,14 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         avg_time = statistics.mean(r.total_time for r in self.task_results)
         total_extra_calls = sum(r.extra_tool_calls_used for r in self.task_results)
 
-        summary = BenchmarkSummary(
+        summary = ToolCallingAgentRunSummary(
             model_name=self.model_name,
             success_rate=round(success_rate, 2),
             avg_time=round(avg_time, 3),
             total_extra_tool_calls_used=total_extra_calls,
             total_tasks=len(self.task_results),
         )
-        self.csv_initialize(self.summary_filename, BenchmarkSummary)
+        self.csv_initialize(self.summary_filename, ToolCallingAgentRunSummary)
         self.csv_writerow(self.summary_filename, summary)
 
 

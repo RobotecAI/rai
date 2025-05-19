@@ -42,7 +42,7 @@ from rai.tools.ros2 import (
 )
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
-from rai_bench.base_benchmark import BaseBenchmark, BenchmarkSummary, TimeoutException
+from rai_bench.base_benchmark import BaseBenchmark, RunSummary, TimeoutException
 from rai_bench.manipulation_o3de.interfaces import Task
 from rai_bench.manipulation_o3de.results_tracking import (
     ScenarioResult,
@@ -354,19 +354,13 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
             else 0
         )
 
-        # TODO (jm) extend this bechmark to implement extra tool calls
-        # since this benchmark doesn't have the concept of "extra tool calls",
-        # we use the total number of tool calls instead
-        total_tool_calls = sum(r.number_of_tool_calls for r in self.scenario_results)
-
-        summary = BenchmarkSummary(
+        summary = RunSummary(
             model_name=self.model_name,
             success_rate=round(success_rate, 2),
             avg_time=round(avg_time, 3),
-            total_extra_tool_calls_used=total_tool_calls,
             total_tasks=len(self.scenario_results),
         )
-        self.csv_initialize(self.summary_filename, BenchmarkSummary)
+        self.csv_initialize(self.summary_filename, RunSummary)
         self.csv_writerow(self.summary_filename, summary)
 
 

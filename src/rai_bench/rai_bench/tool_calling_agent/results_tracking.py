@@ -18,6 +18,14 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from rai_bench.base_benchmark import RunSummary
+
+
+class ToolCallingAgentRunSummary(RunSummary):
+    total_extra_tool_calls_used: int = Field(
+        ..., description="Total number of extra tool calls used in this Task"
+    )
+
 
 class SubTaskResult(BaseModel):
     args: Dict[str, Any]

@@ -80,16 +80,16 @@ def test_models(
     benchmark_configs: List[BenchmarkConfig],
     out_dir: str,
 ):
-    now = datetime.now()
-
     if len(model_names) != len(vendors):
         raise ValueError("Number of passed models must match number of passed vendors")
     else:
         for bench_conf in benchmark_configs:
+            # for each bench configuration seperate run folder
+            now = datetime.now()
+            run_name = f"run_{now.strftime('%Y-%m-%d_%H-%M-%S')}"
             for i, model_name in enumerate(model_names):
                 # for extra_calls in extra_tool_calls:
                 for u in range(bench_conf.repeats):
-                    run_name = f"run_{now.strftime('%Y-%m-%d_%H-%M-%S')}"
                     curr_out_dir = (
                         out_dir
                         + "/"
