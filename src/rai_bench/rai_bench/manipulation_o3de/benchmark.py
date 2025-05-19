@@ -14,12 +14,14 @@
 import logging
 import statistics
 import time
+import uuid
 from pathlib import Path
 from typing import List, TypeVar
 
 import rclpy
 from langchain.tools import BaseTool
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
 from launch import LaunchDescription
@@ -42,7 +44,10 @@ from rai_open_set_vision.tools import GetGrabbingPointTool
 
 from rai_bench.base_benchmark import BaseBenchmark, BenchmarkSummary, TimeoutException
 from rai_bench.manipulation_o3de.interfaces import Task
-from rai_bench.manipulation_o3de.results_tracking import ScenarioResult
+from rai_bench.manipulation_o3de.results_tracking import (
+    ScenarioResult,
+)
+from rai_bench.results_processing.langfuse_scores_tracing import ScoreTracingHandler
 from rai_bench.utils import (
     get_llm_for_benchmark,
 )
@@ -73,6 +78,7 @@ class Scenario:
         task: Task,
         scene_config: SceneConfig,
         scene_config_path: str,
+        level: str | None = None,
     ) -> None:
         """
         Initialize a Scenario.
@@ -85,6 +91,8 @@ class Scenario:
             The scene configuration for the scenario.
         scene_config_path : str
             The file path to the scene configuration.
+        level : str
+            The difficulty level of this scenario
 
         Raises
         ------
@@ -96,6 +104,10 @@ class Scenario:
         # NOTE (jmatejcz) needed for logging which config was used,
         # there probably is better way to do it
         self.scene_config_path = scene_config_path
+        if not level:
+            self.level = "not_declared"
+        else:
+            self.level = level
 
 
 class ManipulationO3DEBenchmark(BaseBenchmark):
@@ -129,6 +141,7 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
         self.scenarios = enumerate(iter(scenarios))
 
         self.scenario_results: List[ScenarioResult] = []
+        self.score_tracing_handler = ScoreTracingHandler()
         self.csv_initialize(self.results_filename, ScenarioResult)
 
     @property
@@ -174,6 +187,7 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
         scene_configs: List[SceneConfig],
         scene_configs_paths: List[str],
         logger: logging.Logger | None = None,
+        level: str | None = None,
     ) -> List[Scenario]:
         """
         Create scenarios by pairing each task with each suitable simulation configuration.
@@ -192,7 +206,7 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
         List[Scenario[SimulationConfigT]]
             A list of scenarios generated from the given tasks and simulation configurations.
         """
-        # NOTE (jmatejcz) hacky_fix, taking paths as args here, not the best solution,
+        # HACK (jmatejcz) taking paths as args here, not the best solution,
         # but more changes to code would be required
         scenarios: List[Scenario] = []
         if not logger:
@@ -205,6 +219,7 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
                             task=task,
                             scene_config=scene_conf,
                             scene_config_path=scene_path,
+                            level=level,
                         )
                     )
                 else:
@@ -240,6 +255,14 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
             self.logger.info(
                 f"RUNNING SCENARIO NUMBER {i + 1} / {self.num_of_scenarios}\n TASK: {scenario.task.task_prompt}\n SIMULATION_CONFIG: {scenario.scene_config_path}"
             )
+            callbacks = self.score_tracing_handler.get_callbacks()
+            run_id = uuid.uuid4()
+            config: RunnableConfig = {
+                "run_id": run_id,
+                "callbacks": callbacks,
+                "tags": [scenario.level, self.model_name],
+                "recursion_limit": 50,
+            }
             tool_calls_num = 0
 
             ts = time.perf_counter()
@@ -248,9 +271,7 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
                 with self.time_limit(210):
                     for state in agent.stream(
                         {"messages": [HumanMessage(content=scenario.task.task_prompt)]},
-                        {
-                            "recursion_limit": 100
-                        },  # NOTE (jmatejcz) what should be recursion limit?
+                        config=config,
                     ):
                         node = next(iter(state))
                         new_messages = state[node]["messages"][prev_count:]
@@ -303,6 +324,14 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
                 self.csv_writerow(self.results_filename, scenario_result)
                 # computing after every iteration in case of early stopping
                 self.compute_and_save_summary()
+
+                for callback in callbacks:
+                    self.score_tracing_handler.send_score(
+                        callback=callback,
+                        run_id=run_id,
+                        score=score,
+                    )
+
             except EntitiesMismatchException as e:
                 self.logger.error(e)
 

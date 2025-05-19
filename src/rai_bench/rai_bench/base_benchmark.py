@@ -127,10 +127,9 @@ class BaseBenchmark(ABC):
 
     @abstractmethod
     def compute_and_save_summary(self) -> None:
+        # TODO (jmatejcz) this can be probably same for all benchmark in the future
         """Compute summary statistics and save them to the summary file."""
         pass
-
-    # TODO (jm) this can be probably same for all benchmark in the future
 
     @contextmanager
     def time_limit(self, seconds: int):

@@ -26,11 +26,11 @@ from rai.agents.langchain.core import create_conversational_agent
 from rai.messages import HumanMultimodalMessage
 
 from rai_bench.base_benchmark import BaseBenchmark, BenchmarkSummary, TimeoutException
+from rai_bench.results_processing.langfuse_scores_tracing import ScoreTracingHandler
 from rai_bench.tool_calling_agent.interfaces import (
     Task,
 )
 from rai_bench.tool_calling_agent.results_tracking import (
-    ScoreTracingHandler,
     TaskResult,
 )
 from rai_bench.tool_calling_agent.tasks.spatial import (
@@ -98,7 +98,7 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         messages: List[BaseMessage] = []
         prev_count: int = 0
         try:
-            with self.time_limit(45):
+            with self.time_limit(60):
                 if isinstance(task, SpatialReasoningAgentTask):
                     for state in agent.stream(
                         {
@@ -148,13 +148,6 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         total_extra_calls: int = 0
         for validator_info in validation_info:
             total_extra_calls += validator_info.extra_tool_calls_used
-        for callback in callbacks:
-            self.score_tracing_handler.send_score(
-                callback=callback,
-                run_id=run_id,
-                score=score,
-                errors=errors,
-            )
 
         self.logger.info(f"TASK SCORE: {score}, TOTAL TIME: {total_time:.3f}")
 
@@ -177,6 +170,14 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         self.csv_writerow(self.results_filename, task_result)
         # computing after every iteration in case of early stopping
         self.compute_and_save_summary()
+
+        for callback in callbacks:
+            self.score_tracing_handler.send_score(
+                callback=callback,
+                run_id=run_id,
+                score=score,
+                errors=errors,
+            )
 
     def compute_and_save_summary(self):
         self.logger.info("Computing and saving average results...")
