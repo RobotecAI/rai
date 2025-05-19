@@ -53,9 +53,9 @@ Adds a custom VAD model to a processing pipeline.
 
 -   `pipeline` can be either `'record'` or `'stop'`
 
-### `__call__()`
+!!! note "`'stop'` pipeline"
 
-Alias to `run()` method to enable usage like a callable object.
+    The `'stop'` pipeline is present for forward compatibility. It currently doesn't affect Agent's functioning.
 
 ### `_on_new_sample()`
 
@@ -73,10 +73,6 @@ Handles transcription for a given buffer in a background thread. Uses locks to e
 ### `_should_record(audio_data, input_parameters)`
 
 Evaluates the `should_record_pipeline` models to determine if recording should begin.
-
-### `_send_ros2_message(data, topic)`
-
-Sends a message to the given ROS2 topic, either a plain string or structured HRI message.
 
 ## Best Practices
 
