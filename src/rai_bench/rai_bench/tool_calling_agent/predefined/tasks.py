@@ -43,7 +43,7 @@ from rai_bench.tool_calling_agent.tasks.spatial import (
     BoolImageTask,
     BoolImageTaskInput,
 )
-from rai_bench.tool_calling_agent.tasks.subtasks import (
+from rai_bench.tool_calling_agent.subtasks import (
     CheckActionFieldsToolCallSubTask,
     CheckArgsToolCallSubTask,
     CheckTopicFieldsToolCallSubTask,
