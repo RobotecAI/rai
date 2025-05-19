@@ -26,6 +26,7 @@ from elevenlabs import ElevenLabs
 from langchain_aws import BedrockEmbeddings, ChatBedrock
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+import logging
 
 
 def get_sound_devices(
@@ -368,7 +369,7 @@ def tracing():
 
 
 def asr():
-    from rai_asr import TRANSCRIBE_MODELS
+    from rai_s2s.asr import TRANSCRIBE_MODELS
 
     def on_recording_device_change():
         st.session_state.config["asr"]["recording_device_name"] = (
@@ -568,7 +569,7 @@ def asr():
 
 
 def tts():
-    from rai_tts import TTS_MODELS
+    from rai_s2s.tts import TTS_MODELS
 
     def on_tts_vendor_change():
         st.session_state.config["tts"]["vendor"] = st.session_state.tts_vendor_select
@@ -934,19 +935,25 @@ def setup_steps():
     step_render = [welcome, model_selection, tracing]
 
     try:
-        from rai_asr import TRANSCRIBE_MODELS
+        from rai_s2s.asr import TRANSCRIBE_MODELS
 
         step_names.append("🎙️ Speech Recognition")
         step_render.append(asr)
     except ImportError:
+        logging.warning(
+            "skipping speech recognition, missing import - install `poetry install --with s2s`"
+        )
         pass
 
     try:
-        from rai_tts import TTS_MODELS
+        from rai_s2s.tts import TTS_MODELS
 
         step_names.append("🔊 Text to Speech")
         step_render.append(tts)
     except ImportError:
+        logging.warning(
+            "skipping text to speech, missing import - install `poetry install --with s2s`"
+        )
         pass
 
     step_names.extend(
