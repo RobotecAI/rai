@@ -20,11 +20,12 @@ import pandas as pd
 import streamlit as st
 from pydantic import BaseModel
 
-from rai_bench.base_benchmark import BenchmarkSummary
+from rai_bench.base_benchmark import RunSummary
 from rai_bench.manipulation_o3de.results_tracking import ScenarioResult
 from rai_bench.tool_calling_agent.results_tracking import (
     SubTaskResult,
     TaskResult,
+    ToolCallingAgentRunSummary,
     ValidatorResult,
 )
 
@@ -114,13 +115,38 @@ BENCHMARKS_CONVERTERS: Dict[str, Any] = {
 }
 
 
+class ModelRepeatResults:
+    """Container for results of a single repeat of one model."""
+
+    def __init__(self, repeat_num: int):
+        self.repeat_num = repeat_num
+        self.task_results: List[BaseModel] = []
+        self.summary: Optional[RunSummary] = None
+
+
 class ModelRunResults:
-    """Container for results from a single model run."""
+    """Container for results of one model from a single run with multiple repeats."""
 
     def __init__(self, run_id: str):
         self.run_id = run_id
-        self.task_results: List[TaskResult] = []
-        self.benchmark_summaries: List[BenchmarkSummary] = []
+        self.repeats: List[ModelRepeatResults] = []
+
+    @property
+    def task_results(self) -> List[BaseModel]:
+        """Get all task results from all repeats."""
+        results: List[BaseModel] = []
+        for repeat in self.repeats:
+            results.extend(repeat.task_results)
+        return results
+
+    @property
+    def summaries(self) -> List[RunSummary]:
+        """Get all summaries from all repeats."""
+        results: List[RunSummary] = []
+        for repeat in self.repeats:
+            if repeat.summary:
+                results.append(repeat.summary)
+        return results
 
 
 class ModelResults:
@@ -131,13 +157,22 @@ class ModelResults:
         self.runs: List[ModelRunResults] = []
 
     def check_if_summaries_present(self) -> bool:
-        if not self.runs or not any(run.benchmark_summaries for run in self.runs):
+        if not self.runs or not any(run.summaries for run in self.runs):
             return False
         return True
 
     @property
     def count(self):
-        return sum(len(run.benchmark_summaries) for run in self.runs)
+        return sum(len(run.summaries) for run in self.runs)
+
+    @property
+    def total_tasks(self) -> int:
+        if not self.check_if_summaries_present():
+            return 0
+
+        return sum(
+            summary.total_tasks for run in self.runs for summary in run.summaries
+        )
 
     @property
     def avg_success_rate(self) -> float:
@@ -146,9 +181,7 @@ class ModelResults:
             return 0.0
 
         total = sum(
-            summary.success_rate
-            for run in self.runs
-            for summary in run.benchmark_summaries
+            summary.success_rate for run in self.runs for summary in run.summaries
         )
         return total / self.count
 
@@ -158,9 +191,7 @@ class ModelResults:
         if not self.check_if_summaries_present():
             return 0.0
 
-        total = sum(
-            summary.avg_time for run in self.runs for summary in run.benchmark_summaries
-        )
+        total = sum(summary.avg_time for run in self.runs for summary in run.summaries)
         return total / self.count
 
     @property
@@ -169,16 +200,21 @@ class ModelResults:
         if not self.check_if_summaries_present():
             return 0.0
 
-        total = sum(
-            summary.total_extra_tool_calls_used
-            for run in self.runs
-            for summary in run.benchmark_summaries
-        )
-        return total / self.count
+        total = 0.0
+        count = 0
+        for run in self.runs:
+            for summary in run.summaries:
+                if isinstance(summary, ToolCallingAgentRunSummary):
+                    total += summary.total_extra_tool_calls_used
+                    count += 1
+                else:
+                    raise NotImplementedError
+
+        return total / count
 
 
 class BenchmarkResults:
-    """Results for a specific benchmark across multiple models."""
+    """Results for a specific benchmark across multiple models and runs."""
 
     def __init__(self, benchmark_name: str):
         self.benchmark_name = benchmark_name
@@ -243,15 +279,14 @@ def safely_parse_json_like_string(s: Any) -> List[Any]:
     """Parse string representation of Python objects like lists and dicts more safely"""
     if pd.isna(s) or not isinstance(s, str):
         return []
-    try:
-        return ast.literal_eval(s)
-    except (ValueError, SyntaxError):
-        return []
+    return ast.literal_eval(s)
 
 
-def convert_row_to_benchmark_summary(row: pd.Series) -> BenchmarkSummary:
+def convert_row_to_benchmark_summary(row: pd.Series) -> RunSummary:
     """
     Convert a DataFrame row to a BenchmarkSummary object.
+    Creates either a base BenchmarkSummary or a ToolCallingAgentSummary
+    depending on the fields present in the row.
 
     Parameters
     ----------
@@ -261,15 +296,22 @@ def convert_row_to_benchmark_summary(row: pd.Series) -> BenchmarkSummary:
     Returns
     -------
     BenchmarkSummary
-        A BenchmarkSummary object
+        A BenchmarkSummary or ToolCallingAgentSummary object
     """
-    return BenchmarkSummary(
-        model_name=row["model_name"],
-        success_rate=float(row["success_rate"]),
-        avg_time=float(row["avg_time"]),
-        total_extra_tool_calls_used=int(row["total_extra_tool_calls_used"]),
-        total_tasks=row["total_tasks"],
-    )
+    base_fields: Dict[str, Any] = {
+        "model_name": row["model_name"],
+        "success_rate": float(row["success_rate"]),
+        "avg_time": float(row["avg_time"]),
+        "total_tasks": row["total_tasks"],
+    }
+
+    if "total_extra_tool_calls_used" in row:
+        return ToolCallingAgentRunSummary(
+            **base_fields,
+            total_extra_tool_calls_used=int(row["total_extra_tool_calls_used"]),
+        )
+
+    return RunSummary(**base_fields)
 
 
 def load_detailed_data(file_path: str, benchmark: str) -> List[BaseModel]:
@@ -284,7 +326,7 @@ def load_detailed_data(file_path: str, benchmark: str) -> List[BaseModel]:
     return task_results
 
 
-def load_summary_data(file_path: str) -> List[BenchmarkSummary]:
+def load_summary_data(file_path: str) -> List[RunSummary]:
     """
     Load summary results data from a file path.
 
@@ -299,7 +341,7 @@ def load_summary_data(file_path: str) -> List[BenchmarkSummary]:
         List of BenchmarkSummary objects
     """
     df = pd.read_csv(file_path)  # type: ignore
-    summaries: List[BenchmarkSummary] = []
+    summaries: List[RunSummary] = []
     for _, row in df.iterrows():  # type: ignore
         summary = convert_row_to_benchmark_summary(row)
         summaries.append(summary)
@@ -332,7 +374,7 @@ def get_available_runs(experiment_dir: str) -> List[str]:
 
 def load_single_run(
     path: str, benchmark: str
-) -> Tuple[List[BaseModel], List[BenchmarkSummary]]:
+) -> Tuple[List[BaseModel], List[RunSummary]]:
     """
     Load task results and benchmark summaries from a single run directory.
     Returns
@@ -365,6 +407,57 @@ def load_single_run(
     return detailed_data, benchmark_summaries
 
 
+def load_single_repeat(path: str, benchmark: str) -> Tuple[List[BaseModel], RunSummary]:
+    """
+    Load task results and benchmark summary from a single repeat directory.
+
+    Parameters
+    ----------
+    path : str
+        Path to the repeat directory
+    benchmark : str
+        Benchmark name
+
+    Returns
+    -------
+    Tuple[List[BaseModel], RunSummary]
+        Tuple of task results and the benchmark summary
+    """
+    detailed_path = os.path.join(path, DETAILED_FILE_NAME)
+    summary_path = os.path.join(path, SUMMARY_FILE_NAME)
+
+    if not os.path.exists(detailed_path):
+        raise RuntimeError(
+            f"Detailed file {detailed_path} doesn't exist, cannot load data."
+        )
+    if not os.path.exists(summary_path):
+        raise RuntimeError(
+            f"Summary file {summary_path} doesn't exist, cannot load data."
+        )
+
+    detailed_data = load_detailed_data(detailed_path, benchmark=benchmark)
+    benchmark_summaries = load_summary_data(summary_path)
+
+    if not detailed_data or not benchmark_summaries:
+        raise RuntimeError(f"No data found in {path}")
+
+    # Verify data consistency
+    task_model_name = detailed_data[0].model_name
+    summary_model_name = benchmark_summaries[0].model_name
+
+    if task_model_name != summary_model_name:
+        st.warning(f"Data mismatch in run {path} - model names don't match")
+        raise ValueError("Model name between detailed and summary data doesn't match.")
+
+    # We expect only one summary per repeat
+    if len(benchmark_summaries) != 1:
+        st.warning(
+            f"Expected 1 summary in {path}, but found {len(benchmark_summaries)}"
+        )
+
+    return detailed_data, benchmark_summaries[0]
+
+
 def load_run_results(run_dir: str) -> RunResults:
     """
     Load all benchmark results from a run directory.
@@ -395,37 +488,29 @@ def load_run_results(run_dir: str) -> RunResults:
                 continue
 
             model_results = ModelResults(model_name=model_name)
-
+            model_run = ModelRunResults(run_id=run_name)
             # List all repeats in model dir
-            # NOTE (jm) these repeats counts also different extra calls number
-            # now the folder names of the repeats is <number_of_available_extra_tool_call>_<repeat>
             for repeat in os.listdir(model_dir):
                 repeat_dir = os.path.join(model_dir, repeat)
                 if not os.path.isdir(repeat_dir):
                     continue
 
-                run_data = load_single_run(path=repeat_dir, benchmark=bench_name)
-                if not run_data:
-                    continue
+                task_results, summary = load_single_repeat(
+                    path=repeat_dir, benchmark=bench_name
+                )
 
-                # Unpack task results and benchmark summaries
-                task_results, benchmark_summaries = run_data
+                repeat_results = ModelRepeatResults(repeat_num=int(repeat))
+                repeat_results.task_results = task_results
+                repeat_results.summary = summary
 
-                # Create model run results
-                model_run = ModelRunResults(run_id=repeat)
-                model_run.task_results = task_results
-                model_run.benchmark_summaries = benchmark_summaries
+                model_run.repeats.append(repeat_results)
 
+            if model_run.repeats:
                 model_results.runs.append(model_run)
-
-            if model_results.runs:
                 benchmark_results.models[model_name] = model_results
 
         if benchmark_results.models:
             run_results.benchmarks[bench_name] = benchmark_results
-
-    if not run_results.benchmarks:
-        return None
 
     return run_results
 
