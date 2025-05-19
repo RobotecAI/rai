@@ -120,6 +120,8 @@ nav:
     - Overview: speech_to_speech/overview.md
     - Agents:
         - Overview: speech_to_speech/agents/overview.md
+        - Automatic Speech Recognition: speech_to_speech/agents/asr.md
+        - Text To Speech: speech_to_speech/agents/tts.md
     - Models:
         - Overview: speech_to_speech/models/overview.md
     - SoundDevice Connector: speech_to_speech/sounddevice.md

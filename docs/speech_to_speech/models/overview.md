@@ -42,11 +42,19 @@ This method takes raw audio data encoded as 2-byte integers and returns the corr
 -   No additional setup required
 -   Returns a confidence value indicating the presence of speech in the audio
 
+??? info "SileroVAD"
+
+    ::: rai_s2s.asr.models.silero_vad.SileroVAD
+
 ### OpenWakeWord
 
 -   Open source project: [GitHub](https://github.com/dscripka/openWakeWord)
 -   Supports predefined and custom wake words
 -   Returns `True` when the specified wake word is detected in the audio
+
+??? info "OpenWakeWord"
+
+    ::: rai_s2s.asr.models.open_wake_word.OpenWakeWord
 
 ### OpenAIWhisper
 
@@ -54,11 +62,19 @@ This method takes raw audio data encoded as 2-byte integers and returns the corr
 -   Requires setting the `OPEN_API_KEY` environment variable
 -   Offers language and model customization via the API
 
+??? info "OpenAIWhisper"
+
+    ::: rai_s2s.asr.models.open_ai_whisper.OpenAIWhisper
+
 ### LocalWhisper
 
 -   Local deployment of OpenAI Whisper: [GitHub](https://github.com/openai/whisper)
 -   Supports GPU acceleration
 -   Same configuration interface as OpenAIWhisper
+
+??? info "LocalWhisper"
+
+    ::: rai_s2s.asr.models.local_whisper.LocalWhisper
 
 ### FasterWhisper
 
@@ -66,10 +82,18 @@ This method takes raw audio data encoded as 2-byte integers and returns the corr
 -   Designed for high speed and low memory usage
 -   Follows the same API as Whisper models
 
+??? info "FasterWhisper"
+
+    ::: rai_s2s.asr.models.local_whisper.FasterWhisper
+
 ### ElevenLabs
 
 -   Cloud-based TTS model: [Website](https://elevenlabs.io/)
 -   Requires the environment variable `ELEVENLABS_API_KEY` with a valid key
+
+??? info "ElevenLabs"
+
+    ::: rai_s2s.tts.models.elevenlabs_tts.ElevenLabsTTS
 
 ### OpenTTS
 
@@ -82,6 +106,10 @@ This method takes raw audio data encoded as 2-byte integers and returns the corr
 
 -   Provides a TTS server running on port 5500
 -   Supports multiple voices and configurations
+
+??? info "OpenTTS"
+
+    ::: rai_s2s.tts.models.open_tts.OpenTTS
 
 ## Custom Models
 

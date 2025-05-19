@@ -57,23 +57,6 @@ Adds a custom VAD model to a processing pipeline.
 
     The `'stop'` pipeline is present for forward compatibility. It currently doesn't affect Agent's functioning.
 
-### `_on_new_sample()`
-
-Callback function triggered for each new audio sample. Determines:
-
--   If recording should start
--   Whether to continue buffering
--   If grace period has ended
--   When to start transcription threads
-
-### `_transcription_thread(identifier)`
-
-Handles transcription for a given buffer in a background thread. Uses locks to ensure safe access to transcription model.
-
-### `_should_record(audio_data, input_parameters)`
-
-Evaluates the `should_record_pipeline` models to determine if recording should begin.
-
 ## Best Practices
 
 1. **Graceful Shutdown**: Always call `stop()` to ensure transcription threads complete.
