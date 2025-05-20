@@ -273,7 +273,6 @@ def display_validator_results(task_result: TaskResult):
 
     # Validation details in the second column
     col2.markdown("#### Validation Results")
-    print(task_result.validation_info)
     if not task_result.validation_info:
         col2.warning("No validation information available.")
     else:
@@ -389,7 +388,7 @@ def render_validator_analysis_tab(bench_results: BenchmarkResults):
         run = model_results.runs[0]
 
     if len(run.repeats) > 1:
-        repeat_ids = [f"{repeat.repeat_id}" for repeat in run.repeats]
+        repeat_ids = [f"{repeat.repeat_num}" for repeat in run.repeats]
         repeat_selected_idx = st.selectbox(
             "Repeat",
             range(len(repeat_ids)),
@@ -463,7 +462,7 @@ def render_tool_calling_agent(bench_results: BenchmarkResults):
         [
             "Model Performance",
             "Task Performance",
-            # "Validator Analysis",
+            "Validator Analysis",
             "Subtask Analysis",
         ]
     )
@@ -478,8 +477,8 @@ def render_tool_calling_agent(bench_results: BenchmarkResults):
     # argument that require only type is stored like this in results:
     #   {'timeout_sec': <class 'int'>}},
     # which can't be parsed correctly
-    # with tabs[2]:
-    #     render_validator_analysis_tab(bench_results)
-
     with tabs[2]:
+        render_validator_analysis_tab(bench_results)
+
+    with tabs[3]:
         render_subtask_analysis_tab(bench_results)

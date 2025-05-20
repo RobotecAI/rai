@@ -13,6 +13,7 @@
 # limitations under the License.
 import ast
 import os
+import re
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -276,10 +277,34 @@ class RunResults:
 
 
 def safely_parse_json_like_string(s: Any) -> List[Any]:
-    """Parse string representation of Python objects like lists and dicts more safely"""
-    if pd.isna(s) or not isinstance(s, str):
+    """
+    Parse validation info, reconstructing class references.
+    """
+    if not isinstance(s, str) or not s:
         return []
-    return ast.literal_eval(s)
+
+    # NOTE (jmatecz) the validation_info is not loaded properly as
+    # argument that require only certain type is stored like this in results:
+    #   {'timeout_sec': <class 'int'>}},
+    # which can't be parsed correctly. Probably better approach would be
+    # storing it differently in results, but for now parsing replaces it
+    def replace_class_ref(match: re.Match[str]):
+        class_name = match.group(1)
+        builtins = {
+            "int": "'int'",
+            "str": "'str'",
+            "float": "'float'",
+            "bool": "'bool'",
+            "list": "'list'",
+            "dict": "'dict'",
+        }
+        if class_name in builtins:
+            return builtins[class_name]
+        return f"'{class_name}'"  # Fallback to string representation
+
+    modified_str = re.sub(r"<class '([^']+)'>", replace_class_ref, s)
+
+    return ast.literal_eval(modified_str)
 
 
 def convert_row_to_benchmark_summary(row: pd.Series) -> RunSummary:
