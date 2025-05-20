@@ -106,6 +106,7 @@ nav:
     - Create Robot's Whoami: tutorials/create_robots_whoami.md
     - Tools: tutorials/tools.md
     - Voice Interface: tutorials/voice_interface.md
+    - Benchmarking: tutorials/benchmarking.md
   - Demos:
     - Overview: demos/overview.md
     - Robotic arm: demos/manipulation.md
