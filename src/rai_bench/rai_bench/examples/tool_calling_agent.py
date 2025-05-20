@@ -16,7 +16,7 @@ from pathlib import Path
 
 from rai_bench import (
     define_benchmark_logger,
-    parse_benchmark_args,
+    parse_tool_calling_benchmark_args,
 )
 from rai_bench.tool_calling_agent import (
     get_tasks,
@@ -24,18 +24,22 @@ from rai_bench.tool_calling_agent import (
 )
 
 if __name__ == "__main__":
-    args = parse_benchmark_args()
+    args = parse_tool_calling_benchmark_args()
     experiment_dir = Path(args.out_dir)
     experiment_dir.mkdir(parents=True, exist_ok=True)
     bench_logger = define_benchmark_logger(out_dir=experiment_dir)
 
-    all_tasks = get_tasks(extra_tool_calls=args.extra_tool_calls)
-    for task in all_tasks:
+    tasks = get_tasks(
+        extra_tool_calls=args.extra_tool_calls,
+        complexities=args.complexities,
+        task_types=args.task_types,
+    )
+    for task in tasks:
         task.set_logger(bench_logger)
     run_benchmark(
         model_name=args.model_name,
         vendor=args.vendor,
         out_dir=args.out_dir,
-        tasks=all_tasks,
+        tasks=tasks,
         bench_logger=bench_logger,
     )

@@ -16,13 +16,19 @@ from .test_models import (
     ToolCallingAgentBenchmarkConfig,
     test_models,
 )
-from .utils import define_benchmark_logger, get_llm_for_benchmark, parse_benchmark_args
+from .utils import (
+    define_benchmark_logger,
+    get_llm_for_benchmark,
+    parse_manipulation_o3de_benchmark_args,
+    parse_tool_calling_benchmark_args,
+)
 
 __all__ = [
     "ManipulationO3DEBenchmarkConfig",
     "ToolCallingAgentBenchmarkConfig",
     "define_benchmark_logger",
     "get_llm_for_benchmark",
-    "parse_benchmark_args",
+    "parse_manipulation_o3de_benchmark_args",
+    "parse_tool_calling_benchmark_args",
     "test_models",
 ]

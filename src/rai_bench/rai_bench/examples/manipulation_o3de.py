@@ -14,25 +14,23 @@
 
 from pathlib import Path
 
-from rai_bench import define_benchmark_logger, parse_benchmark_args
+from rai_bench import define_benchmark_logger, parse_manipulation_o3de_benchmark_args
 from rai_bench.manipulation_o3de import get_scenarios, run_benchmark
 
 if __name__ == "__main__":
-    args = parse_benchmark_args()
+    args = parse_manipulation_o3de_benchmark_args()
     experiment_dir = Path(args.out_dir)
     experiment_dir.mkdir(parents=True, exist_ok=True)
     bench_logger = define_benchmark_logger(out_dir=experiment_dir)
 
-    configs_dir = "src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/"
-    o3de_config_path = configs_dir + "o3de_config.yaml"
     # import ready scenarios
-    scenarios = get_scenarios(logger=bench_logger)
+    scenarios = get_scenarios(logger=bench_logger, levels=args.levels)
 
     run_benchmark(
         model_name=args.model_name,
         vendor=args.vendor,
         out_dir=experiment_dir,
-        o3de_config_path=o3de_config_path,
+        o3de_config_path=args.o3de_config_path,
         scenarios=scenarios,
         bench_logger=bench_logger,
     )
