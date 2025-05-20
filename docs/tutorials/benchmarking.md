@@ -5,14 +5,8 @@ If you aren't familiar with our benchmark package, please read [RAI Bench](../si
 
 Currently we offer 2 predefined benchmarks:
 
--   [Benchmarking](#benchmarking)
-    -   [Manipulation O3DE](#manipulation-o3de)
-    -   [Tool Calling Agent](#tool-calling-agent)
-    -   [Testing Models](#testing-models)
-    -   [Viewing Results](#viewing-results)
-    -   [Creating Custom Tasks](#creating-custom-tasks)
-        -   [Manipualtion O3DE Scenarios](#manipualtion-o3de-scenarios)
-        -   [Tool Calling Tasks](#tool-calling-tasks)
+- [Manipulation_O3DE](#manipulation-o3de)
+- [Tool_Calling_Agent](#tool-calling-agent)
 
 If you want to test multiple models across diffrent benchmark configurations to go [Testing Models](#testing-models)
 
