@@ -23,8 +23,18 @@ from rai_open_set_vision.tools.gdino_tools import (
 
 from rai_bench.tool_calling_agent.interfaces import Task
 from rai_bench.tool_calling_agent.messages.actions import (
+    AssistedTeleopGoal,
+    BackUpGoal,
+    ComputePathThroughPosesGoal,
+    ComputePathToPoseGoal,
+    DriveOnHeadingGoal,
+    FollowPathGoal,
+    FollowWaypointsGoal,
+    NavigateThroughPosesGoal,
     NavigateToPoseGoal,
+    SmoothPathGoal,
     SpinGoal,
+    WaitGoal,
 )
 from rai_bench.tool_calling_agent.mocked_tools import (
     MockActionsToolkit,
@@ -429,7 +439,7 @@ SERVICES_AND_TYPES: Dict[str, str] = {
     "/waypoint_follower/set_parameters_atomically": "rcl_interfaces/srv/SetParametersAtomically",
 }
 INTERFACES: Dict[str, str] = {
-    "/navigate_to_pose": """#goal definition
+    "nav2_msgs/action/NavigateToPose": """#goal definition
 geometry_msgs/PoseStamped pose
 	std_msgs/Header header
 		builtin_interfaces/Time stamp
@@ -476,12 +486,375 @@ builtin_interfaces/Duration estimated_time_remaining
 	uint32 nanosec
 int16 number_of_recoveries
 float32 distance_remaining
-"""
+""",
+    "nav2_msgs/action/AssistedTeleop": """#goal definition
+builtin_interfaces/Duration time_allowance
+	int32 sec
+	uint32 nanosec
+---
+#result definition
+builtin_interfaces/Duration total_elapsed_time
+	int32 sec
+	uint32 nanosec
+---
+#feedback
+builtin_interfaces/Duration current_teleop_duration
+	int32 sec
+	uint32 nanosec""",
+    "nav2_msgs/action/BackUp": """#goal definition
+geometry_msgs/Point target
+	float64 x
+	float64 y
+	float64 z
+float32 speed
+builtin_interfaces/Duration time_allowance
+	int32 sec
+	uint32 nanosec
+---
+#result definition
+builtin_interfaces/Duration total_elapsed_time
+	int32 sec
+	uint32 nanosec
+---
+#feedback definition
+float32 distance_traveled""",
+    "nav2_msgs/action/ComputePathThroughPoses": """#goal definition
+geometry_msgs/PoseStamped[] goals
+	std_msgs/Header header
+		builtin_interfaces/Time stamp
+			int32 sec
+			uint32 nanosec
+		string frame_id
+	Pose pose
+		Point position
+			float64 x
+			float64 y
+			float64 z
+		Quaternion orientation
+			float64 x 0
+			float64 y 0
+			float64 z 0
+			float64 w 1
+geometry_msgs/PoseStamped start
+	std_msgs/Header header
+		builtin_interfaces/Time stamp
+			int32 sec
+			uint32 nanosec
+		string frame_id
+	Pose pose
+		Point position
+			float64 x
+			float64 y
+			float64 z
+		Quaternion orientation
+			float64 x 0
+			float64 y 0
+			float64 z 0
+			float64 w 1
+string planner_id
+bool use_start # If false, use current robot pose as path start, if true, use start above instead
+---
+#result definition
+nav_msgs/Path path
+	std_msgs/Header header
+		builtin_interfaces/Time stamp
+			int32 sec
+			uint32 nanosec
+		string frame_id
+	geometry_msgs/PoseStamped[] poses
+		std_msgs/Header header
+			builtin_interfaces/Time stamp
+				int32 sec
+				uint32 nanosec
+			string frame_id
+		Pose pose
+			Point position
+				float64 x
+				float64 y
+				float64 z
+			Quaternion orientation
+				float64 x 0
+				float64 y 0
+				float64 z 0
+				float64 w 1
+builtin_interfaces/Duration planning_time
+	int32 sec
+	uint32 nanosec
+---
+#feedback definition""",
+    "nav2_msgs/action/ComputePathToPose": """#goal definition
+geometry_msgs/PoseStamped goal
+	std_msgs/Header header
+		builtin_interfaces/Time stamp
+			int32 sec
+			uint32 nanosec
+		string frame_id
+	Pose pose
+		Point position
+			float64 x
+			float64 y
+			float64 z
+		Quaternion orientation
+			float64 x 0
+			float64 y 0
+			float64 z 0
+			float64 w 1
+geometry_msgs/PoseStamped start
+	std_msgs/Header header
+		builtin_interfaces/Time stamp
+			int32 sec
+			uint32 nanosec
+		string frame_id
+	Pose pose
+		Point position
+			float64 x
+			float64 y
+			float64 z
+		Quaternion orientation
+			float64 x 0
+			float64 y 0
+			float64 z 0
+			float64 w 1
+string planner_id
+bool use_start # If false, use current robot pose as path start, if true, use start above instead
+---
+#result definition
+nav_msgs/Path path
+	std_msgs/Header header
+		builtin_interfaces/Time stamp
+			int32 sec
+			uint32 nanosec
+		string frame_id
+	geometry_msgs/PoseStamped[] poses
+		std_msgs/Header header
+			builtin_interfaces/Time stamp
+				int32 sec
+				uint32 nanosec
+			string frame_id
+		Pose pose
+			Point position
+				float64 x
+				float64 y
+				float64 z
+			Quaternion orientation
+				float64 x 0
+				float64 y 0
+				float64 z 0
+				float64 w 1
+builtin_interfaces/Duration planning_time
+	int32 sec
+	uint32 nanosec
+---
+#feedback definition""",
+    "nav2_msgs/action/DriveOnHeading": """#goal definition
+geometry_msgs/Point target
+	float64 x
+	float64 y
+	float64 z
+float32 speed
+builtin_interfaces/Duration time_allowance
+	int32 sec
+	uint32 nanosec
+---
+#result definition
+builtin_interfaces/Duration total_elapsed_time
+	int32 sec
+	uint32 nanosec
+---
+#feedback definition
+float32 distance_traveled""",
+    "nav2_msgs/action/FollowPath": """#goal definition
+nav_msgs/Path path
+	std_msgs/Header header
+		builtin_interfaces/Time stamp
+			int32 sec
+			uint32 nanosec
+		string frame_id
+	geometry_msgs/PoseStamped[] poses
+		std_msgs/Header header
+			builtin_interfaces/Time stamp
+				int32 sec
+				uint32 nanosec
+			string frame_id
+		Pose pose
+			Point position
+				float64 x
+				float64 y
+				float64 z
+			Quaternion orientation
+				float64 x 0
+				float64 y 0
+				float64 z 0
+				float64 w 1
+string controller_id
+string goal_checker_id
+---
+#result definition
+std_msgs/Empty result
+---
+#feedback definition
+float32 distance_to_goal
+float32 speed""",
+    "nav2_msgs/action/FollowWaypoints": """#goal definition
+geometry_msgs/PoseStamped[] poses
+	std_msgs/Header header
+		builtin_interfaces/Time stamp
+			int32 sec
+			uint32 nanosec
+		string frame_id
+	Pose pose
+		Point position
+			float64 x
+			float64 y
+			float64 z
+		Quaternion orientation
+			float64 x 0
+			float64 y 0
+			float64 z 0
+			float64 w 1
+---
+#result definition
+int32[] missed_waypoints
+---
+#feedback definition
+uint32 current_waypoint""",
+    "nav2_msgs/action/NavigateThroughPoses": """#goal definition
+geometry_msgs/PoseStamped[] poses
+	std_msgs/Header header
+		builtin_interfaces/Time stamp
+			int32 sec
+			uint32 nanosec
+		string frame_id
+	Pose pose
+		Point position
+			float64 x
+			float64 y
+			float64 z
+		Quaternion orientation
+			float64 x 0
+			float64 y 0
+			float64 z 0
+			float64 w 1
+string behavior_tree
+---
+#result definition
+std_msgs/Empty result
+---
+#feedback definition
+geometry_msgs/PoseStamped current_pose
+	std_msgs/Header header
+		builtin_interfaces/Time stamp
+			int32 sec
+			uint32 nanosec
+		string frame_id
+	Pose pose
+		Point position
+			float64 x
+			float64 y
+			float64 z
+		Quaternion orientation
+			float64 x 0
+			float64 y 0
+			float64 z 0
+			float64 w 1
+builtin_interfaces/Duration navigation_time
+	int32 sec
+	uint32 nanosec
+builtin_interfaces/Duration estimated_time_remaining
+	int32 sec
+	uint32 nanosec
+int16 number_of_recoveries
+float32 distance_remaining
+int16 number_of_poses_remaining
+""",
+    "nav2_msgs/action/SmoothPath": """#goal definition
+nav_msgs/Path path
+	std_msgs/Header header
+		builtin_interfaces/Time stamp
+			int32 sec
+			uint32 nanosec
+		string frame_id
+	geometry_msgs/PoseStamped[] poses
+		std_msgs/Header header
+			builtin_interfaces/Time stamp
+				int32 sec
+				uint32 nanosec
+			string frame_id
+		Pose pose
+			Point position
+				float64 x
+				float64 y
+				float64 z
+			Quaternion orientation
+				float64 x 0
+				float64 y 0
+				float64 z 0
+				float64 w 1
+string smoother_id
+builtin_interfaces/Duration max_smoothing_duration
+	int32 sec
+	uint32 nanosec
+bool check_for_collisions
+---
+#result definition
+nav_msgs/Path path
+	std_msgs/Header header
+		builtin_interfaces/Time stamp
+			int32 sec
+			uint32 nanosec
+		string frame_id
+	geometry_msgs/PoseStamped[] poses
+		std_msgs/Header header
+			builtin_interfaces/Time stamp
+				int32 sec
+				uint32 nanosec
+			string frame_id
+		Pose pose
+			Point position
+				float64 x
+				float64 y
+				float64 z
+			Quaternion orientation
+				float64 x 0
+				float64 y 0
+				float64 z 0
+				float64 w 1
+builtin_interfaces/Duration smoothing_duration
+	int32 sec
+	uint32 nanosec
+bool was_completed
+---
+#feedback definition
+""",
+    "nav2_msgs/action/Wait": """#goal definition
+builtin_interfaces/Duration time
+	int32 sec
+	uint32 nanosec
+---
+#result definition
+builtin_interfaces/Duration total_elapsed_time
+	int32 sec
+	uint32 nanosec
+---
+#feedback definition
+builtin_interfaces/Duration time_left
+	int32 sec
+	uint32 nanosec""",
 }
 
 ACTION_MODELS: Dict[str, Type[BaseModel]] = {
     "nav2_msgs/action/NavigateToPose": NavigateToPoseGoal,
     "nav2_msgs/action/Spin": SpinGoal,
+    "nav2_msgs/action/AssistedTeleop": AssistedTeleopGoal,
+    "nav2_msgs/action/BackUp": BackUpGoal,
+    "nav2_msgs/action/ComputePathThroughPoses": ComputePathThroughPosesGoal,
+    "nav2_msgs/action/ComputePathToPose": ComputePathToPoseGoal,
+    "nav2_msgs/action/DriveOnHeading": DriveOnHeadingGoal,
+    "nav2_msgs/action/FollowPath": FollowPathGoal,
+    "nav2_msgs/action/FollowWaypoints": FollowWaypointsGoal,
+    "nav2_msgs/action/NavigateThroughPoses": NavigateThroughPosesGoal,
+    "nav2_msgs/action/SmoothPath": SmoothPathGoal,
+    "nav2_msgs/action/Wait": WaitGoal,
 }
 
 ACTION_STRINGS = [

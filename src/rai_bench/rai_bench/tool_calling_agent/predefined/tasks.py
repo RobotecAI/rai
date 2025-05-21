@@ -13,12 +13,17 @@
 # limitations under the License.
 
 import random
-from typing import List, Sequence
+from typing import List, Literal, Sequence
 
 from rai.tools.ros2 import MoveToPointToolInput
 
 from rai_bench.tool_calling_agent.interfaces import (
     Task,
+)
+from rai_bench.tool_calling_agent.subtasks import (
+    CheckActionFieldsToolCallSubTask,
+    CheckArgsToolCallSubTask,
+    CheckTopicFieldsToolCallSubTask,
 )
 from rai_bench.tool_calling_agent.tasks.basic import (
     GetAllROS2DepthCamerasTask,
@@ -43,103 +48,101 @@ from rai_bench.tool_calling_agent.tasks.spatial import (
     BoolImageTask,
     BoolImageTaskInput,
 )
-from rai_bench.tool_calling_agent.tasks.subtasks import (
-    CheckActionFieldsToolCallSubTask,
-    CheckArgsToolCallSubTask,
-    CheckTopicFieldsToolCallSubTask,
-)
 from rai_bench.tool_calling_agent.validators import (
     NotOrderedCallsValidator,
     OrderedCallsValidator,
 )
 
+IMG_PATH = "src/rai_bench/rai_bench/tool_calling_agent/predefined/images/"
 true_response_inputs: List[BoolImageTaskInput] = [
     BoolImageTaskInput(
         question="Is the door on the left from the desk?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_1.jpg"],
+        images_paths=[IMG_PATH + "image_1.jpg"],
     ),
     BoolImageTaskInput(
         question="Is the light on in the room?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_2.jpg"],
+        images_paths=[IMG_PATH + "image_2.jpg"],
     ),
     BoolImageTaskInput(
         question="Do you see the plant?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_2.jpg"],
+        images_paths=[IMG_PATH + "image_2.jpg"],
     ),
     BoolImageTaskInput(
         question="Are there any pictures on the wall?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_3.jpg"],
+        images_paths=[IMG_PATH + "image_3.jpg"],
     ),
     BoolImageTaskInput(
         question="Are there 3 pictures on the wall?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_4.jpg"],
+        images_paths=[IMG_PATH + "image_4.jpg"],
     ),
     BoolImageTaskInput(
         question="Is there a plant behind the rack?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_5.jpg"],
+        images_paths=[IMG_PATH + "image_5.jpg"],
     ),
     BoolImageTaskInput(
         question="Is there a pillow on the armchain?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_7.jpg"],
+        images_paths=[IMG_PATH + "image_7.jpg"],
     ),
 ]
 false_response_inputs: List[BoolImageTaskInput] = [
     BoolImageTaskInput(
         question="Is the door open?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_1.jpg"],
+        images_paths=[IMG_PATH + "image_1.jpg"],
     ),
     BoolImageTaskInput(
         question="Is someone in the room?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_1.jpg"],
+        images_paths=[IMG_PATH + "image_1.jpg"],
     ),
     BoolImageTaskInput(
         question="Do you see the plant?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_3.jpg"],
+        images_paths=[IMG_PATH + "image_3.jpg"],
     ),
     BoolImageTaskInput(
         question="Are there 4 pictures on the wall?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_4.jpg"],
+        images_paths=[IMG_PATH + "image_4.jpg"],
     ),
     BoolImageTaskInput(
         question="Is there a rack on the left from the sofa?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_4.jpg"],
+        images_paths=[IMG_PATH + "image_4.jpg"],
     ),
     BoolImageTaskInput(
         question="Is there a plant on the right from the window?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_6.jpg"],
+        images_paths=[IMG_PATH + "image_6.jpg"],
     ),
     BoolImageTaskInput(
         question="Is there a red pillow on the armchair?",
-        images_paths=["src/rai_bench/rai_bench/examples/images/image_7.jpg"],
+        images_paths=[IMG_PATH + "image_7.jpg"],
     ),
 ]
-
 ########## SUBTASKS #######################################################################################
 get_topics_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="get_ros2_topics_names_and_types", expected_args={}
 )
 
-color_image_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="get_ros2_image", expected_args={"topic": "/camera_image_color"}
-)
-depth_image_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="get_ros2_image", expected_args={"topic": "/camera_image_depth"}
-)
 color_image5_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="get_ros2_image", expected_args={"topic": "/color_image5"}
+    expected_tool_name="get_ros2_image",
+    expected_args={"topic": "/color_image5"},
+    expected_optional_args={"timeout_sec": int},
 )
 depth_image5_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="get_ros2_image", expected_args={"topic": "/depth_image5"}
+    expected_tool_name="get_ros2_image",
+    expected_args={"topic": "/depth_image5"},
+    expected_optional_args={"timeout_sec": int},
 )
 
 receive_robot_desc_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="receive_ros2_message",
     expected_args={"topic": "/robot_description"},
+    expected_optional_args={"timeout_sec": int},
 )
 
-move_to_point_subtask = CheckArgsToolCallSubTask(
+move_to_point_subtask_grab = CheckArgsToolCallSubTask(
     expected_tool_name="move_to_point",
     expected_args={"x": 1.0, "y": 2.0, "z": 3.0, "task": "grab"},
+)
+move_to_point_subtask_drop = CheckArgsToolCallSubTask(
+    expected_tool_name="move_to_point",
+    expected_args={"x": 1.2, "y": 2.3, "z": 3.4, "task": "drop"},
 )
 
 pub_HRIMessage_text_subtask = CheckTopicFieldsToolCallSubTask(
@@ -194,19 +197,24 @@ topics_ord_val = OrderedCallsValidator(subtasks=[get_topics_subtask])
 topics_and_color_image_ord_val = OrderedCallsValidator(
     subtasks=[
         get_topics_subtask,
-        color_image_subtask,
+        color_image5_subtask,
     ]
 )
-color_image_ord_val = OrderedCallsValidator(subtasks=[color_image_subtask])
-depth_image_ord_val = OrderedCallsValidator(subtasks=[depth_image_subtask])
+color_image_ord_val = OrderedCallsValidator(subtasks=[color_image5_subtask])
+depth_image_ord_val = OrderedCallsValidator(subtasks=[depth_image5_subtask])
 all_color_images_notord_val = NotOrderedCallsValidator(
-    subtasks=[color_image_subtask, color_image5_subtask]
+    subtasks=[color_image5_subtask, color_image5_subtask]
 )
 all_depth_images_notord_val = NotOrderedCallsValidator(
-    subtasks=[depth_image_subtask, depth_image5_subtask]
+    subtasks=[depth_image5_subtask, depth_image5_subtask]
 )
 
-move_to_point_ord_val = OrderedCallsValidator(subtasks=[move_to_point_subtask])
+move_to_point_ord_val_grab = OrderedCallsValidator(
+    subtasks=[move_to_point_subtask_grab]
+)
+move_to_point_ord_val_drop = OrderedCallsValidator(
+    subtasks=[move_to_point_subtask_drop]
+)
 
 pub_HRIMessage_text_ord_val = OrderedCallsValidator(
     subtasks=[pub_HRIMessage_text_subtask]
@@ -251,11 +259,11 @@ basic_tasks: List[Task] = [
 manipulation_tasks: List[Task] = [
     MoveToPointTask(
         move_to_tool_input=MoveToPointToolInput(x=1.0, y=2.0, z=3.0, task="grab"),
-        validators=[move_to_point_ord_val],
+        validators=[move_to_point_ord_val_drop],
     ),
     MoveToPointTask(
         move_to_tool_input=MoveToPointToolInput(x=1.2, y=2.3, z=3.4, task="drop"),
-        validators=[move_to_point_ord_val],
+        validators=[move_to_point_ord_val_drop],
     ),
 ]
 
@@ -355,12 +363,12 @@ def get_manipulation_tasks(extra_tool_calls: int = 0) -> List[Task]:
     return [
         MoveToPointTask(
             move_to_tool_input=MoveToPointToolInput(x=1.0, y=2.0, z=3.0, task="grab"),
-            validators=[move_to_point_ord_val],
+            validators=[move_to_point_ord_val_grab],
             extra_tool_calls=extra_tool_calls,
         ),
         MoveToPointTask(
             move_to_tool_input=MoveToPointToolInput(x=1.2, y=2.3, z=3.4, task="drop"),
-            validators=[move_to_point_ord_val],
+            validators=[move_to_point_ord_val_drop],
             extra_tool_calls=extra_tool_calls,
         ),
     ]
@@ -403,13 +411,37 @@ def get_spatial_tasks(extra_tool_calls: int = 0) -> Sequence[Task]:
     return true_tasks + false_tasks
 
 
-def get_all_tasks(extra_tool_calls: int = 0) -> List[Task]:
+def get_tasks(
+    extra_tool_calls: int = 0,
+    complexities: List[Literal["easy", "medium", "hard"]] = ["easy", "medium", "hard"],
+    task_types: List[
+        Literal[
+            "basic",
+            "manipulation",
+            "navigation",
+            "custom_interfaces",
+            "spatial_reasoning",
+        ]
+    ] = [
+        "basic",
+        "manipulation",
+        "navigation",
+        "custom_interfaces",
+        "spatial_reasoning",
+    ],
+) -> List[Task]:
+    # TODO (jmatejcz) implement complexity sorting
     tasks: List[Task] = []
-    tasks += get_basic_tasks(extra_tool_calls=extra_tool_calls)
-    tasks += get_custom_interfaces_tasks(extra_tool_calls=extra_tool_calls)
-    tasks += get_manipulation_tasks(extra_tool_calls=extra_tool_calls)
-    tasks += get_navigation_tasks(extra_tool_calls=extra_tool_calls)
-    tasks += get_spatial_tasks(extra_tool_calls=extra_tool_calls)
+    if "basic" in task_types:
+        tasks += get_basic_tasks(extra_tool_calls=extra_tool_calls)
+    if "custom_interfaces" in task_types:
+        tasks += get_custom_interfaces_tasks(extra_tool_calls=extra_tool_calls)
+    if "manipulation" in task_types:
+        tasks += get_manipulation_tasks(extra_tool_calls=extra_tool_calls)
+    if "navigation" in task_types:
+        tasks += get_navigation_tasks(extra_tool_calls=extra_tool_calls)
+    if "spatial_reasoning" in task_types:
+        tasks += get_spatial_tasks(extra_tool_calls=extra_tool_calls)
 
     random.shuffle(tasks)
     return tasks

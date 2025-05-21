@@ -19,6 +19,7 @@ import pandas as pd
 from rai_bench.results_processing.data_loading import (
     BenchmarkResults,
     ModelResults,
+    RunResults,
 )
 from rai_bench.tool_calling_agent.results_tracking import (
     TaskResult,
@@ -42,14 +43,20 @@ def create_model_summary_dataframe(benchmark: BenchmarkResults) -> pd.DataFrame:
     rows: List[Dict[str, Any]] = []
 
     for model_name, model_results in benchmark.models.items():
-        rows.append(
-            {
-                "model_name": model_name,
-                "avg_success_rate": model_results.avg_success_rate,
-                "avg_time": model_results.avg_time,
-                "total_extra_tool_calls_used": model_results.avg_extra_tool_calls,
-            }
-        )
+        metrics: Dict[str, Any] = {
+            "model_name": model_name,
+            "avg_success_rate": model_results.avg_success_rate,
+            "avg_time": model_results.avg_time,
+            "total_tasks": model_results.total_tasks,
+        }
+
+        benchmark_name = benchmark.benchmark_name
+        if benchmark_name == "tool_calling_agent" and hasattr(
+            model_results, "avg_extra_tool_calls"
+        ):
+            metrics["total_extra_tool_calls_used"] = model_results.avg_extra_tool_calls
+
+        rows.append(metrics)
 
     return pd.DataFrame(rows)
 
@@ -97,9 +104,10 @@ def create_extra_calls_dataframe(
             {
                 "model_name": model_name,
                 "extra_tool_calls": extra_calls,
-                "avg_success_rate": avg_score,
+                "avg_success_rate": avg_score * 100,
                 "avg_time": avg_time,
                 "avg_extra_tool_calls_used": avg_extra_tool_calls,
+                "total_tasks": len(filtered_results),
             }
         )
 
@@ -151,12 +159,14 @@ def create_task_metrics_dataframe(
             for result in all_detailed_results
         ]
     )
+    total_tasks = temp_df.groupby(group_by).size().reset_index(name="total_tasks")  # type: ignore
+    agg_dict = {
+        "score": "mean",
+        "total_time": "mean",
+        "extra_tool_calls_used": "mean",
+    }
 
-    grouped = (
-        temp_df.groupby(group_by)  # type: ignore
-        .agg({"score": "mean", "total_time": "mean", "extra_tool_calls_used": "mean"})
-        .reset_index()
-    )
+    grouped = temp_df.groupby(group_by).agg(agg_dict).reset_index()  # type: ignore
 
     grouped = grouped.rename(
         columns={
@@ -165,6 +175,7 @@ def create_task_metrics_dataframe(
             "extra_tool_calls_used": "avg_extra_tool_calls",
         }
     )
+    grouped = pd.merge(grouped, total_tasks, on=group_by, how="left")  # type: ignore
 
     return grouped
 
@@ -390,3 +401,74 @@ def analyze_subtasks(
         error_df = error_df.sort_values("count", ascending=False).reset_index(drop=True)  # type: ignore
 
     return subtask_df, tool_name_df, error_df
+
+
+def create_aggregate_model_metrics(run_results: RunResults) -> pd.DataFrame:
+    """
+    Create a dataframe with aggregated metrics for each model across all benchmarks.
+
+    Parameters
+    ----------
+    run_results : RunResults
+        The RunResults object containing all benchmark data
+
+    Returns
+    -------
+    pd.DataFrame
+        A dataframe with aggregated metrics for each model
+    """
+    # Dictionary to store aggregated metrics for each model
+    model_metrics: Dict[str, Dict[str, Any]] = {}
+
+    for benchmark_name, benchmark in run_results.benchmarks.items():
+        for model_name, model_results in benchmark.models.items():
+            if not model_results.check_if_summaries_present():
+                continue
+
+            if model_name not in model_metrics:
+                model_metrics[model_name] = {
+                    "success_rate_sum": 0.0,
+                    "time_sum": 0.0,
+                    "total_tasks": 0,
+                    "count": 0,
+                }
+
+            # Sum up metrics for this model from this benchmark
+            metrics = model_metrics[model_name]
+            metrics["success_rate_sum"] += (
+                model_results.avg_success_rate * model_results.count
+            )
+            metrics["time_sum"] += model_results.avg_time * model_results.count
+            metrics["count"] += model_results.count
+            metrics["total_tasks"] += model_results.total_tasks
+
+            # Benchmark specific metrics
+            if benchmark_name == "tool_calling_agent":
+                if hasattr(model_results, "extra_tool_calls_sum"):
+                    metrics["extra_tool_calls_sum"] += (
+                        model_results.avg_extra_tool_calls * model_results.count
+                    )
+                else:
+                    metrics["extra_tool_calls_sum"] = (
+                        model_results.avg_extra_tool_calls * model_results.count
+                    )
+    # Convert to dataframe and calculate averages
+    result_data: List[Dict[str, Any]] = []
+    for model_name, metrics in model_metrics.items():
+        count = metrics["count"]
+        if count > 0:
+            avgs: Dict[str, Any] = {
+                "model_name": model_name,
+                "avg_success_rate": (metrics["success_rate_sum"] / count),
+                "avg_time": metrics["time_sum"] / count,
+                "count": count,
+                "total_tasks": metrics["total_tasks"],
+            }
+            if "extra_tool_calls_sum" in metrics:
+                avgs["avg_extra_tool_calls"] = (
+                    metrics["extra_tool_calls_sum"] / count,
+                )
+
+            result_data.append(avgs)
+
+    return pd.DataFrame(result_data)

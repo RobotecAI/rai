@@ -14,23 +14,28 @@
 
 import csv
 import logging
+import signal
+import types
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Optional
 
 from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, Field
 
 
-class BenchmarkSummary(BaseModel):
+class RunSummary(BaseModel):
     model_name: str = Field(..., description="Name of the LLM.")
     success_rate: float = Field(
         ..., description="Percentage of successfully completed tasks."
     )
     avg_time: float = Field(..., description="Average time taken across all tasks.")
-    total_extra_tool_calls_used: int = Field(
-        ..., description="Total number of extra tool calls used in this Task"
-    )
     total_tasks: int = Field(..., description="Total number of executed tasks.")
+
+
+class TimeoutException(Exception):
+    pass
 
 
 class BaseBenchmark(ABC):
@@ -76,9 +81,7 @@ class BaseBenchmark(ABC):
             Pydantic model class to be used for creating the columns in the CSV file.
         """
         with open(filename, mode="w", newline="", encoding="utf-8") as file:
-            writer = csv.DictWriter(
-                file, fieldnames=base_model_cls.__annotations__.keys()
-            )
+            writer = csv.DictWriter(file, fieldnames=base_model_cls.model_fields.keys())
             writer.writeheader()
 
     @staticmethod
@@ -102,7 +105,7 @@ class BaseBenchmark(ABC):
 
         with open(filename, mode="a", newline="", encoding="utf-8") as file:
             writer = csv.DictWriter(
-                file, fieldnames=base_model_instance.__annotations__.keys()
+                file, fieldnames=base_model_instance.model_fields.keys()
             )
             writer.writerow(row)
 
@@ -119,7 +122,21 @@ class BaseBenchmark(ABC):
 
     @abstractmethod
     def compute_and_save_summary(self) -> None:
+        # TODO (jmatejcz) this can be probably same for all benchmark in the future
         """Compute summary statistics and save them to the summary file."""
         pass
 
-    # TODO (jm) this can be probably same for all benchmark in the future
+    @contextmanager
+    def time_limit(self, seconds: int):
+        def signal_handler(signum: int, frame: Optional[types.FrameType]):
+            raise TimeoutException(f"Timed out after {seconds} seconds!")
+
+        # Set the timeout handler
+        signal.signal(signal.SIGALRM, signal_handler)
+        signal.alarm(seconds)
+
+        try:
+            yield
+        finally:
+            # Reset the alarm
+            signal.alarm(0)

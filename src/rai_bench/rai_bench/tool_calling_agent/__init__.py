@@ -13,6 +13,6 @@
 # limitations under the License.
 
 from .benchmark import run_benchmark
-from .predefined.scenarios import get_scenarios
+from .predefined.tasks import get_tasks
 
-__all__ = ["get_scenarios", "run_benchmark"]
+__all__ = ["get_tasks", "run_benchmark"]

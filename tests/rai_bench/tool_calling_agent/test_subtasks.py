@@ -18,7 +18,7 @@ import pytest
 from langchain_core.messages import ToolCall
 
 from rai_bench.tool_calling_agent.interfaces import SubTask, SubTaskValidationError
-from rai_bench.tool_calling_agent.tasks.subtasks import (
+from rai_bench.tool_calling_agent.subtasks import (
     CheckActionFieldsToolCallSubTask,
     CheckArgsToolCallSubTask,
     CheckServiceFieldsToolCallSubTask,

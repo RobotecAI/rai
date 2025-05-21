@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import logging
 import statistics
 import time
@@ -23,21 +22,24 @@ from langchain_core.messages import BaseMessage
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
+from rai.agents.langchain.core import create_conversational_agent
 from rai.messages import HumanMultimodalMessage
 
-from rai_bench.base_benchmark import BaseBenchmark, BenchmarkSummary
+from rai_bench.base_benchmark import BaseBenchmark, TimeoutException
+from rai_bench.results_processing.langfuse_scores_tracing import ScoreTracingHandler
 from rai_bench.tool_calling_agent.interfaces import (
     Task,
 )
 from rai_bench.tool_calling_agent.results_tracking import (
-    ScoreTracingHandler,
     TaskResult,
+    ToolCallingAgentRunSummary,
 )
 from rai_bench.tool_calling_agent.tasks.spatial import (
     SpatialReasoningAgentTask,
 )
-
-loggers_type = logging.Logger
+from rai_bench.utils import (
+    get_llm_for_benchmark,
+)
 
 
 class ToolCallingAgentBenchmark(BaseBenchmark):
@@ -97,33 +99,39 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         messages: List[BaseMessage] = []
         prev_count: int = 0
         try:
-            if isinstance(task, SpatialReasoningAgentTask):
-                for state in agent.stream(
-                    {
-                        "messages": [
-                            HumanMultimodalMessage(
-                                content=task.get_prompt(), images=task.get_images()
-                            )
-                        ]
-                    },
-                    config=config,
-                ):
-                    node = next(iter(state))
-                    all_messages = state[node]["messages"]
-                    for new_msg in all_messages[prev_count:]:
-                        messages.append(new_msg)
-                    prev_count = len(messages)
-            else:
-                for state in agent.stream(
-                    {"messages": [HumanMultimodalMessage(content=task.get_prompt())]},
-                    config=config,
-                ):
-                    node = next(iter(state))
-                    all_messages = state[node]["messages"]
-                    for new_msg in all_messages[prev_count:]:
-                        messages.append(new_msg)
-                    prev_count = len(messages)
-
+            with self.time_limit(60):
+                if isinstance(task, SpatialReasoningAgentTask):
+                    for state in agent.stream(
+                        {
+                            "messages": [
+                                HumanMultimodalMessage(
+                                    content=task.get_prompt(), images=task.get_images()
+                                )
+                            ]
+                        },
+                        config=config,
+                    ):
+                        node = next(iter(state))
+                        all_messages = state[node]["messages"]
+                        for new_msg in all_messages[prev_count:]:
+                            messages.append(new_msg)
+                        prev_count = len(messages)
+                else:
+                    for state in agent.stream(
+                        {
+                            "messages": [
+                                HumanMultimodalMessage(content=task.get_prompt())
+                            ]
+                        },
+                        config=config,
+                    ):
+                        node = next(iter(state))
+                        all_messages = state[node]["messages"]
+                        for new_msg in all_messages[prev_count:]:
+                            messages.append(new_msg)
+                        prev_count = len(messages)
+        except TimeoutException as e:
+            self.logger.error(msg=f"Task timeout: {e}")
         except GraphRecursionError as e:
             self.logger.error(msg=f"Reached recursion limit {e}")
 
@@ -141,13 +149,6 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         total_extra_calls: int = 0
         for validator_info in validation_info:
             total_extra_calls += validator_info.extra_tool_calls_used
-        for callback in callbacks:
-            self.score_tracing_handler.send_score(
-                callback=callback,
-                run_id=run_id,
-                score=score,
-                errors=errors,
-            )
 
         self.logger.info(f"TASK SCORE: {score}, TOTAL TIME: {total_time:.3f}")
 
@@ -171,6 +172,14 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         # computing after every iteration in case of early stopping
         self.compute_and_save_summary()
 
+        for callback in callbacks:
+            self.score_tracing_handler.send_score(
+                callback=callback,
+                run_id=run_id,
+                score=score,
+                errors=errors,
+            )
+
     def compute_and_save_summary(self):
         self.logger.info("Computing and saving average results...")
 
@@ -179,12 +188,44 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         avg_time = statistics.mean(r.total_time for r in self.task_results)
         total_extra_calls = sum(r.extra_tool_calls_used for r in self.task_results)
 
-        summary = BenchmarkSummary(
+        summary = ToolCallingAgentRunSummary(
             model_name=self.model_name,
             success_rate=round(success_rate, 2),
             avg_time=round(avg_time, 3),
             total_extra_tool_calls_used=total_extra_calls,
             total_tasks=len(self.task_results),
         )
-        self.csv_initialize(self.summary_filename, BenchmarkSummary)
+        self.csv_initialize(self.summary_filename, ToolCallingAgentRunSummary)
         self.csv_writerow(self.summary_filename, summary)
+
+
+def run_benchmark(
+    model_name: str,
+    vendor: str,
+    out_dir: str,
+    tasks: List[Task],
+    bench_logger: logging.Logger,
+):
+    experiment_dir = Path(out_dir)
+    experiment_dir.mkdir(parents=True, exist_ok=True)
+
+    benchmark = ToolCallingAgentBenchmark(
+        tasks=tasks,
+        logger=bench_logger,
+        model_name=model_name,
+        results_dir=experiment_dir,
+    )
+
+    llm = get_llm_for_benchmark(model_name=model_name, vendor=vendor)
+    for task in tasks:
+        agent = create_conversational_agent(
+            llm=llm,
+            tools=task.available_tools,
+            system_prompt=task.get_system_prompt(),
+            logger=bench_logger,
+        )
+        benchmark.run_next(agent=agent)
+
+    bench_logger.info("===============================================================")
+    bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
+    bench_logger.info("===============================================================")
