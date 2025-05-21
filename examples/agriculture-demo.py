@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import argparse
-from threading import Timer
 
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import Runnable, RunnableConfig
@@ -26,7 +25,6 @@ from rai.agents.langchain.core import (
 from rai.communication.ros2 import (
     ROS2Connector,
     ROS2Context,
-    ROS2Message,
     wait_for_ros2_services,
     wait_for_ros2_topics,
 )
@@ -52,12 +50,11 @@ class SafetyAgent(BaseAgent):
         self.working = False
         self.langchain_callbacks = get_tracing_callbacks()
 
-        self.timer = Timer(interval=1.0, function=self.check_tractor_state)
         self.logger.info(f"{self.__class__.__name__} initialized")
 
     def run(self):
         self.logger.info(f"{self.__class__.__name__} running")
-        self.timer.start()
+        self.timer = self.connector.node.create_timer(1.0, self.check_tractor_state)
 
     def stop(self):
         self.logger.info(f"{self.__class__.__name__} stopping")
@@ -66,28 +63,47 @@ class SafetyAgent(BaseAgent):
 
     def check_tractor_state(self):
         """Check the current state of the tractor and call the RAI agent if the tractor has stopped."""
-        response: Trigger.Response = self.connector.service_call(
-            msg_type="std_srvs/srv/Trigger",
-            message=ROS2Message(payload={}),
-            target=f"/tractor{self.tractor_number}/current_state",
-        ).payload
+        # NOTE(@boczekbartek): this demo calls a ros2 service in a timer. Until
+        # https://github.com/ros2/rclpy/issues/1018 is resolved it's hard to
+        # retrieve a service result in a timer.
+        self.logger.info("Checking tractor state")
+        if not self.working:
+            client = self.connector.node.create_client(
+                Trigger, f"/tractor{self.tractor_number}/current_state"
+            )
+            while not client.wait_for_service(timeout_sec=1.0):
+                self.logger.info("service not available")
+            request = Trigger.Request()
+            future = client.call_async(request)
+            future.add_done_callback(self.callback)
+
+    def callback(self, future):
+        try:
+            response = future.result()
+            self.logger.info(f"[callback] Response: {response.message}")
+        except Exception as e:
+            self.logger.info(f"Service call failed {e}")
+            return
+
         if not self.working:
             self.logger.info(f"Tractor {self.tractor_number} state: {response.message}")
 
         if "STOPPED" in response.message and not self.working:
             self.logger.info("---------- RAI Agent invoked ----------")
             self.working = True
-            self.agent.invoke(
-                ConversationalAgentState(
-                    messages=[
-                        HumanMessage(
-                            content="Anomaly has been detected. The tractor has stopped. Please decide what to do."
-                        )
-                    ]
-                ),
-                config=RunnableConfig(callbacks=self.langchain_callbacks),
-            )
-            self.working = False
+            try:
+                self.agent.invoke(
+                    ConversationalAgentState(
+                        messages=[
+                            HumanMessage(
+                                content="Anomaly has been detected. The tractor has stopped. Please decide what to do."
+                            )
+                        ]
+                    ),
+                    config=RunnableConfig(callbacks=self.langchain_callbacks),
+                )
+            finally:
+                self.working = False
             self.logger.info("---------- RAI Agent done ----------")
 
 
