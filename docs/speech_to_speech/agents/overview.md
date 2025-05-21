@@ -12,7 +12,7 @@ Agents in RAI are modular components that encapsulate specific functionalities a
 
 ??? info "SpeechToSpeechAgent class definition"
 
-    ::: rai_s2s.s2s.agents.s2s_agent.SpeechToSpeechAgent
+    ::: rai_s2s.s2s.agents.SpeechToSpeechAgent
 
 ### Communication
 
