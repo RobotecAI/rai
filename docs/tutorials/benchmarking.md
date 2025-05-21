@@ -1,12 +1,13 @@
 # Benchmarking
 
 !!! note
-If you aren't familiar with our benchmark package, please read [RAI Bench](../simulation_and_benchmarking/rai_bench.md) first.
+
+    If you aren't familiar with our benchmark package, please read [RAI Bench](../simulation_and_benchmarking/rai_bench.md) first.
 
 Currently we offer 2 predefined benchmarks:
 
-- [Manipulation_O3DE](#manipulation-o3de)
-- [Tool_Calling_Agent](#tool-calling-agent)
+-   [Manipulation_O3DE](#manipulation-o3de)
+-   [Tool_Calling_Agent](#tool-calling-agent)
 
 If you want to test multiple models across diffrent benchmark configurations to go [Testing Models](#testing-models)
 
@@ -14,7 +15,7 @@ If your goal is creating custom tasks and scenarios visit [Creating Custom Tasks
 
 ## Manipulation O3DE
 
--   Follow setup from [Manipulation demo Setup](../../docs/demos/manipulation.md#setup)
+-   Follow setup from [Manipulation demo Setup](../demos/manipulation.md#setup)
 -   Create the o3de config:
     ```yaml
     binary_path: /path/to/binary/RAIManipulationDemo.GameLauncher
@@ -44,18 +45,20 @@ If your goal is creating custom tasks and scenarios visit [Creating Custom Tasks
     ```
 
     !!! warning
-    Running all scenarios will take a while. If you want to just try it out, we recommend chosing just one level of difficulty.
+
+        Running all scenarios will take a while. If you want to just try it out, we recommend chosing just one level of difficulty.
 
 ## Tool Calling Agent
 
-This benchmark does not require any additinal setup besides the main one [Basic Setup](../../docs/setup/install.md), just run:
+This benchmark does not require any additinal setup besides the main one [Basic Setup](../setup/install.md), just run:
 
 ```bash
 python src/rai_bench/rai_bench/examples/tool_calling_agent.py --model-name <model-name> --vendor <vendor> --extra-tool-calls <5> --task-types <basic> --out-dir <out_dir>
 ```
 
 !!! note
-This Benchmark is significantly faster, but still if just trying out, we recommned chosing just one task-type
+
+    This Benchmark is significantly faster, but still if just trying out, we recommned chosing just one task-type
 
 ## Testing Models
 
