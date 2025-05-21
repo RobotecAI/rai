@@ -44,7 +44,7 @@ git clone https://github.com/RobotecAI/rai.git
 cd rai
 ```
 
-### 1.3 Import ROS 2 Dependencies (e.g. [rai_interfaces](https://github.com/RobotecAI/rai_interfaces))
+### 1.3 Download [rai_interfaces](https://github.com/RobotecAI/rai_interfaces)
 
 ```bash
 vcs import < ros_deps.repos
