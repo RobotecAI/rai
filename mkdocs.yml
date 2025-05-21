@@ -32,7 +32,7 @@ plugins:
 - mkdocstrings:
     handlers:
       python:
-        paths: [src]
+        paths: [src, src/s2s]
         options:
           docstring_style: numpy
           show_root_heading: true
