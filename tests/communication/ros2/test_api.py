@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import random
 import threading
 import time
+from multiprocessing import Pool
+from typing import List
 from unittest.mock import MagicMock
 
 import pytest
@@ -149,6 +152,80 @@ def test_ros2_service_single_call(
         )
         assert response.success
         assert response.message == "Test service called"
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def service_call_helper(service_name: str, service_api: ROS2ServiceAPI):
+    time.sleep(random.random() * 0.3)  # introduce random delay to simulate delays
+    response = service_api.call_service(
+        service_name,
+        service_type="std_srvs/srv/SetBool",
+        request={"data": True},
+    )
+    assert response.success
+    assert response.message == "Test service called"
+
+
+def test_ros2_service_multiple_calls(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    service_name = f"{request.node.originalname}_service"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    service_server = ServiceServer(service_name)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([service_server, node])
+
+    try:
+        service_api = ROS2ServiceAPI(node)
+        for _ in range(3):
+            service_call_helper(service_name, service_api)
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_service_multiple_calls_at_the_same_time_threading(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    service_name = f"{request.node.originalname}_service"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    service_server = ServiceServer(service_name)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([service_server, node])
+
+    try:
+        service_api = ROS2ServiceAPI(node)
+        service_threads: List[threading.Thread] = []
+        for _ in range(10):
+            thread = threading.Thread(
+                target=service_call_helper, args=(service_name, service_api)
+            )
+            service_threads.append(thread)
+            thread.start()
+
+        # Wait for all service threads to complete
+        for thread in service_threads:
+            thread.join()
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+@pytest.mark.skip(reason="As of now, multiprocessing does not work with ROS2API")
+def test_ros2_service_multiple_calls_at_the_same_time_multiprocessing(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    service_name = f"{request.node.originalname}_service"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    service_server = ServiceServer(service_name)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([service_server, node])
+
+    try:
+        service_api = ROS2ServiceAPI(node)
+        with Pool(10) as pool:
+            pool.map(
+                lambda _: service_call_helper(service_name, service_api), range(10)
+            )
     finally:
         shutdown_executors_and_threads(executors, threads)
 

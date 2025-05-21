@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import random
 import threading
 import time
 from typing import Any, Generator, List, Tuple
@@ -71,6 +72,7 @@ class ServiceServer(Node):
     def handle_test_service(
         self, request: SetBool.Request, response: SetBool.Response
     ) -> SetBool.Response:
+        time.sleep(random.random())
         response.success = True
         response.message = "Test service called"
         return response
