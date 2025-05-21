@@ -38,6 +38,9 @@ jobs:
       - name: Install python dependencies
         run: poetry install --with docs
 
+      - name: Install rai packages
+        run: poetry run pip install src/rai_core src/rai_sim src/rai_bench src/rai_s2s --no-deps
+
       - name: Build and Deploy
         shell: bash
         run: |
