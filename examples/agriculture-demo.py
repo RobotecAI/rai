@@ -13,7 +13,8 @@
 # limitations under the License.
 
 import argparse
-from threading import Timer
+import threading
+import time
 
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import Runnable, RunnableConfig
@@ -44,6 +45,7 @@ class SafetyAgent(BaseAgent):
         agent: Runnable[ConversationalAgentState, ConversationalAgentState],
         connector: ROS2Connector,
         tractor_number: int,
+        interval: float = 1.0,
     ):
         super().__init__()
         self.agent = agent
@@ -52,20 +54,31 @@ class SafetyAgent(BaseAgent):
         self.working = False
         self.langchain_callbacks = get_tracing_callbacks()
 
-        self.timer = Timer(interval=1.0, function=self.check_tractor_state)
+        self.stop_event = threading.Event()
+        self.thread = threading.Thread(target=self.loop)
+        self.loop_interval = interval
         self.logger.info(f"{self.__class__.__name__} initialized")
 
     def run(self):
+        self.stop_event.clear()
         self.logger.info(f"{self.__class__.__name__} running")
-        self.timer.start()
+        self.thread.start()
+
+    def loop(self):
+        while True:
+            self.check_tractor_state()
+            time.sleep(self.loop_interval)
+            if self.stop_event.is_set():
+                break
 
     def stop(self):
         self.logger.info(f"{self.__class__.__name__} stopping")
-        self.timer.cancel()
+        self.stop_event.set()
         self.logger.info(f"{self.__class__.__name__} stopped")
 
     def check_tractor_state(self):
         """Check the current state of the tractor and call the RAI agent if the tractor has stopped."""
+        self.logger.info("Checking tractor state...")
         response: Trigger.Response = self.connector.service_call(
             msg_type="std_srvs/srv/Trigger",
             message=ROS2Message(payload={}),
