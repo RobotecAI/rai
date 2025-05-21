@@ -28,6 +28,11 @@ from rai.communication.ros2 import (
     ROS2HRIMessage,
     ROS2Message,
 )
+from rclpy.callback_groups import (
+    CallbackGroup,
+    MutuallyExclusiveCallbackGroup,
+    ReentrantCallbackGroup,
+)
 from std_msgs.msg import String
 from std_srvs.srv import SetBool
 
@@ -92,9 +97,16 @@ def service_call_helper(service_name: str, connector: ROS2Connector):
     )
 
 
-def test_ros2_connector_service_call(ros_setup: None, request: pytest.FixtureRequest):
+@pytest.mark.parametrize(
+    "callback_group",
+    [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
+    ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
+)
+def test_ros2_connector_service_call(
+    ros_setup: None, request: pytest.FixtureRequest, callback_group: CallbackGroup
+):
     service_name = f"{request.node.originalname}_service"  # type: ignore
-    message_receiver = ServiceServer(service_name)
+    message_receiver = ServiceServer(service_name, callback_group)
     executors, threads = multi_threaded_spinner([message_receiver])
     connector = ROS2Connector()
     try:
@@ -104,11 +116,16 @@ def test_ros2_connector_service_call(ros_setup: None, request: pytest.FixtureReq
         shutdown_executors_and_threads(executors, threads)
 
 
+@pytest.mark.parametrize(
+    "callback_group",
+    [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
+    ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
+)
 def test_ros2_connector_service_call_multiple_calls(
-    ros_setup: None, request: pytest.FixtureRequest
+    ros_setup: None, request: pytest.FixtureRequest, callback_group: CallbackGroup
 ):
     service_name = f"{request.node.originalname}_service"  # type: ignore
-    message_receiver = ServiceServer(service_name)
+    message_receiver = ServiceServer(service_name, callback_group)
     executors, threads = multi_threaded_spinner([message_receiver])
     connector = ROS2Connector()
     try:
@@ -119,11 +136,16 @@ def test_ros2_connector_service_call_multiple_calls(
         shutdown_executors_and_threads(executors, threads)
 
 
+@pytest.mark.parametrize(
+    "callback_group",
+    [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
+    ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
+)
 def test_ros2_connector_service_call_multiple_calls_at_the_same_time_threading(
-    ros_setup: None, request: pytest.FixtureRequest
+    ros_setup: None, request: pytest.FixtureRequest, callback_group: CallbackGroup
 ):
     service_name = f"{request.node.originalname}_service"  # type: ignore
-    message_receiver = ServiceServer(service_name)
+    message_receiver = ServiceServer(service_name, callback_group)
     executors, threads = multi_threaded_spinner([message_receiver])
     connector = ROS2Connector()
     try:
@@ -143,11 +165,16 @@ def test_ros2_connector_service_call_multiple_calls_at_the_same_time_threading(
 
 
 @pytest.mark.skip(reason="As of now, multiprocessing does not work with ROS2Connector.")
+@pytest.mark.parametrize(
+    "callback_group",
+    [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
+    ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
+)
 def test_ros2_connector_service_call_multiple_calls_at_the_same_time_multiprocessing(
-    ros_setup: None, request: pytest.FixtureRequest
+    ros_setup: None, request: pytest.FixtureRequest, callback_group: CallbackGroup
 ):
     service_name = f"{request.node.originalname}_service"  # type: ignore
-    message_receiver = ServiceServer(service_name)
+    message_receiver = ServiceServer(service_name, callback_group)
     executors, threads = multi_threaded_spinner([message_receiver])
     connector = ROS2Connector()
     try:

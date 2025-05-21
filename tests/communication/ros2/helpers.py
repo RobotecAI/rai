@@ -15,7 +15,7 @@
 import random
 import threading
 import time
-from typing import Any, Generator, List, Tuple
+from typing import Any, Generator, List, Optional, Tuple
 
 import numpy as np
 import pytest
@@ -25,7 +25,7 @@ from nav2_msgs.action import NavigateToPose
 from pydub import AudioSegment
 from rclpy.action import ActionClient, ActionServer, CancelResponse, GoalResponse
 from rclpy.action.server import ServerGoalHandle
-from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.callback_groups import CallbackGroup, ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from sensor_msgs.msg import Image
@@ -65,9 +65,16 @@ class HRIMessageSubscriber(Node):
 
 
 class ServiceServer(Node):
-    def __init__(self, service_name: str):
+    def __init__(
+        self, service_name: str, callback_group: Optional[CallbackGroup] = None
+    ):
         super().__init__("test_service_server")
-        self.srv = self.create_service(SetBool, service_name, self.handle_test_service)
+        self.srv = self.create_service(
+            SetBool,
+            service_name,
+            self.handle_test_service,
+            callback_group=callback_group,
+        )
 
     def handle_test_service(
         self, request: SetBool.Request, response: SetBool.Response
