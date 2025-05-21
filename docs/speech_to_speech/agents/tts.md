@@ -73,7 +73,6 @@ The `TextToSpeechAgent` interacts with the following core components:
 ## See Also
 
 -   [BaseAgent](../agents/overview.md#baseagent): Abstract base for all agents in RAI
--   [SoundDeviceConnector](../connectors/sound_device_connector.md): For details on speaker configuration and streaming
--   [Text-to-Speech Models](../models/tts_models.md): Supported TTS engines and usage
--   [ROS2 HRI Messaging](../connectors/ros2_connector.md): Interfacing with `/to_human` and `/voice_commands`
--   [Agent Configuration](../configuration/overview.md): Configuring TTS agents using YAML
+-   [SoundDeviceConnector](../sounddevice.md): For details on speaker configuration and streaming
+-   [Text-to-Speech Models](../models/overview.md): Supported TTS engines and usage
+-   [ROS2 HRI Messaging](../../API_documentation/connectors/ROS_2_Connectors.md): Interfacing with `/to_human` and `/voice_commands`

@@ -77,7 +77,7 @@ The `SpeechRecognitionAgent` typically interacts with the following components:
 
 ## See Also
 
--   [BaseAgent](../agents/overview.md): Abstract agent class providing lifecycle and logging support.
--   [ROS2 Connectors](../connectors/ros2_connector.md): Communication layer for ROS2 topics.
+-   [BaseAgent](../../API_documentation/agents/overview.md): Abstract agent class providing lifecycle and logging support.
+-   [ROS2 Connectors](../../API_documentation/connectors/ROS_2_Connectors.md): Communication layer for ROS2 topics.
 -   [Models](../models/overview.md): For available voice based models and instructions for creating new ones.
 -   [TextToSpeech](tts.md): For TextToSpeechAgent meant for distributed deployment.

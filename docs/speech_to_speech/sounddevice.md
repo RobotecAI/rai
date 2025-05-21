@@ -97,5 +97,5 @@ connector.terminate_action(action_handle)
 
 ## See Also
 
--   [Connectors Overview](./overview.md)
--   [Agents](../agents/overview.md)
+-   [Connectors Overview](../API_documentation/connectors/overview.md)
+-   [Agents](../API_documentation/agents/overview.md)

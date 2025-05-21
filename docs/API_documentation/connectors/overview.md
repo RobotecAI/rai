@@ -40,10 +40,9 @@ Extends BaseConnector with Human-Robot Interaction capabilities:
 
 ### Concrete Implementations
 
-| Connector              | Description                            | Documentation Link                         |
-| ---------------------- | -------------------------------------- | ------------------------------------------ |
-| ROS 2 Connectors       | Robot Operating System 2 integration   | [ROS2 Connectors](./ROS_2_Connectors.md)   |
-| Sound Device Connector | Audio streaming and playback/recording | [Sound Device Connector](./sounddevice.md) |
+| Connector        | Description                          | Documentation Link                       |
+| ---------------- | ------------------------------------ | ---------------------------------------- |
+| ROS 2 Connectors | Robot Operating System 2 integration | [ROS2 Connectors](./ROS_2_Connectors.md) |
 
 ## Key Features
 
@@ -89,10 +88,9 @@ Connectors implement thread-safe operations:
 
 ## Usage Examples
 
-| Connector    | Example Usage Documentation                              |
-| ------------ | -------------------------------------------------------- |
-| ROS 2        | [ROS2 Connectors](./ROS_2_Connectors.md#example-usage)   |
-| Sound Device | [Sound Device Connector](./sounddevice.md#example-usage) |
+| Connector | Example Usage Documentation                            |
+| --------- | ------------------------------------------------------ |
+| ROS 2     | [ROS2 Connectors](./ROS_2_Connectors.md#example-usage) |
 
 ## Error Handling
 
