@@ -14,7 +14,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import Dict, List, Literal
 
 import inflect
 from langchain_core.tools import BaseTool
@@ -30,13 +30,30 @@ from rai_bench.tool_calling_agent.mocked_tools import (
 
 loggers_type = logging.Logger
 
-PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT = """
+PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_0_SHOT = """
         You are a robotic arm with interfaces to detect and manipulate objects.
         Here are the coordinates information:
         x - front to back (positive is forward)
         y - left to right (positive is right)
         z - up to down (positive is up).
         """
+
+PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_2_SHOT = (
+    PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_0_SHOT
+    + """
+Example of tool calls:
+- get_object_positions, args: {}
+- move_to_point, args: {'x': 0.5, 'y': 0.2, 'z': 0.3, 'task': 'grab'}"""
+)
+
+PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_5_SHOT = (
+    PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_2_SHOT
+    + """
+- move_to_point, args: {'x': 1.7, 'y': 1.8, 'z': 1.9, 'task': 'drop'}
+- move_to_point, args: {'x': 0.1, 'y': -0.2, 'z': 0.1, 'task': 'grab'}
+- move_to_point, args: {'x': 0.7, 'y': 0.8, 'z': 0.9, 'task': 'drop'}
+"""
+)
 
 
 class TaskParametrizationError(Exception):
@@ -46,25 +63,32 @@ class TaskParametrizationError(Exception):
 
 
 class ManipulationTask(Task, ABC):
-    @property
-    def type(self) -> str:
-        return "manipulation"
+    type = "manipulation"
 
     def get_system_prompt(self) -> str:
-        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
+        if self.n_shots == 0:
+            return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_0_SHOT
+        elif self.n_shots == 2:
+            return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_2_SHOT
+        else:
+            return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_5_SHOT
 
 
 class GrabTask(ManipulationTask, ABC):
     def __init__(
         self,
+        validators: List[Validator],
         objects: Dict[str, List[Point]],
         object_to_grab: str,
-        validators: List[Validator],
+        prompt_detail: Literal["brief", "moderate", "descriptive"] = "brief",
+        n_shots: int = 0,
         extra_tool_calls: int = 0,
         logger: loggers_type | None = None,
     ) -> None:
         super().__init__(
             validators=validators,
+            prompt_detail=prompt_detail,
+            n_shots=n_shots,
             extra_tool_calls=extra_tool_calls,
             logger=logger,
         )
@@ -109,10 +133,16 @@ class MoveToPointTask(ManipulationTask):
         move_to_tool_input: MoveToPointToolInput,
         validators: List[Validator],
         extra_tool_calls: int = 0,
+        prompt_detail: Literal["brief", "moderate", "descriptive"] = "brief",
+        n_shots: int = 0,
         logger: loggers_type | None = None,
     ) -> None:
         super().__init__(
-            validators=validators, extra_tool_calls=extra_tool_calls, logger=logger
+            validators=validators,
+            extra_tool_calls=extra_tool_calls,
+            logger=logger,
+            prompt_detail=prompt_detail,
+            n_shots=n_shots,
         )
 
         self.move_to_tool_input = move_to_tool_input
@@ -132,7 +162,14 @@ class MoveToPointTask(ManipulationTask):
         ]
 
     def get_prompt(self) -> str:
-        return f"Move the arm to a point x={self.move_to_tool_input.x}, y={self.move_to_tool_input.y}, z={self.move_to_tool_input.z} to {self.move_to_tool_input.task} an object."
+        base_prompt = f"Move the arm to point x={self.move_to_tool_input.x}, y={self.move_to_tool_input.y}, z={self.move_to_tool_input.z} to {self.move_to_tool_input.task} an object"
+
+        if self.prompt_detail == "brief":
+            return base_prompt
+        elif self.prompt_detail == "moderate":
+            return f"{base_prompt} using the move_to_point tool."
+        else:
+            return f"{base_prompt} Use the move_to_point tool with the specified coordinates and task type."
 
 
 class GetObjectPositionsTask(ManipulationTask):
@@ -190,7 +227,15 @@ class GetObjectPositionsTask(ManipulationTask):
             )
         else:
             objects_list = formatted_objects[0]
-        return f"Get the {objects_list} positions."
+
+        base_prompt = f"Get the {objects_list} positions"
+
+        if self.prompt_detail == "brief":
+            return base_prompt
+        elif self.prompt_detail == "moderate":
+            return f"{base_prompt} using the get_object_positions tool"
+        else:  # descriptive
+            return f"{base_prompt}. First call get_object_positions to detect all objects and retrieve their 3D coordinates."
 
 
 class GrabExistingObjectTask(GrabTask):
@@ -207,7 +252,14 @@ class GrabExistingObjectTask(GrabTask):
     """
 
     def get_prompt(self) -> str:
-        return f"Grab {self.object_to_grab}."
+        base_prompt = f"Grab {self.object_to_grab}"
+
+        if self.prompt_detail == "brief":
+            return base_prompt
+        elif self.prompt_detail == "moderate":
+            return f"{base_prompt} using get_object_positions and move_to_point tools"
+        else:
+            return f"{base_prompt}. First call get_object_positions to locate the object, then call move_to_point with the object's coordinates and task='grab'."
 
     def _verify_args(self):
         if self.object_to_grab not in self.objects:
@@ -235,7 +287,16 @@ class GrabNotExistingObjectTask(GrabTask):
     """
 
     def get_prompt(self) -> str:
-        return f"Grab {self.object_to_grab}."
+        base_prompt = f"Grab {self.object_to_grab}"
+
+        if self.prompt_detail == "brief":
+            return base_prompt
+        elif self.prompt_detail == "moderate":
+            return (
+                f"{base_prompt} using get_object_positions tool to check if it exists"
+            )
+        else:  # descriptive
+            return f"{base_prompt}. First call get_object_positions to check if the object exists in the environment. If found, call move_to_point to grab it."
 
     def _verify_args(self):
         if self.object_to_grab in self.objects:
@@ -265,10 +326,17 @@ class MoveExistingObjectLeftTask(GrabTask):
     object_to_grab = "cube"
     """
 
-    complexity = "medium"
+    complexity = "hard"
 
     def get_prompt(self) -> str:
-        return f"Move {self.object_to_grab} 20 cm to the left."
+        base_prompt = f"Move {self.object_to_grab} 20 cm to the left"
+
+        if self.prompt_detail == "brief":
+            return base_prompt
+        elif self.prompt_detail == "moderate":
+            return f"{base_prompt} using get_object_positions and move_to_point tools"
+        else:  # descriptive
+            return f"{base_prompt}. First call get_object_positions to locate the object. Then call move_to_point to grab it, and finally call move_to_point again with y-coordinate decreased by 0.2 and task='drop'."
 
     def _verify_args(self):
         if self.object_to_grab not in self.objects:
@@ -295,10 +363,17 @@ class MoveExistingObjectFrontTask(GrabTask):
         Logger, by default None
     """
 
-    complexity = "medium"
+    complexity = "hard"
 
     def get_prompt(self) -> str:
-        return f"Move {self.object_to_grab} 60 cm to the front."
+        base_prompt = f"Move {self.object_to_grab} 60 cm to the front"
+
+        if self.prompt_detail == "brief":
+            return base_prompt
+        elif self.prompt_detail == "moderate":
+            return f"{base_prompt} using get_object_positions and move_to_point tools"
+        else:  # descriptive
+            return f"{base_prompt}. First call get_object_positions to locate the object. Then call move_to_point to grab it, and finally call move_to_point again with x-coordinate increased by 0.6 and task='drop'."
 
     def _verify_args(self):
         if self.object_to_grab not in self.objects:
@@ -394,4 +469,11 @@ class SwapObjectsTask(Task):
             raise TaskParametrizationError(error_message)
 
     def get_prompt(self) -> str:
-        return f"Move {self.objects_to_swap[0]} to the initial position of {self.objects_to_swap[1]}, and move {self.objects_to_swap[1]} to the initial position of {self.objects_to_swap[0]}."
+        base_prompt = f"Swap {self.objects_to_swap[0]} and {self.objects_to_swap[1]}"
+
+        if self.prompt_detail == "brief":
+            return base_prompt
+        elif self.prompt_detail == "moderate":
+            return f"{base_prompt} using get_object_positions and move_to_point tools"
+        else:  # descriptive
+            return f"{base_prompt}. First call get_object_positions to locate both objects. Then grab {self.objects_to_swap[0]} with move_to_point, move it to {self.objects_to_swap[1]}'s position and drop it. Finally, grab {self.objects_to_swap[1]} and move it to {self.objects_to_swap[0]}'s original position."

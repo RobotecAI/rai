@@ -465,6 +465,8 @@ class Task(ABC):
         self,
         validators: List[Validator],
         extra_tool_calls: int = 0,
+        prompt_detail: Literal["brief", "moderate", "descriptive"] = "brief",
+        n_shots: int = 0,
         logger: loggers_type | None = None,
     ) -> None:
         """
@@ -491,6 +493,8 @@ class Task(ABC):
             self.logger = logging.getLogger(__name__)
         self.validators = validators
         self.extra_tool_calls = extra_tool_calls
+        self.prompt_detail = prompt_detail
+        self.n_shots = n_shots
 
     def set_logger(self, logger: loggers_type):
         self.logger = logger

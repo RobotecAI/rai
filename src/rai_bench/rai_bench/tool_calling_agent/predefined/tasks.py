@@ -385,19 +385,43 @@ def get_navigation_tasks(extra_tool_calls: int = 0) -> List[Task]:
     ]
 
 
-def get_manipulation_tasks(extra_tool_calls: int = 0) -> List[Task]:
-    return [
-        MoveToPointTask(
-            move_to_tool_input=MoveToPointToolInput(x=1.0, y=2.0, z=3.0, task="grab"),
-            validators=[move_to_point_ord_val_grab],
-            extra_tool_calls=extra_tool_calls,
-        ),
-        MoveToPointTask(
-            move_to_tool_input=MoveToPointToolInput(x=1.2, y=2.3, z=3.4, task="drop"),
-            validators=[move_to_point_ord_val_drop],
-            extra_tool_calls=extra_tool_calls,
-        ),
-    ]
+def get_manipulation_tasks(
+    extra_tool_calls: int = 0,
+    prompt_detail: List[Literal["brief", "moderate", "descriptive"]] = [
+        "brief",
+        "moderate",
+        "descriptive",
+    ],
+    n_shots: List[Literal[0, 2, 5]] = [0, 2, 5],
+) -> List[Task]:
+    tasks: List[Task] = []
+
+    for detail in prompt_detail:
+        for shots in n_shots:
+            tasks.extend(
+                [
+                    MoveToPointTask(
+                        prompt_detail=detail,
+                        n_shots=shots,
+                        move_to_tool_input=MoveToPointToolInput(
+                            x=1.0, y=2.0, z=3.0, task="grab"
+                        ),
+                        validators=[move_to_point_ord_val_grab],
+                        extra_tool_calls=extra_tool_calls,
+                    ),
+                    MoveToPointTask(
+                        prompt_detail=detail,
+                        n_shots=shots,
+                        move_to_tool_input=MoveToPointToolInput(
+                            x=1.2, y=2.3, z=3.4, task="drop"
+                        ),
+                        validators=[move_to_point_ord_val_drop],
+                        extra_tool_calls=extra_tool_calls,
+                    ),
+                ]
+            )
+
+    return tasks
 
 
 def get_custom_interfaces_tasks(extra_tool_calls: int = 0) -> List[Task]:
