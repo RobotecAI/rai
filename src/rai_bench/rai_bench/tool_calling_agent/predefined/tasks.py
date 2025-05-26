@@ -26,8 +26,7 @@ from rai_bench.tool_calling_agent.subtasks import (
     CheckTopicFieldsToolCallSubTask,
 )
 from rai_bench.tool_calling_agent.tasks.basic import (
-    GetAllROS2DepthCamerasTask,
-    GetAllROS2RGBCamerasTask,
+    GetAllROS2CamerasTask,
     GetROS2DepthCameraTask,
     GetROS2RGBCameraTask,
     GetROS2TopicsTask,
@@ -202,11 +201,13 @@ topics_and_color_image_ord_val = OrderedCallsValidator(
 )
 color_image_ord_val = OrderedCallsValidator(subtasks=[color_image5_subtask])
 depth_image_ord_val = OrderedCallsValidator(subtasks=[depth_image5_subtask])
-all_color_images_notord_val = NotOrderedCallsValidator(
-    subtasks=[color_image5_subtask, color_image5_subtask]
-)
-all_depth_images_notord_val = NotOrderedCallsValidator(
-    subtasks=[depth_image5_subtask, depth_image5_subtask]
+all_camera_iamges_notord_val = NotOrderedCallsValidator(
+    subtasks=[
+        color_image5_subtask,
+        color_image5_subtask,
+        depth_image5_subtask,
+        depth_image5_subtask,
+    ]
 )
 
 move_to_point_ord_val_grab = OrderedCallsValidator(
@@ -253,8 +254,7 @@ basic_tasks: List[Task] = [
     ),
     GetROS2TopicsTask(validators=[topics_ord_val]),
     GetROS2DepthCameraTask(validators=[depth_image_ord_val]),
-    GetAllROS2RGBCamerasTask(validators=[all_color_images_notord_val]),
-    GetAllROS2DepthCamerasTask(validators=[all_depth_images_notord_val]),
+    GetAllROS2CamerasTask(validators=[all_camera_iamges_notord_val]),
 ]
 manipulation_tasks: List[Task] = [
     MoveToPointTask(
@@ -300,42 +300,68 @@ navigation_tasks: List[Task] = [
 ]
 
 
-def get_basic_tasks(extra_tool_calls: int = 0) -> List[Task]:
-    return [
-        # 3 options to validate same task:
-        # most strict, agent has to call both tool correctly to pass this validator
-        GetROS2RGBCameraTask(
-            validators=[topics_and_color_image_ord_val],
-            extra_tool_calls=extra_tool_calls,
-        ),
-        # verifing only if the GetCameraImage call was made properly
-        GetROS2RGBCameraTask(
-            validators=[color_image_ord_val], extra_tool_calls=extra_tool_calls
-        ),
-        # Soft verification. verifing in separate vaidators the list topic and get image.
-        #  agent can get 0.5 score by only calling list topics
-        GetROS2RGBCameraTask(
-            validators=[topics_ord_val, color_image_ord_val],
-            extra_tool_calls=extra_tool_calls,
-        ),
-        # we can also add extra tool calls to allow model to correct itself
-        GetROS2RGBCameraTask(
-            validators=[topics_ord_val, color_image_ord_val],
-            extra_tool_calls=extra_tool_calls,
-        ),
-        GetROS2TopicsTask(
-            validators=[topics_ord_val], extra_tool_calls=extra_tool_calls
-        ),
-        GetROS2DepthCameraTask(
-            validators=[depth_image_ord_val], extra_tool_calls=extra_tool_calls
-        ),
-        GetAllROS2RGBCamerasTask(
-            validators=[all_color_images_notord_val], extra_tool_calls=extra_tool_calls
-        ),
-        GetAllROS2DepthCamerasTask(
-            validators=[all_depth_images_notord_val], extra_tool_calls=extra_tool_calls
-        ),
-    ]
+def get_basic_tasks(
+    extra_tool_calls: int = 0,
+    prompt_detail: List[Literal["brief", "moderate", "descriptive"]] = [
+        "brief",
+        "moderate",
+        "descriptive",
+    ],
+    n_shots: List[Literal[0, 2, 5]] = [0, 2, 5],
+) -> List[Task]:
+    tasks: List[Task] = []
+
+    # Generate all combinations of prompt_detail and n_shots
+    for detail in prompt_detail:
+        for shots in n_shots:
+            # Create task variants with different prompt detail and n_shots
+            tasks.extend(
+                [
+                    # 3 options to validate same task:
+                    # most strict, agent has to call both tool correctly to pass this validator
+                    GetROS2RGBCameraTask(
+                        prompt_detail=detail,
+                        n_shots=shots,
+                        validators=[topics_and_color_image_ord_val],
+                        extra_tool_calls=extra_tool_calls,
+                    ),
+                    # verifying only if the GetCameraImage call was made properly
+                    GetROS2RGBCameraTask(
+                        prompt_detail=detail,
+                        n_shots=shots,
+                        validators=[color_image_ord_val],
+                        extra_tool_calls=extra_tool_calls,
+                    ),
+                    # Soft verification. verifying in separate validators the list topic and get image.
+                    #  agent can get 0.5 score by only calling list topics
+                    GetROS2RGBCameraTask(
+                        prompt_detail=detail,
+                        n_shots=shots,
+                        validators=[topics_ord_val, color_image_ord_val],
+                        extra_tool_calls=extra_tool_calls,
+                    ),
+                    GetROS2TopicsTask(
+                        prompt_detail=detail,
+                        n_shots=shots,
+                        validators=[topics_ord_val],
+                        extra_tool_calls=extra_tool_calls,
+                    ),
+                    GetROS2DepthCameraTask(
+                        prompt_detail=detail,
+                        n_shots=shots,
+                        validators=[depth_image_ord_val],
+                        extra_tool_calls=extra_tool_calls,
+                    ),
+                    GetAllROS2CamerasTask(
+                        prompt_detail=detail,
+                        n_shots=shots,
+                        validators=[all_camera_iamges_notord_val],
+                        extra_tool_calls=extra_tool_calls,
+                    ),
+                ]
+            )
+
+    return tasks
 
 
 def get_navigation_tasks(extra_tool_calls: int = 0) -> List[Task]:
@@ -414,6 +440,12 @@ def get_spatial_tasks(extra_tool_calls: int = 0) -> Sequence[Task]:
 def get_tasks(
     extra_tool_calls: int = 0,
     complexities: List[Literal["easy", "medium", "hard"]] = ["easy", "medium", "hard"],
+    prompt_detail: List[Literal["brief", "moderate", "descriptive"]] = [
+        "brief",
+        "moderate",
+        "descriptive",
+    ],
+    n_shots: List[Literal[0, 2, 5]] = [0, 2, 5],
     task_types: List[
         Literal[
             "basic",
@@ -430,18 +462,28 @@ def get_tasks(
         "spatial_reasoning",
     ],
 ) -> List[Task]:
-    # TODO (jmatejcz) implement complexity sorting
-    tasks: List[Task] = []
+    all_tasks: List[Task] = []
     if "basic" in task_types:
-        tasks += get_basic_tasks(extra_tool_calls=extra_tool_calls)
+        all_tasks += get_basic_tasks(
+            extra_tool_calls=extra_tool_calls,
+            prompt_detail=prompt_detail,
+            n_shots=n_shots,
+        )
     if "custom_interfaces" in task_types:
-        tasks += get_custom_interfaces_tasks(extra_tool_calls=extra_tool_calls)
+        all_tasks += get_custom_interfaces_tasks(extra_tool_calls=extra_tool_calls)
     if "manipulation" in task_types:
-        tasks += get_manipulation_tasks(extra_tool_calls=extra_tool_calls)
+        all_tasks += get_manipulation_tasks(extra_tool_calls=extra_tool_calls)
     if "navigation" in task_types:
-        tasks += get_navigation_tasks(extra_tool_calls=extra_tool_calls)
+        all_tasks += get_navigation_tasks(extra_tool_calls=extra_tool_calls)
     if "spatial_reasoning" in task_types:
-        tasks += get_spatial_tasks(extra_tool_calls=extra_tool_calls)
+        all_tasks += get_spatial_tasks(extra_tool_calls=extra_tool_calls)
 
-    random.shuffle(tasks)
-    return tasks
+    filtered_tasks: List[Task] = []
+    for task in all_tasks:
+        if task.complexity not in complexities:
+            continue
+
+        filtered_tasks.append(task)
+
+    random.shuffle(all_tasks)
+    return all_tasks
