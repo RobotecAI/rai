@@ -364,25 +364,49 @@ def get_basic_tasks(
     return tasks
 
 
-def get_navigation_tasks(extra_tool_calls: int = 0) -> List[Task]:
-    return [
-        NavigateToPointTask(
-            validators=[start_navigate_action_ord_val],
-            extra_tool_calls=extra_tool_calls,
-        ),
-        SpinAroundTask(
-            validators=[start_spin_action_ord_val],
-            extra_tool_calls=extra_tool_calls,
-        ),
-        MoveToBedTask(
-            validators=[move_ahead_ord_val],
-            extra_tool_calls=extra_tool_calls,
-        ),
-        MoveToFrontTask(
-            validators=[move_ahead_ord_val],
-            extra_tool_calls=extra_tool_calls,
-        ),
-    ]
+def get_navigation_tasks(
+    extra_tool_calls: int = 0,
+    prompt_detail: List[Literal["brief", "moderate", "descriptive"]] = [
+        "brief",
+        "moderate",
+        "descriptive",
+    ],
+    n_shots: List[Literal[0, 2, 5]] = [0, 2, 5],
+) -> List[Task]:
+    tasks: List[Task] = []
+
+    for detail in prompt_detail:
+        for shots in n_shots:
+            tasks.extend(
+                [
+                    NavigateToPointTask(
+                        prompt_detail=detail,
+                        n_shots=shots,
+                        validators=[start_navigate_action_ord_val],
+                        extra_tool_calls=extra_tool_calls,
+                    ),
+                    SpinAroundTask(
+                        prompt_detail=detail,
+                        n_shots=shots,
+                        validators=[start_spin_action_ord_val],
+                        extra_tool_calls=extra_tool_calls,
+                    ),
+                    MoveToBedTask(
+                        prompt_detail=detail,
+                        n_shots=shots,
+                        validators=[move_ahead_ord_val],
+                        extra_tool_calls=extra_tool_calls,
+                    ),
+                    MoveToFrontTask(
+                        prompt_detail=detail,
+                        n_shots=shots,
+                        validators=[move_ahead_ord_val],
+                        extra_tool_calls=extra_tool_calls,
+                    ),
+                ]
+            )
+
+    return tasks
 
 
 def get_manipulation_tasks(
