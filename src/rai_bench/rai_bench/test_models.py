@@ -42,6 +42,7 @@ class BenchmarkConfig(BaseModel):
 class ManipulationO3DEBenchmarkConfig(BenchmarkConfig):
     # by default include all
     o3de_config_path: str
+    # TODO (jmatejcz) split the difficulty of task and scene
     levels: List[Literal["trivial", "easy", "medium", "hard", "very_hard"]] = [
         "trivial",
         "easy",
@@ -58,6 +59,12 @@ class ManipulationO3DEBenchmarkConfig(BenchmarkConfig):
 class ToolCallingAgentBenchmarkConfig(BenchmarkConfig):
     extra_tool_calls: int = 0
     complexities: List[Literal["easy", "medium", "hard"]] = ["easy", "medium", "hard"]
+    N_shots: List[Literal[0, 2, 5]] = [0, 2, 5]
+    prompt_detail: List[Literal["brief", "moderate", "descriptive"]] = [
+        "brief",
+        "moderate",
+        "descriptive",
+    ]
     task_types: List[
         Literal[
             "basic",

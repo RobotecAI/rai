@@ -456,6 +456,9 @@ class Validator(ABC):
 
 class Task(ABC):
     complexity: Literal["easy", "medium", "hard"]
+    prompt_detail: Literal["brief", "moderate", "descriptive"]
+    examples_in_system_prompt: int
+    type: str
     recursion_limit: int = DEFAULT_RECURSION_LIMIT
 
     def __init__(
@@ -522,17 +525,11 @@ class Task(ABC):
         pass
 
     @property
-    @abstractmethod
-    def type(self) -> str:
-        """Type of task, for example: manipulation"""
-        pass
-
-    @property
     def max_tool_calls_number(self) -> int:
         return self.required_calls + self.extra_tool_calls
 
     @property
-    def required_calls(self):
+    def required_calls(self) -> int:
         """Minimal number of calls required to complete task"""
         total = 0
         for val in self.validators:

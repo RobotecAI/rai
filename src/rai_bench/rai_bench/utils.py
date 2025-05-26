@@ -43,7 +43,23 @@ def parse_tool_calling_benchmark_args():
         nargs="+",
         choices=["easy", "medium", "hard"],
         default=["easy", "medium", "hard"],
-        help="Complexity levels to include in the benchmark",
+        help="Complexity levels of tasks to include in the benchmark",
+    )
+    parser.add_argument(
+        "--prompt-detail",
+        type=str,
+        nargs="+",
+        choices=["brief", "moderate", "descriptive"],
+        default=["brief", "moderate", "descriptive"],
+        help="Prompt detail level to include in the benchmark",
+    )
+    parser.add_argument(
+        "--n-shots",
+        type=int,
+        nargs="+",
+        choices=[0, 2, 5],
+        default=[0, 2, 5],
+        help="Number of examples in system prompt for few-shot prompting",
     )
     parser.add_argument(
         "--task-types",
