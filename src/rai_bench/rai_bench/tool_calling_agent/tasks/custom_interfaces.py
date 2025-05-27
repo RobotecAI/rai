@@ -38,7 +38,7 @@ from rai.types.rai_interfaces import (
     RAIGroundingDinoRequest,
 )
 
-from rai_bench.tool_calling_agent.interfaces import Task, Validator
+from rai_bench.tool_calling_agent.interfaces import Task, TaskArgs, Validator
 from rai_bench.tool_calling_agent.messages.base import Clock
 from rai_bench.tool_calling_agent.messages.services import (
     StringListRequest,
@@ -781,6 +781,8 @@ TOPICS_AND_TYPES: Dict[str, str] = {
     "/send_detections": "rai_interfaces/msg/RAIDetectionArray",
 }
 
+
+# TODO (jmatejcz) merge from actions defined in navigation
 ACTIONS_AND_TYPES = {
     # custom actions
     "/perform_task": "rai_interfaces/action/Task",
@@ -820,34 +822,43 @@ SERVICE_STRINGS = [
 ]
 
 
-PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT = """You are a ROS 2 expert that want to solve tasks. You have access to various tools that allow you to query the ROS 2 system.
-Be proactive and use the tools to answer questions.
+PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_0_SHOT = """You are a ROS 2 expert that want to solve tasks. You have access to various tools that allow you to query the ROS 2 system.
+Be proactive and use the tools to answer questions."""
+
+PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_2_SHOT = (
+    PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_0_SHOT
+    + """
 Example of tool calls:
 - get_ros2_message_interface, args: {'msg_type': 'geometry_msgs/msg/Twist'}
-- publish_ros2_message, args: {'topic': '/cmd_vel', 'message_type': 'geometry_msgs/msg/Twist', 'message': {linear: {x: 0.5, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 1.0}}}
-- get_ros2_message_interface, args: {'msg_type': 'turtlesim/srv/TeleportAbsolute'}
-- publish_ros2_message, args: {'topic': '/turtle1/teleport_absolute', 'message_type': 'turtlesim/srv/TeleportAbsolute', 'message': {x: 5.0, y: 2.0, theta: 1.57}}"""
+- publish_ros2_message, args: {'topic': '/cmd_vel', 'message_type': 'geometry_msgs/msg/Twist', 'message': {linear: {x: 0.5, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 1.0}}}"""
+)
+
+PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_5_SHOT = (
+    PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_2_SHOT
+    + """
+- get_ros2_topics_names_and_types, args: {}
+- get_ros2_message_interface, args: {'msg_type': 'rai_interfaces/msg/HRIMessage'}
+- call_ros2_service, args: {'service': '/grounding_dino_classify', 'service_type': 'rai_interfaces/srv/RAIGroundingDino', 'request': {'classes': 'bottle, book', 'box_threshold': 0.4, 'text_threshold': 0.25}}"""
+)
 
 
 class CustomInterfaceTask(Task, ABC):
-    @property
-    def type(self) -> str:
-        return "custom_interface"
+    type = "custom_interface"
+
+    def get_system_prompt(self) -> str:
+        if self.n_shots == 0:
+            return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_0_SHOT
+        elif self.n_shots == 2:
+            return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_2_SHOT
+        else:
+            return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_5_SHOT
 
 
 class CustomInterfacesTopicTask(CustomInterfaceTask, ABC):
     def __init__(
-        self,
-        topic: str,
-        validators: List[Validator],
-        extra_tool_calls: int = 0,
-        logger: loggers_type | None = None,
+        self, topic: str, validators: List[Validator], task_args: TaskArgs
     ) -> None:
-        super().__init__(
-            validators=validators,
-            extra_tool_calls=extra_tool_calls,
-            logger=logger,
-        )
+        super().__init__(validators=validators, task_args=task_args)
         self.topic = topic
 
     @property
@@ -864,9 +875,6 @@ class CustomInterfacesTopicTask(CustomInterfaceTask, ABC):
             ),
         ]
 
-    def get_system_prompt(self) -> str:
-        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
-
 
 class CustomInterfacesServiceTask(CustomInterfaceTask, ABC):
     def __init__(
@@ -874,14 +882,9 @@ class CustomInterfacesServiceTask(CustomInterfaceTask, ABC):
         service: str,
         service_args: dict[str, Any],
         validators: List[Validator],
-        extra_tool_calls: int = 0,
-        logger: loggers_type | None = None,
+        task_args: TaskArgs,
     ) -> None:
-        super().__init__(
-            validators=validators,
-            extra_tool_calls=extra_tool_calls,
-            logger=logger,
-        )
+        super().__init__(validators=validators, task_args=task_args)
         self.service = service
         self.service_args = service_args
 
@@ -900,202 +903,279 @@ class CustomInterfacesServiceTask(CustomInterfaceTask, ABC):
         ]
 
 
-# TODO (jm) add actions Tasks
+# TODO (jmatejcz) add actions Tasks
 
 
-# TODO (jm) should we and how to parametrize these classes?
 class PublishROS2HRIMessageTextTask(CustomInterfacesTopicTask):
     complexity = "easy"
 
     def __init__(
         self,
         topic: str,
-        text: str,
         validators: List[Validator],
-        extra_tool_calls: int = 0,
-        logger: logging.Logger | None = None,
+        task_args: TaskArgs,
+        text: str = "Hello!",
     ) -> None:
-        super().__init__(topic, validators, extra_tool_calls, logger)
+        super().__init__(topic, validators=validators, task_args=task_args)
         self.text = text
 
     def get_prompt(self) -> str:
-        return (
-            f"You need to publish a message to the topic '{self.topic}' with the text value: '{self.text}'.\n"
-            "Before publishing, follow these steps:\n"
-            "1. Use the tool to retrieve the available ROS2 topics and their message types.\n"
-            f"2. Find the message type for the topic '{self.topic}'.\n"
-            "3. Retrieve the full message interface definition for that type.\n"
-            "4. Construct the message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
-            f"5. Publish the message to '{self.topic}' using the correct message type and interface.\n"
+        base_prompt = (
+            f"Publish message to topic '{self.topic}' with text: '{self.text}'"
         )
+
+        if self.prompt_detail == "brief":
+            return base_prompt
+        elif self.prompt_detail == "moderate":
+            return f"{base_prompt} using get_ros2_topics_names_and_types, get_ros2_message_interface, and publish_ros2_message tools"
+        else:
+            return f"{base_prompt}. First call get_ros2_topics_names_and_types to find available topics, then call get_ros2_message_interface with the topic's message type, and finally call publish_ros2_message with the constructed HRIMessage containing text='{self.text}'."
 
 
 class PublishROS2AudioMessageTask(CustomInterfacesTopicTask):
     complexity = "easy"
-    expected_audio: List[int] = [123, 456, 789]
-    expected_sample_rate: int = 44100
-    expected_channels: int = 2
+
+    def __init__(
+        self,
+        topic: str,
+        validators: List[Validator],
+        task_args: TaskArgs,
+        audio: List[int] = [123, 456, 789],
+        sample_rate: int = 44100,
+        channels: int = 2,
+    ) -> None:
+        super().__init__(topic, validators=validators, task_args=task_args)
+        self.expected_audio = audio
+        self.expected_sample_rate = sample_rate
+        self.expected_channels = channels
 
     def get_prompt(self) -> str:
-        return (
-            f"You need to publish a message to the topic '{self.topic}' with audio samples {self.expected_audio}, "
-            f"sample rate {self.expected_sample_rate}, and {self.expected_channels} channels.\n"
-            "Before publishing, follow these steps:\n"
-            "1. Use the tool to retrieve the available ROS2 topics and their message types.\n"
-            f"2. Find the message type for the topic '{self.topic}'.\n"
-            "3. Retrieve the full message interface definition for that type.\n"
-            "4. Construct the message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
-            f"5. Publish the message to '{self.topic}' using the correct message type and interface.\n"
-        )
+        base_prompt = f"Publish audio message to topic '{self.topic}' with samples {self.expected_audio}, sample rate {self.expected_sample_rate}, channels {self.expected_channels}"
+
+        if self.prompt_detail == "brief":
+            return base_prompt
+        elif self.prompt_detail == "moderate":
+            return f"{base_prompt} using get_ros2_topics_names_and_types, get_ros2_message_interface, and publish_ros2_message tools"
+        else:
+            return f"{base_prompt}. First call get_ros2_topics_names_and_types to find available topics, then call get_ros2_message_interface with the topic's message type, and finally call publish_ros2_message with audio={self.expected_audio}, sample_rate={self.expected_sample_rate}, and channels={self.expected_channels}."
 
 
 class PublishROS2DetectionArrayTask(CustomInterfacesTopicTask):
     complexity = "easy"
 
-    expected_detection_classes: List[str] = ["person", "car"]
-    expected_detections: List[Detection2D] = [
-        Detection2D(
-            bbox=BoundingBox2D(
-                center=Pose2D(x=320.0, y=240.0, theta=0.0),
-                size_x=50.0,
-                size_y=50.0,
+    def __init__(
+        self,
+        topic: str,
+        validators: List[Validator],
+        task_args: TaskArgs,
+        detection_classes: List[str] = ["person", "car"],
+        bbox_center_x: float = 320.0,
+        bbox_center_y: float = 320.0,
+        bbox_size_x: float = 50.0,
+        bbox_size_y: float = 50.0,
+    ) -> None:
+        super().__init__(topic, validators=validators, task_args=task_args)
+        self.expected_detection_classes = detection_classes
+        self.expected_detections = [
+            Detection2D(
+                bbox=BoundingBox2D(
+                    center=Pose2D(x=bbox_center_x, y=bbox_center_y, theta=0.0),
+                    size_x=bbox_size_x,
+                    size_y=bbox_size_y,
+                )
             )
-        )
-    ]
+        ]
 
     def get_prompt(self) -> str:
-        return (
-            f"You need to publish a detection message to the topic '{self.topic}' with one detection:\n"
-            f"{self.expected_detections[0].model_dump()} and detection classes {self.expected_detection_classes}.\n"
-            "Before publishing, follow these steps:\n"
-            "1. Use the tool to retrieve the available ROS2 topics and their message types.\n"
-            f"2. Find the message type for the topic '{self.topic}'.\n"
-            "3. Retrieve the full message interface definition for that type.\n"
-            "4. Construct the message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
-            f"5. Publish the message to '{self.topic}' using the correct message type and interface.\n"
-        )
+        bbox_center = self.expected_detections[0].bbox.center
+        bbox_size = self.expected_detections[0].bbox
+        base_prompt = f"Publish detection array to topic '{self.topic}' with classes {self.expected_detection_classes} and bbox center ({bbox_center.x}, {bbox_center.y}) size {bbox_size.size_x}x{bbox_size.size_y}"
+
+        if self.prompt_detail == "brief":
+            return base_prompt
+        elif self.prompt_detail == "moderate":
+            return f"{base_prompt} using get_ros2_topics_names_and_types, get_ros2_message_interface, and publish_ros2_message tools"
+        else:
+            return f"{base_prompt}. First call get_ros2_topics_names_and_types to find available topics, then call get_ros2_message_interface with the topic's message type, and finally call publish_ros2_message with detection_classes={self.expected_detection_classes} and bounding box at center ({bbox_center.x}, {bbox_center.y}) with size_x={bbox_size.size_x}, size_y={bbox_size.size_y}."
 
 
 class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
     complexity = "easy"
 
-    expected_initial_gripper_state = True
-    expected_final_gripper_state = False
-    expected_target_pose: PoseStamped = PoseStamped(
-        pose=Pose(
-            position=Point(x=1.0, y=2.0, z=3.0),
-            orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
+    def __init__(
+        self,
+        service: str,
+        service_args: dict[str, Any],
+        validators: List[Validator],
+        task_args: TaskArgs,
+        target_x: float = 1.0,
+        target_y: float = 2.0,
+        target_z: float = 3.0,
+        initial_gripper_state: bool = True,
+        final_gripper_state: bool = False,
+        frame_id: str = "base_link",
+    ) -> None:
+        super().__init__(
+            service, service_args, validators=validators, task_args=task_args
         )
-    )
+        self.expected_initial_gripper_state = initial_gripper_state
+        self.expected_final_gripper_state = final_gripper_state
+        self.expected_target_pose = PoseStamped(
+            header=Header(frame_id=frame_id),
+            pose=Pose(
+                position=Point(x=target_x, y=target_y, z=target_z),
+                orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
+            ),
+        )
 
     def get_prompt(self) -> str:
-        return (
-            f"You need to call the service '{self.service}' with a target_pose: "
-            f"{self.expected_target_pose.model_dump()} and gripper states (initial: {self.expected_initial_gripper_state}, final: {self.expected_final_gripper_state}).\n"
-            "Before calling, follow these steps:\n"
-            "1. Use the tool to retrieve the available ROS2 services and their types.\n"
-            f"2. Find the service type for '{self.service}'.\n"
-            "3. Retrieve the full message interface definition for that service.\n"
-            "4. Construct the request message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
-            f"5. Call the service '{self.service}' using the correct message type and interface.\n"
-        )
+        pos = self.expected_target_pose.pose.position
+        base_prompt = f"Call service '{self.service}' with pose ({pos.x}, {pos.y}, {pos.z}), initial_gripper={self.expected_initial_gripper_state}, final_gripper={self.expected_final_gripper_state}"
+
+        if self.prompt_detail == "brief":
+            return base_prompt
+        elif self.prompt_detail == "moderate":
+            return f"{base_prompt} using get_ros2_services_names_and_types, get_ros2_message_interface, and call_ros2_service tools"
+        else:
+            return f"{base_prompt}. First call get_ros2_services_names_and_types to find available services, then call get_ros2_message_interface with 'rai_interfaces/srv/ManipulatorMoveTo', and finally call call_ros2_service with target_pose position (x={pos.x}, y={pos.y}, z={pos.z}), initial_gripper_state={self.expected_initial_gripper_state}, and final_gripper_state={self.expected_final_gripper_state}."
 
 
 class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
     complexity = "easy"
 
-    expected_detections: RAIDetectionArray = RAIDetectionArray(
-        header=Header(stamp=Time(sec=0, nanosec=0), frame_id="camera_frame"),
-        detections=[],
-    )
+    def __init__(
+        self,
+        service: str,
+        service_args: dict[str, Any],
+        validators: List[Validator],
+        task_args: TaskArgs,
+        frame_id: str = "camera_frame",
+    ) -> None:
+        super().__init__(
+            service, service_args, validators=validators, task_args=task_args
+        )
+        self.expected_detections = RAIDetectionArray(
+            header=Header(stamp=Time(sec=0, nanosec=0), frame_id=frame_id),
+            detections=[],
+        )
 
     def get_prompt(self) -> str:
-        return (
-            f"You need to call the service '{self.service}' with detections: {self.expected_detections.model_dump()}\n"
-            "Before calling, follow these steps:\n"
-            "1. Use the tool to retrieve the available ROS2 services and their types.\n"
-            f"2. Find the service type for '{self.service}'.\n"
-            "3. Retrieve the full message interface definition for that service.\n"
-            "4. Construct the request message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
-            f"5. Call the service '{self.service}' using the correct message type and interface.\n"
-        )
+        frame_id = self.expected_detections.header.frame_id
+        base_prompt = f"Call service '{self.service}' for image segmentation with empty detections from {frame_id}"
+
+        if self.prompt_detail == "brief":
+            return base_prompt
+        elif self.prompt_detail == "moderate":
+            return f"{base_prompt} using get_ros2_services_names_and_types, get_ros2_message_interface, and call_ros2_service tools"
+        else:
+            return f"{base_prompt}. First call get_ros2_services_names_and_types to find available services, then call get_ros2_message_interface with 'rai_interfaces/srv/RAIGroundedSam', and finally call call_ros2_service with detections array (empty detections, header frame_id='{frame_id}') and source image."
 
 
 class CallGroundingDinoClassify(CustomInterfacesServiceTask):
     complexity = "easy"
 
-    expected_classes: str = "bottle, book, chair"
-    expected_box_threshold: float = 0.4
-    expected_text_threshold: float = 0.25
+    def __init__(
+        self,
+        service: str,
+        service_args: dict[str, Any],
+        validators: List[Validator],
+        task_args: TaskArgs,
+        classes: str = "bottle, book, chair",
+        box_threshold: float = 0.4,
+        text_threshold: float = 0.25,
+    ) -> None:
+        super().__init__(
+            service, service_args, validators=validators, task_args=task_args
+        )
+        self.expected_classes = classes
+        self.expected_box_threshold = box_threshold
+        self.expected_text_threshold = text_threshold
 
     def get_prompt(self) -> str:
-        return (
-            f"You need to call the service '{self.service}' with classes: '{self.expected_classes}', "
-            f"box_threshold: {self.expected_box_threshold}, text_threshold: {self.expected_text_threshold}, "
-            "Before calling, follow these steps:\n"
-            "1. Use the tool to retrieve the available ROS2 services and their types.\n"
-            f"2. Find the service type for '{self.service}'.\n"
-            "3. Retrieve the full message interface definition for that service.\n"
-            "4. Construct the request message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
-            f"5. Call the service '{self.service}' using the correct message type and interface.\n"
-        )
+        base_prompt = f"Call service '{self.service}' with classes '{self.expected_classes}', box_threshold {self.expected_box_threshold}, text_threshold {self.expected_text_threshold}"
+
+        if self.prompt_detail == "brief":
+            return base_prompt
+        elif self.prompt_detail == "moderate":
+            return f"{base_prompt} using get_ros2_services_names_and_types, get_ros2_message_interface, and call_ros2_service tools"
+        else:
+            return f"{base_prompt}. First call get_ros2_services_names_and_types to find available services, then call get_ros2_message_interface with 'rai_interfaces/srv/RAIGroundingDino', and finally call call_ros2_service with classes='{self.expected_classes}', box_threshold={self.expected_box_threshold}, and text_threshold={self.expected_text_threshold}."
 
 
 class CallGetLogDigestTask(CustomInterfacesServiceTask):
     complexity = "easy"
 
-    def get_prompt(self) -> str:
-        return (
-            f"You need to call the service '{self.service}' with an empty request.\n"
-            "Before calling, follow these steps:\n"
-            "1. Use the tool to retrieve the available ROS2 services and their types.\n"
-            f"2. Find the service type for '{self.service}'.\n"
-            "3. Retrieve the full message interface definition for that service.\n"
-            "4. Construct the message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
-            f"5. Call the service '{self.service}' using the correct message type and interface.\n"
+    def __init__(
+        self,
+        service: str,
+        service_args: dict[str, Any],
+        validators: List[Validator],
+        task_args: TaskArgs,
+    ) -> None:
+        super().__init__(
+            service, service_args, validators=validators, task_args=task_args
         )
+
+    def get_prompt(self) -> str:
+        base_prompt = f"Call service '{self.service}'"
+
+        if self.prompt_detail == "brief":
+            return base_prompt
+        elif self.prompt_detail == "moderate":
+            return f"{base_prompt} using get_ros2_services_names_and_types, get_ros2_message_interface, and call_ros2_service tools"
+        else:
+            return f"{base_prompt}. First call get_ros2_services_names_and_types to find available services, then call get_ros2_message_interface with 'rai_interfaces/srv/StringList', and finally call call_ros2_service with an empty request."
 
 
 class CallVectorStoreRetrievalTask(CustomInterfacesServiceTask):
     complexity = "easy"
-    expected_query: str = "What is the purpose of this robot?"
+
+    def __init__(
+        self,
+        service: str,
+        service_args: dict[str, Any],
+        validators: List[Validator],
+        task_args: TaskArgs,
+        query: str = "What is the purpose of this robot?",
+    ) -> None:
+        super().__init__(
+            service, service_args, validators=validators, task_args=task_args
+        )
+        self.expected_query = query
 
     def get_prompt(self) -> str:
-        return (
-            f"You need to call the service '{self.service}' with the query: '{self.expected_query}'.\n"
-            "Before calling, follow these steps:\n"
-            "1. Use the tool to retrieve the available ROS2 services and their types.\n"
-            f"2. Find the service type for '{self.service}'.\n"
-            "3. Retrieve the full message interface definition for that service.\n"
-            "4. Construct the request message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
-            f"5. Call the service '{self.service}' using the correct message type and interface.\n"
+        base_prompt = (
+            f"Call service '{self.service}' with query '{self.expected_query}'"
         )
+
+        if self.prompt_detail == "brief":
+            return base_prompt
+        elif self.prompt_detail == "moderate":
+            return f"{base_prompt} using get_ros2_services_names_and_types, get_ros2_message_interface, and call_ros2_service tools"
+        else:
+            return f"{base_prompt}. First call get_ros2_services_names_and_types to find available services, then call get_ros2_message_interface with 'rai_interfaces/srv/VectorStoreRetrieval', and finally call call_ros2_service with query='{self.expected_query}'."
 
 
 class CallWhatISeeTask(CustomInterfacesServiceTask):
     complexity = "easy"
 
-    expected_observations: List[str] = ["table", "cup", "notebook"]
-    expected_perception_source: str = "front_camera"
-
-    expected_image: Image = Image(
-        header=Header(frame_id="camera_frame"),
-        height=480,
-        width=640,
-    )
-
-    expected_pose: Pose = Pose(
-        position=Point(x=1.0, y=2.0, z=0.5),
-        orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
-    )
+    def __init__(
+        self,
+        service: str,
+        service_args: dict[str, Any],
+        validators: List[Validator],
+        task_args: TaskArgs,
+    ) -> None:
+        super().__init__(
+            service, service_args, validators=validators, task_args=task_args
+        )
 
     def get_prompt(self) -> str:
-        return (
-            f"You need to call the service '{self.service}' with an empty request.\n"
-            "Before calling, follow these steps:\n"
-            "1. Use the tool to retrieve the available ROS2 services and their types.\n"
-            f"2. Find the service type for '{self.service}'.\n"
-            "3. Retrieve the full message interface definition for that service.\n"
-            "4. Construct the request message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
-            f"5. Call the service '{self.service}' using the correct message type and interface.\n"
-        )
+        base_prompt = f"Call service '{self.service}'"
+
+        if self.prompt_detail == "brief":
+            return base_prompt
+        elif self.prompt_detail == "moderate":
+            return f"{base_prompt} using get_ros2_services_names_and_types, get_ros2_message_interface, and call_ros2_service tools"
+        else:
+            return f"{base_prompt}. First call get_ros2_services_names_and_types to find available services, then call get_ros2_message_interface with 'rai_interfaces/srv/WhatISee', and finally call call_ros2_service with an empty request to get visual observations and camera pose."

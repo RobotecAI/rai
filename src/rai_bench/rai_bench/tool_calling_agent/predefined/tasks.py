@@ -378,21 +378,42 @@ def get_manipulation_tasks(
     return tasks
 
 
-def get_custom_interfaces_tasks(extra_tool_calls: int = 0) -> List[Task]:
-    return [
-        PublishROS2HRIMessageTextTask(
-            topic="/to_human",
-            text="Hello!",
-            validators=[pub_HRIMessage_text_ord_val],
-            extra_tool_calls=extra_tool_calls,
-        ),
-        PublishROS2HRIMessageTextTask(
-            topic="/to_human",
-            text="Hello!",
-            validators=[list_topic_get_interface_publish_ord_val],
-            extra_tool_calls=extra_tool_calls,
-        ),
-    ]
+def get_custom_interfaces_tasks(
+    extra_tool_calls: int = 0,
+    prompt_detail: List[Literal["brief", "moderate", "descriptive"]] = [
+        "brief",
+        "moderate",
+        "descriptive",
+    ],
+    n_shots: List[Literal[0, 2, 5]] = [0, 2, 5],
+) -> List[Task]:
+    tasks: List[Task] = []
+
+    for detail in prompt_detail:
+        for shots in n_shots:
+            task_args = TaskArgs(
+                extra_tool_calls=extra_tool_calls,
+                prompt_detail=detail,
+                examples_in_system_prompt=shots,
+            )
+            tasks.extend(
+                [
+                    PublishROS2HRIMessageTextTask(
+                        topic="/to_human",
+                        validators=[pub_HRIMessage_text_ord_val],
+                        task_args=task_args,
+                        text="Hello!",
+                    ),
+                    PublishROS2HRIMessageTextTask(
+                        topic="/to_human",
+                        validators=[list_topic_get_interface_publish_ord_val],
+                        task_args=task_args,
+                        text="Hello!",
+                    ),
+                ]
+            )
+
+    return tasks
 
 
 def get_spatial_tasks(extra_tool_calls: int = 0) -> Sequence[Task]:
