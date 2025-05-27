@@ -14,14 +14,14 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, List, Literal
+from typing import Any, Dict, List
 
 import inflect
 from langchain_core.tools import BaseTool
 from rai.tools.ros2 import MoveToPointToolInput
 from rai.types import Point
 
-from rai_bench.tool_calling_agent.interfaces import Task, Validator
+from rai_bench.tool_calling_agent.interfaces import Task, TaskArgs, Validator
 from rai_bench.tool_calling_agent.mocked_tools import (
     MockGetObjectPositionsTool,
     MockGetROS2TopicsNamesAndTypesTool,
@@ -77,21 +77,13 @@ class ManipulationTask(Task, ABC):
 class GrabTask(ManipulationTask, ABC):
     def __init__(
         self,
-        validators: List[Validator],
         objects: Dict[str, List[Point]],
         object_to_grab: str,
-        prompt_detail: Literal["brief", "moderate", "descriptive"] = "brief",
-        n_shots: int = 0,
-        extra_tool_calls: int = 0,
-        logger: loggers_type | None = None,
+        validators: List[Validator],
+        task_args: TaskArgs,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(
-            validators=validators,
-            prompt_detail=prompt_detail,
-            n_shots=n_shots,
-            extra_tool_calls=extra_tool_calls,
-            logger=logger,
-        )
+        super().__init__(validators=validators, task_args=task_args, **kwargs)
         self.objects = objects
         self.object_to_grab = object_to_grab
         self._verify_args()
@@ -132,19 +124,10 @@ class MoveToPointTask(ManipulationTask):
         self,
         move_to_tool_input: MoveToPointToolInput,
         validators: List[Validator],
-        extra_tool_calls: int = 0,
-        prompt_detail: Literal["brief", "moderate", "descriptive"] = "brief",
-        n_shots: int = 0,
-        logger: loggers_type | None = None,
+        task_args: TaskArgs,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(
-            validators=validators,
-            extra_tool_calls=extra_tool_calls,
-            logger=logger,
-            prompt_detail=prompt_detail,
-            n_shots=n_shots,
-        )
-
+        super().__init__(validators=validators, task_args=task_args, **kwargs)
         self.move_to_tool_input = move_to_tool_input
 
     @property
@@ -179,12 +162,10 @@ class GetObjectPositionsTask(ManipulationTask):
         self,
         objects: Dict[str, List[Point]],
         validators: List[Validator],
-        extra_tool_calls: int = 0,
-        logger: loggers_type | None = None,
+        task_args: TaskArgs,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(
-            validators=validators, extra_tool_calls=extra_tool_calls, logger=logger
-        )
+        super().__init__(validators=validators, task_args=task_args, **kwargs)
         """Task to get the positions of the objects
 
         Examples
@@ -415,16 +396,12 @@ class SwapObjectsTask(Task):
     def __init__(
         self,
         objects: Dict[str, List[Point]],
-        objects_to_swap: str,
+        objects_to_swap: List[str],
         validators: List[Validator],
-        extra_tool_calls: int = 0,
-        logger: loggers_type | None = None,
+        task_args: TaskArgs,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(
-            validators=validators,
-            extra_tool_calls=extra_tool_calls,
-            logger=logger,
-        )
+        super().__init__(validators=validators, task_args=task_args, **kwargs)
         self.objects = objects
         self.objects_to_swap = objects_to_swap
         self._verify_args()

@@ -19,6 +19,7 @@ from rai.tools.ros2 import MoveToPointToolInput
 
 from rai_bench.tool_calling_agent.interfaces import (
     Task,
+    TaskArgs,
 )
 from rai_bench.tool_calling_agent.subtasks import (
     CheckActionFieldsToolCallSubTask,
@@ -238,68 +239,8 @@ start_navigate_action_ord_val = OrderedCallsValidator(
 start_spin_action_ord_val = OrderedCallsValidator(subtasks=[start_spin_action_subtask])
 move_ahead_ord_val = OrderedCallsValidator(subtasks=[start_move_front_action_subtask])
 
+
 ######### TASKS ############################################################################################
-basic_tasks: List[Task] = [
-    # 3 options to validate same task:
-    # most strict, agent has to call both tool correctly to pass this validator
-    GetROS2RGBCameraTask(validators=[topics_and_color_image_ord_val]),
-    # verifing only if the GetCameraImage call was made properly
-    GetROS2RGBCameraTask(validators=[color_image_ord_val]),
-    # Soft verification. verifing in separate vaidators the list topic and get image.
-    #  agent can get 0.5 score by only calling list topics
-    GetROS2RGBCameraTask(validators=[topics_ord_val, color_image_ord_val]),
-    # we can also add extra tool calls to allow model to correct itself
-    GetROS2RGBCameraTask(
-        validators=[topics_ord_val, color_image_ord_val], extra_tool_calls=3
-    ),
-    GetROS2TopicsTask(validators=[topics_ord_val]),
-    GetROS2DepthCameraTask(validators=[depth_image_ord_val]),
-    GetAllROS2CamerasTask(validators=[all_camera_iamges_notord_val]),
-]
-manipulation_tasks: List[Task] = [
-    MoveToPointTask(
-        move_to_tool_input=MoveToPointToolInput(x=1.0, y=2.0, z=3.0, task="grab"),
-        validators=[move_to_point_ord_val_drop],
-    ),
-    MoveToPointTask(
-        move_to_tool_input=MoveToPointToolInput(x=1.2, y=2.3, z=3.4, task="drop"),
-        validators=[move_to_point_ord_val_drop],
-    ),
-]
-
-custom_interfaces_tasks: List[Task] = [
-    PublishROS2HRIMessageTextTask(
-        topic="/to_human",
-        text="Hello!",
-        validators=[pub_HRIMessage_text_ord_val],
-        extra_tool_calls=2,
-    ),
-    PublishROS2HRIMessageTextTask(
-        topic="/to_human",
-        text="Hello!",
-        validators=[list_topic_get_interface_publish_ord_val],
-    ),
-]
-
-true_spatial_tasks: List[Task] = [
-    BoolImageTask(
-        task_input=input_item, validators=[ret_true_ord_val], extra_tool_calls=0
-    )
-    for input_item in true_response_inputs
-]
-false_spatial_tasks: List[Task] = [
-    BoolImageTask(task_input=input_item, validators=[ret_false_ord_val])
-    for input_item in false_response_inputs
-]
-
-navigation_tasks: List[Task] = [
-    NavigateToPointTask(validators=[start_navigate_action_ord_val], extra_tool_calls=5),
-    SpinAroundTask(validators=[start_spin_action_ord_val], extra_tool_calls=5),
-    MoveToBedTask(validators=[move_ahead_ord_val], extra_tool_calls=5),
-    MoveToFrontTask(validators=[move_ahead_ord_val], extra_tool_calls=5),
-]
-
-
 def get_basic_tasks(
     extra_tool_calls: int = 0,
     prompt_detail: List[Literal["brief", "moderate", "descriptive"]] = [
@@ -314,49 +255,40 @@ def get_basic_tasks(
     # Generate all combinations of prompt_detail and n_shots
     for detail in prompt_detail:
         for shots in n_shots:
-            # Create task variants with different prompt detail and n_shots
+            task_args = TaskArgs(
+                extra_tool_calls=extra_tool_calls,
+                prompt_detail=detail,
+                examples_in_system_prompt=shots,
+            )
             tasks.extend(
                 [
                     # 3 options to validate same task:
                     # most strict, agent has to call both tool correctly to pass this validator
                     GetROS2RGBCameraTask(
-                        prompt_detail=detail,
-                        n_shots=shots,
-                        validators=[topics_and_color_image_ord_val],
-                        extra_tool_calls=extra_tool_calls,
+                        validators=[topics_and_color_image_ord_val], task_args=task_args
                     ),
                     # verifying only if the GetCameraImage call was made properly
                     GetROS2RGBCameraTask(
-                        prompt_detail=detail,
-                        n_shots=shots,
                         validators=[color_image_ord_val],
-                        extra_tool_calls=extra_tool_calls,
+                        task_args=task_args,
                     ),
                     # Soft verification. verifying in separate validators the list topic and get image.
                     #  agent can get 0.5 score by only calling list topics
                     GetROS2RGBCameraTask(
-                        prompt_detail=detail,
-                        n_shots=shots,
                         validators=[topics_ord_val, color_image_ord_val],
-                        extra_tool_calls=extra_tool_calls,
+                        task_args=task_args,
                     ),
                     GetROS2TopicsTask(
-                        prompt_detail=detail,
-                        n_shots=shots,
                         validators=[topics_ord_val],
-                        extra_tool_calls=extra_tool_calls,
+                        task_args=task_args,
                     ),
                     GetROS2DepthCameraTask(
-                        prompt_detail=detail,
-                        n_shots=shots,
                         validators=[depth_image_ord_val],
-                        extra_tool_calls=extra_tool_calls,
+                        task_args=task_args,
                     ),
                     GetAllROS2CamerasTask(
-                        prompt_detail=detail,
-                        n_shots=shots,
                         validators=[all_camera_iamges_notord_val],
-                        extra_tool_calls=extra_tool_calls,
+                        task_args=task_args,
                     ),
                 ]
             )
@@ -377,31 +309,28 @@ def get_navigation_tasks(
 
     for detail in prompt_detail:
         for shots in n_shots:
+            task_args = TaskArgs(
+                extra_tool_calls=extra_tool_calls,
+                prompt_detail=detail,
+                examples_in_system_prompt=shots,
+            )
             tasks.extend(
                 [
                     NavigateToPointTask(
-                        prompt_detail=detail,
-                        n_shots=shots,
                         validators=[start_navigate_action_ord_val],
-                        extra_tool_calls=extra_tool_calls,
+                        task_args=task_args,
                     ),
                     SpinAroundTask(
-                        prompt_detail=detail,
-                        n_shots=shots,
                         validators=[start_spin_action_ord_val],
-                        extra_tool_calls=extra_tool_calls,
+                        task_args=task_args,
                     ),
                     MoveToBedTask(
-                        prompt_detail=detail,
-                        n_shots=shots,
                         validators=[move_ahead_ord_val],
-                        extra_tool_calls=extra_tool_calls,
+                        task_args=task_args,
                     ),
                     MoveToFrontTask(
-                        prompt_detail=detail,
-                        n_shots=shots,
                         validators=[move_ahead_ord_val],
-                        extra_tool_calls=extra_tool_calls,
+                        task_args=task_args,
                     ),
                 ]
             )
@@ -422,25 +351,26 @@ def get_manipulation_tasks(
 
     for detail in prompt_detail:
         for shots in n_shots:
+            task_args = TaskArgs(
+                extra_tool_calls=extra_tool_calls,
+                prompt_detail=detail,
+                examples_in_system_prompt=shots,
+            )
             tasks.extend(
                 [
                     MoveToPointTask(
-                        prompt_detail=detail,
-                        n_shots=shots,
                         move_to_tool_input=MoveToPointToolInput(
                             x=1.0, y=2.0, z=3.0, task="grab"
                         ),
                         validators=[move_to_point_ord_val_grab],
-                        extra_tool_calls=extra_tool_calls,
+                        task_args=task_args,
                     ),
                     MoveToPointTask(
-                        prompt_detail=detail,
-                        n_shots=shots,
                         move_to_tool_input=MoveToPointToolInput(
                             x=1.2, y=2.3, z=3.4, task="drop"
                         ),
                         validators=[move_to_point_ord_val_drop],
-                        extra_tool_calls=extra_tool_calls,
+                        task_args=task_args,
                     ),
                 ]
             )

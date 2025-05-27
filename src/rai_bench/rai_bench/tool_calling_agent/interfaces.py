@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple
 from langchain_core.messages import AIMessage, BaseMessage, ToolCall
 from langchain_core.runnables.config import DEFAULT_RECURSION_LIMIT
 from langchain_core.tools import BaseTool
+from pydantic import BaseModel
 
 from rai_bench.tool_calling_agent.results_tracking import SubTaskResult, ValidatorResult
 
@@ -454,19 +455,23 @@ class Validator(ABC):
         pass
 
 
+class TaskArgs(BaseModel):
+    """Holds the configurations specified by user"""
+
+    extra_tool_calls: int = 0
+    prompt_detail: Literal["brief", "moderate", "descriptive"] = "brief"
+    examples_in_system_prompt: Literal[0, 2, 5] = 0
+
+
 class Task(ABC):
     complexity: Literal["easy", "medium", "hard"]
-    prompt_detail: Literal["brief", "moderate", "descriptive"]
-    examples_in_system_prompt: int
     type: str
     recursion_limit: int = DEFAULT_RECURSION_LIMIT
 
     def __init__(
         self,
         validators: List[Validator],
-        extra_tool_calls: int = 0,
-        prompt_detail: Literal["brief", "moderate", "descriptive"] = "brief",
-        n_shots: int = 0,
+        task_args: TaskArgs,
         logger: loggers_type | None = None,
     ) -> None:
         """
@@ -492,9 +497,9 @@ class Task(ABC):
         else:
             self.logger = logging.getLogger(__name__)
         self.validators = validators
-        self.extra_tool_calls = extra_tool_calls
-        self.prompt_detail = prompt_detail
-        self.n_shots = n_shots
+        self.extra_tool_calls = task_args.extra_tool_calls
+        self.prompt_detail = task_args.prompt_detail
+        self.n_shots = task_args.examples_in_system_prompt
 
     def set_logger(self, logger: loggers_type):
         self.logger = logger
