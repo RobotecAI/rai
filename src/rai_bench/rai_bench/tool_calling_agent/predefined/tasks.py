@@ -45,8 +45,10 @@ from rai_bench.tool_calling_agent.tasks.navigation import (
     SpinAroundTask,
 )
 from rai_bench.tool_calling_agent.tasks.spatial import (
-    BoolImageTask,
+    BoolImageTaskEasy,
+    BoolImageTaskHard,
     BoolImageTaskInput,
+    BoolImageTaskMedium,
 )
 from rai_bench.tool_calling_agent.validators import (
     NotOrderedCallsValidator,
@@ -416,24 +418,178 @@ def get_custom_interfaces_tasks(
     return tasks
 
 
-def get_spatial_tasks(extra_tool_calls: int = 0) -> Sequence[Task]:
-    true_tasks = [
-        BoolImageTask(
-            task_input=input_item,
-            validators=[ret_true_ord_val],
-            extra_tool_calls=extra_tool_calls,
-        )
-        for input_item in true_response_inputs
+def get_spatial_tasks(
+    extra_tool_calls: int = 0,
+    prompt_detail: List[Literal["brief", "moderate", "descriptive"]] = [
+        "brief",
+        "moderate",
+        "descriptive",
+    ],
+    n_shots: List[Literal[0, 2, 5]] = [0, 2, 5],
+) -> Sequence[Task]:
+    tasks: List[Task] = []
+
+    # Categorize tasks by complexity based on question difficulty
+    easy_true_inputs = [
+        # Single object presence/detection
+        BoolImageTaskInput(
+            question="Is the light on in the room?",
+            images_paths=[IMG_PATH + "image_2.jpg"],
+        ),
+        BoolImageTaskInput(
+            question="Do you see the plant?", images_paths=[IMG_PATH + "image_2.jpg"]
+        ),
+        BoolImageTaskInput(
+            question="Are there any pictures on the wall?",
+            images_paths=[IMG_PATH + "image_3.jpg"],
+        ),
+        BoolImageTaskInput(
+            question="Is there a pillow on the armchain?",
+            images_paths=[IMG_PATH + "image_7.jpg"],
+        ),
     ]
-    false_tasks = [
-        BoolImageTask(
-            task_input=input_item,
-            validators=[ret_false_ord_val],
-            extra_tool_calls=extra_tool_calls,
-        )
-        for input_item in false_response_inputs
+
+    medium_true_inputs = [
+        # Object state or counting
+        BoolImageTaskInput(
+            question="Are there 3 pictures on the wall?",
+            images_paths=[IMG_PATH + "image_4.jpg"],
+        ),
     ]
-    return true_tasks + false_tasks
+
+    hard_true_inputs = [
+        # Spatial relationships between objects
+        BoolImageTaskInput(
+            question="Is the door on the left from the desk?",
+            images_paths=[IMG_PATH + "image_1.jpg"],
+        ),
+        BoolImageTaskInput(
+            question="Is there a plant behind the rack?",
+            images_paths=[IMG_PATH + "image_5.jpg"],
+        ),
+    ]
+
+    easy_false_inputs = [
+        # Single object presence/detection
+        BoolImageTaskInput(
+            question="Is someone in the room?", images_paths=[IMG_PATH + "image_1.jpg"]
+        ),
+        BoolImageTaskInput(
+            question="Do you see the plant?", images_paths=[IMG_PATH + "image_3.jpg"]
+        ),
+        BoolImageTaskInput(
+            question="Is there a red pillow on the armchair?",
+            images_paths=[IMG_PATH + "image_7.jpg"],
+        ),
+    ]
+
+    medium_false_inputs = [
+        # Object state or counting
+        BoolImageTaskInput(
+            question="Is the door open?", images_paths=[IMG_PATH + "image_1.jpg"]
+        ),
+        BoolImageTaskInput(
+            question="Are there 4 pictures on the wall?",
+            images_paths=[IMG_PATH + "image_4.jpg"],
+        ),
+    ]
+
+    hard_false_inputs = [
+        # Spatial relationships between objects
+        BoolImageTaskInput(
+            question="Is there a rack on the left from the sofa?",
+            images_paths=[IMG_PATH + "image_4.jpg"],
+        ),
+        BoolImageTaskInput(
+            question="Is there a plant on the right from the window?",
+            images_paths=[IMG_PATH + "image_6.jpg"],
+        ),
+    ]
+
+    for detail in prompt_detail:
+        for shots in n_shots:
+            task_args = TaskArgs(
+                extra_tool_calls=extra_tool_calls,
+                prompt_detail=detail,
+                examples_in_system_prompt=shots,
+            )
+
+            [
+                BoolImageTaskEasy(
+                    task_input=input_item,
+                    validators=[ret_true_ord_val],
+                    task_args=task_args,
+                )
+                for input_item in easy_true_inputs
+            ]
+
+            tasks.extend(
+                [
+                    BoolImageTaskEasy(
+                        task_input=input_item,
+                        validators=[ret_true_ord_val],
+                        task_args=task_args,
+                    )
+                    for input_item in easy_true_inputs
+                ]
+            )
+
+            tasks.extend(
+                [
+                    BoolImageTaskEasy(
+                        task_input=input_item,
+                        validators=[ret_false_ord_val],
+                        task_args=task_args,
+                    )
+                    for input_item in easy_false_inputs
+                ]
+            )
+
+            tasks.extend(
+                [
+                    BoolImageTaskMedium(
+                        task_input=input_item,
+                        validators=[ret_true_ord_val],
+                        task_args=task_args,
+                    )
+                    for input_item in medium_true_inputs
+                ]
+            )
+
+            tasks.extend(
+                [
+                    BoolImageTaskMedium(
+                        task_input=input_item,
+                        validators=[ret_false_ord_val],
+                        task_args=task_args,
+                    )
+                    for input_item in medium_false_inputs
+                ]
+            )
+
+            tasks.extend(
+                [
+                    BoolImageTaskHard(
+                        task_input=input_item,
+                        validators=[ret_true_ord_val],
+                        task_args=task_args,
+                    )
+                    for input_item in hard_true_inputs
+                ]
+            )
+
+            tasks.extend(
+                [
+                    BoolImageTaskHard(
+                        task_input=input_item,
+                        validators=[ret_false_ord_val],
+                        task_args=task_args,
+                    )
+                    for input_item in hard_false_inputs
+                ]
+            )
+
+    return tasks
 
 
 def get_tasks(

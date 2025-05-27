@@ -14,18 +14,36 @@
 
 
 import logging
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import List
 
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 from rai.messages import preprocess_image
 
-from rai_bench.tool_calling_agent.interfaces import Task, Validator
+from rai_bench.tool_calling_agent.interfaces import Task, TaskArgs, Validator
 
 loggers_type = logging.Logger
 
-SPATIAL_REASONING_SYSTEM_PROMPT = "You are a helpful and knowledgeable AI assistant that specializes in interpreting and analyzing visual content. Your task is to answer questions based on the images provided to you. Please response with the use of the provided tools."
+SPATIAL_REASONING_SYSTEM_PROMPT_0_SHOT = """You are a helpful and knowledgeable AI assistant that specializes in interpreting and analyzing visual content. Your task is to answer questions based on the images provided to you. Please response with the use of the provided tools."""
+
+SPATIAL_REASONING_SYSTEM_PROMPT_2_SHOT = (
+    SPATIAL_REASONING_SYSTEM_PROMPT_0_SHOT
+    + """
+
+Example of tool calls:
+- return_bool_response, args: {'response': True}
+- return_bool_response, args: {'response': False}"""
+)
+
+# NOTE (jmatejcz) In this case we are using only one tool to there is no difference bettween 2 and 5 shot
+SPATIAL_REASONING_SYSTEM_PROMPT_5_SHOT = (
+    SPATIAL_REASONING_SYSTEM_PROMPT_2_SHOT
+    + """
+- return_bool_response, args: {'response': True}  # When object is clearly visible
+- return_bool_response, args: {'response': False}  # When object is not present
+- return_bool_response, args: {'response': True}  # When spatial relationship is correct"""
+)
 
 
 class TaskParametrizationError(Exception):
@@ -37,29 +55,26 @@ class TaskParametrizationError(Exception):
 class SpatialReasoningAgentTask(Task):
     """Abstract class for spatial reasoning tasks for tool calling agent."""
 
+    type = "spatial_reasoning"
+
     def __init__(
         self,
         validators: List[Validator],
-        extra_tool_calls: int = 0,
+        task_args: TaskArgs,
         logger: loggers_type | None = None,
     ) -> None:
         super().__init__(
             validators=validators,
-            extra_tool_calls=extra_tool_calls,
+            task_args=task_args,
             logger=logger,
         )
         self.expected_tools: List[BaseTool]
         self.question: str
         self.images_paths: List[str]
 
-    @property
-    def type(self) -> str:
-        return "spatial_reasoning"
-
     @abstractmethod
     def get_images(self) -> List[str]:
         """Get the images related to the task.
-
         Returns
         -------
         List[str]
@@ -68,7 +83,12 @@ class SpatialReasoningAgentTask(Task):
         pass
 
     def get_system_prompt(self) -> str:
-        return SPATIAL_REASONING_SYSTEM_PROMPT
+        if self.n_shots == 0:
+            return SPATIAL_REASONING_SYSTEM_PROMPT_0_SHOT
+        elif self.n_shots == 2:
+            return SPATIAL_REASONING_SYSTEM_PROMPT_2_SHOT
+        else:
+            return SPATIAL_REASONING_SYSTEM_PROMPT_5_SHOT
 
 
 class ReturnBoolResponseToolInput(BaseModel):
@@ -96,19 +116,17 @@ class BoolImageTaskInput(BaseModel):
     )
 
 
-class BoolImageTask(SpatialReasoningAgentTask):
-    complexity = "easy"
-
+class BoolImageTask(SpatialReasoningAgentTask, ABC):
     def __init__(
         self,
         task_input: BoolImageTaskInput,
         validators: List[Validator],
-        extra_tool_calls: int = 0,
+        task_args: TaskArgs,
         logger: loggers_type | None = None,
     ) -> None:
         super().__init__(
             validators=validators,
-            extra_tool_calls=extra_tool_calls,
+            task_args=task_args,
             logger=logger,
         )
         self.question = task_input.question
@@ -119,8 +137,33 @@ class BoolImageTask(SpatialReasoningAgentTask):
         return [ReturnBoolResponseTool()]
 
     def get_prompt(self):
-        return self.question
+        base_prompt = self.question
+
+        if self.prompt_detail == "brief":
+            return base_prompt
+        elif self.prompt_detail == "moderate":
+            return f"{base_prompt} Use the return_bool_response tool to answer"
+        else:
+            return f"{base_prompt}. Analyze the provided image(s) carefully and call return_bool_response with True or False based on what you observe."
 
     def get_images(self):
         images = [preprocess_image(image_path) for image_path in self.images_paths]
         return images
+
+
+# NOTE (jmatejcz) spatial reasoning task's deiffculty is based soly on prompt and image
+# so in this case when declaring task, please subjectivly decide how hard is the task
+# examples:
+# easy -> locating single object, tell if it is present
+# medium -> tell in what state is the object (is door open?) or locating multiple objects
+# hard -> locating multiple objects and resoning about their relative positions (is X on the right side of Y?)
+class BoolImageTaskEasy(BoolImageTask):
+    complexity = "easy"
+
+
+class BoolImageTaskMedium(BoolImageTask):
+    complexity = "medium"
+
+
+class BoolImageTaskHard(BoolImageTask):
+    complexity = "hard"
