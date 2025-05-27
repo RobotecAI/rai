@@ -28,6 +28,8 @@ from rai_bench.tool_calling_agent.subtasks import (
 )
 from rai_bench.tool_calling_agent.tasks.basic import (
     GetAllROS2CamerasTask,
+    GetPointcloudTask,
+    GetRobotDescriptionTask,
     GetROS2DepthCameraTask,
     GetROS2RGBCameraTask,
     GetROS2TopicsTask,
@@ -132,12 +134,30 @@ depth_image5_subtask = CheckArgsToolCallSubTask(
     expected_optional_args={"timeout_sec": int},
 )
 
+color_camera_info5_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="get_ros2_image",
+    expected_args={"topic": "/color_image5"},
+    expected_optional_args={"timeout_sec": int},
+)
+depth_camera_info5_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="get_ros2_image",
+    expected_args={"topic": "/depth_image5"},
+    expected_optional_args={"timeout_sec": int},
+)
+
 receive_robot_desc_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="receive_ros2_message",
     expected_args={"topic": "/robot_description"},
     expected_optional_args={"timeout_sec": int},
 )
 
+receive_pointcloud_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/pointcloud"},
+    expected_optional_args={"timeout_sec": int},
+)
+
+######### MANIPULATION ########################################################################################
 move_to_point_subtask_grab = CheckArgsToolCallSubTask(
     expected_tool_name="move_to_point",
     expected_args={"x": 1.0, "y": 2.0, "z": 3.0, "task": "grab"},
@@ -195,24 +215,51 @@ start_move_front_action_subtask = CheckActionFieldsToolCallSubTask(
     },
 )
 ######### VALIDATORS #########################################################################################
+######### BASIC    ########################################################################################
 topics_ord_val = OrderedCallsValidator(subtasks=[get_topics_subtask])
-topics_and_color_image_ord_val = OrderedCallsValidator(
-    subtasks=[
-        get_topics_subtask,
-        color_image5_subtask,
-    ]
-)
+# topics_and_color_image_ord_val = OrderedCallsValidator(
+#     subtasks=[
+#         get_topics_subtask,
+#         color_image5_subtask,
+#     ]
+# )
 color_image_ord_val = OrderedCallsValidator(subtasks=[color_image5_subtask])
 depth_image_ord_val = OrderedCallsValidator(subtasks=[depth_image5_subtask])
-all_camera_iamges_notord_val = NotOrderedCallsValidator(
+
+color_camera_info_ord_val = OrderedCallsValidator(subtasks=[color_camera_info5_subtask])
+depth_camera_info_ord_val = OrderedCallsValidator(subtasks=[depth_camera_info5_subtask])
+
+color_image_with_info_ord_val = NotOrderedCallsValidator(
+    subtasks=[color_image5_subtask, color_camera_info5_subtask]
+)
+depth_image_with_info_ord_val = NotOrderedCallsValidator(
+    subtasks=[depth_image5_subtask, color_camera_info5_subtask]
+)
+
+all_camera_images_notord_val = NotOrderedCallsValidator(
     subtasks=[
         color_image5_subtask,
+        depth_image5_subtask,
+    ]
+)
+all_camera_info_notord_val = NotOrderedCallsValidator(
+    subtasks=[
+        color_camera_info5_subtask,
+        depth_camera_info5_subtask,
+    ]
+)
+all_camera_images_with_info_notord_val = NotOrderedCallsValidator(
+    subtasks=[
         color_image5_subtask,
         depth_image5_subtask,
-        depth_image5_subtask,
+        color_camera_info5_subtask,
+        depth_camera_info5_subtask,
     ]
 )
 
+get_pointcloud_ord_val = OrderedCallsValidator(subtasks=[receive_pointcloud_subtask])
+get_robot_desc_ord_val = OrderedCallsValidator(subtasks=[receive_robot_desc_subtask])
+######### MANIPULATION ########################################################################################
 move_to_point_ord_val_grab = OrderedCallsValidator(
     subtasks=[move_to_point_subtask_grab]
 )
@@ -267,7 +314,7 @@ def get_basic_tasks(
                     # 3 options to validate same task:
                     # most strict, agent has to call both tool correctly to pass this validator
                     GetROS2RGBCameraTask(
-                        validators=[topics_and_color_image_ord_val], task_args=task_args
+                        validators=[color_image_ord_val], task_args=task_args
                     ),
                     # verifying only if the GetCameraImage call was made properly
                     GetROS2RGBCameraTask(
@@ -289,8 +336,14 @@ def get_basic_tasks(
                         task_args=task_args,
                     ),
                     GetAllROS2CamerasTask(
-                        validators=[all_camera_iamges_notord_val],
+                        validators=[all_camera_images_notord_val],
                         task_args=task_args,
+                    ),
+                    GetPointcloudTask(
+                        validators=[get_pointcloud_ord_val], task_args=task_args
+                    ),
+                    GetRobotDescriptionTask(
+                        validators=[get_robot_desc_ord_val], task_args=task_args
                     ),
                 ]
             )

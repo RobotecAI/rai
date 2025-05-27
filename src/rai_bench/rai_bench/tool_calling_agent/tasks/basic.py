@@ -14,7 +14,7 @@
 
 import logging
 from abc import ABC
-from typing import List
+from typing import Dict, List
 
 from langchain_core.tools import BaseTool
 
@@ -61,8 +61,58 @@ CAMERA_TOPICS = [
 ]
 
 
+TOPICS_AND_TYPES: Dict[str, str] = {
+    "/attached_collision_object": "moveit_msgs/msg/AttachedCollisionObject",
+    "/clock": "rosgraph_msgs/msg/Clock",
+    "/collision_object": "moveit_msgs/msg/CollisionObject",
+    "/display_contacts": "visualization_msgs/msg/MarkerArray",
+    "/display_planned_path": "moveit_msgs/msg/DisplayTrajectory",
+    "/execute_trajectory/_action/feedback": "moveit_msgs/action/ExecuteTrajectory_FeedbackMessage",
+    "/execute_trajectory/_action/status": "action_msgs/msg/GoalStatusArray",
+    "/joint_states": "sensor_msgs/msg/JointState",
+    "/monitored_planning_scene": "moveit_msgs/msg/PlanningScene",
+    "/motion_plan_request": "moveit_msgs/msg/MotionPlanRequest",
+    "/move_action/_action/feedback": "moveit_msgs/action/MoveGroup_FeedbackMessage",
+    "/move_action/_action/status": "action_msgs/msg/GoalStatusArray",
+    "/panda_arm_controller/follow_joint_trajectory/_action/feedback": "control_msgs/action/FollowJointTrajectory_FeedbackMessage",
+    "/panda_arm_controller/follow_joint_trajectory/_action/status": "action_msgs/msg/GoalStatusArray",
+    "/panda_hand_controller/gripper_cmd/_action/feedback": "control_msgs/action/GripperCommand_FeedbackMessage",
+    "/panda_hand_controller/gripper_cmd/_action/status": "action_msgs/msg/GoalStatusArray",
+    "/parameter_events": "rcl_interfaces/msg/ParameterEvent",
+    "/planning_scene": "moveit_msgs/msg/PlanningScene",
+    "/planning_scene_world": "moveit_msgs/msg/PlanningSceneWorld",
+    "/pointcloud": "sensor_msgs/msg/PointCloud2",
+    "/robot_description": "std_msgs/msg/String",
+    "/robot_description_semantic": "std_msgs/msg/String",
+    "/rosout": "rcl_interfaces/msg/Log",
+    "/tf": "tf2_msgs/msg/TFMessage",
+    "/tf_static": "tf2_msgs/msg/TFMessage",
+    "/trajectory_execution_event": "std_msgs/msg/String",
+    # Camera topics
+    "/color_camera_info5": "sensor_msgs/msg/CameraInfo",
+    "/color_image5": "sensor_msgs/msg/Image",
+    "/depth_camera_info5": "sensor_msgs/msg/CameraInfo",
+    "/depth_image5": "sensor_msgs/msg/Image",
+}
+
+TOPIC_STRINGS = [
+    f"topic: {topic}\ntype: {topic_type}\n"
+    for topic, topic_type in TOPICS_AND_TYPES.items()
+]
+
+
 class BasicTask(Task, ABC):
     type = "basic"
+
+    @property
+    def available_tools(self) -> List[BaseTool]:
+        return [
+            MockGetROS2TopicsNamesAndTypesTool(
+                mock_topics_names_and_types=TOPIC_STRINGS
+            ),
+            MockGetROS2ImageTool(available_topics=list(TOPICS_AND_TYPES.keys())),
+            MockReceiveROS2MessageTool(available_topics=list(TOPICS_AND_TYPES.keys())),
+        ]
 
     def get_system_prompt(self) -> str:
         if self.n_shots == 0:
@@ -76,42 +126,6 @@ class BasicTask(Task, ABC):
 class GetROS2TopicsTask(BasicTask):
     complexity = "easy"
 
-    @property
-    def available_tools(self) -> List[BaseTool]:
-        return [
-            MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
-                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                    "topic: /display_contacts\ntype: visualization_msgs/msg/MarkerArray\n",
-                    "topic: /display_planned_path\ntype: moveit_msgs/msg/DisplayTrajectory\n",
-                    "topic: /execute_trajectory/_action/feedback\ntype: moveit_msgs/action/ExecuteTrajectory_FeedbackMessage\n",
-                    "topic: /execute_trajectory/_action/status\ntype: action_msgs/msg/GoalStatusArray\n",
-                    "topic: /joint_states\ntype: sensor_msgs/msg/JointState\n",
-                    "topic: /monitored_planning_scene\ntype: moveit_msgs/msg/PlanningScene\n",
-                    "topic: /motion_plan_request\ntype: moveit_msgs/msg/MotionPlanRequest\n",
-                    "topic: /move_action/_action/feedback\ntype: moveit_msgs/action/MoveGroup_FeedbackMessage\n",
-                    "topic: /move_action/_action/status\ntype: action_msgs/msg/GoalStatusArray\n",
-                    "topic: /panda_arm_controller/follow_joint_trajectory/_action/feedback\ntype: control_msgs/action/FollowJointTrajectory_FeedbackMessage\n",
-                    "topic: /panda_arm_controller/follow_joint_trajectory/_action/status\ntype: action_msgs/msg/GoalStatusArray\n",
-                    "topic: /panda_hand_controller/gripper_cmd/_action/feedback\ntype: control_msgs/action/GripperCommand_FeedbackMessage\n",
-                    "topic: /panda_hand_controller/gripper_cmd/_action/status\ntype: action_msgs/msg/GoalStatusArray\n",
-                    "topic: /parameter_events\ntype: rcl_interfaces/msg/ParameterEvent\n",
-                    "topic: /planning_scene\ntype: moveit_msgs/msg/PlanningScene\n",
-                    "topic: /planning_scene_world\ntype: moveit_msgs/msg/PlanningSceneWorld\n",
-                    "topic: /pointcloud\ntype: sensor_msgs/msg/PointCloud2\n",
-                    "topic: /robot_description\ntype: std_msgs/msg/String\n",
-                    "topic: /robot_description_semantic\ntype: std_msgs/msg/String\n",
-                    "topic: /rosout\ntype: rcl_interfaces/msg/Log\n",
-                    "topic: /tf\ntype: tf2_msgs/msg/TFMessage\n",
-                    "topic: /tf_static\ntype: tf2_msgs/msg/TFMessage\n",
-                    "topic: /trajectory_execution_event\ntype: std_msgs/msg/String\n",
-                ]
-                + CAMERA_TOPICS_AND_TYPES
-            )
-        ]
-
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return "Get all topics"
@@ -123,20 +137,6 @@ class GetROS2TopicsTask(BasicTask):
 
 class GetROS2RGBCameraTask(BasicTask):
     complexity = "easy"
-
-    @property
-    def available_tools(self) -> List[BaseTool]:
-        return [
-            MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
-                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                ]
-                + CAMERA_TOPICS_AND_TYPES
-            ),
-            MockGetROS2ImageTool(available_topics=CAMERA_TOPICS),
-        ]
 
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
@@ -150,22 +150,6 @@ class GetROS2RGBCameraTask(BasicTask):
 class GetROS2DepthCameraTask(BasicTask):
     complexity = "easy"
 
-    @property
-    def available_tools(self) -> List[BaseTool]:
-        return [
-            MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
-                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                ]
-                + CAMERA_TOPICS_AND_TYPES
-            ),
-            MockGetROS2ImageTool(available_topics=CAMERA_TOPICS),
-        ]
-
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return "Get depth camera image"
@@ -177,22 +161,6 @@ class GetROS2DepthCameraTask(BasicTask):
 
 class GetPointcloudTask(BasicTask):
     complexity = "easy"
-
-    @property
-    def available_tools(self) -> List[BaseTool]:
-        return [
-            MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /pointcloud\ntype: sensor_msgs/msg/PointCloud2\n",
-                    "topic: /robot_description\ntype: std_msgs/msg/String\n",
-                    "topic: /rosout\ntype: rcl_interfaces/msg/Log\n",
-                    "topic: /tf\ntype: tf2_msgs/msg/TFMessage\n",
-                    "topic: /tf_static\ntype: tf2_msgs/msg/TFMessage\n",
-                    "topic: /trajectory_execution_event\ntype: std_msgs/msg/String\n",
-                ]
-            ),
-            MockReceiveROS2MessageTool(available_topics=["/pointcloud"]),
-        ]
 
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
@@ -206,22 +174,6 @@ class GetPointcloudTask(BasicTask):
 class GetRobotDescriptionTask(BasicTask):
     complexity = "easy"
 
-    @property
-    def available_tools(self) -> List[BaseTool]:
-        return [
-            MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /pointcloud\ntype: sensor_msgs/msg/PointCloud2\n",
-                    "topic: /robot_description\ntype: std_msgs/msg/String\n",
-                    "topic: /rosout\ntype: rcl_interfaces/msg/Log\n",
-                    "topic: /tf\ntype: tf2_msgs/msg/TFMessage\n",
-                    "topic: /tf_static\ntype: tf2_msgs/msg/TFMessage\n",
-                    "topic: /trajectory_execution_event\ntype: std_msgs/msg/String\n",
-                ]
-            ),
-            MockReceiveROS2MessageTool(available_topics=["/robot_description"]),
-        ]
-
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return "Get robot description"
@@ -234,20 +186,6 @@ class GetRobotDescriptionTask(BasicTask):
 class GetAllROS2CamerasTask(BasicTask):
     complexity = "medium"
 
-    @property
-    def available_tools(self) -> List[BaseTool]:
-        return [
-            MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
-                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                ]
-                + CAMERA_TOPICS_AND_TYPES
-            ),
-            MockGetROS2ImageTool(available_topics=CAMERA_TOPICS),
-        ]
-
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return "Get all camera images"
@@ -255,3 +193,27 @@ class GetAllROS2CamerasTask(BasicTask):
             return "Get images from all available cameras in the system, both RGB and depth"
         else:
             return "Get images from all available camera topics in the ROS2 system. This includes both RGB color images and depth images. You should first explore what camera topics are available."
+
+
+# class GetROS2RGBCameraWithInfoTask(BasicTask):
+#     complexity = "easy"
+
+#     def get_prompt(self) -> str:
+#         if self.prompt_detail == "brief":
+#             return "Get RGB camera image and info"
+#         elif self.prompt_detail == "moderate":
+#             return "Get the RGB image and camera info from the color camera"
+#         else:
+#             return "Get the RGB color image and camera calibration info from the camera. First check what camera topics are available, then get both the image and camera info from the color camera."
+
+
+# class GetROS2DepthWithInfoCameraTask(BasicTask):
+#     complexity = "easy"
+
+#     def get_prompt(self) -> str:
+#         if self.prompt_detail == "brief":
+#             return "Get depth camera image and info"
+#         elif self.prompt_detail == "moderate":
+#             return "Get the depth image and camera info from the depth sensor"
+#         else:
+#             return "Get the depth image and camera calibration info from the camera. First check what camera topics are available, then get both the image and camera info from the depth camera."
