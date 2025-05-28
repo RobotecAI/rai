@@ -99,6 +99,15 @@ nav:
         - ROS 2 Tools: API_documentation/langchain_integration/ROS_2_tools.md
       - Runners:
         - Overview: API_documentation/runners/overview.md
+  - Speech to speech:
+    - Overview: speech_to_speech/overview.md
+    - Agents:
+        - Overview: speech_to_speech/agents/overview.md
+        - Automatic Speech Recognition: speech_to_speech/agents/asr.md
+        - Text To Speech: speech_to_speech/agents/tts.md
+    - Models:
+        - Overview: speech_to_speech/models/overview.md
+    - SoundDevice Connector: speech_to_speech/sounddevice.md
   - Tutorials:
     - Overview: tutorials/overview.md
     - Complete walkthrough: tutorials/walkthrough.md
@@ -116,15 +125,6 @@ nav:
     - RAI Sim: simulation_and_benchmarking/rai_sim.md
     - RAI Bench: simulation_and_benchmarking/rai_bench.md
     - Simulators: simulation_and_benchmarking/simulators.md
-  - Speech to speech:
-    - Overview: speech_to_speech/overview.md
-    - Agents:
-        - Overview: speech_to_speech/agents/overview.md
-        - Automatic Speech Recognition: speech_to_speech/agents/asr.md
-        - Text To Speech: speech_to_speech/agents/tts.md
-    - Models:
-        - Overview: speech_to_speech/models/overview.md
-    - SoundDevice Connector: speech_to_speech/sounddevice.md
   - Extensions:
     - OpenSet Vision: extensions/openset.md
     - NoMaD Visual Navigation: extensions/nomad.md

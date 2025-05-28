@@ -19,11 +19,11 @@ The `SoundDeviceConnector` provides a Human-Robot Interface (HRI) for audio stre
 To use the connector, specify the target (output) and source (input) devices with their configurations:
 
 ```python
-from rai.communication.sound_device import SoundDeviceConnector, SoundDeviceConfig
+from rai_s2s.sound_device import SoundDeviceConfig, SoundDeviceConnector
 
 # Example device configurations
-output_config = SoundDeviceConfig(device_name="Speaker", sample_rate=16000, channels=1)
-input_config = SoundDeviceConfig(device_name="Microphone", sample_rate=16000, channels=1)
+output_config = SoundDeviceConfig(device_name="Speaker", channels=1)
+input_config = SoundDeviceConfig(device_name="Microphone", channels=1)
 
 connector = SoundDeviceConnector(
     targets=[("speaker", output_config)],
@@ -34,7 +34,7 @@ connector = SoundDeviceConnector(
 ## Message Type: `SoundDeviceMessage`
 
 ```python
-from rai.communication.sound_device import SoundDeviceMessage
+from rai_s2s.sound_device import SoundDeviceMessage
 
 msg = SoundDeviceMessage(
     audios=[audio_data],   # List of audio data (bytes or numpy arrays)
