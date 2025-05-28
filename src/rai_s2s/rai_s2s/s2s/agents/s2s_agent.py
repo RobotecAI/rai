@@ -290,7 +290,39 @@ class SpeechToSpeechAgent(BaseAgent):
             self.text_queues[self.current_transcription_id].put(message.text)
         self.playback_data.playing = True
 
+    def add_detection_model(self, model: BaseVoiceDetectionModel):
+        """
+        Add a voice detection model to check before recording starts.
+
+        Parameters
+        ----------
+        model : BaseVoiceDetectionModel
+            The voice detection model to be added.
+        """
+
+        self.should_record_pipeline.append(model)
+
     def set_playback_state(self, state: Literal["play", "pause", "stop"]):
+        """
+        Set the playback state of the system.
+
+        Parameters
+        ----------
+        state : {"play", "pause", "stop"}
+            The desired playback state:
+            - "play": Start or resume playback.
+            - "pause": Pause the current playback.
+            - "stop": Stop playback and reset playback-related data and queues.
+
+        Notes
+        -----
+        - When state is "stop", this method:
+          - Resets the `current_speech_id`.
+          - Generates a new `current_transcription_id`.
+          - Initializes new audio and text queues.
+          - Clears previous playback data.
+        - Logs actions and transitions for debugging and monitoring purposes.
+        """
         if state == "play":
             self.playback_data.playing = True
         elif state == "pause":

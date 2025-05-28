@@ -90,7 +90,6 @@ nav:
       - Connectors:
         - Overview: API_documentation/connectors/overview.md
         - ROS 2 Connectors: API_documentation/connectors/ROS_2_Connectors.md
-        - Sound Device Connector: API_documentation/connectors/sounddevice.md
       - Aggregators:
         - Overview: API_documentation/aggregators/overview.md
         - ROS 2 Aggregators: API_documentation/aggregators/ROS_2_Aggregators.md
@@ -100,6 +99,15 @@ nav:
         - ROS 2 Tools: API_documentation/langchain_integration/ROS_2_tools.md
       - Runners:
         - Overview: API_documentation/runners/overview.md
+  - Speech to speech:
+    - Overview: speech_to_speech/overview.md
+    - Agents:
+        - Overview: speech_to_speech/agents/overview.md
+        - Automatic Speech Recognition: speech_to_speech/agents/asr.md
+        - Text To Speech: speech_to_speech/agents/tts.md
+    - Models:
+        - Overview: speech_to_speech/models/overview.md
+    - SoundDevice Connector: speech_to_speech/sounddevice.md
   - Tutorials:
     - Overview: tutorials/overview.md
     - Complete walkthrough: tutorials/walkthrough.md

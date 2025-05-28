@@ -105,9 +105,6 @@ class OpenTTS(TTSModel):
 
         The information is retrieved by running a sample transcription request, to ensure that the information will be accurate for generation.
 
-        Parameters
-        ----------
-
         Returns
         -------
         Tuple[int, int]
