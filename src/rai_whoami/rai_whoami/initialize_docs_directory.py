@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import argparse
-import os
 from pathlib import Path
 
 SUBDIRECTORIES = [
@@ -23,8 +22,9 @@ SUBDIRECTORIES = [
 ]
 
 
-def initialize_docs_directory(documentation_dir: Path) -> None:
-    if documentation_dir.is_dir():
+def initialize_docs_directory(args: argparse.Namespace) -> None:
+    documentation_dir = Path(args.documentation_dir)
+    if documentation_dir.exists():
         print(
             f"Directory {documentation_dir} already exists. Remove it or use different folder."
         )
