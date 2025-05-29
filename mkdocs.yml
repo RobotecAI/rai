@@ -53,7 +53,7 @@ extra:
     - icon: fontawesome/brands/linkedin
       link: https://www.linkedin.com/company/robotec-ai
       name: Robotec.ai on LinkedIn
-  branch: development
+  branch: main
 
   analytics:
     provider: google
