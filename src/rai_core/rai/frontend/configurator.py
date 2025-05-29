@@ -890,15 +890,20 @@ def review_and_save():
             (test_embeddings_model, "Embeddings Model"),
             (test_langfuse, "Langfuse"),
             (test_langsmith, "LangSmith"),
-            (test_tts, "TTS"),
-            (
-                partial(
-                    test_recording_device,
-                    st.session_state.config["asr"]["recording_device_name"],
-                ),
-                "Recording Device",
-            ),
         ]
+        if st.session_state.features["s2s"]:
+            tests.extend(
+                [
+                    (test_tts, "TTS"),
+                    (
+                        partial(
+                            test_recording_device,
+                            st.session_state.config["asr"]["recording_device_name"],
+                        ),
+                        "Recording Device",
+                    ),
+                ]
+            )
         progress.progress(0.0, "Running tests...")
         for i, (test, name) in enumerate(tests):
             test_results[name] = test()
@@ -946,6 +951,7 @@ def setup_steps():
         step_names.append("🎙️ Speech Recognition")
         step_render.append(asr)
     except ImportError:
+        st.session_state.features["s2s"] = False
         logging.warning(
             "skipping speech recognition, missing import - install `poetry install --with s2s`"
         )
@@ -957,6 +963,7 @@ def setup_steps():
         step_names.append("🔊 Text to Speech")
         step_render.append(tts)
     except ImportError:
+        st.session_state.features["s2s"] = False
         logging.warning(
             "skipping text to speech, missing import - install `poetry install --with s2s`"
         )
