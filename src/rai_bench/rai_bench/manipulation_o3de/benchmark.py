@@ -261,7 +261,12 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
             config: RunnableConfig = {
                 "run_id": run_id,
                 "callbacks": callbacks,
-                "tags": [scenario.level, self.model_name],
+                "tags": [
+                    f"experiment-id:{experiment_id}",
+                    "benchmark:manipulation-o3de",
+                    self.model_name,
+                    f"scenario-difficulty:{scenario.level}",
+                ],
                 "recursion_limit": 50,
             }
             tool_calls_num = 0
@@ -303,7 +308,8 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
                 self.logger.error(msg=f"Task timeout: {e}")
             except GraphRecursionError as e:
                 self.logger.error(msg=f"Reached recursion limit {e}")
-
+            except Exception as e:
+                self.logger.error(msg=f"Unexpected errot occured: {e}")
             te = time.perf_counter()
             try:
                 score = scenario.task.calculate_score(self.simulation_bridge)
@@ -318,6 +324,7 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
                     scene_config_path=scenario.scene_config_path,
                     model_name=self.model_name,
                     score=score,
+                    level=scenario.level,
                     total_time=total_time,
                     number_of_tool_calls=tool_calls_num,
                 )
