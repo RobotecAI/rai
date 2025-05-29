@@ -4,19 +4,19 @@
 
     If you aren't familiar with our benchmark package, please read [RAI Bench](../simulation_and_benchmarking/rai_bench.md) first.
 
-Currently we offer 2 predefined benchmarks:
+Currently, we offer 2 predefined benchmarks:
 
 -   [Manipulation_O3DE](#manipulation-o3de)
 -   [Tool_Calling_Agent](#tool-calling-agent)
 
-If you want to test multiple models across diffrent benchmark configurations to go [Testing Models](#testing-models)
+If you want to test multiple models across different benchmark configurations, go to [Testing Models](#testing-models).
 
-If your goal is creating custom tasks and scenarios visit [Creating Custom Tasks](#creating-custom-tasks).
+If your goal is creating custom tasks and scenarios, visit [Creating Custom Tasks](#creating-custom-tasks).
 
 ## Manipulation O3DE
 
 -   Follow setup from [Manipulation demo Setup](../demos/manipulation.md#setup)
--   Create the o3de config:
+-   Create the O3DE config:
     ```yaml
     binary_path: /path/to/binary/RAIManipulationDemo.GameLauncher
     level: RoboticManipulationBenchmark
@@ -46,11 +46,11 @@ If your goal is creating custom tasks and scenarios visit [Creating Custom Tasks
 
     !!! warning
 
-        Running all scenarios will take a while. If you want to just try it out, we recommend chosing just one level of difficulty.
+        Running all scenarios will take a while. If you want to just try it out, we recommend choosing just one level of difficulty.
 
 ## Tool Calling Agent
 
-This benchmark does not require any additinal setup besides the main one [Basic Setup](../setup/install.md), just run:
+This benchmark does not require any additional setup besides the main one [Basic Setup](../setup/install.md), just run:
 
 ```bash
 python src/rai_bench/rai_bench/examples/tool_calling_agent.py --model-name <model-name> --vendor <vendor> --extra-tool-calls <5> --task-types <basic> --out-dir <out_dir>
@@ -58,17 +58,17 @@ python src/rai_bench/rai_bench/examples/tool_calling_agent.py --model-name <mode
 
 !!! note
 
-    This Benchmark is significantly faster, but still if just trying out, we recommned chosing just one task-type
+    This Benchmark is significantly faster, but still if just trying out, we recommend choosing just one task-type.
 
 ## Testing Models
 
-The best way of benchmarking your models is using `rai_bench.test_models` function with benchmark configs.
+The best way of benchmarking your models is using the `rai_bench.test_models` function with benchmark configs.
 
 ??? info "test_models function definition"
 
     ::: rai_bench.test_models.test_models
 
-Example usage
+Example usage:
 
 ```python
 from rai_bench import (
@@ -84,7 +84,7 @@ if __name__ == "__main__":
 
     # Define benchmarks that will be used
     man_conf = ManipulationO3DEBenchmarkConfig(
-        o3de_config_path="path/to/your/o3de_config.yaml",  # path to your o3de config
+        o3de_config_path="path/to/your/o3de_config.yaml",  # path to your O3DE config
         levels=[  # define what difficulty of tasks to include in benchmark
             "trivial",
         ],
@@ -107,28 +107,27 @@ if __name__ == "__main__":
         benchmark_configs=[man_conf, tool_conf],
         out_dir=out_dir,
     )
-
 ```
 
 ## Viewing Results
 
-From every benchmark run there will be results saved in provided output directory:
+From every benchmark run, there will be results saved in the provided output directory:
 
 -   Logs - in `benchmark.log` file
 -   results_summary.csv - for overall metrics
--   results.csv - for detailed results of ever task/scenario
+-   results.csv - for detailed results of every task/scenario
 
-When using `test_models` the output directories will be saved as `<run_datetime>/<benchmark_name>/<models>/<repeat>/...` and this format can be visualised with our streamlit script:
+When using `test_models`, the output directories will be saved as `<run_datetime>/<benchmark_name>/<models>/<repeat>/...` and this format can be visualized with our Streamlit script:
 
 ```bash
-streamlit run  src/rai_bench/rai_bench/examples/visualise_streamlit.py
+streamlit run src/rai_bench/rai_bench/examples/visualise_streamlit.py
 ```
 
 ## Creating Custom Tasks
 
-### Manipualtion O3DE Scenarios
+### Manipulation O3DE Scenarios
 
-To create your own Scenarios for you will need Scene Config and Task. You can combine already existing Scene and exisitng Task to create new Scenario like:
+To create your own Scenarios, you will need a Scene Config and Task. You can combine already existing Scene and existing Task to create a new Scenario like:
 
 ```python
 from pathlib import Path
@@ -140,7 +139,7 @@ from rai_bench.manipulation_o3de.benchmark import Scenario
 path_to_your_config = "src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/1a.yaml"
 scene_config = SceneConfig.load_base_config(Path(path_to_your_config))
 
-# configure exisitng Task with different params
+# configure existing Task with different params
 target_coords = (0.1, 0.1)
 disp = 0.1
 task = PlaceObjectAtCoordTask(
@@ -152,13 +151,13 @@ task = PlaceObjectAtCoordTask(
 Scenario(task=task, scene_config=scene_config, scene_config_path=path_to_your_config)
 ```
 
-But you also can create them from scratch.
-Creating Scene Config is very easy, just declare entities in yaml file like:
+But you can also create them from scratch.
+Creating a Scene Config is very easy, just declare entities in a YAML file like:
 
 ```yaml
 entities:
   - name: apple1
-    prefab_name: apple # make sure that this prefab exisits in simulaiton
+    prefab_name: apple # make sure that this prefab exists in simulation
       pose:
           translation:
               x: 0.0
@@ -171,7 +170,7 @@ entities:
               w: 1.0
 ```
 
-Creating your own Task will require slightly more effort. Let's start with something simple - Task will require throwing given objects off the table:
+Creating your own Task will require slightly more effort. Let's start with something simple - a Task that will require throwing given objects off the table:
 
 ```python
 import logging
@@ -189,7 +188,7 @@ class ThrowObjectsOffTableTask(ManipulationTask):
     def __init__(self, obj_types: List[str], logger: loggers_type | None = None):
         super().__init__(logger=logger)
         # obj_types is a list of objects that are subject of the task
-        # In this case it will mean which objects should be thrown off the table
+        # In this case, it will mean which objects should be thrown off the table
         # can be any objects
         self.obj_types = obj_types
 
@@ -225,14 +224,14 @@ class ThrowObjectsOffTableTask(ManipulationTask):
         return correct, incorrect
 ```
 
-As `obj_types` is parameterizable it enables various variants of this Task. In combination with a lot of simulation configs available it means that a single Task can provide dozens of scenarios.
+As `obj_types` is parameterizable, it enables various variants of this Task. In combination with a lot of simulation configs available, it means that a single Task can provide dozens of scenarios.
 
 Congratulations, you just created your first Scenario from scratch!
 
 ### Tool Calling Tasks
 
 To create a Tool Calling Task, you will need to define Subtasks, Validators, and Task itself.
-Let's create a basic task that require using tool to receive message from specific topic.
+Let's create a basic task that requires using a tool to receive a message from a specific topic.
 
 ```python
 from rai_bench.tool_calling_agent.subtasks import (
@@ -248,7 +247,7 @@ from rai_bench.tool_calling_agent.mocked_tools import (
 from langchain_core.tools import BaseTool
 from typing import List
 
-# configure exisitng Task with different params
+# configure existing Task with different params
 target_coords = (0.1, 0.1)
 disp = 0.1
 task = PlaceObjectAtCoordTask(
@@ -259,13 +258,13 @@ task = PlaceObjectAtCoordTask(
 
 Scenario(task=task, scene_config=scene_config, scene_config_path=path_to_your_config)
 
-# define subtask that require
+# define subtask that requires
 receive_robot_pos_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="receive_ros2_message",
     expected_args={"topic": "/robot_position"},
     expected_optional_args={
         "timeout_sec": int
-    },  # if there is not exact value exepected, you can pass type
+    },  # if there is not exact value expected, you can pass type
 )
 # use OrderedCallValidator as there is only 1 subtask
 topics_ord_val = OrderedCallsValidator(subtasks=[receive_robot_pos_subtask])
