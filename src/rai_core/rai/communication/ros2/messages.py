@@ -28,7 +28,7 @@ from sensor_msgs.msg import Image as ROS2Image
 from rai.communication.base_connector import BaseMessage
 from rai.communication.hri_connector import HRIMessage
 
-if importlib.util.find_spec("rai_interfaces.msg") is None:
+if importlib.util.find_spec("rai_interfaces") is None:
     logging.warning("rai_interfaces is not installed, ROS 2 HRIMessage will not work.")
 else:
     import rai_interfaces.msg
