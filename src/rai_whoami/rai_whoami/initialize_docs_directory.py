@@ -23,18 +23,15 @@ SUBDIRECTORIES = [
 ]
 
 
-def initialize_docs_directory(args: argparse.Namespace) -> None:
-    documentation_dir = Path(args.documentation_dir)
-    if os.path.exists(documentation_dir):
+def initialize_docs_directory(documentation_dir: Path) -> None:
+    if documentation_dir.is_dir():
         print(
             f"Directory {documentation_dir} already exists. Remove it or use different folder."
         )
         return
 
-    os.makedirs(documentation_dir)
-    print(f"Initialized documentation directory at {documentation_dir}")
     for subdirectory in SUBDIRECTORIES:
-        os.makedirs(documentation_dir / subdirectory)
+        (documentation_dir / subdirectory).mkdir(parents=True)
         print(
             f"Initialized subdirectory {subdirectory} at {documentation_dir / subdirectory}"
         )
