@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rai_whoami"
-version = "0.0.1"
+version = "0.0.4"
 description = "Package to extract embodiment information from robot documentation"
 authors = ["Maciej Majek <maciej.majek@robotec.ai>"]
 readme = "README.md"
@@ -23,7 +23,7 @@ faiss-cpu = "*"
 pypdf = "^5.4.0"
 
 [tool.poetry.scripts]
-build-whoami = "rai_whoami.build_whoami:build_whoami"
+build-whoami = "rai_whoami.build_whoami:main"
 
 
 [build-system]
