@@ -23,9 +23,9 @@ Before going further, make sure you have ROS 2 (jazzy or humble) installed and s
 
 3.  Optionally install ROS 2 dependencies:
 
-        ```bash
-        sudo apt install ros-${ROS_DISTRO}-rai-interfaces
-        ```
+    ```bash
+    sudo apt install ros-${ROS_DISTRO}-rai-interfaces
+    ```
 
 !!! important "Package availability"
 
