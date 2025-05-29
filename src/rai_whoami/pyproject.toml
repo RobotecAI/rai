@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rai_whoami"
-version = "0.0.2"
+version = "0.0.4"
 description = "Package to extract embodiment information from robot documentation"
 authors = ["Maciej Majek <maciej.majek@robotec.ai>"]
 readme = "README.md"
