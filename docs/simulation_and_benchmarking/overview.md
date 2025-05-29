@@ -10,13 +10,14 @@ RAI Sim provides a simulator-agnostic interface that allows RAI to work with any
 -   Easy integration with new simulators
 -   Seamless switching between simulation backends
 
+The package also provides simulator bridges for concrete simulators, currently supporting only O3DE.
 For detailed information about the simulation interface, see [RAI Sim Documentation](rai_sim.md).
 
 ## RAI Bench
 
-RAI Bench builds on top of RAI Sim to provide a framework for creating and running benchmarks. It uses the simulator-agnostic interface to:
+RAI Bench provides benchmarks with ready-to-use tasks and a framework to create your own tasks. It enables:
 
--   Define and execute tasks in any supported simulator
+-   Define and execute tasks
 -   Measure and evaluate performance
 -   Collect and analyze results
 
@@ -24,7 +25,7 @@ For detailed information about the benchmarking framework, see [RAI Bench Docume
 
 ## Integration
 
-RAI Sim and RAI Bench work together to provide a complete simulation and evaluation environment:
+RAI Sim and RAI Bench work together to provide benchmarks which utilize simulations for evaluation:
 
 1. **Simulation Interface**: RAI Sim provides the foundation with its simulator-agnostic interface
 2. **Task Definition**: RAI Bench defines tasks that can be executed in any supported simulator

@@ -41,6 +41,14 @@ Learn how to implement human-robot interaction through voice commands. This tuto
 -   Configuring Text-to-Speech (TTS) agent
 -   Running a complete speech-to-speech communication example
 
+### 5. [Benchmarking](./benchmarking.md)
+
+Guide to running benchmarks, testing your models, creating new tasks and visualising results. This tutorial covers:
+
+-   Running benchmarks with predefined tasks.
+-   Interpreting and visualizing the results.
+-   Creating your own tasks and scenarios!
+
 ## Getting Started
 
 To get started with RAI, we recommend following these tutorials in the following order:
@@ -49,5 +57,6 @@ To get started with RAI, we recommend following these tutorials in the following
 2. Learn about [Tools](./tools.md) to understand how to extend your agent's capabilities
 3. Configure your robot's identity using [Create Robot's Whoami](./create_robots_whoami.md)
 4. Add voice interaction capabilities using the [Voice Interface](./voice_interface.md) tutorial
+5. Test your models with [Benchmarks](./benchmarking.md)
 
 Each tutorial includes practical examples and code snippets to help you implement the concepts in your own projects.
