@@ -15,11 +15,11 @@ The `SimulationBridge` is an abstract base class that defines the interface for 
 
 ### SceneConfig
 
-The `SceneConfig` is configuration class that specifies the entities to be spawned in the simulation.
+The `SceneConfig` is a configuration class that specifies the entities to be spawned in the simulation.
 
 ### SimulationConfig
 
-The `SimulationConfig` is a abstract configuration class. Each simulation bridge can extend this with additional parameters specific to its implementation.
+The `SimulationConfig` is an abstract configuration class. Each simulation bridge can extend this with additional parameters specific to its implementation.
 
 ### SceneState
 
@@ -101,7 +101,7 @@ This allows RAI Bench to focus on task definition and evaluation while remaining
 
 ## LaunchManager
 
-RAI Sim also provides ROS2LaunchManager class that manages start and shutdown of ROS2 `LaunchDescription`
+RAI Sim also provides a ROS2LaunchManager class that manages the start and shutdown of ROS 2`LaunchDescription`
 
 ??? info "ROS2LaunchManager class definition"
 

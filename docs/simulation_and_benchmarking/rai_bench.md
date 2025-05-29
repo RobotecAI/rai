@@ -1,6 +1,6 @@
 # RAI Bench
 
-RAI Bench is a comprehensive package that both provides benchmarks with ready to use tasks and offers a framework for creating new tasks. It's designed to evaluate the performance of AI agents in various environments.
+RAI Bench is a comprehensive package that both provides benchmarks with ready-to-use tasks and offers a framework for creating new tasks. It's designed to evaluate the performance of AI agents in various environments.
 
 ### Available Benchmarks
 
@@ -22,9 +22,9 @@ Manipulation O3DE Benchmark provides a framework for creating custom tasks and s
 The `Task` class is an abstract base class that defines the interface for tasks used in this benchmark.
 Each concrete Task must implement:
 
--   prompts that will be passed to agent
+-   prompts that will be passed to the agent
 -   validation of simulation configurations
--   calculating result based on scene state
+-   calculating results based on scene state
 
 ### Scenario
 
@@ -56,11 +56,11 @@ The benchmark includes several predefined manipulation tasks:
 
 5. **GroupObjectsTask** - Group specified objects of specified types together
 
-Task are parametrizable so you can configure which object should be manipulated and how much precision is needed to complete a task.
+Tasks are parametrizable so you can configure which objects should be manipulated and how much precision is needed to complete a task.
 
 Tasks are scored on a scale from 0.0 to 1.0, where:
 
--   0.0 indicates no improvement or worse placement than starting one
+-   0.0 indicates no improvement or worse placement than the starting one
 -   1.0 indicates perfect completion
 
 The score is typically calculated as:
@@ -85,37 +85,37 @@ Choose which task you want by selecting the difficulty, from trivial to very har
 
 ## Tool Calling Agent Benchmark
 
-Evaluates agent performance independently from any simulation, based only on tool calls that agent makes. To make it independent from simulations, this benchmark introduces tool mocks which can be adjusted for different tasks. This make the benchmark more universal and a lot faster.
+Evaluates agent performance independently from any simulation, based only on tool calls that the agent makes. To make it independent from simulations, this benchmark introduces tool mocks which can be adjusted for different tasks. This makes the benchmark more universal and a lot faster.
 
 ### Framework Components
 
-![Tool Calling Benchmark FrameWork](../imgs/tool_calling_agent_benchmark.png)
+![Tool Calling Benchmark Framework](../imgs/tool_calling_agent_benchmark.png)
 
 ### SubTask
 
 The `SubTask` class is used to validate just one tool call. Following classes are available:
 
--   `CheckArgsToolCallSubTask` - verify if certain tool was called with expected arguments.
--   `CheckTopicFieldsToolCallSubTask` - verify if a massage published to ros2 topic was of proper type and included expected fields.
--   `CheckServiceFieldsToolCallSubTask` - verify if a massage published to ros2 service was of proper type and included expected fields.
--   `CheckActionFieldsToolCallSubTask`- verify if a massage published to ros2 action was of proper type and included expected fields.
+-   `CheckArgsToolCallSubTask` - verify if a certain tool was called with expected arguments
+-   `CheckTopicFieldsToolCallSubTask` - verify if a message published to ROS 2topic was of proper type and included expected fields
+-   `CheckServiceFieldsToolCallSubTask` - verify if a message published to ROS 2service was of proper type and included expected fields
+-   `CheckActionFieldsToolCallSubTask` - verify if a message published to ROS 2action was of proper type and included expected fields
 
 ### Validator
 
-The `Validator` class can combine single or multiple subtasks to create single validation step. Following validators are available:
+The `Validator` class can combine single or multiple subtasks to create a single validation step. Following validators are available:
 
--   OrderedCallsValidator - requires a strict order of subtaks. The next subtask will be validated only when the previous one was completed. Validator passes when all subtasks pass.
--   NotOrderedCallsValidator - doesn't enforce order of subtaks. Every subtask will be validated against every tool call. Validator passes when all subtasks pass.
+-   OrderedCallsValidator - requires a strict order of subtasks. The next subtask will be validated only when the previous one was completed. Validator passes when all subtasks pass.
+-   NotOrderedCallsValidator - doesn't enforce order of subtasks. Every subtask will be validated against every tool call. Validator passes when all subtasks pass.
 
 ### Task
 
-A Task represents specific prompt and set of tools available. A list of validators is assigned to validate the performance.
+A Task represents a specific prompt and set of tools available. A list of validators is assigned to validate the performance.
 
 ??? info "Task class definition"
 
     ::: rai_bench.tool_calling_agent.interfaces.Task
 
-As you can see the framework is very flexible. Any SubTask can be combined into any Validator that can be later assigned to any Task.
+As you can see, the framework is very flexible. Any SubTask can be combined into any Validator that can be later assigned to any Task.
 
 ### ToolCallingAgentBenchmark
 
@@ -127,10 +127,10 @@ Tasks of this benchmark are grouped by type:
 
 -   Basic - basic usage of tools
 -   Navigation
--   Spatial reasoning - questions about surroundings with images attached.
+-   Spatial reasoning - questions about surroundings with images attached
 -   Manipulation
 -   Custom Interfaces - requires using messages with custom interfaces
 
-If you want to know details about every task visit `rai_bench/tool_calling_agent/tasks`
+If you want to know details about every task, visit `rai_bench/tool_calling_agent/tasks`
 
 ## Test Models
