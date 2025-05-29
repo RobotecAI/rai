@@ -985,6 +985,8 @@ def setup_steps():
 # Initialize session state for tracking steps if not exists
 if "current_step" not in st.session_state:
     st.session_state.current_step = 1
+if "features" not in st.session_state:
+    st.session_state.features = {}
 if "config" not in st.session_state:
     # Load initial config from TOML file
     try:
