@@ -27,10 +27,10 @@ Before going further, make sure you have ROS 2 (jazzy or humble) installed and s
         sudo apt install ros-${ROS_DISTRO}-rai-interfaces
         ```
 
-    !!! important "Package availability"
+!!! important "Package availability"
 
-        `rai_openset` and `rai_nomad` are not yet available through pip. If your workflow relies on openset detection or NoMaD integration, please refer to the
-        [developer environment instructions](#setting-up-developer-environment) setup.
+    `rai_openset` and `rai_nomad` are not yet available through pip. If your workflow relies on openset detection or NoMaD integration, please refer to the
+    [developer environment instructions](#setting-up-developer-environment) setup.
 
 ??? tip "RAI modules"
 
