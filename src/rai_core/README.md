@@ -2,11 +2,6 @@
 
 RAI is a flexible AI agent framework to develop and deploy Embodied AI features for your robots.
 
-📚 Visit [robotecai.github.io/rai](https://robotecai.github.io/rai/) for the latest documentation, setup
-guide and tutorials. 📚
-
----
-
 <div align="center">
 
 ![rai-image](https://raw.githubusercontent.com/RobotecAI/rai/refs/heads/development/docs/imgs/RAI_simple_diagram_medium.png)
@@ -29,6 +24,29 @@ guide and tutorials. 📚
 </div>
 
 ---
+
+## Installation
+
+1. Install RAI:
+
+```bash
+pip install rai
+```
+
+2. Initialize the global configuration file:
+
+```bash
+rai-config-init
+```
+
+3. Optionally install ROS 2 dependencies:
+
+```bash
+sudo apt install ros-${ROS_DISTRO}-rai-interfaces
+```
+
+For more visit [robotecai.github.io/rai](https://robotecai.github.io/rai/) for the latest documentation, setup
+guide and tutorials.
 
 ## 🎯 Overview
 
