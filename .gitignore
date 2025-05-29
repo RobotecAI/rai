@@ -15,8 +15,7 @@ log/
 # Distribution / packaging
 .Python
 build/
-develop-eggs/
-dist/
+develop-eggs/ dist/
 downloads/
 eggs/
 .eggs/
@@ -176,6 +175,7 @@ artifact_database.pkl
 imgui.ini
 
 src/rai_bench/rai_bench/experiments
+src/rai_interfaces
 
 # Demo assets
 demo_assets/
