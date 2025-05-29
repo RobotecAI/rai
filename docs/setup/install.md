@@ -23,7 +23,39 @@ system. If you don't have ROS 2 follow the installation documentation for
 
     If you later decide to integrate with ROS 2, you can simply install and source ROS 2, and all ROS 2-specific RAI features (such as connectors, aggregators, and tools) will become available automatically.
 
-## 1. Setting up the workspace:
+## Installing RAI
+
+1. Install core functionality:
+
+    ```bash
+    pip install rai-core
+    ```
+
+2. Initialize the global configuration file:
+
+    ```bash
+    rai-config-init
+    ```
+
+3. Optionally install ROS 2 dependencies:
+
+    ```bash
+    sudo apt install ros-${ROS_DISTRO}-rai-interfaces
+    ```
+
+??? tip "RAI modules"
+
+    RAI is a modular framework. You can install only the modules you need.
+
+    | Module | Description | Documentation |
+    |--------|-------------|-------------|
+    | rai-core | Core functionality | [link](../API_documentation/overview.md) |
+    | rai-whoami | Embodiment module | [link](https://github.com/RobotecAI/rai/tree/{{branch}}/src/rai_whoami) |
+    | rai-s2s | Speech-to-Speech module | [link](../speech_to_speech/overview.md) |
+    | rai-sim | Simulation module | [Sim](../simulation_and_benchmarking/overview.md) |
+    | rai-bench | Benchmarking module | [Bench](../simulation_and_benchmarking/overview.md) |
+
+## Setting up developer environment
 
 ### 1.1 Install poetry
 
