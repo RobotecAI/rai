@@ -23,7 +23,13 @@ This embodiment info is then used to create a system prompt for LLM-based agents
 
 ### Directory Structure
 
-Prepare your robot documentation directory as follows:
+Initialize the documentation directory:
+
+```bash
+initialize-docs documentation_dir
+```
+
+Populate your robot documentation directory:
 
 ```
 documentation_dir/
@@ -37,7 +43,7 @@ documentation_dir/
 To generate the system prompt from your documentation directory:
 
 ```bash
-python src/rai_whoami/rai_whoami/build_whoami.py documentation_dir [--output_dir output_dir] [--build-vector-db]
+build-whoami documentation_dir [--output_dir output_dir] [--build-vector-db]
 ```
 
 Generated files will be saved in the `output_dir / generated` directory or `documentation_dir / generated` if not specified.
