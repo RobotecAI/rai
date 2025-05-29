@@ -21,7 +21,6 @@ import requests
 import streamlit as st
 import tomli
 import tomli_w
-from elevenlabs import ElevenLabs
 from langchain_aws import BedrockEmbeddings, ChatBedrock
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
@@ -834,6 +833,8 @@ def review_and_save():
             vendor = st.session_state.config["tts"]["vendor"]
             if vendor == "elevenlabs":
                 try:
+                    from elevenlabs import ElevenLabs
+
                     client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
                     output = client.generate(text="Hello, world!")
                     output = list(output)
