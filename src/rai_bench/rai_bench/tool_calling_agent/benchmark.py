@@ -25,10 +25,10 @@ from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
 from rai.agents.langchain.core import (
     create_conversational_agent,
-    create_multimodal_to_tool_agent,
 )
 from rai.messages import HumanMultimodalMessage
 
+from rai_bench.agents import create_multimodal_to_tool_agent
 from rai_bench.base_benchmark import BaseBenchmark, TimeoutException
 from rai_bench.results_processing.langfuse_scores_tracing import ScoreTracingHandler
 from rai_bench.tool_calling_agent.interfaces import (

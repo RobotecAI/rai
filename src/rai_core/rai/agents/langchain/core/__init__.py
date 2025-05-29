@@ -15,7 +15,6 @@
 from .conversational_agent import State as ConversationalAgentState
 from .conversational_agent import (
     create_conversational_agent,
-    create_multimodal_to_tool_agent,
 )
 from .react_agent import (
     ReActAgentState,
@@ -29,7 +28,6 @@ __all__ = [
     "ReActAgentState",
     "ToolRunner",
     "create_conversational_agent",
-    "create_multimodal_to_tool_agent",
     "create_react_runnable",
     "create_state_based_runnable",
 ]

@@ -34,7 +34,6 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from rai.agents.langchain.core import (
     create_conversational_agent,
-    create_multimodal_to_tool_agent,
 )
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.messages import HumanMultimodalMessage
@@ -46,6 +45,7 @@ from rai.tools.ros2 import (
 )
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
+from rai_bench.agents import create_multimodal_to_tool_agent
 from rai_bench.base_benchmark import BaseBenchmark, RunSummary, TimeoutException
 from rai_bench.manipulation_o3de.interfaces import Task
 from rai_bench.manipulation_o3de.results_tracking import (
