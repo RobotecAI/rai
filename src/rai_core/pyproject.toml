@@ -42,3 +42,6 @@ langfuse = "^2.60.2"
 pydub = "^0.25.1"
 streamlit = "^1.44"
 numpy = "<2.0"
+
+[tool.poetry.scripts]
+rai-config-init = "rai.initialization.config_initialization:main"
