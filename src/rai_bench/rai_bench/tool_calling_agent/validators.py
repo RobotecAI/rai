@@ -49,7 +49,7 @@ class OrderedCallsValidator(Validator):
         # was used before in other task
         subtask_iter = iter(enumerate(self.subtasks))
         if len(tool_calls) < 1:
-            self.logger.error("Not a single tool call to validate")
+            self.logger.debug("Not a single tool call to validate")
             self.passed = False
             return False, tool_calls
 
@@ -69,7 +69,7 @@ class OrderedCallsValidator(Validator):
                     self.extra_calls_used = i + 1 - self.required_calls
                     return True, tool_calls[i + 1 :]
 
-            self.logger.error(f"Validation failed for task {u + 1}")
+            self.logger.debug(f"Validation failed for task {u + 1}")
             self.passed = False
             if len(tool_calls) > self.required_calls:
                 self.extra_calls_used += len(tool_calls) - self.required_calls
@@ -96,7 +96,7 @@ class NotOrderedCallsValidator(Validator):
     def validate(self, tool_calls: List[ToolCall]) -> Tuple[bool, List[ToolCall]]:
         self.reset()
         if len(tool_calls) < 1:
-            self.logger.error("Not a single tool call to validate")
+            self.logger.debug("Not a single tool call to validate")
             self.passed = False
             return False, tool_calls
 
@@ -137,7 +137,7 @@ class NotOrderedCallsValidator(Validator):
             self.extra_calls_used = len(tool_calls) - self.required_calls
             return True, []
 
-        self.logger.error(
+        self.logger.debug(
             f"Validation failed for tasks: {[idx + 1 for idx in to_be_done_idx]}"
         )
         self.passed = False

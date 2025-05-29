@@ -20,8 +20,11 @@ from typing import List, TypeVar
 
 import rclpy
 from langchain.tools import BaseTool
+from langchain_aws import ChatBedrock
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables.config import RunnableConfig
+from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
 from launch import LaunchDescription
@@ -48,9 +51,6 @@ from rai_bench.manipulation_o3de.results_tracking import (
     ScenarioResult,
 )
 from rai_bench.results_processing.langfuse_scores_tracing import ScoreTracingHandler
-from rai_bench.utils import (
-    get_llm_for_benchmark,
-)
 from rai_sim.o3de.o3de_bridge import (
     O3DEngineArmManipulationBridge,
     O3DExROS2SimulationConfig,
@@ -228,7 +228,7 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
                     )
         return scenarios
 
-    def run_next(self, agent: CompiledStateGraph) -> None:
+    def run_next(self, agent: CompiledStateGraph, experiment_id: uuid.UUID) -> None:
         """
         Run the next scenario in the benchmark.
 
@@ -244,7 +244,7 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
             i, scenario = next(self.scenarios)  # Get the next scenario
             try:
                 with self.time_limit(30):
-                    # NOTE (jm) sometimes spawning objects freezes
+                    # NOTE (jmatejcz) sometimes spawning objects freezes
                     self.simulation_bridge.setup_scene(scenario.scene_config)
             except TimeoutException as e:
                 self.logger.error(msg=f"Setup scene timeout: {e}")
@@ -365,20 +365,18 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
 
 
 def run_benchmark(
+    llm: ChatOpenAI | ChatBedrock | ChatOllama,
     model_name: str,
-    vendor: str,
     out_dir: Path,
     o3de_config_path: str,
     scenarios: List[Scenario],
+    experiment_id: uuid.UUID,
     bench_logger: logging.Logger,
 ):
     rclpy.init()
     connector = ROS2Connector()
     node = connector.node
     node.declare_parameter("conversion_ratio", 1.0)
-
-    # define model
-    llm = get_llm_for_benchmark(model_name=model_name, vendor=vendor)
 
     # define tools
     tools: List[BaseTool] = [
@@ -415,7 +413,7 @@ def run_benchmark(
             agent = create_conversational_agent(
                 llm, tools, scenario.task.system_prompt, logger=bench_logger
             )
-            benchmark.run_next(agent=agent)
+            benchmark.run_next(agent=agent, experiment_id=experiment_id)
             o3de.reset_arm()
             time.sleep(0.2)  # admire the end position for a second ;)
 

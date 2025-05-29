@@ -11,18 +11,19 @@
 # # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # # See the License for the specific language governing permissions and
 # # limitations under the License.
+import uuid
 from abc import abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import List, Literal
+from typing import Any, Dict, List, Literal
 
+from git import Optional
+from langchain.chat_models.base import BaseChatModel
 from pydantic import BaseModel
 
 import rai_bench.manipulation_o3de as manipulation_o3de
 import rai_bench.tool_calling_agent as tool_calling_agent
-from rai_bench.utils import (
-    define_benchmark_logger,
-)
+from rai_bench.utils import define_benchmark_logger, get_llm_for_benchmark
 
 
 class BenchmarkConfig(BaseModel):
@@ -74,12 +75,83 @@ class ToolCallingAgentBenchmarkConfig(BenchmarkConfig):
         return "tool_calling_agent"
 
 
+def test_dual_agents(
+    multimodal_llms: List[BaseChatModel],
+    tool_calling_models: List[BaseChatModel],
+    benchmark_configs: List[BenchmarkConfig],
+    out_dir: str,
+):
+    if len(multimodal_llms) != len(tool_calling_models):
+        raise ValueError(
+            "Number of passed multimodal models must match number of passed tool calling models"
+        )
+    experiment_id = uuid.uuid4()
+    for bench_conf in benchmark_configs:
+        # for each bench configuration seperate run folder
+        now = datetime.now()
+        run_name = f"run_{now.strftime('%Y-%m-%d_%H-%M-%S')}"
+        for i, m_llm in enumerate(multimodal_llms):
+            tool_llm = tool_calling_models[i]
+            for u in range(bench_conf.repeats):
+                curr_out_dir = (
+                    out_dir
+                    + "/"
+                    + run_name
+                    + "/"
+                    + bench_conf.name
+                    + "/"
+                    + m_llm.get_name()
+                    + "/"
+                    + str(u)
+                )
+                bench_logger = define_benchmark_logger(out_dir=Path(curr_out_dir))
+                try:
+                    if isinstance(bench_conf, ToolCallingAgentBenchmarkConfig):
+                        tool_calling_tasks = tool_calling_agent.get_tasks(
+                            extra_tool_calls=bench_conf.extra_tool_calls,
+                            complexities=bench_conf.complexities,
+                            task_types=bench_conf.task_types,
+                        )
+                        tool_calling_agent.run_benchmark_dual_agent(
+                            multimodal_llm=m_llm,
+                            tool_calling_llm=tool_llm,
+                            model_name=m_llm.get_name(),
+                            out_dir=curr_out_dir,
+                            tasks=tool_calling_tasks,
+                            experiment_id=experiment_id,
+                            bench_logger=bench_logger,
+                        )
+                    # NOTE manipualtion ahs not been tested yet for dual agent
+                    # elif isinstance(bench_conf, ManipulationO3DEBenchmarkConfig):
+                    #     manipulation_o3de_scenarios = manipulation_o3de.get_scenarios(
+                    #         levels=bench_conf.levels,
+                    #         logger=bench_logger,
+                    #     )
+                    #     manipulation_o3de.run_benchmark_dual_agent(
+                    #         llm=llm,
+                    #         model_name=model_name,
+                    #         out_dir=Path(curr_out_dir),
+                    #         o3de_config_path=bench_conf.o3de_config_path,
+                    #         scenarios=manipulation_o3de_scenarios,
+                    #         experiment_id=experiment_id,
+                    #         bench_logger=bench_logger,
+                    #     )
+                except Exception as e:
+                    bench_logger.critical(f"BENCHMARK RUN FAILED: {e}")
+                    raise e
+
+
 def test_models(
     model_names: List[str],
     vendors: List[str],
     benchmark_configs: List[BenchmarkConfig],
     out_dir: str,
+    additional_model_args: Optional[List[Dict[str, Any]]] = None,
 ):
+    if additional_model_args is None:
+        additional_model_args = [{} for _ in model_names]
+
+    experiment_id = uuid.uuid4()
     if len(model_names) != len(vendors):
         raise ValueError("Number of passed models must match number of passed vendors")
     else:
@@ -88,7 +160,6 @@ def test_models(
             now = datetime.now()
             run_name = f"run_{now.strftime('%Y-%m-%d_%H-%M-%S')}"
             for i, model_name in enumerate(model_names):
-                # for extra_calls in extra_tool_calls:
                 for u in range(bench_conf.repeats):
                     curr_out_dir = (
                         out_dir
@@ -101,6 +172,11 @@ def test_models(
                         + "/"
                         + str(u)
                     )
+                    llm = get_llm_for_benchmark(
+                        model_name=model_name,
+                        vendor=vendors[i],
+                        **additional_model_args[i],
+                    )
                     bench_logger = define_benchmark_logger(out_dir=Path(curr_out_dir))
                     try:
                         if isinstance(bench_conf, ToolCallingAgentBenchmarkConfig):
@@ -110,10 +186,11 @@ def test_models(
                                 task_types=bench_conf.task_types,
                             )
                             tool_calling_agent.run_benchmark(
+                                llm=llm,
                                 model_name=model_name,
-                                vendor=vendors[i],
                                 out_dir=curr_out_dir,
                                 tasks=tool_calling_tasks,
+                                experiment_id=experiment_id,
                                 bench_logger=bench_logger,
                             )
                         elif isinstance(bench_conf, ManipulationO3DEBenchmarkConfig):
@@ -124,14 +201,16 @@ def test_models(
                                 )
                             )
                             manipulation_o3de.run_benchmark(
+                                llm=llm,
                                 model_name=model_name,
-                                vendor=vendors[i],
                                 out_dir=Path(curr_out_dir),
                                 o3de_config_path=bench_conf.o3de_config_path,
                                 scenarios=manipulation_o3de_scenarios,
+                                experiment_id=experiment_id,
                                 bench_logger=bench_logger,
                             )
                     except Exception as e:
-                        print(
-                            f"Failed to run {bench_conf.name} benchmark for {model_name}, vendor: {vendors[i]}, execution number: {u + 1}, because: {str(e)}"
+                        bench_logger.critical(f"BENCHMARK RUN FAILED: {e}")
+                        bench_logger.critical(
+                            f"{bench_conf.name} benchmark for {model_name}, vendor: {vendors[i]}, execution number: {u + 1}"
                         )

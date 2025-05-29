@@ -16,7 +16,11 @@ import argparse
 import logging
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
+from langchain_aws import ChatBedrock
+from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from rai.initialization import get_llm_model_direct
 
 
@@ -120,18 +124,19 @@ def define_benchmark_logger(out_dir: Path) -> logging.Logger:
     bench_logger = logging.getLogger("Benchmark logger")
     for handler in bench_logger.handlers:
         bench_logger.removeHandler(handler)
-    bench_logger.setLevel(logging.INFO)
+    bench_logger.setLevel(logging.DEBUG)
     bench_logger.addHandler(file_handler)
 
     return bench_logger
 
 
 def get_llm_for_benchmark(
-    model_name: str,
-    vendor: str,
-):
+    model_name: str, vendor: str, **kwargs: Any
+) -> ChatOpenAI | ChatBedrock | ChatOllama:
     if vendor == "ollama":
-        llm = get_llm_model_direct(model_name=model_name, vendor=vendor, keep_alive=20)
+        llm = get_llm_model_direct(
+            model_name=model_name, vendor=vendor, keep_alive=20, **kwargs
+        )
     else:
-        llm = get_llm_model_direct(model_name=model_name, vendor=vendor)
+        llm = get_llm_model_direct(model_name=model_name, vendor=vendor, **kwargs)
     return llm
