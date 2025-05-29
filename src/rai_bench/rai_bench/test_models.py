@@ -116,26 +116,26 @@ def test_dual_agents(
                             multimodal_llm=m_llm,
                             tool_calling_llm=tool_llm,
                             model_name=m_llm.get_name(),
-                            out_dir=curr_out_dir,
+                            out_dir=Path(curr_out_dir),
                             tasks=tool_calling_tasks,
                             experiment_id=experiment_id,
                             bench_logger=bench_logger,
                         )
-                    # NOTE manipualtion ahs not been tested yet for dual agent
-                    # elif isinstance(bench_conf, ManipulationO3DEBenchmarkConfig):
-                    #     manipulation_o3de_scenarios = manipulation_o3de.get_scenarios(
-                    #         levels=bench_conf.levels,
-                    #         logger=bench_logger,
-                    #     )
-                    #     manipulation_o3de.run_benchmark_dual_agent(
-                    #         llm=llm,
-                    #         model_name=model_name,
-                    #         out_dir=Path(curr_out_dir),
-                    #         o3de_config_path=bench_conf.o3de_config_path,
-                    #         scenarios=manipulation_o3de_scenarios,
-                    #         experiment_id=experiment_id,
-                    #         bench_logger=bench_logger,
-                    #     )
+                    elif isinstance(bench_conf, ManipulationO3DEBenchmarkConfig):
+                        manipulation_o3de_scenarios = manipulation_o3de.get_scenarios(
+                            levels=bench_conf.levels,
+                            logger=bench_logger,
+                        )
+                        manipulation_o3de.run_benchmark_dual_agent(
+                            multimodal_llm=m_llm,
+                            tool_calling_llm=tool_llm,
+                            model_name=m_llm.get_name(),
+                            out_dir=Path(curr_out_dir),
+                            o3de_config_path=bench_conf.o3de_config_path,
+                            scenarios=manipulation_o3de_scenarios,
+                            experiment_id=experiment_id,
+                            bench_logger=bench_logger,
+                        )
                 except Exception as e:
                     bench_logger.critical(f"BENCHMARK RUN FAILED: {e}")
                     raise e
@@ -188,7 +188,7 @@ def test_models(
                             tool_calling_agent.run_benchmark(
                                 llm=llm,
                                 model_name=model_name,
-                                out_dir=curr_out_dir,
+                                out_dir=Path(curr_out_dir),
                                 tasks=tool_calling_tasks,
                                 experiment_id=experiment_id,
                                 bench_logger=bench_logger,

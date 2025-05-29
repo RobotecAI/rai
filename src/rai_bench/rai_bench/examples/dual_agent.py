@@ -15,6 +15,7 @@ from langchain_community.chat_models import ChatOllama
 from langchain_openai import ChatOpenAI
 
 from rai_bench import (
+    ManipulationO3DEBenchmarkConfig,
     ToolCallingAgentBenchmarkConfig,
     test_dual_agents,
 )
@@ -34,11 +35,19 @@ if __name__ == "__main__":
         repeats=15,
     )
 
+    man_conf = ManipulationO3DEBenchmarkConfig(
+        o3de_config_path="src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/o3de_config.yaml",  # path to your o3de config
+        levels=[  # define what difficulty of tasks to include in benchmark
+            "trivial",
+        ],
+        repeats=1,  # how many times to repeat
+    )
+
     out_dir = "src/rai_bench/rai_bench/experiments/dual_agents/"
 
     test_dual_agents(
         multimodal_llms=[m_llm],
         tool_calling_models=[tool_llm],
-        benchmark_configs=[tool_conf],
+        benchmark_configs=[man_conf, tool_conf],
         out_dir=out_dir,
     )

@@ -18,15 +18,12 @@ import uuid
 from pathlib import Path
 from typing import Iterator, List, Sequence, Tuple
 
-from langchain_aws import ChatBedrock
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables.config import RunnableConfig
-from langchain_ollama import ChatOllama
-from langchain_openai import ChatOpenAI
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
-from rai.agents.langchain.core.conversational_agent import (
+from rai.agents.langchain.core import (
     create_conversational_agent,
     create_multimodal_to_tool_agent,
 )
@@ -99,7 +96,8 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
                 f"task-complexity:{task.complexity}",
                 f"extra-tool-calls:{task.extra_tool_calls}",
             ],
-            "recursion_limit": len(agent.get_graph().nodes) * task.max_tool_calls_number,
+            "recursion_limit": len(agent.get_graph().nodes)
+            * task.max_tool_calls_number,
         }
 
         ts = time.perf_counter()
@@ -207,21 +205,18 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
 
 
 def run_benchmark(
-    llm: ChatOpenAI | ChatBedrock | ChatOllama,
+    llm: BaseChatModel,
     model_name: str,
-    out_dir: str,
+    out_dir: Path,
     tasks: List[Task],
     experiment_id: uuid.UUID,
     bench_logger: logging.Logger,
 ):
-    experiment_dir = Path(out_dir)
-    experiment_dir.mkdir(parents=True, exist_ok=True)
-
     benchmark = ToolCallingAgentBenchmark(
         tasks=tasks,
         logger=bench_logger,
         model_name=model_name,
-        results_dir=experiment_dir,
+        results_dir=out_dir,
     )
 
     for task in tasks:
@@ -242,19 +237,16 @@ def run_benchmark_dual_agent(
     multimodal_llm: BaseChatModel,
     tool_calling_llm: BaseChatModel,
     model_name: str,
-    out_dir: str,
+    out_dir: Path,
     tasks: List[Task],
     experiment_id: uuid.UUID,
     bench_logger: logging.Logger,
 ):
-    experiment_dir = Path(out_dir)
-    experiment_dir.mkdir(parents=True, exist_ok=True)
-
     benchmark = ToolCallingAgentBenchmark(
         tasks=tasks,
         logger=bench_logger,
         model_name=model_name,
-        results_dir=experiment_dir,
+        results_dir=out_dir,
     )
     tool_system_prompt = (
         "Based on the conversation call the tool with appropriate arguments"

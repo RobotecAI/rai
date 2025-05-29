@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .benchmark import run_benchmark
+from .benchmark import run_benchmark, run_benchmark_dual_agent
 from .predefined.scenarios import get_scenarios
 
-__all__ = ["get_scenarios", "run_benchmark"]
+__all__ = ["get_scenarios", "run_benchmark", "run_benchmark_dual_agent"]

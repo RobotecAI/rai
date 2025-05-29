@@ -115,7 +115,7 @@ def define_benchmark_logger(out_dir: Path) -> logging.Logger:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     file_handler = logging.FileHandler(log_file)
-    file_handler.setLevel(logging.DEBUG)
+    file_handler.setLevel(logging.INFO)
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
@@ -124,7 +124,7 @@ def define_benchmark_logger(out_dir: Path) -> logging.Logger:
     bench_logger = logging.getLogger("Benchmark logger")
     for handler in bench_logger.handlers:
         bench_logger.removeHandler(handler)
-    bench_logger.setLevel(logging.DEBUG)
+    bench_logger.setLevel(logging.INFO)
     bench_logger.addHandler(file_handler)
 
     return bench_logger

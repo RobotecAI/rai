@@ -20,11 +20,9 @@ from typing import List, TypeVar
 
 import rclpy
 from langchain.tools import BaseTool
-from langchain_aws import ChatBedrock
+from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables.config import RunnableConfig
-from langchain_ollama import ChatOllama
-from langchain_openai import ChatOpenAI
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
 from launch import LaunchDescription
@@ -34,7 +32,10 @@ from launch.actions import (
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from rai.agents.langchain.core import create_conversational_agent
+from rai.agents.langchain.core import (
+    create_conversational_agent,
+    create_multimodal_to_tool_agent,
+)
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.messages import HumanMultimodalMessage
 from rai.tools.ros2 import (
@@ -364,15 +365,14 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
         self.csv_writerow(self.summary_filename, summary)
 
 
-def run_benchmark(
-    llm: ChatOpenAI | ChatBedrock | ChatOllama,
-    model_name: str,
-    out_dir: Path,
+def _setup_benchmark_environment(
     o3de_config_path: str,
+    model_name: str,
     scenarios: List[Scenario],
-    experiment_id: uuid.UUID,
+    out_dir: Path,
     bench_logger: logging.Logger,
 ):
+    """Setup common benchmark environment"""
     rclpy.init()
     connector = ROS2Connector()
     node = connector.node
@@ -393,11 +393,13 @@ def run_benchmark(
         GetROS2ImageTool(connector=connector),
         GetROS2TopicsNamesAndTypesTool(connector=connector),
     ]
+
     # define o3de bridge
     simulation_config = O3DExROS2SimulationConfig.load_config(
         config_path=Path(o3de_config_path)
     )
     o3de = O3DEngineArmManipulationBridge(connector, logger=bench_logger)
+
     # define benchmark
     benchmark = ManipulationO3DEBenchmark(
         model_name=model_name,
@@ -406,6 +408,22 @@ def run_benchmark(
         scenarios=scenarios,
         logger=bench_logger,
         results_dir=out_dir,
+    )
+
+    return connector, o3de, benchmark, tools
+
+
+def run_benchmark(
+    llm: BaseChatModel,
+    model_name: str,
+    out_dir: Path,
+    o3de_config_path: str,
+    scenarios: List[Scenario],
+    experiment_id: uuid.UUID,
+    bench_logger: logging.Logger,
+):
+    connector, o3de, benchmark, tools = _setup_benchmark_environment(
+        o3de_config_path, model_name, scenarios, out_dir, bench_logger
     )
     try:
         for scenario in scenarios:
@@ -425,6 +443,50 @@ def run_benchmark(
         bench_logger.info(
             "==============================================================="
         )
+    finally:
+        connector.shutdown()
+        o3de.shutdown()
+        rclpy.shutdown()
+
+
+def run_benchmark_dual_agent(
+    multimodal_llm: BaseChatModel,
+    tool_calling_llm: BaseChatModel,
+    model_name: str,
+    out_dir: Path,
+    scenarios: List[Scenario],
+    o3de_config_path: str,
+    experiment_id: uuid.UUID,
+    bench_logger: logging.Logger,
+):
+    connector, o3de, benchmark, tools = _setup_benchmark_environment(
+        o3de_config_path, model_name, scenarios, out_dir, bench_logger
+    )
+    tool_system_prompt = (
+        "Based on the conversation call the tool with appropriate arguments"
+    )
+    try:
+        for scenario in scenarios:
+            agent = create_multimodal_to_tool_agent(
+                multimodal_llm=multimodal_llm,
+                tool_llm=tool_calling_llm,
+                tools=tools,
+                multimodal_system_prompt=scenario.task.system_prompt,
+                tool_system_prompt=tool_system_prompt,
+                logger=bench_logger,
+                debug=True,
+            )
+
+            benchmark.run_next(agent=agent, experiment_id=experiment_id)
+
+        bench_logger.info(
+            "==============================================================="
+        )
+        bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
+        bench_logger.info(
+            "==============================================================="
+        )
+
     finally:
         connector.shutdown()
         o3de.shutdown()
