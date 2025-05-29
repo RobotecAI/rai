@@ -97,8 +97,9 @@ def create_conversational_agent(
 
 
 def multimodal_to_tool_bridge(state: State):
-    # Instead of narrative, preserve the original user request
-    # Just remove images, keep the direct request format
+    """Node of langchain workflow designed to bridge
+    nodes with llms. Removing images for context
+    """
 
     cleaned_messages: List[BaseMessage] = []
     for msg in state["messages"]:
@@ -138,18 +139,11 @@ def create_multimodal_to_tool_agent(
     Can be usefull when multimodal llm does not provide tool calling.
 
     Args:
-        multimodal_llm: LLM capable of processing images and text
-        tool_llm: LLM optimized for tool calling
         tools: List of tools available to the tool agent
-        multimodal_system_prompt: System prompt for multimodal LLM
-        tool_system_prompt: System prompt for tool LLM
-        logger: Optional logger
-        debug: Whether to enable debug mode
 
     Returns:
         Compiled state graph
     """
-    # Set up logging
     _logger = None
     if logger:
         _logger = logger
@@ -189,7 +183,6 @@ def create_multimodal_to_tool_agent(
     # Tool node goes back to tool agent
     workflow.add_edge("tools", "tool_agent")
 
-    # Compile the workflow
     app = workflow.compile(debug=debug)
     _logger.info("Multimodal to tool agent flow created")
     return app
