@@ -18,7 +18,6 @@ from typing import Dict, List
 
 import numpy as np
 import requests
-import sounddevice as sd
 import streamlit as st
 import tomli
 import tomli_w
@@ -32,6 +31,8 @@ import logging
 def get_sound_devices(
     reinitialize: bool = False, output: bool = False
 ) -> List[Dict[str, str | int]]:
+    import sounddevice as sd
+
     if reinitialize:
         sd._terminate()
         sd._initialize()
@@ -369,6 +370,7 @@ def tracing():
 
 
 def asr():
+    import sounddevice as sd
     from rai_s2s.asr import TRANSCRIBE_MODELS
 
     def on_recording_device_change():
@@ -854,7 +856,12 @@ def review_and_save():
                     st.error(f"TTS error: {e}")
                 return False
 
-        def test_recording_device(index: int, sample_rate: int):
+        def test_recording_device(device_name: str):
+            import sounddevice as sd
+
+            devices = sd.query_devices()
+            index = [device["name"] for device in devices].index(device_name)
+            sample_rate = int(devices[device_index]["default_samplerate"])
             try:
                 recording = sd.rec(
                     device=index,
@@ -876,11 +883,6 @@ def review_and_save():
 
         # Run tests
 
-        devices = sd.query_devices()
-        device_index = [device["name"] for device in devices].index(
-            st.session_state.config["asr"]["recording_device_name"]
-        )
-        sample_rate = int(devices[device_index]["default_samplerate"])
         tests = [
             (test_simple_model, "Simple Model"),
             (test_complex_model, "Complex Model"),
@@ -889,7 +891,10 @@ def review_and_save():
             (test_langsmith, "LangSmith"),
             (test_tts, "TTS"),
             (
-                partial(test_recording_device, device_index, sample_rate),
+                partial(
+                    test_recording_device,
+                    st.session_state.config["asr"]["recording_device_name"],
+                ),
                 "Recording Device",
             ),
         ]
