@@ -32,6 +32,8 @@ Before going further, make sure you have ROS 2 (jazzy or humble) installed and s
     `rai_openset` and `rai_nomad` are not yet available through pip. If your workflow relies on openset detection or NoMaD integration, please refer to the
     [developer environment instructions](#setting-up-developer-environment) setup.
 
+    `rai_interfaces` is available through rosdep. However, due to package distribution delays, the latest version may not be immediately available. If you encounter missing imports, please build `rai_interfaces` from [source](https://github.com/RobotecAI/rai_interfaces).
+
 ??? tip "RAI modules"
 
     RAI is a modular framework. You can install only the modules you need.
