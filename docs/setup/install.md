@@ -7,6 +7,12 @@ Before going further, make sure you have ROS 2 (jazzy or humble) installed and s
     RAI has experimental docker images. See the [docker](setup_docker.md) for
     instructions.
 
+There are two ways to start using RAI:
+
+1. Installing RAI using pip (recommended for end users)
+
+2. Setting up a developer environment using poetry (recommended for developers)
+
 ## Installing RAI
 
 1.  Install core functionality:
