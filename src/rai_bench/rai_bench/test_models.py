@@ -23,7 +23,11 @@ from pydantic import BaseModel
 
 import rai_bench.manipulation_o3de as manipulation_o3de
 import rai_bench.tool_calling_agent as tool_calling_agent
-from rai_bench.utils import define_benchmark_logger, get_llm_for_benchmark
+from rai_bench.utils import (
+    define_benchmark_logger,
+    get_llm_for_benchmark,
+    get_llm_model_name,
+)
 
 
 class BenchmarkConfig(BaseModel):
@@ -80,6 +84,8 @@ def test_dual_agents(
     tool_calling_models: List[BaseChatModel],
     benchmark_configs: List[BenchmarkConfig],
     out_dir: str,
+    m_system_prompt: Optional[str] = None,
+    tool_system_prompt: Optional[str] = None,
 ):
     if len(multimodal_llms) != len(tool_calling_models):
         raise ValueError(
@@ -100,7 +106,7 @@ def test_dual_agents(
                     + "/"
                     + bench_conf.name
                     + "/"
-                    + m_llm.get_name()
+                    + get_llm_model_name(m_llm)
                     + "/"
                     + str(u)
                 )
@@ -115,7 +121,9 @@ def test_dual_agents(
                         tool_calling_agent.run_benchmark_dual_agent(
                             multimodal_llm=m_llm,
                             tool_calling_llm=tool_llm,
-                            model_name=m_llm.get_name(),
+                            m_system_prompt=m_system_prompt,
+                            tool_system_prompt=tool_system_prompt,
+                            model_name=get_llm_model_name(m_llm),
                             out_dir=Path(curr_out_dir),
                             tasks=tool_calling_tasks,
                             experiment_id=experiment_id,

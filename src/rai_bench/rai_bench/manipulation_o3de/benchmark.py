@@ -16,7 +16,7 @@ import statistics
 import time
 import uuid
 from pathlib import Path
-from typing import List, TypeVar
+from typing import List, Optional, TypeVar
 
 import rclpy
 from langchain.tools import BaseTool
@@ -465,12 +465,14 @@ def run_benchmark_dual_agent(
     o3de_config_path: str,
     experiment_id: uuid.UUID,
     bench_logger: logging.Logger,
+    m_system_prompt: Optional[str] = None,
+    tool_system_prompt: Optional[str] = None,
 ):
     connector, o3de, benchmark, tools = _setup_benchmark_environment(
         o3de_config_path, model_name, scenarios, out_dir, bench_logger
     )
-    tool_system_prompt = (
-        "Based on the conversation call the tool with appropriate arguments"
+    basic_tool_system_prompt = (
+        "Based on the conversation call the tools with appropriate arguments"
     )
     try:
         for scenario in scenarios:
@@ -478,8 +480,14 @@ def run_benchmark_dual_agent(
                 multimodal_llm=multimodal_llm,
                 tool_llm=tool_calling_llm,
                 tools=tools,
-                multimodal_system_prompt=scenario.task.system_prompt,
-                tool_system_prompt=tool_system_prompt,
+                multimodal_system_prompt=(
+                    m_system_prompt if m_system_prompt else scenario.task.system_prompt
+                ),
+                tool_system_prompt=(
+                    tool_system_prompt
+                    if tool_system_prompt
+                    else basic_tool_system_prompt
+                ),
                 logger=bench_logger,
                 debug=True,
             )

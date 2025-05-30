@@ -16,7 +16,7 @@ import statistics
 import time
 import uuid
 from pathlib import Path
-from typing import Iterator, List, Sequence, Tuple
+from typing import Iterator, List, Optional, Sequence, Tuple
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
@@ -242,6 +242,8 @@ def run_benchmark_dual_agent(
     tasks: List[Task],
     experiment_id: uuid.UUID,
     bench_logger: logging.Logger,
+    m_system_prompt: Optional[str] = None,
+    tool_system_prompt: Optional[str] = None,
 ):
     benchmark = ToolCallingAgentBenchmark(
         tasks=tasks,
@@ -249,18 +251,23 @@ def run_benchmark_dual_agent(
         model_name=model_name,
         results_dir=out_dir,
     )
-    tool_system_prompt = (
-        "Based on the conversation call the tool with appropriate arguments"
+
+    basic_tool_system_prompt = (
+        "Based on the conversation call the tools with appropriate arguments"
     )
     for task in tasks:
         agent = create_multimodal_to_tool_agent(
             multimodal_llm=multimodal_llm,
             tool_llm=tool_calling_llm,
             tools=task.available_tools,
-            multimodal_system_prompt=task.get_system_prompt(),
-            tool_system_prompt=tool_system_prompt,
+            multimodal_system_prompt=(
+                m_system_prompt if m_system_prompt else task.get_system_prompt()
+            ),
+            tool_system_prompt=(
+                tool_system_prompt if tool_system_prompt else basic_tool_system_prompt
+            ),
             logger=bench_logger,
-            debug=True,
+            debug=False,
         )
 
         benchmark.run_next(agent=agent, experiment_id=experiment_id)
