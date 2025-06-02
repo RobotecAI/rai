@@ -17,11 +17,11 @@ There are two ways to start using RAI:
 
 ??? tip "Virtual environment"
 
-    We suggest installing RAI in a virtual environment of choice (e.g. virtualenv, uv, poetry, etc.).
+    We recommend installing RAI in a virtual environment (e.g., virtualenv, uv, or poetry) to keep your dependencies organized. Make sure to use the same version of python as the one used for ROS 2 (typically `python3.10` for Humble and `python3.12` for Jazzy).
 
-    When installing RAI in a virtual environment (as opposed to the system interpreter), you need to expand the PYTHONPATH to include the virtual environment's site-packages directory.
+    If you plan to use ROS 2 commands (`ros2 run` or `ros2 launch`), you'll need to add your virtual environment's Python packages to your system's Python path. This step is only necessary for ROS 2 integration - if you're just running RAI directly with Python, you can skip this step.
 
-    Here's how to do it when RAI is installed via git clone: [setup_shell.sh](https://github.com/RobotecAI/rai/blob/245efa95cdb83a81294bc28da814962bff84be20/setup_shell.sh#L32)
+    For reference, here's how to set this up when installing RAI from source: [setup_shell.sh](https://github.com/RobotecAI/rai/blob/245efa95cdb83a81294bc28da814962bff84be20/setup_shell.sh#L32)
 
 1.  Install core functionality:
 
