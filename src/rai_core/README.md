@@ -30,7 +30,7 @@ RAI is a flexible AI agent framework to develop and deploy Embodied AI features 
 1. Install RAI:
 
 ```bash
-pip install rai
+pip install rai-core
 ```
 
 2. Initialize the global configuration file:
