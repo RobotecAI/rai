@@ -41,6 +41,7 @@ from rai_bench.tool_calling_agent.results_tracking import (
 from rai_bench.tool_calling_agent.tasks.spatial import (
     SpatialReasoningAgentTask,
 )
+from rai_bench.utils import get_llm_model_name
 
 
 class ToolCallingAgentBenchmark(BaseBenchmark):
@@ -207,16 +208,15 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
 
 def run_benchmark(
     llm: BaseChatModel,
-    model_name: str,
     out_dir: Path,
     tasks: List[Task],
-    experiment_id: uuid.UUID,
     bench_logger: logging.Logger,
+    experiment_id: uuid.UUID = uuid.uuid4(),
 ):
     benchmark = ToolCallingAgentBenchmark(
         tasks=tasks,
         logger=bench_logger,
-        model_name=model_name,
+        model_name=get_llm_model_name(llm),
         results_dir=out_dir,
     )
 
@@ -237,18 +237,17 @@ def run_benchmark(
 def run_benchmark_dual_agent(
     multimodal_llm: BaseChatModel,
     tool_calling_llm: BaseChatModel,
-    model_name: str,
     out_dir: Path,
     tasks: List[Task],
-    experiment_id: uuid.UUID,
     bench_logger: logging.Logger,
+    experiment_id: uuid.UUID = uuid.uuid4(),
     m_system_prompt: Optional[str] = None,
     tool_system_prompt: Optional[str] = None,
 ):
     benchmark = ToolCallingAgentBenchmark(
         tasks=tasks,
         logger=bench_logger,
-        model_name=model_name,
+        model_name=get_llm_model_name(multimodal_llm),
         results_dir=out_dir,
     )
 

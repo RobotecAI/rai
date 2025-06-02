@@ -52,6 +52,7 @@ from rai_bench.manipulation_o3de.results_tracking import (
     ScenarioResult,
 )
 from rai_bench.results_processing.langfuse_scores_tracing import ScoreTracingHandler
+from rai_bench.utils import get_llm_model_name
 from rai_sim.o3de.o3de_bridge import (
     O3DEngineArmManipulationBridge,
     O3DExROS2SimulationConfig,
@@ -422,15 +423,14 @@ def _setup_benchmark_environment(
 
 def run_benchmark(
     llm: BaseChatModel,
-    model_name: str,
     out_dir: Path,
     o3de_config_path: str,
     scenarios: List[Scenario],
-    experiment_id: uuid.UUID,
     bench_logger: logging.Logger,
+    experiment_id: uuid.UUID = uuid.uuid4(),
 ):
     connector, o3de, benchmark, tools = _setup_benchmark_environment(
-        o3de_config_path, model_name, scenarios, out_dir, bench_logger
+        o3de_config_path, get_llm_model_name(llm), scenarios, out_dir, bench_logger
     )
     try:
         for scenario in scenarios:
@@ -459,17 +459,20 @@ def run_benchmark(
 def run_benchmark_dual_agent(
     multimodal_llm: BaseChatModel,
     tool_calling_llm: BaseChatModel,
-    model_name: str,
     out_dir: Path,
     scenarios: List[Scenario],
     o3de_config_path: str,
-    experiment_id: uuid.UUID,
     bench_logger: logging.Logger,
+    experiment_id: uuid.UUID = uuid.uuid4(),
     m_system_prompt: Optional[str] = None,
     tool_system_prompt: Optional[str] = None,
 ):
     connector, o3de, benchmark, tools = _setup_benchmark_environment(
-        o3de_config_path, model_name, scenarios, out_dir, bench_logger
+        o3de_config_path,
+        get_llm_model_name(multimodal_llm),
+        scenarios,
+        out_dir,
+        bench_logger,
     )
     basic_tool_system_prompt = (
         "Based on the conversation call the tools with appropriate arguments"
@@ -489,7 +492,6 @@ def run_benchmark_dual_agent(
                     else basic_tool_system_prompt
                 ),
                 logger=bench_logger,
-                debug=True,
             )
 
             benchmark.run_next(agent=agent, experiment_id=experiment_id)

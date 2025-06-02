@@ -123,7 +123,6 @@ def test_dual_agents(
                             tool_calling_llm=tool_llm,
                             m_system_prompt=m_system_prompt,
                             tool_system_prompt=tool_system_prompt,
-                            model_name=get_llm_model_name(m_llm),
                             out_dir=Path(curr_out_dir),
                             tasks=tool_calling_tasks,
                             experiment_id=experiment_id,
@@ -137,7 +136,6 @@ def test_dual_agents(
                         manipulation_o3de.run_benchmark_dual_agent(
                             multimodal_llm=m_llm,
                             tool_calling_llm=tool_llm,
-                            model_name=m_llm.get_name(),
                             out_dir=Path(curr_out_dir),
                             o3de_config_path=bench_conf.o3de_config_path,
                             scenarios=manipulation_o3de_scenarios,
@@ -195,7 +193,6 @@ def test_models(
                             )
                             tool_calling_agent.run_benchmark(
                                 llm=llm,
-                                model_name=model_name,
                                 out_dir=Path(curr_out_dir),
                                 tasks=tool_calling_tasks,
                                 experiment_id=experiment_id,
@@ -210,7 +207,6 @@ def test_models(
                             )
                             manipulation_o3de.run_benchmark(
                                 llm=llm,
-                                model_name=model_name,
                                 out_dir=Path(curr_out_dir),
                                 o3de_config_path=bench_conf.o3de_config_path,
                                 scenarios=manipulation_o3de_scenarios,
