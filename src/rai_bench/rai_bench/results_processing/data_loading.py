@@ -70,19 +70,18 @@ def convert_row_to_task_result(row: pd.Series) -> TaskResult:
         )
         validator_results.append(validator_result)
 
-    return TaskResult(
-        task_prompt=row["task_prompt"],
-        system_prompt=row["system_prompt"],
-        complexity=row["complexity"],
-        type=row["type"],
-        model_name=row["model_name"],
-        validation_info=validator_results,
-        extra_tool_calls=int(row["extra_tool_calls"]),
-        extra_tool_calls_used=int(row["extra_tool_calls_used"]),
-        score=float(row["score"]),
-        total_time=float(row["total_time"]),
-        run_id=uuid.UUID(row["run_id"]),
+    row.update(
+        {
+            "validation_info": validator_results,
+            "extra_tool_calls": int(row["extra_tool_calls"]),
+            "extra_tool_calls_used": int(row["extra_tool_calls_used"]),
+            "score": float(row["score"]),
+            "total_time": float(row["total_time"]),
+            "run_id": uuid.UUID(row["run_id"]),
+        }
     )
+
+    return TaskResult(**row)
 
 
 def convert_row_to_scenario_result(row: pd.Series) -> ScenarioResult:
@@ -100,10 +99,7 @@ def convert_row_to_scenario_result(row: pd.Series) -> ScenarioResult:
         A ScenarioResult object
     """
     return ScenarioResult(
-        task_prompt=row["task_prompt"],
-        system_prompt=row["system_prompt"],
-        model_name=row["model_name"],
-        scene_config_path=row["scene_config_path"],
+        **row,
         score=float(row["score"]),
         total_time=float(row["total_time"]),
         number_of_tool_calls=int(row["number_of_tool_calls"]),
