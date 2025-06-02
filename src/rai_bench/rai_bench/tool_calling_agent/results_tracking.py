@@ -43,7 +43,12 @@ class ValidatorResult(BaseModel):
 class TaskResult(BaseModel):
     task_prompt: str = Field(..., description="The task prompt.")
     system_prompt: str = Field(..., description="The system prompt.")
+    examples_in_system_prompt: int = Field(
+        ..., description="Number of examples on how to use tool in system prompt"
+    )
+    prompt_detail: str = Field(..., description="How detailed the task prompt is.")
     complexity: str = Field(..., description="Complexity of the task.")
+
     type: str = Field(..., description="Type of task, for example: manipulation")
     model_name: str = Field(..., description="Name of the LLM.")
     validation_info: List[ValidatorResult] = Field(

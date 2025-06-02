@@ -38,6 +38,12 @@ if __name__ == "__main__":
             "spatial_reasoning",
             "manipulation",
         ],
+        N_shots=[0, 2],  # examples in system prompt
+        prompt_detail=[
+            "brief",
+            "moderate",
+            "descriptive",
+        ],  # how descriptive should task prompt be
         repeats=1,
     )
 
@@ -45,6 +51,6 @@ if __name__ == "__main__":
     test_models(
         model_names=model_names,
         vendors=vendors,
-        benchmark_configs=[man_conf, tool_conf],
+        benchmark_configs=[tool_conf],
         out_dir=out_dir,
     )
