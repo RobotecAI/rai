@@ -15,6 +15,14 @@ There are two ways to start using RAI:
 
 ## Installing RAI
 
+??? tip "Virtual environment"
+
+    We suggest installing RAI in a virtual environment of choice (e.g. virtualenv, uv, poetry, etc.).
+
+    When installing RAI in a virtual environment (as opposed to the system interpreter), you need to expand the PYTHONPATH to include the virtual environment's site-packages directory.
+
+    Here's how to do it when RAI is installed via git clone: [setup_shell.sh](https://github.com/RobotecAI/rai/blob/245efa95cdb83a81294bc28da814962bff84be20/setup_shell.sh#L32)
+
 1.  Install core functionality:
 
     ```bash
