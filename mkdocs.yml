@@ -74,6 +74,7 @@ nav:
   - Home:
     - Overview: index.md
     - Is RAI a good fit for me?: intro/what_is_rai.md
+    - Getting started: setup/install.md
   - Getting started:
     - Local setup: setup/install.md
     - Docker setup: setup/setup_docker.md

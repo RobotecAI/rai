@@ -9,6 +9,29 @@ It generates a comprehensive system prompt (embodiment info) for robots controll
 
 ---
 
+## Installation
+
+1. Install rai whoami:
+
+```bash
+pip install rai-whoami
+```
+
+2. Initialize the global configuration file (if not already done):
+
+```bash
+rai-config-init
+```
+
+3. Optionally install ROS 2 dependencies:
+
+```bash
+sudo apt install ros-${ROS_DISTRO}-rai-interfaces
+```
+
+For more visit [robotecai.github.io/rai](https://robotecai.github.io/rai/) for the latest documentation, setup
+guide and tutorials.
+
 ## How It Works
 
 Given a directory containing robot documentation (documents, images, URDFs), RAI Whoami processes these resources to produce a structured representation of the robot, including:
