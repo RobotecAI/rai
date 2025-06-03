@@ -534,7 +534,18 @@ class Task(ABC):
         pass
 
     @property
+    @abstractmethod
+    def optional_tool_calls_number(self) -> int:
+        """Optional tool calls means calls that are not considered error.
+        For example listing topics at the beginning."""
+        pass
+
+    @property
     def max_tool_calls_number(self) -> int:
+        """maxiumum number of call to still pass task.
+        Includes extra tool calls params.
+        and optional tool calls number which depends on task.
+        """
         return self.required_calls + self.extra_tool_calls
 
     @property

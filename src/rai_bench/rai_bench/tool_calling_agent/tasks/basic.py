@@ -14,13 +14,14 @@
 
 import logging
 from abc import ABC
-from typing import Dict, List
+from typing import List
 
 from langchain_core.tools import BaseTool
 
 from rai_bench.tool_calling_agent.interfaces import (
     Task,
 )
+from rai_bench.tool_calling_agent.mocked_ros2_interfaces import COMMON_TOPICS_AND_TYPES
 from rai_bench.tool_calling_agent.mocked_tools import (
     MockGetROS2ImageTool,
     MockGetROS2TopicsNamesAndTypesTool,
@@ -47,57 +48,9 @@ PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_5_SHOT = (
 - publish_ros2_message, args: {'topic': '/turtle1/teleport_absolute', 'message_type': 'turtlesim/srv/TeleportAbsolute', 'message': {x: 5.0, y: 2.0, theta: 1.57}}"""
 )
 
-CAMERA_TOPICS_AND_TYPES = [
-    "topic: /color_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-    "topic: /color_image5\ntype: sensor_msgs/msg/Image\n",
-    "topic: /depth_camera_info5\ntype: sensor_msgs/msg/CameraInfo\n",
-    "topic: /depth_image5\ntype: sensor_msgs/msg/Image\n",
-]
-CAMERA_TOPICS = [
-    "/color_camera_info5",
-    "/color_image5",
-    "/depth_camera_info5",
-    "/depth_image5",
-]
-
-
-TOPICS_AND_TYPES: Dict[str, str] = {
-    "/attached_collision_object": "moveit_msgs/msg/AttachedCollisionObject",
-    "/clock": "rosgraph_msgs/msg/Clock",
-    "/collision_object": "moveit_msgs/msg/CollisionObject",
-    "/display_contacts": "visualization_msgs/msg/MarkerArray",
-    "/display_planned_path": "moveit_msgs/msg/DisplayTrajectory",
-    "/execute_trajectory/_action/feedback": "moveit_msgs/action/ExecuteTrajectory_FeedbackMessage",
-    "/execute_trajectory/_action/status": "action_msgs/msg/GoalStatusArray",
-    "/joint_states": "sensor_msgs/msg/JointState",
-    "/monitored_planning_scene": "moveit_msgs/msg/PlanningScene",
-    "/motion_plan_request": "moveit_msgs/msg/MotionPlanRequest",
-    "/move_action/_action/feedback": "moveit_msgs/action/MoveGroup_FeedbackMessage",
-    "/move_action/_action/status": "action_msgs/msg/GoalStatusArray",
-    "/panda_arm_controller/follow_joint_trajectory/_action/feedback": "control_msgs/action/FollowJointTrajectory_FeedbackMessage",
-    "/panda_arm_controller/follow_joint_trajectory/_action/status": "action_msgs/msg/GoalStatusArray",
-    "/panda_hand_controller/gripper_cmd/_action/feedback": "control_msgs/action/GripperCommand_FeedbackMessage",
-    "/panda_hand_controller/gripper_cmd/_action/status": "action_msgs/msg/GoalStatusArray",
-    "/parameter_events": "rcl_interfaces/msg/ParameterEvent",
-    "/planning_scene": "moveit_msgs/msg/PlanningScene",
-    "/planning_scene_world": "moveit_msgs/msg/PlanningSceneWorld",
-    "/pointcloud": "sensor_msgs/msg/PointCloud2",
-    "/robot_description": "std_msgs/msg/String",
-    "/robot_description_semantic": "std_msgs/msg/String",
-    "/rosout": "rcl_interfaces/msg/Log",
-    "/tf": "tf2_msgs/msg/TFMessage",
-    "/tf_static": "tf2_msgs/msg/TFMessage",
-    "/trajectory_execution_event": "std_msgs/msg/String",
-    # Camera topics
-    "/color_camera_info5": "sensor_msgs/msg/CameraInfo",
-    "/color_image5": "sensor_msgs/msg/Image",
-    "/depth_camera_info5": "sensor_msgs/msg/CameraInfo",
-    "/depth_image5": "sensor_msgs/msg/Image",
-}
-
 TOPIC_STRINGS = [
     f"topic: {topic}\ntype: {topic_type}\n"
-    for topic, topic_type in TOPICS_AND_TYPES.items()
+    for topic, topic_type in COMMON_TOPICS_AND_TYPES.items()
 ]
 
 
@@ -110,9 +63,16 @@ class BasicTask(Task, ABC):
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=TOPIC_STRINGS
             ),
-            MockGetROS2ImageTool(available_topics=list(TOPICS_AND_TYPES.keys())),
-            MockReceiveROS2MessageTool(available_topics=list(TOPICS_AND_TYPES.keys())),
+            MockGetROS2ImageTool(available_topics=list(COMMON_TOPICS_AND_TYPES.keys())),
+            MockReceiveROS2MessageTool(
+                available_topics=list(COMMON_TOPICS_AND_TYPES.keys())
+            ),
         ]
+
+    @property
+    def optional_tool_calls_number(self) -> int:
+        # Listing topics before getting any message
+        return 1
 
     def get_system_prompt(self) -> str:
         if self.n_shots == 0:
@@ -126,94 +86,106 @@ class BasicTask(Task, ABC):
 class GetROS2TopicsTask(BasicTask):
     complexity = "easy"
 
+    @property
+    def optional_tool_calls_number(self) -> int:
+        return 0
+
     def get_prompt(self) -> str:
+        base_prompt = "Get all topics"
         if self.prompt_detail == "brief":
-            return "Get all topics"
+            return base_prompt
         elif self.prompt_detail == "moderate":
-            return "Get the names and types of all ROS2 topics"
+            return f"{base_prompt} names and types of all ROS2"
         else:
-            return "Get all ROS2 topics with their names and message types. Use the topics tool to list what's available in the system."
+            return f"{base_prompt} ROS2 with their names and message types. Use the topics tool to list what's available in the system."
 
 
 class GetROS2RGBCameraTask(BasicTask):
     complexity = "easy"
 
     def get_prompt(self) -> str:
+        base_prompt = "Get RGB camera image"
         if self.prompt_detail == "brief":
-            return "Get RGB camera image"
+            return base_prompt
         elif self.prompt_detail == "moderate":
-            return "Get the RGB image from the camera topic"
+            return f"{base_prompt} from the camera topic"
         else:
-            return "Get the RGB color image from the camera. First check what camera topics are available, then capture the image from the RGB camera topic."
+            return f"{base_prompt}. Get the RGB color image from the camera. First check what camera topics are available, then capture the image from the RGB camera topic."
 
 
 class GetROS2DepthCameraTask(BasicTask):
     complexity = "easy"
 
     def get_prompt(self) -> str:
+        base_prompt = "Get depth camera image"
         if self.prompt_detail == "brief":
-            return "Get depth camera image"
+            return base_prompt
         elif self.prompt_detail == "moderate":
-            return "Get the depth image from the camera sensor"
-        else:  # descriptive
-            return "Get the depth image from the camera. First check what camera topics are available, then capture the image from the depth camera topic."
+            return f"{base_prompt} from the camera sensor"
+        else:
+            return f"{base_prompt}. Get the depth image from the camera. First check what camera topics are available, then capture the image from the depth camera topic."
 
 
 class GetPointcloudTask(BasicTask):
     complexity = "easy"
 
     def get_prompt(self) -> str:
+        base_prompt = "Get the pointcloud"
         if self.prompt_detail == "brief":
-            return "Get the pointcloud"
+            return base_prompt
         elif self.prompt_detail == "moderate":
-            return "Get the pointcloud data from the topic"
-        else:  # descriptive
-            return "Get the pointcloud data. First check available topics to find the pointcloud topic, then receive the pointcloud message."
+            return f"{base_prompt} data from the topic"
+        else:
+            return f"{base_prompt} data. First check available topics to find the pointcloud topic, then receive the pointcloud message."
 
 
 class GetRobotDescriptionTask(BasicTask):
     complexity = "easy"
 
     def get_prompt(self) -> str:
+        base_prompt = "Get robot description"
         if self.prompt_detail == "brief":
-            return "Get robot description"
+            return base_prompt
         elif self.prompt_detail == "moderate":
-            return "Get the description of the robot from the topic"
+            return f"{base_prompt} of the robot from the topic"
         else:
-            return "Get the robot description. First list available topics to find the robot_description topic, then receive the robot description message."
+            return f"{base_prompt}. First list available topics to find the robot_description topic, then receive the robot description message."
 
 
 class GetAllROS2CamerasTask(BasicTask):
     complexity = "medium"
 
     def get_prompt(self) -> str:
+        base_prompt = "Get all camera images"
         if self.prompt_detail == "brief":
-            return "Get all camera images"
+            return base_prompt
         elif self.prompt_detail == "moderate":
-            return "Get images from all available cameras in the system, both RGB and depth"
+            return f"{base_prompt} from all available cameras in the system, both RGB and depth"
         else:
-            return "Get images from all available camera topics in the ROS2 system. This includes both RGB color images and depth images. You should first explore what camera topics are available."
+            return f"{base_prompt} from all available camera topics in the ROS2 system. This includes both RGB color images and depth images. You should first explore what camera topics are available."
 
 
-# class GetROS2RGBCameraWithInfoTask(BasicTask):
-#     complexity = "easy"
+class CheckRobotHealthTask(BasicTask):
+    complexity = "medium"
 
-#     def get_prompt(self) -> str:
-#         if self.prompt_detail == "brief":
-#             return "Get RGB camera image and info"
-#         elif self.prompt_detail == "moderate":
-#             return "Get the RGB image and camera info from the color camera"
-#         else:
-#             return "Get the RGB color image and camera calibration info from the camera. First check what camera topics are available, then get both the image and camera info from the color camera."
+    def get_prompt(self) -> str:
+        base_prompt = "Check robot health status"
+        if self.prompt_detail == "brief":
+            return base_prompt
+        elif self.prompt_detail == "moderate":
+            return f"{base_prompt} by listing topics and using receive_ros2_message"
+        else:
+            return f"{base_prompt}.  First list available topics, then all receive_ros2_message on diagnostics, joint_states and rosout."
 
 
-# class GetROS2DepthWithInfoCameraTask(BasicTask):
-#     complexity = "easy"
+class AssessSensorDataQualityTask(BasicTask):
+    complexity = "hard"
 
-#     def get_prompt(self) -> str:
-#         if self.prompt_detail == "brief":
-#             return "Get depth camera image and info"
-#         elif self.prompt_detail == "moderate":
-#             return "Get the depth image and camera info from the depth sensor"
-#         else:
-#             return "Get the depth image and camera calibration info from the camera. First check what camera topics are available, then get both the image and camera info from the depth camera."
+    def get_prompt(self) -> str:
+        base_prompt = "Assess sensor data quality"
+        if self.prompt_detail == "brief":
+            return base_prompt
+        elif self.prompt_detail == "moderate":
+            return f"{base_prompt} by listing topics and using receive_ros2_message"
+        else:
+            return f"{base_prompt}. First list available topics to find the robot_description topic, then receive scan, point cloud, camera images, camera infos and odometry."
