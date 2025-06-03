@@ -18,7 +18,7 @@ manipulation techniques.
 
     Make sure ROS 2 is sourced. (e.g. `source /opt/ros/humble/setup.bash`)
 
-1. Follow the RAI setup instructions in the [quick setup guide](../setup/install.md).
+1. Follow the RAI setup instructions in the [quick setup guide](../setup/install.md#setting-up-developer-environment).
 2. Download additional dependencies:
 
     ```shell

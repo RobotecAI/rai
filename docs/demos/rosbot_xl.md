@@ -16,13 +16,15 @@ platform in a nice apartment.
 
     Make sure ROS 2 is sourced. (e.g. `source /opt/ros/humble/setup.bash`)
 
-1. Download the newest binary release:
+1. Follow the RAI setup instructions in the [quick setup guide](../setup/install.md#setting-up-developer-environment).
+
+2. Download the newest binary release:
 
     ```bash
     ./scripts/download_demo.sh rosbot
     ```
 
-2. Install and download required packages
+3. Install and download required packages
 
     ```bash
     sudo apt install ros-${ROS_DISTRO}-navigation2 ros-${ROS_DISTRO}-nav2-bringup
