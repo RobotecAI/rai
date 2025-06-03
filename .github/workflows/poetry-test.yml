@@ -30,6 +30,18 @@ jobs:
         with:
           clean: true
 
+      - name: Fix ROS 2 keys # TODO: remove this once https://github.com/docker-library/official-images/pull/19162 is merged
+        run: |
+          rm /etc/apt/sources.list.d/ros2-latest.list
+          rm /usr/share/keyrings/ros2-latest-archive-keyring.gpg
+          apt-get update
+          apt-get install -y ca-certificates curl
+          export ROS_APT_SOURCE_VERSION=$(curl -s https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | grep -F "tag_name" | awk -F\" '{print $4}') ;\
+          curl -L -s -o /tmp/ros2-apt-source.deb "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release && echo $VERSION_CODENAME)_all.deb" \
+          && apt-get update \
+          && apt-get install /tmp/ros2-apt-source.deb \
+          && rm -f /tmp/ros2-apt-source.deb
+
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
