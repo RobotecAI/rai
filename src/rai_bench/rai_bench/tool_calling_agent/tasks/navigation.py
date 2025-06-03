@@ -146,6 +146,11 @@ class NavigationTask(Task):
         )
         return tools
 
+    @property
+    def optional_tool_calls_number(self) -> int:
+        # list topics and get interface
+        return 2
+
     def get_system_prompt(self) -> str:
         if self.n_shots == 0:
             return ROBOT_NAVIGATION_SYSTEM_PROMPT_0_SHOT
@@ -201,7 +206,7 @@ class MoveToBedTask(NavigationTask):
     complexity = "hard"
 
     def get_prompt(self) -> str:
-        base_prompt = "Move closer to the bed eaving 1 meter space"
+        base_prompt = "Move closer to the bed leaving 1 meter space"
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":

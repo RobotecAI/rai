@@ -136,6 +136,10 @@ class BoolImageTask(SpatialReasoningAgentTask, ABC):
     def available_tools(self) -> List[BaseTool]:
         return [ReturnBoolResponseTool()]
 
+    @property
+    def optional_tool_calls_number(self) -> int:
+        return 0
+
     def get_prompt(self):
         base_prompt = self.question
 

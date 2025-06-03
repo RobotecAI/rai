@@ -104,6 +104,10 @@ class ManipulationTask(Task, ABC):
         self._verify_args()
 
     @property
+    def optional_tool_calls_number(self) -> int:
+        return 0
+
+    @property
     def available_tools(self) -> List[BaseTool]:
         return [
             MockGetROS2TopicsNamesAndTypesTool(
@@ -124,7 +128,6 @@ class ManipulationTask(Task, ABC):
             MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
         ]
 
-    @abstractmethod
     def _verify_args(self) -> None:
         pass
 
@@ -232,7 +235,7 @@ class GetObjectPositionsTask(ManipulationTask):
             return base_prompt
         elif self.prompt_detail == "moderate":
             return f"{base_prompt} using the get_object_positions tool"
-        else:  # descriptive
+        else:
             return f"{base_prompt}. First call get_object_positions to detect all objects and retrieve their 3D coordinates."
 
 
@@ -293,7 +296,7 @@ class GrabNotExistingObjectTask(GrabTask):
             return (
                 f"{base_prompt} using get_object_positions tool to check if it exists"
             )
-        else:  # descriptive
+        else:
             return f"{base_prompt}. First call get_object_positions to check if the object exists in the environment. If found, call move_to_point to grab it."
 
     def _verify_args(self):
@@ -333,7 +336,7 @@ class MoveExistingObjectLeftTask(GrabTask):
             return base_prompt
         elif self.prompt_detail == "moderate":
             return f"{base_prompt} using get_object_positions and move_to_point tools"
-        else:  # descriptive
+        else:
             return f"{base_prompt}. First call get_object_positions to locate the object. Then call move_to_point to grab it, and finally call move_to_point again with y-coordinate decreased by 0.2 and task='drop'."
 
     def _verify_args(self):
@@ -370,7 +373,7 @@ class MoveExistingObjectFrontTask(GrabTask):
             return base_prompt
         elif self.prompt_detail == "moderate":
             return f"{base_prompt} using get_object_positions and move_to_point tools"
-        else:  # descriptive
+        else:
             return f"{base_prompt}. First call get_object_positions to locate the object. Then call move_to_point to grab it, and finally call move_to_point again with x-coordinate increased by 0.6 and task='drop'."
 
     def _verify_args(self):
@@ -447,5 +450,5 @@ class SwapObjectsTask(ManipulationTask):
             return base_prompt
         elif self.prompt_detail == "moderate":
             return f"{base_prompt} using get_object_positions and move_to_point tools"
-        else:  # descriptive
+        else:
             return f"{base_prompt}. First call get_object_positions to locate both objects. Then grab {self.objects_to_swap[0]} with move_to_point, move it to {self.objects_to_swap[1]}'s position and drop it. Finally, grab {self.objects_to_swap[1]} and move it to {self.objects_to_swap[0]}'s original position."

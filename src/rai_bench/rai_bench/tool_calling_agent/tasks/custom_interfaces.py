@@ -94,6 +94,12 @@ PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_5_SHOT = (
 class CustomInterfaceTask(Task, ABC):
     type = "custom_interface"
 
+    @property
+    def optional_tool_calls_number(self) -> int:
+        # list topics
+        # get interface is not optional
+        return 1
+
     def get_system_prompt(self) -> str:
         if self.n_shots == 0:
             return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_0_SHOT
