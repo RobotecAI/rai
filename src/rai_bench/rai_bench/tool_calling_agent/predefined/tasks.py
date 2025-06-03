@@ -27,6 +27,8 @@ from rai_bench.tool_calling_agent.subtasks import (
     CheckTopicFieldsToolCallSubTask,
 )
 from rai_bench.tool_calling_agent.tasks.basic import (
+    AssessSensorDataQualityTask,
+    CheckRobotHealthTask,
     GetAllROS2CamerasTask,
     GetPointcloudTask,
     GetRobotDescriptionTask,
@@ -157,6 +159,122 @@ receive_pointcloud_subtask = CheckArgsToolCallSubTask(
     expected_optional_args={"timeout_sec": int},
 )
 
+# System health subtasks
+diagnostics_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/diagnostics"},
+    expected_optional_args={"timeout_sec": int},
+)
+rosout_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/rosout"},
+    expected_optional_args={"timeout_sec": int},
+)
+joint_states_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/joint_states"},
+    expected_optional_args={"timeout_sec": int},
+)
+
+# Odometry subtasks
+odom_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/odom"},
+    expected_optional_args={"timeout_sec": int},
+)
+filtered_odom_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/odometry/filtered"},
+    expected_optional_args={"timeout_sec": int},
+)
+
+# Transform subtasks
+tf_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/tf"},
+    expected_optional_args={"timeout_sec": int},
+)
+tf_static_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/tf_static"},
+    expected_optional_args={"timeout_sec": int},
+)
+
+
+# Robot description subtasks
+robot_description_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/robot_description"},
+    expected_optional_args={"timeout_sec": int},
+)
+robot_description_semantic_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/robot_description_semantic"},
+    expected_optional_args={"timeout_sec": int},
+)
+
+# Sensor data subtasks
+scan_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/scan"},
+    expected_optional_args={"timeout_sec": int},
+)
+pointcloud_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/pointcloud"},
+    expected_optional_args={"timeout_sec": int},
+)
+
+
+# Robot description subtasks
+robot_description_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/robot_description"},
+    expected_optional_args={"timeout_sec": int},
+)
+robot_description_semantic_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/robot_description_semantic"},
+    expected_optional_args={"timeout_sec": int},
+)
+
+# Sensor data subtasks
+scan_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/scan"},
+    expected_optional_args={"timeout_sec": int},
+)
+pointcloud_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/pointcloud"},
+    expected_optional_args={"timeout_sec": int},
+)
+
+# Robot description subtasks
+robot_description_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/robot_description"},
+    expected_optional_args={"timeout_sec": int},
+)
+robot_description_semantic_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/robot_description_semantic"},
+    expected_optional_args={"timeout_sec": int},
+)
+
+# Sensor data subtasks
+scan_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/scan"},
+    expected_optional_args={"timeout_sec": int},
+)
+pointcloud_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/pointcloud"},
+    expected_optional_args={"timeout_sec": int},
+)
+
+
 ######### MANIPULATION ########################################################################################
 move_to_point_subtask_grab = CheckArgsToolCallSubTask(
     expected_tool_name="move_to_point",
@@ -217,12 +335,7 @@ start_move_front_action_subtask = CheckActionFieldsToolCallSubTask(
 ######### VALIDATORS #########################################################################################
 ######### BASIC    ########################################################################################
 topics_ord_val = OrderedCallsValidator(subtasks=[get_topics_subtask])
-# topics_and_color_image_ord_val = OrderedCallsValidator(
-#     subtasks=[
-#         get_topics_subtask,
-#         color_image5_subtask,
-#     ]
-# )
+
 color_image_ord_val = OrderedCallsValidator(subtasks=[color_image5_subtask])
 depth_image_ord_val = OrderedCallsValidator(subtasks=[depth_image5_subtask])
 
@@ -257,8 +370,33 @@ all_camera_images_with_info_notord_val = NotOrderedCallsValidator(
     ]
 )
 
+joint_states_ord_val = OrderedCallsValidator(subtasks=[joint_states_subtask])
+diagnostics_ord_val = OrderedCallsValidator(subtasks=[diagnostics_subtask])
+
 get_pointcloud_ord_val = OrderedCallsValidator(subtasks=[receive_pointcloud_subtask])
 get_robot_desc_ord_val = OrderedCallsValidator(subtasks=[receive_robot_desc_subtask])
+
+diagnostics_ord_val = NotOrderedCallsValidator(subtasks=[diagnostics_subtask])
+joint_states_ord_val = NotOrderedCallsValidator(subtasks=[joint_states_subtask])
+rosout_ord_val = NotOrderedCallsValidator(subtasks=[rosout_subtask])
+robot_health_val = NotOrderedCallsValidator(
+    subtasks=[diagnostics_subtask, joint_states_subtask, rosout_subtask]
+)
+
+odometry_comparison_val = NotOrderedCallsValidator(
+    subtasks=[odom_subtask, filtered_odom_subtask]
+)
+sensor_data_val = NotOrderedCallsValidator(
+    subtasks=[
+        scan_subtask,
+        pointcloud_subtask,
+        color_image5_subtask,
+        depth_image5_subtask,
+        color_camera_info5_subtask,
+        depth_camera_info5_subtask,
+    ]
+)
+
 ######### MANIPULATION ########################################################################################
 move_to_point_ord_val_grab = OrderedCallsValidator(
     subtasks=[move_to_point_subtask_grab]
@@ -309,22 +447,11 @@ def get_basic_tasks(
                 prompt_detail=detail,
                 examples_in_system_prompt=shots,
             )
+
             tasks.extend(
                 [
-                    # 3 options to validate same task:
-                    # most strict, agent has to call both tool correctly to pass this validator
-                    GetROS2RGBCameraTask(
-                        validators=[color_image_ord_val], task_args=task_args
-                    ),
-                    # verifying only if the GetCameraImage call was made properly
                     GetROS2RGBCameraTask(
                         validators=[color_image_ord_val],
-                        task_args=task_args,
-                    ),
-                    # Soft verification. verifying in separate validators the list topic and get image.
-                    #  agent can get 0.5 score by only calling list topics
-                    GetROS2RGBCameraTask(
-                        validators=[topics_ord_val, color_image_ord_val],
                         task_args=task_args,
                     ),
                     GetROS2TopicsTask(
@@ -344,6 +471,18 @@ def get_basic_tasks(
                     ),
                     GetRobotDescriptionTask(
                         validators=[get_robot_desc_ord_val], task_args=task_args
+                    ),
+                    CheckRobotHealthTask(
+                        validators=[
+                            diagnostics_ord_val,
+                            rosout_ord_val,
+                            joint_states_ord_val,
+                        ],
+                        task_args=task_args,
+                    ),
+                    AssessSensorDataQualityTask(
+                        validators=[sensor_data_val],
+                        task_args=task_args,
                     ),
                 ]
             )
