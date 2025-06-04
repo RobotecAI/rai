@@ -24,7 +24,11 @@ from rai import get_llm_model
 from rai.agents.langchain.core import create_conversational_agent
 from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
-from rai.tools.ros2.manipulation import GetObjectPositionsTool, MoveToPointTool, ResetArmTool
+from rai.tools.ros2.manipulation import (
+    GetObjectPositionsTool,
+    MoveToPointTool,
+    ResetArmTool,
+)
 from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
@@ -35,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 def create_agent():
     rclpy.init()
-    connector = ROS2Connector(executor_type='single_threaded')
+    connector = ROS2Connector(executor_type="single_threaded")
 
     required_services = ["/grounded_sam_segment", "/grounding_dino_classify"]
     required_topics = ["/color_image5", "/depth_image5", "/color_camera_info5"]

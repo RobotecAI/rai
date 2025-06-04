@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import logging
-from typing import Literal, Type
+from typing import Type
 
 import numpy as np
 from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
@@ -45,17 +45,13 @@ class MoveToPointToolInput(BaseModel):
     x1: float = Field(description="The x coordinate of the point to move to")
     y1: float = Field(description="The y coordinate of the point to move to")
     z1: float = Field(description="The z coordinate of the point to move to")
-    #task: Literal["grab", "drop"] = Field(
-    #    description="Specify the intended action: use 'grab' to pick up an object, or 'drop' to release it. "
-    #    "This determines the gripper's behavior during the movement."
-    #)
 
 
 class MoveToPointTool(BaseROS2Tool):
-    name: str = "move_to_point"
+    name: str = "move_object_from_to"
     description: str = (
         "Move an object from one point to another. "
-        "The tool will move the object to the first point and then to the second point. "
+        "The tool will grab the object from the first point and then release it at the second point. "
         "The tool will not confirm the success of grabbing or releasing objects. Use additional sensors (e.g. camera) or tools for that information."
     )
 
@@ -84,8 +80,9 @@ class MoveToPointTool(BaseROS2Tool):
         x1: float,
         y1: float,
         z1: float,
-        #task: Literal["grab", "drop"],
     ) -> str:
+        # NOTE: create_client could be refactored into self.connector.service_call
+        self.connector.service_call
         client = self.connector.node.create_client(
             ManipulatorMoveTo,
             "/manipulator_move_to",
@@ -103,8 +100,6 @@ class MoveToPointTool(BaseROS2Tool):
             position=Point(x=x1, y=y1, z=z1),
             orientation=self.quaternion,
         )
-        #if task == "drop":
-        #    pose_stamped.pose.position.z += self.additional_height
 
         pose_stamped.pose.position.x += self.calibration_x
         pose_stamped.pose.position.y += self.calibration_y
@@ -121,7 +116,6 @@ class MoveToPointTool(BaseROS2Tool):
         pose_stamped1.pose.position.z = np.max(
             [pose_stamped1.pose.position.z, self.min_z]
         )
-        
 
         request = ManipulatorMoveTo.Request()
         request.target_pose = pose_stamped
@@ -139,9 +133,13 @@ class MoveToPointTool(BaseROS2Tool):
             return f"Service call failed for point ({x:.2f}, {y:.2f}, {z:.2f})."
 
         if response.success:
-            self.connector.logger.info(f"End effector successfully positioned at coordinates ({x:.2f}, {y:.2f}, {z:.2f}).")
+            self.connector.logger.info(
+                f"End effector successfully positioned at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
+            )
         else:
-            self.connector.logger.error(f"Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f}).")
+            self.connector.logger.error(
+                f"Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
+            )
             return "Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
 
         request = ManipulatorMoveTo.Request()
@@ -149,7 +147,6 @@ class MoveToPointTool(BaseROS2Tool):
 
         request.initial_gripper_state = False  # closed
         request.final_gripper_state = True  # open
-
 
         future = client.call_async(request)
         self.connector.node.get_logger().debug(
@@ -223,8 +220,10 @@ class GetObjectPositionsTool(BaseROS2Tool):
         else:
             return f"Centroids of detected {object_name}s in {self.target_frame} frame: [{', '.join(map(self.format_pose, mani_frame_poses))}]. Sizes of the detected objects are unknown."
 
+
 class ResetArmToolInput(BaseModel):
     pass
+
 
 class ResetArmTool(BaseROS2Tool):
     name: str = "reset_arm"
@@ -244,7 +243,7 @@ class ResetArmTool(BaseROS2Tool):
             ManipulatorMoveTo,
             "/manipulator_move_to",
         )
-        
+
         x = 0.31
         y = 0.0
         z = 0.59
@@ -256,7 +255,7 @@ class ResetArmTool(BaseROS2Tool):
             position=Point(x=x, y=y, z=z),
             orientation=self.quaternion,
         )
-        
+
         request.initial_gripper_state = True  # open
         request.final_gripper_state = False  # closed
 
@@ -268,9 +267,8 @@ class ResetArmTool(BaseROS2Tool):
 
         if response is None:
             return "Failed to reset the arm."
-        
+
         if response.success:
             return "Arm successfully reset."
         else:
             return "Failed to reset the arm."
-        
