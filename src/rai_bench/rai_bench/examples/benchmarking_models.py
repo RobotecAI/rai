@@ -20,8 +20,8 @@ from rai_bench import (
 
 if __name__ == "__main__":
     # Define models you want to benchmark
-    model_names = ["qwen2.5:7b", "llama3.2:3b"]
-    vendors = ["ollama", "ollama"]
+    model_names = ["qwen2.5:7b"]
+    vendors = ["ollama"]
 
     # Define benchmarks that will be used
     man_conf = ManipulationO3DEBenchmarkConfig(
@@ -36,14 +36,14 @@ if __name__ == "__main__":
         task_types=[  # what types of tasks to include
             "basic",
             "spatial_reasoning",
-            "navigation",
+            # "navigation",
             "custom_interfaces",
             "manipulation",
         ],
-        N_shots=[0, 2],  # examples in system prompt
+        N_shots=[2],  # examples in system prompt
         prompt_detail=[  # how descriptive should task prompt be
             "brief",
-            "moderate",
+            # "moderate",
             "descriptive",
         ],
         repeats=1,
