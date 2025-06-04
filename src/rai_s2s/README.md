@@ -1,12 +1,5 @@
 # RAI Speech To Speech
 
-## RAI ASR
-
-### Description
-
-This is the [RAI](https://github.com/RobotecAI/rai) automatic speech recognition package.
-It contains Agents definitions for the ASR feature.
-
 ### Models
 
 This package contains three types of models: Voice Activity Detection (VAD), Wake word and transcription.
@@ -53,38 +46,6 @@ The environment variable `OPEN_API_KEY` needs to be set to a valid OPENAI key in
 
 [FasterWhisper](https://github.com/SYSTRAN/faster-whisper) is another implementation of the whisper model. It's optimized for speed and memory footprint. It follows the same API as the other two provided implementations.
 
-#### Custom Models
-
-Custom VAD, Wake Word, or other detection models can be implemented by inheriting from `rai_asr.base.BaseVoiceDetectionModel`. The `detect` and `reset` methods must be implemented.
-
-Custom transcription models can be implemented by inheriting from `rai_asr.base.BaseTranscriptionModel`. The `transcribe` method must be implemented.
-
-### Agents
-
-#### Speech Recognition Agent
-
-The speech recognition Agent uses ROS 2 and sounddevice `Connectors`, to communicate with other agents and access the microphone.
-
-It fulfills the following ROS 2 communication API:
-
-Publishes to topic `/to_human: [HRIMessage]`:
-`message.text` is set with the transcription result using the selected transcription model.
-
-Publishes to topic `/voice_commands: [std_msgs/msg/String]`:
-
--   `"pause"` - when voice is detected but the `detection_pipeline` didn't return detection (for interruptive S2S)
--   `"play"` - when voice is not detected, but there was previously a transcription sent
--   `"stop"` - when voice is detected and the `detection_pipeline` returned a detection (or is empty)
-
-## RAI Text To Speech
-
-This is the [RAI](https://github.com/RobotecAI/rai) text to speech package.
-It contains Agent definitions for the TTS feature.
-
-### Models
-
-Out of the box the following models are supported:
-
 #### ElevenLabs
 
 [ElevenLabs](https://elevenlabs.io/) is a proprietary cloud provider for TTS. Refer to the website for the documentation.
@@ -104,6 +65,10 @@ Refer to the providers documentation for available voices and options.
 
 #### Custom Models
 
+Custom VAD, Wake Word, or other detection models can be implemented by inheriting from `rai_asr.base.BaseVoiceDetectionModel`. The `detect` and `reset` methods must be implemented.
+
+Custom transcription models can be implemented by inheriting from `rai_asr.base.BaseTranscriptionModel`. The `transcribe` method must be implemented.
+
 To add your custom TTS model inherit from the `rai_tts.models.base.TTSModel` class.
 
 You can use the following template:
@@ -120,9 +85,32 @@ class MyTTSModel(TTSModel):
 
 ```
 
-Such a model will work with the `TextToSpeechAgent` defined below:
-
 ### Agents
+
+#### Speech To Speech Agent
+
+The `SpeechToSpeechAgent` is an abstract class which provides functionalities to enable S2S communication with RAI Agents using different communication protocols.
+ROS2 is supported through `ROS2S2SAgent`, which is configured by providing two topic names - `to_human`, and `from_human`.
+On `from_human` topic `ROS2HRIMessages` are published containing transcribed voice from the user.
+Analogically on `to_human` messages with text to be played to the user are taken as input.
+The Agent takes care of sound device configuration.
+
+See the documentation for detailes.
+
+#### Speech Recognition Agent
+
+The speech recognition Agent uses ROS 2 and sounddevice `Connectors`, to communicate with other agents and access the microphone.
+
+It fulfills the following ROS 2 communication API:
+
+Publishes to topic `/to_human: [HRIMessage]`:
+`message.text` is set with the transcription result using the selected transcription model.
+
+Publishes to topic `/voice_commands: [std_msgs/msg/String]`:
+
+-   `"pause"` - when voice is detected but the `detection_pipeline` didn't return detection (for interruptive S2S)
+-   `"play"` - when voice is not detected, but there was previously a transcription sent
+-   `"stop"` - when voice is detected and the `detection_pipeline` returned a detection (or is empty)
 
 #### TextToSpeechAgent
 

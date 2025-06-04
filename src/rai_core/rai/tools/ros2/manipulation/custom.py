@@ -155,8 +155,8 @@ class MoveToPointTool(BaseROS2Tool):
         self.connector.node.get_logger().debug(
             f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
         )
-        response = get_future_result(future, timeout_sec=5.0)
 
+        response = get_future_result(future, timeout_sec=20.0)
 
         if response is None:
             return f"Service call failed for point ({x:.2f}, {y:.2f}, {z:.2f})."

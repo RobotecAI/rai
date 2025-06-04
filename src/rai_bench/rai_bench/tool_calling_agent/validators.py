@@ -29,7 +29,7 @@ loggers_type = logging.Logger
 class OrderedCallsValidator(Validator):
     """
     Validator that requires a strict order of subtaks
-    The next subtask will be validate only when the previous one was completed
+    The next subtask will be validated only when the previous one was completed
     """
 
     def __init__(

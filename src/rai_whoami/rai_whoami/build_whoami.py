@@ -43,7 +43,7 @@ def build_whoami(args: argparse.Namespace) -> None:
     info.to_directory(args.output_dir)
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("documentation_dir", type=Path)
     parser.add_argument("--build-vector-db", default=False, action="store_true")
@@ -54,3 +54,7 @@ if __name__ == "__main__":
     if args.output_dir is None:
         args.output_dir = args.documentation_dir / "generated"
     build_whoami(args)
+
+
+if __name__ == "__main__":
+    main()

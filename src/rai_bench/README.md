@@ -80,7 +80,7 @@ Check docstrings and code in [scenarios_packets](rai_bench/examples/manipulation
 2. Follow step 2 from [Manipulation demo Setup section](../../docs/demos/manipulation.md#setup)
 
 3. Adjust the path to the binary in: [o3de_config.yaml](./rai_bench/examples/manipulation_o3de/configs/o3de_config.yaml)
-4. Chose the model you want to run and a vendor.
+4. Choose the model you want to run and a vendor.
     > [!NOTE]
     > The configs of vendors are defined in [config.toml](../../config.toml) Change ithem if needed.
 5. Run benchmark with:

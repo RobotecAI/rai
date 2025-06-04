@@ -15,19 +15,21 @@ optimally by calling the RAI agent to decide what to do.
     Ensure that every command is run in a sourced shell using `source setup_shell.sh`
     Ensure ROS 2 is sourced.
 
-1. **Download the Latest Release**
+1. Follow the RAI setup instructions in the [quick setup guide](../setup/install.md#setting-up-developer-environment).
+
+2. Download the Latest Release
 
     ```bash
     ./scripts/download_demo.sh agriculture
     ```
 
-2. **Run the Simulation**
+3. Run the Simulation
 
     ```bash
     ./demo_assets/agriculture/RAIAgricultureDemo/RAIAgricultureDemo.GameLauncher -bg_ConnectToAssetProcessor=0
     ```
 
-3. **Start the Tractor Node**
+4. Start the Tractor Node
 
     ```bash
     python examples/agriculture-demo.py --tractor_number 1

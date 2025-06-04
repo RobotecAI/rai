@@ -9,6 +9,29 @@ It generates a comprehensive system prompt (embodiment info) for robots controll
 
 ---
 
+## Installation
+
+1. Install rai whoami:
+
+```bash
+pip install rai-whoami
+```
+
+2. Initialize the global configuration file (if not already done):
+
+```bash
+rai-config-init
+```
+
+3. Optionally install ROS 2 dependencies:
+
+```bash
+sudo apt install ros-${ROS_DISTRO}-rai-interfaces
+```
+
+For more visit [robotecai.github.io/rai](https://robotecai.github.io/rai/) for the latest documentation, setup
+guide and tutorials.
+
 ## How It Works
 
 Given a directory containing robot documentation (documents, images, URDFs), RAI Whoami processes these resources to produce a structured representation of the robot, including:
@@ -23,7 +46,13 @@ This embodiment info is then used to create a system prompt for LLM-based agents
 
 ### Directory Structure
 
-Prepare your robot documentation directory as follows:
+Initialize the documentation directory:
+
+```bash
+initialize-docs documentation_dir
+```
+
+Populate your robot documentation directory:
 
 ```
 documentation_dir/
@@ -37,7 +66,7 @@ documentation_dir/
 To generate the system prompt from your documentation directory:
 
 ```bash
-python src/rai_whoami/rai_whoami/build_whoami.py documentation_dir [--output_dir output_dir] [--build-vector-db]
+build-whoami documentation_dir [--output_dir output_dir] [--build-vector-db]
 ```
 
 Generated files will be saved in the `output_dir / generated` directory or `documentation_dir / generated` if not specified.

@@ -13,16 +13,13 @@ The `SimulationBridge` is an abstract base class that defines the interface for 
 -   Object pose retrieval
 -   Scene state monitoring
 
+### SceneConfig
+
+The `SceneConfig` is a configuration class that specifies the entities to be spawned in the simulation.
+
 ### SimulationConfig
 
-The `SimulationConfig` is a base configuration class that specifies the entities to be spawned in the simulation. Each simulation bridge can extend this with additional parameters specific to its implementation.
-
-Key features:
-
--   Entity list management
--   Unique name validation
--   YAML configuration loading
--   Frame ID specification
+The `SimulationConfig` is an abstract configuration class. Each simulation bridge can extend this with additional parameters specific to its implementation.
 
 ### SceneState
 
@@ -54,6 +51,7 @@ To use RAI Sim with a specific simulation environment:
 1. Create a custom `SimulationBridge` implementation for your simulator
 2. Extend `SimulationConfig` with simulator-specific parameters
 3. Implement the required abstract methods:
+    - `init_simulation`
     - `setup_scene`
     - `_spawn_entity`
     - `_despawn_entity`
@@ -100,3 +98,11 @@ RAI Sim serves as the foundation for RAI Bench by providing:
 -   Configuration management
 
 This allows RAI Bench to focus on task definition and evaluation while remaining simulator-agnostic.
+
+## LaunchManager
+
+RAI Sim also provides a ROS2LaunchManager class that manages the start and shutdown of ROS 2`LaunchDescription`
+
+??? info "ROS2LaunchManager class definition"
+
+    ::: rai_sim.launch_manager.ROS2LaunchManager

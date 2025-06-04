@@ -18,11 +18,9 @@ from typing import Dict, List
 
 import numpy as np
 import requests
-import sounddevice as sd
 import streamlit as st
 import tomli
 import tomli_w
-from elevenlabs import ElevenLabs
 from langchain_aws import BedrockEmbeddings, ChatBedrock
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
@@ -32,6 +30,8 @@ import logging
 def get_sound_devices(
     reinitialize: bool = False, output: bool = False
 ) -> List[Dict[str, str | int]]:
+    import sounddevice as sd
+
     if reinitialize:
         sd._terminate()
         sd._initialize()
@@ -369,6 +369,7 @@ def tracing():
 
 
 def asr():
+    import sounddevice as sd
     from rai_s2s.asr import TRANSCRIBE_MODELS
 
     def on_recording_device_change():
@@ -832,6 +833,8 @@ def review_and_save():
             vendor = st.session_state.config["tts"]["vendor"]
             if vendor == "elevenlabs":
                 try:
+                    from elevenlabs import ElevenLabs
+
                     client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
                     output = client.generate(text="Hello, world!")
                     output = list(output)
@@ -854,7 +857,12 @@ def review_and_save():
                     st.error(f"TTS error: {e}")
                 return False
 
-        def test_recording_device(index: int, sample_rate: int):
+        def test_recording_device(device_name: str):
+            import sounddevice as sd
+
+            devices = sd.query_devices()
+            index = [device["name"] for device in devices].index(device_name)
+            sample_rate = int(devices[device_index]["default_samplerate"])
             try:
                 recording = sd.rec(
                     device=index,
@@ -876,23 +884,26 @@ def review_and_save():
 
         # Run tests
 
-        devices = sd.query_devices()
-        device_index = [device["name"] for device in devices].index(
-            st.session_state.config["asr"]["recording_device_name"]
-        )
-        sample_rate = int(devices[device_index]["default_samplerate"])
         tests = [
             (test_simple_model, "Simple Model"),
             (test_complex_model, "Complex Model"),
             (test_embeddings_model, "Embeddings Model"),
             (test_langfuse, "Langfuse"),
             (test_langsmith, "LangSmith"),
-            (test_tts, "TTS"),
-            (
-                partial(test_recording_device, device_index, sample_rate),
-                "Recording Device",
-            ),
         ]
+        if st.session_state.features["s2s"]:
+            tests.extend(
+                [
+                    (test_tts, "TTS"),
+                    (
+                        partial(
+                            test_recording_device,
+                            st.session_state.config["asr"]["recording_device_name"],
+                        ),
+                        "Recording Device",
+                    ),
+                ]
+            )
         progress.progress(0.0, "Running tests...")
         for i, (test, name) in enumerate(tests):
             test_results[name] = test()
@@ -940,6 +951,7 @@ def setup_steps():
         step_names.append("🎙️ Speech Recognition")
         step_render.append(asr)
     except ImportError:
+        st.session_state.features["s2s"] = False
         logging.warning(
             "skipping speech recognition, missing import - install `poetry install --with s2s`"
         )
@@ -951,6 +963,7 @@ def setup_steps():
         step_names.append("🔊 Text to Speech")
         step_render.append(tts)
     except ImportError:
+        st.session_state.features["s2s"] = False
         logging.warning(
             "skipping text to speech, missing import - install `poetry install --with s2s`"
         )
@@ -972,6 +985,8 @@ def setup_steps():
 # Initialize session state for tracking steps if not exists
 if "current_step" not in st.session_state:
     st.session_state.current_step = 1
+if "features" not in st.session_state:
+    st.session_state.features = {}
 if "config" not in st.session_state:
     # Load initial config from TOML file
     try:

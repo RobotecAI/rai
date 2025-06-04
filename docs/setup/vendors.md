@@ -93,5 +93,5 @@ For configuration use `Speech Recognition` tab in [RAI Configurator][configurato
 
 Usage examples can be found in [Voice Interface Tutorial][s2s]
 
-[configurator]: ./install.md#14-configure-rai
+[configurator]: ./install.md#15-configure-rai
 [s2s]: ../tutorials/voice_interface.md
