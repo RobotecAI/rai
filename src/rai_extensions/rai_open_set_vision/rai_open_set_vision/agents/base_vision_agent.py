@@ -36,7 +36,7 @@ class BaseVisionAgent(BaseAgent):
         os.makedirs(self._weights_path, exist_ok=True)
         self._init_weight_path()
         self.weight_path = self._weights_path
-        self.ros2_connector = ROS2Connector(ros2_name)
+        self.ros2_connector = ROS2Connector(ros2_name, executor_type="single_threaded")
 
     def _init_weight_path(self):
         try:

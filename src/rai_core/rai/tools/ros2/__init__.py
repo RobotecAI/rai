@@ -50,6 +50,8 @@ from .generic import (
 )
 from .manipulation.custom import (
     GetObjectPositionsTool,
+    MoveObjectFromToTool,
+    MoveObjectFromToToolInput,
     MoveToPointTool,
     MoveToPointToolInput,
 )
@@ -83,6 +85,8 @@ __all__ = [
     "GetROS2TopicsNamesAndTypesTool",
     "GetROS2TransformConfiguredTool",
     "GetROS2TransformTool",
+    "MoveObjectFromToTool",
+    "MoveObjectFromToToolInput",
     "MoveToPointTool",
     "MoveToPointToolInput",
     "Nav2Toolkit",

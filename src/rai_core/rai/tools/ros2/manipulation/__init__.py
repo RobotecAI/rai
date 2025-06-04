@@ -19,10 +19,20 @@ if importlib.util.find_spec("rclpy") is None:
         "This is a ROS2 feature. Make sure ROS2 is installed and sourced."
     )
 
-from .custom import GetObjectPositionsTool, MoveToPointTool, MoveToPointToolInput
+from .custom import (
+    GetObjectPositionsTool,
+    MoveObjectFromToTool,
+    MoveObjectFromToToolInput,
+    MoveToPointTool,
+    MoveToPointToolInput,
+    ResetArmTool,
+)
 
 __all__ = [
     "GetObjectPositionsTool",
+    "MoveObjectFromToTool",
+    "MoveObjectFromToToolInput",
     "MoveToPointTool",
     "MoveToPointToolInput",
+    "ResetArmTool",
 ]
