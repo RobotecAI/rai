@@ -26,7 +26,7 @@ from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2.manipulation import (
     GetObjectPositionsTool,
-    MoveToPointTool,
+    MoveObjectFromToTool,
     ResetArmTool,
 )
 from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
@@ -59,7 +59,7 @@ def create_agent():
             camera_info_topic="/color_camera_info5",
             get_grabbing_point_tool=GetGrabbingPointTool(connector=connector),
         ),
-        MoveToPointTool(connector=connector, manipulator_frame="panda_link0"),
+        MoveObjectFromToTool(connector=connector, manipulator_frame="panda_link0"),
         ResetArmTool(connector=connector, manipulator_frame="panda_link0"),
         GetROS2ImageConfiguredTool(connector=connector, topic="/color_image5"),
     ]

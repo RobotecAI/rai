@@ -85,7 +85,8 @@ RAI provides specific ROS 2 tools for certain ROS 2 packages.
 
 ### Custom Tools
 
-| Tool Name                | Description                                  |
-| ------------------------ | -------------------------------------------- |
-| `MoveToPointTool`        | Tool for moving to a point                   |
-| `GetObjectPositionsTool` | Tool for retrieving the positions of objects |
+| Tool Name                | Description                                         |
+| ------------------------ | --------------------------------------------------- |
+| `MoveToPointTool`        | Tool for moving to a point                          |
+| `MoveObjectFromToTool`   | Tool for moving an object from one point to another |
+| `GetObjectPositionsTool` | Tool for retrieving the positions of objects        |
