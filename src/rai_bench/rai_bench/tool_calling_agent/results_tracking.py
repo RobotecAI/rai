@@ -48,7 +48,6 @@ class TaskResult(BaseModel):
     )
     prompt_detail: str = Field(..., description="How detailed the task prompt is.")
     complexity: str = Field(..., description="Complexity of the task.")
-
     type: str = Field(..., description="Type of task, for example: manipulation")
     model_name: str = Field(..., description="Name of the LLM.")
     validation_info: List[ValidatorResult] = Field(

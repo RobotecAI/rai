@@ -42,7 +42,6 @@ class BenchmarkConfig(BaseModel):
 class ManipulationO3DEBenchmarkConfig(BenchmarkConfig):
     # by default include all
     o3de_config_path: str
-    # TODO (jmatejcz) split the difficulty of task and scene
     levels: List[Literal["trivial", "easy", "medium", "hard", "very_hard"]] = [
         "trivial",
         "easy",

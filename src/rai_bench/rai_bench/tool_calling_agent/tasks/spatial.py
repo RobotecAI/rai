@@ -36,7 +36,7 @@ Example of tool calls:
 - return_bool_response, args: {'response': False}"""
 )
 
-# NOTE (jmatejcz) In this case we are using only one tool to there is no difference bettween 2 and 5 shot
+# NOTE (jmatejcz) In this case we are using only one tool so there is no difference bettween 2 and 5 shot
 SPATIAL_REASONING_SYSTEM_PROMPT_5_SHOT = (
     SPATIAL_REASONING_SYSTEM_PROMPT_2_SHOT
     + """
