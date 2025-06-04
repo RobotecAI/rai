@@ -16,6 +16,7 @@ from pathlib import Path
 
 from rai_bench import define_benchmark_logger, parse_manipulation_o3de_benchmark_args
 from rai_bench.manipulation_o3de import get_scenarios, run_benchmark
+from rai_bench.utils import get_llm_for_benchmark
 
 if __name__ == "__main__":
     args = parse_manipulation_o3de_benchmark_args()
@@ -26,9 +27,13 @@ if __name__ == "__main__":
     # import ready scenarios
     scenarios = get_scenarios(logger=bench_logger, levels=args.levels)
 
-    run_benchmark(
+    llm = get_llm_for_benchmark(
         model_name=args.model_name,
         vendor=args.vendor,
+    )
+
+    run_benchmark(
+        llm=llm,
         out_dir=experiment_dir,
         o3de_config_path=args.o3de_config_path,
         scenarios=scenarios,

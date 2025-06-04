@@ -18,7 +18,10 @@ from functools import partial
 from typing import List, Optional, TypedDict
 
 from langchain.chat_models.base import BaseChatModel
-from langchain_core.messages import BaseMessage, SystemMessage
+from langchain_core.messages import (
+    BaseMessage,
+    SystemMessage,
+)
 from langchain_core.tools import BaseTool
 from langgraph.graph import START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
@@ -61,7 +64,7 @@ def create_conversational_agent(
     tools: List[BaseTool],
     system_prompt: str | SystemMessage,
     logger: Optional[logging.Logger] = None,
-    debug=False,
+    debug: bool = False,
 ) -> CompiledStateGraph:
     _logger = None
     if logger:

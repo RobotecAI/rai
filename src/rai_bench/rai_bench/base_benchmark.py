@@ -20,6 +20,7 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional
+from uuid import UUID
 
 from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, Field
@@ -110,13 +111,15 @@ class BaseBenchmark(ABC):
             writer.writerow(row)
 
     @abstractmethod
-    def run_next(self, agent: CompiledStateGraph) -> None:
+    def run_next(self, agent: CompiledStateGraph, experiment_id: UUID) -> None:
         """Run the next task/scenario of the benchmark.
 
         Parameters
         ----------
         agent : CompiledStateGraph
             LangChain tool calling agent.
+        experiment_id : uuid.UUID
+            uniqe identifier for whole experiment for tracing purposes.
         """
         pass
 

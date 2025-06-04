@@ -27,6 +27,7 @@ class ScenarioResult(BaseModel):
     score: float = Field(
         ..., description="Value between 0 and 1, describing the task score."
     )
+    level: str = Field(..., description="Difficulty of the scenario")
     total_time: float = Field(..., description="Total time taken to complete the task.")
     number_of_tool_calls: int = Field(
         ..., description="Number of tool calls made during the task."

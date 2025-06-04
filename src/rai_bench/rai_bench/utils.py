@@ -16,7 +16,9 @@ import argparse
 import logging
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
+from langchain.chat_models.base import BaseChatModel
 from rai.initialization import get_llm_model_direct
 
 
@@ -111,7 +113,7 @@ def define_benchmark_logger(out_dir: Path) -> logging.Logger:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     file_handler = logging.FileHandler(log_file)
-    file_handler.setLevel(logging.DEBUG)
+    file_handler.setLevel(logging.INFO)
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
@@ -126,12 +128,25 @@ def define_benchmark_logger(out_dir: Path) -> logging.Logger:
     return bench_logger
 
 
-def get_llm_for_benchmark(
-    model_name: str,
-    vendor: str,
-):
+def get_llm_for_benchmark(model_name: str, vendor: str, **kwargs: Any) -> BaseChatModel:
     if vendor == "ollama":
-        llm = get_llm_model_direct(model_name=model_name, vendor=vendor, keep_alive=20)
+        llm = get_llm_model_direct(
+            model_name=model_name, vendor=vendor, keep_alive=20, **kwargs
+        )
     else:
-        llm = get_llm_model_direct(model_name=model_name, vendor=vendor)
+        llm = get_llm_model_direct(model_name=model_name, vendor=vendor, **kwargs)
     return llm
+
+
+def get_llm_model_name(llm: BaseChatModel) -> str:
+    """Get the actual model name from any LLM, regardless of vendor"""
+
+    # Try common attribute names in order of preference
+    for attr in ["model", "model_name", "deployment_name"]:
+        if hasattr(llm, attr):
+            value = getattr(llm, attr)
+            if value:
+                return str(value)
+
+    # Fallback to vendor name if model name not found
+    return llm.get_name()

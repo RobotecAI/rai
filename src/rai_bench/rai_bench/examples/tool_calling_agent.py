@@ -22,6 +22,7 @@ from rai_bench.tool_calling_agent import (
     get_tasks,
     run_benchmark,
 )
+from rai_bench.utils import get_llm_for_benchmark
 
 if __name__ == "__main__":
     args = parse_tool_calling_benchmark_args()
@@ -36,9 +37,14 @@ if __name__ == "__main__":
     )
     for task in tasks:
         task.set_logger(bench_logger)
-    run_benchmark(
+
+    llm = get_llm_for_benchmark(
         model_name=args.model_name,
         vendor=args.vendor,
+    )
+
+    run_benchmark(
+        llm=llm,
         out_dir=args.out_dir,
         tasks=tasks,
         bench_logger=bench_logger,
