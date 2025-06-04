@@ -106,7 +106,7 @@ ret_false_ord_val = OrderedCallsValidator(subtasks=[return_false_subtask])
 
 
 def get_spatial_tasks(
-    extra_tool_calls: int = 0,
+    extra_tool_calls: List[int] = [0],
     prompt_detail: List[Literal["brief", "moderate", "descriptive"]] = [
         "brief",
         "moderate",
@@ -193,24 +193,15 @@ def get_spatial_tasks(
         ),
     ]
 
-    for detail in prompt_detail:
-        for shots in n_shots:
-            task_args = TaskArgs(
-                extra_tool_calls=extra_tool_calls,
-                prompt_detail=detail,
-                examples_in_system_prompt=shots,
-            )
-
-            [
-                BoolImageTaskEasy(
-                    task_input=input_item,
-                    validators=[ret_true_ord_val],
-                    task_args=task_args,
+    for extra_calls in extra_tool_calls:
+        for detail in prompt_detail:
+            for shots in n_shots:
+                task_args = TaskArgs(
+                    extra_tool_calls=extra_calls,
+                    prompt_detail=detail,
+                    examples_in_system_prompt=shots,
                 )
-                for input_item in easy_true_inputs
-            ]
 
-            tasks.extend(
                 [
                     BoolImageTaskEasy(
                         task_input=input_item,
@@ -219,61 +210,71 @@ def get_spatial_tasks(
                     )
                     for input_item in easy_true_inputs
                 ]
-            )
 
-            tasks.extend(
-                [
-                    BoolImageTaskEasy(
-                        task_input=input_item,
-                        validators=[ret_false_ord_val],
-                        task_args=task_args,
-                    )
-                    for input_item in easy_false_inputs
-                ]
-            )
+                tasks.extend(
+                    [
+                        BoolImageTaskEasy(
+                            task_input=input_item,
+                            validators=[ret_true_ord_val],
+                            task_args=task_args,
+                        )
+                        for input_item in easy_true_inputs
+                    ]
+                )
 
-            tasks.extend(
-                [
-                    BoolImageTaskMedium(
-                        task_input=input_item,
-                        validators=[ret_true_ord_val],
-                        task_args=task_args,
-                    )
-                    for input_item in medium_true_inputs
-                ]
-            )
+                tasks.extend(
+                    [
+                        BoolImageTaskEasy(
+                            task_input=input_item,
+                            validators=[ret_false_ord_val],
+                            task_args=task_args,
+                        )
+                        for input_item in easy_false_inputs
+                    ]
+                )
 
-            tasks.extend(
-                [
-                    BoolImageTaskMedium(
-                        task_input=input_item,
-                        validators=[ret_false_ord_val],
-                        task_args=task_args,
-                    )
-                    for input_item in medium_false_inputs
-                ]
-            )
+                tasks.extend(
+                    [
+                        BoolImageTaskMedium(
+                            task_input=input_item,
+                            validators=[ret_true_ord_val],
+                            task_args=task_args,
+                        )
+                        for input_item in medium_true_inputs
+                    ]
+                )
 
-            tasks.extend(
-                [
-                    BoolImageTaskHard(
-                        task_input=input_item,
-                        validators=[ret_true_ord_val],
-                        task_args=task_args,
-                    )
-                    for input_item in hard_true_inputs
-                ]
-            )
+                tasks.extend(
+                    [
+                        BoolImageTaskMedium(
+                            task_input=input_item,
+                            validators=[ret_false_ord_val],
+                            task_args=task_args,
+                        )
+                        for input_item in medium_false_inputs
+                    ]
+                )
 
-            tasks.extend(
-                [
-                    BoolImageTaskHard(
-                        task_input=input_item,
-                        validators=[ret_false_ord_val],
-                        task_args=task_args,
-                    )
-                    for input_item in hard_false_inputs
-                ]
-            )
+                tasks.extend(
+                    [
+                        BoolImageTaskHard(
+                            task_input=input_item,
+                            validators=[ret_true_ord_val],
+                            task_args=task_args,
+                        )
+                        for input_item in hard_true_inputs
+                    ]
+                )
+
+                tasks.extend(
+                    [
+                        BoolImageTaskHard(
+                            task_input=input_item,
+                            validators=[ret_false_ord_val],
+                            task_args=task_args,
+                        )
+                        for input_item in hard_false_inputs
+                    ]
+                )
 
     return tasks

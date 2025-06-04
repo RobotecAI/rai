@@ -57,7 +57,7 @@ class ManipulationO3DEBenchmarkConfig(BenchmarkConfig):
 
 
 class ToolCallingAgentBenchmarkConfig(BenchmarkConfig):
-    extra_tool_calls: int = 0
+    extra_tool_calls: List[int] = [0]
     complexities: List[Literal["easy", "medium", "hard"]] = ["easy", "medium", "hard"]
     N_shots: List[Literal[0, 2, 5]] = [0, 2, 5]
     prompt_detail: List[Literal["brief", "moderate", "descriptive"]] = [

@@ -546,7 +546,11 @@ class Task(ABC):
         Includes extra tool calls params.
         and optional tool calls number which depends on task.
         """
-        return self.required_calls + self.extra_tool_calls
+        return (
+            self.required_calls
+            + self.optional_tool_calls_number
+            + self.extra_tool_calls
+        )
 
     @property
     def required_calls(self) -> int:

@@ -69,7 +69,7 @@ move_ahead_ord_val = OrderedCallsValidator(subtasks=[start_move_front_action_sub
 
 
 def get_navigation_tasks(
-    extra_tool_calls: int = 0,
+    extra_tool_calls: List[int] = [0],
     prompt_detail: List[Literal["brief", "moderate", "descriptive"]] = [
         "brief",
         "moderate",
@@ -79,32 +79,33 @@ def get_navigation_tasks(
 ) -> List[Task]:
     tasks: List[Task] = []
 
-    for detail in prompt_detail:
-        for shots in n_shots:
-            task_args = TaskArgs(
-                extra_tool_calls=extra_tool_calls,
-                prompt_detail=detail,
-                examples_in_system_prompt=shots,
-            )
-            tasks.extend(
-                [
-                    NavigateToPointTask(
-                        validators=[start_navigate_action_ord_val],
-                        task_args=task_args,
-                    ),
-                    SpinAroundTask(
-                        validators=[start_spin_action_ord_val],
-                        task_args=task_args,
-                    ),
-                    MoveToBedTask(
-                        validators=[move_ahead_ord_val],
-                        task_args=task_args,
-                    ),
-                    MoveToFrontTask(
-                        validators=[move_ahead_ord_val],
-                        task_args=task_args,
-                    ),
-                ]
-            )
+    for extra_calls in extra_tool_calls:
+        for detail in prompt_detail:
+            for shots in n_shots:
+                task_args = TaskArgs(
+                    extra_tool_calls=extra_calls,
+                    prompt_detail=detail,
+                    examples_in_system_prompt=shots,
+                )
+                tasks.extend(
+                    [
+                        NavigateToPointTask(
+                            validators=[start_navigate_action_ord_val],
+                            task_args=task_args,
+                        ),
+                        SpinAroundTask(
+                            validators=[start_spin_action_ord_val],
+                            task_args=task_args,
+                        ),
+                        MoveToBedTask(
+                            validators=[move_ahead_ord_val],
+                            task_args=task_args,
+                        ),
+                        MoveToFrontTask(
+                            validators=[move_ahead_ord_val],
+                            task_args=task_args,
+                        ),
+                    ]
+                )
 
     return tasks

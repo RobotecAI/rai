@@ -221,9 +221,6 @@ diagnostics_ord_val = OrderedCallsValidator(subtasks=[diagnostics_subtask])
 get_pointcloud_ord_val = OrderedCallsValidator(subtasks=[receive_pointcloud_subtask])
 get_robot_desc_ord_val = OrderedCallsValidator(subtasks=[receive_robot_desc_subtask])
 
-diagnostics_ord_val = NotOrderedCallsValidator(subtasks=[diagnostics_subtask])
-joint_states_ord_val = NotOrderedCallsValidator(subtasks=[joint_states_subtask])
-rosout_ord_val = NotOrderedCallsValidator(subtasks=[rosout_subtask])
 robot_health_val = NotOrderedCallsValidator(
     subtasks=[diagnostics_subtask, joint_states_subtask, rosout_subtask]
 )
@@ -244,7 +241,7 @@ sensor_data_val = NotOrderedCallsValidator(
 
 
 def get_basic_tasks(
-    extra_tool_calls: int = 0,
+    extra_tool_calls: List[int] = [0],
     prompt_detail: List[Literal["brief", "moderate", "descriptive"]] = [
         "brief",
         "moderate",
@@ -254,52 +251,49 @@ def get_basic_tasks(
 ) -> List[Task]:
     tasks: List[Task] = []
 
-    # Generate all combinations of prompt_detail and n_shots
-    for detail in prompt_detail:
-        for shots in n_shots:
-            task_args = TaskArgs(
-                extra_tool_calls=extra_tool_calls,
-                prompt_detail=detail,
-                examples_in_system_prompt=shots,
-            )
+    # Generate all combinations of prompt_detail and n_shots and extra tool calls
+    for extra_calls in extra_tool_calls:
+        for detail in prompt_detail:
+            for shots in n_shots:
+                task_args = TaskArgs(
+                    extra_tool_calls=extra_calls,
+                    prompt_detail=detail,
+                    examples_in_system_prompt=shots,
+                )
 
-            tasks.extend(
-                [
-                    GetROS2RGBCameraTask(
-                        validators=[color_image_ord_val],
-                        task_args=task_args,
-                    ),
-                    GetROS2TopicsTask(
-                        validators=[topics_ord_val],
-                        task_args=task_args,
-                    ),
-                    GetROS2DepthCameraTask(
-                        validators=[depth_image_ord_val],
-                        task_args=task_args,
-                    ),
-                    GetAllROS2CamerasTask(
-                        validators=[all_camera_images_notord_val],
-                        task_args=task_args,
-                    ),
-                    GetPointcloudTask(
-                        validators=[get_pointcloud_ord_val], task_args=task_args
-                    ),
-                    GetRobotDescriptionTask(
-                        validators=[get_robot_desc_ord_val], task_args=task_args
-                    ),
-                    CheckRobotHealthTask(
-                        validators=[
-                            diagnostics_ord_val,
-                            rosout_ord_val,
-                            joint_states_ord_val,
-                        ],
-                        task_args=task_args,
-                    ),
-                    AssessSensorDataQualityTask(
-                        validators=[sensor_data_val],
-                        task_args=task_args,
-                    ),
-                ]
-            )
+                tasks.extend(
+                    [
+                        GetROS2RGBCameraTask(
+                            validators=[color_image_ord_val],
+                            task_args=task_args,
+                        ),
+                        GetROS2TopicsTask(
+                            validators=[topics_ord_val],
+                            task_args=task_args,
+                        ),
+                        GetROS2DepthCameraTask(
+                            validators=[depth_image_ord_val],
+                            task_args=task_args,
+                        ),
+                        GetAllROS2CamerasTask(
+                            validators=[all_camera_images_notord_val],
+                            task_args=task_args,
+                        ),
+                        GetPointcloudTask(
+                            validators=[get_pointcloud_ord_val], task_args=task_args
+                        ),
+                        GetRobotDescriptionTask(
+                            validators=[get_robot_desc_ord_val], task_args=task_args
+                        ),
+                        CheckRobotHealthTask(
+                            validators=[robot_health_val],
+                            task_args=task_args,
+                        ),
+                        AssessSensorDataQualityTask(
+                            validators=[sensor_data_val],
+                            task_args=task_args,
+                        ),
+                    ]
+                )
 
     return tasks

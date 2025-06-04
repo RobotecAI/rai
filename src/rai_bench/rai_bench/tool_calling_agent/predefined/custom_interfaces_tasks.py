@@ -56,7 +56,7 @@ get_interface_publish_ord_val = OrderedCallsValidator(
 
 
 def get_custom_interfaces_tasks(
-    extra_tool_calls: int = 0,
+    extra_tool_calls: List[int] = [0],
     prompt_detail: List[Literal["brief", "moderate", "descriptive"]] = [
         "brief",
         "moderate",
@@ -66,22 +66,23 @@ def get_custom_interfaces_tasks(
 ) -> List[Task]:
     tasks: List[Task] = []
 
-    for detail in prompt_detail:
-        for shots in n_shots:
-            task_args = TaskArgs(
-                extra_tool_calls=extra_tool_calls,
-                prompt_detail=detail,
-                examples_in_system_prompt=shots,
-            )
-            tasks.append(
-                PublishROS2HRIMessageTextTask(
-                    topic="/to_human",
-                    validators=[
-                        get_interface_publish_ord_val,
-                    ],
-                    task_args=task_args,
-                    text="Hello!",
-                ),
-            )
+    for extra_calls in extra_tool_calls:
+        for detail in prompt_detail:
+            for shots in n_shots:
+                task_args = TaskArgs(
+                    extra_tool_calls=extra_calls,
+                    prompt_detail=detail,
+                    examples_in_system_prompt=shots,
+                )
+                tasks.append(
+                    PublishROS2HRIMessageTextTask(
+                        topic="/to_human",
+                        validators=[
+                            get_interface_publish_ord_val,
+                        ],
+                        task_args=task_args,
+                        text="Hello!",
+                    ),
+                )
 
     return tasks

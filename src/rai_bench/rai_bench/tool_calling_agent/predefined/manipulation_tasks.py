@@ -51,7 +51,7 @@ move_to_point_ord_val_drop = OrderedCallsValidator(
 
 
 def get_manipulation_tasks(
-    extra_tool_calls: int = 0,
+    extra_tool_calls: List[int] = [0],
     prompt_detail: List[Literal["brief", "moderate", "descriptive"]] = [
         "brief",
         "moderate",
@@ -65,32 +65,33 @@ def get_manipulation_tasks(
         "banana": [Point(x=0.1, y=0.2, z=0.3), Point(x=0.4, y=0.5, z=0.6)],
         "cube": [Point(x=0.7, y=0.8, z=0.9)],
     }
-    for detail in prompt_detail:
-        for shots in n_shots:
-            task_args = TaskArgs(
-                extra_tool_calls=extra_tool_calls,
-                prompt_detail=detail,
-                examples_in_system_prompt=shots,
-            )
-            tasks.extend(
-                [
-                    MoveToPointTask(
-                        objects=objects,
-                        move_to_tool_input=MoveToPointToolInput(
-                            x=1.0, y=2.0, z=3.0, task="grab"
+    for extra_calls in extra_tool_calls:
+        for detail in prompt_detail:
+            for shots in n_shots:
+                task_args = TaskArgs(
+                    extra_tool_calls=extra_calls,
+                    prompt_detail=detail,
+                    examples_in_system_prompt=shots,
+                )
+                tasks.extend(
+                    [
+                        MoveToPointTask(
+                            objects=objects,
+                            move_to_tool_input=MoveToPointToolInput(
+                                x=1.0, y=2.0, z=3.0, task="grab"
+                            ),
+                            validators=[move_to_point_ord_val_grab],
+                            task_args=task_args,
                         ),
-                        validators=[move_to_point_ord_val_grab],
-                        task_args=task_args,
-                    ),
-                    MoveToPointTask(
-                        objects=objects,
-                        move_to_tool_input=MoveToPointToolInput(
-                            x=1.2, y=2.3, z=3.4, task="drop"
+                        MoveToPointTask(
+                            objects=objects,
+                            move_to_tool_input=MoveToPointToolInput(
+                                x=1.2, y=2.3, z=3.4, task="drop"
+                            ),
+                            validators=[move_to_point_ord_val_drop],
+                            task_args=task_args,
                         ),
-                        validators=[move_to_point_ord_val_drop],
-                        task_args=task_args,
-                    ),
-                ]
-            )
+                    ]
+                )
 
     return tasks

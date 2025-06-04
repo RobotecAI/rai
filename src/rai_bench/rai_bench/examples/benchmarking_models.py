@@ -32,10 +32,12 @@ if __name__ == "__main__":
         repeats=1,  # how many times to repeat
     )
     tool_conf = ToolCallingAgentBenchmarkConfig(
-        extra_tool_calls=5,  # how many extra tool calls allowed to still pass
+        extra_tool_calls=[0],  # how many extra tool calls allowed to still pass
         task_types=[  # what types of tasks to include
             "basic",
             "spatial_reasoning",
+            "navigation",
+            "custom_interfaces",
             "manipulation",
         ],
         N_shots=[0, 2],  # examples in system prompt
