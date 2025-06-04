@@ -109,7 +109,7 @@ The `Validator` class can combine single or multiple subtasks to create a single
 
 ### Task
 
-A Task represents a specific prompt and set of tools available. A list of validators is assigned to validate the performance.
+A Task represents a specific prompts and set of tools available. A list of validators is assigned to validate the performance.
 
 ??? info "Task class definition"
 
@@ -123,14 +123,29 @@ The ToolCallingAgentBenchmark class manages the execution of tasks and collects 
 
 ### Available Tasks
 
-Tasks of this benchmark are grouped by type:
+There are predefined Tasks available which are grouped by categories:
 
--   Basic - basic usage of tools
+-   Basic - require retrieving info from certain topics
 -   Navigation
 -   Spatial reasoning - questions about surroundings with images attached
 -   Manipulation
 -   Custom Interfaces - requires using messages with custom interfaces
 
-If you want to know details about every task, visit `rai_bench/tool_calling_agent/tasks`
+Every Task has assigned the `complexity` which reflects the difficulty.
 
-## Test Models
+When creating a Task you can define few params:
+
+```python
+class TaskArgs(BaseModel):
+    """Holds the configurations specified by user"""
+
+    extra_tool_calls: int = 0
+    prompt_detail: Literal["brief", "moderate", "descriptive"] = "brief"
+    examples_in_system_prompt: Literal[0, 2, 5] = 0
+```
+
+-   examples_in_system_prompt - How many examples there are in system prompts.
+-   prompt_detail - How descriptive should the Task prompt be.
+-   extra_tool_calls - How many extra tool calls can agent make and still pass the Task.
+
+If you want to know details about every task, visit `rai_bench/tool_calling_agent/tasks`
