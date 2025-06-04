@@ -18,14 +18,13 @@ import cv2
 import numpy as np
 import rclpy
 import sensor_msgs.msg
-from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 from rai.communication.ros2.api import (
     convert_ros_img_to_base64,
     convert_ros_img_to_ndarray,
 )
-from rai.communication.ros2.connectors import ROS2Connector
 from rai.communication.ros2.ros_async import get_future_result
+from rai.tools.ros2.base import BaseROS2Tool
 from rclpy import Future
 from rclpy.exceptions import (
     ParameterNotDeclaredException,
@@ -67,12 +66,7 @@ class GetGrabbingPointInput(BaseModel):
 
 
 # --------------------- Tools ---------------------
-class GetSegmentationTool:
-    connector: ROS2Connector = Field(..., exclude=True)
-
-    name: str = ""
-    description: str = ""
-
+class GetSegmentationTool(BaseROS2Tool):
     box_threshold: float = Field(default=0.35, description="Box threshold for GDINO")
     text_threshold: float = Field(default=0.45, description="Text threshold for GDINO")
 
@@ -194,9 +188,7 @@ def depth_to_point_cloud(
     return points
 
 
-class GetGrabbingPointTool(BaseTool):
-    connector: ROS2Connector = Field(..., exclude=True)
-
+class GetGrabbingPointTool(BaseROS2Tool):
     name: str = "GetGrabbingPointTool"
     description: str = "Get the grabbing point of an object"
     pcd: List[Any] = []

@@ -16,11 +16,10 @@ from typing import List, NamedTuple, Type
 
 import numpy as np
 import sensor_msgs.msg
-from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
-from rai.communication.ros2 import ROS2Connector
 from rai.communication.ros2.api import convert_ros_img_to_ndarray
 from rai.communication.ros2.ros_async import get_future_result
+from rai.tools.ros2.base import BaseROS2Tool
 from rclpy.exceptions import (
     ParameterNotDeclaredException,
     ParameterUninitializedException,
@@ -78,9 +77,7 @@ class DistanceMeasurement(NamedTuple):
 
 
 # --------------------- Tools ---------------------
-class GroundingDinoBaseTool(BaseTool):
-    connector: ROS2Connector = Field(..., exclude=True)
-
+class GroundingDinoBaseTool(BaseROS2Tool):
     box_threshold: float = Field(default=0.35, description="Box threshold for GDINO")
     text_threshold: float = Field(default=0.45, description="Text threshold for GDINO")
 
@@ -89,7 +86,7 @@ class GroundingDinoBaseTool(BaseTool):
     ) -> Future:
         cli = self.connector.node.create_client(RAIGroundingDino, GDINO_SERVICE_NAME)
         while not cli.wait_for_service(timeout_sec=1.0):
-            self.node.get_logger().info(
+            self.connector.node.get_logger().info(
                 f"service {GDINO_SERVICE_NAME} not available, waiting again..."
             )
         req = RAIGroundingDino.Request()

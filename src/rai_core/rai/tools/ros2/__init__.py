@@ -18,7 +18,6 @@ if importlib.util.find_spec("rclpy") is None:
     raise ImportError(
         "This is a ROS2 feature. Make sure ROS2 is installed and sourced."
     )
-
 from .cli import (
     ROS2CLIToolkit,
     ros2_action,
@@ -48,11 +47,6 @@ from .generic import (
     ROS2TopicsToolkit,
     StartROS2ActionTool,
 )
-from .manipulation.custom import (
-    GetObjectPositionsTool,
-    MoveToPointTool,
-    MoveToPointToolInput,
-)
 from .navigation.nav2 import (
     CancelNavigateToPoseTool,
     GetNavigateToPoseFeedbackTool,
@@ -71,7 +65,6 @@ __all__ = [
     "CancelROS2ActionTool",
     "GetNavigateToPoseFeedbackTool",
     "GetNavigateToPoseResultTool",
-    "GetObjectPositionsTool",
     "GetROS2ActionFeedbackTool",
     "GetROS2ActionIDsTool",
     "GetROS2ActionResultTool",
@@ -83,8 +76,6 @@ __all__ = [
     "GetROS2TopicsNamesAndTypesTool",
     "GetROS2TransformConfiguredTool",
     "GetROS2TransformTool",
-    "MoveToPointTool",
-    "MoveToPointToolInput",
     "Nav2Toolkit",
     "NavigateToPoseTool",
     "PublishROS2MessageTool",
