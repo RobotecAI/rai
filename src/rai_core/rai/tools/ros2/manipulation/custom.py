@@ -159,7 +159,7 @@ class MoveObjectFromToTool(BaseROS2Tool):
         description="Constant quaternion",
     )
 
-    args_schema: Type[MoveToPointToolInput] = MoveToPointToolInput
+    args_schema: Type[MoveObjectFromToToolInput] = MoveObjectFromToToolInput
 
     def _run(
         self,
