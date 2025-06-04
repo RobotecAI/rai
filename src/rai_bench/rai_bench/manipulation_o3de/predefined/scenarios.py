@@ -89,6 +89,7 @@ def trivial_scenarios(logger: logging.Logger | None) -> List[Scenario]:
         tasks=move_to_left_tasks,
         scene_configs=scene_configs,
         scene_configs_paths=scene_configs_paths,
+        level="trivial",
     )
 
     return [*easy_move_to_left_scenarios, *easy_place_objects_scenarios]
@@ -175,6 +176,7 @@ def easy_scenarios(logger: logging.Logger | None) -> List[Scenario]:
         tasks=[task],
         scene_configs=scene_configs,
         scene_configs_paths=scene_configs_paths,
+        level="easy",
     )
 
     return [
@@ -253,6 +255,7 @@ def medium_scenarios(logger: logging.Logger | None) -> List[Scenario]:
         scene_configs=medium_scene_configs,
         scene_configs_paths=medium_scene_configs_paths,
         logger=logger,
+        level="medium",
     )
 
     # place cubes
@@ -262,6 +265,7 @@ def medium_scenarios(logger: logging.Logger | None) -> List[Scenario]:
         scene_configs=medium_scene_configs,
         scene_configs_paths=medium_scene_configs_paths,
         logger=logger,
+        level="medium",
     )
 
     # build tower task
@@ -376,6 +380,7 @@ def hard_scenarios(logger: logging.Logger | None) -> List[Scenario]:
         tasks=move_to_left_tasks,
         scene_configs=hard_scene_configs,
         scene_configs_paths=hard_scene_configs_paths,
+        level="hard",
     )
 
     # place cubes
@@ -384,6 +389,7 @@ def hard_scenarios(logger: logging.Logger | None) -> List[Scenario]:
         tasks=[task],
         scene_configs=hard_scene_configs,
         scene_configs_paths=hard_scene_configs_paths,
+        level="hard",
     )
 
     # build tower task
@@ -400,6 +406,7 @@ def hard_scenarios(logger: logging.Logger | None) -> List[Scenario]:
         tasks=build_tower_tasks,
         scene_configs=medium_scene_configs,
         scene_configs_paths=medium_scene_configs_paths,
+        level="hard",
     )
 
     # group object task
@@ -483,6 +490,7 @@ def very_hard_scenarios(logger: logging.Logger | None) -> List[Scenario]:
         scene_configs=hard_scene_configs,
         scene_configs_paths=hard_scene_configs_paths,
         logger=logger,
+        level="very_hard",
     )
 
     # group object task
@@ -503,6 +511,7 @@ def very_hard_scenarios(logger: logging.Logger | None) -> List[Scenario]:
         tasks=group_object_tasks,
         scene_configs=hard_scene_configs,
         scene_configs_paths=hard_scene_configs_paths,
+        level="very_hard",
     )
     return [
         *build_tower_scenarios,

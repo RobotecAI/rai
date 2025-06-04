@@ -14,6 +14,7 @@
 from .test_models import (
     ManipulationO3DEBenchmarkConfig,
     ToolCallingAgentBenchmarkConfig,
+    test_dual_agents,
     test_models,
 )
 from .utils import (
@@ -30,5 +31,6 @@ __all__ = [
     "get_llm_for_benchmark",
     "parse_manipulation_o3de_benchmark_args",
     "parse_tool_calling_benchmark_args",
+    "test_dual_agents",
     "test_models",
 ]

@@ -16,10 +16,11 @@ import statistics
 import time
 import uuid
 from pathlib import Path
-from typing import List, TypeVar
+from typing import List, Optional, TypeVar
 
 import rclpy
 from langchain.tools import BaseTool
+from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
@@ -31,7 +32,9 @@ from launch.actions import (
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from rai.agents.langchain.core import create_conversational_agent
+from rai.agents.langchain.core import (
+    create_conversational_agent,
+)
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.messages import HumanMultimodalMessage
 from rai.tools.ros2 import (
@@ -42,15 +45,14 @@ from rai.tools.ros2 import (
 )
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
+from rai_bench.agents import create_multimodal_to_tool_agent
 from rai_bench.base_benchmark import BaseBenchmark, RunSummary, TimeoutException
 from rai_bench.manipulation_o3de.interfaces import Task
 from rai_bench.manipulation_o3de.results_tracking import (
     ScenarioResult,
 )
 from rai_bench.results_processing.langfuse_scores_tracing import ScoreTracingHandler
-from rai_bench.utils import (
-    get_llm_for_benchmark,
-)
+from rai_bench.utils import get_llm_model_name
 from rai_sim.o3de.o3de_bridge import (
     O3DEngineArmManipulationBridge,
     O3DExROS2SimulationConfig,
@@ -228,7 +230,7 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
                     )
         return scenarios
 
-    def run_next(self, agent: CompiledStateGraph) -> None:
+    def run_next(self, agent: CompiledStateGraph, experiment_id: uuid.UUID) -> None:
         """
         Run the next scenario in the benchmark.
 
@@ -244,7 +246,7 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
             i, scenario = next(self.scenarios)  # Get the next scenario
             try:
                 with self.time_limit(30):
-                    # NOTE (jm) sometimes spawning objects freezes
+                    # NOTE (jmatejcz) sometimes spawning objects freezes
                     self.simulation_bridge.setup_scene(scenario.scene_config)
             except TimeoutException as e:
                 self.logger.error(msg=f"Setup scene timeout: {e}")
@@ -260,7 +262,12 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
             config: RunnableConfig = {
                 "run_id": run_id,
                 "callbacks": callbacks,
-                "tags": [scenario.level, self.model_name],
+                "tags": [
+                    f"experiment-id:{experiment_id}",
+                    "benchmark:manipulation-o3de",
+                    self.model_name,
+                    f"scenario-difficulty:{scenario.level}",
+                ],
                 "recursion_limit": 50,
             }
             tool_calls_num = 0
@@ -302,7 +309,8 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
                 self.logger.error(msg=f"Task timeout: {e}")
             except GraphRecursionError as e:
                 self.logger.error(msg=f"Reached recursion limit {e}")
-
+            except Exception as e:
+                self.logger.error(msg=f"Unexpected errot occured: {e}")
             te = time.perf_counter()
             try:
                 score = scenario.task.calculate_score(self.simulation_bridge)
@@ -317,6 +325,7 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
                     scene_config_path=scenario.scene_config_path,
                     model_name=self.model_name,
                     score=score,
+                    level=scenario.level,
                     total_time=total_time,
                     number_of_tool_calls=tool_calls_num,
                 )
@@ -364,21 +373,18 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
         self.csv_writerow(self.summary_filename, summary)
 
 
-def run_benchmark(
-    model_name: str,
-    vendor: str,
-    out_dir: Path,
+def _setup_benchmark_environment(
     o3de_config_path: str,
+    model_name: str,
     scenarios: List[Scenario],
+    out_dir: Path,
     bench_logger: logging.Logger,
 ):
+    """Setup common benchmark environment"""
     rclpy.init()
     connector = ROS2Connector()
     node = connector.node
     node.declare_parameter("conversion_ratio", 1.0)
-
-    # define model
-    llm = get_llm_for_benchmark(model_name=model_name, vendor=vendor)
 
     # define tools
     tools: List[BaseTool] = [
@@ -395,11 +401,13 @@ def run_benchmark(
         GetROS2ImageTool(connector=connector),
         GetROS2TopicsNamesAndTypesTool(connector=connector),
     ]
+
     # define o3de bridge
     simulation_config = O3DExROS2SimulationConfig.load_config(
         config_path=Path(o3de_config_path)
     )
     o3de = O3DEngineArmManipulationBridge(connector, logger=bench_logger)
+
     # define benchmark
     benchmark = ManipulationO3DEBenchmark(
         model_name=model_name,
@@ -409,13 +417,28 @@ def run_benchmark(
         logger=bench_logger,
         results_dir=out_dir,
     )
+
+    return connector, o3de, benchmark, tools
+
+
+def run_benchmark(
+    llm: BaseChatModel,
+    out_dir: Path,
+    o3de_config_path: str,
+    scenarios: List[Scenario],
+    bench_logger: logging.Logger,
+    experiment_id: uuid.UUID = uuid.uuid4(),
+):
+    connector, o3de, benchmark, tools = _setup_benchmark_environment(
+        o3de_config_path, get_llm_model_name(llm), scenarios, out_dir, bench_logger
+    )
     try:
         for scenario in scenarios:
             # create new agent for each scenario so its independent from previous ones.
             agent = create_conversational_agent(
                 llm, tools, scenario.task.system_prompt, logger=bench_logger
             )
-            benchmark.run_next(agent=agent)
+            benchmark.run_next(agent=agent, experiment_id=experiment_id)
             o3de.reset_arm()
             time.sleep(0.2)  # admire the end position for a second ;)
 
@@ -427,6 +450,60 @@ def run_benchmark(
         bench_logger.info(
             "==============================================================="
         )
+    finally:
+        connector.shutdown()
+        o3de.shutdown()
+        rclpy.shutdown()
+
+
+def run_benchmark_dual_agent(
+    multimodal_llm: BaseChatModel,
+    tool_calling_llm: BaseChatModel,
+    out_dir: Path,
+    scenarios: List[Scenario],
+    o3de_config_path: str,
+    bench_logger: logging.Logger,
+    experiment_id: uuid.UUID = uuid.uuid4(),
+    m_system_prompt: Optional[str] = None,
+    tool_system_prompt: Optional[str] = None,
+):
+    connector, o3de, benchmark, tools = _setup_benchmark_environment(
+        o3de_config_path,
+        get_llm_model_name(multimodal_llm),
+        scenarios,
+        out_dir,
+        bench_logger,
+    )
+    basic_tool_system_prompt = (
+        "Based on the conversation call the tools with appropriate arguments"
+    )
+    try:
+        for scenario in scenarios:
+            agent = create_multimodal_to_tool_agent(
+                multimodal_llm=multimodal_llm,
+                tool_llm=tool_calling_llm,
+                tools=tools,
+                multimodal_system_prompt=(
+                    m_system_prompt if m_system_prompt else scenario.task.system_prompt
+                ),
+                tool_system_prompt=(
+                    tool_system_prompt
+                    if tool_system_prompt
+                    else basic_tool_system_prompt
+                ),
+                logger=bench_logger,
+            )
+
+            benchmark.run_next(agent=agent, experiment_id=experiment_id)
+
+        bench_logger.info(
+            "==============================================================="
+        )
+        bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
+        bench_logger.info(
+            "==============================================================="
+        )
+
     finally:
         connector.shutdown()
         o3de.shutdown()
