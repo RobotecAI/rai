@@ -179,9 +179,13 @@ class PublishROS2HRIMessageTextTask(CustomInterfacesTopicTask):
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} using get_ros2_topics_names_and_types, get_ros2_message_interface, and publish_ros2_message tools"
+            return f"{base_prompt} using HRI message interface"
         else:
-            return f"{base_prompt}. First call get_ros2_topics_names_and_types to find available topics, then call get_ros2_message_interface with the topic's message type, and finally call publish_ros2_message with the constructed HRIMessage containing text='{self.text}'."
+            return (
+                f"{base_prompt}. "
+                "You can discover available topics, examine the message interface "
+                f"structure, and publish an HRI message containing the text '{self.text}'."
+            )
 
 
 class PublishROS2AudioMessageTask(CustomInterfacesTopicTask):
@@ -202,14 +206,23 @@ class PublishROS2AudioMessageTask(CustomInterfacesTopicTask):
         self.expected_channels = channels
 
     def get_prompt(self) -> str:
-        base_prompt = f"Publish audio message to topic '{self.topic}' with samples {self.expected_audio}, sample rate {self.expected_sample_rate}, channels {self.expected_channels}"
+        base_prompt = (
+            f"Publish audio message to topic '{self.topic}' with samples "
+            f"{self.expected_audio}, sample rate {self.expected_sample_rate}, "
+            f"channels {self.expected_channels}"
+        )
 
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} using get_ros2_topics_names_and_types, get_ros2_message_interface, and publish_ros2_message tools"
+            return f"{base_prompt} using audio message interface"
         else:
-            return f"{base_prompt}. First call get_ros2_topics_names_and_types to find available topics, then call get_ros2_message_interface with the topic's message type, and finally call publish_ros2_message with audio={self.expected_audio}, sample_rate={self.expected_sample_rate}, and channels={self.expected_channels}."
+            return (
+                f"{base_prompt}. "
+                "You can explore available audio topics, examine the message "
+                f"interface, and publish audio data with samples={self.expected_audio}, "
+                f"sample_rate={self.expected_sample_rate}, and channels={self.expected_channels}."
+            )
 
 
 class PublishROS2DetectionArrayTask(CustomInterfacesTopicTask):
@@ -241,14 +254,24 @@ class PublishROS2DetectionArrayTask(CustomInterfacesTopicTask):
     def get_prompt(self) -> str:
         bbox_center = self.expected_detections[0].bbox.center
         bbox_size = self.expected_detections[0].bbox
-        base_prompt = f"Publish detection array to topic '{self.topic}' with classes {self.expected_detection_classes} and bbox center ({bbox_center.x}, {bbox_center.y}) size {bbox_size.size_x}x{bbox_size.size_y}"
+        base_prompt = (
+            f"Publish detection array to topic '{self.topic}' with classes "
+            f"{self.expected_detection_classes} and bbox center "
+            f"({bbox_center.x}, {bbox_center.y}) size {bbox_size.size_x}x{bbox_size.size_y}"
+        )
 
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} using get_ros2_topics_names_and_types, get_ros2_message_interface, and publish_ros2_message tools"
+            return f"{base_prompt} using detection message interface"
         else:
-            return f"{base_prompt}. First call get_ros2_topics_names_and_types to find available topics, then call get_ros2_message_interface with the topic's message type, and finally call publish_ros2_message with detection_classes={self.expected_detection_classes} and bounding box at center ({bbox_center.x}, {bbox_center.y}) with size_x={bbox_size.size_x}, size_y={bbox_size.size_y}."
+            return (
+                f"{base_prompt}. "
+                "You can explore available detection topics, examine the message "
+                f"interface, and publish detection data with classes={self.expected_detection_classes} "
+                f"and bounding box at center ({bbox_center.x}, {bbox_center.y}) "
+                f"with size_x={bbox_size.size_x}, size_y={bbox_size.size_y}."
+            )
 
 
 class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
@@ -282,14 +305,24 @@ class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
 
     def get_prompt(self) -> str:
         pos = self.expected_target_pose.pose.position
-        base_prompt = f"Call service '{self.service}' with pose ({pos.x}, {pos.y}, {pos.z}), initial_gripper={self.expected_initial_gripper_state}, final_gripper={self.expected_final_gripper_state}"
+        base_prompt = (
+            f"Call service '{self.service}' to move manipulator to pose "
+            f"({pos.x}, {pos.y}, {pos.z}) with initial_gripper={self.expected_initial_gripper_state}, "
+            f"final_gripper={self.expected_final_gripper_state}"
+        )
 
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} using get_ros2_services_names_and_types, get_ros2_message_interface, and call_ros2_service tools"
+            return f"{base_prompt} using manipulator service interface"
         else:
-            return f"{base_prompt}. First call get_ros2_services_names_and_types to find available services, then call get_ros2_message_interface with 'rai_interfaces/srv/ManipulatorMoveTo', and finally call call_ros2_service with target_pose position (x={pos.x}, y={pos.y}, z={pos.z}), initial_gripper_state={self.expected_initial_gripper_state}, and final_gripper_state={self.expected_final_gripper_state}."
+            return (
+                f"{base_prompt}. "
+                "You can discover available manipulation services, examine the service "
+                f"interface, and call the service with target_pose position (x={pos.x}, "
+                f"y={pos.y}, z={pos.z}), initial_gripper_state={self.expected_initial_gripper_state}, "
+                f"and final_gripper_state={self.expected_final_gripper_state}."
+            )
 
 
 class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
@@ -313,14 +346,19 @@ class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
 
     def get_prompt(self) -> str:
         frame_id = self.expected_detections.header.frame_id
-        base_prompt = f"Call service '{self.service}' for image segmentation with empty detections from {frame_id}"
+        base_prompt = f"Call service '{self.service}' for image segmentation"
 
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} using get_ros2_services_names_and_types, get_ros2_message_interface, and call_ros2_service tools"
+            return f"{base_prompt} using Grounded SAM interface"
         else:
-            return f"{base_prompt}. First call get_ros2_services_names_and_types to find available services, then call get_ros2_message_interface with 'rai_interfaces/srv/RAIGroundedSam', and finally call call_ros2_service with detections array (empty detections, header frame_id='{frame_id}') and source image."
+            return (
+                f"{base_prompt}. "
+                "You can discover available AI vision services, examine the service "
+                f"interface, and call the segmentation service with detections array "
+                f"(empty detections, header frame_id='{frame_id}') and source image."
+            )
 
 
 class CallGroundingDinoClassify(CustomInterfacesServiceTask):
@@ -344,14 +382,23 @@ class CallGroundingDinoClassify(CustomInterfacesServiceTask):
         self.expected_text_threshold = text_threshold
 
     def get_prompt(self) -> str:
-        base_prompt = f"Call service '{self.service}' with classes '{self.expected_classes}', box_threshold {self.expected_box_threshold}, text_threshold {self.expected_text_threshold}"
+        base_prompt = (
+            f"Call service '{self.service}' for object classification with classes "
+            f"'{self.expected_classes}', box_threshold {self.expected_box_threshold}, "
+            f"text_threshold {self.expected_text_threshold}"
+        )
 
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} using get_ros2_services_names_and_types, get_ros2_message_interface, and call_ros2_service tools"
+            return f"{base_prompt} using Grounding DINO interface"
         else:
-            return f"{base_prompt}. First call get_ros2_services_names_and_types to find available services, then call get_ros2_message_interface with 'rai_interfaces/srv/RAIGroundingDino', and finally call call_ros2_service with classes='{self.expected_classes}', box_threshold={self.expected_box_threshold}, and text_threshold={self.expected_text_threshold}."
+            return (
+                f"{base_prompt}. "
+                "You can discover available AI detection services, examine the service "
+                f"interface, and call the classification service with classes='{self.expected_classes}', "
+                f"box_threshold={self.expected_box_threshold}, and text_threshold={self.expected_text_threshold}."
+            )
 
 
 class CallGetLogDigestTask(CustomInterfacesServiceTask):
@@ -369,14 +416,19 @@ class CallGetLogDigestTask(CustomInterfacesServiceTask):
         )
 
     def get_prompt(self) -> str:
-        base_prompt = f"Call service '{self.service}'"
+        base_prompt = f"Call service '{self.service}' to get log digest"
 
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} using get_ros2_services_names_and_types, get_ros2_message_interface, and call_ros2_service tools"
+            return f"{base_prompt} using log retrieval interface"
         else:
-            return f"{base_prompt}. First call get_ros2_services_names_and_types to find available services, then call get_ros2_message_interface with 'rai_interfaces/srv/StringList', and finally call call_ros2_service with an empty request."
+            return (
+                f"{base_prompt}. "
+                "You can discover available logging services, examine the service "
+                "interface, and call the service with an empty request to retrieve "
+                "system log information."
+            )
 
 
 class CallVectorStoreRetrievalTask(CustomInterfacesServiceTask):
@@ -403,9 +455,14 @@ class CallVectorStoreRetrievalTask(CustomInterfacesServiceTask):
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} using get_ros2_services_names_and_types, get_ros2_message_interface, and call_ros2_service tools"
+            return f"{base_prompt} using vector store interface"
         else:
-            return f"{base_prompt}. First call get_ros2_services_names_and_types to find available services, then call get_ros2_message_interface with 'rai_interfaces/srv/VectorStoreRetrieval', and finally call call_ros2_service with query='{self.expected_query}'."
+            return (
+                f"{base_prompt}. "
+                "You can discover available knowledge services, examine the service "
+                f"interface, and call the retrieval service with query='{self.expected_query}' "
+                "to search the robot's knowledge base."
+            )
 
 
 class CallWhatISeeTask(CustomInterfacesServiceTask):
@@ -423,11 +480,16 @@ class CallWhatISeeTask(CustomInterfacesServiceTask):
         )
 
     def get_prompt(self) -> str:
-        base_prompt = f"Call service '{self.service}'"
+        base_prompt = f"Call service '{self.service}' to get visual observations"
 
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} using get_ros2_services_names_and_types, get_ros2_message_interface, and call_ros2_service tools"
+            return f"{base_prompt} using vision observation interface"
         else:
-            return f"{base_prompt}. First call get_ros2_services_names_and_types to find available services, then call get_ros2_message_interface with 'rai_interfaces/srv/WhatISee', and finally call call_ros2_service with an empty request to get visual observations and camera pose."
+            return (
+                f"{base_prompt}. "
+                "You can discover available vision services, examine the service "
+                "interface, and call the service with an empty request to get "
+                "visual observations and camera pose information."
+            )

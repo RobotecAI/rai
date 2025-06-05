@@ -52,6 +52,31 @@ class TaskParametrizationError(Exception):
     pass
 
 
+class ReturnBoolResponseToolInput(BaseModel):
+    response: bool = Field(..., description="The response to the question.")
+
+
+class ReturnBoolResponseTool(BaseTool):
+    """Tool that returns a boolean response."""
+
+    name: str = "return_bool_response"
+    description: str = "Return a bool response to the question."
+    args_schema = ReturnBoolResponseToolInput
+
+    def _run(self, response: bool) -> bool:
+        if type(response) is bool:
+            return response
+        raise ValueError("Invalid response type. Response must be a boolean.")
+
+
+class BoolImageTaskInput(BaseModel):
+    question: str = Field(..., description="The question to be answered.")
+    images_paths: List[str] = Field(
+        ...,
+        description="List of image file paths to be used for answering the question.",
+    )
+
+
 class SpatialReasoningAgentTask(Task):
     """Abstract class for spatial reasoning tasks for tool calling agent."""
 
@@ -91,31 +116,6 @@ class SpatialReasoningAgentTask(Task):
             return SPATIAL_REASONING_SYSTEM_PROMPT_5_SHOT
 
 
-class ReturnBoolResponseToolInput(BaseModel):
-    response: bool = Field(..., description="The response to the question.")
-
-
-class ReturnBoolResponseTool(BaseTool):
-    """Tool that returns a boolean response."""
-
-    name: str = "return_bool_response"
-    description: str = "Return a bool response to the question."
-    args_schema = ReturnBoolResponseToolInput
-
-    def _run(self, response: bool) -> bool:
-        if type(response) is bool:
-            return response
-        raise ValueError("Invalid response type. Response must be a boolean.")
-
-
-class BoolImageTaskInput(BaseModel):
-    question: str = Field(..., description="The question to be answered.")
-    images_paths: List[str] = Field(
-        ...,
-        description="List of image file paths to be used for answering the question.",
-    )
-
-
 class BoolImageTask(SpatialReasoningAgentTask, ABC):
     def __init__(
         self,
@@ -146,9 +146,13 @@ class BoolImageTask(SpatialReasoningAgentTask, ABC):
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} Use the return_bool_response tool to answer"
+            return f"{base_prompt} using visual analysis"
         else:
-            return f"{base_prompt}. Analyze the provided image(s) carefully and call return_bool_response with True or False based on what you observe."
+            return (
+                f"{base_prompt} using the visual analysis system. "
+                "You can examine the provided image(s) carefully to identify relevant features, "
+                "analyze the visual content, and provide a boolean response based on your observations."
+            )
 
     def get_images(self):
         images = [preprocess_image(image_path) for image_path in self.images_paths]

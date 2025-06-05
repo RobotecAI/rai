@@ -165,12 +165,17 @@ class NavigateToPointTask(NavigationTask):
 
     def get_prompt(self) -> str:
         base_prompt = "Navigate to point (2.0, 2.0, 0.0)"
+
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} using start_ros2_action and get_ros2_message_interface tools"
+            return f"{base_prompt} using robotic navigation system."
         else:
-            return f"{base_prompt}. First call get_ros2_actions_names_and_types to list available actions, then call get_ros2_message_interface with 'nav2_msgs/action/NavigateToPose' to get the interface, and finally call start_ros2_action with the navigation goal."
+            return (
+                f"{base_prompt} using the robotic navigation system. "
+                "You can use the navigation tools to move the robot to the specified coordinates. "
+                "First get the available actions, then set up the navigation goal to reach point (2.0, 2.0, 0.0)."
+            )
 
 
 class SpinAroundTask(NavigationTask):
@@ -179,12 +184,17 @@ class SpinAroundTask(NavigationTask):
 
     def get_prompt(self) -> str:
         base_prompt = "Spin around by 3 radians"
+
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} using start_ros2_action tool"
+            return f"{base_prompt} using robotic navigation system. "
         else:
-            return f"{base_prompt}. First call get_ros2_actions_names_and_types to find the spin action, then call start_ros2_action with action='/spin', action_type='nav2_msgs/action/Spin', and target_yaw=3."
+            return (
+                f"{base_prompt} using the robotic navigation system. "
+                "You can locate the robot's current orientation and execute a spinning motion "
+                "to rotate the robot by 3 radians from its current heading."
+            )
 
 
 class MoveToFrontTask(NavigationTask):
@@ -193,12 +203,17 @@ class MoveToFrontTask(NavigationTask):
 
     def get_prompt(self) -> str:
         base_prompt = "Move 2 meters to the front"
+
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} using start_ros2_action tool"
+            return f"{base_prompt} using robotic navigation system."
         else:
-            return f"{base_prompt}. First call get_ros2_actions_names_and_types to find available actions, then call start_ros2_action with action='/drive_on_heading', action_type='nav2_msgs/action/DriveOnHeading', and target with x=2.0, y=0.0, z=0.0."
+            return (
+                f"{base_prompt} using the robotic navigation system. "
+                "You can determine the robot's current position and orientation, "
+                "then move it 2 meters forward in the direction it is currently facing."
+            )
 
 
 class MoveToBedTask(NavigationTask):
@@ -207,9 +222,14 @@ class MoveToBedTask(NavigationTask):
 
     def get_prompt(self) -> str:
         base_prompt = "Move closer to the bed leaving 1 meter space"
+
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} using get_distance_to_objects and start_ros2_action tools."
+            return f"{base_prompt} using robotic navigation system."
         else:
-            return f"{base_prompt}. First call get_distance_to_objects to locate the bed and measure distance, then call get_ros2_actions_names_and_types to find navigation actions, and finally call start_ros2_action to navigate towards the bed while maintaining 1 meter distance."
+            return (
+                f"{base_prompt} using the robotic navigation system. "
+                "You can locate the bed in the environment, calculate the appropriate position "
+                "that maintains 1 meter distance from the bed, and navigate to that position."
+            )

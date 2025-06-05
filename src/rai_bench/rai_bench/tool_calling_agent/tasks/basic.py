@@ -95,9 +95,12 @@ class GetROS2TopicsTask(BasicTask):
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} names and types of all ROS2"
+            return f"{base_prompt} available in the ROS2 system"
         else:
-            return f"{base_prompt} ROS2 with their names and message types. Use the topics tool to list what's available in the system."
+            return (
+                f"{base_prompt} available in the ROS2 system with their names and message types. "
+                "You can discover what topics are currently active."
+            )
 
 
 class GetROS2RGBCameraTask(BasicTask):
@@ -108,9 +111,12 @@ class GetROS2RGBCameraTask(BasicTask):
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} from the camera topic"
+            return f"{base_prompt} from the camera"
         else:
-            return f"{base_prompt}. Get the RGB color image from the camera. First check what camera topics are available, then capture the image from the RGB camera topic."
+            return (
+                f"{base_prompt} from the robot's camera system. "
+                "You can explore available camera topics and capture the RGB color image."
+            )
 
 
 class GetROS2DepthCameraTask(BasicTask):
@@ -121,22 +127,28 @@ class GetROS2DepthCameraTask(BasicTask):
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} from the camera sensor"
+            return f"{base_prompt} from the depth sensor"
         else:
-            return f"{base_prompt}. Get the depth image from the camera. First check what camera topics are available, then capture the image from the depth camera topic."
+            return (
+                f"{base_prompt} from the robot's depth sensor. "
+                "You can explore available camera topics and capture the depth image data."
+            )
 
 
 class GetPointcloudTask(BasicTask):
     complexity = "easy"
 
     def get_prompt(self) -> str:
-        base_prompt = "Get the pointcloud"
+        base_prompt = "Get the pointcloud data"
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} data from the topic"
+            return f"{base_prompt} from the sensor"
         else:
-            return f"{base_prompt} data. First check available topics to find the pointcloud topic, then receive the pointcloud message."
+            return (
+                f"{base_prompt} from the robot's sensors. "
+                "You can discover available sensor topics and receive the pointcloud information."
+            )
 
 
 class GetRobotDescriptionTask(BasicTask):
@@ -147,9 +159,12 @@ class GetRobotDescriptionTask(BasicTask):
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} of the robot from the topic"
+            return f"{base_prompt} configuration"
         else:
-            return f"{base_prompt}. First list available topics to find the robot_description topic, then receive the robot description message."
+            return (
+                f"{base_prompt} configuration information. You can explore the system "
+                "to find robot description data."
+            )
 
 
 class GetAllROS2CamerasTask(BasicTask):
@@ -160,9 +175,13 @@ class GetAllROS2CamerasTask(BasicTask):
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} from all available cameras in the system, both RGB and depth"
+            return f"{base_prompt} from available cameras."
         else:
-            return f"{base_prompt} from all available camera topics in the ROS2 system. This includes both RGB color images and depth images. You should first explore what camera topics are available."
+            return (
+                f"{base_prompt} from all available camera sources in the system. "
+                "This includes both RGB color images and depth images. "
+                "You can discover what camera topics are available and capture images from each."
+            )
 
 
 class CheckRobotHealthTask(BasicTask):
@@ -173,9 +192,13 @@ class CheckRobotHealthTask(BasicTask):
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} by listing topics and using receive_ros2_message"
+            return f"{base_prompt} using system diagnostics"
         else:
-            return f"{base_prompt}.  First list available topics, then all receive_ros2_message on diagnostics, joint_states and rosout."
+            return (
+                f"{base_prompt} by examining system diagnostics and monitoring data. "
+                "You can explore available diagnostic topics and gather information "
+                "about robot health, joint states, and system logs."
+            )
 
 
 class AssessSensorDataQualityTask(BasicTask):
@@ -186,6 +209,11 @@ class AssessSensorDataQualityTask(BasicTask):
         if self.prompt_detail == "brief":
             return base_prompt
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} by listing topics and using receive_ros2_message"
+            return f"{base_prompt} across all sensors"
         else:
-            return f"{base_prompt}. First list available topics to find the robot_description topic, then receive scan, point cloud, camera images, camera infos and odometry."
+            return (
+                f"{base_prompt} across all available sensors in the robot system. "
+                "You can explore sensor topics and gather data from various sources "
+                "including laser scans, cameras, pointclouds, and odometry to evaluate "
+                "overall sensor performance."
+            )
