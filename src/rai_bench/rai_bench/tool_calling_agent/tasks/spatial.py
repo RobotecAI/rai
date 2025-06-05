@@ -140,16 +140,17 @@ class BoolImageTask(SpatialReasoningAgentTask, ABC):
     def optional_tool_calls_number(self) -> int:
         return 0
 
-    def get_prompt(self):
-        base_prompt = self.question
+    def get_base_prompt(self) -> str:
+        return self.question
 
+    def get_prompt(self):
         if self.prompt_detail == "brief":
-            return base_prompt
+            return self.get_base_prompt()
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} using visual analysis"
+            return f"{self.get_base_prompt()} using visual analysis"
         else:
             return (
-                f"{base_prompt} using the visual analysis system. "
+                f"{self.get_base_prompt()} using the visual analysis system. "
                 "You can examine the provided image(s) carefully to identify relevant features, "
                 "analyze the visual content, and provide a boolean response based on your observations."
             )

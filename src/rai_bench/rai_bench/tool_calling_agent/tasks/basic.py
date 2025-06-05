@@ -90,15 +90,17 @@ class GetROS2TopicsTask(BasicTask):
     def optional_tool_calls_number(self) -> int:
         return 0
 
+    def get_base_prompt(self) -> str:
+        return "Get all topics"
+
     def get_prompt(self) -> str:
-        base_prompt = "Get all topics"
         if self.prompt_detail == "brief":
-            return base_prompt
+            return self.get_base_prompt()
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} available in the ROS2 system"
+            return f"{self.get_base_prompt()} available in the ROS2 system"
         else:
             return (
-                f"{base_prompt} available in the ROS2 system with their names and message types. "
+                f"{self.get_base_prompt()} available in the ROS2 system with their names and message types. "
                 "You can discover what topics are currently active."
             )
 
@@ -106,15 +108,17 @@ class GetROS2TopicsTask(BasicTask):
 class GetROS2RGBCameraTask(BasicTask):
     complexity = "easy"
 
+    def get_base_prompt(self) -> str:
+        return "Get RGB camera image"
+
     def get_prompt(self) -> str:
-        base_prompt = "Get RGB camera image"
         if self.prompt_detail == "brief":
-            return base_prompt
+            return self.get_base_prompt()
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} from the camera"
+            return f"{self.get_base_prompt()} from the camera"
         else:
             return (
-                f"{base_prompt} from the robot's camera system. "
+                f"{self.get_base_prompt()} from the robot's camera system. "
                 "You can explore available camera topics and capture the RGB color image."
             )
 
@@ -122,15 +126,17 @@ class GetROS2RGBCameraTask(BasicTask):
 class GetROS2DepthCameraTask(BasicTask):
     complexity = "easy"
 
+    def get_base_prompt(self) -> str:
+        return "Get depth camera image"
+
     def get_prompt(self) -> str:
-        base_prompt = "Get depth camera image"
         if self.prompt_detail == "brief":
-            return base_prompt
+            return self.get_base_prompt()
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} from the depth sensor"
+            return f"{self.get_base_prompt()} from the depth sensor"
         else:
             return (
-                f"{base_prompt} from the robot's depth sensor. "
+                f"{self.get_base_prompt()} from the robot's depth sensor. "
                 "You can explore available camera topics and capture the depth image data."
             )
 
@@ -138,15 +144,17 @@ class GetROS2DepthCameraTask(BasicTask):
 class GetPointcloudTask(BasicTask):
     complexity = "easy"
 
+    def get_base_prompt(self) -> str:
+        return "Get the pointcloud data"
+
     def get_prompt(self) -> str:
-        base_prompt = "Get the pointcloud data"
         if self.prompt_detail == "brief":
-            return base_prompt
+            return self.get_base_prompt()
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} from the sensor"
+            return f"{self.get_base_prompt()} from the sensor"
         else:
             return (
-                f"{base_prompt} from the robot's sensors. "
+                f"{self.get_base_prompt()} from the robot's sensors. "
                 "You can discover available sensor topics and receive the pointcloud information."
             )
 
@@ -154,15 +162,17 @@ class GetPointcloudTask(BasicTask):
 class GetRobotDescriptionTask(BasicTask):
     complexity = "easy"
 
+    def get_base_prompt(self) -> str:
+        return "Get robot description"
+
     def get_prompt(self) -> str:
-        base_prompt = "Get robot description"
         if self.prompt_detail == "brief":
-            return base_prompt
+            return self.get_base_prompt()
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} configuration"
+            return f"{self.get_base_prompt()} configuration"
         else:
             return (
-                f"{base_prompt} configuration information. You can explore the system "
+                f"{self.get_base_prompt()} configuration information. You can explore the system "
                 "to find robot description data."
             )
 
@@ -170,15 +180,17 @@ class GetRobotDescriptionTask(BasicTask):
 class GetAllROS2CamerasTask(BasicTask):
     complexity = "medium"
 
+    def get_base_prompt(self) -> str:
+        return "Get all camera images"
+
     def get_prompt(self) -> str:
-        base_prompt = "Get all camera images"
         if self.prompt_detail == "brief":
-            return base_prompt
+            return self.get_base_prompt()
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} from available cameras."
+            return f"{self.get_base_prompt()} from available cameras"
         else:
             return (
-                f"{base_prompt} from all available camera sources in the system. "
+                f"{self.get_base_prompt()} from all available camera sources in the system. "
                 "This includes both RGB color images and depth images. "
                 "You can discover what camera topics are available and capture images from each."
             )
@@ -187,15 +199,17 @@ class GetAllROS2CamerasTask(BasicTask):
 class CheckRobotHealthTask(BasicTask):
     complexity = "medium"
 
+    def get_base_prompt(self) -> str:
+        return "Check robot health status"
+
     def get_prompt(self) -> str:
-        base_prompt = "Check robot health status"
         if self.prompt_detail == "brief":
-            return base_prompt
+            return self.get_base_prompt()
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} using system diagnostics"
+            return f"{self.get_base_prompt()} using system diagnostics"
         else:
             return (
-                f"{base_prompt} by examining system diagnostics and monitoring data. "
+                f"{self.get_base_prompt()} by examining system diagnostics and monitoring data. "
                 "You can explore available diagnostic topics and gather information "
                 "about robot health, joint states, and system logs."
             )
@@ -204,15 +218,17 @@ class CheckRobotHealthTask(BasicTask):
 class AssessSensorDataQualityTask(BasicTask):
     complexity = "hard"
 
+    def get_base_prompt(self) -> str:
+        return "Assess sensor data quality"
+
     def get_prompt(self) -> str:
-        base_prompt = "Assess sensor data quality"
         if self.prompt_detail == "brief":
-            return base_prompt
+            return self.get_base_prompt()
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} across all sensors"
+            return f"{self.get_base_prompt()} across all sensors"
         else:
             return (
-                f"{base_prompt} across all available sensors in the robot system. "
+                f"{self.get_base_prompt()} across all available sensors in the robot system. "
                 "You can explore sensor topics and gather data from various sources "
                 "including laser scans, cameras, pointclouds, and odometry to evaluate "
                 "overall sensor performance."

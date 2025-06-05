@@ -572,6 +572,14 @@ class Task(ABC):
         pass
 
     @abstractmethod
+    def get_base_prompt(self) -> str:
+        """
+        Get the base task instruciton,
+        it will be used to identify task in results processing
+        """
+        pass
+
+    @abstractmethod
     def get_prompt(self) -> str:
         """Get the task instruction - the prompt that will be passed to agent.
 
