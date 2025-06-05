@@ -113,7 +113,7 @@ def display_task_performance_by_field(model_results: ModelResults, field: str):
         x_column=field,
         y_column="avg_score",
         title=f"Success Rate by {field}",
-        x_label="Task Complexity",
+        x_label=field,
         y_label="Avg Score",
         y_range=(0.0, 1.0),
         count_column="total_tasks",
@@ -125,7 +125,7 @@ def display_task_performance_by_field(model_results: ModelResults, field: str):
         x_column=field,
         y_column="avg_extra_tool_calls",
         title=f"Avg Extra Tool Calls Used by {field}",
-        x_label="Task Complexity",
+        x_label=field,
         y_label="Avg Extra Tool Calls Used",
         count_column="total_tasks",
     )
