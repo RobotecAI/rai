@@ -12,15 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
+import importlib
 import uuid
 from threading import Lock
-from typing import Any, Dict, List, Tuple, Type
+from typing import Any, Dict, List, Optional, Tuple, Type
 from unittest.mock import MagicMock
 
 import numpy as np
 import numpy.typing as npt
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, computed_field
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.communication.ros2.messages import ROS2Message
 from rai.messages import MultimodalArtifact, preprocess_image
@@ -48,6 +50,7 @@ from rai_open_set_vision.tools import (
     GetDistanceToObjectsTool,
     GetGrabbingPointTool,
 )
+from rosidl_runtime_py import set_message_fields
 
 
 class MockGetROS2TopicsNamesAndTypesTool(GetROS2TopicsNamesAndTypesTool):
@@ -265,21 +268,88 @@ class MockGetROS2MessageInterfaceTool(GetROS2MessageInterfaceTool):
             raise ImportError(f"Module {msg_type} not found.")
 
 
+class ServiceValidator:
+    """Hybrid validator that uses ROS 2 native types when available, falls back to Pydantic"""
+
+    def __init__(self, custom_models: Dict[str, Type[BaseModel]]):
+        self.custom_models = custom_models
+        self.ros2_services_cache: Dict[str, Any] = {}
+
+    def get_ros2_service_class(self, service_type: str):
+        """Dynamically import ROS 2 service class"""
+        if service_type in self.ros2_services_cache:
+            return self.ros2_services_cache[service_type]
+
+        # Parse service type: "package_name/srv/ServiceName"
+        parts = service_type.split("/")
+        if len(parts) != 3 or parts[1] != "srv":
+            raise ValueError(f"Service type: {service_type} is invalid")
+
+        package_name, _, service_name = parts
+
+        module = importlib.import_module(f"{package_name}.srv")
+        service_class = getattr(module, service_name)
+
+        self.ros2_services_cache[service_type] = service_class
+        return service_class
+
+    def validate_with_ros2(self, service_type: str, args: Dict[str, Any]):
+        """Validate using native ROS 2 service definition
+
+        Raises
+        ------
+        TypeError
+            When service type
+        """
+        service_class = self.get_ros2_service_class(service_type)
+        if not service_class:
+            raise TypeError(f"Service type: {service_type} does not exist.")
+
+        request = service_class.Request()
+        # set message fields converts them to object so we need deepcopy to avoid it
+        args_to_validate = copy.deepcopy(args)
+        set_message_fields(request, args_to_validate)
+
+    def validate_with_custom(self, service_type: str, args: Dict[str, Any]):
+        """Validate using Pydantic model"""
+        if service_type not in self.custom_models:
+            raise ValueError(f"Service type: {service_type} is invalid custom type")
+
+        model = self.custom_models[service_type]
+        try:
+            model.model_validate(args)
+        except ValidationError as e:
+            raise ValueError(f"Pydantic validation failed: {e}")
+
+    def validate(self, service_type: str, args: Dict[str, Any]):
+        """Try ROS 2 validation first, fall back to Pydantic"""
+        if service_type in self.custom_models:
+            self.validate_with_custom(service_type, args)
+        else:
+            return self.validate_with_ros2(service_type, args)
+
+
 class MockCallROS2ServiceTool(CallROS2ServiceTool):
     connector: ROS2Connector = MagicMock(spec=ROS2Connector)
     available_services: List[str]
     available_service_types: List[str]
     available_service_models: Dict[str, Type[BaseModel]]
 
+    @computed_field
+    @property
+    def models_validator(self) -> ServiceValidator:
+        return ServiceValidator(self.available_service_models)
+
     def _run(
         self,
         service_name: str,
         service_type: str,
-        service_args: Dict[str, Any],
+        service_args: Optional[Dict[str, Any]] = None,
+        timeout_sec: float = 1.0,
     ) -> str:
         if service_name not in self.available_services:
             raise ValueError(
-                f"Service {service_name} is not available within 1.0 seconds. Check if the service exists."
+                f"Service {service_name} is not available within {timeout_sec} seconds. Check if the service exists."
             )
         if service_type not in self.available_service_types:
             raise TypeError(
@@ -287,12 +357,10 @@ class MockCallROS2ServiceTool(CallROS2ServiceTool):
                     self.available_service_types, service_type
                 )
             )
-        if service_type in self.available_service_models:
-            model = self.available_service_models[service_type]
-            try:
-                model.model_validate(service_args)
-            except ValidationError as e:
-                raise ValueError(f"Failed to populate fields: {e}")
+        if not service_args:
+            service_args = {}
+        try:
+            self.models_validator.validate(service_type, service_args)
             response = ROS2Message(payload={"response": "success"})
             return str(
                 {
@@ -300,10 +368,8 @@ class MockCallROS2ServiceTool(CallROS2ServiceTool):
                     "metadata": response.metadata,
                 }
             )
-        else:
-            raise KeyError(
-                f"Model for service type {service_type} not included in models"
-            )
+        except ValueError as e:
+            raise ValueError(f"Failed to populate fields: {e}")
 
 
 class MockGetROS2ServicesNamesAndTypesTool(GetROS2ServicesNamesAndTypesTool):
