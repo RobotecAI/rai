@@ -60,13 +60,29 @@ def get_tasks(
             n_shots=n_shots,
         )
     if "custom_interfaces" in task_types:
-        all_tasks += get_custom_interfaces_tasks(extra_tool_calls=extra_tool_calls)
+        all_tasks += get_custom_interfaces_tasks(
+            extra_tool_calls=extra_tool_calls,
+            prompt_detail=prompt_detail,
+            n_shots=n_shots,
+        )
     if "manipulation" in task_types:
-        all_tasks += get_manipulation_tasks(extra_tool_calls=extra_tool_calls)
+        all_tasks += get_manipulation_tasks(
+            extra_tool_calls=extra_tool_calls,
+            prompt_detail=prompt_detail,
+            n_shots=n_shots,
+        )
     if "navigation" in task_types:
-        all_tasks += get_navigation_tasks(extra_tool_calls=extra_tool_calls)
+        all_tasks += get_navigation_tasks(
+            extra_tool_calls=extra_tool_calls,
+            prompt_detail=prompt_detail,
+            n_shots=n_shots,
+        )
     if "spatial_reasoning" in task_types:
-        all_tasks += get_spatial_tasks(extra_tool_calls=extra_tool_calls)
+        all_tasks += get_spatial_tasks(
+            extra_tool_calls=extra_tool_calls,
+            prompt_detail=prompt_detail,
+            n_shots=n_shots,
+        )
 
     filtered_tasks: List[Task] = []
     for task in all_tasks:

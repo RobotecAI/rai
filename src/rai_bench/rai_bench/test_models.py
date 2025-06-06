@@ -195,6 +195,8 @@ def test_models(
                             tool_calling_tasks = tool_calling_agent.get_tasks(
                                 extra_tool_calls=bench_conf.extra_tool_calls,
                                 complexities=bench_conf.complexities,
+                                prompt_detail=bench_conf.prompt_detail,
+                                n_shots=bench_conf.N_shots,
                                 task_types=bench_conf.task_types,
                             )
                             tool_calling_agent.run_benchmark(

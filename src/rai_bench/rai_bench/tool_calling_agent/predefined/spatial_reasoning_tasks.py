@@ -202,15 +202,6 @@ def get_spatial_tasks(
                     examples_in_system_prompt=shots,
                 )
 
-                [
-                    BoolImageTaskEasy(
-                        task_input=input_item,
-                        validators=[ret_true_ord_val],
-                        task_args=task_args,
-                    )
-                    for input_item in easy_true_inputs
-                ]
-
                 tasks.extend(
                     [
                         BoolImageTaskEasy(
