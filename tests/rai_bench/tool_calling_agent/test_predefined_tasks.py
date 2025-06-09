@@ -24,13 +24,18 @@ from rai_bench.tool_calling_agent.subtasks import (
     CheckServiceFieldsToolCallSubTask,
 )
 from rai_bench.tool_calling_agent.tasks.basic import (
+    CheckSpawnableEntitiesTask,
     GetAllROS2CamerasTask,
     GetPointcloudTask,
     GetRobotDescriptionTask,
     GetROS2DepthCameraTask,
     GetROS2RGBCameraTask,
+    GetROS2ServicesTask,
     GetROS2TopicsTask,
+    GetSpecificParameterTask,
+    ListRobotParametersTask,
     SetRobotParameterTask,
+    SpawnEntityTask,
 )
 from rai_bench.tool_calling_agent.validators import (
     NotOrderedCallsValidator,
@@ -51,32 +56,24 @@ def task_args() -> TaskArgs:
 class TestSetParameterTask:
     """Test SetRobotParameterTask validation."""
 
-    def test_set_parameter_task_valid(self, task_args: TaskArgs) -> None:
-        set_robot_state_params_subtask = CheckServiceFieldsToolCallSubTask(
-            expected_tool_name="call_ros2_service",
-            expected_service="/robot_state_publisher/set_parameters",
-            expected_service_type="rcl_interfaces/srv/SetParameters",
-            expected_fields={
-                "parameters.0.name": "publish_frequency",
-                "parameters.0.value.type": 3,
-                "parameters.0.value.double_value": 30.0,
-            },
-        )
-        set_param_val = OrderedCallsValidator(subtasks=[set_robot_state_params_subtask])
+    set_robot_state_params_subtask = CheckServiceFieldsToolCallSubTask(
+        expected_tool_name="call_ros2_service",
+        expected_service="/robot_state_publisher/set_parameters",
+        expected_service_type="rcl_interfaces/srv/SetParameters",
+        expected_fields={
+            "parameters.0.name": "publish_frequency",
+            "parameters.0.value.type": 3,
+            "parameters.0.value.double_value": 30.0,
+        },
+    )
+    set_param_val = OrderedCallsValidator(subtasks=[set_robot_state_params_subtask])
 
+    def test_set_parameter_task_valid(self, task_args: TaskArgs) -> None:
         tool_calls: List[Dict[str, Any]] = [
             {"name": "get_ros2_services_names_and_types", "args": {}},
             {
                 "name": "get_ros2_service_interface",
                 "args": {"service_type": "rcl_interfaces/srv/SetParameters"},
-            },
-            {
-                "name": "call_ros2_service",
-                "args": {
-                    "service_name": "/robot_state_publisher/get_parameters",
-                    "service_type": "rcl_interfaces/srv/GetParameters",
-                    "service_args": {"names": ["publish_frequency"]},
-                },
             },
             {
                 "name": "call_ros2_service",
@@ -98,23 +95,13 @@ class TestSetParameterTask:
             },
         ]
 
-        task = SetRobotParameterTask(validators=[set_param_val], task_args=task_args)
+        task = SetRobotParameterTask(
+            validators=[self.set_param_val], task_args=task_args
+        )
         score = task.validate(tool_calls)
         assert score == 1.0  # All validators should pass
 
     def test_set_parameter_task_wrong_parameter_type(self, task_args: TaskArgs) -> None:
-        set_robot_state_params_subtask = CheckServiceFieldsToolCallSubTask(
-            expected_tool_name="call_ros2_service",
-            expected_service="/robot_state_publisher/set_parameters",
-            expected_service_type="rcl_interfaces/srv/SetParameters",
-            expected_fields={
-                "parameters.0.name": "publish_frequency",
-                "parameters.0.value.type": 3,  # Expecting double
-                "parameters.0.value.double_value": 30.0,
-            },
-        )
-        set_param_val = OrderedCallsValidator(subtasks=[set_robot_state_params_subtask])
-
         tool_calls: List[Dict[str, Any]] = [
             {
                 "name": "call_ros2_service",
@@ -136,23 +123,13 @@ class TestSetParameterTask:
             },
         ]
 
-        task = SetRobotParameterTask(validators=[set_param_val], task_args=task_args)
+        task = SetRobotParameterTask(
+            validators=[self.set_param_val], task_args=task_args
+        )
         score = task.validate(tool_calls)
         assert score == 0.0  # Validator should fail
 
     def test_set_parameter_task_wrong_parameter_name(self, task_args: TaskArgs) -> None:
-        set_robot_state_params_subtask = CheckServiceFieldsToolCallSubTask(
-            expected_tool_name="call_ros2_service",
-            expected_service="/robot_state_publisher/set_parameters",
-            expected_service_type="rcl_interfaces/srv/SetParameters",
-            expected_fields={
-                "parameters.0.name": "publish_frequency",
-                "parameters.0.value.type": 3,
-                "parameters.0.value.double_value": 30.0,
-            },
-        )
-        set_param_val = OrderedCallsValidator(subtasks=[set_robot_state_params_subtask])
-
         tool_calls: List[Dict[str, Any]] = [
             {
                 "name": "call_ros2_service",
@@ -174,23 +151,13 @@ class TestSetParameterTask:
             },
         ]
 
-        task = SetRobotParameterTask(validators=[set_param_val], task_args=task_args)
+        task = SetRobotParameterTask(
+            validators=[self.set_param_val], task_args=task_args
+        )
         score = task.validate(tool_calls)
         assert score == 0.0  # Validator should fail
 
     def test_set_parameter_task_wrong_tools(self, task_args: TaskArgs) -> None:
-        set_robot_state_params_subtask = CheckServiceFieldsToolCallSubTask(
-            expected_tool_name="call_ros2_service",
-            expected_service="/robot_state_publisher/set_parameters",
-            expected_service_type="rcl_interfaces/srv/SetParameters",
-            expected_fields={
-                "parameters.0.name": "publish_frequency",
-                "parameters.0.value.type": 3,
-                "parameters.0.value.double_value": 30.0,
-            },
-        )
-        set_param_val = OrderedCallsValidator(subtasks=[set_robot_state_params_subtask])
-
         tool_calls: List[Dict[str, Any]] = [
             {"name": "get_ros2_services_names_and_types", "args": {}},
             {
@@ -201,7 +168,9 @@ class TestSetParameterTask:
             {"name": "get_ros2_services_names_and_types", "args": {}},
         ]
 
-        task = SetRobotParameterTask(validators=[set_param_val], task_args=task_args)
+        task = SetRobotParameterTask(
+            validators=[self.set_param_val], task_args=task_args
+        )
         score = task.validate(tool_calls)
         assert score == 0.0  # Validator should fail
 
@@ -209,41 +178,31 @@ class TestSetParameterTask:
 class TestGetTopicsTask:
     """Test GetROS2TopicsTask validation."""
 
-    def test_get_topics_task_valid(self, task_args: TaskArgs) -> None:
-        get_topics_subtask = CheckArgsToolCallSubTask(
-            expected_tool_name="get_ros2_topics_names_and_types", expected_args={}
-        )
-        topics_val = OrderedCallsValidator(subtasks=[get_topics_subtask])
+    get_topics_subtask = CheckArgsToolCallSubTask(
+        expected_tool_name="get_ros2_topics_names_and_types", expected_args={}
+    )
+    topics_val = OrderedCallsValidator(subtasks=[get_topics_subtask])
 
+    def test_get_topics_task_valid(self, task_args: TaskArgs) -> None:
         tool_calls: List[Dict[str, Any]] = [
             {"name": "get_ros2_topics_names_and_types", "args": {}}
         ]
 
-        task = GetROS2TopicsTask(validators=[topics_val], task_args=task_args)
+        task = GetROS2TopicsTask(validators=[self.topics_val], task_args=task_args)
         score = task.validate(tool_calls)
         assert score == 1.0
 
     def test_get_topics_task_wrong_tool(self, task_args: TaskArgs) -> None:
         """Test get ROS2 topics task with wrong tool name."""
-        get_topics_subtask = CheckArgsToolCallSubTask(
-            expected_tool_name="get_ros2_topics_names_and_types", expected_args={}
-        )
-        topics_val = OrderedCallsValidator(subtasks=[get_topics_subtask])
-
         tool_calls: List[Dict[str, Any]] = [
             {"name": "wrong_tool_name", "args": {}}  # Wrong tool name
         ]
 
-        task = GetROS2TopicsTask(validators=[topics_val], task_args=task_args)
+        task = GetROS2TopicsTask(validators=[self.topics_val], task_args=task_args)
         score = task.validate(tool_calls)
         assert score == 0.0
 
     def test_get_topics_task_unexpected_args(self, task_args: TaskArgs) -> None:
-        get_topics_subtask = CheckArgsToolCallSubTask(
-            expected_tool_name="get_ros2_topics_names_and_types", expected_args={}
-        )
-        topics_val = OrderedCallsValidator(subtasks=[get_topics_subtask])
-
         tool_calls: List[Dict[str, Any]] = [
             {
                 "name": "get_ros2_topics_names_and_types",
@@ -251,7 +210,7 @@ class TestGetTopicsTask:
             }  # Unexpected args
         ]
 
-        task = GetROS2TopicsTask(validators=[topics_val], task_args=task_args)
+        task = GetROS2TopicsTask(validators=[self.topics_val], task_args=task_args)
         score = task.validate(tool_calls)
         assert score == 0.0
 
@@ -259,14 +218,14 @@ class TestGetTopicsTask:
 class TestGetRGBCameraTask:
     """Test GetROS2RGBCameraTask validation."""
 
-    def test_get_rgb_camera_task_valid(self, task_args: TaskArgs) -> None:
-        color_image_subtask = CheckArgsToolCallSubTask(
-            expected_tool_name="get_ros2_image",
-            expected_args={"topic": "/color_image5"},
-            expected_optional_args={"timeout_sec": int},
-        )
-        color_image_val = OrderedCallsValidator(subtasks=[color_image_subtask])
+    color_image_subtask = CheckArgsToolCallSubTask(
+        expected_tool_name="get_ros2_image",
+        expected_args={"topic": "/color_image5"},
+        expected_optional_args={"timeout_sec": int},
+    )
+    color_image_val = OrderedCallsValidator(subtasks=[color_image_subtask])
 
+    def test_get_rgb_camera_task_valid(self, task_args: TaskArgs) -> None:
         tool_calls: List[Dict[str, Any]] = [
             {"name": "get_ros2_topics_names_and_types", "args": {}},
             {
@@ -275,18 +234,13 @@ class TestGetRGBCameraTask:
             },
         ]
 
-        task = GetROS2RGBCameraTask(validators=[color_image_val], task_args=task_args)
+        task = GetROS2RGBCameraTask(
+            validators=[self.color_image_val], task_args=task_args
+        )
         score = task.validate(tool_calls)
         assert score == 1.0
 
     def test_get_rgb_camera_task_wrong_topic(self, task_args: TaskArgs) -> None:
-        color_image_subtask = CheckArgsToolCallSubTask(
-            expected_tool_name="get_ros2_image",
-            expected_args={"topic": "/color_image5"},
-            expected_optional_args={"timeout_sec": int},
-        )
-        color_image_val = OrderedCallsValidator(subtasks=[color_image_subtask])
-
         tool_calls: List[Dict[str, Any]] = [
             {
                 "name": "get_ros2_image",
@@ -294,20 +248,15 @@ class TestGetRGBCameraTask:
             }
         ]
 
-        task = GetROS2RGBCameraTask(validators=[color_image_val], task_args=task_args)
+        task = GetROS2RGBCameraTask(
+            validators=[self.color_image_val], task_args=task_args
+        )
         score = task.validate(tool_calls)
         assert score == 0.0
 
     def test_get_rgb_camera_task_missing_required_arg(
         self, task_args: TaskArgs
     ) -> None:
-        color_image_subtask = CheckArgsToolCallSubTask(
-            expected_tool_name="get_ros2_image",
-            expected_args={"topic": "/color_image5"},
-            expected_optional_args={"timeout_sec": int},
-        )
-        color_image_val = OrderedCallsValidator(subtasks=[color_image_subtask])
-
         tool_calls: List[Dict[str, Any]] = [
             {
                 "name": "get_ros2_image",
@@ -315,18 +264,13 @@ class TestGetRGBCameraTask:
             }
         ]
 
-        task = GetROS2RGBCameraTask(validators=[color_image_val], task_args=task_args)
+        task = GetROS2RGBCameraTask(
+            validators=[self.color_image_val], task_args=task_args
+        )
         score = task.validate(tool_calls)
         assert score == 0.0
 
     def test_get_rgb_camera_task_wrong_timeout_type(self, task_args: TaskArgs) -> None:
-        color_image_subtask = CheckArgsToolCallSubTask(
-            expected_tool_name="get_ros2_image",
-            expected_args={"topic": "/color_image5"},
-            expected_optional_args={"timeout_sec": int},
-        )
-        color_image_val = OrderedCallsValidator(subtasks=[color_image_subtask])
-
         tool_calls: List[Dict[str, Any]] = [
             {
                 "name": "get_ros2_image",
@@ -337,7 +281,9 @@ class TestGetRGBCameraTask:
             }
         ]
 
-        task = GetROS2RGBCameraTask(validators=[color_image_val], task_args=task_args)
+        task = GetROS2RGBCameraTask(
+            validators=[self.color_image_val], task_args=task_args
+        )
         score = task.validate(tool_calls)
         assert score == 0.0
 
@@ -345,14 +291,14 @@ class TestGetRGBCameraTask:
 class TestGetDepthCameraTask:
     """Test GetROS2DepthCameraTask validation."""
 
-    def test_get_depth_camera_task_valid(self, task_args: TaskArgs) -> None:
-        depth_image_subtask = CheckArgsToolCallSubTask(
-            expected_tool_name="get_ros2_image",
-            expected_args={"topic": "/depth_image5"},
-            expected_optional_args={"timeout_sec": int},
-        )
-        depth_image_val = OrderedCallsValidator(subtasks=[depth_image_subtask])
+    depth_image_subtask = CheckArgsToolCallSubTask(
+        expected_tool_name="get_ros2_image",
+        expected_args={"topic": "/depth_image5"},
+        expected_optional_args={"timeout_sec": int},
+    )
+    depth_image_val = OrderedCallsValidator(subtasks=[depth_image_subtask])
 
+    def test_get_depth_camera_task_valid(self, task_args: TaskArgs) -> None:
         tool_calls: List[Dict[str, Any]] = [
             {"name": "get_ros2_topics_names_and_types", "args": {}},
             {
@@ -361,18 +307,13 @@ class TestGetDepthCameraTask:
             },
         ]
 
-        task = GetROS2DepthCameraTask(validators=[depth_image_val], task_args=task_args)
+        task = GetROS2DepthCameraTask(
+            validators=[self.depth_image_val], task_args=task_args
+        )
         score = task.validate(tool_calls)
         assert score == 1.0
 
     def test_get_depth_camera_task_wrong_topic(self, task_args: TaskArgs) -> None:
-        depth_image_subtask = CheckArgsToolCallSubTask(
-            expected_tool_name="get_ros2_image",
-            expected_args={"topic": "/depth_image5"},
-            expected_optional_args={"timeout_sec": int},
-        )
-        depth_image_val = OrderedCallsValidator(subtasks=[depth_image_subtask])
-
         tool_calls: List[Dict[str, Any]] = [
             {
                 "name": "get_ros2_image",
@@ -383,7 +324,9 @@ class TestGetDepthCameraTask:
             }
         ]
 
-        task = GetROS2DepthCameraTask(validators=[depth_image_val], task_args=task_args)
+        task = GetROS2DepthCameraTask(
+            validators=[self.depth_image_val], task_args=task_args
+        )
         score = task.validate(tool_calls)
         assert score == 0.0
 
@@ -391,21 +334,21 @@ class TestGetDepthCameraTask:
 class TestGetAllCamerasTask:
     """Test GetAllROS2CamerasTask validation."""
 
-    def test_get_all_cameras_task_valid(self, task_args: TaskArgs) -> None:
-        color_image_subtask = CheckArgsToolCallSubTask(
-            expected_tool_name="get_ros2_image",
-            expected_args={"topic": "/color_image5"},
-            expected_optional_args={"timeout_sec": int},
-        )
-        depth_image_subtask = CheckArgsToolCallSubTask(
-            expected_tool_name="get_ros2_image",
-            expected_args={"topic": "/depth_image5"},
-            expected_optional_args={"timeout_sec": int},
-        )
-        all_cameras_val = NotOrderedCallsValidator(
-            subtasks=[color_image_subtask, depth_image_subtask]
-        )
+    color_image_subtask = CheckArgsToolCallSubTask(
+        expected_tool_name="get_ros2_image",
+        expected_args={"topic": "/color_image5"},
+        expected_optional_args={"timeout_sec": int},
+    )
+    depth_image_subtask = CheckArgsToolCallSubTask(
+        expected_tool_name="get_ros2_image",
+        expected_args={"topic": "/depth_image5"},
+        expected_optional_args={"timeout_sec": int},
+    )
+    all_cameras_val = NotOrderedCallsValidator(
+        subtasks=[color_image_subtask, depth_image_subtask]
+    )
 
+    def test_get_all_cameras_task_valid(self, task_args: TaskArgs) -> None:
         tool_calls: List[Dict[str, Any]] = [
             {"name": "get_ros2_topics_names_and_types", "args": {}},
             {
@@ -418,25 +361,13 @@ class TestGetAllCamerasTask:
             },
         ]
 
-        task = GetAllROS2CamerasTask(validators=[all_cameras_val], task_args=task_args)
+        task = GetAllROS2CamerasTask(
+            validators=[self.all_cameras_val], task_args=task_args
+        )
         score = task.validate(tool_calls)
         assert score == 1.0
 
     def test_get_all_cameras_task_missing_depth(self, task_args: TaskArgs) -> None:
-        color_image_subtask = CheckArgsToolCallSubTask(
-            expected_tool_name="get_ros2_image",
-            expected_args={"topic": "/color_image5"},
-            expected_optional_args={"timeout_sec": int},
-        )
-        depth_image_subtask = CheckArgsToolCallSubTask(
-            expected_tool_name="get_ros2_image",
-            expected_args={"topic": "/depth_image5"},
-            expected_optional_args={"timeout_sec": int},
-        )
-        all_cameras_val = NotOrderedCallsValidator(
-            subtasks=[color_image_subtask, depth_image_subtask]
-        )
-
         tool_calls: List[Dict[str, Any]] = [
             {
                 "name": "get_ros2_image",
@@ -445,27 +376,15 @@ class TestGetAllCamerasTask:
             # Missing depth camera call
         ]
 
-        task = GetAllROS2CamerasTask(validators=[all_cameras_val], task_args=task_args)
+        task = GetAllROS2CamerasTask(
+            validators=[self.all_cameras_val], task_args=task_args
+        )
         score = task.validate(tool_calls)
         assert score == 0.0
 
     def test_get_all_cameras_task_wrong_order_should_pass(
         self, task_args: TaskArgs
     ) -> None:
-        color_image_subtask = CheckArgsToolCallSubTask(
-            expected_tool_name="get_ros2_image",
-            expected_args={"topic": "/color_image5"},
-            expected_optional_args={"timeout_sec": int},
-        )
-        depth_image_subtask = CheckArgsToolCallSubTask(
-            expected_tool_name="get_ros2_image",
-            expected_args={"topic": "/depth_image5"},
-            expected_optional_args={"timeout_sec": int},
-        )
-        all_cameras_val = NotOrderedCallsValidator(
-            subtasks=[color_image_subtask, depth_image_subtask]
-        )
-
         tool_calls: List[Dict[str, Any]] = [
             # Reversed order - depth first, then color
             {
@@ -478,7 +397,9 @@ class TestGetAllCamerasTask:
             },
         ]
 
-        task = GetAllROS2CamerasTask(validators=[all_cameras_val], task_args=task_args)
+        task = GetAllROS2CamerasTask(
+            validators=[self.all_cameras_val], task_args=task_args
+        )
         score = task.validate(tool_calls)
         assert score == 1.0  # Should pass with NotOrderedCallsValidator
 
@@ -486,14 +407,14 @@ class TestGetAllCamerasTask:
 class TestGetPointcloudTask:
     """Test GetPointcloudTask validation."""
 
-    def test_get_pointcloud_task_valid(self, task_args: TaskArgs) -> None:
-        pointcloud_subtask = CheckArgsToolCallSubTask(
-            expected_tool_name="receive_ros2_message",
-            expected_args={"topic": "/pointcloud"},
-            expected_optional_args={"timeout_sec": int},
-        )
-        pointcloud_val = OrderedCallsValidator(subtasks=[pointcloud_subtask])
+    pointcloud_subtask = CheckArgsToolCallSubTask(
+        expected_tool_name="receive_ros2_message",
+        expected_args={"topic": "/pointcloud"},
+        expected_optional_args={"timeout_sec": int},
+    )
+    pointcloud_val = OrderedCallsValidator(subtasks=[pointcloud_subtask])
 
+    def test_get_pointcloud_task_valid(self, task_args: TaskArgs) -> None:
         tool_calls: List[Dict[str, Any]] = [
             {"name": "get_ros2_topics_names_and_types", "args": {}},
             {
@@ -502,18 +423,11 @@ class TestGetPointcloudTask:
             },
         ]
 
-        task = GetPointcloudTask(validators=[pointcloud_val], task_args=task_args)
+        task = GetPointcloudTask(validators=[self.pointcloud_val], task_args=task_args)
         score = task.validate(tool_calls)
         assert score == 1.0
 
     def test_get_pointcloud_task_wrong_topic(self, task_args: TaskArgs) -> None:
-        pointcloud_subtask = CheckArgsToolCallSubTask(
-            expected_tool_name="receive_ros2_message",
-            expected_args={"topic": "/pointcloud"},
-            expected_optional_args={"timeout_sec": int},
-        )
-        pointcloud_val = OrderedCallsValidator(subtasks=[pointcloud_subtask])
-
         tool_calls: List[Dict[str, Any]] = [
             {
                 "name": "receive_ros2_message",
@@ -524,7 +438,7 @@ class TestGetPointcloudTask:
             }
         ]
 
-        task = GetPointcloudTask(validators=[pointcloud_val], task_args=task_args)
+        task = GetPointcloudTask(validators=[self.pointcloud_val], task_args=task_args)
         score = task.validate(tool_calls)
         assert score == 0.0
 
@@ -532,14 +446,14 @@ class TestGetPointcloudTask:
 class TestGetRobotDescriptionTask:
     """Test GetRobotDescriptionTask validation."""
 
-    def test_get_robot_description_task_valid(self, task_args: TaskArgs) -> None:
-        robot_desc_subtask = CheckArgsToolCallSubTask(
-            expected_tool_name="receive_ros2_message",
-            expected_args={"topic": "/robot_description"},
-            expected_optional_args={"timeout_sec": int},
-        )
-        robot_desc_val = OrderedCallsValidator(subtasks=[robot_desc_subtask])
+    robot_desc_subtask = CheckArgsToolCallSubTask(
+        expected_tool_name="receive_ros2_message",
+        expected_args={"topic": "/robot_description"},
+        expected_optional_args={"timeout_sec": int},
+    )
+    robot_desc_val = OrderedCallsValidator(subtasks=[robot_desc_subtask])
 
+    def test_get_robot_description_task_valid(self, task_args: TaskArgs) -> None:
         tool_calls: List[Dict[str, Any]] = [
             {"name": "get_ros2_topics_names_and_types", "args": {}},
             {
@@ -548,20 +462,15 @@ class TestGetRobotDescriptionTask:
             },
         ]
 
-        task = GetRobotDescriptionTask(validators=[robot_desc_val], task_args=task_args)
+        task = GetRobotDescriptionTask(
+            validators=[self.robot_desc_val], task_args=task_args
+        )
         score = task.validate(tool_calls)
         assert score == 1.0
 
     def test_get_robot_description_task_wrong_tool_name(
         self, task_args: TaskArgs
     ) -> None:
-        robot_desc_subtask = CheckArgsToolCallSubTask(
-            expected_tool_name="receive_ros2_message",
-            expected_args={"topic": "/robot_description"},
-            expected_optional_args={"timeout_sec": int},
-        )
-        robot_desc_val = OrderedCallsValidator(subtasks=[robot_desc_subtask])
-
         tool_calls: List[Dict[str, Any]] = [
             {
                 "name": "get_ros2_message",  # Wrong tool name (missing "receive_")
@@ -569,7 +478,385 @@ class TestGetRobotDescriptionTask:
             }
         ]
 
-        task = GetRobotDescriptionTask(validators=[robot_desc_val], task_args=task_args)
+        task = GetRobotDescriptionTask(
+            validators=[self.robot_desc_val], task_args=task_args
+        )
+        score = task.validate(tool_calls)
+        assert score == 0.0
+
+
+class TestGetROS2ServicesTask:
+    """Test GetROS2ServicesTask validation."""
+
+    get_services_subtask = CheckArgsToolCallSubTask(
+        expected_tool_name="get_ros2_services_names_and_types", expected_args={}
+    )
+    services_val = OrderedCallsValidator(subtasks=[get_services_subtask])
+
+    def test_get_services_task_valid(self, task_args: TaskArgs) -> None:
+        """Test get ROS2 services task with valid call."""
+        tool_calls: List[Dict[str, Any]] = [
+            {"name": "get_ros2_services_names_and_types", "args": {}}
+        ]
+
+        task = GetROS2ServicesTask(validators=[self.services_val], task_args=task_args)
+        score = task.validate(tool_calls)
+        assert score == 1.0
+
+    def test_get_services_task_wrong_tool_name(self, task_args: TaskArgs) -> None:
+        """Test get ROS2 services task with wrong tool name."""
+        tool_calls: List[Dict[str, Any]] = [
+            {"name": "wrong_tool_name", "args": {}}  # Wrong tool name
+        ]
+
+        task = GetROS2ServicesTask(validators=[self.services_val], task_args=task_args)
+        score = task.validate(tool_calls)
+        assert score == 0.0
+
+    def test_get_services_task_unexpected_args(self, task_args: TaskArgs) -> None:
+        """Test get ROS2 services task with unexpected arguments."""
+        tool_calls: List[Dict[str, Any]] = [
+            {
+                "name": "get_ros2_services_names_and_types",
+                "args": {"unexpected": "arg"},
+            }  # Unexpected args
+        ]
+
+        task = GetROS2ServicesTask(validators=[self.services_val], task_args=task_args)
+        score = task.validate(tool_calls)
+        assert score == 0.0
+
+
+class TestListRobotParametersTask:
+    """Test ListRobotParametersTask validation."""
+
+    list_parameters_subtask = CheckServiceFieldsToolCallSubTask(
+        expected_tool_name="call_ros2_service",
+        expected_service="/robot_state_publisher/list_parameters",
+        expected_service_type="rcl_interfaces/srv/ListParameters",
+        expected_fields={"": {}},
+    )
+    list_parameters_val = OrderedCallsValidator(subtasks=[list_parameters_subtask])
+
+    def test_list_parameters_task_valid(self, task_args: TaskArgs) -> None:
+        """Test list parameters task with valid service call."""
+        tool_calls: List[Dict[str, Any]] = [
+            {"name": "get_ros2_services_names_and_types", "args": {}},
+            {
+                "name": "call_ros2_service",
+                "args": {
+                    "service_name": "/robot_state_publisher/list_parameters",
+                    "service_type": "rcl_interfaces/srv/ListParameters",
+                    "service_args": {},
+                },
+            },
+        ]
+
+        task = ListRobotParametersTask(
+            validators=[self.list_parameters_val], task_args=task_args
+        )
+        score = task.validate(tool_calls)
+        assert score == 1.0
+
+    def test_list_parameters_task_wrong_service_name(self, task_args: TaskArgs) -> None:
+        """Test list parameters task with wrong service name."""
+        tool_calls: List[Dict[str, Any]] = [
+            {
+                "name": "call_ros2_service",
+                "args": {
+                    "service_name": "/wrong_node/list_parameters",  # Wrong service name
+                    "service_type": "rcl_interfaces/srv/ListParameters",
+                    "service_args": {},
+                },
+            }
+        ]
+
+        task = ListRobotParametersTask(
+            validators=[self.list_parameters_val], task_args=task_args
+        )
+        score = task.validate(tool_calls)
+        assert score == 0.0
+
+    def test_list_parameters_task_wrong_tool_name(self, task_args: TaskArgs) -> None:
+        """Test list parameters task with wrong tool name."""
+        tool_calls: List[Dict[str, Any]] = [
+            {
+                "name": "wrong_tool_name",  # Wrong tool name
+                "args": {
+                    "service_name": "/robot_state_publisher/list_parameters",
+                    "service_type": "rcl_interfaces/srv/ListParameters",
+                    "service_args": {},
+                },
+            }
+        ]
+
+        task = ListRobotParametersTask(
+            validators=[self.list_parameters_val], task_args=task_args
+        )
+        score = task.validate(tool_calls)
+        assert score == 0.0
+
+
+class TestGetSpecificParameterTask:
+    """Test GetSpecificParameterTask validation."""
+
+    get_parameter_subtask = CheckServiceFieldsToolCallSubTask(
+        expected_tool_name="call_ros2_service",
+        expected_service="/robot_state_publisher/get_parameters",
+        expected_service_type="rcl_interfaces/srv/GetParameters",
+        expected_fields={"names.0": "publish_frequency"},
+    )
+    get_parameter_val = OrderedCallsValidator(subtasks=[get_parameter_subtask])
+
+    def test_get_parameter_task_valid(self, task_args: TaskArgs) -> None:
+        """Test get specific parameter task with valid service call."""
+        tool_calls: List[Dict[str, Any]] = [
+            {"name": "get_ros2_services_names_and_types", "args": {}},
+            {
+                "name": "get_ros2_service_interface",
+                "args": {"service_type": "rcl_interfaces/srv/GetParameters"},
+            },
+            {
+                "name": "call_ros2_service",
+                "args": {
+                    "service_name": "/robot_state_publisher/get_parameters",
+                    "service_type": "rcl_interfaces/srv/GetParameters",
+                    "service_args": {"names": ["publish_frequency"]},
+                },
+            },
+        ]
+
+        task = GetSpecificParameterTask(
+            validators=[self.get_parameter_val], task_args=task_args
+        )
+        score = task.validate(tool_calls)
+        assert score == 1.0
+
+    def test_get_parameter_task_wrong_parameter_name(self, task_args: TaskArgs) -> None:
+        """Test get specific parameter task with wrong parameter name."""
+        tool_calls: List[Dict[str, Any]] = [
+            {
+                "name": "call_ros2_service",
+                "args": {
+                    "service_name": "/robot_state_publisher/get_parameters",
+                    "service_type": "rcl_interfaces/srv/GetParameters",
+                    "service_args": {
+                        "names": ["wrong_parameter_name"]  # Wrong parameter name
+                    },
+                },
+            }
+        ]
+
+        task = GetSpecificParameterTask(
+            validators=[self.get_parameter_val], task_args=task_args
+        )
+        score = task.validate(tool_calls)
+        assert score == 0.0
+
+    def test_get_parameter_task_missing_names_field(self, task_args: TaskArgs) -> None:
+        """Test get specific parameter task with missing names field."""
+        tool_calls: List[Dict[str, Any]] = [
+            {
+                "name": "call_ros2_service",
+                "args": {
+                    "service_name": "/robot_state_publisher/get_parameters",
+                    "service_type": "rcl_interfaces/srv/GetParameters",
+                    "service_args": {},  # Missing names field
+                },
+            }
+        ]
+
+        task = GetSpecificParameterTask(
+            validators=[self.get_parameter_val], task_args=task_args
+        )
+        score = task.validate(tool_calls)
+        assert score == 0.0
+
+
+class TestCheckSpawnableEntitiesTask:
+    """Test CheckSpawnableEntitiesTask validation."""
+
+    check_entities_subtask = CheckArgsToolCallSubTask(
+        expected_tool_name="call_ros2_service",
+        expected_args={
+            "service_name": "/get_available_spawnable_names",
+            "service_type": "gazebo_msgs/srv/GetModelList",
+        },
+        expected_optional_args={"service_args": dict},
+    )
+    check_entities_val = OrderedCallsValidator(subtasks=[check_entities_subtask])
+
+    def test_check_spawnable_entities_task_valid(self, task_args: TaskArgs) -> None:
+        """Test check spawnable entities task with valid service call."""
+        tool_calls: List[Dict[str, Any]] = [
+            {"name": "get_ros2_services_names_and_types", "args": {}},
+            {
+                "name": "call_ros2_service",
+                "args": {
+                    "service_name": "/get_available_spawnable_names",
+                    "service_type": "gazebo_msgs/srv/GetModelList",
+                    "service_args": {},
+                },
+            },
+        ]
+
+        task = CheckSpawnableEntitiesTask(
+            validators=[self.check_entities_val], task_args=task_args
+        )
+        score = task.validate(tool_calls)
+        assert score == 1.0
+
+    def test_check_spawnable_entities_task_valid_no_args(
+        self, task_args: TaskArgs
+    ) -> None:
+        """Test check spawnable entities task with valid service call."""
+        tool_calls: List[Dict[str, Any]] = [
+            {"name": "get_ros2_services_names_and_types", "args": {}},
+            {
+                "name": "call_ros2_service",
+                "args": {
+                    "service_name": "/get_available_spawnable_names",
+                    "service_type": "gazebo_msgs/srv/GetModelList",
+                },
+            },
+        ]
+
+        task = CheckSpawnableEntitiesTask(
+            validators=[self.check_entities_val], task_args=task_args
+        )
+        score = task.validate(tool_calls)
+        assert score == 1.0
+
+    def test_check_spawnable_entities_task_wrong_service_name(
+        self, task_args: TaskArgs
+    ) -> None:
+        """Test check spawnable entities task with wrong service name."""
+        tool_calls: List[Dict[str, Any]] = [
+            {
+                "name": "call_ros2_service",
+                "args": {
+                    "service_name": "/wrong_service_name",  # Wrong service name
+                    "service_type": "gazebo_msgs/srv/GetModelList",
+                    "service_args": {},
+                },
+            }
+        ]
+
+        task = CheckSpawnableEntitiesTask(
+            validators=[self.check_entities_val], task_args=task_args
+        )
+        score = task.validate(tool_calls)
+        assert score == 0.0
+
+    def test_check_spawnable_entities_task_wrong_tool_name(
+        self, task_args: TaskArgs
+    ) -> None:
+        """Test check spawnable entities task with wrong tool name."""
+        tool_calls: List[Dict[str, Any]] = [
+            {
+                "name": "wrong_tool_name",  # Wrong tool name
+                "args": {
+                    "service_name": "/get_available_spawnable_names",
+                    "service_type": "gazebo_msgs/srv/GetModelList",
+                    "service_args": {},
+                },
+            }
+        ]
+
+        task = CheckSpawnableEntitiesTask(
+            validators=[self.check_entities_val], task_args=task_args
+        )
+        score = task.validate(tool_calls)
+        assert score == 0.0
+
+
+class TestSpawnEntityTask:
+    """Test SpawnEntityTask validation."""
+
+    spawn_entity_subtask = CheckServiceFieldsToolCallSubTask(
+        expected_tool_name="call_ros2_service",
+        expected_service="/spawn_entity",
+        expected_service_type="gazebo_msgs/srv/SpawnEntity",
+        expected_fields={
+            "name": "test_box",
+        },
+    )
+    spawn_entity_val = OrderedCallsValidator(subtasks=[spawn_entity_subtask])
+
+    def test_spawn_entity_task_wrong_service_name(self, task_args: TaskArgs) -> None:
+        """Test spawn entity task with wrong service name."""
+        tool_calls: List[Dict[str, Any]] = [
+            {
+                "name": "call_ros2_service",
+                "args": {
+                    "service_name": "/wrong_spawn_service",  # Wrong service name
+                    "service_type": "gazebo_msgs/srv/SpawnEntity",
+                    "service_args": {
+                        "name": "test_box",
+                        "xml": "<sdf>test</sdf>",
+                    },
+                },
+            }
+        ]
+
+        task = SpawnEntityTask(validators=[self.spawn_entity_val], task_args=task_args)
+        score = task.validate(tool_calls)
+        assert score == 0.0
+
+    def test_spawn_entity_task_wrong_entity_name(self, task_args: TaskArgs) -> None:
+        """Test spawn entity task with wrong entity name."""
+        tool_calls: List[Dict[str, Any]] = [
+            {
+                "name": "call_ros2_service",
+                "args": {
+                    "service_name": "/spawn_entity",
+                    "service_type": "gazebo_msgs/srv/SpawnEntity",
+                    "service_args": {
+                        "name": "wrong_entity_name",  # Wrong entity name
+                        "xml": "<sdf>test</sdf>",
+                    },
+                },
+            }
+        ]
+
+        task = SpawnEntityTask(validators=[self.spawn_entity_val], task_args=task_args)
+        score = task.validate(tool_calls)
+        assert score == 0.0
+
+    def test_spawn_entity_task_missing_service_args(self, task_args: TaskArgs) -> None:
+        """Test spawn entity task with missing service args."""
+        tool_calls: List[Dict[str, Any]] = [
+            {
+                "name": "call_ros2_service",
+                "args": {
+                    "service_name": "/spawn_entity",
+                    "service_type": "gazebo_msgs/srv/SpawnEntity",
+                    # Missing service_args
+                },
+            }
+        ]
+
+        task = SpawnEntityTask(validators=[self.spawn_entity_val], task_args=task_args)
+        score = task.validate(tool_calls)
+        assert score == 0.0
+
+    def test_spawn_entity_task_wrong_tool_name(self, task_args: TaskArgs) -> None:
+        """Test spawn entity task with wrong tool name."""
+        tool_calls: List[Dict[str, Any]] = [
+            {
+                "name": "wrong_tool_name",  # Wrong tool name
+                "args": {
+                    "service_name": "/spawn_entity",
+                    "service_type": "gazebo_msgs/srv/SpawnEntity",
+                    "service_args": {
+                        "name": "test_box",
+                        "xml": "<sdf>test</sdf>",
+                    },
+                },
+            }
+        ]
+
+        task = SpawnEntityTask(validators=[self.spawn_entity_val], task_args=task_args)
         score = task.validate(tool_calls)
         assert score == 0.0
 
@@ -694,4 +981,6 @@ class TestMultiValidatorScoring:
 
         task = GetROS2RGBCameraTask(validators=[val1, val2, val3], task_args=task_args)
         score = task.validate(tool_calls)
-        assert score == 0.0  # 0/3 validators pass
+        assert (
+            score == 0.0
+        )  # 0/3 validators pass_valid(self, task_args: TaskArgs) -> None:
