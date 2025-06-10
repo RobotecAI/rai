@@ -53,6 +53,33 @@ from rai_bench.tool_calling_agent.messages.topics import AudioMessage, HRIMessag
 # the dict contains custom as well as couple other common interfaces
 
 COMMON_INTERFACES: Dict[str, str] = {
+    "gazebo_msgs/srv/DeleteEntity": """string name                       # Name of the Gazebo entity to be deleted. This can be either
+                                  # a model or a light.
+---
+bool success                      # Return true if deletion is successful.
+string status_message             # Comments if available.
+""",
+    "gazebo_msgs/srv/SpawnEntity": """string name                       # Name of the entity to be spawned (optional).
+string xml                        # Entity XML description as a string, either URDF or SDF.
+string robot_namespace            # Spawn robot and all ROS interfaces under this namespace
+geometry_msgs/Pose initial_pose   # Initial entity pose.
+	Point position
+		float64 x
+		float64 y
+		float64 z
+	Quaternion orientation
+		float64 x 0
+		float64 y 0
+		float64 z 0
+		float64 w 1
+string reference_frame            # initial_pose is defined relative to the frame of this entity.
+                                  # If left empty or "world" or "map", then gazebo world frame is
+                                  # used.
+                                  # If non-existent entity is specified, an error is returned
+                                  # and the entity is not spawned.
+---
+bool success                      # Return true if spawned successfully.
+string status_message             # Comments if available.""",
     "rcl_interfaces/srv/SetParameters": """# A list of parameters to set.
 Parameter[] parameters
 	string name
