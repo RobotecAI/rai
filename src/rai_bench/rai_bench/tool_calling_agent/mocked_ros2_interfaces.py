@@ -53,6 +53,455 @@ from rai_bench.tool_calling_agent.messages.topics import AudioMessage, HRIMessag
 # the dict contains custom as well as couple other common interfaces
 
 COMMON_INTERFACES: Dict[str, str] = {
+    "std_srvs/srv/Empty": """# Empty service - no request or response
+---
+""",
+    "std_srvs/srv/Trigger": """# Simple service to trigger an action
+---
+bool success   # indicate successful run of triggered service
+string message # informational, e.g. for error messages
+""",
+    "std_srvs/srv/SetBool": """bool data # e.g. for hardware enabling / disabling
+---
+bool success   # indicate successful run of triggered service
+string message # informational, e.g. for error messages
+""",
+    "std_srvs/srv/SetString": """string data
+---
+bool success
+string message
+""",
+    "lifecycle_msgs/srv/ChangeState": """Transition transition
+	uint8 id
+	string label
+---
+bool success
+""",
+    "lifecycle_msgs/srv/GetState": """---
+State current_state
+	uint8 id
+	string label
+""",
+    "lifecycle_msgs/srv/GetAvailableStates": """---
+State[] available_states
+	uint8 id
+	string label
+""",
+    "lifecycle_msgs/srv/GetAvailableTransitions": """---
+TransitionDescription[] available_transitions
+	Transition transition
+		uint8 id
+		string label
+	State start_state
+		uint8 id
+		string label
+	State goal_state
+		uint8 id
+		string label
+""",
+    "rcl_interfaces/msg/ParameterEvent": """# This message is published when parameters change for a node
+Parameter[] changed_parameters
+	string name
+	ParameterValue value
+		uint8 type
+		bool bool_value
+		int64 integer_value
+		float64 double_value
+		string string_value
+		byte[] byte_array_value
+		bool[] bool_array_value
+		int64[] integer_array_value
+		float64[] double_array_value
+		string[] string_array_value
+
+Parameter[] deleted_parameters
+	string name
+	ParameterValue value
+		uint8 type
+		bool bool_value
+		int64 integer_value
+		float64 double_value
+		string string_value
+		byte[] byte_array_value
+		bool[] bool_array_value
+		int64[] integer_array_value
+		float64[] double_array_value
+		string[] string_array_value
+
+string node
+""",
+    "rcl_interfaces/msg/Log": """# This message represents a log message published on the /rosout topic
+# severity level constants
+byte DEBUG=10
+byte INFO=20
+byte WARN=30
+byte ERROR=40
+byte FATAL=50
+
+# message fields
+builtin_interfaces/Time stamp
+	int32 sec
+	uint32 nanosec
+byte level
+string name      # name of the node
+string msg       # message text
+string file      # file the message came from
+string function  # function the message came from
+uint32 line      # line the message came from
+""",
+    "tf2_msgs/msg/TFMessage": """# An array of transforms with a header for the coordinate frame
+geometry_msgs/TransformStamped[] transforms
+	std_msgs/Header header
+		builtin_interfaces/Time stamp
+			int32 sec
+			uint32 nanosec
+		string frame_id
+	string child_frame_id
+	Transform transform
+		Vector3 translation
+			float64 x
+			float64 y
+			float64 z
+		Quaternion rotation
+			float64 x 0
+			float64 y 0
+			float64 z 0
+			float64 w 1
+""",
+    "sensor_msgs/msg/JointState": """# This is a message that holds data to describe the state of a set of torque controlled joints.
+#
+# The state of each joint (revolute or prismatic) is defined by:
+#  * the position of the joint (rad or m),
+#  * the velocity of the joint (rad/s or m/s) and
+#  * the effort that is applied in the joint (Nm or N).
+#
+# Each joint is uniquely identified by its name
+# The header specifies the time at which the joint states were recorded. All the joint states
+# in one message have to be recorded at the same time.
+#
+# This message consists of a multiple arrays, one for each part of the joint state.
+# The goal is to make each of the fields optional. When e.g. your joints have no
+# velocity or effort sensors, you can leave the velocity and effort arrays empty.
+#
+# All arrays in this message should have the same size.
+
+std_msgs/Header header
+	builtin_interfaces/Time stamp
+		int32 sec
+		uint32 nanosec
+	string frame_id
+string[] name
+float64[] position
+float64[] velocity
+float64[] effort
+""",
+    "std_msgs/msg/String": """# Please look at the Standard ROS Messages documentation before using this.
+# http://wiki.ros.org/std_msgs
+string data
+""",
+    "bond/msg/Status": """# An array of bond ids that this node is maintaining
+std_msgs/Header header
+	builtin_interfaces/Time stamp
+		int32 sec
+		uint32 nanosec
+	string frame_id
+string id        # unique identifier for the bond
+string instance_id # identifier for this instance of the node
+bool active      # whether the bond is currently active
+float32 heartbeat_timeout # timeout for heartbeat in seconds
+float32 heartbeat_period  # period for heartbeat messages in seconds
+""",
+    "diagnostic_msgs/msg/DiagnosticArray": """# This message contains a list of diagnostic statuses
+std_msgs/Header header
+	builtin_interfaces/Time stamp
+		int32 sec
+		uint32 nanosec
+	string frame_id
+
+DiagnosticStatus[] status
+	# Possible levels of operations
+	byte OK=0
+	byte WARN=1
+	byte ERROR=2
+	byte STALE=3
+
+	byte level           # level of operation enumerated above
+	string name          # a description of the test/component reporting
+	string message       # a description of the status
+	string hardware_id   # a hardware unique string
+	KeyValue[] values    # an array of values associated with the status
+		string key
+		string value
+""",
+    "sensor_msgs/msg/PointCloud2": """# This message holds a collection of N-dimensional points, which may
+# contain additional information such as normals, intensity, etc. The
+# point data is stored as a binary blob, its format described by the
+# contents of the \"fields\" array.
+
+# The point cloud data may be organized 2d (image-like) or 1d
+# (unordered). Point clouds organized as 2d images may be produced by
+# camera depth sensors such as stereo or time-of-flight.
+
+# Time of sensor data acquisition, and the coordinate frame ID (for 3d
+# points).
+std_msgs/Header header
+	builtin_interfaces/Time stamp
+		int32 sec
+		uint32 nanosec
+	string frame_id
+
+# 2D structure of the point cloud. If the cloud is unordered, height is
+# 1 and width is the length of the point cloud.
+uint32 height
+uint32 width
+
+# Describes the channels and their layout in the binary data blob.
+PointField[] fields
+	uint8 INT8    = 1
+	uint8 UINT8   = 2
+	uint8 INT16   = 3
+	uint8 UINT16  = 4
+	uint8 INT32   = 5
+	uint8 UINT32  = 6
+	uint8 FLOAT32 = 7
+	uint8 FLOAT64 = 8
+
+	string name      # Name of field
+	uint32 offset    # Offset from start of point struct
+	uint8  datatype  # Datatype enumeration, see above
+	uint32 count     # How many elements in the field
+
+bool    is_bigendian # Is this data bigendian?
+uint32  point_step   # Length of a point in bytes
+uint32  row_step     # Length of a row in bytes
+uint8[] data         # Actual point data, size is (row_step*height)
+
+bool is_dense        # True if there are no invalid points
+""",
+    "sensor_msgs/msg/LaserScan": """# Single scan from a planar laser range-finder
+#
+# If you have another ranging device with different behavior (e.g. a sonar
+# array), please find or create a different message, since applications
+# will make fairly laser-specific assumptions about this data
+
+std_msgs/Header header
+	builtin_interfaces/Time stamp
+		int32 sec
+		uint32 nanosec
+	string frame_id
+float32 angle_min        # start angle of the scan [rad]
+float32 angle_max        # end angle of the scan [rad]
+float32 angle_increment  # angular distance between measurements [rad]
+
+float32 time_increment   # time between measurements [seconds] - if your scanner
+                         # is moving, this will be used in interpolating position
+                         # of 3d points
+float32 scan_time        # time between scans [seconds]
+
+float32 range_min        # minimum range value [m]
+float32 range_max        # maximum range value [m]
+
+float32[] ranges         # range data [m] (Note: values < range_min or > range_max should be discarded)
+float32[] intensities    # intensity data [device-specific units].  If your
+                         # device does not provide intensities, please leave
+                         # the array empty.
+""",
+    "nav_msgs/msg/Odometry": """# This represents an estimate of a position and velocity in free space.
+# The pose in this message should be specified in the coordinate frame given by header.frame_id.
+# The twist in this message should be specified in the coordinate frame given by the child_frame_id
+std_msgs/Header header
+	builtin_interfaces/Time stamp
+		int32 sec
+		uint32 nanosec
+	string frame_id
+string child_frame_id
+geometry_msgs/PoseWithCovariance pose
+	Pose pose
+		Point position
+			float64 x
+			float64 y
+			float64 z
+		Quaternion orientation
+			float64 x 0
+			float64 y 0
+			float64 z 0
+			float64 w 1
+	float64[36] covariance # Row-major representation of the 6x6 covariance matrix
+geometry_msgs/TwistWithCovariance twist
+	Twist twist
+		Vector3  linear
+			float64 x
+			float64 y
+			float64 z
+		Vector3  angular
+			float64 x
+			float64 y
+			float64 z
+	float64[36] covariance # Row-major representation of the 6x6 covariance matrix
+""",
+    # Services from COMMON_SERVICES_AND_TYPES that are missing
+    "tf2_msgs/srv/FrameGraph": """---
+string frame_yaml
+""",
+    "composition_interfaces/srv/ListNodes": """---
+# All unique node names within the container
+string[] unique_names
+# Full node names corresponding to each unique node name
+string[] full_node_names
+""",
+    "composition_interfaces/srv/LoadNode": """LoadNodeRequest request
+	string package_name
+	string plugin_name
+	string node_name
+	string node_namespace
+	string[] remap_rules
+	Parameter[] parameters
+		string name
+		ParameterValue value
+			uint8 type
+			bool bool_value
+			int64 integer_value
+			float64 double_value
+			string string_value
+			byte[] byte_array_value
+			bool[] bool_array_value
+			int64[] integer_array_value
+			float64[] double_array_value
+			string[] string_array_value
+	string[] extra_arguments
+---
+bool success
+string error_message
+string full_node_name
+uint64 unique_id
+""",
+    "composition_interfaces/srv/UnloadNode": """uint64 unique_id
+---
+bool success
+string error_message
+""",
+    "rcl_interfaces/srv/DescribeParameters": """string[] names
+---
+ParameterDescriptor[] descriptors
+	string name
+	uint8 type
+	string description
+	string additional_constraints
+	bool read_only
+	bool dynamic_typing
+	ParameterValue floating_point_range
+		uint8 type
+		bool bool_value
+		int64 integer_value
+		float64 double_value
+		string string_value
+		byte[] byte_array_value
+		bool[] bool_array_value
+		int64[] integer_array_value
+		float64[] double_array_value
+		string[] string_array_value
+	ParameterValue integer_range
+		uint8 type
+		bool bool_value
+		int64 integer_value
+		float64 double_value
+		string string_value
+		byte[] byte_array_value
+		bool[] bool_array_value
+		int64[] integer_array_value
+		float64[] double_array_value
+		string[] string_array_value
+""",
+    "rcl_interfaces/srv/GetParameterTypes": """string[] names
+---
+uint8[] types
+# Possible parameter types:
+uint8 PARAMETER_NOT_SET=0
+uint8 PARAMETER_BOOL=1
+uint8 PARAMETER_INTEGER=2
+uint8 PARAMETER_DOUBLE=3
+uint8 PARAMETER_STRING=4
+uint8 PARAMETER_BYTE_ARRAY=5
+uint8 PARAMETER_BOOL_ARRAY=6
+uint8 PARAMETER_INTEGER_ARRAY=7
+uint8 PARAMETER_DOUBLE_ARRAY=8
+uint8 PARAMETER_STRING_ARRAY=9
+""",
+    "rcl_interfaces/srv/GetParameters": """string[] names
+---
+ParameterValue[] values
+	uint8 type
+	bool bool_value
+	int64 integer_value
+	float64 double_value
+	string string_value
+	byte[] byte_array_value
+	bool[] bool_array_value
+	int64[] integer_array_value
+	float64[] double_array_value
+	string[] string_array_value
+""",
+    "rcl_interfaces/srv/ListParameters": """ListParametersRequest request
+	string[] prefixes
+	uint64 depth
+---
+ListParametersResult result
+	string[] names
+	string[] prefixes
+""",
+    "rcl_interfaces/srv/SetParametersAtomically": """Parameter[] parameters
+	string name
+	ParameterValue value
+		uint8 type
+		bool bool_value
+		int64 integer_value
+		float64 double_value
+		string string_value
+		byte[] byte_array_value
+		bool[] bool_array_value
+		int64[] integer_array_value
+		float64[] double_array_value
+		string[] string_array_value
+---
+SetParametersResult result
+	bool successful
+	string reason
+""",
+    "gazebo_msgs/srv/GetWorldProperties": """# Service to get world properties
+---
+string[] model_names
+string[] light_names
+bool rendering_enabled
+bool physics_enabled
+bool physics_paused
+float64 sim_time
+""",
+    "gazebo_msgs/srv/GetModelState": """string model_name
+string relative_entity_name  # return pose relative to this entity
+                             # an empty string will return world relative pose
+---
+geometry_msgs/Pose pose
+	Point position
+		float64 x
+		float64 y
+		float64 z
+	Quaternion orientation
+		float64 x 0
+		float64 y 0
+		float64 z 0
+		float64 w 1
+geometry_msgs/Twist twist
+	Vector3  linear
+		float64 x
+		float64 y
+		float64 z
+	Vector3  angular
+		float64 x
+		float64 y
+		float64 z
+bool success
+string status_message
+""",
     "gazebo_msgs/srv/DeleteEntity": """string name                       # Name of the Gazebo entity to be deleted. This can be either
                                   # a model or a light.
 ---
@@ -2932,8 +3381,6 @@ COMMON_TOPICS_AND_TYPES: Dict[str, str] = {
     "/depth_image5": "sensor_msgs/msg/Image",
     "/pointcloud": "sensor_msgs/msg/PointCloud2",
     "/scan": "sensor_msgs/msg/LaserScan",
-    "/odom": "nav_msgs/msg/Odometry",
-    "/odometry/filtered": "nav_msgs/msg/Odometry",
 }
 
 MANIPULATION_TOPICS_AND_TYPES: Dict[str, str] = {
