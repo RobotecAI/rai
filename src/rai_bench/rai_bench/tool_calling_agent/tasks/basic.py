@@ -14,12 +14,14 @@
 
 import logging
 from abc import ABC
-from typing import List
+from typing import List, Tuple
 
 from langchain_core.tools import BaseTool
 
 from rai_bench.tool_calling_agent.interfaces import (
     Task,
+    TaskArgs,
+    Validator,
 )
 from rai_bench.tool_calling_agent.mocked_ros2_interfaces import (
     COMMON_INTERFACES,
@@ -35,7 +37,6 @@ from rai_bench.tool_calling_agent.mocked_tools import (
     MockReceiveROS2MessageTool,
 )
 
-loggers_type = logging.Logger
 PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_0_SHOT = """You are a ROS 2 expert that want to solve tasks. You have access to various tools that allow you to query the ROS 2 system.
 Be proactive and use the tools to answer questions."""
 
@@ -255,30 +256,49 @@ class ListRobotParametersTask(BasicTask):
 class GetSpecificParameterTask(BasicTask):
     complexity = "easy"
 
+    def __init__(
+        self,
+        parameter: str,
+        validators: List[Validator],
+        task_args: TaskArgs,
+        logger: logging.Logger | None = None,
+    ) -> None:
+        super().__init__(validators, task_args, logger)
+        self.parameter = parameter
+
     @property
     def optional_tool_calls_number(self) -> int:
         # list services and get interfaces
         return 2
 
     def get_base_prompt(self) -> str:
-        return "Get robot `publish_frequency` parameter"
+        return f"Get robot `{self.parameter}` parameter"
 
     def get_prompt(self) -> str:
-        base_prompt = "Get robot publish frequency parameter"
         if self.prompt_detail == "brief":
-            return base_prompt
+            return self.get_base_prompt()
         elif self.prompt_detail == "moderate":
-            return f"{base_prompt} value from the robot state publisher."
+            return f"{self.get_base_prompt()} value from the robot state publisher."
         else:
             return (
                 f"{self.get_base_prompt()} value from the robot state publisher. "
                 "You can explore available services and their interfaces to find "
-                "the appropriate service and retrieve the publish_frequency parameter value."
+                f"the appropriate service and retrieve the {self.parameter} parameter value."
             )
 
 
 class SetRobotParameterTask(BasicTask):
     complexity = "medium"
+
+    def __init__(
+        self,
+        value: float,
+        validators: List[Validator],
+        task_args: TaskArgs,
+        logger: logging.Logger | None = None,
+    ) -> None:
+        super().__init__(validators, task_args, logger)
+        self.value = value
 
     @property
     def optional_tool_calls_number(self) -> int:
@@ -286,7 +306,7 @@ class SetRobotParameterTask(BasicTask):
         return 2
 
     def get_base_prompt(self) -> str:
-        return "Set robot state parameter `publish frequency` to 30.0 Hz"
+        return f"Set robot state parameter `publish frequency` to {self.value} Hz"
 
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
@@ -295,7 +315,7 @@ class SetRobotParameterTask(BasicTask):
             return (
                 f"{self.get_base_prompt()} using parameter service. "
                 "You can explore available services to find the appropriate service, "
-                "check its interface and set the publish_frequency parameter to 30.0."
+                f"check its interface and set the publish_frequency parameter to {self.value}."
             )
 
 
@@ -324,13 +344,23 @@ class CheckSpawnableEntitiesTask(BasicTask):
 class SpawnEntityTask(BasicTask):
     complexity = "medium"
 
+    def __init__(
+        self,
+        entity: str,
+        validators: List[Validator],
+        task_args: TaskArgs,
+        logger: logging.Logger | None = None,
+    ) -> None:
+        super().__init__(validators, task_args, logger)
+        self.entity = entity
+
     @property
     def optional_tool_calls_number(self) -> int:
-        # list services, get interfaces
+        # list services, get interface
         return 2
 
     def get_base_prompt(self) -> str:
-        return "Spawn a red_cube entity"
+        return f"Spawn a {self.entity} entity"
 
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
@@ -340,6 +370,91 @@ class SpawnEntityTask(BasicTask):
         else:
             return (
                 f"{self.get_base_prompt()} in the simulation environment. "
-                "You can explore available services to find the spawn_entity service, "
-                "check its interface, and add a box with appropriate SDF/XML description."
+                "You can explore available services to find the appropriate service, "
+                f"check its interface, and add a {self.entity} with any name and SDF/XML description."
+            )
+
+
+class ConfigureVisionPipelineTask(BasicTask):
+    complexity = "hard"
+
+    def __init__(
+        self,
+        sam_confidence_threshold: float,
+        dino_confidence_threshold: float,
+        fps: int,
+        validators: List[Validator],
+        task_args: TaskArgs,
+        logger: logging.Logger | None = None,
+    ) -> None:
+        super().__init__(validators, task_args, logger)
+        self.sam_confidence_threshold = sam_confidence_threshold
+        self.dino_confidence_threshold = dino_confidence_threshold
+        self.fps = fps
+
+    @property
+    def optional_tool_calls_number(self) -> int:
+        return 2  # list services, get interface
+
+    def get_base_prompt(self) -> str:
+        return (
+            f"Configure AI vision pipeline: set grounded_sam `confidence_threshold` "
+            f"to {self.sam_confidence_threshold}, grounding_dino `confidence_threshold` "
+            f"to {self.dino_confidence_threshold}, o3de_ros2_node `fps` to {self.fps}"
+        )
+
+    def get_prompt(self) -> str:
+        if self.prompt_detail == "brief":
+            return self.get_base_prompt()
+        elif self.prompt_detail == "moderate":
+            return f"{self.get_base_prompt()} using parameter services."
+        else:
+            return (
+                f"{self.get_base_prompt()} using parameter services. "
+                "You can explore parameter services for grounded_sam, grounding_dino, and o3de_ros2_node, "
+                "check their interface and set appropriate parameters"
+            )
+
+
+class RespawnEntitiesTask(BasicTask):
+    complexity = "hard"
+
+    def __init__(
+        self,
+        names: List[str],
+        coords: List[Tuple[float, float, float]],
+        validators: List[Validator],
+        task_args: TaskArgs,
+        logger: logging.Logger | None = None,
+    ) -> None:
+        super().__init__(validators, task_args, logger)
+        self.names = names
+        self.coords = coords
+
+    @property
+    def optional_tool_calls_number(self) -> int:
+        return 3  # list services, get interfaces of spawn and despawn
+
+    def get_base_prompt(self) -> str:
+        names_str = ", ".join(self.names)
+        positions: List[str] = []
+        for coord in self.coords:
+            positions.append(f"({coord[0]}, {coord[1]}, {coord[2]})")
+        positions_str = ", ".join(positions)
+
+        return (
+            f"Reconfigure simulation: remove old `cube` entities named {names_str}, "
+            f"then respawn them at positions [{positions_str}]"
+        )
+
+    def get_prompt(self) -> str:
+        if self.prompt_detail == "brief":
+            return self.get_base_prompt()
+        elif self.prompt_detail == "moderate":
+            return f"{self.get_base_prompt()} using entity management services. "
+        else:
+            return (
+                f"{self.get_base_prompt()} using entity management services. "
+                "You can explore services to find appropriate services, check their interfaces "
+                "and use them to delete old and spawn new `cube` entities with specific names and positions."
             )
