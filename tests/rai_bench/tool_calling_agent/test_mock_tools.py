@@ -130,23 +130,6 @@ class TestServiceValidator:
         with pytest.raises(TypeError):
             validator.validate_with_ros2("rcl_interfaces/srv/SetParameters", args)
 
-    # def test_validate_with_ros2_getparameters_valid_args(
-    #     self, validator: ServiceValidator
-    # ):
-    #     """Test successful validation with valid GetParameters arguments"""
-    #     args: Dict[str, Any] = {"names": ["param1", "param2", "param3"]}
-
-    #     validator.validate_with_ros2("rcl_interfaces/srv/GetParameters", args)
-
-    # def test_validate_with_ros2_getparameters_invalid_args(
-    #     self, validator: ServiceValidator
-    # ):
-    #     """Test validation with invalid GetParameters arguments"""
-    #     args: Dict[str, Any] = {"names": "should_be_list_not_string"}
-
-    #     with pytest.raises(TypeError):
-    #         validator.validate_with_ros2("rcl_interfaces/srv/GetParameters", args)
-
     def test_validate_with_ros2_empty_args(self, validator: ServiceValidator):
         """Test validation with empty args (should use defaults)"""
         args: Dict[str, Any] = {}
