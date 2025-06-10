@@ -24,6 +24,7 @@ from rai_bench.tool_calling_agent.subtasks import (
 )
 from rai_bench.tool_calling_agent.tasks.basic import (
     CheckSpawnableEntitiesTask,
+    ConfigureVisionPipelineTask,
     GetAllROS2CamerasTask,
     GetPointcloudTask,
     GetRobotDescriptionTask,
@@ -33,6 +34,7 @@ from rai_bench.tool_calling_agent.tasks.basic import (
     GetROS2TopicsTask,
     GetSpecificParameterTask,
     ListRobotParametersTask,
+    RespawnEntitiesTask,
     SetRobotParameterTask,
     SpawnEntityTask,
 )
@@ -148,6 +150,86 @@ set_robot_state_params_subtask = CheckServiceFieldsToolCallSubTask(
 )
 
 set_param_val = OrderedCallsValidator(subtasks=[set_robot_state_params_subtask])
+
+grounded_sam_config_subtask = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service="/grounded_sam/set_parameters",
+    expected_service_type="rcl_interfaces/srv/SetParameters",
+    expected_fields={
+        "parameters.0.name": "confidence_threshold",
+        "parameters.0.value.type": 3,
+        "parameters.0.value.double_value": 0.8,
+    },
+)
+
+grounding_dino_config_subtask = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service="/grounding_dino/set_parameters",
+    expected_service_type="rcl_interfaces/srv/SetParameters",
+    expected_fields={
+        "parameters.0.name": "detection_threshold",
+        "parameters.0.value.type": 3,
+        "parameters.0.value.double_value": 0.7,
+    },
+)
+o3de_fps_config_subtask = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service="/o3de_ros2_node/set_parameters",
+    expected_service_type="rcl_interfaces/srv/SetParameters",
+    expected_fields={
+        "parameters.0.name": "fps",
+        "parameters.0.value.type": 2,
+        "parameters.0.value.integer_value": 30,
+    },
+)
+
+delete_entity_subtask1 = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service="/delete_entity",
+    expected_service_type="gazebo_msgs/srv/DeleteEntity",
+    expected_fields={
+        "name": "box1",
+    },
+)
+delete_entity_subtask2 = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service="/delete_entity",
+    expected_service_type="gazebo_msgs/srv/DeleteEntity",
+    expected_fields={
+        "name": "box2",
+    },
+)
+spawn_entity_subtask1 = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service="/spawn_entity",
+    expected_service_type="gazebo_msgs/srv/SpawnEntity",
+    expected_fields={
+        "name": "box1",
+        "xml": str,
+        "initial_pose.position.x": 0.2,
+        "initial_pose.position.y": 0.2,
+        "initial_pose.position.z": 0.2,
+    },
+)
+spawn_entity_subtask2 = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service="/spawn_entity",
+    expected_service_type="gazebo_msgs/srv/SpawnEntity",
+    expected_fields={
+        "name": "box2",
+        "xml": str,
+        "initial_pose.position.x": 0.4,
+        "initial_pose.position.y": 0.4,
+        "initial_pose.position.z": 0.2,
+    },
+)
+
+delete_both_val = NotOrderedCallsValidator(
+    subtasks=[delete_entity_subtask1, delete_entity_subtask2]
+)
+spawn_both_val = NotOrderedCallsValidator(
+    subtasks=[spawn_entity_subtask1, spawn_entity_subtask2]
+)
 ######### VALIDATORS #########################################################################################
 topics_ord_val = OrderedCallsValidator(subtasks=[get_topics_subtask])
 
@@ -183,6 +265,14 @@ check_spawnable_entities_val = OrderedCallsValidator(
     subtasks=[check_spawnable_entities_subtask]
 )
 spawn_entity_val = OrderedCallsValidator(subtasks=[spawn_entity_subtask])
+
+vision_pipeline_config_val = NotOrderedCallsValidator(
+    subtasks=[
+        grounded_sam_config_subtask,
+        grounding_dino_config_subtask,
+        o3de_fps_config_subtask,
+    ]
+)
 
 
 def get_basic_tasks(
@@ -246,6 +336,7 @@ def get_basic_tasks(
                             task_args=task_args,
                         ),
                         GetSpecificParameterTask(
+                            parameter="publish_frequency",
                             validators=[get_parameters_val],
                             task_args=task_args,
                         ),
@@ -254,11 +345,35 @@ def get_basic_tasks(
                             task_args=task_args,
                         ),
                         SpawnEntityTask(
+                            entity="tomato",
                             validators=[spawn_entity_val],
                             task_args=task_args,
                         ),
                         SetRobotParameterTask(
-                            validators=[set_param_val], task_args=task_args
+                            value=30.0, validators=[set_param_val], task_args=task_args
+                        ),
+                        SetRobotParameterTask(
+                            value=25.0, validators=[set_param_val], task_args=task_args
+                        ),
+                        ConfigureVisionPipelineTask(
+                            sam_confidence_threshold=0.8,
+                            dino_confidence_threshold=0.5,
+                            fps=30,
+                            validators=[vision_pipeline_config_val],
+                            task_args=task_args,
+                        ),
+                        ConfigureVisionPipelineTask(
+                            sam_confidence_threshold=0.6,
+                            dino_confidence_threshold=0.6,
+                            fps=10,
+                            validators=[vision_pipeline_config_val],
+                            task_args=task_args,
+                        ),
+                        RespawnEntitiesTask(
+                            names=["box1", "box2"],
+                            coords=[(0.2, 0.2, 0.2), (0.4, 0.4, 0.2)],
+                            validators=[delete_both_val, spawn_both_val],
+                            task_args=task_args,
                         ),
                     ]
                 )
