@@ -124,7 +124,7 @@ get_parameters_subtask = CheckServiceFieldsToolCallSubTask(
 check_spawnable_entities_subtask = CheckServiceFieldsToolCallSubTask(
     expected_tool_name="call_ros2_service",
     expected_service="/get_available_spawnable_names",
-    expected_service_type="gazebo_msgs/srv/GetModelList",
+    expected_service_type="gazebo_msgs/srv/GetWorldProperties",
     expected_fields={"": {}},
 )
 
@@ -133,7 +133,7 @@ spawn_entity_subtask = CheckServiceFieldsToolCallSubTask(
     expected_service="/spawn_entity",
     expected_service_type="gazebo_msgs/srv/SpawnEntity",
     expected_fields={
-        "name": "test_box",
+        "name": "tomato",
     },
 )
 

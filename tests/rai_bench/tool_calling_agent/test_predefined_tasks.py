@@ -764,7 +764,7 @@ class TestCheckSpawnableEntitiesTask:
                 "name": "call_ros2_service",
                 "args": {
                     "service_name": "/wrong_service_name",  # Wrong service name
-                    "service_type": "gazebo_msgs/srv/GetModelList",
+                    "service_type": "gazebo_msgs/srv/GetWorldProperties",
                     "service_args": {},
                 },
             }
