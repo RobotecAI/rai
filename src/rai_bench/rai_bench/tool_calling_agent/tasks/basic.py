@@ -44,16 +44,33 @@ PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_2_SHOT = (
     PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_0_SHOT
     + """
 Example of tool calls:
-- get_ros2_topics_names_and_types, args: {}
-- receive_ros2_message, args: {'topic': '/cmd_vel', 'timeout_sec': 10}"""
+- name: get_ros2_topics_names_and_types, args: {}
+- name: get_ros2_service_interface, args: {"service_type": "tf2_msgs/srv/LookupTransform"}"""
 )
 
 PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_5_SHOT = (
     PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_2_SHOT
     + """
-- get_ros2_image, args: {'topic': '/camera/image_raw', 'timeout_sec': 10}
-- publish_ros2_message, args: {'topic': '/turtle1/teleport_absolute', 'message_type': 'turtlesim/srv/TeleportAbsolute', 'message': {x: 5.0, y: 2.0, theta: 1.57}}
-- receive_ros2_message, args: {'topic': '/cmd_vel', 'timeout_sec': 10}"""
+- name: get_ros2_image, args: {'topic': '/camera/image_raw', 'timeout_sec': 10}
+- name: receive_ros2_message, args: {'topic': '/cmd_vel', 'timeout_sec': 10}
+- name: call_ros2_service, args: {
+        "service_name": "/execute_trajectory",
+        "service_type": "moveit_msgs/srv/ExecuteKnownTrajectory",
+        "service_args": {
+            "trajectory": {
+                "joint_trajectory": {
+                    "header": {"frame_id": "base_link"},
+                    "joint_names": ["joint1", "joint2"],
+                    "points": [{
+                        "positions": [0.0, 1.57],
+                        "time_from_start": {"sec": 2, "nanosec": 0}
+                    }]
+                }
+            },
+            "wait_for_execution": True
+        }
+    }
+"""
 )
 
 TOPIC_STRINGS = [
@@ -137,7 +154,7 @@ class GetROS2RGBCameraTask(BasicTask):
         else:
             return (
                 f"{self.get_base_prompt()} "
-                "You can explore available camera topics and capture the RGB color image."
+                "You can list available camera topics and capture the RGB color image."
             )
 
 
@@ -153,7 +170,7 @@ class GetROS2DepthCameraTask(BasicTask):
         else:
             return (
                 f"{self.get_base_prompt()} "
-                "You can explore available camera topics and capture the depth image data."
+                "You can list available camera topics and capture the depth image data."
             )
 
 
@@ -169,7 +186,7 @@ class GetPointcloudTask(BasicTask):
         else:
             return (
                 f"{self.get_base_prompt()} "
-                "You can discover available sensor topics and receive the pointcloud information."
+                "You can list available topics to find appropriate topic and receive the pointcloud information from it."
             )
 
 
@@ -182,10 +199,12 @@ class GetRobotDescriptionTask(BasicTask):
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
+        elif self.prompt_detail == "moderate":
+            return f"{self.get_base_prompt()}"
         else:
             return (
-                f"{self.get_base_prompt()} You can explore the system "
-                "to find robot description data."
+                f"{self.get_base_prompt()}. You can list available topics to find appropriate topic "
+                "and receive robot description data from it."
             )
 
 
@@ -202,7 +221,7 @@ class GetAllROS2CamerasTask(BasicTask):
             return (
                 f"{self.get_base_prompt()} from all available camera sources in the system. "
                 "This includes both RGB color images and depth images. "
-                "You can discover what camera topics are available and capture images from each."
+                "You can list what camera topics are available and capture images from each."
             )
 
 
@@ -225,17 +244,12 @@ class GetROS2ServicesTask(BasicTask):
         else:
             return (
                 f"{self.get_base_prompt()} available in the ROS2 system with their names and service types. "
-                "You can discover what services are currently available in the system."
+                "You can list what services are currently available in the system."
             )
 
 
 class ListRobotParametersTask(BasicTask):
     complexity = "easy"
-
-    @property
-    def optional_tool_calls_number(self) -> int:
-        # list services
-        return 1
 
     def get_base_prompt(self) -> str:
         return "List robot state publisher parameters"
@@ -249,7 +263,7 @@ class ListRobotParametersTask(BasicTask):
         else:
             return (
                 f"{self.get_base_prompt()} available for configuration. "
-                "You can explore available services to find the appropriate service."
+                "You can list available services to find the appropriate service and receive the parameters from it"
             )
 
 
@@ -282,8 +296,8 @@ class GetSpecificParameterTask(BasicTask):
         else:
             return (
                 f"{self.get_base_prompt()} value from the robot state publisher. "
-                "You can explore available services and their interfaces to find "
-                f"the appropriate service and retrieve the {self.parameter} parameter value."
+                "You can list available services to find the appropriate service, "
+                f"check its type's interface and retrieve the {self.parameter} parameter value."
             )
 
 
@@ -314,8 +328,8 @@ class SetRobotParameterTask(BasicTask):
         else:
             return (
                 f"{self.get_base_prompt()} using parameter service. "
-                "You can explore available services to find the appropriate service, "
-                f"check its interface and set the publish_frequency parameter to {self.value}."
+                "You can list available services to find the appropriate service, "
+                f"check its type's interface and set the publish_frequency parameter to {self.value}."
             )
 
 
@@ -336,7 +350,7 @@ class CheckSpawnableEntitiesTask(BasicTask):
         else:
             return (
                 f"{self.get_base_prompt()} in the simulation environment. "
-                "You can explore available services to find the appropriate "
+                "You can list available services to find the appropriate "
                 "service and see what entities can be spawned."
             )
 
@@ -370,8 +384,8 @@ class SpawnEntityTask(BasicTask):
         else:
             return (
                 f"{self.get_base_prompt()} in the simulation environment. "
-                "You can explore available services to find the appropriate service, "
-                f"check its interface, and add a {self.entity} with any name and SDF/XML description."
+                "You can list available services to find the appropriate service, "
+                f"check its type's interface and add a {self.entity} with any name and SDF/XML description."
             )
 
 
@@ -411,8 +425,8 @@ class ConfigureVisionPipelineTask(BasicTask):
         else:
             return (
                 f"{self.get_base_prompt()} using parameter services. "
-                "You can explore parameter services for grounded_sam, grounding_dino, and o3de_ros2_node, "
-                "check their interface and set appropriate parameters"
+                "You can list parameter services for appropriate services "
+                "check their type's interface and set appropriate parameters."
             )
 
 
@@ -455,6 +469,6 @@ class RespawnEntitiesTask(BasicTask):
         else:
             return (
                 f"{self.get_base_prompt()} using entity management services. "
-                "You can explore services to find appropriate services, check their interfaces "
+                "You can list services to find appropriate services, check their type's interface "
                 "and use them to delete old and spawn new `cube` entities with specific names and positions."
             )

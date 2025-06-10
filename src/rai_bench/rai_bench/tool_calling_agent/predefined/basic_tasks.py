@@ -134,7 +134,6 @@ spawn_entity_subtask = CheckServiceFieldsToolCallSubTask(
     expected_service_type="gazebo_msgs/srv/SpawnEntity",
     expected_fields={
         "name": "test_box",
-        "xml": str,
     },
 )
 
@@ -167,7 +166,7 @@ grounding_dino_config_subtask = CheckServiceFieldsToolCallSubTask(
     expected_service="/grounding_dino/set_parameters",
     expected_service_type="rcl_interfaces/srv/SetParameters",
     expected_fields={
-        "parameters.0.name": "detection_threshold",
+        "parameters.0.name": "confidence_threshold",
         "parameters.0.value.type": 3,
         "parameters.0.value.double_value": 0.7,
     },
@@ -205,7 +204,6 @@ spawn_entity_subtask1 = CheckServiceFieldsToolCallSubTask(
     expected_service_type="gazebo_msgs/srv/SpawnEntity",
     expected_fields={
         "name": "box1",
-        "xml": str,
         "initial_pose.position.x": 0.2,
         "initial_pose.position.y": 0.2,
         "initial_pose.position.z": 0.2,
@@ -217,7 +215,6 @@ spawn_entity_subtask2 = CheckServiceFieldsToolCallSubTask(
     expected_service_type="gazebo_msgs/srv/SpawnEntity",
     expected_fields={
         "name": "box2",
-        "xml": str,
         "initial_pose.position.x": 0.4,
         "initial_pose.position.y": 0.4,
         "initial_pose.position.z": 0.2,
