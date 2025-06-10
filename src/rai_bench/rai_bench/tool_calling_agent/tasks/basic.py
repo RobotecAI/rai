@@ -425,7 +425,7 @@ class ConfigureVisionPipelineTask(BasicTask):
         else:
             return (
                 f"{self.get_base_prompt()} using parameter services. "
-                "You can list parameter services for appropriate services "
+                "You can list parameter services to find appropriate services "
                 "check their type's interface and set appropriate parameters."
             )
 
