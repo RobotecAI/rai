@@ -72,10 +72,12 @@ def trivial_scenarios(logger: logging.Logger | None) -> List[Scenario]:
                 place_object_tasks.append(
                     PlaceObjectAtCoordTask(obj, coord, disp, logger=logger)
                 )
-    easy_place_objects_scenarios = ManipulationO3DEBenchmark.create_scenarios(
+    place_objects_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=place_object_tasks,
         scene_configs=scene_configs,
         scene_configs_paths=scene_configs_paths,
+        level="trivial",
+        logger=logger,
     )
     # move objects to the left
     object_groups = [["carrot"], ["red_cube"], ["tomato"], ["yellow_cube"]]
@@ -85,14 +87,15 @@ def trivial_scenarios(logger: logging.Logger | None) -> List[Scenario]:
         for objects in object_groups
     ]
 
-    easy_move_to_left_scenarios = ManipulationO3DEBenchmark.create_scenarios(
+    move_to_left_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=move_to_left_tasks,
         scene_configs=scene_configs,
         scene_configs_paths=scene_configs_paths,
         level="trivial",
+        logger=logger,
     )
 
-    return [*easy_move_to_left_scenarios, *easy_place_objects_scenarios]
+    return [*move_to_left_scenarios, *place_objects_scenarios]
 
 
 def easy_scenarios(logger: logging.Logger | None) -> List[Scenario]:
@@ -144,10 +147,11 @@ def easy_scenarios(logger: logging.Logger | None) -> List[Scenario]:
                 place_object_tasks.append(
                     PlaceObjectAtCoordTask(obj, coord, disp, logger=logger)
                 )
-    easy_place_objects_scenarios = ManipulationO3DEBenchmark.create_scenarios(
+    place_objects_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=place_object_tasks,
         scene_configs=scene_configs,
         scene_configs_paths=scene_configs_paths,
+        level="easy",
         logger=logger,
     )
     # move objects to the left
@@ -164,25 +168,28 @@ def easy_scenarios(logger: logging.Logger | None) -> List[Scenario]:
         for objects in object_groups
     ]
 
-    easy_move_to_left_scenarios = ManipulationO3DEBenchmark.create_scenarios(
+    move_to_left_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=move_to_left_tasks,
         scene_configs=scene_configs,
         scene_configs_paths=scene_configs_paths,
+        level="easy",
+        logger=logger,
     )
 
     # place cubes
     task = PlaceCubesTask(threshold_distance=0.2, logger=logger)
-    easy_place_cubes_scenarios = ManipulationO3DEBenchmark.create_scenarios(
+    place_cubes_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=[task],
         scene_configs=scene_configs,
         scene_configs_paths=scene_configs_paths,
         level="easy",
+        logger=logger,
     )
 
     return [
-        *easy_move_to_left_scenarios,
-        *easy_place_objects_scenarios,
-        *easy_place_cubes_scenarios,
+        *move_to_left_scenarios,
+        *place_objects_scenarios,
+        *place_cubes_scenarios,
     ]
 
 
@@ -260,7 +267,7 @@ def medium_scenarios(logger: logging.Logger | None) -> List[Scenario]:
 
     # place cubes
     task = PlaceCubesTask(threshold_distance=0.1, logger=logger)
-    easy_place_cubes_scenarios = ManipulationO3DEBenchmark.create_scenarios(
+    place_cubes_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=[task],
         scene_configs=medium_scene_configs,
         scene_configs_paths=medium_scene_configs_paths,
@@ -282,6 +289,8 @@ def medium_scenarios(logger: logging.Logger | None) -> List[Scenario]:
         tasks=build_tower_tasks,
         scene_configs=easy_scene_configs,
         scene_configs_paths=easy_scene_configs_paths,
+        level="medium",
+        logger=logger,
     )
 
     # group object task
@@ -302,11 +311,13 @@ def medium_scenarios(logger: logging.Logger | None) -> List[Scenario]:
         tasks=group_object_tasks,
         scene_configs=easy_scene_configs,
         scene_configs_paths=easy_scene_configs_paths,
+        level="medium",
+        logger=logger,
     )
     return [
         *move_to_left_scenarios,
         *build_tower_scenarios,
-        *easy_place_cubes_scenarios,
+        *place_cubes_scenarios,
         *group_object_scenarios,
     ]
 
@@ -381,15 +392,17 @@ def hard_scenarios(logger: logging.Logger | None) -> List[Scenario]:
         scene_configs=hard_scene_configs,
         scene_configs_paths=hard_scene_configs_paths,
         level="hard",
+        logger=logger,
     )
 
     # place cubes
     task = PlaceCubesTask(threshold_distance=0.1, logger=logger)
-    easy_place_cubes_scenarios = ManipulationO3DEBenchmark.create_scenarios(
+    place_cubes_scenarios = ManipulationO3DEBenchmark.create_scenarios(
         tasks=[task],
         scene_configs=hard_scene_configs,
         scene_configs_paths=hard_scene_configs_paths,
         level="hard",
+        logger=logger,
     )
 
     # build tower task
@@ -407,6 +420,7 @@ def hard_scenarios(logger: logging.Logger | None) -> List[Scenario]:
         scene_configs=medium_scene_configs,
         scene_configs_paths=medium_scene_configs_paths,
         level="hard",
+        logger=logger,
     )
 
     # group object task
@@ -428,11 +442,13 @@ def hard_scenarios(logger: logging.Logger | None) -> List[Scenario]:
         tasks=group_object_tasks,
         scene_configs=medium_scene_configs,
         scene_configs_paths=medium_scene_configs_paths,
+        level="hard",
+        logger=logger,
     )
     return [
         *move_to_left_scenarios,
         *build_tower_scenarios,
-        *easy_place_cubes_scenarios,
+        *place_cubes_scenarios,
         *group_object_scenarios,
     ]
 
@@ -512,6 +528,7 @@ def very_hard_scenarios(logger: logging.Logger | None) -> List[Scenario]:
         scene_configs=hard_scene_configs,
         scene_configs_paths=hard_scene_configs_paths,
         level="very_hard",
+        logger=logger,
     )
     return [
         *build_tower_scenarios,
