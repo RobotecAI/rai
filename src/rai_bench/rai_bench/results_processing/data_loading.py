@@ -101,6 +101,7 @@ def convert_row_to_scenario_result(row: pd.Series) -> ScenarioResult:
     return ScenarioResult(
         **row,
         score=float(row["score"]),
+        level=row["level"],
         total_time=float(row["total_time"]),
         number_of_tool_calls=int(row["number_of_tool_calls"]),
     )
