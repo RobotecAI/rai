@@ -45,7 +45,7 @@ if __name__ == "__main__":
 
     run_benchmark(
         llm=llm,
-        out_dir=args.out_dir,
+        out_dir=experiment_dir,
         tasks=tasks,
         bench_logger=bench_logger,
     )
