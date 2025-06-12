@@ -53,7 +53,7 @@ If your goal is creating custom tasks and scenarios, visit [Creating Custom Task
 This benchmark does not require any additional setup besides the main one [Basic Setup](../setup/install.md), just run:
 
 ```bash
-python src/rai_bench/rai_bench/examples/tool_calling_agent.py --model-name qwen2.5:7b --vendor ollama --extra-tool-calls <0 5> --task-types basic  --n-shots <0 2> --prompt-detail <brief  descriptive> --complexities <easy medium hard> --out-dir <out_dir>
+python src/rai_bench/rai_bench/examples/tool_calling_agent.py --model-name <qwen2.5:7b> --vendor <ollama> --extra-tool-calls <0 5> --task-types basic  --n-shots <0 2> --prompt-detail <brief  descriptive> --complexities <easy medium hard> --out-dir <out_dir>
 ```
 
 !!! note
