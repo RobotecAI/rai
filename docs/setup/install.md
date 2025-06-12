@@ -76,7 +76,7 @@ There are two ways to start using RAI:
 
 ### 1.1 Install poetry
 
-RAI uses [Poetry](https://python-poetry.org/) for python packaging and dependency management.
+RAI uses [Poetry](https://python-poetry.org/)(2.1+) for python packaging and dependency management.
 Install poetry with the following line:
 
 ```bash
