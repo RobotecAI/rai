@@ -19,7 +19,7 @@ If your goal is creating custom tasks and scenarios, visit [Creating Custom Task
 -   Run the benchmark with:
 
     ```bash
-    python src/rai_bench/rai_bench/examples/manipulation_o3de.py --model-name <your-model> --vendor <your-vendor> --o3de-config-path <path/to/your/config> --levels <trivial, easy>
+    python src/rai_bench/rai_bench/examples/manipulation_o3de.py --model-name <your-model> --vendor <your-vendor> --levels <trivial, easy>
     ```
 
     !!! warning
