@@ -20,16 +20,23 @@ from rai_bench.tool_calling_agent.interfaces import (
 )
 from rai_bench.tool_calling_agent.subtasks import (
     CheckArgsToolCallSubTask,
+    CheckServiceFieldsToolCallSubTask,
 )
 from rai_bench.tool_calling_agent.tasks.basic import (
-    AssessSensorDataQualityTask,
-    CheckRobotHealthTask,
+    CheckSpawnableEntitiesTask,
+    ConfigureVisionPipelineTask,
     GetAllROS2CamerasTask,
     GetPointcloudTask,
     GetRobotDescriptionTask,
     GetROS2DepthCameraTask,
     GetROS2RGBCameraTask,
+    GetROS2ServicesTask,
     GetROS2TopicsTask,
+    GetSpecificParameterTask,
+    ListRobotParametersTask,
+    RespawnEntitiesTask,
+    SetRobotParameterTask,
+    SpawnEntityTask,
 )
 from rai_bench.tool_calling_agent.validators import (
     NotOrderedCallsValidator,
@@ -37,6 +44,7 @@ from rai_bench.tool_calling_agent.validators import (
 )
 
 ########## SUBTASKS #################################################################
+
 get_topics_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="get_ros2_topics_names_and_types", expected_args={}
 )
@@ -53,13 +61,13 @@ depth_image5_subtask = CheckArgsToolCallSubTask(
 )
 
 color_camera_info5_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="get_ros2_image",
-    expected_args={"topic": "/color_image5"},
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/color_camera_info5"},
     expected_optional_args={"timeout_sec": int},
 )
 depth_camera_info5_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="get_ros2_image",
-    expected_args={"topic": "/depth_image5"},
+    expected_tool_name="receive_ros2_message",
+    expected_args={"topic": "/depth_camera_info5"},
     expected_optional_args={"timeout_sec": int},
 )
 
@@ -75,61 +83,14 @@ receive_pointcloud_subtask = CheckArgsToolCallSubTask(
     expected_optional_args={"timeout_sec": int},
 )
 
-# System health subtasks
-diagnostics_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="receive_ros2_message",
-    expected_args={"topic": "/diagnostics"},
-    expected_optional_args={"timeout_sec": int},
-)
-rosout_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="receive_ros2_message",
-    expected_args={"topic": "/rosout"},
-    expected_optional_args={"timeout_sec": int},
-)
-joint_states_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="receive_ros2_message",
-    expected_args={"topic": "/joint_states"},
-    expected_optional_args={"timeout_sec": int},
-)
 
-# Odometry subtasks
-odom_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="receive_ros2_message",
-    expected_args={"topic": "/odom"},
-    expected_optional_args={"timeout_sec": int},
-)
-filtered_odom_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="receive_ros2_message",
-    expected_args={"topic": "/odometry/filtered"},
-    expected_optional_args={"timeout_sec": int},
-)
-
-# Transform subtasks
-tf_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="receive_ros2_message",
-    expected_args={"topic": "/tf"},
-    expected_optional_args={"timeout_sec": int},
-)
-tf_static_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="receive_ros2_message",
-    expected_args={"topic": "/tf_static"},
-    expected_optional_args={"timeout_sec": int},
-)
-
-
-# Robot description subtasks
 robot_description_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="receive_ros2_message",
     expected_args={"topic": "/robot_description"},
     expected_optional_args={"timeout_sec": int},
 )
-robot_description_semantic_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="receive_ros2_message",
-    expected_args={"topic": "/robot_description_semantic"},
-    expected_optional_args={"timeout_sec": int},
-)
 
-# Sensor data subtasks
+
 scan_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="receive_ros2_message",
     expected_args={"topic": "/scan"},
@@ -142,42 +103,130 @@ pointcloud_subtask = CheckArgsToolCallSubTask(
 )
 
 
-# Robot description subtasks
-robot_description_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="receive_ros2_message",
-    expected_args={"topic": "/robot_description"},
-    expected_optional_args={"timeout_sec": int},
-)
-robot_description_semantic_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="receive_ros2_message",
-    expected_args={"topic": "/robot_description_semantic"},
-    expected_optional_args={"timeout_sec": int},
+get_services_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="get_ros2_services_names_and_types", expected_args={}
 )
 
-# Sensor data subtasks
-scan_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="receive_ros2_message",
-    expected_args={"topic": "/scan"},
-    expected_optional_args={"timeout_sec": int},
-)
-pointcloud_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="receive_ros2_message",
-    expected_args={"topic": "/pointcloud"},
-    expected_optional_args={"timeout_sec": int},
+list_parameters_subtask = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service="/robot_state_publisher/list_parameters",
+    expected_service_type="rcl_interfaces/srv/ListParameters",
+    expected_fields={"": {}},
 )
 
-# Robot description subtasks
-robot_description_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="receive_ros2_message",
-    expected_args={"topic": "/robot_description"},
-    expected_optional_args={"timeout_sec": int},
-)
-robot_description_semantic_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="receive_ros2_message",
-    expected_args={"topic": "/robot_description_semantic"},
-    expected_optional_args={"timeout_sec": int},
+get_parameters_subtask = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service="/robot_state_publisher/get_parameters",
+    expected_service_type="rcl_interfaces/srv/GetParameters",
+    expected_fields={"names.0": "publish_frequency"},
 )
 
+check_spawnable_entities_subtask = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service="/get_available_spawnable_names",
+    expected_service_type="gazebo_msgs/srv/GetWorldProperties",
+    expected_fields={"": {}},
+)
+
+spawn_entity_subtask = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service="/spawn_entity",
+    expected_service_type="gazebo_msgs/srv/SpawnEntity",
+    expected_fields={
+        "name": "tomato",
+    },
+)
+
+set_robot_state_params_subtask = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service="/robot_state_publisher/set_parameters",
+    expected_service_type="rcl_interfaces/srv/SetParameters",
+    expected_fields={
+        "parameters.0.name": "publish_frequency",
+        "parameters.0.value.type": "3",
+        "parameters.0.value.double_value": 30.0,
+    },
+)
+
+set_param_val = OrderedCallsValidator(subtasks=[set_robot_state_params_subtask])
+
+grounded_sam_config_subtask = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service="/grounded_sam/set_parameters",
+    expected_service_type="rcl_interfaces/srv/SetParameters",
+    expected_fields={
+        "parameters.0.name": "confidence_threshold",
+        "parameters.0.value.type": 3,
+        "parameters.0.value.double_value": 0.8,
+    },
+)
+
+grounding_dino_config_subtask = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service="/grounding_dino/set_parameters",
+    expected_service_type="rcl_interfaces/srv/SetParameters",
+    expected_fields={
+        "parameters.0.name": "confidence_threshold",
+        "parameters.0.value.type": 3,
+        "parameters.0.value.double_value": 0.7,
+    },
+)
+o3de_fps_config_subtask = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service="/o3de_ros2_node/set_parameters",
+    expected_service_type="rcl_interfaces/srv/SetParameters",
+    expected_fields={
+        "parameters.0.name": "fps",
+        "parameters.0.value.type": 2,
+        "parameters.0.value.integer_value": 30,
+    },
+)
+
+delete_entity_subtask1 = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service="/delete_entity",
+    expected_service_type="gazebo_msgs/srv/DeleteEntity",
+    expected_fields={
+        "name": "box1",
+    },
+)
+delete_entity_subtask2 = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service="/delete_entity",
+    expected_service_type="gazebo_msgs/srv/DeleteEntity",
+    expected_fields={
+        "name": "box2",
+    },
+)
+spawn_entity_subtask1 = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service="/spawn_entity",
+    expected_service_type="gazebo_msgs/srv/SpawnEntity",
+    expected_fields={
+        "name": "box1",
+        "initial_pose.position.x": 0.2,
+        "initial_pose.position.y": 0.2,
+        "initial_pose.position.z": 0.2,
+    },
+)
+spawn_entity_subtask2 = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service="/spawn_entity",
+    expected_service_type="gazebo_msgs/srv/SpawnEntity",
+    expected_fields={
+        "name": "box2",
+        "initial_pose.position.x": 0.4,
+        "initial_pose.position.y": 0.4,
+        "initial_pose.position.z": 0.2,
+    },
+)
+
+delete_both_val = NotOrderedCallsValidator(
+    subtasks=[delete_entity_subtask1, delete_entity_subtask2]
+)
+spawn_both_val = NotOrderedCallsValidator(
+    subtasks=[spawn_entity_subtask1, spawn_entity_subtask2]
+)
 ######### VALIDATORS #########################################################################################
 topics_ord_val = OrderedCallsValidator(subtasks=[get_topics_subtask])
 
@@ -187,12 +236,12 @@ depth_image_ord_val = OrderedCallsValidator(subtasks=[depth_image5_subtask])
 color_camera_info_ord_val = OrderedCallsValidator(subtasks=[color_camera_info5_subtask])
 depth_camera_info_ord_val = OrderedCallsValidator(subtasks=[depth_camera_info5_subtask])
 
-color_image_with_info_ord_val = NotOrderedCallsValidator(
-    subtasks=[color_image5_subtask, color_camera_info5_subtask]
-)
-depth_image_with_info_ord_val = NotOrderedCallsValidator(
-    subtasks=[depth_image5_subtask, color_camera_info5_subtask]
-)
+# color_image_with_info_ord_val = NotOrderedCallsValidator(
+#     subtasks=[color_image5_subtask, color_camera_info5_subtask]
+# )
+# depth_image_with_info_ord_val = NotOrderedCallsValidator(
+#     subtasks=[depth_image5_subtask, color_camera_info5_subtask]
+# )
 
 all_camera_images_notord_val = NotOrderedCallsValidator(
     subtasks=[
@@ -200,42 +249,25 @@ all_camera_images_notord_val = NotOrderedCallsValidator(
         depth_image5_subtask,
     ]
 )
-all_camera_info_notord_val = NotOrderedCallsValidator(
-    subtasks=[
-        color_camera_info5_subtask,
-        depth_camera_info5_subtask,
-    ]
-)
-all_camera_images_with_info_notord_val = NotOrderedCallsValidator(
-    subtasks=[
-        color_image5_subtask,
-        depth_image5_subtask,
-        color_camera_info5_subtask,
-        depth_camera_info5_subtask,
-    ]
-)
 
-joint_states_ord_val = OrderedCallsValidator(subtasks=[joint_states_subtask])
-diagnostics_ord_val = OrderedCallsValidator(subtasks=[diagnostics_subtask])
 
 get_pointcloud_ord_val = OrderedCallsValidator(subtasks=[receive_pointcloud_subtask])
 get_robot_desc_ord_val = OrderedCallsValidator(subtasks=[receive_robot_desc_subtask])
 
-robot_health_val = NotOrderedCallsValidator(
-    subtasks=[diagnostics_subtask, joint_states_subtask, rosout_subtask]
-)
 
-odometry_comparison_val = NotOrderedCallsValidator(
-    subtasks=[odom_subtask, filtered_odom_subtask]
+services_ord_val = OrderedCallsValidator(subtasks=[get_services_subtask])
+list_parameters_val = OrderedCallsValidator(subtasks=[list_parameters_subtask])
+get_parameters_val = OrderedCallsValidator(subtasks=[get_parameters_subtask])
+check_spawnable_entities_val = OrderedCallsValidator(
+    subtasks=[check_spawnable_entities_subtask]
 )
-sensor_data_val = NotOrderedCallsValidator(
+spawn_entity_val = OrderedCallsValidator(subtasks=[spawn_entity_subtask])
+
+vision_pipeline_config_val = NotOrderedCallsValidator(
     subtasks=[
-        scan_subtask,
-        receive_pointcloud_subtask,
-        color_image5_subtask,
-        depth_image5_subtask,
-        color_camera_info5_subtask,
-        depth_camera_info5_subtask,
+        grounded_sam_config_subtask,
+        grounding_dino_config_subtask,
+        o3de_fps_config_subtask,
     ]
 )
 
@@ -285,12 +317,52 @@ def get_basic_tasks(
                         GetRobotDescriptionTask(
                             validators=[get_robot_desc_ord_val], task_args=task_args
                         ),
-                        CheckRobotHealthTask(
-                            validators=[robot_health_val],
+                        GetROS2ServicesTask(
+                            validators=[services_ord_val],
                             task_args=task_args,
                         ),
-                        AssessSensorDataQualityTask(
-                            validators=[sensor_data_val],
+                        ListRobotParametersTask(
+                            validators=[list_parameters_val],
+                            task_args=task_args,
+                        ),
+                        GetSpecificParameterTask(
+                            parameter="publish_frequency",
+                            validators=[get_parameters_val],
+                            task_args=task_args,
+                        ),
+                        CheckSpawnableEntitiesTask(
+                            validators=[check_spawnable_entities_val],
+                            task_args=task_args,
+                        ),
+                        SpawnEntityTask(
+                            entity="tomato",
+                            validators=[spawn_entity_val],
+                            task_args=task_args,
+                        ),
+                        SetRobotParameterTask(
+                            value=30.0, validators=[set_param_val], task_args=task_args
+                        ),
+                        SetRobotParameterTask(
+                            value=25.0, validators=[set_param_val], task_args=task_args
+                        ),
+                        ConfigureVisionPipelineTask(
+                            sam_confidence_threshold=0.8,
+                            dino_confidence_threshold=0.5,
+                            fps=30,
+                            validators=[vision_pipeline_config_val],
+                            task_args=task_args,
+                        ),
+                        ConfigureVisionPipelineTask(
+                            sam_confidence_threshold=0.6,
+                            dino_confidence_threshold=0.6,
+                            fps=10,
+                            validators=[vision_pipeline_config_val],
+                            task_args=task_args,
+                        ),
+                        RespawnEntitiesTask(
+                            names=["box1", "box2"],
+                            coords=[(0.2, 0.2, 0.2), (0.4, 0.4, 0.2)],
+                            validators=[delete_both_val, spawn_both_val],
                             task_args=task_args,
                         ),
                     ]
