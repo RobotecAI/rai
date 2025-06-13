@@ -20,8 +20,8 @@ from rai_bench import (
 
 if __name__ == "__main__":
     # Define models you want to benchmark
-    model_names = ["qwen2.5:7b"]
-    vendors = ["ollama"]
+    model_names = ["qwen2.5:7b", "gpt-4o-mini"]
+    vendors = ["ollama", "openai"]
 
     # Define benchmarks that will be used
     man_conf = ManipulationO3DEBenchmarkConfig(
@@ -32,13 +32,13 @@ if __name__ == "__main__":
         repeats=1,  # how many times to repeat
     )
     tool_conf = ToolCallingAgentBenchmarkConfig(
-        extra_tool_calls=[0],  # how many extra tool calls allowed to still pass
+        extra_tool_calls=[3],  # how many extra tool calls allowed to still pass
         task_types=[  # what types of tasks to include
-            "basic",
-            "spatial_reasoning",
+            # "basic",
+            # "spatial_reasoning",
             # "navigation",
             "custom_interfaces",
-            "manipulation",
+            # "manipulation",
         ],
         N_shots=[2],  # examples in system prompt
         prompt_detail=[  # how descriptive should task prompt be
