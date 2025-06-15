@@ -14,7 +14,7 @@
 
 import logging
 from abc import ABC
-from typing import Any, List
+from typing import Any, List, Tuple
 
 from langchain_core.tools import BaseTool
 from rai.types import (
@@ -108,14 +108,6 @@ class CustomInterfaceTask(Task, ABC):
         else:
             return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_5_SHOT
 
-
-class CustomInterfacesTopicTask(CustomInterfaceTask, ABC):
-    def __init__(
-        self, topic: str, validators: List[Validator], task_args: TaskArgs
-    ) -> None:
-        super().__init__(validators=validators, task_args=task_args)
-        self.topic = topic
-
     @property
     def available_tools(self) -> List[BaseTool]:
         return [
@@ -128,24 +120,6 @@ class CustomInterfacesTopicTask(CustomInterfaceTask, ABC):
                 available_message_types=list(TOPICS_AND_TYPES.values()),
                 available_topic_models=TOPIC_MODELS,
             ),
-        ]
-
-
-class CustomInterfacesServiceTask(CustomInterfaceTask, ABC):
-    def __init__(
-        self,
-        service: str,
-        service_args: dict[str, Any],
-        validators: List[Validator],
-        task_args: TaskArgs,
-    ) -> None:
-        super().__init__(validators=validators, task_args=task_args)
-        self.service = service
-        self.service_args = service_args
-
-    @property
-    def available_tools(self) -> List[BaseTool]:
-        return [
             MockGetROS2ServicesNamesAndTypesTool(
                 mock_service_names_and_types=SERVICE_STRINGS
             ),
@@ -158,46 +132,73 @@ class CustomInterfacesServiceTask(CustomInterfaceTask, ABC):
         ]
 
 
-class PublishROS2HRIMessageTextTask(CustomInterfacesTopicTask):
-    complexity = "easy"
-
+class CustomInterfacesServiceTask(CustomInterfaceTask, ABC):
     def __init__(
         self,
-        topic: str,
         validators: List[Validator],
         task_args: TaskArgs,
-        text: str = "Hello!",
+        logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(topic, validators=validators, task_args=task_args)
-        self.text = text
-
-    def get_base_prompt(self) -> str:
-        return f"Publish message to topic '{self.topic}' with text: '{self.text}'."
+        super().__init__(validators=validators, task_args=task_args, logger=logger)
+        self.moderate_sufix = " using service interface."
+        self.descriptive_sufix = (
+            ". Examine the message interface, and publish "
+            "detection data with appropriate arguments."
+        )
 
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
+        elif self.prompt_detail == "moderate":
+            return self.get_base_prompt() + self.moderate_sufix
         else:
-            return (
-                f"{self.get_base_prompt()} "
-                "You can discover available topics, examine the message interface "
-                f"structure, and publish an HRI message containing the text '{self.text}'."
-            )
+            return self.get_base_prompt() + self.descriptive_sufix
 
 
-class PublishROS2AudioMessageTask(CustomInterfacesTopicTask):
+class PublishROS2HRIMessageTextTask(CustomInterfaceTask):
     complexity = "easy"
+    topic = "/to_human"
 
     def __init__(
         self,
-        topic: str,
+        text: str,
+        validators: List[Validator],
+        task_args: TaskArgs,
+        logger: logging.Logger | None = None,
+    ) -> None:
+        super().__init__(validators=validators, task_args=task_args, logger=logger)
+        self.text = text
+
+    def get_base_prompt(self) -> str:
+        return f"Publish message to topic '{self.topic}' with text '{self.text}'"
+
+    def get_prompt(self) -> str:
+        if self.prompt_detail == "brief":
+            return f"{self.get_base_prompt()} using HRI message interface with text='{self.text}'"
+        elif self.prompt_detail == "moderate":
+            return f"{self.get_base_prompt()} using HRI message interface. Set the text field to '{self.text}'"
+        else:
+            return (
+                f"{self.get_base_prompt()}. "
+                "Examine the message interface "
+                f"structure, and publish an HRI message with appropriate arguments."
+            )
+
+
+class PublishROS2AudioMessageTask(CustomInterfaceTask):
+    complexity = "easy"
+    topic = "/audio_message"
+
+    def __init__(
+        self,
         validators: List[Validator],
         task_args: TaskArgs,
         audio: List[int] = [123, 456, 789],
         sample_rate: int = 44100,
         channels: int = 2,
+        logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(topic, validators=validators, task_args=task_args)
+        super().__init__(validators=validators, task_args=task_args, logger=logger)
         self.expected_audio = audio
         self.expected_sample_rate = sample_rate
         self.expected_channels = channels
@@ -205,8 +206,8 @@ class PublishROS2AudioMessageTask(CustomInterfacesTopicTask):
     def get_base_prompt(self) -> str:
         return (
             f"Publish audio message to topic '{self.topic}' with samples "
-            f"{self.expected_audio}, sample rate {self.expected_sample_rate}, "
-            f"channels {self.expected_channels}."
+            f"{self.expected_audio}, sample rate {self.expected_sample_rate} and "
+            f"channels {self.expected_channels}"
         )
 
     def get_prompt(self) -> str:
@@ -214,70 +215,67 @@ class PublishROS2AudioMessageTask(CustomInterfacesTopicTask):
             return self.get_base_prompt()
         else:
             return (
-                f"{self.get_base_prompt()} "
-                "You can explore available audio topics, examine the message "
-                f"interface, and publish audio data with samples={self.expected_audio}, "
-                f"sample_rate={self.expected_sample_rate}, and channels={self.expected_channels}."
+                f"{self.get_base_prompt()}. "
+                f"Examine the message interface, and publish audio data with appropriate arguments."
             )
 
 
-class PublishROS2DetectionArrayTask(CustomInterfacesTopicTask):
-    complexity = "easy"
+class PublishROS2DetectionArrayTask(CustomInterfaceTask):
+    complexity = "medium"
+    topic = "/detection_array"
 
     def __init__(
         self,
-        topic: str,
         validators: List[Validator],
         task_args: TaskArgs,
-        detection_classes: List[str] = ["person", "car"],
-        bbox_center_x: float = 320.0,
-        bbox_center_y: float = 320.0,
-        bbox_size_x: float = 50.0,
-        bbox_size_y: float = 50.0,
+        detection_classes: List[str],
+        bbox_centers: List[Tuple[float, float]],
+        bbox_sizes: List[Tuple[float, float]],
+        logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(topic, validators=validators, task_args=task_args)
+        super().__init__(validators=validators, task_args=task_args, logger=logger)
+        if not (len(detection_classes) == len(bbox_centers) == len(bbox_sizes)):
+            raise ValueError("detection_classes, bbox_centers, and bbox_sizes must have the same length")
+        
         self.expected_detection_classes = detection_classes
-        self.expected_detections = [
-            Detection2D(
-                bbox=BoundingBox2D(
-                    center=Pose2D(x=bbox_center_x, y=bbox_center_y, theta=0.0),
-                    size_x=bbox_size_x,
-                    size_y=bbox_size_y,
-                )
-            )
-        ]
+        self.expected_bbox_centers = bbox_centers
+        self.expected_bbox_sizes = bbox_sizes
 
+  
     def get_base_prompt(self) -> str:
-        bbox_center = self.expected_detections[0].bbox.center
-        bbox_size = self.expected_detections[0].bbox
+        detection_summaries:List[str] = []
+        for _, (cls, center, size) in enumerate(zip(
+            self.expected_detection_classes, 
+            self.expected_bbox_centers, 
+            self.expected_bbox_sizes
+        )):
+            detection_summaries.append(
+                f"{cls} with bbox at center({center[0]}, {center[1]}) and size {size[0]}x{size[1]}"
+            )
+        
         return (
-            f"Publish detection array to topic '{self.topic}' with classes "
-            f"{self.expected_detection_classes} and bbox center "
-            f"({bbox_center.x}, {bbox_center.y}) size {bbox_size.size_x}x{bbox_size.size_y}."
+            f"Publish detection array to topic '{self.topic}' with {len(self.expected_detection_classes)} detections: "
+            f"{'; '.join(detection_summaries)}"
         )
-
+    
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
+        elif self.prompt_detail == "moderate":
+            return f"{self.get_base_prompt()} using service interface."
         else:
-            bbox_center = self.expected_detections[0].bbox.center
-            bbox_size = self.expected_detections[0].bbox
             return (
-                f"{self.get_base_prompt()} "
-                "You can explore available detection topics, examine the message "
-                f"interface, and publish detection data with classes={self.expected_detection_classes} "
-                f"and bounding box at center ({bbox_center.x}, {bbox_center.y}) "
-                f"with size_x={bbox_size.size_x}, size_y={bbox_size.size_y}."
+                f"{self.get_base_prompt()}. Examine the message interface"
+                "and publish detection data with appropriate arguments."
             )
 
 
 class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
-    complexity = "easy"
+    complexity = "medium"
+    service = "/manipulator_move_to"
 
     def __init__(
         self,
-        service: str,
-        service_args: dict[str, Any],
         validators: List[Validator],
         task_args: TaskArgs,
         target_x: float = 1.0,
@@ -285,15 +283,14 @@ class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
         target_z: float = 3.0,
         initial_gripper_state: bool = True,
         final_gripper_state: bool = False,
-        frame_id: str = "base_link",
+        logger: logging.Logger | None = None,
     ) -> None:
         super().__init__(
-            service, service_args, validators=validators, task_args=task_args
+            validators=validators, task_args=task_args, logger=logger
         )
         self.expected_initial_gripper_state = initial_gripper_state
         self.expected_final_gripper_state = final_gripper_state
         self.expected_target_pose = PoseStamped(
-            header=Header(frame_id=frame_id),
             pose=Pose(
                 position=Point(x=target_x, y=target_y, z=target_z),
                 orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
@@ -304,74 +301,78 @@ class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
         pos = self.expected_target_pose.pose.position
         return (
             f"Call service '{self.service}' to move manipulator to pose "
-            f"({pos.x}, {pos.y}, {pos.z}) with initial_gripper={self.expected_initial_gripper_state}, "
-            f"final_gripper={self.expected_final_gripper_state}."
+            f"({pos.x}, {pos.y}, {pos.z}) with initial gripper state {self.expected_initial_gripper_state} "
+            f"and final gripper state {self.expected_final_gripper_state}"
         )
-
-    def get_prompt(self) -> str:
-        if self.prompt_detail == "brief":
-            return self.get_base_prompt()
-        else:
-            pos = self.expected_target_pose.pose.position
-            return (
-                f"{self.get_base_prompt()} "
-                "You can discover available manipulation services, examine the service "
-                f"interface, and call the service with target_pose position (x={pos.x}, "
-                f"y={pos.y}, z={pos.z}), initial_gripper_state={self.expected_initial_gripper_state}, "
-                f"and final_gripper_state={self.expected_final_gripper_state}."
-            )
 
 
 class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
-    complexity = "easy"
+    complexity = "medium"
+    service = "/grounded_sam_segment"
 
     def __init__(
         self,
-        service: str,
-        service_args: dict[str, Any],
         validators: List[Validator],
         task_args: TaskArgs,
-        frame_id: str = "camera_frame",
+        detection_classes: List[str],
+        bbox_centers: List[Tuple[float, float]],
+        bbox_sizes: List[Tuple[float, float]],
+        scores: List[float],
+        positions_3d: List[Tuple[float, float, float]],
+        image_width: int,
+        image_height: int,
+        image_encoding: str,
+        logger: logging.Logger | None = None,
     ) -> None:
         super().__init__(
-            service, service_args, validators=validators, task_args=task_args
+            validators=validators, task_args=task_args, logger=logger
         )
-        self.expected_detections = RAIDetectionArray(
-            header=Header(stamp=Time(sec=0, nanosec=0), frame_id=frame_id),
-            detections=[],
-        )
+        
+        # Validate list lengths
+        if not (len(detection_classes) == len(bbox_centers) == len(bbox_sizes) == 
+                len(scores) == len(positions_3d)):
+            raise ValueError("All detection parameter lists must have the same length")
+        
+        self.detection_classes = detection_classes
+        self.bbox_centers = bbox_centers
+        self.bbox_sizes = bbox_sizes
+        self.scores = scores
+        self.positions_3d = positions_3d
+        self.image_width = image_width
+        self.image_height = image_height
+        self.image_encoding = image_encoding
+        
 
     def get_base_prompt(self) -> str:
-        return f"Call service '{self.service}' for image segmentation."
-
-    def get_prompt(self) -> str:
-        if self.prompt_detail == "brief":
-            return self.get_base_prompt()
-        else:
-            frame_id = self.expected_detections.header.frame_id
-            return (
-                f"{self.get_base_prompt()} "
-                "You can discover available AI vision services, examine the service "
-                f"interface, and call the segmentation service with detections array "
-                f"(empty detections, header frame_id='{frame_id}') and source image."
+        detection_summary: List[str] = []
+        for cls, center, size, score, pos3d in zip(
+            self.detection_classes, self.bbox_centers, self.bbox_sizes, self.scores, self.positions_3d
+        ):
+            detection_summary.append(
+                f"{cls} with score {score} at 3D position ({pos3d[0]}, {pos3d[1]}, {pos3d[2]}) "
+                f"bbox ({center[0]}, {center[1]}) size {size[0]}x{size[1]}"
             )
-
+        
+        return (
+            f"Call service '{self.service}' for image segmentation with {len(self.detection_classes)} detections: "
+            f"{', '.join(detection_summary)} on {self.image_width}x{self.image_height} {self.image_encoding} image"
+        )
 
 class CallGroundingDinoClassify(CustomInterfacesServiceTask):
     complexity = "easy"
+    service = "/grounding_dino_classify"
 
     def __init__(
         self,
-        service: str,
-        service_args: dict[str, Any],
         validators: List[Validator],
         task_args: TaskArgs,
         classes: str = "bottle, book, chair",
         box_threshold: float = 0.4,
         text_threshold: float = 0.25,
+        logger: logging.Logger | None = None,
     ) -> None:
         super().__init__(
-            service, service_args, validators=validators, task_args=task_args
+            validators=validators, task_args=task_args, logger=logger
         )
         self.expected_classes = classes
         self.expected_box_threshold = box_threshold
@@ -380,106 +381,62 @@ class CallGroundingDinoClassify(CustomInterfacesServiceTask):
     def get_base_prompt(self) -> str:
         return (
             f"Call service '{self.service}' for object classification with classes "
-            f"'{self.expected_classes}', box_threshold {self.expected_box_threshold}, "
-            f"text_threshold {self.expected_text_threshold}."
+            f"'{self.expected_classes}', box_threshold {self.expected_box_threshold} and "
+            f"text_threshold {self.expected_text_threshold}"
         )
-
-    def get_prompt(self) -> str:
-        if self.prompt_detail == "brief":
-            return self.get_base_prompt()
-        else:
-            return (
-                f"{self.get_base_prompt()} "
-                "You can discover available AI detection services, examine the service "
-                f"interface, and call the classification service with classes='{self.expected_classes}', "
-                f"box_threshold={self.expected_box_threshold}, and text_threshold={self.expected_text_threshold}."
-            )
 
 
 class CallGetLogDigestTask(CustomInterfacesServiceTask):
     complexity = "easy"
+    service = "/get_log_digest"
 
     def __init__(
         self,
-        service: str,
-        service_args: dict[str, Any],
         validators: List[Validator],
         task_args: TaskArgs,
+        logger: logging.Logger | None = None,
     ) -> None:
         super().__init__(
-            service, service_args, validators=validators, task_args=task_args
+            validators=validators, task_args=task_args, logger=logger
         )
 
     def get_base_prompt(self) -> str:
         return f"Call service '{self.service}' to get log digest."
 
-    def get_prompt(self) -> str:
-        if self.prompt_detail == "brief":
-            return self.get_base_prompt()
-        else:
-            return (
-                f"{self.get_base_prompt()} "
-                "You can discover available logging services, examine the service "
-                "interface, and call the service with an empty request to retrieve "
-                "system log information."
-            )
-
 
 class CallVectorStoreRetrievalTask(CustomInterfacesServiceTask):
     complexity = "easy"
+    service = "/rai_whoami_documentation_service"
 
     def __init__(
         self,
-        service: str,
-        service_args: dict[str, Any],
         validators: List[Validator],
         task_args: TaskArgs,
         query: str = "What is the purpose of this robot?",
+        logger: logging.Logger | None = None,
     ) -> None:
         super().__init__(
-            service, service_args, validators=validators, task_args=task_args
+            validators=validators, task_args=task_args, logger=logger
         )
         self.expected_query = query
 
     def get_base_prompt(self) -> str:
         return f"Call service '{self.service}' with query '{self.expected_query}'"
 
-    def get_prompt(self) -> str:
-        if self.prompt_detail == "brief":
-            return self.get_base_prompt()
-        else:
-            return (
-                f"{self.get_base_prompt()} "
-                "You can discover available knowledge services, examine the service "
-                f"interface, and call the retrieval service with query='{self.expected_query}' "
-                "to search the robot's knowledge base."
-            )
-
 
 class CallWhatISeeTask(CustomInterfacesServiceTask):
     complexity = "easy"
+    service = "/rai_whatisee_get"
 
     def __init__(
         self,
-        service: str,
-        service_args: dict[str, Any],
         validators: List[Validator],
         task_args: TaskArgs,
+        logger: logging.Logger | None = None,
     ) -> None:
         super().__init__(
-            service, service_args, validators=validators, task_args=task_args
+            validators=validators, task_args=task_args, logger=logger
         )
 
     def get_base_prompt(self) -> str:
-        return f"Call service '{self.service}' to get visual observations."
-
-    def get_prompt(self) -> str:
-        if self.prompt_detail == "brief":
-            return self.get_base_prompt()
-        else:
-            return (
-                f"{self.get_base_prompt()} "
-                "You can discover available vision services, examine the service "
-                "interface, and call the service with an empty request to get "
-                "visual observations and camera pose information."
-            )
+        return f"Call service '{self.service}' to get visual observations"
