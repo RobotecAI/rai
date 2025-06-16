@@ -14,22 +14,14 @@
 
 import logging
 from abc import ABC
-from typing import Any, List, Tuple
+from typing import List, Tuple
 
 from langchain_core.tools import BaseTool
 from rai.types import (
-    BoundingBox2D,
-    Detection2D,
-    Header,
     Point,
     Pose,
-    Pose2D,
     PoseStamped,
     Quaternion,
-    Time,
-)
-from rai.types.rai_interfaces import (
-    RAIDetectionArray,
 )
 
 from rai_bench.tool_calling_agent.interfaces import Task, TaskArgs, Validator
@@ -133,18 +125,15 @@ class CustomInterfaceTask(Task, ABC):
 
 
 class CustomInterfacesServiceTask(CustomInterfaceTask, ABC):
-    def __init__(
-        self,
-        validators: List[Validator],
-        task_args: TaskArgs,
-        logger: logging.Logger | None = None,
-    ) -> None:
-        super().__init__(validators=validators, task_args=task_args, logger=logger)
-        self.moderate_sufix = " using service interface."
-        self.descriptive_sufix = (
-            ". Examine the message interface, and publish "
-            "detection data with appropriate arguments."
-        )
+    """
+    Base class for tasks that involve calling SINGLE service with custom interface.
+    """
+
+    moderate_sufix = " using service interface."
+    descriptive_sufix = (
+        ". Examine the required service interface, and call  "
+        "it with appropriate arguments."
+    )
 
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
@@ -153,6 +142,17 @@ class CustomInterfacesServiceTask(CustomInterfaceTask, ABC):
             return self.get_base_prompt() + self.moderate_sufix
         else:
             return self.get_base_prompt() + self.descriptive_sufix
+
+
+class CustomInterfacesServicesTask(CustomInterfacesServiceTask, ABC):
+    """
+    Base class for tasks that involve calling MULITPLE services with custom interface.
+    """
+
+    descriptive_sufix = (
+        ". Examine the required services interfaces, and call  "
+        "them with appropriate arguments."
+    )
 
 
 class PublishROS2HRIMessageTextTask(CustomInterfaceTask):
@@ -235,29 +235,32 @@ class PublishROS2DetectionArrayTask(CustomInterfaceTask):
     ) -> None:
         super().__init__(validators=validators, task_args=task_args, logger=logger)
         if not (len(detection_classes) == len(bbox_centers) == len(bbox_sizes)):
-            raise ValueError("detection_classes, bbox_centers, and bbox_sizes must have the same length")
-        
+            raise ValueError(
+                "detection_classes, bbox_centers, and bbox_sizes must have the same length"
+            )
+
         self.expected_detection_classes = detection_classes
         self.expected_bbox_centers = bbox_centers
         self.expected_bbox_sizes = bbox_sizes
 
-  
     def get_base_prompt(self) -> str:
-        detection_summaries:List[str] = []
-        for _, (cls, center, size) in enumerate(zip(
-            self.expected_detection_classes, 
-            self.expected_bbox_centers, 
-            self.expected_bbox_sizes
-        )):
+        detection_summaries: List[str] = []
+        for _, (cls, center, size) in enumerate(
+            zip(
+                self.expected_detection_classes,
+                self.expected_bbox_centers,
+                self.expected_bbox_sizes,
+            )
+        ):
             detection_summaries.append(
                 f"{cls} with bbox at center({center[0]}, {center[1]}) and size {size[0]}x{size[1]}"
             )
-        
+
         return (
             f"Publish detection array to topic '{self.topic}' with {len(self.expected_detection_classes)} detections: "
             f"{'; '.join(detection_summaries)}"
         )
-    
+
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
@@ -285,9 +288,7 @@ class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
         final_gripper_state: bool = False,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(
-            validators=validators, task_args=task_args, logger=logger
-        )
+        super().__init__(validators=validators, task_args=task_args, logger=logger)
         self.expected_initial_gripper_state = initial_gripper_state
         self.expected_final_gripper_state = final_gripper_state
         self.expected_target_pose = PoseStamped(
@@ -324,15 +325,18 @@ class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
         image_encoding: str,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(
-            validators=validators, task_args=task_args, logger=logger
-        )
-        
+        super().__init__(validators=validators, task_args=task_args, logger=logger)
+
         # Validate list lengths
-        if not (len(detection_classes) == len(bbox_centers) == len(bbox_sizes) == 
-                len(scores) == len(positions_3d)):
+        if not (
+            len(detection_classes)
+            == len(bbox_centers)
+            == len(bbox_sizes)
+            == len(scores)
+            == len(positions_3d)
+        ):
             raise ValueError("All detection parameter lists must have the same length")
-        
+
         self.detection_classes = detection_classes
         self.bbox_centers = bbox_centers
         self.bbox_sizes = bbox_sizes
@@ -341,22 +345,26 @@ class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
         self.image_width = image_width
         self.image_height = image_height
         self.image_encoding = image_encoding
-        
 
     def get_base_prompt(self) -> str:
         detection_summary: List[str] = []
         for cls, center, size, score, pos3d in zip(
-            self.detection_classes, self.bbox_centers, self.bbox_sizes, self.scores, self.positions_3d
+            self.detection_classes,
+            self.bbox_centers,
+            self.bbox_sizes,
+            self.scores,
+            self.positions_3d,
         ):
             detection_summary.append(
                 f"{cls} with score {score} at 3D position ({pos3d[0]}, {pos3d[1]}, {pos3d[2]}) "
                 f"bbox ({center[0]}, {center[1]}) size {size[0]}x{size[1]}"
             )
-        
+
         return (
             f"Call service '{self.service}' for image segmentation with {len(self.detection_classes)} detections: "
             f"{', '.join(detection_summary)} on {self.image_width}x{self.image_height} {self.image_encoding} image"
         )
+
 
 class CallGroundingDinoClassify(CustomInterfacesServiceTask):
     complexity = "easy"
@@ -371,9 +379,7 @@ class CallGroundingDinoClassify(CustomInterfacesServiceTask):
         text_threshold: float = 0.25,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(
-            validators=validators, task_args=task_args, logger=logger
-        )
+        super().__init__(validators=validators, task_args=task_args, logger=logger)
         self.expected_classes = classes
         self.expected_box_threshold = box_threshold
         self.expected_text_threshold = text_threshold
@@ -396,9 +402,7 @@ class CallGetLogDigestTask(CustomInterfacesServiceTask):
         task_args: TaskArgs,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(
-            validators=validators, task_args=task_args, logger=logger
-        )
+        super().__init__(validators=validators, task_args=task_args, logger=logger)
 
     def get_base_prompt(self) -> str:
         return f"Call service '{self.service}' to get log digest."
@@ -415,9 +419,7 @@ class CallVectorStoreRetrievalTask(CustomInterfacesServiceTask):
         query: str = "What is the purpose of this robot?",
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(
-            validators=validators, task_args=task_args, logger=logger
-        )
+        super().__init__(validators=validators, task_args=task_args, logger=logger)
         self.expected_query = query
 
     def get_base_prompt(self) -> str:
@@ -434,9 +436,190 @@ class CallWhatISeeTask(CustomInterfacesServiceTask):
         task_args: TaskArgs,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(
-            validators=validators, task_args=task_args, logger=logger
-        )
+        super().__init__(validators=validators, task_args=task_args, logger=logger)
 
     def get_base_prompt(self) -> str:
         return f"Call service '{self.service}' to get visual observations"
+
+
+class CompleteObjectInteractionTask(CustomInterfacesServicesTask):
+    complexity = "hard"
+
+    @property
+    def optional_tool_calls_number(self) -> int:
+        # list services and get interface for all required services
+        return 5
+
+    def __init__(
+        self,
+        validators: List[Validator],
+        task_args: TaskArgs,
+        # Grounding DINO parameters
+        target_classes: str = "bottle",
+        box_threshold: float = 0.35,
+        text_threshold: float = 0.2,
+        # Grounded SAM parameters
+        detection_classes: List[str] = ["bottle"],
+        bbox_centers: List[Tuple[float, float]] = [(320.0, 240.0)],
+        bbox_sizes: List[Tuple[float, float]] = [(80.0, 120.0)],
+        scores: List[float] = [0.87],
+        positions_3d: List[Tuple[float, float, float]] = [(1.2, 0.0, 0.5)],
+        image_width: int = 640,
+        image_height: int = 480,
+        image_encoding: str = "rgb8",
+        # Manipulator parameters
+        target_x: float = 1.2,
+        target_y: float = 0.0,
+        target_z: float = 0.5,
+        initial_gripper: bool = True,
+        final_gripper: bool = False,
+        # HRI parameters
+        interaction_message: str = "Initiating object interaction sequence with detected bottle",
+        logger: logging.Logger | None = None,
+    ) -> None:
+        super().__init__(validators=validators, task_args=task_args, logger=logger)
+        self.target_classes = target_classes
+        self.box_threshold = box_threshold
+        self.text_threshold = text_threshold
+        self.detection_classes = detection_classes
+        self.bbox_centers = bbox_centers
+        self.bbox_sizes = bbox_sizes
+        self.scores = scores
+        self.positions_3d = positions_3d
+        self.image_width = image_width
+        self.image_height = image_height
+        self.image_encoding = image_encoding
+        self.target_x = target_x
+        self.target_y = target_y
+        self.target_z = target_z
+        self.initial_gripper = initial_gripper
+        self.final_gripper = final_gripper
+        self.interaction_message = interaction_message
+
+    def get_base_prompt(self) -> str:
+        return (
+            f"Perform complete object interaction workflow with predetermined parameters: "
+            f"1) Call service '/grounding_dino_classify' to classify '{self.target_classes}' with box_threshold={self.box_threshold}, text_threshold={self.text_threshold}, "
+            f"2) Call service '/grounded_sam_segment' to segment {self.detection_classes[0]} at bbox({self.bbox_centers[0][0]}, {self.bbox_centers[0][1]}) "
+            f"on {self.image_width}x{self.image_height} {self.image_encoding} image, "
+            f"3) Call service '/manipulator_move_to' to move to position ({self.target_x}, {self.target_y}, {self.target_z}) "
+            f"with gripper {self.initial_gripper}→{self.final_gripper}, "
+            f"4) Publish to topic '/to_human' HRI message: '{self.interaction_message}'"
+        )
+
+
+class MultiModalSceneDocumentationTask(CustomInterfacesServiceTask):
+    complexity = "hard"
+
+    def __init__(
+        self,
+        validators: List[Validator],
+        task_args: TaskArgs,
+        # Detection array parameters
+        scene_objects: List[str] = ["person", "laptop", "coffee_cup"],
+        bbox_centers: List[Tuple[float, float]] = [
+            (160.0, 200.0),
+            (400.0, 300.0),
+            (520.0, 180.0),
+        ],
+        bbox_sizes: List[Tuple[float, float]] = [
+            (80.0, 160.0),
+            (200.0, 120.0),
+            (60.0, 80.0),
+        ],
+        # Knowledge retrieval parameters
+        scene_analysis_query: str = "What safety protocols apply when humans and robots share workspace?",
+        # HRI reporting parameters
+        documentation_report: str = "Scene Documentation Complete: Recorded 3 objects with audio markers and safety analysis",
+        logger: logging.Logger | None = None,
+    ) -> None:
+        super().__init__(validators=validators, task_args=task_args, logger=logger)
+        self.scene_objects = scene_objects
+        self.bbox_centers = bbox_centers
+        self.bbox_sizes = bbox_sizes
+        self.scene_analysis_query = scene_analysis_query
+        self.documentation_report = documentation_report
+
+    @property
+    def optional_tool_calls_number(self) -> int:
+        # list services and get interface for all required services
+        return 5
+
+    def get_base_prompt(self) -> str:
+        object_summary = ", ".join(
+            [
+                f"{obj} at ({center[0]}, {center[1]}) and size {size[0]}x{size[1]}"
+                for obj, center, size in zip(
+                    self.scene_objects, self.bbox_centers, self.bbox_sizes
+                )
+            ]
+        )
+
+        return (
+            f"Perform comprehensive scene documentation using multiple services: "
+            f"1) Call service '/rai_whatisee_get' to get visual observations, "
+            f"2) Publish to topic '/detections' detection array with {len(self.scene_objects)} objects: {object_summary}, "
+            f"3) Call service '/rai_whoami_documentation_service' to query: '{self.scene_analysis_query}', "
+            f"4) Publish to topic '/to_human' final HRI report: '{self.documentation_report}'"
+        )
+
+
+class EmergencyResponseProtocolTask(CustomInterfacesServiceTask):
+    complexity = "hard"
+
+    def __init__(
+        self,
+        validators: List[Validator],
+        task_args: TaskArgs,
+        # detection parameters
+        classes: str = "person",
+        box_threshold: float = 0.9,
+        text_threshold: float = 0.8,
+        # segmentation parameters
+        detection_classes: List[str] = ["person"],
+        bbox_centers: List[Tuple[float, float]] = [(320.0, 240.0)],
+        bbox_sizes: List[Tuple[float, float]] = [(100.0, 180.0)],
+        scores: List[float] = [0.95],
+        positions_3d: List[Tuple[float, float, float]] = [(2.0, 0.0, 0.0)],
+        image_width: int = 1280,
+        image_height: int = 720,
+        image_encoding: str = "rgb8",
+        # audio parameters
+        audio_samples: List[int] = [880, 880, 880, 1760],
+        sample_rate: int = 8000,
+        channels: int = 1,
+        # communication parameters
+        message: str = "Person detected, alarm started.",
+        logger: logging.Logger | None = None,
+    ) -> None:
+        super().__init__(validators=validators, task_args=task_args, logger=logger)
+        self.classes = classes
+        self.box_threshold = box_threshold
+        self.text_threshold = text_threshold
+        self.detection_classes = detection_classes
+        self.bbox_centers = bbox_centers
+        self.bbox_sizes = bbox_sizes
+        self.scores = scores
+        self.positions_3d = positions_3d
+        self.image_width = image_width
+        self.image_height = image_height
+        self.image_encoding = image_encoding
+        self.audio_samples = audio_samples
+        self.sample_rate = sample_rate
+        self.channels = channels
+        self.message = message
+
+    @property
+    def optional_tool_calls_number(self) -> int:
+        # list services and get interface for all required services
+        return 5
+
+    def get_base_prompt(self) -> str:
+        return (
+            f"Execute emergency response protocol with predetermined parameters: "
+            f"1) Call service '/grounding_dino_classify' to detect emergency: '{self.classes}' with high thresholds box={self.box_threshold}, text={self.text_threshold}, "
+            f"2) Call service '/grounded_sam_segment' to segment person at ({self.bbox_centers[0][0]}, {self.bbox_centers[0][1]}) "
+            f"on {self.image_width}x{self.image_height} {self.image_encoding} image, "
+            f"3) Publish to topic '/audio_output' emergency alert: {self.audio_samples} at {self.sample_rate}Hz, "
+            f"4) Publish to topic '/to_human' emergency message: '{self.message}'"
+        )
