@@ -50,7 +50,6 @@ from rai_bench.tool_calling_agent.messages.topics import AudioMessage, HRIMessag
 
 # dict of interfaces where keys are interfaces types and values are output
 # of GetROS2MessageInterfaceTool which are same as ros2 interface show outputs
-# the dict contains custom as well as couple other common interfaces
 
 COMMON_INTERFACES: Dict[str, str] = {
     "std_srvs/srv/Empty": """# Empty service - no request or response
