@@ -790,7 +790,6 @@ def get_custom_interfaces_tasks(
                     examples_in_system_prompt=shots,
                 )
 
-                # Original Tasks
                 tasks.append(
                     PublishROS2HRIMessageTextTask(
                         validators=[get_interface_publish_ord_val],
@@ -808,7 +807,6 @@ def get_custom_interfaces_tasks(
                     )
                 )
 
-                # Detection Array Tasks - Version 1 & 2
                 tasks.append(
                     PublishROS2DetectionArrayTask(
                         validators=[get_interface_publish_detection_ord_val],
@@ -828,7 +826,6 @@ def get_custom_interfaces_tasks(
                     )
                 )
 
-                # Manipulator Tasks - Version 1 & 2
                 tasks.append(
                     CallROS2ManipulatorMoveToServiceTask(
                         validators=[get_interface_call_manipulator_ord_val],
@@ -852,7 +849,6 @@ def get_custom_interfaces_tasks(
                     )
                 )
 
-                # Grounded SAM Tasks - Version 1 & 2
                 tasks.append(
                     CallGroundedSAMSegmentTask(
                         validators=[get_interface_call_grounded_sam_ord_val],
@@ -911,7 +907,6 @@ def get_custom_interfaces_tasks(
                     )
                 )
 
-                # NEW TASKS - CompleteObjectInteractionTask (Version 1 & 2)
                 tasks.append(
                     CompleteObjectInteractionTask(
                         validators=[complete_object_interaction_bottle_validator],
@@ -959,7 +954,6 @@ def get_custom_interfaces_tasks(
                     )
                 )
 
-                # NEW TASKS - MultiModalSceneDocumentationTask (Version 1 & 2)
                 tasks.append(
                     MultiModalSceneDocumentationTask(
                         validators=[multimodal_scene_documentation_office_validator],
@@ -999,7 +993,6 @@ def get_custom_interfaces_tasks(
                     )
                 )
 
-                # NEW TASKS - EmergencyResponseProtocolTask (Version 1 & 2)
                 tasks.append(
                     EmergencyResponseProtocolTask(
                         validators=[emergency_response_protocol_validator],
