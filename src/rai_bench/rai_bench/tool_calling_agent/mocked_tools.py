@@ -16,7 +16,7 @@ import copy
 import importlib
 import uuid
 from threading import Lock
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import Any, Dict, List, Tuple, Type
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -399,7 +399,7 @@ class MockCallROS2ServiceTool(CallROS2ServiceTool):
         self,
         service_name: str,
         service_type: str,
-        service_args: Optional[Dict[str, Any]] = None,
+        service_args: Dict[str, Any] = {},
         timeout_sec: float = 1.0,
     ) -> str:
         if service_name not in self.available_services:
