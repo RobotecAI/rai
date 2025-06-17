@@ -77,9 +77,25 @@ Example of tool calls:
 PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_5_SHOT = (
     PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_2_SHOT
     + """
-- get_ros2_topics_names_and_types, args: {}
-- get_ros2_message_interface, args: {'msg_type': 'rai_interfaces/msg/HRIMessage'}
-- call_ros2_service, args: {'service': '/grounding_dino_classify', 'service_type': 'rai_interfaces/srv/RAIGroundingDino', 'request': {'classes': 'bottle, book', 'box_threshold': 0.4, 'text_threshold': 0.25}}"""
+- get_ros2_services_names_and_types, args: {}
+- get_ros2_message_interface, args: {'msg_type': 'moveit_msgs/srv/ExecuteKnownTrajectory'}
+- name: call_ros2_service, args: {
+        "service_name": "/execute_trajectory",
+        "service_type": "moveit_msgs/srv/ExecuteKnownTrajectory",
+        "service_args": {
+            "trajectory": {
+                "joint_trajectory": {
+                    "header": {"frame_id": "base_link"},
+                    "joint_names": ["joint1", "joint2"],
+                    "points": [{
+                        "positions": [0.0, 1.57],
+                        "time_from_start": {"sec": 2, "nanosec": 0}
+                    }]
+                }
+            },
+            "wait_for_execution": True
+        }
+    }"""
 )
 
 

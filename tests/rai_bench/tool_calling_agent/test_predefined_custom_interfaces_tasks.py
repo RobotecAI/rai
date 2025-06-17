@@ -112,11 +112,11 @@ from rai_bench.tool_calling_agent.tasks.custom_interfaces import (
     CallVectorStoreRetrievalTask,
     CallWhatISeeTask,
     CompleteObjectInteractionTask,
+    EmergencyResponseProtocolTask,
     MultiModalSceneDocumentationTask,
     PublishROS2AudioMessageTask,
     PublishROS2DetectionArrayTask,
     PublishROS2HRIMessageTextTask,
-    EmergencyResponseProtocolTask,
 )
 
 
