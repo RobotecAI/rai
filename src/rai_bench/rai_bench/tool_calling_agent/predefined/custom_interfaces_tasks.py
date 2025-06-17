@@ -210,7 +210,7 @@ get_audio_interface_subtask = CheckArgsToolCallSubTask(
     expected_args={"msg_type": AUDIO_MESSAGE_TYPE},
 )
 
-pub_detection_array_subtask = CheckTopicFieldsToolCallSubTask(
+pub_detection_array_subtask_person = CheckTopicFieldsToolCallSubTask(
     expected_tool_name="publish_ros2_message",
     expected_topic=DETECTIONS_TOPIC,
     expected_message_type=DETECTION_ARRAY_MESSAGE_TYPE,
@@ -222,7 +222,23 @@ pub_detection_array_subtask = CheckTopicFieldsToolCallSubTask(
         "detections.0.bbox.size_y": PERSON_BBOX_SIZE[1],
     },
 )
+pub_detection_array_subtask_car = CheckTopicFieldsToolCallSubTask(
+    expected_tool_name="publish_ros2_message",
+    expected_topic=DETECTIONS_TOPIC,
+    expected_message_type=DETECTION_ARRAY_MESSAGE_TYPE,
+    expected_fields={
+        "detections.0.results.0.hypothesis.class_id": CAR_CLASS,
+        "detections.0.bbox.center.x": CAR_BBOX_CENTER[0],
+        "detections.0.bbox.center.y": CAR_BBOX_CENTER[1],
+        "detections.0.bbox.size_x": CAR_BBOX_SIZE[0],
+        "detections.0.bbox.size_y": CAR_BBOX_SIZE[1],
+    },
+)
 
+get_detection_interface_subtask = CheckArgsToolCallSubTask(
+    expected_tool_name="get_ros2_message_interface",
+    expected_args={"msg_type": DETECTION_ARRAY_MESSAGE_TYPE},
+)
 get_detection_interface_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="get_ros2_message_interface",
     expected_args={"msg_type": DETECTION_ARRAY_MESSAGE_TYPE},
@@ -246,7 +262,7 @@ get_manipulator_interface_subtask = CheckArgsToolCallSubTask(
     expected_args={"msg_type": MANIPULATOR_SERVICE_TYPE},
 )
 
-call_grounded_sam_subtask = CheckServiceFieldsToolCallSubTask(
+call_grounded_sam_subtask_bottle = CheckServiceFieldsToolCallSubTask(
     expected_tool_name="call_ros2_service",
     expected_service=GROUNDED_SAM_SERVICE,
     expected_service_type=GROUNDED_SAM_SERVICE_TYPE,
@@ -265,10 +281,30 @@ call_grounded_sam_subtask = CheckServiceFieldsToolCallSubTask(
         "source_img.encoding": STANDARD_IMAGE_ENCODING,
     },
 )
+call_grounded_sam_subtask_book = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service=GROUNDED_SAM_SERVICE,
+    expected_service_type=GROUNDED_SAM_SERVICE_TYPE,
+    expected_fields={
+        "detections.detections.0.results.0.hypothesis.class_id": BOOK_CLASS,
+        "detections.detections.0.results.0.hypothesis.score": BOOK_SCORE,
+        "detections.detections.0.results.0.pose.pose.position.x": BOOK_POSITION_3D[0],
+        "detections.detections.0.results.0.pose.pose.position.y": BOOK_POSITION_3D[1],
+        "detections.detections.0.results.0.pose.pose.position.z": BOOK_POSITION_3D[2],
+        "detections.detections.0.bbox.center.x": BOOK_BBOX_CENTER[0],
+        "detections.detections.0.bbox.center.y": BOOK_BBOX_CENTER[1],
+        "detections.detections.0.bbox.size_x": BOOK_BBOX_SIZE[0],
+        "detections.detections.0.bbox.size_y": BOOK_BBOX_SIZE[1],
+        "source_img.width": HD_IMAGE_WIDTH,
+        "source_img.height": HD_IMAGE_HEIGHT,
+        "source_img.encoding": HD_IMAGE_ENCODING,
+    },
+)
+
 
 get_grounded_sam_interface_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="get_ros2_message_interface",
-    expected_args={"msg_type": "rai_interfaces/srv/GroundedSAMSegment"},
+    expected_args={"msg_type": GROUNDED_SAM_SERVICE_TYPE},
 )
 
 call_grounding_dino_subtask = CheckServiceFieldsToolCallSubTask(
@@ -291,7 +327,7 @@ call_log_digest_subtask = CheckServiceFieldsToolCallSubTask(
     expected_tool_name="call_ros2_service",
     expected_service=LOG_DIGEST_SERVICE,
     expected_service_type=STRING_LIST_SERVICE_TYPE,
-    expected_fields={},
+    expected_fields={"": {}},
 )
 
 get_log_digest_interface_subtask = CheckArgsToolCallSubTask(
@@ -317,7 +353,7 @@ call_what_i_see_subtask = CheckServiceFieldsToolCallSubTask(
     expected_tool_name="call_ros2_service",
     expected_service=WHAT_I_SEE_SERVICE,
     expected_service_type=WHAT_I_SEE_SERVICE_TYPE,
-    expected_fields={},
+    expected_fields={"": {}},
 )
 
 get_what_i_see_interface_subtask = CheckArgsToolCallSubTask(
@@ -634,10 +670,16 @@ get_interface_publish_audio_ord_val = OrderedCallsValidator(
     ]
 )
 
-get_interface_publish_detection_ord_val = OrderedCallsValidator(
+get_interface_publish_detection_ord_val_person = OrderedCallsValidator(
     subtasks=[
         get_detection_interface_subtask,
-        pub_detection_array_subtask,
+        pub_detection_array_subtask_person,
+    ]
+)
+get_interface_publish_detection_ord_val_car = OrderedCallsValidator(
+    subtasks=[
+        get_detection_interface_subtask,
+        pub_detection_array_subtask_car,
     ]
 )
 
@@ -648,10 +690,16 @@ get_interface_call_manipulator_ord_val = OrderedCallsValidator(
     ]
 )
 
-get_interface_call_grounded_sam_ord_val = OrderedCallsValidator(
+get_interface_call_grounded_sam_ord_val_book = OrderedCallsValidator(
     subtasks=[
         get_grounded_sam_interface_subtask,
-        call_grounded_sam_subtask,
+        call_grounded_sam_subtask_book,
+    ]
+)
+get_interface_call_grounded_sam_ord_val_bottle = OrderedCallsValidator(
+    subtasks=[
+        get_grounded_sam_interface_subtask,
+        call_grounded_sam_subtask_bottle,
     ]
 )
 
@@ -686,78 +734,54 @@ get_interface_call_what_i_see_ord_val = OrderedCallsValidator(
 # New Task Validators
 complete_object_interaction_bottle_validator = OrderedCallsValidator(
     subtasks=[
-        get_grounding_dino_interface_subtask,
         call_grounding_dino_bottle_subtask,
-        get_grounded_sam_interface_subtask,
         call_grounded_sam_bottle_subtask,
-        get_manipulator_interface_subtask,
         call_manipulator_bottle_subtask,
-        get_HRIMessage_interface_subtask,
         pub_hri_bottle_interaction_subtask,
     ]
 )
 
 complete_object_interaction_cup_validator = OrderedCallsValidator(
     subtasks=[
-        get_grounding_dino_interface_subtask,
         call_grounding_dino_cup_subtask,
-        get_grounded_sam_interface_subtask,
         call_grounded_sam_cup_subtask,
-        get_manipulator_interface_subtask,
         call_manipulator_cup_subtask,
-        get_HRIMessage_interface_subtask,
         pub_hri_cup_interaction_subtask,
     ]
 )
 
 multimodal_scene_documentation_office_validator = OrderedCallsValidator(
     subtasks=[
-        get_what_i_see_interface_subtask,
         call_what_i_see_subtask,
-        get_detection_interface_subtask,
         pub_detection_office_subtask,
-        get_vector_store_interface_subtask,
         call_vector_store_safety_subtask,
-        get_HRIMessage_interface_subtask,
         pub_hri_office_documentation_subtask,
     ]
 )
 
 multimodal_scene_documentation_kitchen_validator = OrderedCallsValidator(
     subtasks=[
-        get_what_i_see_interface_subtask,
         call_what_i_see_subtask,
-        get_detection_interface_subtask,
         pub_detection_kitchen_subtask,
-        get_vector_store_interface_subtask,
         call_vector_store_kitchen_subtask,
-        get_HRIMessage_interface_subtask,
         pub_hri_kitchen_documentation_subtask,
     ]
 )
 
 emergency_response_protocol_validator = OrderedCallsValidator(
     subtasks=[
-        get_grounding_dino_interface_subtask,
         call_grounding_dino_emergency_subtask,
-        get_grounded_sam_interface_subtask,
         call_grounded_sam_emergency_subtask,
-        get_audio_interface_subtask,
         pub_audio_emergency_subtask,
-        get_HRIMessage_interface_subtask,
         pub_hri_emergency_subtask,
     ]
 )
 
 emergency_response_intruder_validator = OrderedCallsValidator(
     subtasks=[
-        get_grounding_dino_interface_subtask,
         call_grounding_dino_intruder_subtask,
-        get_grounded_sam_interface_subtask,
         call_grounded_sam_intruder_subtask,
-        get_audio_interface_subtask,
         pub_audio_intruder_subtask,
-        get_HRIMessage_interface_subtask,
         pub_hri_intruder_subtask,
     ]
 )
@@ -809,7 +833,7 @@ def get_custom_interfaces_tasks(
 
                 tasks.append(
                     PublishROS2DetectionArrayTask(
-                        validators=[get_interface_publish_detection_ord_val],
+                        validators=[get_interface_publish_detection_ord_val_person],
                         task_args=task_args,
                         detection_classes=[PERSON_CLASS],
                         bbox_centers=[PERSON_BBOX_CENTER],
@@ -818,7 +842,7 @@ def get_custom_interfaces_tasks(
                 )
                 tasks.append(
                     PublishROS2DetectionArrayTask(
-                        validators=[get_interface_publish_detection_ord_val],
+                        validators=[get_interface_publish_detection_ord_val_car],
                         task_args=task_args,
                         detection_classes=[CAR_CLASS],
                         bbox_centers=[CAR_BBOX_CENTER],
@@ -851,7 +875,7 @@ def get_custom_interfaces_tasks(
 
                 tasks.append(
                     CallGroundedSAMSegmentTask(
-                        validators=[get_interface_call_grounded_sam_ord_val],
+                        validators=[get_interface_call_grounded_sam_ord_val_bottle],
                         task_args=task_args,
                         detection_classes=[BOTTLE_CLASS],
                         bbox_centers=[BOTTLE_BBOX_CENTER],
@@ -865,7 +889,7 @@ def get_custom_interfaces_tasks(
                 )
                 tasks.append(
                     CallGroundedSAMSegmentTask(
-                        validators=[get_interface_call_grounded_sam_ord_val],
+                        validators=[get_interface_call_grounded_sam_ord_val_book],
                         task_args=task_args,
                         detection_classes=[BOOK_CLASS],
                         bbox_centers=[BOOK_BBOX_CENTER],
