@@ -45,7 +45,7 @@ PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_2_SHOT = (
     + """
 Example of tool calls:
 - name: get_ros2_topics_names_and_types, args: {}
-- name: get_ros2_service_interface, args: {"service_type": "tf2_msgs/srv/LookupTransform"}"""
+- name: get_ros2_message_interface, args: {"msg_type": "tf2_msgs/srv/LookupTransform"}"""
 )
 
 PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_5_SHOT = (
