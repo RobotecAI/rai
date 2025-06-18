@@ -43,7 +43,6 @@ from rai_bench.tool_calling_agent.validators import (
     OrderedCallsValidator,
 )
 
-# Topic Names
 COLOR_IMAGE_TOPIC = "/color_image5"
 DEPTH_IMAGE_TOPIC = "/depth_image5"
 COLOR_CAMERA_INFO_TOPIC = "/color_camera_info5"
@@ -52,7 +51,6 @@ ROBOT_DESCRIPTION_TOPIC = "/robot_description"
 POINTCLOUD_TOPIC = "/pointcloud"
 SCAN_TOPIC = "/scan"
 
-# Service Names
 ROBOT_STATE_PUBLISHER_LIST_PARAMS = "/robot_state_publisher/list_parameters"
 ROBOT_STATE_PUBLISHER_GET_PARAMS = "/robot_state_publisher/get_parameters"
 ROBOT_STATE_PUBLISHER_SET_PARAMS = "/robot_state_publisher/set_parameters"
@@ -63,7 +61,6 @@ GROUNDED_SAM_SET_PARAMS = "/grounded_sam/set_parameters"
 GROUNDING_DINO_SET_PARAMS = "/grounding_dino/set_parameters"
 O3DE_SET_PARAMS = "/o3de_ros2_node/set_parameters"
 
-# Service Types
 LIST_PARAMETERS_TYPE = "rcl_interfaces/srv/ListParameters"
 SET_PARAMETERS_TYPE = "rcl_interfaces/srv/SetParameters"
 GET_PARAMETERS_TYPE = "rcl_interfaces/srv/GetParameters"
@@ -71,20 +68,17 @@ SPAWN_ENTITY_TYPE = "gazebo_msgs/srv/SpawnEntity"
 DELETE_ENTITY_TYPE = "gazebo_msgs/srv/DeleteEntity"
 GET_WORLD_PROPERTIES_TYPE = "gazebo_msgs/srv/GetWorldProperties"
 
-# Default Values
 DEFAULT_PUBLISH_FREQUENCY = 30.0
 DEFAULT_FPS = 30
 DEFAULT_SAM_CONFIDENCE = 0.8
 DEFAULT_DINO_CONFIDENCE = 0.7
 
-# Entity Names and Positions
 TOMATO_ENTITY = "tomato"
 BOX1_ENTITY = "box1"
 BOX2_ENTITY = "box2"
 BOX1_POSITION = (0.2, 0.2, 0.2)
 BOX2_POSITION = (0.4, 0.4, 0.2)
 
-# CAMERA Topics and Types
 CAMERA_TOPICS_AND_TYPES = [
     f"topic: {COLOR_CAMERA_INFO_TOPIC}\ntype: sensor_msgs/msg/CameraInfo\n",
     f"topic: {COLOR_IMAGE_TOPIC}\ntype: sensor_msgs/msg/Image\n",
@@ -98,9 +92,7 @@ CAMERA_TOPICS = [
     DEPTH_CAMERA_INFO_TOPIC,
     DEPTH_IMAGE_TOPIC,
 ]
-
 ########## SUBTASKS #################################################################
-
 get_topics_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="get_ros2_topics_names_and_types", expected_args={}
 )
@@ -139,13 +131,11 @@ receive_pointcloud_subtask = CheckArgsToolCallSubTask(
     expected_optional_args={"timeout_sec": int},
 )
 
-
 robot_description_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="receive_ros2_message",
     expected_args={"topic": ROBOT_DESCRIPTION_TOPIC},
     expected_optional_args={"timeout_sec": int},
 )
-
 
 scan_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="receive_ros2_message",
