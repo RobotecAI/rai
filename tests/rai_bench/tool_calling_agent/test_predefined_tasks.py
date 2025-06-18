@@ -19,14 +19,11 @@ import pytest
 from rai_bench.tool_calling_agent.interfaces import (
     TaskArgs,
 )
-
-# Import the constants and validators from the tasks module
 from rai_bench.tool_calling_agent.predefined.basic_tasks import (
     BOX1_ENTITY,
     BOX1_POSITION,
     BOX2_ENTITY,
     BOX2_POSITION,
-    # Constants
     COLOR_IMAGE_TOPIC,
     DEFAULT_DINO_CONFIDENCE,
     DEFAULT_FPS,
