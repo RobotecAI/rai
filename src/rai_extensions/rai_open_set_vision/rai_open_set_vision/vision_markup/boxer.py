@@ -17,6 +17,7 @@ from os import PathLike
 from typing import Dict
 
 import cv2
+import torch
 from cv_bridge import CvBridge
 from groundingdino.util.inference import Model
 from rclpy.time import Time
@@ -71,7 +72,8 @@ class GDBoxer:
         if not use_cuda:
             self.model = Model(self.cfg_path, self.weight_path, device="cpu")
         else:
-            self.model = Model(self.cfg_path, self.weight_path)
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            self.model = Model(self.cfg_path, self.weight_path, device=device)
         self.bridge = CvBridge()
 
     def get_boxes(
