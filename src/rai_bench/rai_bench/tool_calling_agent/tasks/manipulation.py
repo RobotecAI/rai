@@ -76,8 +76,8 @@ Example of tool calls:
 PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_5_SHOT = (
     PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_2_SHOT
     + """
-- move_to_point, args: {'x': 1.7, 'y': 1.8, 'z': 1.9, 'task': 'drop'}
-- move_to_point, args: {'x': 0.1, 'y': -0.2, 'z': 0.1, 'task': 'grab'}
+- get_ros2_topics_names_and_types, args: {}
+- get_ros2_message_interface, args: {'msg_type': 'moveit_msgs/srv/ExecuteKnownTrajectory'}
 - move_to_point, args: {'x': 0.7, 'y': 0.8, 'z': 0.9, 'task': 'drop'}
 """
 )
@@ -101,7 +101,6 @@ class ManipulationTask(Task, ABC):
     ) -> None:
         super().__init__(validators=validators, task_args=task_args, **kwargs)
         self.objects = objects
-        self._verify_args()
 
     @property
     def optional_tool_calls_number(self) -> int:
@@ -230,9 +229,8 @@ class GetObjectPositionsTask(ManipulationTask):
             return self.get_base_prompt()
         else:
             return (
-                f"{self.get_base_prompt()} "
-                "You can detect all objects and retrieve their 3D coordinates "
-                "for manipulation planning."
+                f"{self.get_base_prompt()} in the robotic workspace environment. "
+                "You can detect all objects and retrieve their 3D coordinates."
             )
 
 
@@ -264,31 +262,8 @@ class GrabExistingObjectTask(GrabTask):
             raise TaskParametrizationError(error_message)
 
 
-class GrabNotExistingObjectTask(GrabTask):
-    complexity = "medium"
-
-    def get_base_prompt(self) -> str:
-        return f"Grab {self.object_to_grab}."
-
-    def get_prompt(self) -> str:
-        if self.prompt_detail == "brief":
-            return self.get_base_prompt()
-        else:
-            return (
-                f"{self.get_base_prompt()} "
-                "You can check if the object exists in the environment and "
-                "attempt to grab it if found."
-            )
-
-    def _verify_args(self):
-        if self.object_to_grab in self.objects:
-            error_message = f"Requested object to grab {self.object_to_grab} is present in defined objects: {self.objects} but should not be."
-            self.logger.error(msg=error_message)
-            raise TaskParametrizationError(error_message)
-
-
 class MoveExistingObjectLeftTask(GrabTask):
-    complexity = "hard"
+    complexity = "medium"
 
     def get_base_prompt(self) -> str:
         return f"Move {self.object_to_grab} 20 cm to the left."
@@ -316,7 +291,7 @@ class MoveExistingObjectLeftTask(GrabTask):
 
 
 class MoveExistingObjectFrontTask(GrabTask):
-    complexity = "hard"
+    complexity = "medium"
 
     def get_base_prompt(self) -> str:
         return f"Move {self.object_to_grab} 60 cm to the front."
@@ -343,49 +318,54 @@ class MoveExistingObjectFrontTask(GrabTask):
             raise TaskParametrizationError(error_message)
 
 
-class SwapObjectsTask(ManipulationTask):
-    complexity = "hard"
+# TODO (jmatejcz) if we want to validate this task
+# we have to implement some kind of multipath validator
+# that accepts couple ways of doing the task
+# class SwapObjectsTask(ManipulationTask):
+#     complexity = "hard"
 
-    def __init__(
-        self,
-        objects: Dict[str, List[Point]],
-        objects_to_swap: List[str],
-        validators: List[Validator],
-        task_args: TaskArgs,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(
-            validators=validators, objects=objects, task_args=task_args, **kwargs
-        )
-        self.objects = objects
-        self.objects_to_swap = objects_to_swap
-        self._verify_args()
+#     def __init__(
+#         self,
+#         objects: Dict[str, List[Point]],
+#         objects_to_swap: List[str],
+#         validators: List[Validator],
+#         task_args: TaskArgs,
+#         **kwargs: Any,
+#     ) -> None:
+#         super().__init__(
+#             validators=validators, objects=objects, task_args=task_args, **kwargs
+#         )
+#         self.objects = objects
+#         self.objects_to_swap = objects_to_swap
+#         self._verify_args()
 
-    def get_base_prompt(self) -> str:
-        return f"Swap {self.objects_to_swap[0]} and {self.objects_to_swap[1]}."
+#     def get_base_prompt(self) -> str:
+#         return f"Swap {self.objects_to_swap[0]} and {self.objects_to_swap[1]}"
 
-    def get_prompt(self) -> str:
-        if self.prompt_detail == "brief":
-            return self.get_base_prompt()
-        else:
-            return (
-                f"{self.get_base_prompt()} "
-                "You can locate both objects in the workspace, then perform a sequence "
-                f"of grab and move operations to swap the positions of {self.objects_to_swap[0]} "
-                f"and {self.objects_to_swap[1]}."
-            )
+#     def get_prompt(self) -> str:
+#         if self.prompt_detail == "brief":
+#             return self.get_base_prompt()
+#         elif self.prompt_detail == "moderate":
+#             return f"{self.get_base_prompt()} positions using robotic manipulation"
+#         else:
+#             return (
+#                 f"{self.get_base_prompt()} positions using the robotic manipulation system. "
+#                 "You can locate both objects in the workspace, then perform a sequence "
+#                 f"of grab and move operations to swap the positions of {self.objects_to_swap[0]} "
+#                 f"and {self.objects_to_swap[1]}."
+#             )
 
-    def _verify_args(self):
-        for obj in self.objects_to_swap:
-            if obj not in self.objects:
-                error_message = f"Requested object to swap {obj} is not present in defined objects: {self.objects}."
-                self.logger.error(msg=error_message)
-                raise TaskParametrizationError(error_message)
-            if len(self.objects[obj]) != 1:
-                error_message = f"Number of positions for object to swap ({obj}) should be equal to 1."
-                self.logger.error(msg=error_message)
-                raise TaskParametrizationError(error_message)
-        if len(self.objects_to_swap) != 2:
-            error_message = f"Number of requested objects to swap {len(self.objects_to_swap)} should be equal to 2."
-            self.logger.error(msg=error_message)
-            raise TaskParametrizationError(error_message)
+#     def _verify_args(self):
+#         for obj in self.objects_to_swap:
+#             if obj not in self.objects:
+#                 error_message = f"Requested object to swap {obj} is not present in defined objects: {self.objects}."
+#                 self.logger.error(msg=error_message)
+#                 raise TaskParametrizationError(error_message)
+#             if len(self.objects[obj]) != 1:
+#                 error_message = f"Number of positions for object to swap ({obj}) should be equal to 1."
+#                 self.logger.error(msg=error_message)
+#                 raise TaskParametrizationError(error_message)
+#         if len(self.objects_to_swap) != 2:
+#             error_message = f"Number of requested objects to swap {len(self.objects_to_swap)} should be equal to 2."
+#             self.logger.error(msg=error_message)
+#             raise TaskParametrizationError(error_message)
