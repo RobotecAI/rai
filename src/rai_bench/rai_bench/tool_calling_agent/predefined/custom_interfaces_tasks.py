@@ -41,7 +41,6 @@ from rai_bench.tool_calling_agent.validators import (
     OrderedCallsValidator,
 )
 
-# ROS2 Topic and Service Names
 HRI_TOPIC = "/to_human"
 AUDIO_TOPIC = "/audio_output"
 DETECTIONS_TOPIC = "/detections"
@@ -52,7 +51,6 @@ LOG_DIGEST_SERVICE = "/get_log_digest"
 VECTOR_STORE_SERVICE = "/rai_whoami_documentation_service"
 WHAT_I_SEE_SERVICE = "/rai_whatisee_get"
 
-# ROS2 Message and Service Types
 HRI_MESSAGE_TYPE = "rai_interfaces/msg/HRIMessage"
 AUDIO_MESSAGE_TYPE = "rai_interfaces/msg/AudioMessage"
 DETECTION_ARRAY_MESSAGE_TYPE = "rai_interfaces/msg/RAIDetectionArray"
@@ -63,7 +61,6 @@ STRING_LIST_SERVICE_TYPE = "rai_interfaces/srv/StringList"
 VECTOR_STORE_SERVICE_TYPE = "rai_interfaces/srv/VectorStoreRetrieval"
 WHAT_I_SEE_SERVICE_TYPE = "rai_interfaces/srv/WhatISee"
 
-# Detection Classes
 PERSON_CLASS = "person"
 BOTTLE_CLASS = "bottle"
 CUP_CLASS = "cup"
@@ -74,7 +71,6 @@ COFFEE_CUP_CLASS = "coffee_cup"
 MICROWAVE_CLASS = "microwave"
 KNIFE_CLASS = "knife"
 
-# Text Messages
 HELLO_TEXT = "Hello!"
 BOTTLE_INTERACTION_MESSAGE = (
     "Initiating object interaction sequence with detected bottle"
@@ -89,7 +85,6 @@ INTRUDER_MESSAGE = (
     "ALERT: Unauthorized person detected in secure area. Security protocol activated."
 )
 
-# Audio Parameters
 BASIC_AUDIO_SAMPLES = [123, 456, 789]
 BASIC_SAMPLE_RATE = 44100
 BASIC_CHANNELS = 2
@@ -100,7 +95,6 @@ INTRUDER_AUDIO_SAMPLES = [1000, 500, 1000, 500, 1000]
 INTRUDER_SAMPLE_RATE = 16000
 INTRUDER_CHANNELS = 2
 
-# Threshold Parameters
 BOX_THRESHOLD_1 = 0.4
 TEXT_THRESHOLD_1 = 0.25
 BOTTLE_BOX_THRESHOLD = 0.35
@@ -112,7 +106,6 @@ EMERGENCY_TEXT_THRESHOLD = 0.8
 INTRUDER_BOX_THRESHOLD = 0.85
 INTRUDER_TEXT_THRESHOLD = 0.75
 
-# Bounding Box Parameters
 PERSON_BBOX_CENTER = (320.0, 320.0)
 PERSON_BBOX_SIZE = (50.0, 50.0)
 CAR_BBOX_CENTER = (640.0, 480.0)
@@ -128,7 +121,6 @@ EMERGENCY_BBOX_SIZE = (100.0, 180.0)
 INTRUDER_BBOX_CENTER = (640.0, 360.0)
 INTRUDER_BBOX_SIZE = (120.0, 200.0)
 
-# Office Scene Detection Parameters
 OFFICE_PERSON_BBOX_CENTER = (160.0, 200.0)
 OFFICE_PERSON_BBOX_SIZE = (80.0, 160.0)
 OFFICE_LAPTOP_BBOX_CENTER = (400.0, 300.0)
@@ -136,7 +128,6 @@ OFFICE_LAPTOP_BBOX_SIZE = (200.0, 120.0)
 OFFICE_COFFEE_BBOX_CENTER = (520.0, 180.0)
 OFFICE_COFFEE_BBOX_SIZE = (60.0, 80.0)
 
-# Kitchen Scene Detection Parameters
 KITCHEN_PERSON_BBOX_CENTER = (200.0, 250.0)
 KITCHEN_PERSON_BBOX_SIZE = (90.0, 170.0)
 KITCHEN_MICROWAVE_BBOX_CENTER = (500.0, 200.0)
@@ -144,7 +135,6 @@ KITCHEN_MICROWAVE_BBOX_SIZE = (150.0, 100.0)
 KITCHEN_KNIFE_BBOX_CENTER = (350.0, 400.0)
 KITCHEN_KNIFE_BBOX_SIZE = (80.0, 20.0)
 
-# Score Parameters
 BOTTLE_SCORE = 0.85
 BOTTLE_ENHANCED_SCORE = 0.87
 BOOK_SCORE = 0.91
@@ -152,7 +142,6 @@ CUP_SCORE = 0.92
 EMERGENCY_SCORE = 0.95
 INTRUDER_SCORE = 0.93
 
-# 3D Position Parameters
 STANDARD_TARGET_POSITION = (1.0, 2.0, 3.0)
 ALTERNATIVE_TARGET_POSITION = (0.5, -1.5, 2.2)
 BOTTLE_POSITION_3D = (1.2, 0.0, 0.5)
@@ -161,7 +150,6 @@ CUP_POSITION_3D = (0.8, -0.3, 0.7)
 EMERGENCY_POSITION_3D = (2.0, 0.0, 0.0)
 INTRUDER_POSITION_3D = (1.5, 0.5, 0.0)
 
-# Image Parameters
 STANDARD_IMAGE_WIDTH = 640
 STANDARD_IMAGE_HEIGHT = 480
 STANDARD_IMAGE_ENCODING = "rgb8"
@@ -171,7 +159,6 @@ HD_IMAGE_ENCODING = "bgr8"
 FULL_HD_IMAGE_WIDTH = 1920
 FULL_HD_IMAGE_HEIGHT = 1080
 
-# Query Strings
 ROBOT_PURPOSE_QUERY = "What is the purpose of this robot?"
 GROUNDING_DINO_CLASSES = "bottle, book, chair"
 SAFETY_PROTOCOLS_QUERY = (
@@ -464,7 +451,6 @@ pub_hri_cup_interaction_subtask = CheckTopicFieldsToolCallSubTask(
     expected_fields={"text": CUP_INTERACTION_MESSAGE},
 )
 
-# New Task Subtasks - MultiModalSceneDocumentationTask
 pub_detection_office_subtask = CheckTopicFieldsToolCallSubTask(
     expected_tool_name="publish_ros2_message",
     expected_topic=DETECTIONS_TOPIC,
@@ -731,7 +717,6 @@ get_interface_call_what_i_see_ord_val = OrderedCallsValidator(
     ]
 )
 
-# New Task Validators
 complete_object_interaction_bottle_validator = OrderedCallsValidator(
     subtasks=[
         call_grounding_dino_bottle_subtask,
