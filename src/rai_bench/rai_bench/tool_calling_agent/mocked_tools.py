@@ -184,7 +184,8 @@ class MockGetObjectPositionsTool(GetObjectPositionsTool):
     mock_objects: dict[str, List[Point]]
 
     def _run(self, object_name: str) -> str:
-        """Method that returns a mock message with the object positions if the object_name is present in the mock_objects dictionary.
+        """Method that returns a mock message with the object positions
+        if the object_name is present in the mock_objects dictionary.
 
         Parameters
         ----------
