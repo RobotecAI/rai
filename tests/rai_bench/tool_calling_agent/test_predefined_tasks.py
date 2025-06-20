@@ -160,6 +160,38 @@ class TestSetParameterTask:
         score = task.validate(tool_calls)
         assert score == 0.0
 
+    def test_set_parameter_task_wrong_parameter_missing_type(
+        self, task_args: TaskArgs
+    ) -> None:
+        tool_calls: List[Dict[str, Any]] = [
+            {
+                "name": "call_ros2_service",
+                "args": {
+                    "service_name": ROBOT_STATE_PUBLISHER_SET_PARAMS,
+                    "service_type": SET_PARAMETERS_TYPE,
+                    "service_args": {
+                        "parameters": [
+                            {
+                                "name": "publish_frequency",
+                                "value": {
+                                    # missing type field
+                                    "integer_value": 30,
+                                },
+                            }
+                        ]
+                    },
+                },
+            },
+        ]
+
+        task = SetRobotParameterTask(
+            value=DEFAULT_PUBLISH_FREQUENCY,
+            validators=[set_param_val],
+            task_args=task_args,
+        )
+        score = task.validate(tool_calls)
+        assert score == 0.0
+
     def test_set_parameter_task_wrong_parameter_name(self, task_args: TaskArgs) -> None:
         tool_calls: List[Dict[str, Any]] = [
             {
