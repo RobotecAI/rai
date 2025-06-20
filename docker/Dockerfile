@@ -13,16 +13,24 @@
 # limitations under the License.
 
 ARG ROS_DISTRO=jazzy
-
 FROM osrf/ros:${ROS_DISTRO}-desktop-full
+
+ARG DEPENDENCIES=core_only
 ENV DEBIAN_FRONTEND=noninteractive
+
+# Check whether the $DEPENDENCIES ARG has a valid value
+RUN /bin/bash -c 'if [ "${DEPENDENCIES}" != "core_only" ] && [ "${DEPENDENCIES}" != "all_groups" ]; then \
+  echo Error: invalid DEPENDENCIES value. Valid values "core_only", "all_groups" && exit 1; \
+fi'
+
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     git \
-    wget
+    wget \
+    zip
 
 # Install Poetry
 RUN curl -sSL https://install.python-poetry.org | python3 - --version 1.8.4
@@ -32,8 +40,19 @@ ENV PATH="/root/.local/bin:$PATH"
 WORKDIR /rai
 RUN git clone https://github.com/RobotecAI/rai.git .
 
-# Install Python dependencies with Poetry
-RUN poetry install --with nomad,openset
+# Temporary change to use branch with bug fixes
+RUN git pull
+RUN git switch dm/feat/docker-image-manipulator-demo
+
+# # Install Python dependencies with Poetry
+# RUN poetry install --with nomad,openset
+
+
+RUN /bin/bash -c 'if [ "${DEPENDENCIES}" = "core_only" ]; then \
+  poetry install; \
+else \
+  poetry install --all-groups; \
+fi'
 
 # Install ROS dependencies
 RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && \
