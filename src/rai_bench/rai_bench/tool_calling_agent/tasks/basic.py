@@ -414,7 +414,8 @@ class ConfigureVisionPipelineTask(BasicTask):
         return (
             f"Configure AI vision pipeline: set grounded_sam `confidence_threshold` "
             f"to {self.sam_confidence_threshold}, grounding_dino `confidence_threshold` "
-            f"to {self.dino_confidence_threshold}, o3de_ros2_node `fps` to {self.fps}"
+            f"to {self.dino_confidence_threshold}, o3de_ros2_node `fps` to {self.fps}. "
+            "Ensure they are set atomically."
         )
 
     def get_prompt(self) -> str:
