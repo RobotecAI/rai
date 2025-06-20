@@ -68,14 +68,12 @@ class ToolCallingAgentBenchmarkConfig(BenchmarkConfig):
         Literal[
             "basic",
             "manipulation",
-            "navigation",
             "custom_interfaces",
             "spatial_reasoning",
         ]
     ] = [
         "basic",
         "manipulation",
-        "navigation",
         "custom_interfaces",
         "spatial_reasoning",
     ]
