@@ -22,7 +22,6 @@ from rai_bench.tool_calling_agent.predefined import (
     get_basic_tasks,
     get_custom_interfaces_tasks,
     get_manipulation_tasks,
-    get_navigation_tasks,
     get_spatial_tasks,
 )
 
@@ -36,14 +35,12 @@ def get_tasks(
         Literal[
             "basic",
             "manipulation",
-            "navigation",
             "custom_interfaces",
             "spatial_reasoning",
         ]
     ] = [
         "basic",
         "manipulation",
-        "navigation",
         "custom_interfaces",
         "spatial_reasoning",
     ],
@@ -77,12 +74,6 @@ def get_tasks(
         )
     if "manipulation" in task_types:
         all_tasks += get_manipulation_tasks(
-            extra_tool_calls=extra_tool_calls,
-            prompt_detail=prompt_detail,
-            n_shots=n_shots,
-        )
-    if "navigation" in task_types:
-        all_tasks += get_navigation_tasks(
             extra_tool_calls=extra_tool_calls,
             prompt_detail=prompt_detail,
             n_shots=n_shots,

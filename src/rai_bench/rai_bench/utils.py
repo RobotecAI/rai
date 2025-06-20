@@ -68,14 +68,12 @@ def parse_tool_calling_benchmark_args():
         choices=[
             "basic",
             "manipulation",
-            "navigation",
             "custom_interfaces",
             "spatial_reasoning",
         ],
         default=[
             "basic",
             "manipulation",
-            "navigation",
             "custom_interfaces",
             "spatial_reasoning",
         ],
