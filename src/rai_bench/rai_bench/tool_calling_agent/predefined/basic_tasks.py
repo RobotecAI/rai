@@ -40,6 +40,7 @@ from rai_bench.tool_calling_agent.tasks.basic import (
 )
 from rai_bench.tool_calling_agent.validators import (
     NotOrderedCallsValidator,
+    OptionalValidator,
     OrderedCallsValidator,
 )
 
@@ -54,15 +55,23 @@ SCAN_TOPIC = "/scan"
 ROBOT_STATE_PUBLISHER_LIST_PARAMS = "/robot_state_publisher/list_parameters"
 ROBOT_STATE_PUBLISHER_GET_PARAMS = "/robot_state_publisher/get_parameters"
 ROBOT_STATE_PUBLISHER_SET_PARAMS = "/robot_state_publisher/set_parameters"
+ROBOT_STATE_PUBLISHER_SET_PARAMS_ATOMICALLY = (
+    "/robot_state_publisher/set_parameters_atomically"
+)
+
 SPAWN_ENTITY_SERVICE = "/spawn_entity"
 DELETE_ENTITY_SERVICE = "/delete_entity"
 GET_SPAWNABLE_NAMES_SERVICE = "/get_available_spawnable_names"
 GROUNDED_SAM_SET_PARAMS = "/grounded_sam/set_parameters"
+GROUNDED_SAM_SET_PARAMS_ATOMICALLY = "/grounded_sam/set_parameters_atomically"
 GROUNDING_DINO_SET_PARAMS = "/grounding_dino/set_parameters"
+GROUNDING_DINO_SET_PARAMS_ATOMICALLY = "/grounding_dino/set_parameters_atomically"
 O3DE_SET_PARAMS = "/o3de_ros2_node/set_parameters"
+O3DE_SET_PARAMS_ATOMICALLY = "/o3de_ros2_node/set_parameters_atomically"
 
 LIST_PARAMETERS_TYPE = "rcl_interfaces/srv/ListParameters"
 SET_PARAMETERS_TYPE = "rcl_interfaces/srv/SetParameters"
+SET_PARAMETERS_ATOMICALLY_TYPE = "rcl_interfaces/srv/SetParametersAtomically"
 GET_PARAMETERS_TYPE = "rcl_interfaces/srv/GetParameters"
 SPAWN_ENTITY_TYPE = "gazebo_msgs/srv/SpawnEntity"
 DELETE_ENTITY_TYPE = "gazebo_msgs/srv/DeleteEntity"
@@ -193,10 +202,19 @@ set_robot_state_params_subtask = CheckServiceFieldsToolCallSubTask(
         "parameters.0.value.double_value": DEFAULT_PUBLISH_FREQUENCY,
     },
 )
+set_robot_state_params_atomically_subtask = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service=ROBOT_STATE_PUBLISHER_SET_PARAMS_ATOMICALLY,
+    expected_service_type=SET_PARAMETERS_ATOMICALLY_TYPE,
+    expected_fields={
+        "parameters.0.name": "publish_frequency",
+        "parameters.0.value.type": "3",
+        "parameters.0.value.double_value": DEFAULT_PUBLISH_FREQUENCY,
+    },
+)
 
-set_param_val = OrderedCallsValidator(subtasks=[set_robot_state_params_subtask])
 
-grounded_sam_config_subtask = CheckServiceFieldsToolCallSubTask(
+set_grounded_sam_subtask = CheckServiceFieldsToolCallSubTask(
     expected_tool_name="call_ros2_service",
     expected_service=GROUNDED_SAM_SET_PARAMS,
     expected_service_type=SET_PARAMETERS_TYPE,
@@ -206,8 +224,18 @@ grounded_sam_config_subtask = CheckServiceFieldsToolCallSubTask(
         "parameters.0.value.double_value": DEFAULT_SAM_CONFIDENCE,
     },
 )
+set_grounded_sam_atomically_subtask = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service=GROUNDED_SAM_SET_PARAMS_ATOMICALLY,
+    expected_service_type=SET_PARAMETERS_ATOMICALLY_TYPE,
+    expected_fields={
+        "parameters.0.name": "confidence_threshold",
+        "parameters.0.value.type": 3,
+        "parameters.0.value.double_value": DEFAULT_SAM_CONFIDENCE,
+    },
+)
 
-grounding_dino_config_subtask = CheckServiceFieldsToolCallSubTask(
+set_grounding_dino_subtask = CheckServiceFieldsToolCallSubTask(
     expected_tool_name="call_ros2_service",
     expected_service=GROUNDING_DINO_SET_PARAMS,
     expected_service_type=SET_PARAMETERS_TYPE,
@@ -217,10 +245,31 @@ grounding_dino_config_subtask = CheckServiceFieldsToolCallSubTask(
         "parameters.0.value.double_value": DEFAULT_DINO_CONFIDENCE,
     },
 )
-o3de_fps_config_subtask = CheckServiceFieldsToolCallSubTask(
+set_grounding_dino_atomically_subtask = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service=GROUNDING_DINO_SET_PARAMS_ATOMICALLY,
+    expected_service_type=SET_PARAMETERS_ATOMICALLY_TYPE,
+    expected_fields={
+        "parameters.0.name": "confidence_threshold",
+        "parameters.0.value.type": 3,
+        "parameters.0.value.double_value": DEFAULT_DINO_CONFIDENCE,
+    },
+)
+
+set_o3de_fps_subtask = CheckServiceFieldsToolCallSubTask(
     expected_tool_name="call_ros2_service",
     expected_service=O3DE_SET_PARAMS,
     expected_service_type=SET_PARAMETERS_TYPE,
+    expected_fields={
+        "parameters.0.name": "fps",
+        "parameters.0.value.type": 2,
+        "parameters.0.value.integer_value": DEFAULT_FPS,
+    },
+)
+set_o3de_fps_atomically_subtask = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service=O3DE_SET_PARAMS_ATOMICALLY,
+    expected_service_type=SET_PARAMETERS_ATOMICALLY_TYPE,
     expected_fields={
         "parameters.0.name": "fps",
         "parameters.0.value.type": 2,
@@ -293,7 +342,9 @@ all_camera_images_notord_val = NotOrderedCallsValidator(
 get_pointcloud_ord_val = OrderedCallsValidator(subtasks=[receive_pointcloud_subtask])
 get_robot_desc_ord_val = OrderedCallsValidator(subtasks=[receive_robot_desc_subtask])
 
-
+set_param_val = OptionalValidator(
+    subtasks=[set_robot_state_params_subtask, set_robot_state_params_atomically_subtask]
+)
 services_ord_val = OrderedCallsValidator(subtasks=[get_services_subtask])
 list_parameters_val = OrderedCallsValidator(subtasks=[list_parameters_subtask])
 get_parameters_val = OrderedCallsValidator(subtasks=[get_parameters_subtask])
@@ -304,9 +355,9 @@ spawn_entity_val = OrderedCallsValidator(subtasks=[spawn_entity_subtask])
 
 vision_pipeline_config_val = NotOrderedCallsValidator(
     subtasks=[
-        grounded_sam_config_subtask,
-        grounding_dino_config_subtask,
-        o3de_fps_config_subtask,
+        set_grounded_sam_atomically_subtask,
+        set_grounding_dino_atomically_subtask,
+        set_o3de_fps_atomically_subtask,
     ]
 )
 
