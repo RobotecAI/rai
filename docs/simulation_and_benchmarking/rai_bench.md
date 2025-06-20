@@ -130,7 +130,6 @@ The ToolCallingAgentBenchmark class manages the execution of tasks and collects 
 There are predefined Tasks available which are grouped by categories:
 
 -   Basic - require retrieving info from certain topics
--   Navigation
 -   Spatial reasoning - questions about surroundings with images attached
 -   Manipulation
 -   Custom Interfaces - requires using messages with custom interfaces
