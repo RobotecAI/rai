@@ -20,6 +20,7 @@ import pytest
 from rai_bench.tool_calling_agent.interfaces import SubTaskValidationError, Validator
 from rai_bench.tool_calling_agent.validators import (
     NotOrderedCallsValidator,
+    OptionalValidator,
     OrderedCallsValidator,
 )
 
@@ -674,3 +675,345 @@ class TestNotOrderedCallsValidator:
             expected_subtasks_passed=[False, False],
             expected_errors_counts=[2, 2],
         )
+
+
+class TestOptionalValidator:
+    def test_init_with_empty_subtasks(self):
+        with pytest.raises(ValueError, match="Validator must have at least 1 subtask"):
+            OptionalValidator(subtasks=[])
+
+    def test_validate_empty_tool_calls(self):
+        subtasks = [DummySubTask("task1")]
+        validator = OptionalValidator(subtasks=subtasks)
+
+        success, remaining = validator.validate(tool_calls=[])
+
+        assert not success
+        assert remaining == []
+        assert len(validator.subtasks_errors[0]) == 0
+        assert validator.subtasks_passed[0] is False
+        assert validator.passed is False
+        assert validator.extra_calls_used == 0
+
+        assert_dumped(
+            validator,
+            expected_type="optional",
+            expected_passed=False,
+            expected_extra_calls=0,
+            expected_subtasks_passed=[False],
+            expected_errors_counts=[0],
+        )
+
+    def test_validate_successful_first_subtask_matches(self):
+        subtasks = [
+            DummySubTask("task1", specific_tool="tool1"),
+            DummySubTask("task2", specific_tool="tool2"),
+        ]
+        validator = OptionalValidator(subtasks=subtasks)
+        tool_calls = [ToolCall(name="tool1")]
+
+        success, remaining = validator.validate(tool_calls=tool_calls)
+
+        assert success
+        assert remaining == []
+        assert len(validator.subtasks_errors[0]) == 0
+        assert len(validator.subtasks_errors[1]) == 0
+        assert validator.subtasks_passed[0] is True
+        assert validator.subtasks_passed[1] is False
+        assert validator.passed is True
+        assert validator.extra_calls_used == 0
+
+        assert_dumped(
+            validator,
+            expected_type="optional",
+            expected_passed=True,
+            expected_extra_calls=0,
+            expected_subtasks_passed=[True, False],
+            expected_errors_counts=[0, 0],
+        )
+
+    def test_validate_successful_second_subtask_matches(self):
+        subtasks = [
+            DummySubTask("task1", specific_tool="tool1"),
+            DummySubTask("task2", specific_tool="tool2"),
+        ]
+        validator = OptionalValidator(subtasks=subtasks)
+        tool_calls = [ToolCall(name="tool2")]
+
+        success, remaining = validator.validate(tool_calls=tool_calls)
+
+        assert success
+        assert remaining == []
+        assert len(validator.subtasks_errors[0]) == 1  # Error from trying tool1
+        assert len(validator.subtasks_errors[1]) == 0
+        assert validator.subtasks_passed[0] is False
+        assert validator.subtasks_passed[1] is True
+        assert validator.passed is True
+        assert validator.extra_calls_used == 0
+
+        assert_dumped(
+            validator,
+            expected_type="optional",
+            expected_passed=True,
+            expected_extra_calls=0,
+            expected_subtasks_passed=[False, True],
+            expected_errors_counts=[1, 0],
+        )
+
+    def test_validate_successful_with_excess_tool_calls(self):
+        subtasks = [
+            DummySubTask("task1", specific_tool="tool1"),
+            DummySubTask("task2", specific_tool="tool2"),
+        ]
+        validator = OptionalValidator(subtasks=subtasks)
+        tool_calls = [
+            ToolCall(name="tool1"),
+            ToolCall(name="extra_tool"),
+            ToolCall(name="another_extra"),
+        ]
+
+        success, remaining = validator.validate(tool_calls=tool_calls)
+
+        assert success
+        assert len(remaining) == 2
+        assert remaining[0].name == "extra_tool"
+        assert remaining[1].name == "another_extra"
+        assert len(validator.subtasks_errors[0]) == 0
+        assert len(validator.subtasks_errors[1]) == 0
+        assert validator.subtasks_passed[0] is True
+        assert validator.subtasks_passed[1] is False
+        assert validator.passed is True
+        assert validator.extra_calls_used == 2
+
+        assert_dumped(
+            validator,
+            expected_type="optional",
+            expected_passed=True,
+            expected_extra_calls=2,
+            expected_subtasks_passed=[True, False],
+            expected_errors_counts=[0, 0],
+        )
+
+    def test_validate_successful_after_failed_attempts(self):
+        subtasks = [
+            DummySubTask("task1", specific_tool="tool1"),
+            DummySubTask("task2", specific_tool="tool2"),
+        ]
+        validator = OptionalValidator(subtasks=subtasks)
+        tool_calls = [
+            ToolCall(name="wrong_tool"),
+            ToolCall(name="another_wrong"),
+            ToolCall(name="tool2"),
+            ToolCall(name="extra_tool"),
+        ]
+
+        success, remaining = validator.validate(tool_calls=tool_calls)
+
+        assert success
+        assert len(remaining) == 1
+        assert remaining[0].name == "extra_tool"
+        assert len(validator.subtasks_errors[0]) == 3  # 3 failed attempts
+        assert (
+            len(validator.subtasks_errors[1]) == 2
+        )  # 2 failed attempts before success
+        assert validator.subtasks_passed[0] is False
+        assert validator.subtasks_passed[1] is True
+        assert validator.passed is True
+        assert validator.extra_calls_used == 3
+
+        assert_dumped(
+            validator,
+            expected_type="optional",
+            expected_passed=True,
+            expected_extra_calls=3,
+            expected_subtasks_passed=[False, True],
+            expected_errors_counts=[3, 2],
+        )
+
+    def test_validate_failure_no_subtask_matches(self):
+        subtasks = [
+            DummySubTask("task1", specific_tool="tool1"),
+            DummySubTask("task2", specific_tool="tool2"),
+        ]
+        validator = OptionalValidator(subtasks=subtasks)
+        tool_calls = [
+            ToolCall(name="wrong_tool"),
+            ToolCall(name="another_wrong"),
+        ]
+
+        success, remaining = validator.validate(tool_calls=tool_calls)
+
+        assert not success
+        assert remaining == []
+        assert len(validator.subtasks_errors[0]) == 2
+        assert len(validator.subtasks_errors[1]) == 2
+        assert "Expected tool tool1, got wrong_tool" in validator.subtasks_errors[0][0]
+        assert "Expected tool tool2, got wrong_tool" in validator.subtasks_errors[1][0]
+        assert validator.subtasks_passed[0] is False
+        assert validator.subtasks_passed[1] is False
+        assert validator.passed is False
+        assert validator.extra_calls_used == 1
+
+        assert_dumped(
+            validator,
+            expected_type="optional",
+            expected_passed=False,
+            expected_extra_calls=1,
+            expected_subtasks_passed=[False, False],
+            expected_errors_counts=[2, 2],
+        )
+
+    def test_validate_failure_subtask_validation_error(self):
+        subtasks = [
+            DummySubTask("task1", outcomes=[False]),
+            DummySubTask("task2", outcomes=[False]),
+        ]
+        validator = OptionalValidator(subtasks=subtasks)
+        tool_calls = [ToolCall()]
+
+        success, remaining = validator.validate(tool_calls=tool_calls)
+
+        assert not success
+        assert remaining == []
+        assert len(validator.subtasks_errors[0]) == 1
+        assert len(validator.subtasks_errors[1]) == 1
+        assert "error in task1" in validator.subtasks_errors[0][0]
+        assert "error in task2" in validator.subtasks_errors[1][0]
+        assert validator.subtasks_passed[0] is False
+        assert validator.subtasks_passed[1] is False
+        assert validator.passed is False
+        assert validator.extra_calls_used == 0
+
+        assert_dumped(
+            validator,
+            expected_type="optional",
+            expected_passed=False,
+            expected_extra_calls=0,
+            expected_subtasks_passed=[False, False],
+            expected_errors_counts=[1, 1],
+        )
+
+    def test_validate_single_subtask_success(self):
+        subtasks = [DummySubTask("task1")]
+        validator = OptionalValidator(subtasks=subtasks)
+        tool_calls = [ToolCall()]
+
+        success, remaining = validator.validate(tool_calls=tool_calls)
+
+        assert success
+        assert remaining == []
+        assert len(validator.subtasks_errors[0]) == 0
+        assert validator.subtasks_passed[0] is True
+        assert validator.passed is True
+        assert validator.extra_calls_used == 0
+
+        assert_dumped(
+            validator,
+            expected_type="optional",
+            expected_passed=True,
+            expected_extra_calls=0,
+            expected_subtasks_passed=[True],
+            expected_errors_counts=[0],
+        )
+
+    def test_validate_single_subtask_failure(self):
+        subtasks = [DummySubTask("task1", outcomes=[False])]
+        validator = OptionalValidator(subtasks=subtasks)
+        tool_calls = [ToolCall()]
+
+        success, remaining = validator.validate(tool_calls=tool_calls)
+
+        assert not success
+        assert remaining == []
+        assert len(validator.subtasks_errors[0]) == 1
+        assert "error in task1" in validator.subtasks_errors[0][0]
+        assert validator.subtasks_passed[0] is False
+        assert validator.passed is False
+        assert validator.extra_calls_used == 0
+
+        assert_dumped(
+            validator,
+            expected_type="optional",
+            expected_passed=False,
+            expected_extra_calls=0,
+            expected_subtasks_passed=[False],
+            expected_errors_counts=[1],
+        )
+
+    def test_validate_many_subtasks_last_one_succeeds(self):
+        subtasks = [
+            DummySubTask("task1", specific_tool="tool1"),
+            DummySubTask("task2", specific_tool="tool2"),
+            DummySubTask("task3", specific_tool="tool3"),
+            DummySubTask("task4", specific_tool="tool4"),
+        ]
+        validator = OptionalValidator(subtasks=subtasks)
+        tool_calls = [ToolCall(name="tool4")]
+
+        success, remaining = validator.validate(tool_calls=tool_calls)
+
+        assert success
+        assert remaining == []
+        assert len(validator.subtasks_errors[0]) == 1
+        assert len(validator.subtasks_errors[1]) == 1
+        assert len(validator.subtasks_errors[2]) == 1
+        assert len(validator.subtasks_errors[3]) == 0
+        assert validator.subtasks_passed[0] is False
+        assert validator.subtasks_passed[1] is False
+        assert validator.subtasks_passed[2] is False
+        assert validator.subtasks_passed[3] is True
+        assert validator.passed is True
+        assert validator.extra_calls_used == 0
+
+        assert_dumped(
+            validator,
+            expected_type="optional",
+            expected_passed=True,
+            expected_extra_calls=0,
+            expected_subtasks_passed=[False, False, False, True],
+            expected_errors_counts=[1, 1, 1, 0],
+        )
+
+    def test_validate_reset(self):
+        subtasks = [
+            DummySubTask("task1", outcomes=4 * [False]),
+            DummySubTask("task2", outcomes=4 * [False]),
+        ]
+        validator = OptionalValidator(subtasks=subtasks)
+        tool_calls = [ToolCall(), ToolCall()]
+
+        # First validation call
+        validator.validate(tool_calls=tool_calls)
+        # Second validation call (should reset)
+        success, remaining = validator.validate(tool_calls=tool_calls)
+
+        assert not success
+        assert remaining == []
+        assert len(validator.subtasks_errors[0]) == 2
+        assert len(validator.subtasks_errors[1]) == 2
+        assert "error in task1" in validator.subtasks_errors[0][0]
+        assert "error in task2" in validator.subtasks_errors[1][0]
+        assert validator.subtasks_passed[0] is False
+        assert validator.subtasks_passed[1] is False
+        assert validator.passed is False
+        assert validator.extra_calls_used == 1
+
+        assert_dumped(
+            validator,
+            expected_type="optional",
+            expected_passed=False,
+            expected_extra_calls=1,
+            expected_subtasks_passed=[False, False],
+            expected_errors_counts=[2, 2],
+        )
+
+    def test_required_calls_property(self):
+        subtasks = [
+            DummySubTask("task1"),
+            DummySubTask("task2"),
+            DummySubTask("task3"),
+        ]
+        validator = OptionalValidator(subtasks=subtasks)
+
+        # OptionalValidator should only require 1 call
+        assert validator.required_calls == 1
