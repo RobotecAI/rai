@@ -127,8 +127,8 @@ def get_spatial_tasks(
     easy_true_inputs = [
         # Single object presence/detection
         BoolImageTaskInput(
-            question="Is the light on in the room?",
-            images_paths=[IMG_PATH + "image_2.jpg"],
+            question="Is the chair in the room?",
+            images_paths=[IMG_PATH + "image_1.jpg"],
         ),
         BoolImageTaskInput(
             question="Do you see the plant?", images_paths=[IMG_PATH + "image_2.jpg"]
@@ -136,6 +136,10 @@ def get_spatial_tasks(
         BoolImageTaskInput(
             question="Are there any pictures on the wall?",
             images_paths=[IMG_PATH + "image_3.jpg"],
+        ),
+        BoolImageTaskInput(
+            question="is there a TV in the room?",
+            images_paths=[IMG_PATH + "image_4.jpg"],
         ),
         BoolImageTaskInput(
             question="Is there a pillow on the armchain?",
@@ -149,6 +153,18 @@ def get_spatial_tasks(
             question="Are there 3 pictures on the wall?",
             images_paths=[IMG_PATH + "image_4.jpg"],
         ),
+        BoolImageTaskInput(
+            question="Is the light on in the room?",
+            images_paths=[IMG_PATH + "image_2.jpg"],
+        ),
+        BoolImageTaskInput(
+            question="Is the chair blue?",
+            images_paths=[IMG_PATH + "image_3.jpg"],
+        ),
+        BoolImageTaskInput(
+            question="Is there something to sit on?",
+            images_paths=[IMG_PATH + "image_7.jpg"],
+        ),
     ]
 
     hard_true_inputs = [
@@ -160,6 +176,10 @@ def get_spatial_tasks(
         BoolImageTaskInput(
             question="Is there a plant behind the rack?",
             images_paths=[IMG_PATH + "image_5.jpg"],
+        ),
+        BoolImageTaskInput(
+            question="Is there a rug under the bed?",
+            images_paths=[IMG_PATH + "image_2.jpg"],
         ),
     ]
 
@@ -175,6 +195,14 @@ def get_spatial_tasks(
             question="Is there a red pillow on the armchair?",
             images_paths=[IMG_PATH + "image_7.jpg"],
         ),
+        BoolImageTaskInput(
+            question="Is there a red desk with chair in the room?",
+            images_paths=[IMG_PATH + "image_5.jpg"],
+        ),
+        BoolImageTaskInput(
+            question="Do you see the bed?",
+            images_paths=[IMG_PATH + "image_6.jpg"],
+        ),
     ]
 
     medium_false_inputs = [
@@ -185,6 +213,14 @@ def get_spatial_tasks(
         BoolImageTaskInput(
             question="Are there 4 pictures on the wall?",
             images_paths=[IMG_PATH + "image_4.jpg"],
+        ),
+        BoolImageTaskInput(
+            question="Is the TV switched on?",
+            images_paths=[IMG_PATH + "image_6.jpg"],
+        ),
+        BoolImageTaskInput(
+            question="Is the window opened?",
+            images_paths=[IMG_PATH + "image_6.jpg"],
         ),
     ]
 
@@ -197,6 +233,10 @@ def get_spatial_tasks(
         BoolImageTaskInput(
             question="Is there a plant on the right from the window?",
             images_paths=[IMG_PATH + "image_6.jpg"],
+        ),
+        BoolImageTaskInput(
+            question="Is the chair next to a bed?",
+            images_paths=[IMG_PATH + "image_1.jpg"],
         ),
     ]
 
