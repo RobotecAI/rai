@@ -32,11 +32,15 @@ from rai_bench.tool_calling_agent.predefined.basic_tasks import (
     DELETE_ENTITY_SERVICE,
     DELETE_ENTITY_TYPE,
     DEPTH_IMAGE_TOPIC,
+    DINO_CONFIDENCE_2,
+    FPS_2,
     GET_PARAMETERS_TYPE,
     GET_SPAWNABLE_NAMES_SERVICE,
     GET_WORLD_PROPERTIES_TYPE,
     GROUNDED_SAM_SET_PARAMS,
+    GROUNDED_SAM_SET_PARAMS_ATOMICALLY,
     GROUNDING_DINO_SET_PARAMS,
+    GROUNDING_DINO_SET_PARAMS_ATOMICALLY,
     LIST_PARAMETERS_TYPE,
     O3DE_SET_PARAMS,
     POINTCLOUD_TOPIC,
@@ -44,6 +48,8 @@ from rai_bench.tool_calling_agent.predefined.basic_tasks import (
     ROBOT_STATE_PUBLISHER_GET_PARAMS,
     ROBOT_STATE_PUBLISHER_LIST_PARAMS,
     ROBOT_STATE_PUBLISHER_SET_PARAMS,
+    SAM_CONFIDENCE_2,
+    SET_PARAMETERS_ATOMICALLY_TYPE,
     SET_PARAMETERS_TYPE,
     SPAWN_ENTITY_SERVICE,
     SPAWN_ENTITY_TYPE,
@@ -58,11 +64,16 @@ from rai_bench.tool_calling_agent.predefined.basic_tasks import (
     get_robot_desc_ord_val,
     list_parameters_val,
     services_ord_val,
+    set_grounded_dino_opt_val_1,
+    set_grounded_dino_opt_val_2,
+    set_grounded_sam_opt_val_1,
+    set_grounded_sam_opt_val_2,
+    set_o3de_fps_opt_val_1,
+    set_o3de_fps_opt_val_2,
     set_param_val,
     spawn_both_val,
     spawn_entity_val,
     topics_ord_val,
-    vision_pipeline_config_val,
 )
 from rai_bench.tool_calling_agent.tasks.basic import (
     CheckSpawnableEntitiesTask,
@@ -880,8 +891,8 @@ class TestConfigureVisionPipelineTask:
             {
                 "name": "call_ros2_service",
                 "args": {
-                    "service_name": GROUNDED_SAM_SET_PARAMS,
-                    "service_type": SET_PARAMETERS_TYPE,
+                    "service_name": GROUNDED_SAM_SET_PARAMS_ATOMICALLY,
+                    "service_type": SET_PARAMETERS_ATOMICALLY_TYPE,
                     "service_args": {
                         "parameters": [
                             {
@@ -898,8 +909,8 @@ class TestConfigureVisionPipelineTask:
             {
                 "name": "call_ros2_service",
                 "args": {
-                    "service_name": GROUNDING_DINO_SET_PARAMS,
-                    "service_type": SET_PARAMETERS_TYPE,
+                    "service_name": GROUNDING_DINO_SET_PARAMS_ATOMICALLY,
+                    "service_type": SET_PARAMETERS_ATOMICALLY_TYPE,
                     "service_args": {
                         "parameters": [
                             {
@@ -934,7 +945,11 @@ class TestConfigureVisionPipelineTask:
             sam_confidence_threshold=DEFAULT_SAM_CONFIDENCE,
             dino_confidence_threshold=DEFAULT_DINO_CONFIDENCE,
             fps=DEFAULT_FPS,
-            validators=[vision_pipeline_config_val],
+            validators=[
+                set_grounded_sam_opt_val_1,
+                set_grounded_dino_opt_val_1,
+                set_o3de_fps_opt_val_1,
+            ],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -944,46 +959,6 @@ class TestConfigureVisionPipelineTask:
         self, task_args: TaskArgs
     ) -> None:
         """Test configure vision pipeline task with second configuration."""
-        # Create custom validators for the second configuration
-        from rai_bench.tool_calling_agent.subtasks import (
-            CheckServiceFieldsToolCallSubTask,
-        )
-        from rai_bench.tool_calling_agent.validators import NotOrderedCallsValidator
-
-        grounded_sam_subtask = CheckServiceFieldsToolCallSubTask(
-            expected_tool_name="call_ros2_service",
-            expected_service=GROUNDED_SAM_SET_PARAMS,
-            expected_service_type=SET_PARAMETERS_TYPE,
-            expected_fields={
-                "parameters.0.name": "confidence_threshold",
-                "parameters.0.value.type": 3,
-                "parameters.0.value.double_value": 0.6,
-            },
-        )
-        grounding_dino_subtask = CheckServiceFieldsToolCallSubTask(
-            expected_tool_name="call_ros2_service",
-            expected_service=GROUNDING_DINO_SET_PARAMS,
-            expected_service_type=SET_PARAMETERS_TYPE,
-            expected_fields={
-                "parameters.0.name": "confidence_threshold",
-                "parameters.0.value.type": 3,
-                "parameters.0.value.double_value": 0.6,
-            },
-        )
-        o3de_fps_subtask = CheckServiceFieldsToolCallSubTask(
-            expected_tool_name="call_ros2_service",
-            expected_service=O3DE_SET_PARAMS,
-            expected_service_type=SET_PARAMETERS_TYPE,
-            expected_fields={
-                "parameters.0.name": "fps",
-                "parameters.0.value.type": 2,
-                "parameters.0.value.integer_value": 10,
-            },
-        )
-        vision_pipeline_val = NotOrderedCallsValidator(
-            subtasks=[grounded_sam_subtask, grounding_dino_subtask, o3de_fps_subtask]
-        )
-
         tool_calls: List[Dict[str, Any]] = [
             {"name": "get_ros2_services_names_and_types", "args": {}},
             {
@@ -999,7 +974,10 @@ class TestConfigureVisionPipelineTask:
                         "parameters": [
                             {
                                 "name": "confidence_threshold",
-                                "value": {"type": 3, "double_value": 0.6},
+                                "value": {
+                                    "type": 3,
+                                    "double_value": SAM_CONFIDENCE_2,
+                                },
                             }
                         ]
                     },
@@ -1014,7 +992,10 @@ class TestConfigureVisionPipelineTask:
                         "parameters": [
                             {
                                 "name": "confidence_threshold",
-                                "value": {"type": 3, "double_value": 0.6},
+                                "value": {
+                                    "type": 3,
+                                    "double_value": DINO_CONFIDENCE_2,
+                                },
                             }
                         ]
                     },
@@ -1029,7 +1010,7 @@ class TestConfigureVisionPipelineTask:
                         "parameters": [
                             {
                                 "name": "fps",
-                                "value": {"type": 2, "integer_value": 10},
+                                "value": {"type": 2, "integer_value": FPS_2},
                             }
                         ]
                     },
@@ -1038,10 +1019,14 @@ class TestConfigureVisionPipelineTask:
         ]
 
         task = ConfigureVisionPipelineTask(
-            sam_confidence_threshold=0.6,
-            dino_confidence_threshold=0.6,
-            fps=10,
-            validators=[vision_pipeline_val],
+            sam_confidence_threshold=SAM_CONFIDENCE_2,
+            dino_confidence_threshold=DINO_CONFIDENCE_2,
+            fps=FPS_2,
+            validators=[
+                set_grounded_sam_opt_val_2,
+                set_grounded_dino_opt_val_2,
+                set_o3de_fps_opt_val_2,
+            ],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -1052,7 +1037,6 @@ class TestConfigureVisionPipelineTask:
     ) -> None:
         """Test configure vision pipeline task with missing service calls."""
 
-        # Only calling one service instead of all three
         tool_calls: List[Dict[str, Any]] = [
             {
                 "name": "call_ros2_service",
@@ -1078,11 +1062,92 @@ class TestConfigureVisionPipelineTask:
             sam_confidence_threshold=DEFAULT_SAM_CONFIDENCE,
             dino_confidence_threshold=DEFAULT_DINO_CONFIDENCE,
             fps=DEFAULT_FPS,
-            validators=[vision_pipeline_config_val],
+            validators=[
+                set_grounded_sam_opt_val_1,
+                set_grounded_dino_opt_val_1,
+                set_o3de_fps_opt_val_1,
+            ],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
-        assert score == 0.0
+        assert abs(score - 0.3333333333333333) < 0.01
+
+    def test_configure_vision_pipeline_task_setting_in_one_call(
+        self, task_args: TaskArgs
+    ) -> None:
+        tool_calls: List[Dict[str, Any]] = [
+            {
+                "name": "call_ros2_service",
+                "args": {
+                    "service_name": GROUNDED_SAM_SET_PARAMS,
+                    "service_type": SET_PARAMETERS_TYPE,
+                    "service_args": {
+                        "parameters": [
+                            {
+                                "name": "confidence_threshold",
+                                "value": {
+                                    "type": 3,
+                                    "double_value": DEFAULT_SAM_CONFIDENCE,
+                                },
+                            },
+                            {
+                                "name": "fps",
+                                "value": {"type": 2, "integer_value": FPS_2},
+                            },
+                            {
+                                "name": "confidence_threshold",
+                                "value": {
+                                    "type": 3,
+                                    "double_value": DEFAULT_DINO_CONFIDENCE,
+                                },
+                            },
+                        ]
+                    },
+                },
+            }
+        ]
+
+        task = ConfigureVisionPipelineTask(
+            sam_confidence_threshold=DEFAULT_SAM_CONFIDENCE,
+            dino_confidence_threshold=DEFAULT_DINO_CONFIDENCE,
+            fps=DEFAULT_FPS,
+            validators=[
+                set_grounded_sam_opt_val_1,
+                set_grounded_dino_opt_val_1,
+                set_o3de_fps_opt_val_1,
+            ],
+            task_args=task_args,
+        )
+        score = task.validate(tool_calls)
+        assert abs(score - 0.3333333333333333) < 0.01
+
+    def test_configure_vision_pipeline_task_empty_call(
+        self, task_args: TaskArgs
+    ) -> None:
+        tool_calls: List[Dict[str, Any]] = [
+            {
+                "name": "call_ros2_service",
+                "args": {
+                    "service_name": GROUNDED_SAM_SET_PARAMS,
+                    "service_type": SET_PARAMETERS_TYPE,
+                    "service_args": {"parameters": []},
+                },
+            }
+        ]
+
+        task = ConfigureVisionPipelineTask(
+            sam_confidence_threshold=DEFAULT_SAM_CONFIDENCE,
+            dino_confidence_threshold=DEFAULT_DINO_CONFIDENCE,
+            fps=DEFAULT_FPS,
+            validators=[
+                set_grounded_sam_opt_val_1,
+                set_grounded_dino_opt_val_1,
+                set_o3de_fps_opt_val_1,
+            ],
+            task_args=task_args,
+        )
+        score = task.validate(tool_calls)
+        assert score == 0
 
 
 class TestRespawnEntitiesTask:
