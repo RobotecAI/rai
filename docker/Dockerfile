@@ -40,6 +40,10 @@ ENV PATH="/root/.local/bin:$PATH"
 WORKDIR /rai
 RUN git clone https://github.com/RobotecAI/rai.git .
 
+# Set up the environment to use Fast DDS
+ENV FASTRTPS_DEFAULT_PROFILES_FILE=/rai/fastrtpsa_config.xml
+ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+
 # Temporary change to use branch with bug fixes
 RUN git pull
 RUN git switch dm/feat/docker-image-manipulator-demo
