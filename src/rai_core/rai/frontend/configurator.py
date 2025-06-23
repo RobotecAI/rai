@@ -967,7 +967,6 @@ def setup_steps():
         logging.warning(
             "skipping text to speech, missing import - install `poetry install --with s2s`"
         )
-        pass
 
     step_names.extend(
         [
