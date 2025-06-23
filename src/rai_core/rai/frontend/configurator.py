@@ -25,6 +25,7 @@ from langchain_aws import BedrockEmbeddings, ChatBedrock
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 import logging
+import importlib.util
 
 
 def get_sound_devices(
@@ -976,27 +977,29 @@ def setup_steps():
     step_render = [welcome, model_selection, tracing]
 
     st.session_state.features["s2s"] = True
+
+    if importlib.util.find_spec("rai_s2s") is None:
+        logging.warning(
+            "Skipping speech recognition, rai_s2s not installed - install `poetry install --with s2s`"
+        )
+
     try:
         from rai_s2s.asr import TRANSCRIBE_MODELS
 
         step_names.append("🎙️ Speech Recognition")
         step_render.append(asr)
-    except ImportError:
+    except ImportError as e:
         st.session_state.features["s2s"] = False
-        logging.warning(
-            "skipping speech recognition, missing import - install `poetry install --with s2s`"
-        )
+        logging.warning(f"Skipping speech recognition. {e}")
 
     try:
         from rai_s2s.tts import TTS_MODELS
 
         step_names.append("🔊 Text to Speech")
         step_render.append(tts)
-    except ImportError:
+    except ImportError as e:
         st.session_state.features["s2s"] = False
-        logging.warning(
-            "skipping text to speech, missing import - install `poetry install --with s2s`"
-        )
+        logging.warning(f"Skipping text to speech. {e}")
 
     step_names.extend(
         [
