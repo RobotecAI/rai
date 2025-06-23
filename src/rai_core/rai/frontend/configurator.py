@@ -945,6 +945,7 @@ def setup_steps():
     step_names = ["👋 Welcome", "🤖 Model Selection", "📊 Tracing"]
     step_render = [welcome, model_selection, tracing]
 
+    st.session_state.features["s2s"] = True
     try:
         from rai_s2s.asr import TRANSCRIBE_MODELS
 
@@ -955,7 +956,6 @@ def setup_steps():
         logging.warning(
             "skipping speech recognition, missing import - install `poetry install --with s2s`"
         )
-        pass
 
     try:
         from rai_s2s.tts import TTS_MODELS
