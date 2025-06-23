@@ -81,6 +81,9 @@ DEFAULT_PUBLISH_FREQUENCY = 30.0
 DEFAULT_FPS = 30
 DEFAULT_SAM_CONFIDENCE = 0.8
 DEFAULT_DINO_CONFIDENCE = 0.7
+SAM_CONFIDENCE_2 = 0.6
+DINO_CONFIDENCE_2 = 0.6
+FPS_2 = 10
 
 TOMATO_ENTITY = "tomato"
 BOX1_ENTITY = "box1"
@@ -214,7 +217,7 @@ set_robot_state_params_atomically_subtask = CheckServiceFieldsToolCallSubTask(
 )
 
 
-set_grounded_sam_subtask = CheckServiceFieldsToolCallSubTask(
+set_grounded_sam_subtask_1 = CheckServiceFieldsToolCallSubTask(
     expected_tool_name="call_ros2_service",
     expected_service=GROUNDED_SAM_SET_PARAMS,
     expected_service_type=SET_PARAMETERS_TYPE,
@@ -224,7 +227,7 @@ set_grounded_sam_subtask = CheckServiceFieldsToolCallSubTask(
         "parameters.0.value.double_value": DEFAULT_SAM_CONFIDENCE,
     },
 )
-set_grounded_sam_atomically_subtask = CheckServiceFieldsToolCallSubTask(
+set_grounded_sam_atomically_subtask_1 = CheckServiceFieldsToolCallSubTask(
     expected_tool_name="call_ros2_service",
     expected_service=GROUNDED_SAM_SET_PARAMS_ATOMICALLY,
     expected_service_type=SET_PARAMETERS_ATOMICALLY_TYPE,
@@ -235,7 +238,7 @@ set_grounded_sam_atomically_subtask = CheckServiceFieldsToolCallSubTask(
     },
 )
 
-set_grounding_dino_subtask = CheckServiceFieldsToolCallSubTask(
+set_grounded_dino_subtask_1 = CheckServiceFieldsToolCallSubTask(
     expected_tool_name="call_ros2_service",
     expected_service=GROUNDING_DINO_SET_PARAMS,
     expected_service_type=SET_PARAMETERS_TYPE,
@@ -245,7 +248,7 @@ set_grounding_dino_subtask = CheckServiceFieldsToolCallSubTask(
         "parameters.0.value.double_value": DEFAULT_DINO_CONFIDENCE,
     },
 )
-set_grounding_dino_atomically_subtask = CheckServiceFieldsToolCallSubTask(
+set_grounding_dino_atomically_subtask_1 = CheckServiceFieldsToolCallSubTask(
     expected_tool_name="call_ros2_service",
     expected_service=GROUNDING_DINO_SET_PARAMS_ATOMICALLY,
     expected_service_type=SET_PARAMETERS_ATOMICALLY_TYPE,
@@ -256,7 +259,7 @@ set_grounding_dino_atomically_subtask = CheckServiceFieldsToolCallSubTask(
     },
 )
 
-set_o3de_fps_subtask = CheckServiceFieldsToolCallSubTask(
+set_o3de_fps_subtask_1 = CheckServiceFieldsToolCallSubTask(
     expected_tool_name="call_ros2_service",
     expected_service=O3DE_SET_PARAMS,
     expected_service_type=SET_PARAMETERS_TYPE,
@@ -266,7 +269,7 @@ set_o3de_fps_subtask = CheckServiceFieldsToolCallSubTask(
         "parameters.0.value.integer_value": DEFAULT_FPS,
     },
 )
-set_o3de_fps_atomically_subtask = CheckServiceFieldsToolCallSubTask(
+set_o3de_fps_atomically_subtask_1 = CheckServiceFieldsToolCallSubTask(
     expected_tool_name="call_ros2_service",
     expected_service=O3DE_SET_PARAMS_ATOMICALLY,
     expected_service_type=SET_PARAMETERS_ATOMICALLY_TYPE,
@@ -276,6 +279,70 @@ set_o3de_fps_atomically_subtask = CheckServiceFieldsToolCallSubTask(
         "parameters.0.value.integer_value": DEFAULT_FPS,
     },
 )
+
+set_grounded_sam_subtask_2 = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service=GROUNDED_SAM_SET_PARAMS,
+    expected_service_type=SET_PARAMETERS_TYPE,
+    expected_fields={
+        "parameters.0.name": "confidence_threshold",
+        "parameters.0.value.type": 3,
+        "parameters.0.value.double_value": SAM_CONFIDENCE_2,
+    },
+)
+set_grounded_sam_atomically_subtask_2 = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service=GROUNDED_SAM_SET_PARAMS_ATOMICALLY,
+    expected_service_type=SET_PARAMETERS_ATOMICALLY_TYPE,
+    expected_fields={
+        "parameters.0.name": "confidence_threshold",
+        "parameters.0.value.type": 3,
+        "parameters.0.value.double_value": SAM_CONFIDENCE_2,
+    },
+)
+
+set_grounding_dino_subtask_2 = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service=GROUNDING_DINO_SET_PARAMS,
+    expected_service_type=SET_PARAMETERS_TYPE,
+    expected_fields={
+        "parameters.0.name": "confidence_threshold",
+        "parameters.0.value.type": 3,
+        "parameters.0.value.double_value": DINO_CONFIDENCE_2,
+    },
+)
+set_grounding_dino_atomically_subtask_2 = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service=GROUNDING_DINO_SET_PARAMS_ATOMICALLY,
+    expected_service_type=SET_PARAMETERS_ATOMICALLY_TYPE,
+    expected_fields={
+        "parameters.0.name": "confidence_threshold",
+        "parameters.0.value.type": 3,
+        "parameters.0.value.double_value": DINO_CONFIDENCE_2,
+    },
+)
+
+set_o3de_fps_subtask_2 = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service=O3DE_SET_PARAMS,
+    expected_service_type=SET_PARAMETERS_TYPE,
+    expected_fields={
+        "parameters.0.name": "fps",
+        "parameters.0.value.type": 2,
+        "parameters.0.value.integer_value": FPS_2,
+    },
+)
+set_o3de_fps_atomically_subtask_2 = CheckServiceFieldsToolCallSubTask(
+    expected_tool_name="call_ros2_service",
+    expected_service=O3DE_SET_PARAMS_ATOMICALLY,
+    expected_service_type=SET_PARAMETERS_ATOMICALLY_TYPE,
+    expected_fields={
+        "parameters.0.name": "fps",
+        "parameters.0.value.type": 2,
+        "parameters.0.value.integer_value": FPS_2,
+    },
+)
+
 
 delete_entity_subtask1 = CheckServiceFieldsToolCallSubTask(
     expected_tool_name="call_ros2_service",
@@ -353,12 +420,25 @@ check_spawnable_entities_val = OrderedCallsValidator(
 )
 spawn_entity_val = OrderedCallsValidator(subtasks=[spawn_entity_subtask])
 
-vision_pipeline_config_val = NotOrderedCallsValidator(
-    subtasks=[
-        set_grounded_sam_atomically_subtask,
-        set_grounding_dino_atomically_subtask,
-        set_o3de_fps_atomically_subtask,
-    ]
+set_grounded_sam_opt_val_1 = OptionalValidator(
+    subtasks=[set_grounded_sam_subtask_1, set_grounded_sam_atomically_subtask_1]
+)
+set_grounded_dino_opt_val_1 = OptionalValidator(
+    subtasks=[set_grounded_dino_subtask_1, set_grounding_dino_atomically_subtask_1]
+)
+set_o3de_fps_opt_val_1 = OptionalValidator(
+    subtasks=[set_o3de_fps_subtask_1, set_o3de_fps_atomically_subtask_1]
+)
+
+
+set_grounded_sam_opt_val_2 = OptionalValidator(
+    subtasks=[set_grounded_sam_subtask_2, set_grounded_sam_atomically_subtask_2]
+)
+set_grounded_dino_opt_val_2 = OptionalValidator(
+    subtasks=[set_grounding_dino_subtask_2, set_grounding_dino_atomically_subtask_2]
+)
+set_o3de_fps_opt_val_2 = OptionalValidator(
+    subtasks=[set_o3de_fps_subtask_2, set_o3de_fps_atomically_subtask_2]
 )
 
 
@@ -448,14 +528,22 @@ def get_basic_tasks(
                             sam_confidence_threshold=DEFAULT_SAM_CONFIDENCE,
                             dino_confidence_threshold=DEFAULT_DINO_CONFIDENCE,
                             fps=DEFAULT_FPS,
-                            validators=[vision_pipeline_config_val],
+                            validators=[
+                                set_grounded_sam_opt_val_1,
+                                set_grounded_dino_opt_val_1,
+                                set_o3de_fps_opt_val_1,
+                            ],
                             task_args=task_args,
                         ),
                         ConfigureVisionPipelineTask(
                             sam_confidence_threshold=0.6,
                             dino_confidence_threshold=0.6,
                             fps=10,
-                            validators=[vision_pipeline_config_val],
+                            validators=[
+                                set_grounded_sam_opt_val_2,
+                                set_grounded_dino_opt_val_2,
+                                set_o3de_fps_opt_val_2,
+                            ],
                             task_args=task_args,
                         ),
                         RespawnEntitiesTask(
