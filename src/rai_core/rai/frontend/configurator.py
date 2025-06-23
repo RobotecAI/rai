@@ -851,7 +851,7 @@ def review_and_save():
 
         def test_tts():
             vendor = st.session_state.config["tts"]["vendor"]
-            if vendor == "elevenlabs":
+            if vendor == "ElevenLabs":
                 try:
                     from elevenlabs import ElevenLabs
 
@@ -862,7 +862,7 @@ def review_and_save():
                 except Exception as e:
                     st.error(f"TTS error: {e}")
                 return False
-            elif vendor == "opentts":
+            elif vendor == "OpenTTS":
                 try:
                     params = {
                         "voice": "glow-speak:en-us_mary_ann",
