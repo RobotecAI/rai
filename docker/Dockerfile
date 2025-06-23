@@ -25,7 +25,7 @@ fi'
 
 
 # Install dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt update && apt install -y \
     python3 \
     python3-pip \
     git \
@@ -33,7 +33,7 @@ RUN apt-get update && apt-get install -y \
     zip
 
 # Install Poetry
-RUN curl -sSL https://install.python-poetry.org | python3 - --version 1.8.4
+RUN curl -sSL https://install.python-poetry.org | python3 - --version 2.1.3
 ENV PATH="/root/.local/bin:$PATH"
 
 # Clone and setup RAI
@@ -41,16 +41,12 @@ WORKDIR /rai
 RUN git clone https://github.com/RobotecAI/rai.git .
 
 # Set up the environment to use Fast DDS
-ENV FASTRTPS_DEFAULT_PROFILES_FILE=/rai/fastrtpsa_config.xml
+ENV FASTRTPS_DEFAULT_PROFILES_FILE=/rai/fastrtps_config.xml
 ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 
 # Temporary change to use branch with bug fixes
 RUN git pull
 RUN git switch dm/feat/docker-image-manipulator-demo
-
-# # Install Python dependencies with Poetry
-# RUN poetry install --with nomad,openset
-
 
 RUN /bin/bash -c 'if [ "${DEPENDENCIES}" = "core_only" ]; then \
   poetry install; \
