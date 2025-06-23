@@ -365,7 +365,7 @@ class ServiceValidator:
         try:
             model.model_validate(args)
         except ValidationError as e:
-            raise ValueError(f"Pydantic validation failed: {e}")
+            raise ValueError(f"Pydantic validation failed: {e}") from e
 
     def validate(self, service_type: str, args: Dict[str, Any]):
         """
@@ -380,7 +380,7 @@ class ServiceValidator:
         if service_type in self.custom_models:
             self.validate_with_custom(service_type, args)
         else:
-            return self.validate_with_ros2(service_type, args)
+            self.validate_with_ros2(service_type, args)
 
 
 class MockCallROS2ServiceTool(CallROS2ServiceTool):
@@ -402,6 +402,18 @@ class MockCallROS2ServiceTool(CallROS2ServiceTool):
         service_args: Optional[Dict[str, Any]] = None,
         timeout_sec: float = 1.0,
     ) -> str:
+        """
+        Execute the mocked ROS2 service call with validation of service type and its args.
+
+        Parameters
+        ----------
+        service_name : str
+            Name of the service to call
+        service_type : str
+            Type of the service
+        service_args : Optional[Dict[str, Any]], optional
+            Arguments for the service call, by default None
+        """
         if service_name not in self.available_services:
             raise ValueError(
                 f"Service {service_name} is not available within {timeout_sec} seconds. Check if the service exists."
