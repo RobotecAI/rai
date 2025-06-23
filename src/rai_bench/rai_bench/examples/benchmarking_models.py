@@ -36,7 +36,6 @@ if __name__ == "__main__":
         task_types=[  # what types of tasks to include
             "basic",
             "spatial_reasoning",
-            # "navigation",
             "custom_interfaces",
             "manipulation",
         ],
