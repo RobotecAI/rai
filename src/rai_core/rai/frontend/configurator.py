@@ -892,7 +892,7 @@ def review_and_save():
 
             devices = sd.query_devices()
             index = [device["name"] for device in devices].index(device_name)
-            sample_rate = int(devices[device_index]["default_samplerate"])
+            sample_rate = int(devices[index]["default_samplerate"])
             try:
                 recording = sd.rec(
                     device=index,
