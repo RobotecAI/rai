@@ -4,18 +4,24 @@
 
     If you aren't familiar with our benchmark package, please read [RAI Bench](../simulation_and_benchmarking/rai_bench.md) first.
 
+To enable benchmarking follow:
+
+- [Developer environment setup](../setup/install.md#11-install-poetry)
+- [Manipulation demo Setup](../demos/manipulation.md#setup)
+
 Currently, we offer 2 predefined benchmarks:
 
 -   [Manipulation_O3DE](#manipulation-o3de)
 -   [Tool_Calling_Agent](#tool-calling-agent)
 
+   
 If you want to test multiple models across different benchmark configurations, go to [Testing Models](#testing-models).
 
 If your goal is creating custom tasks and scenarios, visit [Creating Custom Tasks](#creating-custom-tasks).
 
+
 ## Manipulation O3DE
 
--   Follow setup from [Manipulation demo Setup](../demos/manipulation.md#setup)
 -   Run the benchmark with:
 
     ```bash
