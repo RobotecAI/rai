@@ -156,10 +156,6 @@ def display_detailed_task_analysis(
         st.warning(f"No tasks of type {selected_type} found.")
         return
 
-    if tasks_df.empty:
-        st.warning(f"No task details available for type: {selected_type}")
-        return
-
     task_stats = (
         tasks_df.groupby("task_prompt")  # type: ignore
         .agg({"score": "mean", "total_time": "mean"})
@@ -373,7 +369,7 @@ def render_task_performance_tab(bench_results: BenchmarkResults):
         model_results, "prompt_detail"
     )
     selected_prompt_detail = st.selectbox(
-        "Select prompt decriptivness",
+        "Select prompt decriptiveness",
         ["All"] + prompt_detail_values,
         key="prompt_detail_select",
     )
