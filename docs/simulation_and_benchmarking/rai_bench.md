@@ -133,7 +133,7 @@ There are predefined Tasks available which are grouped by categories:
 
 Every Task has assigned the `complexity` which reflects the difficulty.
 
-When creating a Task you can define few params:
+When creating a Task, you can define few params:
 
 ```python
 class TaskArgs(BaseModel):
@@ -146,6 +146,6 @@ class TaskArgs(BaseModel):
 
 -   examples_in_system_prompt - How many examples there are in system prompts.
 -   prompt_detail - How descriptive should the Task prompt be.
--   extra_tool_calls - How many extra tool calls can agent make and still pass the Task.
+-   extra_tool_calls - How many extra tool calls an agent can make and still pass the Task.
 
 If you want to know details about every task, visit `rai_bench/tool_calling_agent/tasks`
