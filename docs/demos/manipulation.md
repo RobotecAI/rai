@@ -18,6 +18,10 @@ manipulation techniques.
 
     Make sure ROS 2 is sourced. (e.g. `source /opt/ros/humble/setup.bash`)
 
+### Local Setup
+
+#### Setting up the demo
+
 1. Follow the RAI setup instructions in the [quick setup guide](../setup/install.md#setting-up-developer-environment).
 2. Download additional dependencies:
 
@@ -39,7 +43,7 @@ manipulation techniques.
     colcon build --symlink-install
     ```
 
-## Running the Demo
+#### Running the demo
 
 !!! note "Remain in sourced shell"
 
@@ -74,6 +78,66 @@ manipulation techniques.
 !!! tip "Changing camera view"
 
     To change camera in the simulation use 1-7 keys on your keyboard once it's window is focused.
+
+### Docker Setup
+
+!!! note "ROS 2 required"
+
+    The docker setup requires a working Humble or Jazzy ROS 2 installation on the host machine. Make sure that ROS 2 is sourced on the host machine.
+
+#### 1. Setting up the demo
+
+1. Set up docker as outlined in the [docker setup guide](../setup/setup_docker.md). During the setup, build the docker image with all dependencies (i.e., use the `--build-arg DEPENDENCIES=all_groups` argument)
+   and configure communication between the container and the host ([link](<../setup/setup_docker.md#3.-set-up-communications-between-docker-and-host-(optional)>)).
+
+2. On the host machine, download the latest binary release for the Robotic Arm Demo:
+
+    ```shell
+    ./scripts/download_demo.sh manipulation
+    ```
+
+3. (Inside the container shell) Download additional ROS 2 dependencies:
+
+    ```shell
+    vcs import < demos.repos
+    rosdep install --from-paths src/examples/rai-manipulation-demo/ros2_ws/src --ignore-src -r -y
+    ```
+
+4. (Inside the container shell) Build the ROS 2 workspace:
+
+    ```shell
+    colcon build --symlink-install
+    ```
+
+#### 2. Running the demo
+
+!!! note Source the setup shell
+
+    Ensure ROS 2 is sourced on the host machine. Ensure that every command inside the docker container is run in a sourced shell using `source setup_shell.sh`.
+
+1. Launch the Robotic Arm Visualization on the host machine:
+
+    ```shell
+    ./demo_assets/manipulation/RAIManipulationDemo/RAIManipulationDemo.GameLauncher
+    ```
+
+2. (Inside the container shell) Launch the Robotic Arm Demo script inside of the docker container:
+
+    ```shell
+    ros2 launch examples/manipulation-demo.launch.py
+    ```
+
+3. (Inside the container shell) Open a new terminal for the docker container (e.g., `docker exec -it CONTAINER_ID /bin/bash`) and launch the streamlit interface:
+
+    ```shell
+    streamlit run examples/manipulation-demo-streamlit.py
+    ```
+
+    Alternatively, run the simpler command-line version:
+
+    ```shell
+    python examples/manipulation-demo.py
+    ```
 
 ## How it works
 
