@@ -44,10 +44,6 @@ RUN git clone https://github.com/RobotecAI/rai.git .
 ENV FASTRTPS_DEFAULT_PROFILES_FILE=/rai/fastrtps_config.xml
 ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 
-# Temporary change to use branch with bug fixes
-RUN git pull
-RUN git switch dm/feat/docker-image-manipulator-demo
-
 RUN /bin/bash -c 'if [ "${DEPENDENCIES}" = "core_only" ]; then \
   poetry install; \
 else \
