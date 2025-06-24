@@ -56,8 +56,14 @@ class ManipulationO3DEBenchmarkConfig(BenchmarkConfig):
 
 
 class ToolCallingAgentBenchmarkConfig(BenchmarkConfig):
-    extra_tool_calls: int = 0
+    extra_tool_calls: List[int] = [0]
     complexities: List[Literal["easy", "medium", "hard"]] = ["easy", "medium", "hard"]
+    N_shots: List[Literal[0, 2, 5]] = [0, 2, 5]
+    prompt_detail: List[Literal["brief", "moderate", "descriptive"]] = [
+        "brief",
+        "moderate",
+        "descriptive",
+    ]
     task_types: List[
         Literal[
             "basic",
@@ -189,6 +195,8 @@ def test_models(
                             tool_calling_tasks = tool_calling_agent.get_tasks(
                                 extra_tool_calls=bench_conf.extra_tool_calls,
                                 complexities=bench_conf.complexities,
+                                prompt_detail=bench_conf.prompt_detail,
+                                n_shots=bench_conf.N_shots,
                                 task_types=bench_conf.task_types,
                             )
                             tool_calling_agent.run_benchmark(

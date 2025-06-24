@@ -100,20 +100,20 @@ def display_task_type_performance(model_results: ModelResults):
     st.plotly_chart(fig_type_calls, use_container_width=True)  # type: ignore
 
 
-def display_task_complexity_performance(model_results: ModelResults):
+def display_task_performance_by_field(model_results: ModelResults, field: str):
     """Display performance charts by task complexity."""
-    complexity_df = create_task_metrics_dataframe(model_results, "complexity")
+    metric_df = create_task_metrics_dataframe(model_results, field)
 
-    if complexity_df.empty:
+    if metric_df.empty:
         st.warning("No complexity data available.")
         return
 
     fig_complexity_score = create_bar_chart(
-        df=complexity_df,
-        x_column="complexity",
+        df=metric_df,
+        x_column=field,
         y_column="avg_score",
-        title="Success Rate by Task Complexity",
-        x_label="Task Complexity",
+        title=f"Success Rate by {field}",
+        x_label=field,
         y_label="Avg Score",
         y_range=(0.0, 1.0),
         count_column="total_tasks",
@@ -121,63 +121,43 @@ def display_task_complexity_performance(model_results: ModelResults):
     st.plotly_chart(fig_complexity_score, use_container_width=True)  # type: ignore
 
     fig_complexity_calls = create_bar_chart(
-        df=complexity_df,
-        x_column="complexity",
+        df=metric_df,
+        x_column=field,
         y_column="avg_extra_tool_calls",
-        title="Avg Extra Tool Calls Used by Task Complexity",
-        x_label="Task Complexity",
+        title=f"Avg Extra Tool Calls Used by {field}",
+        x_label=field,
         y_label="Avg Extra Tool Calls Used",
         count_column="total_tasks",
     )
     st.plotly_chart(fig_complexity_calls, use_container_width=True)  # type: ignore
 
 
-def display_detailed_task_type_analysis(
-    model_results: ModelResults, selected_type: str
+def display_detailed_task_analysis(
+    model_results: ModelResults,
+    selected_type: str,
+    selected_complexity: str,
+    selected_example_num: str,
+    selected_prompt_detail: str,
 ):
     """Display detailed analysis for a specific task type."""
     # first, get only the tasks of the selected type
-    tasks_for_type_df = create_task_details_dataframe(model_results, selected_type)
-    if tasks_for_type_df.empty:
-        st.warning(f"No tasks of type {selected_type} found.")
-        return
-    # Now aggregate by complexity for that type
-    filtered_by_complexity = (
-        tasks_for_type_df.groupby("complexity")  # type: ignore
-        .agg(
-            avg_score=("score", "mean"),
-            avg_time=("total_time", "mean"),
-            avg_extra_tool_calls=("extra_tool_calls_used", "mean"),
-        )
-        .reset_index()
+    tasks_df = create_task_details_dataframe(
+        model_results,
+        task_type=selected_type if selected_type != "All" else None,
+        complexity=selected_complexity if selected_complexity != "All" else None,
+        examples_in_system_prompt=(
+            int(selected_example_num) if selected_example_num != "All" else None
+        ),
+        prompt_detail=(
+            selected_prompt_detail if selected_prompt_detail != "All" else None
+        ),
     )
-    filtered_by_complexity = filtered_by_complexity[
-        filtered_by_complexity["complexity"].notna()
-    ]
-
-    # Display success rate by complexity for the selected task type
-    if not filtered_by_complexity.empty:
-        fig_complexity_score = create_bar_chart(
-            df=filtered_by_complexity,
-            x_column="complexity",
-            y_column="avg_score",
-            title=f"Success Rate by Task Complexity for '{selected_type}' Tasks",
-            x_label="Task Complexity",
-            y_label="Avg Score",
-            y_range=(0.0, 1.0),
-            count_column="total_tasks",
-        )
-        st.plotly_chart(fig_complexity_score, use_container_width=True)  # type: ignore
-
-    # Display success rate by individual task
-    task_details_df = create_task_details_dataframe(model_results, selected_type)
-
-    if task_details_df.empty:
-        st.warning(f"No task details available for type: {selected_type}")
+    if tasks_df.empty:
+        st.warning(f"No tasks of type {selected_type} found.")
         return
 
     task_stats = (
-        task_details_df.groupby("task_prompt")  # type: ignore
+        tasks_df.groupby("task_prompt")  # type: ignore
         .agg({"score": "mean", "total_time": "mean"})
         .reset_index()
     )
@@ -200,7 +180,7 @@ def display_detailed_task_type_analysis(
         df=task_stats,
         x_column="task_prompt",
         y_column="score",
-        title=f"Avg Score for '{selected_type}' Tasks",
+        title="Avg Score",
         x_label="Task",
         y_label="Avg Score",
         custom_data=["wrapped_prompt", "score"],
@@ -216,7 +196,7 @@ def display_detailed_task_type_analysis(
         df=task_stats,
         x_column="task_prompt",
         y_column="total_time",
-        title=f"Avg Time for '{selected_type}' Tasks",
+        title="Avg Time",
         x_label="Task",
         y_label="Avg Time (s)",
         custom_data=["wrapped_prompt", "total_time"],
@@ -349,20 +329,58 @@ def render_task_performance_tab(bench_results: BenchmarkResults):
 
     # Display performance by complexity
     st.subheader("Performance by Task Complexity")
-    display_task_complexity_performance(model_results)
+    display_task_performance_by_field(model_results, "complexity")
 
-    # Per Task Type Analysis
+    # Display performance by complexity
+    st.subheader("Performance by system prompt examples")
+    display_task_performance_by_field(model_results, "examples_in_system_prompt")
+
+    # Display performance by complexity
+    st.subheader("Performance by Task's prompt detail")
+    display_task_performance_by_field(model_results, "prompt_detail")
+
     st.subheader("Detailed Task Type Analysis")
     task_types = get_unique_values_from_results(model_results, "type")
-
     if not task_types:
         st.warning("No task types available.")
         return
 
     selected_type = st.selectbox(
-        "Select Task Type", sorted(task_types), key="task_type"
+        "Select Task Type", ["All"] + sorted(task_types), key="task_type"
     )
-    display_detailed_task_type_analysis(model_results, selected_type)
+
+    # Add selectboxes for the two additional attributes with "All" as default
+    complexity_values = get_unique_values_from_results(model_results, "complexity")
+    selected_complexity = st.selectbox(
+        "Select Complexity",
+        ["All"] + complexity_values,
+        key="complexity_select",
+    )
+
+    examples_values = get_unique_values_from_results(
+        model_results, "examples_in_system_prompt"
+    )
+    selected_examples = st.selectbox(
+        "Select Examples in System Prompt",
+        ["All"] + sorted(examples_values),
+        key="n_shots_select",
+    )
+    prompt_detail_values = get_unique_values_from_results(
+        model_results, "prompt_detail"
+    )
+    selected_prompt_detail = st.selectbox(
+        "Select prompt decriptiveness",
+        ["All"] + prompt_detail_values,
+        key="prompt_detail_select",
+    )
+
+    display_detailed_task_analysis(
+        model_results,
+        selected_type,
+        selected_complexity,
+        selected_examples,
+        selected_prompt_detail,
+    )
 
 
 def render_validator_analysis_tab(bench_results: BenchmarkResults):
