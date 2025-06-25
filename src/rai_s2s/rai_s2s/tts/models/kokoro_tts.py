@@ -125,3 +125,39 @@ class KokoroTTS(TTSModel):
 
         data = self.get_speech("A")
         return data.frame_rate, 1
+
+    def get_supported_languages(self) -> list[str]:
+        """
+        Returns a list of supported languages for the Kokoro TTS model.
+
+        Returns
+        -------
+        list[str]
+            List of supported languages.
+        Raises
+        ------
+        TTSModelError
+            If there is an issue with retrieving supported languages from the Kokoro TTS model.
+        """
+        try:
+            return self.kokoro.get_languages()
+        except Exception as e:
+            raise TTSModelError(f"Failed to get supported languages: {e}")
+
+    def get_available_voices(self) -> list[str]:
+        """
+        Returns a list of available voice names.
+
+        Returns
+        -------
+        list[str]
+            List of voice names available in the Kokoro TTS model.
+        Raises
+        ------
+        TTSModelError
+            If there is an issue with retrieving voice names from the Kokoro TTS model.
+        """
+        try:
+            return list(self.kokoro.get_voices())
+        except Exception as e:
+            raise TTSModelError(f"Failed to retrieve voice names: {e}")
