@@ -34,6 +34,14 @@ class KokoroTTS(TTSModel):
         Path to the JSON file containing voice configurations, by default "voices.json".
     voice : str, optional
         The voice model to use, by default "af_sarah".
+    language : str, optional
+        The language code for the TTS model, by default "en-us".
+    speed : float, optional
+        The speed of the speech generation, by default 1.0.
+    Raises
+    ------
+    TTSModelError
+        If there is an issue with initializing the Kokoro TTS model.
 
     """
 
@@ -42,10 +50,19 @@ class KokoroTTS(TTSModel):
         model_path: str = "kokoro-v0_19.onnx",
         voices_path: str = "voices.json",
         voice: str = "af_sarah",
+        language: str = "en-us",
+        speed: float = 1.0,
     ):
-        self.model_path = model_path
-        self.voices_path = voices_path
         self.voice = voice
+        self.speed = speed
+        self.language = language
+
+        try:
+            self.kokoro = Kokoro(
+                model_path=model_path, voices_path=voices_path
+            )  # TODO (mkotynia) add method to download the model ?
+        except Exception as e:
+            raise TTSModelError(f"Failed to initialize Kokoro TTS model: {e}") from e
 
     def get_speech(self, text: str) -> AudioSegment:
         """
@@ -64,23 +81,15 @@ class KokoroTTS(TTSModel):
         Raises
         ------
         TTSModelError
-            If there is an issue with Kokoro TTS model or processing audio.
+            If there is an issue with processing TTS conversion by Kokoro TTS model.
         """
         try:
-            kokoro = Kokoro(
-                model_path=self.model_path, voices_path=self.voices_path
-            )  # TODO (mkotynia) add method to download the model ?
-        except Exception as e:
-            raise TTSModelError(f"Failed to initialize Kokoro TTS model: {e}")
-        try:
-            samples, sample_rate = kokoro.create(
-                text, voice=self.voice, speed=1.0, lang="en-us"
-            )  # TODO (mkotynia) parametrize this
+            samples, sample_rate = self.kokoro.create(
+                text, voice=self.voice, speed=self.speed, lang=self.language
+            )
 
             if samples.dtype == np.float32:
-                samples = (
-                    (samples * 32768).clip(-32768, 32767).astype(np.int16)
-                )  # TODO (mkotynia) consider writing tests for format in case kokoro_onnx version is changed
+                samples = (samples * 32768).clip(-32768, 32767).astype(np.int16)
             else:
                 raise TTSModelError(
                     f"Unsupported sample format: {samples.dtype}. Expected float32."
@@ -111,7 +120,7 @@ class KokoroTTS(TTSModel):
         Raises
         ------
         TTSModelError
-            If there is an issue with Kokoro TTS model or processing audio.
+            If there is an issue with processing TTS conversion by Kokoro TTS model.
         """
 
         data = self.get_speech("A")
