@@ -14,7 +14,7 @@ Choose the docker image based on your preferred ROS 2 version. You may build the
 Core dependencies only:
 
 ```bash
-docker build -t rai:humble --build-arg ROS_DISTRO=humble --build-arg -f docker/Dockerfile .
+docker build -t rai:humble --build-arg ROS_DISTRO=humble -f docker/Dockerfile .
 ```
 
 All dependencies:
