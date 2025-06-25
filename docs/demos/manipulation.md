@@ -88,7 +88,7 @@ manipulation techniques.
 #### 1. Setting up the demo
 
 1. Set up docker as outlined in the [docker setup guide](../setup/setup_docker.md). During the setup, build the docker image with all dependencies (i.e., use the `--build-arg DEPENDENCIES=all_groups` argument)
-   and configure communication between the container and the host ([link](<../setup/setup_docker.md#3.-set-up-communications-between-docker-and-host-(optional)>)).
+   and configure communication between the container and the host ([link](../setup/setup_docker.md#2-set-up-communications-between-docker-and-host-optional)).
 
 2. On the host machine, download the latest binary release for the Robotic Arm Demo:
 
