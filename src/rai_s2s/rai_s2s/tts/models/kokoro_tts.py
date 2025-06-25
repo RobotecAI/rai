@@ -13,6 +13,9 @@
 # limitations under the License.
 
 
+import os
+import subprocess
+from pathlib import Path
 from typing import Tuple
 
 import numpy as np
@@ -28,41 +31,126 @@ class KokoroTTS(TTSModel):
 
     Parameters
     ----------
-    model_path : str, optional
-        Path to the ONNX model file for Kokoro TTS, by default "kokoro-v0_19.onnx".
-    voices_path : str, optional
-        Path to the JSON file containing voice configurations, by default "voices.json".
     voice : str, optional
         The voice model to use, by default "af_sarah".
     language : str, optional
         The language code for the TTS model, by default "en-us".
     speed : float, optional
         The speed of the speech generation, by default 1.0.
+    cache_dir : str | Path, optional
+        Directory to cache downloaded models, by default "~/.cache/rai/kokoro/".
+
     Raises
     ------
     TTSModelError
-        If there is an issue with initializing the Kokoro TTS model.
+        If there is an issue with initializing the Kokoro TTS model or downloading
+        required files.
 
     """
 
+    MODEL_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/kokoro-v0_19.onnx"
+    VOICES_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/voices.json"
+
+    MODEL_FILENAME = "kokoro-v0_19.onnx"
+    VOICES_FILENAME = "voices.json"
+
     def __init__(
         self,
-        model_path: str = "kokoro-v0_19.onnx",
-        voices_path: str = "voices.json",
         voice: str = "af_sarah",
         language: str = "en-us",
         speed: float = 1.0,
+        cache_dir: str | Path = Path.home() / ".cache/rai/kokoro/",
     ):
         self.voice = voice
         self.speed = speed
         self.language = language
+        self.cache_dir = Path(cache_dir)
+
+        os.makedirs(self.cache_dir, exist_ok=True)
+
+        self.model_path = self._ensure_model_exists()
+        self.voices_path = self._ensure_voices_exists()
 
         try:
             self.kokoro = Kokoro(
-                model_path=model_path, voices_path=voices_path
-            )  # TODO (mkotynia) add method to download the model ?
+                model_path=str(self.model_path), voices_path=str(self.voices_path)
+            )
         except Exception as e:
             raise TTSModelError(f"Failed to initialize Kokoro TTS model: {e}") from e
+
+    def _ensure_model_exists(self) -> Path:
+        """
+        Checks if the model file exists and downloads it if necessary.
+
+        Returns
+        -------
+        Path
+            The path to the model file.
+
+        Raises
+        ------
+        TTSModelError
+            If the model cannot be downloaded or accessed.
+        """
+        model_path = self.cache_dir / self.MODEL_FILENAME
+        if model_path.exists() and model_path.is_file():
+            return model_path
+
+        self._download_file(self.MODEL_URL, model_path)
+        return model_path
+
+    def _ensure_voices_exists(self) -> Path:
+        """
+        Checks if the voices file exists and downloads it if necessary.
+
+        Returns
+        -------
+        Path
+            The path to the voices file.
+
+        Raises
+        ------
+        TTSModelError
+            If the voices file cannot be downloaded or accessed.
+        """
+        voices_path = self.cache_dir / self.VOICES_FILENAME
+        if voices_path.exists() and voices_path.is_file():
+            return voices_path
+
+        self._download_file(self.VOICES_URL, voices_path)
+        return voices_path
+
+    def _download_file(self, url: str, destination: Path) -> None:
+        """
+        Downloads a file from a URL to a destination path.
+
+        Parameters
+        ----------
+        url : str
+            The URL to download from.
+        destination : Path
+            The destination path to save the file.
+
+        Raises
+        ------
+        Exception
+            If the download fails.
+        """
+        try:
+            subprocess.run(
+                [
+                    "wget",
+                    url,
+                    "-O",
+                    str(destination),
+                    "--progress=dot:giga",
+                ],
+                check=True,
+            )
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"Download failed with exit code {e.returncode}") from e
+        except Exception as e:
+            raise Exception(f"Download failed: {e}") from e
 
     def get_speech(self, text: str) -> AudioSegment:
         """
