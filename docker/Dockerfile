@@ -36,9 +36,9 @@ RUN apt update && apt install -y \
 RUN curl -sSL https://install.python-poetry.org | python3 - --version 2.1.3
 ENV PATH="/root/.local/bin:$PATH"
 
-# Clone and setup RAI
+# Copy the RAI repository
+COPY . /rai
 WORKDIR /rai
-RUN git clone https://github.com/RobotecAI/rai.git .
 
 # Set up the environment to use Fast DDS
 ENV FASTRTPS_DEFAULT_PROFILES_FILE=/rai/fastrtps_config.xml
