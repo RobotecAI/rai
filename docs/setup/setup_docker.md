@@ -7,7 +7,12 @@
 
 ## 1. Build the docker image
 
-Choose the docker image based on your preferred ROS 2 version. You may build the selected image with only the core dependencies or, alternatively, with all the additional modules.
+Choose the docker image based on your preferred ROS 2 version. You may build the selected image with only the core dependencies or, alternatively, with all the additional modules. To build the docker image, you must clone the RAI repository:
+
+```bash
+git clone https://github.com/RobotecAI/rai.git
+cd rai
+```
 
 ### 1.1. Humble
 
