@@ -48,25 +48,31 @@ docker build -t rai:jazzy --build-arg ROS_DISTRO=jazzy --build-arg DEPENDENCIES=
 
 To allow the container to communicate with the host machine, configure the host environment as presented below:
 
-1. If not configured, set the `ROS_DOMAIN_ID` environment variable to a domain ID between 0 and 101, inclusive. Example:
+1. Source ROS 2 on the host machine:
+
+    ```shell
+    source /opt/ros/jazzy/setup.bash # or humble
+    ```
+
+2. If not configured, set the `ROS_DOMAIN_ID` environment variable to a domain ID between 0 and 101, inclusive. Example:
 
     ```shell
     export ROS_DOMAIN_ID=99
     ```
 
-2. Install the eProsima Fast DDS middleware (should come preinstalled with ROS 2):
+3. Install the eProsima Fast DDS middleware (should come preinstalled with ROS 2):
 
     ```shell
     apt install ros-"${ROS_DISTRO}"-fastrtps
     ```
 
-3. Configure the DDS middleware using the `fastrtps_config.xml` file included in the RAI repository:
+4. Configure the DDS middleware using the `fastrtps_config.xml` file included in the RAI repository:
 
     ```shell
     export FASTRTPS_DEFAULT_PROFILES_FILE=/path/to/fastrtps_config.xml
     ```
 
-4. Set the RMW to use eProsima Fast DDS:
+5. Set the RMW to use eProsima Fast DDS:
 
     ```shell
     export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
