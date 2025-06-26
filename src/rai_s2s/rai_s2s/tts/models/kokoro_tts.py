@@ -183,14 +183,16 @@ class KokoroTTS(TTSModel):
                     f"Unsupported sample format: {samples.dtype}. Expected float32."
                 )
 
-            audio_segment = AudioSegment(
+            audio = AudioSegment(
                 data=samples.tobytes(),
                 sample_width=2,
                 frame_rate=sample_rate,
                 channels=1,
             )
-
-            return audio_segment
+            if self.sample_rate == -1:
+                return audio
+            else:
+                return self._resample(audio)
         except Exception as e:
             raise TTSModelError(f"Failed to process text with Kokoro TTS model: {e}")
 
