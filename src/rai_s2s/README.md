@@ -51,6 +51,16 @@ The environment variable `OPEN_API_KEY` needs to be set to a valid OPENAI key in
 [ElevenLabs](https://elevenlabs.io/) is a proprietary cloud provider for TTS. Refer to the website for the documentation.
 In order to use it the `ELEVENLABS_API_KEY` environment variable must be set, with a valid API key.
 
+#### KokoroTTS
+
+[KokoroTTS](https://huggingface.co/hexgrad/Kokoro-82M) is an open source model for TTS.
+
+The model works locally with the use of [kokoro-onnx library](https://github.com/thewh1teagle/kokoro-onnx) in onnx format.
+For available voices and languages supported within currently used version of the model - use `get_available_voices()` and `get_supported_languages()` methods of the `rai_s2s.tts.models.KokoroTTS` respectively.
+
+> [!NOTE]
+> You may encounter phonemizer warnings like "words count mismatch on x% of the lines". These warnings do not indicate that something is wrong with text to speech processing and can be safely ignored.
+
 #### OpenTTS
 
 [OpenTTS](https://github.com/synesthesiam/opentts) is an open source model for TTS.
