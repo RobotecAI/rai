@@ -33,7 +33,7 @@ docker build -t rai:humble --build-arg ROS_DISTRO=humble --build-arg DEPENDENCIE
 Core dependencies only:
 
 ```bash
-docker build -t rai:jazzy --build-arg ROS_DISTRO=jazzy --build-arg DEPENDENCIES=all_groups -f docker/Dockerfile .
+docker build -t rai:jazzy --build-arg ROS_DISTRO=jazzy -f docker/Dockerfile .
 ```
 
 All dependencies:
