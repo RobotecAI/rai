@@ -13,6 +13,6 @@
 # limitations under the License.
 
 from .tts.agents import TextToSpeechAgent
-from .tts.models import ElevenLabsTTS, OpenTTS
+from .tts.models import ElevenLabsTTS, KokoroTTS, OpenTTS
 
-__all__ = ["ElevenLabsTTS", "OpenTTS", "TextToSpeechAgent"]
+__all__ = ["ElevenLabsTTS", "KokoroTTS", "OpenTTS", "TextToSpeechAgent"]
