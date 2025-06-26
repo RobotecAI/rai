@@ -41,7 +41,7 @@ COPY . /rai
 WORKDIR /rai
 
 # Set up the environment to use Fast DDS
-ENV FASTRTPS_DEFAULT_PROFILES_FILE=/rai/fastrtps_config.xml
+ENV FASTRTPS_DEFAULT_PROFILES_FILE=/rai/docker/fastrtps_config.xml
 ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 
 RUN /bin/bash -c 'if [ "${DEPENDENCIES}" = "core_only" ]; then \
