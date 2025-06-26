@@ -863,9 +863,16 @@ def review_and_save():
                 except Exception as e:
                     st.error(f"TTS error: {e}")
                 return False
-            elif vendor == "kokoroTTS":
-                # TODO (mkotynia) implement KokoroTTS test
-                pass
+            elif vendor == "KokoroTTS":
+                try:
+                    from rai_s2s.tts import KokoroTTS
+
+                    model = KokoroTTS()
+                    model.get_speech(text="A")
+                    return True
+                except Exception as e:
+                    st.error(f"TTS error: {e}")
+                return False
 
         def test_recording_device(device_name: str):
             import sounddevice as sd
