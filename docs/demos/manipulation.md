@@ -87,23 +87,37 @@ manipulation techniques.
 
 #### 1. Setting up the demo
 
-1. Set up docker as outlined in the [docker setup guide](../setup/setup_docker.md). During the setup, build the docker image with all dependencies (i.e., use the `--build-arg DEPENDENCIES=all_groups` argument)
-   and configure communication between the container and the host ([link](../setup/setup_docker.md#2-set-up-communications-between-docker-and-host-optional)).
+1.  Set up docker as outlined in the [docker setup guide](../setup/setup_docker.md). During the setup, build the docker image with all dependencies (i.e., use the `--build-arg DEPENDENCIES=all_groups` argument)
+    and configure communication between the container and the host ([link](../setup/setup_docker.md#2-set-up-communications-between-docker-and-host-optional)).
 
-2. On the host machine, download the latest binary release for the Robotic Arm Demo:
+2.  On the host machine, download the latest binary release for the Robotic Arm Demo:
 
     ```shell
     ./scripts/download_demo.sh manipulation
     ```
 
-3. (Inside the container shell) Download additional ROS 2 dependencies:
+3.  Run the docker container (if not already running):
+
+    ```shell
+    docker run --net=host --ipc=host --pid=host -e ROS_DOMAIN_ID=$ROS_DOMAIN_ID -it rai:jazzy # or rai:humble
+    ```
+
+    !!! tip "NVIDIA GPU acceleration"
+
+        If the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) is set up on your host machine, you can use the GPU within the RAI docker container for faster inference by adding the `--gpus all` option:
+
+        ```shell
+        docker run --net=host --ipc=host --pid=host -e ROS_DOMAIN_ID=$ROS_DOMAIN_ID --gpus all -it rai:jazzy # or rai:humble
+        ```
+
+4.  (Inside the container shell) Download additional ROS 2 dependencies:
 
     ```shell
     vcs import < demos.repos
     rosdep install --from-paths src/examples/rai-manipulation-demo/ros2_ws/src --ignore-src -r -y
     ```
 
-4. (Inside the container shell) Build the ROS 2 workspace:
+5.  (Inside the container shell) Build the ROS 2 workspace:
 
     ```shell
     colcon build --symlink-install
