@@ -14,6 +14,7 @@
 
 
 import os
+import re
 import subprocess
 from pathlib import Path
 from typing import Tuple
@@ -152,6 +153,31 @@ class KokoroTTS(TTSModel):
         except Exception as e:
             raise Exception(f"Download failed: {e}") from e
 
+    def _preprocess_text(self, text: str) -> str:
+        """
+        Preprocesses text by removing formatting characters that would be
+        read aloud as words (like 'asterisk' for '*').
+
+        Parameters
+        ----------
+        text : str
+            The input text that may contain formatting characters.
+
+        Returns
+        -------
+        str
+            The cleaned text with formatting characters removed.
+        """
+        # Remove bold markdown (** or __)
+        text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
+        text = re.sub(r"__(.*?)__", r"\1", text)
+
+        # Remove italic markdown (* or _)
+        text = re.sub(r"\*(.*?)\*", r"\1", text)
+        text = re.sub(r"_(.*?)_", r"\1", text)
+
+        return text
+
     def get_speech(self, text: str) -> AudioSegment:
         """
         Converts text into speech using the Kokoro TTS model.
@@ -172,8 +198,10 @@ class KokoroTTS(TTSModel):
             If there is an issue with processing TTS conversion by Kokoro TTS model.
         """
         try:
+            text = self._preprocess_text(text)
+
             samples, sample_rate = self.kokoro.create(
-                text, voice=self.voice, speed=self.speed, lang=self.language, trim=False
+                text, voice=self.voice, speed=self.speed, lang=self.language
             )
 
             if samples.dtype == np.float32:
