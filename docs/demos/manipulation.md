@@ -85,6 +85,10 @@ manipulation techniques.
 
     The docker setup requires a working Humble or Jazzy ROS 2 installation on the host machine. Make sure that ROS 2 is sourced on the host machine.
 
+!!! warning "ROS 2 distributions"
+
+    It is highly recommended that ROS 2 distribution on the host machine matches the ROS 2 distribution of the docker container. A distribution version mismatch may result in the demo not working correctly.
+
 #### 1. Setting up the demo
 
 1.  Set up docker as outlined in the [docker setup guide](../setup/setup_docker.md). During the setup, build the docker image with all dependencies (i.e., use the `--build-arg DEPENDENCIES=all_groups` argument)
