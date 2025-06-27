@@ -592,6 +592,7 @@ def tts():
         """
     Text to Speech (TTS) converts your assistant's text responses into spoken words:
     - ElevenLabs provides high-quality, natural-sounding voices (requires API key)
+    - KokoroTTS in ONNX format runs locally on your computer.
     - OpenTTS runs locally on your computer with no API costs (requires Docker)
     """
     )
@@ -652,6 +653,12 @@ def tts():
         ```
 
         To learn more about OpenTTS, visit [here](https://github.com/synesthesiam/opentts)
+        """
+        )
+    elif tts_vendor == "KokoroTTS":
+        st.info(
+            """
+        To learn more about KokoroTTS, visit [here](https://huggingface.co/hexgrad/Kokoro-82M)
         """
         )
 
@@ -853,6 +860,16 @@ def review_and_save():
                     )
                     if response.status_code == 200:
                         return True
+                except Exception as e:
+                    st.error(f"TTS error: {e}")
+                return False
+            elif vendor == "KokoroTTS":
+                try:
+                    from rai_s2s.tts import KokoroTTS
+
+                    model = KokoroTTS()
+                    model.get_speech(text="A")
+                    return True
                 except Exception as e:
                     st.error(f"TTS error: {e}")
                 return False

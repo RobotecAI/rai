@@ -23,7 +23,7 @@ class SpeakerConfig:
     device_name: str
 
 
-TTS_MODELS = ["OpenTTS", "ElevenLabs"]
+TTS_MODELS = ["KokoroTTS", "OpenTTS", "ElevenLabs"]
 
 
 @dataclass
