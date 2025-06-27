@@ -31,6 +31,9 @@ connector = SoundDeviceConnector(
 )
 ```
 
+> [!WARNING]
+> It is not recommended to use device_name set to `default` in `SoundDeviceConfig` due to potential issues with audio.
+
 ## Message Type: `SoundDeviceMessage`
 
 ```python
