@@ -204,7 +204,7 @@ class KokoroTTS(TTSModel):
             text = self._preprocess_text(text)
 
             samples, sample_rate = self.kokoro.create(
-                text, voice=self.voice, speed=self.speed, lang=self.language
+                text, voice=self.voice, speed=self.speed, lang=self.language, trim=False
             )
 
             if samples.dtype == np.float32:
