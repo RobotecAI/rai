@@ -17,7 +17,7 @@ import os
 import re
 import subprocess
 from pathlib import Path
-from typing import Tuple
+from typing import Literal, Tuple
 
 import numpy as np
 from kokoro_onnx import Kokoro
@@ -49,10 +49,11 @@ class KokoroTTS(TTSModel):
 
     """
 
-    MODEL_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/kokoro-v0_19.onnx"
+    BASE_MODEL_URL = (
+        "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/"
+    )
     VOICES_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/voices.json"
 
-    MODEL_FILENAME = "kokoro-v0_19.onnx"
     VOICES_FILENAME = "voices.json"
 
     def __init__(
@@ -60,6 +61,7 @@ class KokoroTTS(TTSModel):
         voice: str = "af_sarah",
         language: str = "en-us",
         speed: float = 1.0,
+        model_size: Literal["small", "medium", "large"] = "large",
         cache_dir: str | Path = Path.home() / ".cache/rai/kokoro/",
     ):
         self.voice = voice
@@ -69,6 +71,7 @@ class KokoroTTS(TTSModel):
 
         os.makedirs(self.cache_dir, exist_ok=True)
 
+        self.model_size = model_size
         self.model_path = self._ensure_model_exists()
         self.voices_path = self._ensure_voices_exists()
 
@@ -93,11 +96,13 @@ class KokoroTTS(TTSModel):
         TTSModelError
             If the model cannot be downloaded or accessed.
         """
-        model_path = self.cache_dir / self.MODEL_FILENAME
+        model_filename = self._get_model_filename()
+        model_path = self.cache_dir / model_filename
         if model_path.exists() and model_path.is_file():
             return model_path
 
-        self._download_file(self.MODEL_URL, model_path)
+        model_url = self._get_model_url()
+        self._download_file(model_url, model_path)
         return model_path
 
     def _ensure_voices_exists(self) -> Path:
@@ -282,3 +287,32 @@ class KokoroTTS(TTSModel):
             return list(self.kokoro.get_voices())
         except Exception as e:
             raise TTSModelError(f"Failed to retrieve voice names: {e}")
+
+    def _get_model_filename(self) -> str:
+        """
+        Gets the model filename based on the model size.
+
+        Returns
+        -------
+        str
+            The model filename for the specified model size.
+        """
+        if self.model_size == "large":
+            return "kokoro-v0_19.onnx"
+        elif self.model_size == "medium":
+            return "kokoro-v0_19.fp16.onnx"
+        elif self.model_size == "small":
+            return "kokoro-v0_19.int8.onnx"
+        else:
+            raise TTSModelError(f"Unsupported model size: {self.model_size}")
+
+    def _get_model_url(self) -> str:
+        """
+        Gets the full model URL based on the model size.
+
+        Returns
+        -------
+        str
+            The full URL for downloading the model.
+        """
+        return self.BASE_MODEL_URL + self._get_model_filename()
