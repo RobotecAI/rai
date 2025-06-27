@@ -56,6 +56,7 @@ In order to use it the `ELEVENLABS_API_KEY` environment variable must be set, wi
 [KokoroTTS](https://huggingface.co/hexgrad/Kokoro-82M) is an open source model for TTS.
 
 The model works locally with the use of [kokoro-onnx library](https://github.com/thewh1teagle/kokoro-onnx) in onnx format.
+The model is available in 3 sizes - 310MB, 169MB, 88MB. The default size is 310MB.
 For available voices and languages supported within currently used version of the model - use `get_available_voices()` and `get_supported_languages()` methods of the `rai_s2s.tts.models.KokoroTTS` respectively.
 
 > [!NOTE]
