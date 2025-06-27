@@ -82,110 +82,6 @@ class KokoroTTS(TTSModel):
         except Exception as e:
             raise TTSModelError(f"Failed to initialize Kokoro TTS model: {e}") from e
 
-    def _ensure_model_exists(self) -> Path:
-        """
-        Checks if the model file exists and downloads it if necessary.
-
-        Returns
-        -------
-        Path
-            The path to the model file.
-
-        Raises
-        ------
-        TTSModelError
-            If the model cannot be downloaded or accessed.
-        """
-        model_filename = self._get_model_filename()
-        model_path = self.cache_dir / model_filename
-        if model_path.exists() and model_path.is_file():
-            return model_path
-
-        model_url = self._get_model_url()
-        self._download_file(model_url, model_path)
-        return model_path
-
-    def _ensure_voices_exists(self) -> Path:
-        """
-        Checks if the voices file exists and downloads it if necessary.
-
-        Returns
-        -------
-        Path
-            The path to the voices file.
-
-        Raises
-        ------
-        TTSModelError
-            If the voices file cannot be downloaded or accessed.
-        """
-        voices_path = self.cache_dir / self.VOICES_FILENAME
-        if voices_path.exists() and voices_path.is_file():
-            return voices_path
-
-        self._download_file(self.VOICES_URL, voices_path)
-        return voices_path
-
-    def _download_file(self, url: str, destination: Path) -> None:
-        """
-        Downloads a file from a URL to a destination path.
-
-        Parameters
-        ----------
-        url : str
-            The URL to download from.
-        destination : Path
-            The destination path to save the file.
-
-        Raises
-        ------
-        Exception
-            If the download fails.
-        """
-        try:
-            subprocess.run(
-                [
-                    "wget",
-                    url,
-                    "-O",
-                    str(destination),
-                    "--progress=dot:giga",
-                ],
-                check=True,
-            )
-        except subprocess.CalledProcessError as e:
-            raise Exception(f"Download failed with exit code {e.returncode}") from e
-        except Exception as e:
-            raise Exception(f"Download failed: {e}") from e
-
-    def _preprocess_text(self, text: str) -> str:
-        """
-        Preprocesses text by removing formatting characters that would be
-        read aloud as words (like 'asterisk' for '*').
-
-        Parameters
-        ----------
-        text : str
-            The input text that may contain formatting characters.
-
-        Returns
-        -------
-        str
-            The cleaned text with formatting characters removed.
-        """
-        # Remove markdown headers (# symbols at start of line)
-        text = re.sub(r"^#+\s*", "", text, flags=re.MULTILINE)
-
-        # Remove bold markdown (** or __)
-        text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
-        text = re.sub(r"__(.*?)__", r"\1", text)
-
-        # Remove italic markdown (* or _)
-        text = re.sub(r"\*(.*?)\*", r"\1", text)
-        text = re.sub(r"_(.*?)_", r"\1", text)
-
-        return text
-
     def get_speech(self, text: str) -> AudioSegment:
         """
         Converts text into speech using the Kokoro TTS model.
@@ -316,3 +212,107 @@ class KokoroTTS(TTSModel):
             The full URL for downloading the model.
         """
         return self.BASE_MODEL_URL + self._get_model_filename()
+
+    def _ensure_model_exists(self) -> Path:
+        """
+        Checks if the model file exists and downloads it if necessary.
+
+        Returns
+        -------
+        Path
+            The path to the model file.
+
+        Raises
+        ------
+        TTSModelError
+            If the model cannot be downloaded or accessed.
+        """
+        model_filename = self._get_model_filename()
+        model_path = self.cache_dir / model_filename
+        if model_path.exists() and model_path.is_file():
+            return model_path
+
+        model_url = self._get_model_url()
+        self._download_file(model_url, model_path)
+        return model_path
+
+    def _ensure_voices_exists(self) -> Path:
+        """
+        Checks if the voices file exists and downloads it if necessary.
+
+        Returns
+        -------
+        Path
+            The path to the voices file.
+
+        Raises
+        ------
+        TTSModelError
+            If the voices file cannot be downloaded or accessed.
+        """
+        voices_path = self.cache_dir / self.VOICES_FILENAME
+        if voices_path.exists() and voices_path.is_file():
+            return voices_path
+
+        self._download_file(self.VOICES_URL, voices_path)
+        return voices_path
+
+    def _download_file(self, url: str, destination: Path) -> None:
+        """
+        Downloads a file from a URL to a destination path.
+
+        Parameters
+        ----------
+        url : str
+            The URL to download from.
+        destination : Path
+            The destination path to save the file.
+
+        Raises
+        ------
+        Exception
+            If the download fails.
+        """
+        try:
+            subprocess.run(
+                [
+                    "wget",
+                    url,
+                    "-O",
+                    str(destination),
+                    "--progress=dot:giga",
+                ],
+                check=True,
+            )
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"Download failed with exit code {e.returncode}") from e
+        except Exception as e:
+            raise Exception(f"Download failed: {e}") from e
+
+    def _preprocess_text(self, text: str) -> str:
+        """
+        Preprocesses text by removing formatting characters that would be
+        read aloud as words (like 'asterisk' for '*').
+
+        Parameters
+        ----------
+        text : str
+            The input text that may contain formatting characters.
+
+        Returns
+        -------
+        str
+            The cleaned text with formatting characters removed.
+        """
+        # Remove markdown headers (# symbols at start of line)
+        text = re.sub(r"^#+\s*", "", text, flags=re.MULTILINE)
+
+        # Remove bold markdown (** or __)
+        text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
+        text = re.sub(r"__(.*?)__", r"\1", text)
+
+        # Remove italic markdown (* or _)
+        text = re.sub(r"\*(.*?)\*", r"\1", text)
+        text = re.sub(r"_(.*?)_", r"\1", text)
+
+        return text
