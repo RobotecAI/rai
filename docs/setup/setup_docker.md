@@ -78,7 +78,8 @@ To allow the container to communicate with the host machine, configure the host 
 4. Configure the DDS middleware using the `fastrtps_config.xml` file included in the RAI repository:
 
     ```shell
-    export FASTRTPS_DEFAULT_PROFILES_FILE=/path/to/fastrtps_config.xml
+    export FASTRTPS_DEFAULT_PROFILES_FILE=$(pwd)/docker/fastrtps_config.xml
+
     ```
 
 5. Set the RMW to use eProsima Fast DDS:
