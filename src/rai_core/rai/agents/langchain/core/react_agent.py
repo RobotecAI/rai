@@ -19,6 +19,7 @@ from typing import (
     TypedDict,
     cast,
 )
+import logging
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, SystemMessage
@@ -47,7 +48,8 @@ class ReActAgentState(TypedDict):
 def llm_node(
     llm: BaseChatModel,
     system_prompt: Optional[str | SystemMultimodalMessage],
-    state: ReActAgentState,
+    output_template: Optional[str] = None,
+    state: ReActAgentState=None,
 ):
     """Process messages using the LLM.
 
@@ -75,6 +77,10 @@ def llm_node(
         # at this point, state['messages'] length should at least be 1
         if not isinstance(state["messages"][0], SystemMessage):
             state["messages"].insert(0, SystemMessage(content=system_prompt))
+
+    if output_template:
+        llm = llm.with_structured_output(output_template)
+        logging.getLogger("ReActAgent").info(f"Using output template: {output_template}")
     ai_msg = llm.invoke(state["messages"])
     state["messages"].append(ai_msg)
 
@@ -83,6 +89,7 @@ def create_react_runnable(
     llm: Optional[BaseChatModel] = None,
     tools: Optional[List[BaseTool]] = None,
     system_prompt: Optional[str | SystemMultimodalMessage] = None,
+    output_template = None
 ) -> Runnable[ReActAgentState, ReActAgentState]:
     """Create a react agent that can process messages and optionally use tools.
 
@@ -119,9 +126,10 @@ def create_react_runnable(
         graph.add_edge("tools", "llm")
         # Bind tools to LLM
         bound_llm = cast(BaseChatModel, llm.bind_tools(tools))
-        graph.add_node("llm", partial(llm_node, bound_llm, system_prompt))
+        graph.add_node("llm", partial(llm_node, bound_llm, system_prompt, output_template))
     else:
-        graph.add_node("llm", partial(llm_node, llm, system_prompt))
+        graph.add_node("llm", partial(llm_node, llm, system_prompt, output_template))
 
     # Compile the graph
     return graph.compile()
+

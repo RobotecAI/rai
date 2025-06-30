@@ -13,11 +13,12 @@
 # limitations under the License.
 
 import logging
-from typing import Literal, Type
+from typing import Any, Literal, Tuple, Type, cast
 
 import numpy as np
 from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
 from pydantic import BaseModel, Field
+from rai_interfaces.srv import RAIGroundingDino
 from tf2_geometry_msgs import do_transform_pose
 
 from rai.communication.ros2.ros_async import get_future_result
@@ -100,7 +101,7 @@ class MoveToPointTool(BaseROS2Tool):
         pose_stamped1 = PoseStamped()
         pose_stamped1.header.frame_id = self.manipulator_frame
         pose_stamped1.pose = Pose(
-            position=Point(x=x1, y=y1, z=z1),
+            position=Point(x=x1, y=y1, z=z1 + 0.10),
             orientation=self.quaternion,
         )
         #if task == "drop":

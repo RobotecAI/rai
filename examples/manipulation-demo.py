@@ -13,18 +13,19 @@
 # limitations under the License.
 
 
+import asyncio
 import logging
 from typing import List
 
+from rai.tools.ros2.manipulation.custom import ResetArmTool
 import rclpy
 import rclpy.qos
-from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.tools import BaseTool
 from rai import get_llm_model
-from rai.agents.langchain.core import create_conversational_agent
+from rai.agents.langchain.core.plan_and_execute import Criticism, create_plan_and_execute_runnable, critic
 from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
-from rai.tools.ros2.manipulation import GetObjectPositionsTool, MoveToPointTool, ResetArmTool
+from rai.tools.ros2.manipulation import GetObjectPositionsTool, MoveToPointTool
 from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
@@ -35,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 def create_agent():
     rclpy.init()
-    connector = ROS2Connector(executor_type='single_threaded')
+    connector = ROS2Connector(executor_type="single_threaded")
 
     required_services = ["/grounded_sam_segment", "/grounding_dino_classify"]
     required_topics = ["/color_image5", "/depth_image5", "/color_camera_info5"]
@@ -45,6 +46,7 @@ def create_agent():
     node = connector.node
     node.declare_parameter("conversion_ratio", 1.0)
 
+    camera_tool = GetROS2ImageConfiguredTool(connector=connector, topic="/color_image5")
     tools: List[BaseTool] = [
         GetObjectPositionsTool(
             connector=connector,
@@ -56,32 +58,43 @@ def create_agent():
             get_grabbing_point_tool=GetGrabbingPointTool(connector=connector),
         ),
         MoveToPointTool(connector=connector, manipulator_frame="panda_link0"),
+        camera_tool,
         ResetArmTool(connector=connector, manipulator_frame="panda_link0"),
-        GetROS2ImageConfiguredTool(connector=connector, topic="/color_image5"),
     ]
 
     llm = get_llm_model(model_type="complex_model", streaming=True)
     embodiment_info = EmbodimentInfo.from_file(
         "examples/embodiments/manipulation_embodiment.json"
     )
-    agent = create_conversational_agent(
+
+    agent = create_plan_and_execute_runnable(
         llm=llm,
         tools=tools,
-        system_prompt=embodiment_info.to_langchain(),
+        system_prompt=embodiment_info._to_markdown()
+        + "left/right - x axis, front/back - y axis",
+        camera_tool=camera_tool,
     )
     return agent
 
 
-def main():
+async def main():
+    # llm = get_llm_model(model_type="complex_model", streaming=True)
+    # llm = llm.with_structured_output(Criticism)
+    # resp = await critic(llm, "")
+    # print(resp)
+    # return 
     agent = create_agent()
-    messages: List[BaseMessage] = []
 
-    while True:
-        prompt = input("Enter a prompt: ")
-        messages.append(HumanMessage(content=prompt))
-        output = agent.invoke({"messages": messages})
-        output["messages"][-1].pretty_print()
+    # prompt = "Place the carrot close to the apple"
+    # prompt = "Build tower from cubes. Then surround it with other objects. Make sure to leave enough space - at least 10 cm."
+    prompt = "Move the corn to the left"
+    messages = {"input": prompt}
+    config = {"recursion_limit": 100}
+
+    async for event in agent.astream(messages, config=config):
+        for k, v in event.items():
+            if k != "__end__":
+                print(v)
 
 
-if __name__ == "__main__":
-    main()
+asyncio.run(main())
