@@ -68,7 +68,7 @@ To allow the container to communicate with the host machine, configure the host 
 3. Install the eProsima Fast DDS middleware (should come preinstalled with ROS 2):
 
     ```shell
-    apt install ros-"${ROS_DISTRO}"-fastrtps
+    sudo apt install ros-"${ROS_DISTRO}"-fastrtps
     ```
 
 4. Configure the DDS middleware using the `fastrtps_config.xml` file included in the RAI repository:
