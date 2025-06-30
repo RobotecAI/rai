@@ -24,7 +24,7 @@ if __name__ == "__main__":
     vendors = ["ollama"]
 
     # Define benchmarks that will be used
-    man_conf = ManipulationO3DEBenchmarkConfig(
+    mani_conf = ManipulationO3DEBenchmarkConfig(
         o3de_config_path="src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/o3de_config.yaml",  # path to your o3de config
         levels=[  # define what difficulty of tasks to include in benchmark
             "trivial",
