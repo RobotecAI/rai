@@ -83,7 +83,7 @@ manipulation techniques.
 
 !!! note "ROS 2 required"
 
-    The docker setup requires a working Humble or Jazzy ROS 2 installation on the host machine. Make sure that ROS 2 is sourced on the host machine.
+    The docker setup requires a working Humble or Jazzy ROS 2 installation on the host machine. Make sure that ROS 2 is sourced on the host machine and the `ROS_DOMAIN_ID` environment variable is set to the same value as in the [Docker setup](../setup/setup_docker.md#2-set-up-communications-between-docker-and-host-optional)
 
 !!! warning "ROS 2 distributions"
 
@@ -131,7 +131,7 @@ manipulation techniques.
 
 !!! note Source the setup shell
 
-    Ensure ROS 2 is sourced on the host machine. Ensure that every command inside the docker container is run in a sourced shell using `source setup_shell.sh`.
+    Ensure ROS 2 is sourced on the host machine and the `ROS_DOMAIN_ID` environment variable is set to the same value as in the [Docker setup](../setup/setup_docker.md#2-set-up-communications-between-docker-and-host-optional). Ensure that every command inside the docker container is run in a sourced shell using `source setup_shell.sh`.
 
 1. Launch the Robotic Arm Visualization on the host machine:
 
