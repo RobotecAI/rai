@@ -51,6 +51,10 @@ docker build -t rai:jazzy --build-arg ROS_DISTRO=jazzy --build-arg DEPENDENCIES=
     host:
     [link](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html#try-some-examples).
 
+!!! warning "ROS 2 distributions"
+
+    It is highly recommended that ROS 2 distribution on the host machine matches the ROS 2 distribution of the docker container. A distribution version mismatch may result in the demos not working correctly.
+
 To allow the container to communicate with the host machine, configure the host environment as presented below:
 
 1. Source ROS 2 on the host machine:
