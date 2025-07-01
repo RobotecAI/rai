@@ -270,8 +270,10 @@ class MockGetROS2MessageInterfaceTool(GetROS2MessageInterfaceTool):
 
 class ServiceValidator:
     """
-    Hybrid validator that uses ROS 2 native types when available,
-    falls back to Pydantic models of custom interfaces
+    Validator that is responsible for checking if gicen service type exists
+    and if it is used correctly.
+    Validator uses ROS 2 native types when available,
+    falls back to Pydantic models of custom interfaces when not.
     """
 
     def __init__(self, custom_models: Dict[str, Type[BaseModel]]):

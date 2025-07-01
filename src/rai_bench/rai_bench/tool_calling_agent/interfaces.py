@@ -121,6 +121,30 @@ class SubTask(ABC):
     def _check_nested_fields(
         self, field_path: str, args: Dict[str, Any], expected_value: Any
     ) -> bool:
+        """Check if a nested field in the arguments matches the expected value.
+
+        Parameters
+        ----------
+        field_path : str
+            Dot-separated path to the field (e.g., "header.frame_id").
+            Including indexes for lists possible (e.g., "data[0].value").
+        args : Dict[str, Any]
+            The arguments dictionary to check.
+        expected_value : Any
+            The expected value for the field.
+
+        Returns
+        -------
+        bool
+            True if the field matches the expected value, False otherwise.
+
+
+        Raises
+        ------
+        SubTaskValidationError
+            If the field is not found or does not match the expected value.
+        """
+
         keys = field_path.split(".")
         value: Any = args
         for key in keys:
