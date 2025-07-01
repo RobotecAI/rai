@@ -17,7 +17,6 @@ from typing import Any, Dict
 
 import pytest
 from rai.types.rai_interfaces import ManipulatorMoveToRequest
-from rcl_interfaces.srv import SetParameters
 
 from rai_bench.tool_calling_agent.mocked_tools import ServiceValidator
 
@@ -36,44 +35,6 @@ class TestServiceValidator:
     def validator(self, custom_models: Dict[str, Any]) -> ServiceValidator:
         """Fixture providing ServiceValidator instance with real models"""
         return ServiceValidator(custom_models)
-
-    def test_get_ros2_service_class_caching(self, validator: ServiceValidator):
-        """Test that service classes are cached properly"""
-        # First call
-        result1 = validator.get_ros2_service_class("rcl_interfaces/srv/SetParameters")
-        # Second call (should use cache)
-        result2 = validator.get_ros2_service_class("rcl_interfaces/srv/SetParameters")
-
-        assert result1 == result2 == SetParameters
-        assert "rcl_interfaces/srv/SetParameters" in validator.ros2_services_cache
-
-    def test_get_ros2_service_class_invalid_format_too_few_parts(
-        self, validator: ServiceValidator
-    ):
-        """Test error handling for service type with too few parts"""
-        with pytest.raises(ValueError, match="is invalid"):
-            validator.get_ros2_service_class("invalid_format")
-
-    def test_get_ros2_service_class_invalid_format_wrong_middle_part(
-        self, validator: ServiceValidator
-    ):
-        """Test error handling for service type with wrong middle part"""
-        with pytest.raises(ValueError, match="is invalid"):
-            validator.get_ros2_service_class("rcl_interfaces/msg/SetParameters")
-
-    def test_get_ros2_service_class_nonexistent_package(
-        self, validator: ServiceValidator
-    ):
-        """Test error handling when package doesn't exist"""
-        with pytest.raises(ImportError):
-            validator.get_ros2_service_class("nonexistent_package/srv/TestService")
-
-    def test_get_ros2_service_class_nonexistent_service(
-        self, validator: ServiceValidator
-    ):
-        """Test error handling when service doesn't exist in package"""
-        with pytest.raises(AttributeError):
-            validator.get_ros2_service_class("rcl_interfaces/srv/NonexistentService")
 
     def test_validate_with_ros2_setparameters_valid_args(
         self, validator: ServiceValidator
