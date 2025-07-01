@@ -163,6 +163,6 @@ class TaskArgs(BaseModel):
         Descriptive prompts provides guidance and tips.
 
 -   extra_tool_calls - How many extra tool calls an agent can make and still pass the Task, example:
-    -   `GetROS2RGBCameraTask` has 1 required tool call and 1 optional. When `extra_tool_calls` set to 5, agent can correct himself couple times and still pass even with 7 tool calls.
+    -   `GetROS2RGBCameraTask` has 1 required tool call and 1 optional. When `extra_tool_calls` set to 5, agent can correct himself couple times and still pass even with 7 tool calls. There can be 2 types of invalid tool calls, first when the tool is used incorrectly and agent receives an error - this allows him to correct himself easier. Second type is when tool is called properly but it is not the tool that should be called or it is called with wrong params. In this case agent won't get any error so it will be harder for him to correct, but BOTH of these cases are counted as `extra tool call`.
 
 If you want to know details about every task, visit `rai_bench/tool_calling_agent/tasks`

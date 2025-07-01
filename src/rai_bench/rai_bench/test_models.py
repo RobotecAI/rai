@@ -83,6 +83,9 @@ class ToolCallingAgentBenchmarkConfig(BenchmarkConfig):
     task_types : List[Literal["basic", "manipulation", "navigation", "custom_interfaces", "spatial_reasoning"]], optional
         types of tasks to include in the benchmark, by default all types are included:
         ["basic", "manipulation", "navigation", "custom_interfaces", "spatial_reasoning"]
+
+    For more detailed explanation of parameters, see the documentation:
+    (https://robotecai.github.io/rai/simulation_and_benchmarking/rai_bench/)
     """
 
     extra_tool_calls: List[int] = [0]
