@@ -199,8 +199,6 @@ class GetRobotDescriptionTask(BasicTask):
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()}"
         else:
             return (
                 f"{self.get_base_prompt()}. You can list available topics to find appropriate topic "
@@ -239,8 +237,6 @@ class GetROS2ServicesTask(BasicTask):
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()} available in the ROS2 system"
         else:
             return (
                 f"{self.get_base_prompt()} available in the ROS2 system with their names and service types. "
@@ -258,8 +254,6 @@ class ListRobotParametersTask(BasicTask):
         base_prompt = "List robot state publisher parameters"
         if self.prompt_detail == "brief":
             return base_prompt
-        elif self.prompt_detail == "moderate":
-            return f"{base_prompt} available for configuration."
         else:
             return (
                 f"{self.get_base_prompt()} available for configuration. "
@@ -291,8 +285,6 @@ class GetSpecificParameterTask(BasicTask):
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()} value from the robot state publisher."
         else:
             return (
                 f"{self.get_base_prompt()} value from the robot state publisher. "
@@ -379,8 +371,6 @@ class SpawnEntityTask(BasicTask):
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()} in the simulation environment"
         else:
             return (
                 f"{self.get_base_prompt()} in the simulation environment. "
@@ -421,8 +411,6 @@ class ConfigureVisionPipelineTask(BasicTask):
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()} using parameter services."
         else:
             return (
                 f"{self.get_base_prompt()} using parameter services. "
@@ -465,8 +453,6 @@ class RespawnEntitiesTask(BasicTask):
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()} using entity management services. "
         else:
             return (
                 f"{self.get_base_prompt()} using entity management services. "
