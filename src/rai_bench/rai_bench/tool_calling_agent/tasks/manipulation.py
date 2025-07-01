@@ -12,31 +12,75 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import inflect
 from langchain_core.tools import BaseTool
 from rai.tools.ros2 import MoveToPointToolInput
 from rai.types import Point
 
-from rai_bench.tool_calling_agent.interfaces import Task, Validator
+from rai_bench.tool_calling_agent.interfaces import Task, TaskArgs, Validator
+from rai_bench.tool_calling_agent.mocked_ros2_interfaces import (
+    COMMON_INTERFACES,
+    COMMON_SERVICES_AND_TYPES,
+    COMMON_TOPICS_AND_TYPES,
+    MANIPULATION_ACTIONS_AND_TYPES,
+    MANIPULATION_INTERFACES,
+    MANIPULATION_SERVICES_AND_TYPES,
+    MANIPULATION_TOPICS_AND_TYPES,
+)
 from rai_bench.tool_calling_agent.mocked_tools import (
     MockGetObjectPositionsTool,
+    MockGetROS2MessageInterfaceTool,
+    MockGetROS2ServicesNamesAndTypesTool,
     MockGetROS2TopicsNamesAndTypesTool,
     MockMoveToPointTool,
 )
 
-loggers_type = logging.Logger
+INTERFACES = COMMON_INTERFACES | MANIPULATION_INTERFACES
+TOPCIS_AND_TYPES = COMMON_TOPICS_AND_TYPES | MANIPULATION_TOPICS_AND_TYPES
+SERVICES_AND_TYPES = COMMON_SERVICES_AND_TYPES | MANIPULATION_SERVICES_AND_TYPES
 
-PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT = """
+TOPIC_STRINGS = [
+    f"topic: {topic}\ntype: {topic_type}\n"
+    for topic, topic_type in COMMON_TOPICS_AND_TYPES.items()
+]
+
+ACTION_STRINGS = [
+    f"action: {action}\ntype: {act_type}\n"
+    for action, act_type in MANIPULATION_ACTIONS_AND_TYPES.items()
+]
+
+SERVICE_STRINGS = [
+    f"service: {service}\ntype: {srv_type}\n"
+    for service, srv_type in SERVICES_AND_TYPES.items()
+]
+
+PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_0_SHOT = """
         You are a robotic arm with interfaces to detect and manipulate objects.
         Here are the coordinates information:
         x - front to back (positive is forward)
         y - left to right (positive is right)
         z - up to down (positive is up).
         """
+
+PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_2_SHOT = (
+    PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_0_SHOT
+    + """
+Example of tool calls:
+- get_object_positions, args: {}
+- move_to_point, args: {'x': 0.5, 'y': 0.2, 'z': 0.3, 'task': 'grab'}"""
+)
+
+PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_5_SHOT = (
+    PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_2_SHOT
+    + """
+- move_to_point, args: {'x': 1.7, 'y': 1.8, 'z': 1.9, 'task': 'drop'}
+- move_to_point, args: {'x': 0.1, 'y': -0.2, 'z': 0.1, 'task': 'grab'}
+- move_to_point, args: {'x': 0.7, 'y': 0.8, 'z': 0.9, 'task': 'drop'}
+"""
+)
 
 
 class TaskParametrizationError(Exception):
@@ -46,48 +90,28 @@ class TaskParametrizationError(Exception):
 
 
 class ManipulationTask(Task, ABC):
-    @property
-    def type(self) -> str:
-        return "manipulation"
+    type = "manipulation"
 
-    def get_system_prompt(self) -> str:
-        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
-
-
-class GrabTask(ManipulationTask, ABC):
     def __init__(
         self,
         objects: Dict[str, List[Point]],
-        object_to_grab: str,
         validators: List[Validator],
-        extra_tool_calls: int = 0,
-        logger: loggers_type | None = None,
+        task_args: TaskArgs,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(
-            validators=validators,
-            extra_tool_calls=extra_tool_calls,
-            logger=logger,
-        )
+        super().__init__(validators=validators, task_args=task_args, **kwargs)
         self.objects = objects
-        self.object_to_grab = object_to_grab
         self._verify_args()
 
-    @abstractmethod
-    def _verify_args(self) -> None:
-        pass
+    @property
+    def optional_tool_calls_number(self) -> int:
+        return 0
 
     @property
     def available_tools(self) -> List[BaseTool]:
         return [
             MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
-                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
-                ]
+                mock_topics_names_and_types=TOPIC_STRINGS
             ),
             MockGetObjectPositionsTool(
                 target_frame="panda_link0",
@@ -98,7 +122,42 @@ class GrabTask(ManipulationTask, ABC):
                 mock_objects=self.objects,
             ),
             MockMoveToPointTool(manipulator_frame="panda_link0"),
+            MockGetROS2ServicesNamesAndTypesTool(
+                mock_service_names_and_types=SERVICE_STRINGS
+            ),
+            MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
         ]
+
+    def _verify_args(self) -> None:
+        pass
+
+    def get_system_prompt(self) -> str:
+        if self.n_shots == 0:
+            return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_0_SHOT
+        elif self.n_shots == 2:
+            return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_2_SHOT
+        else:
+            return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_5_SHOT
+
+
+class GrabTask(ManipulationTask, ABC):
+    def __init__(
+        self,
+        objects: Dict[str, List[Point]],
+        object_to_grab: str,
+        validators: List[Validator],
+        task_args: TaskArgs,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(
+            validators=validators, objects=objects, task_args=task_args, **kwargs
+        )
+        self.object_to_grab = object_to_grab
+        self._verify_args()
+
+    @abstractmethod
+    def _verify_args(self) -> None:
+        pass
 
 
 class MoveToPointTask(ManipulationTask):
@@ -106,33 +165,33 @@ class MoveToPointTask(ManipulationTask):
 
     def __init__(
         self,
+        objects: Dict[str, List[Point]],
         move_to_tool_input: MoveToPointToolInput,
         validators: List[Validator],
-        extra_tool_calls: int = 0,
-        logger: loggers_type | None = None,
+        task_args: TaskArgs,
+        **kwargs: Any,
     ) -> None:
         super().__init__(
-            validators=validators, extra_tool_calls=extra_tool_calls, logger=logger
+            validators=validators, objects=objects, task_args=task_args, **kwargs
         )
-
         self.move_to_tool_input = move_to_tool_input
 
-    @property
-    def available_tools(self) -> List[BaseTool]:
-        return [
-            MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /pointcloud\ntype: sensor_msgs/msg/PointCloud2\n",
-                    "topic: /robot_description\ntype: std_msgs/msg/String\n",
-                    "topic: /rosout\ntype: rcl_interfaces/msg/Log\n",
-                    "topic: /tf\ntype: tf2_msgs/msg/TFMessage\n",
-                ]
-            ),
-            MockMoveToPointTool(manipulator_frame="base_link"),
-        ]
+    def get_base_prompt(self) -> str:
+        return (
+            f"Move the arm to point x={self.move_to_tool_input.x}, "
+            f"y={self.move_to_tool_input.y}, z={self.move_to_tool_input.z} "
+            f"to {self.move_to_tool_input.task} an object."
+        )
 
     def get_prompt(self) -> str:
-        return f"Move the arm to a point x={self.move_to_tool_input.x}, y={self.move_to_tool_input.y}, z={self.move_to_tool_input.z} to {self.move_to_tool_input.task} an object."
+        if self.prompt_detail == "brief":
+            return self.get_base_prompt()
+        else:
+            return (
+                f"{self.get_base_prompt()} "
+                "You can control the arm movement to the specified coordinates "
+                f"and perform the {self.move_to_tool_input.task} action at that location."
+            )
 
 
 class GetObjectPositionsTask(ManipulationTask):
@@ -142,42 +201,15 @@ class GetObjectPositionsTask(ManipulationTask):
         self,
         objects: Dict[str, List[Point]],
         validators: List[Validator],
-        extra_tool_calls: int = 0,
-        logger: loggers_type | None = None,
+        task_args: TaskArgs,
+        **kwargs: Any,
     ) -> None:
         super().__init__(
-            validators=validators, extra_tool_calls=extra_tool_calls, logger=logger
+            validators=validators, objects=objects, task_args=task_args, **kwargs
         )
-        """Task to get the positions of the objects
-
-        Examples
-        --------
-        objects = {
-            "banana": [(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
-            "cube": [(0.7, 0.8, 0.9)],
-        }
-        """
         self.objects = objects
 
-    @property
-    def available_tools(self) -> List[BaseTool]:
-        return [
-            MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /pointcloud\ntype: sensor_msgs/msg/PointCloud2\n",
-                    "topic: /robot_description\ntype: std_msgs/msg/String\n",
-                    "topic: /rosout\ntype: rcl_interfaces/msg/Log\n",
-                    "topic: /tf\ntype: tf2_msgs/msg/TFMessage\n",
-                ]
-            ),
-            MockGetObjectPositionsTool(mock_objects=self.objects),
-        ]
-
-    def get_prompt(self) -> str:
-        """Generates a prompt based on the objects provided in the task. If there is more than one object, the object in the prompt will be pluralized.
-        Returns:
-            str: Formatted prompt for the task
-        """
+    def get_base_prompt(self) -> str:
         inflector = inflect.engine()
         object_counts = {obj: len(positions) for obj, positions in self.objects.items()}
         formatted_objects = [
@@ -190,24 +222,35 @@ class GetObjectPositionsTask(ManipulationTask):
             )
         else:
             objects_list = formatted_objects[0]
+
         return f"Get the {objects_list} positions."
+
+    def get_prompt(self) -> str:
+        if self.prompt_detail == "brief":
+            return self.get_base_prompt()
+        else:
+            return (
+                f"{self.get_base_prompt()} "
+                "You can detect all objects and retrieve their 3D coordinates "
+                "for manipulation planning."
+            )
 
 
 class GrabExistingObjectTask(GrabTask):
     complexity = "medium"
-    """
-    Task to grab an object.
 
-    Parameters
-    ----------
-    objects : Dict[str, List[dict[str, float]]]
-        Dictionary of object types and their positions.
-    object_to_grab : str
-        The object to be grabbed (must have a single position).
-    """
+    def get_base_prompt(self) -> str:
+        return f"Grab {self.object_to_grab}."
 
     def get_prompt(self) -> str:
-        return f"Grab {self.object_to_grab}."
+        if self.prompt_detail == "brief":
+            return self.get_base_prompt()
+        else:
+            return (
+                f"{self.get_base_prompt()} "
+                "You can locate the object in the workspace and move the arm "
+                "to grab it at the correct coordinates."
+            )
 
     def _verify_args(self):
         if self.object_to_grab not in self.objects:
@@ -223,19 +266,19 @@ class GrabExistingObjectTask(GrabTask):
 
 class GrabNotExistingObjectTask(GrabTask):
     complexity = "medium"
-    """
-    Task to attempt grabbing an object that does not exist.
 
-    Parameters
-    ----------
-    objects : Dict[str, List[dict[str, float]]]
-        Available objects and their positions.
-    object_to_grab : str
-        Object that should not be present in the list.
-    """
+    def get_base_prompt(self) -> str:
+        return f"Grab {self.object_to_grab}."
 
     def get_prompt(self) -> str:
-        return f"Grab {self.object_to_grab}."
+        if self.prompt_detail == "brief":
+            return self.get_base_prompt()
+        else:
+            return (
+                f"{self.get_base_prompt()} "
+                "You can check if the object exists in the environment and "
+                "attempt to grab it if found."
+            )
 
     def _verify_args(self):
         if self.object_to_grab in self.objects:
@@ -245,30 +288,20 @@ class GrabNotExistingObjectTask(GrabTask):
 
 
 class MoveExistingObjectLeftTask(GrabTask):
-    """Task to move an existing object to the left.
+    complexity = "hard"
 
-    Parameters
-    ----------
-    objects : Dict[str, List[dict[str, float]]]
-        Dictionary containing the object types and their positions. Object type should be passed as singular.
-    object_to_grab : str
-        Object type should be passed as singular. Object to be grabbed should be defined in the objects argument with only one instance (one position).
-    logger : loggers_type | None, optional
-        Logger, by default None
-
-    Examples
-    --------
-    objects = {
-        "banana": [(0.1, 0.2, 0.3), (0.4, 0.5, 0.6)],
-        "cube": [(0.7, 0.8, 0.9)],
-    }
-    object_to_grab = "cube"
-    """
-
-    complexity = "medium"
+    def get_base_prompt(self) -> str:
+        return f"Move {self.object_to_grab} 20 cm to the left."
 
     def get_prompt(self) -> str:
-        return f"Move {self.object_to_grab} 20 cm to the left."
+        if self.prompt_detail == "brief":
+            return self.get_base_prompt()
+        else:
+            return (
+                f"{self.get_base_prompt()} "
+                "You can locate the object, grab it with the manipulator, "
+                "and move it to a position 20 cm to the left of its current location."
+            )
 
     def _verify_args(self):
         if self.object_to_grab not in self.objects:
@@ -283,22 +316,20 @@ class MoveExistingObjectLeftTask(GrabTask):
 
 
 class MoveExistingObjectFrontTask(GrabTask):
-    """Task to move an existing object to the front
+    complexity = "hard"
 
-    Parameters
-    ----------
-    objects : Dict[str, List[dict[str, float]]]
-        Dictionary containing the object types and their positions. Object type should be passed as singular.
-    object_to_grab : str
-        Object to grab. Object type should be passed as singular. Object to be grabbed should be defined in the objects argument with only one instance (one position).
-    logger : loggers_type | None, optional
-        Logger, by default None
-    """
-
-    complexity = "medium"
+    def get_base_prompt(self) -> str:
+        return f"Move {self.object_to_grab} 60 cm to the front."
 
     def get_prompt(self) -> str:
-        return f"Move {self.object_to_grab} 60 cm to the front."
+        if self.prompt_detail == "brief":
+            return self.get_base_prompt()
+        else:
+            return (
+                f"{self.get_base_prompt()} "
+                "You can locate the object, grab it with the manipulator, "
+                "and move it to a position 60 cm forward from its current location."
+            )
 
     def _verify_args(self):
         if self.object_to_grab not in self.objects:
@@ -312,71 +343,37 @@ class MoveExistingObjectFrontTask(GrabTask):
             raise TaskParametrizationError(error_message)
 
 
-class SwapObjectsTask(Task):
-    """Task to swap objects
-
-    Parameters
-    ----------
-    objects : Dict[str, List[Dict[str, float]]]
-        Dictionary containing the object types and their positions. Object type should be passed as singular.
-    objects_to_swap : List[str]
-        Objects to be swapped. Object type should be passed as singular. Objects to be swapped should be defined in the objects argument with only one instance (one position).
-    logger : loggers_type | None, optional
-        Logger, by default None
-
-    Examples
-    --------
-    objects = {
-        "banana": [(0.1, 0.2, 0.1)],
-        "cube": [(0.7, 0.8, 0.1)],
-        "apple": [(0.3, 0.4, 0.1), (0.5, 0.6, 0.1)],
-
-    }
-    objects_to_swap = ["cube", "banana"]
-    """
-
+class SwapObjectsTask(ManipulationTask):
     complexity = "hard"
 
     def __init__(
         self,
         objects: Dict[str, List[Point]],
-        objects_to_swap: str,
+        objects_to_swap: List[str],
         validators: List[Validator],
-        extra_tool_calls: int = 0,
-        logger: loggers_type | None = None,
+        task_args: TaskArgs,
+        **kwargs: Any,
     ) -> None:
         super().__init__(
-            validators=validators,
-            extra_tool_calls=extra_tool_calls,
-            logger=logger,
+            validators=validators, objects=objects, task_args=task_args, **kwargs
         )
         self.objects = objects
         self.objects_to_swap = objects_to_swap
         self._verify_args()
 
-    @property
-    def available_tools(self) -> List[BaseTool]:
-        return [
-            MockGetROS2TopicsNamesAndTypesTool(
-                mock_topics_names_and_types=[
-                    "topic: /attached_collision_object\ntype: moveit_msgs/msg/AttachedCollisionObject\n",
-                    "topic: /camera_image_color\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /camera_image_depth\ntype: sensor_msgs/msg/Image\n",
-                    "topic: /clock\ntype: rosgraph_msgs/msg/Clock\n",
-                    "topic: /collision_object\ntype: moveit_msgs/msg/CollisionObject\n",
-                    "topic: /color_camera_info\ntype: sensor_msgs/msg/CameraInfo\n",
-                ]
-            ),
-            MockGetObjectPositionsTool(
-                target_frame="panda_link0",
-                source_frame="RGBDCamera5",
-                camera_topic="/color_image5",
-                depth_topic="/depth_image5",
-                camera_info_topic="/color_camera_info5",
-                mock_objects=self.objects,
-            ),
-            MockMoveToPointTool(manipulator_frame="panda_link0"),
-        ]
+    def get_base_prompt(self) -> str:
+        return f"Swap {self.objects_to_swap[0]} and {self.objects_to_swap[1]}."
+
+    def get_prompt(self) -> str:
+        if self.prompt_detail == "brief":
+            return self.get_base_prompt()
+        else:
+            return (
+                f"{self.get_base_prompt()} "
+                "You can locate both objects in the workspace, then perform a sequence "
+                f"of grab and move operations to swap the positions of {self.objects_to_swap[0]} "
+                f"and {self.objects_to_swap[1]}."
+            )
 
     def _verify_args(self):
         for obj in self.objects_to_swap:
@@ -392,6 +389,3 @@ class SwapObjectsTask(Task):
             error_message = f"Number of requested objects to swap {len(self.objects_to_swap)} should be equal to 2."
             self.logger.error(msg=error_message)
             raise TaskParametrizationError(error_message)
-
-    def get_prompt(self) -> str:
-        return f"Move {self.objects_to_swap[0]} to the initial position of {self.objects_to_swap[1]}, and move {self.objects_to_swap[1]} to the initial position of {self.objects_to_swap[0]}."

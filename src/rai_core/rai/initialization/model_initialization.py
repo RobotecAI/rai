@@ -190,6 +190,8 @@ def get_llm_model_direct(
     elif vendor == "ollama":
         from langchain_ollama import ChatOllama
 
+        # Suppress httpx info logging for Ollama
+        logging.getLogger("httpx").setLevel(logging.WARNING)
         model_config = cast(OllamaConfig, model_config)
         return ChatOllama(model=model_name, base_url=model_config.base_url, **kwargs)
     else:

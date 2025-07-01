@@ -160,8 +160,10 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         self.logger.info(f"TASK SCORE: {score}, TOTAL TIME: {total_time:.3f}")
 
         task_result = TaskResult(
-            task_prompt=task.get_prompt(),
+            task_prompt=task.get_base_prompt(),
             system_prompt=task.get_system_prompt(),
+            examples_in_system_prompt=task.n_shots,
+            prompt_detail=task.prompt_detail,
             type=task.type,
             extra_tool_calls=task.extra_tool_calls,
             extra_tool_calls_used=total_extra_calls,
