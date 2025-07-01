@@ -48,6 +48,20 @@ def get_tasks(
         "spatial_reasoning",
     ],
 ) -> List[Task]:
+    """Get a list of tasks based on the provided configuration.
+
+    Parameters
+    ----------
+    Parameters match :class:`~src.rai_bench.rai_bench.test_models.ToolCallingAgentBenchmarkConfig`.
+    See the class documentation for parameter descriptions.
+
+    Returns
+    -------
+    List[Task]
+        sequence of spatial reasoning tasks with varying difficulty levels.
+        There will be every combination of extra_tool_calls x prompt_detail x n_shots tasks generated.
+    """
+
     all_tasks: List[Task] = []
     if "basic" in task_types:
         all_tasks += get_basic_tasks(

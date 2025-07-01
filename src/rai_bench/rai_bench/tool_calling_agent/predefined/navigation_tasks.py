@@ -77,19 +77,12 @@ def get_navigation_tasks(
 
     Parameters
     ----------
-    extra_tool_calls : List[int], optional
-        how many extra tool calls allowed to still pass, by default [0]
-    prompt_detail : List[Literal["brief", "descriptive"]], optional
-        how descriptive should task prompt be, by default all levels are included:
-        ["brief", "descriptive"]
-    n_shots : List[Literal[0, 2, 5]], optional
-        how many examples are in system prompt, by default all are included: [0, 2, 5]
+    Parameters match :class:`~src.rai_bench.rai_bench.test_models.ToolCallingAgentBenchmarkConfig`.
+    See the class documentation for parameter descriptions.
 
     Returns
     -------
-    Sequence[Task]
-        sequence of spatial reasoning tasks with varying difficulty levels.
-        There will be len(extra_tool_calls) * len(prompt_detail) * len(n_shots) tasks generated.
+    Returned list match :func:`~src.rai_bench.rai_bench.tool_calling_agent.predefined.tasks.get_tasks`.
     """
     tasks: List[Task] = []
 
