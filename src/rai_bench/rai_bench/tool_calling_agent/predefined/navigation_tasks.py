@@ -70,11 +70,7 @@ move_ahead_ord_val = OrderedCallsValidator(subtasks=[start_move_front_action_sub
 
 def get_navigation_tasks(
     extra_tool_calls: List[int] = [0],
-    prompt_detail: List[Literal["brief", "moderate", "descriptive"]] = [
-        "brief",
-        "moderate",
-        "descriptive",
-    ],
+    prompt_detail: List[Literal["brief", "descriptive"]] = ["brief", "descriptive"],
     n_shots: List[Literal[0, 2, 5]] = [0, 2, 5],
 ) -> List[Task]:
     tasks: List[Task] = []

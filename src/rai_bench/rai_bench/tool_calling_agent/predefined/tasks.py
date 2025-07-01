@@ -30,11 +30,7 @@ from rai_bench.tool_calling_agent.predefined import (
 def get_tasks(
     extra_tool_calls: List[int] = [0],
     complexities: List[Literal["easy", "medium", "hard"]] = ["easy", "medium", "hard"],
-    prompt_detail: List[Literal["brief", "moderate", "descriptive"]] = [
-        "brief",
-        "moderate",
-        "descriptive",
-    ],
+    prompt_detail: List[Literal["brief", "descriptive"]] = ["brief", "descriptive"],
     n_shots: List[Literal[0, 2, 5]] = [0, 2, 5],
     task_types: List[
         Literal[

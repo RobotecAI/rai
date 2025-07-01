@@ -100,7 +100,6 @@ if __name__ == "__main__":
         N_shots=[0, 2],  # examples in system prompt
         prompt_detail=[  # how descriptive should task prompt be
             "brief",
-            "moderate",
             "descriptive",
         ],
         repeats=1,

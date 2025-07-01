@@ -459,7 +459,7 @@ class TaskArgs(BaseModel):
     """Holds the configurations specified by user"""
 
     extra_tool_calls: int = 0
-    prompt_detail: Literal["brief", "moderate", "descriptive"] = "brief"
+    prompt_detail: Literal["brief", "descriptive"] = "brief"
     examples_in_system_prompt: Literal[0, 2, 5] = 0
 
 

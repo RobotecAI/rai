@@ -49,8 +49,8 @@ def parse_tool_calling_benchmark_args():
         "--prompt-detail",
         type=str,
         nargs="+",
-        choices=["brief", "moderate", "descriptive"],
-        default=["brief", "moderate", "descriptive"],
+        choices=["brief", "descriptive"],
+        default=["brief", "descriptive"],
         help="Prompt detail level to include in the benchmark",
     )
     parser.add_argument(

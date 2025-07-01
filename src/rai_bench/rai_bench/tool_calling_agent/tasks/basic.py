@@ -96,8 +96,6 @@ class GetROS2TopicsTask(BasicTask):
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()} available in the ROS2 system"
         else:
             return (
                 f"{self.get_base_prompt()} available in the ROS2 system with their names and message types. "
@@ -109,16 +107,14 @@ class GetROS2RGBCameraTask(BasicTask):
     complexity = "easy"
 
     def get_base_prompt(self) -> str:
-        return "Get RGB camera image"
+        return "Get RGB camera image."
 
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()} from the camera"
         else:
             return (
-                f"{self.get_base_prompt()} from the robot's camera system. "
+                f"{self.get_base_prompt()} "
                 "You can explore available camera topics and capture the RGB color image."
             )
 
@@ -127,16 +123,14 @@ class GetROS2DepthCameraTask(BasicTask):
     complexity = "easy"
 
     def get_base_prompt(self) -> str:
-        return "Get depth camera image"
+        return "Get depth camera image."
 
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()} from the depth sensor"
         else:
             return (
-                f"{self.get_base_prompt()} from the robot's depth sensor. "
+                f"{self.get_base_prompt()} "
                 "You can explore available camera topics and capture the depth image data."
             )
 
@@ -145,16 +139,14 @@ class GetPointcloudTask(BasicTask):
     complexity = "easy"
 
     def get_base_prompt(self) -> str:
-        return "Get the pointcloud data"
+        return "Get the pointcloud data."
 
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()} from the sensor"
         else:
             return (
-                f"{self.get_base_prompt()} from the robot's sensors. "
+                f"{self.get_base_prompt()} "
                 "You can discover available sensor topics and receive the pointcloud information."
             )
 
@@ -163,16 +155,14 @@ class GetRobotDescriptionTask(BasicTask):
     complexity = "easy"
 
     def get_base_prompt(self) -> str:
-        return "Get robot description"
+        return "Get robot description."
 
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()} configuration"
         else:
             return (
-                f"{self.get_base_prompt()} configuration information. You can explore the system "
+                f"{self.get_base_prompt()} You can explore the system "
                 "to find robot description data."
             )
 
@@ -186,8 +176,6 @@ class GetAllROS2CamerasTask(BasicTask):
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()} from available cameras"
         else:
             return (
                 f"{self.get_base_prompt()} from all available camera sources in the system. "
@@ -205,8 +193,6 @@ class CheckRobotHealthTask(BasicTask):
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()} using system diagnostics"
         else:
             return (
                 f"{self.get_base_prompt()} by examining system diagnostics and monitoring data. "
@@ -224,8 +210,6 @@ class AssessSensorDataQualityTask(BasicTask):
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()} across all sensors"
         else:
             return (
                 f"{self.get_base_prompt()} across all available sensors in the robot system. "

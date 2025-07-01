@@ -242,11 +242,7 @@ sensor_data_val = NotOrderedCallsValidator(
 
 def get_basic_tasks(
     extra_tool_calls: List[int] = [0],
-    prompt_detail: List[Literal["brief", "moderate", "descriptive"]] = [
-        "brief",
-        "moderate",
-        "descriptive",
-    ],
+    prompt_detail: List[Literal["brief", "descriptive"]] = ["brief", "descriptive"],
     n_shots: List[Literal[0, 2, 5]] = [0, 2, 5],
 ) -> List[Task]:
     tasks: List[Task] = []

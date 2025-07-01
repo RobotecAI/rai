@@ -164,16 +164,14 @@ class NavigateToPointTask(NavigationTask):
     complexity = "easy"
 
     def get_base_prompt(self) -> str:
-        return "Navigate to point (2.0, 2.0, 0.0)"
+        return "Navigate to point (2.0, 2.0, 0.0)."
 
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()} using robotic navigation system."
         else:
             return (
-                f"{self.get_base_prompt()} using the robotic navigation system. "
+                f"{self.get_base_prompt()} "
                 "You can use the navigation tools to move the robot to the specified coordinates. "
                 "First get the available actions, then set up the navigation goal to reach point (2.0, 2.0, 0.0)."
             )
@@ -184,16 +182,14 @@ class SpinAroundTask(NavigationTask):
     complexity = "medium"
 
     def get_base_prompt(self) -> str:
-        return "Spin around by 3 radians"
+        return "Spin around by 3 radians."
 
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()} using robotic navigation system. "
         else:
             return (
-                f"{self.get_base_prompt()} using the robotic navigation system. "
+                f"{self.get_base_prompt()} "
                 "You can locate the robot's current orientation and execute a spinning motion "
                 "to rotate the robot by 3 radians from its current heading."
             )
@@ -204,16 +200,14 @@ class MoveToFrontTask(NavigationTask):
     complexity = "medium"
 
     def get_base_prompt(self) -> str:
-        return "Move 2 meters to the front"
+        return "Move 2 meters to the front."
 
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()} using robotic navigation system."
         else:
             return (
-                f"{self.get_base_prompt()} using the robotic navigation system. "
+                f"{self.get_base_prompt()} "
                 "You can determine the robot's current position and orientation, "
                 "then move it 2 meters forward in the direction it is currently facing."
             )
@@ -224,16 +218,14 @@ class MoveToBedTask(NavigationTask):
     complexity = "hard"
 
     def get_base_prompt(self) -> str:
-        return "Move closer to the bed leaving 1 meter space"
+        return "Move closer to the bed leaving 1 meter space."
 
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()} using robotic navigation system."
         else:
             return (
-                f"{self.get_base_prompt()} using the robotic navigation system. "
+                f"{self.get_base_prompt()} "
                 "You can locate the bed in the environment, calculate the appropriate position "
                 "that maintains 1 meter distance from the bed, and navigate to that position."
             )
