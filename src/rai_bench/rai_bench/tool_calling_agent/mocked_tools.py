@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import copy
-import importlib
 import uuid
 from threading import Lock
 from typing import Any, Dict, List, Optional, Tuple, Type
@@ -23,6 +22,7 @@ import numpy as np
 import numpy.typing as npt
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ValidationError, computed_field
+from rai.communication.ros2.api.conversion import import_message_from_str
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.communication.ros2.messages import ROS2Message
 from rai.messages import MultimodalArtifact, preprocess_image
@@ -270,7 +270,7 @@ class MockGetROS2MessageInterfaceTool(GetROS2MessageInterfaceTool):
 
 class ServiceValidator:
     """
-    Validator that is responsible for checking if gicen service type exists
+    Validator that is responsible for checking if given service type exists
     and if it is used correctly.
     Validator uses ROS 2 native types when available,
     falls back to Pydantic models of custom interfaces when not.
@@ -279,47 +279,6 @@ class ServiceValidator:
     def __init__(self, custom_models: Dict[str, Type[BaseModel]]):
         self.custom_models = custom_models
         self.ros2_services_cache: Dict[str, Any] = {}
-
-    def get_ros2_service_class(self, service_type: str):
-        """
-        Dynamically import ROS 2 service class.
-
-        Parameters
-        ----------
-        service_type : str
-            The ROS 2 service type in format "package_name/srv/ServiceName".
-
-        Returns
-        -------
-        class
-            The dynamically imported ROS 2 service class.
-
-        Raises
-        ------
-        ValueError
-            If the service_type format is invalid (not in format
-            "package_name/srv/ServiceName").
-
-        Notes
-        -----
-        Results are cached in ros2_services_cache to avoid repeated imports
-        of the same service type.
-        """
-        if service_type in self.ros2_services_cache:
-            return self.ros2_services_cache[service_type]
-
-        # Parse service type: "package_name/srv/ServiceName"
-        parts = service_type.split("/")
-        if len(parts) != 3 or parts[1] != "srv":
-            raise ValueError(f"Service type: {service_type} is invalid")
-
-        package_name, _, service_name = parts
-
-        module = importlib.import_module(f"{package_name}.srv")
-        service_class = getattr(module, service_name)
-
-        self.ros2_services_cache[service_type] = service_class
-        return service_class
 
     def validate_with_ros2(self, service_type: str, args: Dict[str, Any]):
         """Validate using installed ROS2 packages services definition
@@ -335,7 +294,7 @@ class ServiceValidator:
         TypeError
             When service type does not exist in ROS2 installed packages
         """
-        service_class = self.get_ros2_service_class(service_type)
+        service_class = import_message_from_str(service_type)
         if not service_class:
             raise TypeError(f"Service type: {service_type} does not exist.")
 
