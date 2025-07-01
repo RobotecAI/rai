@@ -146,7 +146,7 @@ class NotOrderedCallsValidator(Validator):
         return False, []
 
 
-class OptionalValidator(Validator):
+class OneFromManyValidator(Validator):
     """
     Validator that passes when any one of the given subtasks passes.
     """

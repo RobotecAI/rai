@@ -20,7 +20,7 @@ import pytest
 from rai_bench.tool_calling_agent.interfaces import SubTaskValidationError, Validator
 from rai_bench.tool_calling_agent.validators import (
     NotOrderedCallsValidator,
-    OptionalValidator,
+    OneFromManyValidator,
     OrderedCallsValidator,
 )
 
@@ -680,11 +680,11 @@ class TestNotOrderedCallsValidator:
 class TestOptionalValidator:
     def test_init_with_empty_subtasks(self):
         with pytest.raises(ValueError, match="Validator must have at least 1 subtask"):
-            OptionalValidator(subtasks=[])
+            OneFromManyValidator(subtasks=[])
 
     def test_validate_empty_tool_calls(self):
         subtasks = [DummySubTask("task1")]
-        validator = OptionalValidator(subtasks=subtasks)
+        validator = OneFromManyValidator(subtasks=subtasks)
 
         success, remaining = validator.validate(tool_calls=[])
 
@@ -709,7 +709,7 @@ class TestOptionalValidator:
             DummySubTask("task1", specific_tool="tool1"),
             DummySubTask("task2", specific_tool="tool2"),
         ]
-        validator = OptionalValidator(subtasks=subtasks)
+        validator = OneFromManyValidator(subtasks=subtasks)
         tool_calls = [ToolCall(name="tool1")]
 
         success, remaining = validator.validate(tool_calls=tool_calls)
@@ -737,7 +737,7 @@ class TestOptionalValidator:
             DummySubTask("task1", specific_tool="tool1"),
             DummySubTask("task2", specific_tool="tool2"),
         ]
-        validator = OptionalValidator(subtasks=subtasks)
+        validator = OneFromManyValidator(subtasks=subtasks)
         tool_calls = [ToolCall(name="tool2")]
 
         success, remaining = validator.validate(tool_calls=tool_calls)
@@ -765,7 +765,7 @@ class TestOptionalValidator:
             DummySubTask("task1", specific_tool="tool1"),
             DummySubTask("task2", specific_tool="tool2"),
         ]
-        validator = OptionalValidator(subtasks=subtasks)
+        validator = OneFromManyValidator(subtasks=subtasks)
         tool_calls = [
             ToolCall(name="tool1"),
             ToolCall(name="extra_tool"),
@@ -799,7 +799,7 @@ class TestOptionalValidator:
             DummySubTask("task1", specific_tool="tool1"),
             DummySubTask("task2", specific_tool="tool2"),
         ]
-        validator = OptionalValidator(subtasks=subtasks)
+        validator = OneFromManyValidator(subtasks=subtasks)
         tool_calls = [
             ToolCall(name="wrong_tool"),
             ToolCall(name="another_wrong"),
@@ -835,7 +835,7 @@ class TestOptionalValidator:
             DummySubTask("task1", specific_tool="tool1"),
             DummySubTask("task2", specific_tool="tool2"),
         ]
-        validator = OptionalValidator(subtasks=subtasks)
+        validator = OneFromManyValidator(subtasks=subtasks)
         tool_calls = [
             ToolCall(name="wrong_tool"),
             ToolCall(name="another_wrong"),
@@ -868,7 +868,7 @@ class TestOptionalValidator:
             DummySubTask("task1", outcomes=[False]),
             DummySubTask("task2", outcomes=[False]),
         ]
-        validator = OptionalValidator(subtasks=subtasks)
+        validator = OneFromManyValidator(subtasks=subtasks)
         tool_calls = [ToolCall()]
 
         success, remaining = validator.validate(tool_calls=tool_calls)
@@ -895,7 +895,7 @@ class TestOptionalValidator:
 
     def test_validate_single_subtask_success(self):
         subtasks = [DummySubTask("task1")]
-        validator = OptionalValidator(subtasks=subtasks)
+        validator = OneFromManyValidator(subtasks=subtasks)
         tool_calls = [ToolCall()]
 
         success, remaining = validator.validate(tool_calls=tool_calls)
@@ -918,7 +918,7 @@ class TestOptionalValidator:
 
     def test_validate_single_subtask_failure(self):
         subtasks = [DummySubTask("task1", outcomes=[False])]
-        validator = OptionalValidator(subtasks=subtasks)
+        validator = OneFromManyValidator(subtasks=subtasks)
         tool_calls = [ToolCall()]
 
         success, remaining = validator.validate(tool_calls=tool_calls)
@@ -947,7 +947,7 @@ class TestOptionalValidator:
             DummySubTask("task3", specific_tool="tool3"),
             DummySubTask("task4", specific_tool="tool4"),
         ]
-        validator = OptionalValidator(subtasks=subtasks)
+        validator = OneFromManyValidator(subtasks=subtasks)
         tool_calls = [ToolCall(name="tool4")]
 
         success, remaining = validator.validate(tool_calls=tool_calls)
@@ -979,7 +979,7 @@ class TestOptionalValidator:
             DummySubTask("task1", outcomes=4 * [False]),
             DummySubTask("task2", outcomes=4 * [False]),
         ]
-        validator = OptionalValidator(subtasks=subtasks)
+        validator = OneFromManyValidator(subtasks=subtasks)
         tool_calls = [ToolCall(), ToolCall()]
 
         # First validation call
@@ -1013,7 +1013,7 @@ class TestOptionalValidator:
             DummySubTask("task2"),
             DummySubTask("task3"),
         ]
-        validator = OptionalValidator(subtasks=subtasks)
+        validator = OneFromManyValidator(subtasks=subtasks)
 
         # OptionalValidator should only require 1 call
         assert validator.required_calls == 1

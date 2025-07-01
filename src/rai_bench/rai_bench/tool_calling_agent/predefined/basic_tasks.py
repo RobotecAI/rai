@@ -40,7 +40,7 @@ from rai_bench.tool_calling_agent.tasks.basic import (
 )
 from rai_bench.tool_calling_agent.validators import (
     NotOrderedCallsValidator,
-    OptionalValidator,
+    OneFromManyValidator,
     OrderedCallsValidator,
 )
 
@@ -409,7 +409,7 @@ all_camera_images_notord_val = NotOrderedCallsValidator(
 get_pointcloud_ord_val = OrderedCallsValidator(subtasks=[receive_pointcloud_subtask])
 get_robot_desc_ord_val = OrderedCallsValidator(subtasks=[receive_robot_desc_subtask])
 
-set_param_val = OptionalValidator(
+set_param_val = OneFromManyValidator(
     subtasks=[set_robot_state_params_subtask, set_robot_state_params_atomically_subtask]
 )
 services_ord_val = OrderedCallsValidator(subtasks=[get_services_subtask])
@@ -420,24 +420,24 @@ check_spawnable_entities_val = OrderedCallsValidator(
 )
 spawn_entity_val = OrderedCallsValidator(subtasks=[spawn_entity_subtask])
 
-set_grounded_sam_opt_val_1 = OptionalValidator(
+set_grounded_sam_opt_val_1 = OneFromManyValidator(
     subtasks=[set_grounded_sam_subtask_1, set_grounded_sam_atomically_subtask_1]
 )
-set_grounded_dino_opt_val_1 = OptionalValidator(
+set_grounded_dino_opt_val_1 = OneFromManyValidator(
     subtasks=[set_grounded_dino_subtask_1, set_grounding_dino_atomically_subtask_1]
 )
-set_o3de_fps_opt_val_1 = OptionalValidator(
+set_o3de_fps_opt_val_1 = OneFromManyValidator(
     subtasks=[set_o3de_fps_subtask_1, set_o3de_fps_atomically_subtask_1]
 )
 
 
-set_grounded_sam_opt_val_2 = OptionalValidator(
+set_grounded_sam_opt_val_2 = OneFromManyValidator(
     subtasks=[set_grounded_sam_subtask_2, set_grounded_sam_atomically_subtask_2]
 )
-set_grounded_dino_opt_val_2 = OptionalValidator(
+set_grounded_dino_opt_val_2 = OneFromManyValidator(
     subtasks=[set_grounding_dino_subtask_2, set_grounding_dino_atomically_subtask_2]
 )
-set_o3de_fps_opt_val_2 = OptionalValidator(
+set_o3de_fps_opt_val_2 = OneFromManyValidator(
     subtasks=[set_o3de_fps_subtask_2, set_o3de_fps_atomically_subtask_2]
 )
 
