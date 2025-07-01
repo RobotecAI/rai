@@ -181,10 +181,14 @@ def create_task_metrics_dataframe(
 
 
 def create_task_details_dataframe(
-    model_results: ModelResults, task_type: Optional[str] = None
+    model_results: ModelResults,
+    task_type: Optional[str] = None,
+    complexity: Optional[str] = None,
+    examples_in_system_prompt: Optional[int] = None,
+    prompt_detail: Optional[str] = None,
 ) -> pd.DataFrame:
     """
-    Create a DataFrame with task details, optionally filtered by task type.
+    Create a DataFrame with task details, optionally filtered by multiple criteria.
 
     Parameters
     ----------
@@ -192,6 +196,10 @@ def create_task_details_dataframe(
         The model results object
     task_type : Optional[str]
         Task type to filter by
+    complexity : Optional[str]
+        Complexity to filter by
+    examples_in_system_prompt : Optional[str]
+        Examples in system prompt to filter by
 
     Returns
     -------
@@ -201,13 +209,29 @@ def create_task_details_dataframe(
     all_detailed_results = get_all_detailed_results_from_model_results(
         model_results=model_results
     )
-
     if not all_detailed_results:
         return pd.DataFrame()
 
-    # filter by task type
+    # Apply filters
     if task_type:
         all_detailed_results = [r for r in all_detailed_results if r.type == task_type]
+
+    if complexity:
+        all_detailed_results = [
+            r for r in all_detailed_results if r.complexity == complexity
+        ]
+
+    if examples_in_system_prompt:
+        all_detailed_results = [
+            r
+            for r in all_detailed_results
+            if r.examples_in_system_prompt == examples_in_system_prompt
+        ]
+
+    if prompt_detail:
+        all_detailed_results = [
+            r for r in all_detailed_results if r.prompt_detail == prompt_detail
+        ]
 
     rows: List[Dict[str, Any]] = [
         {
@@ -217,10 +241,10 @@ def create_task_details_dataframe(
             "score": result.score,
             "total_time": result.total_time,
             "extra_tool_calls_used": result.extra_tool_calls_used,
+            "examples_in_system_prompt": result.examples_in_system_prompt,
         }
         for result in all_detailed_results
     ]
-
     return pd.DataFrame(rows)
 
 

@@ -245,12 +245,12 @@ class MoveObjectFromToTool(BaseROS2Tool):
         response = get_future_result(future, timeout_sec=20.0)
 
         if response is None:
-            return f"Service call failed for point ({x:.2f}, {y:.2f}, {z:.2f})."
+            return f"Service call failed for point ({x1:.2f}, {y1:.2f}, {z1:.2f})."
 
         if response.success:
-            return f"End effector successfully positioned at coordinates ({x:.2f}, {y:.2f}, {z:.2f}). Note: The status of object interaction (grab/drop) is not confirmed by this movement."
+            return f"End effector successfully positioned at coordinates ({x1:.2f}, {y1:.2f}, {z1:.2f}). Note: The status of object interaction (grab/drop) is not confirmed by this movement."
         else:
-            return f"Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
+            return f"Failed to position end effector at coordinates ({x1:.2f}, {y1:.2f}, {z1:.2f})."
 
 
 class GetObjectPositionsToolInput(BaseModel):

@@ -50,6 +50,7 @@ def parse_tool_calling_benchmark_args():
     parser.add_argument(
         "--extra-tool-calls",
         type=int,
+        nargs="+",
         help="Number of extra tools calls agent can make and still pass the task",
         default=0,
     )
@@ -59,7 +60,23 @@ def parse_tool_calling_benchmark_args():
         nargs="+",
         choices=["easy", "medium", "hard"],
         default=["easy", "medium", "hard"],
-        help="Complexity levels to include in the benchmark",
+        help="Complexity levels of tasks to include in the benchmark",
+    )
+    parser.add_argument(
+        "--prompt-detail",
+        type=str,
+        nargs="+",
+        choices=["brief", "descriptive"],
+        default=["brief", "descriptive"],
+        help="Prompt detail level to include in the benchmark",
+    )
+    parser.add_argument(
+        "--n-shots",
+        type=int,
+        nargs="+",
+        choices=[0, 2, 5],
+        default=[0, 2, 5],
+        help="Number of examples in system prompt for few-shot prompting",
     )
     parser.add_argument(
         "--task-types",
@@ -68,13 +85,11 @@ def parse_tool_calling_benchmark_args():
         choices=[
             "basic",
             "manipulation",
-            "navigation",
             "custom_interfaces",
         ],
         default=[
             "basic",
             "manipulation",
-            "navigation",
             "custom_interfaces",
         ],
         help="Types of tasks to include in the benchmark",
@@ -89,7 +104,7 @@ def parse_manipulation_o3de_benchmark_args():
     parser.add_argument(
         "--o3de-config-path",
         type=str,
-        required=True,
+        default="src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/o3de_config.yaml",
         help="Path to the O3DE configuration file",
     )
     parser.add_argument(
@@ -108,12 +123,12 @@ def parse_vlm_benchmark_args():
     return parser.parse_args()
 
 
-def define_benchmark_logger(out_dir: Path) -> logging.Logger:
+def define_benchmark_logger(out_dir: Path, level: int = logging.INFO) -> logging.Logger:
     log_file = out_dir / "benchmark.log"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     file_handler = logging.FileHandler(log_file)
-    file_handler.setLevel(logging.INFO)
+    file_handler.setLevel(level)
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
@@ -126,7 +141,7 @@ def define_benchmark_logger(out_dir: Path) -> logging.Logger:
     bench_logger = logging.getLogger("Benchmark logger")
     for handler in bench_logger.handlers:
         bench_logger.removeHandler(handler)
-    bench_logger.setLevel(logging.INFO)
+    bench_logger.setLevel(level)
     bench_logger.addHandler(file_handler)
     bench_logger.addHandler(console_handler)
 

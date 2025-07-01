@@ -34,6 +34,8 @@ if __name__ == "__main__":
         extra_tool_calls=args.extra_tool_calls,
         complexities=args.complexities,
         task_types=args.task_types,
+        n_shots=args.n_shots,
+        prompt_detail=args.prompt_detail,
     )
     for task in tasks:
         task.set_logger(bench_logger)

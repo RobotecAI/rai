@@ -56,6 +56,7 @@ class RAIGroundedSamResponse(BaseRaiSrv):
 
 class RAIGroundingDinoRequest(BaseRaiSrv):
     _prefix: str = "rai_interfaces/srv"
+    # TODO (jmatejcz) is it a bug that classes is str ?
     classes: str = ""
     box_threshold: float = 0.0
     text_threshold: float = 0.0
