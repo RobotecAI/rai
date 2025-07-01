@@ -60,6 +60,24 @@ def get_custom_interfaces_tasks(
     prompt_detail: List[Literal["brief", "descriptive"]] = ["brief", "descriptive"],
     n_shots: List[Literal[0, 2, 5]] = [0, 2, 5],
 ) -> List[Task]:
+    """Get predefined custom_interfaces tasks.
+
+    Parameters
+    ----------
+    extra_tool_calls : List[int], optional
+        how many extra tool calls allowed to still pass, by default [0]
+    prompt_detail : List[Literal["brief", "descriptive"]], optional
+        how descriptive should task prompt be, by default all levels are included:
+        ["brief", "descriptive"]
+    n_shots : List[Literal[0, 2, 5]], optional
+        how many examples are in system prompt, by default all are included: [0, 2, 5]
+
+    Returns
+    -------
+    Sequence[Task]
+        sequence of spatial reasoning tasks with varying difficulty levels.
+        There will be len(extra_tool_calls) * len(prompt_detail) * len(n_shots) tasks generated.
+    """
     tasks: List[Task] = []
 
     for extra_calls in extra_tool_calls:

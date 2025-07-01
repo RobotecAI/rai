@@ -40,7 +40,17 @@ class BenchmarkConfig(BaseModel):
 
 
 class ManipulationO3DEBenchmarkConfig(BenchmarkConfig):
-    # by default include all
+    """Configuration for Manipulation O3DE Benchmark.
+
+    Parameters
+    ----------
+    o3de_config_path : str
+        path to O3DE configuration file
+    levels : List[Literal["trivial", "easy", "medium", "hard", "very_hard"]], optional
+        difficulty levels to include in benchmark, by default all levels are included:
+        ["trivial", "easy", "medium", "hard", "very_hard"]
+    """
+
     o3de_config_path: str
     levels: List[Literal["trivial", "easy", "medium", "hard", "very_hard"]] = [
         "trivial",
@@ -56,6 +66,25 @@ class ManipulationO3DEBenchmarkConfig(BenchmarkConfig):
 
 
 class ToolCallingAgentBenchmarkConfig(BenchmarkConfig):
+    """Configuration for Tool Calling Agent Benchmark.
+
+    Parameters
+    ----------
+    extra_tool_calls : List[int], optional
+        how many extra tool calls allowed to still pass, by default [0]
+    prompt_detail : List[Literal["brief", "descriptive"]], optional
+        how descriptive should task prompt be, by default all levels are included:
+        ["brief", "descriptive"]
+    N_shots : List[Literal[0, 2, 5]], optional
+        how many examples are in system prompt, by default all are included: [0, 2, 5]
+    complexities : List[Literal["easy", "medium", "hard"]], optional
+        complexity levels of tasks to include in the benchmark, by default all levels are included:
+        ["easy", "medium", "hard"]
+    task_types : List[Literal["basic", "manipulation", "navigation", "custom_interfaces", "spatial_reasoning"]], optional
+        types of tasks to include in the benchmark, by default all types are included:
+        ["basic", "manipulation", "navigation", "custom_interfaces", "spatial_reasoning"]
+    """
+
     extra_tool_calls: List[int] = [0]
     complexities: List[Literal["easy", "medium", "hard"]] = ["easy", "medium", "hard"]
     N_shots: List[Literal[0, 2, 5]] = [0, 2, 5]
@@ -156,6 +185,7 @@ def test_models(
     out_dir: str,
     additional_model_args: Optional[List[Dict[str, Any]]] = None,
 ):
+    # TODO (jmatejcz) add docstring after passing agent logic will be added
     if additional_model_args is None:
         additional_model_args = [{} for _ in model_names]
 

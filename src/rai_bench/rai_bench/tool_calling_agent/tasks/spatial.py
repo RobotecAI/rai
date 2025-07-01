@@ -146,11 +146,9 @@ class BoolImageTask(SpatialReasoningAgentTask, ABC):
     def get_prompt(self):
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()} using visual analysis"
         else:
             return (
-                f"{self.get_base_prompt()} using the visual analysis system. "
+                f"{self.get_base_prompt()}"
                 "You can examine the provided image(s) carefully to identify relevant features, "
                 "analyze the visual content, and provide a boolean response based on your observations."
             )
@@ -160,7 +158,7 @@ class BoolImageTask(SpatialReasoningAgentTask, ABC):
         return images
 
 
-# NOTE (jmatejcz) spatial reasoning task's deiffculty is based soly on prompt and image
+# NOTE (jmatejcz) spatial reasoning task's difficulty is based solely on prompt and image
 # so in this case when declaring task, please subjectivly decide how hard is the task
 # examples:
 # easy -> locating single object, tell if it is present

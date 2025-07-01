@@ -456,7 +456,17 @@ class Validator(ABC):
 
 
 class TaskArgs(BaseModel):
-    """Holds the configurations specified by user"""
+    """Holds the configurations specified by user
+
+    Parameters
+    ----------
+    extra_tool_calls : int, optional
+        how many extra tool calls allowed to still pass, by default 0
+    prompt_detail : Literal["brief", "descriptive"], optional
+        how descriptive should task prompt be, by default "brief"
+    examples_in_system_prompt : Literal[0, 2, 5], optional
+        how many examples are in system prompt, by default 0
+    """
 
     extra_tool_calls: int = 0
     prompt_detail: Literal["brief", "descriptive"] = "brief"
@@ -483,14 +493,21 @@ class Task(ABC):
 
         Attributes
         ----------
+        complexity : Literal["easy", "medium", "hard"]
+            difficulty level of the task
+        type : str
+            type identifier for the task
+        recursion_limit : int, optional
+            maximum recursion depth allowed, by default DEFAULT_RECURSION_LIMIT
+
+        Parameters
+        ----------
         validators : List[Validator]
             List of validators that will be applied in sequence.
-        extra_tool_calls : int
-            Number of additional tool calls allowed beyond the minimum required.
+        task_args : TaskArgs
+            Configuration parameters for the task specified by user
         logger : logging.Logger
             Logger for recording task validation results and errors.
-        result : Result
-            Object tracking the validation results across all validators.
         """
         if logger:
             self.logger = logger
