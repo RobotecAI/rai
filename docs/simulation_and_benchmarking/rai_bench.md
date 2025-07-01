@@ -117,6 +117,10 @@ A Task represents a specific prompts and set of tools available. A list of valid
 
 As you can see, the framework is very flexible. Any SubTask can be combined into any Validator that can be later assigned to any Task.
 
+Every Task needs to define it's prompt and system prompt, what tools agent will have available, how many tool calls are required to complete it and how many optional tool calls are possible.
+
+Optional tool calls mean that a certain tool calls is not obligatory to pass the Task, but shoudn't be considered an error, example: `GetROS2RGBCameraTask` which has prompt: `Get RGB camera image.` requires making one tool call with `get_ros2_image` tool. But listing topics before doing it is a valid approach, so in this case opitonal tool calls is `1`.
+
 ### ToolCallingAgentBenchmark
 
 The ToolCallingAgentBenchmark class manages the execution of tasks and collects results.
@@ -144,8 +148,21 @@ class TaskArgs(BaseModel):
     examples_in_system_prompt: Literal[0, 2, 5] = 0
 ```
 
--   examples_in_system_prompt - How many examples there are in system prompts.
--   prompt_detail - How descriptive should the Task prompt be.
--   extra_tool_calls - How many extra tool calls an agent can make and still pass the Task.
+-   examples_in_system_prompt - How many examples there are in system prompts, example:
+
+    -   `0`: `You are a ROS 2 expert that want to solve tasks. You have access to various tools that allow you to query the ROS 2 system. Be proactive and use the tools to answer questions.`
+    -   `2`: `You are a ROS 2 expert that want to solve tasks. You have access to various tools that allow you to query the ROS 2 system. Be proactive and use the tools to answer questions. Example of tool calls: get_ros2_message_interface, args: {'msg_type': 'geometry_msgs/msg/Twist'} publish_ros2_message, args: {'topic': '/cmd_vel', 'message_type': 'geometry_msgs/msg/Twist', 'message': {linear: {x: 0.5, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 1.0}}}`
+
+-   prompt_detail - How descriptive should the Task prompt be, example:
+
+    -   `brief`: "Get all camera images"
+    -   `descriptive`: "Get all camera images from all available camera sources in the system.
+        This includes both RGB color images and depth images.
+        You can discover what camera topics are available and capture images from each."
+
+        Descriptive prompts provides guidance and tips.
+
+-   extra_tool_calls - How many extra tool calls an agent can make and still pass the Task, example:
+    -   `GetROS2RGBCameraTask` has 1 required tool call and 1 optional. When `extra_tool_calls` set to 5, agent can correct himself couple times and still pass even with 7 tool calls.
 
 If you want to know details about every task, visit `rai_bench/tool_calling_agent/tasks`
