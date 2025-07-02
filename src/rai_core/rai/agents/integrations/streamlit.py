@@ -86,7 +86,9 @@ def get_streamlit_cb(parent_container: DeltaGenerator) -> BaseCallbackHandler:
             """
             with self.thoughts_placeholder:
                 status_placeholder = st.empty()  # Placeholder to show the tool's status
-                with status_placeholder.status("Calling Tool...", expanded=True) as s:
+                with status_placeholder.status(
+                    f"Calling Tool {serialized['name']}...", expanded=True
+                ) as s:
                     st.write("Called tool: ", serialized["name"])
                     st.write("tool description: ", serialized["description"])
                     st.write("tool input: ")
@@ -95,7 +97,7 @@ def get_streamlit_cb(parent_container: DeltaGenerator) -> BaseCallbackHandler:
                     # Placeholder for tool output that will be updated later below
                     self.tool_output_placeholder = st.empty()
                     s.update(
-                        label="Completed Calling Tool!", expanded=False
+                        label=f"Tool {serialized['name']} completed!", expanded=False
                     )  # Update the status once done
 
         def on_tool_end(self, output: Any, **kwargs: Any) -> Any:
