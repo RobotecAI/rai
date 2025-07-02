@@ -64,11 +64,11 @@ from rai_bench.tool_calling_agent.predefined.basic_tasks import (
     get_robot_desc_ord_val,
     list_parameters_val,
     services_ord_val,
-    set_grounded_dino_opt_val_1,
+    set_grounded_dino_opt_val,
     set_grounded_dino_opt_val_2,
-    set_grounded_sam_opt_val_1,
+    set_grounded_sam_opt_val,
     set_grounded_sam_opt_val_2,
-    set_o3de_fps_opt_val_1,
+    set_o3de_fps_opt_val,
     set_o3de_fps_opt_val_2,
     set_param_val,
     spawn_both_val,
@@ -946,9 +946,9 @@ class TestConfigureVisionPipelineTask:
             dino_confidence_threshold=DEFAULT_DINO_CONFIDENCE,
             fps=DEFAULT_FPS,
             validators=[
-                set_grounded_sam_opt_val_1,
-                set_grounded_dino_opt_val_1,
-                set_o3de_fps_opt_val_1,
+                set_grounded_sam_opt_val,
+                set_grounded_dino_opt_val,
+                set_o3de_fps_opt_val,
             ],
             task_args=task_args,
         )
@@ -1063,9 +1063,9 @@ class TestConfigureVisionPipelineTask:
             dino_confidence_threshold=DEFAULT_DINO_CONFIDENCE,
             fps=DEFAULT_FPS,
             validators=[
-                set_grounded_sam_opt_val_1,
-                set_grounded_dino_opt_val_1,
-                set_o3de_fps_opt_val_1,
+                set_grounded_sam_opt_val,
+                set_grounded_dino_opt_val,
+                set_o3de_fps_opt_val,
             ],
             task_args=task_args,
         )
@@ -1112,9 +1112,9 @@ class TestConfigureVisionPipelineTask:
             dino_confidence_threshold=DEFAULT_DINO_CONFIDENCE,
             fps=DEFAULT_FPS,
             validators=[
-                set_grounded_sam_opt_val_1,
-                set_grounded_dino_opt_val_1,
-                set_o3de_fps_opt_val_1,
+                set_grounded_sam_opt_val,
+                set_grounded_dino_opt_val,
+                set_o3de_fps_opt_val,
             ],
             task_args=task_args,
         )
@@ -1140,9 +1140,9 @@ class TestConfigureVisionPipelineTask:
             dino_confidence_threshold=DEFAULT_DINO_CONFIDENCE,
             fps=DEFAULT_FPS,
             validators=[
-                set_grounded_sam_opt_val_1,
-                set_grounded_dino_opt_val_1,
-                set_o3de_fps_opt_val_1,
+                set_grounded_sam_opt_val,
+                set_grounded_dino_opt_val,
+                set_o3de_fps_opt_val,
             ],
             task_args=task_args,
         )
