@@ -20,6 +20,17 @@ from rai_bench.tool_calling_agent.interfaces import (
     TaskArgs,
 )
 from rai_bench.tool_calling_agent.predefined.basic_tasks import (
+    all_camera_images_notord_val,
+    check_spawnable_entities_val,
+    color_image_ord_val,
+    depth_image_ord_val,
+    get_pointcloud_ord_val,
+    get_robot_desc_ord_val,
+    list_parameters_val,
+    services_ord_val,
+    topics_ord_val,
+)
+from rai_bench.tool_calling_agent.tasks.basic import (
     BOX1_ENTITY,
     BOX1_POSITION,
     BOX2_ENTITY,
@@ -54,28 +65,6 @@ from rai_bench.tool_calling_agent.predefined.basic_tasks import (
     SPAWN_ENTITY_SERVICE,
     SPAWN_ENTITY_TYPE,
     TOMATO_ENTITY,
-    all_camera_images_notord_val,
-    check_spawnable_entities_val,
-    color_image_ord_val,
-    delete_both_val,
-    depth_image_ord_val,
-    get_parameters_val,
-    get_pointcloud_ord_val,
-    get_robot_desc_ord_val,
-    list_parameters_val,
-    services_ord_val,
-    set_grounded_dino_opt_val,
-    set_grounded_dino_opt_val_2,
-    set_grounded_sam_opt_val,
-    set_grounded_sam_opt_val_2,
-    set_o3de_fps_opt_val,
-    set_o3de_fps_opt_val_2,
-    set_param_val,
-    spawn_both_val,
-    spawn_entity_val,
-    topics_ord_val,
-)
-from rai_bench.tool_calling_agent.tasks.basic import (
     CheckSpawnableEntitiesTask,
     ConfigureVisionPipelineTask,
     GetAllROS2CamerasTask,
@@ -133,9 +122,9 @@ class TestSetParameterTask:
             },
         ]
 
+        # Test with refactored task (uses internal validators)
         task = SetRobotParameterTask(
             value=DEFAULT_PUBLISH_FREQUENCY,
-            validators=[set_param_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -165,7 +154,6 @@ class TestSetParameterTask:
 
         task = SetRobotParameterTask(
             value=DEFAULT_PUBLISH_FREQUENCY,
-            validators=[set_param_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -197,7 +185,6 @@ class TestSetParameterTask:
 
         task = SetRobotParameterTask(
             value=DEFAULT_PUBLISH_FREQUENCY,
-            validators=[set_param_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -227,7 +214,6 @@ class TestSetParameterTask:
 
         task = SetRobotParameterTask(
             value=DEFAULT_PUBLISH_FREQUENCY,
-            validators=[set_param_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -246,7 +232,6 @@ class TestSetParameterTask:
 
         task = SetRobotParameterTask(
             value=DEFAULT_PUBLISH_FREQUENCY,
-            validators=[set_param_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -640,9 +625,9 @@ class TestGetSpecificParameterTask:
             },
         ]
 
+        # Test with refactored task (uses internal validators)
         task = GetSpecificParameterTask(
             parameter="publish_frequency",
-            validators=[get_parameters_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -665,7 +650,6 @@ class TestGetSpecificParameterTask:
 
         task = GetSpecificParameterTask(
             parameter="publish_frequency",
-            validators=[get_parameters_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -686,7 +670,6 @@ class TestGetSpecificParameterTask:
 
         task = GetSpecificParameterTask(
             parameter="publish_frequency",
-            validators=[get_parameters_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -783,9 +766,8 @@ class TestSpawnEntityTask:
             },
         ]
 
-        task = SpawnEntityTask(
-            entity=TOMATO_ENTITY, validators=[spawn_entity_val], task_args=task_args
-        )
+        # Test with refactored task (uses internal validators)
+        task = SpawnEntityTask(entity=TOMATO_ENTITY, task_args=task_args)
         score = task.validate(tool_calls)
         assert score == 1.0
 
@@ -805,9 +787,7 @@ class TestSpawnEntityTask:
             }
         ]
 
-        task = SpawnEntityTask(
-            entity=TOMATO_ENTITY, validators=[spawn_entity_val], task_args=task_args
-        )
+        task = SpawnEntityTask(entity=TOMATO_ENTITY, task_args=task_args)
         score = task.validate(tool_calls)
         assert score == 0.0
 
@@ -827,9 +807,7 @@ class TestSpawnEntityTask:
             }
         ]
 
-        task = SpawnEntityTask(
-            entity=TOMATO_ENTITY, validators=[spawn_entity_val], task_args=task_args
-        )
+        task = SpawnEntityTask(entity=TOMATO_ENTITY, task_args=task_args)
         score = task.validate(tool_calls)
         assert score == 0.0
 
@@ -846,9 +824,7 @@ class TestSpawnEntityTask:
             }
         ]
 
-        task = SpawnEntityTask(
-            entity=TOMATO_ENTITY, validators=[spawn_entity_val], task_args=task_args
-        )
+        task = SpawnEntityTask(entity=TOMATO_ENTITY, task_args=task_args)
         score = task.validate(tool_calls)
         assert score == 0.0
 
@@ -868,9 +844,7 @@ class TestSpawnEntityTask:
             }
         ]
 
-        task = SpawnEntityTask(
-            entity=TOMATO_ENTITY, validators=[spawn_entity_val], task_args=task_args
-        )
+        task = SpawnEntityTask(entity=TOMATO_ENTITY, task_args=task_args)
         score = task.validate(tool_calls)
         assert score == 0.0
 
@@ -941,15 +915,11 @@ class TestConfigureVisionPipelineTask:
             },
         ]
 
+        # Test with refactored task (uses internal validators)
         task = ConfigureVisionPipelineTask(
             sam_confidence_threshold=DEFAULT_SAM_CONFIDENCE,
             dino_confidence_threshold=DEFAULT_DINO_CONFIDENCE,
             fps=DEFAULT_FPS,
-            validators=[
-                set_grounded_sam_opt_val,
-                set_grounded_dino_opt_val,
-                set_o3de_fps_opt_val,
-            ],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -1022,11 +992,6 @@ class TestConfigureVisionPipelineTask:
             sam_confidence_threshold=SAM_CONFIDENCE_2,
             dino_confidence_threshold=DINO_CONFIDENCE_2,
             fps=FPS_2,
-            validators=[
-                set_grounded_sam_opt_val_2,
-                set_grounded_dino_opt_val_2,
-                set_o3de_fps_opt_val_2,
-            ],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -1062,11 +1027,6 @@ class TestConfigureVisionPipelineTask:
             sam_confidence_threshold=DEFAULT_SAM_CONFIDENCE,
             dino_confidence_threshold=DEFAULT_DINO_CONFIDENCE,
             fps=DEFAULT_FPS,
-            validators=[
-                set_grounded_sam_opt_val,
-                set_grounded_dino_opt_val,
-                set_o3de_fps_opt_val,
-            ],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -1111,11 +1071,6 @@ class TestConfigureVisionPipelineTask:
             sam_confidence_threshold=DEFAULT_SAM_CONFIDENCE,
             dino_confidence_threshold=DEFAULT_DINO_CONFIDENCE,
             fps=DEFAULT_FPS,
-            validators=[
-                set_grounded_sam_opt_val,
-                set_grounded_dino_opt_val,
-                set_o3de_fps_opt_val,
-            ],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -1139,11 +1094,6 @@ class TestConfigureVisionPipelineTask:
             sam_confidence_threshold=DEFAULT_SAM_CONFIDENCE,
             dino_confidence_threshold=DEFAULT_DINO_CONFIDENCE,
             fps=DEFAULT_FPS,
-            validators=[
-                set_grounded_sam_opt_val,
-                set_grounded_dino_opt_val,
-                set_o3de_fps_opt_val,
-            ],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -1220,10 +1170,10 @@ class TestRespawnEntitiesTask:
             },
         ]
 
+        # Test with refactored task (uses internal validators)
         task = RespawnEntitiesTask(
             names=[BOX1_ENTITY, BOX2_ENTITY],
             coords=[BOX1_POSITION, BOX2_POSITION],
-            validators=[delete_both_val, spawn_both_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -1281,11 +1231,10 @@ class TestRespawnEntitiesTask:
         task = RespawnEntitiesTask(
             names=[BOX1_ENTITY, BOX2_ENTITY],
             coords=[BOX1_POSITION, BOX2_POSITION],
-            validators=[delete_both_val, spawn_both_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
-        assert score == 0.0
+        assert score == 0.0  # first validator fail so second fail too
 
     def test_respawn_entities_task_missing_spawn(self, task_args: TaskArgs) -> None:
         """Test respawn entities task with missing spawn calls."""
@@ -1330,11 +1279,10 @@ class TestRespawnEntitiesTask:
         task = RespawnEntitiesTask(
             names=[BOX1_ENTITY, BOX2_ENTITY],
             coords=[BOX1_POSITION, BOX2_POSITION],
-            validators=[delete_both_val, spawn_both_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
-        assert score == 0.5
+        assert score == 0.5  # Only delete validators pass, spawn validators fail
 
 
 class TestMultiValidatorScoring:
@@ -1354,7 +1302,6 @@ class TestMultiValidatorScoring:
         ]
 
         # Create multiple validators for testing
-
         val1 = topics_ord_val
         val2 = color_image_ord_val
         val3 = depth_image_ord_val

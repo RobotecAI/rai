@@ -14,11 +14,12 @@
 
 import logging
 from abc import ABC
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from langchain_core.tools import BaseTool
 
 from rai_bench.tool_calling_agent.interfaces import (
+    SubTask,
     Task,
     TaskArgs,
     Validator,
@@ -36,6 +37,73 @@ from rai_bench.tool_calling_agent.mocked_tools import (
     MockGetROS2TopicsNamesAndTypesTool,
     MockReceiveROS2MessageTool,
 )
+from rai_bench.tool_calling_agent.subtasks import CheckServiceFieldsToolCallSubTask
+from rai_bench.tool_calling_agent.validators import (
+    NotOrderedCallsValidator,
+    OneFromManyValidator,
+    OrderedCallsValidator,
+)
+
+COLOR_IMAGE_TOPIC = "/color_image5"
+DEPTH_IMAGE_TOPIC = "/depth_image5"
+COLOR_CAMERA_INFO_TOPIC = "/color_camera_info5"
+DEPTH_CAMERA_INFO_TOPIC = "/depth_camera_info5"
+ROBOT_DESCRIPTION_TOPIC = "/robot_description"
+POINTCLOUD_TOPIC = "/pointcloud"
+SCAN_TOPIC = "/scan"
+
+ROBOT_STATE_PUBLISHER_LIST_PARAMS = "/robot_state_publisher/list_parameters"
+ROBOT_STATE_PUBLISHER_GET_PARAMS = "/robot_state_publisher/get_parameters"
+ROBOT_STATE_PUBLISHER_SET_PARAMS = "/robot_state_publisher/set_parameters"
+ROBOT_STATE_PUBLISHER_SET_PARAMS_ATOMICALLY = (
+    "/robot_state_publisher/set_parameters_atomically"
+)
+
+SPAWN_ENTITY_SERVICE = "/spawn_entity"
+DELETE_ENTITY_SERVICE = "/delete_entity"
+GET_SPAWNABLE_NAMES_SERVICE = "/get_available_spawnable_names"
+GROUNDED_SAM_SET_PARAMS = "/grounded_sam/set_parameters"
+GROUNDED_SAM_SET_PARAMS_ATOMICALLY = "/grounded_sam/set_parameters_atomically"
+GROUNDING_DINO_SET_PARAMS = "/grounding_dino/set_parameters"
+GROUNDING_DINO_SET_PARAMS_ATOMICALLY = "/grounding_dino/set_parameters_atomically"
+O3DE_SET_PARAMS = "/o3de_ros2_node/set_parameters"
+O3DE_SET_PARAMS_ATOMICALLY = "/o3de_ros2_node/set_parameters_atomically"
+
+LIST_PARAMETERS_TYPE = "rcl_interfaces/srv/ListParameters"
+SET_PARAMETERS_TYPE = "rcl_interfaces/srv/SetParameters"
+SET_PARAMETERS_ATOMICALLY_TYPE = "rcl_interfaces/srv/SetParametersAtomically"
+GET_PARAMETERS_TYPE = "rcl_interfaces/srv/GetParameters"
+SPAWN_ENTITY_TYPE = "gazebo_msgs/srv/SpawnEntity"
+DELETE_ENTITY_TYPE = "gazebo_msgs/srv/DeleteEntity"
+GET_WORLD_PROPERTIES_TYPE = "gazebo_msgs/srv/GetWorldProperties"
+
+DEFAULT_PUBLISH_FREQUENCY = 30.0
+DEFAULT_FPS = 30
+DEFAULT_SAM_CONFIDENCE = 0.8
+DEFAULT_DINO_CONFIDENCE = 0.7
+SAM_CONFIDENCE_2 = 0.6
+DINO_CONFIDENCE_2 = 0.6
+FPS_2 = 10
+
+TOMATO_ENTITY = "tomato"
+BOX1_ENTITY = "box1"
+BOX2_ENTITY = "box2"
+BOX1_POSITION = (0.2, 0.2, 0.2)
+BOX2_POSITION = (0.4, 0.4, 0.2)
+
+CAMERA_TOPICS_AND_TYPES = [
+    f"topic: {COLOR_CAMERA_INFO_TOPIC}\ntype: sensor_msgs/msg/CameraInfo\n",
+    f"topic: {COLOR_IMAGE_TOPIC}\ntype: sensor_msgs/msg/Image\n",
+    f"topic: {DEPTH_CAMERA_INFO_TOPIC}\ntype: sensor_msgs/msg/CameraInfo\n",
+    f"topic: {DEPTH_IMAGE_TOPIC}\ntype: sensor_msgs/msg/Image\n",
+]
+
+CAMERA_TOPICS = [
+    COLOR_CAMERA_INFO_TOPIC,
+    COLOR_IMAGE_TOPIC,
+    DEPTH_CAMERA_INFO_TOPIC,
+    DEPTH_IMAGE_TOPIC,
+]
 
 PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_0_SHOT = """You are a ROS 2 expert that want to solve tasks. You have access to various tools that allow you to query the ROS 2 system.
 Be proactive and use the tools to answer questions."""
@@ -267,12 +335,21 @@ class GetSpecificParameterTask(BasicTask):
     def __init__(
         self,
         parameter: str,
-        validators: List[Validator],
         task_args: TaskArgs,
+        validators: Optional[List[Validator]] = None,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(validators, task_args, logger)
         self.parameter = parameter
+        if validators is None:
+            # Default validator for this task
+            get_parameters_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=ROBOT_STATE_PUBLISHER_GET_PARAMS,
+                expected_service_type=GET_PARAMETERS_TYPE,
+                expected_fields={"names.0": parameter},
+            )
+            validators = [OrderedCallsValidator(subtasks=[get_parameters_subtask])]
+        super().__init__(validators, task_args, logger)
 
     @property
     def optional_tool_calls_number(self) -> int:
@@ -299,12 +376,44 @@ class SetRobotParameterTask(BasicTask):
     def __init__(
         self,
         value: float,
-        validators: List[Validator],
         task_args: TaskArgs,
+        validators: Optional[List[Validator]] = None,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(validators, task_args, logger)
         self.value = value
+        if validators is None:
+            # Default validators for this task - allow either regular or atomic set
+            set_robot_state_params_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=ROBOT_STATE_PUBLISHER_SET_PARAMS,
+                expected_service_type=SET_PARAMETERS_TYPE,
+                expected_fields={
+                    "parameters.0.name": "publish_frequency",
+                    "parameters.0.value.type": "3",
+                    "parameters.0.value.double_value": value,
+                },
+            )
+            set_robot_state_params_atomically_subtask = (
+                CheckServiceFieldsToolCallSubTask(
+                    expected_tool_name="call_ros2_service",
+                    expected_service=ROBOT_STATE_PUBLISHER_SET_PARAMS_ATOMICALLY,
+                    expected_service_type=SET_PARAMETERS_ATOMICALLY_TYPE,
+                    expected_fields={
+                        "parameters.0.name": "publish_frequency",
+                        "parameters.0.value.type": "3",
+                        "parameters.0.value.double_value": value,
+                    },
+                )
+            )
+            validators = [
+                OneFromManyValidator(
+                    subtasks=[
+                        set_robot_state_params_subtask,
+                        set_robot_state_params_atomically_subtask,
+                    ]
+                )
+            ]
+        super().__init__(validators, task_args, logger)
 
     @property
     def optional_tool_calls_number(self) -> int:
@@ -353,12 +462,23 @@ class SpawnEntityTask(BasicTask):
     def __init__(
         self,
         entity: str,
-        validators: List[Validator],
         task_args: TaskArgs,
+        validators: Optional[List[Validator]] = None,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(validators, task_args, logger)
         self.entity = entity
+        if validators is None:
+            # Default validator for this task
+            spawn_entity_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=SPAWN_ENTITY_SERVICE,
+                expected_service_type=SPAWN_ENTITY_TYPE,
+                expected_fields={
+                    "name": entity,
+                },
+            )
+            validators = [OrderedCallsValidator(subtasks=[spawn_entity_subtask])]
+        super().__init__(validators, task_args, logger)
 
     @property
     def optional_tool_calls_number(self) -> int:
@@ -387,14 +507,98 @@ class ConfigureVisionPipelineTask(BasicTask):
         sam_confidence_threshold: float,
         dino_confidence_threshold: float,
         fps: int,
-        validators: List[Validator],
         task_args: TaskArgs,
+        validators: Optional[List[Validator]] = None,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(validators, task_args, logger)
         self.sam_confidence_threshold = sam_confidence_threshold
         self.dino_confidence_threshold = dino_confidence_threshold
         self.fps = fps
+
+        if validators is None:
+            # Default validators for this task
+            set_grounded_sam_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=GROUNDED_SAM_SET_PARAMS,
+                expected_service_type=SET_PARAMETERS_TYPE,
+                expected_fields={
+                    "parameters.0.name": "confidence_threshold",
+                    "parameters.0.value.type": 3,
+                    "parameters.0.value.double_value": sam_confidence_threshold,
+                },
+            )
+            set_grounded_sam_atomically_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=GROUNDED_SAM_SET_PARAMS_ATOMICALLY,
+                expected_service_type=SET_PARAMETERS_ATOMICALLY_TYPE,
+                expected_fields={
+                    "parameters.0.name": "confidence_threshold",
+                    "parameters.0.value.type": 3,
+                    "parameters.0.value.double_value": sam_confidence_threshold,
+                },
+            )
+
+            set_grounded_dino_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=GROUNDING_DINO_SET_PARAMS,
+                expected_service_type=SET_PARAMETERS_TYPE,
+                expected_fields={
+                    "parameters.0.name": "confidence_threshold",
+                    "parameters.0.value.type": 3,
+                    "parameters.0.value.double_value": dino_confidence_threshold,
+                },
+            )
+            set_grounding_dino_atomically_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=GROUNDING_DINO_SET_PARAMS_ATOMICALLY,
+                expected_service_type=SET_PARAMETERS_ATOMICALLY_TYPE,
+                expected_fields={
+                    "parameters.0.name": "confidence_threshold",
+                    "parameters.0.value.type": 3,
+                    "parameters.0.value.double_value": dino_confidence_threshold,
+                },
+            )
+
+            set_o3de_fps_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=O3DE_SET_PARAMS,
+                expected_service_type=SET_PARAMETERS_TYPE,
+                expected_fields={
+                    "parameters.0.name": "fps",
+                    "parameters.0.value.type": 2,
+                    "parameters.0.value.integer_value": fps,
+                },
+            )
+            set_o3de_fps_atomically_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=O3DE_SET_PARAMS_ATOMICALLY,
+                expected_service_type=SET_PARAMETERS_ATOMICALLY_TYPE,
+                expected_fields={
+                    "parameters.0.name": "fps",
+                    "parameters.0.value.type": 2,
+                    "parameters.0.value.integer_value": fps,
+                },
+            )
+
+            validators = [
+                OneFromManyValidator(
+                    subtasks=[
+                        set_grounded_sam_subtask,
+                        set_grounded_sam_atomically_subtask,
+                    ]
+                ),
+                OneFromManyValidator(
+                    subtasks=[
+                        set_grounded_dino_subtask,
+                        set_grounding_dino_atomically_subtask,
+                    ]
+                ),
+                OneFromManyValidator(
+                    subtasks=[set_o3de_fps_subtask, set_o3de_fps_atomically_subtask]
+                ),
+            ]
+
+        super().__init__(validators, task_args, logger)
 
     @property
     def optional_tool_calls_number(self) -> int:
@@ -426,13 +630,47 @@ class RespawnEntitiesTask(BasicTask):
         self,
         names: List[str],
         coords: List[Tuple[float, float, float]],
-        validators: List[Validator],
         task_args: TaskArgs,
+        validators: Optional[List[Validator]] = None,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(validators, task_args, logger)
         self.names = names
         self.coords = coords
+
+        if validators is None:
+            # Default validators for this task
+            delete_subtasks: List[SubTask] = []
+            spawn_subtasks: List[SubTask] = []
+
+            for name, coord in zip(names, coords):
+                delete_subtask = CheckServiceFieldsToolCallSubTask(
+                    expected_tool_name="call_ros2_service",
+                    expected_service=DELETE_ENTITY_SERVICE,
+                    expected_service_type=DELETE_ENTITY_TYPE,
+                    expected_fields={
+                        "name": name,
+                    },
+                )
+                spawn_subtask = CheckServiceFieldsToolCallSubTask(
+                    expected_tool_name="call_ros2_service",
+                    expected_service=SPAWN_ENTITY_SERVICE,
+                    expected_service_type=SPAWN_ENTITY_TYPE,
+                    expected_fields={
+                        "name": name,
+                        "initial_pose.position.x": coord[0],
+                        "initial_pose.position.y": coord[1],
+                        "initial_pose.position.z": coord[2],
+                    },
+                )
+                delete_subtasks.append(delete_subtask)
+                spawn_subtasks.append(spawn_subtask)
+
+            validators = [
+                NotOrderedCallsValidator(subtasks=delete_subtasks),
+                NotOrderedCallsValidator(subtasks=spawn_subtasks),
+            ]
+
+        super().__init__(validators, task_args, logger)
 
     @property
     def optional_tool_calls_number(self) -> int:
