@@ -118,6 +118,61 @@ class SubTask(ABC):
                         )
         return True
 
+    def _check_nested_fields(
+        self, field_path: str, args: Dict[str, Any], expected_value: Any
+    ) -> bool:
+        """Check if a nested field in the arguments matches the expected value.
+
+        Parameters
+        ----------
+        field_path : str
+            Dot-separated path to the field (e.g., "header.frame_id").
+            Including indexes for lists possible (e.g., "data[0].value").
+        args : Dict[str, Any]
+            The arguments dictionary to check.
+        expected_value : Any
+            The expected value for the field.
+
+        Returns
+        -------
+        bool
+            True if the field matches the expected value, False otherwise.
+
+
+        Raises
+        ------
+        SubTaskValidationError
+            If the field is not found or does not match the expected value.
+        """
+
+        keys = field_path.split(".")
+        value: Any = args
+        for key in keys:
+            if isinstance(value, dict) and key in value:
+                value = value[key]
+            elif isinstance(value, list):
+                # try to access index
+                try:
+                    index = int(key)
+                except ValueError:
+                    raise SubTaskValidationError(f"Expected numeric index, got '{key}'")
+
+                if 0 <= index < len(value):
+                    value = value[index]
+                else:
+                    raise SubTaskValidationError(f"Index {index} out of range")
+
+            else:
+                raise SubTaskValidationError(
+                    f"Field path '{field_path}' not found in the message."
+                )
+
+        if value != expected_value:
+            raise SubTaskValidationError(
+                f"Expected value for field '{field_path}' is '{expected_value}', but got '{value}'."
+            )
+        return True
+
     def _check_topic_tool_call_field(
         self,
         tool_call: ToolCall,
@@ -173,22 +228,9 @@ class SubTask(ABC):
                 "Tool call does not contain a 'message' argument."
             )
 
-        keys = field_path.split(".")
-        value: Any = message
-        for key in keys:
-            if isinstance(value, dict) and key in value:
-                value = value[key]
-            else:
-                raise SubTaskValidationError(
-                    f"Field path '{field_path}' not found in the message."
-                )
-
-        if value != expected_value:
-            raise SubTaskValidationError(
-                f"Expected value for field '{field_path}' is '{expected_value}', but got '{value}'."
-            )
-
-        return True
+        return self._check_nested_fields(
+            field_path=field_path, args=message, expected_value=expected_value
+        )
 
     def _check_service_tool_call_field(
         self,
@@ -253,22 +295,9 @@ class SubTask(ABC):
                     f"Expected empty service_args, but got: {service_args}"
                 )
 
-        keys = field_path.split(".")
-        value: Any = service_args
-        for key in keys:
-            if isinstance(value, dict) and key in value:
-                value = value[key]
-            else:
-                raise SubTaskValidationError(
-                    f"Field path '{field_path}' not found in the message."
-                )
-
-        if value != expected_value:
-            raise SubTaskValidationError(
-                f"Expected value for field '{field_path}' is '{expected_value}', but got '{value}'."
-            )
-
-        return True
+        return self._check_nested_fields(
+            field_path=field_path, args=service_args, expected_value=expected_value
+        )
 
     def _check_action_tool_call_field(
         self,
@@ -333,22 +362,9 @@ class SubTask(ABC):
                     f"Expected empty action_args, but got: {action_args}"
                 )
 
-        keys = field_path.split(".")
-        value: Any = action_args
-        for key in keys:
-            if isinstance(value, dict) and key in value:
-                value = value[key]
-            else:
-                raise SubTaskValidationError(
-                    f"Field path '{field_path}' not found in the action_args."
-                )
-
-        if value != expected_value:
-            raise SubTaskValidationError(
-                f"Expected value for field '{field_path}' is '{expected_value}', but got '{value}'."
-            )
-
-        return True
+        return self._check_nested_fields(
+            field_path=field_path, args=action_args, expected_value=expected_value
+        )
 
 
 class Validator(ABC):
