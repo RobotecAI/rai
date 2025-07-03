@@ -44,7 +44,6 @@ from rai_bench.tool_calling_agent.mocked_tools import (
     MockPublishROS2MessageTool,
 )
 
-loggers_type = logging.Logger
 INTERFACES = COMMON_INTERFACES | CUSTOM_INTERFACES
 
 TOPICS_AND_TYPES = COMMON_TOPICS_AND_TYPES | CUSTOM_TOPICS_AND_TYPES
@@ -145,17 +144,14 @@ class CustomInterfacesServiceTask(CustomInterfaceTask, ABC):
     Base class for tasks that involve calling SINGLE service with custom interface.
     """
 
-    moderate_sufix = " using service interface."
     descriptive_sufix = (
-        ". Examine the required service interface, and call  "
+        " Examine the required service interface, and call  "
         "it with appropriate arguments."
     )
 
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return self.get_base_prompt() + self.moderate_sufix
         else:
             return self.get_base_prompt() + self.descriptive_sufix
 
@@ -166,7 +162,7 @@ class CustomInterfacesServicesTask(CustomInterfacesServiceTask, ABC):
     """
 
     descriptive_sufix = (
-        ". Examine the required services interfaces, and call  "
+        " Examine the required services interfaces, and call  "
         "them with appropriate arguments."
     )
 
@@ -186,17 +182,15 @@ class PublishROS2HRIMessageTextTask(CustomInterfaceTask):
         self.text = text
 
     def get_base_prompt(self) -> str:
-        return f"Publish message to topic '{self.topic}' with text '{self.text}'"
+        return f"Publish message to topic '{self.topic}' with text '{self.text}'."
 
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
-            return f"{self.get_base_prompt()} using HRI message interface with text='{self.text}'"
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()} using HRI message interface. Set the text field to '{self.text}'"
+            return f"{self.get_base_prompt()}."
         else:
             return (
-                f"{self.get_base_prompt()}. "
-                "Examine the message interface "
+                f"{self.get_base_prompt()}"
+                " Examine the message interface "
                 f"structure, and publish an HRI message with appropriate arguments."
             )
 
@@ -223,7 +217,7 @@ class PublishROS2AudioMessageTask(CustomInterfaceTask):
         return (
             f"Publish audio message to topic '{self.topic}' with samples "
             f"{self.expected_audio}, sample rate {self.expected_sample_rate} and "
-            f"channels {self.expected_channels}"
+            f"channels {self.expected_channels}."
         )
 
     def get_prompt(self) -> str:
@@ -231,8 +225,8 @@ class PublishROS2AudioMessageTask(CustomInterfaceTask):
             return self.get_base_prompt()
         else:
             return (
-                f"{self.get_base_prompt()}. "
-                f"Examine the message interface, and publish audio data with appropriate arguments."
+                f"{self.get_base_prompt()}"
+                f" Examine the message interface, and publish audio data with appropriate arguments."
             )
 
 
@@ -274,17 +268,15 @@ class PublishROS2DetectionArrayTask(CustomInterfaceTask):
 
         return (
             f"Publish detection array to topic '{self.topic}' with {len(self.expected_detection_classes)} detections: "
-            f"{'; '.join(detection_summaries)}"
+            f"{'; '.join(detection_summaries)}."
         )
 
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
             return self.get_base_prompt()
-        elif self.prompt_detail == "moderate":
-            return f"{self.get_base_prompt()} using service interface."
         else:
             return (
-                f"{self.get_base_prompt()}. Examine the message interface"
+                f"{self.get_base_prompt()} Examine the message interface "
                 "and publish detection data with appropriate arguments."
             )
 
@@ -319,7 +311,7 @@ class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
         return (
             f"Call service '{self.service}' to move manipulator to pose "
             f"({pos.x}, {pos.y}, {pos.z}) with initial gripper state {self.expected_initial_gripper_state} "
-            f"and final gripper state {self.expected_final_gripper_state}"
+            f"and final gripper state {self.expected_final_gripper_state}."
         )
 
 
@@ -378,7 +370,7 @@ class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
 
         return (
             f"Call service '{self.service}' for image segmentation with {len(self.detection_classes)} detections: "
-            f"{', '.join(detection_summary)} on {self.image_width}x{self.image_height} {self.image_encoding} image"
+            f"{', '.join(detection_summary)} on {self.image_width}x{self.image_height} {self.image_encoding} image."
         )
 
 
@@ -404,7 +396,7 @@ class CallGroundingDinoClassify(CustomInterfacesServiceTask):
         return (
             f"Call service '{self.service}' for object classification with classes "
             f"'{self.expected_classes}', box_threshold {self.expected_box_threshold} and "
-            f"text_threshold {self.expected_text_threshold}"
+            f"text_threshold {self.expected_text_threshold}."
         )
 
 
@@ -439,7 +431,7 @@ class CallVectorStoreRetrievalTask(CustomInterfacesServiceTask):
         self.expected_query = query
 
     def get_base_prompt(self) -> str:
-        return f"Call service '{self.service}' with query '{self.expected_query}'"
+        return f"Call service '{self.service}' with query '{self.expected_query}'."
 
 
 class CallWhatISeeTask(CustomInterfacesServiceTask):
@@ -455,7 +447,7 @@ class CallWhatISeeTask(CustomInterfacesServiceTask):
         super().__init__(validators=validators, task_args=task_args, logger=logger)
 
     def get_base_prompt(self) -> str:
-        return f"Call service '{self.service}' to get visual observations"
+        return f"Call service '{self.service}' to get visual observations."
 
 
 class CompleteObjectInteractionTask(CustomInterfacesServicesTask):
@@ -513,15 +505,14 @@ class CompleteObjectInteractionTask(CustomInterfacesServicesTask):
         self.interaction_message = interaction_message
 
     def get_base_prompt(self) -> str:
-        return (
-            f"Perform complete object interaction workflow with predetermined parameters: "
-            f"1) Call service '/grounding_dino_classify' to classify '{self.target_classes}' with box_threshold={self.box_threshold}, text_threshold={self.text_threshold}, "
-            f"2) Call service '/grounded_sam_segment' to segment {self.detection_classes[0]} at bbox({self.bbox_centers[0][0]}, {self.bbox_centers[0][1]}) "
-            f"on {self.image_width}x{self.image_height} {self.image_encoding} image, "
-            f"3) Call service '/manipulator_move_to' to move to position ({self.target_x}, {self.target_y}, {self.target_z}) "
-            f"with gripper {self.initial_gripper}→{self.final_gripper}, "
-            f"4) Publish to topic '/to_human' HRI message: '{self.interaction_message}'"
-        )
+        return f"""Perform complete object interaction workflow with predetermined parameters:
+            1) Call service '/grounding_dino_classify' to classify '{self.target_classes}' with box_threshold={self.box_threshold}, text_threshold={self.text_threshold}
+            2) Call service '/grounded_sam_segment' to segment {self.detection_classes[0]} at bbox({self.bbox_centers[0][0]}, {self.bbox_centers[0][1]})
+            on {self.image_width}x{self.image_height} {self.image_encoding} image
+            3) Call service '/manipulator_move_to' to move to position ({self.target_x}, {self.target_y}, {self.target_z})
+            with gripper {self.initial_gripper}→{self.final_gripper}
+            4) Publish to topic '/to_human' HRI message: '{self.interaction_message}'
+            """
 
 
 class MultiModalSceneDocumentationTask(CustomInterfacesServiceTask):
@@ -571,13 +562,12 @@ class MultiModalSceneDocumentationTask(CustomInterfacesServiceTask):
             ]
         )
 
-        return (
-            f"Perform comprehensive scene documentation using multiple services: "
-            f"1) Call service '/rai_whatisee_get' to get visual observations, "
-            f"2) Publish to topic '/detections' detection array with {len(self.scene_objects)} objects: {object_summary}, "
-            f"3) Call service '/rai_whoami_documentation_service' to query: '{self.scene_analysis_query}', "
-            f"4) Publish to topic '/to_human' final HRI report: '{self.documentation_report}'"
-        )
+        return f"""Perform comprehensive scene documentation using multiple services:
+            1) Call service '/rai_whatisee_get' to get visual observations
+            2) Publish to topic '/detections' detection array with {len(self.scene_objects)} objects: {object_summary}
+            3) Call service '/rai_whoami_documentation_service' to query: '{self.scene_analysis_query}'
+            4) Publish to topic '/to_human' final HRI report: '{self.documentation_report}'
+            """
 
 
 class EmergencyResponseProtocolTask(CustomInterfacesServiceTask):
@@ -631,11 +621,10 @@ class EmergencyResponseProtocolTask(CustomInterfacesServiceTask):
         return 5
 
     def get_base_prompt(self) -> str:
-        return (
-            f"Execute emergency response protocol with predetermined parameters: "
-            f"1) Call service '/grounding_dino_classify' to detect emergency: '{self.classes}' with high thresholds box={self.box_threshold}, text={self.text_threshold}, "
-            f"2) Call service '/grounded_sam_segment' to segment person at ({self.bbox_centers[0][0]}, {self.bbox_centers[0][1]}) "
-            f"on {self.image_width}x{self.image_height} {self.image_encoding} image, "
-            f"3) Publish to topic '/audio_output' emergency alert: {self.audio_samples} at {self.sample_rate}Hz, "
-            f"4) Publish to topic '/to_human' emergency message: '{self.message}'"
-        )
+        return f"""Execute emergency response protocol with predetermined parameters:
+            1) Call service '/grounding_dino_classify' to detect emergency: '{self.classes}' with high thresholds box={self.box_threshold}, text={self.text_threshold}
+            2) Call service '/grounded_sam_segment' to segment person at ({self.bbox_centers[0][0]}, {self.bbox_centers[0][1]})
+            on {self.image_width}x{self.image_height} {self.image_encoding} image
+            3) Publish to topic '/audio_output' emergency alert: {self.audio_samples} at {self.sample_rate}Hz
+            4) Publish to topic '/to_human' emergency message: '{self.message}'
+            """
