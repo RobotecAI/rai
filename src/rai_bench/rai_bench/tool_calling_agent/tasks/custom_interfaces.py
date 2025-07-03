@@ -14,15 +14,9 @@
 
 import logging
 from abc import ABC
-from typing import List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from langchain_core.tools import BaseTool
-from rai.types import (
-    Point,
-    Pose,
-    PoseStamped,
-    Quaternion,
-)
 
 from rai_bench.tool_calling_agent.interfaces import Task, TaskArgs, Validator
 from rai_bench.tool_calling_agent.mocked_ros2_interfaces import (
@@ -43,6 +37,35 @@ from rai_bench.tool_calling_agent.mocked_tools import (
     MockGetROS2TopicsNamesAndTypesTool,
     MockPublishROS2MessageTool,
 )
+from rai_bench.tool_calling_agent.subtasks import (
+    CheckArgsToolCallSubTask,
+    CheckServiceFieldsToolCallSubTask,
+    CheckTopicFieldsToolCallSubTask,
+)
+from rai_bench.tool_calling_agent.validators import (
+    OrderedCallsValidator,
+)
+
+HRI_TOPIC = "/to_human"
+AUDIO_TOPIC = "/audio_output"
+DETECTIONS_TOPIC = "/detections"
+MANIPULATOR_SERVICE = "/manipulator_move_to"
+GROUNDED_SAM_SERVICE = "/grounded_sam_segment"
+GROUNDING_DINO_SERVICE = "/grounding_dino_classify"
+LOG_DIGEST_SERVICE = "/get_log_digest"
+VECTOR_STORE_SERVICE = "/rai_whoami_documentation_service"
+WHAT_I_SEE_SERVICE = "/rai_whatisee_get"
+
+HRI_MESSAGE_TYPE = "rai_interfaces/msg/HRIMessage"
+AUDIO_MESSAGE_TYPE = "rai_interfaces/msg/AudioMessage"
+DETECTION_ARRAY_MESSAGE_TYPE = "rai_interfaces/msg/RAIDetectionArray"
+MANIPULATOR_SERVICE_TYPE = "rai_interfaces/srv/ManipulatorMoveTo"
+GROUNDED_SAM_SERVICE_TYPE = "rai_interfaces/srv/RAIGroundedSam"
+GROUNDING_DINO_SERVICE_TYPE = "rai_interfaces/srv/RAIGroundingDino"
+STRING_LIST_SERVICE_TYPE = "rai_interfaces/srv/StringList"
+VECTOR_STORE_SERVICE_TYPE = "rai_interfaces/srv/VectorStoreRetrieval"
+WHAT_I_SEE_SERVICE_TYPE = "rai_interfaces/srv/WhatISee"
+
 
 INTERFACES = COMMON_INTERFACES | CUSTOM_INTERFACES
 
@@ -174,12 +197,32 @@ class PublishROS2HRIMessageTextTask(CustomInterfaceTask):
     def __init__(
         self,
         text: str,
-        validators: List[Validator],
         task_args: TaskArgs,
+        validators: Optional[List[Validator]] = None,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(validators=validators, task_args=task_args, logger=logger)
         self.text = text
+        if validators is None:
+            # Default validator for this task
+            get_HRIMessage_interface_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="get_ros2_message_interface",
+                expected_args={"msg_type": HRI_MESSAGE_TYPE},
+            )
+            pub_HRIMessage_text_subtask = CheckTopicFieldsToolCallSubTask(
+                expected_tool_name="publish_ros2_message",
+                expected_topic=HRI_TOPIC,
+                expected_message_type=HRI_MESSAGE_TYPE,
+                expected_fields={"text": text},
+            )
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        get_HRIMessage_interface_subtask,
+                        pub_HRIMessage_text_subtask,
+                    ]
+                )
+            ]
+        super().__init__(validators, task_args, logger)
 
     def get_base_prompt(self) -> str:
         return f"Publish message to topic '{self.topic}' with text '{self.text}'."
@@ -201,23 +244,47 @@ class PublishROS2AudioMessageTask(CustomInterfaceTask):
 
     def __init__(
         self,
-        validators: List[Validator],
+        audio: List[int],
+        sample_rate: int,
+        channels: int,
         task_args: TaskArgs,
-        audio: List[int] = [123, 456, 789],
-        sample_rate: int = 44100,
-        channels: int = 2,
+        validators: Optional[List[Validator]] = None,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(validators=validators, task_args=task_args, logger=logger)
-        self.expected_audio = audio
-        self.expected_sample_rate = sample_rate
-        self.expected_channels = channels
+        self.audio = audio
+        self.sample_rate = sample_rate
+        self.channels = channels
+        if validators is None:
+            # Default validator for this task
+            get_audio_interface_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="get_ros2_message_interface",
+                expected_args={"msg_type": AUDIO_MESSAGE_TYPE},
+            )
+            pub_audio_message_subtask = CheckTopicFieldsToolCallSubTask(
+                expected_tool_name="publish_ros2_message",
+                expected_topic=AUDIO_TOPIC,
+                expected_message_type=AUDIO_MESSAGE_TYPE,
+                expected_fields={
+                    "samples": audio,
+                    "sample_rate": sample_rate,
+                    "channels": channels,
+                },
+            )
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        get_audio_interface_subtask,
+                        pub_audio_message_subtask,
+                    ]
+                )
+            ]
+        super().__init__(validators, task_args, logger)
 
     def get_base_prompt(self) -> str:
         return (
             f"Publish audio message to topic '{self.topic}' with samples "
-            f"{self.expected_audio}, sample rate {self.expected_sample_rate} and "
-            f"channels {self.expected_channels}."
+            f"{self.audio}, sample rate {self.sample_rate} and "
+            f"channels {self.channels}."
         )
 
     def get_prompt(self) -> str:
@@ -236,14 +303,13 @@ class PublishROS2DetectionArrayTask(CustomInterfaceTask):
 
     def __init__(
         self,
-        validators: List[Validator],
         task_args: TaskArgs,
         detection_classes: List[str],
         bbox_centers: List[Tuple[float, float]],
         bbox_sizes: List[Tuple[float, float]],
+        validators: Optional[List[Validator]] = None,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(validators=validators, task_args=task_args, logger=logger)
         if not (len(detection_classes) == len(bbox_centers) == len(bbox_sizes)):
             raise ValueError(
                 "detection_classes, bbox_centers, and bbox_sizes must have the same length"
@@ -252,6 +318,46 @@ class PublishROS2DetectionArrayTask(CustomInterfaceTask):
         self.expected_detection_classes = detection_classes
         self.expected_bbox_centers = bbox_centers
         self.expected_bbox_sizes = bbox_sizes
+
+        if validators is None:
+            # Create default validator based on the detection parameters
+            get_detection_interface_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="get_ros2_message_interface",
+                expected_args={"msg_type": "rai_interfaces/msg/RAIDetectionArray"},
+            )
+
+            # Build expected fields dynamically based on detection parameters
+            expected_fields: Dict[str, Any] = {}
+            for i, (cls, center, size) in enumerate(
+                zip(detection_classes, bbox_centers, bbox_sizes)
+            ):
+                expected_fields.update(
+                    {
+                        f"detections.{i}.results.0.hypothesis.class_id": cls,
+                        f"detections.{i}.bbox.center.x": center[0],
+                        f"detections.{i}.bbox.center.y": center[1],
+                        f"detections.{i}.bbox.size_x": size[0],
+                        f"detections.{i}.bbox.size_y": size[1],
+                    }
+                )
+
+            pub_detection_array_subtask = CheckTopicFieldsToolCallSubTask(
+                expected_tool_name="publish_ros2_message",
+                expected_topic="/detections",
+                expected_message_type="rai_interfaces/msg/RAIDetectionArray",
+                expected_fields=expected_fields,
+            )
+
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        get_detection_interface_subtask,
+                        pub_detection_array_subtask,
+                    ]
+                )
+            ]
+
+        super().__init__(validators=validators, task_args=task_args, logger=logger)
 
     def get_base_prompt(self) -> str:
         detection_summaries: List[str] = []
@@ -287,31 +393,53 @@ class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
 
     def __init__(
         self,
-        validators: List[Validator],
+        target_x: float,
+        target_y: float,
+        target_z: float,
+        initial_gripper_state: bool,
+        final_gripper_state: bool,
         task_args: TaskArgs,
-        target_x: float = 1.0,
-        target_y: float = 2.0,
-        target_z: float = 3.0,
-        initial_gripper_state: bool = True,
-        final_gripper_state: bool = False,
+        validators: Optional[List[Validator]] = None,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(validators=validators, task_args=task_args, logger=logger)
-        self.expected_initial_gripper_state = initial_gripper_state
-        self.expected_final_gripper_state = final_gripper_state
-        self.expected_target_pose = PoseStamped(
-            pose=Pose(
-                position=Point(x=target_x, y=target_y, z=target_z),
-                orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
-            ),
-        )
+        self.target_x = target_x
+        self.target_y = target_y
+        self.target_z = target_z
+        self.initial_gripper_state = initial_gripper_state
+        self.final_gripper_state = final_gripper_state
+        if validators is None:
+            # Default validator for this task
+            get_manipulator_interface_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="get_ros2_message_interface",
+                expected_args={"msg_type": MANIPULATOR_SERVICE_TYPE},
+            )
+            call_manipulator_service_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=MANIPULATOR_SERVICE,
+                expected_service_type=MANIPULATOR_SERVICE_TYPE,
+                expected_fields={
+                    "target_pose.pose.position.x": target_x,
+                    "target_pose.pose.position.y": target_y,
+                    "target_pose.pose.position.z": target_z,
+                    "initial_gripper_state": initial_gripper_state,
+                    "final_gripper_state": final_gripper_state,
+                },
+            )
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        get_manipulator_interface_subtask,
+                        call_manipulator_service_subtask,
+                    ]
+                )
+            ]
+        super().__init__(validators, task_args, logger)
 
     def get_base_prompt(self) -> str:
-        pos = self.expected_target_pose.pose.position
         return (
             f"Call service '{self.service}' to move manipulator to pose "
-            f"({pos.x}, {pos.y}, {pos.z}) with initial gripper state {self.expected_initial_gripper_state} "
-            f"and final gripper state {self.expected_final_gripper_state}."
+            f"({self.target_x}, {self.target_y}, {self.target_z}) with initial gripper state {self.initial_gripper_state} "
+            f"and final gripper state {self.final_gripper_state}."
         )
 
 
@@ -321,7 +449,6 @@ class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
 
     def __init__(
         self,
-        validators: List[Validator],
         task_args: TaskArgs,
         detection_classes: List[str],
         bbox_centers: List[Tuple[float, float]],
@@ -331,10 +458,9 @@ class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
         image_width: int,
         image_height: int,
         image_encoding: str,
+        validators: Optional[List[Validator]] = None,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(validators=validators, task_args=task_args, logger=logger)
-
         # Validate list lengths
         if not (
             len(detection_classes)
@@ -353,6 +479,65 @@ class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
         self.image_width = image_width
         self.image_height = image_height
         self.image_encoding = image_encoding
+
+        if validators is None:
+            # Create default validator based on the detection parameters
+            get_grounded_sam_interface_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="get_ros2_message_interface",
+                expected_args={"msg_type": "rai_interfaces/srv/RAIGroundedSam"},
+            )
+
+            # Build expected fields dynamically based on detection parameters
+            expected_fields: Dict[str, Any] = {}
+            for i, (cls, center, size, score, pos3d) in enumerate(
+                zip(detection_classes, bbox_centers, bbox_sizes, scores, positions_3d)
+            ):
+                expected_fields.update(
+                    {
+                        f"detections.detections.{i}.results.0.hypothesis.class_id": cls,
+                        f"detections.detections.{i}.results.0.hypothesis.score": score,
+                        f"detections.detections.{i}.results.0.pose.pose.position.x": pos3d[
+                            0
+                        ],
+                        f"detections.detections.{i}.results.0.pose.pose.position.y": pos3d[
+                            1
+                        ],
+                        f"detections.detections.{i}.results.0.pose.pose.position.z": pos3d[
+                            2
+                        ],
+                        f"detections.detections.{i}.bbox.center.x": center[0],
+                        f"detections.detections.{i}.bbox.center.y": center[1],
+                        f"detections.detections.{i}.bbox.size_x": size[0],
+                        f"detections.detections.{i}.bbox.size_y": size[1],
+                    }
+                )
+
+            # Add image fields
+            expected_fields.update(
+                {
+                    "source_img.width": image_width,
+                    "source_img.height": image_height,
+                    "source_img.encoding": image_encoding,
+                }
+            )
+
+            call_grounded_sam_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service="/grounded_sam_segment",
+                expected_service_type="rai_interfaces/srv/RAIGroundedSam",
+                expected_fields=expected_fields,
+            )
+
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        get_grounded_sam_interface_subtask,
+                        call_grounded_sam_subtask,
+                    ]
+                )
+            ]
+
+        super().__init__(validators=validators, task_args=task_args, logger=logger)
 
     def get_base_prompt(self) -> str:
         detection_summary: List[str] = []
@@ -380,23 +565,47 @@ class CallGroundingDinoClassify(CustomInterfacesServiceTask):
 
     def __init__(
         self,
-        validators: List[Validator],
+        classes: str,
+        box_threshold: float,
+        text_threshold: float,
         task_args: TaskArgs,
-        classes: str = "bottle, book, chair",
-        box_threshold: float = 0.4,
-        text_threshold: float = 0.25,
+        validators: Optional[List[Validator]] = None,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(validators=validators, task_args=task_args, logger=logger)
-        self.expected_classes = classes
-        self.expected_box_threshold = box_threshold
-        self.expected_text_threshold = text_threshold
+        self.classes = classes
+        self.box_threshold = box_threshold
+        self.text_threshold = text_threshold
+        if validators is None:
+            # Default validator for this task
+            get_grounding_dino_interface_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="get_ros2_message_interface",
+                expected_args={"msg_type": GROUNDING_DINO_SERVICE_TYPE},
+            )
+            call_grounding_dino_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=GROUNDING_DINO_SERVICE,
+                expected_service_type=GROUNDING_DINO_SERVICE_TYPE,
+                expected_fields={
+                    "classes": classes,
+                    "box_threshold": box_threshold,
+                    "text_threshold": text_threshold,
+                },
+            )
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        get_grounding_dino_interface_subtask,
+                        call_grounding_dino_subtask,
+                    ]
+                )
+            ]
+        super().__init__(validators, task_args, logger)
 
     def get_base_prompt(self) -> str:
         return (
             f"Call service '{self.service}' for object classification with classes "
-            f"'{self.expected_classes}', box_threshold {self.expected_box_threshold} and "
-            f"text_threshold {self.expected_text_threshold}."
+            f"'{self.classes}', box_threshold {self.box_threshold} and "
+            f"text_threshold {self.text_threshold}."
         )
 
 
@@ -406,11 +615,31 @@ class CallGetLogDigestTask(CustomInterfacesServiceTask):
 
     def __init__(
         self,
-        validators: List[Validator],
         task_args: TaskArgs,
+        validators: Optional[List[Validator]] = None,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(validators=validators, task_args=task_args, logger=logger)
+        if validators is None:
+            # Default validator for this task
+            get_log_digest_interface_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="get_ros2_message_interface",
+                expected_args={"msg_type": STRING_LIST_SERVICE_TYPE},
+            )
+            call_log_digest_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=LOG_DIGEST_SERVICE,
+                expected_service_type=STRING_LIST_SERVICE_TYPE,
+                expected_fields={"": {}},
+            )
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        get_log_digest_interface_subtask,
+                        call_log_digest_subtask,
+                    ]
+                )
+            ]
+        super().__init__(validators, task_args, logger)
 
     def get_base_prompt(self) -> str:
         return f"Call service '{self.service}' to get log digest."
@@ -422,16 +651,38 @@ class CallVectorStoreRetrievalTask(CustomInterfacesServiceTask):
 
     def __init__(
         self,
-        validators: List[Validator],
+        query: str,
         task_args: TaskArgs,
-        query: str = "What is the purpose of this robot?",
+        validators: Optional[List[Validator]] = None,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(validators=validators, task_args=task_args, logger=logger)
-        self.expected_query = query
+        self.query = query
+        if validators is None:
+            # Default validator for this task
+            get_vector_store_interface_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="get_ros2_message_interface",
+                expected_args={"msg_type": VECTOR_STORE_SERVICE_TYPE},
+            )
+            call_vector_store_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=VECTOR_STORE_SERVICE,
+                expected_service_type=VECTOR_STORE_SERVICE_TYPE,
+                expected_fields={
+                    "query": query,
+                },
+            )
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        get_vector_store_interface_subtask,
+                        call_vector_store_subtask,
+                    ]
+                )
+            ]
+        super().__init__(validators, task_args, logger)
 
     def get_base_prompt(self) -> str:
-        return f"Call service '{self.service}' with query '{self.expected_query}'."
+        return f"Call service '{self.service}' with query '{self.query}'."
 
 
 class CallWhatISeeTask(CustomInterfacesServiceTask):
@@ -440,11 +691,31 @@ class CallWhatISeeTask(CustomInterfacesServiceTask):
 
     def __init__(
         self,
-        validators: List[Validator],
         task_args: TaskArgs,
+        validators: Optional[List[Validator]] = None,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(validators=validators, task_args=task_args, logger=logger)
+        if validators is None:
+            # Default validator for this task
+            get_what_i_see_interface_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="get_ros2_message_interface",
+                expected_args={"msg_type": WHAT_I_SEE_SERVICE_TYPE},
+            )
+            call_what_i_see_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=WHAT_I_SEE_SERVICE,
+                expected_service_type=WHAT_I_SEE_SERVICE_TYPE,
+                expected_fields={"": {}},
+            )
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        get_what_i_see_interface_subtask,
+                        call_what_i_see_subtask,
+                    ]
+                )
+            ]
+        super().__init__(validators, task_args, logger)
 
     def get_base_prompt(self) -> str:
         return f"Call service '{self.service}' to get visual observations."
@@ -575,30 +846,25 @@ class EmergencyResponseProtocolTask(CustomInterfacesServiceTask):
 
     def __init__(
         self,
-        validators: List[Validator],
+        classes: str,
+        box_threshold: float,
+        text_threshold: float,
+        detection_classes: List[str],
+        bbox_centers: List[Tuple[float, float]],
+        bbox_sizes: List[Tuple[float, float]],
+        scores: List[float],
+        positions_3d: List[Tuple[float, float, float]],
+        image_width: int,
+        image_height: int,
+        image_encoding: str,
+        audio_samples: List[int],
+        sample_rate: int,
+        channels: int,
+        message: str,
         task_args: TaskArgs,
-        # detection parameters
-        classes: str = "person",
-        box_threshold: float = 0.9,
-        text_threshold: float = 0.8,
-        # segmentation parameters
-        detection_classes: List[str] = ["person"],
-        bbox_centers: List[Tuple[float, float]] = [(320.0, 240.0)],
-        bbox_sizes: List[Tuple[float, float]] = [(100.0, 180.0)],
-        scores: List[float] = [0.95],
-        positions_3d: List[Tuple[float, float, float]] = [(2.0, 0.0, 0.0)],
-        image_width: int = 1280,
-        image_height: int = 720,
-        image_encoding: str = "rgb8",
-        # audio parameters
-        audio_samples: List[int] = [880, 880, 880, 1760],
-        sample_rate: int = 8000,
-        channels: int = 1,
-        # communication parameters
-        message: str = "Person detected, alarm started.",
+        validators: Optional[List[Validator]] = None,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(validators=validators, task_args=task_args, logger=logger)
         self.classes = classes
         self.box_threshold = box_threshold
         self.text_threshold = text_threshold
@@ -614,6 +880,73 @@ class EmergencyResponseProtocolTask(CustomInterfacesServiceTask):
         self.sample_rate = sample_rate
         self.channels = channels
         self.message = message
+
+        if validators is None:
+            # Default validator for this task
+            call_grounding_dino_emergency_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=GROUNDING_DINO_SERVICE,
+                expected_service_type=GROUNDING_DINO_SERVICE_TYPE,
+                expected_fields={
+                    "classes": classes,
+                    "box_threshold": box_threshold,
+                    "text_threshold": text_threshold,
+                },
+            )
+            call_grounded_sam_emergency_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=GROUNDED_SAM_SERVICE,
+                expected_service_type=GROUNDED_SAM_SERVICE_TYPE,
+                expected_fields={
+                    "detections.detections.0.results.0.hypothesis.class_id": detection_classes[
+                        0
+                    ],
+                    "detections.detections.0.results.0.hypothesis.score": scores[0],
+                    "detections.detections.0.results.0.pose.pose.position.x": positions_3d[
+                        0
+                    ][0],
+                    "detections.detections.0.results.0.pose.pose.position.y": positions_3d[
+                        0
+                    ][1],
+                    "detections.detections.0.results.0.pose.pose.position.z": positions_3d[
+                        0
+                    ][2],
+                    "detections.detections.0.bbox.center.x": bbox_centers[0][0],
+                    "detections.detections.0.bbox.center.y": bbox_centers[0][1],
+                    "detections.detections.0.bbox.size_x": bbox_sizes[0][0],
+                    "detections.detections.0.bbox.size_y": bbox_sizes[0][1],
+                    "source_img.width": image_width,
+                    "source_img.height": image_height,
+                    "source_img.encoding": image_encoding,
+                },
+            )
+            pub_audio_emergency_subtask = CheckTopicFieldsToolCallSubTask(
+                expected_tool_name="publish_ros2_message",
+                expected_topic=AUDIO_TOPIC,
+                expected_message_type=AUDIO_MESSAGE_TYPE,
+                expected_fields={
+                    "samples": audio_samples,
+                    "sample_rate": sample_rate,
+                    "channels": channels,
+                },
+            )
+            pub_hri_emergency_subtask = CheckTopicFieldsToolCallSubTask(
+                expected_tool_name="publish_ros2_message",
+                expected_topic=HRI_TOPIC,
+                expected_message_type=HRI_MESSAGE_TYPE,
+                expected_fields={"text": message},
+            )
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        call_grounding_dino_emergency_subtask,
+                        call_grounded_sam_emergency_subtask,
+                        pub_audio_emergency_subtask,
+                        pub_hri_emergency_subtask,
+                    ]
+                )
+            ]
+        super().__init__(validators, task_args, logger)
 
     @property
     def optional_tool_calls_number(self) -> int:
