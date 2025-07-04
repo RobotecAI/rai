@@ -47,8 +47,8 @@ from rai_bench.tool_calling_agent.validators import (
 )
 
 HRI_TOPIC = "/to_human"
-AUDIO_TOPIC = "/audio_output"
-DETECTIONS_TOPIC = "/detections"
+AUDIO_TOPIC = "/audio_message"
+DETECTIONS_TOPIC = "/detection_array"
 MANIPULATOR_SERVICE = "/manipulator_move_to"
 GROUNDED_SAM_SERVICE = "/grounded_sam_segment"
 GROUNDING_DINO_SERVICE = "/grounding_dino_classify"
@@ -65,6 +65,38 @@ GROUNDING_DINO_SERVICE_TYPE = "rai_interfaces/srv/RAIGroundingDino"
 STRING_LIST_SERVICE_TYPE = "rai_interfaces/srv/StringList"
 VECTOR_STORE_SERVICE_TYPE = "rai_interfaces/srv/VectorStoreRetrieval"
 WHAT_I_SEE_SERVICE_TYPE = "rai_interfaces/srv/WhatISee"
+
+STANDARD_IMAGE_WIDTH = 640
+STANDARD_IMAGE_HEIGHT = 480
+STANDARD_IMAGE_ENCODING = "rgb8"
+
+PERSON_BBOX_CENTER = (320.0, 320.0)
+PERSON_BBOX_SIZE = (50.0, 50.0)
+PERSON_SCORE = 0.85
+PERSON_POSITION_3D = (2.0, 0.0, 0.0)
+
+BOTTLE_BBOX_CENTER = (320.0, 240.0)
+BOTTLE_BBOX_SIZE = (80.0, 120.0)
+BOTTLE_SCORE = 0.87
+BOTTLE_POSITION_3D = (1.2, 0.0, 0.5)
+
+DETECTION_DEFAULTS: Dict[str, Any] = {
+    "person": {
+        "bbox_center": PERSON_BBOX_CENTER,
+        "bbox_size": PERSON_BBOX_SIZE,
+        "score": PERSON_SCORE,
+        "position_3d": PERSON_POSITION_3D,
+    },
+    "bottle": {
+        "bbox_center": BOTTLE_BBOX_CENTER,
+        "bbox_size": BOTTLE_BBOX_SIZE,
+        "score": BOTTLE_SCORE,
+        "position_3d": BOTTLE_POSITION_3D,
+    },
+}
+
+DEFAULT_BOX_THRESHOLD: float = 0.4
+DEFAULT_TEXT_THRESHOLD: float = 0.25
 
 
 INTERFACES = COMMON_INTERFACES | CUSTOM_INTERFACES
@@ -122,6 +154,11 @@ PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_5_SHOT = (
 
 
 class CustomInterfaceTask(Task, ABC):
+    """Custom Interface Tasks are designed around out custom interfaces in RAI
+    In these tasks we want to evaulate how well agent can understand these interfaes
+    and fill them as requested
+    """
+
     type = "custom_interface"
 
     @property
@@ -192,7 +229,6 @@ class CustomInterfacesServicesTask(CustomInterfacesServiceTask, ABC):
 
 class PublishROS2HRIMessageTextTask(CustomInterfaceTask):
     complexity = "easy"
-    topic = "/to_human"
 
     def __init__(
         self,
@@ -225,7 +261,7 @@ class PublishROS2HRIMessageTextTask(CustomInterfaceTask):
         super().__init__(validators, task_args, logger)
 
     def get_base_prompt(self) -> str:
-        return f"Publish message to topic '{self.topic}' with text '{self.text}'."
+        return f"Publish message to topic '{HRI_TOPIC}' with text '{self.text}'."
 
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
@@ -240,7 +276,6 @@ class PublishROS2HRIMessageTextTask(CustomInterfaceTask):
 
 class PublishROS2AudioMessageTask(CustomInterfaceTask):
     complexity = "easy"
-    topic = "/audio_message"
 
     def __init__(
         self,
@@ -282,7 +317,7 @@ class PublishROS2AudioMessageTask(CustomInterfaceTask):
 
     def get_base_prompt(self) -> str:
         return (
-            f"Publish audio message to topic '{self.topic}' with samples "
+            f"Publish audio message to topic '{AUDIO_TOPIC}' with samples "
             f"{self.audio}, sample rate {self.sample_rate} and "
             f"channels {self.channels}."
         )
@@ -299,52 +334,48 @@ class PublishROS2AudioMessageTask(CustomInterfaceTask):
 
 class PublishROS2DetectionArrayTask(CustomInterfaceTask):
     complexity = "medium"
-    topic = "/detection_array"
 
     def __init__(
         self,
         task_args: TaskArgs,
         detection_classes: List[str],
-        bbox_centers: List[Tuple[float, float]],
-        bbox_sizes: List[Tuple[float, float]],
         validators: Optional[List[Validator]] = None,
         logger: logging.Logger | None = None,
     ) -> None:
-        if not (len(detection_classes) == len(bbox_centers) == len(bbox_sizes)):
-            raise ValueError(
-                "detection_classes, bbox_centers, and bbox_sizes must have the same length"
-            )
+        self.detection_classes = detection_classes
 
-        self.expected_detection_classes = detection_classes
-        self.expected_bbox_centers = bbox_centers
-        self.expected_bbox_sizes = bbox_sizes
+        self.bbox_centers: List[Tuple[float, float]] = []
+        self.bbox_sizes: List[Tuple[float, float]] = []
+        for obj in detection_classes:
+            if obj not in DETECTION_DEFAULTS:
+                # use existing values
+                obj = "person"
+            defaults = DETECTION_DEFAULTS[obj]
+            self.bbox_centers.append(defaults["bbox_center"])
+            self.bbox_sizes.append(defaults["bbox_size"])
 
         if validators is None:
-            # Create default validator based on the detection parameters
             get_detection_interface_subtask = CheckArgsToolCallSubTask(
                 expected_tool_name="get_ros2_message_interface",
-                expected_args={"msg_type": "rai_interfaces/msg/RAIDetectionArray"},
+                expected_args={"msg_type": DETECTION_ARRAY_MESSAGE_TYPE},
             )
 
-            # Build expected fields dynamically based on detection parameters
             expected_fields: Dict[str, Any] = {}
-            for i, (cls, center, size) in enumerate(
-                zip(detection_classes, bbox_centers, bbox_sizes)
-            ):
+            for i, obj in enumerate(detection_classes):
                 expected_fields.update(
                     {
-                        f"detections.{i}.results.0.hypothesis.class_id": cls,
-                        f"detections.{i}.bbox.center.x": center[0],
-                        f"detections.{i}.bbox.center.y": center[1],
-                        f"detections.{i}.bbox.size_x": size[0],
-                        f"detections.{i}.bbox.size_y": size[1],
+                        f"detections.{i}.results.0.hypothesis.class_id": obj,
+                        f"detections.{i}.bbox.center.x": self.bbox_centers[i][0],
+                        f"detections.{i}.bbox.center.y": self.bbox_centers[i][1],
+                        f"detections.{i}.bbox.size_x": self.bbox_sizes[i][0],
+                        f"detections.{i}.bbox.size_y": self.bbox_sizes[i][1],
                     }
                 )
 
             pub_detection_array_subtask = CheckTopicFieldsToolCallSubTask(
                 expected_tool_name="publish_ros2_message",
-                expected_topic="/detections",
-                expected_message_type="rai_interfaces/msg/RAIDetectionArray",
+                expected_topic=DETECTIONS_TOPIC,
+                expected_message_type=DETECTION_ARRAY_MESSAGE_TYPE,
                 expected_fields=expected_fields,
             )
 
@@ -363,9 +394,9 @@ class PublishROS2DetectionArrayTask(CustomInterfaceTask):
         detection_summaries: List[str] = []
         for _, (cls, center, size) in enumerate(
             zip(
-                self.expected_detection_classes,
-                self.expected_bbox_centers,
-                self.expected_bbox_sizes,
+                self.detection_classes,
+                self.bbox_centers,
+                self.bbox_sizes,
             )
         ):
             detection_summaries.append(
@@ -373,7 +404,7 @@ class PublishROS2DetectionArrayTask(CustomInterfaceTask):
             )
 
         return (
-            f"Publish detection array to topic '{self.topic}' with {len(self.expected_detection_classes)} detections: "
+            f"Publish detection array to topic '{DETECTIONS_TOPIC}' with {len(self.detection_classes)} detections: "
             f"{'; '.join(detection_summaries)}."
         )
 
@@ -389,7 +420,6 @@ class PublishROS2DetectionArrayTask(CustomInterfaceTask):
 
 class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
     complexity = "medium"
-    service = "/manipulator_move_to"
 
     def __init__(
         self,
@@ -437,7 +467,7 @@ class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
 
     def get_base_prompt(self) -> str:
         return (
-            f"Call service '{self.service}' to move manipulator to pose "
+            f"Call service '{MANIPULATOR_SERVICE}' to move manipulator to pose "
             f"({self.target_x}, {self.target_y}, {self.target_z}) with initial gripper state {self.initial_gripper_state} "
             f"and final gripper state {self.final_gripper_state}."
         )
@@ -445,86 +475,83 @@ class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
 
 class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
     complexity = "medium"
-    service = "/grounded_sam_segment"
 
     def __init__(
         self,
         task_args: TaskArgs,
         detection_classes: List[str],
-        bbox_centers: List[Tuple[float, float]],
-        bbox_sizes: List[Tuple[float, float]],
-        scores: List[float],
-        positions_3d: List[Tuple[float, float, float]],
-        image_width: int,
-        image_height: int,
-        image_encoding: str,
         validators: Optional[List[Validator]] = None,
         logger: logging.Logger | None = None,
     ) -> None:
-        # Validate list lengths
-        if not (
-            len(detection_classes)
-            == len(bbox_centers)
-            == len(bbox_sizes)
-            == len(scores)
-            == len(positions_3d)
-        ):
-            raise ValueError("All detection parameter lists must have the same length")
-
         self.detection_classes = detection_classes
-        self.bbox_centers = bbox_centers
-        self.bbox_sizes = bbox_sizes
-        self.scores = scores
-        self.positions_3d = positions_3d
-        self.image_width = image_width
-        self.image_height = image_height
-        self.image_encoding = image_encoding
+
+        # Get default parameters for each detection class
+        self.bbox_centers: List[Tuple[float, float]] = []
+        self.bbox_sizes: List[Tuple[float, float]] = []
+        self.scores: List[Tuple[float, float]] = []
+        self.positions_3d: List[Tuple[float, float]] = []
+
+        for obj in detection_classes:
+            if obj not in DETECTION_DEFAULTS:
+                # use existing values
+                obj = "person"
+            defaults = DETECTION_DEFAULTS[obj]
+            self.bbox_centers.append(defaults["bbox_center"])
+            self.bbox_sizes.append(defaults["bbox_size"])
+            self.scores.append(defaults["score"])
+            self.positions_3d.append(defaults["position_3d"])
 
         if validators is None:
-            # Create default validator based on the detection parameters
             get_grounded_sam_interface_subtask = CheckArgsToolCallSubTask(
                 expected_tool_name="get_ros2_message_interface",
-                expected_args={"msg_type": "rai_interfaces/srv/RAIGroundedSam"},
+                expected_args={"msg_type": GROUNDED_SAM_SERVICE_TYPE},
             )
 
-            # Build expected fields dynamically based on detection parameters
             expected_fields: Dict[str, Any] = {}
-            for i, (cls, center, size, score, pos3d) in enumerate(
-                zip(detection_classes, bbox_centers, bbox_sizes, scores, positions_3d)
-            ):
+            for i, obj in enumerate(detection_classes):
+                defaults = DETECTION_DEFAULTS[obj]
                 expected_fields.update(
                     {
-                        f"detections.detections.{i}.results.0.hypothesis.class_id": cls,
-                        f"detections.detections.{i}.results.0.hypothesis.score": score,
-                        f"detections.detections.{i}.results.0.pose.pose.position.x": pos3d[
+                        f"detections.detections.{i}.results.0.hypothesis.class_id": obj,
+                        f"detections.detections.{i}.results.0.hypothesis.score": defaults[
+                            "score"
+                        ],
+                        f"detections.detections.{i}.results.0.pose.pose.position.x": defaults[
+                            "position_3d"
+                        ][0],
+                        f"detections.detections.{i}.results.0.pose.pose.position.y": defaults[
+                            "position_3d"
+                        ][1],
+                        f"detections.detections.{i}.results.0.pose.pose.position.z": defaults[
+                            "position_3d"
+                        ][2],
+                        f"detections.detections.{i}.bbox.center.x": defaults[
+                            "bbox_center"
+                        ][0],
+                        f"detections.detections.{i}.bbox.center.y": defaults[
+                            "bbox_center"
+                        ][1],
+                        f"detections.detections.{i}.bbox.size_x": defaults["bbox_size"][
                             0
                         ],
-                        f"detections.detections.{i}.results.0.pose.pose.position.y": pos3d[
+                        f"detections.detections.{i}.bbox.size_y": defaults["bbox_size"][
                             1
                         ],
-                        f"detections.detections.{i}.results.0.pose.pose.position.z": pos3d[
-                            2
-                        ],
-                        f"detections.detections.{i}.bbox.center.x": center[0],
-                        f"detections.detections.{i}.bbox.center.y": center[1],
-                        f"detections.detections.{i}.bbox.size_x": size[0],
-                        f"detections.detections.{i}.bbox.size_y": size[1],
                     }
                 )
 
-            # Add image fields
             expected_fields.update(
                 {
-                    "source_img.width": image_width,
-                    "source_img.height": image_height,
-                    "source_img.encoding": image_encoding,
+                    "source_img.width": STANDARD_IMAGE_WIDTH,
+                    "source_img.height": STANDARD_IMAGE_HEIGHT,
+                    "source_img.encoding": STANDARD_IMAGE_ENCODING,
                 }
             )
 
             call_grounded_sam_subtask = CheckServiceFieldsToolCallSubTask(
                 expected_tool_name="call_ros2_service",
-                expected_service="/grounded_sam_segment",
-                expected_service_type="rai_interfaces/srv/RAIGroundedSam",
+                expected_service=GROUNDED_SAM_SERVICE,
+                expected_service_type=GROUNDED_SAM_SERVICE_TYPE,
                 expected_fields=expected_fields,
             )
 
@@ -541,42 +568,36 @@ class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
 
     def get_base_prompt(self) -> str:
         detection_summary: List[str] = []
-        for cls, center, size, score, pos3d in zip(
-            self.detection_classes,
-            self.bbox_centers,
-            self.bbox_sizes,
-            self.scores,
-            self.positions_3d,
-        ):
+        for cls in self.detection_classes:
+            defaults = DETECTION_DEFAULTS[cls]
+            center = defaults["bbox_center"]
+            size = defaults["bbox_size"]
+            score = defaults["score"]
+            pos3d = defaults["position_3d"]
             detection_summary.append(
                 f"{cls} with score {score} at 3D position ({pos3d[0]}, {pos3d[1]}, {pos3d[2]}) "
                 f"bbox ({center[0]}, {center[1]}) size {size[0]}x{size[1]}"
             )
 
         return (
-            f"Call service '{self.service}' for image segmentation with {len(self.detection_classes)} detections: "
-            f"{', '.join(detection_summary)} on {self.image_width}x{self.image_height} {self.image_encoding} image."
+            f"Call service '{GROUNDED_SAM_SERVICE}' for image segmentation with {len(self.detection_classes)} detections: "
+            f"{', '.join(detection_summary)} on {STANDARD_IMAGE_WIDTH}x{STANDARD_IMAGE_HEIGHT} {STANDARD_IMAGE_ENCODING} image."
         )
 
 
 class CallGroundingDinoClassify(CustomInterfacesServiceTask):
     complexity = "easy"
-    service = "/grounding_dino_classify"
 
     def __init__(
         self,
-        classes: str,
-        box_threshold: float,
-        text_threshold: float,
         task_args: TaskArgs,
+        classes: str,  # Comma-separated string of classes like "person, bottle"
         validators: Optional[List[Validator]] = None,
-        logger: logging.Logger | None = None,
+        logger: Optional[logging.Logger] = None,
     ) -> None:
         self.classes = classes
-        self.box_threshold = box_threshold
-        self.text_threshold = text_threshold
+
         if validators is None:
-            # Default validator for this task
             get_grounding_dino_interface_subtask = CheckArgsToolCallSubTask(
                 expected_tool_name="get_ros2_message_interface",
                 expected_args={"msg_type": GROUNDING_DINO_SERVICE_TYPE},
@@ -587,8 +608,8 @@ class CallGroundingDinoClassify(CustomInterfacesServiceTask):
                 expected_service_type=GROUNDING_DINO_SERVICE_TYPE,
                 expected_fields={
                     "classes": classes,
-                    "box_threshold": box_threshold,
-                    "text_threshold": text_threshold,
+                    "box_threshold": DEFAULT_BOX_THRESHOLD,
+                    "text_threshold": DEFAULT_TEXT_THRESHOLD,
                 },
             )
             validators = [
@@ -603,15 +624,14 @@ class CallGroundingDinoClassify(CustomInterfacesServiceTask):
 
     def get_base_prompt(self) -> str:
         return (
-            f"Call service '{self.service}' for object classification with classes "
-            f"'{self.classes}', box_threshold {self.box_threshold} and "
-            f"text_threshold {self.text_threshold}."
+            f"Call service '{GROUNDING_DINO_SERVICE}' for object classification with classes "
+            f"'{self.classes}', box_threshold {DEFAULT_BOX_THRESHOLD} and "
+            f"text_threshold {DEFAULT_TEXT_THRESHOLD}."
         )
 
 
 class CallGetLogDigestTask(CustomInterfacesServiceTask):
     complexity = "easy"
-    service = "/get_log_digest"
 
     def __init__(
         self,
@@ -642,12 +662,11 @@ class CallGetLogDigestTask(CustomInterfacesServiceTask):
         super().__init__(validators, task_args, logger)
 
     def get_base_prompt(self) -> str:
-        return f"Call service '{self.service}' to get log digest."
+        return f"Call service '{LOG_DIGEST_SERVICE}' to get log digest."
 
 
 class CallVectorStoreRetrievalTask(CustomInterfacesServiceTask):
     complexity = "easy"
-    service = "/rai_whoami_documentation_service"
 
     def __init__(
         self,
@@ -682,12 +701,11 @@ class CallVectorStoreRetrievalTask(CustomInterfacesServiceTask):
         super().__init__(validators, task_args, logger)
 
     def get_base_prompt(self) -> str:
-        return f"Call service '{self.service}' with query '{self.query}'."
+        return f"Call service '{VECTOR_STORE_SERVICE}' with query '{self.query}'."
 
 
 class CallWhatISeeTask(CustomInterfacesServiceTask):
     complexity = "easy"
-    service = "/rai_whatisee_get"
 
     def __init__(
         self,
@@ -718,7 +736,7 @@ class CallWhatISeeTask(CustomInterfacesServiceTask):
         super().__init__(validators, task_args, logger)
 
     def get_base_prompt(self) -> str:
-        return f"Call service '{self.service}' to get visual observations."
+        return f"Call service '{WHAT_I_SEE_SERVICE}' to get visual observations."
 
 
 class CompleteObjectInteractionTask(CustomInterfacesServicesTask):
@@ -731,92 +749,191 @@ class CompleteObjectInteractionTask(CustomInterfacesServicesTask):
 
     def __init__(
         self,
-        validators: List[Validator],
         task_args: TaskArgs,
-        # Grounding DINO parameters
-        target_classes: str = "bottle",
-        box_threshold: float = 0.35,
-        text_threshold: float = 0.2,
-        # Grounded SAM parameters
-        detection_classes: List[str] = ["bottle"],
-        bbox_centers: List[Tuple[float, float]] = [(320.0, 240.0)],
-        bbox_sizes: List[Tuple[float, float]] = [(80.0, 120.0)],
-        scores: List[float] = [0.87],
-        positions_3d: List[Tuple[float, float, float]] = [(1.2, 0.0, 0.5)],
-        image_width: int = 640,
-        image_height: int = 480,
-        image_encoding: str = "rgb8",
-        # Manipulator parameters
-        target_x: float = 1.2,
-        target_y: float = 0.0,
-        target_z: float = 0.5,
-        initial_gripper: bool = True,
-        final_gripper: bool = False,
-        # HRI parameters
-        interaction_message: str = "Initiating object interaction sequence with detected bottle",
-        logger: logging.Logger | None = None,
+        target_class: str = "bottle",
+        validators: Optional[List[Validator]] = None,
+        logger: Optional[logging.Logger] = None,
     ) -> None:
+        self.target_class = target_class
+
+        # Get default parameters for the target class
+        obj_key = target_class if target_class in DETECTION_DEFAULTS else "person"
+        defaults = DETECTION_DEFAULTS[obj_key]
+
+        if validators is None:
+            self.initial_gripper = False
+            self.final_gripper = True
+            self.interaction_message = (
+                f"Initiating object interaction sequence with detected {target_class}"
+            )
+
+            call_grounding_dino_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=GROUNDING_DINO_SERVICE,
+                expected_service_type=GROUNDING_DINO_SERVICE_TYPE,
+                expected_fields={
+                    "classes": target_class,
+                    "box_threshold": DEFAULT_BOX_THRESHOLD,
+                    "text_threshold": DEFAULT_BOX_THRESHOLD,
+                },
+            )
+
+            call_grounded_sam_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=GROUNDED_SAM_SERVICE,
+                expected_service_type=GROUNDED_SAM_SERVICE_TYPE,
+                expected_fields={
+                    "detections.detections.0.results.0.hypothesis.class_id": target_class,
+                    "detections.detections.0.results.0.hypothesis.score": defaults[
+                        "score"
+                    ],
+                    "detections.detections.0.results.0.pose.pose.position.x": defaults[
+                        "position_3d"
+                    ][0],
+                    "detections.detections.0.results.0.pose.pose.position.y": defaults[
+                        "position_3d"
+                    ][1],
+                    "detections.detections.0.results.0.pose.pose.position.z": defaults[
+                        "position_3d"
+                    ][2],
+                    "detections.detections.0.bbox.center.x": defaults["bbox_center"][0],
+                    "detections.detections.0.bbox.center.y": defaults["bbox_center"][1],
+                    "detections.detections.0.bbox.size_x": defaults["bbox_size"][0],
+                    "detections.detections.0.bbox.size_y": defaults["bbox_size"][1],
+                    "source_img.width": STANDARD_IMAGE_WIDTH,
+                    "source_img.height": STANDARD_IMAGE_HEIGHT,
+                    "source_img.encoding": STANDARD_IMAGE_ENCODING,
+                },
+            )
+
+            call_manipulator_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=MANIPULATOR_SERVICE,
+                expected_service_type=MANIPULATOR_SERVICE_TYPE,
+                expected_fields={
+                    "target_pose.pose.position.x": defaults["position_3d"][0],
+                    "target_pose.pose.position.y": defaults["position_3d"][1],
+                    "target_pose.pose.position.z": defaults["position_3d"][2],
+                    "initial_gripper_state": self.initial_gripper,
+                    "final_gripper_state": self.final_gripper,
+                },
+            )
+
+            pub_hri_interaction_subtask = CheckTopicFieldsToolCallSubTask(
+                expected_tool_name="publish_ros2_message",
+                expected_topic=HRI_TOPIC,
+                expected_message_type=HRI_MESSAGE_TYPE,
+                expected_fields={"text": self.interaction_message},
+            )
+
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        call_grounding_dino_subtask,
+                        call_grounded_sam_subtask,
+                        call_manipulator_subtask,
+                        pub_hri_interaction_subtask,
+                    ]
+                )
+            ]
+
         super().__init__(validators=validators, task_args=task_args, logger=logger)
-        self.target_classes = target_classes
-        self.box_threshold = box_threshold
-        self.text_threshold = text_threshold
-        self.detection_classes = detection_classes
-        self.bbox_centers = bbox_centers
-        self.bbox_sizes = bbox_sizes
-        self.scores = scores
-        self.positions_3d = positions_3d
-        self.image_width = image_width
-        self.image_height = image_height
-        self.image_encoding = image_encoding
-        self.target_x = target_x
-        self.target_y = target_y
-        self.target_z = target_z
-        self.initial_gripper = initial_gripper
-        self.final_gripper = final_gripper
-        self.interaction_message = interaction_message
 
     def get_base_prompt(self) -> str:
-        return f"""Perform complete object interaction workflow with predetermined parameters:
-            1) Call service '/grounding_dino_classify' to classify '{self.target_classes}' with box_threshold={self.box_threshold}, text_threshold={self.text_threshold}
-            2) Call service '/grounded_sam_segment' to segment {self.detection_classes[0]} at bbox({self.bbox_centers[0][0]}, {self.bbox_centers[0][1]})
-            on {self.image_width}x{self.image_height} {self.image_encoding} image
-            3) Call service '/manipulator_move_to' to move to position ({self.target_x}, {self.target_y}, {self.target_z})
-            with gripper {self.initial_gripper}→{self.final_gripper}
-            4) Publish to topic '/to_human' HRI message: '{self.interaction_message}'
+        obj_key = (
+            self.target_class if self.target_class in DETECTION_DEFAULTS else "person"
+        )
+        defaults = DETECTION_DEFAULTS[obj_key]
+        return f"""Perform complete object interaction workflow with {self.target_class}:
+            1) Call service '{GROUNDING_DINO_SERVICE}' to classify '{self.target_class}' with box_threshold={DEFAULT_BOX_THRESHOLD}, text_threshold={DEFAULT_TEXT_THRESHOLD}
+            2) Call service '{GROUNDED_SAM_SERVICE}' to segment {self.target_class} at bbox({defaults["bbox_center"][0]}, {defaults["bbox_center"][1]})
+            on {STANDARD_IMAGE_WIDTH}x{STANDARD_IMAGE_HEIGHT} {STANDARD_IMAGE_ENCODING} image
+            3) Call service '{MANIPULATOR_SERVICE}' to move to position ({defaults["position_3d"][0]}, {defaults["position_3d"][1]}, {defaults["position_3d"][2]})
+            with initial gripper state {self.initial_gripper} and final griper state {self.final_gripper}
+            4) Publish to topic '{HRI_TOPIC}' HRI message: '{self.interaction_message}'
             """
 
 
 class MultiModalSceneDocumentationTask(CustomInterfacesServiceTask):
     complexity = "hard"
+    safety_query = "What safety protocols apply when humans and robots share workspace?"
+    doc_report = "Scene Documentation Complete: Recorded objects with safety analysis"
 
     def __init__(
         self,
-        validators: List[Validator],
         task_args: TaskArgs,
-        # Detection array parameters
-        scene_objects: List[str] = ["person", "laptop", "coffee_cup"],
-        bbox_centers: List[Tuple[float, float]] = [
-            (160.0, 200.0),
-            (400.0, 300.0),
-            (520.0, 180.0),
-        ],
-        bbox_sizes: List[Tuple[float, float]] = [
-            (80.0, 160.0),
-            (200.0, 120.0),
-            (60.0, 80.0),
-        ],
-        # Knowledge retrieval parameters
-        scene_analysis_query: str = "What safety protocols apply when humans and robots share workspace?",
-        # HRI reporting parameters
-        documentation_report: str = "Scene Documentation Complete: Recorded 3 objects with audio markers and safety analysis",
-        logger: logging.Logger | None = None,
+        objects: List[str] = ["person", "bottle"],
+        validators: Optional[List[Validator]] = None,
+        logger: Optional[logging.Logger] = None,
     ) -> None:
+        self.objects = objects
+
+        self.bbox_centers: List[Tuple[float, float]] = []
+        self.bbox_sizes: List[Tuple[float, float]] = []
+
+        for obj in objects:
+            obj_key = obj if obj in DETECTION_DEFAULTS else "person"
+            defaults = DETECTION_DEFAULTS[obj_key]
+            self.bbox_centers.append(defaults["bbox_center"])
+            self.bbox_sizes.append(defaults["bbox_size"])
+
+        if validators is None:
+            call_what_i_see_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=WHAT_I_SEE_SERVICE,
+                expected_service_type=WHAT_I_SEE_SERVICE_TYPE,
+                expected_fields={"": {}},
+            )
+
+            expected_fields: Dict[str, Any] = {}
+            for i, obj in enumerate(objects):
+                obj_key = obj if obj in DETECTION_DEFAULTS else "person"
+                defaults = DETECTION_DEFAULTS[obj_key]
+                expected_fields.update(
+                    {
+                        f"detections.{i}.results.0.hypothesis.class_id": obj,
+                        f"detections.{i}.bbox.center.x": defaults["bbox_center"][0],
+                        f"detections.{i}.bbox.center.y": defaults["bbox_center"][1],
+                        f"detections.{i}.bbox.size_x": defaults["bbox_size"][0],
+                        f"detections.{i}.bbox.size_y": defaults["bbox_size"][1],
+                    }
+                )
+
+            pub_detection_array_subtask = CheckTopicFieldsToolCallSubTask(
+                expected_tool_name="publish_ros2_message",
+                expected_topic=DETECTIONS_TOPIC,
+                expected_message_type=DETECTION_ARRAY_MESSAGE_TYPE,
+                expected_fields=expected_fields,
+            )
+
+            call_vector_store_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=VECTOR_STORE_SERVICE,
+                expected_service_type=VECTOR_STORE_SERVICE_TYPE,
+                expected_fields={
+                    "query": self.safety_query,
+                },
+            )
+
+            pub_hri_documentation_subtask = CheckTopicFieldsToolCallSubTask(
+                expected_tool_name="publish_ros2_message",
+                expected_topic=HRI_TOPIC,
+                expected_message_type=HRI_MESSAGE_TYPE,
+                expected_fields={"text": self.doc_report},
+            )
+
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        call_what_i_see_subtask,
+                        pub_detection_array_subtask,
+                        call_vector_store_subtask,
+                        pub_hri_documentation_subtask,
+                    ]
+                )
+            ]
+
         super().__init__(validators=validators, task_args=task_args, logger=logger)
-        self.scene_objects = scene_objects
-        self.bbox_centers = bbox_centers
-        self.bbox_sizes = bbox_sizes
-        self.scene_analysis_query = scene_analysis_query
-        self.documentation_report = documentation_report
 
     @property
     def optional_tool_calls_number(self) -> int:
@@ -828,69 +945,47 @@ class MultiModalSceneDocumentationTask(CustomInterfacesServiceTask):
             [
                 f"{obj} at ({center[0]}, {center[1]}) and size {size[0]}x{size[1]}"
                 for obj, center, size in zip(
-                    self.scene_objects, self.bbox_centers, self.bbox_sizes
+                    self.objects, self.bbox_centers, self.bbox_sizes
                 )
             ]
         )
 
         return f"""Perform comprehensive scene documentation using multiple services:
             1) Call service '/rai_whatisee_get' to get visual observations
-            2) Publish to topic '/detections' detection array with {len(self.scene_objects)} objects: {object_summary}
-            3) Call service '/rai_whoami_documentation_service' to query: '{self.scene_analysis_query}'
-            4) Publish to topic '/to_human' final HRI report: '{self.documentation_report}'
+            2) Publish to topic '{DETECTIONS_TOPIC}' detection array with {len(self.objects)} objects: {object_summary}
+            3) Call service '{VECTOR_STORE_SERVICE}' to query: '{self.safety_query}'
+            4) Publish to topic '{HRI_TOPIC}' final HRI report: '{self.doc_report}'
             """
 
 
 class EmergencyResponseProtocolTask(CustomInterfacesServiceTask):
     complexity = "hard"
+    emergence_audio_samples = [880, 880, 880, 1760]
+    emergence_sample_rate = 8000
+    emergency_channels = 1
+    emergency_message = "Person detected, alarm started!"
 
     def __init__(
         self,
-        classes: str,
-        box_threshold: float,
-        text_threshold: float,
-        detection_classes: List[str],
-        bbox_centers: List[Tuple[float, float]],
-        bbox_sizes: List[Tuple[float, float]],
-        scores: List[float],
-        positions_3d: List[Tuple[float, float, float]],
-        image_width: int,
-        image_height: int,
-        image_encoding: str,
-        audio_samples: List[int],
-        sample_rate: int,
-        channels: int,
-        message: str,
         task_args: TaskArgs,
+        target_class: str = "person",
         validators: Optional[List[Validator]] = None,
-        logger: logging.Logger | None = None,
+        logger: Optional[logging.Logger] = None,
     ) -> None:
-        self.classes = classes
-        self.box_threshold = box_threshold
-        self.text_threshold = text_threshold
-        self.detection_classes = detection_classes
-        self.bbox_centers = bbox_centers
-        self.bbox_sizes = bbox_sizes
-        self.scores = scores
-        self.positions_3d = positions_3d
-        self.image_width = image_width
-        self.image_height = image_height
-        self.image_encoding = image_encoding
-        self.audio_samples = audio_samples
-        self.sample_rate = sample_rate
-        self.channels = channels
-        self.message = message
+        self.target_class = target_class
+
+        obj_key = target_class if target_class in DETECTION_DEFAULTS else "person"
+        defaults = DETECTION_DEFAULTS[obj_key]
 
         if validators is None:
-            # Default validator for this task
             call_grounding_dino_emergency_subtask = CheckServiceFieldsToolCallSubTask(
                 expected_tool_name="call_ros2_service",
                 expected_service=GROUNDING_DINO_SERVICE,
                 expected_service_type=GROUNDING_DINO_SERVICE_TYPE,
                 expected_fields={
-                    "classes": classes,
-                    "box_threshold": box_threshold,
-                    "text_threshold": text_threshold,
+                    "classes": target_class,
+                    "box_threshold": DEFAULT_BOX_THRESHOLD,
+                    "text_threshold": DEFAULT_TEXT_THRESHOLD,
                 },
             )
             call_grounded_sam_emergency_subtask = CheckServiceFieldsToolCallSubTask(
@@ -898,26 +993,26 @@ class EmergencyResponseProtocolTask(CustomInterfacesServiceTask):
                 expected_service=GROUNDED_SAM_SERVICE,
                 expected_service_type=GROUNDED_SAM_SERVICE_TYPE,
                 expected_fields={
-                    "detections.detections.0.results.0.hypothesis.class_id": detection_classes[
-                        0
+                    "detections.detections.0.results.0.hypothesis.class_id": target_class,
+                    "detections.detections.0.results.0.hypothesis.score": defaults[
+                        "score"
                     ],
-                    "detections.detections.0.results.0.hypothesis.score": scores[0],
-                    "detections.detections.0.results.0.pose.pose.position.x": positions_3d[
-                        0
+                    "detections.detections.0.results.0.pose.pose.position.x": defaults[
+                        "position_3d"
                     ][0],
-                    "detections.detections.0.results.0.pose.pose.position.y": positions_3d[
-                        0
+                    "detections.detections.0.results.0.pose.pose.position.y": defaults[
+                        "position_3d"
                     ][1],
-                    "detections.detections.0.results.0.pose.pose.position.z": positions_3d[
-                        0
+                    "detections.detections.0.results.0.pose.pose.position.z": defaults[
+                        "position_3d"
                     ][2],
-                    "detections.detections.0.bbox.center.x": bbox_centers[0][0],
-                    "detections.detections.0.bbox.center.y": bbox_centers[0][1],
-                    "detections.detections.0.bbox.size_x": bbox_sizes[0][0],
-                    "detections.detections.0.bbox.size_y": bbox_sizes[0][1],
-                    "source_img.width": image_width,
-                    "source_img.height": image_height,
-                    "source_img.encoding": image_encoding,
+                    "detections.detections.0.bbox.center.x": defaults["bbox_center"][0],
+                    "detections.detections.0.bbox.center.y": defaults["bbox_center"][1],
+                    "detections.detections.0.bbox.size_x": defaults["bbox_size"][0],
+                    "detections.detections.0.bbox.size_y": defaults["bbox_size"][1],
+                    "source_img.width": STANDARD_IMAGE_WIDTH,
+                    "source_img.height": STANDARD_IMAGE_HEIGHT,
+                    "source_img.encoding": STANDARD_IMAGE_ENCODING,
                 },
             )
             pub_audio_emergency_subtask = CheckTopicFieldsToolCallSubTask(
@@ -925,16 +1020,16 @@ class EmergencyResponseProtocolTask(CustomInterfacesServiceTask):
                 expected_topic=AUDIO_TOPIC,
                 expected_message_type=AUDIO_MESSAGE_TYPE,
                 expected_fields={
-                    "samples": audio_samples,
-                    "sample_rate": sample_rate,
-                    "channels": channels,
+                    "samples": self.emergence_audio_samples,
+                    "sample_rate": self.emergence_sample_rate,
+                    "channels": self.emergency_channels,
                 },
             )
             pub_hri_emergency_subtask = CheckTopicFieldsToolCallSubTask(
                 expected_tool_name="publish_ros2_message",
                 expected_topic=HRI_TOPIC,
                 expected_message_type=HRI_MESSAGE_TYPE,
-                expected_fields={"text": message},
+                expected_fields={"text": self.emergency_message},
             )
             validators = [
                 OrderedCallsValidator(
@@ -954,10 +1049,15 @@ class EmergencyResponseProtocolTask(CustomInterfacesServiceTask):
         return 5
 
     def get_base_prompt(self) -> str:
-        return f"""Execute emergency response protocol with predetermined parameters:
-            1) Call service '/grounding_dino_classify' to detect emergency: '{self.classes}' with high thresholds box={self.box_threshold}, text={self.text_threshold}
-            2) Call service '/grounded_sam_segment' to segment person at ({self.bbox_centers[0][0]}, {self.bbox_centers[0][1]})
-            on {self.image_width}x{self.image_height} {self.image_encoding} image
-            3) Publish to topic '/audio_output' emergency alert: {self.audio_samples} at {self.sample_rate}Hz
-            4) Publish to topic '/to_human' emergency message: '{self.message}'
-            """
+        obj_key = (
+            self.target_class if self.target_class in DETECTION_DEFAULTS else "person"
+        )
+        defaults = DETECTION_DEFAULTS[obj_key]
+
+        return f"""Execute emergency response protocol for {self.target_class} detection:
+           1) Call service '{GROUNDING_DINO_SERVICE}' to detect emergency: '{self.target_class}' with high thresholds box={DEFAULT_BOX_THRESHOLD}, text={DEFAULT_TEXT_THRESHOLD}
+           2) Call service '{GROUNDED_SAM_SERVICE}' to segment {self.target_class} at ({defaults["bbox_center"][0]}, {defaults["bbox_center"][1]})
+           on {STANDARD_IMAGE_WIDTH}x{STANDARD_IMAGE_HEIGHT} {STANDARD_IMAGE_ENCODING} image
+           3) Publish to topic '{AUDIO_TOPIC}' emergency alert: {self.emergence_audio_samples} at {self.emergence_sample_rate}Hz
+           4) Publish to topic '{HRI_TOPIC}' emergency message: '{self.emergency_message}'
+           """
