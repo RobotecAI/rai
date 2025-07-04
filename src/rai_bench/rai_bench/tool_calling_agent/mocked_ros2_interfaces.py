@@ -50,7 +50,6 @@ from rai_bench.tool_calling_agent.messages.topics import AudioMessage, HRIMessag
 
 # dict of interfaces where keys are interfaces types and values are output
 # of GetROS2MessageInterfaceTool which are same as ros2 interface show outputs
-# the dict contains custom as well as couple other common interfaces
 
 COMMON_INTERFACES: Dict[str, str] = {
     "std_srvs/srv/Empty": """# Empty service - no request or response
@@ -3486,7 +3485,7 @@ NAVIGATION_TOPICS_AND_TYPES: Dict[str, str] = {
 }
 
 CUSTOM_TOPICS_AND_TYPES: Dict[str, str] = {
-    "/hri_message": "rai_interfaces/msg/HRIMessage",
+    "/to_human": "rai_interfaces/msg/HRIMessage",
     "/audio_message": "rai_interfaces/msg/AudioMessage",
     "/detection_array": "rai_interfaces/msg/RAIDetectionArray",
 }
@@ -3826,7 +3825,7 @@ CUSTOM_SERVICES_AND_TYPES: Dict[str, str] = {
     "/manipulator_move_to": "rai_interfaces/srv/ManipulatorMoveTo",
     "/get_log_digest": "rai_interfaces/srv/StringList",
     "/rai_whoami_documentation_service": "rai_interfaces/srv/VectorStoreRetrieval",
-    "/rai/whatisee/get": "rai_interfaces/srv/WhatISee",
+    "/rai_whatisee_get": "rai_interfaces/srv/WhatISee",
 }
 
 MANIPULATION_ACTIONS_AND_TYPES: Dict[str, str] = {

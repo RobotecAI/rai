@@ -18,41 +18,42 @@ from rai_bench.tool_calling_agent.interfaces import (
     Task,
     TaskArgs,
 )
-from rai_bench.tool_calling_agent.subtasks import (
-    CheckArgsToolCallSubTask,
-    CheckTopicFieldsToolCallSubTask,
-)
 from rai_bench.tool_calling_agent.tasks.custom_interfaces import (
+    CallGetLogDigestTask,
+    CallGroundedSAMSegmentTask,
+    CallGroundingDinoClassify,
+    CallROS2ManipulatorMoveToServiceTask,
+    CallVectorStoreRetrievalTask,
+    CallWhatISeeTask,
+    CompleteObjectInteractionTask,
+    EmergencyResponseProtocolTask,
+    MultiModalSceneDocumentationTask,
+    PublishROS2AudioMessageTask,
+    PublishROS2DetectionArrayTask,
     PublishROS2HRIMessageTextTask,
 )
-from rai_bench.tool_calling_agent.validators import (
-    OrderedCallsValidator,
-)
 
-########## SUBTASKS #################################################################
-pub_HRIMessage_text_subtask = CheckTopicFieldsToolCallSubTask(
-    expected_tool_name="publish_ros2_message",
-    expected_topic="/to_human",
-    expected_message_type="rai_interfaces/msg/HRIMessage",
-    expected_fields={"text": "Hello!"},
-)
+# Object Classes
+PERSON_CLASS = "person"
+BOTTLE_CLASS = "bottle"
 
-get_HRIMessage_interface_subtask = CheckArgsToolCallSubTask(
-    expected_tool_name="get_ros2_message_interface",
-    expected_args={"msg_type": "rai_interfaces/msg/HRIMessage"},
-)
+# Text Messages
+HRI_TEXT = "Hello!"
 
+# Audio Parameters
+BASIC_AUDIO_SAMPLES = [123, 456, 789]
+BASIC_SAMPLE_RATE = 44100
+BASIC_CHANNELS = 2
 
-######### VALIDATORS #########################################################################################
-pub_HRIMessage_text_ord_val = OrderedCallsValidator(
-    subtasks=[pub_HRIMessage_text_subtask]
-)
-get_interface_publish_ord_val = OrderedCallsValidator(
-    subtasks=[
-        get_HRIMessage_interface_subtask,
-        pub_HRIMessage_text_subtask,
-    ]
-)
+# Position Parameters
+STANDARD_TARGET_POSITION = (1.0, 2.0, 3.0)
+
+# Query Strings
+ROBOT_PURPOSE_QUERY = "What is the purpose of this robot?"
+GROUNDING_DINO_CLASSES = "person, bottle"
+
+# Default scene objects for documentation
+DEFAULT_SCENE_OBJECTS = ["person", "bottle"]
 
 
 def get_custom_interfaces_tasks(
@@ -81,15 +82,96 @@ def get_custom_interfaces_tasks(
                     prompt_detail=detail,
                     examples_in_system_prompt=shots,
                 )
+
                 tasks.append(
                     PublishROS2HRIMessageTextTask(
-                        topic="/to_human",
-                        validators=[
-                            get_interface_publish_ord_val,
-                        ],
                         task_args=task_args,
-                        text="Hello!",
+                        text=HRI_TEXT,
                     ),
+                )
+                tasks.append(
+                    PublishROS2AudioMessageTask(
+                        task_args=task_args,
+                        audio=BASIC_AUDIO_SAMPLES,
+                        sample_rate=BASIC_SAMPLE_RATE,
+                        channels=BASIC_CHANNELS,
+                    )
+                )
+
+                tasks.append(
+                    PublishROS2DetectionArrayTask(
+                        task_args=task_args,
+                        detection_classes=[PERSON_CLASS],
+                    )
+                )
+                tasks.append(
+                    PublishROS2DetectionArrayTask(
+                        task_args=task_args,
+                        detection_classes=[BOTTLE_CLASS, PERSON_CLASS],
+                    )
+                )
+
+                tasks.append(
+                    CallROS2ManipulatorMoveToServiceTask(
+                        task_args=task_args,
+                        target_x=STANDARD_TARGET_POSITION[0],
+                        target_y=STANDARD_TARGET_POSITION[1],
+                        target_z=STANDARD_TARGET_POSITION[2],
+                        initial_gripper_state=True,
+                        final_gripper_state=False,
+                    )
+                )
+
+                tasks.append(
+                    CallGroundedSAMSegmentTask(
+                        task_args=task_args,
+                        detection_classes=[BOTTLE_CLASS],
+                    )
+                )
+
+                tasks.append(
+                    CallGroundingDinoClassify(
+                        task_args=task_args,
+                        classes=GROUNDING_DINO_CLASSES,
+                    )
+                )
+
+                tasks.append(
+                    CallGetLogDigestTask(
+                        task_args=task_args,
+                    )
+                )
+                tasks.append(
+                    CallVectorStoreRetrievalTask(
+                        task_args=task_args,
+                        query=ROBOT_PURPOSE_QUERY,
+                    )
+                )
+                tasks.append(
+                    CallWhatISeeTask(
+                        task_args=task_args,
+                    )
+                )
+
+                tasks.append(
+                    CompleteObjectInteractionTask(
+                        task_args=task_args,
+                        target_class=BOTTLE_CLASS,
+                    )
+                )
+
+                tasks.append(
+                    MultiModalSceneDocumentationTask(
+                        task_args=task_args,
+                        objects=DEFAULT_SCENE_OBJECTS,
+                    )
+                )
+
+                tasks.append(
+                    EmergencyResponseProtocolTask(
+                        task_args=task_args,
+                        target_class=PERSON_CLASS,
+                    )
                 )
 
     return tasks

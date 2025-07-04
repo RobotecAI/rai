@@ -273,7 +273,7 @@ class SubTask(ABC):
 
         if args.get("service_name") != expected_service:
             raise SubTaskValidationError(
-                f"Expected service '{expected_service}', but got '{args.get('service')}'."
+                f"Expected service '{expected_service}', but got '{args.get('service_name')}'."
             )
 
         if args.get("service_type") != expected_service_type:
