@@ -16,32 +16,10 @@ If your goal is creating custom tasks and scenarios, visit [Creating Custom Task
 ## Manipulation O3DE
 
 -   Follow setup from [Manipulation demo Setup](../demos/manipulation.md#setup)
--   Create the O3DE config:
-    ```yaml
-    binary_path: /path/to/binary/RAIManipulationDemo.GameLauncher
-    level: RoboticManipulationBenchmark
-    robotic_stack_command: ros2 launch examples/manipulation-demo-no-binary.launch.py
-    required_simulation_ros2_interfaces:
-    services:
-        - /spawn_entity
-        - /delete_entity
-    topics:
-        - /color_image5
-        - /depth_image5
-        - /color_camera_info5
-    actions: []
-    required_robotic_ros2_interfaces:
-    services:
-        - /grounding_dino_classify
-        - /grounded_sam_segment
-        - /manipulator_move_to
-    topics: []
-    actions: []
-    ```
 -   Run the benchmark with:
 
     ```bash
-    python src/rai_bench/rai_bench/examples/manipulation_o3de.py --model-name <your-model> --vendor <your-vendor> --o3de-config-path <path/to/your/config> --levels <trivial, easy>
+    python src/rai_bench/rai_bench/examples/manipulation_o3de.py --model-name <your-model> --vendor <your-vendor> --levels <trivial, easy>
     ```
 
     !!! warning
