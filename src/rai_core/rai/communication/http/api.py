@@ -1,7 +1,7 @@
 import asyncio
 import threading
 from enum import IntFlag
-from typing import Optional, Any
+from typing import Callable, Optional, Any
 import logging
 
 from aiohttp import ClientSession, ClientTimeout, web
@@ -69,7 +69,12 @@ class HTTPAPI:
 
         shutdown()
 
-    def add_route(self, method: str, path: str, handler_lambda):
+    def add_route(
+        self,
+        method: str,
+        path: str,
+        handler_lambda: Callable,
+    ):
         if not (self.mode & HTTPConnectorMode.server):
             return
 

@@ -2,7 +2,7 @@ from typing import Any, Callable, Optional, TypeVar
 
 from rai.communication.base_connector import BaseConnector, BaseMessage
 from rai.communication.http.messages import HTTPMessage
-from rai.communication.http.api import HTTPAPI, HTTPConnectorMode
+from rai.communication.http.api import HTTPAPI, HTTPAPIError, HTTPConnectorMode
 
 T = TypeVar("T", bound=HTTPMessage)
 
@@ -18,6 +18,7 @@ class HTTPBaseConnector(BaseConnector[T]):
 
         self._api = HTTPAPI(mode, host, port)
         self._api.run()
+        self._services = []
 
     def send_message(self, message: T, target: str, **kwargs: Optional[Any]) -> None:
         self._api.send_request(
@@ -68,9 +69,17 @@ class HTTPBaseConnector(BaseConnector[T]):
         service_name: str,
         on_request: Callable,
         on_done: Optional[Callable] = None,
+        *,
+        method: str,
         **kwargs: Optional[Any],
     ) -> str:
-        raise NotImplementedError("This method should be implemented by the subclass.")
+        id_str = f"{method.upper()}_{service_name}"
+        if id_str in self._services:
+            raise HTTPAPIError(
+                f"Service {service_name} already has a {method.upper()} handler"
+            )
+        self._api.add_route(method, service_name, on_request)
+        return id_str
 
     def create_action(
         self,
