@@ -2,13 +2,31 @@ from typing import Any, Callable, Optional, TypeVar
 
 from rai.communication.base_connector import BaseConnector, BaseMessage
 from rai.communication.http.messages import HTTPMessage
+from rai.communication.http.api import HTTPAPI, HTTPConnectorMode
 
 T = TypeVar("T", bound=HTTPMessage)
 
 
 class HTTPBaseConnector(BaseConnector[T]):
+    def __init__(
+        self,
+        mode: HTTPConnectorMode = HTTPConnectorMode.client,
+        host: str = "localhost",
+        port: int = 8080,
+    ):
+        super().__init__()
+
+        self._api = HTTPAPI(mode, host, port)
+        self._api.run()
+
     def send_message(self, message: T, target: str, **kwargs: Optional[Any]) -> None:
-        raise NotImplementedError("This method should be implemented by the subclass.")
+        self._api.send_request(
+            message.method,
+            target,
+            None,
+            payload=message.payload,
+            headers=message.headers,
+        )
 
     def receive_message(
         self, source: str, timeout_sec: float, **kwargs: Optional[Any]
@@ -35,7 +53,15 @@ class HTTPBaseConnector(BaseConnector[T]):
     def service_call(
         self, message: T, target: str, timeout_sec: float, **kwargs: Optional[Any]
     ) -> BaseMessage:
-        raise NotImplementedError("This method should be implemented by the subclass.")
+        payload, status = self._api.send_request(
+            message.method,
+            target,
+            timeout_sec,
+            payload=message.payload,
+            headers=message.headers,
+        )
+        ret = BaseMessage(payload=payload, metadata={"status": status})
+        return ret
 
     def create_service(
         self,
@@ -70,4 +96,5 @@ class HTTPBaseConnector(BaseConnector[T]):
 
     def shutdown(self):
         """Shuts down the connector and releases all resources."""
+        self._api.shutdown()
         self.callback_executor.shutdown(wait=True)
