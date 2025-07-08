@@ -59,9 +59,6 @@ The model works locally with the use of [kokoro-onnx library](https://github.com
 The model is available in 3 sizes - 310MB, 169MB, 88MB. The default size is 310MB.
 For available voices and languages supported within currently used version of the model - use `get_available_voices()` and `get_supported_languages()` methods of the `rai_s2s.tts.models.KokoroTTS` respectively.
 
-> [!NOTE]
-> You may encounter phonemizer warnings like "words count mismatch on x% of the lines". These warnings do not indicate that something is wrong with text to speech processing and can be safely ignored.
-
 #### OpenTTS
 
 [OpenTTS](https://github.com/synesthesiam/opentts) is an open source model for TTS.
