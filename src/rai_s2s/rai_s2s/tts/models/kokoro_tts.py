@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+import logging
 import os
 import re
 import subprocess
@@ -64,6 +65,7 @@ class KokoroTTS(TTSModel):
         model_size: Literal["small", "medium", "large"] = "large",
         cache_dir: str | Path = Path.home() / ".cache/rai/kokoro/",
     ):
+        logging.getLogger("phonemizer").setLevel(logging.ERROR)
         self.voice = voice
         self.speed = speed
         self.language = language
