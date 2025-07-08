@@ -27,6 +27,11 @@ from pydub import AudioSegment
 from rai_s2s.tts.models import TTSModel, TTSModelError
 
 
+class _PhonemizerLogsFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "words count mismatch" not in record.getMessage()
+
+
 class KokoroTTS(TTSModel):
     """
     A text-to-speech (TTS) model interface for Kokoro TTS.
@@ -65,7 +70,8 @@ class KokoroTTS(TTSModel):
         model_size: Literal["small", "medium", "large"] = "large",
         cache_dir: str | Path = Path.home() / ".cache/rai/kokoro/",
     ):
-        logging.getLogger("phonemizer").setLevel(logging.ERROR)
+        phonemizer_logger = logging.getLogger("phonemizer")
+        phonemizer_logger.addFilter(_PhonemizerLogsFilter())
         self.voice = voice
         self.speed = speed
         self.language = language
