@@ -457,6 +457,13 @@ def asr():
     if refresh_devices:
         recording_devices = get_sound_devices(reinitialize=True)
 
+    if recording_device_name == "default":
+        st.info(
+            """
+        If you're experiencing audio issues and device_name is set to 'default', try specifying the exact device name instead, as this often resolves the problem.
+        """
+        )
+
     # Get the current vendor from config and convert to display name
     current_vendor = st.session_state.config.get("asr", {}).get(
         "transciption_model", TRANSCRIBE_MODELS[0]
@@ -621,6 +628,12 @@ def tts():
     if refresh_devices:
         recording_devices = get_sound_devices(reinitialize=True, output=True)
 
+    if recording_device_name == "default":
+        st.info(
+            """
+        If you're experiencing audio issues and device_name is set to 'default', try specifying the exact device name instead, as this often resolves the problem.
+        """
+        )
     # Get the current vendor from config and convert to display name
     current_vendor = st.session_state.config.get("tts", {}).get("vendor", TTS_MODELS[0])
 
