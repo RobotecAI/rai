@@ -312,15 +312,14 @@ class KokoroTTS(TTSModel):
         str
             The cleaned text with formatting characters removed.
         """
+
         # Remove markdown headers (# symbols at start of line)
         text = re.sub(r"^#+\s*", "", text)
 
-        # Remove bold markdown (** or __)
+        # Remove bold markdown (**)
         text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
-        text = re.sub(r"__(.*?)__", r"\1", text)
 
-        # Remove italic markdown (* or _)
+        # Remove italic markdown (*)
         text = re.sub(r"\*(.*?)\*", r"\1", text)
-        text = re.sub(r"_(.*?)_", r"\1", text)
 
         return text
