@@ -31,8 +31,8 @@ connector = SoundDeviceConnector(
 )
 ```
 
-> [!WARNING]
-> It is not recommended to use device_name set to `'default'` in `SoundDeviceConfig` due to potential issues with audio.
+> [!TIP]
+> If you're experiencing audio issues and device_name is set to 'default', try specifying the exact device name instead, as this often resolves the problem.
 
 ## Message Type: `SoundDeviceMessage`
 
