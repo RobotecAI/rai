@@ -117,6 +117,12 @@ class KokoroTTS(TTSModel):
             )
 
             if samples.dtype == np.float32:
+                if np.any(samples < -1.0) or np.any(samples > 1.0):
+                    min_val = np.min(samples)
+                    max_val = np.max(samples)
+                    logging.error(
+                        f"Audio samples exceed expected range [-1, 1]. Found range: [{min_val}, {max_val}]. This may cause audio distortion during conversion."
+                    )
                 samples = (samples * 32768).clip(-32768, 32767).astype(np.int16)
             else:
                 raise TTSModelError(
