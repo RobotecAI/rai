@@ -457,6 +457,13 @@ def asr():
     if refresh_devices:
         recording_devices = get_sound_devices(reinitialize=True)
 
+    if recording_device_name == "default":
+        st.info(
+            """
+        If you're experiencing audio issues and device_name is set to 'default', try specifying the exact device name instead, as this often resolves the problem.
+        """
+        )
+
     # Get the current vendor from config and convert to display name
     current_vendor = st.session_state.config.get("asr", {}).get(
         "transciption_model", TRANSCRIBE_MODELS[0]
@@ -592,6 +599,7 @@ def tts():
         """
     Text to Speech (TTS) converts your assistant's text responses into spoken words:
     - ElevenLabs provides high-quality, natural-sounding voices (requires API key)
+    - KokoroTTS in ONNX format runs locally on your computer.
     - OpenTTS runs locally on your computer with no API costs (requires Docker)
     """
     )
@@ -620,6 +628,12 @@ def tts():
     if refresh_devices:
         recording_devices = get_sound_devices(reinitialize=True, output=True)
 
+    if recording_device_name == "default":
+        st.info(
+            """
+        If you're experiencing audio issues and device_name is set to 'default', try specifying the exact device name instead, as this often resolves the problem.
+        """
+        )
     # Get the current vendor from config and convert to display name
     current_vendor = st.session_state.config.get("tts", {}).get("vendor", TTS_MODELS[0])
 
@@ -652,6 +666,12 @@ def tts():
         ```
 
         To learn more about OpenTTS, visit [here](https://github.com/synesthesiam/opentts)
+        """
+        )
+    elif tts_vendor == "KokoroTTS":
+        st.info(
+            """
+        To learn more about KokoroTTS, visit [here](https://huggingface.co/hexgrad/Kokoro-82M)
         """
         )
 
@@ -853,6 +873,16 @@ def review_and_save():
                     )
                     if response.status_code == 200:
                         return True
+                except Exception as e:
+                    st.error(f"TTS error: {e}")
+                return False
+            elif vendor == "KokoroTTS":
+                try:
+                    from rai_s2s.tts import KokoroTTS
+
+                    model = KokoroTTS()
+                    model.get_speech(text="A")
+                    return True
                 except Exception as e:
                     st.error(f"TTS error: {e}")
                 return False

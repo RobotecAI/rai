@@ -14,6 +14,7 @@
 
 from .base import TTSModel, TTSModelError
 from .elevenlabs_tts import ElevenLabsTTS
+from .kokoro_tts import KokoroTTS
 from .open_tts import OpenTTS
 
-__all__ = ["ElevenLabsTTS", "OpenTTS", "TTSModel", "TTSModelError"]
+__all__ = ["ElevenLabsTTS", "KokoroTTS", "OpenTTS", "TTSModel", "TTSModelError"]

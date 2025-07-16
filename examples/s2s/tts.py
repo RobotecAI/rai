@@ -18,7 +18,7 @@ import time
 
 import rclpy
 
-from rai_s2s import OpenTTS, TextToSpeechAgent
+from rai_s2s import KokoroTTS, OpenTTS, TextToSpeechAgent
 from rai_s2s.sound_device import SoundDeviceConfig
 
 
@@ -33,6 +33,14 @@ def parse_arguments():
         type=str,
         default="default",
         help="Speaker device name (default: 'default')",
+    )
+
+    parser.add_argument(
+        "--tts-model",
+        type=str,
+        choices=["opentts", "kokoro"],
+        default="kokoro",
+        help="TTS model to use: 'opentts' or 'kokoro' (default: 'kokoro')",
     )
 
     # Use parse_known_args to ignore unknown arguments
@@ -55,7 +63,12 @@ if __name__ == "__main__":
         # device_name="Jabra Speak2 40 MS: USB Audio (hw:2,0)",
         device_name=args.device_name,
     )
-    tts = OpenTTS()
+
+    tts = KokoroTTS()
+    print("Using KokoroTTS model")
+    if args.tts_model == "opentts":
+        tts = OpenTTS()
+        print("Using OpenTTS model")
 
     agent = TextToSpeechAgent(config, "text_to_speech", tts)
     agent.run()
