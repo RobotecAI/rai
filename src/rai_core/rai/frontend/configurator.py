@@ -976,30 +976,31 @@ def setup_steps():
     step_names = ["👋 Welcome", "🤖 Model Selection", "📊 Tracing"]
     step_render = [welcome, model_selection, tracing]
 
-    st.session_state.features["s2s"] = True
-
     if importlib.util.find_spec("rai_s2s") is None:
         logging.warning(
             "Skipping speech recognition, rai_s2s not installed - install `poetry install --with s2s`"
         )
-
-    try:
-        from rai_s2s.asr import TRANSCRIBE_MODELS
-
-        step_names.append("🎙️ Speech Recognition")
-        step_render.append(asr)
-    except ImportError as e:
         st.session_state.features["s2s"] = False
-        logging.warning(f"Skipping speech recognition. {e}")
+    else:
+        st.session_state.features["s2s"] = True
 
-    try:
-        from rai_s2s.tts import TTS_MODELS
+        try:
+            from rai_s2s.asr import TRANSCRIBE_MODELS
 
-        step_names.append("🔊 Text to Speech")
-        step_render.append(tts)
-    except ImportError as e:
-        st.session_state.features["s2s"] = False
-        logging.warning(f"Skipping text to speech. {e}")
+            step_names.append("🎙️ Speech Recognition")
+            step_render.append(asr)
+        except ImportError as e:
+            st.session_state.features["s2s"] = False
+            logging.warning(f"Skipping speech recognition. {e}")
+
+        try:
+            from rai_s2s.tts import TTS_MODELS
+
+            step_names.append("🔊 Text to Speech")
+            step_render.append(tts)
+        except ImportError as e:
+            st.session_state.features["s2s"] = False
+            logging.warning(f"Skipping text to speech. {e}")
 
     step_names.extend(
         [
