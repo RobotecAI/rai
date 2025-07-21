@@ -25,6 +25,7 @@ from langchain_aws import BedrockEmbeddings, ChatBedrock
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 import logging
+import importlib.util
 
 
 def get_sound_devices(
@@ -851,7 +852,7 @@ def review_and_save():
 
         def test_tts():
             vendor = st.session_state.config["tts"]["vendor"]
-            if vendor == "elevenlabs":
+            if vendor == "ElevenLabs":
                 try:
                     from elevenlabs import ElevenLabs
 
@@ -862,7 +863,7 @@ def review_and_save():
                 except Exception as e:
                     st.error(f"TTS error: {e}")
                 return False
-            elif vendor == "opentts":
+            elif vendor == "OpenTTS":
                 try:
                     params = {
                         "voice": "glow-speak:en-us_mary_ann",
@@ -892,7 +893,7 @@ def review_and_save():
 
             devices = sd.query_devices()
             index = [device["name"] for device in devices].index(device_name)
-            sample_rate = int(devices[device_index]["default_samplerate"])
+            sample_rate = int(devices[index]["default_samplerate"])
             try:
                 recording = sd.rec(
                     device=index,
@@ -975,29 +976,31 @@ def setup_steps():
     step_names = ["👋 Welcome", "🤖 Model Selection", "📊 Tracing"]
     step_render = [welcome, model_selection, tracing]
 
-    try:
-        from rai_s2s.asr import TRANSCRIBE_MODELS
-
-        step_names.append("🎙️ Speech Recognition")
-        step_render.append(asr)
-    except ImportError:
-        st.session_state.features["s2s"] = False
+    if importlib.util.find_spec("rai_s2s") is None:
         logging.warning(
-            "skipping speech recognition, missing import - install `poetry install --with s2s`"
+            "Skipping speech recognition, rai_s2s not installed - install `poetry install --with s2s`"
         )
-        pass
-
-    try:
-        from rai_s2s.tts import TTS_MODELS
-
-        step_names.append("🔊 Text to Speech")
-        step_render.append(tts)
-    except ImportError:
         st.session_state.features["s2s"] = False
-        logging.warning(
-            "skipping text to speech, missing import - install `poetry install --with s2s`"
-        )
-        pass
+    else:
+        st.session_state.features["s2s"] = True
+
+        try:
+            from rai_s2s.asr import TRANSCRIBE_MODELS
+
+            step_names.append("🎙️ Speech Recognition")
+            step_render.append(asr)
+        except ImportError as e:
+            st.session_state.features["s2s"] = False
+            logging.warning(f"Skipping speech recognition. {e}")
+
+        try:
+            from rai_s2s.tts import TTS_MODELS
+
+            step_names.append("🔊 Text to Speech")
+            step_render.append(tts)
+        except ImportError as e:
+            st.session_state.features["s2s"] = False
+            logging.warning(f"Skipping text to speech. {e}")
 
     step_names.extend(
         [
