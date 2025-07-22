@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
@@ -25,16 +25,16 @@ logger = logging.getLogger(__name__)
 
 
 def invoke_llm_with_tracing(
-    llm: BaseChatModel, 
-    messages: List[BaseMessage], 
-    config: Optional[RunnableConfig] = None
+    llm: BaseChatModel,
+    messages: List[BaseMessage],
+    config: Optional[RunnableConfig] = None,
 ) -> Any:
     """
     Invoke an LLM with enhanced tracing callbacks.
-    
+
     This function automatically adds tracing callbacks (like Langfuse) to LLM calls
     within LangGraph nodes, solving the callback propagation issue.
-    
+
     Parameters
     ----------
     llm : BaseChatModel
@@ -43,32 +43,32 @@ def invoke_llm_with_tracing(
         Messages to send to the LLM
     config : Optional[RunnableConfig]
         Existing configuration (may contain some callbacks)
-        
+
     Returns
     -------
     Any
         The LLM response
     """
     tracing_callbacks = get_tracing_callbacks()
-    
+
     if len(tracing_callbacks) == 0:
         # No tracing callbacks available, use config as-is
         return llm.invoke(messages, config=config)
-    
+
     # Create enhanced config with tracing callbacks
     enhanced_config = config.copy() if config else {}
-    
+
     # Add tracing callbacks to existing callbacks
     existing_callbacks = config.get("callbacks", []) if config else []
-    
-    if hasattr(existing_callbacks, 'handlers'):
+
+    if hasattr(existing_callbacks, "handlers"):
         # Merge with existing CallbackManager
         all_callbacks = existing_callbacks.handlers + tracing_callbacks
     elif isinstance(existing_callbacks, list):
         all_callbacks = existing_callbacks + tracing_callbacks
     else:
         all_callbacks = tracing_callbacks
-    
+
     enhanced_config["callbacks"] = all_callbacks
-    
+
     return llm.invoke(messages, config=enhanced_config)

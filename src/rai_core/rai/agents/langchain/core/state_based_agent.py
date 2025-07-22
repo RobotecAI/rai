@@ -83,7 +83,7 @@ def llm_node(
         # at this point, state['messages'] length should at least be 1
         if not isinstance(state["messages"][0], SystemMessage):
             state["messages"].insert(0, SystemMessage(content=system_prompt))
-    
+
     # Invoke LLM with tracing if it is configured and available
     ai_msg = invoke_llm_with_tracing(llm, state["messages"], config)
     state["messages"].append(ai_msg)

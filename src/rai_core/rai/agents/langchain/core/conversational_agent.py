@@ -57,7 +57,7 @@ def agent(
             else system_prompt
         )
         state["messages"].insert(0, system_msg)
-    
+
     # Invoke LLM with tracing if it is configured and available
     ai_msg = invoke_llm_with_tracing(llm, state["messages"], config)
     state["messages"].append(ai_msg)
