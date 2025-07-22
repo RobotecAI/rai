@@ -461,7 +461,7 @@ def render_tool_calling_agent(bench_results: BenchmarkResults):
     tabs = st.tabs(
         [
             "Model Performance",
-            "Task Performance",
+            "Task Analysis",
             "Validator Analysis",
             "Subtask Analysis",
         ]
