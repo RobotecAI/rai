@@ -22,12 +22,14 @@ from langchain_core.messages import (
     BaseMessage,
     SystemMessage,
 )
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.graph import START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt.tool_node import tools_condition
 
 from rai.agents.langchain.core.tool_runner import ToolRunner
+from rai.agents.langchain.utils import invoke_llm_with_tracing
 
 
 class State(TypedDict):
@@ -39,6 +41,7 @@ def agent(
     logger: logging.Logger,
     system_prompt: str | SystemMessage,
     state: State,
+    config: RunnableConfig,
 ):
     logger.info("Running thinker")
 
@@ -54,7 +57,9 @@ def agent(
             else system_prompt
         )
         state["messages"].insert(0, system_msg)
-    ai_msg = llm.invoke(state["messages"])
+    
+    # Invoke LLM with tracing if it is configured and available
+    ai_msg = invoke_llm_with_tracing(llm, state["messages"], config)
     state["messages"].append(ai_msg)
     return state
 

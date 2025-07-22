@@ -26,12 +26,13 @@ from typing import (
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-from langchain_core.runnables import Runnable
+from langchain_core.runnables import Runnable, RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.graph import START, StateGraph
 from langgraph.prebuilt.tool_node import tools_condition
 
 from rai.agents.langchain.core.tool_runner import ToolRunner
+from rai.agents.langchain.utils import invoke_llm_with_tracing
 from rai.initialization import get_llm_model
 from rai.messages import HumanMultimodalMessage, SystemMultimodalMessage
 
@@ -52,6 +53,7 @@ def llm_node(
     llm: BaseChatModel,
     system_prompt: Optional[str | SystemMultimodalMessage],
     state: ReActAgentState,
+    config: RunnableConfig,
 ):
     """Process messages using the LLM.
 
@@ -61,6 +63,8 @@ def llm_node(
         The language model to use for processing
     state : ReActAgentState
         Current state containing messages
+    config : RunnableConfig
+        Configuration including callbacks for tracing
 
     Returns
     -------
@@ -79,7 +83,9 @@ def llm_node(
         # at this point, state['messages'] length should at least be 1
         if not isinstance(state["messages"][0], SystemMessage):
             state["messages"].insert(0, SystemMessage(content=system_prompt))
-    ai_msg = llm.invoke(state["messages"])
+    
+    # Invoke LLM with tracing if it is configured and available
+    ai_msg = invoke_llm_with_tracing(llm, state["messages"], config)
     state["messages"].append(ai_msg)
 
 
