@@ -114,6 +114,18 @@ manipulation techniques.
         docker run --net=host --ipc=host --pid=host -e ROS_DOMAIN_ID=$ROS_DOMAIN_ID --gpus all -it rai:jazzy # or rai:humble
         ```
 
+        Sometimes, passing GPUs to the docker container may result in an error:
+
+        ```shell
+        docker: Error response from daemon: could not select device driver "" with capabilities: [[gpu]].
+        ```
+
+        Restarting the docker service should resolve this error:
+
+        ```shell
+        sudo systemctl restart docker
+        ```
+
 4.  (Inside the container shell) Download additional ROS 2 dependencies:
 
     ```shell
