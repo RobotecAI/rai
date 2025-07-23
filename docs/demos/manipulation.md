@@ -136,6 +136,7 @@ manipulation techniques.
 5.  (Inside the container shell) Build the ROS 2 workspace:
 
     ```shell
+    source /opt/ros/${ROS_DISTRO}/setup.bash
     colcon build --symlink-install
     ```
 
