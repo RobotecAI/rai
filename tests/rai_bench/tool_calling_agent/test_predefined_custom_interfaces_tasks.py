@@ -1339,67 +1339,6 @@ class TestEmergencyResponseProtocolTask:
             },
         },
         {
-            "name": "call_ros2_service",
-            "args": {
-                "service_name": GROUNDED_SAM_SERVICE,
-                "service_type": GROUNDED_SAM_SERVICE_TYPE,
-                "service_args": {
-                    "detections": {
-                        "detections": [
-                            {
-                                "results": [
-                                    {
-                                        "hypothesis": {
-                                            "class_id": PERSON_CLASS,
-                                            "score": DETECTION_DEFAULTS["person"][
-                                                "score"
-                                            ],
-                                        },
-                                        "pose": {
-                                            "pose": {
-                                                "position": {
-                                                    "x": DETECTION_DEFAULTS["person"][
-                                                        "position_3d"
-                                                    ][0],
-                                                    "y": DETECTION_DEFAULTS["person"][
-                                                        "position_3d"
-                                                    ][1],
-                                                    "z": DETECTION_DEFAULTS["person"][
-                                                        "position_3d"
-                                                    ][2],
-                                                }
-                                            }
-                                        },
-                                    }
-                                ],
-                                "bbox": {
-                                    "center": {
-                                        "x": DETECTION_DEFAULTS["person"][
-                                            "bbox_center"
-                                        ][0],
-                                        "y": DETECTION_DEFAULTS["person"][
-                                            "bbox_center"
-                                        ][1],
-                                    },
-                                    "size_x": DETECTION_DEFAULTS["person"]["bbox_size"][
-                                        0
-                                    ],
-                                    "size_y": DETECTION_DEFAULTS["person"]["bbox_size"][
-                                        1
-                                    ],
-                                },
-                            }
-                        ]
-                    },
-                    "source_img": {
-                        "width": STANDARD_IMAGE_WIDTH,
-                        "height": STANDARD_IMAGE_HEIGHT,
-                        "encoding": STANDARD_IMAGE_ENCODING,
-                    },
-                },
-            },
-        },
-        {
             "name": "publish_ros2_message",
             "args": {
                 "topic": AUDIO_TOPIC,
@@ -1462,7 +1401,6 @@ class TestEmergencyResponseProtocolTask:
         """Test emergency response missing a required tool call."""
         tool_calls = copy.deepcopy(self.VALID_TOOL_CALLS_TEMPLATE)
 
-        # Remove the Grounded SAM service call (index 1)
         tool_calls.pop(1)
 
         task = EmergencyResponseProtocolTask(
