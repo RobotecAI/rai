@@ -50,7 +50,7 @@ def initialize_agent() -> Runnable[ReActAgentState, ReActAgentState]:
         "examples/embodiments/rosbotxl_embodiment.json"
     )
 
-    connector = ROS2Connector(executor_type="multi_threaded")
+    connector = ROS2Connector(executor_type="multi_threaded", use_sim_time=True)
     tools: List[BaseTool] = [
         GetROS2TransformConfiguredTool(
             connector=connector,

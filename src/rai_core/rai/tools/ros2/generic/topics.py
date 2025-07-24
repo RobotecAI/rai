@@ -15,6 +15,7 @@
 import json
 from typing import Any, Dict, List, Literal, Tuple, Type
 
+import rclpy.time
 import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
 from cv_bridge import CvBridge
@@ -243,10 +244,34 @@ class GetROS2TransformTool(BaseROS2Tool):
     description: str = "Get the transform between two frames"
     args_schema: Type[GetROS2TransformToolInput] = GetROS2TransformToolInput
 
+    # Staleness threshold in seconds (10 missed cycles at 10Hz = 1 second)
+    STALE_TRANSFORM_THRESHOLD_SEC: float = 1.0
+
     def _run(self, target_frame: str, source_frame: str, timeout_sec: float) -> str:
         transform = self.connector.get_transform(
             target_frame=target_frame,
             source_frame=source_frame,
             timeout_sec=timeout_sec,
         )
-        return stringify_dict(ros2_message_to_dict(transform))
+
+        transform_time = rclpy.time.Time.from_msg(transform.header.stamp)
+        current_time = self.connector._node.get_clock().now()
+
+        age_seconds = (current_time - transform_time).nanoseconds / 1e9
+
+        result = stringify_dict(ros2_message_to_dict(transform))
+
+        # Add clear warning for stale data at the beginning of response
+        if abs(age_seconds) > self.STALE_TRANSFORM_THRESHOLD_SEC:
+            if age_seconds == float("inf"):
+                result = (
+                    "WARNING: Robot position data has invalid timestamp (potentially stale). The robot may have moved since then.\n\n"
+                    + result
+                )
+            else:
+                result = (
+                    f"WARNING: Robot position data is {age_seconds:.1f} seconds old (potentially stale). The robot may have moved since then.\n\n"
+                    + result
+                )
+
+        return result

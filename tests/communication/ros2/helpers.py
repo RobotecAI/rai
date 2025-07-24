@@ -28,6 +28,7 @@ from rclpy.action.server import ServerGoalHandle
 from rclpy.callback_groups import CallbackGroup, ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
+from rosgraph_msgs.msg import Clock
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
 from std_srvs.srv import SetBool
@@ -232,8 +233,16 @@ class MessagePublisher(Node):
 
 
 class TransformPublisher(Node):
-    def __init__(self, topic: str):
+    def __init__(self, topic: str, use_sim_time: bool = False):
         super().__init__("test_transform_publisher")
+        if use_sim_time:
+            self.set_parameters(
+                [
+                    rclpy.parameter.Parameter(
+                        "use_sim_time", rclpy.parameter.Parameter.Type.BOOL, True
+                    )
+                ]
+            )
         self.tf_broadcaster = TransformBroadcaster(self)
         self.timer = self.create_timer(0.1, self.publish_transform)
         self.frame_id = "base_link"
@@ -252,6 +261,22 @@ class TransformPublisher(Node):
         msg.transform.rotation.z = 0.0  # type: ignore
         msg.transform.rotation.w = 1.0  # type: ignore
         self.tf_broadcaster.sendTransform(msg)
+
+
+class ClockPublisher(Node):
+    def __init__(self):
+        super().__init__("test_clock_publisher")
+        self.publisher = self.create_publisher(Clock, "/clock", 10)
+        self.timer = self.create_timer(0.1, self.publish_clock)
+        self.start_time = time.time()
+
+    def publish_clock(self) -> None:
+        msg = Clock()
+        # Publish simulation time that advances faster than real time
+        sim_time = (time.time() - self.start_time) * 2.0  # 2x speed
+        msg.clock.sec = int(sim_time)
+        msg.clock.nanosec = int((sim_time % 1.0) * 1e9)
+        self.publisher.publish(msg)
 
 
 def multi_threaded_spinner(
@@ -274,14 +299,36 @@ def multi_threaded_spinner(
 def shutdown_executors_and_threads(
     executors: List[MultiThreadedExecutor], threads: List[threading.Thread]
 ) -> None:
-    # First shutdown executors
+    # Cancel any ongoing tasks/guard conditions
     for executor in executors:
-        executor.shutdown()
-    # Small delay to allow executors to finish pending operations
-    time.sleep(0.5)
-    # Then join threads with a timeout
+        try:
+            if hasattr(executor, "_futures"):
+                for future in executor._futures:
+                    if not future.done():
+                        future.cancel()
+        except Exception as e:
+            print(f"Error canceling ongoing tasks: {e}")
+
+    # Join threads with a timeout
     for thread in threads:
         thread.join(timeout=2.0)
+
+    # Clean up any remaining nodes
+    for executor in executors:
+        try:
+            for node in executor.get_nodes():
+                node.destroy_node()
+        except Exception as e:
+            print(f"Error destroying node: {e}")
+
+    time.sleep(0.5)
+
+    # Shutdown executors
+    for executor in executors:
+        try:
+            executor.shutdown()
+        except Exception as e:
+            print(f"Error shutting down executor: {e}")
 
 
 @pytest.fixture(scope="function")
