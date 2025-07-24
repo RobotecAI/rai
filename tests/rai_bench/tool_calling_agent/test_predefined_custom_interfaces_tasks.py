@@ -60,14 +60,11 @@ from rai_bench.tool_calling_agent.tasks.custom_interfaces import (
     STRING_LIST_SERVICE_TYPE,
     VECTOR_STORE_SERVICE,
     VECTOR_STORE_SERVICE_TYPE,
-    WHAT_I_SEE_SERVICE,
-    WHAT_I_SEE_SERVICE_TYPE,
     CallGetLogDigestTask,
     CallGroundedSAMSegmentTask,
     CallGroundingDinoClassify,
     CallROS2ManipulatorMoveToServiceTask,
     CallVectorStoreRetrievalTask,
-    CallWhatISeeTask,
     CompleteObjectInteractionTask,
     EmergencyResponseProtocolTask,
     MultiModalSceneDocumentationTask,
@@ -1206,114 +1203,10 @@ class TestCallVectorStoreRetrievalTask:
         assert score == 0.0
 
 
-class TestCallWhatISeeTask:
-    """Test CallWhatISeeTask validation."""
-
-    def test_call_what_i_see_valid(self, task_args: TaskArgs) -> None:
-        """Test valid WhatISee service call."""
-        tool_calls: List[Dict[str, Any]] = [
-            {
-                "name": "get_ros2_message_interface",
-                "args": {"msg_type": WHAT_I_SEE_SERVICE_TYPE},
-            },
-            {
-                "name": "call_ros2_service",
-                "args": {
-                    "service_name": WHAT_I_SEE_SERVICE,
-                    "service_type": WHAT_I_SEE_SERVICE_TYPE,
-                    "service_args": {},
-                },
-            },
-        ]
-
-        task = CallWhatISeeTask(
-            task_args=task_args,
-        )
-        score = task.validate(tool_calls)
-        assert score == 1.0
-
-    def test_call_what_i_see_wrong_service_name(self, task_args: TaskArgs) -> None:
-        """Test WhatISee with wrong service name."""
-        tool_calls: List[Dict[str, Any]] = [
-            {
-                "name": "get_ros2_message_interface",
-                "args": {"msg_type": WHAT_I_SEE_SERVICE_TYPE},
-            },
-            {
-                "name": "call_ros2_service",
-                "args": {
-                    "service_name": "/wrong_what_i_see_service",  # Wrong service name
-                    "service_type": WHAT_I_SEE_SERVICE_TYPE,
-                    "service_args": {},
-                },
-            },
-        ]
-
-        task = CallWhatISeeTask(
-            task_args=task_args,
-        )
-        score = task.validate(tool_calls)
-        assert score == 0.0
-
-    def test_call_what_i_see_wrong_message_type(self, task_args: TaskArgs) -> None:
-        """Test WhatISee with wrong message type."""
-        tool_calls: List[Dict[str, Any]] = [
-            {
-                "name": "get_ros2_message_interface",
-                "args": {"msg_type": "wrong_message_type"},  # Wrong message type
-            },
-            {
-                "name": "call_ros2_service",
-                "args": {
-                    "service_name": WHAT_I_SEE_SERVICE,
-                    "service_type": WHAT_I_SEE_SERVICE_TYPE,
-                    "service_args": {},
-                },
-            },
-        ]
-
-        task = CallWhatISeeTask(
-            task_args=task_args,
-        )
-        score = task.validate(tool_calls)
-        assert score == 0.0
-
-    def test_call_what_i_see_wrong_tool_order(self, task_args: TaskArgs) -> None:
-        """Test WhatISee with wrong tool call order."""
-        tool_calls: List[Dict[str, Any]] = [
-            {
-                "name": "call_ros2_service",
-                "args": {
-                    "service_name": "/what_i_see",
-                    "service_type": "rai_interfaces/srv/WhatISee",
-                    "service_args": {},
-                },
-            },
-            {
-                "name": "get_ros2_message_interface",
-                "args": {"msg_type": "rai_interfaces/srv/WhatISee"},
-            },
-        ]
-
-        task = CallWhatISeeTask(
-            task_args=task_args,
-        )
-        score = task.validate(tool_calls)
-        assert score == 0.0
-
-
 class TestMultiModalSceneDocumentationTask:
     """Test MultiModalSceneDocumentationTask validation."""
 
     VALID_TOOL_CALLS_TEMPLATE: List[Dict[str, Any]] = [
-        {
-            "name": "call_ros2_service",
-            "args": {
-                "service_name": WHAT_I_SEE_SERVICE,
-                "service_type": WHAT_I_SEE_SERVICE_TYPE,
-                "service_args": {},
-            },
-        },
         {
             "name": "publish_ros2_message",
             "args": {
@@ -1385,7 +1278,7 @@ class TestMultiModalSceneDocumentationTask:
         tool_calls = copy.deepcopy(self.VALID_TOOL_CALLS_TEMPLATE)
 
         # Modify the first detection class to wrong value
-        tool_calls[1]["args"]["message"]["detections"][0]["results"][0]["hypothesis"][
+        tool_calls[0]["args"]["message"]["detections"][0]["results"][0]["hypothesis"][
             "class_id"
         ] = "unknown_object"
 
@@ -1403,7 +1296,7 @@ class TestMultiModalSceneDocumentationTask:
         tool_calls = copy.deepcopy(self.VALID_TOOL_CALLS_TEMPLATE)
 
         # Modify the safety query to wrong value
-        tool_calls[2]["args"]["service_args"]["query"] = "What is the weather like?"
+        tool_calls[1]["args"]["service_args"]["query"] = "What is the weather like?"
 
         task = MultiModalSceneDocumentationTask(
             task_args=task_args,

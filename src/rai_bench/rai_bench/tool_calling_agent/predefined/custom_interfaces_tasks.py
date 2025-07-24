@@ -20,17 +20,27 @@ from rai_bench.tool_calling_agent.interfaces import (
 )
 from rai_bench.tool_calling_agent.tasks.custom_interfaces import (
     CallGetLogDigestTask,
+    CallGetLogDigestTaskIndirect,
     CallGroundedSAMSegmentTask,
+    CallGroundedSAMSegmentTaskIndirect,
     CallGroundingDinoClassify,
+    CallGroundingDinoClassifyIndirect,
     CallROS2ManipulatorMoveToServiceTask,
+    CallROS2ManipulatorMoveToServiceTaskIndirect,
     CallVectorStoreRetrievalTask,
-    CallWhatISeeTask,
+    CallVectorStoreRetrievalTaskIndirect,
     CompleteObjectInteractionTask,
+    CompleteObjectInteractionTaskIndirect,
     EmergencyResponseProtocolTask,
+    EmergencyResponseProtocolTaskIndirect,
     MultiModalSceneDocumentationTask,
+    MultiModalSceneDocumentationTaskIndirect,
     PublishROS2AudioMessageTask,
+    PublishROS2AudioMessageTaskIndirect,
     PublishROS2DetectionArrayTask,
+    PublishROS2DetectionArrayTaskIndirect,
     PublishROS2HRIMessageTextTask,
+    PublishROS2HRIMessageTextTaskIndirect,
 )
 
 # Object Classes
@@ -60,17 +70,25 @@ def get_custom_interfaces_tasks(
     extra_tool_calls: List[int] = [0],
     prompt_detail: List[Literal["brief", "descriptive"]] = ["brief", "descriptive"],
     n_shots: List[Literal[0, 2, 5]] = [0, 2, 5],
+    include_indirect: bool = True,
 ) -> List[Task]:
     """Get predefined custom_interfaces tasks.
 
     Parameters
     ----------
-    Parameters match :class:`~src.rai_bench.rai_bench.test_models.ToolCallingAgentBenchmarkConfig`.
-    See the class documentation for parameter descriptions.
+    extra_tool_calls : List[int]
+        Number of extra tool calls allowed beyond the minimum required.
+    prompt_detail : List[Literal["brief", "descriptive"]]
+        Level of detail in task prompts.
+    n_shots : List[Literal[0, 2, 5]]
+        Number of examples in system prompt.
+    include_indirect : bool
+        Whether to include indirect (natural language) task variants.
 
     Returns
     -------
-    Returned list match :func:`~src.rai_bench.rai_bench.tool_calling_agent.predefined.tasks.get_tasks`.
+    List[Task]
+        List of task instances for benchmarking.
     """
     tasks: List[Task] = []
 
@@ -83,6 +101,7 @@ def get_custom_interfaces_tasks(
                     examples_in_system_prompt=shots,
                 )
 
+                # Direct tasks (original)
                 tasks.append(
                     PublishROS2HRIMessageTextTask(
                         task_args=task_args,
@@ -147,11 +166,6 @@ def get_custom_interfaces_tasks(
                         query=ROBOT_PURPOSE_QUERY,
                     )
                 )
-                tasks.append(
-                    CallWhatISeeTask(
-                        task_args=task_args,
-                    )
-                )
 
                 tasks.append(
                     CompleteObjectInteractionTask(
@@ -173,5 +187,92 @@ def get_custom_interfaces_tasks(
                         target_class=PERSON_CLASS,
                     )
                 )
+
+                if include_indirect:
+                    tasks.append(
+                        PublishROS2HRIMessageTextTaskIndirect(
+                            task_args=task_args,
+                            text=HRI_TEXT,
+                        ),
+                    )
+                    tasks.append(
+                        PublishROS2AudioMessageTaskIndirect(
+                            task_args=task_args,
+                            audio=BASIC_AUDIO_SAMPLES,
+                            sample_rate=BASIC_SAMPLE_RATE,
+                            channels=BASIC_CHANNELS,
+                        )
+                    )
+
+                    tasks.append(
+                        PublishROS2DetectionArrayTaskIndirect(
+                            task_args=task_args,
+                            detection_classes=[PERSON_CLASS],
+                        )
+                    )
+                    tasks.append(
+                        PublishROS2DetectionArrayTaskIndirect(
+                            task_args=task_args,
+                            detection_classes=[BOTTLE_CLASS, PERSON_CLASS],
+                        )
+                    )
+
+                    tasks.append(
+                        CallROS2ManipulatorMoveToServiceTaskIndirect(
+                            task_args=task_args,
+                            target_x=STANDARD_TARGET_POSITION[0],
+                            target_y=STANDARD_TARGET_POSITION[1],
+                            target_z=STANDARD_TARGET_POSITION[2],
+                            initial_gripper_state=True,
+                            final_gripper_state=False,
+                        )
+                    )
+
+                    tasks.append(
+                        CallGroundedSAMSegmentTaskIndirect(
+                            task_args=task_args,
+                            detection_classes=[BOTTLE_CLASS],
+                        )
+                    )
+
+                    tasks.append(
+                        CallGroundingDinoClassifyIndirect(
+                            task_args=task_args,
+                            classes=GROUNDING_DINO_CLASSES,
+                        )
+                    )
+
+                    tasks.append(
+                        CallGetLogDigestTaskIndirect(
+                            task_args=task_args,
+                        )
+                    )
+                    tasks.append(
+                        CallVectorStoreRetrievalTaskIndirect(
+                            task_args=task_args,
+                            query=ROBOT_PURPOSE_QUERY,
+                        )
+                    )
+
+                    tasks.append(
+                        CompleteObjectInteractionTaskIndirect(
+                            task_args=task_args,
+                            target_class=BOTTLE_CLASS,
+                        )
+                    )
+
+                    tasks.append(
+                        MultiModalSceneDocumentationTaskIndirect(
+                            task_args=task_args,
+                            objects=DEFAULT_SCENE_OBJECTS,
+                        )
+                    )
+
+                    tasks.append(
+                        EmergencyResponseProtocolTaskIndirect(
+                            task_args=task_args,
+                            target_class=PERSON_CLASS,
+                        )
+                    )
 
     return tasks
