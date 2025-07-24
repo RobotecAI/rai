@@ -140,6 +140,19 @@ manipulation techniques.
     colcon build --symlink-install
     ```
 
+6.  (Inside the docker container) By default, RAI uses OpenAI as the vendor. Thus, it is necessary
+    to set the `$OPENAI_API_KEY` environmental variable. The command below may be utilized to set
+    the variable and add it to the container's `.bashrc` file:
+
+    ```shell
+    export OPENAI_API_KEY=YOUR_OPEN_AI_API_KEY
+    echo "export OPENAI_API_KEY=$OPENAI_API_KEY" >> ~/.bashrc
+    ```
+
+    !!! note AI vendor change
+
+        The default vendor can be changed to a different provider via the [RAI configuration tool](../setup/install.md#15-configure-rai)
+
 #### 2. Running the demo
 
 !!! note Source the setup shell
