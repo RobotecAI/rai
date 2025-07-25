@@ -137,7 +137,7 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
         self.simulation_bridge.init_simulation(simulation_config=simulation_config)
         self.simulation_bridge.launch_robotic_stack(
             required_robotic_ros2_interfaces=simulation_config.required_robotic_ros2_interfaces,
-            launch_description=self.launch_description,
+            launch_description=self.launch_description(),
         )
         self.num_of_scenarios = len(scenarios)
         self.scenarios = enumerate(iter(scenarios))
@@ -146,7 +146,6 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
         self.score_tracing_handler = ScoreTracingHandler()
         self.csv_initialize(self.results_filename, ScenarioResult)
 
-    @property
     def launch_description(self):
         launch_moveit = IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
