@@ -22,6 +22,7 @@ from rai_bench.tool_calling_agent.interfaces import (
     TaskArgs,
 )
 from rai_bench.tool_calling_agent.tasks.manipulation import (
+    AlignTwoObjectsTask,
     GetObjectPositionsTask,
     GrabExistingObjectTask,
     MoveExistingObjectFrontTask,
@@ -128,6 +129,7 @@ def get_manipulation_tasks(
                             object_to_grab=BANANA_OBJECT,
                             task_args=task_args,
                         ),
+                        AlignTwoObjectsTask(objects=objects, task_args=task_args),
                     ]
                 )
 
