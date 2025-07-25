@@ -15,12 +15,12 @@ If your goal is creating custom tasks and scenarios, visit [Creating Custom Task
 
 ## Manipulation O3DE
 
-- Follow the main setup [Basic Setup](../setup/install.md) and setup from [Manipulation demo Setup](../demos/manipulation.md#setup)
-- To see available options run:
+-   Follow the main setup [Basic Setup](../setup/install.md) and setup from [Manipulation demo Setup](../demos/manipulation.md#setup)
+-   To see available options run:
     ```bash
     python src/rai_bench/rai_bench/examples/manipulation_o3de.py --help
     ```
-- Example usage:
+-   Example usage:
 
     ```bash
     python src/rai_bench/rai_bench/examples/manipulation_o3de.py --model-name qwen2.5:7b --vendor ollama --levels trivial
@@ -28,24 +28,24 @@ If your goal is creating custom tasks and scenarios, visit [Creating Custom Task
 
     !!! note
 
-        When using Ollama, be sure to pull the model first.
+          When using Ollama, be sure to pull the model first.
 
     !!! warning
 
-        Running all scenarios will take a while. If you want to just try it out, we recommend choosing just one level of difficulty.
+          Running all scenarios will take a while. If you want to just try it out, we recommend choosing just one level of difficulty.
 
 ## Tool Calling Agent
 
-- This benchmark does not require any additional setup besides the main one [Basic Setup](../setup/install.md)
-- To see available options run:
+-   This benchmark does not require any additional setup besides the main one [Basic Setup](../setup/install.md)
+-   To see available options run:
     ```bash
     python src/rai_bench/rai_bench/examples/tool_calling_agent.py --help
     ```
-- Example usage:
-```bash
-python src/rai_bench/rai_bench/examples/tool_calling_agent.py --model-name qwen2.5:7b --vendor ollama --extra-tool-calls 5 --task-types basic  --n-shots 5 --prompt-detail descriptive --complexities easy 
-```
+-   Example usage:
 
+```bash
+python src/rai_bench/rai_bench/examples/tool_calling_agent.py --model-name qwen2.5:7b --vendor ollama --extra-tool-calls 5 --task-types basic  --n-shots 5 --prompt-detail descriptive --complexities easy
+```
 
 ## Testing Models
 
@@ -91,6 +91,7 @@ if __name__ == "__main__":
         out_dir=out_dir,
     )
 ```
+
 Based on the example above the `Tool Calling` benchmark will run [extra_tool_calls x N_shots x prompt_detail x repeats] = 8 times, each run will include basic, spatial_reasoning and custom_interfaces tasks.
 
 ## Viewing Results
