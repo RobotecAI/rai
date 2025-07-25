@@ -23,21 +23,12 @@ from rai_bench.tool_calling_agent.predefined.manipulation_tasks import (
     BANANA_POSITION,
     CUBE_OBJECT,
     CUBE_POSITION,
-    FRONT_DISTANCE,
-    LEFT_DISTANCE,
     MOVE_TO_DROP_COORDS,
     MOVE_TO_GRAB_COORDS,
-    get_both_object_positions_ord_val,
-    grab_banana_ord_val,
-    grab_cube_ord_val,
-    move_banana_front_ord_val,
-    move_banana_left_ord_val,
-    move_cube_front_ord_val,
-    move_cube_left_ord_val,
-    move_to_point_ord_val_drop,
-    move_to_point_ord_val_grab,
 )
 from rai_bench.tool_calling_agent.tasks.manipulation import (
+    FRONT_DISTANCE,
+    LEFT_DISTANCE,
     GetObjectPositionsTask,
     GrabExistingObjectTask,
     MoveExistingObjectFrontTask,
@@ -71,7 +62,6 @@ class TestMoveToPointTask:
         task = MoveToPointTask(
             objects=objects,
             move_to_tool_input=MoveToPointToolInput(x=1.0, y=2.0, z=3.0, task="grab"),
-            validators=[move_to_point_ord_val_grab],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -90,7 +80,6 @@ class TestMoveToPointTask:
         task = MoveToPointTask(
             objects=objects,
             move_to_tool_input=MoveToPointToolInput(x=1.2, y=2.3, z=3.4, task="drop"),
-            validators=[move_to_point_ord_val_drop],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -114,7 +103,6 @@ class TestMoveToPointTask:
         task = MoveToPointTask(
             objects=objects,
             move_to_tool_input=MoveToPointToolInput(x=1.0, y=2.0, z=3.0, task="grab"),
-            validators=[move_to_point_ord_val_grab],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -133,7 +121,6 @@ class TestMoveToPointTask:
         task = MoveToPointTask(
             objects=objects,
             move_to_tool_input=MoveToPointToolInput(x=1.0, y=2.0, z=3.0, task="grab"),
-            validators=[move_to_point_ord_val_grab],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -152,7 +139,6 @@ class TestMoveToPointTask:
         task = MoveToPointTask(
             objects=objects,
             move_to_tool_input=MoveToPointToolInput(x=1.0, y=2.0, z=3.0, task="grab"),
-            validators=[move_to_point_ord_val_grab],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -172,7 +158,6 @@ class TestGetObjectPositionsTask:
 
         task = GetObjectPositionsTask(
             objects=objects,
-            validators=[get_both_object_positions_ord_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -188,7 +173,6 @@ class TestGetObjectPositionsTask:
 
         task = GetObjectPositionsTask(
             objects=objects,
-            validators=[get_both_object_positions_ord_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -201,7 +185,6 @@ class TestGetObjectPositionsTask:
 
         task = GetObjectPositionsTask(
             objects=objects,
-            validators=[get_both_object_positions_ord_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -216,7 +199,6 @@ class TestGetObjectPositionsTask:
 
         task = GetObjectPositionsTask(
             objects=objects,
-            validators=[get_both_object_positions_ord_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -245,7 +227,6 @@ class TestGrabExistingObjectTask:
         task = GrabExistingObjectTask(
             objects=objects,
             object_to_grab=CUBE_OBJECT,
-            validators=[grab_cube_ord_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -270,7 +251,6 @@ class TestGrabExistingObjectTask:
         task = GrabExistingObjectTask(
             objects=objects,
             object_to_grab=BANANA_OBJECT,
-            validators=[grab_banana_ord_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -295,7 +275,6 @@ class TestGrabExistingObjectTask:
         task = GrabExistingObjectTask(
             objects=objects,
             object_to_grab=CUBE_OBJECT,
-            validators=[grab_cube_ord_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -319,7 +298,6 @@ class TestGrabExistingObjectTask:
         task = GrabExistingObjectTask(
             objects=objects,
             object_to_grab=CUBE_OBJECT,
-            validators=[grab_cube_ord_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -347,7 +325,6 @@ class TestGrabExistingObjectTask:
         task = GrabExistingObjectTask(
             objects=objects,
             object_to_grab=CUBE_OBJECT,
-            validators=[grab_cube_ord_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -385,7 +362,6 @@ class TestMoveExistingObjectLeftTask:
         task = MoveExistingObjectLeftTask(
             objects=objects,
             object_to_grab=CUBE_OBJECT,
-            validators=[move_cube_left_ord_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -419,7 +395,6 @@ class TestMoveExistingObjectLeftTask:
         task = MoveExistingObjectLeftTask(
             objects=objects,
             object_to_grab=BANANA_OBJECT,
-            validators=[move_banana_left_ord_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -453,7 +428,6 @@ class TestMoveExistingObjectLeftTask:
         task = MoveExistingObjectLeftTask(
             objects=objects,
             object_to_grab=CUBE_OBJECT,
-            validators=[move_cube_left_ord_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -478,7 +452,6 @@ class TestMoveExistingObjectLeftTask:
         task = MoveExistingObjectLeftTask(
             objects=objects,
             object_to_grab=CUBE_OBJECT,
-            validators=[move_cube_left_ord_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -516,7 +489,6 @@ class TestMoveExistingObjectFrontTask:
         task = MoveExistingObjectFrontTask(
             objects=objects,
             object_to_grab=CUBE_OBJECT,
-            validators=[move_cube_front_ord_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -550,7 +522,6 @@ class TestMoveExistingObjectFrontTask:
         task = MoveExistingObjectFrontTask(
             objects=objects,
             object_to_grab=BANANA_OBJECT,
-            validators=[move_banana_front_ord_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
@@ -584,7 +555,6 @@ class TestMoveExistingObjectFrontTask:
         task = MoveExistingObjectFrontTask(
             objects=objects,
             object_to_grab=CUBE_OBJECT,
-            validators=[move_cube_front_ord_val],
             task_args=task_args,
         )
         score = task.validate(tool_calls)
