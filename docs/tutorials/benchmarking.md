@@ -15,12 +15,20 @@ If your goal is creating custom tasks and scenarios, visit [Creating Custom Task
 
 ## Manipulation O3DE
 
--   Follow setup from [Manipulation demo Setup](../demos/manipulation.md#setup)
--   Run the benchmark with:
+- Follow the main setup [Basic Setup](../setup/install.md) and setup from [Manipulation demo Setup](../demos/manipulation.md#setup)
+- To see available options run:
+    ```bash
+    python src/rai_bench/rai_bench/examples/manipulation_o3de.py --help
+    ```
+- Example usage:
 
     ```bash
-    python src/rai_bench/rai_bench/examples/manipulation_o3de.py --model-name <your-model> --vendor <your-vendor> --levels <trivial, easy>
+    python src/rai_bench/rai_bench/examples/manipulation_o3de.py --model-name qwen2.5:7b --vendor ollama --levels trivial
     ```
+
+    !!! note
+
+        When using Ollama, be sure to pull the model first.
 
     !!! warning
 
@@ -28,33 +36,25 @@ If your goal is creating custom tasks and scenarios, visit [Creating Custom Task
 
 ## Tool Calling Agent
 
-This benchmark does not require any additional setup besides the main one [Basic Setup](../setup/install.md), just run:
-
+- This benchmark does not require any additional setup besides the main one [Basic Setup](../setup/install.md)
+- To see available options run:
+    ```bash
+    python src/rai_bench/rai_bench/examples/tool_calling_agent.py --help
+    ```
+- Example usage:
 ```bash
-python src/rai_bench/rai_bench/examples/tool_calling_agent.py --model-name <qwen2.5:7b> --vendor <ollama> --extra-tool-calls <0 5> --task-types basic  --n-shots <0 2> --prompt-detail <brief  descriptive> --complexities <easy medium hard> --out-dir <out_dir>
+python src/rai_bench/rai_bench/examples/tool_calling_agent.py --model-name qwen2.5:7b --vendor ollama --extra-tool-calls 5 --task-types basic  --n-shots 5 --prompt-detail descriptive --complexities easy 
 ```
 
-!!! note
-
-    This Benchmark is significantly faster, but still, if just trying out, we recommend choosing just one parameter per flag as every combination on params will create more tasks.
 
 ## Testing Models
 
-The best way of benchmarking your models is using the `rai_bench.test_models` function with benchmark configs.
+The best way of benchmarking your models is using the `src/rai_bench/rai_bench/examples/benchmarking_models.py`
 
-??? info "test_models function definition"
-
-    ::: rai_bench.test_models.test_models
-
-Example usage:
+Feel free to modify the benchmark configs to suit your needs, you can chose every possible set of params
+and the benchmark will be run with every combination:
 
 ```python
-from rai_bench import (
-    ManipulationO3DEBenchmarkConfig,
-    ToolCallingAgentBenchmarkConfig,
-    test_models,
-)
-
 if __name__ == "__main__":
     # Define models you want to benchmark
     model_names = ["qwen2.5:7b", "llama3.2:3b"]
@@ -91,6 +91,7 @@ if __name__ == "__main__":
         out_dir=out_dir,
     )
 ```
+Based on the example above the `Tool Calling` benchmark will run [extra_tool_calls x N_shots x prompt_detail x repeats] = 8 times, each run will include basic, spatial_reasoning and custom_interfaces tasks.
 
 ## Viewing Results
 

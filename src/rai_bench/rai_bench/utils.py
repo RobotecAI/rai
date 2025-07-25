@@ -34,6 +34,7 @@ def parse_tool_calling_benchmark_args():
     parser.add_argument(
         "--extra-tool-calls",
         type=int,
+        nargs="+",
         help="Number of extra tools calls agent can make and still pass the task",
         default=0,
     )
