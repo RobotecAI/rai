@@ -94,10 +94,6 @@ def get_spatial_tasks(
             images_paths=[IMG_PATH + "image_2.jpg"],
         ),
         BoolImageTaskInput(
-            question="Is the chair blue?",
-            images_paths=[IMG_PATH + "image_3.jpg"],
-        ),
-        BoolImageTaskInput(
             question="Is there something to sit on?",
             images_paths=[IMG_PATH + "image_7.jpg"],
         ),
