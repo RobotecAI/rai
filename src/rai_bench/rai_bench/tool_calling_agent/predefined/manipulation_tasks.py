@@ -166,69 +166,6 @@ move_banana_front_drop_subtask = CheckArgsToolCallSubTask(
     },
 )
 
-# swap_objects_grab_cube_subtask = CheckArgsToolCallSubTask(
-#     expected_tool_name="move_to_point",
-#     expected_args={
-#         "x": CUBE_POSITION.x,
-#         "y": CUBE_POSITION.y,
-#         "z": CUBE_POSITION.z,
-#         "task": "grab",
-#     },
-# )
-# swap_objects_move_cube_to_temp_subtask = CheckArgsToolCallSubTask(
-#     expected_tool_name="move_to_point",
-#     expected_args={
-#         # NOTE (jmatejcz) technically we should not accept any position but
-#         # every besides the positions of the objects to swap
-#         # but we currently don't implement checks for negative validation
-#         # so just accept any coords
-#         "task": "drop",
-#     },
-#     expected_optional_args={
-#         "x": float,
-#         "y": float,
-#         "z": float,
-#     },
-# )
-# swap_objects_grab_banana_subtask = CheckArgsToolCallSubTask(
-#     expected_tool_name="move_to_point",
-#     expected_args={
-#         "x": BANANA_POSITION.x,
-#         "y": BANANA_POSITION.y,
-#         "z": BANANA_POSITION.z,
-#         "task": "grab",
-#     },
-# )
-# swap_objects_move_banana_to_cube_subtask = CheckArgsToolCallSubTask(
-#     expected_tool_name="move_to_point",
-#     expected_args={
-#         "x": CUBE_POSITION.x,
-#         "y": CUBE_POSITION.y,
-#         "z": CUBE_POSITION.z,
-#         "task": "drop",
-#     },
-# )
-# swap_objects_grab_cube_from_temp_subtask = CheckArgsToolCallSubTask(
-#     expected_tool_name="move_to_point",
-#     expected_args={
-#         "task": "grab",
-#     },
-#     expected_optional_args={
-#         "x": float,
-#         "y": float,
-#         "z": float,
-#     },
-# )
-# swap_objects_move_cube_to_banana_subtask = CheckArgsToolCallSubTask(
-#     expected_tool_name="move_to_point",
-#     expected_args={
-#         "x": BANANA_POSITION.x,
-#         "y": BANANA_POSITION.y,
-#         "z": BANANA_POSITION.z,
-#         "task": "drop",
-#     },
-# )
-
 ######### VALIDATORS #########################################################################################
 move_to_point_ord_val_grab = OrderedCallsValidator(
     subtasks=[move_to_point_subtask_grab]
@@ -278,17 +215,6 @@ move_banana_front_ord_val = OrderedCallsValidator(
         move_banana_front_drop_subtask,
     ]
 )
-
-# swap_objects_ord_val = OrderedCallsValidator(
-#     subtasks=[
-#         swap_objects_grab_cube_subtask,
-#         swap_objects_move_cube_to_temp_subtask,
-#         swap_objects_grab_banana_subtask,
-#         swap_objects_move_banana_to_cube_subtask,
-#         swap_objects_grab_cube_from_temp_subtask,
-#         swap_objects_move_cube_to_banana_subtask,
-#     ]
-# )
 
 
 def get_manipulation_tasks(
@@ -390,12 +316,6 @@ def get_manipulation_tasks(
                             validators=[move_banana_front_ord_val],
                             task_args=task_args,
                         ),
-                        # SwapObjectsTask(
-                        #     objects=objects,
-                        #     objects_to_swap=[CUBE_OBJECT, BANANA_OBJECT],
-                        #     validators=[swap_objects_ord_val],
-                        #     task_args=task_args,
-                        # ),
                     ]
                 )
 
