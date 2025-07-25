@@ -77,33 +77,6 @@ SPAWN_ENTITY_TYPE = "gazebo_msgs/srv/SpawnEntity"
 DELETE_ENTITY_TYPE = "gazebo_msgs/srv/DeleteEntity"
 GET_WORLD_PROPERTIES_TYPE = "gazebo_msgs/srv/GetWorldProperties"
 
-DEFAULT_PUBLISH_FREQUENCY = 30.0
-DEFAULT_FPS = 30
-DEFAULT_SAM_CONFIDENCE = 0.8
-DEFAULT_DINO_CONFIDENCE = 0.7
-SAM_CONFIDENCE_2 = 0.6
-DINO_CONFIDENCE_2 = 0.6
-FPS_2 = 10
-
-TOMATO_ENTITY = "tomato"
-BOX1_ENTITY = "box1"
-BOX2_ENTITY = "box2"
-BOX1_POSITION = (0.2, 0.2, 0.2)
-BOX2_POSITION = (0.4, 0.4, 0.2)
-
-CAMERA_TOPICS_AND_TYPES = [
-    f"topic: {COLOR_CAMERA_INFO_TOPIC}\ntype: sensor_msgs/msg/CameraInfo\n",
-    f"topic: {COLOR_IMAGE_TOPIC}\ntype: sensor_msgs/msg/Image\n",
-    f"topic: {DEPTH_CAMERA_INFO_TOPIC}\ntype: sensor_msgs/msg/CameraInfo\n",
-    f"topic: {DEPTH_IMAGE_TOPIC}\ntype: sensor_msgs/msg/Image\n",
-]
-
-CAMERA_TOPICS = [
-    COLOR_CAMERA_INFO_TOPIC,
-    COLOR_IMAGE_TOPIC,
-    DEPTH_CAMERA_INFO_TOPIC,
-    DEPTH_IMAGE_TOPIC,
-]
 
 PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_0_SHOT = """You are a ROS 2 expert that want to solve tasks. You have access to various tools that allow you to query the ROS 2 system.
 Be proactive and use the tools to answer questions."""

@@ -22,15 +22,7 @@ from rai_bench.tool_calling_agent.subtasks import (
     CheckServiceFieldsToolCallSubTask,
 )
 from rai_bench.tool_calling_agent.tasks.basic import (
-    BOX1_ENTITY,
-    BOX1_POSITION,
-    BOX2_ENTITY,
-    BOX2_POSITION,
     COLOR_IMAGE_TOPIC,
-    DEFAULT_DINO_CONFIDENCE,
-    DEFAULT_FPS,
-    DEFAULT_PUBLISH_FREQUENCY,
-    DEFAULT_SAM_CONFIDENCE,
     DEPTH_IMAGE_TOPIC,
     GET_SPAWNABLE_NAMES_SERVICE,
     GET_WORLD_PROPERTIES_TYPE,
@@ -38,7 +30,6 @@ from rai_bench.tool_calling_agent.tasks.basic import (
     POINTCLOUD_TOPIC,
     ROBOT_DESCRIPTION_TOPIC,
     ROBOT_STATE_PUBLISHER_LIST_PARAMS,
-    TOMATO_ENTITY,
     CheckSpawnableEntitiesTask,
     ConfigureVisionPipelineTask,
     GetAllROS2CamerasTask,
@@ -58,6 +49,20 @@ from rai_bench.tool_calling_agent.validators import (
     NotOrderedCallsValidator,
     OrderedCallsValidator,
 )
+
+DEFAULT_PUBLISH_FREQUENCY = 30.0
+DEFAULT_FPS = 30
+DEFAULT_SAM_CONFIDENCE = 0.8
+DEFAULT_DINO_CONFIDENCE = 0.7
+SAM_CONFIDENCE_2 = 0.6
+DINO_CONFIDENCE_2 = 0.6
+FPS_2 = 10
+
+TOMATO_ENTITY = "tomato"
+BOX1_ENTITY = "box1"
+BOX2_ENTITY = "box2"
+BOX1_POSITION = (0.2, 0.2, 0.2)
+BOX2_POSITION = (0.4, 0.4, 0.2)
 
 ########## SUBTASKS FOR TASKS WITHOUT REFACTORED VALIDATORS #################################################################
 get_topics_subtask = CheckArgsToolCallSubTask(
