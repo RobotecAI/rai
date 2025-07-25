@@ -101,7 +101,7 @@ def parse_manipulation_o3de_benchmark_args():
     parser.add_argument(
         "--o3de-config-path",
         type=str,
-        required=True,
+        default="src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/o3de_config.yaml",
         help="Path to the O3DE configuration file",
     )
     parser.add_argument(
