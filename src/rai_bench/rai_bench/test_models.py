@@ -218,6 +218,7 @@ def test_models(
                         vendor=vendors[i],
                         **additional_model_args[i],
                     )
+                    # TODO (jmatejcz) take param to set log level
                     bench_logger = define_benchmark_logger(out_dir=Path(curr_out_dir))
                     try:
                         if isinstance(bench_conf, ToolCallingAgentBenchmarkConfig):
