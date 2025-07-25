@@ -25,24 +25,24 @@ from rai_bench.tool_calling_agent.interfaces import Task, TaskArgs, Validator
 
 loggers_type = logging.Logger
 
-SPATIAL_REASONING_SYSTEM_PROMPT_0_SHOT = """You are a helpful and knowledgeable AI assistant that specializes in interpreting and analyzing visual content. Your task is to answer questions based on the images provided to you. Please response with the use of the provided tools."""
+SPATIAL_REASONING_SYSTEM_PROMPT_0_SHOT = """You are a helpful and knowledgeable AI assistant that specializes
+in interpreting and analyzing visual content. Your task is to answer questions based
+on the images provided to you. Please response with the use of the provided tools."""
+# NOTE (jmatejcz) In this case we are using only one tool so there is no difference bettween 2 and 5 shot
+# so I made 1 example in '2 shot' and 2 examples in '5 shot' prompt
 
 SPATIAL_REASONING_SYSTEM_PROMPT_2_SHOT = (
     SPATIAL_REASONING_SYSTEM_PROMPT_0_SHOT
     + """
 
 Example of tool calls:
-- return_bool_response, args: {'response': True}
-- return_bool_response, args: {'response': False}"""
+- return_bool_response, args: {'response': True}"""
 )
 
-# NOTE (jmatejcz) In this case we are using only one tool so there is no difference bettween 2 and 5 shot
 SPATIAL_REASONING_SYSTEM_PROMPT_5_SHOT = (
     SPATIAL_REASONING_SYSTEM_PROMPT_2_SHOT
     + """
-- return_bool_response, args: {'response': True}  # When object is clearly visible
-- return_bool_response, args: {'response': False}  # When object is not present
-- return_bool_response, args: {'response': True}  # When spatial relationship is correct"""
+- return_bool_response, args: {'response': False}"""
 )
 
 
