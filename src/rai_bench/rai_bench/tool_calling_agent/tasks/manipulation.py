@@ -283,7 +283,9 @@ class GetObjectPositionsTask(ManipulationTask):
         else:
             objects_list = formatted_objects[0]
 
-        return f"Get the {objects_list} positions."
+        return (
+            f"Get the {objects_list} positions. Object name should be in singular form."
+        )
 
     def get_prompt(self) -> str:
         if self.prompt_detail == "brief":
