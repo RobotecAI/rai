@@ -31,12 +31,12 @@ If your goal is creating custom tasks and scenarios, visit [Creating Custom Task
 This benchmark does not require any additional setup besides the main one [Basic Setup](../setup/install.md), just run:
 
 ```bash
-python src/rai_bench/rai_bench/examples/tool_calling_agent.py --model-name <model-name> --vendor <vendor> --extra-tool-calls <5> --task-types <basic> --out-dir <out_dir>
+python src/rai_bench/rai_bench/examples/tool_calling_agent.py --model-name <qwen2.5:7b> --vendor <ollama> --extra-tool-calls <0 5> --task-types basic  --n-shots <0 2> --prompt-detail <brief  descriptive> --complexities <easy medium hard> --out-dir <out_dir>
 ```
 
 !!! note
 
-    This Benchmark is significantly faster, but still if just trying out, we recommend choosing just one task-type.
+    This Benchmark is significantly faster, but still, if just trying out, we recommend choosing just one parameter per flag as every combination on params will create more tasks.
 
 ## Testing Models
 
@@ -68,12 +68,17 @@ if __name__ == "__main__":
         ],
         repeats=1,  # how many times to repeat
     )
-    tool_conf = ToolCallingAgentBenchmarkConfig(
-        extra_tool_calls=5,  # how many extra tool calls allowed to still pass
+     tool_conf = ToolCallingAgentBenchmarkConfig(
+        extra_tool_calls=[0, 5],  # how many extra tool calls allowed to still pass
         task_types=[  # what types of tasks to include
             "basic",
             "spatial_reasoning",
-            "manipulation",
+            "custom_interfaces",
+        ],
+        N_shots=[0, 2],  # examples in system prompt
+        prompt_detail=[  # how descriptive should task prompt be
+            "brief",
+            "descriptive"
         ],
         repeats=1,
     )
@@ -200,6 +205,21 @@ class ThrowObjectsOffTableTask(ManipulationTask):
 
         incorrect: int = len(selected_type_objects) - correct
         return correct, incorrect
+
+# configure existing Task with different params
+target_coords = (0.1, 0.1)
+disp = 0.1
+task = PlaceObjectAtCoordTask(
+    obj_type="apple",
+    target_position=target_coords,
+    allowable_displacement=disp,
+)
+
+Scenario(
+    task=task,
+    scene_config=scene_config,
+    scene_config_path=path_to_your_config
+)
 ```
 
 As `obj_types` is parameterizable, it enables various variants of this Task. In combination with a lot of simulation configs available, it means that a single Task can provide dozens of scenarios.
@@ -218,23 +238,14 @@ from rai_bench.tool_calling_agent.subtasks import (
 from rai_bench.tool_calling_agent.validators import (
     OrderedCallsValidator,
 )
-from rai_bench.tool_calling_agent.tasks.basic import BasicTask
 from rai_bench.tool_calling_agent.mocked_tools import (
     MockGetROS2TopicsNamesAndTypesTool,
 )
+from rai_bench.tool_calling_agent.interfaces import Task, TaskArgs
 from langchain_core.tools import BaseTool
 from typing import List
 
-# configure existing Task with different params
-target_coords = (0.1, 0.1)
-disp = 0.1
-task = PlaceObjectAtCoordTask(
-    obj_type="apple",
-    target_position=target_coords,
-    allowable_displacement=disp,
-)
 
-Scenario(task=task, scene_config=scene_config, scene_config_path=path_to_your_config)
 
 # define subtask that requires
 receive_robot_pos_subtask = CheckArgsToolCallSubTask(
@@ -248,7 +259,7 @@ receive_robot_pos_subtask = CheckArgsToolCallSubTask(
 topics_ord_val = OrderedCallsValidator(subtasks=[receive_robot_pos_subtask])
 
 
-class GetROS2RobotPositionTask(BasicTask):
+class GetROS2RobotPositionTask(Task):
     complexity = "easy"
 
     @property
@@ -265,9 +276,18 @@ class GetROS2RobotPositionTask(BasicTask):
             ),
         ]
 
+    def get_system_prompt(self) -> str:
+        return "You are a ROS 2 expert that want to solve tasks. You have access to various tools that allow you to query the ROS 2 system."
+
     def get_prompt(self) -> str:
         return "Get the position of the robot."
 
+    @property
+    def optional_tool_calls_number(self) -> int:
+        # Listing topics before getting any message
+        return 1
+
 # optionally pass number of extra tool calls
-task = GetROS2RobotPositionTask(validators=[topics_ord_val], extra_tool_calls=1)
+args = TaskArgs(extra_tool_calls=0)
+task = GetROS2RobotPositionTask(validators=[topics_ord_val], task_args=args)
 ```

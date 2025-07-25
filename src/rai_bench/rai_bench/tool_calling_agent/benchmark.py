@@ -87,6 +87,14 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         )
         callbacks = self.score_tracing_handler.get_callbacks()
         run_id = uuid.uuid4()
+        # NOTE (jmatejcz) recursion limit calculated as all_nodes_num -> one pass though whole node
+        # plus (task.max_tool_calls_number-1 because the first pass is already added in)
+        # times number of nodes - 2 because we dont cout start and end node
+        # this can be to much for larger graphs that dont use all nodes on extra calls
+        # in such ase adjust this value
+        recurssion_limit = len(agent.get_graph().nodes) + (
+            task.max_tool_calls_number - 1
+        ) * (len(agent.get_graph().nodes) - 2)
         config: RunnableConfig = {
             "run_id": run_id,
             "callbacks": callbacks,
@@ -97,15 +105,15 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
                 f"task-complexity:{task.complexity}",
                 f"extra-tool-calls:{task.extra_tool_calls}",
             ],
-            "recursion_limit": len(agent.get_graph().nodes)
-            * task.max_tool_calls_number,
+            "recursion_limit": recurssion_limit,
         }
+        self.logger.debug(f"recurssion limit: {recurssion_limit}")
 
         ts = time.perf_counter()
         messages: List[BaseMessage] = []
         prev_count: int = 0
         try:
-            with self.time_limit(60):
+            with self.time_limit(20 * task.max_tool_calls_number):
                 if isinstance(task, SpatialReasoningAgentTask):
                     for state in agent.stream(
                         {
@@ -160,8 +168,10 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         self.logger.info(f"TASK SCORE: {score}, TOTAL TIME: {total_time:.3f}")
 
         task_result = TaskResult(
-            task_prompt=task.get_prompt(),
+            task_prompt=task.get_base_prompt(),
             system_prompt=task.get_system_prompt(),
+            examples_in_system_prompt=task.n_shots,
+            prompt_detail=task.prompt_detail,
             type=task.type,
             extra_tool_calls=task.extra_tool_calls,
             extra_tool_calls_used=total_extra_calls,

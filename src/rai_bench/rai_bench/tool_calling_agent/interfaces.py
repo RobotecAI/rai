@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple
 from langchain_core.messages import AIMessage, BaseMessage, ToolCall
 from langchain_core.runnables.config import DEFAULT_RECURSION_LIMIT
 from langchain_core.tools import BaseTool
+from pydantic import BaseModel
 
 from rai_bench.tool_calling_agent.results_tracking import SubTaskResult, ValidatorResult
 
@@ -117,6 +118,61 @@ class SubTask(ABC):
                         )
         return True
 
+    def _check_nested_fields(
+        self, field_path: str, args: Dict[str, Any], expected_value: Any
+    ) -> bool:
+        """Check if a nested field in the arguments matches the expected value.
+
+        Parameters
+        ----------
+        field_path : str
+            Dot-separated path to the field (e.g., "header.frame_id").
+            Including indexes for lists possible (e.g., "data[0].value").
+        args : Dict[str, Any]
+            The arguments dictionary to check.
+        expected_value : Any
+            The expected value for the field.
+
+        Returns
+        -------
+        bool
+            True if the field matches the expected value, False otherwise.
+
+
+        Raises
+        ------
+        SubTaskValidationError
+            If the field is not found or does not match the expected value.
+        """
+
+        keys = field_path.split(".")
+        value: Any = args
+        for key in keys:
+            if isinstance(value, dict) and key in value:
+                value = value[key]
+            elif isinstance(value, list):
+                # try to access index
+                try:
+                    index = int(key)
+                except ValueError:
+                    raise SubTaskValidationError(f"Expected numeric index, got '{key}'")
+
+                if 0 <= index < len(value):
+                    value = value[index]
+                else:
+                    raise SubTaskValidationError(f"Index {index} out of range")
+
+            else:
+                raise SubTaskValidationError(
+                    f"Field path '{field_path}' not found in the message."
+                )
+
+        if value != expected_value:
+            raise SubTaskValidationError(
+                f"Expected value for field '{field_path}' is '{expected_value}', but got '{value}'."
+            )
+        return True
+
     def _check_topic_tool_call_field(
         self,
         tool_call: ToolCall,
@@ -172,22 +228,9 @@ class SubTask(ABC):
                 "Tool call does not contain a 'message' argument."
             )
 
-        keys = field_path.split(".")
-        value: Any = message
-        for key in keys:
-            if isinstance(value, dict) and key in value:
-                value = value[key]
-            else:
-                raise SubTaskValidationError(
-                    f"Field path '{field_path}' not found in the message."
-                )
-
-        if value != expected_value:
-            raise SubTaskValidationError(
-                f"Expected value for field '{field_path}' is '{expected_value}', but got '{value}'."
-            )
-
-        return True
+        return self._check_nested_fields(
+            field_path=field_path, args=message, expected_value=expected_value
+        )
 
     def _check_service_tool_call_field(
         self,
@@ -230,7 +273,7 @@ class SubTask(ABC):
 
         if args.get("service_name") != expected_service:
             raise SubTaskValidationError(
-                f"Expected service '{expected_service}', but got '{args.get('service')}'."
+                f"Expected service '{expected_service}', but got '{args.get('service_name')}'."
             )
 
         if args.get("service_type") != expected_service_type:
@@ -252,22 +295,9 @@ class SubTask(ABC):
                     f"Expected empty service_args, but got: {service_args}"
                 )
 
-        keys = field_path.split(".")
-        value: Any = service_args
-        for key in keys:
-            if isinstance(value, dict) and key in value:
-                value = value[key]
-            else:
-                raise SubTaskValidationError(
-                    f"Field path '{field_path}' not found in the message."
-                )
-
-        if value != expected_value:
-            raise SubTaskValidationError(
-                f"Expected value for field '{field_path}' is '{expected_value}', but got '{value}'."
-            )
-
-        return True
+        return self._check_nested_fields(
+            field_path=field_path, args=service_args, expected_value=expected_value
+        )
 
     def _check_action_tool_call_field(
         self,
@@ -332,22 +362,9 @@ class SubTask(ABC):
                     f"Expected empty action_args, but got: {action_args}"
                 )
 
-        keys = field_path.split(".")
-        value: Any = action_args
-        for key in keys:
-            if isinstance(value, dict) and key in value:
-                value = value[key]
-            else:
-                raise SubTaskValidationError(
-                    f"Field path '{field_path}' not found in the action_args."
-                )
-
-        if value != expected_value:
-            raise SubTaskValidationError(
-                f"Expected value for field '{field_path}' is '{expected_value}', but got '{value}'."
-            )
-
-        return True
+        return self._check_nested_fields(
+            field_path=field_path, args=action_args, expected_value=expected_value
+        )
 
 
 class Validator(ABC):
@@ -454,14 +471,33 @@ class Validator(ABC):
         pass
 
 
+class TaskArgs(BaseModel):
+    """Holds the configurations specified by user
+
+    Parameters
+    ----------
+    extra_tool_calls : int, optional
+        how many extra tool calls allowed to still pass, by default 0
+    prompt_detail : Literal["brief", "descriptive"], optional
+        how descriptive should task prompt be, by default "brief"
+    examples_in_system_prompt : Literal[0, 2, 5], optional
+        how many examples are in system prompt, by default 0
+    """
+
+    extra_tool_calls: int = 0
+    prompt_detail: Literal["brief", "descriptive"] = "brief"
+    examples_in_system_prompt: Literal[0, 2, 5] = 0
+
+
 class Task(ABC):
     complexity: Literal["easy", "medium", "hard"]
+    type: str
     recursion_limit: int = DEFAULT_RECURSION_LIMIT
 
     def __init__(
         self,
         validators: List[Validator],
-        extra_tool_calls: int = 0,
+        task_args: TaskArgs,
         logger: loggers_type | None = None,
     ) -> None:
         """
@@ -473,21 +509,30 @@ class Task(ABC):
 
         Attributes
         ----------
+        complexity : Literal["easy", "medium", "hard"]
+            difficulty level of the task
+        type : str
+            type identifier for the task
+        recursion_limit : int, optional
+            maximum recursion depth allowed, by default DEFAULT_RECURSION_LIMIT
+
+        Parameters
+        ----------
         validators : List[Validator]
             List of validators that will be applied in sequence.
-        extra_tool_calls : int
-            Number of additional tool calls allowed beyond the minimum required.
+        task_args : TaskArgs
+            Configuration parameters for the task specified by user
         logger : logging.Logger
             Logger for recording task validation results and errors.
-        result : Result
-            Object tracking the validation results across all validators.
         """
         if logger:
             self.logger = logger
         else:
             self.logger = logging.getLogger(__name__)
         self.validators = validators
-        self.extra_tool_calls = extra_tool_calls
+        self.extra_tool_calls = task_args.extra_tool_calls
+        self.prompt_detail = task_args.prompt_detail
+        self.n_shots = task_args.examples_in_system_prompt
 
     def set_logger(self, logger: loggers_type):
         self.logger = logger
@@ -523,16 +568,25 @@ class Task(ABC):
 
     @property
     @abstractmethod
-    def type(self) -> str:
-        """Type of task, for example: manipulation"""
+    def optional_tool_calls_number(self) -> int:
+        """Optional tool calls means calls that are not considered error.
+        For example listing topics at the beginning."""
         pass
 
     @property
     def max_tool_calls_number(self) -> int:
-        return self.required_calls + self.extra_tool_calls
+        """maxiumum number of call to still pass task.
+        Includes extra tool calls params.
+        and optional tool calls number which depends on task.
+        """
+        return (
+            self.required_calls
+            + self.optional_tool_calls_number
+            + self.extra_tool_calls
+        )
 
     @property
-    def required_calls(self):
+    def required_calls(self) -> int:
         """Minimal number of calls required to complete task"""
         total = 0
         for val in self.validators:
@@ -547,6 +601,14 @@ class Task(ABC):
         -------
         str
             System prompt
+        """
+        pass
+
+    @abstractmethod
+    def get_base_prompt(self) -> str:
+        """
+        Get the base task instruciton,
+        it will be used to identify task in results processing
         """
         pass
 
