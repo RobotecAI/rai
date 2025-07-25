@@ -140,8 +140,7 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
             self.logger.error(msg=f"Task timeout: {e}")
         except GraphRecursionError as e:
             self.logger.error(msg=f"Reached recursion limit {e}")
-        except Exception as e:
-            self.logger.error(msg=f"Unexpected error occured: {e}")
+
         tool_calls = task.get_tool_calls_from_messages(messages=messages)
         score = task.validate(tool_calls=tool_calls)
         te = time.perf_counter()

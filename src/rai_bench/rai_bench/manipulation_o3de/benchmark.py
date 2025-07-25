@@ -309,8 +309,7 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
                 self.logger.error(msg=f"Task timeout: {e}")
             except GraphRecursionError as e:
                 self.logger.error(msg=f"Reached recursion limit {e}")
-            except Exception as e:
-                self.logger.error(msg=f"Unexpected errot occured: {e}")
+
             te = time.perf_counter()
             try:
                 score = scenario.task.calculate_score(self.simulation_bridge)

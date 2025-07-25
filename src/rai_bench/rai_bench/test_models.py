@@ -214,7 +214,12 @@ def test_models(
                                 bench_logger=bench_logger,
                             )
                     except Exception as e:
-                        bench_logger.critical(f"BENCHMARK RUN FAILED: {e}")
+                        import traceback
+
                         bench_logger.critical(
-                            f"{bench_conf.name} benchmark for {model_name}, vendor: {vendors[i]}, execution number: {u + 1}"
+                            f"{bench_conf.name} benchmark for {model_name}, vendor: {vendors[i]}, repeat number: {u + 1}"
                         )
+                        bench_logger.critical(f"BENCHMARK RUN FAILED: {e}")
+                        error_msg = traceback.format_exc()
+                        bench_logger.critical(error_msg)
+                        print(error_msg)
