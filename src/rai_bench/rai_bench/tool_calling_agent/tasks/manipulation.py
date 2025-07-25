@@ -567,13 +567,13 @@ class AlignTwoObjectsTask(ManipulationTask):
             )
 
     def _verify_args(self) -> None:
-        if len(self.objects) != 2:
-            error_message = f"AlignTwoObjectsTask requires exactly 2 objects, but got {len(self.objects)}: {list(self.objects.keys())}"
+        if len(self.objects) < 2:
+            error_message = f"AlignTwoObjectsTask requires at least 2 objects, but got {len(self.objects)}: {list(self.objects.keys())}"
             if self.logger:
                 self.logger.error(msg=error_message)
             raise TaskParametrizationError(error_message)
 
-        # Verify each object has exactly one position
+        # Verify that objects are different so they can be distinguished
         for obj_name, positions in self.objects.items():
             if len(positions) != 1:
                 error_message = f"Object {obj_name} must have exactly 1 position, but got {len(positions)}: {positions}"
