@@ -16,20 +16,19 @@ import statistics
 import time
 import uuid
 from pathlib import Path
-from typing import Iterator, List, Optional, Sequence, Tuple
+from typing import Iterator, List, Sequence, Tuple
 
-from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
-from rai.agents.langchain.core import (
-    create_conversational_agent,
-)
-from rai.messages import HumanMultimodalMessage
+from rai.agents.langchain.core.react_agent import ReActAgentState
 
-from rai_bench.agents import create_multimodal_to_tool_agent
-from rai_bench.base_benchmark import BaseBenchmark, TimeoutException
+from rai_bench.agents import AgentFactory
+from rai_bench.base_benchmark import (
+    BaseBenchmark,
+    TimeoutException,
+)
 from rai_bench.results_processing.langfuse_scores_tracing import ScoreTracingHandler
 from rai_bench.tool_calling_agent.interfaces import (
     Task,
@@ -41,7 +40,6 @@ from rai_bench.tool_calling_agent.results_tracking import (
 from rai_bench.tool_calling_agent.tasks.spatial import (
     SpatialReasoningAgentTask,
 )
-from rai_bench.utils import get_llm_model_name
 
 
 class ToolCallingAgentBenchmark(BaseBenchmark):
@@ -67,15 +65,22 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         self.tasks_results: List[TaskResult] = []
         self.csv_initialize(self.results_filename, TaskResult)
 
-    def run_next(self, agent: CompiledStateGraph, experiment_id: uuid.UUID) -> None:
+    def run_next(
+        self,
+        agent: CompiledStateGraph,
+        initial_state: ReActAgentState,
+        experiment_id: uuid.UUID,
+    ) -> None:
         """Runs the next task of the benchmark.
 
         Parameters
         ----------
         agent : CompiledStateGraph
-            LangChain tool calling agent.
-        model_name : str
-            Name of the LLM model.
+            The agent used to execute the scenario.
+
+        initial_state : Dict[str, Any]
+            The initial state of the agent
+
         """
         # try:
         i, task = next(self._tasks)
@@ -114,32 +119,12 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         prev_count: int = 0
         try:
             with self.time_limit(20 * task.max_tool_calls_number):
-                if isinstance(task, SpatialReasoningAgentTask):
-                    for state in agent.stream(
-                        {
-                            "messages": [
-                                HumanMultimodalMessage(
-                                    content=task.get_prompt(), images=task.get_images()
-                                )
-                            ]
-                        },
-                        config=config,
-                    ):
-                        node = next(iter(state))
-                        all_messages = state[node]["messages"]
-                        for new_msg in all_messages[prev_count:]:
-                            messages.append(new_msg)
-                        prev_count = len(messages)
-                else:
-                    for state in agent.stream(
-                        {
-                            "messages": [
-                                HumanMultimodalMessage(content=task.get_prompt())
-                            ]
-                        },
-                        config=config,
-                    ):
-                        node = next(iter(state))
+                for state in agent.stream(
+                    initial_state,
+                    config=config,
+                ):
+                    node = next(iter(state))
+                    if "messages" in state[node]:
                         all_messages = state[node]["messages"]
                         for new_msg in all_messages[prev_count:]:
                             messages.append(new_msg)
@@ -148,8 +133,7 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
             self.logger.error(msg=f"Task timeout: {e}")
         except GraphRecursionError as e:
             self.logger.error(msg=f"Reached recursion limit {e}")
-        except Exception as e:
-            self.logger.error(msg=f"Unexpected error occured: {e}")
+
         tool_calls = task.get_tool_calls_from_messages(messages=messages)
         score = task.validate(tool_calls=tool_calls)
         te = time.perf_counter()
@@ -217,7 +201,7 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
 
 
 def run_benchmark(
-    llm: BaseChatModel,
+    agent_factory: AgentFactory,
     out_dir: Path,
     tasks: List[Task],
     bench_logger: logging.Logger,
@@ -226,60 +210,23 @@ def run_benchmark(
     benchmark = ToolCallingAgentBenchmark(
         tasks=tasks,
         logger=bench_logger,
-        model_name=get_llm_model_name(llm),
+        model_name=agent_factory.model_name,
         results_dir=out_dir,
     )
 
     for task in tasks:
-        agent = create_conversational_agent(
-            llm=llm,
-            tools=task.available_tools,
-            system_prompt=task.get_system_prompt(),
-            logger=bench_logger,
+        agent = agent_factory.create_agent(
+            tools=task.available_tools, system_prompt=task.get_system_prompt()
         )
-        benchmark.run_next(agent=agent, experiment_id=experiment_id)
-
-    bench_logger.info("===============================================================")
-    bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
-    bench_logger.info("===============================================================")
-
-
-def run_benchmark_dual_agent(
-    multimodal_llm: BaseChatModel,
-    tool_calling_llm: BaseChatModel,
-    out_dir: Path,
-    tasks: List[Task],
-    bench_logger: logging.Logger,
-    experiment_id: uuid.UUID = uuid.uuid4(),
-    m_system_prompt: Optional[str] = None,
-    tool_system_prompt: Optional[str] = None,
-):
-    benchmark = ToolCallingAgentBenchmark(
-        tasks=tasks,
-        logger=bench_logger,
-        model_name=get_llm_model_name(multimodal_llm),
-        results_dir=out_dir,
-    )
-
-    basic_tool_system_prompt = (
-        "Based on the conversation call the tools with appropriate arguments"
-    )
-    for task in tasks:
-        agent = create_multimodal_to_tool_agent(
-            multimodal_llm=multimodal_llm,
-            tool_llm=tool_calling_llm,
-            tools=task.available_tools,
-            multimodal_system_prompt=(
-                m_system_prompt if m_system_prompt else task.get_system_prompt()
-            ),
-            tool_system_prompt=(
-                tool_system_prompt if tool_system_prompt else basic_tool_system_prompt
-            ),
-            logger=bench_logger,
-            debug=False,
+        kwargs = {}
+        if isinstance(task, SpatialReasoningAgentTask):
+            kwargs["images"] = task.get_images()
+        initial_state = agent_factory.create_initial_state(
+            prompt=task.get_prompt(), **kwargs
         )
-
-        benchmark.run_next(agent=agent, experiment_id=experiment_id)
+        benchmark.run_next(
+            agent=agent, initial_state=initial_state, experiment_id=experiment_id
+        )
 
     bench_logger.info("===============================================================")
     bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")

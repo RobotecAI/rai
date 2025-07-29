@@ -15,9 +15,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langchain.chat_models.base import BaseChatModel
 from langchain.prompts import ChatPromptTemplate
-from langchain_core.messages import (
-    BaseMessage,
-)
+from langchain_core.messages import BaseMessage, SystemMessage
 from langchain_core.tools import BaseTool
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
@@ -50,7 +48,8 @@ class Act(BaseModel):
 
 class PlanExecuteState(ReActAgentState):
     """State for the plan and execute agent."""
-
+    # TODO (jmatejcz) should original_task be replaced with 
+    # passing first message? The message can contain images etc.
     original_task: str
     plan: List[str]
     past_steps: List[Tuple[str, str]]
@@ -105,23 +104,12 @@ def create_plan_execute_agent(
     if system_prompt is None:
         system_prompt = ""
 
-    planner_prompt = ChatPromptTemplate.from_messages(  # type: ignore
-        [
-            (
-                "system",
-                system_prompt
-                + """For the given objective, come up with a simple step by step plan. \
+    planner_prompt = """For the given objective, come up with a simple step by step plan. \
 This plan should involve individual tasks, that if executed correctly will yield the correct answer.
 Do not add any superfluous steps. The result of the final step should be the final answer.
-Make sure that each step has all the information needed - do not skip steps.""",
-            ),
-            ("placeholder", "{messages}"),
-        ]
-    )
+Make sure that each step has all the information needed - do not skip steps."""
 
-    replanner_prompt = ChatPromptTemplate.from_template(
-        system_prompt
-        + """For the given objective, come up with a simple step by step plan.
+    replanner_prompt = """For the given objective, come up with a simple step by step plan.
 This plan should involve individual tasks, that if executed correctly will yield the correct answer.
 Do not add any superfluous steps. The result of the final step should be the final answer.
 Make sure that each step has all the information needed - do not skip steps.
@@ -136,37 +124,44 @@ You have currently done the following steps:
 {past_steps}
 
 Update your plan accordingly. If no more steps are needed and you can return to the user, then respond with that. Otherwise, fill out the plan. Only add steps to the plan that still NEED to be done. Do not return previously done steps as part of the plan."""
-    )
 
     agent_executor = create_react_runnable(
         llm=executor_llm, system_prompt=system_prompt, tools=tools
     )
     # the prompt will be filled with values when passed to invoke
-    planner = planner_prompt | planner_llm.with_structured_output(Plan)  # type: ignore
-    replanner = replanner_prompt | replanner_llm.with_structured_output(Act)  # type: ignore
+    planner = planner_llm.with_structured_output(Plan)  # type: ignore
+    replanner = replanner_llm.with_structured_output(Act)  # type: ignore
 
     def execute_step(state: PlanExecuteState):
         """Execute the current step of the plan."""
+        # TODO (jmatejcz) should we pass whole plan or only single the to the executor?
+        plan = state["plan"]
+        plan_str = "\n".join(f"{i + 1}. {step}" for i, step in enumerate(plan))
+        task = plan[0]
+        task_formatted = f"""For the following plan:
+{plan_str}\n\nYou are tasked with executing step: {task}."""
         if not state["plan"]:
             return {}
 
-        # Get the current step
-        current_step = state["plan"][0]
         agent_response = agent_executor.invoke(
-            {"messages": [("user", current_step)]}, config={"recursion_limit": 100}
+            {"messages": [("user", task_formatted)]}, config={"recursion_limit": 20}
         )
         result = agent_response["messages"][-1].content
 
-        new_past_steps = state["past_steps"] + [(current_step, result)]
-        remaining_plan = state["plan"][1:]  # Remove the executed step
+        new_past_steps = state["past_steps"] + [(task, result)]
+        # remaining_plan = state["plan"][1:]  # Remove the executed step
 
         return {
             "past_steps": new_past_steps,
-            "plan": remaining_plan,
+            # "plan": remaining_plan,
         }
 
     def plan_step(state: PlanExecuteState):
         """Initial planning step."""
+        messages = [
+            SystemMessage(content=system_prompt + "\n" + planner_prompt),
+            HumanMessage(content=state["original_task"]),
+        ]
         plan = planner.invoke({"messages": [("user", state["original_task"])]})
         return {"plan": plan.steps}
 
