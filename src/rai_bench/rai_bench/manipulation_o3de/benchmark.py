@@ -16,12 +16,11 @@ import statistics
 import time
 import uuid
 from pathlib import Path
-from typing import List, Optional, TypeVar
+from typing import List, TypeVar
 
 import rclpy
 from langchain.tools import BaseTool
-from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
@@ -32,27 +31,29 @@ from launch.actions import (
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from rai.agents.langchain.core import (
-    create_conversational_agent,
-)
+from rai.agents.langchain.core.react_agent import ReActAgentState
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.messages import HumanMultimodalMessage
 from rai.tools.ros2 import (
     GetObjectPositionsTool,
-    GetROS2ImageTool,
     GetROS2TopicsNamesAndTypesTool,
     MoveToPointTool,
 )
+from rai.tools.ros2.manipulation import ResetArmTool
+from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
-from rai_bench.agents import create_multimodal_to_tool_agent
-from rai_bench.base_benchmark import BaseBenchmark, RunSummary, TimeoutException
+from rai_bench.agents import AgentFactory
+from rai_bench.base_benchmark import (
+    BaseBenchmark,
+    RunSummary,
+    TimeoutException,
+)
 from rai_bench.manipulation_o3de.interfaces import Task
 from rai_bench.manipulation_o3de.results_tracking import (
     ScenarioResult,
 )
 from rai_bench.results_processing.langfuse_scores_tracing import ScoreTracingHandler
-from rai_bench.utils import get_llm_model_name
 from rai_sim.o3de.o3de_bridge import (
     O3DEngineArmManipulationBridge,
     O3DExROS2SimulationConfig,
@@ -229,7 +230,12 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
                     )
         return scenarios
 
-    def run_next(self, agent: CompiledStateGraph, experiment_id: uuid.UUID) -> None:
+    def run_next(
+        self,
+        agent: CompiledStateGraph,
+        initial_state: ReActAgentState,
+        experiment_id: uuid.UUID,
+    ) -> None:
         """
         Run the next scenario in the benchmark.
 
@@ -237,6 +243,9 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
         ----------
         agent : CompiledStateGraph
             The agent used to execute the scenario.
+
+        initial_state : Dict[str, Any]
+            The initial state of the agent
 
         This method sets up the scene, streams the agent's responses, logs messages,
         counts tool calls, calculates the final task score, and writes the result to a CSV file.
@@ -276,39 +285,41 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
             try:
                 with self.time_limit(210):
                     for state in agent.stream(
-                        {"messages": [HumanMessage(content=scenario.task.task_prompt)]},
+                        initial_state,
                         config=config,
                     ):
                         node = next(iter(state))
-                        new_messages = state[node]["messages"][prev_count:]
-                        prev_count = len(state[node]["messages"])
+                        if "messages" in state[node]:  # if node returns message
+                            new_messages = state[node]["messages"][prev_count:]
+                            prev_count = len(state[node]["messages"])
 
-                        for msg in new_messages:
-                            if isinstance(msg, HumanMultimodalMessage):
-                                last_msg = msg.text
-                            elif isinstance(msg, BaseMessage):
-                                if isinstance(msg.content, list):
-                                    if len(msg.content) == 1:
-                                        if type(msg.content[0]) is dict:
-                                            last_msg = msg.content[0].get("text", "")
+                            for msg in new_messages:
+                                if isinstance(msg, HumanMultimodalMessage):
+                                    last_msg = msg.text
+                                elif isinstance(msg, BaseMessage):
+                                    if isinstance(msg.content, list):
+                                        if len(msg.content) == 1:
+                                            if type(msg.content[0]) is dict:
+                                                last_msg = msg.content[0].get(
+                                                    "text", ""
+                                                )
+                                    else:
+                                        last_msg = msg.content
+                                        self.logger.debug(f"{node}: {last_msg}")
+
                                 else:
-                                    last_msg = msg.content
-                                    self.logger.debug(f"{node}: {last_msg}")
+                                    raise ValueError(
+                                        f"Unexpected type of message: {type(msg)}"
+                                    )
 
-                            else:
-                                raise ValueError(
-                                    f"Unexpected type of message: {type(msg)}"
-                                )
+                                if isinstance(msg, AIMessage):
+                                    tool_calls_num += len(msg.tool_calls)
+                                    self.logger.info(f"AI Message: {msg}")
 
-                            if isinstance(msg, AIMessage):
-                                tool_calls_num += len(msg.tool_calls)
-
-                            self.logger.info(f"AI Message: {msg}")
             except TimeoutException as e:
                 self.logger.error(msg=f"Task timeout: {e}")
             except GraphRecursionError as e:
                 self.logger.error(msg=f"Reached recursion limit {e}")
-
             te = time.perf_counter()
             try:
                 score = scenario.task.calculate_score(self.simulation_bridge)
@@ -395,8 +406,11 @@ def _setup_benchmark_environment(
             camera_info_topic="/color_camera_info5",
             get_grabbing_point_tool=GetGrabbingPointTool(connector=connector),
         ),
+        # MoveObjectFromToTool(connector=connector, manipulator_frame="panda_link0"),
         MoveToPointTool(connector=connector, manipulator_frame="panda_link0"),
-        GetROS2ImageTool(connector=connector),
+        ResetArmTool(connector=connector, manipulator_frame="panda_link0"),
+        # GetROS2ImageTool(connector=connector),
+        GetROS2ImageConfiguredTool(connector=connector, topic="/color_image5"),
         GetROS2TopicsNamesAndTypesTool(connector=connector),
     ]
 
@@ -420,7 +434,7 @@ def _setup_benchmark_environment(
 
 
 def run_benchmark(
-    llm: BaseChatModel,
+    agent_factory: AgentFactory,
     out_dir: Path,
     o3de_config_path: str,
     scenarios: List[Scenario],
@@ -428,15 +442,20 @@ def run_benchmark(
     experiment_id: uuid.UUID = uuid.uuid4(),
 ):
     connector, o3de, benchmark, tools = _setup_benchmark_environment(
-        o3de_config_path, get_llm_model_name(llm), scenarios, out_dir, bench_logger
+        o3de_config_path, agent_factory.model_name, scenarios, out_dir, bench_logger
     )
     try:
         for scenario in scenarios:
             # create new agent for each scenario so its independent from previous ones.
-            agent = create_conversational_agent(
-                llm, tools, scenario.task.system_prompt, logger=bench_logger
+            agent = agent_factory.create_agent(
+                tools=tools, system_prompt=scenario.task.system_prompt
             )
-            benchmark.run_next(agent=agent, experiment_id=experiment_id)
+            initial_state = agent_factory.create_initial_state(
+                prompt=scenario.task.task_prompt,
+            )
+            benchmark.run_next(
+                agent=agent, initial_state=initial_state, experiment_id=experiment_id
+            )
             o3de.reset_arm()
             time.sleep(0.2)  # admire the end position for a second ;)
 
@@ -448,60 +467,6 @@ def run_benchmark(
         bench_logger.info(
             "==============================================================="
         )
-    finally:
-        connector.shutdown()
-        o3de.shutdown()
-        rclpy.shutdown()
-
-
-def run_benchmark_dual_agent(
-    multimodal_llm: BaseChatModel,
-    tool_calling_llm: BaseChatModel,
-    out_dir: Path,
-    scenarios: List[Scenario],
-    o3de_config_path: str,
-    bench_logger: logging.Logger,
-    experiment_id: uuid.UUID = uuid.uuid4(),
-    m_system_prompt: Optional[str] = None,
-    tool_system_prompt: Optional[str] = None,
-):
-    connector, o3de, benchmark, tools = _setup_benchmark_environment(
-        o3de_config_path,
-        get_llm_model_name(multimodal_llm),
-        scenarios,
-        out_dir,
-        bench_logger,
-    )
-    basic_tool_system_prompt = (
-        "Based on the conversation call the tools with appropriate arguments"
-    )
-    try:
-        for scenario in scenarios:
-            agent = create_multimodal_to_tool_agent(
-                multimodal_llm=multimodal_llm,
-                tool_llm=tool_calling_llm,
-                tools=tools,
-                multimodal_system_prompt=(
-                    m_system_prompt if m_system_prompt else scenario.task.system_prompt
-                ),
-                tool_system_prompt=(
-                    tool_system_prompt
-                    if tool_system_prompt
-                    else basic_tool_system_prompt
-                ),
-                logger=bench_logger,
-            )
-
-            benchmark.run_next(agent=agent, experiment_id=experiment_id)
-
-        bench_logger.info(
-            "==============================================================="
-        )
-        bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
-        bench_logger.info(
-            "==============================================================="
-        )
-
     finally:
         connector.shutdown()
         o3de.shutdown()

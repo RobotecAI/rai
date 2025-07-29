@@ -11,18 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import List
 
 from rai_bench import (
     ManipulationO3DEBenchmarkConfig,
     ToolCallingAgentBenchmarkConfig,
-    test_models,
+    get_llm_for_benchmark,
+    test_agents,
+)
+from rai_bench.agents import (
+    AgentFactory,
+    TaskVerificationAgentFactory,
 )
 
 if __name__ == "__main__":
-    # Define models you want to benchmark
-    model_names = ["qwen2.5:7b"]
-    vendors = ["ollama"]
-
     # Define benchmarks that will be used
     mani_conf = ManipulationO3DEBenchmarkConfig(
         o3de_config_path="src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/o3de_config.yaml",  # path to your o3de config
@@ -40,14 +42,20 @@ if __name__ == "__main__":
             "manipulation",
         ],
         N_shots=[2],  # examples in system prompt
-        prompt_detail=["brief", "descriptive"],  # how descriptive should task prompt be
+        prompt_detail=["descriptive"],  # how descriptive should task prompt be
         repeats=1,
     )
-
+    gpt_llm = get_llm_for_benchmark(model_name="gpt-4o-mini", vendor="openai")
+    qwen2_5_7b = get_llm_for_benchmark(model_name="qwen2.5:7b", vendor="ollama")
+    agent_factories: List[AgentFactory] = [
+        # PlanExecuteAgentFactory(
+        #     planner_llm=gpt_llm, executor_llm=qwen2_5_7b, replanner_llm=gpt_llm
+        # ),
+        TaskVerificationAgentFactory(worker_llm=qwen2_5_7b, verification_llm=gpt_llm),
+    ]
     out_dir = "src/rai_bench/rai_bench/experiments"
-    test_models(
-        model_names=model_names,
-        vendors=vendors,
-        benchmark_configs=[tool_conf],
+    test_agents(
+        agent_factories=agent_factories,
+        benchmark_configs=[mani_conf],
         out_dir=out_dir,
     )
