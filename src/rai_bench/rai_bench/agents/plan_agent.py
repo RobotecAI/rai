@@ -23,12 +23,15 @@ from pydantic import BaseModel, Field
 from rai.agents.langchain.core import ReActAgentState
 from rai.agents.langchain.core.react_agent import create_react_runnable
 from rai.initialization import get_llm_model
+from rai.messages import HumanMultimodalMessage
 
 
 class Plan(BaseModel):
     """A plan to help solve a user request."""
 
-    steps: List[str]
+    steps: List[str] = Field(
+        description="different steps to follow, should be in sorted order"
+    )
 
 
 class Response(BaseModel):
@@ -48,7 +51,8 @@ class Act(BaseModel):
 
 class PlanExecuteState(ReActAgentState):
     """State for the plan and execute agent."""
-    # TODO (jmatejcz) should original_task be replaced with 
+
+    # TODO (jmatejcz) should original_task be replaced with
     # passing first message? The message can contain images etc.
     original_task: str
     plan: List[str]
@@ -109,22 +113,6 @@ This plan should involve individual tasks, that if executed correctly will yield
 Do not add any superfluous steps. The result of the final step should be the final answer.
 Make sure that each step has all the information needed - do not skip steps."""
 
-    replanner_prompt = """For the given objective, come up with a simple step by step plan.
-This plan should involve individual tasks, that if executed correctly will yield the correct answer.
-Do not add any superfluous steps. The result of the final step should be the final answer.
-Make sure that each step has all the information needed - do not skip steps.
-
-Your objective was this:
-{original_task}
-
-Your original plan was this:
-{plan}
-
-You have currently done the following steps:
-{past_steps}
-
-Update your plan accordingly. If no more steps are needed and you can return to the user, then respond with that. Otherwise, fill out the plan. Only add steps to the plan that still NEED to be done. Do not return previously done steps as part of the plan."""
-
     agent_executor = create_react_runnable(
         llm=executor_llm, system_prompt=system_prompt, tools=tools
     )
@@ -139,30 +127,32 @@ Update your plan accordingly. If no more steps are needed and you can return to 
         plan_str = "\n".join(f"{i + 1}. {step}" for i, step in enumerate(plan))
         task = plan[0]
         task_formatted = f"""For the following plan:
-{plan_str}\n\nYou are tasked with executing step: {task}."""
-        if not state["plan"]:
-            return {}
+        {plan_str}\n\nYou are tasked with executing step: {task}."""
 
         agent_response = agent_executor.invoke(
-            {"messages": [("user", task_formatted)]}, config={"recursion_limit": 20}
+            {"messages": [HumanMultimodalMessage(content=task_formatted)]},
+            config={"recursion_limit": 10},
         )
-        result = agent_response["messages"][-1].content
+        # result = agent_response["messages"][-1].content
 
-        new_past_steps = state["past_steps"] + [(task, result)]
-        # remaining_plan = state["plan"][1:]  # Remove the executed step
+        # new_past_steps = state["past_steps"] + [(task, result)]
+        # # remaining_plan = state["plan"][1:]  # Remove the executed step
 
+        # return {
+        #     "past_steps": new_past_steps,
+        #     # "plan": remaining_plan,
+        # }
         return {
-            "past_steps": new_past_steps,
-            # "plan": remaining_plan,
+            "past_steps": [(task, agent_response["messages"][-1].content)],
         }
 
     def plan_step(state: PlanExecuteState):
         """Initial planning step."""
         messages = [
             SystemMessage(content=system_prompt + "\n" + planner_prompt),
-            HumanMessage(content=state["original_task"]),
+            HumanMultimodalMessage(content=state["original_task"]),
         ]
-        plan = planner.invoke({"messages": [("user", state["original_task"])]})
+        plan = planner.invoke(messages)
         return {"plan": plan.steps}
 
     def replan_step(state: PlanExecuteState):
@@ -180,13 +170,27 @@ Update your plan accordingly. If no more steps are needed and you can return to 
             [f"{i + 1}. {step}" for i, step in enumerate(state["plan"])]
         )
 
-        output = replanner.invoke(
-            {
-                "original_task": state["original_task"],
-                "plan": plan_str,
-                "past_steps": past_steps_str,
-            }
-        )
+        replanner_prompt = f"""For the given objective, come up with a simple step by step plan.
+This plan should involve individual tasks, that if executed correctly will yield the correct answer.
+Do not add any superfluous steps. The result of the final step should be the final answer.
+Make sure that each step has all the information needed - do not skip steps.
+
+Your objective was this:
+{state["original_task"]}
+
+Your original plan was this:
+{plan_str}
+
+You have currently done the following steps:
+{past_steps_str}
+
+Update your plan accordingly. If no more steps are needed and you can return to the user, then respond with that. Otherwise, fill out the plan. Only add steps to the plan that still NEED to be done. Do not return previously done steps as part of the plan."""
+
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMultimodalMessage(content=replanner_prompt),
+        ]
+        output = replanner.invoke(messages)
 
         if isinstance(output.action, Response):
             return {"response": output.action.response}

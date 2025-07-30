@@ -21,6 +21,8 @@ from rai_bench import (
 )
 from rai_bench.agents import (
     AgentFactory,
+    ConversationalAgentFactory,
+    PlanExecuteAgentFactory,
     TaskVerificationAgentFactory,
 )
 
@@ -34,24 +36,36 @@ if __name__ == "__main__":
         repeats=1,  # how many times to repeat
     )
     tool_conf = ToolCallingAgentBenchmarkConfig(
-        extra_tool_calls=[0],  # how many extra tool calls allowed to still pass
+        extra_tool_calls=[3],  # how many extra tool calls allowed to still pass
         task_types=[  # what types of tasks to include
             "basic",
-            "spatial_reasoning",
+            # "spatial_reasoning",
             "custom_interfaces",
             "manipulation",
         ],
-        N_shots=[2],  # examples in system prompt
+        N_shots=[5],  # examples in system prompt
         prompt_detail=["descriptive"],  # how descriptive should task prompt be
         repeats=1,
     )
-    gpt_llm = get_llm_for_benchmark(model_name="gpt-4o-mini", vendor="openai")
-    qwen2_5_7b = get_llm_for_benchmark(model_name="qwen2.5:7b", vendor="ollama")
+    gpt_llm = get_llm_for_benchmark(model_name="gpt-4o", vendor="openai")
+    # qwen2_5_7b = get_llm_for_benchmark(model_name="qwen2.5:7b", vendor="ollama")
+    qwen3_8b = get_llm_for_benchmark(
+        model_name="qwen3:8b", vendor="ollama", reasoning=False
+    )
+    qwen3_14b = get_llm_for_benchmark(
+        model_name="qwen3:14b", vendor="ollama", reasoning=False
+    )
     agent_factories: List[AgentFactory] = [
-        # PlanExecuteAgentFactory(
-        #     planner_llm=gpt_llm, executor_llm=qwen2_5_7b, replanner_llm=gpt_llm
-        # ),
-        TaskVerificationAgentFactory(worker_llm=qwen2_5_7b, verification_llm=gpt_llm),
+        # ConversationalAgentFactory(llm=gpt_llm),
+        # ConversationalAgentFactory(llm=qwen3_8b),
+        # ConversationalAgentFactory(llm=qwen3_14b),
+        PlanExecuteAgentFactory(
+            planner_llm=gpt_llm, executor_llm=qwen3_14b, replanner_llm=gpt_llm
+        ),
+        PlanExecuteAgentFactory(
+            planner_llm=qwen3_14b, executor_llm=qwen3_8b, replanner_llm=qwen3_14b
+        ),
+        # TaskVerificationAgentFactory(worker_llm=qwen2_5_7b, verification_llm=gpt_llm),
     ]
     out_dir = "src/rai_bench/rai_bench/experiments"
     test_agents(
