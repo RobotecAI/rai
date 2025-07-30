@@ -283,7 +283,7 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
             ts = time.perf_counter()
             prev_count: int = 0
             try:
-                with self.time_limit(210):
+                with self.time_limit(120):
                     for state in agent.stream(
                         initial_state,
                         config=config,
@@ -315,14 +315,15 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
                                 if isinstance(msg, AIMessage):
                                     tool_calls_num += len(msg.tool_calls)
                                     self.logger.info(f"AI Message: {msg}")
-
+                score = scenario.task.calculate_score(self.simulation_bridge)
             except TimeoutException as e:
                 self.logger.error(msg=f"Task timeout: {e}")
+                score = 0.0
             except GraphRecursionError as e:
+                score = 0.0
                 self.logger.error(msg=f"Reached recursion limit {e}")
             te = time.perf_counter()
             try:
-                score = scenario.task.calculate_score(self.simulation_bridge)
                 total_time = te - ts
                 self.logger.info(
                     f"TASK SCORE: {score}, TOTAL TIME: {total_time:.3f}, NUM_OF_TOOL_CALLS: {tool_calls_num}"
@@ -471,3 +472,4 @@ def run_benchmark(
         connector.shutdown()
         o3de.shutdown()
         rclpy.shutdown()
+        time.sleep(10)  # wait for everything to close

@@ -129,13 +129,16 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
                         for new_msg in all_messages[prev_count:]:
                             messages.append(new_msg)
                         prev_count = len(messages)
+
+            tool_calls = task.get_tool_calls_from_messages(messages=messages)
+            score = task.validate(tool_calls=tool_calls)
         except TimeoutException as e:
+            score = 0.0
             self.logger.error(msg=f"Task timeout: {e}")
         except GraphRecursionError as e:
+            score = 0.0
             self.logger.error(msg=f"Reached recursion limit {e}")
 
-        tool_calls = task.get_tool_calls_from_messages(messages=messages)
-        score = task.validate(tool_calls=tool_calls)
         te = time.perf_counter()
         total_time = te - ts
 
