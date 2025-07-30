@@ -55,6 +55,21 @@ class AgentFactory(ABC):
     ) -> CompiledStateGraph:
         pass
 
+    @staticmethod
+    def clean_model_name(model_str: str) -> str:
+        """Clean model name string by removing keep_alive and base_url parameters
+        and replacing ':' with '-' so it can be uploaded easily to for example google drive
+        """
+        import re
+
+        # Remove keep_alive and base_url parameters
+        cleaned = re.sub(r"\s*keep_alive=\S+", "", model_str)
+        cleaned = re.sub(r"\s*base_url=\S+", "", cleaned)
+        # Clean up any extra spaces
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        cleaned.replace(":", "-")
+        return cleaned
+
     @property
     @abstractmethod
     def model_name(self) -> str:
@@ -86,7 +101,7 @@ class ConversationalAgentFactory(AgentFactory):
 
     @property
     def model_name(self) -> str:
-        return get_llm_model_name(self.llm)
+        return AgentFactory.clean_model_name(get_llm_model_name(self.llm))
 
 
 class DualAgentFactory(AgentFactory):
@@ -118,9 +133,14 @@ class DualAgentFactory(AgentFactory):
 
     @property
     def model_name(self) -> str:
-        m_llm_name = get_llm_model_name(self.multimodal_llm)
-        tool_llm_name = get_llm_model_name(self.multimodal_llm)
-        return f"dual: multimodal->{m_llm_name} + tool-calling->{tool_llm_name}"
+        m_llm_name = AgentFactory.clean_model_name(
+            get_llm_model_name(self.multimodal_llm)
+        )
+        tool_llm_name = AgentFactory.clean_model_name(
+            get_llm_model_name(self.multimodal_llm)
+        )
+        model_str = f"dual_multimodal->{m_llm_name}_tool-calling->{tool_llm_name}"
+        return AgentFactory.clean_model_name(model_str)
 
 
 class TaskVerificationAgentFactory(AgentFactory):
@@ -162,11 +182,13 @@ class TaskVerificationAgentFactory(AgentFactory):
 
     @property
     def model_name(self) -> str:
-        tool_llm_name = getattr(self.worker_llm, "model_name", str(self.worker_llm))
-        verification_llm_name = getattr(
-            self.verification_llm, "model_name", str(self.verification_llm)
+        tool_llm_name = AgentFactory.clean_model_name(
+            getattr(self.worker_llm, "model_name", str(self.worker_llm))
         )
-        return f"tool: {tool_llm_name}, verification: {verification_llm_name}"
+        verification_llm_name = AgentFactory.clean_model_name(
+            getattr(self.verification_llm, "model_name", str(self.verification_llm))
+        )
+        return f"verification_worker->{tool_llm_name}_verification->{verification_llm_name}"
 
 
 class PlanExecuteAgentFactory(AgentFactory):
@@ -209,7 +231,13 @@ class PlanExecuteAgentFactory(AgentFactory):
 
     @property
     def model_name(self) -> str:
-        planner = getattr(self.planner_llm, "model_name", str(self.planner_llm))
-        executor = getattr(self.executor_llm, "model_name", str(self.executor_llm))
-        replanner = getattr(self.replanner_llm, "model_name", str(self.replanner_llm))
-        return f"planner: {planner}, executor: {executor}, replanner: {replanner}"
+        planner = AgentFactory.clean_model_name(
+            getattr(self.planner_llm, "model_name", str(self.planner_llm))
+        )
+        executor = AgentFactory.clean_model_name(
+            getattr(self.executor_llm, "model_name", str(self.executor_llm))
+        )
+        replanner = AgentFactory.clean_model_name(
+            getattr(self.replanner_llm, "model_name", str(self.replanner_llm))
+        )
+        return f"plan&execute_planner->{planner}_executor->{executor}_replanner->{replanner}"
