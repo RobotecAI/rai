@@ -14,7 +14,6 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langchain.chat_models.base import BaseChatModel
-from langchain.prompts import ChatPromptTemplate
 from langchain_core.messages import BaseMessage, SystemMessage
 from langchain_core.tools import BaseTool
 from langgraph.graph import END, START, StateGraph
@@ -123,27 +122,20 @@ Make sure that each step has all the information needed - do not skip steps."""
     def execute_step(state: PlanExecuteState):
         """Execute the current step of the plan."""
         # TODO (jmatejcz) should we pass whole plan or only single the to the executor?
+
         plan = state["plan"]
-        plan_str = "\n".join(f"{i + 1}. {step}" for i, step in enumerate(plan))
+        if not plan:
+            return {}
         task = plan[0]
-        task_formatted = f"""For the following plan:
-        {plan_str}\n\nYou are tasked with executing step: {task}."""
+        task_formatted = f"""You are tasked with executing task: {task}."""
 
         agent_response = agent_executor.invoke(
             {"messages": [HumanMultimodalMessage(content=task_formatted)]},
-            config={"recursion_limit": 10},
+            config={"recursion_limit": 50},
         )
-        # result = agent_response["messages"][-1].content
-
-        # new_past_steps = state["past_steps"] + [(task, result)]
-        # # remaining_plan = state["plan"][1:]  # Remove the executed step
-
-        # return {
-        #     "past_steps": new_past_steps,
-        #     # "plan": remaining_plan,
-        # }
         return {
             "past_steps": [(task, agent_response["messages"][-1].content)],
+            # "plan": plan[1:],  # removing the step that was executed
         }
 
     def plan_step(state: PlanExecuteState):
@@ -160,15 +152,13 @@ Make sure that each step has all the information needed - do not skip steps."""
         # Format past steps for the prompt
         past_steps_str = "\n".join(
             [
-                f"{i + 1}. {step}: {result}"
+                f"{step}: {result}"
                 for i, (step, result) in enumerate(state["past_steps"])
             ]
         )
 
         # Format remaining plan
-        plan_str = "\n".join(
-            [f"{i + 1}. {step}" for i, step in enumerate(state["plan"])]
-        )
+        plan_str = "\n".join([step for i, step in enumerate(state["plan"])])
 
         replanner_prompt = f"""For the given objective, come up with a simple step by step plan.
 This plan should involve individual tasks, that if executed correctly will yield the correct answer.
@@ -178,13 +168,13 @@ Make sure that each step has all the information needed - do not skip steps.
 Your objective was this:
 {state["original_task"]}
 
-Your original plan was this:
+Your current plan is:
 {plan_str}
 
 You have currently done the following steps:
 {past_steps_str}
 
-Update your plan accordingly. If no more steps are needed and you can return to the user, then respond with that. Otherwise, fill out the plan. Only add steps to the plan that still NEED to be done. Do not return previously done steps as part of the plan."""
+Update your plan accordingly if needed. If no more steps are needed and you can return to the user, then respond with that. Otherwise, fill out the plan. Only add steps to the plan that still NEED to be done. Do not return previously done steps as part of the plan."""
 
         messages = [
             SystemMessage(content=system_prompt),
