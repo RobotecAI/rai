@@ -22,6 +22,7 @@ from rai_bench.tool_calling_agent import (
     get_tasks,
     run_benchmark,
 )
+from rai_bench.agents import ConversationalAgentFactory, agent_factory
 from rai_bench.utils import get_llm_for_benchmark
 
 if __name__ == "__main__":
@@ -44,10 +45,10 @@ if __name__ == "__main__":
         model_name=args.model_name,
         vendor=args.vendor,
     )
-
+    agent_factory = ConversationalAgentFactory(llm=llm)
     run_benchmark(
-        llm=llm,
         out_dir=experiment_dir,
+        agent_factory=agent_factory,
         tasks=tasks,
         bench_logger=bench_logger,
     )
