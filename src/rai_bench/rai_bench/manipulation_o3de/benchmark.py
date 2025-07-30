@@ -283,38 +283,39 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
             ts = time.perf_counter()
             prev_count: int = 0
             try:
-                with self.time_limit(120):
+                with self.time_limit(300):
                     for state in agent.stream(
                         initial_state,
                         config=config,
                     ):
                         node = next(iter(state))
-                        if "messages" in state[node]:  # if node returns message
-                            new_messages = state[node]["messages"][prev_count:]
-                            prev_count = len(state[node]["messages"])
+                        if state[node]:
+                            if "messages" in state[node]:  # if node returns message
+                                new_messages = state[node]["messages"][prev_count:]
+                                prev_count = len(state[node]["messages"])
 
-                            for msg in new_messages:
-                                if isinstance(msg, HumanMultimodalMessage):
-                                    last_msg = msg.text
-                                elif isinstance(msg, BaseMessage):
-                                    if isinstance(msg.content, list):
-                                        if len(msg.content) == 1:
-                                            if type(msg.content[0]) is dict:
-                                                last_msg = msg.content[0].get(
-                                                    "text", ""
-                                                )
+                                for msg in new_messages:
+                                    if isinstance(msg, HumanMultimodalMessage):
+                                        last_msg = msg.text
+                                    elif isinstance(msg, BaseMessage):
+                                        if isinstance(msg.content, list):
+                                            if len(msg.content) == 1:
+                                                if type(msg.content[0]) is dict:
+                                                    last_msg = msg.content[0].get(
+                                                        "text", ""
+                                                    )
+                                        else:
+                                            last_msg = msg.content
+                                            self.logger.debug(f"{node}: {last_msg}")
+
                                     else:
-                                        last_msg = msg.content
-                                        self.logger.debug(f"{node}: {last_msg}")
+                                        raise ValueError(
+                                            f"Unexpected type of message: {type(msg)}"
+                                        )
 
-                                else:
-                                    raise ValueError(
-                                        f"Unexpected type of message: {type(msg)}"
-                                    )
-
-                                if isinstance(msg, AIMessage):
-                                    tool_calls_num += len(msg.tool_calls)
-                                    self.logger.info(f"AI Message: {msg}")
+                                    if isinstance(msg, AIMessage):
+                                        tool_calls_num += len(msg.tool_calls)
+                                        self.logger.info(f"AI Message: {msg}")
                 score = scenario.task.calculate_score(self.simulation_bridge)
             except TimeoutException as e:
                 self.logger.error(msg=f"Task timeout: {e}")
