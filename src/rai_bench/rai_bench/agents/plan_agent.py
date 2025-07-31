@@ -107,7 +107,15 @@ def create_plan_execute_agent(
     if system_prompt is None:
         system_prompt = ""
 
-    planner_prompt = """For the given objective, come up with a simple step by step plan. \
+    planner_prompt = f"""For the given objective, come up with a simple step by step plan.
+
+When creating your plan:
+- Design each step to leverage the most appropriate tool from the list above
+- Be specific about what information each step should gather or what action it should perform
+- Frame steps as clear instructions that can be executed using the available tools
+- Do NOT actually call or use any tools yourself - only create the plan
+- Each step should be actionable and tool-appropriate
+
 This plan should involve individual tasks, that if executed correctly will yield the correct answer.
 Do not add any superfluous steps. The result of the final step should be the final answer.
 Make sure that each step has all the information needed - do not skip steps."""
@@ -116,7 +124,8 @@ Make sure that each step has all the information needed - do not skip steps."""
         llm=executor_llm, system_prompt=system_prompt, tools=tools
     )
     # the prompt will be filled with values when passed to invoke
-    planner = planner_llm.with_structured_output(Plan)  # type: ignore
+    planner_llm_with_tools = planner_llm.bind_tools(tools)
+    planner = planner_llm_with_tools.with_structured_output(Plan)  # type: ignore
     replanner = replanner_llm.with_structured_output(Act)  # type: ignore
 
     def execute_step(state: PlanExecuteState):
