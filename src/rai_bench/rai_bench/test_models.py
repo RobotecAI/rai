@@ -15,18 +15,14 @@ import uuid
 from abc import abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Literal
+from typing import List, Literal
 
 from git import Optional
-from langchain.chat_models.base import BaseChatModel
 from pydantic import BaseModel
 
-import rai_bench.manipulation_o3de as manipulation_o3de
-import rai_bench.tool_calling_agent as tool_calling_agent
+from rai_bench.agents import AgentFactory
 from rai_bench.utils import (
     define_benchmark_logger,
-    get_llm_for_benchmark,
-    get_llm_model_name,
 )
 
 
@@ -111,146 +107,94 @@ class ToolCallingAgentBenchmarkConfig(BenchmarkConfig):
         return "tool_calling_agent"
 
 
-def test_dual_agents(
-    multimodal_llms: List[BaseChatModel],
-    tool_calling_models: List[BaseChatModel],
+def test_agents(
+    agent_factories: List[AgentFactory],
     benchmark_configs: List[BenchmarkConfig],
     out_dir: str,
-    m_system_prompt: Optional[str] = None,
-    tool_system_prompt: Optional[str] = None,
+    experiment_name: Optional[str] = None,
 ):
-    if len(multimodal_llms) != len(tool_calling_models):
-        raise ValueError(
-            "Number of passed multimodal models must match number of passed tool calling models"
-        )
+    """
+    Test multiple agent factories on multiple benchmark configurations.
+
+    Args:
+        agent_factories: List of agent factories to benchmark
+        benchmark_configs: List of benchmark configurations to run
+        out_dir: Output directory for results
+        experiment_name: Optional name for the experiment
+    """
     experiment_id = uuid.uuid4()
-    for bench_conf in benchmark_configs:
-        # for each bench configuration seperate run folder
+
+    # Generate experiment name containing current datetime, if not provided
+    now = datetime.now()
+    if experiment_name is None:
         now = datetime.now()
-        run_name = f"run_{now.strftime('%Y-%m-%d_%H-%M-%S')}"
-        for i, m_llm in enumerate(multimodal_llms):
-            tool_llm = tool_calling_models[i]
-            for u in range(bench_conf.repeats):
+        experiment_name = f"run_{now.strftime('%Y-%m-%d_%H-%M-%S')}"
+
+    for bench_conf in benchmark_configs:
+        for agent_factory in agent_factories:
+            for repeat in range(bench_conf.repeats):
                 curr_out_dir = (
-                    out_dir
-                    + "/"
-                    + run_name
-                    + "/"
-                    + bench_conf.name
-                    + "/"
-                    + get_llm_model_name(m_llm)
-                    + "/"
-                    + str(u)
+                    Path(out_dir)
+                    / experiment_name
+                    / bench_conf.name
+                    / agent_factory.model_name
+                    / str(repeat)
                 )
-                bench_logger = define_benchmark_logger(out_dir=Path(curr_out_dir))
+                curr_out_dir.mkdir(parents=True, exist_ok=True)
+
+                bench_logger = define_benchmark_logger(out_dir=curr_out_dir)
+
                 try:
-                    if isinstance(bench_conf, ToolCallingAgentBenchmarkConfig):
-                        tool_calling_tasks = tool_calling_agent.get_tasks(
-                            extra_tool_calls=bench_conf.extra_tool_calls,
-                            complexities=bench_conf.complexities,
-                            task_types=bench_conf.task_types,
-                        )
-                        tool_calling_agent.run_benchmark_dual_agent(
-                            multimodal_llm=m_llm,
-                            tool_calling_llm=tool_llm,
-                            m_system_prompt=m_system_prompt,
-                            tool_system_prompt=tool_system_prompt,
-                            out_dir=Path(curr_out_dir),
-                            tasks=tool_calling_tasks,
-                            experiment_id=experiment_id,
-                            bench_logger=bench_logger,
-                        )
-                    elif isinstance(bench_conf, ManipulationO3DEBenchmarkConfig):
-                        manipulation_o3de_scenarios = manipulation_o3de.get_scenarios(
-                            levels=bench_conf.levels,
-                            logger=bench_logger,
-                        )
-                        manipulation_o3de.run_benchmark_dual_agent(
-                            multimodal_llm=m_llm,
-                            tool_calling_llm=tool_llm,
-                            out_dir=Path(curr_out_dir),
-                            o3de_config_path=bench_conf.o3de_config_path,
-                            scenarios=manipulation_o3de_scenarios,
-                            experiment_id=experiment_id,
-                            bench_logger=bench_logger,
-                        )
+                    run_single_benchmark(
+                        agent_factory=agent_factory,
+                        bench_conf=bench_conf,
+                        curr_out_dir=curr_out_dir,
+                        experiment_id=experiment_id,
+                        bench_logger=bench_logger,
+                    )
                 except Exception as e:
                     bench_logger.critical(f"BENCHMARK RUN FAILED: {e}")
-                    raise e
+                    bench_logger.critical(
+                        f"{bench_conf.name} benchmark for {agent_factory.model_name}, repeat: {repeat + 1}"
+                    )
 
 
-def test_models(
-    model_names: List[str],
-    vendors: List[str],
-    benchmark_configs: List[BenchmarkConfig],
-    out_dir: str,
-    additional_model_args: Optional[List[Dict[str, Any]]] = None,
+def run_single_benchmark(
+    agent_factory: AgentFactory,
+    bench_conf: BenchmarkConfig,
+    curr_out_dir: Path,
+    experiment_id: uuid.UUID,
+    bench_logger,
 ):
-    # TODO (jmatejcz) add docstring after passing agent logic will be added
-    if additional_model_args is None:
-        additional_model_args = [{} for _ in model_names]
+    """Run a single benchmark configuration with a single agent factory."""
+    if isinstance(bench_conf, ToolCallingAgentBenchmarkConfig):
+        import rai_bench.tool_calling_agent as tool_calling_agent
 
-    experiment_id = uuid.uuid4()
-    if len(model_names) != len(vendors):
-        raise ValueError("Number of passed models must match number of passed vendors")
-    else:
-        for bench_conf in benchmark_configs:
-            # for each bench configuration seperate run folder
-            now = datetime.now()
-            run_name = f"run_{now.strftime('%Y-%m-%d_%H-%M-%S')}"
-            for i, model_name in enumerate(model_names):
-                for u in range(bench_conf.repeats):
-                    curr_out_dir = (
-                        out_dir
-                        + "/"
-                        + run_name
-                        + "/"
-                        + bench_conf.name
-                        + "/"
-                        + model_name
-                        + "/"
-                        + str(u)
-                    )
-                    llm = get_llm_for_benchmark(
-                        model_name=model_name,
-                        vendor=vendors[i],
-                        **additional_model_args[i],
-                    )
-                    # TODO (jmatejcz) take param to set log level
-                    bench_logger = define_benchmark_logger(out_dir=Path(curr_out_dir))
-                    try:
-                        if isinstance(bench_conf, ToolCallingAgentBenchmarkConfig):
-                            tool_calling_tasks = tool_calling_agent.get_tasks(
-                                extra_tool_calls=bench_conf.extra_tool_calls,
-                                complexities=bench_conf.complexities,
-                                prompt_detail=bench_conf.prompt_detail,
-                                n_shots=bench_conf.N_shots,
-                                task_types=bench_conf.task_types,
-                            )
-                            tool_calling_agent.run_benchmark(
-                                llm=llm,
-                                out_dir=Path(curr_out_dir),
-                                tasks=tool_calling_tasks,
-                                experiment_id=experiment_id,
-                                bench_logger=bench_logger,
-                            )
-                        elif isinstance(bench_conf, ManipulationO3DEBenchmarkConfig):
-                            manipulation_o3de_scenarios = (
-                                manipulation_o3de.get_scenarios(
-                                    levels=bench_conf.levels,
-                                    logger=bench_logger,
-                                )
-                            )
-                            manipulation_o3de.run_benchmark(
-                                llm=llm,
-                                out_dir=Path(curr_out_dir),
-                                o3de_config_path=bench_conf.o3de_config_path,
-                                scenarios=manipulation_o3de_scenarios,
-                                experiment_id=experiment_id,
-                                bench_logger=bench_logger,
-                            )
-                    except Exception as e:
-                        bench_logger.critical(f"BENCHMARK RUN FAILED: {e}")
-                        bench_logger.critical(
-                            f"{bench_conf.name} benchmark for {model_name}, vendor: {vendors[i]}, execution number: {u + 1}"
-                        )
+        tasks = tool_calling_agent.get_tasks(
+            extra_tool_calls=bench_conf.extra_tool_calls,
+            complexities=bench_conf.complexities,
+            task_types=bench_conf.task_types,
+        )
+        tool_calling_agent.run_benchmark(
+            agent_factory=agent_factory,
+            out_dir=curr_out_dir,
+            tasks=tasks,
+            experiment_id=experiment_id,
+            bench_logger=bench_logger,
+        )
+
+    elif isinstance(bench_conf, ManipulationO3DEBenchmarkConfig):
+        import rai_bench.manipulation_o3de as manipulation_o3de
+
+        scenarios = manipulation_o3de.get_scenarios(
+            levels=bench_conf.levels,
+            logger=bench_logger,
+        )
+        manipulation_o3de.run_benchmark(
+            agent_factory=agent_factory,
+            out_dir=curr_out_dir,
+            o3de_config_path=bench_conf.o3de_config_path,
+            scenarios=scenarios,
+            experiment_id=experiment_id,
+            bench_logger=bench_logger,
+        )

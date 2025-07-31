@@ -25,6 +25,7 @@ from langchain_aws import BedrockEmbeddings, ChatBedrock
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 import logging
+import importlib.util
 
 
 def get_sound_devices(
@@ -457,6 +458,13 @@ def asr():
     if refresh_devices:
         recording_devices = get_sound_devices(reinitialize=True)
 
+    if recording_device_name == "default":
+        st.info(
+            """
+        If you're experiencing audio issues and device_name is set to 'default', try specifying the exact device name instead, as this often resolves the problem.
+        """
+        )
+
     # Get the current vendor from config and convert to display name
     current_vendor = st.session_state.config.get("asr", {}).get(
         "transciption_model", TRANSCRIBE_MODELS[0]
@@ -592,6 +600,7 @@ def tts():
         """
     Text to Speech (TTS) converts your assistant's text responses into spoken words:
     - ElevenLabs provides high-quality, natural-sounding voices (requires API key)
+    - KokoroTTS in ONNX format runs locally on your computer.
     - OpenTTS runs locally on your computer with no API costs (requires Docker)
     """
     )
@@ -620,6 +629,12 @@ def tts():
     if refresh_devices:
         recording_devices = get_sound_devices(reinitialize=True, output=True)
 
+    if recording_device_name == "default":
+        st.info(
+            """
+        If you're experiencing audio issues and device_name is set to 'default', try specifying the exact device name instead, as this often resolves the problem.
+        """
+        )
     # Get the current vendor from config and convert to display name
     current_vendor = st.session_state.config.get("tts", {}).get("vendor", TTS_MODELS[0])
 
@@ -652,6 +667,12 @@ def tts():
         ```
 
         To learn more about OpenTTS, visit [here](https://github.com/synesthesiam/opentts)
+        """
+        )
+    elif tts_vendor == "KokoroTTS":
+        st.info(
+            """
+        To learn more about KokoroTTS, visit [here](https://huggingface.co/hexgrad/Kokoro-82M)
         """
         )
 
@@ -831,7 +852,7 @@ def review_and_save():
 
         def test_tts():
             vendor = st.session_state.config["tts"]["vendor"]
-            if vendor == "elevenlabs":
+            if vendor == "ElevenLabs":
                 try:
                     from elevenlabs import ElevenLabs
 
@@ -842,7 +863,7 @@ def review_and_save():
                 except Exception as e:
                     st.error(f"TTS error: {e}")
                 return False
-            elif vendor == "opentts":
+            elif vendor == "OpenTTS":
                 try:
                     params = {
                         "voice": "glow-speak:en-us_mary_ann",
@@ -856,13 +877,23 @@ def review_and_save():
                 except Exception as e:
                     st.error(f"TTS error: {e}")
                 return False
+            elif vendor == "KokoroTTS":
+                try:
+                    from rai_s2s.tts import KokoroTTS
+
+                    model = KokoroTTS()
+                    model.get_speech(text="A")
+                    return True
+                except Exception as e:
+                    st.error(f"TTS error: {e}")
+                return False
 
         def test_recording_device(device_name: str):
             import sounddevice as sd
 
             devices = sd.query_devices()
             index = [device["name"] for device in devices].index(device_name)
-            sample_rate = int(devices[device_index]["default_samplerate"])
+            sample_rate = int(devices[index]["default_samplerate"])
             try:
                 recording = sd.rec(
                     device=index,
@@ -945,29 +976,31 @@ def setup_steps():
     step_names = ["👋 Welcome", "🤖 Model Selection", "📊 Tracing"]
     step_render = [welcome, model_selection, tracing]
 
-    try:
-        from rai_s2s.asr import TRANSCRIBE_MODELS
-
-        step_names.append("🎙️ Speech Recognition")
-        step_render.append(asr)
-    except ImportError:
-        st.session_state.features["s2s"] = False
+    if importlib.util.find_spec("rai_s2s") is None:
         logging.warning(
-            "skipping speech recognition, missing import - install `poetry install --with s2s`"
+            "Skipping speech recognition, rai_s2s not installed - install `poetry install --with s2s`"
         )
-        pass
-
-    try:
-        from rai_s2s.tts import TTS_MODELS
-
-        step_names.append("🔊 Text to Speech")
-        step_render.append(tts)
-    except ImportError:
         st.session_state.features["s2s"] = False
-        logging.warning(
-            "skipping text to speech, missing import - install `poetry install --with s2s`"
-        )
-        pass
+    else:
+        st.session_state.features["s2s"] = True
+
+        try:
+            from rai_s2s.asr import TRANSCRIBE_MODELS
+
+            step_names.append("🎙️ Speech Recognition")
+            step_render.append(asr)
+        except ImportError as e:
+            st.session_state.features["s2s"] = False
+            logging.warning(f"Skipping speech recognition. {e}")
+
+        try:
+            from rai_s2s.tts import TTS_MODELS
+
+            step_names.append("🔊 Text to Speech")
+            step_render.append(tts)
+        except ImportError as e:
+            st.session_state.features["s2s"] = False
+            logging.warning(f"Skipping text to speech. {e}")
 
     step_names.extend(
         [

@@ -15,7 +15,7 @@
 
 import logging
 from functools import partial
-from typing import List, Optional, TypedDict
+from typing import Any, List, Optional, TypedDict
 
 from langchain.chat_models.base import BaseChatModel
 from langchain_core.messages import (
@@ -25,13 +25,34 @@ from langchain_core.messages import (
 from langchain_core.tools import BaseTool
 from langgraph.graph import START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
-from langgraph.prebuilt.tool_node import tools_condition
 
+# from langgraph.prebuilt.tool_node import tools_condition
 from rai.agents.langchain.core.tool_runner import ToolRunner
 
 
 class State(TypedDict):
     messages: List[BaseMessage]
+
+
+def tools_condition(
+    state: Any,
+    messages_key: str = "messages",
+):
+    """Use in the conditional_edge to route to the ToolNode if the last message"""
+    if isinstance(state, list):
+        ai_message = state[-1]
+    elif isinstance(state, dict) and (messages := state.get(messages_key, [])):
+        ai_message = messages[-1]
+    elif messages := getattr(state, messages_key, []):
+        ai_message = messages[-1]
+    else:
+        raise ValueError(f"No messages found in input state to tool_edge: {state}")
+    if hasattr(ai_message, "tool_calls") and len(ai_message.tool_calls) > 0:
+        return "tools"
+
+    elif is_reasoning_model_output(ai_message):
+        return "thinker"
+    return "__end__"
 
 
 def agent(
@@ -57,6 +78,25 @@ def agent(
     ai_msg = llm.invoke(state["messages"])
     state["messages"].append(ai_msg)
     return state
+
+
+def is_reasoning_model_output(message: BaseMessage) -> bool:
+    """Check if message contains reasoning model thinking patterns"""
+    content = message.content if hasattr(message, "content") else str(message)
+
+    # Check for common reasoning markers
+    reasoning_markers = [
+        "<think>",
+        "<thinking>",
+        "<thought>",
+        "<reasoning>",
+        "Let me think",
+        "I need to think about this",
+        "Okay, I understand",
+        # Add patterns specific to your models
+    ]
+
+    return any(marker in content.lower() for marker in reasoning_markers)
 
 
 def create_conversational_agent(

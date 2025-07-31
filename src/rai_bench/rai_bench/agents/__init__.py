@@ -12,9 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .base import TTSModel, TTSModelError
-from .elevenlabs_tts import ElevenLabsTTS
-from .kokoro_tts import KokoroTTS
-from .open_tts import OpenTTS
+from .agent_factory import (
+    AgentFactory,
+    ConversationalAgentFactory,
+    DualAgentFactory,
+    PlanExecuteAgentFactory,
+    TaskVerificationAgentFactory,
+)
 
-__all__ = ["ElevenLabsTTS", "KokoroTTS", "OpenTTS", "TTSModel", "TTSModelError"]
+__all__ = [
+    "AgentFactory",
+    "ConversationalAgentFactory",
+    "DualAgentFactory",
+    "PlanExecuteAgentFactory",
+    "TaskVerificationAgentFactory",
+]

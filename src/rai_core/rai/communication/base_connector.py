@@ -256,6 +256,14 @@ class BaseConnector(Generic[T]):
         """
         raise NotImplementedError("This method should be implemented by the subclass.")
 
+    def call_service(
+        self, message: T, target: str, timeout_sec: float, **kwargs: Optional[Any]
+    ) -> BaseMessage:
+        """
+        Alias for service_call method.
+        """
+        return self.service_call(message, target, timeout_sec, **kwargs)
+
     def service_call(
         self, message: T, target: str, timeout_sec: float, **kwargs: Optional[Any]
     ) -> BaseMessage:

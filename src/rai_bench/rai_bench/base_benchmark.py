@@ -24,6 +24,7 @@ from uuid import UUID
 
 from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, Field
+from rai.agents.langchain.core.react_agent import ReActAgentState
 
 
 class RunSummary(BaseModel):
@@ -111,7 +112,12 @@ class BaseBenchmark(ABC):
             writer.writerow(row)
 
     @abstractmethod
-    def run_next(self, agent: CompiledStateGraph, experiment_id: UUID) -> None:
+    def run_next(
+        self,
+        agent: CompiledStateGraph,
+        initial_state: ReActAgentState,
+        experiment_id: UUID,
+    ) -> None:
         """Run the next task/scenario of the benchmark.
 
         Parameters

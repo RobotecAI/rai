@@ -15,13 +15,17 @@
 
 import logging
 from functools import partial
-from typing import List, Optional
+from typing import (
+    List,
+    Optional,
+)
 
 from langchain.chat_models.base import BaseChatModel
 from langchain_core.messages import (
     AIMessage,
     BaseMessage,
     HumanMessage,
+    SystemMessage,
 )
 from langchain_core.tools import BaseTool
 from langgraph.graph import START, StateGraph
@@ -29,6 +33,7 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt.tool_node import tools_condition
 from rai.agents.langchain.core.conversational_agent import State, agent
 from rai.agents.langchain.core.tool_runner import ToolRunner
+from rai.messages import SystemMultimodalMessage
 
 
 def multimodal_to_tool_bridge(state: State):
@@ -63,15 +68,16 @@ def create_multimodal_to_tool_agent(
     multimodal_llm: BaseChatModel,
     tool_llm: BaseChatModel,
     tools: List[BaseTool],
-    multimodal_system_prompt: str,
-    tool_system_prompt: str,
+    tool_system_prompt: str | SystemMessage,
+    multimodal_system_prompt: Optional[str | SystemMultimodalMessage] = None,
     logger: Optional[logging.Logger] = None,
     debug: bool = False,
 ) -> CompiledStateGraph:
     """
     Creates an agent flow where inputs first go to a multimodal LLM,
-    then its output is passed to a tool-calling LLM.
-    Can be usefull when multimodal llm does not provide tool calling.
+    then its output is passed to a tool-calling LLM without rhe original image
+    Can be usefull when multimodal llm does not provide tool calling, but we want to test
+    its capabilities
 
     Args:
         tools: List of tools available to the tool agent
@@ -95,7 +101,7 @@ def create_multimodal_to_tool_agent(
         "thinker",
         partial(agent, multimodal_llm, _logger, multimodal_system_prompt),
     )
-    # context bridge for altering the
+    # context bridge for altering the state passed
     workflow.add_node(
         "context_bridge",
         multimodal_to_tool_bridge,

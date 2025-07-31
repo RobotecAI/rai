@@ -51,6 +51,33 @@ The environment variable `OPEN_API_KEY` needs to be set to a valid OPENAI key in
 [ElevenLabs](https://elevenlabs.io/) is a proprietary cloud provider for TTS. Refer to the website for the documentation.
 In order to use it the `ELEVENLABS_API_KEY` environment variable must be set, with a valid API key.
 
+#### KokoroTTS
+
+[KokoroTTS](https://huggingface.co/hexgrad/Kokoro-82M) is an open source model for TTS.
+
+The model works locally with the use of [kokoro-onnx library](https://github.com/thewh1teagle/kokoro-onnx) in onnx format.
+The model is available in 3 sizes - 310MB, 169MB, 88MB. The default size is 310MB.
+For available voices and languages supported within currently used version of the model - use `get_available_voices()` and `get_supported_languages()` methods of the `rai_s2s.tts.models.KokoroTTS` respectively.
+The model can be run on CPU or GPU:
+
+**CPU Execution (Default):**
+No additional setup required. The model will automatically fall back to CPU execution.
+
+**NVIDIA GPU with CUDA:**
+To enable CUDA acceleration on NVIDIA GPUs, you need to install the following dependencies:
+
+-   CUDA 12.\*
+-   cuDNN 9.\*
+
+Set environment variable to force GPU usage:
+
+```bash
+export ONNX_PROVIDER=CUDAExecutionProvider
+```
+
+**Other GPU Providers:**
+For other GPUs, or other hardware acceleration options, refer to the [ONNX Runtime Execution Providers documentation](https://onnxruntime.ai/docs/execution-providers/) for setup instructions and available providers.
+
 #### OpenTTS
 
 [OpenTTS](https://github.com/synesthesiam/opentts) is an open source model for TTS.

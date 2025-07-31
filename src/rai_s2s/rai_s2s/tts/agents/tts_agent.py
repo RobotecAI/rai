@@ -140,6 +140,13 @@ class TextToSpeechAgent(BaseAgent):
                     model = OpenTTS(voice=cfg.text_to_speech.voice)
                 else:
                     model = OpenTTS()
+            case "KokoroTTS":
+                from rai_s2s.tts.models import KokoroTTS
+
+                if cfg.text_to_speech.voice != "":
+                    model = KokoroTTS(voice=cfg.text_to_speech.voice)
+                else:
+                    model = KokoroTTS()
             case _:
                 raise ValueError(f"Unknown model_type: {cfg.text_to_speech.model_type}")
         return cls(config, "rai_auto_tts", model)

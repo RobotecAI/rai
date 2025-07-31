@@ -15,6 +15,9 @@
 from pathlib import Path
 
 from rai_bench import define_benchmark_logger, parse_manipulation_o3de_benchmark_args
+from rai_bench.agents import (
+    ConversationalAgentFactory,
+)
 from rai_bench.manipulation_o3de import get_scenarios, run_benchmark
 from rai_bench.utils import get_llm_for_benchmark
 
@@ -27,13 +30,19 @@ if __name__ == "__main__":
     # import ready scenarios
     scenarios = get_scenarios(logger=bench_logger, levels=args.levels)
 
-    llm = get_llm_for_benchmark(
+    p_llm = get_llm_for_benchmark(model_name=args.model_name, vendor=args.vendor)
+    e_llm = get_llm_for_benchmark(
         model_name=args.model_name,
         vendor=args.vendor,
     )
-
+    re_llm = get_llm_for_benchmark(
+        model_name=args.model_name,
+        vendor=args.vendor,
+    )
+ 
+    agent_factory = ConversationalAgentFactory(llm=p_llm)
     run_benchmark(
-        llm=llm,
+        agent_factory=agent_factory,
         out_dir=experiment_dir,
         o3de_config_path=args.o3de_config_path,
         scenarios=scenarios,
