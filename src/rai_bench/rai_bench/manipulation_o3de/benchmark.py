@@ -38,6 +38,7 @@ from rai.tools.ros2 import (
     GetObjectPositionsTool,
     GetROS2TopicsNamesAndTypesTool,
     MoveToPointTool,
+    MoveObjectFromToTool,
 )
 from rai.tools.ros2.manipulation import ResetArmTool
 from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
@@ -408,8 +409,8 @@ def _setup_benchmark_environment(
             camera_info_topic="/color_camera_info5",
             get_grabbing_point_tool=GetGrabbingPointTool(connector=connector),
         ),
-        # MoveObjectFromToTool(connector=connector, manipulator_frame="panda_link0"),
-        MoveToPointTool(connector=connector, manipulator_frame="panda_link0"),
+        MoveObjectFromToTool(connector=connector, manipulator_frame="panda_link0"),
+        # MoveToPointTool(connector=connector, manipulator_frame="panda_link0"),
         ResetArmTool(connector=connector, manipulator_frame="panda_link0"),
         # GetROS2ImageTool(connector=connector),
         GetROS2ImageConfiguredTool(connector=connector, topic="/color_image5"),

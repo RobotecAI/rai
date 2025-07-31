@@ -128,9 +128,9 @@ class MoveToPointTool(BaseROS2Tool):
 
 
 class MoveObjectFromToToolInput(BaseModel):
-    x: float = Field(description="The x coordinate of the point to move to")
-    y: float = Field(description="The y coordinate of the point to move to")
-    z: float = Field(description="The z coordinate of the point to move to")
+    x: float = Field(description="The x coordinate of the point to move from")
+    y: float = Field(description="The y coordinate of the point to move from")
+    z: float = Field(description="The z coordinate of the point to move from")
     x1: float = Field(description="The x coordinate of the point to move to")
     y1: float = Field(description="The y coordinate of the point to move to")
     z1: float = Field(description="The z coordinate of the point to move to")
@@ -245,12 +245,12 @@ class MoveObjectFromToTool(BaseROS2Tool):
         response = get_future_result(future, timeout_sec=20.0)
 
         if response is None:
-            return f"Service call failed for point ({x:.2f}, {y:.2f}, {z:.2f})."
+            return f"Service call failed for point ({x1:.2f}, {y1:.2f}, {z1:.2f})."
 
         if response.success:
-            return f"End effector successfully positioned at coordinates ({x:.2f}, {y:.2f}, {z:.2f}). Note: The status of object interaction (grab/drop) is not confirmed by this movement."
+            return f"End effector successfully positioned at coordinates ({x1:.2f}, {y1:.2f}, {z1:.2f}). Note: The status of object interaction (grab/drop) is not confirmed by this movement."
         else:
-            return f"Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
+            return f"Failed to position end effector at coordinates ({x1:.2f}, {y1:.2f}, {z1:.2f})."
 
 
 class GetObjectPositionsToolInput(BaseModel):
@@ -316,7 +316,9 @@ class ResetArmToolInput(BaseModel):
 
 class ResetArmTool(BaseROS2Tool):
     name: str = "reset_arm"
-    description: str = "Reset the arm to the initial position. Use when the arm is stuck or when arm obstructs the objects."
+    description: str = (
+        "Reset the arm to the initial position. Use when the arm is stuck or when arm obstructs the objects."
+    )
 
     args_schema: Type[ResetArmToolInput] = ResetArmToolInput
 
