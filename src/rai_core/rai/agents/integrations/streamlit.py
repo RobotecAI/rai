@@ -75,7 +75,10 @@ def get_streamlit_cb(parent_container: DeltaGenerator) -> BaseCallbackHandler:
             self.token_placeholder.write(self.text)
 
         def on_chat_model_start(
-            self, serialized: Dict[str, Any], messages: List[List[BaseMessage]], **kwargs: Any
+            self,
+            serialized: Dict[str, Any],
+            messages: List[List[BaseMessage]],
+            **kwargs: Any,
         ) -> None:
             """
             Run when the chat model starts.
