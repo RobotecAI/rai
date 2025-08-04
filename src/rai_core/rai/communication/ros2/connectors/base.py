@@ -25,6 +25,7 @@ import rclpy.time
 from rclpy.duration import Duration
 from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from rclpy.qos import QoSProfile
 from tf2_ros import Buffer, LookupException, TransformListener, TransformStamped
 
@@ -55,6 +56,8 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         Whether to destroy subscribers after receiving a message, by default False.
     executor_type : Literal["single_threaded", "multi_threaded"], optional
         Type of executor to use for processing ROS2 callbacks, by default "multi_threaded".
+    use_sim_time : bool, optional
+        Whether to use simulation time or system time, by default False.
 
     Methods
     -------
@@ -100,6 +103,7 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         node_name: str = f"rai_ros2_connector_{str(uuid.uuid4())[-12:]}",
         destroy_subscribers: bool = False,
         executor_type: Literal["single_threaded", "multi_threaded"] = "multi_threaded",
+        use_sim_time: bool = False,
     ):
         """Initialize the ROS2BaseConnector.
 
@@ -127,6 +131,10 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
             )
         self._executor_type = executor_type
         self._node = Node(node_name)
+        if use_sim_time:
+            self._node.set_parameters(
+                [Parameter("use_sim_time", Parameter.Type.BOOL, True)]
+            )
         self._topic_api = ROS2TopicAPI(self._node, destroy_subscribers)
         self._service_api = ROS2ServiceAPI(self._node)
         self._actions_api = ROS2ActionAPI(self._node)
