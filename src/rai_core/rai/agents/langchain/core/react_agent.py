@@ -29,7 +29,7 @@ from langgraph.prebuilt.tool_node import tools_condition
 
 from rai.agents.langchain.core.tool_runner import ToolRunner
 from rai.initialization import get_llm_model
-from rai.messages import SystemMultimodalMessage
+from rai.messages import AIMultimodalMessage, SystemMultimodalMessage
 
 
 class ReActAgentState(TypedDict):
@@ -76,6 +76,7 @@ def llm_node(
         if not isinstance(state["messages"][0], SystemMessage):
             state["messages"].insert(0, SystemMessage(content=system_prompt))
     ai_msg = llm.invoke(state["messages"])
+    ai_msg = AIMultimodalMessage(content=ai_msg.content)
     state["messages"].append(ai_msg)
 
 

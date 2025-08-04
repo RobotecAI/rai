@@ -13,10 +13,12 @@
 # limitations under the License.
 
 
+from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.messages.base import BaseMessage, get_msg_title_repr
+from pydantic import Field
 
 
 class MultimodalMessage(BaseMessage):
@@ -30,6 +32,8 @@ class MultimodalMessage(BaseMessage):
     audios : Optional[Any]
         List of base64 encoded audios.
     """
+
+    timestamp: datetime = Field(default_factory=datetime.now)
 
     images: Optional[List[str]] = None
     audios: Optional[Any] = None
@@ -46,7 +50,15 @@ class MultimodalMessage(BaseMessage):
         _content: List[Union[str, Dict[str, Union[Dict[str, str], str]]]] = []
 
         if isinstance(self.content, str):
-            _content.append({"type": "text", "text": self.content})
+            _content.append(
+                {
+                    "type": "text",
+                    "text": "Current time: "
+                    + self.timestamp.isoformat(timespec="seconds")
+                    + "\n"
+                    + self.content,
+                }
+            )
         else:
             raise ValueError("Content must be a string")  # for now, to guarantee compat
 
@@ -62,10 +74,6 @@ class MultimodalMessage(BaseMessage):
             ]
             _content.extend(_image_content)
         self.content = _content
-
-    @property
-    def text(self) -> str:
-        return self.content[0]["text"]
 
 
 class HumanMultimodalMessage(HumanMessage, MultimodalMessage):
