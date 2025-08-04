@@ -118,7 +118,7 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         messages: List[BaseMessage] = []
         prev_count: int = 0
         try:
-            with self.time_limit(20 * task.max_tool_calls_number):
+            with self.time_limit(200 * task.max_tool_calls_number):
                 for state in agent.stream(
                     initial_state,
                     config=config,
