@@ -237,64 +237,139 @@ class SortTask(Task):
         **kwargs: Any,
     ) -> None:
         if not validators:
-            # after every navigate call and before asking vlm
+            # after every navigate call
             # the where am i should probably be called? should it be mandatory?
             # it is for now
             # Should ask vlm be called after manipulaiton action?
             # So robot can confirm if it pick or droppped object
-
-            #### go to table
-            navigate_to_slot1_subtask = CheckArgsToolCallSubTask(
-                expected_tool_name="nav_tool",
-                expected_args={
-                    "x": 10.5,
-                    "y": 1.5,
-                },
-            )
-
-            #### detect and pick up blue object sequence
             where_am_i_subtask = CheckArgsToolCallSubTask(
                 expected_tool_name="where_am_i",
                 expected_args={},  # No parameters expected
             )
             ask_vlm_subtask = CheckArgsToolCallSubTask(
-                expected_tool_name="ask_vlm",
+                expected_tool_name="nav_tool",
+                expected_args={},
+            )
+
+            #### navigate to table, detect and pick up object
+            navigate_to_slot1_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="nav_tool",
+                expected_args={
+                    "x": 10.0,
+                    "y": 1.5,
+                },
+            )
+            ask_vlm_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="nav_tool",
                 expected_args={},
             )
             pick_up_1_subtask = CheckArgsToolCallSubTask(
                 expected_tool_name="pick_up_object",
                 expected_args={"x": 0.02, "y": 0.1, "z": 0.05},
             )
-
             #### navigate to the box and drop object
             navigate_to_box1_subtask = CheckArgsToolCallSubTask(
                 expected_tool_name="nav_tool",
                 expected_args={
                     "x": 3.0,
-                    "y": 5.5,
+                    "y": 5.0,
                 },
-            )
-            where_am_i_subtask_2 = CheckArgsToolCallSubTask(
-                expected_tool_name="where_am_i",
-                expected_args={},  # No parameters expected
             )
             drop_subtask_1 = CheckArgsToolCallSubTask(
                 expected_tool_name="drop_object",
                 expected_args={"x": 0.2, "y": 0, "z": 0.05},
             )
 
+            #### navigate to the table and pick up second object
+            navigate_to_slot2_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="nav_tool",
+                expected_args={
+                    "x": 10.0,
+                    "y": 3.0,
+                },
+            )
+            # there was no green or blue object so navigate to the next slot
+            navigate_to_slot3_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="nav_tool",
+                expected_args={
+                    "x": 10.0,
+                    "y": 4.5,
+                },
+            )
+            pick_up_3_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="pick_up_object",
+                expected_args={"x": 0.1, "y": 0.4, "z": 0.05},
+            )
+
+            #### navigate to the 2nd box and drop
+            navigate_to_box2_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="nav_tool",
+                expected_args={
+                    "x": 5.0,
+                    "y": 5.0,
+                },
+            )
+            drop_subtask_2 = CheckArgsToolCallSubTask(
+                expected_tool_name="drop_object",
+                expected_args={"x": 0.1, "y": -0.05, "z": 0.05},
+            )
+            #### navigate to 4th slot and check for object, its empty so end the task
+            navigate_to_slot4_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="nav_tool",
+                expected_args={
+                    "x": 10.0,
+                    "y": 3.0,
+                },
+            )
             validators = [
+                #### navigate to slot1, detect and pick up 1st object
                 OrderedCallsValidator(
                     subtasks=[
                         navigate_to_slot1_subtask,
                         where_am_i_subtask,
                         ask_vlm_subtask,
                         pick_up_1_subtask,
+                    ]
+                ),
+                #### navigate to the box1 and drop object
+                OrderedCallsValidator(
+                    subtasks=[
                         navigate_to_box1_subtask,
-                        where_am_i_subtask_2,
+                        where_am_i_subtask,
+                        ask_vlm_subtask,
                         drop_subtask_1,
                     ]
-                )
+                ),
+                #### navigate to slot2, detect - there is no blue or green obj
+                # so navigate to slot3, detect and pick up
+                OrderedCallsValidator(
+                    subtasks=[
+                        navigate_to_slot2_subtask,
+                        where_am_i_subtask,
+                        ask_vlm_subtask,
+                        navigate_to_slot3_subtask,
+                        where_am_i_subtask,
+                        ask_vlm_subtask,
+                        pick_up_3_subtask,
+                    ]
+                ),
+                #### navigate to the 2nd box and drop
+                OrderedCallsValidator(
+                    subtasks=[
+                        navigate_to_box2_subtask,
+                        where_am_i_subtask,
+                        ask_vlm_subtask,
+                        drop_subtask_2,
+                    ]
+                ),
+                #### navigate to 4th slot and check for object, its empty so end the task
+                OrderedCallsValidator(
+                    subtasks=[
+                        navigate_to_slot4_subtask,
+                        where_am_i_subtask,
+                        ask_vlm_subtask,
+                    ]
+                ),
             ]
         super().__init__(validators=validators, task_args=task_args, **kwargs)
         self.env_state = EnvStateManager()
@@ -407,7 +482,8 @@ class SortTask(Task):
 
     def get_base_prompt(self) -> str:
         return """Sort blue and green objects from table to separate boxes on the rack.
-Blue objects should go to the 1st box (x: 3.0, y: 5.5), green objects should go to the second box (x: 5.0, y: 5.5)"""
+Blue objects should go to the 1st box (x: 3.0, y: 5.5), green objects should go to the second box (x: 5.0, y: 5.5)
+Check the slots in order."""
 
     def get_prompt(self) -> str:
         return self.get_base_prompt()
