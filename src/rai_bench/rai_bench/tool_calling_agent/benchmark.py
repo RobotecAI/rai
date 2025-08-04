@@ -26,6 +26,7 @@ from langgraph.graph.state import CompiledStateGraph
 from rai.agents.langchain.core import (
     create_conversational_agent,
 )
+from rai.agents.langchain.core.react_agent import ReActAgentState
 from rai.messages import HumanMultimodalMessage
 
 from rai_bench.agents import create_multimodal_to_tool_agent
@@ -67,7 +68,12 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         self.tasks_results: List[TaskResult] = []
         self.csv_initialize(self.results_filename, TaskResult)
 
-    def run_next(self, agent: CompiledStateGraph, experiment_id: uuid.UUID) -> None:
+    def run_next(
+        self,
+        agent: CompiledStateGraph,
+        initial_state: ReActAgentState,
+        experiment_id: uuid.UUID,
+    ) -> None:
         """Runs the next task of the benchmark.
 
         Parameters
@@ -113,33 +119,13 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         messages: List[BaseMessage] = []
         prev_count: int = 0
         try:
-            with self.time_limit(20 * task.max_tool_calls_number):
-                if isinstance(task, SpatialReasoningAgentTask):
-                    for state in agent.stream(
-                        {
-                            "messages": [
-                                HumanMultimodalMessage(
-                                    content=task.get_prompt(), images=task.get_images()
-                                )
-                            ]
-                        },
-                        config=config,
-                    ):
-                        node = next(iter(state))
-                        all_messages = state[node]["messages"]
-                        for new_msg in all_messages[prev_count:]:
-                            messages.append(new_msg)
-                        prev_count = len(messages)
-                else:
-                    for state in agent.stream(
-                        {
-                            "messages": [
-                                HumanMultimodalMessage(content=task.get_prompt())
-                            ]
-                        },
-                        config=config,
-                    ):
-                        node = next(iter(state))
+            with self.time_limit(200 * task.max_tool_calls_number):
+                for state in agent.stream(
+                    initial_state,
+                    config=config,
+                ):
+                    node = next(iter(state))
+                    if "messages" in state[node]:
                         all_messages = state[node]["messages"]
                         for new_msg in all_messages[prev_count:]:
                             messages.append(new_msg)
