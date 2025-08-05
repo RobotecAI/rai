@@ -16,7 +16,6 @@ from functools import partial
 from typing import (
     List,
     Optional,
-    TypedDict,
     cast,
 )
 
@@ -26,6 +25,7 @@ from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
 from langgraph.graph import START, StateGraph
 from langgraph.prebuilt.tool_node import tools_condition
+from typing_extensions import TypedDict
 
 from rai.agents.langchain.core.tool_runner import ToolRunner
 from rai.initialization import get_llm_model

@@ -39,10 +39,12 @@ if __name__ == "__main__":
     task.set_logger(bench_logger)
 
     # supervisor_name = "qwen3:14b"
-    supervisor_name = "gpt-4o"
-    executor_name = "qwen3:14b"
+    supervisor_name = "gpt-4o-mini"
+    executor_name = "qwen3:8b"
     model_name = f"supervisor-{supervisor_name}_executor-{executor_name}"
-    supervisor_llm = get_llm_for_benchmark(model_name=supervisor_name, vendor="openai")
+    supervisor_llm = get_llm_for_benchmark(
+        model_name=supervisor_name, vendor="ollama", reasoning=False
+    )
     executor_llm = get_llm_for_benchmark(
         model_name=executor_name, vendor="ollama", reasoning=False
     )
@@ -57,6 +59,7 @@ if __name__ == "__main__":
     agent = create_supervisor_agent(
         manipulation_tools=task.manipulation_tools(),
         navigation_tools=task.navigation_tools(),
+        planner_llm=supervisor_llm,
         supervisor_llm=supervisor_llm,
         executor_llm=executor_llm,
         system_prompt=task.get_system_prompt(),
