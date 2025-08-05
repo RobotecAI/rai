@@ -28,7 +28,7 @@ from langgraph.graph import START, StateGraph
 from langgraph.prebuilt.tool_node import tools_condition
 
 from rai.agents.langchain.core.tool_runner import ToolRunner
-from rai.agents.langchain.utils import invoke_llm_with_tracing
+from rai.agents.langchain.invocation_helpers import invoke_llm_with_tracing
 from rai.initialization import get_llm_model
 from rai.messages import SystemMultimodalMessage
 
