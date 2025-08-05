@@ -19,6 +19,7 @@ from .core import (
     create_react_runnable,
     create_state_based_runnable,
 )
+from .planner_supervisor import create_planner_supervisor
 from .react_agent import ReActAgent
 from .state_based_agent import BaseStateBasedAgent, StateBasedConfig
 
@@ -30,6 +31,7 @@ __all__ = [
     "ReActAgent",
     "ReActAgentState",
     "StateBasedConfig",
+    "create_planner_supervisor",
     "create_react_runnable",
     "create_state_based_runnable",
     "newMessageBehaviorType",

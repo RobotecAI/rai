@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+### NOTE (jmatejcz) this agent is still in process of testing and refining
 import json
 import logging
 import time
@@ -39,9 +41,8 @@ from langgraph.prebuilt.tool_node import msg_content_output
 from langgraph.types import Command
 from langgraph.utils.runnable import RunnableCallable
 from pydantic import BaseModel, Field, ValidationError
-from rai.agents.langchain.core import ReActAgentState
 
-# from rai.agents.langchain.core.tool_runner import ToolRunner
+from rai.agents.langchain.core import ReActAgentState
 from rai.messages import (
     HumanMultimodalMessage,
     MultimodalArtifact,
@@ -70,7 +71,7 @@ class ExecutionPlan(ReActAgentState):
     plan: List[str]
     step: str
     step_messages: List[BaseMessage]  # messages for subagents for given step
-    fail_msg: Optional[str]
+    fail_msg: str
 
 
 class SubAgentResponse(BaseModel):
@@ -325,7 +326,7 @@ def create_supervisor_node(
             SystemMessage(content=supervisor_system_prompt),
             HumanMessage(content=plan),
         ]
-        if state["fail_msg"]:
+        if "fail_msg" in state:
             supervisor_messages.append(HumanMessage(content=state["fail_msg"]))
 
         # Create supervisor agent and invoke
@@ -349,7 +350,7 @@ def create_supervisor_node(
     return supervisor_node
 
 
-def create_supervisor_agent(
+def create_planner_supervisor(
     manipulation_tools: List[BaseTool],
     navigation_tools: List[BaseTool],
     planner_llm: BaseChatModel,

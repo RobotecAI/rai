@@ -16,13 +16,13 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
+from rai.agents.langchain import create_planner_supervisor
 from rai.agents.langchain.core.react_agent import ReActAgentState
 from rai.messages.multimodal import HumanMultimodalMessage
 
 from rai_bench import (
     define_benchmark_logger,
 )
-from rai_bench.agents.supervisor import create_supervisor_agent
 from rai_bench.tool_calling_agent.benchmark import ToolCallingAgentBenchmark
 from rai_bench.tool_calling_agent.tasks.demo import SortTask
 from rai_bench.utils import get_llm_for_benchmark
@@ -42,9 +42,7 @@ if __name__ == "__main__":
     supervisor_name = "gpt-4o-mini"
     executor_name = "qwen3:8b"
     model_name = f"supervisor-{supervisor_name}_executor-{executor_name}"
-    supervisor_llm = get_llm_for_benchmark(
-        model_name=supervisor_name, vendor="ollama", reasoning=False
-    )
+    supervisor_llm = get_llm_for_benchmark(model_name=supervisor_name, vendor="openai")
     executor_llm = get_llm_for_benchmark(
         model_name=executor_name, vendor="ollama", reasoning=False
     )
@@ -56,7 +54,7 @@ if __name__ == "__main__":
         results_dir=experiment_dir,
     )
 
-    agent = create_supervisor_agent(
+    agent = create_planner_supervisor(
         manipulation_tools=task.manipulation_tools(),
         navigation_tools=task.navigation_tools(),
         planner_llm=supervisor_llm,
