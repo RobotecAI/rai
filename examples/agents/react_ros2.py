@@ -34,7 +34,7 @@ def main():
     # Agent will wait for messages published to /from_human ros2 topic
     agent.subscribe_source("/from_human", hri_connector)
     runner = AgentRunner([agent])
-    runner.run()
+    runner.run_and_wait_for_shutdown()
 
 
 if __name__ == "__main__":
