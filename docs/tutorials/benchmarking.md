@@ -52,23 +52,24 @@ python src/rai_bench/rai_bench/examples/tool_calling_agent.py --model-name qwen2
 The best way of benchmarking your models is using the `src/rai_bench/rai_bench/examples/benchmarking_models.py`
 
 Feel free to modify the benchmark configs to suit your needs, you can chose every possible set of params
-and the benchmark will be run with every combination:
+and the benchmark will be run tasks with every combination:
 
 ```python
 if __name__ == "__main__":
     # Define models you want to benchmark
-    model_names = ["qwen2.5:7b", "llama3.2:3b"]
+    model_names = ["qwen3:4b", "llama3.2:3b"]
     vendors = ["ollama", "ollama"]
 
     # Define benchmarks that will be used
-    man_conf = ManipulationO3DEBenchmarkConfig(
-        o3de_config_path="path/to/your/o3de_config.yaml",  # path to your O3DE config
+    mani_conf = ManipulationO3DEBenchmarkConfig(
+        o3de_config_path="src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/o3de_config.yaml",
         levels=[  # define what difficulty of tasks to include in benchmark
             "trivial",
+            "easy",
         ],
         repeats=1,  # how many times to repeat
     )
-     tool_conf = ToolCallingAgentBenchmarkConfig(
+    tool_conf = ToolCallingAgentBenchmarkConfig(
         extra_tool_calls=[0, 5],  # how many extra tool calls allowed to still pass
         task_types=[  # what types of tasks to include
             "basic",
@@ -76,10 +77,7 @@ if __name__ == "__main__":
             "custom_interfaces",
         ],
         N_shots=[0, 2],  # examples in system prompt
-        prompt_detail=[  # how descriptive should task prompt be
-            "brief",
-            "descriptive"
-        ],
+        prompt_detail=["brief", "descriptive"],  # how descriptive should task prompt be
         repeats=1,
     )
 
@@ -87,12 +85,21 @@ if __name__ == "__main__":
     test_models(
         model_names=model_names,
         vendors=vendors,
-        benchmark_configs=[man_conf, tool_conf],
+        benchmark_configs=[mani_conf, tool_conf],
         out_dir=out_dir,
+        # if you want to pass any additinal args to model
+        additional_model_args=[
+            {"reasoning": False},
+            {},
+        ],
     )
 ```
 
-Based on the example above the `Tool Calling` benchmark will run [extra_tool_calls x N_shots x prompt_detail x repeats] = 8 times, each run will include basic, spatial_reasoning and custom_interfaces tasks.
+Based on the example above the `Tool Calling` benchmark will run basic, spatial_reasoning and custom_interfaces tasks with every configuration of [extra_tool_calls x N_shots x prompt_detail] provided which will result in almost 500 tasks. Manipulation benchmark will run all specified task level once as there is no additional params. Reapeat is set to 1 in both configs so there will be no additional runs.
+
+!!! note
+
+    When using ollama vendor make sure to pull used models first
 
 ## Viewing Results
 
