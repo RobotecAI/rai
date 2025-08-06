@@ -37,6 +37,7 @@ from rai.tools.ros2 import (
 )
 
 from tests.communication.ros2.helpers import (
+    ClockPublisher,
     ImagePublisher,
     MessagePublisher,
     MessageSubscriber,
@@ -224,4 +225,123 @@ def test_get_transform_tool(ros_setup: None, request: pytest.FixtureRequest) -> 
         assert "translation" in response
         assert "rotation" in response
     finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_get_transform_tool_with_stale_tf_data(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    """Test that GetROS2TransformTool returns stale transform data with warning."""
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    connector = ROS2Connector()
+    publisher = TransformPublisher(topic=topic_name)
+    executors, threads = multi_threaded_spinner([publisher])
+    tool = GetROS2TransformTool(connector=connector)
+
+    # Let the publisher run for a bit to establish transforms
+    time.sleep(1.0)
+    response = tool._run(
+        source_frame="map",
+        target_frame="base_link",
+        timeout_sec=5.0,
+    )  # type: ignore
+    assert "translation" in response
+    assert "rotation" in response
+
+    # stop the /tf publisher
+    publisher.timer.cancel()
+
+    # wait for some time to pass then get the transform again
+    time.sleep(2.0)
+
+    try:
+        response = tool._run(
+            source_frame="map",
+            target_frame="base_link",
+            timeout_sec=5.0,
+        )  # type: ignore
+
+        response_lower = response.lower()
+        staleness_indicators = [
+            "stale",
+            "old",
+            "outdated",
+            "warning",
+            "invalid",
+        ]
+        staleness_warning_present = any(
+            indicator in response_lower for indicator in staleness_indicators
+        )
+
+        #  Stale data should be warned about
+        if not staleness_warning_present:
+            pytest.fail(
+                f"Response: {response}. "
+                "Expected behavior: Either include staleness warning in response or raise appropriate error."
+            )
+
+    finally:
+        # Clean shutdown
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_get_transform_tool_with_stale_tf_data_sim_time(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    """Test that GetROS2TransformTool returns stale transform data with warning when using sim time."""
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    connector = ROS2Connector(use_sim_time=True)
+
+    # Create clock publisher to provide simulation time
+    clock_publisher = ClockPublisher()
+    publisher = TransformPublisher(topic=topic_name, use_sim_time=True)
+    executors, threads = multi_threaded_spinner([clock_publisher, publisher])
+    tool = GetROS2TransformTool(connector=connector)
+
+    # Let the publishers run for a bit to establish transforms and clock
+    time.sleep(1.0)
+    response = tool._run(
+        source_frame="map",
+        target_frame="base_link",
+        timeout_sec=5.0,
+    )  # type: ignore
+    assert "translation" in response
+    assert "rotation" in response
+
+    # stop the /tf publisher
+    publisher.timer.cancel()
+
+    # wait for some time to pass then get the transform again
+    time.sleep(2.0)
+
+    try:
+        response = tool._run(
+            source_frame="map",
+            target_frame="base_link",
+            timeout_sec=5.0,
+        )  # type: ignore
+
+        response_lower = response.lower()
+        staleness_indicators = [
+            "stale",
+            "old",
+            "outdated",
+            "warning",
+            "invalid",
+        ]
+        staleness_warning_present = any(
+            indicator in response_lower for indicator in staleness_indicators
+        )
+
+        #  Stale data should be warned about
+        if not staleness_warning_present:
+            pytest.fail(
+                f"Response: {response}. "
+                "Expected behavior: Either include staleness warning in response or raise appropriate error."
+            )
+
+    finally:
+        clock_publisher.timer.cancel()
+        # wait for the timer to be canceled
+        time.sleep(0.1)
         shutdown_executors_and_threads(executors, threads)
