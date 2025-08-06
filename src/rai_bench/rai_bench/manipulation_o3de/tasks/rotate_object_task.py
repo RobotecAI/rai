@@ -14,7 +14,7 @@
 
 import logging
 import math
-from typing import List, Tuple, Union
+from typing import List, Sequence, Tuple, Union
 
 from rai.types import Quaternion
 from rclpy.impl.rcutils_logger import RcutilsLogger
@@ -72,7 +72,7 @@ class RotateObjectTask(ManipulationTask):
         )
 
     def calculate_correct(
-        self, entities: List[Entity], allowable_rotation_error: float = 5.0
+        self, entities: Sequence[Entity], allowable_rotation_error: float = 5.0
     ) -> Tuple[int, int]:
         """
         Calculate the number of correctly rotated objects and incorrectly rotated objects,

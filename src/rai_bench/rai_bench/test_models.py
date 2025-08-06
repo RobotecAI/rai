@@ -15,9 +15,8 @@ import uuid
 from abc import abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Literal
+from typing import Any, Dict, List, Literal, Optional
 
-from git import Optional
 from langchain.chat_models.base import BaseChatModel
 from pydantic import BaseModel
 

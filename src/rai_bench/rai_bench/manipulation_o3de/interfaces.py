@@ -15,7 +15,7 @@ import logging
 import math
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Dict, List, Set, Tuple, TypeVar, Union
+from typing import Dict, List, Sequence, Set, Tuple, Union
 
 from rai.types import Pose
 from rclpy.impl.rcutils_logger import RcutilsLogger
@@ -24,12 +24,10 @@ from rai_sim.simulation_bridge import (
     Entity,
     SceneConfig,
     SimulationBridge,
-    SimulationConfigT,
-    SpawnedEntity,
 )
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
-EntityT = TypeVar("EntityT", bound=Entity)
+# EntityT = TypeVar("EntityT", bound=Entity)
 
 
 class EntitiesMismatchException(Exception):
@@ -79,9 +77,7 @@ class Task(ABC):
         pass
 
     @abstractmethod
-    def calculate_score(
-        self, simulation_bridge: SimulationBridge[SimulationConfigT]
-    ) -> float:
+    def calculate_score(self, simulation_bridge: SimulationBridge) -> float:
         """
         Calculate the task score based on the simulation information.
 
@@ -98,8 +94,8 @@ class Task(ABC):
         pass
 
     def filter_entities_by_object_type(
-        self, entities: List[EntityT], object_types: List[str]
-    ) -> List[EntityT]:
+        self, entities: Sequence[Entity], object_types: List[str]
+    ) -> List[Entity]:
         """
         Filter and return only the entities that match the provided prefab types.
 
@@ -198,14 +194,14 @@ class Task(ABC):
         return adjacent_count
 
     def build_neighbourhood_list(
-        self, entities: List[EntityT], threshold_distance: float = 0.15
-    ) -> Dict[EntityT, List[EntityT]]:
+        self, entities: Sequence[Entity], threshold_distance: float = 0.15
+    ) -> Dict[Entity, List[Entity]]:
         """
         Build a neighbourhood list assigning a list of neighbours to every entity based on a threshold distance.
 
         Parameters
         ----------
-        entities : List[EntityT]
+        entities : Sequence[EntityT]  # Changed from List[EntityT]
             The list of entities.
         threshold_distance : float, optional
             The maximum distance between entities to consider them neighbours. Default is 0.15.
@@ -215,7 +211,7 @@ class Task(ABC):
         Dict[EntityT, List[EntityT]]
             A dictionary mapping each entity to a list of neighbouring entities.
         """
-        neighbourhood_graph: Dict[EntityT, List[EntityT]] = {
+        neighbourhood_graph: Dict[Entity, List[Entity]] = {
             entity: [] for entity in entities
         }
         for entity in entities:
@@ -230,8 +226,8 @@ class Task(ABC):
         return neighbourhood_graph
 
     def group_entities_by_type(
-        self, entities: List[EntityT]
-    ) -> Dict[str, List[EntityT]]:
+        self, entities: Sequence[Entity]
+    ) -> Dict[str, List[Entity]]:
         """
         Group entities by their prefab type.
 
@@ -245,14 +241,14 @@ class Task(ABC):
         Dict[str, List[EntityT]]
             A dictionary with keys as prefab names and values as lists of entities of that type.
         """
-        entities_by_type: Dict[str, List[EntityT]] = defaultdict(list)
+        entities_by_type: Dict[str, List[Entity]] = defaultdict(list)
         for entity in entities:
             entities_by_type[entity.prefab_name].append(entity)
         return entities_by_type
 
     def check_neighbourhood_types(
         self,
-        neighbourhood: List[EntityT],
+        neighbourhood: Sequence[Entity],
         allowed_types: List[str],
     ) -> bool:
         """
@@ -275,8 +271,8 @@ class Task(ABC):
         )
 
     def find_clusters(
-        self, neighbourhood_list: Dict[EntityT, List[EntityT]]
-    ) -> List[List[EntityT]]:
+        self, neighbourhood_list: Dict[Entity, List[Entity]]
+    ) -> List[List[Entity]]:
         """
         Identify clusters of entities using a DFS algorithm.
 
@@ -293,10 +289,10 @@ class Task(ABC):
         List[List[EntityT]]
             A list of clusters, where each cluster is a list of connected entities.
         """
-        visited: Set[EntityT] = set()
-        clusters: List[List[EntityT]] = []
+        visited: Set[Entity] = set()
+        clusters: List[List[Entity]] = []
 
-        def dfs(node: EntityT, cluster: List[EntityT]):
+        def dfs(node: Entity, cluster: List[Entity]):
             visited.add(node)
             cluster.append(node)
             for neighbor in neighbourhood_list.get(node, []):
@@ -305,7 +301,7 @@ class Task(ABC):
 
         for node in neighbourhood_list.keys():
             if node not in visited:
-                component: List[EntityT] = []
+                component: List[Entity] = []
                 dfs(node, component)
                 clusters.append(component)
 
@@ -314,9 +310,9 @@ class Task(ABC):
     def group_entities_along_z_axis(
         # NOTE (jmatejcz) figure out how to group by other coords and orientation, without reapeting code
         self,
-        entities: List[EntityT],
+        entities: List[Entity],
         margin: float,
-    ) -> List[List[EntityT]]:
+    ) -> List[List[Entity]]:
         """
         Group entities that are aligned along the z axis based on their x and y coordinates.
 
@@ -347,7 +343,7 @@ class Task(ABC):
             key=lambda ent: (ent.pose.pose.position.x, ent.pose.pose.position.y),
         )
 
-        groups: List[List[EntityT]] = []
+        groups: List[List[Entity]] = []
         for entity in entities:
             placed = False
             for group in groups:
@@ -440,9 +436,7 @@ class ManipulationTask(Task, ABC):
             return False
 
     @abstractmethod
-    def calculate_correct(
-        self, entities: List[Entity] | List[SpawnedEntity]
-    ) -> Tuple[int, int]:
+    def calculate_correct(self, entities: Sequence[Entity]) -> Tuple[int, int]:
         """Method to calculate how many objects are placed correctly
 
         Parameters
@@ -458,7 +452,7 @@ class ManipulationTask(Task, ABC):
         pass
 
     def calculate_current_placements(
-        self, simulation_bridge: SimulationBridge[SimulationConfigT]
+        self, simulation_bridge: SimulationBridge
     ) -> tuple[int, int]:
         """
         Get the current placements of objects in the simulation
@@ -485,9 +479,7 @@ class ManipulationTask(Task, ABC):
         )
         return current_correct, current_incorrect
 
-    def calculate_score(
-        self, simulation_bridge: SimulationBridge[SceneConfig]
-    ) -> float:
+    def calculate_score(self, simulation_bridge: SimulationBridge) -> float:
         """
         Calculate the task score based on the difference between initial and current placements.
 

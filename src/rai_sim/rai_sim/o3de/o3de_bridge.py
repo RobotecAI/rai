@@ -61,7 +61,7 @@ class O3DExROS2SimulationConfig(SimulationConfig):
         return cls(**connector_content)
 
 
-class O3DExROS2Bridge(SimulationBridge[O3DExROS2SimulationConfig]):
+class O3DExROS2Bridge(SimulationBridge):
     def __init__(
         self, connector: ROS2Connector, logger: Optional[logging.Logger] = None
     ):
