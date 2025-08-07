@@ -25,7 +25,7 @@ from rai_bench.tool_calling_agent.interfaces import Task, Validator
 
 loggers_type = logging.Logger
 
-SPATIAL_REASONING_SYSTEM_PROMPT = "You are a helpful and knowledgeable AI assistant that specializes in interpreting and analyzing visual content. Your task is to answer questions based on the images provided to you. Please response in requested structured output format or with the use of provided tools."
+SPATIAL_REASONING_SYSTEM_PROMPT = "You are a helpful and knowledgeable AI assistant that specializes in interpreting and analyzing visual content. Your task is to answer questions based on the images provided to you. Please response with the use of the provided tools."
 
 
 class TaskParametrizationError(Exception):
