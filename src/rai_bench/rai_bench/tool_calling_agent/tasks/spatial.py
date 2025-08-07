@@ -88,13 +88,6 @@ class ReturnBoolResponseTool(BaseTool):
         raise ValueError("Invalid response type. Response must be a boolean.")
 
 
-class BoolAnswerWithJustification(BaseModel):
-    """A boolean answer to the user question along with justification for the answer."""
-
-    answer: bool
-    justification: str
-
-
 class BoolImageTaskInput(BaseModel):
     question: str = Field(..., description="The question to be answered.")
     images_paths: List[str] = Field(
@@ -124,10 +117,6 @@ class BoolImageTask(SpatialReasoningAgentTask):
     @property
     def available_tools(self) -> List[BaseTool]:
         return [ReturnBoolResponseTool()]
-
-    @property
-    def structured_output(self) -> type[BaseModel]:
-        return BoolAnswerWithJustification
 
     def get_prompt(self):
         return self.question
