@@ -22,8 +22,9 @@ from langchain.chat_models.base import BaseChatModel
 from rai.initialization import get_llm_model_direct
 
 
-def parse_tool_calling_benchmark_args():
-    parser = argparse.ArgumentParser(description="Run the Tool Calling Agent Benchmark")
+def parse_base_benchmark_args(description: str, default_out_subdir: str):
+    """Parse common benchmark arguments shared across different benchmark types."""
+    parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
         "--model-name",
         type=str,
@@ -31,6 +32,21 @@ def parse_tool_calling_benchmark_args():
         required=True,
     )
     parser.add_argument("--vendor", type=str, help="Vendor of the model", required=True)
+
+    now = datetime.now()
+    parser.add_argument(
+        "--out-dir",
+        type=str,
+        default=f"src/rai_bench/rai_bench/experiments/{default_out_subdir}/{now.strftime('%Y-%m-%d_%H-%M-%S')}",
+        help="Output directory for results and logs",
+    )
+    return parser
+
+
+def parse_tool_calling_benchmark_args():
+    parser = parse_base_benchmark_args(
+        "Run the Tool Calling Agent Benchmark", "tool_calling"
+    )
     parser.add_argument(
         "--extra-tool-calls",
         type=int,
@@ -65,25 +81,13 @@ def parse_tool_calling_benchmark_args():
         ],
         help="Types of tasks to include in the benchmark",
     )
-    now = datetime.now()
-    parser.add_argument(
-        "--out-dir",
-        type=str,
-        default=f"src/rai_bench/rai_bench/experiments/tool_calling/{now.strftime('%Y-%m-%d_%H-%M-%S')}",
-        help="Output directory for results and logs",
-    )
     return parser.parse_args()
 
 
 def parse_manipulation_o3de_benchmark_args():
-    parser = argparse.ArgumentParser(description="Run the Manipulation O3DE Benchmark")
-    parser.add_argument(
-        "--model-name",
-        type=str,
-        help="Model name to use for benchmarking",
-        required=True,
+    parser = parse_base_benchmark_args(
+        "Run the Manipulation O3DE Benchmark", "o3de_manipulation"
     )
-    parser.add_argument("--vendor", type=str, help="Vendor of the model", required=True)
     parser.add_argument(
         "--o3de-config-path",
         type=str,
@@ -98,13 +102,11 @@ def parse_manipulation_o3de_benchmark_args():
         default=["trivial", "easy", "medium", "hard", "very_hard"],
         help="Difficulty levels to include in the benchmark",
     )
-    now = datetime.now()
-    parser.add_argument(
-        "--out-dir",
-        type=str,
-        default=f"src/rai_bench/rai_bench/experiments/o3de_manipulation/{now.strftime('%Y-%m-%d_%H-%M-%S')}",
-        help="Output directory for results and logs",
-    )
+    return parser.parse_args()
+
+
+def parse_vlm_benchmark_args():
+    parser = parse_base_benchmark_args("Run the VLM Benchmark", "vlm_benchmark")
     return parser.parse_args()
 
 
