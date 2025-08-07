@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple
 from langchain_core.messages import AIMessage, BaseMessage, ToolCall
 from langchain_core.runnables.config import DEFAULT_RECURSION_LIMIT
 from langchain_core.tools import BaseTool
+from pydantic import BaseModel
 
 from rai_bench.tool_calling_agent.results_tracking import SubTaskResult, ValidatorResult
 
@@ -520,6 +521,14 @@ class Task(ABC):
     def available_tools(self) -> List[BaseTool]:
         """List of tool available for the agent"""
         pass
+
+    @property
+    def structured_output(self) -> type[BaseModel]:
+        """Structured output that agent should return."""
+        raise NotImplementedError(
+            "Tasks that require structured output must implement this property. "
+            "Tasks that don't need structured output should return None."
+        )
 
     @property
     @abstractmethod

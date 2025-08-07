@@ -19,6 +19,7 @@ from .react_agent import (
     create_react_runnable,
 )
 from .state_based_agent import create_state_based_runnable
+from .structured_output_agent import create_structured_output_agent
 from .tool_runner import ToolRunner
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "create_conversational_agent",
     "create_react_runnable",
     "create_state_based_runnable",
+    "create_structured_output_agent",
 ]

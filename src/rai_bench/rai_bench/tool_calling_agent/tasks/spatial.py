@@ -25,7 +25,7 @@ from rai_bench.tool_calling_agent.interfaces import Task, Validator
 
 loggers_type = logging.Logger
 
-SPATIAL_REASONING_SYSTEM_PROMPT = "You are a helpful and knowledgeable AI assistant that specializes in interpreting and analyzing visual content. Your task is to answer questions based on the images provided to you. Please response with the use of the provided tools."
+SPATIAL_REASONING_SYSTEM_PROMPT = "You are a helpful and knowledgeable AI assistant that specializes in interpreting and analyzing visual content. Your task is to answer questions based on the images provided to you. Please response in requested structured output format or with the use of provided tools."
 
 
 class TaskParametrizationError(Exception):
@@ -88,6 +88,13 @@ class ReturnBoolResponseTool(BaseTool):
         raise ValueError("Invalid response type. Response must be a boolean.")
 
 
+class BoolAnswerWithJustification(BaseModel):
+    """A boolean answer to the user question along with justification for the answer."""
+
+    answer: bool
+    justification: str
+
+
 class BoolImageTaskInput(BaseModel):
     question: str = Field(..., description="The question to be answered.")
     images_paths: List[str] = Field(
@@ -117,6 +124,10 @@ class BoolImageTask(SpatialReasoningAgentTask):
     @property
     def available_tools(self) -> List[BaseTool]:
         return [ReturnBoolResponseTool()]
+
+    @property
+    def structured_output(self) -> type[BaseModel]:
+        return BoolAnswerWithJustification
 
     def get_prompt(self):
         return self.question
