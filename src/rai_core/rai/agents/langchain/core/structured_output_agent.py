@@ -28,7 +28,7 @@ from pydantic import BaseModel
 from rai.agents.langchain.core.conversational_agent import State, agent
 
 
-def create_structured_output_agent(
+def create_structured_output_runnable(
     llm: BaseChatModel,
     structured_output: type[BaseModel],
     system_prompt: str | SystemMessage,
