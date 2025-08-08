@@ -38,9 +38,6 @@ from rai_bench.tool_calling_agent.results_tracking import (
     TaskResult,
     ToolCallingAgentRunSummary,
 )
-from rai_bench.tool_calling_agent.tasks.spatial import (
-    SpatialReasoningAgentTask,
-)
 from rai_bench.utils import get_llm_model_name
 
 
@@ -106,36 +103,15 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         prev_count: int = 0
         try:
             with self.time_limit(60):
-                if isinstance(task, SpatialReasoningAgentTask):
-                    for state in agent.stream(
-                        {
-                            "messages": [
-                                HumanMultimodalMessage(
-                                    content=task.get_prompt(), images=task.get_images()
-                                )
-                            ]
-                        },
-                        config=config,
-                    ):
-                        node = next(iter(state))
-                        all_messages = state[node]["messages"]
-                        for new_msg in all_messages[prev_count:]:
-                            messages.append(new_msg)
-                        prev_count = len(messages)
-                else:
-                    for state in agent.stream(
-                        {
-                            "messages": [
-                                HumanMultimodalMessage(content=task.get_prompt())
-                            ]
-                        },
-                        config=config,
-                    ):
-                        node = next(iter(state))
-                        all_messages = state[node]["messages"]
-                        for new_msg in all_messages[prev_count:]:
-                            messages.append(new_msg)
-                        prev_count = len(messages)
+                for state in agent.stream(
+                    {"messages": [HumanMultimodalMessage(content=task.get_prompt())]},
+                    config=config,
+                ):
+                    node = next(iter(state))
+                    all_messages = state[node]["messages"]
+                    for new_msg in all_messages[prev_count:]:
+                        messages.append(new_msg)
+                    prev_count = len(messages)
         except TimeoutException as e:
             self.logger.error(msg=f"Task timeout: {e}")
         except GraphRecursionError as e:

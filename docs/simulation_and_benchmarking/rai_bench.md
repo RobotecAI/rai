@@ -127,7 +127,6 @@ Tasks of this benchmark are grouped by type:
 
 -   Basic - basic usage of tools
 -   Navigation
--   Spatial reasoning - questions about surroundings with images attached
 -   Manipulation
 -   Custom Interfaces - requires using messages with custom interfaces
 

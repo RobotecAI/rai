@@ -35,7 +35,6 @@ if __name__ == "__main__":
         extra_tool_calls=5,  # how many extra tool calls allowed to still pass
         task_types=[  # what types of tasks to include
             "basic",
-            "spatial_reasoning",
             "manipulation",
         ],
         repeats=1,

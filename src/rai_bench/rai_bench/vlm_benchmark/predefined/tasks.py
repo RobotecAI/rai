@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from rai_bench.vlm_benchmark.interfaces import ImageReasoningTask
 from rai_bench.vlm_benchmark.tasks.tasks import BoolImageTask, BoolImageTaskInput
 
-IMG_PATH = "src/rai_bench/rai_bench/tool_calling_agent/predefined/images/"
+IMG_PATH = "src/rai_bench/rai_bench/vlm_benchmark/predefined/images/"
 true_response_inputs: List[BoolImageTaskInput] = [
     BoolImageTaskInput(
         question="Is the door on the left from the desk?",

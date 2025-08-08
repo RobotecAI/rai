@@ -70,14 +70,12 @@ def parse_tool_calling_benchmark_args():
             "manipulation",
             "navigation",
             "custom_interfaces",
-            "spatial_reasoning",
         ],
         default=[
             "basic",
             "manipulation",
             "navigation",
             "custom_interfaces",
-            "spatial_reasoning",
         ],
         help="Types of tasks to include in the benchmark",
     )
