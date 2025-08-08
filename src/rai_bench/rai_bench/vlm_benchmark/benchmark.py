@@ -163,6 +163,7 @@ class VLMBenchmark(BaseBenchmark):
                 callback=callback,
                 run_id=run_id,
                 score=score,
+                errors=[errors],
             )
 
     def compute_and_save_summary(self):
