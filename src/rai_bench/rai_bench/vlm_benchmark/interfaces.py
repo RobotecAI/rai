@@ -14,11 +14,11 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Generic, List, Literal, TypeVar
+from typing import Generic, List, Literal, Optional, TypeVar
 
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables.config import DEFAULT_RECURSION_LIMIT
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 loggers_type = logging.Logger
 
@@ -26,6 +26,17 @@ BaseModelT = TypeVar("BaseModelT", bound=BaseModel)
 
 
 IMAGE_REASONING_SYSTEM_PROMPT = "You are a helpful and knowledgeable AI assistant that specializes in interpreting and analyzing visual content. Your task is to answer questions based on the images provided to you. Please response in requested structured output format."
+
+
+class LangchainRawOutputModel(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    raw: BaseMessage
+    parsed: BaseModel
+    parsing_error: Optional[BaseException]
+
+
+class TaskValidationError(Exception):
+    pass
 
 
 class ImageReasoningTask(ABC, Generic[BaseModelT]):
@@ -111,9 +122,20 @@ class ImageReasoningTask(ABC, Generic[BaseModelT]):
 
     def get_structured_output_from_messages(
         self, messages: List[BaseMessage]
-    ) -> BaseModelT:
-        """Get structured output from messages and validate it matches the expected type."""
+    ) -> BaseModelT | None:
+        """Get structured output from the messages."""
         for message in reversed(messages):
-            if isinstance(message, self.structured_output):
-                return message
-        raise ValueError(f"No {self.structured_output.__name__} found in messages")
+            if isinstance(message, dict):
+                try:
+                    validated_message = LangchainRawOutputModel.model_validate(message)
+                    if validated_message.parsing_error is not None:
+                        raise TaskValidationError(
+                            f"Parsing error: {validated_message.parsing_error}"
+                        )
+
+                    parsed = validated_message.parsed
+                    if isinstance(parsed, self.structured_output):
+                        return parsed
+                except ValidationError:
+                    continue
+        return None

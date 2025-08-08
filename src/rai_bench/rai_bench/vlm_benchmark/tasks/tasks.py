@@ -73,7 +73,4 @@ class BoolImageTask(ImageReasoningTask[BoolAnswerWithJustification]):
         return images
 
     def validate(self, output: BoolAnswerWithJustification) -> bool:
-        if not isinstance(output, self.structured_output):
-            self.logger.error(f"Invalid output type: {type(output)}")
-            return False
         return output.answer == self.expected_answer

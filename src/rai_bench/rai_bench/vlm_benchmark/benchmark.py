@@ -32,7 +32,7 @@ from rai.messages import HumanMultimodalMessage
 from rai_bench.base_benchmark import BaseBenchmark, RunSummary, TimeoutException
 from rai_bench.results_processing.langfuse_scores_tracing import ScoreTracingHandler
 from rai_bench.utils import get_llm_model_name
-from rai_bench.vlm_benchmark.interfaces import ImageReasoningTask
+from rai_bench.vlm_benchmark.interfaces import ImageReasoningTask, TaskValidationError
 from rai_bench.vlm_benchmark.results_tracking import (
     TaskResult,
 )
@@ -98,6 +98,7 @@ class VLMBenchmark(BaseBenchmark):
         ts = time.perf_counter()
         messages: List[BaseMessage] = []
         prev_count: int = 0
+        errors: List[str] = []
         try:
             with self.time_limit(60):
                 for state in agent.stream(
@@ -121,13 +122,22 @@ class VLMBenchmark(BaseBenchmark):
             self.logger.error(msg=f"Reached recursion limit {e}")
         except Exception as e:
             self.logger.error(msg=f"Unexpected error occured: {e}")
-        structured_output = task.get_structured_output_from_messages(messages=messages)
+        structured_output = None
+        try:
+            structured_output = task.get_structured_output_from_messages(
+                messages=messages
+            )
+        except TaskValidationError as e:
+            errors.append(str(e))
 
-        score = task.validate(output=structured_output)
+        if structured_output is not None:
+            score = task.validate(output=structured_output)
+        else:
+            errors.append(f"Not valid structured output: {type(structured_output)}")
+            score = False
+
         te = time.perf_counter()
         total_time = te - ts
-
-        # TODO (mkotynia) handle pydantic validation errors
 
         self.logger.info(f"TASK SCORE: {score}, TOTAL TIME: {total_time:.3f}")
 
