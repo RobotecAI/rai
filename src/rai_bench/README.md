@@ -176,7 +176,7 @@ To run the benchmark:
 ```bash
 cd rai
 source setup_shell.sh
-python src/rai_bench/rai_bench/examples/vlm_benchmark.py --model-name llama3.2 --vendor ollama
+python src/rai_bench/rai_bench/examples/vlm_benchmark.py --model-name gemma3:4b --vendor ollama
 ```
 
 ## Testing Models
