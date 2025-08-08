@@ -26,19 +26,23 @@ if __name__ == "__main__":
     experiment_dir = Path(args.out_dir)
     experiment_dir.mkdir(parents=True, exist_ok=True)
     bench_logger = define_benchmark_logger(out_dir=experiment_dir)
+    try:
+        tasks = get_spatial_tasks()
+        for task in tasks:
+            task.set_logger(bench_logger)
 
-    tasks = get_spatial_tasks()
-    for task in tasks:
-        task.set_logger(bench_logger)
-
-    llm = get_llm_for_benchmark(
-        model_name=args.model_name,
-        vendor=args.vendor,
-    )
-
-    run_benchmark(
-        llm=llm,
-        out_dir=experiment_dir,
-        tasks=tasks,
-        bench_logger=bench_logger,
-    )
+        llm = get_llm_for_benchmark(
+            model_name=args.model_name,
+            vendor=args.vendor,
+        )
+        run_benchmark(
+            llm=llm,
+            out_dir=experiment_dir,
+            tasks=tasks,
+            bench_logger=bench_logger,
+        )
+    except Exception as e:
+        bench_logger.critical(
+            msg=f"Benchmark failed with error: {e}",
+            exc_info=True,
+        )

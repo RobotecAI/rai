@@ -120,8 +120,7 @@ class VLMBenchmark(BaseBenchmark):
             self.logger.error(msg=f"Task timeout: {e}")
         except GraphRecursionError as e:
             self.logger.error(msg=f"Reached recursion limit {e}")
-        except Exception as e:
-            self.logger.error(msg=f"Unexpected error occured: {e}")
+
         structured_output = None
         try:
             structured_output = task.get_structured_output_from_messages(
