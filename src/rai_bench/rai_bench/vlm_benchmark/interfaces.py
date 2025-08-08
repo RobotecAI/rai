@@ -29,6 +29,22 @@ IMAGE_REASONING_SYSTEM_PROMPT = "You are a helpful and knowledgeable AI assistan
 
 
 class LangchainRawOutputModel(BaseModel):
+    """
+    A Pydantic model for wrapping Langchain message parsing results from a structured output agent. See documentation for more details:
+    https://github.com/langchain-ai/langchain/blob/02001212b0a2b37d90451d8493089389ea220cab/libs/core/langchain_core/language_models/chat_models.py#L1430-L1432
+
+
+    Attributes
+    ----------
+    raw : BaseMessage
+        The original raw message object from Langchain before parsing.
+    parsed : BaseModel
+        The parsed and validated Pydantic model instance derived from the raw message.
+    parsing_error : Optional[BaseException]
+        Any exception that occurred during the parsing process, None if parsing
+        was successful.
+    """
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
     raw: BaseMessage
     parsed: BaseModel
@@ -48,18 +64,15 @@ class ImageReasoningTask(ABC, Generic[BaseModelT]):
         logger: loggers_type | None = None,
     ) -> None:
         """
-        Abstract base class representing a complete task to be validated.
+        Abstract base class representing a complete image reasoning task to be validated.
 
-        A Task consists of multiple Validators, where each Validator can be treated as a single
-        step that is scored atomically. Each Task has a consistent prompt and available tools,
-        with validation methods that can be parameterized.
+        Each Task has a consistent prompt and structured output schema, along
+        with validation methods that check the output against the expected result.
 
         Attributes
         ----------
         logger : logging.Logger
             Logger for recording task validation results and errors.
-        result : Result
-            Object tracking the validation results across all validators.
         """
         if logger:
             self.logger = logger
