@@ -119,11 +119,16 @@ def define_benchmark_logger(out_dir: Path) -> logging.Logger:
     )
     file_handler.setFormatter(formatter)
 
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(formatter)
+
     bench_logger = logging.getLogger("Benchmark logger")
     for handler in bench_logger.handlers:
         bench_logger.removeHandler(handler)
     bench_logger.setLevel(logging.INFO)
     bench_logger.addHandler(file_handler)
+    bench_logger.addHandler(console_handler)
 
     return bench_logger
 
