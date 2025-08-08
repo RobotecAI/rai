@@ -41,7 +41,7 @@ def create_structured_output_agent(
     else:
         _logger = logging.getLogger(__name__)
 
-    _logger.info("Creating state based agent")
+    _logger.info("Creating structured output runnable")
 
     llm_with_structured_output = llm.with_structured_output(
         schema=structured_output, include_raw=True
