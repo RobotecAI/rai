@@ -23,6 +23,7 @@ from langchain_core.messages import BaseMessage
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
+from pydantic import BaseModel
 from rai.agents.langchain.core import (
     create_structured_output_agent,
 )
@@ -31,7 +32,7 @@ from rai.messages import HumanMultimodalMessage
 from rai_bench.base_benchmark import BaseBenchmark, RunSummary, TimeoutException
 from rai_bench.results_processing.langfuse_scores_tracing import ScoreTracingHandler
 from rai_bench.utils import get_llm_model_name
-from rai_bench.vlm_benchmark.interfaces import BaseModelT, ImageReasoningTask
+from rai_bench.vlm_benchmark.interfaces import ImageReasoningTask
 from rai_bench.vlm_benchmark.results_tracking import (
     TaskResult,
 )
@@ -42,7 +43,7 @@ class VLMBenchmark(BaseBenchmark):
 
     def __init__(
         self,
-        tasks: Sequence[ImageReasoningTask[BaseModelT]],
+        tasks: Sequence[ImageReasoningTask[BaseModel]],
         model_name: str,
         results_dir: Path,
         logger: logging.Logger | None = None,
@@ -52,7 +53,7 @@ class VLMBenchmark(BaseBenchmark):
             results_dir=results_dir,
             logger=logger,
         )
-        self._tasks: Iterator[Tuple[int, ImageReasoningTask[BaseModelT]]] = enumerate(
+        self._tasks: Iterator[Tuple[int, ImageReasoningTask[BaseModel]]] = enumerate(
             iter(tasks)
         )
         self.num_tasks = len(tasks)
@@ -174,7 +175,7 @@ class VLMBenchmark(BaseBenchmark):
 def run_benchmark(
     llm: BaseChatModel,
     out_dir: Path,
-    tasks: List[ImageReasoningTask[BaseModelT]],
+    tasks: List[ImageReasoningTask[BaseModel]],
     bench_logger: logging.Logger,
     experiment_id: uuid.UUID = uuid.uuid4(),
 ):

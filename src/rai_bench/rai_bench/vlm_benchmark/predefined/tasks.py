@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Sequence
+from typing import List, cast
+
+from pydantic import BaseModel
 
 from rai_bench.vlm_benchmark.interfaces import ImageReasoningTask
 from rai_bench.vlm_benchmark.tasks.tasks import BoolImageTask, BoolImageTaskInput
@@ -94,15 +96,7 @@ false_response_inputs: List[BoolImageTaskInput] = [
 ]
 
 
-true_spatial_tasks: List[ImageReasoningTask] = [
-    BoolImageTask(task_input=input_item) for input_item in true_response_inputs
-]
-false_spatial_tasks: List[ImageReasoningTask] = [
-    BoolImageTask(task_input=input_item) for input_item in false_response_inputs
-]
-
-
-def get_spatial_tasks() -> Sequence[ImageReasoningTask]:
+def get_spatial_tasks() -> List[ImageReasoningTask[BaseModel]]:
     true_tasks = [
         BoolImageTask(
             task_input=input_item,
@@ -115,4 +109,4 @@ def get_spatial_tasks() -> Sequence[ImageReasoningTask]:
         )
         for input_item in false_response_inputs
     ]
-    return true_tasks + false_tasks
+    return cast(List[ImageReasoningTask[BaseModel]], true_tasks + false_tasks)
