@@ -25,7 +25,7 @@ from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel
 from rai.agents.langchain.core import (
-    create_structured_output_agent,
+    create_structured_output_runnable,
 )
 from rai.messages import HumanMultimodalMessage
 
@@ -198,7 +198,7 @@ def run_benchmark(
     )
 
     for task in tasks:
-        agent = create_structured_output_agent(
+        agent = create_structured_output_runnable(
             llm=llm,
             structured_output=task.structured_output,
             system_prompt=task.get_system_prompt(),
