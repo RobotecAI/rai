@@ -136,7 +136,27 @@ class ImageReasoningTask(ABC, Generic[BaseModelT]):
     def get_structured_output_from_messages(
         self, messages: List[BaseMessage]
     ) -> BaseModelT | None:
-        """Get structured output from the messages."""
+        """Extract and validate structured output from a list of messages.
+
+        Iterates through messages in reverse order, attempting to find the message that is
+        a LangchainRawOutputModel containing the structured output.
+
+        Parameters
+        ----------
+        messages : List[BaseMessage]
+            List of messages to search for structured output.
+
+        Returns
+        -------
+        BaseModelT | None
+            The first valid structured output found that matches the task's expected
+            output type, or None if no valid structured output is found.
+
+        Raises
+        ------
+        TaskValidationError
+            If a message contains a parsing error during validation.
+        """
         for message in reversed(messages):
             if isinstance(message, dict):
                 try:
