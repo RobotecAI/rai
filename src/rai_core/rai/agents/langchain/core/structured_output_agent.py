@@ -46,7 +46,6 @@ def create_structured_output_agent(
     llm_with_structured_output = llm.with_structured_output(
         schema=structured_output, include_raw=True
     )
-    # tool_node = ToolRunner(tools=tools, logger=_logger)
 
     workflow = StateGraph(State)
 
