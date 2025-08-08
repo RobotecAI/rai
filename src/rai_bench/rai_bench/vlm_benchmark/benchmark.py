@@ -208,5 +208,5 @@ def run_benchmark(
         benchmark.run_next(agent=agent, experiment_id=experiment_id)
 
     bench_logger.info("===============================================================")
-    bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
+    bench_logger.info("ALL TASKS DONE. BENCHMARK COMPLETED!")
     bench_logger.info("===============================================================")
