@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Literal
+from typing import Any, Dict, List, Literal
 
 from rai.tools.ros2 import MoveToPointToolInput
 from rai.types import Point
@@ -21,33 +21,25 @@ from rai_bench.tool_calling_agent.interfaces import (
     Task,
     TaskArgs,
 )
-from rai_bench.tool_calling_agent.subtasks import (
-    CheckArgsToolCallSubTask,
-)
 from rai_bench.tool_calling_agent.tasks.manipulation import (
+    AlignTwoObjectsTask,
+    GetObjectPositionsTask,
+    GrabExistingObjectTask,
+    MoveExistingObjectFrontTask,
+    MoveExistingObjectLeftTask,
     MoveToPointTask,
 )
-from rai_bench.tool_calling_agent.validators import (
-    OrderedCallsValidator,
-)
 
-########## SUBTASKS #################################################################
-move_to_point_subtask_grab = CheckArgsToolCallSubTask(
-    expected_tool_name="move_to_point",
-    expected_args={"x": 1.0, "y": 2.0, "z": 3.0, "task": "grab"},
-)
-move_to_point_subtask_drop = CheckArgsToolCallSubTask(
-    expected_tool_name="move_to_point",
-    expected_args={"x": 1.2, "y": 2.3, "z": 3.4, "task": "drop"},
-)
+BANANA_POSITION = Point(x=0.1, y=0.2, z=0.3)
+BANANA_POSITION_2 = Point(x=0.4, y=0.5, z=0.6)
+CUBE_POSITION = Point(x=0.7, y=0.8, z=0.9)
 
-######### VALIDATORS #########################################################################################
-move_to_point_ord_val_grab = OrderedCallsValidator(
-    subtasks=[move_to_point_subtask_grab]
-)
-move_to_point_ord_val_drop = OrderedCallsValidator(
-    subtasks=[move_to_point_subtask_drop]
-)
+BANANA_OBJECT = "banana"
+CUBE_OBJECT = "cube"
+APPLE_OBJECT = "apple"
+
+MOVE_TO_GRAB_COORDS: Dict[str, Any] = {"x": 1.0, "y": 2.0, "z": 3.0, "task": "grab"}
+MOVE_TO_DROP_COORDS: Dict[str, Any] = {"x": 1.2, "y": 2.3, "z": 3.4, "task": "drop"}
 
 
 def get_manipulation_tasks(
@@ -69,9 +61,15 @@ def get_manipulation_tasks(
     tasks: List[Task] = []
 
     objects = {
-        "banana": [Point(x=0.1, y=0.2, z=0.3), Point(x=0.4, y=0.5, z=0.6)],
-        "cube": [Point(x=0.7, y=0.8, z=0.9)],
+        BANANA_OBJECT: [BANANA_POSITION],
+        CUBE_OBJECT: [CUBE_POSITION],
     }
+
+    objects_with_multiple_bananas = {
+        BANANA_OBJECT: [BANANA_POSITION, BANANA_POSITION_2],
+        CUBE_OBJECT: [CUBE_POSITION],
+    }
+
     for extra_calls in extra_tool_calls:
         for detail in prompt_detail:
             for shots in n_shots:
@@ -80,6 +78,7 @@ def get_manipulation_tasks(
                     prompt_detail=detail,
                     examples_in_system_prompt=shots,
                 )
+
                 tasks.extend(
                     [
                         MoveToPointTask(
@@ -87,7 +86,6 @@ def get_manipulation_tasks(
                             move_to_tool_input=MoveToPointToolInput(
                                 x=1.0, y=2.0, z=3.0, task="grab"
                             ),
-                            validators=[move_to_point_ord_val_grab],
                             task_args=task_args,
                         ),
                         MoveToPointTask(
@@ -95,9 +93,43 @@ def get_manipulation_tasks(
                             move_to_tool_input=MoveToPointToolInput(
                                 x=1.2, y=2.3, z=3.4, task="drop"
                             ),
-                            validators=[move_to_point_ord_val_drop],
                             task_args=task_args,
                         ),
+                        GetObjectPositionsTask(
+                            objects=objects_with_multiple_bananas,
+                            task_args=task_args,
+                        ),
+                        GrabExistingObjectTask(
+                            objects=objects,
+                            object_to_grab=CUBE_OBJECT,
+                            task_args=task_args,
+                        ),
+                        GrabExistingObjectTask(
+                            objects=objects,
+                            object_to_grab=BANANA_OBJECT,
+                            task_args=task_args,
+                        ),
+                        MoveExistingObjectLeftTask(
+                            objects=objects,
+                            object_to_grab=CUBE_OBJECT,
+                            task_args=task_args,
+                        ),
+                        MoveExistingObjectLeftTask(
+                            objects=objects,
+                            object_to_grab=BANANA_OBJECT,
+                            task_args=task_args,
+                        ),
+                        MoveExistingObjectFrontTask(
+                            objects=objects,
+                            object_to_grab=CUBE_OBJECT,
+                            task_args=task_args,
+                        ),
+                        MoveExistingObjectFrontTask(
+                            objects=objects,
+                            object_to_grab=BANANA_OBJECT,
+                            task_args=task_args,
+                        ),
+                        AlignTwoObjectsTask(objects=objects, task_args=task_args),
                     ]
                 )
 
