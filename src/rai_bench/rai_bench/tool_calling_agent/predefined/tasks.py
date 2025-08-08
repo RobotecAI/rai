@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import random
-from typing import List, Literal, Sequence
+from typing import List, Literal
 
 from rai.tools.ros2 import MoveToPointToolInput
 
@@ -44,76 +44,11 @@ from rai_bench.tool_calling_agent.tasks.navigation import (
     NavigateToPointTask,
     SpinAroundTask,
 )
-from rai_bench.tool_calling_agent.tasks.spatial import (
-    BoolImageTask,
-    BoolImageTaskInput,
-)
 from rai_bench.tool_calling_agent.validators import (
     NotOrderedCallsValidator,
     OrderedCallsValidator,
 )
 
-IMG_PATH = "src/rai_bench/rai_bench/tool_calling_agent/predefined/images/"
-true_response_inputs: List[BoolImageTaskInput] = [
-    BoolImageTaskInput(
-        question="Is the door on the left from the desk?",
-        images_paths=[IMG_PATH + "image_1.jpg"],
-    ),
-    BoolImageTaskInput(
-        question="Is the light on in the room?",
-        images_paths=[IMG_PATH + "image_2.jpg"],
-    ),
-    BoolImageTaskInput(
-        question="Do you see the plant?",
-        images_paths=[IMG_PATH + "image_2.jpg"],
-    ),
-    BoolImageTaskInput(
-        question="Are there any pictures on the wall?",
-        images_paths=[IMG_PATH + "image_3.jpg"],
-    ),
-    BoolImageTaskInput(
-        question="Are there 3 pictures on the wall?",
-        images_paths=[IMG_PATH + "image_4.jpg"],
-    ),
-    BoolImageTaskInput(
-        question="Is there a plant behind the rack?",
-        images_paths=[IMG_PATH + "image_5.jpg"],
-    ),
-    BoolImageTaskInput(
-        question="Is there a pillow on the armchain?",
-        images_paths=[IMG_PATH + "image_7.jpg"],
-    ),
-]
-false_response_inputs: List[BoolImageTaskInput] = [
-    BoolImageTaskInput(
-        question="Is the door open?",
-        images_paths=[IMG_PATH + "image_1.jpg"],
-    ),
-    BoolImageTaskInput(
-        question="Is someone in the room?",
-        images_paths=[IMG_PATH + "image_1.jpg"],
-    ),
-    BoolImageTaskInput(
-        question="Do you see the plant?",
-        images_paths=[IMG_PATH + "image_3.jpg"],
-    ),
-    BoolImageTaskInput(
-        question="Are there 4 pictures on the wall?",
-        images_paths=[IMG_PATH + "image_4.jpg"],
-    ),
-    BoolImageTaskInput(
-        question="Is there a rack on the left from the sofa?",
-        images_paths=[IMG_PATH + "image_4.jpg"],
-    ),
-    BoolImageTaskInput(
-        question="Is there a plant on the right from the window?",
-        images_paths=[IMG_PATH + "image_6.jpg"],
-    ),
-    BoolImageTaskInput(
-        question="Is there a red pillow on the armchair?",
-        images_paths=[IMG_PATH + "image_7.jpg"],
-    ),
-]
 ########## SUBTASKS #######################################################################################
 get_topics_subtask = CheckArgsToolCallSubTask(
     expected_tool_name="get_ros2_topics_names_and_types", expected_args={}
@@ -281,16 +216,6 @@ custom_interfaces_tasks: List[Task] = [
     ),
 ]
 
-true_spatial_tasks: List[Task] = [
-    BoolImageTask(
-        task_input=input_item, validators=[ret_true_ord_val], extra_tool_calls=0
-    )
-    for input_item in true_response_inputs
-]
-false_spatial_tasks: List[Task] = [
-    BoolImageTask(task_input=input_item, validators=[ret_false_ord_val])
-    for input_item in false_response_inputs
-]
 
 navigation_tasks: List[Task] = [
     NavigateToPointTask(validators=[start_navigate_action_ord_val], extra_tool_calls=5),
@@ -391,26 +316,6 @@ def get_custom_interfaces_tasks(extra_tool_calls: int = 0) -> List[Task]:
     ]
 
 
-def get_spatial_tasks(extra_tool_calls: int = 0) -> Sequence[Task]:
-    true_tasks = [
-        BoolImageTask(
-            task_input=input_item,
-            validators=[ret_true_ord_val],
-            extra_tool_calls=extra_tool_calls,
-        )
-        for input_item in true_response_inputs
-    ]
-    false_tasks = [
-        BoolImageTask(
-            task_input=input_item,
-            validators=[ret_false_ord_val],
-            extra_tool_calls=extra_tool_calls,
-        )
-        for input_item in false_response_inputs
-    ]
-    return true_tasks + false_tasks
-
-
 def get_tasks(
     extra_tool_calls: int = 0,
     complexities: List[Literal["easy", "medium", "hard"]] = ["easy", "medium", "hard"],
@@ -420,14 +325,12 @@ def get_tasks(
             "manipulation",
             "navigation",
             "custom_interfaces",
-            "spatial_reasoning",
         ]
     ] = [
         "basic",
         "manipulation",
         "navigation",
         "custom_interfaces",
-        "spatial_reasoning",
     ],
 ) -> List[Task]:
     # TODO (jmatejcz) implement complexity sorting
@@ -440,8 +343,6 @@ def get_tasks(
         tasks += get_manipulation_tasks(extra_tool_calls=extra_tool_calls)
     if "navigation" in task_types:
         tasks += get_navigation_tasks(extra_tool_calls=extra_tool_calls)
-    if "spatial_reasoning" in task_types:
-        tasks += get_spatial_tasks(extra_tool_calls=extra_tool_calls)
 
     random.shuffle(tasks)
     return tasks

@@ -47,7 +47,7 @@ class ScoreTracingHandler:
         if isinstance(callback, CallbackHandler):
             callback.langfuse.score(
                 trace_id=str(run_id),
-                name="tool calls result",
+                name="result",
                 value=score,
                 comment=comment,
             )
@@ -55,7 +55,7 @@ class ScoreTracingHandler:
         if isinstance(callback, LangChainTracer):
             callback.client.create_feedback(
                 run_id=run_id,
-                key="tool calls result",
+                key="result",
                 score=score,
                 comment=comment,
             )

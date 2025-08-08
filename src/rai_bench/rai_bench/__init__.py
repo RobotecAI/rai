@@ -22,6 +22,7 @@ from .utils import (
     get_llm_for_benchmark,
     parse_manipulation_o3de_benchmark_args,
     parse_tool_calling_benchmark_args,
+    parse_vlm_benchmark_args,
 )
 
 __all__ = [
@@ -31,6 +32,7 @@ __all__ = [
     "get_llm_for_benchmark",
     "parse_manipulation_o3de_benchmark_args",
     "parse_tool_calling_benchmark_args",
+    "parse_vlm_benchmark_args",
     "test_dual_agents",
     "test_models",
 ]

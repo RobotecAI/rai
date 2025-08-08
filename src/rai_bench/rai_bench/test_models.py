@@ -64,14 +64,12 @@ class ToolCallingAgentBenchmarkConfig(BenchmarkConfig):
             "manipulation",
             "navigation",
             "custom_interfaces",
-            "spatial_reasoning",
         ]
     ] = [
         "basic",
         "manipulation",
         "navigation",
         "custom_interfaces",
-        "spatial_reasoning",
     ]
 
     @property

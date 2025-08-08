@@ -16,37 +16,34 @@ import statistics
 import time
 import uuid
 from pathlib import Path
-from typing import Iterator, List, Optional, Sequence, Tuple
+from typing import Iterator, List, Sequence, Tuple
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
+from pydantic import BaseModel
 from rai.agents.langchain.core import (
-    create_conversational_agent,
+    create_structured_output_runnable,
 )
 from rai.messages import HumanMultimodalMessage
 
-from rai_bench.agents import create_multimodal_to_tool_agent
-from rai_bench.base_benchmark import BaseBenchmark, TimeoutException
+from rai_bench.base_benchmark import BaseBenchmark, RunSummary, TimeoutException
 from rai_bench.results_processing.langfuse_scores_tracing import ScoreTracingHandler
-from rai_bench.tool_calling_agent.interfaces import (
-    Task,
-)
-from rai_bench.tool_calling_agent.results_tracking import (
-    TaskResult,
-    ToolCallingAgentRunSummary,
-)
 from rai_bench.utils import get_llm_model_name
+from rai_bench.vlm_benchmark.interfaces import ImageReasoningTask, TaskValidationError
+from rai_bench.vlm_benchmark.results_tracking import (
+    TaskResult,
+)
 
 
-class ToolCallingAgentBenchmark(BaseBenchmark):
-    """Benchmark for LangChain tool calling agents."""
+class VLMBenchmark(BaseBenchmark):
+    """Benchmark for VLMs."""
 
     def __init__(
         self,
-        tasks: Sequence[Task],
+        tasks: Sequence[ImageReasoningTask[BaseModel]],
         model_name: str,
         results_dir: Path,
         logger: logging.Logger | None = None,
@@ -56,7 +53,9 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
             results_dir=results_dir,
             logger=logger,
         )
-        self._tasks: Iterator[Tuple[int, Task]] = enumerate(iter(tasks))
+        self._tasks: Iterator[Tuple[int, ImageReasoningTask[BaseModel]]] = enumerate(
+            iter(tasks)
+        )
         self.num_tasks = len(tasks)
         self.task_results: List[TaskResult] = []
 
@@ -89,22 +88,27 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
             "callbacks": callbacks,
             "tags": [
                 f"experiment-id:{experiment_id}",
-                "benchmark:tool-calling-agent",
+                "benchmark:vlm-benchmark",
                 self.model_name,
                 f"task-complexity:{task.complexity}",
-                f"extra-tool-calls:{task.extra_tool_calls}",
             ],
-            "recursion_limit": len(agent.get_graph().nodes)
-            * task.max_tool_calls_number,
+            "recursion_limit": len(agent.get_graph().nodes),
         }
 
         ts = time.perf_counter()
         messages: List[BaseMessage] = []
         prev_count: int = 0
+        errors: List[str] = []
         try:
             with self.time_limit(60):
                 for state in agent.stream(
-                    {"messages": [HumanMultimodalMessage(content=task.get_prompt())]},
+                    {
+                        "messages": [
+                            HumanMultimodalMessage(
+                                content=task.get_prompt(), images=task.get_images()
+                            )
+                        ]
+                    },
                     config=config,
                 ):
                     node = next(iter(state))
@@ -116,22 +120,23 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
             self.logger.error(msg=f"Task timeout: {e}")
         except GraphRecursionError as e:
             self.logger.error(msg=f"Reached recursion limit {e}")
-        except Exception as e:
-            self.logger.error(msg=f"Unexpected error occured: {e}")
-        tool_calls = task.get_tool_calls_from_messages(messages=messages)
-        score = task.validate(tool_calls=tool_calls)
+
+        structured_output = None
+        try:
+            structured_output = task.get_structured_output_from_messages(
+                messages=messages
+            )
+        except TaskValidationError as e:
+            errors.append(str(e))
+
+        if structured_output is not None:
+            score = task.validate(output=structured_output)
+        else:
+            errors.append(f"Not valid structured output: {type(structured_output)}")
+            score = False
+
         te = time.perf_counter()
         total_time = te - ts
-
-        validation_info = task.dump_validators()
-        errors = [
-            s.errors
-            for validator_info in validation_info
-            for s in validator_info.subtasks
-        ]
-        total_extra_calls: int = 0
-        for validator_info in validation_info:
-            total_extra_calls += validator_info.extra_tool_calls_used
 
         self.logger.info(f"TASK SCORE: {score}, TOTAL TIME: {total_time:.3f}")
 
@@ -139,11 +144,8 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
             task_prompt=task.get_prompt(),
             system_prompt=task.get_system_prompt(),
             type=task.type,
-            extra_tool_calls=task.extra_tool_calls,
-            extra_tool_calls_used=total_extra_calls,
             complexity=task.complexity,
             model_name=self.model_name,
-            validation_info=validation_info,
             score=score,
             total_time=total_time,
             run_id=run_id,
@@ -160,7 +162,7 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
                 callback=callback,
                 run_id=run_id,
                 score=score,
-                errors=errors,
+                errors=[errors],
             )
 
     def compute_and_save_summary(self):
@@ -169,27 +171,25 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         success_count = sum(1 for r in self.task_results if r.score == 1.0)
         success_rate = success_count / len(self.task_results) * 100
         avg_time = statistics.mean(r.total_time for r in self.task_results)
-        total_extra_calls = sum(r.extra_tool_calls_used for r in self.task_results)
 
-        summary = ToolCallingAgentRunSummary(
+        summary = RunSummary(
             model_name=self.model_name,
             success_rate=round(success_rate, 2),
             avg_time=round(avg_time, 3),
-            total_extra_tool_calls_used=total_extra_calls,
             total_tasks=len(self.task_results),
         )
-        self.csv_initialize(self.summary_filename, ToolCallingAgentRunSummary)
+        self.csv_initialize(self.summary_filename, RunSummary)
         self.csv_writerow(self.summary_filename, summary)
 
 
 def run_benchmark(
     llm: BaseChatModel,
     out_dir: Path,
-    tasks: List[Task],
+    tasks: List[ImageReasoningTask[BaseModel]],
     bench_logger: logging.Logger,
     experiment_id: uuid.UUID = uuid.uuid4(),
 ):
-    benchmark = ToolCallingAgentBenchmark(
+    benchmark = VLMBenchmark(
         tasks=tasks,
         logger=bench_logger,
         model_name=get_llm_model_name(llm),
@@ -197,56 +197,15 @@ def run_benchmark(
     )
 
     for task in tasks:
-        agent = create_conversational_agent(
+        agent = create_structured_output_runnable(
             llm=llm,
-            tools=task.available_tools,
+            structured_output=task.structured_output,
             system_prompt=task.get_system_prompt(),
             logger=bench_logger,
         )
-        benchmark.run_next(agent=agent, experiment_id=experiment_id)
-
-    bench_logger.info("===============================================================")
-    bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
-    bench_logger.info("===============================================================")
-
-
-def run_benchmark_dual_agent(
-    multimodal_llm: BaseChatModel,
-    tool_calling_llm: BaseChatModel,
-    out_dir: Path,
-    tasks: List[Task],
-    bench_logger: logging.Logger,
-    experiment_id: uuid.UUID = uuid.uuid4(),
-    m_system_prompt: Optional[str] = None,
-    tool_system_prompt: Optional[str] = None,
-):
-    benchmark = ToolCallingAgentBenchmark(
-        tasks=tasks,
-        logger=bench_logger,
-        model_name=get_llm_model_name(multimodal_llm),
-        results_dir=out_dir,
-    )
-
-    basic_tool_system_prompt = (
-        "Based on the conversation call the tools with appropriate arguments"
-    )
-    for task in tasks:
-        agent = create_multimodal_to_tool_agent(
-            multimodal_llm=multimodal_llm,
-            tool_llm=tool_calling_llm,
-            tools=task.available_tools,
-            multimodal_system_prompt=(
-                m_system_prompt if m_system_prompt else task.get_system_prompt()
-            ),
-            tool_system_prompt=(
-                tool_system_prompt if tool_system_prompt else basic_tool_system_prompt
-            ),
-            logger=bench_logger,
-            debug=False,
-        )
 
         benchmark.run_next(agent=agent, experiment_id=experiment_id)
 
     bench_logger.info("===============================================================")
-    bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
+    bench_logger.info("ALL TASKS DONE. BENCHMARK COMPLETED!")
     bench_logger.info("===============================================================")
