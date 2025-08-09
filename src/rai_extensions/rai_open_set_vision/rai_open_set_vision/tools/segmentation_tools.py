@@ -345,13 +345,15 @@ class GetGrabbingPointTool(BaseTool):
             conversion_ratio = 0.001
         resolved = None
 
-        resolved = get_future_result(future)
+        # NOTE: Image processing by GroundingDino and Grounded SAM may take a significant amount
+        # of time, especially when performed on the CPU. Hence, timeout is set to 60 seconds
+        resolved = get_future_result(future, timeout_sec=60.0)
 
         assert resolved is not None
         future = self._call_gsam_node(camera_img_msg, resolved)
 
         ret = []
-        resolved = get_future_result(future)
+        resolved = get_future_result(future, timeout_sec=60.0)
         if resolved is not None:
             for img_msg in resolved.masks:
                 ret.append(convert_ros_img_to_base64(img_msg))
