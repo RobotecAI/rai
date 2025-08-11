@@ -46,8 +46,6 @@ When navigating to slots or boxes remember that you can't navigate into them,
 for example slot1 is at x=10.5, y=1.5 but table spans from x=10 to x=11 so you need to navigate to x=10, y=1.5.
 When navigating to table always approach from the side that is closer to rack (x=10).
 When navigating to the rack always approach from the side that is closer to starting position (y=5).
-
-When you are at the slot or box, you can ask vlm to check if there is an object there and at what coordinates relative to you.
 """
 SYSTEM_PROMPT = """You are a mobile robot operating in a warehouse environment for pick-and-place operations."""
 
@@ -175,13 +173,13 @@ class EnvStateManager:
         visible_objects = []
 
         # Check for objects at table slots
-        if abs(robot_x - 10.5) < 0.5:  # At sorting table
+        if abs(robot_x - 10.0) <= 0.5:  # At sorting table
             for obj_id, obj_data in self._objects.items():
                 if not obj_data["picked_up"]:
                     obj_world_pos = obj_data["world_position"]
                     # Check if object is at current slot
                     expected_robot_y = obj_world_pos[1] - obj_data["relative"][1]
-                    if abs(robot_y - expected_robot_y) < 0.5:
+                    if abs(robot_y - expected_robot_y) <= 0.5:
                         visible_objects.append(
                             {
                                 "id": obj_id,
@@ -198,10 +196,10 @@ class EnvStateManager:
         visible_boxes = []
 
         # Check for boxes at storage rack
-        if 2 <= robot_x <= 6 and abs(robot_y - 5.5) < 0.5:
+        if 2 <= robot_x <= 6 and abs(robot_y - 5.5) <= 0.5:
             for box_id, box_data in self._boxes.items():
                 box_world_pos = box_data["world_position"]
-                if abs(robot_x - box_world_pos[0]) < 0.5:
+                if abs(robot_x - box_world_pos[0]) <= 0.5:
                     visible_boxes.append(
                         {
                             "id": box_id,
@@ -377,13 +375,16 @@ class SortTask(Task):
         # define tools
         @tool
         def nav_tool(x: float, y: float):
-            """Navigate to certain coordinates in the warehouse"""
+            """Navigate to certain coordinates in the warehouse."""
             self.env_state.set_position(x, y)
-            return f"Navigating to x: {x}, y: {y} ..."
+            return (
+                f"Navigating to x: {x}, y: {y} ...\n"
+                "Check you current position to ensure if movement was done properly"
+            )
 
         @tool
         def where_am_i() -> Dict[str, float]:
-            """Returns your current location"""
+            """Returns your current position"""
             x, y = self.env_state.get_position()
             return {"x": x, "y": y}
 
@@ -396,9 +397,7 @@ class SortTask(Task):
                     obj_color = self.env_state._objects[obj_id]["color"]
                     return f"Successfully picked up {obj_color} object ({obj_id}) at relative position x: {x}, y: {y}, z: {z}"
                 else:
-                    return (
-                        f"No object found at relative position x: {x}, y: {y}, z: {z}"
-                    )
+                    return f"No object grabbed successfully at relative position x: {x}, y: {y}, z: {z}"
             else:
                 return "Gripper is already closed"
 
