@@ -119,7 +119,7 @@ streamlit run src/rai_bench/rai_bench/examples/visualise_streamlit.py
 
 ### Manipulation O3DE Scenarios
 
-To create your own Scenarios, you will need a Scene Config and Task - check out example [CustomScenario](../../src//rai_bench/rai_bench/examples/custom_scenario.py).
+To create your own Scenarios, you will need a Scene Config and Task - check out example `src/rai_bench/rai_bench/examples/custom_scenario.py`.
 You can combine already existing Scene and existing Task to create a new Scenario like:
 
 ```python
@@ -268,7 +268,7 @@ Congratulations, you just created and launched your first Scenario from scratch!
 ### Tool Calling Tasks
 
 To create a Tool Calling Task, you will need to define Subtasks, Validators, and Task itself.
-Check the example [CustomTask](../../src/rai_bench/rai_bench/examples/custom_task.py).
+Check the example `src/rai_bench/rai_bench/examples/custom_task.py`.
 Let's create a basic task that requires using a tool to receive a message from a specific topic.
 
 ```python
