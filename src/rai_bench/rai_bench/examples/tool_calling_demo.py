@@ -17,6 +17,7 @@ from datetime import datetime
 from pathlib import Path
 
 from rai.agents.langchain import create_planner_supervisor
+from rai.agents.langchain.megamind import create_megamind
 from rai.agents.langchain.core.react_agent import ReActAgentState
 from rai.messages.multimodal import HumanMultimodalMessage
 
@@ -54,16 +55,17 @@ if __name__ == "__main__":
         results_dir=experiment_dir,
     )
 
-    agent = create_planner_supervisor(
+    agent = create_megamind(
         manipulation_tools=task.manipulation_tools(),
         navigation_tools=task.navigation_tools(),
-        planner_llm=supervisor_llm,
-        supervisor_llm=supervisor_llm,
+        megamind_llm=supervisor_llm,
         executor_llm=executor_llm,
         system_prompt=task.get_system_prompt(),
     )
     initial_state = ReActAgentState(
-        {"messages": [HumanMultimodalMessage(content=task.get_prompt())]}
+        {
+            "messages": [HumanMultimodalMessage(content=task.get_prompt())],
+        }
     )
     experiment_id = uuid.uuid4()
     benchmark.run_next(
