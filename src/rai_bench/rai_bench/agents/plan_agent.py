@@ -107,7 +107,7 @@ def create_plan_execute_agent(
     if system_prompt is None:
         system_prompt = ""
 
-    planner_prompt = f"""For the given objective, come up with a simple step by step plan.
+    planner_prompt = """For the given objective, come up with a simple step by step plan.
 
 When creating your plan:
 - Design each step to leverage the most appropriate tool from the list above
