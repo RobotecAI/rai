@@ -163,6 +163,22 @@ python src/rai_bench/rai_bench/examples/tool_calling_agent/main.py --model-name 
 > [!NOTE]
 > The configs of vendors are defined in [config.toml](../../config.toml) Change ithem if needed.
 
+## VLM Benchmark
+
+The VLM Benchmark is a benchmark for VLM models. It includes a set of tasks containing questions related to images and evaluates the performance of the agent that returns the answer in the structured format.
+
+### Running
+
+To set up tracing backends, please follow the instructions in the [tracing.md](../../docs/tracing.md) document.
+
+To run the benchmark:
+
+```bash
+cd rai
+source setup_shell.sh
+python src/rai_bench/rai_bench/examples/vlm_benchmark.py --model-name gemma3:4b --vendor ollama
+```
+
 ## Testing Models
 
 To test multiple models, different benchamrks or couple repeats in one go - use script [test_models](./rai_bench/examples/test_models.py)
