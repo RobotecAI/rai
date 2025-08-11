@@ -16,9 +16,7 @@
 ### NOTE (jmatejcz) this agent is still in process of testing and refining
 import json
 import logging
-import stat
 import time
-from enum import Enum
 from functools import partial
 from typing import (
     Annotated,
@@ -30,10 +28,8 @@ from typing import (
     Sequence,
     Union,
     cast,
-    Tuple,
 )
 
-from altair import Step
 from langchain.chat_models.base import BaseChatModel
 from langchain_core.messages import (
     AIMessage,
@@ -47,7 +43,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.runnables.config import get_executor_for_config
 from langchain_core.tools import BaseTool, InjectedToolCallId, tool
 from langchain_core.tools import tool as create_tool
-from langgraph.graph import END, START, StateGraph
+from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import create_react_agent
 from langgraph.prebuilt.tool_node import msg_content_output
@@ -55,8 +51,6 @@ from langgraph.types import Command
 from langgraph.utils.runnable import RunnableCallable
 from pydantic import BaseModel, Field, ValidationError
 
-from typing_extensions import TypedDict
-from rai.agents.langchain.core import ReActAgentState
 from rai.messages import (
     HumanMultimodalMessage,
     MultimodalArtifact,
@@ -64,13 +58,12 @@ from rai.messages import (
     store_artifacts,
 )
 
+# class AgentType(str, Enum):
+#     """Types of specialized agents."""
 
-class AgentType(str, Enum):
-    """Types of specialized agents."""
-
-    MANIPULATION = "manipulation"
-    NAVIGATION = "navigation"
-    COMPLETE = "complete"
+#     MANIPULATION = "manipulation"
+#     NAVIGATION = "navigation"
+#     COMPLETE = "complete"
 
 
 class StepSuccess(BaseModel):
@@ -86,7 +79,7 @@ class PlanStep(BaseModel):
     task: str = Field(description="Description of the task to be completed")
 
 
-class State(ReActAgentState):
+class State(MessagesState):
     original_task: str
     steps_done: List[str]
     step: Optional[str]
@@ -236,11 +229,7 @@ def structured_output_node(
     state: State,
 ) -> State:
     """Analyze the conversation and return structured output."""
-    final_response = (
-        state["step_messages"][-1].content if state["step_messages"] else ""
-    )
 
-    # Analyze with structured output
     analyzer = llm.with_structured_output(StepSuccess)
     analysis = analyzer.invoke(
         [
@@ -251,7 +240,10 @@ Analyze if this task was completed successfully:
 Task: {state["step"]}
 
 
-Determine success and provide brief explanation of what happened. 
+Determine success and provide brief explanation of what happened.
+Include the end result details in explanation.
+For example for the navigation tasks include the final location.
+For manipulation the coordinates of objects that have been detected, picked up from or dropped to.
 Below you have messages of agent doing the task:"""
             ),
             *state["step_messages"],
@@ -260,6 +252,8 @@ Below you have messages of agent doing the task:"""
     state["step_success"] = StepSuccess(
         success=analysis.success, explanation=analysis.explanation
     )
+    # success_str = "success" if state["step_success"].success else "failure"
+    state["steps_done"].append(f"{state['step_success'].explanation}")
     return state
 
 
@@ -317,7 +311,6 @@ def create_megamind(
     executor_llm: BaseChatModel,
     system_prompt: str,
 ) -> CompiledStateGraph:
-
     if not manipulation_tools and not navigation_tools:
         raise ValueError("At least one set of tools must be provided")
 
@@ -328,15 +321,12 @@ def create_megamind(
         @tool(name, description=description)
         def handoff_tool(
             task_instruction: str,  # The specific task for the agent
-            state: State,
             tool_call_id: Annotated[str, InjectedToolCallId],
         ) -> Command:
-            state["step"] = task_instruction
-            state["step_messages"] = []
             return Command(
                 goto=agent_name,
                 # Send only the task message to the specialist agent, not the full history
-                update=state,
+                update={"step": task_instruction, "step_messages": []},
                 graph=Command.PARENT,
             )
 
@@ -345,7 +335,8 @@ def create_megamind(
     manipulation_system_prompt = """You are a manipulation specialist robot agent.
 Your role is to handle object manipulation tasks including picking up and droping objects using provided tools.
 
-Ask the VLM for objects detection and positions before perfomring any manipulation action."""
+Ask the VLM for objects detection and positions before perfomring any manipulation action.
+If VLM doesn't see objects that are objectives of the task, return this information, without proceeding"""
 
     navigation_system_prompt = """You are a navigation specialist robot agent.
 Your role is to handle navigation tasks in space using provided tools.
@@ -375,24 +366,29 @@ After performing navigation action, always check your current position to ensure
         description="Assign task to a manipulation agent.",
     )
 
-    megamind_system_prompt = f"""You manage specialists to whom you will delegate tasks:
-- Manipulaiton specialist can ask VLM about the nearby objects and their coordinates, pick up and drop objects.
+    megamind_system_prompt = """You manage specialists to whom you will delegate tasks:
 - Navigation specialist can navigate to certain coordinates and determine the location of robot in the environment.
 Always include coordinates to navigate to.
+- Manipulaiton specialist can ask VLM about the nearby objects and their coordinates, pick up and drop objects.
+Pick and drop operations depend on relative cooridnates so don't include global cooridantes. Make sure that robot
+is in the right place to perform the task. For example to drop object at box2, robot should be at box2 in the first place.
+
 
 The single task should be delegated to only 1 agent and should be doable by only 1 agent.
 
-Examples of a WELL formulated task:
-- Navigate to (5.0, 4.0).
+Examples of a WELL formulated tasks:
+- Navigate to (5.0, 4.0). (delegated to navigation agent)
 ----------------------------------
-- Check for objects near you.
+- Check for objects near you. (delegated to manipulation agent)
 ----------------------------------
-- Pick up green object.
+- Pick up green object. (delegated to manipulation agent)
 ----------------------------------
-- Drop an object to the box.
+- Drop an object to the box. (delegated to manipulation agent)
 
-Examples of WRONGLY formulated task:
-- Pick up object and navigate to box.
+Examples of WRONGLY formulated tasks:
+- Pick up object and navigate to box. (delegated to navigation agent)
+-------------------------------------
+- Drop the object at the box1 (15.5, 1.0) (delegated to manipulation agent)
 """
     system_prompt += "\n"
     system_prompt += megamind_system_prompt
@@ -414,12 +410,14 @@ Examples of WRONGLY formulated task:
             state["step"] = None
 
         megamind_prompt = (
-            f'You are given objective to complete: {state["original_task"]}'
+            f"You are given objective to complete: {state['original_task']}"
         )
         if state["steps_done"]:
-            megamind_prompt += "\n"
-            megamind_prompt += "Steps that were already done:\n"
-            steps_done = "\n".join(state["steps_done"])
+            megamind_prompt += "\n\n"
+            megamind_prompt += "Steps that were already done successfully:\n"
+            steps_done = "\n".join(
+                [f"{i + 1}. {step}" for i, step in enumerate(state["steps_done"])]
+            )
             megamind_prompt += steps_done
             megamind_prompt += "\n"
 
@@ -427,29 +425,24 @@ Examples of WRONGLY formulated task:
             if not state["step_success"]:
                 raise ValueError("Step success should be specified at this point")
 
-            megamind_prompt += (
-                f"\nLatest step delegated to specialist was:\n {state['step']}\n"
-            )
-            success_str = "success" if state["step_success"].success else "failure"
-            megamind_prompt += f"\nIt resulted in {success_str} because: {state['step_success'].explanation}"
-            megamind_prompt += "\nBased on that outcome come up with the next step and delegate it to selected agent."
+            megamind_prompt += "\nBased on that outcome and past steps come up with the next step and delegate it to selected agent."
 
-            # only successful steps are appended to steps_done
-            if state["step_success"].success:
-                state["steps_done"].append(state["step"])
         else:
             megamind_prompt += "\n"
             megamind_prompt += (
                 "Come up with the fist step and delegate it to selected agent."
             )
 
+        megamind_prompt += "\n\n"
+        megamind_prompt += (
+            "When you decide that the objective is completed return response to user."
+        )
         messages = [
             HumanMultimodalMessage(content=megamind_prompt),
         ]
-
-        response = megamind_agent.invoke({"messages": messages})
-
-        state["messages"].append(response)
+        # NOTE (jmatejcz) the response of megamind isnt appended to messages
+        # as Command from handoff instantly transitions to next node
+        megamind_agent.invoke({"messages": messages})
         return state
 
     megamind = (

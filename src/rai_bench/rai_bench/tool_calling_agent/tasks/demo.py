@@ -32,7 +32,7 @@ TABLE WITH SLOTS:
 - Slot 4: (10.5, 6.0)
 
 Each slot can contain at most 1 item that can be picked up.
-New Items won't appear during the task, so if you picked objects for a ceratin slot,
+New Items won't appear during the task, so if you picked objects from a ceratin slot,
 it will be empty for the rest of the task.
 
 STORAGE RACKS:
@@ -126,12 +126,12 @@ class EnvStateManager:
         for obj, obj_data in self._objects.items():
             if not obj_data["picked_up"]:
                 # Check if this object is at the current location with matching relative position
-                expected_rel = obj_data["relative"]
-                if relative_pos == expected_rel:
-                    # good coords passed to pick up
-                    obj_world_pos = obj_data["world_position"]
+                if relative_pos == obj_data["relative"]:
                     # Check if robot is at the right slot for this object
-                    if robot_x == obj_world_pos[0] and robot_y == obj_world_pos[1]:
+                    if (
+                        abs(robot_x - obj_data["world_position"][0]) <= 0.5
+                        and abs(robot_y - obj_data["world_position"][1]) <= 0.5
+                    ):
                         obj_data["picked_up"] = True
                         self._state["held_object"] = obj
                         self.set_gripper_state("closed")
@@ -465,7 +465,7 @@ class SortTask(Task):
                 elif 2 <= x <= 6 and abs(y - 5.5) < 0.5:  # At storage rack
                     return "I see the storage rack area, but no objects or boxes are immediately visible from this position."
 
-                return "I don't see anything relevant here."
+                return "I don't see any relevant objects here."
 
             return " ".join(responses)
 
@@ -480,9 +480,11 @@ class SortTask(Task):
         return 10
 
     def get_base_prompt(self) -> str:
-        return """Sort blue and green objects from table to separate boxes on the rack.
-Blue objects should go to the 1st box (x: 3.0, y: 5.5), green objects should go to the second box (x: 5.0, y: 5.5)
-Check the slots in order."""
+        return (
+            "Sort blue and green objects from slots to separate boxes on the rack. "
+            "Blue objects should go to the 1st box (x: 3.0, y: 5.5), green objects should go to the second box (x: 5.0, y: 5.5). "
+            "Check the slots in order. If you checked all of them and sorted all blue and green objects the task is done."
+        )
 
     def get_prompt(self) -> str:
         return self.get_base_prompt()

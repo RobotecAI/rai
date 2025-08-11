@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Iterator, List, Optional, Sequence, Tuple
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
@@ -98,9 +98,10 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         # times number of nodes - 2 because we dont cout start and end node
         # this can be to much for larger graphs that dont use all nodes on extra calls
         # in such ase adjust this value
-        recurssion_limit = len(agent.get_graph().nodes) + (
-            task.max_tool_calls_number - 1
-        ) * (len(agent.get_graph().nodes) - 2)
+        # recurssion_limit = len(agent.get_graph().nodes) + (
+        #     task.max_tool_calls_number - 1
+        # ) * (len(agent.get_graph().nodes) - 2)
+        recurssion_limit = 200
         config: RunnableConfig = {
             "run_id": run_id,
             "callbacks": callbacks,
@@ -129,6 +130,10 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
                         all_messages = state[node]["messages"]
                         for new_msg in all_messages[prev_count:]:
                             messages.append(new_msg)
+                            if isinstance(new_msg, AIMessage):
+                                self.logger.debug(
+                                    f"Message from node '{node}': {new_msg.content}, tool_calls: {new_msg.tool_calls}"
+                                )
                         prev_count = len(messages)
         except TimeoutException as e:
             self.logger.error(msg=f"Task timeout: {e}")

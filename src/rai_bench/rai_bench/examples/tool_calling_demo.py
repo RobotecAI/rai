@@ -11,14 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import logging
 import uuid
 from datetime import datetime
 from pathlib import Path
 
-from rai.agents.langchain import create_planner_supervisor
-from rai.agents.langchain.megamind import create_megamind
-from rai.agents.langchain.core.react_agent import ReActAgentState
+from rai.agents.langchain.megamind import State, StepSuccess, create_megamind
 from rai.messages.multimodal import HumanMultimodalMessage
 
 from rai_bench import (
@@ -34,16 +32,17 @@ if __name__ == "__main__":
     out_dir = f"src/rai_bench/rai_bench/experiments/tool_calling/{now.strftime('%Y-%m-%d_%H-%M-%S')}"
     experiment_dir = Path(out_dir)
     experiment_dir.mkdir(parents=True, exist_ok=True)
-    bench_logger = define_benchmark_logger(out_dir=experiment_dir)
+    bench_logger = define_benchmark_logger(out_dir=experiment_dir, level=logging.DEBUG)
 
     task = SortTask()
     task.set_logger(bench_logger)
 
-    # supervisor_name = "qwen3:14b"
-    supervisor_name = "gpt-4o-mini"
+    supervisor_name = "qwen3:30b-a3b-instruct-2507-q8_0"
+    # supervisor_name = "gpt-4o-mini"
+
     executor_name = "qwen3:8b"
     model_name = f"supervisor-{supervisor_name}_executor-{executor_name}"
-    supervisor_llm = get_llm_for_benchmark(model_name=supervisor_name, vendor="openai")
+    supervisor_llm = get_llm_for_benchmark(model_name=supervisor_name, vendor="ollama")
     executor_llm = get_llm_for_benchmark(
         model_name=executor_name, vendor="ollama", reasoning=False
     )
@@ -62,9 +61,14 @@ if __name__ == "__main__":
         executor_llm=executor_llm,
         system_prompt=task.get_system_prompt(),
     )
-    initial_state = ReActAgentState(
+    initial_state = State(
         {
+            "original_task": task.get_prompt(),
             "messages": [HumanMultimodalMessage(content=task.get_prompt())],
+            "step": "",
+            "steps_done": [],
+            "step_success": StepSuccess(success=False, explanation=""),
+            "step_messages": [],
         }
     )
     experiment_id = uuid.uuid4()
