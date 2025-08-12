@@ -23,6 +23,7 @@ from pydantic import BaseModel
 
 import rai_bench.manipulation_o3de as manipulation_o3de
 import rai_bench.tool_calling_agent as tool_calling_agent
+import rai_bench.vlm_benchmark as vlm_benchmark
 from rai_bench.utils import (
     define_benchmark_logger,
     get_llm_for_benchmark,
@@ -75,6 +76,25 @@ class ToolCallingAgentBenchmarkConfig(BenchmarkConfig):
     @property
     def name(self) -> str:
         return "tool_calling_agent"
+
+
+class VLMBenchmarkConfig(BenchmarkConfig):
+    complexities: List[Literal["easy", "medium", "hard"]] = ["easy", "medium", "hard"]
+    task_types: List[
+        Literal[
+            "bool_response_image_task",
+            "quantity_response_image_task",
+            "multiple_choice_image_task",
+        ]
+    ] = [
+        "bool_response_image_task",
+        "quantity_response_image_task",
+        "multiple_choice_image_task",
+    ]
+
+    @property
+    def name(self) -> str:
+        return "vlm"
 
 
 def test_dual_agents(
@@ -209,6 +229,15 @@ def test_models(
                                 o3de_config_path=bench_conf.o3de_config_path,
                                 scenarios=manipulation_o3de_scenarios,
                                 experiment_id=experiment_id,
+                                bench_logger=bench_logger,
+                            )
+
+                        elif isinstance(bench_conf, VLMBenchmarkConfig):
+                            vlm_tasks = vlm_benchmark.get_spatial_tasks()
+                            vlm_benchmark.run_benchmark(
+                                llm=llm,
+                                out_dir=Path(curr_out_dir),
+                                tasks=vlm_tasks,
                                 bench_logger=bench_logger,
                             )
                     except Exception as e:
