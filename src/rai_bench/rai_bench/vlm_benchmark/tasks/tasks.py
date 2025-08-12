@@ -16,75 +16,44 @@
 import logging
 from typing import List, Type
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 from rai.messages import preprocess_image
 
-from rai_bench.vlm_benchmark.interfaces import ImageReasoningTask
+from rai_bench.vlm_benchmark.interfaces import (
+    ImageReasoningAnswer,
+    ImageReasoningTask,
+    ImageReasoningTaskInput,
+)
 
 loggers_type = logging.Logger
 
 
-class BoolAnswerWithJustification(BaseModel):
+class BoolAnswerWithJustification(ImageReasoningAnswer[bool]):
     """A boolean answer to the user question along with justification for the answer."""
 
-    answer: bool
-    justification: str
+
+class QuantityAnswerWithJustification(ImageReasoningAnswer[int]):
+    """A quantity answer telling the number of objects to the user question along with justification for the answer."""
 
 
-class QuantityAnswerWithJustification(BaseModel):
-    """A quantity answer to the user question along with justification for the answer."""
-
-    answer: int
-    justification: str
-
-
-class MultipleChoiceAnswerWithJustification(BaseModel):
+class MultipleChoiceAnswerWithJustification(ImageReasoningAnswer[List[str]]):
     """A multiple choice answer to the user question along with justification for the answer."""
 
-    answer: List[str]
-    justification: str
+
+class BoolImageTaskInput(ImageReasoningTaskInput[bool]):
+    """Input for a task that requires a boolean answer to a question about an image."""
 
 
-class BoolImageTaskInput(BaseModel):
-    question: str = Field(..., description="The question to be answered.")
-    images_paths: List[str] = Field(
-        ...,
-        description="List of image file paths to be used for answering the question.",
-    )
-    expected_answer: bool = Field(
-        ..., description="The expected answer to the question."
-    )
-
-
-class QuantityImageTaskInput(BaseModel):
+class QuantityImageTaskInput(ImageReasoningTaskInput[int]):
     """Input for a task that requires counting objects in an image."""
 
-    question: str = Field(..., description="The question to be answered.")
-    images_paths: List[str] = Field(
-        ...,
-        description="List of image file paths to be used for answering the question.",
-    )
-    expected_answer: int = Field(
-        ...,
-        description="The expected number of objects to be counted in the image.",
-    )
 
-
-class MultipleChoiceImageTaskInput(BaseModel):
+class MultipleChoiceImageTaskInput(ImageReasoningTaskInput[List[str]]):
     """Input for a task that requires selecting one or more answers from a list of options."""
 
-    question: str = Field(..., description="The question to be answered.")
-    images_paths: List[str] = Field(
-        ...,
-        description="List of image file paths to be used for answering the question.",
-    )
     options: List[str] = Field(
         ...,
         description="List of possible answers to the question.",
-    )
-    expected_answer: List[str] = Field(
-        ...,
-        description="The expected answer to the question being a list of strings chosen from the options.",
     )
 
 

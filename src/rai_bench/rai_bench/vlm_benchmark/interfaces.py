@@ -18,7 +18,7 @@ from typing import Generic, List, Literal, Optional, TypeVar
 
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables.config import DEFAULT_RECURSION_LIMIT
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 loggers_type = logging.Logger
 
@@ -53,6 +53,29 @@ class LangchainRawOutputModel(BaseModel):
 
 class TaskValidationError(Exception):
     pass
+
+
+AnswerT = TypeVar("AnswerT")
+
+
+class ImageReasoningTaskInput(BaseModel, Generic[AnswerT]):
+    """Base input for an image reasoning task."""
+
+    question: str = Field(..., description="The question to be answered.")
+    images_paths: List[str] = Field(
+        ...,
+        description="List of image file paths to be used for answering the question.",
+    )
+    expected_answer: AnswerT = Field(
+        ..., description="The expected answer to the question."
+    )
+
+
+class ImageReasoningAnswer(BaseModel, Generic[AnswerT]):
+    """Base answer for an image reasoning task."""
+
+    answer: AnswerT = Field(..., description="The answer to the question.")
+    justification: str = Field(..., description="Justification for the answer.")
 
 
 class ImageReasoningTask(ABC, Generic[BaseModelT]):
