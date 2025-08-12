@@ -11,12 +11,14 @@
 # # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # # See the License for the specific language governing permissions and
 # # limitations under the License.
+import csv
 import uuid
 from abc import abstractmethod
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Literal
 
+import numpy as np
 from git import Optional
 from langchain.chat_models.base import BaseChatModel
 from pydantic import BaseModel
@@ -24,11 +26,16 @@ from pydantic import BaseModel
 import rai_bench.manipulation_o3de as manipulation_o3de
 import rai_bench.tool_calling_agent as tool_calling_agent
 import rai_bench.vlm_benchmark as vlm_benchmark
+from rai_bench.base_benchmark import RunSummary
+from rai_bench.results_processing.data_loading import SUMMARY_FILE_NAME
 from rai_bench.utils import (
     define_benchmark_logger,
     get_llm_for_benchmark,
     get_llm_model_name,
 )
+
+REPEATS_SUMMARY_FILE_NAME = "repeats_summary.csv"
+BENCHMARK_SUMMARY = "benchmark_summary.csv"
 
 
 class BenchmarkConfig(BaseModel):
@@ -95,6 +102,98 @@ class VLMBenchmarkConfig(BenchmarkConfig):
     @property
     def name(self) -> str:
         return "vlm"
+
+
+def merge_model_repeats_summary(
+    bench_name: str, model_name: str, run_dir: Path
+) -> None:
+    """Merge summary results across all repeats for a single model.
+
+    Parameters
+    ----------
+    bench_name : str
+        Name of the benchmark
+    model_name : str
+        Name of the model
+    run_dir : Path
+        Directory containing the benchmark run results
+    """
+    model_dir = run_dir / bench_name / model_name
+    if not model_dir.exists():
+        return
+
+    # TODO (mkotynia): create new BenchSummary model with added std of success rate and time across repeats
+    summaries: List[RunSummary] = []
+    for repeat_dir in model_dir.iterdir():
+        if repeat_dir.is_dir() and repeat_dir.name.isdigit():
+            summary_file = repeat_dir / SUMMARY_FILE_NAME
+            if summary_file.exists():
+                with open(summary_file, "r") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        summaries.append(RunSummary.model_validate(row))
+
+    if not summaries:
+        return
+
+    avg_success_rate = np.mean([s.success_rate for s in summaries])
+    avg_time = np.mean([s.avg_time for s in summaries])
+    total_tasks = np.min(
+        [s.total_tasks for s in summaries]
+    )  # NOTE (mkotynia) get the minimum total tasks across repeats. If benchmark breaks for some repeat, it will be noticed in such case
+
+    merged_summary = RunSummary(
+        model_name=model_name,
+        success_rate=round(float(avg_success_rate), 2),
+        avg_time=round(float(avg_time), 3),
+        total_tasks=total_tasks,
+    )
+
+    merged_file = model_dir / REPEATS_SUMMARY_FILE_NAME
+    with open(merged_file, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=RunSummary.model_fields.keys())
+        writer.writeheader()
+        writer.writerow(merged_summary.model_dump())
+
+
+def merge_benchmark_summary(
+    bench_name: str, run_dir: Path, model_names: List[str]
+) -> None:
+    """Merge summary results across all models for a single benchmark.
+
+    Parameters
+    ----------
+    bench_name : str
+        Name of the benchmark
+    run_dir : Path
+        Directory containing the benchmark run results
+    model_names : List[str]
+        List of model names to include in the summary
+    """
+    bench_dir = run_dir / bench_name
+    if not bench_dir.exists():
+        return
+
+    all_summaries: List[RunSummary] = []
+    for model_name in model_names:
+        model_dir = bench_dir / model_name
+        merged_file = model_dir / REPEATS_SUMMARY_FILE_NAME
+
+        if merged_file.exists():
+            with open(merged_file, "r") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    all_summaries.append(RunSummary.model_validate(row))
+
+    if not all_summaries:
+        return
+
+    benchmark_summary_file = bench_dir / BENCHMARK_SUMMARY
+    with open(benchmark_summary_file, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=RunSummary.model_fields.keys())
+        writer.writeheader()
+        for summary in all_summaries:
+            writer.writerow(summary.model_dump())
 
 
 def test_dual_agents(
@@ -183,6 +282,7 @@ def test_models(
             # for each bench configuration seperate run folder
             now = datetime.now()
             run_name = f"run_{now.strftime('%Y-%m-%d_%H-%M-%S')}"
+            run_dir = Path(out_dir) / run_name
             for i, model_name in enumerate(model_names):
                 for u in range(bench_conf.repeats):
                     curr_out_dir = (
@@ -240,8 +340,20 @@ def test_models(
                                 tasks=vlm_tasks,
                                 bench_logger=bench_logger,
                             )
+
                     except Exception as e:
                         bench_logger.critical(f"BENCHMARK RUN FAILED: {e}")
                         bench_logger.critical(
                             f"{bench_conf.name} benchmark for {model_name}, vendor: {vendors[i]}, execution number: {u + 1}"
                         )
+            # TODO (mkotynia): resolve unbound bench_logger
+            bench_logger.info(f"Merging summaries for benchmark: {bench_conf.name}")
+
+            for model_name in model_names:
+                merge_model_repeats_summary(bench_conf.name, model_name, run_dir)
+
+            merge_benchmark_summary(bench_conf.name, run_dir, model_names)
+
+            bench_logger.info(
+                f"Summary merging completed for benchmark: {bench_conf.name}"
+            )
