@@ -171,6 +171,9 @@ The VLM Benchmark is a benchmark for VLM models. It includes a set of tasks cont
 
 To set up tracing backends, please follow the instructions in the [tracing.md](../../docs/tracing.md) document.
 
+> [!IMPORTANT]
+> If you are going to use Lanfuse for tracing results, do `export LANGFUSE_MAX_EVENT_SIZE_BYTES=20000000`. By default, the maximum tracing event size is 1MB, but some tasks exceed this limit.
+
 To run the benchmark:
 
 ```bash
