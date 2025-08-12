@@ -118,7 +118,7 @@ class ImageReasoningTask(ABC, Generic[BaseModelT]):
         pass
 
     @abstractmethod
-    def validate(self, output: BaseModelT) -> bool:
+    def validate(self, output: BaseModelT) -> float:
         """Validate result of the task."""
         pass
 

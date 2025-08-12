@@ -14,7 +14,7 @@
 
 
 import logging
-from typing import List
+from typing import List, Type
 
 from pydantic import BaseModel, Field
 from rai.messages import preprocess_image
@@ -31,6 +31,20 @@ class BoolAnswerWithJustification(BaseModel):
     justification: str
 
 
+class QuantityAnswerWithJustification(BaseModel):
+    """A quantity answer to the user question along with justification for the answer."""
+
+    answer: int
+    justification: str
+
+
+class MultipleChoiceAnswerWithJustification(BaseModel):
+    """A multiple choice answer to the user question along with justification for the answer."""
+
+    answer: List[str]
+    justification: str
+
+
 class BoolImageTaskInput(BaseModel):
     question: str = Field(..., description="The question to be answered.")
     images_paths: List[str] = Field(
@@ -39,6 +53,38 @@ class BoolImageTaskInput(BaseModel):
     )
     expected_answer: bool = Field(
         ..., description="The expected answer to the question."
+    )
+
+
+class QuantityImageTaskInput(BaseModel):
+    """Input for a task that requires counting objects in an image."""
+
+    question: str = Field(..., description="The question to be answered.")
+    images_paths: List[str] = Field(
+        ...,
+        description="List of image file paths to be used for answering the question.",
+    )
+    expected_answer: int = Field(
+        ...,
+        description="The expected number of objects to be counted in the image.",
+    )
+
+
+class MultipleChoiceImageTaskInput(BaseModel):
+    """Input for a task that requires selecting one or more answers from a list of options."""
+
+    question: str = Field(..., description="The question to be answered.")
+    images_paths: List[str] = Field(
+        ...,
+        description="List of image file paths to be used for answering the question.",
+    )
+    options: List[str] = Field(
+        ...,
+        description="List of possible answers to the question.",
+    )
+    expected_answer: List[str] = Field(
+        ...,
+        description="The expected answer to the question being a list of strings chosen from the options.",
     )
 
 
@@ -72,5 +118,89 @@ class BoolImageTask(ImageReasoningTask[BoolAnswerWithJustification]):
         images = [preprocess_image(image_path) for image_path in self.images_paths]
         return images
 
-    def validate(self, output: BoolAnswerWithJustification) -> bool:
-        return output.answer == self.expected_answer
+    def validate(self, output: BoolAnswerWithJustification) -> float:
+        return float(output.answer == self.expected_answer)
+
+
+class QuantityImageTask(ImageReasoningTask[QuantityAnswerWithJustification]):
+    """A task that requires counting objects in an image."""
+
+    complexity = "medium"
+
+    def __init__(
+        self,
+        task_input: QuantityImageTaskInput,
+        logger: loggers_type | None = None,
+    ) -> None:
+        super().__init__(logger=logger)
+        self.question = task_input.question
+        self.images_paths = task_input.images_paths
+        self.expected_answer = task_input.expected_answer
+
+    @property
+    def type(self) -> str:
+        return "quantity_response_image_task"
+
+    @property
+    def structured_output(self) -> Type[QuantityAnswerWithJustification]:
+        return QuantityAnswerWithJustification
+
+    def validate(self, output: QuantityAnswerWithJustification) -> float:
+        return float(output.answer == self.expected_answer)
+
+    def get_prompt(self) -> str:
+        return self.question
+
+    def get_images(self):
+        images = [preprocess_image(image_path) for image_path in self.images_paths]
+        return images
+
+
+class MultipleChoiceImageTask(
+    ImageReasoningTask[MultipleChoiceAnswerWithJustification]
+):
+    """A task that requires selecting one or more answers from a set of options."""
+
+    complexity = "hard"
+
+    def __init__(
+        self,
+        task_input: MultipleChoiceImageTaskInput,
+        logger: loggers_type | None = None,
+    ) -> None:
+        super().__init__(logger=logger)
+        self.question = task_input.question
+        self.images_paths = task_input.images_paths
+        self.options = task_input.options
+        self.expected_answer = task_input.expected_answer
+
+    @property
+    def type(self) -> str:
+        return "multiple_choice_response_image_task"
+
+    @property
+    def structured_output(self) -> Type[MultipleChoiceAnswerWithJustification]:
+        return MultipleChoiceAnswerWithJustification
+
+    def validate(self, output: MultipleChoiceAnswerWithJustification) -> float:
+        answers_processed = set([answer.casefold() for answer in output.answer])
+        expected_processed = set([answer.casefold() for answer in self.expected_answer])
+
+        if not answers_processed.issubset(expected_processed):
+            return 0.0
+
+        correct_count = len(answers_processed.intersection(expected_processed))
+        total_expected = len(expected_processed)
+
+        return float(correct_count / total_expected) if total_expected > 0 else 0.0
+
+    def get_prompt(self) -> str:
+        return (
+            self.question
+            + " Choose one or more answers from the options: "
+            + ", ".join(self.options)
+        )
+
+    def get_images(self):
+        images = [preprocess_image(image_path) for image_path in self.images_paths]
+        return images
