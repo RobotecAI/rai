@@ -14,7 +14,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Generic, List, Literal, Optional, TypeVar
+from typing import Any, Generic, List, Literal, Optional, TypeVar
 
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables.config import DEFAULT_RECURSION_LIMIT
@@ -26,29 +26,6 @@ BaseModelT = TypeVar("BaseModelT", bound=BaseModel)
 
 
 IMAGE_REASONING_SYSTEM_PROMPT = "You are a helpful and knowledgeable AI assistant that specializes in interpreting and analyzing visual content. Your task is to answer questions based on the images provided to you. Please response in requested structured output format."
-
-
-class LangchainRawOutputModel(BaseModel):
-    """
-    A Pydantic model for wrapping Langchain message parsing results from a structured output agent. See documentation for more details:
-    https://github.com/langchain-ai/langchain/blob/02001212b0a2b37d90451d8493089389ea220cab/libs/core/langchain_core/language_models/chat_models.py#L1430-L1432
-
-
-    Attributes
-    ----------
-    raw : BaseMessage
-        The original raw message object from Langchain before parsing.
-    parsed : BaseModel
-        The parsed and validated Pydantic model instance derived from the raw message.
-    parsing_error : Optional[BaseException]
-        Any exception that occurred during the parsing process, None if parsing
-        was successful.
-    """
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    raw: BaseMessage
-    parsed: BaseModel
-    parsing_error: Optional[BaseException]
 
 
 class TaskValidationError(Exception):
@@ -78,7 +55,30 @@ class ImageReasoningAnswer(BaseModel, Generic[AnswerT]):
     justification: str = Field(..., description="Justification for the answer.")
 
 
-class ImageReasoningTask(ABC, Generic[BaseModelT]):
+class LangchainRawOutputModel(BaseModel):
+    """
+    A Pydantic model for wrapping Langchain message parsing results from a structured output agent. See documentation for more details:
+    https://github.com/langchain-ai/langchain/blob/02001212b0a2b37d90451d8493089389ea220cab/libs/core/langchain_core/language_models/chat_models.py#L1430-L1432
+
+
+    Attributes
+    ----------
+    raw : BaseMessage
+        The original raw message object from Langchain before parsing.
+    parsed : BaseModel
+        The parsed and validated Pydantic model instance derived from the raw message.
+    parsing_error : Optional[BaseException]
+        Any exception that occurred during the parsing process, None if parsing
+        was successful.
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    raw: BaseMessage
+    parsed: ImageReasoningAnswer[Any]
+    parsing_error: Optional[BaseException]
+
+
+class ImageReasoningTask(ABC, Generic[AnswerT]):
     complexity: Literal["easy", "medium", "hard"]
     recursion_limit: int = DEFAULT_RECURSION_LIMIT
 
@@ -103,13 +103,14 @@ class ImageReasoningTask(ABC, Generic[BaseModelT]):
             self.logger = logging.getLogger(__name__)
         self.question: str
         self.images_paths: List[str]
+        # TODO move here task input
 
     def set_logger(self, logger: loggers_type):
         self.logger = logger
 
     @property
     @abstractmethod
-    def structured_output(self) -> type[BaseModelT]:
+    def structured_output(self) -> type[ImageReasoningAnswer[AnswerT]]:
         """Structured output that agent should return."""
         pass
 
@@ -141,7 +142,7 @@ class ImageReasoningTask(ABC, Generic[BaseModelT]):
         pass
 
     @abstractmethod
-    def validate(self, output: BaseModelT) -> float:
+    def validate(self, output: ImageReasoningAnswer[AnswerT]) -> float:
         """Validate result of the task."""
         pass
 
@@ -158,7 +159,7 @@ class ImageReasoningTask(ABC, Generic[BaseModelT]):
 
     def get_structured_output_from_messages(
         self, messages: List[BaseMessage]
-    ) -> BaseModelT | None:
+    ) -> ImageReasoningAnswer[AnswerT] | None:
         """Extract and validate structured output from a list of messages.
 
         Iterates through messages in reverse order, attempting to find the message that is
