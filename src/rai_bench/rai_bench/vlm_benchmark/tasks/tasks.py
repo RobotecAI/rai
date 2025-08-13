@@ -57,7 +57,7 @@ class MultipleChoiceImageTaskInput(ImageReasoningTaskInput[List[str]]):
     )
 
 
-class BoolImageTask(ImageReasoningTask[BoolAnswerWithJustification]):
+class BoolImageTask(ImageReasoningTask[bool]):
     complexity = "easy"
 
     def __init__(
@@ -87,11 +87,11 @@ class BoolImageTask(ImageReasoningTask[BoolAnswerWithJustification]):
         images = [preprocess_image(image_path) for image_path in self.images_paths]
         return images
 
-    def validate(self, output: BoolAnswerWithJustification) -> float:
+    def validate(self, output: ImageReasoningAnswer[bool]) -> float:
         return float(output.answer == self.expected_answer)
 
 
-class QuantityImageTask(ImageReasoningTask[QuantityAnswerWithJustification]):
+class QuantityImageTask(ImageReasoningTask[int]):
     """A task that requires counting objects in an image."""
 
     complexity = "medium"
@@ -114,7 +114,7 @@ class QuantityImageTask(ImageReasoningTask[QuantityAnswerWithJustification]):
     def structured_output(self) -> Type[QuantityAnswerWithJustification]:
         return QuantityAnswerWithJustification
 
-    def validate(self, output: QuantityAnswerWithJustification) -> float:
+    def validate(self, output: ImageReasoningAnswer[int]) -> float:
         return float(output.answer == self.expected_answer)
 
     def get_prompt(self) -> str:
@@ -125,9 +125,7 @@ class QuantityImageTask(ImageReasoningTask[QuantityAnswerWithJustification]):
         return images
 
 
-class MultipleChoiceImageTask(
-    ImageReasoningTask[MultipleChoiceAnswerWithJustification]
-):
+class MultipleChoiceImageTask(ImageReasoningTask[List[str]]):
     """A task that requires selecting one or more answers from a set of options."""
 
     complexity = "hard"
@@ -151,7 +149,7 @@ class MultipleChoiceImageTask(
     def structured_output(self) -> Type[MultipleChoiceAnswerWithJustification]:
         return MultipleChoiceAnswerWithJustification
 
-    def validate(self, output: MultipleChoiceAnswerWithJustification) -> float:
+    def validate(self, output: ImageReasoningAnswer[List[str]]) -> float:
         answers_processed = set([answer.casefold() for answer in output.answer])
         expected_processed = set([answer.casefold() for answer in self.expected_answer])
 
