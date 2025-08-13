@@ -26,10 +26,12 @@ WAREHOUSE LAYOUT:
 
 TABLE WITH SLOTS:
 - Table location: x=10-11, y=1-7
-- Slot 1: (10.5, 1.5)
-- Slot 2: (10.5, 3.0)
-- Slot 3: (10.5, 4.5)
-- Slot 4: (10.5, 6.0)
+- Slot 1: (10.0, 1.5)
+- Slot 2: (10.0, 3.0)
+- Slot 3: (10.0, 4.5)
+- Slot 4: (10.0, 6.0)
+When navigating to the table remember that you can't navigate into it,
+always approach from the side that is closer to rack (use x=10).
 
 Each slot can contain at most 1 item that can be picked up.
 New Items won't appear during the task, so if you picked objects from a ceratin slot,
@@ -37,15 +39,12 @@ it will be empty for the rest of the task.
 
 STORAGE RACKS:
 Storage Rack 1 location: x=2-6 y=5-6
-- Boxes: (3.0, 5.5), (5.0, 5.5)
+- Boxes: (3.0, 5.0), (5.0, 5.0)
+When navigating to the tack remember that you can't navigate into it,
+always approach from the side that is closer to starting position (use y=5).
 
 ROBOT STARTING POSITION:
 - Robot starting location: (4.0, 2.0)
-
-When navigating to slots or boxes remember that you can't navigate into them,
-for example slot1 is at x=10.5, y=1.5 but table spans from x=10 to x=11 so you need to navigate to x=10, y=1.5.
-When navigating to table always approach from the side that is closer to rack (x=10).
-When navigating to the rack always approach from the side that is closer to starting position (y=5).
 """
 SYSTEM_PROMPT = """You are a mobile robot operating in a warehouse environment for pick-and-place operations."""
 
@@ -107,12 +106,6 @@ class EnvStateManager:
     def set_position(self, x: float, y: float):
         self._state["robot_position"] = (x, y)
 
-    def get_gripper_state(self) -> str:
-        return self._state["gripper_state"]
-
-    def set_gripper_state(self, state: str):
-        self._state["gripper_state"] = state
-
     def get_held_object(self) -> Optional[str]:
         return self._state.get("held_object")
 
@@ -134,38 +127,32 @@ class EnvStateManager:
                     ):
                         obj_data["picked_up"] = True
                         self._state["held_object"] = obj
-                        self.set_gripper_state("closed")
                         return obj
         return None
 
-    def drop_object_at_position(self, relative_pos: Tuple[float, float, float]) -> bool:
+    def drop_object_at_position(self, relative_pos: Tuple[float, float, float]) -> None:
         """Drop held object at relative position from current robot location"""
-        if self._state.get("held_object") is None:
-            return False
-
+        # Check if placed in box, if yes, change env state
         robot_x, robot_y = self.get_position()
-
         # Find which box we're dropping into
         for box_id, box_data in self._boxes.items():
-            expected_rel = box_data["relative"]
-            if relative_pos == expected_rel:
+            if relative_pos == box_data["relative"]:
                 # Check if robot is at the right position for this box
-                box_world_pos = box_data["world_position"]
-                if robot_x == box_world_pos[0] and robot_y == box_world_pos[1]:
+                if (
+                    robot_x == box_data["world_position"][0]
+                    and robot_y == box_data["world_position"][1]
+                ):
                     # Drop object into box
                     obj_id = self._state["held_object"]
                     box_data["objects"].append(obj_id)
 
                     # Update object position to be in the box
                     self._objects[obj_id]["world_position"] = (
-                        box_world_pos[0] + relative_pos[0],
-                        box_world_pos[1] + relative_pos[1],
+                        box_data["world_position"][0] + relative_pos[0],
+                        box_data["world_position"][1] + relative_pos[1],
                     )
 
-                    self._state["held_object"] = None
-                    self.set_gripper_state("open")
-                    return True
-        return False
+        self._state["held_object"] = None
 
     def get_visible_objects_at_position(self) -> List[Dict]:
         """Get objects visible at current robot position"""
@@ -387,7 +374,8 @@ class SortTask(Task):
         @tool
         def pick_up_object(x: float, y: float, z: float) -> str:
             """Move gripper and close it to pick up object from a certain coordinates relative to you"""
-            if self.env_state.get_gripper_state() == "open":
+            held_obj = self.env_state.get_held_object()
+            if not held_obj:
                 obj_id = self.env_state.pick_up_object_at_position((x, y, z))
                 if obj_id:
                     obj_color = self.env_state._objects[obj_id]["color"]
@@ -395,20 +383,17 @@ class SortTask(Task):
                 else:
                     return f"No object grabbed successfully at relative position x: {x}, y: {y}, z: {z}"
             else:
-                return "Gripper is already closed"
+                return f"Can't perform pick up action as you are already holding an {held_obj} object."
 
         @tool
         def drop_object(x: float, y: float, z: float) -> str:
             """Move gripper and open it to drop object at a certain coordinates relative to you"""
-            if self.env_state.get_gripper_state() == "closed":
-                held_obj = self.env_state.get_held_object()
-                if held_obj and self.env_state.drop_object_at_position((x, y, z)):
-                    obj_color = self.env_state._objects[held_obj]["color"]
-                    return f"Successfully dropped {obj_color} object ({held_obj}) at relative position x: {x}, y: {y}, z: {z}"
-                else:
-                    return f"Failed to drop object at relative position x: {x}, y: {y}, z: {z}"
+            held_obj = self.env_state.get_held_object()
+            if not held_obj:
+                return "Failed to drop - you are not holding any object."
             else:
-                return "Gripper is already open"
+                self.env_state.drop_object_at_position((x, y, z))
+                return f"Successfully dropped object ({held_obj}) at relative position x: {x}, y: {y}, z: {z}"
 
         @tool
         def ask_vlm() -> str:
@@ -478,7 +463,7 @@ class SortTask(Task):
     def get_base_prompt(self) -> str:
         return (
             "Sort blue and green objects from slots to separate boxes on the rack. "
-            "Blue objects should go to the 1st box (x: 3.0, y: 5.5), green objects should go to the second box (x: 5.0, y: 5.5). "
+            "Blue objects should go to the 1st box (x: 3.0, y: 5.0), green objects should go to the second box (x: 5.0, y: 5.0). "
             "Check the slots in order. If you checked all of them and sorted all blue and green objects the task is done."
         )
 

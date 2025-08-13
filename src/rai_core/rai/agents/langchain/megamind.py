@@ -372,6 +372,7 @@ Always include coordinates to navigate to.
 - Manipulaiton specialist can ask VLM about the nearby objects and their coordinates, pick up and drop objects.
 Pick and drop operations depend on relative cooridnates so don't include global cooridantes. Make sure that robot
 is in the right place to perform the task. For example to drop object at box2, robot should be at box2 in the first place.
+After picking any object, you will be holding it until dropped. Remember to first drop object before you pick up another.
 
 
 The single task should be delegated to only 1 agent and should be doable by only 1 agent.
