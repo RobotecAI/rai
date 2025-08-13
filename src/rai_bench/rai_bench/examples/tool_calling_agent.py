@@ -18,11 +18,11 @@ from rai_bench import (
     define_benchmark_logger,
     parse_tool_calling_benchmark_args,
 )
+from rai_bench.agents import ConversationalAgentFactory, agent_factory
 from rai_bench.tool_calling_agent import (
     get_tasks,
     run_benchmark,
 )
-from rai_bench.agents import ConversationalAgentFactory, agent_factory
 from rai_bench.utils import get_llm_for_benchmark
 
 if __name__ == "__main__":

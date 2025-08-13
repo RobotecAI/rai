@@ -37,7 +37,6 @@ from rai.messages import HumanMultimodalMessage
 from rai.tools.ros2 import (
     GetObjectPositionsTool,
     GetROS2TopicsNamesAndTypesTool,
-    MoveToPointTool,
     MoveObjectFromToTool,
 )
 from rai.tools.ros2.manipulation import ResetArmTool

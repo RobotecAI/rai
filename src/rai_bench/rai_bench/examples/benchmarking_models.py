@@ -21,9 +21,7 @@ from rai_bench import (
 )
 from rai_bench.agents import (
     AgentFactory,
-    ConversationalAgentFactory,
     PlanExecuteAgentFactory,
-    TaskVerificationAgentFactory,
 )
 
 if __name__ == "__main__":
