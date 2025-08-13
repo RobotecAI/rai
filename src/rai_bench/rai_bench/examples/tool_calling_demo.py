@@ -23,6 +23,7 @@ from rai_bench import (
     define_benchmark_logger,
 )
 from rai_bench.tool_calling_agent.benchmark import ToolCallingAgentBenchmark
+from rai_bench.tool_calling_agent.interfaces import TaskArgs
 from rai_bench.tool_calling_agent.tasks.demo import SortTask
 from rai_bench.utils import get_llm_for_benchmark
 
@@ -34,7 +35,7 @@ if __name__ == "__main__":
     experiment_dir.mkdir(parents=True, exist_ok=True)
     bench_logger = define_benchmark_logger(out_dir=experiment_dir, level=logging.DEBUG)
 
-    task = SortTask()
+    task = SortTask(task_args=TaskArgs(extra_tool_calls=50))
     task.set_logger(bench_logger)
 
     supervisor_name = "qwen3:30b-a3b-instruct-2507-q8_0"

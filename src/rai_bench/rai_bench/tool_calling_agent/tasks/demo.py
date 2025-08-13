@@ -230,8 +230,8 @@ class SortTask(Task):
 
     def __init__(
         self,
+        task_args: TaskArgs,
         validators: Optional[List[Validator]] = None,
-        task_args: TaskArgs = TaskArgs(),
         **kwargs: Any,
     ) -> None:
         if not validators:
@@ -245,7 +245,7 @@ class SortTask(Task):
                 expected_args={},  # No parameters expected
             )
             ask_vlm_subtask = CheckArgsToolCallSubTask(
-                expected_tool_name="nav_tool",
+                expected_tool_name="ask_vlm",
                 expected_args={},
             )
 
@@ -256,10 +256,6 @@ class SortTask(Task):
                     "x": 10.0,
                     "y": 1.5,
                 },
-            )
-            ask_vlm_subtask = CheckArgsToolCallSubTask(
-                expected_tool_name="nav_tool",
-                expected_args={},
             )
             pick_up_1_subtask = CheckArgsToolCallSubTask(
                 expected_tool_name="pick_up_object",
