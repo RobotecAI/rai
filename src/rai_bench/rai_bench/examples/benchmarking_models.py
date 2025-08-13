@@ -20,26 +20,26 @@ from rai_bench import (
 
 if __name__ == "__main__":
     # Define models you want to benchmark
-    model_names = ["qwen2.5:7b"]
-    vendors = ["ollama"]
+    model_names = ["qwen3:4b", "llama3.2:3b"]
+    vendors = ["ollama", "ollama"]
 
     # Define benchmarks that will be used
     mani_conf = ManipulationO3DEBenchmarkConfig(
-        o3de_config_path="src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/o3de_config.yaml",  # path to your o3de config
+        o3de_config_path="src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/o3de_config.yaml",
         levels=[  # define what difficulty of tasks to include in benchmark
             "trivial",
+            "easy",
         ],
         repeats=1,  # how many times to repeat
     )
     tool_conf = ToolCallingAgentBenchmarkConfig(
-        extra_tool_calls=[0],  # how many extra tool calls allowed to still pass
+        extra_tool_calls=[0, 5],  # how many extra tool calls allowed to still pass
         task_types=[  # what types of tasks to include
             "basic",
             "spatial_reasoning",
             "custom_interfaces",
-            "manipulation",
         ],
-        N_shots=[2],  # examples in system prompt
+        N_shots=[0, 2],  # examples in system prompt
         prompt_detail=["brief", "descriptive"],  # how descriptive should task prompt be
         repeats=1,
     )
@@ -48,6 +48,11 @@ if __name__ == "__main__":
     test_models(
         model_names=model_names,
         vendors=vendors,
-        benchmark_configs=[tool_conf],
+        benchmark_configs=[mani_conf, tool_conf],
         out_dir=out_dir,
+        # if you want to pass any additinal args to model
+        additional_model_args=[
+            {"reasoning": False},
+            {},
+        ],
     )

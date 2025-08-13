@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import logging
-from typing import List, Tuple, Union
+from typing import List, Sequence, Tuple, Union
 
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
@@ -94,7 +94,7 @@ class BuildCubeTowerTask(ManipulationTask):
         )
         return cube_count > 1
 
-    def calculate_correct(self, entities: List[Entity]) -> Tuple[int, int]:
+    def calculate_correct(self, entities: Sequence[Entity]) -> Tuple[int, int]:
         """
         Calculate the number of correctly and incorrectly placed cubes.
 
