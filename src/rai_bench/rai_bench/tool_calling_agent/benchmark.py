@@ -101,7 +101,7 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         # recurssion_limit = len(agent.get_graph().nodes) + (
         #     task.max_tool_calls_number - 1
         # ) * (len(agent.get_graph().nodes) - 2)
-        recurssion_limit = 200
+        recurssion_limit = 70
         config: RunnableConfig = {
             "run_id": run_id,
             "callbacks": callbacks,
@@ -138,6 +138,9 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         except TimeoutException as e:
             self.logger.error(msg=f"Task timeout: {e}")
         except GraphRecursionError as e:
+            tool_calls = task.get_tool_calls_from_messages(messages=messages)
+            score = task.validate(tool_calls=tool_calls)
+            score = 0.0
             self.logger.error(msg=f"Reached recursion limit {e}")
 
         tool_calls = task.get_tool_calls_from_messages(messages=messages)
