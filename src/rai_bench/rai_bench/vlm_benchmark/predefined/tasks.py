@@ -27,8 +27,6 @@ from rai_bench.vlm_benchmark.tasks.tasks import (
 IMG_PATH = "src/rai_bench/rai_bench/vlm_benchmark/predefined/images/"
 
 
-## ANOTHER TASKS ORGANIZATION
-
 image_1 = IMG_PATH + "image_1.jpg"
 
 image_1_tasks: List[ImageReasoningTask[Any]] = [
