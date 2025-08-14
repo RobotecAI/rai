@@ -191,8 +191,11 @@ class ImageReasoningTask(ABC, Generic[AnswerT]):
                         )
 
                     parsed = validated_message.parsed
-                    if isinstance(parsed, self.structured_output):
-                        return parsed
+                    expected_output_type = self.structured_output
+                    parsed_valid_output = expected_output_type.model_validate(
+                        parsed.model_dump()
+                    )
+                    return parsed_valid_output
                 except ValidationError:
                     continue
         return None
