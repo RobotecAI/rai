@@ -35,6 +35,44 @@ class RunSummary(BaseModel):
     total_tasks: int = Field(..., description="Total number of executed tasks.")
 
 
+class ModelSummary(BaseModel):
+    model_name: str = Field(..., description="Name of the LLM.")
+    avg_success_rate: float = Field(
+        ...,
+        description="Percentage of successfully completed tasks across all repeats.",
+    )
+    avg_total_tasks: float = Field(
+        ..., description="Average number of tasks executed through all repeats."
+    )
+    avg_time: float = Field(
+        ..., description="Average time taken across all tasks and repeats."
+    )
+
+    repeats: int = Field(
+        ..., description="Total number of repeats for the model for each task."
+    )
+
+
+class TasksSummary(BaseModel):
+    model_name: str = Field(..., description="Name of the LLM.")
+    avg_success_rate: float = Field(
+        ..., description="Average result for task across all repeats."
+    )
+    std_success_rate: float = Field(
+        ..., description="Standard deviation of the success rate across all repeats."
+    )
+    avg_time: float = Field(
+        ..., description="Average time taken across all repeats for one task."
+    )
+    std_time: float = Field(
+        ...,
+        description="Standard deviation of the time taken across all repeats for one task.",
+    )
+    total_tasks: int = Field(
+        ..., description="Total number of executed tasks across all repeats per task."
+    )
+
+
 class TimeoutException(Exception):
     pass
 

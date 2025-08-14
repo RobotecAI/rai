@@ -26,7 +26,7 @@ from pydantic import BaseModel
 import rai_bench.manipulation_o3de as manipulation_o3de
 import rai_bench.tool_calling_agent as tool_calling_agent
 import rai_bench.vlm_benchmark as vlm_benchmark
-from rai_bench.base_benchmark import RunSummary
+from rai_bench.base_benchmark import ModelSummary, RunSummary
 from rai_bench.results_processing.data_loading import SUMMARY_FILE_NAME
 from rai_bench.utils import (
     define_benchmark_logger,
@@ -138,15 +138,15 @@ def merge_model_repeats_summary(
 
     avg_success_rate = np.mean([s.success_rate for s in summaries])
     avg_time = np.mean([s.avg_time for s in summaries])
-    total_tasks = np.min(
-        [s.total_tasks for s in summaries]
-    )  # NOTE (mkotynia) get the minimum total tasks across repeats. If benchmark breaks for some repeat, it will be noticed in such case
 
-    merged_summary = RunSummary(
+    total_tasks = np.mean([s.total_tasks for s in summaries])
+
+    merged_summary = ModelSummary(
         model_name=model_name,
-        success_rate=round(float(avg_success_rate), 2),
+        avg_success_rate=round(float(avg_success_rate), 2),
         avg_time=round(float(avg_time), 3),
-        total_tasks=total_tasks,
+        avg_total_tasks=round(float(total_tasks), 3),
+        repeats=len(summaries),
     )
 
     merged_file = model_dir / REPEATS_SUMMARY_FILE_NAME
