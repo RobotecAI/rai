@@ -37,7 +37,7 @@ from rai_bench.utils import (
     get_llm_model_name,
 )
 
-REPEATS_SUMMARY_FILE_NAME = "repeats_summary.csv"
+MODEL_SUMMARY_FILE_NAME = "model_summary.csv"
 TASKS_SUMMARY_FILE_NAME = "tasks_summary.csv"
 BENCHMARK_SUMMARY = "benchmark_summary.csv"
 
@@ -153,7 +153,7 @@ def merge_model_repeats_summary(
         repeats=len(summaries),
     )
 
-    merged_file = model_dir / REPEATS_SUMMARY_FILE_NAME
+    merged_file = model_dir / MODEL_SUMMARY_FILE_NAME
     with open(merged_file, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=ModelSummary.model_fields.keys())
         writer.writeheader()
@@ -181,7 +181,7 @@ def merge_benchmark_summary(
     all_summaries: List[ModelSummary] = []
     for model_name in model_names:
         model_dir = bench_dir / model_name
-        merged_file = model_dir / REPEATS_SUMMARY_FILE_NAME
+        merged_file = model_dir / MODEL_SUMMARY_FILE_NAME
 
         if merged_file.exists():
             with open(merged_file, "r") as f:
