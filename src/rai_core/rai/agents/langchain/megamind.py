@@ -58,25 +58,12 @@ from rai.messages import (
     store_artifacts,
 )
 
-# class AgentType(str, Enum):
-#     """Types of specialized agents."""
-
-#     MANIPULATION = "manipulation"
-#     NAVIGATION = "navigation"
-#     COMPLETE = "complete"
-
 
 class StepSuccess(BaseModel):
     """Output of success attacher"""
 
     success: bool = Field(description="Whether the task was completed successfully")
     explanation: str = Field(description="Explanation of what happened")
-
-
-class PlanStep(BaseModel):
-    """Output of megamind"""
-
-    task: str = Field(description="Description of the task to be completed")
 
 
 class State(MessagesState):
@@ -105,9 +92,7 @@ class ToolRunner(RunnableCallable):
             self.tools_by_name[tool_.name] = tool_
 
     def _func(self, input: dict[str, Any], config: RunnableConfig) -> Any:
-        config["max_concurrency"] = (
-            1  # TODO(maciejmajek): use better mechanism for task queueing
-        )
+        config["max_concurrency"] = 1
         if messages := input.get("step_messages", []):
             message = messages[-1]
         else:
@@ -252,7 +237,6 @@ Below you have messages of agent doing the task:"""
     state["step_success"] = StepSuccess(
         success=analysis.success, explanation=analysis.explanation
     )
-    # success_str = "success" if state["step_success"].success else "failure"
     state["steps_done"].append(f"{state['step_success'].explanation}")
     return state
 
