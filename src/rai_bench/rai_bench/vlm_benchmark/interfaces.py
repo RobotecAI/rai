@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import hashlib
 import logging
 from abc import ABC, abstractmethod
 from typing import Any, Generic, List, Literal, Optional, TypeVar
 
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables.config import DEFAULT_RECURSION_LIMIT
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, computed_field
 
 loggers_type = logging.Logger
 
@@ -46,6 +47,13 @@ class ImageReasoningTaskInput(BaseModel, Generic[AnswerT]):
     expected_answer: AnswerT = Field(
         ..., description="The expected answer to the question."
     )
+
+    @computed_field
+    @property
+    def task_id(self) -> str:
+        """Unique identifier for the task based on question and image paths."""
+        content = f"{self.question}|{sorted(self.images_paths)}"
+        return hashlib.sha256(content.encode()).hexdigest()
 
 
 class ImageReasoningAnswer(BaseModel, Generic[AnswerT]):
@@ -84,6 +92,7 @@ class ImageReasoningTask(ABC, Generic[AnswerT]):
 
     def __init__(
         self,
+        task_input: ImageReasoningTaskInput[AnswerT],
         logger: loggers_type | None = None,
     ) -> None:
         """
@@ -101,9 +110,28 @@ class ImageReasoningTask(ABC, Generic[AnswerT]):
             self.logger = logger
         else:
             self.logger = logging.getLogger(__name__)
-        self.question: str
-        self.images_paths: List[str]
-        # TODO move here task input
+
+        self._task_input = task_input
+
+    @property
+    def question(self) -> str:
+        """The question to be answered."""
+        return self._task_input.question
+
+    @property
+    def images_paths(self) -> List[str]:
+        """List of image file paths."""
+        return self._task_input.images_paths
+
+    @property
+    def expected_answer(self) -> AnswerT:
+        """The expected answer to the question."""
+        return self._task_input.expected_answer
+
+    @property
+    def task_id(self) -> str:
+        """Unique identifier for the task."""
+        return self._task_input.task_id
 
     def set_logger(self, logger: loggers_type):
         self.logger = logger

@@ -66,11 +66,9 @@ class BoolImageTask(ImageReasoningTask[bool]):
         logger: loggers_type | None = None,
     ) -> None:
         super().__init__(
+            task_input=task_input,
             logger=logger,
         )
-        self.question = task_input.question
-        self.images_paths = task_input.images_paths
-        self.expected_answer = task_input.expected_answer
 
     @property
     def structured_output(self) -> type[BoolAnswerWithJustification]:
@@ -101,10 +99,7 @@ class QuantityImageTask(ImageReasoningTask[int]):
         task_input: QuantityImageTaskInput,
         logger: loggers_type | None = None,
     ) -> None:
-        super().__init__(logger=logger)
-        self.question = task_input.question
-        self.images_paths = task_input.images_paths
-        self.expected_answer = task_input.expected_answer
+        super().__init__(task_input=task_input, logger=logger)
 
     @property
     def type(self) -> str:
@@ -135,11 +130,8 @@ class MultipleChoiceImageTask(ImageReasoningTask[List[str]]):
         task_input: MultipleChoiceImageTaskInput,
         logger: loggers_type | None = None,
     ) -> None:
-        super().__init__(logger=logger)
-        self.question = task_input.question
-        self.images_paths = task_input.images_paths
+        super().__init__(task_input=task_input, logger=logger)
         self.options = task_input.options
-        self.expected_answer = task_input.expected_answer
 
     @property
     def type(self) -> str:

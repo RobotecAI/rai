@@ -133,7 +133,7 @@ class VLMBenchmark(BaseBenchmark):
             score = task.validate(output=structured_output)
         else:
             errors.append(f"Not valid structured output: {type(structured_output)}")
-            score = False
+            score = 0
 
         te = time.perf_counter()
         total_time = te - ts
@@ -141,6 +141,7 @@ class VLMBenchmark(BaseBenchmark):
         self.logger.info(f"TASK SCORE: {score}, TOTAL TIME: {total_time:.3f}")
 
         task_result = TaskResult(
+            task_id=task.task_id,
             task_prompt=task.get_prompt(),
             system_prompt=task.get_system_prompt(),
             type=task.type,
