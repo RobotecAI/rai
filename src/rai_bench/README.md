@@ -10,7 +10,7 @@ The Manipulation O3DE Benchmark [manipulation_o3de_benchmark_module](./rai_bench
 -   **GroupObjectsTask**
 -   **BuildCubeTowerTask**
 -   **PlaceObjectAtCoordTask**
--   **RotateObjectTask** (currently not applicable due to limitations in the ManipulatorMoveTo tool)
+-   **RotateObjectTask** (currently not applicable due to limitations in the `ManipulatorMoveTo` tool)
 
 The result of a task is a value between 0 and 1, calculated like `initially_misplaced_now_correct / initially_misplaced`. This score is calculated at the end of each scenario.
 
@@ -110,7 +110,7 @@ The Tool Calling Agent Benchmark is the benchmark for LangChain tool calling age
 
 -   [Tool Calling Agent Benchmark](rai_bench//tool_calling_agent/benchmark.py) - Benchmark for LangChain tool calling agents
 -   [Scores tracing](rai_bench/results_processing/langfuse_scores_tracing.py) - Component handling sending scores to tracing backends
--   [Interfaces](rai_bench//tool_calling_agent/interfaces.py) - Interfaces for validation classes - Task, Validator, SubTask
+-   [Interfaces](rai_bench//tool_calling_agent/interfaces.py) - Interfaces for validation classes - `Task`, `Validator`, `SubTask`
 
     For detailed description of validation visit -> [Validation](./rai_bench/docs/tool_calling_agent_benchmark.md)
 
