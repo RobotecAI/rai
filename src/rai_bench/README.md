@@ -182,7 +182,7 @@ python src/rai_bench/rai_bench/examples/vlm_benchmark.py --model-name gemma3:4b 
 
 ## Testing Models
 
-To test multiple models, different benchamrks or couple repeats in one go - use script [test_models](./rai_bench/examples/test_models.py)
+To test multiple models, different benchmarks or couple repeats in one go - use script [test_models](./rai_bench/examples/test_models.py)
 
 Modify these params:
 
