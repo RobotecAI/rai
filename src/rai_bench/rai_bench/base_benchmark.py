@@ -55,6 +55,10 @@ class ModelSummary(BaseModel):
 
 class TasksSummary(BaseModel):
     model_name: str = Field(..., description="Name of the LLM.")
+    task_id: str = Field(..., description="Unique identifier for the task.")
+    task_prompt: str = Field(
+        ..., description="The task prompt that identifies the task."
+    )
     avg_success_rate: float = Field(
         ..., description="Average result for task across all repeats."
     )
@@ -68,9 +72,7 @@ class TasksSummary(BaseModel):
         ...,
         description="Standard deviation of the time taken across all repeats for one task.",
     )
-    total_tasks: int = Field(
-        ..., description="Total number of executed tasks across all repeats per task."
-    )
+    repeats: int = Field(..., description="Total number of repeats for task.")
 
 
 class TimeoutException(Exception):

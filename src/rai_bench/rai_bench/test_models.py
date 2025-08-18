@@ -216,51 +216,52 @@ def merge_tasks_summary(bench_name: str, model_name: str, run_dir: Path) -> None
     if not model_dir.exists():
         return
 
-    # Collect all task results from all repeats
-    task_data_by_prompt: Dict[str, Dict[str, List[float]]] = {}
+    task_data_by_id: Dict[str, Dict[str, Any]] = {}
 
     for repeat_dir in model_dir.iterdir():
         if repeat_dir.is_dir() and repeat_dir.name.isdigit():
             results_file = repeat_dir / DETAILED_FILE_NAME
             if results_file.exists():
-                # Read detailed results from this repeat
                 with open(results_file, "r") as f:
                     reader = csv.DictReader(f)
                     for row in reader:
+                        task_id = row["task_id"]
                         task_prompt = row["task_prompt"]
                         score = float(row["score"])
                         total_time = float(row["total_time"])
 
-                        if task_prompt not in task_data_by_prompt:
-                            task_data_by_prompt[task_prompt] = {
+                        if task_id not in task_data_by_id:
+                            task_data_by_id[task_id] = {
                                 "scores": [],
                                 "times": [],
+                                "task_prompt": task_prompt,
                             }
 
-                        task_data_by_prompt[task_prompt]["scores"].append(score)
-                        task_data_by_prompt[task_prompt]["times"].append(total_time)
+                        task_data_by_id[task_id]["scores"].append(score)
+                        task_data_by_id[task_id]["times"].append(total_time)
 
-    if not task_data_by_prompt:
+    if not task_data_by_id:
         return
 
     # Calculate statistics for each task
     task_summaries: List[TasksSummary] = []
-    for task_prompt, data in task_data_by_prompt.items():
+    for task_id, data in task_data_by_id.items():
         scores = np.array(data["scores"])
         times = np.array(data["times"])
+        task_prompt = data["task_prompt"]
 
         task_summary = TasksSummary(
             model_name=model_name,
+            task_id=task_id,
             task_prompt=task_prompt,
             avg_success_rate=round(float(scores.mean()), 3),
             std_success_rate=round(float(scores.std()), 3),
             avg_time=round(float(times.mean()), 3),
             std_time=round(float(times.std()), 3),
-            repeats=len(scores),  # TODO (mkotynia) (extract repeats in another way)
+            repeats=len(scores),
         )
         task_summaries.append(task_summary)
 
-    # Save task summaries to CSV
     tasks_summary_file = model_dir / TASKS_SUMMARY_FILE_NAME
     with open(tasks_summary_file, "w", newline="") as f:
         if task_summaries:
@@ -420,8 +421,10 @@ def test_models(
                         bench_logger.critical(
                             f"{bench_conf.name} benchmark for {model_name}, vendor: {vendors[i]}, execution number: {u + 1}"
                         )
-            # TODO (mkotynia): resolve unbound bench_logger
-            bench_logger.info(f"Merging summaries for benchmark: {bench_conf.name}")
+            merge_results_logger = define_benchmark_logger(out_dir=Path(out_dir))
+            merge_results_logger.info(
+                f"Merging summaries for benchmark: {bench_conf.name}"
+            )
 
             for model_name in model_names:
                 merge_model_repeats_summary(bench_conf.name, model_name, run_dir)
@@ -429,6 +432,6 @@ def test_models(
 
             merge_benchmark_summary(bench_conf.name, run_dir, model_names)
 
-            bench_logger.info(
+            merge_results_logger.info(
                 f"Summary merging completed for benchmark: {bench_conf.name}"
             )
