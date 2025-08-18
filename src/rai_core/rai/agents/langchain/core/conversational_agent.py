@@ -17,6 +17,7 @@ import logging
 from functools import partial
 from typing import List, Optional, TypedDict
 
+from deprecated import deprecated
 from langchain.chat_models.base import BaseChatModel
 from langchain_core.messages import (
     BaseMessage,
@@ -64,6 +65,10 @@ def agent(
     return state
 
 
+@deprecated(
+    "Use rai.agents.langchain.core.create_react_runnable instead. "
+    "Support for the conversational agent will be removed in the 3.0 release."
+)
 def create_conversational_agent(
     llm: BaseChatModel,
     tools: List[BaseTool],
