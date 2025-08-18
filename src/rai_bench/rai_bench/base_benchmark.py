@@ -41,11 +41,19 @@ class ModelSummary(BaseModel):
         ...,
         description="Percentage of successfully completed tasks across all repeats.",
     )
+    std_success_rate: float = Field(
+        ...,
+        description="Standard deviation of success rate across all repeats for this model.",
+    )
     avg_total_tasks: float = Field(
         ..., description="Average number of tasks executed through all repeats."
     )
     avg_time: float = Field(
         ..., description="Average time taken across all tasks and repeats."
+    )
+    std_time: float = Field(
+        ...,
+        description="Standard deviation of time taken across all repeats for this model.",
     )
 
     repeats: int = Field(

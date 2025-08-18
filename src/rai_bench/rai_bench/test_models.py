@@ -126,7 +126,6 @@ def merge_model_repeats_summary(
     if not model_dir.exists():
         return
 
-    # TODO (mkotynia): create new BenchSummary model with added std of success rate and time across repeats
     summaries: List[RunSummary] = []
     for repeat_dir in model_dir.iterdir():
         if repeat_dir.is_dir() and repeat_dir.name.isdigit():
@@ -140,15 +139,22 @@ def merge_model_repeats_summary(
     if not summaries:
         return
 
-    avg_success_rate = np.mean([s.success_rate for s in summaries])
-    avg_time = np.mean([s.avg_time for s in summaries])
+    success_rates = [s.success_rate for s in summaries]
+    times = [s.avg_time for s in summaries]
+    total_tasks_list = [s.total_tasks for s in summaries]
 
-    total_tasks = np.mean([s.total_tasks for s in summaries])
+    avg_success_rate = np.mean(success_rates)
+    std_success_rate = np.std(success_rates)
+    avg_time = np.mean(times)
+    std_time = np.std(times)
+    total_tasks = np.mean(total_tasks_list)
 
     merged_summary = ModelSummary(
         model_name=model_name,
         avg_success_rate=round(float(avg_success_rate), 2),
+        std_success_rate=round(float(std_success_rate), 3),
         avg_time=round(float(avg_time), 3),
+        std_time=round(float(std_time), 3),
         avg_total_tasks=round(float(total_tasks), 3),
         repeats=len(summaries),
     )
