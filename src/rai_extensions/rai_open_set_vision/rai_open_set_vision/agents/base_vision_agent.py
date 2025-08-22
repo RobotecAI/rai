@@ -34,6 +34,7 @@ class BaseVisionAgent(BaseAgent):
         super().__init__()
         self._weights_path = Path(weights_path)
         os.makedirs(self._weights_path, exist_ok=True)
+        self._is_weights_path_set = False
         self._init_weight_path()
         self.weight_path = self._weights_path
         self.ros2_connector = ROS2Connector(ros2_name, executor_type="single_threaded")
@@ -43,9 +44,16 @@ class BaseVisionAgent(BaseAgent):
             if self.WEIGHTS_FILENAME == "":
                 raise ValueError("WEIGHTS_FILENAME is not set")
 
-            install_path = (
-                self._weights_path / "vision" / "weights" / self.WEIGHTS_FILENAME
-            )
+            # Ensure that the self._weights_path variable is set only once
+            # to prevent issues during weight re-downloading
+            if not self._is_weights_path_set:
+                install_path = (
+                    self._weights_path / "vision" / "weights" / self.WEIGHTS_FILENAME
+                )
+            else:
+                install_path = self._weights_path
+            self._is_weights_path_set = True
+
             # make sure the file exists
             if install_path.exists() and install_path.is_file():
                 self._weights_path = install_path
