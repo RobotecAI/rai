@@ -13,7 +13,7 @@ It is recommended for extractors to adopt a standardized data format based on La
 
 Data from different sources (e.g., LangSmith) can be preprocessed at the extraction level to ensure consistent formatting. For example, LangSmith data with nested message structures and different field names is converted to the standard format before reaching the formatter, maintaining a single, reusable formatter for all data sources.
 
-Formatter follows OpenAI recommendation on [data formatting](https://platform.openai.com/docs/guides/supervised-fine-tuning#formatting-your-data) for fine tuning. 
+Formatter follows OpenAI recommendation on [data formatting](https://platform.openai.com/docs/guides/supervised-fine-tuning#formatting-your-data) for fine tuning.
 
 **Fine-tune Helpers:**
 
@@ -26,7 +26,6 @@ To be added. It includes:
 The module is designed as a standalone package to avoid dependency conflicts between different versions of Triton required by openai-whisper and unsloth-zoo.
 
 **System Component Proposal**: (Feedback is welcome and appreciated!)
-
 
 <div style="text-align: center; padding: 20px;"><img src="imgs/rai-fine-tune-system-components.png" alt="RAI Fine Tune System Components"></div>
 
