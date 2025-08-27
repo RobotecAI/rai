@@ -35,6 +35,8 @@ def invoke_llm_with_tracing(
     This function automatically adds tracing callbacks (like Langfuse) to LLM calls
     within LangGraph nodes, solving the callback propagation issue.
 
+    Tracing is controlled by config.toml. If the file is missing, no tracing is applied.
+
     Parameters
     ----------
     llm : BaseChatModel

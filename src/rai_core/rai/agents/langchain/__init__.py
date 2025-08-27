@@ -19,6 +19,7 @@ from .core import (
     create_react_runnable,
     create_state_based_runnable,
 )
+from .invocation_helpers import invoke_llm_with_tracing
 from .react_agent import ReActAgent
 from .state_based_agent import BaseStateBasedAgent, StateBasedConfig
 
@@ -32,5 +33,6 @@ __all__ = [
     "StateBasedConfig",
     "create_react_runnable",
     "create_state_based_runnable",
+    "invoke_llm_with_tracing",
     "newMessageBehaviorType",
 ]

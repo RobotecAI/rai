@@ -10,9 +10,9 @@ The Manipulation O3DE Benchmark [manipulation_o3de_benchmark_module](./rai_bench
 -   **GroupObjectsTask**
 -   **BuildCubeTowerTask**
 -   **PlaceObjectAtCoordTask**
--   **RotateObjectTask** (currently not applicable due to limitations in the ManipulatorMoveTo tool)
+-   **RotateObjectTask** (currently not applicable due to limitations in the `ManipulatorMoveTo` tool)
 
-The result of a task is a value between 0 and 1, calculated like initially_misplaced_now_correct / initially_misplaced. This score is calculated at the end of each scenario.
+The result of a task is a value between 0 and 1, calculated like `initially_misplaced_now_correct / initially_misplaced`. This score is calculated at the end of each scenario.
 
 ### Frame Components
 
@@ -92,7 +92,7 @@ python src/rai_bench/rai_bench/examples/manipulation_o3de/main.py --model-name l
 ```
 
 > [!NOTE]
-> For now benchmark runs all available scenarios (~160). See [Examples](#example-usege)
+> For now benchmark runs all available scenarios (~160). See [Examples](#example-usage)
 > section for details.
 
 ### Development
@@ -100,7 +100,7 @@ python src/rai_bench/rai_bench/examples/manipulation_o3de/main.py --model-name l
 When creating new task or changing existing ones, make sure to add unit tests for score calculation in [rai_bench_tests](../../tests/rai_bench/manipulation_o3de/tasks/).
 This applies also when you are adding or changing the helper methods in `Task` or `ManipulationTask`.
 
-The number of scenarios can be easily extened without writing new tasks, by increasing number of variants of the same task and adding more simulation configs but it won't improve variety of scenarios as much as creating new tasks.
+The number of scenarios can be easily extended without writing new tasks, by increasing number of variants of the same task and adding more simulation configs but it won't improve variety of scenarios as much as creating new tasks.
 
 ## Tool Calling Agent Benchmark
 
@@ -109,15 +109,16 @@ The Tool Calling Agent Benchmark is the benchmark for LangChain tool calling age
 ### Frame Components
 
 -   [Tool Calling Agent Benchmark](rai_bench//tool_calling_agent/benchmark.py) - Benchmark for LangChain tool calling agents
--   [Scores tracing](rai_bench/tool_calling_agent_bench/scores_tracing.py) - Component handling sending scores to tracing backends
--   [Interfaces](rai_bench//tool_calling_agent/interfaces.py) - Interfaces for validation classes - Task, Validator, SubTask
-    For detailed description of validation visit -> [Validation](.//rai_bench/docs/tool_calling_agent_benchmark.md)
+-   [Scores tracing](rai_bench/results_processing/langfuse_scores_tracing.py) - Component handling sending scores to tracing backends
+-   [Interfaces](rai_bench//tool_calling_agent/interfaces.py) - Interfaces for validation classes - `Task`, `Validator`, `SubTask`
 
-[tool_calling_agent_test_bench.py](rai_bench/examples/tool_calling_agent/main.py) - Script providing benchmark on tasks based on the ROS2 tools usage.
+    For detailed description of validation visit -> [Validation](./rai_bench/docs/tool_calling_agent_benchmark.md)
+
+[tool_calling_agent_test_bench.py](./rai_bench/examples/tool_calling_agent/main.py) - Script providing benchmark on tasks based on the ROS2 tools usage.
 
 ### Example Usage
 
-Validators can be constructed from any SubTasks, Tasks can be validated by any numer of Validators, which makes whole validation process incredibly versital.
+`Validators` can be constructed from any `SubTasks`, `Tasks` can be validated by any number of `Validators`, which makes whole validation process incredibly versatile.
 
 ```python
 # subtasks
@@ -144,7 +145,7 @@ GetROS2RGBCameraTask(validators=[topics_ord_val, color_image_ord_val]),
 
 ### Running
 
-To set up tracing backends, please follow the instructions in the [tracing.md](../../docs/tracing.md) document.
+To set up tracing backends, please follow the instructions in the [tracing.md](../../docs/setup/tracing.md) document.
 
 To run the benchmark:
 
@@ -169,7 +170,7 @@ The VLM Benchmark is a benchmark for VLM models. It includes a set of tasks cont
 
 ### Running
 
-To set up tracing backends, please follow the instructions in the [tracing.md](../../docs/tracing.md) document.
+To set up tracing backends, please follow the instructions in the [tracing.md](../../docs/setup/tracing.md) document.
 
 To run the benchmark:
 
@@ -181,7 +182,7 @@ python src/rai_bench/rai_bench/examples/vlm_benchmark.py --model-name gemma3:4b 
 
 ## Testing Models
 
-To test multiple models, different benchamrks or couple repeats in one go - use script [test_models](./rai_bench/examples/test_models.py)
+To test multiple models, different benchmarks or couple repeats in one go - use script [test_models](./rai_bench/examples/test_models.py)
 
 Modify these params:
 
@@ -216,7 +217,7 @@ When you run a test via:
 python src/rai_bench/rai_bench/examples/test_models.py
 ```
 
-results will be saved to separate folder in [results](./rai_bench/experiments/), with prefix `run_`
+results will be saved to separate folder in [experiments](./rai_bench/experiments/), with prefix `run_`
 
 To visualise the results run:
 

@@ -96,9 +96,9 @@ Evaluates agent performance independently from any simulation, based only on too
 The `SubTask` class is used to validate just one tool call. Following classes are available:
 
 -   `CheckArgsToolCallSubTask` - verify if a certain tool was called with expected arguments
--   `CheckTopicFieldsToolCallSubTask` - verify if a message published to ROS 2topic was of proper type and included expected fields
--   `CheckServiceFieldsToolCallSubTask` - verify if a message published to ROS 2service was of proper type and included expected fields
--   `CheckActionFieldsToolCallSubTask` - verify if a message published to ROS 2action was of proper type and included expected fields
+-   `CheckTopicFieldsToolCallSubTask` - verify if a message published to ROS2 topic was of proper type and included expected fields
+-   `CheckServiceFieldsToolCallSubTask` - verify if a message published to ROS2 service was of proper type and included expected fields
+-   `CheckActionFieldsToolCallSubTask` - verify if a message published to ROS2 action was of proper type and included expected fields
 
 ### Validator
 
