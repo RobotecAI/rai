@@ -423,14 +423,14 @@ image_13_tasks: List[ImageReasoningTask[Any]] = [
     QuantityImageTask(
         task_input=QuantityImageTaskInput(
             question="How many fallen barrels are in the image?",
-            images_paths=[IMG_PATH + image_13],
+            images_paths=[image_13],
             expected_answer=1,
         )
     ),
     QuantityImageTask(
         task_input=QuantityImageTaskInput(
             question="How many barrels are in the image?",
-            images_paths=[IMG_PATH + image_13],
+            images_paths=[image_13],
             expected_answer=6,
         )
     ),
@@ -508,7 +508,7 @@ image_16_tasks: List[ImageReasoningTask[Any]] = [
     BoolImageTask(
         task_input=BoolImageTaskInput(
             question="Is worker wearing a helmet?",
-            images_paths=[IMG_PATH + "woman_wo_helmet_1.png"],
+            images_paths=[image_16],
             expected_answer=False,
         ),
     )
