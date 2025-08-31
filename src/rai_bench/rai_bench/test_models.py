@@ -200,15 +200,7 @@ def test_models(
             for i, model_name in enumerate(model_names):
                 for u in range(bench_conf.repeats):
                     curr_out_dir = (
-                        out_dir
-                        + "/"
-                        + run_name
-                        + "/"
-                        + bench_conf.name
-                        + "/"
-                        + model_name
-                        + "/"
-                        + str(u)
+                        Path(out_dir) / run_name / bench_conf.name / model_name / str(u)
                     )
                     llm = get_llm_for_benchmark(
                         model_name=model_name,
@@ -216,7 +208,7 @@ def test_models(
                         **additional_model_args[i],
                     )
                     # TODO (jmatejcz) take param to set log level
-                    bench_logger = define_benchmark_logger(out_dir=Path(curr_out_dir))
+                    bench_logger = define_benchmark_logger(out_dir=curr_out_dir)
                     try:
                         if isinstance(bench_conf, ToolCallingAgentBenchmarkConfig):
                             tool_calling_tasks = tool_calling_agent.get_tasks(
@@ -228,7 +220,7 @@ def test_models(
                             )
                             tool_calling_agent.run_benchmark(
                                 llm=llm,
-                                out_dir=Path(curr_out_dir),
+                                out_dir=curr_out_dir,
                                 tasks=tool_calling_tasks,
                                 experiment_id=experiment_id,
                                 bench_logger=bench_logger,
@@ -242,7 +234,7 @@ def test_models(
                             )
                             manipulation_o3de.run_benchmark(
                                 llm=llm,
-                                out_dir=Path(curr_out_dir),
+                                out_dir=curr_out_dir,
                                 o3de_config_path=bench_conf.o3de_config_path,
                                 scenarios=manipulation_o3de_scenarios,
                                 experiment_id=experiment_id,
@@ -253,3 +245,4 @@ def test_models(
                         bench_logger.critical(
                             f"{bench_conf.name} benchmark for {model_name}, vendor: {vendors[i]}, execution number: {u + 1}"
                         )
+                        raise e

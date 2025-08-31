@@ -240,6 +240,10 @@ class O3DExROS2Bridge(SimulationBridge):
             available_services = self.connector.node.get_service_names_and_types()
             available_topics_names = [tp[0] for tp in available_topics]
             available_services_names = [srv[0] for srv in available_services]
+            # print(f"available_topics: {available_topics}")
+            # print(f"available_services: {available_services}")
+            # print(f"available_topics_names: {available_topics_names}")
+            # print(f"available_services_names: {available_services_names}")
 
             # Extract action names
             available_actions_names: Set[str] = set()

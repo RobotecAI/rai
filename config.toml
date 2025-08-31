@@ -16,8 +16,8 @@ embeddings_model = "text-embedding-ada-002"
 base_url = "https://api.openai.com/v1/"
 
 [ollama]
-simple_model = "llama3.2"
-complex_model = "llama3.1:70b"
+simple_model = "qwen3:1.7b"
+complex_model = "qwen3:8b"
 embeddings_model = "llama3.2"
 base_url = "http://localhost:11434"
 

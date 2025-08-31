@@ -171,7 +171,6 @@ class MoveObjectFromToTool(BaseROS2Tool):
         z1: float,
     ) -> str:
         # NOTE: create_client could be refactored into self.connector.service_call
-        self.connector.service_call
         client = self.connector.node.create_client(
             ManipulatorMoveTo,
             "/manipulator_move_to",
@@ -200,7 +199,7 @@ class MoveObjectFromToTool(BaseROS2Tool):
 
         pose_stamped1.pose.position.x += self.calibration_x
         pose_stamped1.pose.position.y += self.calibration_y
-        pose_stamped1.pose.position.z += self.calibration_z
+        pose_stamped1.pose.position.z += self.calibration_z + self.additional_height
 
         pose_stamped1.pose.position.z = np.max(
             [pose_stamped1.pose.position.z, self.min_z]
@@ -219,17 +218,17 @@ class MoveObjectFromToTool(BaseROS2Tool):
         response = get_future_result(future, timeout_sec=5.0)
 
         if response is None:
-            return f"Service call failed for point ({x:.2f}, {y:.2f}, {z:.2f})."
+            return f"Service call failed for pickup at position ({x:.2f}, {y:.2f}, {z:.2f})."
 
         if response.success:
             self.connector.logger.info(
-                f"End effector successfully positioned at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
+                f"Successfully picked up object at position ({x:.2f}, {y:.2f}, {z:.2f})."
             )
         else:
             self.connector.logger.error(
-                f"Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
+                f"Failed to pick up object at position ({x:.2f}, {y:.2f}, {z:.2f})."
             )
-            return "Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
+            return f"Failed to pick up object at position ({x:.2f}, {y:.2f}, {z:.2f})."
 
         request = ManipulatorMoveTo.Request()
         request.target_pose = pose_stamped1
@@ -245,12 +244,12 @@ class MoveObjectFromToTool(BaseROS2Tool):
         response = get_future_result(future, timeout_sec=20.0)
 
         if response is None:
-            return f"Service call failed for point ({x:.2f}, {y:.2f}, {z:.2f})."
+            return f"Service call failed for placement at position ({x1:.2f}, {y1:.2f}, {z1:.2f}). Object was picked up from ({x:.2f}, {y:.2f}, {z:.2f}) but could not be placed."
 
         if response.success:
-            return f"End effector successfully positioned at coordinates ({x:.2f}, {y:.2f}, {z:.2f}). Note: The status of object interaction (grab/drop) is not confirmed by this movement."
+            return f"Successfully moved object from position ({x:.2f}, {y:.2f}, {z:.2f}) to position ({x1:.2f}, {y1:.2f}, {z1:.2f}). Note: The status of object interaction (grab/drop) is not confirmed by this movement."
         else:
-            return f"Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
+            return f"Failed to place object at position ({x1:.2f}, {y1:.2f}, {z1:.2f}). Object was picked up from ({x:.2f}, {y:.2f}, {z:.2f}) but placement failed."
 
 
 class GetObjectPositionsToolInput(BaseModel):
