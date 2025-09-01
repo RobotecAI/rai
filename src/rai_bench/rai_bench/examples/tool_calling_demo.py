@@ -28,7 +28,6 @@ from rai_bench.tool_calling_agent.tasks.demo import SortTask
 from rai_bench.utils import get_llm_for_benchmark
 
 if __name__ == "__main__":
-    # args = parse_tool_calling_benchmark_args()
     now = datetime.now()
     out_dir = f"src/rai_bench/rai_bench/experiments/tool_calling/{now.strftime('%Y-%m-%d_%H-%M-%S')}"
     experiment_dir = Path(out_dir)
@@ -38,8 +37,7 @@ if __name__ == "__main__":
     task = SortTask(task_args=TaskArgs(extra_tool_calls=50))
     task.set_logger(bench_logger)
 
-    supervisor_name = "qwen3:30b-a3b-instruct-2507-q8_0"
-    # supervisor_name = "gpt-4o-mini"
+    supervisor_name = "qwen3:8b"
 
     executor_name = "qwen3:8b"
     model_name = f"supervisor-{supervisor_name}_executor-{executor_name}"
