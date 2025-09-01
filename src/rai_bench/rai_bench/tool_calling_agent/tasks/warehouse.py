@@ -20,7 +20,6 @@ from rai_bench.tool_calling_agent.interfaces import Task, TaskArgs, Validator
 from rai_bench.tool_calling_agent.subtasks import CheckArgsToolCallSubTask
 from rai_bench.tool_calling_agent.validators import OrderedCallsValidator
 
-#### tasks for demo ###############################
 WAREHOUSE_ENVIRONMENT_DESCRIPTION = """
 WAREHOUSE LAYOUT:
 
@@ -213,7 +212,7 @@ class EnvStateManager:
 
 class SortTask(Task):
     complexity = "hard"
-    type = "warehouse_demo"
+    type = "warehouse"
 
     def __init__(
         self,
