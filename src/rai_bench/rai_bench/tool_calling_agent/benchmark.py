@@ -27,7 +27,6 @@ from rai.agents.langchain.core import (
     create_conversational_agent,
 )
 from rai.agents.langchain.core.react_agent import ReActAgentState
-from rai.messages import HumanMultimodalMessage
 
 from rai_bench.agents import create_multimodal_to_tool_agent
 from rai_bench.base_benchmark import BaseBenchmark, TimeoutException
@@ -38,9 +37,6 @@ from rai_bench.tool_calling_agent.interfaces import (
 from rai_bench.tool_calling_agent.results_tracking import (
     TaskResult,
     ToolCallingAgentRunSummary,
-)
-from rai_bench.tool_calling_agent.tasks.spatial import (
-    SpatialReasoningAgentTask,
 )
 from rai_bench.utils import get_llm_model_name
 

@@ -22,9 +22,9 @@ from rai.messages.multimodal import HumanMultimodalMessage
 from rai_bench import (
     define_benchmark_logger,
 )
+from rai_bench.rai_bench.tool_calling_agent.tasks.warehouse import SortTask
 from rai_bench.tool_calling_agent.benchmark import ToolCallingAgentBenchmark
 from rai_bench.tool_calling_agent.interfaces import TaskArgs
-from rai_bench.rai_bench.tool_calling_agent.tasks.warehouse import SortTask
 from rai_bench.utils import get_llm_for_benchmark
 
 if __name__ == "__main__":
