@@ -20,6 +20,7 @@ from .nav2 import (
     Nav2Toolkit,
     NavigateToPoseTool,
 )
+from .nav2_blocking import NavigateToPoseBlockingTool
 
 __all__ = [
     "CancelNavigateToPoseTool",
@@ -27,5 +28,6 @@ __all__ = [
     "GetNavigateToPoseResultTool",
     "GetOccupancyGridTool",
     "Nav2Toolkit",
+    "NavigateToPoseBlockingTool",
     "NavigateToPoseTool",
 ]
