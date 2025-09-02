@@ -358,22 +358,7 @@ Pick and drop operations depend on relative cooridnates so don't include global 
 is in the right place to perform the task. For example to drop object at box2, robot should be at box2 in the first place.
 After picking any object, you will be holding it until dropped. Remember to first drop object before you pick up another.
 
-
 The single task should be delegated to only 1 agent and should be doable by only 1 agent.
-
-Examples of a WELL formulated tasks:
-- Navigate to (5.0, 4.0). (delegated to navigation agent)
-----------------------------------
-- Check for objects near you. (delegated to manipulation agent)
-----------------------------------
-- Pick up green object. (delegated to manipulation agent)
-----------------------------------
-- Drop an object to the box. (delegated to manipulation agent)
-
-Examples of WRONGLY formulated tasks:
-- Pick up object and navigate to box. (delegated to navigation agent)
--------------------------------------
-- Drop the object at the box1 (15.5, 1.0) (delegated to manipulation agent)
 """
     system_prompt += "\n"
     system_prompt += megamind_system_prompt
