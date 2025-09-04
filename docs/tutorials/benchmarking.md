@@ -51,7 +51,7 @@ python src/rai_bench/rai_bench/examples/tool_calling_agent.py --model-name qwen2
 
 The best way of benchmarking your models is using the `src/rai_bench/rai_bench/examples/benchmarking_models.py`
 
-Feel free to modify the benchmark configs to suit your needs, you can chose every possible set of params
+Feel free to modify the benchmark configs to suit your needs, you can choose every possible set of params
 and the benchmark will be run tasks with every combination:
 
 ```python

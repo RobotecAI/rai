@@ -27,7 +27,6 @@ from rai_sim.simulation_bridge import (
 )
 
 loggers_type = Union[RcutilsLogger, logging.Logger]
-# EntityT = TypeVar("EntityT", bound=Entity)
 
 
 class EntitiesMismatchException(Exception):

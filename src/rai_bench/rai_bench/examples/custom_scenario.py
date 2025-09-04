@@ -33,7 +33,7 @@ path_to_your_config = (
 )
 scene_config = SceneConfig.load_base_config(Path(path_to_your_config))
 
-# configure existing Task with different params
+# Configure predefined task to place an apple on the table
 target_coords = (0.1, 0.1)
 disp = 0.1
 task = PlaceObjectAtCoordTask(
@@ -42,6 +42,7 @@ task = PlaceObjectAtCoordTask(
     allowable_displacement=disp,
 )
 
+# Create scene with apple on the table
 Scenario(task=task, scene_config=scene_config, scene_config_path=path_to_your_config)
 
 
@@ -84,19 +85,21 @@ class ThrowObjectsOffTableTask(ManipulationTask):
         return correct, incorrect
 
 
-# configure existing Task with different params
-target_coords = (0.1, 0.1)
-disp = 0.1
-task = ThrowObjectsOffTableTask(
+# Task, throw apple off the table
+remove_obj_from_table_task = ThrowObjectsOffTableTask(
     obj_types=["apple"],
 )
-
 super_scenario = Scenario(
     task=task, scene_config=scene_config, scene_config_path=path_to_your_config
 )
 
 
-##### Now you can run it in benchmark ##################
+super_scenario = Scenario(
+    task=remove_obj_from_table_task,
+    scene_config=scene_config,
+    scene_config_path=path_to_your_config,
+)
+
 if __name__ == "__main__":
     from pathlib import Path
 
