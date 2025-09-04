@@ -73,7 +73,7 @@ score = (correctly_placed_now - correctly_placed_initially) / initially_incorrec
 
 You can find predefined scene configs in `rai_bench/manipulation_o3de/predefined/configs/`.
 
-Predefined scenarios can be imported like, chosing tasks by difficulty:
+Predefined scenarios can be imported, for example, choosing tasks by difficulty:
 
 ```python
 from rai_bench.manipulation_o3de import get_scenarios
