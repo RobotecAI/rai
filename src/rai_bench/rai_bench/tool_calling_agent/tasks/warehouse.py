@@ -88,12 +88,12 @@ class EnvStateManager:
 
         self._boxes = {
             "box_1": {
-                "world_position": (3.0, 5.5),
+                "world_position": (3.0, 5.0),
                 "objects": [],  # List of objects in this box
                 "relative": (0.2, 0, 0.05),  # relative when robot is at box
             },
             "box_2": {
-                "world_position": (5.0, 5.5),
+                "world_position": (5.0, 5.0),
                 "objects": [],
                 "relative": (0.1, -0.05, 0.05),
             },
