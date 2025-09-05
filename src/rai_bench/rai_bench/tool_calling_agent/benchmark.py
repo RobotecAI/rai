@@ -19,14 +19,14 @@ from pathlib import Path
 from typing import Iterator, List, Optional, Sequence, Tuple
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
 from rai.agents.langchain.core import (
     create_conversational_agent,
 )
-from rai.messages import HumanMultimodalMessage
+from rai.agents.langchain.core.react_agent import ReActAgentState
 
 from rai_bench.agents import create_multimodal_to_tool_agent
 from rai_bench.base_benchmark import BaseBenchmark, TimeoutException
@@ -37,9 +37,6 @@ from rai_bench.tool_calling_agent.interfaces import (
 from rai_bench.tool_calling_agent.results_tracking import (
     TaskResult,
     ToolCallingAgentRunSummary,
-)
-from rai_bench.tool_calling_agent.tasks.spatial import (
-    SpatialReasoningAgentTask,
 )
 from rai_bench.utils import get_llm_model_name
 
@@ -67,7 +64,12 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         self.tasks_results: List[TaskResult] = []
         self.csv_initialize(self.results_filename, TaskResult)
 
-    def run_next(self, agent: CompiledStateGraph, experiment_id: uuid.UUID) -> None:
+    def run_next(
+        self,
+        agent: CompiledStateGraph,
+        initial_state: ReActAgentState,
+        experiment_id: uuid.UUID,
+    ) -> None:
         """Runs the next task of the benchmark.
 
         Parameters
@@ -92,9 +94,10 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         # times number of nodes - 2 because we dont cout start and end node
         # this can be to much for larger graphs that dont use all nodes on extra calls
         # in such ase adjust this value
-        recurssion_limit = len(agent.get_graph().nodes) + (
-            task.max_tool_calls_number - 1
-        ) * (len(agent.get_graph().nodes) - 2)
+        # recurssion_limit = len(agent.get_graph().nodes) + (
+        #     task.max_tool_calls_number - 1
+        # ) * (len(agent.get_graph().nodes) - 2)
+        recurssion_limit = 70
         config: RunnableConfig = {
             "run_id": run_id,
             "callbacks": callbacks,
@@ -113,40 +116,27 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         messages: List[BaseMessage] = []
         prev_count: int = 0
         try:
-            with self.time_limit(20 * task.max_tool_calls_number):
-                if isinstance(task, SpatialReasoningAgentTask):
-                    for state in agent.stream(
-                        {
-                            "messages": [
-                                HumanMultimodalMessage(
-                                    content=task.get_prompt(), images=task.get_images()
+            with self.time_limit(200 * task.max_tool_calls_number):
+                for state in agent.stream(
+                    initial_state,
+                    config=config,
+                ):
+                    node = next(iter(state))
+                    if "messages" in state[node]:
+                        all_messages = state[node]["messages"]
+                        for new_msg in all_messages[prev_count:]:
+                            messages.append(new_msg)
+                            if isinstance(new_msg, AIMessage):
+                                self.logger.debug(
+                                    f"Message from node '{node}': {new_msg.content}, tool_calls: {new_msg.tool_calls}"
                                 )
-                            ]
-                        },
-                        config=config,
-                    ):
-                        node = next(iter(state))
-                        all_messages = state[node]["messages"]
-                        for new_msg in all_messages[prev_count:]:
-                            messages.append(new_msg)
-                        prev_count = len(messages)
-                else:
-                    for state in agent.stream(
-                        {
-                            "messages": [
-                                HumanMultimodalMessage(content=task.get_prompt())
-                            ]
-                        },
-                        config=config,
-                    ):
-                        node = next(iter(state))
-                        all_messages = state[node]["messages"]
-                        for new_msg in all_messages[prev_count:]:
-                            messages.append(new_msg)
                         prev_count = len(messages)
         except TimeoutException as e:
             self.logger.error(msg=f"Task timeout: {e}")
         except GraphRecursionError as e:
+            tool_calls = task.get_tool_calls_from_messages(messages=messages)
+            score = task.validate(tool_calls=tool_calls)
+            score = 0.0
             self.logger.error(msg=f"Reached recursion limit {e}")
 
         tool_calls = task.get_tool_calls_from_messages(messages=messages)
