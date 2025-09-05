@@ -422,9 +422,9 @@ def _setup_benchmark_environment(
 def run_benchmark(
     llm: BaseChatModel,
     out_dir: Path,
-    o3de_config_path: str,
     scenarios: List[Scenario],
     bench_logger: logging.Logger,
+    o3de_config_path: str = "src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/o3de_config.yaml",
     experiment_id: uuid.UUID = uuid.uuid4(),
 ):
     connector, o3de, benchmark, tools = _setup_benchmark_environment(

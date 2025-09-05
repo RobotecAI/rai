@@ -15,7 +15,7 @@
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Generic, List, Optional, TypeVar
+from typing import List, Optional
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
@@ -167,25 +167,22 @@ class SceneState(BaseModel):
 class SimulationConfig(BaseModel): ...
 
 
-SimulationConfigT = TypeVar("SimulationConfigT", bound=SimulationConfig)
-
-
-class SimulationBridge(ABC, Generic[SimulationConfigT]):
+class SimulationBridge(ABC):
     """
     Responsible for communication with simulation.
     """
 
     def __init__(self, logger: Optional[logging.Logger] = None):
-        self.spawned_entities: List[
-            SpawnedEntity
-        ] = []  # list of spawned entities with their initial poses
+        self.spawned_entities: List[SpawnedEntity] = (
+            []
+        )  # list of spawned entities with their initial poses
         if logger is None:
             self.logger = logging.getLogger(__name__)
         else:
             self.logger = logger
 
     @abstractmethod
-    def init_simulation(self, simulation_config: SimulationConfigT):
+    def init_simulation(self, simulation_config: SimulationConfig):
         """
         Initialize simulation binary and all other required processes,
         for example ros2 nodes

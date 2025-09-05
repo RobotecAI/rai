@@ -73,15 +73,13 @@ score = (correctly_placed_now - correctly_placed_initially) / initially_incorrec
 
 You can find predefined scene configs in `rai_bench/manipulation_o3de/predefined/configs/`.
 
-Predefined scenarios can be imported like:
+Predefined scenarios can be imported, for example, choosing tasks by difficulty:
 
 ```python
 from rai_bench.manipulation_o3de import get_scenarios
 
 get_scenarios(levels=["easy", "medium"])
 ```
-
-Choose which task you want by selecting the difficulty, from trivial to very hard scenarios.
 
 ## Tool Calling Agent Benchmark
 
@@ -106,6 +104,7 @@ The `Validator` class can combine single or multiple subtasks to create a single
 
 -   OrderedCallsValidator - requires a strict order of subtasks. The next subtask will be validated only when the previous one was completed. Validator passes when all subtasks pass.
 -   NotOrderedCallsValidator - doesn't enforce order of subtasks. Every subtask will be validated against every tool call. Validator passes when all subtasks pass.
+-   OneFromManyValidator - passes when any one of the given subtasks passes.
 
 ### Task
 
