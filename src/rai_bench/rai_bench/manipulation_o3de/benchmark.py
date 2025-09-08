@@ -286,7 +286,7 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
 
                         for msg in new_messages:
                             if isinstance(msg, HumanMultimodalMessage):
-                                last_msg = msg.text
+                                last_msg = msg.text()
                             elif isinstance(msg, BaseMessage):
                                 if isinstance(msg.content, list):
                                     if len(msg.content) == 1:

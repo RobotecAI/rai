@@ -18,9 +18,13 @@ from typing import List
 from unittest.mock import MagicMock, patch
 
 import pytest
+from langchain_core.callbacks import BaseCallbackHandler
+from langchain_core.language_models.fake_chat_models import ParrotFakeChatModel
+from langchain_core.runnables import RunnableConfig
 from rai.agents.langchain import invoke_llm_with_tracing
 from rai.agents.langchain.agent import LangChainAgent, newMessageBehaviorType
 from rai.initialization import get_tracing_callbacks
+from rai.messages import HumanMultimodalMessage
 
 
 @pytest.mark.parametrize(
@@ -150,3 +154,12 @@ class TestInvokeLLMWithTracing:
             assert "callbacks" in call_args[1]["config"]
             assert "existing_callback" in call_args[1]["config"]["callbacks"]
             assert "tracing_callback" in call_args[1]["config"]["callbacks"]
+
+    def test_invoke_llm_with_callback_integration(self):
+        """Test that invoke_llm_with_tracing works with a callback handler."""
+        llm = ParrotFakeChatModel()
+        human_msg = HumanMultimodalMessage(content="human")
+        response = llm.invoke(
+            [human_msg], config=RunnableConfig(callbacks=[BaseCallbackHandler()])
+        )
+        assert response.content == [{"type": "text", "text": "human"}]
