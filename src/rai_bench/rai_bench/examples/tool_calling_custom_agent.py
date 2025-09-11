@@ -16,8 +16,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from rai.agents.langchain.megamind import State, StepSuccess, create_megamind
-from rai.messages.multimodal import HumanMultimodalMessage
+from rai.agents.langchain import Executor, create_megamind, get_initial_megamind_state
 
 from rai_bench import (
     define_benchmark_logger,
@@ -52,27 +51,42 @@ if __name__ == "__main__":
         model_name=model_name,
         results_dir=experiment_dir,
     )
+    manipulation_system_prompt = """You are a manipulation specialist robot agent.
+Your role is to handle object manipulation tasks including picking up and droping objects using provided tools.
 
+Ask the VLM for objects detection and positions before perfomring any manipulation action.
+If VLM doesn't see objects that are objectives of the task, return this information, without proceeding"""
+
+    navigation_system_prompt = """You are a navigation specialist robot agent.
+Your role is to handle navigation tasks in space using provided tools.
+
+After performing navigation action, always check your current position to ensure success"""
+
+    executors = [
+        Executor(
+            name="manipulation",
+            llm=executor_llm,
+            tools=task.manipulation_tools(),
+            system_prompt=manipulation_system_prompt,
+        ),
+        Executor(
+            name="navigation",
+            llm=executor_llm,
+            tools=task.navigation_tools(),
+            system_prompt=navigation_system_prompt,
+        ),
+    ]
     agent = create_megamind(
-        manipulation_tools=task.manipulation_tools(),
-        navigation_tools=task.navigation_tools(),
         megamind_llm=supervisor_llm,
-        executor_llm=executor_llm,
-        system_prompt=task.get_system_prompt(),
+        megamind_system_prompt=task.get_system_prompt(),
+        executors=executors,
     )
-    initial_state = State(
-        {
-            "original_task": task.get_prompt(),
-            "messages": [HumanMultimodalMessage(content=task.get_prompt())],
-            "step": "",
-            "steps_done": [],
-            "step_success": StepSuccess(success=False, explanation=""),
-            "step_messages": [],
-        }
-    )
+
     experiment_id = uuid.uuid4()
     benchmark.run_next(
-        agent=agent, initial_state=initial_state, experiment_id=experiment_id
+        agent=agent,
+        initial_state=get_initial_megamind_state(task=task.get_prompt()),
+        experiment_id=experiment_id,
     )
 
     bench_logger.info("===============================================================")
