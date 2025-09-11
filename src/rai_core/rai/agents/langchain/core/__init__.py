@@ -19,11 +19,12 @@ from .react_agent import (
     create_react_runnable,
 )
 from .state_based_agent import create_state_based_runnable
-from .tool_runner import ToolRunner
+from .tool_runner import SubAgentToolRunner, ToolRunner
 
 __all__ = [
     "ConversationalAgentState",
     "ReActAgentState",
+    "SubAgentToolRunner",
     "ToolRunner",
     "create_conversational_agent",
     "create_react_runnable",
