@@ -89,15 +89,16 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         )
         callbacks = self.score_tracing_handler.get_callbacks()
         run_id = uuid.uuid4()
-        # NOTE (jmatejcz) recursion limit calculated as all_nodes_num -> one pass though whole node
-        # plus (task.max_tool_calls_number-1 because the first pass is already added in)
-        # times number of nodes - 2 because we dont cout start and end node
-        # this can be to much for larger graphs that dont use all nodes on extra calls
-        # in such ase adjust this value
-        # recurssion_limit = len(agent.get_graph().nodes) + (
-        #     task.max_tool_calls_number - 1
-        # ) * (len(agent.get_graph().nodes) - 2)
-        recurssion_limit = 70
+        # NOTE (jmatejcz) recursion limit calculated as (all_nodes_num - 2) * required tool calls
+        # -2 because we don't want to include START and END node
+        # then we add numer of additional calls that can be made
+        # and +2 as we have to pass once though START and END
+
+        recurssion_limit = (
+            (len(agent.get_graph().nodes) - 2) * task.required_calls
+            + task.additional_calls
+            + 2
+        )
         config: RunnableConfig = {
             "run_id": run_id,
             "callbacks": callbacks,
