@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import hashlib
 import logging
 from abc import ABC, abstractmethod
-from typing import Generic, List, Literal, Optional, TypeVar
+from typing import Any, Generic, List, Literal, Optional, TypeVar
 
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables.config import DEFAULT_RECURSION_LIMIT
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, computed_field
 
 loggers_type = logging.Logger
 
@@ -26,6 +27,40 @@ BaseModelT = TypeVar("BaseModelT", bound=BaseModel)
 
 
 IMAGE_REASONING_SYSTEM_PROMPT = "You are a helpful and knowledgeable AI assistant that specializes in interpreting and analyzing visual content. Your task is to answer questions based on the images provided to you. Please response in requested structured output format."
+
+
+class TaskValidationError(Exception):
+    pass
+
+
+AnswerT = TypeVar("AnswerT")
+
+
+class ImageReasoningTaskInput(BaseModel, Generic[AnswerT]):
+    """Base input for an image reasoning task."""
+
+    question: str = Field(..., description="The question to be answered.")
+    images_paths: List[str] = Field(
+        ...,
+        description="List of image file paths to be used for answering the question.",
+    )
+    expected_answer: AnswerT = Field(
+        ..., description="The expected answer to the question."
+    )
+
+    @computed_field
+    @property
+    def task_id(self) -> str:
+        """Unique identifier for the task based on question and image paths."""
+        content = f"{self.question}|{sorted(self.images_paths)}"
+        return hashlib.sha256(content.encode()).hexdigest()
+
+
+class ImageReasoningAnswer(BaseModel, Generic[AnswerT]):
+    """Base answer for an image reasoning task."""
+
+    answer: AnswerT = Field(..., description="The answer to the question.")
+    justification: str = Field(..., description="Justification for the answer.")
 
 
 class LangchainRawOutputModel(BaseModel):
@@ -47,20 +82,17 @@ class LangchainRawOutputModel(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
     raw: BaseMessage
-    parsed: BaseModel
+    parsed: ImageReasoningAnswer[Any]
     parsing_error: Optional[BaseException]
 
 
-class TaskValidationError(Exception):
-    pass
-
-
-class ImageReasoningTask(ABC, Generic[BaseModelT]):
+class ImageReasoningTask(ABC, Generic[AnswerT]):
     complexity: Literal["easy", "medium", "hard"]
     recursion_limit: int = DEFAULT_RECURSION_LIMIT
 
     def __init__(
         self,
+        task_input: ImageReasoningTaskInput[AnswerT],
         logger: loggers_type | None = None,
     ) -> None:
         """
@@ -78,15 +110,35 @@ class ImageReasoningTask(ABC, Generic[BaseModelT]):
             self.logger = logger
         else:
             self.logger = logging.getLogger(__name__)
-        self.question: str
-        self.images_paths: List[str]
+
+        self._task_input = task_input
+
+    @property
+    def question(self) -> str:
+        """The question to be answered."""
+        return self._task_input.question
+
+    @property
+    def images_paths(self) -> List[str]:
+        """List of image file paths."""
+        return self._task_input.images_paths
+
+    @property
+    def expected_answer(self) -> AnswerT:
+        """The expected answer to the question."""
+        return self._task_input.expected_answer
+
+    @property
+    def task_id(self) -> str:
+        """Unique identifier for the task."""
+        return self._task_input.task_id
 
     def set_logger(self, logger: loggers_type):
         self.logger = logger
 
     @property
     @abstractmethod
-    def structured_output(self) -> type[BaseModelT]:
+    def structured_output(self) -> type[ImageReasoningAnswer[AnswerT]]:
         """Structured output that agent should return."""
         pass
 
@@ -118,7 +170,7 @@ class ImageReasoningTask(ABC, Generic[BaseModelT]):
         pass
 
     @abstractmethod
-    def validate(self, output: BaseModelT) -> bool:
+    def validate(self, output: ImageReasoningAnswer[AnswerT]) -> float:
         """Validate result of the task."""
         pass
 
@@ -135,7 +187,7 @@ class ImageReasoningTask(ABC, Generic[BaseModelT]):
 
     def get_structured_output_from_messages(
         self, messages: List[BaseMessage]
-    ) -> BaseModelT | None:
+    ) -> ImageReasoningAnswer[AnswerT] | None:
         """Extract and validate structured output from a list of messages.
 
         Iterates through messages in reverse order, attempting to find the message that is
@@ -167,8 +219,11 @@ class ImageReasoningTask(ABC, Generic[BaseModelT]):
                         )
 
                     parsed = validated_message.parsed
-                    if isinstance(parsed, self.structured_output):
-                        return parsed
+                    expected_output_type = self.structured_output
+                    parsed_valid_output = expected_output_type.model_validate(
+                        parsed.model_dump()
+                    )
+                    return parsed_valid_output
                 except ValidationError:
                     continue
         return None

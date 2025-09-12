@@ -14,6 +14,7 @@
 from .test_models import (
     ManipulationO3DEBenchmarkConfig,
     ToolCallingAgentBenchmarkConfig,
+    VLMBenchmarkConfig,
     test_dual_agents,
     test_models,
 )
@@ -28,6 +29,7 @@ from .utils import (
 __all__ = [
     "ManipulationO3DEBenchmarkConfig",
     "ToolCallingAgentBenchmarkConfig",
+    "VLMBenchmarkConfig",
     "define_benchmark_logger",
     "get_llm_for_benchmark",
     "parse_manipulation_o3de_benchmark_args",

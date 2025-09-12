@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 
 
 class TaskResult(BaseModel):
+    task_id: str = Field(..., description="Unique identifier for the task object.")
     task_prompt: str = Field(..., description="The task prompt.")
     system_prompt: str = Field(..., description="The system prompt.")
     complexity: str = Field(..., description="Complexity of the task.")
