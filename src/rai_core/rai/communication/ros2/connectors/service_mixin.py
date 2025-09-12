@@ -30,6 +30,9 @@ class ROS2ServiceMixin:
                 f"{self.__class__.__name__} instance must have an attribute '_service_api' of type ROS2ServiceAPI"
             )
 
+    def release_client(self, service_name: str) -> bool:
+        return self._service_api.release_client(service_name)
+
     def service_call(
         self,
         message: ROS2Message,
@@ -37,6 +40,7 @@ class ROS2ServiceMixin:
         timeout_sec: float = 5.0,
         *,
         msg_type: str,
+        reuse_client: bool = True,
         **kwargs: Any,
     ) -> ROS2Message:
         msg = self._service_api.call_service(
@@ -44,6 +48,7 @@ class ROS2ServiceMixin:
             service_type=msg_type,
             request=message.payload,
             timeout_sec=timeout_sec,
+            reuse_client=reuse_client,
         )
         return ROS2Message(
             payload=msg, metadata={"msg_type": str(type(msg)), "service": target}
