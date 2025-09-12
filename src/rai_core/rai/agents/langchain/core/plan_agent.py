@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Robotec.AI
+# Copyright (C) 2025 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ class Act(BaseModel):
 class PlanExecuteState(ReActAgentState):
     """State for the plan and execute agent."""
 
-    # TODO (jmatejcz) should original_task be replaced with
+    # NOTE (jmatejcz) should original_task be replaced with
     # passing first message? The message can contain images etc.
     original_task: str
     plan: List[str]
@@ -131,7 +131,6 @@ Make sure that each step has all the information needed - do not skip steps."""
 
     def execute_step(state: PlanExecuteState):
         """Execute the current step of the plan."""
-        # TODO (jmatejcz) should we pass whole plan or only single the to the executor?
 
         plan = state["plan"]
         if not plan:
@@ -145,7 +144,6 @@ Make sure that each step has all the information needed - do not skip steps."""
         )
         return {
             "past_steps": [(task, agent_response["messages"][-1].content)],
-            # "plan": plan[1:],  # removing the step that was executed
         }
 
     def plan_step(state: PlanExecuteState):
