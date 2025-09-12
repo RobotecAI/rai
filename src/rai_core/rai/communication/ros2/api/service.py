@@ -74,17 +74,15 @@ class ROS2ServiceAPI(BaseROS2API):
         Returns:
             The response message
         """
-        request_message, service_type_class = self.build_ros2_service_request(
-            service_type, request
-        )
+        srv_msg, srv_cls = self.build_ros2_service_request(service_type, request)
         if reuse_client:
             with self._persistent_clients_lock:
                 client = self._persistent_clients.get(service_name, None)
                 if client is None:
-                    client = self.node.create_client(service_type_class, service_name)  # type: ignore
+                    client = self.node.create_client(srv_cls, service_name)  # type: ignore
                     self._persistent_clients[service_name] = client
         else:
-            client = self.node.create_client(service_type_class, service_name)  # type: ignore
+            client = self.node.create_client(srv_cls, service_name)  # type: ignore
         is_service_available = client.wait_for_service(timeout_sec=timeout_sec)
         if not is_service_available:
             raise ValueError(
@@ -92,9 +90,9 @@ class ROS2ServiceAPI(BaseROS2API):
                 "Try increasing the timeout or check if the service is running."
             )
         if os.getenv("ROS_DISTRO") == "humble":
-            return client.call(request_message)
+            return client.call(srv_msg)
         else:
-            return client.call(request_message, timeout_sec=timeout_sec)
+            return client.call(srv_msg, timeout_sec=timeout_sec)
 
     def get_service_names_and_types(self) -> List[Tuple[str, List[str]]]:
         return self.node.get_service_names_and_types()
