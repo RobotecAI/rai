@@ -27,7 +27,7 @@ from rai_bench import (
 )
 from rai_bench.tool_calling_agent.benchmark import ToolCallingAgentBenchmark
 from rai_bench.tool_calling_agent.interfaces import TaskArgs
-from rai_bench.tool_calling_agent.tasks.warehouse import SortTask
+from rai_bench.tool_calling_agent.tasks.warehouse import SortingTask
 from rai_bench.utils import get_llm_for_benchmark
 
 if __name__ == "__main__":
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     experiment_dir.mkdir(parents=True, exist_ok=True)
     bench_logger = define_benchmark_logger(out_dir=experiment_dir, level=logging.DEBUG)
 
-    task = SortTask(task_args=TaskArgs(extra_tool_calls=50))
+    task = SortingTask(task_args=TaskArgs(extra_tool_calls=50))
     task.set_logger(bench_logger)
 
     supervisor_name = "gpt-4o"
@@ -85,6 +85,7 @@ After performing navigation action, always check your current position to ensure
         megamind_llm=supervisor_llm,
         megamind_system_prompt=task.get_system_prompt(),
         executors=executors,
+        task_planning_prompt=task.get_planning_prompt(),
     )
 
     experiment_id = uuid.uuid4()

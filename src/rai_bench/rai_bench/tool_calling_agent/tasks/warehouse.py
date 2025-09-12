@@ -210,7 +210,7 @@ class EnvStateManager:
         }
 
 
-class SortTask(Task):
+class SortingTask(Task):
     complexity = "hard"
     type = "warehouse"
 
@@ -468,6 +468,18 @@ class SortTask(Task):
 
     def get_prompt(self) -> str:
         return self.get_base_prompt()
+
+    def get_planning_prompt(self) -> str:
+        """
+        Planning prompt help generate summary info for high level
+        task planning to undrestand the overall progress.
+        """
+        return """
+Determine success and provide brief explanation of what happened by slot,
+for example Slot 1: Object color: BLUE, actions: [NAVIGATED to SLOT->CHECKED OBJECTS->PICKED up OBJECT->NAVIGATED to BOX ->DROPPED OBJECT->COMPLETED].
+Mark a slot as COMPLETED only if object from this slot was dropped.
+If the slot doesn't contain the right object, for example Slot 2: Object color: RED, actions: [NAVIGATED to SLOT->CHECKED OBJECTS->NOT THE RIGHT COLOR->NOTHING TO DO->COMPLETED].
+"""
 
     def manipulation_tools(self) -> List[BaseTool]:
         return [

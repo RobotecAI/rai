@@ -75,12 +75,14 @@ def llm_node(
     return state
 
 
-def structured_output_node(
+def analyzer_node(
     llm: BaseChatModel,
+    planning_prompt: Optional[str],
     state: MegamindState,
 ) -> MegamindState:
     """Analyze the conversation and return structured output."""
-
+    if not planning_prompt:
+        planning_prompt = ""
     analyzer = llm.with_structured_output(StepSuccess)
     analysis = analyzer.invoke(
         [
@@ -90,9 +92,7 @@ Analyze if this task was completed successfully:
 
 Task: {state["step"]}
 
-
-Determine success and provide brief explanation of what happened.
-Include the end result details in explanation.
+{planning_prompt}
 Below you have messages of agent doing the task:"""
             ),
             *state["step_messages"],
@@ -121,6 +121,7 @@ def create_react_structured_agent(
     llm: BaseChatModel,
     tools: Optional[List[BaseTool]] = None,
     system_prompt: Optional[str] = None,
+    planning_prompt: Optional[str] = None,
 ) -> CompiledStateGraph:
     """Create a react agent that returns structured output."""
 
@@ -134,7 +135,9 @@ def create_react_structured_agent(
         bound_llm = llm.bind_tools(tools)
         graph.add_node("llm", partial(llm_node, bound_llm, system_prompt))
 
-        graph.add_node("structured_output", partial(structured_output_node, llm))
+        graph.add_node(
+            "structured_output", partial(analyzer_node, llm, planning_prompt)
+        )
 
         graph.add_conditional_edges(
             "llm",
@@ -145,7 +148,9 @@ def create_react_structured_agent(
         graph.add_edge("structured_output", END)
     else:
         graph.add_node("llm", partial(llm_node, llm, system_prompt))
-        graph.add_node("structured_output", partial(structured_output_node, llm))
+        graph.add_node(
+            "structured_output", partial(analyzer_node, llm, planning_prompt)
+        )
         graph.add_edge("llm", "structured_output")
         graph.add_edge("structured_output", END)
 
@@ -238,8 +243,19 @@ def plan_step(megamind_agent: BaseChatModel, state: MegamindState) -> MegamindSt
 
 
 def create_megamind(
-    megamind_llm: BaseChatModel, megamind_system_prompt: str, executors: List[Executor]
+    megamind_llm: BaseChatModel,
+    megamind_system_prompt: str,
+    executors: List[Executor],
+    task_planning_prompt: Optional[str] = None,
 ) -> CompiledStateGraph:
+    """Create a megamind langchain agent
+
+    Args:
+        executors (List[Executor]): Subagents for megamind, each can be a specialist with
+        its own tools llm and system prompt
+        task_planning_prompt (Optional[str]): Prompt that helps summarize the step in a way
+        that helps planning task
+    """
     executor_agents = {}
     handoff_tools = []
     for executor in executors:
@@ -247,6 +263,7 @@ def create_megamind(
             llm=executor.llm,
             tools=executor.tools,
             system_prompt=executor.system_prompt,
+            planning_prompt=task_planning_prompt,
         )
 
         handoff_tools.append(
