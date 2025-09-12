@@ -180,130 +180,6 @@ class Executor:
     system_prompt: str
 
 
-class MegamindAgent:
-    """An architecture of agent that plans and deletegate task to executors.
-    Megamind shows good replanning capabilities"""
-
-    def __init__(
-        self,
-        megamind_llm: BaseChatModel,
-        megamind_system_prompt: Optional[str],
-        executors: List[Executor],
-    ):
-        self.megamind_llm = megamind_llm
-        self.executors = executors
-        self._graph = None
-
-        self.executor_agents = {}
-        handoff_tools = []
-        for executor in self.executors:
-            self.executor_agents[executor.name] = create_react_structured_agent(
-                llm=executor.llm,
-                tools=executor.tools,
-                system_prompt=executor.system_prompt,
-            )
-
-            handoff_tools.append(
-                create_handoff_tool(
-                    agent_name=executor.name,
-                    description=f"Assign task to {executor.name} agent.",
-                )
-            )
-        if not megamind_system_prompt:
-            # make a generic system prompt that list executors and their tools
-            specialists_info = []
-            for executor in self.executors:
-                tool_names = [tool.name for tool in executor.tools]
-                tool_list = ", ".join(tool_names)
-                specialists_info.append(
-                    f"- {executor.name}: Available tools: {tool_list}"
-                )
-
-            specialists_section = "\n".join(specialists_info)
-            megamind_system_prompt = f"""You manage specialists to whom you will delegate tasks to complete objective.
-Available specialists and their capabilities:
-{specialists_section}
-
-The single task should be delegated to only 1 agent and should be doable by only 1 agent."""
-
-        self.megamind = create_react_agent(
-            self.megamind_llm,
-            tools=handoff_tools,
-            prompt=megamind_system_prompt,
-            name="megamind",
-        )
-
-    def _plan_step(self, state):
-        """Initial planning step executed by the megamind agent."""
-        if "original_task" not in state:
-            state["original_task"] = state["messages"][0].content[0]["text"]
-        if "steps_done" not in state:
-            state["steps_done"] = []
-        if "step" not in state:
-            state["step"] = None
-
-        megamind_prompt = (
-            f"You are given objective to complete: {state['original_task']}"
-        )
-
-        if state["steps_done"]:
-            megamind_prompt += "\n\n"
-            megamind_prompt += "Steps that were already done successfully:\n"
-            steps_done = "\n".join(
-                [f"{i + 1}. {step}" for i, step in enumerate(state["steps_done"])]
-            )
-            megamind_prompt += steps_done
-            megamind_prompt += "\n"
-
-        if state["step"]:
-            if not state["step_success"]:
-                raise ValueError("Step success should be specified at this point")
-
-            megamind_prompt += "\nBased on that outcome and past steps come up with the next step and delegate it to selected agent."
-        else:
-            megamind_prompt += "\n"
-            megamind_prompt += (
-                "Come up with the fist step and delegate it to selected agent."
-            )
-
-        megamind_prompt += "\n\n"
-        megamind_prompt += (
-            "When you decide that the objective is completed return response to user."
-        )
-
-        messages = [HumanMultimodalMessage(content=megamind_prompt)]
-        # NOTE: the response of megamind isn't appended to messages
-        # as Command from handoff instantly transitions to next node
-        self.megamind_agent.invoke({"messages": messages})
-        return state
-
-    def compile(self) -> CompiledStateGraph:
-        """Compile the multi-agent system into a state graph."""
-        if self._graph is not None:
-            return self._graph
-
-        graph_builder = StateGraph(MegamindState).add_node("megamind", self._plan_step)
-        for agent_name, agent in self.executor_agents.items():
-            graph_builder.add_node(agent_name, agent)
-            graph_builder.add_edge(agent_name, "megamind")
-
-        graph_builder.add_edge(START, "megamind")
-        self._graph = graph_builder.compile()
-        return self._graph
-
-    def get_initial_state(task: str):
-        return MegamindState(
-            {
-                "original_task": task.get_prompt(),
-                "messages": [HumanMultimodalMessage(content=task.get_prompt())],
-                "step": "",
-                "steps_done": [],
-                "step_success": StepSuccess(success=False, explanation=""),
-                "step_messages": [],
-            }
-        )
-
-
 def get_initial_megamind_state(task: str):
     return MegamindState(
         {
@@ -315,6 +191,50 @@ def get_initial_megamind_state(task: str):
             "step_messages": [],
         }
     )
+
+
+def plan_step(megamind_agent: BaseChatModel, state: MegamindState) -> MegamindState:
+    """Initial planning step."""
+    if "original_task" not in state:
+        state["original_task"] = state["messages"][0].content[0]["text"]
+    if "steps_done" not in state:
+        state["steps_done"] = []
+    if "step" not in state:
+        state["step"] = None
+
+    megamind_prompt = f"You are given objective to complete: {state['original_task']}"
+    if state["steps_done"]:
+        megamind_prompt += "\n\n"
+        megamind_prompt += "Steps that were already done successfully:\n"
+        steps_done = "\n".join(
+            [f"{i + 1}. {step}" for i, step in enumerate(state["steps_done"])]
+        )
+        megamind_prompt += steps_done
+        megamind_prompt += "\n"
+
+    if state["step"]:
+        if not state["step_success"]:
+            raise ValueError("Step success should be specified at this point")
+
+        megamind_prompt += "\nBased on that outcome and past steps come up with the next step and delegate it to selected agent."
+
+    else:
+        megamind_prompt += "\n"
+        megamind_prompt += (
+            "Come up with the fist step and delegate it to selected agent."
+        )
+
+    megamind_prompt += "\n\n"
+    megamind_prompt += (
+        "When you decide that the objective is completed return response to user."
+    )
+    messages = [
+        HumanMultimodalMessage(content=megamind_prompt),
+    ]
+    # NOTE (jmatejcz) the response of megamind isnt appended to messages
+    # as Command from handoff instantly transitions to next node
+    megamind_agent.invoke({"messages": messages})
+    return state
 
 
 def create_megamind(
@@ -357,52 +277,9 @@ The single task should be delegated to only 1 agent and should be doable by only
         name="megamind",
     )
 
-    def plan_step(state: MegamindState) -> MegamindState:
-        """Initial planning step."""
-        if "original_task" not in state:
-            state["original_task"] = state["messages"][0].content[0]["text"]
-        if "steps_done" not in state:
-            state["steps_done"] = []
-        if "step" not in state:
-            state["step"] = None
-
-        megamind_prompt = (
-            f"You are given objective to complete: {state['original_task']}"
-        )
-        if state["steps_done"]:
-            megamind_prompt += "\n\n"
-            megamind_prompt += "Steps that were already done successfully:\n"
-            steps_done = "\n".join(
-                [f"{i + 1}. {step}" for i, step in enumerate(state["steps_done"])]
-            )
-            megamind_prompt += steps_done
-            megamind_prompt += "\n"
-
-        if state["step"]:
-            if not state["step_success"]:
-                raise ValueError("Step success should be specified at this point")
-
-            megamind_prompt += "\nBased on that outcome and past steps come up with the next step and delegate it to selected agent."
-
-        else:
-            megamind_prompt += "\n"
-            megamind_prompt += (
-                "Come up with the fist step and delegate it to selected agent."
-            )
-
-        megamind_prompt += "\n\n"
-        megamind_prompt += (
-            "When you decide that the objective is completed return response to user."
-        )
-        messages = [
-            HumanMultimodalMessage(content=megamind_prompt),
-        ]
-        # NOTE (jmatejcz) the response of megamind isnt appended to messages
-        # as Command from handoff instantly transitions to next node
-        megamind_agent.invoke({"messages": messages})
-        return state
-
-    graph = StateGraph(MegamindState).add_node("megamind", plan_step)
+    graph = StateGraph(MegamindState).add_node(
+        "megamind", partial(plan_step, megamind_agent)
+    )
     for agent_name, agent in executor_agents.items():
         graph.add_node(agent_name, agent)
         graph.add_edge(agent_name, "megamind")
