@@ -61,4 +61,10 @@ class NavigateToPoseBlockingTool(BaseROS2Tool):
 
         result = action_client.send_goal(goal)
 
-        return str(result)
+        if result is None:
+            return "Navigate to pose action failed. Please try again."
+        
+        if result.result.error_code != 0:
+            return f"Navigate to pose action failed. Error code: {result.result.error_code}"
+
+        return "Navigate to pose successful."
