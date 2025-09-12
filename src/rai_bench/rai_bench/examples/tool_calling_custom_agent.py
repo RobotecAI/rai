@@ -16,7 +16,11 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from rai.agents.langchain import Executor, create_megamind, get_initial_megamind_state
+from rai.agents.langchain.core import (
+    Executor,
+    create_megamind,
+    get_initial_megamind_state,
+)
 
 from rai_bench import (
     define_benchmark_logger,
