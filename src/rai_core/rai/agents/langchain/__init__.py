@@ -20,7 +20,6 @@ from .core import (
     create_state_based_runnable,
 )
 from .megamind import Executor, create_megamind, get_initial_megamind_state
-from .planner_supervisor import create_planner_supervisor
 from .react_agent import ReActAgent
 from .state_based_agent import BaseStateBasedAgent, StateBasedConfig
 
@@ -34,7 +33,6 @@ __all__ = [
     "ReActAgentState",
     "StateBasedConfig",
     "create_megamind",
-    "create_planner_supervisor",
     "create_react_runnable",
     "create_state_based_runnable",
     "get_initial_megamind_state",
