@@ -46,6 +46,7 @@ class NavigateToPoseBlockingTool(BaseROS2Tool):
             self.connector.node, NavigateToPose, self.action_name
         )
 
+
         pose = PoseStamped()
         pose.header.frame_id = self.frame_id
         pose.header.stamp = self.connector.node.get_clock().now().to_msg()
@@ -55,15 +56,8 @@ class NavigateToPoseBlockingTool(BaseROS2Tool):
         quat = quaternion_from_euler(0, 0, yaw)
         pose.pose.orientation = Quaternion(x=quat[0], y=quat[1], z=quat[2], w=quat[3])
 
-        goal = {
-            "pose": {
-                "header": {
-                    "frame_id": self.frame_id,
-                    "stamp": self.connector.node.get_clock().now().to_msg(),
-                },
-                "pose": pose,
-            }
-        }
+        goal = NavigateToPose.Goal()
+        goal.pose = pose
 
         result = action_client.send_goal(goal)
 
