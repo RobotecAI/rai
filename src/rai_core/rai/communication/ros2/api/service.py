@@ -60,7 +60,7 @@ class ROS2ServiceAPI(BaseROS2API):
         service_type: str,
         request: Any,
         timeout_sec: float = 5.0,
-        /,
+        *,
         reuse_client: bool = True,
     ) -> Any:
         """
