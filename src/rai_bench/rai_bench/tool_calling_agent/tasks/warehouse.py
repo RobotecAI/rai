@@ -449,11 +449,32 @@ class SortingTask(Task):
 
             return " ".join(responses)
 
+        @tool
+        def get_slot_position(slot_id: str) -> Dict[str, float]:
+            """Returns the world position of a slot, pass in slot id as integer, for example 1"""
+
+            x, y = self.env_state._slots[f"{slot_id}"]["world_position"]
+            return {"x": x, "y": y}
+
+        @tool
+        def get_default_box_position() -> Dict[str, float]:
+            """Returns the world position of the default box"""
+            x, y = self.env_state._boxes["default"]["world_position"]
+            return {"x": x, "y": y}
+
         self.nav_tool = nav_tool
         self.where_am_i = where_am_i
         self.pick_up_object = pick_up_object
         self.drop_object = drop_object
         self.ask_vlm = ask_vlm
+
+        self.nav_tool = nav_tool
+        self.where_am_i = where_am_i
+        self.pick_up_object = pick_up_object
+        self.drop_object = drop_object
+        self.ask_vlm = ask_vlm
+        self.get_slot_position = get_slot_position
+        self.get_default_box_position = get_default_box_position
 
     @property
     def optional_tool_calls_number(self) -> int:
@@ -506,3 +527,7 @@ If the slot doesn't contain the right object, for example Slot 2: Object color: 
 
     def get_system_prompt(self) -> str:
         return SYSTEM_PROMPT + "\n" + WAREHOUSE_ENVIRONMENT_DESCRIPTION
+
+    def report_sorting_status(self):
+        print("** Reporting sorting status")
+        self.env_state.report_sorting_status()
