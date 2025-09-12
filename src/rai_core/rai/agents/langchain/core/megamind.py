@@ -13,6 +13,7 @@
 # limitations under the License.
 
 ### NOTE (jmatejcz) this agent is still in process of testing and refining
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from functools import partial
 from typing import (
@@ -185,6 +186,14 @@ class Executor:
     system_prompt: str
 
 
+class ContextProvider(ABC):
+    """Context provider are meant to inject exteral info to megamind prompt"""
+
+    @abstractmethod
+    def get_context(self) -> str:
+        pass
+
+
 def get_initial_megamind_state(task: str):
     return MegamindState(
         {
@@ -198,7 +207,11 @@ def get_initial_megamind_state(task: str):
     )
 
 
-def plan_step(megamind_agent: BaseChatModel, state: MegamindState) -> MegamindState:
+def plan_step(
+    megamind_agent: BaseChatModel,
+    context_providers: Optional[List[ContextProvider]],
+    state: MegamindState,
+) -> MegamindState:
     """Initial planning step."""
     if "original_task" not in state:
         state["original_task"] = state["messages"][0].content[0]["text"]
@@ -208,6 +221,9 @@ def plan_step(megamind_agent: BaseChatModel, state: MegamindState) -> MegamindSt
         state["step"] = None
 
     megamind_prompt = f"You are given objective to complete: {state['original_task']}"
+    for provider in context_providers:
+        megamind_prompt += provider.get_context()
+        megamind_prompt += "\n"
     if state["steps_done"]:
         megamind_prompt += "\n\n"
         megamind_prompt += "Steps that were already done successfully:\n"
@@ -247,6 +263,7 @@ def create_megamind(
     megamind_system_prompt: str,
     executors: List[Executor],
     task_planning_prompt: Optional[str] = None,
+    context_providers: List[ContextProvider] = [],
 ) -> CompiledStateGraph:
     """Create a megamind langchain agent
 
@@ -295,7 +312,7 @@ The single task should be delegated to only 1 agent and should be doable by only
     )
 
     graph = StateGraph(MegamindState).add_node(
-        "megamind", partial(plan_step, megamind_agent)
+        "megamind", partial(plan_step, megamind_agent, context_providers)
     )
     for agent_name, agent in executor_agents.items():
         graph.add_node(agent_name, agent)
