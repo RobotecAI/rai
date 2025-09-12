@@ -586,6 +586,14 @@ class Task(ABC):
         )
 
     @property
+    def additional_calls(self) -> int:
+        """number of additional calls that can be done to still pass task.
+        Includes extra tool calls params.
+        and optional tool calls number which depends on task.
+        """
+        return self.optional_tool_calls_number + self.extra_tool_calls
+
+    @property
     def required_calls(self) -> int:
         """Minimal number of calls required to complete task"""
         total = 0
