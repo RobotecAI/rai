@@ -67,32 +67,50 @@ class ROS2ServiceAPI(BaseROS2API):
         Call a ROS 2 service.
 
         Args:
-            service_name: Name of the service to call
-            service_type: ROS2 service type as string
-            request: Request message content
+            service_name: Fully-qualified service name.
+            service_type: ROS 2 service type string (e.g., 'std_srvs/srv/SetBool').
+            request: Request payload dict.
+            timeout_sec: Seconds to wait for availability/response.
+            reuse_client: Reuse a cached client. Client creation is synchronized; set
+                False to create a new client per call.
 
         Returns:
-            The response message
+            Response message instance.
+
+        Raises:
+            ValueError: Service not available within the timeout.
+            AttributeError: Service type or request cannot be constructed.
+
+        Note:
+            With reuse_client=True, access to the cached client (including the
+            service call) is serialized by a lock, preventing concurrent calls
+            through the same client. Use reuse_client=False for per-call clients
+            when concurrent service calls are required.
         """
         srv_msg, srv_cls = self.build_ros2_service_request(service_type, request)
+
+        def _call_service(client: Client, timeout_sec: float) -> Any:
+            is_service_available = client.wait_for_service(timeout_sec=timeout_sec)
+            if not is_service_available:
+                raise ValueError(
+                    f"Service {service_name} not ready within {timeout_sec} seconds. "
+                    "Try increasing the timeout or check if the service is running."
+                )
+            if os.getenv("ROS_DISTRO") == "humble":
+                return client.call(srv_msg)
+            else:
+                return client.call(srv_msg, timeout_sec=timeout_sec)
+
         if reuse_client:
             with self._persistent_clients_lock:
                 client = self._persistent_clients.get(service_name, None)
                 if client is None:
                     client = self.node.create_client(srv_cls, service_name)  # type: ignore
                     self._persistent_clients[service_name] = client
+                return _call_service(client, timeout_sec)
         else:
             client = self.node.create_client(srv_cls, service_name)  # type: ignore
-        is_service_available = client.wait_for_service(timeout_sec=timeout_sec)
-        if not is_service_available:
-            raise ValueError(
-                f"Service {service_name} not ready within {timeout_sec} seconds. "
-                "Try increasing the timeout or check if the service is running."
-            )
-        if os.getenv("ROS_DISTRO") == "humble":
-            return client.call(srv_msg)
-        else:
-            return client.call(srv_msg, timeout_sec=timeout_sec)
+            return _call_service(client, timeout_sec)
 
     def get_service_names_and_types(self) -> List[Tuple[str, List[str]]]:
         return self.node.get_service_names_and_types()
