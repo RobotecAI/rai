@@ -36,13 +36,14 @@ if __name__ == "__main__":
     task = SortTask(task_args=TaskArgs(extra_tool_calls=50))
     task.set_logger(bench_logger)
 
-    supervisor_name = "qwen3:8b"
+    supervisor_name = "gpt-4o"
 
-    executor_name = "qwen3:8b"
+    executor_name = "gpt-4o-mini"
     model_name = f"supervisor-{supervisor_name}_executor-{executor_name}"
-    supervisor_llm = get_llm_for_benchmark(model_name=supervisor_name, vendor="ollama")
+    supervisor_llm = get_llm_for_benchmark(model_name=supervisor_name, vendor="openai")
     executor_llm = get_llm_for_benchmark(
-        model_name=executor_name, vendor="ollama", reasoning=False
+        model_name=executor_name,
+        vendor="openai",
     )
 
     benchmark = ToolCallingAgentBenchmark(
