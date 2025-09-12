@@ -14,6 +14,7 @@
 
 import os
 import uuid
+from threading import Lock
 from typing import (
     Any,
     Callable,
@@ -47,9 +48,11 @@ class ROS2ServiceAPI(BaseROS2API):
         self._logger = node.get_logger()
         self._services: Dict[str, Service] = {}
         self._persistent_clients: Dict[str, Client] = {}
+        self._persistent_clients_lock = Lock()
 
     def release_client(self, service_name: str) -> bool:
-        return self._persistent_clients.pop(service_name, None) is not None
+        with self._persistent_clients_lock:
+            return self._persistent_clients.pop(service_name, None) is not None
 
     def call_service(
         self,
@@ -75,10 +78,11 @@ class ROS2ServiceAPI(BaseROS2API):
             service_type, request
         )
         if reuse_client:
-            client = self._persistent_clients.get(service_name, None)
-            if client is None:
-                client = self.node.create_client(service_type_class, service_name)  # type: ignore
-                self._persistent_clients[service_name] = client
+            with self._persistent_clients_lock:
+                client = self._persistent_clients.get(service_name, None)
+                if client is None:
+                    client = self.node.create_client(service_type_class, service_name)  # type: ignore
+                    self._persistent_clients[service_name] = client
         else:
             client = self.node.create_client(service_type_class, service_name)  # type: ignore
         is_service_available = client.wait_for_service(timeout_sec=timeout_sec)

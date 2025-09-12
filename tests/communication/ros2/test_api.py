@@ -212,7 +212,7 @@ def test_ros2_service_multiple_calls_with_reused_client(
         service_api = ROS2ServiceAPI(node)
         for _ in range(3):
             invoke_set_bool_service(service_name, service_api, reuse_client=True)
-            assert service_api.release_client(service_name), "Client not released"
+        assert service_api.release_client(service_name), "Client not released"
     finally:
         shutdown_executors_and_threads(executors, threads)
 
