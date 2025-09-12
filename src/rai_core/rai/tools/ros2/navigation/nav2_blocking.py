@@ -46,7 +46,6 @@ class NavigateToPoseBlockingTool(BaseROS2Tool):
             self.connector.node, NavigateToPose, self.action_name
         )
 
-
         pose = PoseStamped()
         pose.header.frame_id = self.frame_id
         pose.header.stamp = self.connector.node.get_clock().now().to_msg()
@@ -63,7 +62,7 @@ class NavigateToPoseBlockingTool(BaseROS2Tool):
 
         if result is None:
             return "Navigate to pose action failed. Please try again."
-        
+
         if result.result.error_code != 0:
             return f"Navigate to pose action failed. Error code: {result.result.error_code}"
 
