@@ -37,7 +37,7 @@ jobs:
 
           # List changed files between base and head
           CHANGED_FILES=$(git diff --name-only "${BASE_SHA}" "${HEAD_SHA}")
-          echo "Changed files:\n${CHANGED_FILES}"
+          printf "Changed files:\n%s\n" "${CHANGED_FILES}"
 
           # Detect changes within src/rai_core/
           if ! printf '%s\n' "${CHANGED_FILES}" | grep -E '^src/rai_core/' >/dev/null 2>&1; then
@@ -46,6 +46,11 @@ jobs:
           fi
 
           echo "Changes detected in src/rai_core. Verifying src/rai_core/pyproject.toml is updated..."
+          echo "Reading versions from src/rai_core/pyproject.toml (for context)..."
+          BASE_VERSION=$(git show "${BASE_SHA}:src/rai_core/pyproject.toml" 2>/dev/null | python -c "import tomli, sys; print(tomli.load(sys.stdin)['project']['version'])" || true)
+          HEAD_VERSION=$(git show "${HEAD_SHA}:src/rai_core/pyproject.toml" 2>/dev/null | python -c "import tomli, sys; print(tomli.load(sys.stdin)['project']['version'])" || true)
+          echo "Base version: ${BASE_VERSION:-<not found>}"
+          echo "Head version: ${HEAD_VERSION:-<not found>}"
 
           # Ensure src/rai_core/pyproject.toml is among changed files
           if printf '%s\n' "${CHANGED_FILES}" | grep -xq 'src/rai_core/pyproject.toml'; then
