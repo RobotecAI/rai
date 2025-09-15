@@ -16,7 +16,7 @@ import statistics
 import time
 import uuid
 from pathlib import Path
-from typing import List, Optional, TypeVar
+from typing import List, TypeVar
 
 import rclpy
 from langchain.tools import BaseTool
@@ -45,7 +45,6 @@ from rai.tools.ros2 import (
 )
 from rai_open_set_vision.tools import GetGrabbingPointTool
 
-from rai_bench.agents import create_multimodal_to_tool_agent
 from rai_bench.base_benchmark import BaseBenchmark, RunSummary, TimeoutException
 from rai_bench.manipulation_o3de.interfaces import Task
 from rai_bench.manipulation_o3de.results_tracking import (
@@ -285,7 +284,7 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
 
                         for msg in new_messages:
                             if isinstance(msg, HumanMultimodalMessage):
-                                last_msg = msg.text
+                                last_msg = msg.text()
                             elif isinstance(msg, BaseMessage):
                                 if isinstance(msg.content, list):
                                     if len(msg.content) == 1:
@@ -448,60 +447,6 @@ def run_benchmark(
         bench_logger.info(
             "==============================================================="
         )
-    finally:
-        connector.shutdown()
-        o3de.shutdown()
-        rclpy.shutdown()
-
-
-def run_benchmark_dual_agent(
-    multimodal_llm: BaseChatModel,
-    tool_calling_llm: BaseChatModel,
-    out_dir: Path,
-    scenarios: List[Scenario],
-    o3de_config_path: str,
-    bench_logger: logging.Logger,
-    experiment_id: uuid.UUID = uuid.uuid4(),
-    m_system_prompt: Optional[str] = None,
-    tool_system_prompt: Optional[str] = None,
-):
-    connector, o3de, benchmark, tools = _setup_benchmark_environment(
-        o3de_config_path,
-        get_llm_model_name(multimodal_llm),
-        scenarios,
-        out_dir,
-        bench_logger,
-    )
-    basic_tool_system_prompt = (
-        "Based on the conversation call the tools with appropriate arguments"
-    )
-    try:
-        for scenario in scenarios:
-            agent = create_multimodal_to_tool_agent(
-                multimodal_llm=multimodal_llm,
-                tool_llm=tool_calling_llm,
-                tools=tools,
-                multimodal_system_prompt=(
-                    m_system_prompt if m_system_prompt else scenario.task.system_prompt
-                ),
-                tool_system_prompt=(
-                    tool_system_prompt
-                    if tool_system_prompt
-                    else basic_tool_system_prompt
-                ),
-                logger=bench_logger,
-            )
-
-            benchmark.run_next(agent=agent, experiment_id=experiment_id)
-
-        bench_logger.info(
-            "==============================================================="
-        )
-        bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
-        bench_logger.info(
-            "==============================================================="
-        )
-
     finally:
         connector.shutdown()
         o3de.shutdown()

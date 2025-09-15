@@ -15,11 +15,9 @@
 from .basic_tasks import get_basic_tasks
 from .custom_interfaces_tasks import get_custom_interfaces_tasks
 from .manipulation_tasks import get_manipulation_tasks
-from .spatial_reasoning_tasks import get_spatial_tasks
 
 __all__ = [
     "get_basic_tasks",
     "get_custom_interfaces_tasks",
     "get_manipulation_tasks",
-    "get_spatial_tasks",
 ]

@@ -19,33 +19,31 @@ from pathlib import Path
 from typing import Iterator, List, Sequence, Tuple
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.messages import BaseMessage
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
+from pydantic import BaseModel
 from rai.agents.langchain.core import (
-    create_conversational_agent,
+    create_structured_output_runnable,
 )
 from rai.messages import HumanMultimodalMessage
 
-from rai_bench.base_benchmark import BaseBenchmark, TimeoutException
+from rai_bench.base_benchmark import BaseBenchmark, RunSummary, TimeoutException
 from rai_bench.results_processing.langfuse_scores_tracing import ScoreTracingHandler
-from rai_bench.tool_calling_agent.interfaces import (
-    Task,
-)
-from rai_bench.tool_calling_agent.results_tracking import (
-    TaskResult,
-    ToolCallingAgentRunSummary,
-)
 from rai_bench.utils import get_llm_model_name
+from rai_bench.vlm_benchmark.interfaces import ImageReasoningTask, TaskValidationError
+from rai_bench.vlm_benchmark.results_tracking import (
+    TaskResult,
+)
 
 
-class ToolCallingAgentBenchmark(BaseBenchmark):
-    """Benchmark for LangChain tool calling agents."""
+class VLMBenchmark(BaseBenchmark):
+    """Benchmark for VLMs."""
 
     def __init__(
         self,
-        tasks: Sequence[Task],
+        tasks: Sequence[ImageReasoningTask[BaseModel]],
         model_name: str,
         results_dir: Path,
         logger: logging.Logger | None = None,
@@ -55,7 +53,9 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
             results_dir=results_dir,
             logger=logger,
         )
-        self._tasks: Iterator[Tuple[int, Task]] = enumerate(iter(tasks))
+        self._tasks: Iterator[Tuple[int, ImageReasoningTask[BaseModel]]] = enumerate(
+            iter(tasks)
+        )
         self.num_tasks = len(tasks)
         self.task_results: List[TaskResult] = []
 
@@ -63,12 +63,7 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         self.tasks_results: List[TaskResult] = []
         self.csv_initialize(self.results_filename, TaskResult)
 
-    def run_next(
-        self,
-        agent: CompiledStateGraph,
-        initial_state: dict,
-        experiment_id: uuid.UUID,
-    ) -> None:
+    def run_next(self, agent: CompiledStateGraph, experiment_id: uuid.UUID) -> None:
         """Runs the next task of the benchmark.
 
         Parameters
@@ -88,85 +83,69 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         )
         callbacks = self.score_tracing_handler.get_callbacks()
         run_id = uuid.uuid4()
-        # NOTE (jmatejcz) recursion limit calculated as (all_nodes_num - 2) * required tool calls
-        # -2 because we don't want to include START and END node
-        # then we add numer of additional calls that can be made
-        # and +2 as we have to pass once though START and END
-
-        recurssion_limit = (
-            (len(agent.get_graph().nodes) - 2) * task.required_calls
-            + task.additional_calls
-            + 2
-        )
         config: RunnableConfig = {
             "run_id": run_id,
             "callbacks": callbacks,
             "tags": [
                 f"experiment-id:{experiment_id}",
-                "benchmark:tool-calling-agent",
+                "benchmark:vlm-benchmark",
                 self.model_name,
                 f"task-complexity:{task.complexity}",
-                f"extra-tool-calls:{task.extra_tool_calls}",
             ],
-            "recursion_limit": recurssion_limit,
+            "recursion_limit": len(agent.get_graph().nodes),
         }
-        self.logger.debug(f"recurssion limit: {recurssion_limit}")
 
         ts = time.perf_counter()
         messages: List[BaseMessage] = []
         prev_count: int = 0
+        errors: List[str] = []
         try:
-            with self.time_limit(200 * task.max_tool_calls_number):
+            with self.time_limit(60):
                 for state in agent.stream(
-                    initial_state,
+                    {
+                        "messages": [
+                            HumanMultimodalMessage(
+                                content=task.get_prompt(), images=task.get_images()
+                            )
+                        ]
+                    },
                     config=config,
                 ):
                     node = next(iter(state))
-                    if "messages" in state[node]:
-                        all_messages = state[node]["messages"]
-                        for new_msg in all_messages[prev_count:]:
-                            messages.append(new_msg)
-                            if isinstance(new_msg, AIMessage):
-                                self.logger.debug(
-                                    f"Message from node '{node}': {new_msg.content}, tool_calls: {new_msg.tool_calls}"
-                                )
-                        prev_count = len(messages)
+                    all_messages = state[node]["messages"]
+                    for new_msg in all_messages[prev_count:]:
+                        messages.append(new_msg)
+                    prev_count = len(messages)
         except TimeoutException as e:
             self.logger.error(msg=f"Task timeout: {e}")
         except GraphRecursionError as e:
-            tool_calls = task.get_tool_calls_from_messages(messages=messages)
-            score = task.validate(tool_calls=tool_calls)
-            score = 0.0
             self.logger.error(msg=f"Reached recursion limit {e}")
 
-        tool_calls = task.get_tool_calls_from_messages(messages=messages)
-        score = task.validate(tool_calls=tool_calls)
+        structured_output = None
+        try:
+            structured_output = task.get_structured_output_from_messages(
+                messages=messages
+            )
+        except TaskValidationError as e:
+            errors.append(str(e))
+
+        if structured_output is not None:
+            score = task.validate(output=structured_output)
+        else:
+            errors.append(f"Not valid structured output: {type(structured_output)}")
+            score = False
+
         te = time.perf_counter()
         total_time = te - ts
-
-        validation_info = task.dump_validators()
-        errors = [
-            s.errors
-            for validator_info in validation_info
-            for s in validator_info.subtasks
-        ]
-        total_extra_calls: int = 0
-        for validator_info in validation_info:
-            total_extra_calls += validator_info.extra_tool_calls_used
 
         self.logger.info(f"TASK SCORE: {score}, TOTAL TIME: {total_time:.3f}")
 
         task_result = TaskResult(
-            task_prompt=task.get_base_prompt(),
+            task_prompt=task.get_prompt(),
             system_prompt=task.get_system_prompt(),
-            examples_in_system_prompt=task.n_shots,
-            prompt_detail=task.prompt_detail,
             type=task.type,
-            extra_tool_calls=task.extra_tool_calls,
-            extra_tool_calls_used=total_extra_calls,
             complexity=task.complexity,
             model_name=self.model_name,
-            validation_info=validation_info,
             score=score,
             total_time=total_time,
             run_id=run_id,
@@ -183,7 +162,7 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
                 callback=callback,
                 run_id=run_id,
                 score=score,
-                errors=errors,
+                errors=[errors],
             )
 
     def compute_and_save_summary(self):
@@ -192,27 +171,25 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         success_count = sum(1 for r in self.task_results if r.score == 1.0)
         success_rate = success_count / len(self.task_results) * 100
         avg_time = statistics.mean(r.total_time for r in self.task_results)
-        total_extra_calls = sum(r.extra_tool_calls_used for r in self.task_results)
 
-        summary = ToolCallingAgentRunSummary(
+        summary = RunSummary(
             model_name=self.model_name,
             success_rate=round(success_rate, 2),
             avg_time=round(avg_time, 3),
-            total_extra_tool_calls_used=total_extra_calls,
             total_tasks=len(self.task_results),
         )
-        self.csv_initialize(self.summary_filename, ToolCallingAgentRunSummary)
+        self.csv_initialize(self.summary_filename, RunSummary)
         self.csv_writerow(self.summary_filename, summary)
 
 
 def run_benchmark(
     llm: BaseChatModel,
     out_dir: Path,
-    tasks: List[Task],
+    tasks: List[ImageReasoningTask[BaseModel]],
     bench_logger: logging.Logger,
     experiment_id: uuid.UUID = uuid.uuid4(),
 ):
-    benchmark = ToolCallingAgentBenchmark(
+    benchmark = VLMBenchmark(
         tasks=tasks,
         logger=bench_logger,
         model_name=get_llm_model_name(llm),
@@ -220,20 +197,15 @@ def run_benchmark(
     )
 
     for task in tasks:
-        agent = create_conversational_agent(
+        agent = create_structured_output_runnable(
             llm=llm,
-            tools=task.available_tools,
+            structured_output=task.structured_output,
             system_prompt=task.get_system_prompt(),
             logger=bench_logger,
         )
-        benchmark.run_next(
-            agent=agent,
-            initial_state={
-                "messages": [HumanMultimodalMessage(content=task.get_prompt())]
-            },
-            experiment_id=experiment_id,
-        )
+
+        benchmark.run_next(agent=agent, experiment_id=experiment_id)
 
     bench_logger.info("===============================================================")
-    bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
+    bench_logger.info("ALL TASKS DONE. BENCHMARK COMPLETED!")
     bench_logger.info("===============================================================")

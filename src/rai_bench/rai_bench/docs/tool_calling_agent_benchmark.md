@@ -14,4 +14,4 @@ Implementations can be found:
 
 -   Validators [Validators](../tool_calling_agent/validators.py)
 -   Subtasks [Validators](../tool_calling_agent/tasks/subtasks.py)
--   Tasks, including basic, spatial, custom interfaces and manipulation [Tasks](../tool_calling_agent/tasks/)
+-   Tasks, including basic, custom interfaces and manipulation [Tasks](../tool_calling_agent/tasks/)

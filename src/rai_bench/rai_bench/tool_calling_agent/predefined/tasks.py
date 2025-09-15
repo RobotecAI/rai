@@ -22,7 +22,6 @@ from rai_bench.tool_calling_agent.predefined import (
     get_basic_tasks,
     get_custom_interfaces_tasks,
     get_manipulation_tasks,
-    get_spatial_tasks,
 )
 
 
@@ -36,13 +35,11 @@ def get_tasks(
             "basic",
             "manipulation",
             "custom_interfaces",
-            "spatial_reasoning",
         ]
     ] = [
         "basic",
         "manipulation",
         "custom_interfaces",
-        "spatial_reasoning",
     ],
 ) -> List[Task]:
     """Get a list of tasks based on the provided configuration.
@@ -55,7 +52,7 @@ def get_tasks(
     Returns
     -------
     List[Task]
-        sequence of spatial reasoning tasks with varying difficulty levels.
+        sequence of tasks with varying difficulty levels.
         There will be every combination of extra_tool_calls x prompt_detail x n_shots tasks generated.
     """
 
@@ -74,12 +71,6 @@ def get_tasks(
         )
     if "manipulation" in task_types:
         all_tasks += get_manipulation_tasks(
-            extra_tool_calls=extra_tool_calls,
-            prompt_detail=prompt_detail,
-            n_shots=n_shots,
-        )
-    if "spatial_reasoning" in task_types:
-        all_tasks += get_spatial_tasks(
             extra_tool_calls=extra_tool_calls,
             prompt_detail=prompt_detail,
             n_shots=n_shots,
