@@ -15,10 +15,8 @@ import uuid
 from abc import abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Literal
+from typing import Any, Dict, List, Literal, Optional
 
-from git import Optional
-from langchain.chat_models.base import BaseChatModel
 from pydantic import BaseModel
 
 import rai_bench.manipulation_o3de as manipulation_o3de
@@ -26,7 +24,6 @@ import rai_bench.tool_calling_agent as tool_calling_agent
 from rai_bench.utils import (
     define_benchmark_logger,
     get_llm_for_benchmark,
-    get_llm_model_name,
 )
 
 
@@ -40,7 +37,17 @@ class BenchmarkConfig(BaseModel):
 
 
 class ManipulationO3DEBenchmarkConfig(BenchmarkConfig):
-    # by default include all
+    """Configuration for Manipulation O3DE Benchmark.
+
+    Parameters
+    ----------
+    o3de_config_path : str
+        path to O3DE configuration file
+    levels : List[Literal["trivial", "easy", "medium", "hard", "very_hard"]], optional
+        difficulty levels to include in benchmark, by default all levels are included:
+        ["trivial", "easy", "medium", "hard", "very_hard"]
+    """
+
     o3de_config_path: str
     levels: List[Literal["trivial", "easy", "medium", "hard", "very_hard"]] = [
         "trivial",
@@ -56,93 +63,47 @@ class ManipulationO3DEBenchmarkConfig(BenchmarkConfig):
 
 
 class ToolCallingAgentBenchmarkConfig(BenchmarkConfig):
-    extra_tool_calls: int = 0
+    """Configuration for Tool Calling Agent Benchmark.
+
+    Parameters
+    ----------
+    extra_tool_calls : List[int], optional
+        how many extra tool calls allowed to still pass, by default [0]
+    prompt_detail : List[Literal["brief", "descriptive"]], optional
+        how descriptive should task prompt be, by default all levels are included:
+        ["brief", "descriptive"]
+    N_shots : List[Literal[0, 2, 5]], optional
+        how many examples are in system prompt, by default all are included: [0, 2, 5]
+    complexities : List[Literal["easy", "medium", "hard"]], optional
+        complexity levels of tasks to include in the benchmark, by default all levels are included:
+        ["easy", "medium", "hard"]
+    task_types : List[Literal["basic", "manipulation", "navigation", "custom_interfaces"], optional
+        types of tasks to include in the benchmark, by default all types are included:
+        ["basic", "manipulation", "navigation", "custom_interfaces"]
+
+    For more detailed explanation of parameters, see the documentation:
+    (https://robotecai.github.io/rai/simulation_and_benchmarking/rai_bench/)
+    """
+
+    extra_tool_calls: List[int] = [0]
     complexities: List[Literal["easy", "medium", "hard"]] = ["easy", "medium", "hard"]
+    N_shots: List[Literal[0, 2, 5]] = [0, 2, 5]
+    prompt_detail: List[Literal["brief", "descriptive"]] = ["brief", "descriptive"]
     task_types: List[
         Literal[
             "basic",
             "manipulation",
-            "navigation",
             "custom_interfaces",
         ]
     ] = [
         "basic",
         "manipulation",
-        "navigation",
         "custom_interfaces",
     ]
 
     @property
     def name(self) -> str:
         return "tool_calling_agent"
-
-
-def test_dual_agents(
-    multimodal_llms: List[BaseChatModel],
-    tool_calling_models: List[BaseChatModel],
-    benchmark_configs: List[BenchmarkConfig],
-    out_dir: str,
-    m_system_prompt: Optional[str] = None,
-    tool_system_prompt: Optional[str] = None,
-):
-    if len(multimodal_llms) != len(tool_calling_models):
-        raise ValueError(
-            "Number of passed multimodal models must match number of passed tool calling models"
-        )
-    experiment_id = uuid.uuid4()
-    for bench_conf in benchmark_configs:
-        # for each bench configuration seperate run folder
-        now = datetime.now()
-        run_name = f"run_{now.strftime('%Y-%m-%d_%H-%M-%S')}"
-        for i, m_llm in enumerate(multimodal_llms):
-            tool_llm = tool_calling_models[i]
-            for u in range(bench_conf.repeats):
-                curr_out_dir = (
-                    out_dir
-                    + "/"
-                    + run_name
-                    + "/"
-                    + bench_conf.name
-                    + "/"
-                    + get_llm_model_name(m_llm)
-                    + "/"
-                    + str(u)
-                )
-                bench_logger = define_benchmark_logger(out_dir=Path(curr_out_dir))
-                try:
-                    if isinstance(bench_conf, ToolCallingAgentBenchmarkConfig):
-                        tool_calling_tasks = tool_calling_agent.get_tasks(
-                            extra_tool_calls=bench_conf.extra_tool_calls,
-                            complexities=bench_conf.complexities,
-                            task_types=bench_conf.task_types,
-                        )
-                        tool_calling_agent.run_benchmark_dual_agent(
-                            multimodal_llm=m_llm,
-                            tool_calling_llm=tool_llm,
-                            m_system_prompt=m_system_prompt,
-                            tool_system_prompt=tool_system_prompt,
-                            out_dir=Path(curr_out_dir),
-                            tasks=tool_calling_tasks,
-                            experiment_id=experiment_id,
-                            bench_logger=bench_logger,
-                        )
-                    elif isinstance(bench_conf, ManipulationO3DEBenchmarkConfig):
-                        manipulation_o3de_scenarios = manipulation_o3de.get_scenarios(
-                            levels=bench_conf.levels,
-                            logger=bench_logger,
-                        )
-                        manipulation_o3de.run_benchmark_dual_agent(
-                            multimodal_llm=m_llm,
-                            tool_calling_llm=tool_llm,
-                            out_dir=Path(curr_out_dir),
-                            o3de_config_path=bench_conf.o3de_config_path,
-                            scenarios=manipulation_o3de_scenarios,
-                            experiment_id=experiment_id,
-                            bench_logger=bench_logger,
-                        )
-                except Exception as e:
-                    bench_logger.critical(f"BENCHMARK RUN FAILED: {e}")
-                    raise e
 
 
 def test_models(
@@ -187,6 +148,8 @@ def test_models(
                             tool_calling_tasks = tool_calling_agent.get_tasks(
                                 extra_tool_calls=bench_conf.extra_tool_calls,
                                 complexities=bench_conf.complexities,
+                                prompt_detail=bench_conf.prompt_detail,
+                                n_shots=bench_conf.N_shots,
                                 task_types=bench_conf.task_types,
                             )
                             tool_calling_agent.run_benchmark(
@@ -212,7 +175,12 @@ def test_models(
                                 bench_logger=bench_logger,
                             )
                     except Exception as e:
-                        bench_logger.critical(f"BENCHMARK RUN FAILED: {e}")
+                        import traceback
+
                         bench_logger.critical(
-                            f"{bench_conf.name} benchmark for {model_name}, vendor: {vendors[i]}, execution number: {u + 1}"
+                            f"{bench_conf.name} benchmark for {model_name}, vendor: {vendors[i]}, repeat number: {u + 1}"
                         )
+                        bench_logger.critical(f"BENCHMARK RUN FAILED: {e}")
+                        error_msg = traceback.format_exc()
+                        bench_logger.critical(error_msg)
+                        print(error_msg)
