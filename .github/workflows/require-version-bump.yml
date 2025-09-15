@@ -53,4 +53,5 @@ jobs:
           echo "Please update src/rai_core/pyproject.toml (e.g., version or metadata) to reflect the changes."
           echo "Update the version in the pyproject.toml file and commit the changes according to changes with respect to Semantic Versioning."
           echo "Bump patch if a bug fix is introduced, minor if a feature is added, and major if a breaking change is added."
+          echo "Disregard the version bump only if you know what you are doing."
           exit 1
