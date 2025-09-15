@@ -20,7 +20,7 @@ from rai_bench import (
 
 if __name__ == "__main__":
     # Define models you want to benchmark
-    model_names = ["qwen3:4b", "llama3.2:3b"]
+    model_names = ["qwen2.5:3b", "llama3.2:3b"]
     vendors = ["ollama", "ollama"]
 
     # Define benchmarks that will be used
@@ -36,6 +36,7 @@ if __name__ == "__main__":
         extra_tool_calls=[0, 5],  # how many extra tool calls allowed to still pass
         task_types=[  # what types of tasks to include
             "basic",
+            "manipulation",
             "custom_interfaces",
         ],
         N_shots=[0, 2],  # examples in system prompt
@@ -47,11 +48,6 @@ if __name__ == "__main__":
     test_models(
         model_names=model_names,
         vendors=vendors,
-        benchmark_configs=[mani_conf, tool_conf],
+        benchmark_configs=[tool_conf, mani_conf],
         out_dir=out_dir,
-        # if you want to pass any additinal args to model
-        additional_model_args=[
-            {"reasoning": False},
-            {},
-        ],
     )
