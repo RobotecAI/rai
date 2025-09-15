@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rai-bench"
-version = "0.1.2"
+version = "0.2.0"
 description = "Package for running and creating benchmarks."
 authors = ["Jakub Matejczyk <jakub.matejczyk@robotec.ai>", "Magdalena Kotynia <magdalena.kotynia@robotec.ai>"]
 readme = "README.md"

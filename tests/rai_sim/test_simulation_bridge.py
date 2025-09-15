@@ -148,7 +148,7 @@ def test_load_base_config(sample_base_yaml_config: Path):
     assert len(config.entities) == 2
 
 
-class MockSimulationBridge(SimulationBridge[SimulationConfig]):
+class MockSimulationBridge(SimulationBridge):
     """Mock implementation of SimulationBridge for testing."""
 
     def init_simulation(self, simulation_config: SimulationConfig):

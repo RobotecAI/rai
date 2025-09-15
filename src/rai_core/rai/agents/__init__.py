@@ -13,7 +13,10 @@
 # limitations under the License.
 
 from rai.agents.base import BaseAgent
-from rai.agents.langchain import BaseStateBasedAgent, ReActAgent
+from rai.agents.langchain import (
+    BaseStateBasedAgent,
+    ReActAgent,
+)
 from rai.agents.runner import AgentRunner, wait_for_shutdown
 
 __all__ = [

@@ -47,15 +47,25 @@ class ToolRunner(RunnableCallable):
                 tool_ = create_tool(tool_)
             self.tools_by_name[tool_.name] = tool_
 
+    def get_messages(self, input: dict[str, Any]) -> List:
+        """Get fields from from input that will be processed."""
+        return input.get("messages", [])
+
+    def update_input_with_outputs(
+        self, input: dict[str, Any], outputs: List[Any]
+    ) -> None:
+        """Update input with tool outputs."""
+        input["messages"].extend(outputs)
+
     def _func(self, input: dict[str, Any], config: RunnableConfig) -> Any:
         config["max_concurrency"] = (
             1  # TODO(maciejmajek): use better mechanism for task queueing
         )
-        if messages := input.get("messages", []):
-            message = messages[-1]
-        else:
+        messages = self.get_messages(input)
+        if not messages:
             raise ValueError("No message found in input")
 
+        message = messages[-1]
         if not isinstance(message, AIMessage):
             raise ValueError("Last message is not an AIMessage")
 
@@ -142,5 +152,19 @@ class ToolRunner(RunnableCallable):
             # we sort the messages by type so that the tool messages are sent first
             # for more information see implementation of ToolMultimodalMessage.postprocess
             outputs.sort(key=lambda x: x.__class__.__name__, reverse=True)
-            input["messages"].extend(outputs)
+
+            self.update_input_with_outputs(input, outputs)
             return input
+
+
+class SubAgentToolRunner(ToolRunner):
+    """ToolRunner that works with 'step_messages' key used by subagents"""
+
+    def get_messages(self, input: dict[str, Any]) -> List:
+        return input.get("step_messages", [])
+
+    def update_input_with_outputs(
+        self, input: dict[str, Any], outputs: List[Any]
+    ) -> None:
+        input["messages"].extend(outputs)
+        input["step_messages"].extend(outputs)

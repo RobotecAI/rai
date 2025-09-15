@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
-from typing import List, Tuple, Union
+from typing import Sequence, Tuple, Union
 
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
@@ -65,7 +65,7 @@ class PlaceCubesTask(ManipulationTask):
 
         return False
 
-    def calculate_correct(self, entities: List[Entity]) -> Tuple[int, int]:
+    def calculate_correct(self, entities: Sequence[Entity]) -> Tuple[int, int]:
         """
         Calculate the number of correctly and incorrectly placed cubes based on adjacency.
 

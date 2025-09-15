@@ -6,6 +6,7 @@ RAI Bench is a comprehensive package that both provides benchmarks with ready-to
 
 -   [Manipulation O3DE Benchmark](#manipulation-o3de-benchmark)
 -   [Tool Calling Agent Benchmark](#tool-calling-agent-benchmark)
+-   [VLM Benchmark](#vlm-benchmark)
 
 ## Manipulation O3DE Benchmark
 
@@ -73,15 +74,13 @@ score = (correctly_placed_now - correctly_placed_initially) / initially_incorrec
 
 You can find predefined scene configs in `rai_bench/manipulation_o3de/predefined/configs/`.
 
-Predefined scenarios can be imported like:
+Predefined scenarios can be imported, for example, choosing tasks by difficulty:
 
 ```python
 from rai_bench.manipulation_o3de import get_scenarios
 
 get_scenarios(levels=["easy", "medium"])
 ```
-
-Choose which task you want by selecting the difficulty, from trivial to very hard scenarios.
 
 ## Tool Calling Agent Benchmark
 
@@ -106,10 +105,11 @@ The `Validator` class can combine single or multiple subtasks to create a single
 
 -   OrderedCallsValidator - requires a strict order of subtasks. The next subtask will be validated only when the previous one was completed. Validator passes when all subtasks pass.
 -   NotOrderedCallsValidator - doesn't enforce order of subtasks. Every subtask will be validated against every tool call. Validator passes when all subtasks pass.
+-   OneFromManyValidator - passes when any one of the given subtasks passes.
 
 ### Task
 
-A Task represents a specific prompt and set of tools available. A list of validators is assigned to validate the performance.
+A Task represents a specific prompts and set of tools available. A list of validators is assigned to validate the performance.
 
 ??? info "Task class definition"
 
@@ -117,19 +117,64 @@ A Task represents a specific prompt and set of tools available. A list of valida
 
 As you can see, the framework is very flexible. Any SubTask can be combined into any Validator that can be later assigned to any Task.
 
+Every Task needs to define it's prompt and system prompt, what tools agent will have available, how many tool calls are required to complete it and how many optional tool calls are possible.
+
+Optional tool calls mean that a certain tool calls is not obligatory to pass the Task, but shoudn't be considered an error, example: `GetROS2RGBCameraTask` which has prompt: `Get RGB camera image.` requires making one tool call with `get_ros2_image` tool. But listing topics before doing it is a valid approach, so in this case opitonal tool calls is `1`.
+
 ### ToolCallingAgentBenchmark
 
 The ToolCallingAgentBenchmark class manages the execution of tasks and collects results.
 
 ### Available Tasks
 
-Tasks of this benchmark are grouped by type:
+There are predefined Tasks available which are grouped by categories:
 
--   Basic - basic usage of tools
--   Navigation
+-   Basic - require retrieving info from certain topics
 -   Manipulation
 -   Custom Interfaces - requires using messages with custom interfaces
 
+Every Task has assigned the `complexity` which reflects the difficulty.
+
+When creating a Task, you can define few params:
+
+```python
+class TaskArgs(BaseModel):
+    """Holds the configurations specified by user"""
+
+    extra_tool_calls: int = 0
+    prompt_detail: Literal["brief", "descriptive"] = "brief"
+    examples_in_system_prompt: Literal[0, 2, 5] = 0
+```
+
+-   examples_in_system_prompt - How many examples there are in system prompts, example:
+
+    -   `0`: `You are a ROS 2 expert that want to solve tasks. You have access to various tools that allow you to query the ROS 2 system. Be proactive and use the tools to answer questions.`
+    -   `2`: `You are a ROS 2 expert that want to solve tasks. You have access to various tools that allow you to query the ROS 2 system. Be proactive and use the tools to answer questions. Example of tool calls: get_ros2_message_interface, args: {'msg_type': 'geometry_msgs/msg/Twist'} publish_ros2_message, args: {'topic': '/cmd_vel', 'message_type': 'geometry_msgs/msg/Twist', 'message': {linear: {x: 0.5, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 1.0}}}`
+
+-   prompt_detail - How descriptive should the Task prompt be, example:
+
+    -   `brief`: "Get all camera images"
+    -   `descriptive`: "Get all camera images from all available camera sources in the system.
+        This includes both RGB color images and depth images.
+        You can discover what camera topics are available and capture images from each."
+
+        Descriptive prompts provides guidance and tips.
+
+-   extra_tool_calls - How many extra tool calls an agent can make and still pass the Task, example:
+    -   `GetROS2RGBCameraTask` has 1 required tool call and 1 optional. When `extra_tool_calls` set to 5, agent can correct himself couple times and still pass even with 7 tool calls. There can be 2 types of invalid tool calls, first when the tool is used incorrectly and agent receives an error - this allows him to correct himself easier. Second type is when tool is called properly but it is not the tool that should be called or it is called with wrong params. In this case agent won't get any error so it will be harder for him to correct, but BOTH of these cases are counted as `extra tool call`.
+
 If you want to know details about every task, visit `rai_bench/tool_calling_agent/tasks`
 
-## Test Models
+## VLM Benchmark
+
+The VLM Benchmark is a benchmark for VLM models. It includes a set of tasks containing questions related to images and evaluates the performance of the agent that returns the answer in the structured format.
+
+### Running
+
+To run the benchmark:
+
+```bash
+cd rai
+source setup_shell.sh
+python src/rai_bench/rai_bench/examples/vlm_benchmark.py --model-name gemma3:4b --vendor ollama
+```

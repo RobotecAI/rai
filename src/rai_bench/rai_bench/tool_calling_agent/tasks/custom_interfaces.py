@@ -14,38 +14,22 @@
 
 import logging
 from abc import ABC
-from typing import Any, Dict, List, Type
+from typing import Any, Dict, List, Optional, Tuple
 
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel
-from rai.types import (
-    BoundingBox2D,
-    CameraInfo,
-    Detection2D,
-    Header,
-    Image,
-    Point,
-    Pose,
-    Pose2D,
-    PoseStamped,
-    Quaternion,
-    Time,
-)
-from rai.types.rai_interfaces import (
-    ManipulatorMoveToRequest,
-    RAIDetectionArray,
-    RAIGroundedSamRequest,
-    RAIGroundingDinoRequest,
-)
 
-from rai_bench.tool_calling_agent.interfaces import Task, Validator
-from rai_bench.tool_calling_agent.messages.base import Clock
-from rai_bench.tool_calling_agent.messages.services import (
-    StringListRequest,
-    VectorStoreRetrievalRequest,
-    WhatISeeRequest,
+from rai_bench.tool_calling_agent.interfaces import Task, TaskArgs, Validator
+from rai_bench.tool_calling_agent.mocked_ros2_interfaces import (
+    COMMON_INTERFACES,
+    COMMON_SERVICES_AND_TYPES,
+    COMMON_TOPIC_MODELS,
+    COMMON_TOPICS_AND_TYPES,
+    CUSTOM_INTERFACES,
+    CUSTOM_SERVICE_MODELS,
+    CUSTOM_SERVICES_AND_TYPES,
+    CUSTOM_TOPIC_MODELS,
+    CUSTOM_TOPICS_AND_TYPES,
 )
-from rai_bench.tool_calling_agent.messages.topics import AudioMessage, HRIMessage
 from rai_bench.tool_calling_agent.mocked_tools import (
     MockCallROS2ServiceTool,
     MockGetROS2MessageInterfaceTool,
@@ -53,766 +37,77 @@ from rai_bench.tool_calling_agent.mocked_tools import (
     MockGetROS2TopicsNamesAndTypesTool,
     MockPublishROS2MessageTool,
 )
+from rai_bench.tool_calling_agent.subtasks import (
+    CheckArgsToolCallSubTask,
+    CheckServiceFieldsToolCallSubTask,
+    CheckTopicFieldsToolCallSubTask,
+)
+from rai_bench.tool_calling_agent.validators import (
+    OrderedCallsValidator,
+)
 
-loggers_type = logging.Logger
+HRI_TOPIC = "/to_human"
+AUDIO_TOPIC = "/audio_message"
+DETECTIONS_TOPIC = "/detection_array"
+MANIPULATOR_SERVICE = "/manipulator_move_to"
+GROUNDED_SAM_SERVICE = "/grounded_sam_segment"
+GROUNDING_DINO_SERVICE = "/grounding_dino_classify"
+LOG_DIGEST_SERVICE = "/get_log_digest"
+VECTOR_STORE_SERVICE = "/rai_whoami_documentation_service"
 
-# dict of interfaces where keys are interfaces types and values are output
-# of GetROS2MessageInterfaceTool which are same as ros2 interface show outputs
-# the dict contains custom as well as couple other common interfaces
-MOCK_INTERFACES: Dict[str, str] = {
-    "sensor_msgs/msg/CameraInfo": """
-# This message defines meta information for a camera. It should be in a
-# camera namespace on topic "camera_info" and accompanied by up to five
-# image topics named:
-#
-#   image_raw - raw data from the camera driver, possibly Bayer encoded
-#   image            - monochrome, distorted
-#   image_color      - color, distorted
-#   image_rect       - monochrome, rectified
-#   image_rect_color - color, rectified
-#
-# The image_pipeline contains packages (image_proc, stereo_image_proc)
-# for producing the four processed image topics from image_raw and
-# camera_info. The meaning of the camera parameters are described in
-# detail at http://www.ros.org/wiki/image_pipeline/CameraInfo.
-#
-# The image_geometry package provides a user-friendly interface to
-# common operations using this meta information. If you want to, e.g.,
-# project a 3d point into image coordinates, we strongly recommend
-# using image_geometry.
-#
-# If the camera is uncalibrated, the matrices D, K, R, P should be left
-# zeroed out. In particular, clients may assume that K[0] == 0.0
-# indicates an uncalibrated camera.
+HRI_MESSAGE_TYPE = "rai_interfaces/msg/HRIMessage"
+AUDIO_MESSAGE_TYPE = "rai_interfaces/msg/AudioMessage"
+DETECTION_ARRAY_MESSAGE_TYPE = "rai_interfaces/msg/RAIDetectionArray"
+MANIPULATOR_SERVICE_TYPE = "rai_interfaces/srv/ManipulatorMoveTo"
+GROUNDED_SAM_SERVICE_TYPE = "rai_interfaces/srv/RAIGroundedSam"
+GROUNDING_DINO_SERVICE_TYPE = "rai_interfaces/srv/RAIGroundingDino"
+STRING_LIST_SERVICE_TYPE = "rai_interfaces/srv/StringList"
+VECTOR_STORE_SERVICE_TYPE = "rai_interfaces/srv/VectorStoreRetrieval"
 
-#######################################################################
-#                     Image acquisition info                          #
-#######################################################################
+STANDARD_IMAGE_WIDTH = 640
+STANDARD_IMAGE_HEIGHT = 480
+STANDARD_IMAGE_ENCODING = "rgb8"
 
-# Time of image acquisition, camera coordinate frame ID
-std_msgs/Header header # Header timestamp should be acquisition time of image
-	builtin_interfaces/Time stamp
-		int32 sec
-		uint32 nanosec
-	string frame_id
-                             # Header frame_id should be optical frame of camera
-                             # origin of frame should be optical center of camera
-                             # +x should point to the right in the image
-                             # +y should point down in the image
-                             # +z should point into the plane of the image
+PERSON_BBOX_CENTER = (320.0, 320.0)
+PERSON_BBOX_SIZE = (50.0, 50.0)
+PERSON_SCORE = 0.85
+PERSON_POSITION_3D = (2.0, 0.0, 0.0)
 
+BOTTLE_BBOX_CENTER = (320.0, 240.0)
+BOTTLE_BBOX_SIZE = (80.0, 120.0)
+BOTTLE_SCORE = 0.87
+BOTTLE_POSITION_3D = (1.2, 0.0, 0.5)
 
-#######################################################################
-#                      Calibration Parameters                         #
-#######################################################################
-# These are fixed during camera calibration. Their values will be the #
-# same in all messages until the camera is recalibrated. Note that    #
-# self-calibrating systems may "recalibrate" frequently.              #
-#                                                                     #
-# The internal parameters can be used to warp a raw (distorted) image #
-# to:                                                                 #
-#   1. An undistorted image (requires D and K)                        #
-#   2. A rectified image (requires D, K, R)                           #
-# The projection matrix P projects 3D points into the rectified image.#
-#######################################################################
-
-# The image dimensions with which the camera was calibrated.
-# Normally this will be the full camera resolution in pixels.
-uint32 height
-uint32 width
-
-# The distortion model used. Supported models are listed in
-# sensor_msgs/distortion_models.hpp. For most cameras, "plumb_bob" - a
-# simple model of radial and tangential distortion - is sufficent.
-string distortion_model
-
-# The distortion parameters, size depending on the distortion model.
-# For "plumb_bob", the 5 parameters are: (k1, k2, t1, t2, k3).
-float64[] d
-
-# Intrinsic camera matrix for the raw (distorted) images.
-#     [fx  0 cx]
-# K = [ 0 fy cy]
-#     [ 0  0  1]
-# Projects 3D points in the camera coordinate frame to 2D pixel
-# coordinates using the focal lengths (fx, fy) and principal point
-# (cx, cy).
-float64[9]  k # 3x3 row-major matrix
-
-# Rectification matrix (stereo cameras only)
-# A rotation matrix aligning the camera coordinate system to the ideal
-# stereo image plane so that epipolar lines in both stereo images are
-# parallel.
-float64[9]  r # 3x3 row-major matrix
-
-# Projection/camera matrix
-#     [fx'  0  cx' Tx]
-# P = [ 0  fy' cy' Ty]
-#     [ 0   0   1   0]
-# By convention, this matrix specifies the intrinsic (camera) matrix
-#  of the processed (rectified) image. That is, the left 3x3 portion
-#  is the normal camera intrinsic matrix for the rectified image.
-# It projects 3D points in the camera coordinate frame to 2D pixel
-#  coordinates using the focal lengths (fx', fy') and principal point
-#  (cx', cy') - these may differ from the values in K.
-# For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will
-#  also have R = the identity and P[1:3,1:3] = K.
-# For a stereo pair, the fourth column [Tx Ty 0]' is related to the
-#  position of the optical center of the second camera in the first
-#  camera's frame. We assume Tz = 0 so both cameras are in the same
-#  stereo image plane. The first camera always has Tx = Ty = 0. For
-#  the right (second) camera of a horizontal stereo pair, Ty = 0 and
-#  Tx = -fx' * B, where B is the baseline between the cameras.
-# Given a 3D point [X Y Z]', the projection (x, y) of the point onto
-#  the rectified image is given by:
-#  [u v w]' = P * [X Y Z 1]'
-#         x = u / w
-#         y = v / w
-#  This holds for both images of a stereo pair.
-float64[12] p # 3x4 row-major matrix
-
-
-#######################################################################
-#                      Operational Parameters                         #
-#######################################################################
-# These define the image region actually captured by the camera       #
-# driver. Although they affect the geometry of the output image, they #
-# may be changed freely without recalibrating the camera.             #
-#######################################################################
-
-# Binning refers here to any camera setting which combines rectangular
-#  neighborhoods of pixels into larger "super-pixels." It reduces the
-#  resolution of the output image to
-#  (width / binning_x) x (height / binning_y).
-# The default values binning_x = binning_y = 0 is considered the same
-#  as binning_x = binning_y = 1 (no subsampling).
-uint32 binning_x
-uint32 binning_y
-
-# Region of interest (subwindow of full camera resolution), given in
-#  full resolution (unbinned) image coordinates. A particular ROI
-#  always denotes the same window of pixels on the camera sensor,
-#  regardless of binning settings.
-# The default setting of roi (all values 0) is considered the same as
-#  full resolution (roi.width = width, roi.height = height).
-RegionOfInterest roi
-	#
-	uint32 x_offset  #
-	                 # (0 if the ROI includes the left edge of the image)
-	uint32 y_offset  #
-	                 # (0 if the ROI includes the top edge of the image)
-	uint32 height    #
-	uint32 width     #
-	bool do_rectify
-""",
-    "sensor_msgs/msg/Image": """
-# This message contains an uncompressed image
-# (0, 0) is at top-left corner of image
-
-std_msgs/Header header # Header timestamp should be acquisition time of image
-	builtin_interfaces/Time stamp
-		int32 sec
-		uint32 nanosec
-	string frame_id
-                             # Header frame_id should be optical frame of camera
-                             # origin of frame should be optical center of cameara
-                             # +x should point to the right in the image
-                             # +y should point down in the image
-                             # +z should point into to plane of the image
-                             # If the frame_id here and the frame_id of the CameraInfo
-                             # message associated with the image conflict
-                             # the behavior is undefined
-
-uint32 height                # image height, that is, number of rows
-uint32 width                 # image width, that is, number of columns
-
-# The legal values for encoding are in file src/image_encodings.cpp
-# If you want to standardize a new string format, join
-# ros-users@lists.ros.org and send an email proposing a new encoding.
-
-string encoding       # Encoding of pixels -- channel meaning, ordering, size
-                      # taken from the list of strings in include/sensor_msgs/image_encodings.hpp
-
-uint8 is_bigendian    # is this data bigendian?
-uint32 step           # Full row length in bytes
-uint8[] data          # actual matrix data, size is (step * rows)
-""",
-    "rosgraph_msgs/msg/Clock": """
-# This message communicates the current time.
-#
-# For more information, see https://design.ros2.org/articles/clock_and_time.html.
-builtin_interfaces/Time clock
-	int32 sec
-	uint32 nanosec
-""",
-    "rai_interfaces/msg/HRIMessage": """
-#
-# Copyright (C) 2024 Robotec.AI
-#
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#          http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-#
-
-std_msgs/Header header
-	builtin_interfaces/Time stamp
-		int32 sec
-		uint32 nanosec
-	string frame_id
-string text
-sensor_msgs/Image[] images
-	std_msgs/Header header #
-		builtin_interfaces/Time stamp
-			int32 sec
-			uint32 nanosec
-		string frame_id
-	                             # Header frame_id should be optical frame of camera
-	                             # origin of frame should be optical center of cameara
-	                             # +x should point to the right in the image
-	                             # +y should point down in the image
-	                             # +z should point into to plane of the image
-	                             # If the frame_id here and the frame_id of the CameraInfo
-	                             # message associated with the image conflict
-	                             # the behavior is undefined
-	uint32 height                #
-	uint32 width                 #
-	string encoding       #
-	                      # taken from the list of strings in include/sensor_msgs/image_encodings.hpp
-	uint8 is_bigendian    #
-	uint32 step           #
-	uint8[] data          #
-rai_interfaces/AudioMessage[] audios
-	#
-	#
-	#
-	#
-	#
-	int16[] audio
-	uint16 sample_rate
-	uint16 channels
-string communication_id
-int64 seq_no
-bool seq_end
-""",
-    "rai_interfaces/msg/AudioMessage": """
-#
-# Copyright (C) 2024 Robotec.AI
-#
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#          http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-#
-
-int16[] audio
-uint16 sample_rate
-uint16 channels
-""",
-    "rai_interfaces/msg/RAIDetectionArray": """
-#
-# Copyright (C) 2024 Robotec.AI
-#
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#          http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-#
-
-# A list of 2D detections, for a multi-object 2D detector.
-std_msgs/Header header
-	builtin_interfaces/Time stamp
-		int32 sec
-		uint32 nanosec
-	string frame_id
-
-# A list of the detected proposals. A multi-proposal detector might generate
-#   this list with many candidate detections generated from a single input.
-vision_msgs/Detection2D[] detections
-	#
-	std_msgs/Header header
-		builtin_interfaces/Time stamp
-			int32 sec
-			uint32 nanosec
-		string frame_id
-	ObjectHypothesisWithPose[] results
-		ObjectHypothesis hypothesis
-			string class_id
-			float64 score
-		geometry_msgs/PoseWithCovariance pose
-			Pose pose
-				Point position
-					float64 x
-					float64 y
-					float64 z
-				Quaternion orientation
-					float64 x 0
-					float64 y 0
-					float64 z 0
-					float64 w 1
-			float64[36] covariance
-	BoundingBox2D bbox
-		vision_msgs/Pose2D center
-            float64 x
-            float64 y
-            float64 theta
-        float64 size_x
-        float64 size_y
-	string id
-# a list of classes being detected
-string[] detection_classes
-""",
-    "rai_interfaces/srv/ManipulatorMoveTo": """
-#
-# Copyright (C) 2024 Robotec.AI
-#
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#          http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-
-# A simplified approach with binary states for the gripper
-bool initial_gripper_state
-bool final_gripper_state
-geometry_msgs/PoseStamped target_pose
-	std_msgs/Header header
-		builtin_interfaces/Time stamp
-			int32 sec
-			uint32 nanosec
-		string frame_id
-	Pose pose
-		Point position
-			float64 x
-			float64 y
-			float64 z
-		Quaternion orientation
-			float64 x 0
-			float64 y 0
-			float64 z 0
-			float64 w 1
----
-bool success
-""",
-    "rai_interfaces/srv/RAIGroundedSam": """
-#
-# Copyright (C) 2024 Robotec.AI
-#
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#          http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-#
-RAIDetectionArray detections
-	#
-	#
-	#
-	#
-	#
-	std_msgs/Header header
-		builtin_interfaces/Time stamp
-			int32 sec
-			uint32 nanosec
-		string frame_id
-	vision_msgs/Detection2D[] detections
-		#
-		std_msgs/Header header
-			builtin_interfaces/Time stamp
-				int32 sec
-				uint32 nanosec
-			string frame_id
-		ObjectHypothesisWithPose[] results
-			ObjectHypothesis hypothesis
-				string class_id
-				float64 score
-			geometry_msgs/PoseWithCovariance pose
-				Pose pose
-					Point position
-						float64 x
-						float64 y
-						float64 z
-					Quaternion orientation
-						float64 x 0
-						float64 y 0
-						float64 z 0
-						float64 w 1
-				float64[36] covariance
-		BoundingBox2D bbox
-            vision_msgs/Pose2D center
-                float64 x
-                float64 y
-				float64 theta
-			float64 size_x
-			float64 size_y
-		string id
-	string[] detection_classes
-sensor_msgs/Image source_img
-	std_msgs/Header header #
-		builtin_interfaces/Time stamp
-			int32 sec
-			uint32 nanosec
-		string frame_id
-	                             # Header frame_id should be optical frame of camera
-	                             # origin of frame should be optical center of cameara
-	                             # +x should point to the right in the image
-	                             # +y should point down in the image
-	                             # +z should point into to plane of the image
-	                             # If the frame_id here and the frame_id of the CameraInfo
-	                             # message associated with the image conflict
-	                             # the behavior is undefined
-	uint32 height                #
-	uint32 width                 #
-	string encoding       #
-	                      # taken from the list of strings in include/sensor_msgs/image_encodings.hpp
-	uint8 is_bigendian    #
-	uint32 step           #
-	uint8[] data          #
----
-sensor_msgs/Image[] masks
-	std_msgs/Header header #
-		builtin_interfaces/Time stamp
-			int32 sec
-			uint32 nanosec
-		string frame_id
-	                             # Header frame_id should be optical frame of camera
-	                             # origin of frame should be optical center of cameara
-	                             # +x should point to the right in the image
-	                             # +y should point down in the image
-	                             # +z should point into to plane of the image
-	                             # If the frame_id here and the frame_id of the CameraInfo
-	                             # message associated with the image conflict
-	                             # the behavior is undefined
-	uint32 height                #
-	uint32 width                 #
-	string encoding       #
-	                      # taken from the list of strings in include/sensor_msgs/image_encodings.hpp
-	uint8 is_bigendian    #
-	uint32 step           #
-	uint8[] data          #
-""",
-    "rai_interfaces/srv/RAIGroundingDino": """
-#
-# Copyright (C) 2024 Robotec.AI
-#
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#          http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-#
-string classes
-float64 box_threshold
-float64 text_threshold
-sensor_msgs/Image source_img
-	std_msgs/Header header #
-		builtin_interfaces/Time stamp
-			int32 sec
-			uint32 nanosec
-		string frame_id
-	                             # Header frame_id should be optical frame of camera
-	                             # origin of frame should be optical center of cameara
-	                             # +x should point to the right in the image
-	                             # +y should point down in the image
-	                             # +z should point into to plane of the image
-	                             # If the frame_id here and the frame_id of the CameraInfo
-	                             # message associated with the image conflict
-	                             # the behavior is undefined
-	uint32 height                #
-	uint32 width                 #
-	string encoding       #
-	                      # taken from the list of strings in include/sensor_msgs/image_encodings.hpp
-	uint8 is_bigendian    #
-	uint32 step           #
-	uint8[] data          #
----
-RAIDetectionArray detections
-	#
-	#
-	#
-	#
-	#
-	std_msgs/Header header
-		builtin_interfaces/Time stamp
-			int32 sec
-			uint32 nanosec
-		string frame_id
-	vision_msgs/Detection2D[] detections
-		#
-		std_msgs/Header header
-			builtin_interfaces/Time stamp
-				int32 sec
-				uint32 nanosec
-			string frame_id
-		ObjectHypothesisWithPose[] results
-			ObjectHypothesis hypothesis
-				string class_id
-				float64 score
-			geometry_msgs/PoseWithCovariance pose
-				Pose pose
-					Point position
-						float64 x
-						float64 y
-						float64 z
-					Quaternion orientation
-						float64 x 0
-						float64 y 0
-						float64 z 0
-						float64 w 1
-				float64[36] covariance
-		BoundingBox2D bbox
-			vision_msgs/Pose2D center
-                float64 x
-                float64 y
-				float64 theta
-			float64 size_x
-			float64 size_y
-		string id
-	string[] detection_classes
-""",
-    "rai_interfaces/srv/StringList": """
-# Copyright (C) 2024 Robotec.AI
-#
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#          http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-#
-
-# Request - empty
----
-# Response
-bool success
-string[] string_list
-""",
-    "rai_interfaces/srv/VectorStoreRetrieval": """
-# Copyright (C) 2024 Robotec.AI
-#
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#          http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-#
-
-# Request
-string query
-
----
-# Response
-bool success
-string message
-string[] documents
-float32[] scores
-""",
-    "rai_interfaces/srv/WhatISee": """z
-# Copyright (C) 2024 Robotec.AI
-#
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#          http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-#
-
-# Request (empty)
-
----
-# Response, timed with image timestamp
-string[] observations
-string perception_source
-sensor_msgs/Image image
-	std_msgs/Header header #
-		builtin_interfaces/Time stamp
-			int32 sec
-			uint32 nanosec
-		string frame_id
-	                             # Header frame_id should be optical frame of camera
-	                             # origin of frame should be optical center of cameara
-	                             # +x should point to the right in the image
-	                             # +y should point down in the image
-	                             # +z should point into to plane of the image
-	                             # If the frame_id here and the frame_id of the CameraInfo
-	                             # message associated with the image conflict
-	                             # the behavior is undefined
-	uint32 height                #
-	uint32 width                 #
-	string encoding       #
-	                      # taken from the list of strings in include/sensor_msgs/image_encodings.hpp
-	uint8 is_bigendian    #
-	uint32 step           #
-	uint8[] data          #
-geometry_msgs/Pose pose
-	Point position
-		float64 x
-		float64 y
-		float64 z
-	Quaternion orientation
-		float64 x 0
-		float64 y 0
-		float64 z 0
-		float64 w 1
-""",
-    "rai_interfaces/action/Task": """
-# Goal
-string task
-string description
-string priority
-
----
-# Result
-bool success
-string report
-
----
-# Feedback
-string current_status
-""",
-    "/load_map": """
-string filename
----
-bool success
-""",
-    "/query_planner_interface": """
----
-
-# The planning instances that could be used in the benchmark
-PlannerInterfaceDescription[] planner_interfaces
-	string name
-	string pipeline_id
-	string[] planner_ids
-
-""",
+DETECTION_DEFAULTS: Dict[str, Any] = {
+    "person": {
+        "bbox_center": PERSON_BBOX_CENTER,
+        "bbox_size": PERSON_BBOX_SIZE,
+        "score": PERSON_SCORE,
+        "position_3d": PERSON_POSITION_3D,
+    },
+    "bottle": {
+        "bbox_center": BOTTLE_BBOX_CENTER,
+        "bbox_size": BOTTLE_BBOX_SIZE,
+        "score": BOTTLE_SCORE,
+        "position_3d": BOTTLE_POSITION_3D,
+    },
 }
 
+DEFAULT_BOX_THRESHOLD: float = 0.4
+DEFAULT_TEXT_THRESHOLD: float = 0.25
 
-SERVICES_AND_TYPES = {
-    # sample interfaces
-    # "/load_map": "moveit_msgs/srv/LoadMap",
-    # "/query_planner_interface": "moveit_msgs/srv/QueryPlannerInterfaces",
-    # custom interfaces
-    "/manipulator_move_to": "rai_interfaces/srv/ManipulatorMoveTo",
-    "/grounded_sam_segment": "rai_interfaces/srv/RAIGroundedSam",
-    "/grounding_dino_classify": "rai_interfaces/srv/RAIGroundingDino",
-    "/get_log_digest": "rai_interfaces/srv/StringList",
-    "/rai_whoami_documentation_service": "rai_interfaces/srv/VectorStoreRetrieval",
-    "/rai/whatisee/get": "rai_interfaces/srv/WhatISee",
-}
 
-SERVICE_MODELS: Dict[str, Type[BaseModel]] = {
-    "rai_interfaces/srv/ManipulatorMoveTo": ManipulatorMoveToRequest,
-    "rai_interfaces/srv/RAIGroundedSam": RAIGroundedSamRequest,
-    "rai_interfaces/srv/RAIGroundingDino": RAIGroundingDinoRequest,
-    "rai_interfaces/srv/StringList": StringListRequest,
-    "rai_interfaces/srv/VectorStoreRetrieval": VectorStoreRetrievalRequest,
-    "rai_interfaces/srv/WhatISee": WhatISeeRequest,
-}
+INTERFACES = COMMON_INTERFACES | CUSTOM_INTERFACES
 
-TOPICS_AND_TYPES: Dict[str, str] = {
-    # sample topics
-    "/camera_image_color": "sensor_msgs/msg/Image",
-    "/camera_image_depth": "sensor_msgs/msg/Image",
-    "/clock": "rosgraph_msgs/msg/Clock",
-    "/color_camera_info": "sensor_msgs/msg/CameraInfo",
-    "/color_camera_info5": "sensor_msgs/msg/CameraInfo",
-    "/depth_camera_info5": "sensor_msgs/msg/CameraInfo",
-    "/depth_image5": "sensor_msgs/msg/Image",
-    # custom topics
-    "/to_human": "rai_interfaces/msg/HRIMessage",
-    "/send_audio": "rai_interfaces/msg/AudioMessage",
-    "/send_detections": "rai_interfaces/msg/RAIDetectionArray",
-}
+TOPICS_AND_TYPES = COMMON_TOPICS_AND_TYPES | CUSTOM_TOPICS_AND_TYPES
+TOPIC_MODELS = COMMON_TOPIC_MODELS | CUSTOM_TOPIC_MODELS
 
-ACTIONS_AND_TYPES = {
-    # custom actions
-    "/perform_task": "rai_interfaces/action/Task",
-    # some sample actions
-    # "/execute_trajectory": "moveit_msgs/action/ExecuteTrajectory",
-    # "/move_action": "moveit_msgs/action/MoveGroup",
-    # "/follow_joint_trajectory": "control_msgs/action/FollowJointTrajectory",
-    # "/gripper_cmd": "control_msgs/action/GripperCommand",
-}
+SERVICES_AND_TYPES = COMMON_SERVICES_AND_TYPES | CUSTOM_SERVICES_AND_TYPES
 TOPIC_STRINGS = [
     f"topic: {topic}\ntype: {msg_type}\n"
     for topic, msg_type in TOPICS_AND_TYPES.items()
 ]
-TOPIC_MODELS: Dict[str, Type[BaseModel]] = {
-    "sensor_msgs/msg/CameraInfo": CameraInfo,
-    "sensor_msgs/msg/Image": Image,
-    "rosgraph_msgs/msg/Clock": Clock,
-    "rai_interfaces/msg/HRIMessage": HRIMessage,
-    "rai_interfaces/msg/AudioMessage": AudioMessage,
-    "rai_interfaces/msg/RAIDetectionArray": RAIDetectionArray,
-}
 
-IMAGE_TOPICS: Dict[str, str] = {
-    "/attached_collision_object": "moveit_msgs/msg/AttachedCollisionObject",
-    "/camera_image_color": "sensor_msgs/msg/Image",
-    "/camera_image_depth": "sensor_msgs/msg/Image",
-    "/clock": "rosgraph_msgs/msg/Clock",
-    "/collision_object": "moveit_msgs/msg/CollisionObject",
-    "/color_camera_info": "sensor_msgs/msg/CameraInfo",
-    "/color_camera_info5": "sensor_msgs/msg/CameraInfo",
-    "/depth_camera_info5": "sensor_msgs/msg/CameraInfo",
-}
 
 SERVICE_STRINGS = [
     f"service: {service}\ntype: {msg_type}\n"
@@ -820,35 +115,63 @@ SERVICE_STRINGS = [
 ]
 
 
-PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT = """You are a ROS 2 expert that want to solve tasks. You have access to various tools that allow you to query the ROS 2 system.
-Be proactive and use the tools to answer questions.
+PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_0_SHOT = """You are a ROS 2 expert that want to solve tasks. You have access to various tools that allow you to query the ROS 2 system.
+Be proactive and use the tools to answer questions."""
+
+PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_2_SHOT = (
+    PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_0_SHOT
+    + """
 Example of tool calls:
 - get_ros2_message_interface, args: {'msg_type': 'geometry_msgs/msg/Twist'}
-- publish_ros2_message, args: {'topic': '/cmd_vel', 'message_type': 'geometry_msgs/msg/Twist', 'message': {linear: {x: 0.5, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 1.0}}}
-- get_ros2_message_interface, args: {'msg_type': 'turtlesim/srv/TeleportAbsolute'}
-- publish_ros2_message, args: {'topic': '/turtle1/teleport_absolute', 'message_type': 'turtlesim/srv/TeleportAbsolute', 'message': {x: 5.0, y: 2.0, theta: 1.57}}"""
+- publish_ros2_message, args: {'topic': '/cmd_vel', 'message_type': 'geometry_msgs/msg/Twist', 'message': {linear: {x: 0.5, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 1.0}}}"""
+)
+
+PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_5_SHOT = (
+    PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_2_SHOT
+    + """
+- get_ros2_services_names_and_types, args: {}
+- get_ros2_message_interface, args: {'msg_type': 'moveit_msgs/srv/ExecuteKnownTrajectory'}
+- name: call_ros2_service, args: {
+        "service_name": "/execute_trajectory",
+        "service_type": "moveit_msgs/srv/ExecuteKnownTrajectory",
+        "service_args": {
+            "trajectory": {
+                "joint_trajectory": {
+                    "header": {"frame_id": "base_link"},
+                    "joint_names": ["joint1", "joint2"],
+                    "points": [{
+                        "positions": [0.0, 1.57],
+                        "time_from_start": {"sec": 2, "nanosec": 0}
+                    }]
+                }
+            },
+            "wait_for_execution": True
+        }
+    }"""
+)
 
 
 class CustomInterfaceTask(Task, ABC):
+    """Custom Interface Tasks are designed around out custom interfaces in RAI
+    In these tasks we want to evaulate how well agent can understand these interfaes
+    and fill them as requested
+    """
+
+    type = "custom_interface"
+
     @property
-    def type(self) -> str:
-        return "custom_interface"
+    def optional_tool_calls_number(self) -> int:
+        # list topics
+        # get interface is not optional
+        return 1
 
-
-class CustomInterfacesTopicTask(CustomInterfaceTask, ABC):
-    def __init__(
-        self,
-        topic: str,
-        validators: List[Validator],
-        extra_tool_calls: int = 0,
-        logger: loggers_type | None = None,
-    ) -> None:
-        super().__init__(
-            validators=validators,
-            extra_tool_calls=extra_tool_calls,
-            logger=logger,
-        )
-        self.topic = topic
+    def get_system_prompt(self) -> str:
+        if self.n_shots == 0:
+            return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_0_SHOT
+        elif self.n_shots == 2:
+            return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_2_SHOT
+        else:
+            return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT_5_SHOT
 
     @property
     def available_tools(self) -> List[BaseTool]:
@@ -856,246 +179,952 @@ class CustomInterfacesTopicTask(CustomInterfaceTask, ABC):
             MockGetROS2TopicsNamesAndTypesTool(
                 mock_topics_names_and_types=TOPIC_STRINGS
             ),
-            MockGetROS2MessageInterfaceTool(mock_interfaces=MOCK_INTERFACES),
+            MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
             MockPublishROS2MessageTool(
                 available_topics=list(TOPICS_AND_TYPES.keys()),
                 available_message_types=list(TOPICS_AND_TYPES.values()),
                 available_topic_models=TOPIC_MODELS,
             ),
-        ]
-
-    def get_system_prompt(self) -> str:
-        return PROACTIVE_ROS2_EXPERT_SYSTEM_PROMPT
-
-
-class CustomInterfacesServiceTask(CustomInterfaceTask, ABC):
-    def __init__(
-        self,
-        service: str,
-        service_args: dict[str, Any],
-        validators: List[Validator],
-        extra_tool_calls: int = 0,
-        logger: loggers_type | None = None,
-    ) -> None:
-        super().__init__(
-            validators=validators,
-            extra_tool_calls=extra_tool_calls,
-            logger=logger,
-        )
-        self.service = service
-        self.service_args = service_args
-
-    @property
-    def available_tools(self) -> List[BaseTool]:
-        return [
             MockGetROS2ServicesNamesAndTypesTool(
                 mock_service_names_and_types=SERVICE_STRINGS
             ),
-            MockGetROS2MessageInterfaceTool(mock_interfaces=MOCK_INTERFACES),
+            MockGetROS2MessageInterfaceTool(mock_interfaces=INTERFACES),
             MockCallROS2ServiceTool(
                 available_services=list(SERVICES_AND_TYPES.keys()),
                 available_service_types=list(SERVICES_AND_TYPES.values()),
-                available_service_models=SERVICE_MODELS,
+                available_service_models=CUSTOM_SERVICE_MODELS,
             ),
         ]
 
 
-# TODO (jm) add actions Tasks
+class CustomInterfacesServiceTask(CustomInterfaceTask, ABC):
+    """
+    Base class for tasks that involve calling SINGLE service with custom interface.
+    """
+
+    descriptive_sufix = (
+        " Examine the required service interface and call  "
+        "it with appropriate arguments."
+    )
+
+    def get_prompt(self) -> str:
+        if self.prompt_detail == "brief":
+            return self.get_base_prompt()
+        else:
+            return self.get_base_prompt() + self.descriptive_sufix
 
 
-# TODO (jm) should we and how to parametrize these classes?
-class PublishROS2HRIMessageTextTask(CustomInterfacesTopicTask):
+class CustomInterfacesServicesTask(CustomInterfacesServiceTask, ABC):
+    """
+    Base class for tasks that involve calling MULITPLE services with custom interface.
+    """
+
+    descriptive_sufix = (
+        " Examine the required services interfaces and call  "
+        "them with appropriate arguments."
+    )
+
+
+#### NOTE(jmatejcz) Tasks come in 2 versions:
+#### - basic one that gives required topic or service and field values directly,
+#### they verify if model can handle custom interface
+#### - indirect, where prompts are more natural and indirect,
+#### they verify if model can on top understand and use the topic or service in suitable situation
+
+
+class PublishROS2HRIMessageTextTask(CustomInterfaceTask):
     complexity = "easy"
 
     def __init__(
         self,
-        topic: str,
         text: str,
-        validators: List[Validator],
-        extra_tool_calls: int = 0,
+        task_args: TaskArgs,
+        validators: Optional[List[Validator]] = None,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(topic, validators, extra_tool_calls, logger)
         self.text = text
-
-    def get_prompt(self) -> str:
-        return (
-            f"You need to publish a message to the topic '{self.topic}' with the text value: '{self.text}'.\n"
-            "Before publishing, follow these steps:\n"
-            "1. Use the tool to retrieve the available ROS2 topics and their message types.\n"
-            f"2. Find the message type for the topic '{self.topic}'.\n"
-            "3. Retrieve the full message interface definition for that type.\n"
-            "4. Construct the message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
-            f"5. Publish the message to '{self.topic}' using the correct message type and interface.\n"
-        )
-
-
-class PublishROS2AudioMessageTask(CustomInterfacesTopicTask):
-    complexity = "easy"
-    expected_audio: List[int] = [123, 456, 789]
-    expected_sample_rate: int = 44100
-    expected_channels: int = 2
-
-    def get_prompt(self) -> str:
-        return (
-            f"You need to publish a message to the topic '{self.topic}' with audio samples {self.expected_audio}, "
-            f"sample rate {self.expected_sample_rate}, and {self.expected_channels} channels.\n"
-            "Before publishing, follow these steps:\n"
-            "1. Use the tool to retrieve the available ROS2 topics and their message types.\n"
-            f"2. Find the message type for the topic '{self.topic}'.\n"
-            "3. Retrieve the full message interface definition for that type.\n"
-            "4. Construct the message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
-            f"5. Publish the message to '{self.topic}' using the correct message type and interface.\n"
-        )
-
-
-class PublishROS2DetectionArrayTask(CustomInterfacesTopicTask):
-    complexity = "easy"
-
-    expected_detection_classes: List[str] = ["person", "car"]
-    expected_detections: List[Detection2D] = [
-        Detection2D(
-            bbox=BoundingBox2D(
-                center=Pose2D(x=320.0, y=240.0, theta=0.0),
-                size_x=50.0,
-                size_y=50.0,
+        if validators is None:
+            # Default validator for this task
+            get_HRIMessage_interface_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="get_ros2_message_interface",
+                expected_args={"msg_type": HRI_MESSAGE_TYPE},
             )
-        )
-    ]
+            pub_HRIMessage_text_subtask = CheckTopicFieldsToolCallSubTask(
+                expected_tool_name="publish_ros2_message",
+                expected_topic=HRI_TOPIC,
+                expected_message_type=HRI_MESSAGE_TYPE,
+                expected_fields={"text": text},
+            )
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        get_HRIMessage_interface_subtask,
+                        pub_HRIMessage_text_subtask,
+                    ]
+                )
+            ]
+        super().__init__(validators, task_args, logger)
+
+    def get_base_prompt(self) -> str:
+        return f"Publish message to topic '{HRI_TOPIC}' with text '{self.text}'."
 
     def get_prompt(self) -> str:
+        if self.prompt_detail == "brief":
+            return f"{self.get_base_prompt()}."
+        else:
+            return (
+                f"{self.get_base_prompt()}"
+                " Examine the message interface "
+                f"structure, and publish an HRI message with appropriate arguments."
+            )
+
+
+class PublishROS2HRIMessageTextTaskIndirect(PublishROS2HRIMessageTextTask):
+    complexity = "easy"
+
+    def get_base_prompt(self) -> str:
+        return f"Publish message '{self.text}' to human."
+
+
+class PublishROS2AudioMessageTask(CustomInterfaceTask):
+    complexity = "easy"
+
+    def __init__(
+        self,
+        audio: List[int],
+        sample_rate: int,
+        channels: int,
+        task_args: TaskArgs,
+        validators: Optional[List[Validator]] = None,
+        logger: logging.Logger | None = None,
+    ) -> None:
+        self.audio = audio
+        self.sample_rate = sample_rate
+        self.channels = channels
+        if validators is None:
+            # Default validator for this task
+            get_audio_interface_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="get_ros2_message_interface",
+                expected_args={"msg_type": AUDIO_MESSAGE_TYPE},
+            )
+            pub_audio_message_subtask = CheckTopicFieldsToolCallSubTask(
+                expected_tool_name="publish_ros2_message",
+                expected_topic=AUDIO_TOPIC,
+                expected_message_type=AUDIO_MESSAGE_TYPE,
+                expected_fields={
+                    "samples": audio,
+                    "sample_rate": sample_rate,
+                    "channels": channels,
+                },
+            )
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        get_audio_interface_subtask,
+                        pub_audio_message_subtask,
+                    ]
+                )
+            ]
+        super().__init__(validators, task_args, logger)
+
+    def get_base_prompt(self) -> str:
         return (
-            f"You need to publish a detection message to the topic '{self.topic}' with one detection:\n"
-            f"{self.expected_detections[0].model_dump()} and detection classes {self.expected_detection_classes}.\n"
-            "Before publishing, follow these steps:\n"
-            "1. Use the tool to retrieve the available ROS2 topics and their message types.\n"
-            f"2. Find the message type for the topic '{self.topic}'.\n"
-            "3. Retrieve the full message interface definition for that type.\n"
-            "4. Construct the message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
-            f"5. Publish the message to '{self.topic}' using the correct message type and interface.\n"
+            f"Publish audio message to topic '{AUDIO_TOPIC}' with samples "
+            f"{self.audio}, sample rate {self.sample_rate} and "
+            f"channels {self.channels}."
+        )
+
+    def get_prompt(self) -> str:
+        if self.prompt_detail == "brief":
+            return self.get_base_prompt()
+        else:
+            return (
+                f"{self.get_base_prompt()}"
+                f" Examine the message interface, and publish audio data with appropriate arguments."
+            )
+
+
+class PublishROS2AudioMessageTaskIndirect(PublishROS2AudioMessageTask):
+    complexity = "easy"
+
+    def get_base_prompt(self) -> str:
+        return (
+            f"Publish audio with samples {self.audio}, "
+            f"sample rate {self.sample_rate} and {self.channels} channels."
+        )
+
+
+class PublishROS2DetectionArrayTask(CustomInterfaceTask):
+    complexity = "medium"
+
+    def __init__(
+        self,
+        task_args: TaskArgs,
+        detection_classes: List[str],
+        validators: Optional[List[Validator]] = None,
+        logger: logging.Logger | None = None,
+    ) -> None:
+        self.detection_classes = detection_classes
+
+        self.bbox_centers: List[Tuple[float, float]] = []
+        self.bbox_sizes: List[Tuple[float, float]] = []
+        for obj in detection_classes:
+            if obj not in DETECTION_DEFAULTS:
+                # use existing values
+                obj = "person"
+            defaults = DETECTION_DEFAULTS[obj]
+            self.bbox_centers.append(defaults["bbox_center"])
+            self.bbox_sizes.append(defaults["bbox_size"])
+
+        if validators is None:
+            get_detection_interface_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="get_ros2_message_interface",
+                expected_args={"msg_type": DETECTION_ARRAY_MESSAGE_TYPE},
+            )
+
+            expected_fields: Dict[str, Any] = {}
+            for i, obj in enumerate(detection_classes):
+                expected_fields.update(
+                    {
+                        f"detections.{i}.results.0.hypothesis.class_id": obj,
+                        f"detections.{i}.bbox.center.x": self.bbox_centers[i][0],
+                        f"detections.{i}.bbox.center.y": self.bbox_centers[i][1],
+                        f"detections.{i}.bbox.size_x": self.bbox_sizes[i][0],
+                        f"detections.{i}.bbox.size_y": self.bbox_sizes[i][1],
+                    }
+                )
+
+            pub_detection_array_subtask = CheckTopicFieldsToolCallSubTask(
+                expected_tool_name="publish_ros2_message",
+                expected_topic=DETECTIONS_TOPIC,
+                expected_message_type=DETECTION_ARRAY_MESSAGE_TYPE,
+                expected_fields=expected_fields,
+            )
+
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        get_detection_interface_subtask,
+                        pub_detection_array_subtask,
+                    ]
+                )
+            ]
+
+        super().__init__(validators=validators, task_args=task_args, logger=logger)
+
+    def get_base_prompt(self) -> str:
+        detection_summaries: List[str] = []
+        for _, (cls, center, size) in enumerate(
+            zip(
+                self.detection_classes,
+                self.bbox_centers,
+                self.bbox_sizes,
+            )
+        ):
+            detection_summaries.append(
+                f"{cls} with bbox at center({center[0]}, {center[1]}) and size {size[0]}x{size[1]}"
+            )
+
+        return (
+            f"Publish detection array to topic '{DETECTIONS_TOPIC}' with {len(self.detection_classes)} detections: "
+            f"{'; '.join(detection_summaries)}."
+        )
+
+    def get_prompt(self) -> str:
+        if self.prompt_detail == "brief":
+            return self.get_base_prompt()
+        else:
+            return (
+                f"{self.get_base_prompt()} Examine the message interface "
+                "and publish detection data with appropriate arguments."
+            )
+
+
+class PublishROS2DetectionArrayTaskIndirect(PublishROS2DetectionArrayTask):
+    complexity = "hard"
+
+    def get_base_prompt(self) -> str:
+        detection_summaries: List[str] = []
+        for _, (cls, center, size) in enumerate(
+            zip(
+                self.detection_classes,
+                self.bbox_centers,
+                self.bbox_sizes,
+            )
+        ):
+            detection_summaries.append(
+                f"{cls} at position ({center[0]}, {center[1]}) with size {size[0]}x{size[1]}"
+            )
+
+        return (
+            f"Report detected objects in the scene: {'; '.join(detection_summaries)}."
         )
 
 
 class CallROS2ManipulatorMoveToServiceTask(CustomInterfacesServiceTask):
-    complexity = "easy"
+    complexity = "medium"
 
-    expected_initial_gripper_state = True
-    expected_final_gripper_state = False
-    expected_target_pose: PoseStamped = PoseStamped(
-        pose=Pose(
-            position=Point(x=1.0, y=2.0, z=3.0),
-            orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
-        )
-    )
+    def __init__(
+        self,
+        target_x: float,
+        target_y: float,
+        target_z: float,
+        initial_gripper_state: bool,
+        final_gripper_state: bool,
+        task_args: TaskArgs,
+        validators: Optional[List[Validator]] = None,
+        logger: logging.Logger | None = None,
+    ) -> None:
+        self.target_x = target_x
+        self.target_y = target_y
+        self.target_z = target_z
+        self.initial_gripper_state = initial_gripper_state
+        self.final_gripper_state = final_gripper_state
+        if validators is None:
+            # Default validator for this task
+            get_manipulator_interface_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="get_ros2_message_interface",
+                expected_args={"msg_type": MANIPULATOR_SERVICE_TYPE},
+            )
+            call_manipulator_service_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=MANIPULATOR_SERVICE,
+                expected_service_type=MANIPULATOR_SERVICE_TYPE,
+                expected_fields={
+                    "target_pose.pose.position.x": target_x,
+                    "target_pose.pose.position.y": target_y,
+                    "target_pose.pose.position.z": target_z,
+                    "initial_gripper_state": initial_gripper_state,
+                    "final_gripper_state": final_gripper_state,
+                },
+            )
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        get_manipulator_interface_subtask,
+                        call_manipulator_service_subtask,
+                    ]
+                )
+            ]
+        super().__init__(validators, task_args, logger)
 
-    def get_prompt(self) -> str:
+    def get_base_prompt(self) -> str:
         return (
-            f"You need to call the service '{self.service}' with a target_pose: "
-            f"{self.expected_target_pose.model_dump()} and gripper states (initial: {self.expected_initial_gripper_state}, final: {self.expected_final_gripper_state}).\n"
-            "Before calling, follow these steps:\n"
-            "1. Use the tool to retrieve the available ROS2 services and their types.\n"
-            f"2. Find the service type for '{self.service}'.\n"
-            "3. Retrieve the full message interface definition for that service.\n"
-            "4. Construct the request message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
-            f"5. Call the service '{self.service}' using the correct message type and interface.\n"
+            f"Call service '{MANIPULATOR_SERVICE}' to move manipulator to pose "
+            f"({self.target_x}, {self.target_y}, {self.target_z}) with initial gripper state {self.initial_gripper_state} "
+            f"and final gripper state {self.final_gripper_state}."
+        )
+
+
+class CallROS2ManipulatorMoveToServiceTaskIndirect(
+    CallROS2ManipulatorMoveToServiceTask
+):
+    complexity = "medium"
+
+    def get_base_prompt(self) -> str:
+        init_gripper_action = "close" if self.final_gripper_state else "open"
+        final_gripper_action = "close" if self.final_gripper_state else "open"
+        return (
+            f"Move robot arm to position ({self.target_x}, {self.target_y}, {self.target_z}) "
+            f"At the start keep griper {init_gripper_action}, at the end {final_gripper_action}. "
         )
 
 
 class CallGroundedSAMSegmentTask(CustomInterfacesServiceTask):
-    complexity = "easy"
+    complexity = "medium"
 
-    expected_detections: RAIDetectionArray = RAIDetectionArray(
-        header=Header(stamp=Time(sec=0, nanosec=0), frame_id="camera_frame"),
-        detections=[],
-    )
+    def __init__(
+        self,
+        task_args: TaskArgs,
+        detection_classes: List[str],
+        validators: Optional[List[Validator]] = None,
+        logger: logging.Logger | None = None,
+    ) -> None:
+        self.detection_classes = detection_classes
 
-    def get_prompt(self) -> str:
+        # Get default parameters for each detection class
+        self.bbox_centers: List[Tuple[float, float]] = []
+        self.bbox_sizes: List[Tuple[float, float]] = []
+        self.scores: List[Tuple[float, float]] = []
+        self.positions_3d: List[Tuple[float, float]] = []
+
+        for obj in detection_classes:
+            if obj not in DETECTION_DEFAULTS:
+                # use existing values
+                obj = "person"
+            defaults = DETECTION_DEFAULTS[obj]
+            self.bbox_centers.append(defaults["bbox_center"])
+            self.bbox_sizes.append(defaults["bbox_size"])
+            self.scores.append(defaults["score"])
+            self.positions_3d.append(defaults["position_3d"])
+
+        if validators is None:
+            get_grounded_sam_interface_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="get_ros2_message_interface",
+                expected_args={"msg_type": GROUNDED_SAM_SERVICE_TYPE},
+            )
+
+            expected_fields: Dict[str, Any] = {}
+            for i, obj in enumerate(detection_classes):
+                defaults = DETECTION_DEFAULTS[obj]
+                expected_fields.update(
+                    {
+                        f"detections.detections.{i}.results.0.hypothesis.class_id": obj,
+                        f"detections.detections.{i}.results.0.hypothesis.score": defaults[
+                            "score"
+                        ],
+                        f"detections.detections.{i}.results.0.pose.pose.position.x": defaults[
+                            "position_3d"
+                        ][0],
+                        f"detections.detections.{i}.results.0.pose.pose.position.y": defaults[
+                            "position_3d"
+                        ][1],
+                        f"detections.detections.{i}.results.0.pose.pose.position.z": defaults[
+                            "position_3d"
+                        ][2],
+                        f"detections.detections.{i}.bbox.center.x": defaults[
+                            "bbox_center"
+                        ][0],
+                        f"detections.detections.{i}.bbox.center.y": defaults[
+                            "bbox_center"
+                        ][1],
+                        f"detections.detections.{i}.bbox.size_x": defaults["bbox_size"][
+                            0
+                        ],
+                        f"detections.detections.{i}.bbox.size_y": defaults["bbox_size"][
+                            1
+                        ],
+                    }
+                )
+
+            expected_fields.update(
+                {
+                    "source_img.width": STANDARD_IMAGE_WIDTH,
+                    "source_img.height": STANDARD_IMAGE_HEIGHT,
+                    "source_img.encoding": STANDARD_IMAGE_ENCODING,
+                }
+            )
+
+            call_grounded_sam_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=GROUNDED_SAM_SERVICE,
+                expected_service_type=GROUNDED_SAM_SERVICE_TYPE,
+                expected_fields=expected_fields,
+            )
+
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        get_grounded_sam_interface_subtask,
+                        call_grounded_sam_subtask,
+                    ]
+                )
+            ]
+
+        super().__init__(validators=validators, task_args=task_args, logger=logger)
+
+    def get_base_prompt(self) -> str:
+        detection_summary: List[str] = []
+        for cls in self.detection_classes:
+            defaults = DETECTION_DEFAULTS[cls]
+            center = defaults["bbox_center"]
+            size = defaults["bbox_size"]
+            score = defaults["score"]
+            pos3d = defaults["position_3d"]
+            detection_summary.append(
+                f"{cls} with score {score} at 3D position ({pos3d[0]}, {pos3d[1]}, {pos3d[2]}) "
+                f"bbox ({center[0]}, {center[1]}) size {size[0]}x{size[1]}"
+            )
+
         return (
-            f"You need to call the service '{self.service}' with detections: {self.expected_detections.model_dump()}\n"
-            "Before calling, follow these steps:\n"
-            "1. Use the tool to retrieve the available ROS2 services and their types.\n"
-            f"2. Find the service type for '{self.service}'.\n"
-            "3. Retrieve the full message interface definition for that service.\n"
-            "4. Construct the request message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
-            f"5. Call the service '{self.service}' using the correct message type and interface.\n"
+            f"Call service '{GROUNDED_SAM_SERVICE}' for image segmentation with {len(self.detection_classes)} detections: "
+            f"{', '.join(detection_summary)} on {STANDARD_IMAGE_WIDTH}x{STANDARD_IMAGE_HEIGHT} {STANDARD_IMAGE_ENCODING} image."
+        )
+
+
+class CallGroundedSAMSegmentTaskIndirect(CallGroundedSAMSegmentTask):
+    complexity = "medium"
+
+    def get_base_prompt(self) -> str:
+        detection_summary: List[str] = []
+        for cls in self.detection_classes:
+            defaults = DETECTION_DEFAULTS[cls]
+            center = defaults["bbox_center"]
+            size = defaults["bbox_size"]
+            score = defaults["score"]
+            pos3d = defaults["position_3d"]
+            detection_summary.append(
+                f"{cls} with score {score} at 3D position ({pos3d[0]}, {pos3d[1]}, {pos3d[2]}) "
+                f"bbox ({center[0]}, {center[1]}) size {size[0]}x{size[1]}"
+            )
+
+        return (
+            f"Segment detected objects: "
+            f"{', '.join(detection_summary)}."
+            f"on {STANDARD_IMAGE_WIDTH}x{STANDARD_IMAGE_HEIGHT} {STANDARD_IMAGE_ENCODING} image."
         )
 
 
 class CallGroundingDinoClassify(CustomInterfacesServiceTask):
     complexity = "easy"
 
-    expected_classes: str = "bottle, book, chair"
-    expected_box_threshold: float = 0.4
-    expected_text_threshold: float = 0.25
+    def __init__(
+        self,
+        task_args: TaskArgs,
+        classes: str,  # Comma-separated string of classes like "person, bottle"
+        validators: Optional[List[Validator]] = None,
+        logger: Optional[logging.Logger] = None,
+    ) -> None:
+        self.classes = classes
 
-    def get_prompt(self) -> str:
+        if validators is None:
+            get_grounding_dino_interface_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="get_ros2_message_interface",
+                expected_args={"msg_type": GROUNDING_DINO_SERVICE_TYPE},
+            )
+            call_grounding_dino_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=GROUNDING_DINO_SERVICE,
+                expected_service_type=GROUNDING_DINO_SERVICE_TYPE,
+                expected_fields={
+                    "classes": classes,
+                    "box_threshold": DEFAULT_BOX_THRESHOLD,
+                    "text_threshold": DEFAULT_TEXT_THRESHOLD,
+                },
+            )
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        get_grounding_dino_interface_subtask,
+                        call_grounding_dino_subtask,
+                    ]
+                )
+            ]
+        super().__init__(validators, task_args, logger)
+
+    def get_base_prompt(self) -> str:
         return (
-            f"You need to call the service '{self.service}' with classes: '{self.expected_classes}', "
-            f"box_threshold: {self.expected_box_threshold}, text_threshold: {self.expected_text_threshold}, "
-            "Before calling, follow these steps:\n"
-            "1. Use the tool to retrieve the available ROS2 services and their types.\n"
-            f"2. Find the service type for '{self.service}'.\n"
-            "3. Retrieve the full message interface definition for that service.\n"
-            "4. Construct the request message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
-            f"5. Call the service '{self.service}' using the correct message type and interface.\n"
+            f"Call service '{GROUNDING_DINO_SERVICE}' for object classification with classes "
+            f"'{self.classes}', box_threshold {DEFAULT_BOX_THRESHOLD} and "
+            f"text_threshold {DEFAULT_TEXT_THRESHOLD}."
+        )
+
+
+class CallGroundingDinoClassifyIndirect(CallGroundingDinoClassify):
+    complexity = "medium"
+
+    def get_base_prompt(self) -> str:
+        return (
+            f"Identify these objects in the scene: {self.classes}. "
+            f"box_threshold should be {DEFAULT_BOX_THRESHOLD} and "
+            f"text_threshold should be {DEFAULT_TEXT_THRESHOLD}."
         )
 
 
 class CallGetLogDigestTask(CustomInterfacesServiceTask):
     complexity = "easy"
 
-    def get_prompt(self) -> str:
-        return (
-            f"You need to call the service '{self.service}' with an empty request.\n"
-            "Before calling, follow these steps:\n"
-            "1. Use the tool to retrieve the available ROS2 services and their types.\n"
-            f"2. Find the service type for '{self.service}'.\n"
-            "3. Retrieve the full message interface definition for that service.\n"
-            "4. Construct the message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
-            f"5. Call the service '{self.service}' using the correct message type and interface.\n"
-        )
+    def __init__(
+        self,
+        task_args: TaskArgs,
+        validators: Optional[List[Validator]] = None,
+        logger: logging.Logger | None = None,
+    ) -> None:
+        if validators is None:
+            # Default validator for this task
+            get_log_digest_interface_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="get_ros2_message_interface",
+                expected_args={"msg_type": STRING_LIST_SERVICE_TYPE},
+            )
+            call_log_digest_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=LOG_DIGEST_SERVICE,
+                expected_service_type=STRING_LIST_SERVICE_TYPE,
+                expected_fields={"": {}},
+            )
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        get_log_digest_interface_subtask,
+                        call_log_digest_subtask,
+                    ]
+                )
+            ]
+        super().__init__(validators, task_args, logger)
+
+    def get_base_prompt(self) -> str:
+        return f"Call service '{LOG_DIGEST_SERVICE}' to get log digest."
+
+
+class CallGetLogDigestTaskIndirect(CallGetLogDigestTask):
+    complexity = "medium"
+
+    def get_base_prompt(self) -> str:
+        return "Get a summary of recent system logs."
 
 
 class CallVectorStoreRetrievalTask(CustomInterfacesServiceTask):
     complexity = "easy"
-    expected_query: str = "What is the purpose of this robot?"
 
-    def get_prompt(self) -> str:
-        return (
-            f"You need to call the service '{self.service}' with the query: '{self.expected_query}'.\n"
-            "Before calling, follow these steps:\n"
-            "1. Use the tool to retrieve the available ROS2 services and their types.\n"
-            f"2. Find the service type for '{self.service}'.\n"
-            "3. Retrieve the full message interface definition for that service.\n"
-            "4. Construct the request message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
-            f"5. Call the service '{self.service}' using the correct message type and interface.\n"
+    def __init__(
+        self,
+        query: str,
+        task_args: TaskArgs,
+        validators: Optional[List[Validator]] = None,
+        logger: logging.Logger | None = None,
+    ) -> None:
+        self.query = query
+        if validators is None:
+            # Default validator for this task
+            get_vector_store_interface_subtask = CheckArgsToolCallSubTask(
+                expected_tool_name="get_ros2_message_interface",
+                expected_args={"msg_type": VECTOR_STORE_SERVICE_TYPE},
+            )
+            call_vector_store_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=VECTOR_STORE_SERVICE,
+                expected_service_type=VECTOR_STORE_SERVICE_TYPE,
+                expected_fields={
+                    "query": query,
+                },
+            )
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        get_vector_store_interface_subtask,
+                        call_vector_store_subtask,
+                    ]
+                )
+            ]
+        super().__init__(validators, task_args, logger)
+
+    def get_base_prompt(self) -> str:
+        return f"Call service '{VECTOR_STORE_SERVICE}' with query '{self.query}'."
+
+
+class CallVectorStoreRetrievalTaskIndirect(CallVectorStoreRetrievalTask):
+    complexity = "medium"
+
+    def get_base_prompt(self) -> str:
+        return f"Search the documentation for information about: {self.query}."
+
+
+class CompleteObjectInteractionTask(CustomInterfacesServicesTask):
+    complexity = "hard"
+
+    @property
+    def optional_tool_calls_number(self) -> int:
+        # list services and get interface for all required services
+        return 5
+
+    def __init__(
+        self,
+        task_args: TaskArgs,
+        target_class: str = "bottle",
+        validators: Optional[List[Validator]] = None,
+        logger: Optional[logging.Logger] = None,
+    ) -> None:
+        self.target_class = target_class
+
+        # Get default parameters for the target class
+        obj_key = target_class if target_class in DETECTION_DEFAULTS else "person"
+        defaults = DETECTION_DEFAULTS[obj_key]
+
+        if validators is None:
+            self.initial_gripper = False
+            self.final_gripper = True
+            self.interaction_message = (
+                f"Initiating object interaction sequence with detected {target_class}"
+            )
+
+            call_grounding_dino_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=GROUNDING_DINO_SERVICE,
+                expected_service_type=GROUNDING_DINO_SERVICE_TYPE,
+                expected_fields={
+                    "classes": target_class,
+                    "box_threshold": DEFAULT_BOX_THRESHOLD,
+                    "text_threshold": DEFAULT_BOX_THRESHOLD,
+                },
+            )
+
+            call_grounded_sam_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=GROUNDED_SAM_SERVICE,
+                expected_service_type=GROUNDED_SAM_SERVICE_TYPE,
+                expected_fields={
+                    "detections.detections.0.results.0.hypothesis.class_id": target_class,
+                    "detections.detections.0.results.0.hypothesis.score": defaults[
+                        "score"
+                    ],
+                    "detections.detections.0.results.0.pose.pose.position.x": defaults[
+                        "position_3d"
+                    ][0],
+                    "detections.detections.0.results.0.pose.pose.position.y": defaults[
+                        "position_3d"
+                    ][1],
+                    "detections.detections.0.results.0.pose.pose.position.z": defaults[
+                        "position_3d"
+                    ][2],
+                    "detections.detections.0.bbox.center.x": defaults["bbox_center"][0],
+                    "detections.detections.0.bbox.center.y": defaults["bbox_center"][1],
+                    "detections.detections.0.bbox.size_x": defaults["bbox_size"][0],
+                    "detections.detections.0.bbox.size_y": defaults["bbox_size"][1],
+                    "source_img.width": STANDARD_IMAGE_WIDTH,
+                    "source_img.height": STANDARD_IMAGE_HEIGHT,
+                    "source_img.encoding": STANDARD_IMAGE_ENCODING,
+                },
+            )
+
+            call_manipulator_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=MANIPULATOR_SERVICE,
+                expected_service_type=MANIPULATOR_SERVICE_TYPE,
+                expected_fields={
+                    "target_pose.pose.position.x": defaults["position_3d"][0],
+                    "target_pose.pose.position.y": defaults["position_3d"][1],
+                    "target_pose.pose.position.z": defaults["position_3d"][2],
+                    "initial_gripper_state": self.initial_gripper,
+                    "final_gripper_state": self.final_gripper,
+                },
+            )
+
+            pub_hri_interaction_subtask = CheckTopicFieldsToolCallSubTask(
+                expected_tool_name="publish_ros2_message",
+                expected_topic=HRI_TOPIC,
+                expected_message_type=HRI_MESSAGE_TYPE,
+                expected_fields={"text": self.interaction_message},
+            )
+
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        call_grounding_dino_subtask,
+                        call_grounded_sam_subtask,
+                        call_manipulator_subtask,
+                        pub_hri_interaction_subtask,
+                    ]
+                )
+            ]
+
+        super().__init__(validators=validators, task_args=task_args, logger=logger)
+
+    def get_base_prompt(self) -> str:
+        obj_key = (
+            self.target_class if self.target_class in DETECTION_DEFAULTS else "person"
+        )
+        defaults = DETECTION_DEFAULTS[obj_key]
+        return f"""Perform complete object interaction workflow with {self.target_class}:
+            1) Call service '{GROUNDING_DINO_SERVICE}' to classify '{self.target_class}' with box_threshold={DEFAULT_BOX_THRESHOLD}, text_threshold={DEFAULT_TEXT_THRESHOLD}
+            2) Call service '{GROUNDED_SAM_SERVICE}' to segment {self.target_class} at bbox({defaults["bbox_center"][0]}, {defaults["bbox_center"][1]})
+            on {STANDARD_IMAGE_WIDTH}x{STANDARD_IMAGE_HEIGHT} {STANDARD_IMAGE_ENCODING} image
+            3) Call service '{MANIPULATOR_SERVICE}' to move to position ({defaults["position_3d"][0]}, {defaults["position_3d"][1]}, {defaults["position_3d"][2]})
+            with initial gripper state {self.initial_gripper} and final griper state {self.final_gripper}
+            4) Publish to topic '{HRI_TOPIC}' HRI message: '{self.interaction_message}'
+            """
+
+
+class CompleteObjectInteractionTaskIndirect(CompleteObjectInteractionTask):
+    complexity = "hard"
+
+    def get_base_prompt(self) -> str:
+        obj_key = (
+            self.target_class if self.target_class in DETECTION_DEFAULTS else "person"
+        )
+        defaults = DETECTION_DEFAULTS[obj_key]
+        return f"""Find and pick up the {self.target_class} in front of you by following these steps:
+            1) First, look for and identify the {self.target_class} in the scene
+            2) Then, get a segmentation of the {self.target_class} to understand its exact location
+            3) Move the robot arm to reach the {self.target_class} at position ({defaults["position_3d"][0]}, {defaults["position_3d"][1]}, {defaults["position_3d"][2]}) and grab it
+            4) Finally, inform human with '{self.interaction_message}` message that you've completed the task.
+            """
+
+
+class MultiModalSceneDocumentationTask(CustomInterfacesServiceTask):
+    complexity = "hard"
+    safety_query = "What safety protocols apply when humans and robots share workspace?"
+    doc_report = "Scene Documentation Complete: Recorded objects with safety analysis"
+
+    def __init__(
+        self,
+        task_args: TaskArgs,
+        objects: List[str] = ["person", "bottle"],
+        validators: Optional[List[Validator]] = None,
+        logger: Optional[logging.Logger] = None,
+    ) -> None:
+        self.objects = objects
+
+        self.bbox_centers: List[Tuple[float, float]] = []
+        self.bbox_sizes: List[Tuple[float, float]] = []
+
+        for obj in objects:
+            obj_key = obj if obj in DETECTION_DEFAULTS else "person"
+            defaults = DETECTION_DEFAULTS[obj_key]
+            self.bbox_centers.append(defaults["bbox_center"])
+            self.bbox_sizes.append(defaults["bbox_size"])
+
+        if validators is None:
+            expected_fields: Dict[str, Any] = {}
+            for i, obj in enumerate(objects):
+                obj_key = obj if obj in DETECTION_DEFAULTS else "person"
+                defaults = DETECTION_DEFAULTS[obj_key]
+                expected_fields.update(
+                    {
+                        f"detections.{i}.results.0.hypothesis.class_id": obj,
+                        f"detections.{i}.bbox.center.x": defaults["bbox_center"][0],
+                        f"detections.{i}.bbox.center.y": defaults["bbox_center"][1],
+                        f"detections.{i}.bbox.size_x": defaults["bbox_size"][0],
+                        f"detections.{i}.bbox.size_y": defaults["bbox_size"][1],
+                    }
+                )
+
+            pub_detection_array_subtask = CheckTopicFieldsToolCallSubTask(
+                expected_tool_name="publish_ros2_message",
+                expected_topic=DETECTIONS_TOPIC,
+                expected_message_type=DETECTION_ARRAY_MESSAGE_TYPE,
+                expected_fields=expected_fields,
+            )
+
+            call_vector_store_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=VECTOR_STORE_SERVICE,
+                expected_service_type=VECTOR_STORE_SERVICE_TYPE,
+                expected_fields={
+                    "query": self.safety_query,
+                },
+            )
+
+            pub_hri_documentation_subtask = CheckTopicFieldsToolCallSubTask(
+                expected_tool_name="publish_ros2_message",
+                expected_topic=HRI_TOPIC,
+                expected_message_type=HRI_MESSAGE_TYPE,
+                expected_fields={"text": self.doc_report},
+            )
+
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        pub_detection_array_subtask,
+                        call_vector_store_subtask,
+                        pub_hri_documentation_subtask,
+                    ]
+                )
+            ]
+
+        super().__init__(validators=validators, task_args=task_args, logger=logger)
+
+    @property
+    def optional_tool_calls_number(self) -> int:
+        # list services and get interface for all required services
+        return 5
+
+    def get_base_prompt(self) -> str:
+        object_summary = ", ".join(
+            [
+                f"{obj} at ({center[0]}, {center[1]}) and size {size[0]}x{size[1]}"
+                for obj, center, size in zip(
+                    self.objects, self.bbox_centers, self.bbox_sizes
+                )
+            ]
         )
 
+        return f"""Perform comprehensive scene documentation using multiple services:
+            1) Publish to topic '{DETECTIONS_TOPIC}' detection array with {len(self.objects)} objects: {object_summary}
+            2) Call service '{VECTOR_STORE_SERVICE}' to query: '{self.safety_query}'
+            3) Publish to topic '{HRI_TOPIC}' final HRI report: '{self.doc_report}'
+            """
 
-class CallWhatISeeTask(CustomInterfacesServiceTask):
-    complexity = "easy"
 
-    expected_observations: List[str] = ["table", "cup", "notebook"]
-    expected_perception_source: str = "front_camera"
+class MultiModalSceneDocumentationTaskIndirect(MultiModalSceneDocumentationTask):
+    complexity = "hard"
 
-    expected_image: Image = Image(
-        header=Header(frame_id="camera_frame"),
-        height=480,
-        width=640,
-    )
-
-    expected_pose: Pose = Pose(
-        position=Point(x=1.0, y=2.0, z=0.5),
-        orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
-    )
-
-    def get_prompt(self) -> str:
-        return (
-            f"You need to call the service '{self.service}' with an empty request.\n"
-            "Before calling, follow these steps:\n"
-            "1. Use the tool to retrieve the available ROS2 services and their types.\n"
-            f"2. Find the service type for '{self.service}'.\n"
-            "3. Retrieve the full message interface definition for that service.\n"
-            "4. Construct the request message filling only the fields you are instructed to. Rest of the fields will have default values.\n"
-            f"5. Call the service '{self.service}' using the correct message type and interface.\n"
+    def get_base_prompt(self) -> str:
+        object_summary = ", ".join(
+            [
+                f"{obj} at position ({center[0]}, {center[1]})"
+                for obj, center in zip(self.objects, self.bbox_centers)
+            ]
         )
+        return f"""Document the current scene and ensure safety protocols are followed:
+            1) Record all detected objects in the scene: {object_summary}
+            2) Look up safety guidelines for human-robot workspace sharing with query: `{self.safety_query}`
+            3) Provide a final documentation report confirming scene analysis and safety compliance with report: `{self.doc_report}`
+            """
+
+
+class EmergencyResponseProtocolTask(CustomInterfacesServiceTask):
+    complexity = "hard"
+    emergence_audio_samples = [880, 880, 880, 1760]
+    emergence_sample_rate = 8000
+    emergency_channels = 1
+    emergency_message = "Person detected, alarm started!"
+
+    def __init__(
+        self,
+        task_args: TaskArgs,
+        target_class: str = "person",
+        validators: Optional[List[Validator]] = None,
+        logger: Optional[logging.Logger] = None,
+    ) -> None:
+        self.target_class = target_class
+        if validators is None:
+            call_grounding_dino_emergency_subtask = CheckServiceFieldsToolCallSubTask(
+                expected_tool_name="call_ros2_service",
+                expected_service=GROUNDING_DINO_SERVICE,
+                expected_service_type=GROUNDING_DINO_SERVICE_TYPE,
+                expected_fields={
+                    "classes": target_class,
+                    "box_threshold": DEFAULT_BOX_THRESHOLD,
+                    "text_threshold": DEFAULT_TEXT_THRESHOLD,
+                },
+            )
+
+            pub_audio_emergency_subtask = CheckTopicFieldsToolCallSubTask(
+                expected_tool_name="publish_ros2_message",
+                expected_topic=AUDIO_TOPIC,
+                expected_message_type=AUDIO_MESSAGE_TYPE,
+                expected_fields={
+                    "samples": self.emergence_audio_samples,
+                    "sample_rate": self.emergence_sample_rate,
+                    "channels": self.emergency_channels,
+                },
+            )
+            pub_hri_emergency_subtask = CheckTopicFieldsToolCallSubTask(
+                expected_tool_name="publish_ros2_message",
+                expected_topic=HRI_TOPIC,
+                expected_message_type=HRI_MESSAGE_TYPE,
+                expected_fields={"text": self.emergency_message},
+            )
+            validators = [
+                OrderedCallsValidator(
+                    subtasks=[
+                        call_grounding_dino_emergency_subtask,
+                        pub_audio_emergency_subtask,
+                        pub_hri_emergency_subtask,
+                    ]
+                )
+            ]
+        super().__init__(validators, task_args, logger)
+
+    @property
+    def optional_tool_calls_number(self) -> int:
+        # list services and get interface for all required services
+        return 5
+
+    def get_base_prompt(self) -> str:
+        return f"""Execute emergency response protocol for {self.target_class} detection:
+           1) Call service '{GROUNDING_DINO_SERVICE}' to detect emergency: '{self.target_class}' with high thresholds box={DEFAULT_BOX_THRESHOLD}, text={DEFAULT_TEXT_THRESHOLD}
+           2) Publish to topic '{AUDIO_TOPIC}' emergency alert: {self.emergence_audio_samples} at {self.emergence_sample_rate}Hz
+           3) Publish to topic '{HRI_TOPIC}' emergency message: '{self.emergency_message}'
+           """
+
+
+class EmergencyResponseProtocolTaskIndirect(EmergencyResponseProtocolTask):
+    complexity = "hard"
+
+    def get_base_prompt(self) -> str:
+        return f"""Execute emergency response protocol when {self.target_class} is detected:
+           1) Detect any {self.target_class} presence.
+           2) Sound an emergency audio alert with samples {self.emergence_audio_samples} at {self.emergence_sample_rate}Hz
+           3) Send emergency notification: '{self.emergency_message}'
+           """

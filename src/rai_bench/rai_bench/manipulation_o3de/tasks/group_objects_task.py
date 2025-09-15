@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
-from typing import List, Tuple, Union
+from typing import List, Sequence, Tuple, Union
 
 from rclpy.impl.rcutils_logger import RcutilsLogger
 
@@ -76,7 +76,7 @@ class GroupObjectsTask(ManipulationTask):
 
         return set(self.obj_types) <= object_types_present
 
-    def calculate_correct(self, entities: List[Entity]) -> Tuple[int, int]:
+    def calculate_correct(self, entities: Sequence[Entity]) -> Tuple[int, int]:
         """
         Count correctly and incorrectly clustered objects based on clustering rules.
 

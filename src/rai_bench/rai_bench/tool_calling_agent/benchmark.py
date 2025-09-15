@@ -16,10 +16,10 @@ import statistics
 import time
 import uuid
 from pathlib import Path
-from typing import Iterator, List, Optional, Sequence, Tuple
+from typing import Iterator, List, Sequence, Tuple
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
@@ -28,7 +28,6 @@ from rai.agents.langchain.core import (
 )
 from rai.messages import HumanMultimodalMessage
 
-from rai_bench.agents import create_multimodal_to_tool_agent
 from rai_bench.base_benchmark import BaseBenchmark, TimeoutException
 from rai_bench.results_processing.langfuse_scores_tracing import ScoreTracingHandler
 from rai_bench.tool_calling_agent.interfaces import (
@@ -64,7 +63,12 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         self.tasks_results: List[TaskResult] = []
         self.csv_initialize(self.results_filename, TaskResult)
 
-    def run_next(self, agent: CompiledStateGraph, experiment_id: uuid.UUID) -> None:
+    def run_next(
+        self,
+        agent: CompiledStateGraph,
+        initial_state: dict,
+        experiment_id: uuid.UUID,
+    ) -> None:
         """Runs the next task of the benchmark.
 
         Parameters
@@ -84,6 +88,16 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         )
         callbacks = self.score_tracing_handler.get_callbacks()
         run_id = uuid.uuid4()
+        # NOTE (jmatejcz) recursion limit calculated as (all_nodes_num - 2) * required tool calls
+        # -2 because we don't want to include START and END node
+        # then we add numer of additional calls that can be made
+        # and +2 as we have to pass once though START and END
+
+        recurssion_limit = (
+            (len(agent.get_graph().nodes) - 2) * task.required_calls
+            + task.additional_calls
+            + 2
+        )
         config: RunnableConfig = {
             "run_id": run_id,
             "callbacks": callbacks,
@@ -94,30 +108,37 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
                 f"task-complexity:{task.complexity}",
                 f"extra-tool-calls:{task.extra_tool_calls}",
             ],
-            "recursion_limit": len(agent.get_graph().nodes)
-            * task.max_tool_calls_number,
+            "recursion_limit": recurssion_limit,
         }
+        self.logger.debug(f"recurssion limit: {recurssion_limit}")
 
         ts = time.perf_counter()
         messages: List[BaseMessage] = []
         prev_count: int = 0
         try:
-            with self.time_limit(60):
+            with self.time_limit(200 * task.max_tool_calls_number):
                 for state in agent.stream(
-                    {"messages": [HumanMultimodalMessage(content=task.get_prompt())]},
+                    initial_state,
                     config=config,
                 ):
                     node = next(iter(state))
-                    all_messages = state[node]["messages"]
-                    for new_msg in all_messages[prev_count:]:
-                        messages.append(new_msg)
-                    prev_count = len(messages)
+                    if "messages" in state[node]:
+                        all_messages = state[node]["messages"]
+                        for new_msg in all_messages[prev_count:]:
+                            messages.append(new_msg)
+                            if isinstance(new_msg, AIMessage):
+                                self.logger.debug(
+                                    f"Message from node '{node}': {new_msg.content}, tool_calls: {new_msg.tool_calls}"
+                                )
+                        prev_count = len(messages)
         except TimeoutException as e:
             self.logger.error(msg=f"Task timeout: {e}")
         except GraphRecursionError as e:
+            tool_calls = task.get_tool_calls_from_messages(messages=messages)
+            score = task.validate(tool_calls=tool_calls)
+            score = 0.0
             self.logger.error(msg=f"Reached recursion limit {e}")
-        except Exception as e:
-            self.logger.error(msg=f"Unexpected error occured: {e}")
+
         tool_calls = task.get_tool_calls_from_messages(messages=messages)
         score = task.validate(tool_calls=tool_calls)
         te = time.perf_counter()
@@ -136,8 +157,10 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         self.logger.info(f"TASK SCORE: {score}, TOTAL TIME: {total_time:.3f}")
 
         task_result = TaskResult(
-            task_prompt=task.get_prompt(),
+            task_prompt=task.get_base_prompt(),
             system_prompt=task.get_system_prompt(),
+            examples_in_system_prompt=task.n_shots,
+            prompt_detail=task.prompt_detail,
             type=task.type,
             extra_tool_calls=task.extra_tool_calls,
             extra_tool_calls_used=total_extra_calls,
@@ -203,49 +226,13 @@ def run_benchmark(
             system_prompt=task.get_system_prompt(),
             logger=bench_logger,
         )
-        benchmark.run_next(agent=agent, experiment_id=experiment_id)
-
-    bench_logger.info("===============================================================")
-    bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
-    bench_logger.info("===============================================================")
-
-
-def run_benchmark_dual_agent(
-    multimodal_llm: BaseChatModel,
-    tool_calling_llm: BaseChatModel,
-    out_dir: Path,
-    tasks: List[Task],
-    bench_logger: logging.Logger,
-    experiment_id: uuid.UUID = uuid.uuid4(),
-    m_system_prompt: Optional[str] = None,
-    tool_system_prompt: Optional[str] = None,
-):
-    benchmark = ToolCallingAgentBenchmark(
-        tasks=tasks,
-        logger=bench_logger,
-        model_name=get_llm_model_name(multimodal_llm),
-        results_dir=out_dir,
-    )
-
-    basic_tool_system_prompt = (
-        "Based on the conversation call the tools with appropriate arguments"
-    )
-    for task in tasks:
-        agent = create_multimodal_to_tool_agent(
-            multimodal_llm=multimodal_llm,
-            tool_llm=tool_calling_llm,
-            tools=task.available_tools,
-            multimodal_system_prompt=(
-                m_system_prompt if m_system_prompt else task.get_system_prompt()
-            ),
-            tool_system_prompt=(
-                tool_system_prompt if tool_system_prompt else basic_tool_system_prompt
-            ),
-            logger=bench_logger,
-            debug=False,
+        benchmark.run_next(
+            agent=agent,
+            initial_state={
+                "messages": [HumanMultimodalMessage(content=task.get_prompt())]
+            },
+            experiment_id=experiment_id,
         )
-
-        benchmark.run_next(agent=agent, experiment_id=experiment_id)
 
     bench_logger.info("===============================================================")
     bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")

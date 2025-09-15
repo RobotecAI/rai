@@ -144,3 +144,54 @@ class NotOrderedCallsValidator(Validator):
         if len(tool_calls) > self.required_calls:
             self.extra_calls_used = len(tool_calls) - self.required_calls
         return False, []
+
+
+class OneFromManyValidator(Validator):
+    """
+    Validator that passes when any one of the given subtasks passes.
+    """
+
+    def __init__(
+        self, subtasks: List[SubTask], logger: loggers_type | None = None
+    ) -> None:
+        super().__init__(subtasks=subtasks, logger=logger)
+        if len(self.subtasks) < 1:
+            raise ValueError("Validator must have at least 1 subtask.")
+
+    @property
+    def type(self) -> str:
+        return "optional"
+
+    @property
+    def required_calls(self) -> int:
+        # For optional validator, we only need 1 call to pass any subtask
+        return 1
+
+    def validate(self, tool_calls: List[ToolCall]) -> Tuple[bool, List[ToolCall]]:
+        self.reset()
+        if len(tool_calls) < 1:
+            self.logger.debug("Not a single tool call to validate")
+            self.passed = False
+            return False, tool_calls
+
+        for i, tool_call in enumerate(tool_calls):
+            # Check if this tool call matches any subtask
+            for u, subtask in enumerate(self.subtasks):
+                try:
+                    if subtask.validate(tool_call=tool_call):
+                        # Found a matching subtask - validation succeeds
+                        self.subtasks_passed[u] = True
+                        self.passed = True
+                        self.extra_calls_used = (
+                            len(tool_calls) - 1
+                        )  # We only needed 1 call
+                        return True, tool_calls[i + 1 :]
+                except SubTaskValidationError as e:
+                    # Store error but continue trying other subtasks
+                    self.add_subtask_errors(idx=u, msgs=[str(e)])
+
+        # No tool call matched any subtask
+        self.logger.debug("Validation failed - no tool call matched any subtask")
+        self.passed = False
+        self.extra_calls_used = len(tool_calls) - 1 if len(tool_calls) > 1 else 0
+        return False, []
