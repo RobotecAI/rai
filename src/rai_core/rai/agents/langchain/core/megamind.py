@@ -209,8 +209,8 @@ def get_initial_megamind_state(task: str):
 
 def plan_step(
     megamind_agent: BaseChatModel,
-    context_providers: Optional[List[ContextProvider]],
     state: MegamindState,
+    context_providers: Optional[List[ContextProvider]] = None,
 ) -> MegamindState:
     """Initial planning step."""
     if "original_task" not in state:
@@ -321,7 +321,8 @@ The single task should be delegated to only 1 agent and should be doable by only
     )
 
     graph = StateGraph(MegamindState).add_node(
-        "megamind", partial(plan_step, megamind_agent, context_providers)
+        "megamind",
+        partial(plan_step, megamind_agent, context_providers=context_providers),
     )
     for agent_name, agent in executor_agents.items():
         graph.add_node(agent_name, agent)
