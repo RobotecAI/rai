@@ -1,0 +1,54 @@
+name: "Require rai_core pyproject change when code changes"
+on:
+  pull_request:
+    branches:
+      - main
+      - development
+    paths:
+      - 'src/rai_core/**'
+      - 'src/rai_core/pyproject.toml'
+
+jobs:
+  check-rai-core-pyproject:
+    name: Ensure src/rai_core/pyproject.toml changed if rai_core changed
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify rai_core pyproject changed
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          echo "Base: ${BASE_SHA}"
+          echo "Head: ${HEAD_SHA}"
+
+          # List changed files between base and head
+          CHANGED_FILES=$(git diff --name-only "${BASE_SHA}" "${HEAD_SHA}")
+          echo "Changed files:\n${CHANGED_FILES}"
+
+          # Detect changes within src/rai_core/
+          if ! printf '%s\n' "${CHANGED_FILES}" | grep -E '^src/rai_core/' >/dev/null 2>&1; then
+            echo "No changes detected in src/rai_core. Skipping check."
+            exit 0
+          fi
+
+          echo "Changes detected in src/rai_core. Verifying src/rai_core/pyproject.toml is updated..."
+
+          # Ensure src/rai_core/pyproject.toml is among changed files
+          if printf '%s\n' "${CHANGED_FILES}" | grep -xq 'src/rai_core/pyproject.toml'; then
+            echo "Detected change in src/rai_core/pyproject.toml."
+            exit 0
+          fi
+
+          echo "ERROR: Files in src/rai_core changed but src/rai_core/pyproject.toml was not modified in this PR."
+          echo "Please update src/rai_core/pyproject.toml (e.g., version or metadata) to reflect the changes."
+          exit 1
