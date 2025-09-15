@@ -10,7 +10,7 @@ on:
 
 jobs:
   check-rai-core-pyproject:
-    name: Ensure src/rai_core/pyproject.toml changed if rai_core changed
+    name: Require version bump if rai_core changed
     runs-on: ubuntu-latest
     permissions:
       contents: read
