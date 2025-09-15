@@ -6,6 +6,7 @@ RAI Bench is a comprehensive package that both provides benchmarks with ready-to
 
 -   [Manipulation O3DE Benchmark](#manipulation-o3de-benchmark)
 -   [Tool Calling Agent Benchmark](#tool-calling-agent-benchmark)
+-   [VLM Benchmark](#vlm-benchmark)
 
 ## Manipulation O3DE Benchmark
 
@@ -163,3 +164,17 @@ class TaskArgs(BaseModel):
     -   `GetROS2RGBCameraTask` has 1 required tool call and 1 optional. When `extra_tool_calls` set to 5, agent can correct himself couple times and still pass even with 7 tool calls. There can be 2 types of invalid tool calls, first when the tool is used incorrectly and agent receives an error - this allows him to correct himself easier. Second type is when tool is called properly but it is not the tool that should be called or it is called with wrong params. In this case agent won't get any error so it will be harder for him to correct, but BOTH of these cases are counted as `extra tool call`.
 
 If you want to know details about every task, visit `rai_bench/tool_calling_agent/tasks`
+
+## VLM Benchmark
+
+The VLM Benchmark is a benchmark for VLM models. It includes a set of tasks containing questions related to images and evaluates the performance of the agent that returns the answer in the structured format.
+
+### Running
+
+To run the benchmark:
+
+```bash
+cd rai
+source setup_shell.sh
+python src/rai_bench/rai_bench/examples/vlm_benchmark.py --model-name gemma3:4b --vendor ollama
+```
