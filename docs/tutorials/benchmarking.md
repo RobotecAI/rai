@@ -73,7 +73,7 @@ if __name__ == "__main__":
         extra_tool_calls=[0, 5],  # how many extra tool calls allowed to still pass
         task_types=[  # what types of tasks to include
             "basic",
-            "manipulation",
+            "custom_interfaces",
         ],
         N_shots=[0, 2],  # examples in system prompt
         prompt_detail=["brief", "descriptive"],  # how descriptive should task prompt be
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     )
 ```
 
-Based on the example above the `Tool Calling` benchmark will run basic, spatial_reasoning and custom_interfaces tasks with every configuration of [extra_tool_calls x N_shots x prompt_detail] provided which will result in almost 500 tasks. Manipulation benchmark will run all specified task level once as there is no additional params. Reapeat is set to 1 in both configs so there will be no additional runs.
+Based on the example above the `Tool Calling` benchmark will run basic and custom_interfaces tasks with every configuration of [extra_tool_calls x N_shots x prompt_detail] provided which will result in almost 500 tasks. Manipulation benchmark will run all specified task level once as there is no additional params. Reapeat is set to 1 in both configs so there will be no additional runs.
 
 !!! note
 

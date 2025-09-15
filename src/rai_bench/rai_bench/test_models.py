@@ -79,9 +79,9 @@ class ToolCallingAgentBenchmarkConfig(BenchmarkConfig):
     complexities : List[Literal["easy", "medium", "hard"]], optional
         complexity levels of tasks to include in the benchmark, by default all levels are included:
         ["easy", "medium", "hard"]
-    task_types : List[Literal["basic", "manipulation", "navigation", "custom_interfaces", "spatial_reasoning"]], optional
+    task_types : List[Literal["basic", "manipulation", "navigation", "custom_interfaces"], optional
         types of tasks to include in the benchmark, by default all types are included:
-        ["basic", "manipulation", "navigation", "custom_interfaces", "spatial_reasoning"]
+        ["basic", "manipulation", "navigation", "custom_interfaces"]
 
     For more detailed explanation of parameters, see the documentation:
     (https://robotecai.github.io/rai/simulation_and_benchmarking/rai_bench/)
@@ -183,7 +183,6 @@ def test_models(
     out_dir: str,
     additional_model_args: Optional[List[Dict[str, Any]]] = None,
 ):
-    # TODO (jmatejcz) add docstring after passing agent logic will be added
     if additional_model_args is None:
         additional_model_args = [{} for _ in model_names]
 
@@ -213,7 +212,6 @@ def test_models(
                         vendor=vendors[i],
                         **additional_model_args[i],
                     )
-                    # TODO (jmatejcz) take param to set log level
                     bench_logger = define_benchmark_logger(out_dir=Path(curr_out_dir))
                     try:
                         if isinstance(bench_conf, ToolCallingAgentBenchmarkConfig):
