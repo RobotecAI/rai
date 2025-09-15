@@ -21,6 +21,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install tomli
+        run: |
+          pip install tomli
+
       - name: Verify rai_core pyproject changed
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -46,11 +50,23 @@ jobs:
           # Ensure src/rai_core/pyproject.toml is among changed files
           if printf '%s\n' "${CHANGED_FILES}" | grep -xq 'src/rai_core/pyproject.toml'; then
             echo "Detected change in src/rai_core/pyproject.toml."
+            echo "Checking version bump with Python..."
+            BASE_VERSION=$(git show "${BASE_SHA}:src/rai_core/pyproject.toml" | python -c "import tomli, sys; print(tomli.load(sys.stdin)['project']['version'])")
+            HEAD_VERSION=$(git show "${HEAD_SHA}:src/rai_core/pyproject.toml" | python -c "import tomli, sys; print(tomli.load(sys.stdin)['project']['version'])")
+
+            echo "Base version: ${BASE_VERSION:-<not found>}"
+            echo "Head version: ${HEAD_VERSION:-<not found>}"
+
+            if [ "${BASE_VERSION}" = "${HEAD_VERSION}" ]; then
+              echo "ERROR: pyproject.toml modified but version was not bumped."
+              exit 1
+            fi
+
+            echo "✅ Version bump detected: ${BASE_VERSION} -> ${HEAD_VERSION}"
             exit 0
           fi
 
           echo "ERROR: Files in src/rai_core changed but src/rai_core/pyproject.toml was not modified in this PR."
-          echo "Please update src/rai_core/pyproject.toml (e.g., version or metadata) to reflect the changes."
           echo "Update the version in the pyproject.toml file and commit the changes according to changes with respect to Semantic Versioning."
           echo "Bump patch if a bug fix is introduced, minor if a feature is added, and major if a breaking change is added."
           echo "Disregard the version bump only if you know what you are doing."
