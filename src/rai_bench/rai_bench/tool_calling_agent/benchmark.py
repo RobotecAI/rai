@@ -27,6 +27,7 @@ from rai.agents.langchain.core import (
     create_conversational_agent,
 )
 from rai.agents.langchain.core.react_agent import ReActAgentState
+from rai.messages import HumanMultimodalMessage
 
 from rai_bench.agents import create_multimodal_to_tool_agent
 from rai_bench.base_benchmark import BaseBenchmark, TimeoutException
@@ -227,7 +228,12 @@ def run_benchmark(
             system_prompt=task.get_system_prompt(),
             logger=bench_logger,
         )
-        benchmark.run_next(agent=agent, experiment_id=experiment_id)
+        initial_state = ReActAgentState(
+            messages=[HumanMultimodalMessage(content=task.get_prompt())]
+        )
+        benchmark.run_next(
+            agent=agent, initial_state=initial_state, experiment_id=experiment_id
+        )
 
     bench_logger.info("===============================================================")
     bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
@@ -269,7 +275,12 @@ def run_benchmark_dual_agent(
             debug=False,
         )
 
-        benchmark.run_next(agent=agent, experiment_id=experiment_id)
+        initial_state = ReActAgentState(
+            messages=[HumanMultimodalMessage(content=task.get_prompt())]
+        )
+        benchmark.run_next(
+            agent=agent, initial_state=initial_state, experiment_id=experiment_id
+        )
 
     bench_logger.info("===============================================================")
     bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
