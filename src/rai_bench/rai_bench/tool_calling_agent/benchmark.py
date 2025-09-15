@@ -16,7 +16,7 @@ import statistics
 import time
 import uuid
 from pathlib import Path
-from typing import Iterator, List, Optional, Sequence, Tuple
+from typing import Iterator, List, Sequence, Tuple
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage
@@ -26,10 +26,8 @@ from langgraph.graph.state import CompiledStateGraph
 from rai.agents.langchain.core import (
     create_conversational_agent,
 )
-from rai.agents.langchain.core.react_agent import ReActAgentState
 from rai.messages import HumanMultimodalMessage
 
-from rai_bench.agents import create_multimodal_to_tool_agent
 from rai_bench.base_benchmark import BaseBenchmark, TimeoutException
 from rai_bench.results_processing.langfuse_scores_tracing import ScoreTracingHandler
 from rai_bench.tool_calling_agent.interfaces import (
@@ -68,7 +66,7 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
     def run_next(
         self,
         agent: CompiledStateGraph,
-        initial_state: ReActAgentState,
+        initial_state: dict,
         experiment_id: uuid.UUID,
     ) -> None:
         """Runs the next task of the benchmark.
@@ -228,58 +226,12 @@ def run_benchmark(
             system_prompt=task.get_system_prompt(),
             logger=bench_logger,
         )
-        initial_state = ReActAgentState(
-            messages=[HumanMultimodalMessage(content=task.get_prompt())]
-        )
         benchmark.run_next(
-            agent=agent, initial_state=initial_state, experiment_id=experiment_id
-        )
-
-    bench_logger.info("===============================================================")
-    bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
-    bench_logger.info("===============================================================")
-
-
-def run_benchmark_dual_agent(
-    multimodal_llm: BaseChatModel,
-    tool_calling_llm: BaseChatModel,
-    out_dir: Path,
-    tasks: List[Task],
-    bench_logger: logging.Logger,
-    experiment_id: uuid.UUID = uuid.uuid4(),
-    m_system_prompt: Optional[str] = None,
-    tool_system_prompt: Optional[str] = None,
-):
-    benchmark = ToolCallingAgentBenchmark(
-        tasks=tasks,
-        logger=bench_logger,
-        model_name=get_llm_model_name(multimodal_llm),
-        results_dir=out_dir,
-    )
-
-    basic_tool_system_prompt = (
-        "Based on the conversation call the tools with appropriate arguments"
-    )
-    for task in tasks:
-        agent = create_multimodal_to_tool_agent(
-            multimodal_llm=multimodal_llm,
-            tool_llm=tool_calling_llm,
-            tools=task.available_tools,
-            multimodal_system_prompt=(
-                m_system_prompt if m_system_prompt else task.get_system_prompt()
-            ),
-            tool_system_prompt=(
-                tool_system_prompt if tool_system_prompt else basic_tool_system_prompt
-            ),
-            logger=bench_logger,
-            debug=False,
-        )
-
-        initial_state = ReActAgentState(
-            messages=[HumanMultimodalMessage(content=task.get_prompt())]
-        )
-        benchmark.run_next(
-            agent=agent, initial_state=initial_state, experiment_id=experiment_id
+            agent=agent,
+            initial_state={
+                "messages": [HumanMultimodalMessage(content=task.get_prompt())]
+            },
+            experiment_id=experiment_id,
         )
 
     bench_logger.info("===============================================================")
