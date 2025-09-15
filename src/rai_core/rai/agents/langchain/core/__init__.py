@@ -25,6 +25,7 @@ from .react_agent import (
     create_react_runnable,
 )
 from .state_based_agent import create_state_based_runnable
+from .structured_output_agent import create_structured_output_runnable
 from .tool_runner import SubAgentToolRunner, ToolRunner
 
 __all__ = [
@@ -38,5 +39,6 @@ __all__ = [
     "create_megamind",
     "create_react_runnable",
     "create_state_based_runnable",
+    "create_structured_output_runnable",
     "get_initial_megamind_state",
 ]

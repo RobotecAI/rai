@@ -36,13 +36,11 @@ def get_tasks(
             "basic",
             "manipulation",
             "custom_interfaces",
-            "spatial_reasoning",
         ]
     ] = [
         "basic",
         "manipulation",
         "custom_interfaces",
-        "spatial_reasoning",
     ],
 ) -> List[Task]:
     """Get a list of tasks based on the provided configuration.

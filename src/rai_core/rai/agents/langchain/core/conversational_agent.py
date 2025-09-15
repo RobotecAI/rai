@@ -17,17 +17,20 @@ import logging
 from functools import partial
 from typing import List, Optional, TypedDict
 
+from deprecated import deprecated
 from langchain.chat_models.base import BaseChatModel
 from langchain_core.messages import (
     BaseMessage,
     SystemMessage,
 )
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.graph import START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt.tool_node import tools_condition
 
 from rai.agents.langchain.core.tool_runner import ToolRunner
+from rai.agents.langchain.invocation_helpers import invoke_llm_with_tracing
 
 
 class State(TypedDict):
@@ -39,6 +42,7 @@ def agent(
     logger: logging.Logger,
     system_prompt: str | SystemMessage,
     state: State,
+    config: RunnableConfig,
 ):
     logger.info("Running thinker")
 
@@ -54,11 +58,17 @@ def agent(
             else system_prompt
         )
         state["messages"].insert(0, system_msg)
-    ai_msg = llm.invoke(state["messages"])
+
+    # Invoke LLM with tracing if it is configured and available
+    ai_msg = invoke_llm_with_tracing(llm, state["messages"], config)
     state["messages"].append(ai_msg)
     return state
 
 
+@deprecated(
+    "Use rai.agents.langchain.core.create_react_runnable instead. "
+    "Support for the conversational agent will be removed in the 3.0 release."
+)
 def create_conversational_agent(
     llm: BaseChatModel,
     tools: List[BaseTool],

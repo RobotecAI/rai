@@ -16,7 +16,6 @@ from langchain_openai import ChatOpenAI
 
 from rai_bench import (
     ManipulationO3DEBenchmarkConfig,
-    ToolCallingAgentBenchmarkConfig,
     test_dual_agents,
 )
 
@@ -29,11 +28,6 @@ if __name__ == "__main__":
 
     tool_llm = ChatOpenAI(model="gpt-4o-mini", base_url="https://api.openai.com/v1/")
     # Define benchmarks that will be used
-    tool_conf = ToolCallingAgentBenchmarkConfig(
-        extra_tool_calls=0,  # how many extra tool calls allowed to still pass
-        task_types=["spatial_reasoning"],
-        repeats=15,
-    )
 
     man_conf = ManipulationO3DEBenchmarkConfig(
         o3de_config_path="src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/o3de_config.yaml",  # path to your o3de config
@@ -48,6 +42,6 @@ if __name__ == "__main__":
     test_dual_agents(
         multimodal_llms=[m_llm],
         tool_calling_models=[tool_llm],
-        benchmark_configs=[man_conf, tool_conf],
+        benchmark_configs=[man_conf],
         out_dir=out_dir,
     )

@@ -36,7 +36,6 @@ if __name__ == "__main__":
         extra_tool_calls=[0, 5],  # how many extra tool calls allowed to still pass
         task_types=[  # what types of tasks to include
             "basic",
-            "spatial_reasoning",
             "custom_interfaces",
         ],
         N_shots=[0, 2],  # examples in system prompt

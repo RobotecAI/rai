@@ -138,11 +138,14 @@ def test_ros2_single_message_publish_wrong_qos_setup(
         shutdown_executors_and_threads(executors, threads)
 
 
-def service_call_helper(service_name: str, service_api: ROS2ServiceAPI):
+def invoke_set_bool_service(
+    service_name: str, service_api: ROS2ServiceAPI, reuse_client: bool = True
+):
     response = service_api.call_service(
         service_name,
         service_type="std_srvs/srv/SetBool",
         request={"data": True},
+        reuse_client=reuse_client,
     )
     assert response.success
     assert response.message == "Test service called"
@@ -164,7 +167,7 @@ def test_ros2_service_single_call(
 
     try:
         service_api = ROS2ServiceAPI(node)
-        service_call_helper(service_name, service_api)
+        invoke_set_bool_service(service_name, service_api)
     finally:
         shutdown_executors_and_threads(executors, threads)
 
@@ -186,7 +189,30 @@ def test_ros2_service_multiple_calls(
     try:
         service_api = ROS2ServiceAPI(node)
         for _ in range(3):
-            service_call_helper(service_name, service_api)
+            invoke_set_bool_service(service_name, service_api, reuse_client=False)
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+@pytest.mark.parametrize(
+    "callback_group",
+    [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
+    ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
+)
+def test_ros2_service_multiple_calls_with_reused_client(
+    ros_setup: None, request: pytest.FixtureRequest, callback_group: CallbackGroup
+) -> None:
+    service_name = f"{request.node.originalname}_service"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    service_server = ServiceServer(service_name, callback_group)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([service_server, node])
+
+    try:
+        service_api = ROS2ServiceAPI(node)
+        for _ in range(3):
+            invoke_set_bool_service(service_name, service_api, reuse_client=True)
+        assert service_api.release_client(service_name), "Client not released"
     finally:
         shutdown_executors_and_threads(executors, threads)
 
@@ -210,7 +236,7 @@ def test_ros2_service_multiple_calls_at_the_same_time_threading(
         service_threads: List[threading.Thread] = []
         for _ in range(10):
             thread = threading.Thread(
-                target=service_call_helper, args=(service_name, service_api)
+                target=invoke_set_bool_service, args=(service_name, service_api)
             )
             service_threads.append(thread)
             thread.start()
@@ -241,7 +267,7 @@ def test_ros2_service_multiple_calls_at_the_same_time_multiprocessing(
         service_api = ROS2ServiceAPI(node)
         with Pool(10) as pool:
             pool.map(
-                lambda _: service_call_helper(service_name, service_api), range(10)
+                lambda _: invoke_set_bool_service(service_name, service_api), range(10)
             )
     finally:
         shutdown_executors_and_threads(executors, threads)

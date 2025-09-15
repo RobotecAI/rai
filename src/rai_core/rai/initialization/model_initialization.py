@@ -275,11 +275,16 @@ def get_embeddings_model(
 
 
 def get_tracing_callbacks(
-    override_use_langfuse: bool = False, override_use_langsmith: bool = False
+    config_path: Optional[str] = None,
 ) -> List[BaseCallbackHandler]:
-    config = load_config()
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        logger.warning(f"Failed to load config for tracing: {e}, tracing disabled")
+        return []
+
     callbacks: List[BaseCallbackHandler] = []
-    if config.tracing.langfuse.use_langfuse or override_use_langfuse:
+    if config.tracing.langfuse.use_langfuse:
         from langfuse.callback import CallbackHandler  # type: ignore
 
         public_key = os.getenv("LANGFUSE_PUBLIC_KEY", None)
@@ -294,7 +299,7 @@ def get_tracing_callbacks(
         )
         callbacks.append(callback)
 
-    if config.tracing.langsmith.use_langsmith or override_use_langsmith:
+    if config.tracing.langsmith.use_langsmith:
         os.environ["LANGCHAIN_TRACING_V2"] = "true"
         os.environ["LANGCHAIN_PROJECT"] = config.tracing.project
         api_key = os.getenv("LANGCHAIN_API_KEY", None)
