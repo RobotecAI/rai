@@ -260,8 +260,8 @@ def plan_step(
 
 def create_megamind(
     megamind_llm: BaseChatModel,
-    megamind_system_prompt: str,
     executors: List[Executor],
+    megamind_system_prompt: Optional[str] = None,
     task_planning_prompt: Optional[str] = None,
     context_providers: List[ContextProvider] = [],
 ) -> CompiledStateGraph:
@@ -270,8 +270,17 @@ def create_megamind(
     Args:
         executors (List[Executor]): Subagents for megamind, each can be a specialist with
         its own tools llm and system prompt
+
+        megamind_system_prompt (Optional[str]): Prompt for megamind node. If not provided
+        it will default to informing agent of the avaialble executors and listing their tools.
+
         task_planning_prompt (Optional[str]): Prompt that helps summarize the step in a way
         that helps planning task
+
+        context_providers (List[ContextProvider]): Each ContextProvider can inject external info
+        to prompt during planning phase
+
+
     """
     executor_agents = {}
     handoff_tools = []
