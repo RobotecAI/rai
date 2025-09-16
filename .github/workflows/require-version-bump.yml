@@ -38,9 +38,17 @@ jobs:
             echo "EOF"
           } >> $GITHUB_OUTPUT
 
-      - name: Print file contents
+      - name: Compare version lines
         run: |
-          echo "BASE version:"
-          echo "${{ steps.file_diff.outputs.base }}"
-          echo "HEAD version:"
-          echo "${{ steps.file_diff.outputs.head }}"
+          BASE_VERSION=$(grep '^version =' base.txt || echo "MISSING")
+          HEAD_VERSION=$(grep '^version =' head.txt || echo "MISSING")
+
+          echo "BASE: $BASE_VERSION"
+          echo "HEAD: $HEAD_VERSION"
+
+          if [ "$BASE_VERSION" = "$HEAD_VERSION" ]; then
+            echo "❌ Version has not changed, failing CI"
+            exit 1
+          else
+            echo "✅ Version changed, passing CI"
+          fi
