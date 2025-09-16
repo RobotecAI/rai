@@ -115,37 +115,37 @@ jobs:
             if ! git cat-file -e "${sha}:${FILE}" 2>/dev/null; then
               echo ""; return 0
             fi
-            git show "${sha}:${FILE}" | python3 - <<'PY'
-          import sys, tomli, json
-          data = sys.stdin.read()
-          try:
-              t = tomli.loads(data)
-          except Exception as e:
-              print(json.dumps({"error": f"TOML parse error: {e}"}))
-              sys.exit(0)
-          def get(d, path):
-              cur = d
-              for p in path:
-                  if not isinstance(cur, dict) or p not in cur:
-                      return None
-                  cur = cur[p]
-              return cur
-          version = (
-              get(t, ["project", "version"]) or
-              get(t, ["tool", "poetry", "version"]) or
-              get(t, ["tool", "hatch", "version"]) or
-              get(t, ["tool", "pdm", "version"]) or
-              get(t, ["tool", "setuptools", "metadata", "version"]) or
-              get(t, ["tool", "flit", "metadata", "version"]) or
-              None
-          )
-          print(json.dumps({
-              "keys": list(t.keys()),
-              "has_project": "project" in t,
-              "has_tool": "tool" in t,
-              "detected_version": version
-          }, ensure_ascii=False))
-          PY
+            git show "${sha}:${FILE}" | python3 -c '
+import sys, tomli, json
+data = sys.stdin.read()
+try:
+    t = tomli.loads(data)
+except Exception as e:
+    print(json.dumps({"error": f"TOML parse error: {e}"}))
+    sys.exit(0)
+def get(d, path):
+    cur = d
+    for p in path:
+        if not isinstance(cur, dict) or p not in cur:
+            return None
+        cur = cur[p]
+    return cur
+version = (
+    get(t, ["project", "version"]) or
+    get(t, ["tool", "poetry", "version"]) or
+    get(t, ["tool", "hatch", "version"]) or
+    get(t, ["tool", "pdm", "version"]) or
+    get(t, ["tool", "setuptools", "metadata", "version"]) or
+    get(t, ["tool", "flit", "metadata", "version"]) or
+    None
+)
+print(json.dumps({
+    "keys": list(t.keys()),
+    "has_project": "project" in t,
+    "has_tool": "tool" in t,
+    "detected_version": version
+}, ensure_ascii=False))
+'
                     }
           echo "--- Parsing BASE ---"
           BASE_INFO=$(parse_version "${BASE_SHA}" || true)
