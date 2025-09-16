@@ -21,47 +21,167 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install tomli
+      - name: Environment info (verbose)
         run: |
-          pip install tomli
+          set -euxo pipefail
+          echo "Shell: $SHELL"
+          echo "Runner OS: ${{ runner.os }}"
+          echo "GitHub Ref: ${{ github.ref }}"
+          echo "GitHub SHA: ${{ github.sha }}"
+          echo "PR Base SHA: ${{ github.event.pull_request.base.sha }}"
+          echo "PR Head SHA: ${{ github.event.pull_request.head.sha }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Workspace: $GITHUB_WORKSPACE"
+          echo "PATH: $PATH"
+          env | sort | sed 's/\(ACTIONS_STEP_DEBUG\|ACTIONS_RUNNER_DEBUG\)=.*/\1=***masked***/'
+          echo "--- Tool versions ---"
+          git --version
+          python3 --version
+          pip3 --version
+          echo "--- Git status ---"
+          git status --porcelain=v1 -b || true
+          echo "--- Recent commits ---"
+          git log --oneline -n 10 || true
 
-      - name: Verify rai_core pyproject changed
+      - name: Install tomli (for Python TOML parsing)
+        run: |
+          set -euxo pipefail
+          python3 -m pip install --upgrade pip
+          python3 -m pip install tomli
+
+      - name: Detect changed files (verbose)
+        id: diff
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          set -euo pipefail
-
+          set -euxo pipefail
           echo "Base: ${BASE_SHA}"
           echo "Head: ${HEAD_SHA}"
-
-          # List changed files between base and head
-          CHANGED_FILES=$(git diff --name-only "${BASE_SHA}" "${HEAD_SHA}")
-          printf "Changed files:\n%s\n" "${CHANGED_FILES}"
-
-          # Detect changes within src/rai_core/
-          if ! printf '%s\n' "${CHANGED_FILES}" | grep -E '^src/rai_core/' >/dev/null 2>&1; then
-            echo "No changes detected in src/rai_core. Skipping check."
-            exit 0
+          echo "--- Diff name-status (base..head) ---"
+          git diff --name-status "${BASE_SHA}" "${HEAD_SHA}" | sed 's/^/DIFF:\t/' || true
+          echo "--- Diff names only (base..head) ---"
+          CHANGED_FILES=$(git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" || true)
+          printf "Changed files (list):\n%s\n" "${CHANGED_FILES}"
+          if printf '%s\n' "${CHANGED_FILES}" | grep -E '^src/rai_core/' >/dev/null 2>&1; then
+            echo "rai_core_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "rai_core_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+          if printf '%s\n' "${CHANGED_FILES}" | grep -E '^src/rai_core/pyproject.toml$' >/dev/null 2>&1; then
+            echo "pyproject_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "pyproject_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-          echo "Changes detected in src/rai_core. Verifying src/rai_core/pyproject.toml is updated..."
-          echo "Reading versions from src/rai_core/pyproject.toml (for context)..."
-          BASE_VERSION=$(git show "${BASE_SHA}:src/rai_core/pyproject.toml" 2>/dev/null | python -c "import tomli, sys; data=sys.stdin.read(); print(tomli.loads(data)['project']['version']) if data.strip() else exit(1)" 2>/dev/null || true)
-          HEAD_VERSION=$(git show "${HEAD_SHA}:src/rai_core/pyproject.toml" 2>/dev/null | python -c "import tomli, sys; data=sys.stdin.read(); print(tomli.loads(data)['project']['version']) if data.strip() else exit(1)" 2>/dev/null || true)
-          echo "Base version: ${BASE_VERSION:-<not found>}"
-          echo "Head version: ${HEAD_VERSION:-<not found>}"
+      - name: Show pyproject at base and head (verbose)
+        if: steps.diff.outputs.rai_core_changed == 'true'
+        id: show
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euxo pipefail
+          FILE="src/rai_core/pyproject.toml"
+          echo "Checking existence of ${FILE} at base (${BASE_SHA}) and head (${HEAD_SHA})"
+          if git cat-file -e "${BASE_SHA}:${FILE}" 2>/dev/null; then
+            echo "base_has_file=true" >> "$GITHUB_OUTPUT"
+            echo "--- BASE ${FILE} ---"
+            git show "${BASE_SHA}:${FILE}" | sed 's/^/BASE>| /'
+          else
+            echo "base_has_file=false" >> "$GITHUB_OUTPUT"
+            echo "No ${FILE} at BASE commit"
+          fi
+          if git cat-file -e "${HEAD_SHA}:${FILE}" 2>/dev/null; then
+            echo "head_has_file=true" >> "$GITHUB_OUTPUT"
+            echo "--- HEAD ${FILE} ---"
+            git show "${HEAD_SHA}:${FILE}" | sed 's/^/HEAD>| /'
+          else
+            echo "head_has_file=false" >> "$GITHUB_OUTPUT"
+            echo "No ${FILE} at HEAD commit"
+          fi
 
+      - name: Parse versions from pyproject (supports PEP 621 and Poetry)
+        if: steps.diff.outputs.rai_core_changed == 'true'
+        id: parse
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euxo pipefail
+          FILE="src/rai_core/pyproject.toml"
+          parse_version() {
+            local sha="$1"
+            if ! git cat-file -e "${sha}:${FILE}" 2>/dev/null; then
+              echo ""; return 0
+            fi
+            git show "${sha}:${FILE}" | python3 - <<'PY'
+          import sys, tomli, json
+          data = sys.stdin.read()
+          try:
+              t = tomli.loads(data)
+          except Exception as e:
+              print(json.dumps({"error": f"TOML parse error: {e}"}))
+              sys.exit(0)
+          def get(d, path):
+              cur = d
+              for p in path:
+                  if not isinstance(cur, dict) or p not in cur:
+                      return None
+                  cur = cur[p]
+              return cur
+          version = (
+              get(t, ["project", "version"]) or
+              get(t, ["tool", "poetry", "version"]) or
+              get(t, ["tool", "hatch", "version"]) or
+              get(t, ["tool", "pdm", "version"]) or
+              get(t, ["tool", "setuptools", "metadata", "version"]) or
+              get(t, ["tool", "flit", "metadata", "version"]) or
+              None
+          )
+          print(json.dumps({
+              "keys": list(t.keys()),
+              "has_project": "project" in t,
+              "has_tool": "tool" in t,
+              "detected_version": version
+          }, ensure_ascii=False))
+          PY
+                    }
+          echo "--- Parsing BASE ---"
+          BASE_INFO=$(parse_version "${BASE_SHA}" || true)
+          echo "BASE_PARSE_JSON=${BASE_INFO}"
+          BASE_VERSION=$(printf "%s" "${BASE_INFO}" | python3 -c 'import sys, json; j=json.loads(sys.stdin.read() or "{}" ); print(j.get("detected_version",""))' || true)
+          echo "base_version=${BASE_VERSION}" >> "$GITHUB_OUTPUT"
+
+          echo "--- Parsing HEAD ---"
+          HEAD_INFO=$(parse_version "${HEAD_SHA}" || true)
+          echo "HEAD_PARSE_JSON=${HEAD_INFO}"
+          HEAD_VERSION=$(printf "%s" "${HEAD_INFO}" | python3 -c 'import sys, json; j=json.loads(sys.stdin.read() or "{}" ); print(j.get("detected_version",""))' || true)
+          echo "head_version=${HEAD_VERSION}" >> "$GITHUB_OUTPUT"
+          printf "Base version: %s\n" "${BASE_VERSION:-<not found>}"
+          printf "Head version: %s\n" "${HEAD_VERSION:-<not found>}"
+
+      - name: Validate version bump
+        if: steps.diff.outputs.rai_core_changed == 'true'
+        env:
+          PYPROJECT_CHANGED: ${{ steps.diff.outputs.pyproject_changed }}
+          BASE_VERSION: ${{ steps.parse.outputs.base_version }}
+          HEAD_VERSION: ${{ steps.parse.outputs.head_version }}
+        run: |
+          set -euxo pipefail
+          echo "pyproject_changed=${PYPROJECT_CHANGED}"
+          echo "BASE_VERSION='${BASE_VERSION}'"
+          echo "HEAD_VERSION='${HEAD_VERSION}'"
+          if [ "${PYPROJECT_CHANGED}" != "true" ]; then
+            echo "ERROR: Files in src/rai_core changed but src/rai_core/pyproject.toml was not modified in this PR."
+            exit 1
+          fi
+          if [ -z "${BASE_VERSION}" ] && [ -z "${HEAD_VERSION}" ]; then
+            echo "ERROR: Could not detect version in pyproject.toml at either base or head. Ensure 'project.version' or 'tool.poetry.version' exists."
+            exit 1
+          fi
           if [ "${BASE_VERSION}" = "${HEAD_VERSION}" ]; then
             echo "ERROR: pyproject.toml modified but version was not bumped."
             exit 1
           fi
-
-          echo "✅ Version bump detected: ${BASE_VERSION} -> ${HEAD_VERSION}"
-          exit 0
-
-          echo "ERROR: Files in src/rai_core changed but src/rai_core/pyproject.toml was not modified in this PR."
-          echo "Update the version in the pyproject.toml file and commit the changes according to changes with respect to Semantic Versioning."
-          echo "Bump patch if a bug fix is introduced, minor if a feature is added, and major if a breaking change is added."
-          echo "Disregard the version bump only if you know what you are doing."
-          exit 1
+          echo "✅ Version bump detected: ${BASE_VERSION:-<unknown>} -> ${HEAD_VERSION:-<unknown>}"
