@@ -103,12 +103,11 @@ class HRIMessage(BaseMessage):
         seq_no: int = 0,
         seq_end: bool = False,
     ) -> "HRIMessage":
+        text = message.text()
         if isinstance(message, RAIMultimodalMessage):
-            text = message.text
             images = message.images
             audios = message.audios
         else:
-            text = str(message.content)
             images = None
             audios = None
         if message.type not in ["ai", "human"]:

@@ -11,9 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import pytest
 from rai.types import Header, Point, Pose, PoseStamped, Quaternion
 
+from rai_bench.tool_calling_agent.interfaces import TaskArgs
 from rai_sim.simulation_bridge import Entity
 
 
@@ -34,4 +35,14 @@ def create_entity(
             pose=Pose(position=Point(x=x, y=y, z=z), orientation=orientation),
             header=Header(frame_id="/test_frame"),
         ),
+    )
+
+
+@pytest.fixture
+def task_args() -> TaskArgs:
+    """Create basic task arguments for testing."""
+    return TaskArgs(
+        extra_tool_calls=0,
+        prompt_detail="brief",
+        examples_in_system_prompt=0,
     )

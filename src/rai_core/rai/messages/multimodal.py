@@ -63,10 +63,6 @@ class MultimodalMessage(BaseMessage):
             _content.extend(_image_content)
         self.content = _content
 
-    @property
-    def text(self) -> str:
-        return self.content[0]["text"]
-
 
 class HumanMultimodalMessage(HumanMessage, MultimodalMessage):
     def __repr_args__(self) -> Any:

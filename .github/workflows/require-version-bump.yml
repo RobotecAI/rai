@@ -1,0 +1,44 @@
+name: Require Version Bump
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/rai_core/pyproject.toml'
+      - 'src/rai_core/**'
+
+jobs:
+  require-version-bump:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get rai_core version from BASE and HEAD
+        id: require-version-bump
+        run: |
+          BASE_SHA=${{ github.event.pull_request.base.sha }}
+          HEAD_SHA=${{ github.event.pull_request.head.sha }}
+          FILE_PATH="src/rai_core/pyproject.toml"
+
+          git show $BASE_SHA:$FILE_PATH > base.txt || echo "BASE file not found"
+          git show $HEAD_SHA:$FILE_PATH > head.txt || echo "HEAD file not found"
+
+      - name: Compare version lines
+        run: |
+          BASE_VERSION=$(grep '^version =' base.txt || echo "MISSING")
+          HEAD_VERSION=$(grep '^version =' head.txt || echo "MISSING")
+
+          echo "BASE: $BASE_VERSION"
+          echo "HEAD: $HEAD_VERSION"
+
+          if [ "$BASE_VERSION" = "$HEAD_VERSION" ]; then
+            echo "❌ Version has not changed. Please bump the version in the pyproject.toml file according to Semantic Versioning."
+            exit 1
+          else
+            echo "✅ Version changed."
+          fi
