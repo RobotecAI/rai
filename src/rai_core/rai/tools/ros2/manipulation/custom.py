@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import logging
-from typing import Literal, Type
+from typing import List, Literal, Type
 
 import numpy as np
 from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
@@ -79,7 +79,7 @@ class MoveToPointTool(BaseROS2Tool):
         x: float,
         y: float,
         z: float,
-        task: Literal["grab", "drop"],
+        task: Literal["grab", "drop"] = "grab",
     ) -> str:
         client = self.connector.node.create_client(
             ManipulatorMoveTo,
@@ -171,6 +171,13 @@ class MoveObjectFromToTool(BaseROS2Tool):
         z1: float,
     ) -> str:
         # NOTE: create_client could be refactored into self.connector.service_call
+        x = float(x)
+        y = float(y)
+        z = float(z)
+        x1 = float(x1)
+        y1 = float(y1)
+        z1 = float(z1)
+
         client = self.connector.node.create_client(
             ManipulatorMoveTo,
             "/manipulator_move_to",
@@ -212,23 +219,24 @@ class MoveObjectFromToTool(BaseROS2Tool):
         request.final_gripper_state = False  # closed
 
         future = client.call_async(request)
-        self.connector.node.get_logger().debug(
-            f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
-        )
-        response = get_future_result(future, timeout_sec=5.0)
+        # self.connector.node.get_logger().debug(
+        #     f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
+        # )
+        response = get_future_result(future, timeout_sec=10.0)
 
         if response is None:
-            return f"Service call failed for pickup at position ({x:.2f}, {y:.2f}, {z:.2f})."
+            msg = f"Service call failed for pickup at position ({x:.2f}, {y:.2f}, {z:.2f})."
+            # self.connector.node.get_logger().error(msg)
+            print(msg)
 
         if response.success:
-            self.connector.logger.info(
-                f"Successfully picked up object at position ({x:.2f}, {y:.2f}, {z:.2f})."
-            )
+            msg = f"Successfully picked up object at position ({x:.2f}, {y:.2f}, {z:.2f})."
+            # self.connector.node.get_logger().info(msg)
+            print(msg)
         else:
-            self.connector.logger.error(
-                f"Failed to pick up object at position ({x:.2f}, {y:.2f}, {z:.2f})."
-            )
-            return f"Failed to pick up object at position ({x:.2f}, {y:.2f}, {z:.2f})."
+            msg = f"Failed to pick up object at position ({x:.2f}, {y:.2f}, {z:.2f})."
+            # self.connector.node.get_logger().error(msg)
+            print(msg)
 
         request = ManipulatorMoveTo.Request()
         request.target_pose = pose_stamped1
@@ -237,19 +245,25 @@ class MoveObjectFromToTool(BaseROS2Tool):
         request.final_gripper_state = True  # open
 
         future = client.call_async(request)
-        self.connector.node.get_logger().debug(
-            f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
-        )
+        # self.connector.node.get_logger().debug(
+        #     f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
+        # )
 
         response = get_future_result(future, timeout_sec=20.0)
 
         if response is None:
-            return f"Service call failed for placement at position ({x1:.2f}, {y1:.2f}, {z1:.2f}). Object was picked up from ({x:.2f}, {y:.2f}, {z:.2f}) but could not be placed."
+            msg = f"Service call failed for placement at position ({x1:.2f}, {y1:.2f}, {z1:.2f}). Object was picked up from ({x:.2f}, {y:.2f}, {z:.2f}) but could not be placed."
+            print(msg)
+            return msg
 
         if response.success:
-            return f"Successfully moved object from position ({x:.2f}, {y:.2f}, {z:.2f}) to position ({x1:.2f}, {y1:.2f}, {z1:.2f}). Note: The status of object interaction (grab/drop) is not confirmed by this movement."
+            msg = f"Successfully moved object from position ({x:.2f}, {y:.2f}, {z:.2f}) to position ({x1:.2f}, {y1:.2f}, {z1:.2f})."
+            print(msg)
+            return msg
         else:
-            return f"Failed to place object at position ({x1:.2f}, {y1:.2f}, {z1:.2f}). Object was picked up from ({x:.2f}, {y:.2f}, {z:.2f}) but placement failed."
+            msg = f"Failed to place object at position ({x1:.2f}, {y1:.2f}, {z1:.2f}). Object was picked up from ({x:.2f}, {y:.2f}, {z:.2f}) but placement failed."
+            print(msg)
+            return msg
 
 
 class GetObjectPositionsToolInput(BaseModel):
@@ -263,7 +277,9 @@ class GetObjectPositionsTool(BaseROS2Tool):
     description: str = (
         "Retrieve the positions of all objects of a specified type in the target frame. "
         "This tool provides accurate positional data but does not distinguish between different colors of the same object type. "
-        "While position detection is reliable, please note that object classification may occasionally be inaccurate."
+        "While position detection is reliable, please note that object classification may occasionally be inaccurate. "
+        "Returns the positions of the objects as a list of lists, where each list contains the x, y, and z coordinates of the object. "
+        "Returns an empty list if no objects are detected."
     )
 
     target_frame: str
@@ -277,9 +293,9 @@ class GetObjectPositionsTool(BaseROS2Tool):
 
     @staticmethod
     def format_pose(pose: Pose):
-        return f"Centroid(x={pose.position.x:.2f}, y={pose.position.y:2f}, z={pose.position.z:2f})"
+        return f"Centroid(x={pose.position.x:.2f}, y={pose.position.y:.2f}, z={pose.position.z:.2f})"
 
-    def _run(self, object_name: str):
+    def _run(self, object_name: str) -> List[List[float]]:
         transform = self.connector.get_transform(
             target_frame=self.target_frame, source_frame=self.source_frame
         )
@@ -304,9 +320,16 @@ class GetObjectPositionsTool(BaseROS2Tool):
             mani_frame_poses.append(mani_frame_pose)
 
         if len(mani_frame_poses) == 0:
-            return f"No {object_name}s detected."
+            result = f"No {object_name}s detected."
+            # print(result)
+            return []
         else:
-            return f"Centroids of detected {object_name}s in {self.target_frame} frame: [{', '.join(map(self.format_pose, mani_frame_poses))}]. Sizes of the detected objects are unknown."
+            result = f"Centroids of detected {object_name}s in {self.target_frame} frame: [{', '.join(map(self.format_pose, mani_frame_poses))}]. Sizes of the detected objects are unknown."
+            # print(result)
+            return [
+                [pose.position.x, pose.position.y, pose.position.z]
+                for pose in mani_frame_poses
+            ]
 
 
 class ResetArmToolInput(BaseModel):

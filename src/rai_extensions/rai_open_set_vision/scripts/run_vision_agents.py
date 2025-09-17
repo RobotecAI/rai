@@ -12,10 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 
 import rclpy
 from rai.agents import wait_for_shutdown
 from rai_open_set_vision.agents import GroundedSamAgent, GroundingDinoAgent
+
+project_root = "/home/pkotowski/AMD-RosCon2025-Demo/rai"
+sys.path.insert(0, f"{project_root}/build/rai_open_set_vision")
 
 
 def main():

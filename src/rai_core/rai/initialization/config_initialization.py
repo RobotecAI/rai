@@ -42,6 +42,11 @@ complex_model = "llama3.1:70b"
 embeddings_model = "llama3.2"
 base_url = "http://localhost:11434"
 
+[anthropic]
+simple_model = "claude-3-5-haiku-latest"
+complex_model = "claude-sonnet-4-20250514"
+embeddings_model = ""
+
 [tracing]
 project = "rai"
 

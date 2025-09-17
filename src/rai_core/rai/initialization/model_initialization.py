@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple, cast
 
 import coloredlogs
 import tomli
+from langchain_anthropic import ChatAnthropic
 from langchain_aws import ChatBedrock
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.embeddings import Embeddings
@@ -62,6 +63,11 @@ class OpenAIConfig(ModelConfig):
 
 
 @dataclass
+class AnthropicConfig(ModelConfig):
+    pass
+
+
+@dataclass
 class LangfuseConfig:
     use_langfuse: bool
     host: str
@@ -86,6 +92,7 @@ class RAIConfig:
     aws: AWSConfig
     openai: OpenAIConfig
     ollama: OllamaConfig
+    anthropic: AnthropicConfig
     tracing: TracingConfig
 
 
@@ -101,6 +108,7 @@ def load_config(config_path: Optional[str] = None) -> RAIConfig:
         aws=AWSConfig(**config_dict["aws"]),
         openai=OpenAIConfig(**config_dict["openai"]),
         ollama=OllamaConfig(**config_dict["ollama"]),
+        anthropic=AnthropicConfig(**config_dict["anthropic"]),
         tracing=TracingConfig(
             project=config_dict["tracing"]["project"],
             langfuse=LangfuseConfig(**config_dict["tracing"]["langfuse"]),
@@ -130,7 +138,7 @@ def get_llm_model(
     vendor: Optional[str] = None,
     config_path: Optional[str] = None,
     **kwargs: Any,
-) -> ChatOpenAI | ChatBedrock | ChatOllama:
+) -> ChatOpenAI | ChatBedrock | ChatOllama | ChatAnthropic:
     model_config, vendor = get_llm_model_config_and_vendor(
         model_type, vendor, config_path
     )
@@ -141,7 +149,12 @@ def get_llm_model(
 
         model_config = cast(OpenAIConfig, model_config)
 
-        return ChatOpenAI(model=model, base_url=model_config.base_url, **kwargs)
+        return ChatOpenAI(
+            model=model,
+            openai_api_base=model_config.base_url,
+            openai_api_key=os.getenv("OPENROUTER_API_KEY"),
+            **kwargs,
+        )
     elif vendor == "aws":
         from langchain_aws import ChatBedrock
 
@@ -157,6 +170,10 @@ def get_llm_model(
 
         model_config = cast(OllamaConfig, model_config)
         return ChatOllama(model=model, base_url=model_config.base_url, **kwargs)
+    elif vendor == "anthropic":
+        from langchain_anthropic import ChatAnthropic
+
+        return ChatAnthropic(model=model, **kwargs)
     else:
         raise ValueError(f"Unknown LLM vendor: {vendor}")
 
@@ -166,7 +183,7 @@ def get_llm_model_direct(
     vendor: str,
     config_path: Optional[str] = None,
     **kwargs: Any,
-) -> ChatOpenAI | ChatBedrock | ChatOllama:
+) -> ChatOpenAI | ChatBedrock | ChatOllama | ChatAnthropic:
     config = load_config(config_path)
     model_config = getattr(config, vendor)
 
@@ -194,6 +211,10 @@ def get_llm_model_direct(
         logging.getLogger("httpx").setLevel(logging.WARNING)
         model_config = cast(OllamaConfig, model_config)
         return ChatOllama(model=model_name, base_url=model_config.base_url, **kwargs)
+    elif vendor == "anthropic":
+        from langchain_anthropic import ChatAnthropic
+
+        return ChatAnthropic(model=model_name, **kwargs)
     else:
         raise ValueError(f"Unknown LLM vendor: {vendor}")
 

@@ -1,7 +1,7 @@
 [vendor]
-simple_model = "openai"
-complex_model = "openai"
-embeddings_model = "openai"
+simple_model = "ollama"
+complex_model = "ollama"
+embeddings_model = "ollama"
 
 [aws]
 simple_model = "anthropic.claude-3-haiku-20240307-v1:0"
@@ -10,16 +10,21 @@ embeddings_model = "amazon.titan-embed-text-v1"
 region_name = "us-east-1"
 
 [openai]
-simple_model = "gpt-4o-mini"
-complex_model = "gpt-4o"
+simple_model = "qwen/qwen3-coder-30b-a3b-instruct"
+complex_model = "qwen/qwen3-coder"
 embeddings_model = "text-embedding-ada-002"
-base_url = "https://api.openai.com/v1/"
+base_url = "https://openrouter.ai/api/v1"
 
 [ollama]
 simple_model = "qwen3:1.7b"
 complex_model = "qwen3:8b"
 embeddings_model = "llama3.2"
 base_url = "http://localhost:11434"
+
+[anthropic]
+simple_model = "claude-3-5-haiku-latest"
+complex_model = "claude-sonnet-4-20250514"
+embeddings_model = ""
 
 [tracing]
 project = "rai"

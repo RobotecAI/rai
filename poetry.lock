@@ -247,6 +247,32 @@ files = [
 ]
 
 [[package]]
+name = "anthropic"
+version = "0.66.0"
+description = "The official Python library for the anthropic API"
+optional = false
+python-versions = ">=3.8"
+groups = ["main", "simbench"]
+files = [
+    {file = "anthropic-0.66.0-py3-none-any.whl", hash = "sha256:67b8cd4486f3cdd09211598dc5325cc8e4e349c106a03041231d551603551c06"},
+    {file = "anthropic-0.66.0.tar.gz", hash = "sha256:5aa8b18da57dc27d83fc1d82c9fb860977e5adfae3e0c215d7ab2ebd70afb9cb"},
+]
+
+[package.dependencies]
+anyio = ">=3.5.0,<5"
+distro = ">=1.7.0,<2"
+httpx = ">=0.25.0,<1"
+jiter = ">=0.4.0,<1"
+pydantic = ">=1.9.0,<3"
+sniffio = "*"
+typing-extensions = ">=4.10,<5"
+
+[package.extras]
+aiohttp = ["aiohttp", "httpx-aiohttp (>=0.1.8)"]
+bedrock = ["boto3 (>=1.28.57)", "botocore (>=1.31.57)"]
+vertex = ["google-auth[requests] (>=2,<3)"]
+
+[[package]]
 name = "antlr4-python3-runtime"
 version = "4.9.3"
 description = "ANTLR 4.9.3 runtime for Python 3.7"
@@ -3124,6 +3150,23 @@ together = ["langchain-together"]
 xai = ["langchain-xai"]
 
 [[package]]
+name = "langchain-anthropic"
+version = "0.3.19"
+description = "An integration package connecting Anthropic and LangChain"
+optional = false
+python-versions = ">=3.9"
+groups = ["main", "simbench"]
+files = [
+    {file = "langchain_anthropic-0.3.19-py3-none-any.whl", hash = "sha256:5b5372ef7e10ee32b4308b4d9e1ed623c360b7d0a233c017e5209ad8118d5ab7"},
+    {file = "langchain_anthropic-0.3.19.tar.gz", hash = "sha256:e62259382586ee5c44e9a9459d00b74a7e191550e5fadfad28f0daa5d143d745"},
+]
+
+[package.dependencies]
+anthropic = ">=0.64.0,<1"
+langchain-core = ">=0.3.74,<1.0.0"
+pydantic = ">=2.7.4,<3.0.0"
+
+[[package]]
 name = "langchain-aws"
 version = "0.2.29"
 description = "An integration package connecting AWS and LangChain"
@@ -3175,14 +3218,14 @@ tenacity = ">=8.1.0,<8.4.0 || >8.4.0,<10"
 
 [[package]]
 name = "langchain-core"
-version = "0.3.70"
+version = "0.3.75"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "simbench"]
 files = [
-    {file = "langchain_core-0.3.70-py3-none-any.whl", hash = "sha256:56f1ce0ab410508e25b3b4b3b87a8ffae38bf16294e5f605ac63a8aff5bc13a4"},
-    {file = "langchain_core-0.3.70.tar.gz", hash = "sha256:58551e5411ff9f92c7c8f4379e07e762ca66800e821cd904e19881fe41f691ee"},
+    {file = "langchain_core-0.3.75-py3-none-any.whl", hash = "sha256:03ca1fadf955ee3c7d5806a841f4b3a37b816acea5e61a7e6ba1298c05eea7f5"},
+    {file = "langchain_core-0.3.75.tar.gz", hash = "sha256:ab0eb95a06ed6043f76162e6086b45037690cb70b7f090bd83b5ebb8a05b70ed"},
 ]
 
 [package.dependencies]
@@ -6481,7 +6524,7 @@ cffi = {version = "*", markers = "implementation_name == \"pypy\""}
 
 [[package]]
 name = "rai-bench"
-version = "0.1.2"
+version = "0.2.0"
 description = "Package for running and creating benchmarks."
 optional = false
 python-versions = "^3.10"
@@ -6501,7 +6544,7 @@ url = "src/rai_bench"
 
 [[package]]
 name = "rai-core"
-version = "2.0.3"
+version = "2.2.1"
 description = "Core functionality for RAI framework"
 optional = false
 python-versions = "^3.10, <3.13"
@@ -6513,6 +6556,7 @@ develop = true
 coloredlogs = "^15.0.1"
 deprecated = "^1.2.14"
 langchain = "*"
+langchain-anthropic = "^0.3.18"
 langchain-aws = "*"
 langchain-community = "*"
 langchain-core = "^0.3"
@@ -6560,10 +6604,10 @@ sounddevice = "^0.4.7"
 torchaudio = "2.3.1"
 
 [package.extras]
-all = ["elevenlabs (>=1.4.1,<2.0.0)", "faster-whisper (>=1.1.1,<2.0.0)", "kokoro-onnx (==0.3.3)", "onnxruntime-gpu (>=1.20.1)", "openai-whisper (>=20231117,<20231118)", "openwakeword @ git+https://github.com/maciejmajek/openWakeWord.git@chore/remove-tflite-backend"]
+all = ["elevenlabs (>=1.4.1,<2.0.0)", "faster-whisper (>=1.1.1,<2.0.0)", "kokoro-onnx (==0.3.3)", "onnxruntime-gpu (>=1.20.1) ; platform_machine == \"x86_64\" and sys_platform != \"darwin\"", "openai-whisper (>=20231117,<20231118)", "openwakeword @ git+https://github.com/maciejmajek/openWakeWord.git@chore/remove-tflite-backend"]
 elevenlabs = ["elevenlabs (>=1.4.1,<2.0.0)"]
 fasterwhisper = ["faster-whisper (>=1.1.1,<2.0.0)"]
-gpu = ["onnxruntime-gpu (>=1.20.1)"]
+gpu = ["onnxruntime-gpu (>=1.20.1) ; platform_machine == \"x86_64\" and sys_platform != \"darwin\""]
 kokoro = ["kokoro-onnx (==0.3.3)"]
 wakeword = ["openwakeword @ git+https://github.com/maciejmajek/openWakeWord.git@chore/remove-tflite-backend"]
 whisper = ["openai-whisper (>=20231117,<20231118)"]

@@ -24,6 +24,7 @@ import tomli_w
 from langchain_aws import BedrockEmbeddings, ChatBedrock
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_anthropic import ChatAnthropic
 import logging
 import importlib.util
 
@@ -79,13 +80,13 @@ def model_selection():
     )
 
     def on_vendor_change():
-        st.session_state.vendor_index = ["openai", "aws", "ollama"].index(
+        st.session_state.vendor_index = ["openai", "aws", "ollama", "anthropic"].index(
             st.session_state.vendor
         )
 
     vendor = st.selectbox(
         "Which AI vendor would you like to use?",
-        ["openai", "aws", "ollama"],
+        ["openai", "aws", "ollama", "anthropic"],
         placeholder="Select vendor",
         key="vendor",
         index=st.session_state.get("vendor_index", 0),
@@ -202,6 +203,23 @@ def model_selection():
                 "simple_model": simple_model,
                 "complex_model": complex_model,
                 "embeddings_model": embeddings_model,
+            }
+
+        elif vendor == "anthropic":
+            st.write(
+                f"Check out available {vendor} models [here](https://docs.anthropic.com/en/docs/models/overview)"
+            )
+            simple_model = st.text_input(
+                "Model for simple tasks",
+                value=st.session_state["config"]["anthropic"]["simple_model"],
+            )
+            complex_model = st.text_input(
+                "Model for complex tasks",
+                value=st.session_state["config"]["anthropic"]["complex_model"],
+            )
+            st.session_state.config["anthropic"] = {
+                "simple_model": simple_model,
+                "complex_model": complex_model,
             }
 
     st.subheader("Multivendor configuration (Advanced)")
@@ -780,7 +798,6 @@ def review_and_save():
         def create_chat_model(model_type: str):
             vendor_name = st.session_state.config["vendor"][f"{model_type}_model"]
             model_name = st.session_state.config[vendor_name][f"{model_type}_model"]
-
             if vendor_name == "openai":
                 base_url = st.session_state.config["openai"]["base_url"]
                 return ChatOpenAI(model=model_name, base_url=base_url)
@@ -791,6 +808,8 @@ def review_and_save():
                     model=model_name,
                     base_url=st.session_state.config["ollama"]["base_url"],
                 )
+            elif vendor_name == "anthropic":
+                return ChatAnthropic(model=model_name)
             raise ValueError(f"Unknown vendor: {vendor_name}")
 
         def test_chat_model(model_type: str) -> bool:
