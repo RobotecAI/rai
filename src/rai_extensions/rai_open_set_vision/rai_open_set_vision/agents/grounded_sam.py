@@ -34,19 +34,11 @@ class GroundedSamAgent(BaseVisionAgent):
 
     def __init__(
         self,
-        weights_path: str | Path = Path.home() / Path(".cache/rai"),
+        weights_root_path: str | Path = Path.home() / Path(".cache/rai"),
         ros2_name: str = GSAM_NODE_NAME,
     ):
-        super().__init__(weights_path, ros2_name)
-        try:
-            self._segmenter = GDSegmenter(self._weights_path)
-        except Exception as e:
-            self.logger.error(
-                f"Could not load model : {e}. The weights might be corrupted. Redownloading..."
-            )
-            self._remove_weights(self.weight_path)
-            self._init_weight_path()
-            self.segmenter = GDSegmenter(self.weight_path)
+        super().__init__(weights_root_path, ros2_name)
+        self._segmenter = self._load_model_with_error_handling(GDSegmenter)
         self.logger.info(f"{self.__class__.__name__} initialized")
 
     def run(self):
