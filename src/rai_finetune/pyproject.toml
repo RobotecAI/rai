@@ -1,0 +1,62 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "rai_finetune"
+version = "0.1.0-alpha"
+description = "RAI fine-tuning utilities using Unsloth - standalone package"
+authors = ["Julia Jia <juliajster@gmail.com>"]
+readme = "README.md"
+packages = [{include = "rai_finetune"}]
+# Make this package completely independent
+[tool.poetry.dependencies]
+python = "^3.10, <3.12"  # Python3.10 is recommended for better compatibility with other Rai components' setup.
+
+# Core ML dependencies
+torch = ">=2.4.0"
+torchvision = ">=0.19.0"
+transformers = ">=4.51.3"
+datasets = ">=3.4.1, <4.0.0"
+accelerate = ">=0.34.1"
+
+# Unsloth for efficient fine-tuning (with zoo dependency)
+unsloth = {git = "https://github.com/unslothai/unsloth.git", extras = ["colab-new"]}
+unsloth-zoo = ">=2025.8.3"  # Required by unsloth[colab-new], Python 3.10 compatible
+
+# PEFT for parameter-efficient fine-tuning
+peft = ">=0.17.0"  # Required for training with unsloth
+
+# Scientific computing and utilities
+numpy = ">=1.21.0, <1.25.0"
+scipy = ">=1.7.0, <1.12.0"
+scikit-learn = ">=1.0.0, <1.4.0"
+tqdm = ">=4.60.0, <4.67.0"
+
+# Hugging Face Hub integration
+huggingface-hub = ">=0.34.0, <0.37.0"  # Required by unsloth[colab-new], Python 3.10 compatible
+
+# Langfuse for LLM observability and evaluation
+langfuse = "^2.0.0, <3.0.0"
+
+# Template engine for chat templates
+jinja2 = "^3.0.0, <4.0.0"
+
+# Performance optimization (optional but recommended)
+xformers = ">=0.0.20, <0.1.0"
+
+# GGUF conversion and Ollama compatibility
+llama-cpp-python = ">=0.1.0, <0.3.0"
+sentencepiece = ">=0.2.0, <0.3.0"  # Required by unsloth[colab-new], Python 3.10 compatible
+protobuf = ">=3.20.0, <4.22.0"
+mistral-common = "^1.0.0, <2.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.0.0, <8.3.0"
+pytest-timeout = "^2.1.0, <2.4.0"
+black = "^22.0.0, <24.0.0"
+isort = "^5.10.0, <5.13.0"
+flake8 = "^5.0.0, <6.1.0"
+
+[tool.poetry.scripts]
+rai-finetune = "rai_finetune.data_cli:main"
