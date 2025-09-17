@@ -34,10 +34,10 @@ class GroundedSamAgent(BaseVisionAgent):
 
     def __init__(
         self,
-        weights_path: str | Path = Path.home() / Path(".cache/rai"),
+        weights_root_path: str | Path = Path.home() / Path(".cache/rai"),
         ros2_name: str = GSAM_NODE_NAME,
     ):
-        super().__init__(weights_path, ros2_name)
+        super().__init__(weights_root_path, ros2_name)
         self._segmenter = self._load_model_with_error_handling(GDSegmenter)
         self.logger.info(f"{self.__class__.__name__} initialized")
 
