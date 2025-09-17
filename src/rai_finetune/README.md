@@ -1,5 +1,7 @@
 # RAI Fine-tuning Module
 
+⚠️ **Experimental Module**: This module is in active development. Features may change and some functionality is still in progress.
+
 ## Module Overview
 
 This module provides tools for extracting and formatting training data from various providers such as Langfuse and LangSmith. The formatted training data is designed to work seamlessly with Unsloth for efficient fine-tuning. It includes:

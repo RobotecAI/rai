@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "rai_finetune"
-version = "0.1.0"
+version = "0.1.0-alpha"
 description = "RAI fine-tuning utilities using Unsloth - standalone package"
 authors = ["Julia Jia <juliajster@gmail.com>"]
 readme = "README.md"
