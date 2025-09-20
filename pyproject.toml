@@ -76,7 +76,8 @@ build-backend = "poetry.core.masonry.api"
 markers = [
     "billable: marks test as billable  (deselect with '-m \"not billable\"')",
     "ci_only: marks test as cli only (deselect with '-m \"not ci_only\"')",
+    "manual: marks tests as manual (may require demo app to be running)",
 ]
-addopts = "-m 'not billable and not ci_only' --ignore=src"
+addopts = "-m 'not billable and not ci_only and not manual' --ignore=src"
 log_cli = true
 log_cli_level = "INFO"
