@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import time
 from typing import List, Literal, Optional, cast
 
 import numpy as np
@@ -44,6 +45,77 @@ def depth_to_point_cloud(
     points = np.stack((x, y, z), axis=-1).reshape(-1, 3)
     points = points[points[:, 2] > 0]
     return points.astype(np.float32, copy=False)
+
+
+def _publish_gripping_point_debug_data(
+    connector: ROS2Connector,
+    obj_points_xyz: NDArray[np.float32],
+    gripping_points_xyz: list[NDArray[np.float32]],
+    base_frame_id: str = "egoarm_base_link",
+    publish_duration: float = 10.0,
+) -> None:
+    """Publish the gripping point debug data for visualization in RVIZ via point cloud and marker array.
+
+    Args:
+        connector: The ROS2 connector.
+        obj_points_xyz: The list of objects found in the image.
+        gripping_points_xyz: The list of gripping points in the base frame.
+        base_frame_id: The base frame id.
+        publish_duration: Duration in seconds to publish the data (default: 10.0).
+    """
+
+    from geometry_msgs.msg import Point, Point32, Pose, Vector3
+    from sensor_msgs.msg import PointCloud
+    from std_msgs.msg import Header
+    from visualization_msgs.msg import Marker, MarkerArray
+
+    points = (
+        np.concatenate(obj_points_xyz, axis=0)
+        if obj_points_xyz
+        else np.zeros((0, 3), dtype=np.float32)
+    )
+
+    msg = PointCloud()  # type: ignore[reportUnknownArgumentType]
+    msg.header.frame_id = base_frame_id  # type: ignore[reportUnknownMemberType]
+    msg.points = [Point32(x=float(p[0]), y=float(p[1]), z=float(p[2])) for p in points]  # type: ignore[reportUnknownArgumentType]
+    pub = connector.node.create_publisher(  # type: ignore[reportUnknownMemberType]
+        PointCloud, "/debug_gripping_points_pointcloud", 10
+    )
+
+    marker_pub = connector.node.create_publisher(  # type: ignore[reportUnknownMemberType]
+        MarkerArray, "/debug_gripping_points_markerarray", 10
+    )
+    marker_array = MarkerArray()
+    header = Header()
+    header.frame_id = base_frame_id
+    header.stamp = connector.node.get_clock().now().to_msg()
+    markers = []
+    for i, p in enumerate(gripping_points_xyz):
+        m = Marker()
+        m.header = header
+        m.type = Marker.SPHERE
+        m.action = Marker.ADD
+        m.pose = Pose(position=Point(x=float(p[0]), y=float(p[1]), z=float(p[2])))
+        m.scale = Vector3(x=0.04, y=0.04, z=0.04)
+        m.id = i
+        m.color.r = 1.0  # type: ignore[reportUnknownMemberType]
+        m.color.g = 0.0  # type: ignore[reportUnknownMemberType]
+        m.color.b = 0.0  # type: ignore[reportUnknownMemberType]
+        m.color.a = 1.0  # type: ignore[reportUnknownMemberType]
+
+        # m.ns = str(i)
+
+        markers.append(m)  # type: ignore[reportUnknownArgumentType]
+    marker_array.markers = markers
+
+    start_time = time.time()
+    publish_rate = 10.0  # Hz
+    sleep_duration = 1.0 / publish_rate
+
+    while time.time() - start_time < publish_duration:
+        marker_pub.publish(marker_array)
+        pub.publish(msg)
+        time.sleep(sleep_duration)
 
 
 class PointCloudFromSegmentation:
@@ -511,96 +583,3 @@ class PointCloudFilter:
                 f = pts
             filtered.append(f.astype(np.float32, copy=False))
         return filtered
-
-
-import time
-
-from rai.communication.ros2 import ROS2Context
-
-ROS2Context()
-
-
-def main():
-    from rai.communication.ros2.connectors import ROS2Connector
-
-    connector = ROS2Connector()
-    connector.node.declare_parameter("conversion_ratio", 1.0)
-    time.sleep(5)
-    est = GrippingPointEstimator(
-        strategy="biggest_plane", ransac_iterations=400, distance_threshold_m=0.008
-    )
-
-    pc_gen = PointCloudFromSegmentation(
-        connector=connector,
-        camera_topic="/rgbd_camera/camera_image_color",
-        depth_topic="/rgbd_camera/camera_image_depth",
-        camera_info_topic="/rgbd_camera/camera_info",
-        source_frame="egofront_rgbd_camera_depth_optical_frame",
-        target_frame="egoarm_base_link",
-    )
-    points_xyz = pc_gen.run(
-        object_name="box"
-    )  # ndarray of shape (N, 3) in target frame
-    print(points_xyz)
-    filt = PointCloudFilter(strategy="dbscan", dbscan_eps=0.02, dbscan_min_samples=10)
-    points_xyz = filt.run(points_xyz)  # same list shape, each np.float32 (N,3)
-    grip_points = est.run(points_xyz)
-
-    print(grip_points)
-    from geometry_msgs.msg import Point32
-    from sensor_msgs.msg import PointCloud
-
-    points = (
-        np.concatenate(points_xyz, axis=0)
-        if points_xyz
-        else np.zeros((0, 3), dtype=np.float32)
-    )
-
-    msg = PointCloud()  # type: ignore[reportUnknownArgumentType]
-    msg.header.frame_id = "egoarm_base_link"  # type: ignore[reportUnknownMemberType]
-    msg.points = [Point32(x=float(p[0]), y=float(p[1]), z=float(p[2])) for p in points]  # type: ignore[reportUnknownArgumentType]
-    pub = connector.node.create_publisher(  # type: ignore[reportUnknownMemberType]
-        PointCloud, "/debug/get_grabbing_point_pointcloud", 10
-    )
-    from geometry_msgs.msg import Point, Pose, Vector3
-    from std_msgs.msg import Header
-    from visualization_msgs.msg import Marker, MarkerArray
-
-    marker_pub = connector.node.create_publisher(  # type: ignore[reportUnknownMemberType]
-        MarkerArray, "/debug/get_grabbing_point_marker_array", 10
-    )
-    marker_array = MarkerArray()
-    header = Header()
-    header.frame_id = "egoarm_base_link"
-    # header.stamp = connector.node.get_clock().now().to_msg()
-    markers = []
-    for i, p in enumerate(grip_points):
-        m = Marker()
-        m.header = header
-        m.type = Marker.SPHERE
-        m.action = Marker.ADD
-        m.pose = Pose(position=Point(x=float(p[0]), y=float(p[1]), z=float(p[2])))
-        m.scale = Vector3(x=0.04, y=0.04, z=0.04)
-        m.id = i
-        m.color.r = 1.0  # type: ignore[reportUnknownMemberType]
-        m.color.g = 0.0  # type: ignore[reportUnknownMemberType]
-        m.color.b = 0.0  # type: ignore[reportUnknownMemberType]
-        m.color.a = 1.0  # type: ignore[reportUnknownMemberType]
-
-        # m.ns = str(i)
-
-        markers.append(m)  # type: ignore[reportUnknownArgumentType]
-    marker_array.markers = markers
-
-    while True:
-        connector.node.get_logger().info(  # type: ignore[reportUnknownMemberType]
-            f"publishing pointcloud to /debug/get_grabbing_point_pointcloud: {len(msg.points)} points, mean: {np.array(points.mean(axis=0))}."
-        )
-
-        marker_pub.publish(marker_array)
-        pub.publish(msg)
-        time.sleep(0.1)
-
-
-if __name__ == "__main__":
-    main()

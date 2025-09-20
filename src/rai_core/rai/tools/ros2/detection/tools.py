@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Type
+from typing import Any, Optional, Type
 
 from pydantic import BaseModel, Field
 
-from rai.tools import timeout
 from rai.tools.ros2.base import BaseROS2Tool
 from rai.tools.ros2.detection.pcl import (
     GrippingPointEstimator,
@@ -33,13 +32,22 @@ class GetGrippingPointToolInput(BaseModel):
 
 
 # TODO(maciejmajek): Configuration system configurable with namespacing
+# TODO(juliajia): Question for Maciej: for comments above on configuration system with namespacing, can you provide an use case for this?
 class GetGrippingPointTool(BaseROS2Tool):
     name: str = "get_gripping_point"
     description: str = "Get gripping points for specified object/objects. Returns 3D coordinates where a robot gripper can grasp the object."
 
-    point_cloud_from_segmentation: PointCloudFromSegmentation
+    target_frame: str
+    source_frame: str
+    camera_topic: str  # rgb camera topic
+    depth_topic: str
+    camera_info_topic: str  # rgb camera info topic
+
     gripping_point_estimator: GrippingPointEstimator
     point_cloud_filter: PointCloudFilter
+
+    # Auto-initialized in model_post_init
+    point_cloud_from_segmentation: Optional[PointCloudFromSegmentation] = None
 
     timeout_sec: float = Field(
         default=10.0, description="Timeout in seconds to get the gripping point"
@@ -47,13 +55,28 @@ class GetGrippingPointTool(BaseROS2Tool):
 
     args_schema: Type[GetGrippingPointToolInput] = GetGrippingPointToolInput
 
-    def _run(self, object_name: str) -> str:
-        @timeout(
-            self.timeout_sec,
-            f"Gripping point detection for object '{object_name}' exceeded {self.timeout_sec} seconds",
+    def model_post_init(self, __context: Any) -> None:
+        """Initialize PointCloudFromSegmentation with the provided camera parameters."""
+        self.point_cloud_from_segmentation = PointCloudFromSegmentation(
+            connector=self.connector,
+            camera_topic=self.camera_topic,
+            depth_topic=self.depth_topic,
+            camera_info_topic=self.camera_info_topic,
+            source_frame=self.source_frame,
+            target_frame=self.target_frame,
         )
+
+    def _run(self, object_name: str) -> str:
+        # this will be not work in agent scenario because signal need to be run in main thread, comment out for now
+        # @timeout(
+        #     self.timeout_sec,
+        #     f"Gripping point detection for object '{object_name}' exceeded {self.timeout_sec} seconds",
+        # )
         def _run_with_timeout():
             pcl = self.point_cloud_from_segmentation.run(object_name)
+            if len(pcl) == 0:
+                return f"No {object_name}s detected."
+
             pcl = self.point_cloud_filter.run(pcl)
             gps = self.gripping_point_estimator.run(pcl)
 
