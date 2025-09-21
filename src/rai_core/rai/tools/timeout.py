@@ -12,7 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import signal
+"""
+Design considerations:
+
+Primary use case:
+- 3D object detection pipeline (image → point cloud → segmentation → gripping points)
+- Timeout long-running ROS2 service calls from agent tools
+
+RAI concurrency model:
+- `multiprocessing`: Process isolation (ROS2 launch)
+- `threading`: Agent execution and callbacks (LangChain agents in worker threads)
+- `asyncio`: Limited ROS2 coordination (LaunchManager)
+
+Timeout implementation:
+- Signal-based (SIGALRM): Only works in main thread, unsuitable for RAI's worker threads
+- ThreadPoolExecutor: Works in any thread, provides clean resource management
+
+Alternatives considered:
+- asyncio.wait_for(): Requires async context, conflicts with sync tool interface
+- threading.Timer: Potential resource leaks, less robust cleanup
+"""
+
+import concurrent.futures
 from functools import wraps
 from typing import Any, Callable, TypeVar
 
@@ -63,23 +84,16 @@ def timeout(seconds: float, timeout_message: str = None) -> Callable[[F], F]:
     def decorator(func: F) -> F:
         @wraps(func)
         def wrapper(*args, **kwargs):
-            def timeout_handler(signum, frame):
-                message = (
-                    timeout_message
-                    or f"Function '{func.__name__}' timed out after {seconds} seconds"
-                )
-                raise TimeoutError(message)
-
-            # Set up timeout
-            old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(int(seconds))
-
-            try:
-                return func(*args, **kwargs)
-            finally:
-                # Clean up timeout
-                signal.alarm(0)
-                signal.signal(signal.SIGALRM, old_handler)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(func, *args, **kwargs)
+                try:
+                    return future.result(timeout=seconds)
+                except concurrent.futures.TimeoutError:
+                    message = (
+                        timeout_message
+                        or f"Function '{func.__name__}' timed out after {seconds} seconds"
+                    )
+                    raise TimeoutError(message)
 
         return wrapper
 
@@ -116,23 +130,16 @@ def timeout_method(seconds: float, timeout_message: str = None) -> Callable[[F],
     def decorator(func: F) -> F:
         @wraps(func)
         def wrapper(self, *args, **kwargs):
-            def timeout_handler(signum, frame):
-                message = (
-                    timeout_message
-                    or f"Method '{func.__name__}' of {self.__class__.__name__} timed out after {seconds} seconds"
-                )
-                raise TimeoutError(message)
-
-            # Set up timeout
-            old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(int(seconds))
-
-            try:
-                return func(self, *args, **kwargs)
-            finally:
-                # Clean up timeout
-                signal.alarm(0)
-                signal.signal(signal.SIGALRM, old_handler)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(func, self, *args, **kwargs)
+                try:
+                    return future.result(timeout=seconds)
+                except concurrent.futures.TimeoutError:
+                    message = (
+                        timeout_message
+                        or f"Method '{func.__name__}' of {self.__class__.__name__} timed out after {seconds} seconds"
+                    )
+                    raise TimeoutError(message)
 
         return wrapper
 

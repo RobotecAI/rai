@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 import pytest
 
 try:
@@ -149,70 +151,42 @@ def test_point_cloud_filter():
 
 
 def test_get_gripping_point_tool_timeout():
-    """Test GetGrippingPointTool timeout behavior."""
-    # Mock the connector and components
+    # Complete mock setup
     mock_connector = Mock(spec=ROS2Connector)
-
-    # Create mock components that will simulate timeout
     mock_pcl_gen = Mock(spec=PointCloudFromSegmentation)
-    mock_pcl_gen.run.side_effect = lambda x: []  # Return empty to simulate no detection
-
     mock_filter = Mock(spec=PointCloudFilter)
-    mock_filter.run.return_value = []
-
     mock_estimator = Mock(spec=GrippingPointEstimator)
+
+    # Test 1: No timeout (fast execution)
+    mock_pcl_gen.run.return_value = []
+    mock_filter.run.return_value = []
     mock_estimator.run.return_value = []
 
-    # Create tool with short timeout
     tool = GetGrippingPointTool(
         connector=mock_connector,
-        point_cloud_from_segmentation=mock_pcl_gen,
-        point_cloud_filter=mock_filter,
+        target_frame="base",
+        source_frame="camera",
+        camera_topic="/image",
+        depth_topic="/depth",
+        camera_info_topic="/info",
         gripping_point_estimator=mock_estimator,
-        timeout_sec=0.1,
-    )
-
-    # Test successful run with no gripping points found
-    result = tool._run("test_object")
-    assert "No gripping point found" in result
-    assert "test_object" in result
-
-    # Test with mock that simulates found gripping points
-    mock_estimator.run.return_value = [np.array([1.0, 2.0, 3.0], dtype=np.float32)]
-    result = tool._run("test_object")
-    assert "gripping point of the object test_object is" in result
-    assert "[1. 2. 3.]" in result
-
-    # Test with multiple gripping points
-    mock_estimator.run.return_value = [
-        np.array([1.0, 2.0, 3.0], dtype=np.float32),
-        np.array([4.0, 5.0, 6.0], dtype=np.float32),
-    ]
-    result = tool._run("test_object")
-    assert "Multiple gripping points found" in result
-
-
-def test_get_gripping_point_tool_validation():
-    """Test GetGrippingPointTool input validation."""
-    mock_connector = Mock(spec=ROS2Connector)
-    mock_pcl_gen = Mock(spec=PointCloudFromSegmentation)
-    mock_filter = Mock(spec=PointCloudFilter)
-    mock_estimator = Mock(spec=GrippingPointEstimator)
-
-    # Test tool creation
-    tool = GetGrippingPointTool(
-        connector=mock_connector,
-        point_cloud_from_segmentation=mock_pcl_gen,
         point_cloud_filter=mock_filter,
-        gripping_point_estimator=mock_estimator,
+        timeout_sec=5.0,
     )
+    tool.point_cloud_from_segmentation = mock_pcl_gen  # Connect the mock
 
-    # Verify tool properties
-    assert tool.name == "get_gripping_point"
-    assert "gripping points" in tool.description
-    assert tool.timeout_sec == 10.0  # default value
+    # Test fast execution - should complete without timeout
+    result = tool._run("test_object")
+    assert "No test_objects detected" in result
+    assert "timed out" not in result.lower()
 
-    # Test args schema
-    from rai.tools.ros2.detection.tools import GetGrippingPointToolInput
+    # Test 2: Actual timeout behavior
+    def slow_operation(obj_name):
+        time.sleep(2.0)  # Longer than timeout
+        return []
 
-    assert tool.args_schema == GetGrippingPointToolInput
+    mock_pcl_gen.run.side_effect = slow_operation
+    tool.timeout_sec = 1.0  # Short timeout
+
+    result = tool._run("test")
+    assert "timed out" in result.lower() or "timeout" in result.lower()

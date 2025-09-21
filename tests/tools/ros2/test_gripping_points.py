@@ -25,6 +25,8 @@ Usage:
 pytest tests/tools/ros2/test_gripping_points.py::test_gripping_points_manipulation_demo -m "" -s -v
 """
 
+import time
+
 import cv2
 import numpy as np
 import pytest
@@ -278,6 +280,8 @@ def main(config_name: str = "manipulation-demo", test_object: str = "cube"):
         filter_config = algo_config["filter"]
         point_cloud_filter = PointCloudFilter(**filter_config)
 
+        start_time = time.time()
+
         # Create the tool
         gripping_tool = GetGrippingPointTool(
             connector=connector,
@@ -288,7 +292,9 @@ def main(config_name: str = "manipulation-demo", test_object: str = "cube"):
             camera_info_topic=config["topics"]["camera_info"],
             gripping_point_estimator=gripping_estimator,
             point_cloud_filter=point_cloud_filter,
+            timeout_sec=15.0,
         )
+        print(f"elapsed time: {time.time() - start_time} seconds")
 
         # Test the tool directly
         print(f"\nTesting GetGrippingPointTool with object '{test_object}'")
@@ -299,6 +305,8 @@ def main(config_name: str = "manipulation-demo", test_object: str = "cube"):
 
         for i, gp in enumerate(gripping_points):
             print(f"  GP{i + 1}: [{gp[0]:.3f}, {gp[1]:.3f}, {gp[2]:.3f}]")
+
+        assert len(gripping_points) > 0, "No gripping points found"
 
         if gripping_points:
             # Call the function in pcl.py to publish the gripping point for visualization
@@ -318,9 +326,6 @@ def main(config_name: str = "manipulation-demo", test_object: str = "cube"):
                 connector, gripping_points, config, annotated_image_path
             )
             print(f"✅ Saved annotated image as '{annotated_image_path}'")
-
-        else:
-            print("❌ No gripping points found")
 
     except Exception as e:
         print(f"❌ Setup failed: {e}")
