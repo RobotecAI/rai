@@ -22,6 +22,7 @@ from rai.tools.ros2.detection.pcl import (
     PointCloudFilter,
     PointCloudFromSegmentation,
 )
+from rai.tools.timeout import TimeoutError, timeout
 
 
 class GetGrippingPointToolInput(BaseModel):
@@ -32,7 +33,6 @@ class GetGrippingPointToolInput(BaseModel):
 
 
 # TODO(maciejmajek): Configuration system configurable with namespacing
-# TODO(juliajia): Question for Maciej: for comments above on configuration system with namespacing, can you provide an use case for this?
 class GetGrippingPointTool(BaseROS2Tool):
     name: str = "get_gripping_point"
     description: str = "Get gripping points for specified object/objects. Returns 3D coordinates where a robot gripper can grasp the object."
@@ -68,10 +68,10 @@ class GetGrippingPointTool(BaseROS2Tool):
 
     def _run(self, object_name: str) -> str:
         # this will be not work in agent scenario because signal need to be run in main thread, comment out for now
-        # @timeout(
-        #     self.timeout_sec,
-        #     f"Gripping point detection for object '{object_name}' exceeded {self.timeout_sec} seconds",
-        # )
+        @timeout(
+            self.timeout_sec,
+            f"Gripping point detection for object '{object_name}' exceeded {self.timeout_sec} seconds",
+        )
         def _run_with_timeout():
             pcl = self.point_cloud_from_segmentation.run(object_name)
             if len(pcl) == 0:
@@ -101,7 +101,7 @@ class GetGrippingPointTool(BaseROS2Tool):
 
         try:
             return _run_with_timeout()
-        except Exception as e:
-            if "timed out" in str(e).lower():
-                return f"Timeout: Gripping point detection for object '{object_name}' exceeded {self.timeout_sec} seconds"
+        except TimeoutError:
+            return f"Timeout: Gripping point detection for object '{object_name}' exceeded {self.timeout_sec} seconds"
+        except Exception:
             raise

@@ -12,4 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .timeout import timeout, timeout_method
+from .timeout import timeout as timeout
+from .timeout import timeout_method as timeout_method
