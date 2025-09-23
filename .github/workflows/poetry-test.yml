@@ -71,4 +71,4 @@ jobs:
         shell: bash
         run: |
           source setup_shell.sh
-          pytest -m "not billable"
+          pytest -m "not billable and not manual"
