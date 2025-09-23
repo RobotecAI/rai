@@ -203,9 +203,9 @@ def main(
 
     if filter_config is None:
         filter_config = {
-            "strategy": "dbscan",
-            "dbscan_eps": 0.02,
-            "dbscan_min_samples": 5,
+            "strategy": "isolation_forest",
+            "if_max_samples": "auto",
+            "if_contamination": 0.05,
         }
 
     services = ["/grounded_sam_segment", "/grounding_dino_classify"]
@@ -240,6 +240,10 @@ def main(
 
         start_time = time.time()
 
+        print(
+            f"\nTesting GetGrippingPointTool with object '{test_object}', strategy '{strategy}'"
+        )
+
         # Create the tool with algorithm configurations
         gripping_tool = GetGrippingPointTool(
             connector=connector,
@@ -247,14 +251,10 @@ def main(
             estimator_config=GrippingPointEstimatorConfig(**estimator_config),
             filter_config=PointCloudFilterConfig(**filter_config),
         )
-        print(f"elapsed time: {time.time() - start_time} seconds")
-
-        # Test the tool directly
-        print(
-            f"\nTesting GetGrippingPointTool with object '{test_object}', strategy '{strategy}'"
-        )
 
         result = gripping_tool._run(test_object)
+        print(f"elapsed time: {time.time() - start_time} seconds")
+
         gripping_points = extract_gripping_points(result)
         print(f"\nFound {len(gripping_points)} gripping points in target frame:")
 
@@ -268,11 +268,13 @@ def main(
             segmented_clouds = gripping_tool.point_cloud_from_segmentation.run(
                 test_object
             )
+            filtered_clouds = gripping_tool.point_cloud_filter.run(segmented_clouds)
+
             print(
                 "\nPublishing debug data to /debug_gripping_points_pointcloud and /debug_gripping_points_markerarray"
             )
             _publish_gripping_point_debug_data(
-                connector, segmented_clouds, gripping_points, frames["target"]
+                connector, filtered_clouds, gripping_points, frames["target"]
             )
             print("✅ Debug data published")
 
@@ -327,8 +329,8 @@ def test_gripping_points_maciej_demo(strategy):
             "distance_threshold_m": 0.008,
         },
         filter_config={
-            "strategy": "dbscan",
-            "dbscan_eps": 0.02,
-            "dbscan_min_samples": 10,
+            "strategy": "isolation_forest",
+            "if_max_samples": "auto",
+            "if_contamination": 0.05,
         },
     )
