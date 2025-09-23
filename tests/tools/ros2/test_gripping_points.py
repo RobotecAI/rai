@@ -22,7 +22,7 @@ Manual test for GetGrippingPointTool with various demo scenarios. Each test:
 The demo app and rivz2 need to be started before running the test. The test will fail if the gripping points are not found.
 
 Usage:
-pytest tests/tools/ros2/test_gripping_points.py::test_gripping_points_manipulation_demo -m "" -s -v
+pytest tests/tools/ros2/test_gripping_points.py::test_gripping_points_manipulation_demo -m "manual" -s -v --strategy <strategy>
 """
 
 import time
@@ -246,13 +246,8 @@ def save_annotated_image(
     cv2.imwrite(filename, annotated_image)
 
 
-def main(config_name: str = "manipulation-demo", test_object: str = "cube"):
+def main(config: dict, test_object: str = "cube", strategy: str = None):
     """Enhanced test with visualization and better error handling."""
-
-    # Get test configuration
-    config = TEST_CONFIGS[config_name]
-
-    print(f"Config: {config_name}")
 
     # Initialize ROS2
     rclpy.init()
@@ -273,7 +268,9 @@ def main(config_name: str = "manipulation-demo", test_object: str = "cube"):
         algo_config = config["algorithms"]
 
         # Create gripping estimator with strategy-specific parameters
-        estimator_config = algo_config["estimator"]
+        estimator_config = algo_config["estimator"].copy()
+        if strategy:
+            estimator_config["strategy"] = strategy
         gripping_estimator = GrippingPointEstimator(**estimator_config)
 
         # Create point cloud filter
@@ -297,7 +294,9 @@ def main(config_name: str = "manipulation-demo", test_object: str = "cube"):
         print(f"elapsed time: {time.time() - start_time} seconds")
 
         # Test the tool directly
-        print(f"\nTesting GetGrippingPointTool with object '{test_object}'")
+        print(
+            f"\nTesting GetGrippingPointTool with object '{test_object}', strategy '{strategy}'"
+        )
 
         result = gripping_tool._run(test_object)
         gripping_points = extract_gripping_points(result)
@@ -321,7 +320,7 @@ def main(config_name: str = "manipulation-demo", test_object: str = "cube"):
             )
             print("✅ Debug data published")
 
-            annotated_image_path = f"{test_object}_gripping_points.jpg"
+            annotated_image_path = f"{test_object}_{strategy}_gripping_points.jpg"
             save_annotated_image(
                 connector, gripping_points, config, annotated_image_path
             )
@@ -340,12 +339,14 @@ def main(config_name: str = "manipulation-demo", test_object: str = "cube"):
 
 
 @pytest.mark.manual
-def test_gripping_points_manipulation_demo():
+def test_gripping_points_manipulation_demo(strategy):
     """Manual test requiring manipulation-demo app to be started."""
-    main("manipulation-demo", "apple")
+    config = TEST_CONFIGS["manipulation-demo"]
+    main(config, "cube", strategy)
 
 
 @pytest.mark.manual
-def test_gripping_points_maciej_demo():
+def test_gripping_points_maciej_demo(strategy):
     """Manual test requiring demo app to be started."""
-    main("maciej-test-demo", "box")
+    config = TEST_CONFIGS["maciej-test-demo"]
+    main(config, "box", strategy)
