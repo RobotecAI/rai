@@ -30,8 +30,11 @@ from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2.detection import GetGrippingPointTool
 from rai.tools.ros2.detection.pcl import (
     GrippingPointEstimator,
+    GrippingPointEstimatorConfig,
     PointCloudFilter,
+    PointCloudFilterConfig,
     PointCloudFromSegmentation,
+    PointCloudFromSegmentationConfig,
     depth_to_point_cloud,
 )
 
@@ -92,7 +95,9 @@ def test_gripping_point_estimator():
     segmented_clouds = [points1, points2]
 
     # Test centroid strategy
-    estimator = GrippingPointEstimator(strategy="centroid")
+    estimator = GrippingPointEstimator(
+        config=GrippingPointEstimatorConfig(strategy="centroid")
+    )
     grip_points = estimator.run(segmented_clouds)
 
     assert len(grip_points) == 2
@@ -101,7 +106,9 @@ def test_gripping_point_estimator():
     np.testing.assert_array_almost_equal(grip_points[0], expected_centroid1)
 
     # Test top_plane strategy
-    estimator_top = GrippingPointEstimator(strategy="top_plane", top_percentile=0.5)
+    estimator_top = GrippingPointEstimator(
+        config=GrippingPointEstimatorConfig(strategy="top_plane", top_percentile=0.5)
+    )
     grip_points_top = estimator_top.run(segmented_clouds)
 
     assert len(grip_points_top) == 2
@@ -125,7 +132,9 @@ def test_point_cloud_filter():
 
     # Test DBSCAN filtering
     filter_dbscan = PointCloudFilter(
-        strategy="dbscan", dbscan_eps=0.5, dbscan_min_samples=5
+        config=PointCloudFilterConfig(
+            strategy="dbscan", dbscan_eps=0.5, dbscan_min_samples=5
+        )
     )
     filtered_dbscan = filter_dbscan.run(clouds)
 
@@ -136,14 +145,18 @@ def test_point_cloud_filter():
 
     # Test with too few points (should return original)
     small_cloud = np.array([[1, 1, 1], [2, 2, 2]], dtype=np.float32)
-    filter_small = PointCloudFilter(strategy="dbscan", min_points=20)
+    filter_small = PointCloudFilter(
+        config=PointCloudFilterConfig(strategy="dbscan", min_points=20)
+    )
     filtered_small = filter_small.run([small_cloud])
 
     assert len(filtered_small) == 1
     np.testing.assert_array_equal(filtered_small[0], small_cloud)
 
     # Test kmeans_largest_cluster strategy
-    filter_kmeans = PointCloudFilter(strategy="kmeans_largest_cluster", kmeans_k=2)
+    filter_kmeans = PointCloudFilter(
+        config=PointCloudFilterConfig(strategy="kmeans_largest_cluster", kmeans_k=2)
+    )
     filtered_kmeans = filter_kmeans.run(clouds)
 
     assert len(filtered_kmeans) == 1
@@ -164,15 +177,14 @@ def test_get_gripping_point_tool_timeout():
 
     tool = GetGrippingPointTool(
         connector=mock_connector,
-        target_frame="base",
-        source_frame="camera",
-        camera_topic="/image",
-        depth_topic="/depth",
-        camera_info_topic="/info",
-        gripping_point_estimator=mock_estimator,
-        point_cloud_filter=mock_filter,
-        timeout_sec=5.0,
+        segmentation_config=PointCloudFromSegmentationConfig(),
+        estimator_config=GrippingPointEstimatorConfig(),
+        filter_config=PointCloudFilterConfig(),
     )
+    # Mock the initialized components
+    tool.gripping_point_estimator = mock_estimator
+    tool.point_cloud_filter = mock_filter
+    tool.timeout_sec = 5.0
     tool.point_cloud_from_segmentation = mock_pcl_gen  # Connect the mock
 
     # Test fast execution - should complete without timeout
