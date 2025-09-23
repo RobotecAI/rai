@@ -17,6 +17,7 @@ from typing import List, Literal, Optional, cast
 import numpy as np
 import sensor_msgs.msg
 from numpy.typing import NDArray
+from pydantic import BaseModel
 from rai_open_set_vision import GDINO_SERVICE_NAME
 from rclpy import Future
 from rclpy.exceptions import (
@@ -30,6 +31,38 @@ from rai.communication.ros2.api import (
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.communication.ros2.ros_async import get_future_result
 from rai_interfaces.srv import RAIGroundedSam, RAIGroundingDino
+
+
+class PointCloudFromSegmentationConfig(BaseModel):
+    box_threshold: float = 0.35
+    text_threshold: float = 0.45
+
+
+class GrippingPointEstimatorConfig(BaseModel):
+    strategy: Literal["centroid", "top_plane", "biggest_plane"] = "centroid"
+    top_percentile: float = 0.05
+    plane_bin_size_m: float = 0.01
+    ransac_iterations: int = 200
+    distance_threshold_m: float = 0.01
+    min_points: int = 10
+
+
+class PointCloudFilterConfig(BaseModel):
+    strategy: Literal["dbscan", "kmeans_largest_cluster", "isolation_forest", "lof"] = (
+        "dbscan"
+    )
+    min_points: int = 20
+    # DBSCAN
+    dbscan_eps: float = 0.02
+    dbscan_min_samples: int = 10
+    # KMeans
+    kmeans_k: int = 2
+    # Isolation Forest
+    if_max_samples: int | float | Literal["auto"] = "auto"
+    if_contamination: float = 0.05
+    # LOF
+    lof_n_neighbors: int = 20
+    lof_contamination: float = 0.05
 
 
 def depth_to_point_cloud(
@@ -125,16 +158,6 @@ class PointCloudFromSegmentation:
     get an Nx3 numpy array of points [X, Y, Z] expressed in the target frame.
     """
 
-    connector: ROS2Connector
-    camera_topic: str
-    depth_topic: str
-    camera_info_topic: str
-    source_frame: str
-    target_frame: str
-
-    box_threshold: float = 0.35
-    text_threshold: float = 0.45
-
     def __init__(
         self,
         *,
@@ -144,8 +167,7 @@ class PointCloudFromSegmentation:
         camera_info_topic: str,
         source_frame: str,
         target_frame: str,
-        box_threshold: float = 0.35,
-        text_threshold: float = 0.45,
+        config: PointCloudFromSegmentationConfig,
     ) -> None:
         self.connector = connector
         self.camera_topic = camera_topic
@@ -153,8 +175,7 @@ class PointCloudFromSegmentation:
         self.camera_info_topic = camera_info_topic
         self.source_frame = source_frame
         self.target_frame = target_frame
-        self.box_threshold = box_threshold
-        self.text_threshold = text_threshold
+        self.config = config
 
     # --------------------- ROS helpers ---------------------
     def _get_image_message(self, topic: str) -> sensor_msgs.msg.Image:
@@ -194,8 +215,8 @@ class PointCloudFromSegmentation:
         req = RAIGroundingDino.Request()
         req.source_img = camera_img_message
         req.classes = object_name
-        req.box_threshold = self.box_threshold
-        req.text_threshold = self.text_threshold
+        req.box_threshold = self.config.box_threshold
+        req.text_threshold = self.config.text_threshold
         return cli.call_async(req)
 
     def _call_gsam_node(
@@ -330,29 +351,8 @@ class GrippingPointEstimator:
       - "biggest_plane": centroid of the most populated horizontal plane bin (RANSAC-free)
     """
 
-    strategy: Literal["centroid", "top_plane", "biggest_plane"]
-    top_percentile: float
-    plane_bin_size_m: float
-    ransac_iterations: int
-    distance_threshold_m: float
-    min_points: int
-
-    def __init__(
-        self,
-        *,
-        strategy: Literal["centroid", "top_plane", "biggest_plane"] = "centroid",
-        top_percentile: float = 0.05,
-        plane_bin_size_m: float = 0.01,
-        ransac_iterations: int = 200,
-        distance_threshold_m: float = 0.01,
-        min_points: int = 10,
-    ) -> None:
-        self.strategy = strategy
-        self.top_percentile = top_percentile
-        self.plane_bin_size_m = plane_bin_size_m
-        self.ransac_iterations = int(max(1, ransac_iterations))
-        self.distance_threshold_m = float(max(1e-6, distance_threshold_m))
-        self.min_points = min_points
+    def __init__(self, config: GrippingPointEstimatorConfig) -> None:
+        self.config = config
 
     def _centroid(self, points: NDArray[np.float32]) -> Optional[NDArray[np.float32]]:
         if points.size == 0:
@@ -362,10 +362,10 @@ class GrippingPointEstimator:
     def _top_plane_centroid(
         self, points: NDArray[np.float32]
     ) -> Optional[NDArray[np.float32]]:
-        if points.shape[0] < self.min_points:
+        if points.shape[0] < self.config.min_points:
             return self._centroid(points)
         z_vals = points[:, 2]
-        threshold = np.quantile(z_vals, 1.0 - self.top_percentile)
+        threshold = np.quantile(z_vals, 1.0 - self.config.top_percentile)
         mask = z_vals >= threshold
         top_points = points[mask]
         if top_points.shape[0] == 0:
@@ -377,7 +377,7 @@ class GrippingPointEstimator:
     ) -> Optional[NDArray[np.float32]]:
         # RANSAC plane detection: not restricted to horizontal planes
         num_points = points.shape[0]
-        if num_points < self.min_points:
+        if num_points < self.config.min_points:
             return self._centroid(points)
 
         best_inlier_count = 0
@@ -385,11 +385,11 @@ class GrippingPointEstimator:
 
         # Precompute for speed
         pts64 = points.astype(np.float64, copy=False)
-        threshold = float(self.distance_threshold_m)
+        threshold = float(self.config.distance_threshold_m)
 
         rng = np.random.default_rng()
 
-        for _ in range(self.ransac_iterations):
+        for _ in range(self.config.ransac_iterations):
             # Sample 3 unique points
             idxs = rng.choice(num_points, size=3, replace=False)
             p0, p1, p2 = pts64[idxs[0]], pts64[idxs[1]], pts64[idxs[2]]
@@ -410,7 +410,7 @@ class GrippingPointEstimator:
                 best_inlier_count = count
                 best_inlier_mask = inliers
 
-        if best_inlier_mask is None or best_inlier_count < self.min_points:
+        if best_inlier_mask is None or best_inlier_count < self.config.min_points:
             return self._centroid(points)
 
         inlier_points = points[best_inlier_mask]
@@ -436,11 +436,11 @@ class GrippingPointEstimator:
         for pts in segmented_point_clouds:
             if pts.size == 0:
                 continue
-            if self.strategy == "centroid":
+            if self.config.strategy == "centroid":
                 gp = self._centroid(pts)
-            elif self.strategy == "top_plane":
+            elif self.config.strategy == "top_plane":
                 gp = self._top_plane_centroid(pts)
-            elif self.strategy == "biggest_plane":
+            elif self.config.strategy == "biggest_plane":
                 gp = self._biggest_plane_centroid(pts)
             else:
                 gp = self._centroid(pts)
@@ -461,51 +461,17 @@ class PointCloudFilter:
       - "lof": keep inliers (pred == 1)
     """
 
-    strategy: Literal["dbscan", "kmeans_largest_cluster", "isolation_forest", "lof"]
-    min_points: int
-    # DBSCAN
-    dbscan_eps: float
-    dbscan_min_samples: int
-    # KMeans
-    kmeans_k: int
-    # Isolation Forest
-    if_max_samples: int | float | Literal["auto"]
-    if_contamination: float
-    # LOF
-    lof_n_neighbors: int
-    lof_contamination: float
-
-    def __init__(
-        self,
-        *,
-        strategy: Literal[
-            "dbscan", "kmeans_largest_cluster", "isolation_forest", "lof"
-        ] = "dbscan",
-        min_points: int = 20,
-        dbscan_eps: float = 0.02,
-        dbscan_min_samples: int = 10,
-        kmeans_k: int = 2,
-        if_max_samples: int | float | Literal["auto"] = "auto",
-        if_contamination: float = 0.05,
-        lof_n_neighbors: int = 20,
-        lof_contamination: float = 0.05,
-    ) -> None:
-        self.strategy = strategy
-        self.min_points = min_points
-        self.dbscan_eps = dbscan_eps
-        self.dbscan_min_samples = dbscan_min_samples
-        self.kmeans_k = kmeans_k
-        self.if_max_samples = if_max_samples
-        self.if_contamination = if_contamination
-        self.lof_n_neighbors = lof_n_neighbors
-        self.lof_contamination = lof_contamination
+    def __init__(self, config: PointCloudFilterConfig) -> None:
+        self.config = config
 
     def _filter_dbscan(self, pts: NDArray[np.float32]) -> NDArray[np.float32]:
         from sklearn.cluster import DBSCAN  # type: ignore[reportMissingImports]
 
-        if pts.shape[0] < self.min_points:
+        if pts.shape[0] < self.config.min_points:
             return pts
-        db = DBSCAN(eps=self.dbscan_eps, min_samples=self.dbscan_min_samples)
+        db = DBSCAN(
+            eps=self.config.dbscan_eps, min_samples=self.config.dbscan_min_samples
+        )
         labels = cast(NDArray[np.int64], db.fit_predict(pts))  # type: ignore[no-any-return]
         if labels.size == 0:
             return pts
@@ -521,9 +487,9 @@ class PointCloudFilter:
     def _filter_kmeans_largest(self, pts: NDArray[np.float32]) -> NDArray[np.float32]:
         from sklearn.cluster import KMeans  # type: ignore[reportMissingImports]
 
-        if pts.shape[0] < max(self.min_points, self.kmeans_k):
+        if pts.shape[0] < max(self.config.min_points, self.config.kmeans_k):
             return pts
-        kmeans = KMeans(n_clusters=self.kmeans_k, n_init="auto")
+        kmeans = KMeans(n_clusters=self.config.kmeans_k, n_init="auto")
         labels = cast(NDArray[np.int64], kmeans.fit_predict(pts))  # type: ignore[no-any-return]
         unique_labels, counts = np.unique(labels, return_counts=True)
         dominant = unique_labels[np.argmax(counts)]
@@ -535,11 +501,11 @@ class PointCloudFilter:
             IsolationForest,  # type: ignore[reportMissingImports]
         )
 
-        if pts.shape[0] < self.min_points:
+        if pts.shape[0] < self.config.min_points:
             return pts
         iso = IsolationForest(
-            max_samples=self.if_max_samples,
-            contamination=self.if_contamination,
+            max_samples=self.config.if_max_samples,
+            contamination=self.config.if_contamination,
             random_state=42,
         )
         pred = cast(NDArray[np.int64], iso.fit_predict(pts))  # type: ignore[no-any-return]  # 1 inlier, -1 outlier
@@ -553,10 +519,11 @@ class PointCloudFilter:
             LocalOutlierFactor,  # type: ignore[reportMissingImports]
         )
 
-        if pts.shape[0] < max(self.min_points, self.lof_n_neighbors + 1):
+        if pts.shape[0] < max(self.config.min_points, self.config.lof_n_neighbors + 1):
             return pts
         lof = LocalOutlierFactor(
-            n_neighbors=self.lof_n_neighbors, contamination=self.lof_contamination
+            n_neighbors=self.config.lof_n_neighbors,
+            contamination=self.config.lof_contamination,
         )
         pred = cast(NDArray[np.int64], lof.fit_predict(pts))  # type: ignore[no-any-return]  # 1 inlier, -1 outlier
         mask = pred == 1
@@ -571,13 +538,13 @@ class PointCloudFilter:
         for pts in segmented_point_clouds:
             if pts.size == 0:
                 continue
-            if self.strategy == "dbscan":
+            if self.config.strategy == "dbscan":
                 f = self._filter_dbscan(pts)
-            elif self.strategy == "kmeans_largest_cluster":
+            elif self.config.strategy == "kmeans_largest_cluster":
                 f = self._filter_kmeans_largest(pts)
-            elif self.strategy == "isolation_forest":
+            elif self.config.strategy == "isolation_forest":
                 f = self._filter_isolation_forest(pts)
-            elif self.strategy == "lof":
+            elif self.config.strategy == "lof":
                 f = self._filter_lof(pts)
             else:
                 f = pts

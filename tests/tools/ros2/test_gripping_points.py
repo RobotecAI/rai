@@ -31,90 +31,17 @@ import cv2
 import numpy as np
 import pytest
 import rclpy
+import rclpy.parameter
 from cv_bridge import CvBridge
 from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2.detection import GetGrippingPointTool
 from rai.tools.ros2.detection.pcl import (
-    GrippingPointEstimator,
-    PointCloudFilter,
+    GrippingPointEstimatorConfig,
+    PointCloudFilterConfig,
+    PointCloudFromSegmentationConfig,
     _publish_gripping_point_debug_data,
 )
-
-# Test configurations
-TEST_CONFIGS = {
-    "manipulation-demo": {
-        "services": ["/grounded_sam_segment", "/grounding_dino_classify"],
-        "topics": {
-            "color_image": "/color_image5",
-            "depth_image": "/depth_image5",
-            "camera_info": "/color_camera_info5",
-        },
-        "frames": {"target": "panda_link0", "source": "RGBDCamera5"},
-        "algorithms": {
-            "filter": {
-                "strategy": "dbscan",
-                "dbscan_eps": 0.02,
-                "dbscan_min_samples": 5,
-            },
-            "estimator": {"strategy": "centroid"},
-        },
-    },
-    "maciej-test-demo": {
-        "services": ["/grounded_sam_segment", "/grounding_dino_classify"],
-        "topics": {
-            "color_image": "/rgbd_camera/camera_image_color",
-            "depth_image": "/rgbd_camera/camera_image_depth",
-            "camera_info": "/rgbd_camera/camera_info",
-        },
-        "frames": {
-            "target": "egoarm_base_link",
-            "source": "egofront_rgbd_camera_depth_optical_frame",
-        },
-        "algorithms": {
-            "filter": {
-                "strategy": "dbscan",
-                "dbscan_eps": 0.02,
-                "dbscan_min_samples": 10,
-            },
-            "estimator": {
-                "strategy": "biggest_plane",
-                "ransac_iterations": 400,
-                "distance_threshold_m": 0.008,
-            },
-        },
-    },
-    "dummy-example-with-default-algorithm-parameters": {
-        "services": ["/grounded_sam_segment", "/grounding_dino_classify"],
-        "topics": {
-            "color_image": "/color_image5",
-            "depth_image": "/depth_image5",
-            "camera_info": "/color_camera_info5",
-        },
-        "frames": {"target": "panda_link0", "source": "RGBDCamera5"},
-        "algorithms": {
-            "filter": {
-                "strategy": "dbscan",
-                "min_points": 100,
-                "dbscan_eps": 0.02,
-                "dbscan_min_samples": 5,
-                "kmeans_k": 3,
-                "if_max_samples": 100,
-                "if_contamination": 0.1,
-                "lof_n_neighbors": 20,
-                "lof_contamination": 0.1,
-            },
-            "estimator": {
-                "strategy": "centroid",
-                "top_percentile": 0.8,
-                "plane_bin_size_m": 0.01,
-                "ransac_iterations": 100,
-                "distance_threshold_m": 0.01,
-                "min_points": 10,
-            },
-        },
-    },
-}
 
 
 def draw_points_on_image(image_msg, points, camera_info):
@@ -225,18 +152,24 @@ def transform_points_to_target_frame(connector, points, source_frame, target_fra
 
 
 def save_annotated_image(
-    connector, gripping_points, config, filename: str = "gripping_points_annotated.jpg"
+    connector,
+    gripping_points,
+    camera_topic,
+    camera_info_topic,
+    source_frame,
+    target_frame,
+    filename: str = "gripping_points_annotated.jpg",
 ):
     camera_frame_points = transform_points_to_target_frame(
         connector,
         gripping_points,
-        config["frames"]["source"],
-        config["frames"]["target"],
+        source_frame,
+        target_frame,
     )
 
     # Get current camera image and draw points
-    image_msg = connector.receive_message(config["topics"]["color_image"]).payload
-    camera_info_msg = connector.receive_message(config["topics"]["camera_info"]).payload
+    image_msg = connector.receive_message(camera_topic).payload
+    camera_info_msg = connector.receive_message(camera_info_topic).payload
 
     # Draw gripping points on image
     annotated_image = draw_points_on_image(
@@ -246,8 +179,36 @@ def save_annotated_image(
     cv2.imwrite(filename, annotated_image)
 
 
-def main(config: dict, test_object: str = "cube", strategy: str = None):
-    """Enhanced test with visualization and better error handling."""
+def main(
+    test_object: str = "cube",
+    strategy: str = "centroid",
+    topics: dict = None,
+    frames: dict = None,
+    estimator_config: dict = None,
+    filter_config: dict = None,
+):
+    # Default configuration for manipulation-demo
+    if topics is None:
+        topics = {
+            "camera": "/color_image5",
+            "depth": "/depth_image5",
+            "camera_info": "/color_camera_info5",
+        }
+
+    if frames is None:
+        frames = {"target": "panda_link0", "source": "RGBDCamera5"}
+
+    if estimator_config is None:
+        estimator_config = {"strategy": strategy}
+
+    if filter_config is None:
+        filter_config = {
+            "strategy": "dbscan",
+            "dbscan_eps": 0.02,
+            "dbscan_min_samples": 5,
+        }
+
+    services = ["/grounded_sam_segment", "/grounding_dino_classify"]
 
     # Initialize ROS2
     rclpy.init()
@@ -256,40 +217,35 @@ def main(config: dict, test_object: str = "cube", strategy: str = None):
     try:
         # Wait for required services and topics
         print("Waiting for ROS2 services and topics...")
-        wait_for_ros2_services(connector, config["services"])
-        wait_for_ros2_topics(connector, list(config["topics"].values()))
+        wait_for_ros2_services(connector, services)
+        wait_for_ros2_topics(connector, list(topics.values()))
         print("✅ All services and topics available")
 
         # Set up node parameters
         node = connector.node
-        node.declare_parameter("conversion_ratio", 1.0)
 
-        # Create tool components
-        algo_config = config["algorithms"]
+        # Declare and set ROS2 parameters for deployment configuration
+        parameters_to_set = [
+            ("conversion_ratio", 1.0),
+            ("detection_tools.gripping_point.target_frame", frames["target"]),
+            ("detection_tools.gripping_point.source_frame", frames["source"]),
+            ("detection_tools.gripping_point.camera_topic", topics["camera"]),
+            ("detection_tools.gripping_point.depth_topic", topics["depth"]),
+            ("detection_tools.gripping_point.camera_info_topic", topics["camera_info"]),
+        ]
 
-        # Create gripping estimator with strategy-specific parameters
-        estimator_config = algo_config["estimator"].copy()
-        if strategy:
-            estimator_config["strategy"] = strategy
-        gripping_estimator = GrippingPointEstimator(**estimator_config)
-
-        # Create point cloud filter
-        filter_config = algo_config["filter"]
-        point_cloud_filter = PointCloudFilter(**filter_config)
+        # Declare and set each parameter
+        for param_name, param_value in parameters_to_set:
+            node.declare_parameter(param_name, param_value)
 
         start_time = time.time()
 
-        # Create the tool
+        # Create the tool with algorithm configurations
         gripping_tool = GetGrippingPointTool(
             connector=connector,
-            target_frame=config["frames"]["target"],
-            source_frame=config["frames"]["source"],
-            camera_topic=config["topics"]["color_image"],
-            depth_topic=config["topics"]["depth_image"],
-            camera_info_topic=config["topics"]["camera_info"],
-            gripping_point_estimator=gripping_estimator,
-            point_cloud_filter=point_cloud_filter,
-            timeout_sec=15.0,
+            segmentation_config=PointCloudFromSegmentationConfig(),
+            estimator_config=GrippingPointEstimatorConfig(**estimator_config),
+            filter_config=PointCloudFilterConfig(**filter_config),
         )
         print(f"elapsed time: {time.time() - start_time} seconds")
 
@@ -316,13 +272,19 @@ def main(config: dict, test_object: str = "cube", strategy: str = None):
                 "\nPublishing debug data to /debug_gripping_points_pointcloud and /debug_gripping_points_markerarray"
             )
             _publish_gripping_point_debug_data(
-                connector, segmented_clouds, gripping_points, config["frames"]["target"]
+                connector, segmented_clouds, gripping_points, frames["target"]
             )
             print("✅ Debug data published")
 
             annotated_image_path = f"{test_object}_{strategy}_gripping_points.jpg"
             save_annotated_image(
-                connector, gripping_points, config, annotated_image_path
+                connector,
+                gripping_points,
+                topics["camera"],
+                topics["camera_info"],
+                frames["source"],
+                frames["target"],
+                annotated_image_path,
             )
             print(f"✅ Saved annotated image as '{annotated_image_path}'")
 
@@ -341,12 +303,32 @@ def main(config: dict, test_object: str = "cube", strategy: str = None):
 @pytest.mark.manual
 def test_gripping_points_manipulation_demo(strategy):
     """Manual test requiring manipulation-demo app to be started."""
-    config = TEST_CONFIGS["manipulation-demo"]
-    main(config, "cube", strategy)
+    main("cube", strategy)
 
 
 @pytest.mark.manual
 def test_gripping_points_maciej_demo(strategy):
     """Manual test requiring demo app to be started."""
-    config = TEST_CONFIGS["maciej-test-demo"]
-    main(config, "box", strategy)
+    main(
+        test_object="box",
+        strategy=strategy,
+        topics={
+            "camera": "/rgbd_camera/camera_image_color",
+            "depth": "/rgbd_camera/camera_image_depth",
+            "camera_info": "/rgbd_camera/camera_info",
+        },
+        frames={
+            "target": "egoarm_base_link",
+            "source": "egofront_rgbd_camera_depth_optical_frame",
+        },
+        estimator_config={
+            "strategy": strategy or "biggest_plane",
+            "ransac_iterations": 400,
+            "distance_threshold_m": 0.008,
+        },
+        filter_config={
+            "strategy": "dbscan",
+            "dbscan_eps": 0.02,
+            "dbscan_min_samples": 10,
+        },
+    )
