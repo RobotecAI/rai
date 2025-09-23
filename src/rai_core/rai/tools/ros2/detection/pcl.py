@@ -49,7 +49,7 @@ class GrippingPointEstimatorConfig(BaseModel):
 
 class PointCloudFilterConfig(BaseModel):
     strategy: Literal["dbscan", "kmeans_largest_cluster", "isolation_forest", "lof"] = (
-        "dbscan"
+        "isolation_forest"
     )
     min_points: int = 20
     # DBSCAN
