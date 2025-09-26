@@ -40,8 +40,8 @@ from typing import Any, Callable, TypeVar
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-class TimeoutError(Exception):
-    """Raised when an operation times out."""
+class RaiTimeoutError(Exception):
+    """Custom timeout exception for RAI tools"""
 
     pass
 
@@ -93,7 +93,7 @@ def timeout(seconds: float, timeout_message: str = None) -> Callable[[F], F]:
                         timeout_message
                         or f"Function '{func.__name__}' timed out after {seconds} seconds"
                     )
-                    raise TimeoutError(message)
+                    raise RaiTimeoutError(message)
 
         return wrapper
 
@@ -139,7 +139,7 @@ def timeout_method(seconds: float, timeout_message: str = None) -> Callable[[F],
                         timeout_message
                         or f"Method '{func.__name__}' of {self.__class__.__name__} timed out after {seconds} seconds"
                     )
-                    raise TimeoutError(message)
+                    raise RaiTimeoutError(message)
 
         return wrapper
 

@@ -291,26 +291,8 @@ class GetGrabbingPointTool(BaseTool):
             masked_depth_image, intrinsic[0], intrinsic[1], intrinsic[2], intrinsic[3]
         )
 
+        # TODO: Filter out outliers
         points = pcd
-        # publish resulting pointcloud
-        # TODO(juliajia): remove this after debugging
-        # import time
-
-        # from geometry_msgs.msg import Point32
-        # from sensor_msgs.msg import PointCloud
-
-        # msg = PointCloud()
-        # msg.header.frame_id = "egofront_rgbd_camera_depth_optical_frame"
-        # msg.points = [Point32(x=p[0], y=p[1], z=p[2]) for p in points]
-        # pub = self.connector.node.create_publisher(
-        #     PointCloud, "/debug/get_grabbing_point_pointcloud", 10
-        # )
-        # while True:
-        #     self.connector.node.get_logger().info(
-        #         f"publishing pointcloud to /debug/get_grabbing_point_pointcloud: {len(msg.points)} points, mean: {np.array(points.mean(axis=0))}."
-        #     )
-        #     pub.publish(msg)
-        #     time.sleep(0.1)
 
         # https://github.com/ycheng517/tabletop-handybot/blob/6d401e577e41ea86529d091b406fbfc936f37a8d/tabletop_handybot/tabletop_handybot/tabletop_handybot_node.py#L413-L424
         grasp_z = points[:, 2].max()

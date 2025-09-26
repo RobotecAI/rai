@@ -26,6 +26,7 @@ pytest tests/tools/ros2/test_gripping_points.py::test_gripping_points_manipulati
 """
 
 import time
+from typing import List
 
 import cv2
 import numpy as np
@@ -35,13 +36,15 @@ import rclpy.parameter
 from cv_bridge import CvBridge
 from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
-from rai.tools.ros2.detection import GetGrippingPointTool
-from rai.tools.ros2.detection.pcl import (
+from rai_open_set_vision import (
+    GetGrippingPointTool,
     GrippingPointEstimatorConfig,
     PointCloudFilterConfig,
     PointCloudFromSegmentationConfig,
-    _publish_gripping_point_debug_data,
 )
+
+# import internal tool
+from rai_open_set_vision.tools.pcl_detection import _publish_gripping_point_debug_data
 
 
 def draw_points_on_image(image_msg, points, camera_info):
@@ -86,20 +89,9 @@ def draw_points_on_image(image_msg, points, camera_info):
     return cv_image
 
 
-def extract_gripping_points(result: str) -> list[np.ndarray]:
-    """Extract gripping points from the result."""
-    gripping_points = []
-    lines = result.split("\n")
-    for line in lines:
-        if "gripping point" in line and "is [" in line:
-            # Extract coordinates from line like "is [0.39972728 0.16179778 0.04179673]"
-            start = line.find("[") + 1
-            end = line.find("]")
-            if start > 0 and end > start:
-                coords_str = line[start:end]
-                coords = [float(x) for x in coords_str.split()]
-                gripping_points.append(np.array(coords))
-    return gripping_points
+def extract_gripping_points(result: List[np.ndarray]) -> list[np.ndarray]:
+    """Extract gripping points from the result - now returns raw points directly."""
+    return result
 
 
 def transform_points_to_target_frame(connector, points, source_frame, target_frame):
@@ -221,22 +213,9 @@ def main(
         wait_for_ros2_topics(connector, list(topics.values()))
         print("✅ All services and topics available")
 
-        # Set up node parameters
+        # Set up conversion ratio parameter
         node = connector.node
-
-        # Declare and set ROS2 parameters for deployment configuration
-        parameters_to_set = [
-            ("conversion_ratio", 1.0),
-            ("detection_tools.gripping_point.target_frame", frames["target"]),
-            ("detection_tools.gripping_point.source_frame", frames["source"]),
-            ("detection_tools.gripping_point.camera_topic", topics["camera"]),
-            ("detection_tools.gripping_point.depth_topic", topics["depth"]),
-            ("detection_tools.gripping_point.camera_info_topic", topics["camera_info"]),
-        ]
-
-        # Declare and set each parameter
-        for param_name, param_value in parameters_to_set:
-            node.declare_parameter(param_name, param_value)
+        node.declare_parameter("conversion_ratio", 1.0)
 
         start_time = time.time()
 
@@ -255,7 +234,8 @@ def main(
         result = gripping_tool._run(test_object)
         print(f"elapsed time: {time.time() - start_time} seconds")
 
-        gripping_points = extract_gripping_points(result)
+        # result is now a list of numpy arrays directly
+        gripping_points = result
         print(f"\nFound {len(gripping_points)} gripping points in target frame:")
 
         for i, gp in enumerate(gripping_points):
