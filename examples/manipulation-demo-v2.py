@@ -24,17 +24,18 @@ from rai import get_llm_model
 from rai.agents.langchain.core import create_conversational_agent
 from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
-from rai.tools.ros2.detection.pcl import (
-    GrippingPointEstimatorConfig,
-    PointCloudFilterConfig,
-    PointCloudFromSegmentationConfig,
-)
-from rai.tools.ros2.detection.tools import GetGrippingPointTool
 from rai.tools.ros2.manipulation import (
+    GetObjectGrippingPointsTool,
     MoveObjectFromToTool,
     ResetArmTool,
 )
 from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
+from rai_open_set_vision import (
+    GetGrippingPointTool,
+    GrippingPointEstimatorConfig,
+    PointCloudFilterConfig,
+    PointCloudFromSegmentationConfig,
+)
 
 from rai_whoami.models import EmbodimentInfo
 
@@ -51,21 +52,7 @@ def create_agent():
     wait_for_ros2_topics(connector, required_topics)
 
     node = connector.node
-
-    # Declare and set parameters for GetGrippingPointTool
-    # These also can be set in the launch file or during runtime
-    parameters_to_set = [
-        ("conversion_ratio", 1.0),
-        ("detection_tools.gripping_point.target_frame", "panda_link0"),
-        ("detection_tools.gripping_point.source_frame", "RGBDCamera5"),
-        ("detection_tools.gripping_point.camera_topic", "/color_image5"),
-        ("detection_tools.gripping_point.depth_topic", "/depth_image5"),
-        ("detection_tools.gripping_point.camera_info_topic", "/color_camera_info5"),
-    ]
-
-    # Declare and set each parameter (timeout_sec handled by tool internally)
-    for param_name, param_value in parameters_to_set:
-        node.declare_parameter(param_name, param_value)
+    node.declare_parameter("conversion_ratio", 1.0)
 
     # Configure gripping point detection algorithms
     segmentation_config = PointCloudFromSegmentationConfig(
@@ -89,12 +76,23 @@ def create_agent():
         dbscan_min_samples=10,
     )
 
+    # Create the underlying GetGrippingPointTool
+    gripping_point_tool = GetGrippingPointTool(
+        connector=connector,
+        segmentation_config=segmentation_config,
+        estimator_config=estimator_config,
+        filter_config=filter_config,
+    )
+
     tools: List[BaseTool] = [
-        GetGrippingPointTool(
+        GetObjectGrippingPointsTool(
             connector=connector,
-            segmentation_config=segmentation_config,
-            estimator_config=estimator_config,
-            filter_config=filter_config,
+            target_frame="panda_link0",
+            source_frame="RGBDCamera5",
+            camera_topic="/color_image5",
+            depth_topic="/depth_image5",
+            camera_info_topic="/color_camera_info5",
+            get_gripping_point_tool=gripping_point_tool,
         ),
         MoveObjectFromToTool(connector=connector, manipulator_frame="panda_link0"),
         ResetArmTool(connector=connector, manipulator_frame="panda_link0"),

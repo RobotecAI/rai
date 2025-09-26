@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import logging
-from typing import Literal, Type
+from typing import Literal, Type, List
 
 import numpy as np
 from deprecated import deprecated
@@ -23,9 +23,10 @@ from tf2_geometry_msgs import do_transform_pose
 
 from rai.communication.ros2.ros_async import get_future_result
 from rai.tools.ros2.base import BaseROS2Tool
+from rai.tools.timeout import RaiTimeoutError
 
 try:
-    from rai_interfaces.srv import ManipulatorMoveTo
+    from rai_open_set_vision import GetGrabbingPointTool, GetGrippingPointTool
 except ImportError:
     logging.warning(
         "rai_interfaces is not installed, ManipulatorMoveTo tool will not work."
@@ -277,7 +278,9 @@ class GetObjectPositionsToolInput(BaseModel):
     )
 
 
-@deprecated("Use GetGrippingPointTool from rai.tools.ros2.detection instead")
+@deprecated(
+    "Use GetObjectGrippingPointsTool from rai_core.rai.tools.ros2.manipulation.custom instead"
+)
 class GetObjectPositionsTool(BaseROS2Tool):
     name: str = "get_object_positions"
     description: str = (
@@ -329,13 +332,71 @@ class GetObjectPositionsTool(BaseROS2Tool):
             return f"Centroids of detected {object_name}s in {self.target_frame} frame: [{', '.join(map(self.format_pose, mani_frame_poses))}]. Sizes of the detected objects are unknown."
 
 
+class GetObjectGrippingPointsTool(BaseROS2Tool):
+    name: str = "get_object_gripping_points"
+    description: str = (
+        "Retrieve the gripping points of all objects of a specified type in the target frame. "
+        "This tool provides accurate gripping point data but does not distinguish between different colors of the same object type. "
+        "While gripping point detection is reliable, please note that object classification may occasionally be inaccurate."
+    )
+
+    target_frame: str
+    source_frame: str
+    camera_topic: str  # rgb camera topic
+    depth_topic: str
+    camera_info_topic: str  # rgb camera info topic
+
+    get_gripping_point_tool: "GetGrippingPointTool"
+
+    args_schema: Type[GetObjectPositionsToolInput] = GetObjectPositionsToolInput
+
+    @staticmethod
+    def format_pose(pose: Pose):
+        return f"Centroid(x={pose.position.x:.2f}, y={pose.position.y:2f}, z={pose.position.z:2f})"
+
+    def _run(self, object_name: str):
+        transform = self.connector.get_transform(
+            target_frame=self.target_frame, source_frame=self.source_frame
+        )
+
+        try:
+            # Get raw gripping points from the tool
+            gripping_points = self.get_gripping_point_tool._run(object_name)
+        except RaiTimeoutError as e:
+            return str(e)
+        except Exception as e:
+            return f"Error getting gripping points: {str(e)}"
+
+        if len(gripping_points) == 0:
+            return f"No {object_name}s detected."
+
+        # Transform gripping points to target frame
+        mani_frame_poses = []
+        for gp in gripping_points:
+            pose = Pose(position=Point(x=gp[0], y=gp[1], z=gp[2]))
+            mani_frame_pose = do_transform_pose(pose, transform)
+            mani_frame_poses.append(mani_frame_pose)
+
+        # Format message similar to original GetGrippingPointTool
+        if len(mani_frame_poses) == 1:
+            message = f"The gripping point of the object {object_name} is {mani_frame_poses[0].position.x:.3f}, {mani_frame_poses[0].position.y:.3f}, {mani_frame_poses[0].position.z:.3f}\n"
+        else:
+            message = f"Multiple gripping points found for the object {object_name}\n"
+            for i, pose in enumerate(mani_frame_poses):
+                message += f"The gripping point of the object {i + 1} {object_name} is {pose.position.x:.3f}, {pose.position.y:.3f}, {pose.position.z:.3f}\n"
+
+        return message
+
+
 class ResetArmToolInput(BaseModel):
     pass
 
 
 class ResetArmTool(BaseROS2Tool):
     name: str = "reset_arm"
-    description: str = "Reset the arm to the initial position. Use when the arm is stuck or when arm obstructs the objects."
+    description: str = (
+        "Reset the arm to the initial position. Use when the arm is stuck or when arm obstructs the objects."
+    )
 
     args_schema: Type[ResetArmToolInput] = ResetArmToolInput
 

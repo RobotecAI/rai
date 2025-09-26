@@ -18,19 +18,15 @@ import numpy as np
 import sensor_msgs.msg
 from numpy.typing import NDArray
 from pydantic import BaseModel
-from rai_open_set_vision import GDINO_SERVICE_NAME
-from rclpy import Future
-from rclpy.exceptions import (
-    ParameterNotDeclaredException,
-    ParameterUninitializedException,
-)
-
 from rai.communication.ros2.api import (
     convert_ros_img_to_ndarray,  # type: ignore[reportUnknownVariableType]
 )
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.communication.ros2.ros_async import get_future_result
+from rclpy import Future
+
 from rai_interfaces.srv import RAIGroundedSam, RAIGroundingDino
+from rai_open_set_vision import GDINO_SERVICE_NAME
 
 
 class PointCloudFromSegmentationConfig(BaseModel):
@@ -168,6 +164,7 @@ class PointCloudFromSegmentation:
         source_frame: str,
         target_frame: str,
         config: PointCloudFromSegmentationConfig,
+        conversion_ratio: float = 0.001,
     ) -> None:
         self.connector = connector
         self.camera_topic = camera_topic
@@ -176,6 +173,7 @@ class PointCloudFromSegmentation:
         self.source_frame = source_frame
         self.target_frame = target_frame
         self.config = config
+        self.conversion_ratio = conversion_ratio
 
     # --------------------- ROS helpers ---------------------
     def _get_image_message(self, topic: str) -> sensor_msgs.msg.Image:
@@ -286,22 +284,7 @@ class PointCloudFromSegmentation:
 
         gdino_future = self._call_gdino_node(camera_img_msg, object_name)
 
-        logger = self.connector.node.get_logger()
-        try:
-            conversion_ratio_value = self.connector.node.get_parameter(
-                "conversion_ratio"
-            ).value  # type: ignore[reportUnknownMemberType]
-            conversion_ratio: float
-            if isinstance(conversion_ratio_value, float):
-                conversion_ratio = conversion_ratio_value
-            else:
-                logger.error(  # type: ignore[reportUnknownMemberType]
-                    "Parameter conversion_ratio has wrong type. Using default 0.001"
-                )
-                conversion_ratio = 0.001
-        except (ParameterUninitializedException, ParameterNotDeclaredException):
-            logger.warning("Parameter conversion_ratio not found. Using default 0.001")  # type: ignore[reportUnknownMemberType]
-            conversion_ratio = 0.001
+        conversion_ratio = self.conversion_ratio
 
         gdino_resolved = get_future_result(gdino_future)
         if gdino_resolved is None:

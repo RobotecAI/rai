@@ -13,6 +13,16 @@
 # limitations under the License.
 
 from .gdino_tools import DistanceMeasurement, GetDetectionTool, GetDistanceToObjectsTool
+from .pcl_detection import (
+    GrippingPointEstimator,
+    GrippingPointEstimatorConfig,
+    PointCloudFilter,
+    PointCloudFilterConfig,
+    PointCloudFromSegmentation,
+    PointCloudFromSegmentationConfig,
+    depth_to_point_cloud,
+)
+from .pcl_detection_tools import GetGrippingPointTool, GetGrippingPointToolInput
 from .segmentation_tools import GetGrabbingPointTool, GetSegmentationTool
 
 __all__ = [
@@ -20,5 +30,15 @@ __all__ = [
     "GetDetectionTool",
     "GetDistanceToObjectsTool",
     "GetGrabbingPointTool",
+    "GetGrippingPointTool",
+    "GetGrippingPointToolInput",
     "GetSegmentationTool",
+    # PCL Detection APIs
+    "GrippingPointEstimator",
+    "GrippingPointEstimatorConfig",
+    "PointCloudFilter",
+    "PointCloudFilterConfig",
+    "PointCloudFromSegmentation",
+    "PointCloudFromSegmentationConfig",
+    "depth_to_point_cloud",
 ]
