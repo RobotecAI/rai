@@ -17,7 +17,7 @@ from typing import List, Literal, Optional, cast
 import numpy as np
 import sensor_msgs.msg
 from numpy.typing import NDArray
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from rai.communication.ros2.api import (
     convert_ros_img_to_ndarray,  # type: ignore[reportUnknownVariableType]
 )
@@ -30,35 +30,71 @@ from rai_open_set_vision import GDINO_SERVICE_NAME
 
 
 class PointCloudFromSegmentationConfig(BaseModel):
-    box_threshold: float = 0.35
-    text_threshold: float = 0.45
+    box_threshold: float = Field(
+        default=0.35, description="Box threshold for GDINO object detection"
+    )
+    text_threshold: float = Field(
+        default=0.45, description="Text threshold for GDINO object detection"
+    )
 
 
 class GrippingPointEstimatorConfig(BaseModel):
-    strategy: Literal["centroid", "top_plane", "biggest_plane"] = "centroid"
-    top_percentile: float = 0.05
-    plane_bin_size_m: float = 0.01
-    ransac_iterations: int = 200
-    distance_threshold_m: float = 0.01
-    min_points: int = 10
+    strategy: Literal["centroid", "top_plane", "biggest_plane"] = Field(
+        default="centroid",
+        description="Strategy for estimating gripping points from point clouds",
+    )
+    top_percentile: float = Field(
+        default=0.05,
+        description="Fraction of highest Z points to consider (0.05 = top 5%)",
+    )
+    plane_bin_size_m: float = Field(
+        default=0.01, description="Bin size in meters for plane detection"
+    )
+    ransac_iterations: int = Field(
+        default=200, description="Number of RANSAC iterations for plane fitting"
+    )
+    distance_threshold_m: float = Field(
+        default=0.01,
+        description="Distance threshold in meters for RANSAC plane fitting",
+    )
+    min_points: int = Field(
+        default=10, description="Minimum number of points required for processing"
+    )
 
 
 class PointCloudFilterConfig(BaseModel):
     strategy: Literal["dbscan", "kmeans_largest_cluster", "isolation_forest", "lof"] = (
-        "isolation_forest"
+        Field(
+            default="isolation_forest",
+            description="Clustering strategy for filtering point cloud outliers",
+        )
     )
-    min_points: int = 20
+    min_points: int = Field(
+        default=20, description="Minimum number of points required for filtering"
+    )
     # DBSCAN
-    dbscan_eps: float = 0.02
-    dbscan_min_samples: int = 10
+    dbscan_eps: float = Field(
+        default=0.02, description="DBSCAN epsilon parameter for neighborhood radius"
+    )
+    dbscan_min_samples: int = Field(
+        default=10, description="DBSCAN minimum samples in neighborhood"
+    )
     # KMeans
-    kmeans_k: int = 2
+    kmeans_k: int = Field(default=2, description="Number of clusters for KMeans")
     # Isolation Forest
-    if_max_samples: int | float | Literal["auto"] = "auto"
-    if_contamination: float = 0.05
+    if_max_samples: int | float | Literal["auto"] = Field(
+        default="auto", description="Maximum samples for Isolation Forest"
+    )
+    if_contamination: float = Field(
+        default=0.05, description="Contamination rate for Isolation Forest"
+    )
     # LOF
-    lof_n_neighbors: int = 20
-    lof_contamination: float = 0.05
+    lof_n_neighbors: int = Field(
+        default=20, description="Number of neighbors for Local Outlier Factor"
+    )
+    lof_contamination: float = Field(
+        default=0.05, description="Contamination rate for Local Outlier Factor"
+    )
 
 
 def depth_to_point_cloud(
@@ -81,9 +117,9 @@ def _publish_gripping_point_debug_data(
     obj_points_xyz: NDArray[np.float32],
     gripping_points_xyz: list[NDArray[np.float32]],
     base_frame_id: str = "egoarm_base_link",
-    publish_duration: float = 10.0,
+    publish_duration: float = 5.0,
 ) -> None:
-    """Publish the gripping point debug data for visualization in RVIZ via point cloud and marker array.
+    """Publish the gripping point debug data to ROS2 topics which can be visualized in RVIZ.
 
     Args:
         connector: The ROS2 connector.
@@ -98,6 +134,14 @@ def _publish_gripping_point_debug_data(
     from std_msgs.msg import Header
     from visualization_msgs.msg import Marker, MarkerArray
 
+    debug_gripping_points_pointcloud_topic = "/debug_gripping_points_pointcloud"
+    debug_gripping_points_markerarray_topic = "/debug_gripping_points_markerarray"
+
+    connector.node.get_logger().warning(
+        "Debug data publishing adds computational overhead and network traffic and impact the performance - not suitable for production. "
+        f"Data will be published to {debug_gripping_points_pointcloud_topic} and {debug_gripping_points_markerarray_topic} for {publish_duration} seconds."
+    )
+
     points = (
         np.concatenate(obj_points_xyz, axis=0)
         if obj_points_xyz
@@ -108,11 +152,11 @@ def _publish_gripping_point_debug_data(
     msg.header.frame_id = base_frame_id  # type: ignore[reportUnknownMemberType]
     msg.points = [Point32(x=float(p[0]), y=float(p[1]), z=float(p[2])) for p in points]  # type: ignore[reportUnknownArgumentType]
     pub = connector.node.create_publisher(  # type: ignore[reportUnknownMemberType]
-        PointCloud, "/debug_gripping_points_pointcloud", 10
+        PointCloud, debug_gripping_points_pointcloud_topic, 10
     )
 
     marker_pub = connector.node.create_publisher(  # type: ignore[reportUnknownMemberType]
-        MarkerArray, "/debug_gripping_points_markerarray", 10
+        MarkerArray, debug_gripping_points_markerarray_topic, 10
     )
     marker_array = MarkerArray()
     header = Header()
@@ -131,8 +175,6 @@ def _publish_gripping_point_debug_data(
         m.color.g = 0.0  # type: ignore[reportUnknownMemberType]
         m.color.b = 0.0  # type: ignore[reportUnknownMemberType]
         m.color.a = 1.0  # type: ignore[reportUnknownMemberType]
-
-        # m.ns = str(i)
 
         markers.append(m)  # type: ignore[reportUnknownArgumentType]
     marker_array.markers = markers
@@ -163,8 +205,8 @@ class PointCloudFromSegmentation:
         camera_info_topic: str,
         source_frame: str,
         target_frame: str,
-        config: PointCloudFromSegmentationConfig,
         conversion_ratio: float = 0.001,
+        config: PointCloudFromSegmentationConfig,
     ) -> None:
         self.connector = connector
         self.camera_topic = camera_topic
@@ -284,8 +326,6 @@ class PointCloudFromSegmentation:
 
         gdino_future = self._call_gdino_node(camera_img_msg, object_name)
 
-        conversion_ratio = self.conversion_ratio
-
         gdino_resolved = get_future_result(gdino_future)
         if gdino_resolved is None:
             return []
@@ -304,7 +344,7 @@ class PointCloudFromSegmentation:
                 depth, dtype=np.float32
             )
             masked_depth_image[binary_mask] = depth[binary_mask]
-            masked_depth_image = masked_depth_image * float(conversion_ratio)
+            masked_depth_image = masked_depth_image * float(self.conversion_ratio)
 
             points_camera: NDArray[np.float32] = depth_to_point_cloud(
                 masked_depth_image, fx, fy, cx, cy

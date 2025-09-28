@@ -22,7 +22,10 @@ from .pcl_detection import (
     PointCloudFromSegmentationConfig,
     depth_to_point_cloud,
 )
-from .pcl_detection_tools import GetGrippingPointTool, GetGrippingPointToolInput
+from .pcl_detection_tools import (
+    GetObjectGrippingPointsTool,
+    GetObjectGrippingPointsToolInput,
+)
 from .segmentation_tools import GetGrabbingPointTool, GetSegmentationTool
 
 __all__ = [
@@ -30,8 +33,8 @@ __all__ = [
     "GetDetectionTool",
     "GetDistanceToObjectsTool",
     "GetGrabbingPointTool",
-    "GetGrippingPointTool",
-    "GetGrippingPointToolInput",
+    "GetObjectGrippingPointsTool",
+    "GetObjectGrippingPointsToolInput",
     "GetSegmentationTool",
     # PCL Detection APIs
     "GrippingPointEstimator",

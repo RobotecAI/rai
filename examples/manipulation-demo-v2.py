@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Robotec.AI
+# Copyright (C) 2025 Julia Jia
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ import logging
 from typing import List
 
 import rclpy
-import rclpy.qos
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.tools import BaseTool
 from rai import get_llm_model
@@ -25,13 +24,12 @@ from rai.agents.langchain.core import create_conversational_agent
 from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2.manipulation import (
-    GetObjectGrippingPointsTool,
     MoveObjectFromToTool,
     ResetArmTool,
 )
 from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
 from rai_open_set_vision import (
-    GetGrippingPointTool,
+    GetObjectGrippingPointsTool,
     GrippingPointEstimatorConfig,
     PointCloudFilterConfig,
     PointCloudFromSegmentationConfig,
@@ -40,19 +38,26 @@ from rai_open_set_vision import (
 from rai_whoami.models import EmbodimentInfo
 
 logger = logging.getLogger(__name__)
+param_prefix = "pcl.detection.gripping_points"
 
 
-def create_agent():
-    rclpy.init()
-    connector = ROS2Connector(executor_type="single_threaded")
-
-    required_services = ["/grounded_sam_segment", "/grounding_dino_classify"]
-    required_topics = ["/color_image5", "/depth_image5", "/color_camera_info5"]
-    wait_for_ros2_services(connector, required_services)
-    wait_for_ros2_topics(connector, required_topics)
-
+def initialize_tools(connector: ROS2Connector) -> List[BaseTool]:
+    """Initialize and configure all tools for the manipulation agent."""
     node = connector.node
-    node.declare_parameter("conversion_ratio", 1.0)
+
+    # Parameters for GetObjectGrippingPointsTool, these also can be set in the launch file or load from yaml file
+    parameters_to_set = [
+        (f"{param_prefix}.target_frame", "panda_link0"),
+        (f"{param_prefix}.source_frame", "RGBDCamera5"),
+        (f"{param_prefix}.camera_topic", "/color_image5"),
+        (f"{param_prefix}.depth_topic", "/depth_image5"),
+        (f"{param_prefix}.camera_info_topic", "/color_camera_info5"),
+        (f"{param_prefix}.timeout_sec", 10.0),
+        (f"{param_prefix}.conversion_ratio", 1.0),
+    ]
+
+    for param_name, param_value in parameters_to_set:
+        node.declare_parameter(param_name, param_value)
 
     # Configure gripping point detection algorithms
     segmentation_config = PointCloudFromSegmentationConfig(
@@ -61,7 +66,7 @@ def create_agent():
     )
 
     estimator_config = GrippingPointEstimatorConfig(
-        strategy="biggest_plane",  # Options: "centroid", "top_plane", "biggest_plane"
+        strategy="centroid",  # Options: "centroid", "top_plane", "biggest_plane"
         top_percentile=0.05,
         plane_bin_size_m=0.01,
         ransac_iterations=200,
@@ -70,34 +75,48 @@ def create_agent():
     )
 
     filter_config = PointCloudFilterConfig(
-        strategy="dbscan",
+        strategy="isolation_forest",  # Options: "dbscan", "kmeans_largest_cluster", "isolation_forest", "lof"
+        if_max_samples="auto",
+        if_contamination=0.05,
         min_points=20,
-        dbscan_eps=0.02,
-        dbscan_min_samples=10,
     )
 
-    # Create the underlying GetGrippingPointTool
-    gripping_point_tool = GetGrippingPointTool(
-        connector=connector,
-        segmentation_config=segmentation_config,
-        estimator_config=estimator_config,
-        filter_config=filter_config,
-    )
+    manipulator_frame = node.get_parameter(f"{param_prefix}.target_frame").value
+    camera_topic = node.get_parameter(f"{param_prefix}.camera_topic").value
 
     tools: List[BaseTool] = [
         GetObjectGrippingPointsTool(
             connector=connector,
-            target_frame="panda_link0",
-            source_frame="RGBDCamera5",
-            camera_topic="/color_image5",
-            depth_topic="/depth_image5",
-            camera_info_topic="/color_camera_info5",
-            get_gripping_point_tool=gripping_point_tool,
+            segmentation_config=segmentation_config,
+            estimator_config=estimator_config,
+            filter_config=filter_config,
         ),
-        MoveObjectFromToTool(connector=connector, manipulator_frame="panda_link0"),
-        ResetArmTool(connector=connector, manipulator_frame="panda_link0"),
-        GetROS2ImageConfiguredTool(connector=connector, topic="/color_image5"),
+        MoveObjectFromToTool(connector=connector, manipulator_frame=manipulator_frame),
+        ResetArmTool(connector=connector, manipulator_frame=manipulator_frame),
+        GetROS2ImageConfiguredTool(connector=connector, topic=camera_topic),
     ]
+
+    return tools
+
+
+def wait_for_ros2_services_and_topics(connector: ROS2Connector):
+    required_services = ["/grounded_sam_segment", "/grounding_dino_classify"]
+    required_topics = [
+        connector.node.get_parameter(f"{param_prefix}.camera_topic").value,
+        connector.node.get_parameter(f"{param_prefix}.depth_topic").value,
+        connector.node.get_parameter(f"{param_prefix}.camera_info_topic").value,
+    ]
+
+    wait_for_ros2_services(connector, required_services)
+    wait_for_ros2_topics(connector, required_topics)
+
+
+def create_agent():
+    rclpy.init()
+    connector = ROS2Connector(executor_type="single_threaded")
+
+    tools = initialize_tools(connector)
+    wait_for_ros2_services_and_topics(connector)
 
     llm = get_llm_model(model_type="complex_model", streaming=True)
     embodiment_info = EmbodimentInfo.from_file(

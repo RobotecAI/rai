@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, List, Optional, Type
+from typing import Any, Optional, Type
 
-import numpy as np
 from pydantic import BaseModel, Field
 from rai.tools.ros2.base import BaseROS2Tool
 from rai.tools.timeout import RaiTimeoutError, timeout
@@ -28,53 +27,121 @@ from .pcl_detection import (
     PointCloudFromSegmentationConfig,
 )
 
+# Parameter prefix for ROS2 configuration
+PCL_DETECTION_PARAM_PREFIX = "pcl.detection.gripping_points"
 
-class GetGrippingPointToolInput(BaseModel):
+
+class GetObjectGrippingPointsToolInput(BaseModel):
     object_name: str = Field(
         ...,
         description="The name of the object to get the gripping point of e.g. 'box', 'apple', 'screwdriver'",
     )
-    timeout_sec: Optional[float] = Field(
-        default=None,
-        description="Override timeout in seconds. If not provided, uses tool's default timeout.",
-    )
-    conversion_ratio: Optional[float] = Field(
-        default=None,
-        description="Override conversion ratio for depth to meters. If not provided, uses tool's default.",
-    )
 
 
-class GetGrippingPointTool(BaseROS2Tool):
-    name: str = "get_gripping_point"
+class GetObjectGrippingPointsTool(BaseROS2Tool):
+    name: str = "get_object_gripping_points"
     description: str = "Get gripping points for specified object/objects. Returns 3D coordinates where a robot gripper can grasp the object."
 
     # Configuration for PCL components
-    segmentation_config: PointCloudFromSegmentationConfig
-    estimator_config: GrippingPointEstimatorConfig
-    filter_config: PointCloudFilterConfig
+    segmentation_config: PointCloudFromSegmentationConfig = Field(
+        default_factory=PointCloudFromSegmentationConfig,
+        description="Configuration for point cloud segmentation from camera images",
+    )
+    estimator_config: GrippingPointEstimatorConfig = Field(
+        default_factory=GrippingPointEstimatorConfig,
+        description="Configuration for gripping point estimation strategies",
+    )
+    filter_config: PointCloudFilterConfig = Field(
+        default_factory=PointCloudFilterConfig,
+        description="Configuration for point cloud filtering and outlier removal",
+    )
 
-    # Required parameters
-    target_frame: str
-    source_frame: str
-    camera_topic: str
-    depth_topic: str
-    camera_info_topic: str
-    timeout_sec: float = 10.0  # Default timeout
-    conversion_ratio: float = 0.001  # Default conversion ratio
+    # Auto-initialized in model_post_init from ROS2 parameters
+    target_frame: Optional[str] = Field(
+        default=None, description="Target coordinate frame for gripping points"
+    )
+    source_frame: Optional[str] = Field(
+        default=None, description="Source coordinate frame of camera data"
+    )
+    camera_topic: Optional[str] = Field(
+        default=None, description="ROS2 topic for camera RGB images"
+    )
+    depth_topic: Optional[str] = Field(
+        default=None, description="ROS2 topic for camera depth images"
+    )
+    camera_info_topic: Optional[str] = Field(
+        default=None, description="ROS2 topic for camera calibration info"
+    )
+    timeout_sec: Optional[float] = Field(
+        default=None, description="Timeout in seconds for gripping point detection"
+    )
+    conversion_ratio: Optional[float] = Field(
+        default=0.001, description="Conversion ratio from depth units to meters"
+    )
 
     # Components initialized in model_post_init
-    gripping_point_estimator: Optional[GrippingPointEstimator] = None
-    point_cloud_filter: Optional[PointCloudFilter] = None
-    point_cloud_from_segmentation: Optional[PointCloudFromSegmentation] = None
+    gripping_point_estimator: Optional[GrippingPointEstimator] = Field(
+        default=None, exclude=True
+    )
+    point_cloud_filter: Optional[PointCloudFilter] = Field(default=None, exclude=True)
+    point_cloud_from_segmentation: Optional[PointCloudFromSegmentation] = Field(
+        default=None, exclude=True
+    )
 
-    args_schema: Type[GetGrippingPointToolInput] = GetGrippingPointToolInput
+    args_schema: Type[GetObjectGrippingPointsToolInput] = (
+        GetObjectGrippingPointsToolInput
+    )
 
     def model_post_init(self, __context: Any) -> None:
-        """Initialize tool components."""
+        """Initialize tool with ROS2 parameters and components."""
+        self._load_parameters()
         self._initialize_components()
 
+    def _load_parameters(self) -> None:
+        """Load configuration from ROS2 parameters."""
+        node = self.connector.node
+        param_prefix = PCL_DETECTION_PARAM_PREFIX
+
+        # Declare required parameters
+        params = [
+            f"{param_prefix}.target_frame",
+            f"{param_prefix}.source_frame",
+            f"{param_prefix}.camera_topic",
+            f"{param_prefix}.depth_topic",
+            f"{param_prefix}.camera_info_topic",
+        ]
+
+        for param_name in params:
+            if not node.has_parameter(param_name):
+                raise ValueError(
+                    f"Required parameter '{param_name}' must be set before initializing GetObjectGrippingPointsTool"
+                )
+
+        # Load parameters
+        self.target_frame = node.get_parameter(f"{param_prefix}.target_frame").value
+        self.source_frame = node.get_parameter(f"{param_prefix}.source_frame").value
+        self.camera_topic = node.get_parameter(f"{param_prefix}.camera_topic").value
+        self.depth_topic = node.get_parameter(f"{param_prefix}.depth_topic").value
+        self.camera_info_topic = node.get_parameter(
+            f"{param_prefix}.camera_info_topic"
+        ).value
+
+        # timeout for gripping point detection
+        self.timeout_sec = (
+            node.get_parameter(f"{param_prefix}.timeout_sec").value
+            if node.has_parameter(f"{param_prefix}.timeout_sec")
+            else 10.0
+        )
+
+        # conversion ratio for point cloud from segmentation
+        self.conversion_ratio = (
+            node.get_parameter(f"{param_prefix}.conversion_ratio").value
+            if node.has_parameter(f"{param_prefix}.conversion_ratio")
+            else 0.001
+        )
+
     def _initialize_components(self) -> None:
-        """Initialize PCL components with provided parameters."""
+        """Initialize PCL components with loaded parameters."""
         self.point_cloud_from_segmentation = PointCloudFromSegmentation(
             connector=self.connector,
             camera_topic=self.camera_topic,
@@ -82,52 +149,51 @@ class GetGrippingPointTool(BaseROS2Tool):
             camera_info_topic=self.camera_info_topic,
             source_frame=self.source_frame,
             target_frame=self.target_frame,
-            config=self.segmentation_config,
             conversion_ratio=self.conversion_ratio,
+            config=self.segmentation_config,
         )
         self.gripping_point_estimator = GrippingPointEstimator(
             config=self.estimator_config
         )
         self.point_cloud_filter = PointCloudFilter(config=self.filter_config)
 
-    def _run(
-        self,
-        object_name: str,
-        timeout_sec: Optional[float] = None,
-        conversion_ratio: Optional[float] = None,
-    ) -> List[np.ndarray]:
-        """Run gripping point detection and return raw gripping points."""
-
-        # Use runtime parameters if provided, otherwise use defaults
-        effective_timeout = timeout_sec if timeout_sec is not None else self.timeout_sec
-        effective_conversion_ratio = (
-            conversion_ratio if conversion_ratio is not None else self.conversion_ratio
-        )
-
-        # Update conversion ratio if different from current
-        if effective_conversion_ratio != self.conversion_ratio:
-            self.point_cloud_from_segmentation.conversion_ratio = (
-                effective_conversion_ratio
-            )
-
+    def _run(self, object_name: str) -> str:
         @timeout(
-            effective_timeout,
-            f"Gripping point detection for object '{object_name}' exceeded {effective_timeout} seconds",
+            self.timeout_sec,
+            f"Gripping point detection for object '{object_name}' exceeded {self.timeout_sec} seconds",
         )
         def _run_with_timeout():
             pcl = self.point_cloud_from_segmentation.run(object_name)
             if len(pcl) == 0:
-                return []
+                return f"No {object_name}s detected."
 
-            pcl = self.point_cloud_filter.run(pcl)
-            gps = self.gripping_point_estimator.run(pcl)
-            return gps
+            pcl_filtered = self.point_cloud_filter.run(pcl)
+            if len(pcl_filtered) == 0:
+                return f"No {object_name}s detected after applying filtering"
+
+            gripping_points = self.gripping_point_estimator.run(pcl_filtered)
+
+            message = ""
+            if len(gripping_points) == 0:
+                message += f"No gripping point found for the object {object_name}\n"
+            elif len(gripping_points) == 1:
+                message += f"The gripping point of the object {object_name} is {gripping_points[0]}\n"
+            else:
+                message += (
+                    f"Multiple gripping points found for the object {object_name}\n"
+                )
+
+            for i, gp in enumerate(gripping_points):
+                message += (
+                    f"The gripping point of the object {i + 1} {object_name} is {gp}\n"
+                )
+
+            return message
 
         try:
             return _run_with_timeout()
         except RaiTimeoutError as e:
-            # Log the timeout but still raise it
             self.connector.node.get_logger().warning(f"Timeout: {e}")
-            raise  # Let caller decide how to handle
+            return f"Timeout: Gripping point detection for object '{object_name}' exceeded {self.timeout_sec} seconds"
         except Exception:
             raise

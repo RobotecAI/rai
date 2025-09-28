@@ -27,9 +27,8 @@ from unittest.mock import Mock
 
 import numpy as np
 from rai.communication.ros2.connectors import ROS2Connector
-from rai.tools.timeout import RaiTimeoutError
 from rai_open_set_vision import (
-    GetGrippingPointTool,
+    GetObjectGrippingPointsTool,
     GrippingPointEstimator,
     GrippingPointEstimatorConfig,
     PointCloudFilter,
@@ -176,13 +175,8 @@ def test_get_gripping_point_tool_timeout():
     mock_filter.run.return_value = []
     mock_estimator.run.return_value = []
 
-    tool = GetGrippingPointTool(
+    tool = GetObjectGrippingPointsTool(
         connector=mock_connector,
-        target_frame="panda_link0",
-        source_frame="RGBDCamera5",
-        camera_topic="/color_image5",
-        depth_topic="/depth_image5",
-        camera_info_topic="/color_camera_info5",
         segmentation_config=PointCloudFromSegmentationConfig(),
         estimator_config=GrippingPointEstimatorConfig(),
         filter_config=PointCloudFilterConfig(),
@@ -195,8 +189,8 @@ def test_get_gripping_point_tool_timeout():
 
     # Test fast execution - should complete without timeout
     result = tool._run("test_object")
-    assert result == []  # Returns empty list for no objects found
-    assert len(result) == 0
+    assert "No test_objects detected" in result
+    assert "timed out" not in result.lower()
 
     # Test 2: Actual timeout behavior - should raise TimeoutError
     def slow_operation(obj_name):
@@ -206,6 +200,8 @@ def test_get_gripping_point_tool_timeout():
     mock_pcl_gen.run.side_effect = slow_operation
     tool.timeout_sec = 1.0  # Short timeout
 
-    # Expect TimeoutError to be raised
-    with pytest.raises(RaiTimeoutError, match="exceeded 1.0 seconds"):
+    # Expect TimeoutError
+    assert (
         tool._run("test")
+        == "Timeout: Gripping point detection for object 'test' exceeded 1.0 seconds"
+    )

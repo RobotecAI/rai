@@ -30,8 +30,8 @@ from .tools.pcl_detection import (  # noqa: E402
     depth_to_point_cloud,
 )
 from .tools.pcl_detection_tools import (  # noqa: E402
-    GetGrippingPointTool,
-    GetGrippingPointToolInput,
+    GetObjectGrippingPointsTool,
+    GetObjectGrippingPointsToolInput,
 )
 
 __all__ = [
@@ -41,8 +41,8 @@ __all__ = [
     "GSAM_SERVICE_NAME",
     "GetDetectionTool",
     "GetDistanceToObjectsTool",
-    "GetGrippingPointTool",
-    "GetGrippingPointToolInput",
+    "GetObjectGrippingPointsTool",
+    "GetObjectGrippingPointsToolInput",
     "GrippingPointEstimator",
     "GrippingPointEstimatorConfig",
     "GroundedSamAgent",

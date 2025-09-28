@@ -22,29 +22,24 @@ Manual test for GetGrippingPointTool with various demo scenarios. Each test:
 The demo app and rivz2 need to be started before running the test. The test will fail if the gripping points are not found.
 
 Usage:
-pytest tests/tools/ros2/test_gripping_points.py::test_gripping_points_manipulation_demo -m "manual" -s -v --strategy <strategy>
+pytest tests/rai_extensions/test_gripping_points.py::test_gripping_points_manipulation_demo -m "manual" -s -v --strategy <strategy>
 """
-
-import time
-from typing import List
 
 import cv2
 import numpy as np
 import pytest
 import rclpy
-import rclpy.parameter
 from cv_bridge import CvBridge
 from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
-from rai_open_set_vision import (
-    GetGrippingPointTool,
+from rai_open_set_vision import GetObjectGrippingPointsTool
+from rai_open_set_vision.tools.pcl_detection import (
     GrippingPointEstimatorConfig,
     PointCloudFilterConfig,
     PointCloudFromSegmentationConfig,
+    _publish_gripping_point_debug_data,
 )
-
-# import internal tool
-from rai_open_set_vision.tools.pcl_detection import _publish_gripping_point_debug_data
+from rai_open_set_vision.tools.pcl_detection_tools import PCL_DETECTION_PARAM_PREFIX
 
 
 def draw_points_on_image(image_msg, points, camera_info):
@@ -89,9 +84,20 @@ def draw_points_on_image(image_msg, points, camera_info):
     return cv_image
 
 
-def extract_gripping_points(result: List[np.ndarray]) -> list[np.ndarray]:
-    """Extract gripping points from the result - now returns raw points directly."""
-    return result
+def extract_gripping_points(result: str) -> list[np.ndarray]:
+    """Extract gripping points from the result."""
+    gripping_points = []
+    lines = result.split("\n")
+    for line in lines:
+        if "gripping point" in line and "is [" in line:
+            # Extract coordinates from line like "is [0.39972728 0.16179778 0.04179673]"
+            start = line.find("[") + 1
+            end = line.find("]")
+            if start > 0 and end > start:
+                coords_str = line[start:end]
+                coords = [float(x) for x in coords_str.split()]
+                gripping_points.append(np.array(coords))
+    return gripping_points
 
 
 def transform_points_to_target_frame(connector, points, source_frame, target_frame):
@@ -178,6 +184,7 @@ def main(
     frames: dict = None,
     estimator_config: dict = None,
     filter_config: dict = None,
+    debug_enabled: bool = False,
 ):
     # Default configuration for manipulation-demo
     if topics is None:
@@ -204,6 +211,7 @@ def main(
 
     # Initialize ROS2
     rclpy.init()
+
     connector = ROS2Connector(executor_type="single_threaded")
 
     try:
@@ -213,51 +221,58 @@ def main(
         wait_for_ros2_topics(connector, list(topics.values()))
         print("✅ All services and topics available")
 
-        # Set up conversion ratio parameter
+        # Set up node parameters
         node = connector.node
-        node.declare_parameter("conversion_ratio", 1.0)
 
-        start_time = time.time()
+        param_prefix = PCL_DETECTION_PARAM_PREFIX
+        # Declare and set ROS2 parameters for deployment configuration
+        parameters_to_set = [
+            (f"{param_prefix}.target_frame", frames["target"]),
+            (f"{param_prefix}.source_frame", frames["source"]),
+            (f"{param_prefix}.camera_topic", topics["camera"]),
+            (f"{param_prefix}.depth_topic", topics["depth"]),
+            (f"{param_prefix}.camera_info_topic", topics["camera_info"]),
+            (f"{param_prefix}.timeout_sec", 10.0),
+            (f"{param_prefix}.conversion_ratio", 1.0),
+        ]
+
+        # Declare and set each parameter
+        for param_name, param_value in parameters_to_set:
+            node.declare_parameter(param_name, param_value)
 
         print(
             f"\nTesting GetGrippingPointTool with object '{test_object}', strategy '{strategy}'"
         )
 
         # Create the tool with algorithm configurations
-        gripping_tool = GetGrippingPointTool(
+        tool = GetObjectGrippingPointsTool(
             connector=connector,
             segmentation_config=PointCloudFromSegmentationConfig(),
             estimator_config=GrippingPointEstimatorConfig(**estimator_config),
             filter_config=PointCloudFilterConfig(**filter_config),
         )
 
-        result = gripping_tool._run(test_object)
-        print(f"elapsed time: {time.time() - start_time} seconds")
+        pcl = tool.point_cloud_from_segmentation.run(test_object)
+        if len(pcl) == 0:
+            print(f"No {test_object}s detected.")
+            return
 
-        # result is now a list of numpy arrays directly
-        gripping_points = result
+        pcl_filtered = tool.point_cloud_filter.run(pcl)
+        gripping_points = tool.gripping_point_estimator.run(pcl_filtered)
+        assert len(gripping_points) > 0, "No gripping points found"
+
         print(f"\nFound {len(gripping_points)} gripping points in target frame:")
 
         for i, gp in enumerate(gripping_points):
             print(f"  GP{i + 1}: [{gp[0]:.3f}, {gp[1]:.3f}, {gp[2]:.3f}]")
 
-        assert len(gripping_points) > 0, "No gripping points found"
-
-        if gripping_points:
-            # Call the function in pcl.py to publish the gripping point for visualization
-            segmented_clouds = gripping_tool.point_cloud_from_segmentation.run(
-                test_object
-            )
-            filtered_clouds = gripping_tool.point_cloud_filter.run(segmented_clouds)
-
-            print(
-                "\nPublishing debug data to /debug_gripping_points_pointcloud and /debug_gripping_points_markerarray"
-            )
+        if debug_enabled:
             _publish_gripping_point_debug_data(
-                connector, filtered_clouds, gripping_points, frames["target"]
+                connector,
+                pcl_filtered,
+                gripping_points,
+                frames["target"],
             )
-            print("✅ Debug data published")
-
             annotated_image_path = f"{test_object}_{strategy}_gripping_points.jpg"
             save_annotated_image(
                 connector,
@@ -285,7 +300,7 @@ def main(
 @pytest.mark.manual
 def test_gripping_points_manipulation_demo(strategy):
     """Manual test requiring manipulation-demo app to be started."""
-    main("cube", strategy)
+    main("cube", strategy, debug_enabled=True)
 
 
 @pytest.mark.manual
