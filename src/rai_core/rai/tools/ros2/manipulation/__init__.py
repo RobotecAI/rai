@@ -20,7 +20,6 @@ if importlib.util.find_spec("rclpy") is None:
     )
 
 from .custom import (
-    GetObjectGrippingPointsTool,
     GetObjectPositionsTool,
     MoveObjectFromToTool,
     MoveObjectFromToToolInput,
@@ -30,7 +29,6 @@ from .custom import (
 )
 
 __all__ = [
-    "GetObjectGrippingPointsTool",
     "GetObjectPositionsTool",
     "MoveObjectFromToTool",
     "MoveObjectFromToToolInput",

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import logging
-from typing import Literal, Type, List
+from typing import Literal, Type
 
 import numpy as np
 from deprecated import deprecated
@@ -23,10 +23,9 @@ from tf2_geometry_msgs import do_transform_pose
 
 from rai.communication.ros2.ros_async import get_future_result
 from rai.tools.ros2.base import BaseROS2Tool
-from rai.tools.timeout import RaiTimeoutError
 
 try:
-    from rai_open_set_vision import GetGrabbingPointTool, GetGrippingPointTool
+    from rai_interfaces.srv import ManipulatorMoveTo
 except ImportError:
     logging.warning(
         "rai_interfaces is not installed, ManipulatorMoveTo tool will not work."
