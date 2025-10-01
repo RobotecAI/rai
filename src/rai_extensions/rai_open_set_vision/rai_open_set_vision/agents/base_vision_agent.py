@@ -41,7 +41,7 @@ class BaseVisionAgent(BaseAgent):
             self.weights_root_path / self.WEIGHTS_DIR_PATH_PART / self.WEIGHTS_FILENAME
         )
         if not self.weights_path.exists():
-            self.download_weights()
+            self._download_weights()
         self.ros2_connector = ROS2Connector(ros2_name, executor_type="single_threaded")
 
     def _load_model_with_error_handling(self, model_class):
@@ -59,13 +59,13 @@ class BaseVisionAgent(BaseAgent):
             self.logger.error(f"Could not load model: {e}")
             if "PytorchStreamReader" in str(e):
                 self.logger.error("The weights might be corrupted. Redownloading...")
-                self.remove_weights()
-                self.download_weights()
+                self._remove_weights()
+                self._download_weights()
                 return model_class(self.weights_path)
             else:
                 raise e
 
-    def download_weights(self):
+    def _download_weights(self):
         try:
             subprocess.run(
                 [
@@ -80,7 +80,7 @@ class BaseVisionAgent(BaseAgent):
             self.logger.error("Could not download weights")
             raise Exception("Could not download weights")
 
-    def remove_weights(self):
+    def _remove_weights(self):
         os.remove(self.weights_path)
 
     def stop(self):
