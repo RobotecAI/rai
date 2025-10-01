@@ -213,7 +213,9 @@ class ROS2ActionAPI(BaseROS2API):
 
         action_cls = import_message_from_str(action_type)
         action_goal = action_cls.Goal()  # type: ignore
-        rosidl_runtime_py.set_message.set_message_fields(action_goal, goal)
+        rosidl_runtime_py.set_message.set_message_fields(
+            action_goal, copy.deepcopy(goal)
+        )
 
         action_client = ActionClient(self.node, action_cls, action_name)
         if not action_client.wait_for_server(timeout_sec=timeout_sec):  # type: ignore
