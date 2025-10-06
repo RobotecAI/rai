@@ -28,7 +28,7 @@ from rclpy.exceptions import (
 from rclpy.task import Future
 
 from rai_interfaces.srv import RAIGroundingDino
-from rai_open_set_vision import GDINO_SERVICE_NAME
+from rai_perception import GDINO_SERVICE_NAME
 
 
 # --------------------- Inputs ---------------------

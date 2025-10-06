@@ -17,7 +17,7 @@
 <launch>
     <arg name="weights_path" default = ""/>
 
-    <node pkg="rai_open_set_vision" exec="grounding_dino" name="grounding_dino" output="screen">
+    <node pkg="rai_perception" exec="grounding_dino" name="grounding_dino" output="screen">
         <param name="weights_path" value="$(var weights_path)" />
     </node>
 </launch>

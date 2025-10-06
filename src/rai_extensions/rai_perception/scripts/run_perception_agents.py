@@ -15,7 +15,7 @@
 
 import rclpy
 from rai.agents import wait_for_shutdown
-from rai_open_set_vision.agents import GroundedSamAgent, GroundingDinoAgent
+from rai_perception.agents import GroundedSamAgent, GroundingDinoAgent
 
 
 def main():

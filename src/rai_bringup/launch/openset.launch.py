@@ -22,7 +22,7 @@ def generate_launch_description():
         [
             ExecuteProcess(
                 cmd=["python", "run_vision_agents.py"],
-                cwd="src/rai_extensions/rai_open_set_vision/scripts",
+                cwd="src/rai_extensions/rai_perception/scripts",
                 output="screen",
             ),
         ]

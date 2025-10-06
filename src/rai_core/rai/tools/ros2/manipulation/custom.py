@@ -31,10 +31,10 @@ except ImportError:
     )
 
 try:
-    from rai_open_set_vision.tools import GetGrabbingPointTool
+    from rai_perception.tools import GetGrabbingPointTool
 except ImportError:
     logging.warning(
-        "rai_open_set_vision is not installed, GetGrabbingPointTool will not work"
+        "rai-perception is not installed, GetGrabbingPointTool will not work"
     )
 
 

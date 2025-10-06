@@ -35,7 +35,7 @@ class GDSegmenter:
     ):
         self.cfg_path = "seg_config.yml"
         hydra.core.global_hydra.GlobalHydra.instance().clear()
-        hydra.initialize_config_module("rai_open_set_vision.configs")
+        hydra.initialize_config_module("rai_perception.configs")
 
         self.weight_path = str(weight_path)
         if use_cuda:

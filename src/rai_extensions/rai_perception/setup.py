@@ -18,7 +18,7 @@ from glob import glob
 
 from setuptools import find_packages, setup
 
-package_name = "rai_open_set_vision"
+package_name = "rai_perception"
 
 setup(
     name=package_name,
@@ -43,7 +43,7 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "talker = rai_open_set_vision.examples.talker:main",
+            "talker = rai_perception.examples.talker:main",
         ],
     },
 )

@@ -19,8 +19,8 @@ import numpy as np
 from cv_bridge import CvBridge
 
 from rai_interfaces.srv import RAIGroundedSam
-from rai_open_set_vision.agents.base_vision_agent import BaseVisionAgent
-from rai_open_set_vision.vision_markup.segmenter import GDSegmenter
+from rai_perception.agents.base_vision_agent import BaseVisionAgent
+from rai_perception.vision_markup.segmenter import GDSegmenter
 
 GSAM_NODE_NAME = "grounded_sam"
 GSAM_SERVICE_NAME = "grounded_sam_segment"

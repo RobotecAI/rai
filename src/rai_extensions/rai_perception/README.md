@@ -7,7 +7,7 @@ It allows for open-set detection.
 
 ## Installation
 
-In your workspace you need to have an `src` folder containing this package `rai_open_set_vision` and the `rai_interfaces` package.
+In your workspace you need to have an `src` folder containing this package `rai_perception` and the `rai_interfaces` package.
 
 ### Preparing the GroundingDINO
 
@@ -67,7 +67,7 @@ These agents can be triggered by ROS2 services:
 
 ## RAI Tools
 
-`rai_open_set_vision` package contains tools that can be used by [RAI LLM agents](../../../docs/tutorials/walkthrough.md)
+`rai_perception` package contains tools that can be used by [RAI LLM agents](../../../docs/tutorials/walkthrough.md)
 enhance their perception capabilities. For more information on RAI Tools see
 [Tool use and development](../../../docs/tutorials/tools.md) tutorial.
 
@@ -89,7 +89,7 @@ This tool calls the grounding dino service to use the model to see if the messag
 **Example call**
 
 ```python
-from rai_open_set_vision.tools import GetDetectionTool
+from rai_perception.tools import GetDetectionTool
 from rai.communication.ros2 import ROS2Connector, ROS2Context
 
 with ROS2Context():
@@ -113,7 +113,7 @@ This tool calls the grounding dino service to use the model to see if the messag
 **Example call**
 
 ```python
-from rai_open_set_vision.tools import GetDetectionTool
+from rai_perception.tools import GetDetectionTool
 from rai.communication.ros2 import ROS2Connector, ROS2Context
 
 with ROS2Context():
@@ -135,14 +135,14 @@ I have detected the following items in the picture human: 3.77m away
 
 ## Simple ROS2 Client Node Example
 
-An example client is provided with the package as `rai_open_set_vision/talker.py`
+An example client is provided with the package as `rai_perception/talker.py`
 
 You can see it working by running:
 
 ```
 python run_vision_agents.py
 cd rai # rai repo BASE directory
-ros2 run rai_open_set_vision talker --ros-args -p image_path:=src/rai_extensions/rai_open_set_vision/images/sample.jpg
+ros2 run rai_perception talker --ros-args -p image_path:=src/rai_extensions/rai_perception/images/sample.jpg
 ```
 
 If everything was set up properly you should see a couple of detections with classes `dinosaur`, `dragon`, and `lizard`.
