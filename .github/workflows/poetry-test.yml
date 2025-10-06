@@ -43,7 +43,7 @@ jobs:
           jackd -d dummy -r 44100 &
 
       - name: Install python dependencies
-        run: poetry install --with openset,nomad,s2s,simbench
+        run: poetry install --with perception,nomad,s2s,simbench
 
       - name: Update rosdep
         shell: bash

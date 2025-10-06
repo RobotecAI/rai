@@ -33,7 +33,7 @@ WORKDIR /rai
 RUN git clone https://github.com/RobotecAI/rai.git .
 
 # Install Python dependencies with Poetry
-RUN poetry install --with nomad,openset
+RUN poetry install --with nomad,perception
 
 # Install ROS dependencies
 RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && \

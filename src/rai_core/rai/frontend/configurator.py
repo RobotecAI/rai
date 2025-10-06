@@ -715,7 +715,7 @@ def additional_features():
 
     To install OpenSET dependencies, run:
     ```bash
-    poetry install --with openset
+    poetry install --with perception
     ```
 
     This will install:

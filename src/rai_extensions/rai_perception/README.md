@@ -22,7 +22,7 @@ rosdep install --from-paths src --ignore-src -r
 In the base directory of the `RAI` package install dependencies:
 
 ```
-poetry install --with openset
+poetry install --with perception
 ```
 
 Source the ros installation

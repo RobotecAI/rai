@@ -30,7 +30,7 @@ platform in a nice apartment.
     sudo apt install ros-${ROS_DISTRO}-navigation2 ros-${ROS_DISTRO}-nav2-bringup
     vcs import < demos.repos
     rosdep install --from-paths src --ignore-src -r -y
-    poetry install --with openset
+    poetry install --with perception
     ```
 
 !!! tip "Alternative: Demo source build"
@@ -70,7 +70,7 @@ platform in a nice apartment.
 
 The rosbot demo utilizes several components:
 
-1. Vision processing using Grounded SAM 2 and Grounding DINO for object detection and segmentation. See [RAI OpenSet Vision](../extensions/openset.md).
+1. Vision processing using Grounded SAM 2 and Grounding DINO for object detection and segmentation. See [RAI perception](../extensions/.md).
 2. RAI agent to process the request and interact with environment via [tool-calling](https://python.langchain.com/docs/concepts/tool_calling/) mechanism.
 3. Navigation is enabled via [nav2 toolkit](../API_documentation/langchain_integration/ROS_2_tools.md#nav2), which interacts with [ROS 2 nav2](https://docs.nav2.org/) asynchronously by calling [ros2 actions](https://docs.ros.org/en/jazzy/Tutorials/Beginner-CLI-Tools/Understanding-ROS2-Actions/Understanding-ROS2-Actions.html).
 4. Embodiment of the Rosbot is achieved using [RAI Whoami](../tutorials/create_robots_whoami.md) module. This makes RAI agent aware of the hardware platform and its capabilities.
