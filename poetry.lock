@@ -6500,7 +6500,7 @@ url = "src/rai_bench"
 
 [[package]]
 name = "rai-core"
-version = "2.5.1"
+version = "2.5.2"
 description = "Core functionality for RAI framework"
 optional = false
 python-versions = "^3.10, <3.13"
