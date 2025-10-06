@@ -42,16 +42,9 @@ rai_s2s = {path = "src/rai_s2s", develop = true, extras = ["all"]}
 [tool.poetry.group.simbench]
 optional = true
 
-# TODO(juliaj): for testing purpose only, remove once sam2 is published.
-[[tool.poetry.source]]
-name = "test-pypi"
-url = "https://test.pypi.org/simple/"
-priority = "explicit"
-
 [tool.poetry.group.simbench.dependencies]
 rai_sim = {path = "src/rai_sim", develop = true}
 rai_bench = {path = "src/rai_bench", develop = true}
-rai_perception = {path = "src/rai_extensions/rai_perception", develop = true}
 
 [tool.poetry.group.nomad]
 optional = true
@@ -59,6 +52,18 @@ optional = true
 [tool.poetry.group.nomad.dependencies]
 visualnav_transformer = { git = "https://github.com/RobotecAI/visualnav-transformer-ros2.git", branch = "main" }
 gdown = "^5.2.0"
+
+[tool.poetry.group.perception]
+optional = true
+
+[tool.poetry.group.perception.dependencies]
+rai_perception = {path = "src/rai_extensions/rai_perception", develop = true}
+
+# TODO(juliaj): for testing purpose only, remove once rai-grounded-sam2 is published.
+[[tool.poetry.source]]
+name = "test-pypi"
+url = "https://test.pypi.org/simple/"
+priority = "explicit"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

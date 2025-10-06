@@ -13,8 +13,9 @@ python = "^3.8"
 torch = "^2.3.1"
 torchvision = "^0.18.1"
 rf-groundingdino = "^0.2.0"
-#TODO(juliaj): for testing purpose only, update once sam2 is published
-sam2 = { version = "*", source = "test-pypi" }
+# TODO(juliaj): for testing purpose only, update once rai-grounded-sam2 is published
+# Note, rai-sam2 package name has been taken on Test PyPi
+rai-grounded-sam2 = { version = "0.1.1", source = "test-pypi" }
 rai_core = ">=2.0.0.a2,<3.0.0"
 
 [build-system]
