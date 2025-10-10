@@ -180,3 +180,6 @@ src/rai_interfaces
 
 # Demo assets
 demo_assets/
+
+# Docker files
+Dockerfile*
