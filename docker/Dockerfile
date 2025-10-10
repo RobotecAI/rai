@@ -17,6 +17,8 @@ FROM osrf/ros:${ROS_DISTRO}-desktop-full
 
 ARG DEPENDENCIES=core_only
 ENV DEBIAN_FRONTEND=noninteractive
+# Increase timeout for Poetry requests.
+ENV POETRY_REQUESTS_TIMEOUT=300
 
 # Check whether the $DEPENDENCIES ARG has a valid value
 RUN /bin/bash -c 'if [ "${DEPENDENCIES}" != "core_only" ] && [ "${DEPENDENCIES}" != "all_groups" ]; then \
