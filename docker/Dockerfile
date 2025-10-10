@@ -56,3 +56,20 @@ RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && \
 
 # Build the workspace
 RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && colcon build --symlink-install'
+
+# Install libraries required for GUI and NVIDIA support
+RUN apt install -y \
+    libglu1-mesa-dev \
+    libxcb-xinerama0 \
+    libfontconfig1-dev \
+    libnvidia-gl-470 \
+    libxcb-xkb-dev \
+    libxkbcommon-x11-dev \
+    libxkbcommon-dev \
+    libxcb-xfixes0-dev \
+    libxcb-xinput-dev \
+    libxcb-xinput0 \
+    libpcre2-16-0 \
+    libunwind-dev
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=all
