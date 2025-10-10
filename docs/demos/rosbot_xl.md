@@ -70,7 +70,7 @@ platform in a nice apartment.
 
 The rosbot demo utilizes several components:
 
-1. Vision processing using Grounded SAM 2 and Grounding DINO for object detection and segmentation. See [RAI perception](../extensions/.md).
+1. Vision processing using Grounded SAM 2 and Grounding DINO for object detection and segmentation. See [RAI perception](../extensions/perception.md).
 2. RAI agent to process the request and interact with environment via [tool-calling](https://python.langchain.com/docs/concepts/tool_calling/) mechanism.
 3. Navigation is enabled via [nav2 toolkit](../API_documentation/langchain_integration/ROS_2_tools.md#nav2), which interacts with [ROS 2 nav2](https://docs.nav2.org/) asynchronously by calling [ros2 actions](https://docs.ros.org/en/jazzy/Tutorials/Beginner-CLI-Tools/Understanding-ROS2-Actions/Understanding-ROS2-Actions.html).
 4. Embodiment of the Rosbot is achieved using [RAI Whoami](../tutorials/create_robots_whoami.md) module. This makes RAI agent aware of the hardware platform and its capabilities.

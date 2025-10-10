@@ -49,7 +49,7 @@ guide and tutorials. 📚
 -   [x] rai_tts: Text-to-speech models and tools.
 -   [x] rai_sim: Package for connecting RAI to simulation environments.
 -   [x] rai_bench: Benchmarking suite for RAI. Test agents, models, tools, simulators, etc.
--   [x] rai_openset: Openset detection models and tools.
+-   [x] rai_perception: Object detection tools based on open-set models and machine learning techniques.
 -   [x] rai_nomad: Integration with NoMaD for navigation.
 -   [ ] rai_finetune: Finetune LLMs on your embodied data.
 

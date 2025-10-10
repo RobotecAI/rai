@@ -21,7 +21,7 @@ def generate_launch_description():
     return LaunchDescription(
         [
             ExecuteProcess(
-                cmd=["python", "run_vision_agents.py"],
+                cmd=["python", "run_perception_agents.py"],
                 cwd="src/rai_extensions/rai_perception/scripts",
                 output="screen",
             ),

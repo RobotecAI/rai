@@ -38,7 +38,7 @@ setup(
     zip_safe=True,
     maintainer="Kajetan Rachwał",
     maintainer_email="kajetan.rachwal@robotec.ai",
-    description="Package enabling open set vision for RAI",
+    description="Package enabling perception capabilities for RAI",
     license="Apache License 2.0",
     tests_require=["pytest"],
     entry_points={
