@@ -1,9 +1,9 @@
 <!--- --8<-- [start:sec1] -->
 
-# RAI Open Set Vision
+# RAI Perception
 
-This package provides a ROS2 Node which is an interface to the [Idea-Research GroundingDINO Model](https://github.com/IDEA-Research/GroundingDINO).
-It allows for open-set detection.
+This package provides a ROS 2 node that interfaces with the [Idea-Research GroundingDINO Model](https://github.com/IDEA-Research/GroundingDINO) for open-set object detection.
+
 
 ## Installation
 

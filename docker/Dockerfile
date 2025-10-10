@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y \
     wget
 
 # Install Poetry
-RUN curl -sSL https://install.python-poetry.org | python3 - --version 1.8.4
+RUN curl -sSL https://install.python-poetry.org | python3 - --version 2.1.1
 ENV PATH="/root/.local/bin:$PATH"
 
 # Clone and setup RAI
@@ -33,7 +33,7 @@ WORKDIR /rai
 RUN git clone https://github.com/RobotecAI/rai.git .
 
 # Install Python dependencies with Poetry
-RUN poetry install --with nomad,perception
+RUN poetry install --with nomad,openset
 
 # Install ROS dependencies
 RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && \
