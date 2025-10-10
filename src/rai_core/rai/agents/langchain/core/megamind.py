@@ -45,7 +45,7 @@ class StepSuccess(BaseModel):
     """Output of success attacher"""
 
     success: bool = Field(description="Whether the task was completed successfully")
-    explanation: str = Field(description="Explanation of what happened")
+    explanation: str = Field(description="Summarize briefly what happened")
 
 
 class MegamindState(MessagesState):
@@ -102,7 +102,9 @@ Below you have messages of agent doing the task:"""
     state["step_success"] = StepSuccess(
         success=analysis.success, explanation=analysis.explanation
     )
-    state["steps_done"].append(f"{state['step_success'].explanation}")
+    state["steps_done"].append(
+        f"objective: {state['step']}, success: {state['step_success'].success}, explanation: {state['step_success'].explanation}"
+    )
     return state
 
 
@@ -158,7 +160,7 @@ def create_react_structured_agent(
     return graph.compile()
 
 
-def create_handoff_tool(agent_name: str, description: str = None):
+def create_handoff_tool(agent_name: str, description: Optional[str] = None):
     """Create a handoff tool for transferring tasks to specialist agents."""
     name = f"transfer_to_{agent_name}"
     description = description or f" {agent_name} for help."
@@ -221,9 +223,10 @@ def plan_step(
         state["step"] = None
 
     megamind_prompt = f"You are given objective to complete: {state['original_task']}"
-    for provider in context_providers:
-        megamind_prompt += provider.get_context()
-        megamind_prompt += "\n"
+    if context_providers:
+        for provider in context_providers:
+            megamind_prompt += provider.get_context()
+            megamind_prompt += "\n"
     if state["steps_done"]:
         megamind_prompt += "\n\n"
         megamind_prompt += "Steps that were already done successfully:\n"
