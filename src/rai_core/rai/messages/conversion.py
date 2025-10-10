@@ -32,13 +32,49 @@ def preprocess_image(
 ) -> str:
     """Convert various image inputs into a base64-encoded PNG string.
 
-    Supported inputs:
-    - PIL Image.Image
-    - str path, str file URL (file://...), or HTTP(S) URL
-    - bytes containing image data
-    - numpy.ndarray (uint8 or float32/float64; grayscale or 3/4-channel)
+    Parameters
+    ----------
+    image : PIL.Image.Image or str or bytes or numpy.ndarray
+        Supported inputs:
+        - PIL Image
+        - Path to a file, ``file://`` URL, or HTTP(S) URL
+        - Raw bytes containing image data
+        - ``numpy.ndarray`` with dtype ``uint8`` or ``float32``/``float64``;
+          grayscale or 3/4-channel arrays are supported.
+    encoding_function : callable, optional
+        Function that converts PNG bytes to the final string representation.
+        By default, returns base64-encoded UTF-8 string.
 
-    All inputs are decoded and re-encoded to PNG to guarantee consistent output.
+    Returns
+    -------
+    str
+        Base64-encoded PNG string.
+
+    Raises
+    ------
+    FileNotFoundError
+        If a file path (or ``file://`` URL) does not exist.
+    TypeError
+        If the input type is not supported.
+    requests.HTTPError
+        If fetching an HTTP(S) URL fails with a non-2xx response.
+    requests.RequestException
+        If a network error occurs while fetching an HTTP(S) URL.
+    OSError
+        If the input cannot be decoded as an image by Pillow.
+
+    Notes
+    -----
+    - All inputs are decoded and re-encoded to PNG to guarantee consistent output.
+    - Float arrays are assumed to be in [0, 1] and are scaled to ``uint8``.
+    - Network requests use a timeout of ``(5, 15)`` seconds (connect, read).
+
+    Examples
+    --------
+    >>> b64_png = preprocess_image("path/to/image.jpg")
+    >>> import numpy as np
+    >>> arr = np.random.rand(64, 64, 3).astype(np.float32)
+    >>> b64_png = preprocess_image(arr)
     """
 
     def _to_pil_from_ndarray(arr: np.ndarray) -> Image:
