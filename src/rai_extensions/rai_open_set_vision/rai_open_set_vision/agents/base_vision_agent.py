@@ -36,10 +36,11 @@ class BaseVisionAgent(BaseAgent):
             raise ValueError("WEIGHTS_FILENAME is not set")
         super().__init__()
         self.weights_root_path = Path(weights_root_path)
-        self.weights_root_path.mkdir(parents=True, exist_ok=True)
         self.weights_path = (
             self.weights_root_path / self.WEIGHTS_DIR_PATH_PART / self.WEIGHTS_FILENAME
         )
+        # create the directory structure
+        self.weights_path.parent.mkdir(parents=True, exist_ok=True)
         if not self.weights_path.exists():
             self._download_weights()
         self.ros2_connector = ROS2Connector(ros2_name, executor_type="single_threaded")
