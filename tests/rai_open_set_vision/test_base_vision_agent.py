@@ -16,6 +16,7 @@ import subprocess
 from unittest.mock import MagicMock, patch
 
 import pytest
+import rclpy
 from rai_open_set_vision.agents.base_vision_agent import BaseVisionAgent
 
 
@@ -66,8 +67,10 @@ class TestVisionWeightsDownload:
             # Verify file exists after download
             assert weights_path.exists()
 
-            # Clean up ROS2 node
+            # Clean up ROS2 node and context
             agent.stop()
+            if rclpy.ok():
+                rclpy.shutdown()
 
     def test_download_weights_failure(self, tmp_path):
         """Test weight download failure raises exception."""
@@ -88,5 +91,7 @@ class TestVisionWeightsDownload:
             with pytest.raises(Exception, match="Could not download weights"):
                 agent._download_weights()
 
-            # Clean up ROS2 node
+            # Clean up ROS2 node and context
             agent.stop()
+            if rclpy.ok():
+                rclpy.shutdown()
