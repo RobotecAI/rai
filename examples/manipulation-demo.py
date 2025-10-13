@@ -38,7 +38,6 @@ logger = logging.getLogger(__name__)
 
 
 def create_agent():
-    rclpy.init()
     connector = ROS2Connector(executor_type="single_threaded")
 
     required_services = ["/grounded_sam_segment", "/grounding_dino_classify"]
