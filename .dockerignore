@@ -182,4 +182,5 @@ src/rai_interfaces
 demo_assets/
 
 # Docker files
-Dockerfile*
+docker/Dockerfile
+.dockerignore

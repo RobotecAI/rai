@@ -75,3 +75,13 @@ RUN apt install -y \
     libunwind-dev
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=all
+
+RUN poetry install --with openset && \
+    vcs import < demos.repos && \
+    rosdep install --from-paths src/examples/rai-manipulation-demo/ros2_ws/src --ignore-src -r -y
+
+RUN ./scripts/download_demo.sh manipulation
+RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && \
+                  colcon build --symlink-install'
+
+ENTRYPOINT ["bash", "-c", ". setup_shell.sh && streamlit run examples/manipulation-demo-streamlit.py \"$@\""]
