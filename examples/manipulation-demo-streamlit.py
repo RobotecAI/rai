@@ -106,6 +106,19 @@ def initialize_o3de(scenario_path: str, o3de_config_path: str):
         launch_description=launch_description(),
     )
     o3de.setup_scene(scenario.scene_config)
+    return o3de, scenario
+
+
+def setup_new_scene(o3de, scenario_path: str):
+    """Setup a new scene with the given scenario path"""
+    scene_config = SceneConfig.load_base_config(Path(scenario_path))
+    scenario = Scenario(
+        task=None,
+        scene_config=scene_config,
+        scene_config_path=scenario_path,
+    )
+    o3de.setup_scene(scenario.scene_config)
+    return scenario
 
 
 def main(scenario: Scenario, simulation_config: O3DExROS2SimulationConfig):
@@ -115,6 +128,93 @@ def main(scenario: Scenario, simulation_config: O3DExROS2SimulationConfig):
     )
     st.title("RAI Manipulation Demo")
     st.markdown("---")
+    
+    # Layout selection in sidebar
+    st.sidebar.header("Configuration")
+    
+    # Get available scenarios for layout selection
+    levels = ["medium", "hard", "very_hard"]
+    scenarios: list[Scenario] = get_scenarios(levels=levels)
+    scenario_names = sorted([Path(s.scene_config_path).stem for s in scenarios])
+    
+    # Create layout selection widget
+    selected_layout = st.sidebar.selectbox(
+        "Select Layout:",
+        options=scenario_names,
+        index=scenario_names.index(Path(scenario).stem) if Path(scenario).stem in scenario_names else 0,
+        help="Choose a scene layout for the manipulation demo"
+    )
+    
+    # Display selected layout info
+    st.sidebar.info(f"Selected: {selected_layout}")
+    
+    # Display current scene info if available
+    if "current_scenario" in st.session_state:
+        current_scene_name = Path(st.session_state["current_scenario"].scene_config_path).stem
+        st.sidebar.success(f"Active Scene: {current_scene_name}")
+    
+    # Check if layout has changed
+    if "current_layout" not in st.session_state:
+        st.session_state["current_layout"] = selected_layout
+    elif st.session_state["current_layout"] != selected_layout:
+        st.sidebar.success("🔄 Layout changed! Setting up new scene...")
+        # Find the scenario path for the selected layout
+        selected_scenario_path = None
+        for s in scenarios:
+            if Path(s.scene_config_path).stem == selected_layout:
+                selected_scenario_path = s.scene_config_path
+                break
+        
+        if selected_scenario_path and "o3de" in st.session_state:
+            # Setup new scene with the selected layout
+            try:
+                new_scenario = setup_new_scene(st.session_state["o3de"], selected_scenario_path)
+                st.session_state["current_scenario"] = new_scenario
+                st.session_state["current_layout"] = selected_layout
+                st.sidebar.success(f"✅ Scene updated to: {selected_layout}")
+            except Exception as e:
+                st.sidebar.error(f"❌ Failed to setup new scene: {str(e)}")
+        else:
+            st.session_state["current_layout"] = selected_layout
+    
+    # Add reload and restart buttons
+    col1, col2 = st.sidebar.columns(2)
+    
+    with col1:
+        if st.button("🔄 Reload Layout", help="Reload the current scene layout"):
+            if "o3de" in st.session_state and "current_layout" in st.session_state:
+                # Find the scenario path for the current layout
+                current_scenario_path = None
+                for s in scenarios:
+                    if Path(s.scene_config_path).stem == st.session_state["current_layout"]:
+                        current_scenario_path = s.scene_config_path
+                        break
+                
+                if current_scenario_path:
+                    try:
+                        new_scenario = setup_new_scene(st.session_state["o3de"], current_scenario_path)
+                        st.session_state["current_scenario"] = new_scenario
+                        st.sidebar.success(f"✅ Scene reloaded: {st.session_state['current_layout']}")
+                    except Exception as e:
+                        st.sidebar.error(f"❌ Failed to reload scene: {str(e)}")
+                else:
+                    st.sidebar.error("❌ Could not find scenario path for current layout")
+            else:
+                st.sidebar.warning("⚠️ Demo not initialized yet")
+    
+    with col2:
+        if st.button("🔄 Restart Demo", help="Restart the demo with the selected layout"):
+            # Reset layout and call o3de.reset_arm()
+            if "o3de" in st.session_state:
+                try:
+                    st.session_state["o3de"].reset_arm()
+                    st.sidebar.success("✅ Arm has been reset.")
+                except Exception as e:
+                    st.sidebar.error(f"❌ Failed to reset arm: {e}")
+            st.session_state["current_layout"] = selected_layout
+            st.rerun()
+    
+    st.sidebar.markdown("---")
     st.sidebar.header("Tool Calls History")
 
     if "ros" not in st.session_state:
@@ -122,8 +222,9 @@ def main(scenario: Scenario, simulation_config: O3DExROS2SimulationConfig):
         st.session_state["ros"] = ros
 
     if "o3de" not in st.session_state:
-        o3de = initialize_o3de(scenario, simulation_config)
+        o3de, initial_scenario = initialize_o3de(scenario, simulation_config)
         st.session_state["o3de"] = o3de
+        st.session_state["current_scenario"] = initial_scenario
 
     if "graph" not in st.session_state:
         graph = initialize_graph()
@@ -164,15 +265,14 @@ if __name__ == "__main__":
         "very_hard",
     ]
     scenarios: list[Scenario] = get_scenarios(levels=levels)
-    scenario_names = [Path(s.scene_config_path).stem for s in scenarios]
-    print(scenario_names)
+    scenario_names = sorted([Path(s.scene_config_path).stem for s in scenarios])
 
     if len(sys.argv) > 1:
         layout = sys.argv[1]
         if layout not in scenario_names:
             raise ValueError(f"Invalid layout: {layout}. Select from {scenario_names}")
     else:
-        layout = "3carrots_1a_1t_2bc_2yc"
+        layout = "1carrot_1a_1t_1bc_1corn"
     o3de_config_path = (
         "src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/o3de_config.yaml"
     )
