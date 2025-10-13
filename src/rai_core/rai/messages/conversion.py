@@ -68,6 +68,7 @@ def preprocess_image(
     - All inputs are decoded and re-encoded to PNG to guarantee consistent output.
     - Float arrays are assumed to be in [0, 1] and are scaled to ``uint8``.
     - Network requests use a timeout of ``(5, 15)`` seconds (connect, read).
+    - Supported color space: rgb
 
     Examples
     --------

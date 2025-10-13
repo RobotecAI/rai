@@ -137,11 +137,11 @@ class GetROS2ImageTool(BaseROS2Tool):
         msg_type = type(message.payload)
         if msg_type == Image:
             image = CvBridge().imgmsg_to_cv2(  # type: ignore
-                message.payload, desired_encoding="bgr8"
+                message.payload, desired_encoding="rgb8"
             )
         elif msg_type == CompressedImage:
             image = CvBridge().compressed_imgmsg_to_cv2(  # type: ignore
-                message.payload, desired_encoding="bgr8"
+                message.payload, desired_encoding="rgb8"
             )
         else:
             raise ValueError(
