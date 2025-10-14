@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 param_prefix = "pcl.detection.gripping_points"
 
 
-def initialize_tools(connector: ROS2Connector) -> List[BaseTool]:
+def initialize_tools(connector: ROS2Connector, camera_tool: GetROS2ImageConfiguredTool) -> List[BaseTool]:
     """Initialize and configure all tools for the manipulation agent."""
     node = connector.node
 
@@ -91,7 +91,7 @@ def initialize_tools(connector: ROS2Connector) -> List[BaseTool]:
             filter_config=filter_config,
         ),
         MoveObjectFromToTool(connector=connector, manipulator_frame=manipulator_frame),
-        GetROS2ImageConfiguredTool(connector=connector, topic=camera_topic),
+        camera_tool,
     ]
 
     return tools
@@ -114,7 +114,8 @@ def create_agent():
         rclpy.init()
     connector = ROS2Connector(executor_type="single_threaded")
 
-    tools = initialize_tools(connector)
+    camera_tool = GetROS2ImageConfiguredTool(connector=connector, topic="/color_image5")
+    tools = initialize_tools(connector, camera_tool)
     wait_for_ros2_services_and_topics(connector)
 
     llm = get_llm_model(model_type="complex_model", streaming=True)
@@ -126,7 +127,7 @@ def create_agent():
         tools=tools,
         system_prompt=embodiment_info.to_langchain(),
     )
-    return agent
+    return agent, camera_tool
 
 
 def main():
