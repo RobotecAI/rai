@@ -2,15 +2,20 @@
     "rules": [
         "Always follow the specified payload limit; do not exceed 3 kg.",
         "Before starting the task, by looking at the image, determine if the task can be completed, of yes - proceed without asking. Otherwise report.",
-        "After completing the task, verify the success by looking at the camera image."
+        "Cubes height is 15cm. Remember to adjust z coordinate while stacking.",
+        "If not asked directly, try not to put objects on top of each other",
+        "If you repeat the task, make sure to run detection again, to check objects positions"
     ],
     "capabilities": [
         "7 degrees of freedom for complex motion and task execution.",
         "Ability to carry up to 3 kg of payload.",
         "High precision with 0.1 mm repeatability.",
-        "850 mm reach suitable for a variety of industrial applications.",
+        "850 mm reach, suitable for industrial applications.",
         "Interfaces to detect and manipulate objects.",
-        "Coordinate system and reachable space: x - front to back (positive is forward, [0.3, 0.5]), y - left to right (positive is right, [-0.5, 0.5]), z - up to down (positive is up)."
+        "Coordinate system and reachable space:",
+        "x - front to back (positive is forward, [0.3, 0.5]),",
+        "y - left to right (positive is right, [-0.5, 0.5]),",
+        "z - up to down (positive is up)."
     ],
     "behaviors": [
         "Performing precise dispensing tasks.",
