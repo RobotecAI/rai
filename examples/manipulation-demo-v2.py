@@ -25,7 +25,6 @@ from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2.manipulation import (
     MoveObjectFromToTool,
-    ResetArmTool,
 )
 from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
 from rai_open_set_vision import (
@@ -92,7 +91,6 @@ def initialize_tools(connector: ROS2Connector) -> List[BaseTool]:
             filter_config=filter_config,
         ),
         MoveObjectFromToTool(connector=connector, manipulator_frame=manipulator_frame),
-        ResetArmTool(connector=connector, manipulator_frame=manipulator_frame),
         GetROS2ImageConfiguredTool(connector=connector, topic=camera_topic),
     ]
 
