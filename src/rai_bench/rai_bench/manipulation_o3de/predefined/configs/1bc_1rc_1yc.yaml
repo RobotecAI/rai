@@ -3,7 +3,7 @@ entities:
     prefab_name: blue_cube
     pose:
       translation:
-        x: 0.15
+        x: 0.3
         y: 0.35
         z: 0.05
       rotation:
@@ -27,7 +27,7 @@ entities:
     prefab_name: yellow_cube
     pose:
       translation:
-        x: 0.25
+        x: 0.3
         y: 0.5
         z: 0.05
       rotation:
