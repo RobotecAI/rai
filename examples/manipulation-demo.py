@@ -1,5 +1,3 @@
-# Copyright (C) 2024 Robotec.AI
-#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -27,7 +25,6 @@ from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2.manipulation import (
     GetObjectPositionsTool,
     MoveObjectFromToTool,
-    ResetArmTool,
 )
 from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
 from rai_perception.tools import GetGrabbingPointTool
@@ -60,7 +57,6 @@ def create_agent():
             get_grabbing_point_tool=GetGrabbingPointTool(connector=connector),
         ),
         MoveObjectFromToTool(connector=connector, manipulator_frame="panda_link0"),
-        ResetArmTool(connector=connector, manipulator_frame="panda_link0"),
         GetROS2ImageConfiguredTool(connector=connector, topic="/color_image5"),
     ]
 
