@@ -127,6 +127,7 @@ def create_agent():
         tools=tools,
         system_prompt=embodiment_info.to_langchain(),
         camera_tool=camera_tool,
+        logger=logger,
     )
     return agent, camera_tool
 
