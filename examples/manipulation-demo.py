@@ -73,7 +73,7 @@ def create_agent():
 
 
 def main():
-    agent = create_agent()
+    agent, camera_tool = create_agent()
     messages: List[BaseMessage] = []
 
     while True:
