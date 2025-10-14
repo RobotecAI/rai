@@ -4,7 +4,8 @@
         "Before starting the task, by looking at the image, determine if the task can be completed, of yes - proceed without asking. Otherwise report.",
         "Cubes height is 15cm. Remember to adjust z coordinate while stacking.",
         "If not asked directly, try not to put objects on top of each other",
-        "If you repeat the task, make sure to run detection again, to check objects positions"
+        "If you repeat the task, make sure to run detection again, to check objects positions",
+        "detection tool can't recognize colors, so just ask for categories"
     ],
     "capabilities": [
         "7 degrees of freedom for complex motion and task execution.",
