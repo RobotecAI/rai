@@ -126,12 +126,13 @@ def create_agent():
         llm=llm,
         tools=tools,
         system_prompt=embodiment_info.to_langchain(),
+        camera_tool=camera_tool,
     )
     return agent, camera_tool
 
 
 def main():
-    agent = create_agent()
+    agent, camera_tool = create_agent()
     messages: List[BaseMessage] = []
 
     while True:
