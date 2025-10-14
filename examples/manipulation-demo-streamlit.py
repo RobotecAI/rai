@@ -13,7 +13,10 @@
 # limitations under the License.
 
 import importlib
+import random
 import sys
+import tempfile
+import yaml
 from pathlib import Path
 
 import rclpy
@@ -38,7 +41,7 @@ from rai_sim.o3de.o3de_bridge import (
 )
 from rai_sim.simulation_bridge import SceneConfig
 
-manipulation_demo = importlib.import_module("manipulation-demo")
+manipulation_demo = importlib.import_module("manipulation-demo-v2")
 
 
 def launch_description():
@@ -85,7 +88,8 @@ def init_ros():
 
 @st.cache_resource
 def initialize_graph():
-    return manipulation_demo.create_agent()
+    agent, camera_tool = manipulation_demo.create_agent()
+    return agent, camera_tool
 
 
 @st.cache_resource
@@ -100,6 +104,8 @@ def initialize_o3de(scenario_path: str, o3de_config_path: str):
         scene_config_path=scenario_path,
     )
     o3de = O3DEngineArmManipulationBridge(ROS2Connector())
+    
+    # Clear scene at the beginning
     o3de.init_simulation(simulation_config=simulation_config)
     o3de.launch_robotic_stack(
         required_robotic_ros2_interfaces=simulation_config.required_robotic_ros2_interfaces,
@@ -121,7 +127,83 @@ def setup_new_scene(o3de, scenario_path: str):
     return scenario
 
 
-def main(scenario: Scenario, simulation_config: O3DExROS2SimulationConfig):
+def generate_random_scenario(object_counts: dict) -> str:
+    """Generate a random scenario configuration with specified object counts.
+    
+    Args:
+        object_counts: Dictionary with object types as keys and counts as values
+        e.g., {"apple": 2, "tomato": 1, "blue_cube": 3}
+    
+    Returns:
+        Path to the generated scenario file
+    """
+    # Available object types and their prefab names
+    object_types = {
+        "apple": "apple",
+        "tomato": "tomato", 
+        "carrot": "carrot",
+        "blue_cube": "blue_cube",
+        "red_cube": "red_cube",
+        "yellow_cube": "yellow_cube",
+        "corn": "corn"
+    }
+    
+    entities = []
+    entity_counter = 1
+    
+    # Generate entities for each object type
+    for obj_type, count in object_counts.items():
+        if obj_type not in object_types:
+            continue
+            
+        prefab_name = object_types[obj_type]
+        
+        for i in range(count):
+            # Generate random position within reasonable bounds
+            x = random.uniform(0.1, 0.4)  # Front to back
+            y = random.uniform(-0.5, 0.5)  # Left to right
+            z = 0.05  # Height on table
+            
+            entity = {
+                "name": f"{obj_type}{entity_counter}",
+                "prefab_name": prefab_name,
+                "pose": {
+                    "translation": {"x": x, "y": y, "z": z},
+                    "rotation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0}
+                }
+            }
+            entities.append(entity)
+            entity_counter += 1
+    
+    # Create scenario configuration
+    scenario_config = {"entities": entities}
+    
+    # Create temporary file
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+        yaml.dump(scenario_config, f, default_flow_style=False)
+        return f.name
+
+
+SCENARIO_NAMES = [
+    "1bc_1rc_1yc",
+    "1rc_2bc_3yc",
+    "1carrot_1a_2t_1bc_1rc_3yc_stacked",
+    "4carrots",
+    "3a_4t_2bc",
+    "2a_1c_2rc",
+    "1carrot_1a_1t_1bc_1corn"
+]
+
+
+def get_scenario_path(scenarios, selected_layout: str):
+    selected_scenario_path = None
+    for s in scenarios:
+        if Path(s.scene_config_path).stem == selected_layout:
+            selected_scenario_path = s.scene_config_path
+            break
+    return selected_scenario_path
+
+def main(simulation_config: O3DExROS2SimulationConfig):
     st.set_page_config(
         page_title="RAI Manipulation Demo",
         page_icon=":robot:",
@@ -135,47 +217,141 @@ def main(scenario: Scenario, simulation_config: O3DExROS2SimulationConfig):
     # Get available scenarios for layout selection
     levels = ["medium", "hard", "very_hard"]
     scenarios: list[Scenario] = get_scenarios(levels=levels)
-    scenario_names = sorted([Path(s.scene_config_path).stem for s in scenarios])
+    scenarios = [s for s in scenarios if Path(s.scene_config_path).stem in SCENARIO_NAMES]
     
-    # Create layout selection widget
-    selected_layout = st.sidebar.selectbox(
+    # Create layout selection widget with random scenario option
+    layout_options = ["🎲 Random Scenario"] + SCENARIO_NAMES
+    scenario = "1bc_1rc_1yc"
+    # Determine the current selection index
+    if "current_layout" in st.session_state and st.session_state["current_layout"] == "random_scenario":
+        current_index = 0  # Random scenario is first option
+    else:
+        current_index = SCENARIO_NAMES.index(Path(scenario).stem) + 1 if Path(scenario).stem in SCENARIO_NAMES else 1
+    
+    selected_layout_option = st.sidebar.selectbox(
         "Select Layout:",
-        options=scenario_names,
-        index=scenario_names.index(Path(scenario).stem) if Path(scenario).stem in scenario_names else 0,
+        options=layout_options,
+        index=current_index,
         help="Choose a scene layout for the manipulation demo"
     )
     
+    # Convert selection back to layout name
+    if selected_layout_option == "🎲 Random Scenario":
+        selected_layout = "random_scenario"
+    else:
+        selected_layout = selected_layout_option
+    # Random scenario generator
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🎲 Random Scenario Generator")
+    
     # Display selected layout info
-    st.sidebar.info(f"Selected: {selected_layout}")
+    if selected_layout == "random_scenario":
+        st.sidebar.info("Selected: 🎲 Random Scenario")
+    else:
+        st.sidebar.info(f"Selected: {selected_layout}")
+    
+    
+    # Object count inputs
+    object_counts = {}
+    available_objects = ["apple", "tomato", "carrot", "blue_cube", "red_cube", "yellow_cube", "corn"]
+    
+    for obj in available_objects:
+        count = st.sidebar.number_input(
+            f"Number of {obj.replace('_', ' ').title()}s:",
+            min_value=0,
+            max_value=10,
+            value=0,
+            key=f"count_{obj}"
+        )
+        if count > 0:
+            object_counts[obj] = count
+    
+    # Generate random scenario button
+    if st.sidebar.button("🎲 Generate Random Scenario", disabled=not any(object_counts.values())):
+        if any(object_counts.values()):
+            try:
+                # Generate the scenario file
+                scenario_path = generate_random_scenario(object_counts)
+                
+                # Load the scenario into the scene
+                if "o3de" in st.session_state:
+                    # Clear the current scene first
+                    st.sidebar.info("🧹 Clearing current scene...")
+                    try:
+                        st.session_state["o3de"].clear_scene()
+                        st.sidebar.success("✅ Scene cleared")
+                    except Exception as clear_error:
+                        st.sidebar.warning(f"⚠️ Could not clear scene: {str(clear_error)}")
+                    
+                    # Setup new scene with random scenario
+                    st.sidebar.info("🎲 Setting up random scenario...")
+                    new_scenario = setup_new_scene(st.session_state["o3de"], scenario_path)
+                    st.session_state["current_scenario"] = new_scenario
+                    st.session_state["current_layout"] = "random_scenario"
+                    
+                    # Reset agent history for new random scenario
+                    st.session_state["messages"] = [
+                        AIMessage(content="Hi! I am a robotic arm. What can I do for you?")
+                    ]
+                    
+                    st.sidebar.success(f"✅ Random scenario generated with {sum(object_counts.values())} objects!")
+                else:
+                    st.sidebar.warning("⚠️ Demo not initialized yet")
+            except Exception as e:
+                st.sidebar.error(f"❌ Failed to generate random scenario: {str(e)}")
+        else:
+            st.sidebar.warning("⚠️ Please specify at least one object count")
     
     # Display current scene info if available
     if "current_scenario" in st.session_state:
         current_scene_name = Path(st.session_state["current_scenario"].scene_config_path).stem
-        st.sidebar.success(f"Active Scene: {current_scene_name}")
+        if current_scene_name == "random_scenario":
+            st.sidebar.success("Active Scene: Random Scenario")
+        else:
+            st.sidebar.success(f"Active Scene: {current_scene_name}")
     
     # Check if layout has changed
     if "current_layout" not in st.session_state:
         st.session_state["current_layout"] = selected_layout
     elif st.session_state["current_layout"] != selected_layout:
-        st.sidebar.success("🔄 Layout changed! Setting up new scene...")
-        # Find the scenario path for the selected layout
-        selected_scenario_path = None
-        for s in scenarios:
-            if Path(s.scene_config_path).stem == selected_layout:
-                selected_scenario_path = s.scene_config_path
-                break
-        
-        if selected_scenario_path and "o3de" in st.session_state:
-            # Setup new scene with the selected layout
-            try:
-                new_scenario = setup_new_scene(st.session_state["o3de"], selected_scenario_path)
-                st.session_state["current_scenario"] = new_scenario
-                st.session_state["current_layout"] = selected_layout
-                st.sidebar.success(f"✅ Scene updated to: {selected_layout}")
-            except Exception as e:
-                st.sidebar.error(f"❌ Failed to setup new scene: {str(e)}")
-        else:
+        if selected_layout == "random_scenario":
+            # User selected random scenario from dropdown - show info
+            st.sidebar.info("🎲 Random scenario selected. Use the controls below to generate a scenario.")
             st.session_state["current_layout"] = selected_layout
+        else:
+            # User selected a predefined layout
+            st.sidebar.success("🔄 Layout changed! Setting up new scene...")
+            # Find the scenario path for the selected layout
+            selected_scenario_path = None
+            selected_scenario_path = get_scenario_path(scenarios, selected_layout)
+            
+            if selected_scenario_path and "o3de" in st.session_state:
+                # Setup new scene with the selected layout
+                try:
+                    # Clear the current scene first
+                    st.sidebar.info("🧹 Clearing current scene...")
+                    try:
+                        st.session_state["o3de"].clear_scene()
+                        st.sidebar.success("✅ Scene cleared")
+                    except Exception as clear_error:
+                        st.sidebar.warning(f"⚠️ Could not clear scene: {str(clear_error)}")
+                    
+                    # Setup new scene
+                    st.sidebar.info(f"🎯 Setting up scene: {selected_layout}")
+                    new_scenario = setup_new_scene(st.session_state["o3de"], selected_scenario_path)
+                    st.session_state["current_scenario"] = new_scenario
+                    st.session_state["current_layout"] = selected_layout
+                    
+                    # Reset agent history for new layout
+                    st.session_state["messages"] = [
+                        AIMessage(content="Hi! I am a robotic arm. What can I do for you?")
+                    ]
+                    
+                    st.sidebar.success(f"✅ Scene updated to: {selected_layout}")
+                except Exception as e:
+                    st.sidebar.error(f"❌ Failed to setup new scene: {str(e)}")
+            else:
+                st.session_state["current_layout"] = selected_layout
     
     # Add reload and restart buttons
     col1, col2 = st.sidebar.columns(2)
@@ -192,8 +368,24 @@ def main(scenario: Scenario, simulation_config: O3DExROS2SimulationConfig):
                 
                 if current_scenario_path:
                     try:
+                        # Clear the current scene first
+                        st.sidebar.info("🧹 Clearing current scene...")
+                        try:
+                            st.session_state["o3de"].clear_scene()
+                            st.sidebar.success("✅ Scene cleared")
+                        except Exception as clear_error:
+                            st.sidebar.warning(f"⚠️ Could not clear scene: {str(clear_error)}")
+                        
+                        # Reload the scene
+                        st.sidebar.info(f"🔄 Reloading scene: {st.session_state['current_layout']}")
                         new_scenario = setup_new_scene(st.session_state["o3de"], current_scenario_path)
                         st.session_state["current_scenario"] = new_scenario
+                        
+                        # Reset agent history for reloaded scene
+                        st.session_state["messages"] = [
+                            AIMessage(content="Hi! I am a robotic arm. What can I do for you?")
+                        ]
+                        
                         st.sidebar.success(f"✅ Scene reloaded: {st.session_state['current_layout']}")
                     except Exception as e:
                         st.sidebar.error(f"❌ Failed to reload scene: {str(e)}")
@@ -222,13 +414,17 @@ def main(scenario: Scenario, simulation_config: O3DExROS2SimulationConfig):
         st.session_state["ros"] = ros
 
     if "o3de" not in st.session_state:
-        o3de, initial_scenario = initialize_o3de(scenario, simulation_config)
+        selected_scenario_path = get_scenario_path(scenarios, scenario)
+        o3de, initial_scenario = initialize_o3de(selected_scenario_path, simulation_config)
         st.session_state["o3de"] = o3de
         st.session_state["current_scenario"] = initial_scenario
 
+    
+
     if "graph" not in st.session_state:
-        graph = initialize_graph()
+        graph, camera_tool = initialize_graph()
         st.session_state["graph"] = graph
+        st.session_state["camera_tool"] = camera_tool
 
     if "messages" not in st.session_state:
         st.session_state["messages"] = [
@@ -249,7 +445,13 @@ def main(scenario: Scenario, simulation_config: O3DExROS2SimulationConfig):
                 st.code(msg.content, language="json")
 
     if prompt:
-        st.session_state.messages.append(HumanMessage(content=prompt))
+        if "camera_tool" in st.session_state:
+            _, artifact = st.session_state["camera_tool"]._run()
+        else:
+            artifact = None
+        message = HumanMultimodalMessage(content=prompt, images=artifact.get("images", [])) 
+        st.session_state.messages.append(message)
+
         st.chat_message("user").write(prompt)
         with st.chat_message("assistant"):
             st_callback = get_streamlit_cb(st.container())
@@ -265,19 +467,7 @@ if __name__ == "__main__":
         "very_hard",
     ]
     scenarios: list[Scenario] = get_scenarios(levels=levels)
-    scenario_names = sorted([Path(s.scene_config_path).stem for s in scenarios])
-
-    if len(sys.argv) > 1:
-        layout = sys.argv[1]
-        if layout not in scenario_names:
-            raise ValueError(f"Invalid layout: {layout}. Select from {scenario_names}")
-    else:
-        layout = "1carrot_1a_1t_1bc_1corn"
     o3de_config_path = (
         "src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/o3de_config.yaml"
     )
-
-    scenario_idx = scenario_names.index(layout)
-    scenario = str(scenarios[scenario_idx].scene_config_path)
-
-    main(scenario, o3de_config_path)
+    main(o3de_config_path)
