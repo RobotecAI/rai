@@ -16,6 +16,7 @@ import logging
 from typing import Literal, Type
 
 import numpy as np
+from deprecated import deprecated
 from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
 from pydantic import BaseModel, Field
 from tf2_geometry_msgs import do_transform_pose
@@ -259,6 +260,7 @@ class GetObjectPositionsToolInput(BaseModel):
     )
 
 
+@deprecated("Use GetObjectGrippingPointsTool from rai_open_set_vision instead")
 class GetObjectPositionsTool(BaseROS2Tool):
     name: str = "get_object_positions"
     description: str = (
