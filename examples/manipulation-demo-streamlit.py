@@ -82,8 +82,9 @@ def launch_description():
 
 @st.cache_resource
 def init_ros():
-    rclpy.init()
-    return "ros"
+    if not rclpy.ok():
+        rclpy.init()
+    return ""
 
 
 @st.cache_resource

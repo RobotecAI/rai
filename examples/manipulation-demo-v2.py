@@ -110,7 +110,8 @@ def wait_for_ros2_services_and_topics(connector: ROS2Connector):
 
 
 def create_agent():
-    rclpy.init()
+    if not rclpy.ok():
+        rclpy.init()
     connector = ROS2Connector(executor_type="single_threaded")
 
     tools = initialize_tools(connector)
