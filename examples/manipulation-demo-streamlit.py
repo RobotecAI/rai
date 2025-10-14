@@ -250,15 +250,16 @@ def main(simulation_config: O3DExROS2SimulationConfig):
         selected_layout = "random_scenario"
     else:
         selected_layout = selected_layout_option
-    # Random scenario generator
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("🎲 Random Scenario Generator")
 
     # Display selected layout info
     if selected_layout == "random_scenario":
         st.sidebar.info("Selected: 🎲 Random Scenario")
     else:
         st.sidebar.info(f"Selected: {selected_layout}")
+
+    # Random scenario generator
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🎲 Random Scenario Generator")
 
     # Object count inputs
     object_counts = {}
@@ -297,7 +298,6 @@ def main(simulation_config: O3DExROS2SimulationConfig):
                     # Clear the current scene first
                     st.sidebar.info("🧹 Clearing current scene...")
                     try:
-                        st.session_state["o3de"].clear_scene()
                         st.sidebar.success("✅ Scene cleared")
                     except Exception as clear_error:
                         st.sidebar.warning(
@@ -362,7 +362,6 @@ def main(simulation_config: O3DExROS2SimulationConfig):
                     # Clear the current scene first
                     st.sidebar.info("🧹 Clearing current scene...")
                     try:
-                        st.session_state["o3de"].clear_scene()
                         st.sidebar.success("✅ Scene cleared")
                     except Exception as clear_error:
                         st.sidebar.warning(
