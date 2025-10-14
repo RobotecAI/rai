@@ -3,7 +3,7 @@ entities:
     prefab_name: carrot
     pose:
       translation:
-        x: 0.05
+        x: 0.3
         y: -0.45
         z: 0.05
       rotation:
@@ -15,7 +15,7 @@ entities:
     prefab_name: apple
     pose:
       translation:
-        x: 0.20
+        x: 0.3
         y: -0.10
         z: 0.05
       rotation:
@@ -27,7 +27,7 @@ entities:
     prefab_name: tomato
     pose:
       translation:
-        x: 0.25
+        x: 0.3
         y: -0.10
         z: 0.05
       rotation:
@@ -39,7 +39,7 @@ entities:
     prefab_name: tomato
     pose:
       translation:
-        x: 0.25
+        x: 0.3
         y: -0.15
         z: 0.05
       rotation:
