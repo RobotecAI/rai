@@ -148,7 +148,7 @@ class MoveObjectFromToTool(BaseROS2Tool):
     min_z: float = Field(default=0.135, description="Minimum z coordinate [m]")
     calibration_x: float = Field(default=0.0, description="Calibration x [m]")
     calibration_y: float = Field(default=0.0, description="Calibration y [m]")
-    calibration_z: float = Field(default=0.1, description="Calibration z [m]")
+    calibration_z: float = Field(default=0.0, description="Calibration z [m]")
     additional_height: float = Field(
         default=0.05, description="Additional height for the place task [m]"
     )
@@ -170,6 +170,9 @@ class MoveObjectFromToTool(BaseROS2Tool):
         y1: float,
         z1: float,
     ) -> str:
+        self.connector.node.get_logger().info(f"Calibration x: {self.calibration_x}, y: {self.calibration_y}, z: {self.calibration_z}")
+        self.connector.node.get_logger().info(f"Target: ({x:.2f}, {y:.2f}, {z:.2f})->({x1:.2f}, {y1:.2f}, {z1:.2f})")
+
         # NOTE: create_client could be refactored into self.connector.service_call
         self.connector.service_call
         client = self.connector.node.create_client(
@@ -213,7 +216,7 @@ class MoveObjectFromToTool(BaseROS2Tool):
         request.final_gripper_state = False  # closed
 
         future = client.call_async(request)
-        self.connector.node.get_logger().debug(
+        self.connector.node.get_logger().info(
             f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
         )
         response = get_future_result(future, timeout_sec=5.0)
@@ -238,11 +241,14 @@ class MoveObjectFromToTool(BaseROS2Tool):
         request.final_gripper_state = True  # open
 
         future = client.call_async(request)
-        self.connector.node.get_logger().debug(
+        self.connector.node.get_logger().info(
             f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
         )
 
         response = get_future_result(future, timeout_sec=20.0)
+
+        # reset_tool = ResetArmTool(connector=self.connector, manipulator_frame=self.manipulator_frame)
+        # reset_tool._run()
 
         if response is None:
             return f"Service call failed for point ({x1:.2f}, {y1:.2f}, {z1:.2f})."
