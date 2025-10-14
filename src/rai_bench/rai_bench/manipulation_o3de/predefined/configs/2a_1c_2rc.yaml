@@ -3,7 +3,7 @@ entities:
     prefab_name: apple
     pose:
       translation:
-        x: 0.1
+        x: 0.3
         y: -0.3
         z: 0.05
       rotation:
@@ -28,7 +28,7 @@ entities:
     prefab_name: corn
     pose:
       translation:
-        x: 0.2
+        x: 0.3
         y: 0.0
         z: 0.05
       rotation:
@@ -41,7 +41,7 @@ entities:
     prefab_name: corn
     pose:
       translation:
-        x: 0.1
+        x: 0.3
         y: -0.45
         z: 0.05
       rotation:
@@ -53,7 +53,7 @@ entities:
     prefab_name: red_cube
     pose:
       translation:
-        x: 0.05
+        x: 0.3
         y: 0.25
         z: 0.05
       rotation:
@@ -65,7 +65,7 @@ entities:
     prefab_name: red_cube
     pose:
       translation:
-        x: 0.25
+        x: 0.3
         y: -0.5
         z: 0.05
       rotation:
