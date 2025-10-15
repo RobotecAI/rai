@@ -18,13 +18,14 @@ FROM osrf/ros:${ROS_DISTRO}-desktop-full
 ARG DEPENDENCIES=core_only
 ENV DEBIAN_FRONTEND=noninteractive
 # Increase timeout for Poetry requests.
-ENV POETRY_REQUESTS_TIMEOUT=300
 
 # Check whether the $DEPENDENCIES ARG has a valid value
 RUN /bin/bash -c 'if [ "${DEPENDENCIES}" != "core_only" ] && [ "${DEPENDENCIES}" != "all_groups" ]; then \
   echo Error: invalid DEPENDENCIES value. Valid values "core_only", "all_groups" && exit 1; \
 fi'
 
+ENV NVIDIA_VISIBLE_DEVICES=all \
+    NVIDIA_DRIVER_CAPABILITIES=all
 
 # Install dependencies
 RUN apt update && apt install -y \
@@ -33,35 +34,7 @@ RUN apt update && apt install -y \
     git \
     wget \
     zip \
-    ros-${ROS_DISTRO}-rai-interfaces
-
-# Install Poetry
-RUN curl -sSL https://install.python-poetry.org | python3 - --version 2.1.3
-ENV PATH="/root/.local/bin:$PATH"
-
-# Copy the RAI repository
-COPY . /rai
-WORKDIR /rai
-
-# Set up the environment to use Fast DDS
-ENV FASTRTPS_DEFAULT_PROFILES_FILE=/rai/docker/fastrtps_config.xml
-ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-
-RUN --mount=type=cache,target=/root/.cache /bin/bash -c 'if [ "${DEPENDENCIES}" = "core_only" ]; then \
-  poetry install; \
-else \
-  poetry install --all-groups; \
-fi'
-
-# Install ROS dependencies
-RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && \
-    rosdep install --from-paths src --ignore-src -r -y'
-
-# Build the workspace
-RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && colcon build --symlink-install'
-
-# Install libraries required for GUI and NVIDIA support
-RUN apt install -y \
+    ros-${ROS_DISTRO}-rai-interfaces \
     libglu1-mesa-dev \
     libxcb-xinerama0 \
     libfontconfig1-dev \
@@ -75,5 +48,44 @@ RUN apt install -y \
     libpcre2-16-0 \
     libunwind-dev
 
-ENV NVIDIA_VISIBLE_DEVICES=all
-ENV NVIDIA_DRIVER_CAPABILITIES=all
+# Install Poetry
+RUN --mount=type=cache,target=/root/.cache/pypoetry/cache curl -sSL https://install.python-poetry.org \
+    | python3 - --version 2.1.3
+
+ENV PATH="/root/.local/bin:$PATH"
+
+# Copy the RAI repository
+COPY . /rai
+WORKDIR /rai
+
+RUN vcs import < demos.repos
+
+# Install ROS dependencies
+RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && \
+    rosdep install --from-paths src --ignore-src -r -y'
+
+# Build the workspace
+RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && colcon build --symlink-install'
+
+# Set up the environment to use Fast DDS
+ENV FASTRTPS_DEFAULT_PROFILES_FILE=/rai/docker/fastrtps_config.xml
+ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+
+ENV POETRY_REQUESTS_TIMEOUT=100 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=on \
+    PIP_DEFAULT_TIMEOUT=100
+
+RUN --mount=type=cache,target=/root/.cache/pypoetry/cache \
+    --mount=type=cache,target=/root/.cache/pypoetry/artifacts \
+    /bin/bash -c 'if [ "${DEPENDENCIES}" = "core_only" ]; then \
+  poetry install -v; \
+else \
+  poetry install --all-groups -v; \
+fi'
+
+RUN bash -c ". setup_shell.sh && python src/rai_extensions/rai_open_set_vision/scripts/download_weights.py"
+RUN ./scripts/download_demo.sh manipulation
+
+ENTRYPOINT ["bash", "-c", ". setup_shell.sh && streamlit run examples/manipulation-demo-streamlit.py \"$@\""]
