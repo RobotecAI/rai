@@ -148,7 +148,7 @@ class MoveObjectFromToTool(BaseROS2Tool):
     min_z: float = Field(default=0.135, description="Minimum z coordinate [m]")
     calibration_x: float = Field(default=0.0, description="Calibration x [m]")
     calibration_y: float = Field(default=0.0, description="Calibration y [m]")
-    calibration_z: float = Field(default=0.0, description="Calibration z [m]")
+    calibration_z: float = Field(default=0.1, description="Calibration z [m]")
     additional_height: float = Field(
         default=0.05, description="Additional height for the place task [m]"
     )
@@ -195,7 +195,7 @@ class MoveObjectFromToTool(BaseROS2Tool):
 
         pose_stamped.pose.position.x += self.calibration_x
         pose_stamped.pose.position.y += self.calibration_y
-        pose_stamped.pose.position.z += self.calibration_z
+        pose_stamped.pose.position.z
 
         pose_stamped.pose.position.z = np.max(
             [pose_stamped.pose.position.z, self.min_z]
@@ -247,8 +247,6 @@ class MoveObjectFromToTool(BaseROS2Tool):
 
         response = get_future_result(future, timeout_sec=20.0)
 
-        self.reset_arm()
-
         if response is None:
             return f"Service call failed for point ({x1:.2f}, {y1:.2f}, {z1:.2f})."
 
@@ -256,10 +254,6 @@ class MoveObjectFromToTool(BaseROS2Tool):
             return f"End effector successfully positioned at coordinates ({x1:.2f}, {y1:.2f}, {z1:.2f}). Note: The status of object interaction (grab/drop) is not confirmed by this movement."
         else:
             return f"Failed to position end effector at coordinates ({x1:.2f}, {y1:.2f}, {z1:.2f})."
-
-    def reset_arm(self):
-        tool = ResetArmTool(connector=self.connector, manipulator_frame=self.manipulator_frame)
-        return tool._run()
 
 
 class GetObjectPositionsToolInput(BaseModel):
