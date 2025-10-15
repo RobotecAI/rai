@@ -25,10 +25,12 @@ from langchain_core.messages import (
     SystemMessage,
 )
 from pydantic import BaseModel, Field
+from rai.communication.ros2.connectors import ROS2Connector
 from langchain_core.tools import BaseTool
 from langgraph.graph import START, StateGraph, END
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt.tool_node import tools_condition
+from rai.tools.ros2.manipulation import ResetArmTool
 
 from rai.agents.langchain.core.tool_runner import ToolRunner
 from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
@@ -84,81 +86,7 @@ class BoolAnswerWithJustification(BaseModel):
     answer: bool = Field(..., description="Whether the task has been completed successfully.")
     justification: str = Field(..., description="Justification for the answer.")
 
-def camera_tool_critic(state: State, vlm, camera_tool: GetROS2ImageConfiguredTool, logger: logging.Logger) -> BoolAnswerWithJustification:
-    """
-    Takes the latest camera image and the latest human message
-    to judge if the task has been completed. Returns True if completed, else False.
-
-    This is a stub function; actual implementation should use vision/language models.
-    """
-    logger.info("🔍 Running camera tool critic to evaluate task completion")
-    
-    # Find the last HumanMessage
-    human_msg = None
-    for msg in reversed(state["messages"]):
-        if msg.__class__.__name__ == "HumanMessage" or msg.__class__.__name__ == "HumanMultimodalMessage":
-            human_msg = msg
-            break
-
-    if human_msg is None:
-        logger.warning("⚠️ No human message found in state")
-        return BoolAnswerWithJustification(answer=False, justification="No human message found")
-
-    task = human_msg.content if hasattr(human_msg, 'content') else str(human_msg)
-    logger.info(f"📋 Evaluating task: {task[:100]}{'...' if len(task) > 100 else ''}")
-    
-    # Get initial image if available
-    initial_image = None
-    if hasattr(human_msg, 'images') and human_msg.images:
-        initial_image = human_msg.images[0]
-        logger.info("📸 Found initial image from human message")
-    else:
-        logger.info("📸 No initial image found in human message")
-    
-    # Get current camera image
-    try:
-        logger.info("📷 Capturing current camera image")
-        _, artifact = camera_tool._run()
-        current_image = artifact.images[0] if hasattr(artifact, 'images') and artifact.images else None
-        if current_image:
-            logger.info("📷 Successfully captured current camera image")
-        else:
-            logger.warning("📷 No image found in camera artifact")
-    except Exception as e:
-        logger.error(f"❌ Failed to get camera image: {e}")
-        return BoolAnswerWithJustification(answer=False, justification=f"Failed to get camera image: {e}")
-
-    if initial_image is None or current_image is None:
-        logger.warning("⚠️ Missing images for comparison")
-        return BoolAnswerWithJustification(answer=False, justification="Missing images for comparison")
-
-    logger.info("🧠 Invoking VLM to evaluate task completion")
-    prompt = """
-    You are a helpful assistant that judges if a manipulation task has been completed successfully.
-    Compare the initial and current images to determine if the requested task has been accomplished.
-    Return True if the task appears to be completed successfully, False otherwise.
-    """
-
-    system_msg = SystemMessage(content=prompt)
-    images = [initial_image, current_image]
-    message = HumanMultimodalMessage(
-        content=f"Using these 2 images (initial and current) please judge if the task: '{task}' has been completed successfully.", 
-        images=images
-    )
-    msgs = [system_msg, message]
-
-    try:
-        vlm_with_structured_output = vlm.with_structured_output(BoolAnswerWithJustification)
-        vlm_response = vlm_with_structured_output.invoke(msgs)
-        logger.info(f"✅ VLM evaluation complete: Task {'COMPLETED' if vlm_response.answer else 'NOT COMPLETED'}")
-        logger.info(f"💭 VLM justification: {vlm_response.justification}")
-        return vlm_response
-    except Exception as e:
-        logger.error(f"❌ Failed to get VLM response: {e}")
-        return BoolAnswerWithJustification(answer=False, justification=f"VLM evaluation failed: {e}")
-
-
-def tools_condition(state: State, vlm, camera_tool: GetROS2ImageConfiguredTool, logger: logging.Logger, messages_key: str = "messages") -> str:
+def tools_condition(state: State, logger: logging.Logger, messages_key: str = "messages", connector: ROS2Connector = None, manipulator_frame: str = "manipulator_base_link") -> str:
     logger.info("🔀 Running tools_condition to determine next step")
     
     if isinstance(state, list):
@@ -179,19 +107,9 @@ def tools_condition(state: State, vlm, camera_tool: GetROS2ImageConfiguredTool, 
         logger.info(f"🔧 AI message has {len(ai_message.tool_calls)} tool calls - routing to tools")
         return "tools"
 
-    logger.info("🔍 No tool calls found - checking task completion with critic")
-    # If no tool calls, check if task is completed using the critic
-    critic_response = camera_tool_critic(state, vlm, camera_tool, logger)
-    if critic_response.answer:
-        # Task completed successfully - end the conversation
-        logger.info("🎉 Task completed successfully - ending conversation")
-        return "__end__"
-    else:
-        # Task not completed - continue with feedback
-        feedback_msg = f"The task has not been completed yet. Feedback: {critic_response.justification}. Please try again."
-        logger.info(f"🔄 Task not completed - providing feedback and continuing: {critic_response.justification}")
-        state["messages"].append(HumanMessage(content=feedback_msg))
-        return "thinker"
+    reset_arm_tool = ResetArmTool(connector=connector, manipulator_frame=manipulator_frame)
+    reset_arm_tool._run()
+    return "__end__"
 
 def create_conversational_agent(
     llm: BaseChatModel,
@@ -199,6 +117,8 @@ def create_conversational_agent(
     system_prompt: str | SystemMessage,
     camera_tool: GetROS2ImageConfiguredTool,
     logger: Optional[logging.Logger] = None,
+    connector: ROS2Connector = None,
+    manipulator_frame: str = "manipulator_base_link",
     debug: bool = False,
 ) -> CompiledStateGraph:
     _logger = None
@@ -228,7 +148,7 @@ def create_conversational_agent(
 
     workflow.add_conditional_edges(
         "thinker",
-        partial(tools_condition, vlm=llm, camera_tool=camera_tool, logger=_logger),
+        partial(tools_condition, logger=_logger, connector=connector, manipulator_frame=manipulator_frame),
         {"thinker": "thinker", "tools": "tools", "__end__": END}
     )
     _logger.info("🔀 Added conditional edges from thinker")
