@@ -219,7 +219,6 @@ def medium_scenarios(logger: logging.Logger | None) -> List[Scenario]:
         CONFIGS_DIR + "2carrots_2a.yaml",
         CONFIGS_DIR + "2yc_1bc_1rc.yaml",
         CONFIGS_DIR + "4carrots.yaml",
-        CONFIGS_DIR + "1carrot_1a_1t_1bc_1corn.yaml",
         CONFIGS_DIR + "4bc.yaml",
         CONFIGS_DIR + "2a_1c_2rc.yaml",
     ]
@@ -350,7 +349,7 @@ def hard_scenarios(logger: logging.Logger | None) -> List[Scenario]:
         CONFIGS_DIR + "2carrots_2a.yaml",
         CONFIGS_DIR + "2yc_1bc_1rc.yaml",
         CONFIGS_DIR + "4carrots.yaml",
-        CONFIGS_DIR + "1carrot_1a_1t_1bc_1corn.yaml",
+        CONFIGS_DIR + "1a_1t_1bc_2corn.yaml",
         CONFIGS_DIR + "4bc.yaml",
         CONFIGS_DIR + "2a_1c_2rc.yaml",
     ]
@@ -358,6 +357,7 @@ def hard_scenarios(logger: logging.Logger | None) -> List[Scenario]:
     hard_scene_configs_paths: List[str] = [
         CONFIGS_DIR + "3carrots_1a_1t_2bc_2yc.yaml",
         CONFIGS_DIR + "1carrot_1a_2t_1bc_1rc_3yc_stacked.yaml",
+        CONFIGS_DIR + "1carrot_3a_1bc_1rc_3yc_stacked.yaml",
         CONFIGS_DIR + "2carrots_1a_1t_1bc_1rc_1yc_1corn.yaml",
         CONFIGS_DIR + "2rc_3bc_4yc_stacked.yaml",
         CONFIGS_DIR + "2t_3a_1corn_2rc.yaml",
