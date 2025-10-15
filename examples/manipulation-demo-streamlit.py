@@ -13,13 +13,10 @@
 # limitations under the License.
 
 import importlib
-import random
-import tempfile
 from pathlib import Path
 
 import rclpy
 import streamlit as st
-import yaml
 from langchain_core.messages import AIMessage, HumanMessage
 from launch import LaunchDescription
 from launch.actions import (
@@ -81,8 +78,13 @@ def launch_description():
 
 @st.cache_resource
 def init_ros():
-    if not rclpy.ok():
-        rclpy.init()
+    try:
+        if not rclpy.ok():
+            rclpy.init()
+    except Exception:
+        # ROS2 might already be initialized or there might be event loop conflicts
+        # This is often safe to ignore in Streamlit context
+        pass
     return ""
 
 
@@ -127,63 +129,6 @@ def setup_new_scene(o3de, scenario_path: str):
     return scenario
 
 
-def generate_random_scenario(object_counts: dict) -> str:
-    """Generate a random scenario configuration with specified object counts.
-
-    Args:
-        object_counts: Dictionary with object types as keys and counts as values
-        e.g., {"apple": 2, "tomato": 1, "blue_cube": 3}
-
-    Returns:
-        Path to the generated scenario file
-    """
-    # Available object types and their prefab names
-    object_types = {
-        "apple": "apple",
-        "carrot": "carrot",
-        "blue_cube": "blue_cube",
-        "red_cube": "red_cube",
-        "yellow_cube": "yellow_cube",
-        "corn": "corn",
-    }
-
-    entities = []
-    entity_counter = 1
-
-    # Generate entities for each object type
-    for obj_type, count in object_counts.items():
-        if obj_type not in object_types:
-            continue
-
-        prefab_name = object_types[obj_type]
-
-        for i in range(count):
-            # Generate random position within reasonable bounds
-            x = random.uniform(0.3, 0.55)  # Front to back
-            y = random.uniform(-0.5, 0.5)  # Left to right
-            z = 0.05  # Height on table
-            if "corn" in prefab_name:
-                rotation = {"x": 0.0, "y": 0.707, "z": 0.0, "w": 0.707}
-            else:
-                rotation = {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0}
-
-            entity = {
-                "name": f"{obj_type}{entity_counter}",
-                "prefab_name": prefab_name,
-                "pose": {"translation": {"x": x, "y": y, "z": z}, "rotation": rotation},
-            }
-            entities.append(entity)
-            entity_counter += 1
-
-    # Create scenario configuration
-    scenario_config = {"entities": entities}
-
-    # Create temporary file
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-        yaml.dump(scenario_config, f, default_flow_style=False)
-        return f.name
-
-
 SCENARIO_NAMES = [
     "1bc_1rc_1yc",
     "1rc_2bc_3yc",
@@ -221,21 +166,15 @@ def main(simulation_config: O3DExROS2SimulationConfig):
         s for s in scenarios if Path(s.scene_config_path).stem in SCENARIO_NAMES
     ]
 
-    # Create layout selection widget with random scenario option
-    layout_options = ["🎲 Random Scenario"] + SCENARIO_NAMES
+    # Create layout selection widget
+    layout_options = SCENARIO_NAMES
     scenario = "1bc_1rc_1yc"
     # Determine the current selection index
-    if (
-        "current_layout" in st.session_state
-        and st.session_state["current_layout"] == "random_scenario"
-    ):
-        current_index = 0  # Random scenario is first option
-    else:
-        current_index = (
-            SCENARIO_NAMES.index(Path(scenario).stem) + 1
-            if Path(scenario).stem in SCENARIO_NAMES
-            else 1
-        )
+    current_index = (
+        SCENARIO_NAMES.index(Path(scenario).stem)
+        if Path(scenario).stem in SCENARIO_NAMES
+        else 0
+    )
 
     selected_layout_option = st.sidebar.selectbox(
         "Select Layout:",
@@ -245,88 +184,10 @@ def main(simulation_config: O3DExROS2SimulationConfig):
     )
 
     # Convert selection back to layout name
-    if selected_layout_option == "🎲 Random Scenario":
-        selected_layout = "random_scenario"
-    else:
-        selected_layout = selected_layout_option
+    selected_layout = selected_layout_option
 
     # Display selected layout info
-    if selected_layout == "random_scenario":
-        st.sidebar.info("Selected: 🎲 Random Scenario")
-    else:
-        st.sidebar.info(f"Selected: {selected_layout}")
-
-    # Random scenario generator - only show if Random Scenario is selected
-    if selected_layout == "random_scenario":
-        st.sidebar.markdown("---")
-        st.sidebar.subheader("🎲 Random Scenario Generator")
-
-        # Object count inputs
-        object_counts = {}
-        available_objects = [
-            "apple",
-            "tomato",
-            "carrot",
-            "blue_cube",
-            "red_cube",
-            "yellow_cube",
-            "corn",
-        ]
-
-        for obj in available_objects:
-            count = st.sidebar.number_input(
-                f"Number of {obj.replace('_', ' ').title()}s:",
-                min_value=0,
-                max_value=10,
-                value=0,
-                key=f"count_{obj}",
-            )
-            if count > 0:
-                object_counts[obj] = count
-
-        # Generate random scenario button
-        if st.sidebar.button(
-            "🎲 Generate Random Scenario", disabled=not any(object_counts.values())
-        ):
-            if any(object_counts.values()):
-                try:
-                    # Generate the scenario file
-                    scenario_path = generate_random_scenario(object_counts)
-
-                    # Load the scenario into the scene
-                    if "o3de" in st.session_state:
-                        # Clear the current scene first
-                        try:
-                            # Actually clear the scene by despawning all entities
-                            while st.session_state["o3de"].spawned_entities:
-                                st.session_state["o3de"]._despawn_entity(
-                                    st.session_state["o3de"].spawned_entities[0]
-                                )
-                        except Exception as clear_error:
-                            st.sidebar.warning(
-                                f"⚠️ Could not clear scene: {str(clear_error)}"
-                            )
-
-                        # Setup new scene with random scenario
-                        new_scenario = setup_new_scene(
-                            st.session_state["o3de"], scenario_path
-                        )
-                        st.session_state["current_scenario"] = new_scenario
-                        st.session_state["current_layout"] = "random_scenario"
-
-                        # Reset agent history for new random scenario
-                        st.session_state["messages"] = [
-                            AIMessage(
-                                content="Hi! I am a robotic arm. What can I do for you?"
-                            )
-                        ]
-                        st.rerun()
-                    else:
-                        st.sidebar.warning("⚠️ Demo not initialized yet")
-                except Exception as e:
-                    st.sidebar.error(f"❌ Failed to generate random scenario: {str(e)}")
-            else:
-                st.sidebar.warning("⚠️ Please specify at least one object count")
+    st.sidebar.info(f"Selected: {selected_layout}")
 
     # Display current scene info if available (removed to reduce log noise)
 
@@ -334,52 +195,41 @@ def main(simulation_config: O3DExROS2SimulationConfig):
     if "current_layout" not in st.session_state:
         st.session_state["current_layout"] = selected_layout
     elif st.session_state["current_layout"] != selected_layout:
-        if selected_layout == "random_scenario":
-            # User selected random scenario from dropdown - show info
-            st.sidebar.info(
-                "🎲 Random scenario selected. Use the controls below to generate a scenario."
-            )
-            st.session_state["current_layout"] = selected_layout
-        else:
-            # User selected a predefined layout
-            st.sidebar.success("🔄 Layout changed! Setting up new scene...")
-            # Find the scenario path for the selected layout
-            selected_scenario_path = None
-            selected_scenario_path = get_scenario_path(scenarios, selected_layout)
+        # User selected a predefined layout
+        st.sidebar.success("🔄 Layout changed! Setting up new scene...")
+        # Find the scenario path for the selected layout
+        selected_scenario_path = None
+        selected_scenario_path = get_scenario_path(scenarios, selected_layout)
 
-            if selected_scenario_path and "o3de" in st.session_state:
-                # Setup new scene with the selected layout
+        if selected_scenario_path and "o3de" in st.session_state:
+            # Setup new scene with the selected layout
+            try:
+                # Clear the current scene first
                 try:
-                    # Clear the current scene first
-                    try:
-                        # Actually clear the scene by despawning all entities
-                        while st.session_state["o3de"].spawned_entities:
-                            st.session_state["o3de"]._despawn_entity(
-                                st.session_state["o3de"].spawned_entities[0]
-                            )
-                    except Exception as clear_error:
-                        st.sidebar.warning(
-                            f"⚠️ Could not clear scene: {str(clear_error)}"
+                    # Actually clear the scene by despawning all entities
+                    while st.session_state["o3de"].spawned_entities:
+                        st.session_state["o3de"]._despawn_entity(
+                            st.session_state["o3de"].spawned_entities[0]
                         )
+                except Exception as clear_error:
+                    st.sidebar.warning(f"⚠️ Could not clear scene: {str(clear_error)}")
 
-                    # Setup new scene
-                    new_scenario = setup_new_scene(
-                        st.session_state["o3de"], selected_scenario_path
-                    )
-                    st.session_state["current_scenario"] = new_scenario
-                    st.session_state["current_layout"] = selected_layout
-
-                    # Reset agent history for new layout
-                    st.session_state["messages"] = [
-                        AIMessage(
-                            content="Hi! I am a robotic arm. What can I do for you?"
-                        )
-                    ]
-                    st.rerun()
-                except Exception as e:
-                    st.sidebar.error(f"❌ Failed to setup new scene: {str(e)}")
-            else:
+                # Setup new scene
+                new_scenario = setup_new_scene(
+                    st.session_state["o3de"], selected_scenario_path
+                )
+                st.session_state["current_scenario"] = new_scenario
                 st.session_state["current_layout"] = selected_layout
+
+                # Reset agent history for new layout
+                st.session_state["messages"] = [
+                    AIMessage(content="Hi! I am a robotic arm. What can I do for you?")
+                ]
+                st.rerun()
+            except Exception as e:
+                st.sidebar.error(f"❌ Failed to setup new scene: {str(e)}")
+        else:
+            st.session_state["current_layout"] = selected_layout
 
     # Add reload button in configuration section
     st.sidebar.markdown("---")
@@ -432,8 +282,13 @@ def main(simulation_config: O3DExROS2SimulationConfig):
             st.sidebar.warning("⚠️ Demo not initialized yet")
 
     if "ros" not in st.session_state:
-        ros = init_ros()
-        st.session_state["ros"] = ros
+        try:
+            ros = init_ros()
+            st.session_state["ros"] = ros
+        except Exception as e:
+            # Handle ROS2 initialization errors gracefully
+            st.session_state["ros"] = ""
+            st.sidebar.warning(f"⚠️ ROS2 initialization warning: {str(e)}")
 
     if "o3de" not in st.session_state:
         selected_scenario_path = get_scenario_path(scenarios, scenario)
@@ -482,13 +337,15 @@ def main(simulation_config: O3DExROS2SimulationConfig):
 
 
 if __name__ == "__main__":
-    levels = [
-        "medium",
-        "hard",
-        "very_hard",
-    ]
-    scenarios: list[Scenario] = get_scenarios(levels=levels)
-    o3de_config_path = (
-        "src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/o3de_config.yaml"
-    )
-    main(o3de_config_path)
+    try:
+        levels = [
+            "medium",
+            "hard",
+            "very_hard",
+        ]
+        scenarios: list[Scenario] = get_scenarios(levels=levels)
+        o3de_config_path = "src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/o3de_config.yaml"
+        main(o3de_config_path)
+    except Exception as e:
+        st.error(f"Application error: {str(e)}")
+        st.stop()
