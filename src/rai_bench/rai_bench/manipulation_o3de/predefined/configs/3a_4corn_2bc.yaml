@@ -37,21 +37,20 @@ entities:
         z: 0.0
         w: 1.0
 
-  - name: tomato1
-    prefab_name: tomato
+  - name: corn1
+    prefab_name: corn
     pose:
       translation:
         x: 0.4
-        y: -0.35
+        y: -0.4
         z: 0.05
       rotation:
         x: 0.0
-        y: 0.0
+        y: 0.707
         z: 0.0
-        w: 1.0
-
-  - name: tomato2
-    prefab_name: tomato
+        w: 0.707
+  - name: corn2
+    prefab_name: corn
     pose:
       translation:
         x: 0.4
@@ -59,11 +58,11 @@ entities:
         z: 0.05
       rotation:
         x: 0.0
-        y: 0.0
+        y: 0.707
         z: 0.0
-        w: 1.0
-  - name: tomato3
-    prefab_name: tomato
+        w: 0.707
+  - name: corn3
+    prefab_name: corn
     pose:
       translation:
         x: 0.3
@@ -71,27 +70,27 @@ entities:
         z: 0.05
       rotation:
         x: 0.0
-        y: 0.0
+        y: 0.707
         z: 0.0
-        w: 1.0
-  - name: tomato4
-    prefab_name: tomato
+        w: 0.707
+  - name: corn4
+    prefab_name: corn
     pose:
       translation:
         x: 0.5
-        y: 0.35
+        y: 0.3
         z: 0.05
       rotation:
         x: 0.0
-        y: 0.0
+        y: 0.707
         z: 0.0
-        w: 1.0
+        w: 0.707
   - name: blue_cube1
     prefab_name: blue_cube
     pose:
       translation:
-        x: 0.6
-        y: -0.3
+        x: 0.5
+        y: -0.1
         z: 0.05
       rotation:
         x: 0.0
@@ -103,7 +102,7 @@ entities:
     pose:
       translation:
         x: 0.35
-        y: 0.30
+        y: 0.2
         z: 0.05
       rotation:
         x: 0.0
