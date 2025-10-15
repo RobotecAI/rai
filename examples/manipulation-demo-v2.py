@@ -24,7 +24,7 @@ from rai.agents.langchain.core import create_conversational_agent
 from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2.manipulation import (
-    MoveObjectFromToTool,
+    MoveObjectFromToTool
 )
 from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
 from rai_open_set_vision import (
@@ -91,7 +91,7 @@ def initialize_tools(connector: ROS2Connector, camera_tool: GetROS2ImageConfigur
             filter_config=filter_config,
         ),
         MoveObjectFromToTool(connector=connector, manipulator_frame=manipulator_frame),
-        camera_tool,
+        camera_tool
     ]
 
     return tools
@@ -128,6 +128,8 @@ def create_agent():
         system_prompt=embodiment_info.to_langchain(),
         camera_tool=camera_tool,
         logger=logger,
+        connector=connector,
+        manipulator_frame="panda_link0",
     )
     return agent, camera_tool
 
