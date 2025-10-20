@@ -87,4 +87,7 @@ fi'
 RUN bash -c ". setup_shell.sh && python src/rai_extensions/rai_open_set_vision/scripts/download_weights.py"
 RUN ./scripts/download_demo.sh manipulation
 
+# suppress streamlit email request
+RUN mkdir -p ~/.streamlit && echo "[general]\nemail = \"\"" > /root/.streamlit/credentials.toml
+
 ENTRYPOINT ["bash", "-c", ". setup_shell.sh && streamlit run examples/manipulation-demo-streamlit.py \"$@\""]
