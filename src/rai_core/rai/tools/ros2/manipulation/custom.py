@@ -128,9 +128,9 @@ class MoveToPointTool(BaseROS2Tool):
 
 
 class MoveObjectFromToToolInput(BaseModel):
-    x: float = Field(description="The x coordinate of the point to move to")
-    y: float = Field(description="The y coordinate of the point to move to")
-    z: float = Field(description="The z coordinate of the point to move to")
+    x: float = Field(description="The x coordinate of the point to move from")
+    y: float = Field(description="The y coordinate of the point to move from")
+    z: float = Field(description="The z coordinate of the point to move from")
     x1: float = Field(description="The x coordinate of the point to move to")
     y1: float = Field(description="The y coordinate of the point to move to")
     z1: float = Field(description="The z coordinate of the point to move to")
@@ -170,8 +170,12 @@ class MoveObjectFromToTool(BaseROS2Tool):
         y1: float,
         z1: float,
     ) -> str:
-        self.connector.node.get_logger().info(f"Calibration x: {self.calibration_x}, y: {self.calibration_y}, z: {self.calibration_z}")
-        self.connector.node.get_logger().info(f"Target: ({x:.2f}, {y:.2f}, {z:.2f})->({x1:.2f}, {y1:.2f}, {z1:.2f})")
+        self.connector.node.get_logger().info(
+            f"Calibration x: {self.calibration_x}, y: {self.calibration_y}, z: {self.calibration_z}"
+        )
+        self.connector.node.get_logger().info(
+            f"Target: ({x:.2f}, {y:.2f}, {z:.2f})->({x1:.2f}, {y1:.2f}, {z1:.2f})"
+        )
 
         # NOTE: create_client could be refactored into self.connector.service_call
         self.connector.service_call

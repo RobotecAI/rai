@@ -34,13 +34,13 @@ PCL_DETECTION_PARAM_PREFIX = "pcl.detection.gripping_points"
 class GetObjectGrippingPointsToolInput(BaseModel):
     object_name: str = Field(
         ...,
-        description="The name of the object to get the gripping point of e.g. 'box', 'apple', 'screwdriver'",
+        description="The type of object to get the gripping point for (e.g. 'cube', 'apple', 'screwdriver'). Pass the general object type or class, not a specific instance or ID like 'cube_1' or 'apple_5'.",
     )
 
 
 class GetObjectGrippingPointsTool(BaseROS2Tool):
     name: str = "get_object_gripping_points"
-    description: str = "Get gripping points for specified object/objects. Returns 3D coordinates where a robot gripper can grasp the object."
+    description: str = "Get gripping points for all objects of the specified type (e.g. all cubes). Returns 3D coordinates for every object of that class in the scene, where a robot gripper can grasp. Call this tool once with the general object class name, not multiple times for each object instance (e.g., call once with 'cube' to get all cubes)."
 
     # Configuration for PCL components
     segmentation_config: PointCloudFromSegmentationConfig = Field(
