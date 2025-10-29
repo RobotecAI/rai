@@ -128,9 +128,9 @@ class MoveToPointTool(BaseROS2Tool):
 
 
 class MoveObjectFromToToolInput(BaseModel):
-    x: float = Field(description="The x coordinate of the point to move to")
-    y: float = Field(description="The y coordinate of the point to move to")
-    z: float = Field(description="The z coordinate of the point to move to")
+    x: float = Field(description="The x coordinate of the point to move from")
+    y: float = Field(description="The y coordinate of the point to move from")
+    z: float = Field(description="The z coordinate of the point to move from")
     x1: float = Field(description="The x coordinate of the point to move to")
     y1: float = Field(description="The y coordinate of the point to move to")
     z1: float = Field(description="The z coordinate of the point to move to")
@@ -316,7 +316,9 @@ class ResetArmToolInput(BaseModel):
 
 class ResetArmTool(BaseROS2Tool):
     name: str = "reset_arm"
-    description: str = "Reset the arm to the initial position. Use when the arm is stuck or when arm obstructs the objects."
+    description: str = (
+        "Reset the arm to the initial position. Use when the arm is stuck or when arm obstructs the objects."
+    )
 
     args_schema: Type[ResetArmToolInput] = ResetArmToolInput
 
