@@ -25,6 +25,8 @@ from langchain_core.runnables import Runnable, RunnableConfig
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 
+from rai.initialization import get_tracing_callbacks
+
 # code inspired by (mostly copied, some changes were applied and might be updated in the future)
 # https://github.com/shiv248/Streamlit-x-LangGraph-Cookbooks/tree/b8e623bdc9821fc1cf581607454dae1afc054df2/tool_calling_via_callback
 
@@ -192,7 +194,11 @@ def streamlit_invoke(
 ):
     if not isinstance(callables, list):
         raise TypeError("callables must be a list")
+    tracing_callbacks = get_tracing_callbacks()
+    callbacks = (
+        callables + tracing_callbacks if len(tracing_callbacks) > 0 else callables
+    )
     return graph.invoke(
         {"messages": messages},
-        config=RunnableConfig({"callbacks": callables, "recursion_limit": 100}),
+        config=RunnableConfig({"callbacks": callbacks, "recursion_limit": 100}),
     )
