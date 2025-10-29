@@ -130,12 +130,10 @@ def setup_new_scene(o3de, scenario_path: str):
 
 
 SCENARIO_NAMES = [
-    "1bc_1rc_1yc",
-    "1rc_2bc_3yc",
+    # "3rc",
     "4carrots",
-    "3a_4t_2bc",
+    "3a_4corn_2bc",
     "2a_1c_2rc",
-    "1a_1t_1bc_2corn",
 ]
 
 

@@ -15,7 +15,6 @@ import logging
 from typing import List
 
 import rclpy
-import rclpy.qos
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.tools import BaseTool
 from rai import get_llm_model

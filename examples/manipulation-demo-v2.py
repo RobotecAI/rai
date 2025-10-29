@@ -23,9 +23,7 @@ from rai import get_llm_model
 from rai.agents.langchain.core import create_conversational_agent
 from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
-from rai.tools.ros2.manipulation import (
-    MoveObjectFromToTool
-)
+from rai.tools.ros2.manipulation import MoveObjectFromToTool
 from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
 from rai_open_set_vision import (
     GetObjectGrippingPointsTool,
@@ -40,7 +38,9 @@ logger = logging.getLogger(__name__)
 param_prefix = "pcl.detection.gripping_points"
 
 
-def initialize_tools(connector: ROS2Connector, camera_tool: GetROS2ImageConfiguredTool) -> List[BaseTool]:
+def initialize_tools(
+    connector: ROS2Connector, camera_tool: GetROS2ImageConfiguredTool
+) -> List[BaseTool]:
     """Initialize and configure all tools for the manipulation agent."""
     node = connector.node
 
@@ -81,7 +81,6 @@ def initialize_tools(connector: ROS2Connector, camera_tool: GetROS2ImageConfigur
     )
 
     manipulator_frame = node.get_parameter(f"{param_prefix}.target_frame").value
-    camera_topic = node.get_parameter(f"{param_prefix}.camera_topic").value
 
     tools: List[BaseTool] = [
         GetObjectGrippingPointsTool(
@@ -91,7 +90,7 @@ def initialize_tools(connector: ROS2Connector, camera_tool: GetROS2ImageConfigur
             filter_config=filter_config,
         ),
         MoveObjectFromToTool(connector=connector, manipulator_frame=manipulator_frame),
-        camera_tool
+        camera_tool,
     ]
 
     return tools
