@@ -13,14 +13,11 @@
 # limitations under the License.
 
 import importlib
-import sys
-import tempfile
-import yaml
 from pathlib import Path
 
 import rclpy
 import streamlit as st
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from launch import LaunchDescription
 from launch.actions import (
     IncludeLaunchDescription,
@@ -84,7 +81,7 @@ def init_ros():
     try:
         if not rclpy.ok():
             rclpy.init()
-    except Exception as e:
+    except Exception:
         # ROS2 might already be initialized or there might be event loop conflicts
         # This is often safe to ignore in Streamlit context
         pass
@@ -109,7 +106,7 @@ def initialize_o3de(scenario_path: str, o3de_config_path: str):
         scene_config_path=scenario_path,
     )
     o3de = O3DEngineArmManipulationBridge(ROS2Connector())
-    
+
     # Clear scene at the beginning
     o3de.init_simulation(simulation_config=simulation_config)
     o3de.launch_robotic_stack(
@@ -132,15 +129,11 @@ def setup_new_scene(o3de, scenario_path: str):
     return scenario
 
 
-
-
 SCENARIO_NAMES = [
-    "1bc_1rc_1yc",
-    "1rc_2bc_3yc",
+    # "3rc",
     "4carrots",
-    "3a_4t_2bc",
+    "3a_4corn_2bc",
     "2a_1c_2rc",
-    "1a_1t_1bc_2corn",
 ]
 
 
@@ -152,6 +145,7 @@ def get_scenario_path(scenarios, selected_layout: str):
             break
     return selected_scenario_path
 
+
 def main(simulation_config: O3DExROS2SimulationConfig):
     st.set_page_config(
         page_title="RAI Manipulation Demo",
@@ -159,37 +153,42 @@ def main(simulation_config: O3DExROS2SimulationConfig):
     )
     st.title("RAI Manipulation Demo")
     st.markdown("---")
-    
+
     # Layout selection in sidebar
     st.sidebar.header("Configuration")
-    
+
     # Get available scenarios for layout selection
     levels = ["medium", "hard", "very_hard"]
     scenarios: list[Scenario] = get_scenarios(levels=levels)
-    scenarios = [s for s in scenarios if Path(s.scene_config_path).stem in SCENARIO_NAMES]
-    
+    scenarios = [
+        s for s in scenarios if Path(s.scene_config_path).stem in SCENARIO_NAMES
+    ]
+
     # Create layout selection widget
     layout_options = SCENARIO_NAMES
     scenario = "1bc_1rc_1yc"
     # Determine the current selection index
-    current_index = SCENARIO_NAMES.index(Path(scenario).stem) if Path(scenario).stem in SCENARIO_NAMES else 0
-    
+    current_index = (
+        SCENARIO_NAMES.index(Path(scenario).stem)
+        if Path(scenario).stem in SCENARIO_NAMES
+        else 0
+    )
+
     selected_layout_option = st.sidebar.selectbox(
         "Select Layout:",
         options=layout_options,
         index=current_index,
-        help="Choose a scene layout for the manipulation demo"
+        help="Choose a scene layout for the manipulation demo",
     )
-    
+
     # Convert selection back to layout name
     selected_layout = selected_layout_option
-    
+
     # Display selected layout info
     st.sidebar.info(f"Selected: {selected_layout}")
-    
-    
+
     # Display current scene info if available (removed to reduce log noise)
-    
+
     # Check if layout has changed
     if "current_layout" not in st.session_state:
         st.session_state["current_layout"] = selected_layout
@@ -199,7 +198,7 @@ def main(simulation_config: O3DExROS2SimulationConfig):
         # Find the scenario path for the selected layout
         selected_scenario_path = None
         selected_scenario_path = get_scenario_path(scenarios, selected_layout)
-        
+
         if selected_scenario_path and "o3de" in st.session_state:
             # Setup new scene with the selected layout
             try:
@@ -207,15 +206,19 @@ def main(simulation_config: O3DExROS2SimulationConfig):
                 try:
                     # Actually clear the scene by despawning all entities
                     while st.session_state["o3de"].spawned_entities:
-                        st.session_state["o3de"]._despawn_entity(st.session_state["o3de"].spawned_entities[0])
+                        st.session_state["o3de"]._despawn_entity(
+                            st.session_state["o3de"].spawned_entities[0]
+                        )
                 except Exception as clear_error:
                     st.sidebar.warning(f"⚠️ Could not clear scene: {str(clear_error)}")
-                
+
                 # Setup new scene
-                new_scenario = setup_new_scene(st.session_state["o3de"], selected_scenario_path)
+                new_scenario = setup_new_scene(
+                    st.session_state["o3de"], selected_scenario_path
+                )
                 st.session_state["current_scenario"] = new_scenario
                 st.session_state["current_layout"] = selected_layout
-                
+
                 # Reset agent history for new layout
                 st.session_state["messages"] = [
                     AIMessage(content="Hi! I am a robotic arm. What can I do for you?")
@@ -225,7 +228,7 @@ def main(simulation_config: O3DExROS2SimulationConfig):
                 st.sidebar.error(f"❌ Failed to setup new scene: {str(e)}")
         else:
             st.session_state["current_layout"] = selected_layout
-    
+
     # Add reload button in configuration section
     st.sidebar.markdown("---")
     if st.sidebar.button("🔄 Reload Layout", help="Reload the current scene layout"):
@@ -236,7 +239,7 @@ def main(simulation_config: O3DExROS2SimulationConfig):
                 if Path(s.scene_config_path).stem == st.session_state["current_layout"]:
                     current_scenario_path = s.scene_config_path
                     break
-            
+
             if current_scenario_path:
                 try:
                     # Clear the current scene first
@@ -245,27 +248,36 @@ def main(simulation_config: O3DExROS2SimulationConfig):
                         st.session_state["o3de"].clear_scene()
                         st.sidebar.success("✅ Scene cleared")
                     except Exception as clear_error:
-                        st.sidebar.warning(f"⚠️ Could not clear scene: {str(clear_error)}")
-                    
+                        st.sidebar.warning(
+                            f"⚠️ Could not clear scene: {str(clear_error)}"
+                        )
+
                     # Reload the scene
-                    st.sidebar.info(f"🔄 Reloading scene: {st.session_state['current_layout']}")
-                    new_scenario = setup_new_scene(st.session_state["o3de"], current_scenario_path)
+                    st.sidebar.info(
+                        f"🔄 Reloading scene: {st.session_state['current_layout']}"
+                    )
+                    new_scenario = setup_new_scene(
+                        st.session_state["o3de"], current_scenario_path
+                    )
                     st.session_state["current_scenario"] = new_scenario
-                    
+
                     # Reset agent history for reloaded scene
                     st.session_state["messages"] = [
-                        AIMessage(content="Hi! I am a robotic arm. What can I do for you?")
+                        AIMessage(
+                            content="Hi! I am a robotic arm. What can I do for you?"
+                        )
                     ]
                     st.rerun()
-                    
-                    st.sidebar.success(f"✅ Scene reloaded: {st.session_state['current_layout']}")
+
+                    st.sidebar.success(
+                        f"✅ Scene reloaded: {st.session_state['current_layout']}"
+                    )
                 except Exception as e:
                     st.sidebar.error(f"❌ Failed to reload scene: {str(e)}")
             else:
                 st.sidebar.error("❌ Could not find scenario path for current layout")
         else:
             st.sidebar.warning("⚠️ Demo not initialized yet")
-    
 
     if "ros" not in st.session_state:
         try:
@@ -278,11 +290,11 @@ def main(simulation_config: O3DExROS2SimulationConfig):
 
     if "o3de" not in st.session_state:
         selected_scenario_path = get_scenario_path(scenarios, scenario)
-        o3de, initial_scenario = initialize_o3de(selected_scenario_path, simulation_config)
+        o3de, initial_scenario = initialize_o3de(
+            selected_scenario_path, simulation_config
+        )
         st.session_state["o3de"] = o3de
         st.session_state["current_scenario"] = initial_scenario
-
-    
 
     if "graph" not in st.session_state:
         graph, camera_tool = initialize_graph()
@@ -309,7 +321,9 @@ def main(simulation_config: O3DExROS2SimulationConfig):
             _, artifact = st.session_state["camera_tool"]._run()
         else:
             artifact = None
-        message = HumanMultimodalMessage(content=prompt, images=artifact.get("images", [])) 
+        message = HumanMultimodalMessage(
+            content=prompt, images=artifact.get("images", [])
+        )
         st.session_state.messages.append(message)
 
         st.chat_message("user").write(prompt)
@@ -328,9 +342,7 @@ if __name__ == "__main__":
             "very_hard",
         ]
         scenarios: list[Scenario] = get_scenarios(levels=levels)
-        o3de_config_path = (
-            "src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/o3de_config.yaml"
-        )
+        o3de_config_path = "src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/o3de_config.yaml"
         main(o3de_config_path)
     except Exception as e:
         st.error(f"Application error: {str(e)}")

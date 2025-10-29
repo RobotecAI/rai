@@ -25,23 +25,23 @@ manipulation techniques.
 1. Follow the RAI setup instructions in the [quick setup guide](../setup/install.md#setting-up-developer-environment).
 2. Download additional dependencies:
 
-   ```shell
-   poetry install --with openset
-   vcs import < demos.repos
-   rosdep install --from-paths src/examples/rai-manipulation-demo/ros2_ws/src --ignore-src -r -y
-   ```
+    ```shell
+    poetry install --with openset
+    vcs import < demos.repos
+    rosdep install --from-paths src/examples/rai-manipulation-demo/ros2_ws/src --ignore-src -r -y
+    ```
 
 3. Download the latest binary release
 
-   ```bash
-   ./scripts/download_demo.sh manipulation
-   ```
+    ```bash
+    ./scripts/download_demo.sh manipulation
+    ```
 
 4. Build the ROS 2 workspace:
 
-   ```bash
-   colcon build --symlink-install
-   ```
+    ```bash
+    colcon build --symlink-install
+    ```
 
 #### Running the demo
 
@@ -52,28 +52,28 @@ manipulation techniques.
 
 1. Start the demo
 
-   ```shell
-   ros2 launch examples/manipulation-demo.launch.py game_launcher:=demo_assets/manipulation/RAIManipulationDemo/RAIManipulationDemo.GameLauncher
-   ```
+    ```shell
+    ros2 launch examples/manipulation-demo.launch.py game_launcher:=demo_assets/manipulation/RAIManipulationDemo/RAIManipulationDemo.GameLauncher
+    ```
 
 2. In the second terminal, run the streamlit interface:
 
-   ```shell
-   streamlit run examples/manipulation-demo-streamlit.py
-   ```
+    ```shell
+    streamlit run examples/manipulation-demo-streamlit.py
+    ```
 
-   Alternatively, you can run the simpler command-line version, which also serves as an example of
-   how to use the RAI API for you own applications:
+    Alternatively, you can run the simpler command-line version, which also serves as an example of
+    how to use the RAI API for you own applications:
 
-   ```shell
-   python examples/manipulation-demo.py
-   ```
+    ```shell
+    python examples/manipulation-demo.py
+    ```
 
 3. Interact with the robot arm using natural language commands. For example:
 
-   ```
-   Enter a prompt: Pick up the red cube and drop it on another cube
-   ```
+    ```
+    Enter a prompt: Pick up the red cube and drop it on another cube
+    ```
 
 !!! tip "Changing camera view"
 
@@ -140,8 +140,8 @@ examples/manipulation-demo.py
 
 ## Known Limitations
 
-- `Grounding DINO` can't distinguish colors.
-- VLMs tend to struggle with spatial understanding (for example left/right concepts).
+-   `Grounding DINO` can't distinguish colors.
+-   VLMs tend to struggle with spatial understanding (for example left/right concepts).
 
 !!! tip "Building from source"
 
