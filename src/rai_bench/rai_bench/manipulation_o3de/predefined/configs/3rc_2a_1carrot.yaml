@@ -3,8 +3,8 @@ entities:
     prefab_name: red_cube
     pose:
       translation:
-        x: 0.40
-        y: 0.0
+        x: 0.50
+        y: 0.00
         z: 0.05
       rotation:
         x: 0.0
@@ -28,7 +28,7 @@ entities:
     pose:
       translation:
         x: 0.35
-        y: -0.2
+        y: -0.45
         z: 0.05
       rotation:
         x: 0.0
@@ -40,7 +40,7 @@ entities:
     prefab_name: apple
     pose:
       translation:
-        x: 0.25
+        x: 0.35
         y: -0.10
         z: 0.05
       rotation:
@@ -52,7 +52,7 @@ entities:
     prefab_name: apple
     pose:
       translation:
-        x: 0.20
+        x: 0.30
         y: 0.20
         z: 0.05
       rotation:
@@ -65,7 +65,7 @@ entities:
     prefab_name: carrot
     pose:
       translation:
-        x: 0.10
+        x: 0.45
         y: -0.20
         z: 0.05
       rotation:
