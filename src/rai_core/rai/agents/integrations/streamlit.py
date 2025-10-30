@@ -198,7 +198,15 @@ def streamlit_invoke(
     callbacks = (
         callables + tracing_callbacks if len(tracing_callbacks) > 0 else callables
     )
+    # To reduce the temperature (i.e., make generations more deterministic), we can provide a lower temperature parameter if the underlying graph component/model supports it.
+    # Assuming the graph supports a "temperature" setting in its config/environment, set it explicitly:
     return graph.invoke(
         {"messages": messages},
-        config=RunnableConfig({"callbacks": callbacks, "recursion_limit": 100}),
+        config=RunnableConfig(
+            {
+                "callbacks": callbacks,
+                "recursion_limit": 100,
+                "configurable": {"temperature": 0.1},
+            }
+        ),
     )
