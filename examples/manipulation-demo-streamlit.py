@@ -130,10 +130,11 @@ def setup_new_scene(o3de, scenario_path: str):
 
 
 SCENARIO_NAMES = [
-    # "3rc",
+    "3rc",
     "4carrots",
-    "3a_4corn_2bc",
+    "3a_4corn_2rc",
     "2a_1c_2rc",
+    "2carrots_2a",
 ]
 
 
@@ -166,7 +167,7 @@ def main(simulation_config: O3DExROS2SimulationConfig):
 
     # Create layout selection widget
     layout_options = SCENARIO_NAMES
-    scenario = "1bc_1rc_1yc"
+    scenario = "3rc"
     # Determine the current selection index
     current_index = (
         SCENARIO_NAMES.index(Path(scenario).stem)
@@ -335,15 +336,17 @@ def main(simulation_config: O3DExROS2SimulationConfig):
 
 
 if __name__ == "__main__":
-    try:
-        levels = [
-            "medium",
-            "hard",
-            "very_hard",
-        ]
-        scenarios: list[Scenario] = get_scenarios(levels=levels)
-        o3de_config_path = "src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/o3de_config.yaml"
-        main(o3de_config_path)
-    except Exception as e:
-        st.error(f"Application error: {str(e)}")
-        st.stop()
+    # try:
+    levels = [
+        "medium",
+        "hard",
+        "very_hard",
+    ]
+    scenarios: list[Scenario] = get_scenarios(levels=levels)
+    o3de_config_path = (
+        "src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/o3de_config.yaml"
+    )
+    main(o3de_config_path)
+    # except Exception as e:
+    #     st.error(f"Application error: {str(e)}")
+    #     st.stop()
