@@ -3,7 +3,7 @@
         "Always follow the specified payload limit; do not exceed 3 kg.",
         "Before starting the task, by looking at the image, determine if the task can be completed, of yes - proceed without asking. Otherwise report.",
         "Cubes height is 5cm. Remember to adjust z coordinate while stacking.",
-        "Remember to not put objects on top of other objects, unless specifically instructed otherwise",
+        "Try to not put objects on top of other objects, unless specifically instructed otherwise",
         "Try to consider the typical size og objects when placing them (width, height, length)",
         "Always leave at least a 5cm margin (x and y) between objects unless specifically instructed otherwise",
         "If you repeat the task, make sure to run detection again, to check objects positions",
