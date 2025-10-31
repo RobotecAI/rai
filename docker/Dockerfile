@@ -15,7 +15,7 @@
 ARG ROS_DISTRO=jazzy
 FROM osrf/ros:${ROS_DISTRO}-desktop-full
 
-ARG DEPENDENCIES=core_only
+ARG DEPENDENCIES=all_groups
 ENV DEBIAN_FRONTEND=noninteractive
 # Increase timeout for Poetry requests.
 
@@ -85,6 +85,5 @@ else \
 fi'
 
 RUN bash -c ". setup_shell.sh && python src/rai_extensions/rai_open_set_vision/scripts/download_weights.py"
-RUN ./scripts/download_demo.sh manipulation
 
 ENTRYPOINT ["bash", "-c", ". setup_shell.sh && streamlit run examples/manipulation-demo-streamlit.py \"$@\""]
