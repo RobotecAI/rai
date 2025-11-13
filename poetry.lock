@@ -6607,7 +6607,7 @@ cffi = {version = "*", markers = "implementation_name == \"pypy\""}
 
 [[package]]
 name = "rai-bench"
-version = "0.1.2"
+version = "0.2.0"
 description = "Package for running and creating benchmarks."
 optional = false
 python-versions = "^3.10"
@@ -6627,7 +6627,7 @@ url = "src/rai_bench"
 
 [[package]]
 name = "rai-core"
-version = "2.0.3"
+version = "2.5.4"
 description = "Core functionality for RAI framework"
 optional = false
 python-versions = "^3.10, <3.13"
@@ -6686,10 +6686,10 @@ sounddevice = "^0.4.7"
 torchaudio = "2.3.1"
 
 [package.extras]
-all = ["elevenlabs (>=1.4.1,<2.0.0)", "faster-whisper (>=1.1.1,<2.0.0)", "kokoro-onnx (==0.3.3)", "onnxruntime-gpu (>=1.20.1)", "openai-whisper (>=20231117,<20231118)", "openwakeword @ git+https://github.com/maciejmajek/openWakeWord.git@chore/remove-tflite-backend"]
+all = ["elevenlabs (>=1.4.1,<2.0.0)", "faster-whisper (>=1.1.1,<2.0.0)", "kokoro-onnx (==0.3.3)", "onnxruntime-gpu (>=1.20.1) ; platform_machine == \"x86_64\" and sys_platform != \"darwin\"", "openai-whisper (>=20231117,<20231118)", "openwakeword @ git+https://github.com/maciejmajek/openWakeWord.git@chore/remove-tflite-backend"]
 elevenlabs = ["elevenlabs (>=1.4.1,<2.0.0)"]
 fasterwhisper = ["faster-whisper (>=1.1.1,<2.0.0)"]
-gpu = ["onnxruntime-gpu (>=1.20.1)"]
+gpu = ["onnxruntime-gpu (>=1.20.1) ; platform_machine == \"x86_64\" and sys_platform != \"darwin\""]
 kokoro = ["kokoro-onnx (==0.3.3)"]
 wakeword = ["openwakeword @ git+https://github.com/maciejmajek/openWakeWord.git@chore/remove-tflite-backend"]
 whisper = ["openai-whisper (>=20231117,<20231118)"]
