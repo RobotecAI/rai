@@ -120,7 +120,8 @@ def test_ros2_img_vlm_description_aggregator(ros2_image: Image):
             return self
 
     with patch(
-        "rai.aggregators.ros2.aggregators.get_llm_model", return_value=DummyModel()
+        "rai.aggregators.ros2.aggregators.get_llm_model",
+        return_value=DummyModel(),
     ):
         aggregator = ROS2ImgVLMDescriptionAggregator()
         aggregator(ros2_image)
@@ -133,17 +134,29 @@ def test_ros2_img_vlm_description_aggregator(ros2_image: Image):
 
 
 def test_ros2_img_vlm_description_aggregator_constructor():
-    aggregator = ROS2ImgVLMDescriptionAggregator(max_size=100)
-    assert aggregator.max_size == 100
-    assert aggregator.llm is not None
+    # patch ROS2 aggregator module get_llm_model to return a FakeChatModel
+    with patch(
+        "rai.aggregators.ros2.aggregators.get_llm_model",
+        side_effect=lambda *args, **kwargs: FakeChatModel(),
+    ):
+        aggregator = ROS2ImgVLMDescriptionAggregator(max_size=100)
+        assert aggregator.max_size == 100
+        assert isinstance(aggregator.llm, FakeChatModel)
+
     aggregator = ROS2ImgVLMDescriptionAggregator(llm=FakeChatModel())
     assert isinstance(aggregator.llm, FakeChatModel)
 
 
 def test_ros2_img_vlm_diff_aggregator_constructor():
-    aggregator = ROS2ImgVLMDiffAggregator(max_size=100)
-    assert aggregator.max_size == 100
-    assert aggregator.llm is not None
+    # patch ROS2 aggregator module get_llm_model to return a FakeChatModel
+    with patch(
+        "rai.aggregators.ros2.aggregators.get_llm_model",
+        side_effect=lambda *args, **kwargs: FakeChatModel(),
+    ):
+        aggregator = ROS2ImgVLMDiffAggregator(max_size=100)
+        assert aggregator.max_size == 100
+        assert isinstance(aggregator.llm, FakeChatModel)
+
     aggregator = ROS2ImgVLMDiffAggregator(llm=FakeChatModel())
     assert isinstance(aggregator.llm, FakeChatModel)
 
@@ -164,7 +177,8 @@ def test_ros2_img_vlm_diff_aggregator(ros2_image: Image):
             return self
 
     with patch(
-        "rai.aggregators.ros2.aggregators.get_llm_model", return_value=DummyModel()
+        "rai.aggregators.ros2.aggregators.get_llm_model",
+        side_effect=lambda *args, **kwargs: DummyModel(),
     ):
         aggregator = ROS2ImgVLMDiffAggregator()
         for _ in range(3):
