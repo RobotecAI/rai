@@ -88,12 +88,24 @@ def test_ros2_logs_aggregator_overflow():
     assert aggregator.get_buffer()[1].msg == "System warming up: 9"
 
 
+def test_ros2_logs_aggregator_constructor():
+    aggregator = ROS2LogsAggregator(max_size=100)
+    assert aggregator.max_size == 100
+
+
 def test_ros2_last_image_aggregator(ros2_image: Image):
     aggregator = ROS2GetLastImageAggregator()
     aggregator(ros2_image)
     assert aggregator.get_buffer()[0] == ros2_image
     b64_image = convert_ros_img_to_base64(ros2_image)
     assert aggregator.get() == HumanMultimodalMessage(content="", images=[b64_image])
+    assert aggregator.get_buffer() == []
+    assert aggregator.get() is None
+
+
+def test_ros2_last_image_aggregator_constructor():
+    aggregator = ROS2GetLastImageAggregator(max_size=100)
+    assert aggregator.max_size == 100
 
 
 def test_ros2_img_vlm_description_aggregator(ros2_image: Image):
@@ -116,6 +128,24 @@ def test_ros2_img_vlm_description_aggregator(ros2_image: Image):
         assert aggregator.get() == HumanMessage(
             content="These are the key elements of the last camera image frame: key_elements=['test 12345']"
         )
+        assert aggregator.get_buffer() == []
+        assert aggregator.get() is None
+
+
+def test_ros2_img_vlm_description_aggregator_constructor():
+    aggregator = ROS2ImgVLMDescriptionAggregator(max_size=100)
+    assert aggregator.max_size == 100
+    assert aggregator.llm is not None
+    aggregator = ROS2ImgVLMDescriptionAggregator(llm=FakeChatModel())
+    assert isinstance(aggregator.llm, FakeChatModel)
+
+
+def test_ros2_img_vlm_diff_aggregator_constructor():
+    aggregator = ROS2ImgVLMDiffAggregator(max_size=100)
+    assert aggregator.max_size == 100
+    assert aggregator.llm is not None
+    aggregator = ROS2ImgVLMDiffAggregator(llm=FakeChatModel())
+    assert isinstance(aggregator.llm, FakeChatModel)
 
 
 def test_ros2_img_vlm_diff_aggregator(ros2_image: Image):
@@ -148,3 +178,4 @@ def test_ros2_img_vlm_diff_aggregator(ros2_image: Image):
             )
         )
         assert aggregator.get_buffer() == []
+        assert aggregator.get() is None
