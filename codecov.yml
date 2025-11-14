@@ -1,0 +1,2 @@
+ignore:
+  - src/rai_core/rai/frontend/*
