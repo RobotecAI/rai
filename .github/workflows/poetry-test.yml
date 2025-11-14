@@ -82,5 +82,6 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
+          exclude: ./src/rai_core/rai/frontend/
           name: codecov-pytest
           fail_ci_if_error: false
