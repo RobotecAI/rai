@@ -6,6 +6,9 @@ on:
     branches:
       - development
       - main
+  push:
+    branches:
+      - main
 
 jobs:
   build-and-test-ros2:
