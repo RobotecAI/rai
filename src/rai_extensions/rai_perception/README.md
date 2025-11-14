@@ -19,8 +19,7 @@ mkdir -p ~/rai_perception_ws/src
 cd ~/rai_perception_ws/src
 
 # only checkout rai_perception package
-# TODO:juliaj, update branch to main!
-git clone --depth 1 --branch jj/feat/rai-perception-pkg https://github.com/RobotecAI/rai.git temp
+git clone --depth 1 --branch main https://github.com/RobotecAI/rai.git temp
 cd temp
 git archive --format=tar --prefix=rai_perception/ HEAD:src/rai_extensions/rai_perception | tar -xf -
 mv rai_perception ../rai_perception
