@@ -50,3 +50,30 @@ def test_ros2_logs_aggregator_deduplicates_and_clears_buffer():
         == "Logs summary: ['[demo_node] [WARNING] [do_work] System warming up', 'Log above repeated 1 times']"
     )
     assert aggregator.get_buffer() == []
+
+
+def test_ros2_logs_aggregator_str():
+    aggregator = ROS2LogsAggregator()
+    assert str(aggregator) == "ROS2LogsAggregator(len=0)"
+    aggregator(
+        DummyLog(
+            level=30, name="demo_node", function="do_work", msg="System warming up"
+        )
+    )
+    assert str(aggregator) == "ROS2LogsAggregator(len=1)"
+
+
+def test_ros2_logs_aggregator_overflow():
+    aggregator = ROS2LogsAggregator(max_size=2)
+    for i in range(10):
+        aggregator(
+            DummyLog(
+                level=30,
+                name="demo_node",
+                function="do_work",
+                msg=f"System warming up: {i}",
+            )
+        )
+    assert len(aggregator.get_buffer()) == 2
+    assert aggregator.get_buffer()[0].msg == "System warming up: 8"
+    assert aggregator.get_buffer()[1].msg == "System warming up: 9"
