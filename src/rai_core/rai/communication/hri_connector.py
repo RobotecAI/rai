@@ -51,23 +51,27 @@ class HRIMessage(BaseMessage):
     def __repr__(self):
         return f"HRIMessage(type={self.message_author}, text={self.text}, images={self.images}, audios={self.audios}, communication_id={self.communication_id}, seq_no={self.seq_no}, seq_end={self.seq_end})"
 
-    def _image_to_base64(self, image: ImageType) -> str:
+    @staticmethod
+    def _image_to_base64(image: ImageType) -> str:
         buffered = BytesIO()
         image.save(buffered, "PNG")
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
-    def _audio_to_base64(self, audio: AudioSegment) -> str:
+    @staticmethod
+    def _audio_to_base64(audio: AudioSegment) -> str:
         buffered = BytesIO()
         audio.export(buffered, format="wav")
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
-    @classmethod
-    def _base64_to_image(cls, base64_str: str) -> ImageType:
+    @staticmethod
+    def _base64_to_image(base64_str: str) -> ImageType:
         img_data = base64.b64decode(base64_str)
-        return Image.open(BytesIO(img_data))
+        image = Image.open(BytesIO(img_data))
+        image.load()
+        return image
 
-    @classmethod
-    def _base64_to_audio(cls, base64_str: str) -> AudioSegment:
+    @staticmethod
+    def _base64_to_audio(base64_str: str) -> AudioSegment:
         audio_data = base64.b64decode(base64_str)
         return AudioSegment.from_file(BytesIO(audio_data), format="wav")
 
