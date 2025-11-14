@@ -76,3 +76,65 @@ def test_base_connector_callback_registration_and_dispatch():
     assert not callback_event.wait(timeout=0.1)
 
     connector.shutdown()
+
+
+def test_base_connector_methods_behavior():
+    connector = BaseConnector[DummyMessage]()
+
+    with pytest.raises(NotImplementedError):
+        connector.send_message(DummyMessage(payload="hello"), "demo")
+    with pytest.raises(NotImplementedError):
+        connector.receive_message("demo", 1.0)
+    with pytest.raises(NotImplementedError):
+        connector.service_call(DummyMessage(payload="hello"), "demo", 1.0)
+    with pytest.raises(NotImplementedError):
+        connector.create_service("demo", lambda: None)
+    with pytest.raises(NotImplementedError):
+        connector.create_action("demo", lambda: None)
+    with pytest.raises(NotImplementedError):
+        connector.start_action(
+            DummyMessage(payload="hello"), "demo", lambda: None, lambda: None, 1.0
+        )
+    with pytest.raises(NotImplementedError):
+        connector.terminate_action("demo")
+    with pytest.raises(NotImplementedError):
+        connector.general_callback_preprocessor(DummyMessage(payload="hello"))
+
+
+def test_base_connector_msg_class_obj_type():
+    # test orig bases type
+    class InternalDummyConnector(BaseConnector[DummyMessage]):
+        pass
+
+    connector = InternalDummyConnector()
+    assert connector.T_class == DummyMessage
+
+    # test derived class type
+    class DerivedMessage(DummyMessage):
+        pass
+
+    class InternalDerivedConnector(BaseConnector[DerivedMessage]):
+        pass
+
+    connector = InternalDerivedConnector()
+    assert connector.T_class == DerivedMessage
+
+    # test derived class type with multiple inheritance
+    class DerivedMessage(DummyMessage, BaseMessage):
+        pass
+
+    class InternalDerivedConnector(BaseConnector[DerivedMessage]):
+        pass
+
+    connector = InternalDerivedConnector()
+    assert connector.T_class == DerivedMessage
+
+    # test derived class type with multiple inheritance
+    class DerivedMessage(DummyMessage, BaseMessage):
+        pass
+
+    class InternalDerivedConnector(BaseConnector[DerivedMessage]):
+        pass
+
+    connector = InternalDerivedConnector()
+    assert connector.T_class == DerivedMessage
