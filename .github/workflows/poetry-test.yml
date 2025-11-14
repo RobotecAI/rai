@@ -74,6 +74,7 @@ jobs:
           pytest -m "not billable" --cov=./src/rai_core --cov-report=xml
 
       - name: Upload coverage to Codecov
+        if: ${{ matrix.ros_distro == 'jazzy' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
