@@ -17,7 +17,7 @@
 <launch>
     <arg name="weights_path" default = ""/>
 
-    <node pkg="rai_open_set_vision" exec="grounded_sam" name="grounded_sam" output="screen">
+    <node pkg="rai_perception" exec="grounded_sam" name="grounded_sam" output="screen">
         <param name="weights_path" value="$(var weights_path)" />
     </node>
 </launch>

@@ -19,15 +19,15 @@
     <arg name="sam_weights_path" default = ""/>
     <arg name="image_path" />
 
-    <node pkg="rai_open_set_vision" exec="grounding_dino" name="grounding_dino" output="screen">
+    <node pkg="rai_perception" exec="grounding_dino" name="grounding_dino" output="screen">
         <param name="weights_path" value="$(var dino_weights_path)" />
     </node>
 
-    <node pkg="rai_open_set_vision" exec="grounded_sam" name="grounded_sam" output="screen">
+    <node pkg="rai_perception" exec="grounded_sam" name="grounded_sam" output="screen">
         <param name="weights_path" value="$(var sam_weights_path)" />
     </node>
 
-    <node pkg="rai_open_set_vision" exec="talker" name="example_client" output="screen">
+    <node pkg="rai_perception" exec="talker" name="example_client" output="screen">
       <param name="image_path" value="$(var image_path)" />
     </node>
 </launch>

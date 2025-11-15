@@ -22,7 +22,7 @@ manipulation techniques.
 2. Download additional dependencies:
 
     ```shell
-    poetry install --with openset
+    poetry install --with perception
     vcs import < demos.repos
     rosdep install --from-paths src/examples/rai-manipulation-demo/ros2_ws/src --ignore-src -r -y
     ```

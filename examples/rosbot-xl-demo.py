@@ -32,7 +32,7 @@ from rai.tools.ros2 import (
     Nav2Toolkit,
 )
 from rai.tools.time import WaitForSecondsTool
-from rai_open_set_vision.tools import GetGrabbingPointTool
+from rai_perception.tools import GetGrabbingPointTool
 
 from rai_whoami import EmbodimentInfo
 

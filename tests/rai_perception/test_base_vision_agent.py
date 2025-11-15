@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import rclpy
-from rai_open_set_vision.agents.base_vision_agent import BaseVisionAgent
+from rai_perception.agents.base_vision_agent import BaseVisionAgent
 
 
 class MockBaseVisionAgent(BaseVisionAgent):

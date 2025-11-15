@@ -16,8 +16,8 @@
 from pathlib import Path
 
 from rai_interfaces.msg import RAIDetectionArray
-from rai_open_set_vision.agents.base_vision_agent import BaseVisionAgent
-from rai_open_set_vision.vision_markup.boxer import GDBoxer
+from rai_perception.agents.base_vision_agent import BaseVisionAgent
+from rai_perception.vision_markup.boxer import GDBoxer
 
 GDINO_NODE_NAME = "grounding_dino"
 GDINO_SERVICE_NAME = "grounding_dino_classify"

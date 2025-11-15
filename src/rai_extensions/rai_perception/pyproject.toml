@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "rai_perception"
+version = "0.1.0"
+description = "Package enabling perception capabilities for RAI"
+authors = ["Kajetan Rachwał <kajetan.rachwal@robotec.ai>"]
+license = "Apache License 2.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+# TODO:(juliaj) update sam2 dependency after https://github.com/RobotecAI/Grounded-SAM-2/pull/3 is merged
+torch = "^2.3.1"
+torchvision = "^0.18.1"
+rf-groundingdino = "^0.2.0"
+sam2 = { git = "https://github.com/RobotecAI/Grounded-SAM-2", branch = "main" }
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
