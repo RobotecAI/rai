@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import copy
-import time
+import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
@@ -232,11 +232,9 @@ class ROS2ActionAPI(BaseROS2API):
         self.actions[handle]["action_client"] = action_client
         self.actions[handle]["goal_future"] = send_goal_future
 
-        start_time = time.time()
-        while time.time() - start_time < timeout_sec:
-            if send_goal_future.done():
-                break
-            time.sleep(0.01)
+        goal_event = threading.Event()
+        send_goal_future.add_done_callback(lambda _: goal_event.set())
+        goal_event.wait(timeout=timeout_sec)
 
         goal_handle = cast(Optional[ClientGoalHandle], send_goal_future.result())
         if goal_handle is None:
