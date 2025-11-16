@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import threading
 from typing import Any
 
 import rclpy
 import rclpy.task
+
+logger = logging.getLogger(__name__)
 
 
 def get_future_result(
@@ -33,6 +36,8 @@ def get_future_result(
 
     future.add_done_callback(callback)
 
-    _ = event.wait(timeout=timeout_sec)
+    timed_out = not event.wait(timeout=timeout_sec)
+    if timed_out:
+        logger.warning(f"Future timed out after {timeout_sec}s")
 
     return result
