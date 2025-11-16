@@ -39,7 +39,6 @@ class BaseAggregator(ABC, Generic[T]):
     @abstractmethod
     def get(self) -> BaseMessage | None:
         """Returns the outcome of processing the aggregated message"""
-        pass
 
     def clear_buffer(self) -> None:
         """Clears the buffer of messages"""

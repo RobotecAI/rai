@@ -20,6 +20,7 @@ pre-commit = "^3.7.0"
 tabulate = "^0.9.0"
 pytest = "^8.2.0"
 pytest-timeout = "^2.3.1"
+pytest-cov = "^7.0.0"
 
 
 [tool.poetry.group.docs]
@@ -46,11 +47,8 @@ optional = true
 rai_sim = {path = "src/rai_sim", develop = true}
 rai_bench = {path = "src/rai_bench", develop = true}
 
-[tool.poetry.group.openset]
+[tool.poetry.group.perception]
 optional = true
-
-[tool.poetry.group.openset.dependencies]
-rai_open_set_vision = {path = "src/rai_extensions/rai_open_set_vision", develop = true}
 
 # TODO(juliaj): The test-pypi source is for testing purpose only, remove once rai-sam2 is published.
 # This source needs to be in this file in order to run poetry lock from the project root.
@@ -58,6 +56,8 @@ rai_open_set_vision = {path = "src/rai_extensions/rai_open_set_vision", develop 
 name = "test-pypi"
 url = "https://test.pypi.org/simple/"
 priority = "explicit"
+[tool.poetry.group.perception.dependencies]
+rai_perception = {path = "src/rai_extensions/rai_perception", develop = true}
 
 [tool.poetry.group.nomad]
 optional = true

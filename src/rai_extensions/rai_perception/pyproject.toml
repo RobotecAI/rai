@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "rai_perception"
+version = "0.1.0"
+description = "Package for object detection, segmentation and gripping point detection."
+authors = ["Kajetan Rachwał <kajetan.rachwal@robotec.ai>"]
+readme = "README.md"
+packages = [
+    { include = "rai_perception", from = "." },
+]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+torch = "^2.3.1"
+torchvision = "^0.18.1"
+rf-groundingdino = "^0.2.0"
+# TODO(juliaj): for testing purpose only, update rai-sam2 info once it is published
+rai-sam2 = { version = "1.1.2", source = "test-pypi" }
+rai_core = ">=2.0.0.a2,<3.0.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

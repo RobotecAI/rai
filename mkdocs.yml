@@ -128,7 +128,7 @@ nav:
     - RAI Bench: simulation_and_benchmarking/rai_bench.md
     - Simulators: simulation_and_benchmarking/simulators.md
   - Extensions:
-    - OpenSet Vision: extensions/openset.md
+    - Perception: extensions/perception.md
     - NoMaD Visual Navigation: extensions/nomad.md
   - FAQ:
     - Overview: faq/faq.md

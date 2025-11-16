@@ -45,7 +45,7 @@ from rai.tools.ros2 import (
     StartROS2ActionTool,
 )
 from rai.types import Point
-from rai_open_set_vision.tools import (
+from rai_perception.tools import (
     DistanceMeasurement,
     GetDistanceToObjectsTool,
     GetGrabbingPointTool,

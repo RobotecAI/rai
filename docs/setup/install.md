@@ -43,7 +43,7 @@ There are two ways to start using RAI:
 
 !!! important "Package availability"
 
-    `rai_openset` and `rai_nomad` are not yet available through pip. If your workflow relies on openset detection or NoMaD integration, please refer to the
+    `rai_perception` and `rai_nomad` are not yet available through pip. If your workflow relies on openset detection or NoMaD integration, please refer to the
     [developer environment instructions](#setting-up-developer-environment) setup.
 
     `rai_interfaces` is available as `apt` package. However, due to package distribution delays, the latest version may not be immediately available. If you encounter missing imports, please build `rai_interfaces` from [source](https://github.com/RobotecAI/rai_interfaces).
@@ -113,14 +113,14 @@ rosdep install --from-paths src --ignore-src -r -y
     install additional dependencies:
 
     ```bash
-    poetry install --with openset,nomad,s2s,simbench # or `--all-groups` for full setup
+    poetry install --with perception,nomad,s2s,simbench # or `--all-groups` for full setup
     ```
 
     | Group Name | Description | Dependencies |
     |------------|-------------|--------------|
     | [s2s][s2s] | Speech-to-Speech functionality | rai_asr, rai_tts |
     | [simbench][simbench] | Simulation and benchmarking tools | rai_sim, rai_bench |
-    | [openset][openset] | Open-set detection capabilities | groundingdino, groundedsam |
+    | [perception][perception] | Open-set detection capabilities | groundingdino, groundedsam |
     | [nomad][nomad] | Visual Navigation - NoMaD integration | visualnav_transformer |
     | docs | Documentation-related dependencies | mkdocs, mkdocs-material, pymdown-extensions |
 
@@ -168,5 +168,5 @@ Pick your local solution or service provider and follow one of these guides:
 
 [s2s]: ../tutorials/voice_interface.md
 [simbench]: ../simulation_and_benchmarking/overview.md
-[openset]: ../extensions/openset.md
+[perception]: ../extensions/perception.md
 [nomad]: ../extensions/nomad.md
