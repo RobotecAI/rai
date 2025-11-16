@@ -346,6 +346,7 @@ def test_ros2_service_single_call_wrong_service_name(
                 f"{service_name}/wrong_service_name",
                 service_type="std_srvs/srv/SetBool",
                 request={"data": True},
+                timeout_sec=1.0,
             )
     finally:
         shutdown_executors_and_threads(executors, threads)
