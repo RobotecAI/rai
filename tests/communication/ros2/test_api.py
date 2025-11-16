@@ -483,17 +483,17 @@ def test_ros2_action_feedback_callback_exception_handling(
     thread = threading.Thread(target=executor.spin)
     thread.start()
     action_api = ROS2ActionAPI(node)
-    
+
     error_callback_called = False
-    
+
     def failing_feedback_callback(feedback_msg: Any) -> None:
         nonlocal error_callback_called
         error_callback_called = True
         raise ValueError("Test exception in feedback callback")
-    
+
     mock_logger = MagicMock()
     action_api._logger = mock_logger
-    
+
     try:
         accepted, handle = action_api.send_goal(
             action_name,
@@ -503,17 +503,17 @@ def test_ros2_action_feedback_callback_exception_handling(
         )
         assert accepted
         assert handle != ""
-        
+
         wait_time = 0.5
         start_time = time.perf_counter()
         while not action_api.is_goal_done(handle):
             time.sleep(0.01)
             if time.perf_counter() - start_time > wait_time:
                 raise TimeoutError("Goal not done")
-        
+
         result = action_api.get_result(handle)
         assert result.status == GoalStatus.STATUS_SUCCEEDED
-        
+
         time.sleep(0.1)
         assert error_callback_called, "Error callback should have been called"
         mock_logger.error.assert_called()
