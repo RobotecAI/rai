@@ -74,7 +74,7 @@ jobs:
         shell: bash
         run: |
           source setup_shell.sh
-          pytest -m "not billable" --cov=./src/rai_core --cov-report=xml
+          pytest -m "not billable" --cov=./src/rai_core --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
 
       - name: Upload coverage to Codecov
         if: ${{ matrix.ros_distro == 'jazzy' }}
@@ -84,3 +84,9 @@ jobs:
           files: ./coverage.xml
           name: codecov-pytest
           fail_ci_if_error: false
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() && matrix.ros_distro == 'jazzy' }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
