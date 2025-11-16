@@ -403,6 +403,50 @@ def test_get_topics_names_and_types_tool_empty_response_when_all_filtered(
         shutdown_executors_and_threads(executors, threads)
 
 
+def test_categorize_topic_returns_none_when_neither_readable_nor_writable(
+    ros_setup: None,
+) -> None:
+    """Test that _categorize_topic returns None when topic is neither readable nor writable."""
+    connector = ROS2Connector()
+    tool = GetROS2TopicsNamesAndTypesTool(connector=connector)
+
+    # Test the None case: both flags are False
+    result = tool._categorize_topic(is_readable_topic=False, is_writable_topic=False)
+    assert result is None
+
+
+def test_get_topics_when_should_include_is_false(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    """Test that topics are excluded when should_include is False."""
+    included_topic = f"/{request.node.originalname}_included"  # type: ignore
+    excluded_topic = f"/{request.node.originalname}_excluded"  # type: ignore
+
+    publisher1 = MessagePublisher(topic=included_topic)
+    publisher2 = MessagePublisher(topic=excluded_topic)
+
+    executors, threads = multi_threaded_spinner([publisher1, publisher2])
+    try:
+        connector = ROS2Connector()
+        wait_for_ros2_topics(
+            connector, [included_topic, excluded_topic], time_interval=0.1
+        )
+        # Test case: only readable is set, excluded_topic is not readable
+        # This triggers should_include=False for excluded_topic because it is not in readable whitelist
+        tool = GetROS2TopicsNamesAndTypesTool(
+            connector=connector,
+            readable=[included_topic],
+        )
+        response = tool._run()
+        assert response != ""
+        # Verify included topic appears
+        assert included_topic in response
+        # Verify excluded topic does NOT appear because should_include=False
+        assert excluded_topic not in response
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
 def test_get_topics_names_and_types_tool_response_section_order(
     ros_setup: None, request: pytest.FixtureRequest
 ) -> None:
