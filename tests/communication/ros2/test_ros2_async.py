@@ -40,18 +40,17 @@ def test_get_future_result_timeout():
 def test_get_future_result_timeout_logs_warning(caplog):
     """Test that timeout logs a warning message."""
     import logging
-    
+
     logger = logging.getLogger("rai.communication.ros2.ros_async")
     logger.propagate = True
-    
+
     future = Future()
     with caplog.at_level(logging.WARNING, logger=logger.name):
         result = get_future_result(future, timeout_sec=0.1)
-    
+
     assert result is None
     assert any(
-        "Future timed out after 0.1s" in record.message
-        for record in caplog.records
+        "Future timed out after 0.1s" in record.message for record in caplog.records
     )
 
 

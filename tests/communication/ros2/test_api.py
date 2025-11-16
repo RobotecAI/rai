@@ -502,7 +502,9 @@ def test_ros2_action_send_goal_terminate_goal(
         shutdown_executors_and_threads(executors, threads)
 
 
-def test_ros2_action_send_goal_timeout(ros_setup: None, request: pytest.FixtureRequest) -> None:
+def test_ros2_action_send_goal_timeout(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
     """Test that send_goal returns (False, "") when goal send times out."""
     action_name = f"{request.node.originalname}_nonexistent_action"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
@@ -536,24 +538,21 @@ def test_ros2_action_send_goal_timeout_logs_warning(
         action_api = ROS2ActionAPI(node)
         # Wait for server first
         time.sleep(0.1)
-        
+
         # Ensure logger propagates to root logger for caplog to capture
         logger = logging.getLogger("rai.communication.ros2.ros_async")
         logger.propagate = True
-        
+
         # Now use a very short timeout for goal send to trigger timeout
         with caplog.at_level(logging.WARNING, logger=logger.name):
             accepted, handle = action_api.send_goal(
                 action_name, "nav2_msgs/action/NavigateToPose", {}, timeout_sec=0.001
             )
-        
+
         # Should timeout and log warning
         assert not accepted
         assert handle == ""
-        assert any(
-            "Future timed out" in record.message
-            for record in caplog.records
-        )
+        assert any("Future timed out" in record.message for record in caplog.records)
     finally:
         shutdown_executors_and_threads(executors, threads)
 
@@ -573,9 +572,7 @@ def test_ros2_action_send_goal_exception_propagates(
         # Invalid action type will raise during import, not in future
         # This tests that exceptions are properly propagated through get_future_result
         with pytest.raises((ValueError, ImportError, AttributeError)):
-            action_api.send_goal(
-                action_name, "invalid/action/Type", {}
-            )
+            action_api.send_goal(action_name, "invalid/action/Type", {})
     finally:
         shutdown_executors_and_threads(executors, threads)
 

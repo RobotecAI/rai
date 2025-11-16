@@ -232,7 +232,10 @@ class ROS2ActionAPI(BaseROS2API):
         self.actions[handle]["action_client"] = action_client
         self.actions[handle]["goal_future"] = send_goal_future
 
-        goal_handle = cast(Optional[ClientGoalHandle], get_future_result(send_goal_future, timeout_sec=timeout_sec))
+        goal_handle = cast(
+            Optional[ClientGoalHandle],
+            get_future_result(send_goal_future, timeout_sec=timeout_sec),
+        )
         if goal_handle is None:
             return False, ""
 
