@@ -285,7 +285,7 @@ def get_tracing_callbacks(
 
     callbacks: List[BaseCallbackHandler] = []
     if config.tracing.langfuse.use_langfuse:
-        from langfuse.callback import CallbackHandler  # type: ignore
+        from langfuse.langchain import CallbackHandler  # type: ignore
 
         public_key = os.getenv("LANGFUSE_PUBLIC_KEY", None)
         secret_key = os.getenv("LANGFUSE_SECRET_KEY", None)
