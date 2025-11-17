@@ -18,6 +18,7 @@ from rai.communication.hri_connector import HRIMessage
 
 
 class HTTPMessage(BaseMessage):
+    protocol: Literal["http", "websocket"]
     headers: Optional[dict] = None
     method: Literal[
         "GET", "HEAD", "OPTIONS", "TRACE", "PUT", "DELETE", "POST", "PATCH", "CONNECT"
