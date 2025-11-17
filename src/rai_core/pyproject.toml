@@ -19,13 +19,13 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.10, <3.13"
-langchain-core = "^0.3"
+langchain-core = "^1.0"
 langgraph = "*"
 langgraph-prebuilt = "*"
 langchain = "*"
 langchain-aws = "*"
 langchain-openai = "*"
-langchain-ollama = "^0.3.4"
+langchain-ollama = "*"
 langchain-community = "*"
 
 requests = "^2.32.2"
@@ -41,7 +41,7 @@ pillow = "^11.0.0"
 langfuse = "^2.60.2"
 pydub = "^0.25.1"
 streamlit = "^1.44"
-numpy = "<2.0"
+numpy = ">2.0"
 
 [tool.poetry.scripts]
 rai-config-init = "rai.initialization.config_initialization:main"
