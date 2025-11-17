@@ -57,7 +57,7 @@ rai_perception = {path = "src/rai_extensions/rai_perception", develop = true}
 optional = true
 
 [tool.poetry.group.nomad.dependencies]
-visualnav_transformer = { git = "https://github.com/RobotecAI/visualnav-transformer-ros2.git", branch = "main" }
+# visualnav_transformer = { git = "https://github.com/RobotecAI/visualnav-transformer-ros2.git", branch = "main" }
 gdown = "^5.2.0"
 
 [build-system]
