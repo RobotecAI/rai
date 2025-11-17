@@ -1,4 +1,6 @@
-from typing import Any, Callable, Optional, TypeVar
+import time
+import logging
+from typing import Any, Callable, Optional, TypeVar, Dict
 
 from rai.communication.base_connector import BaseConnector, BaseMessage
 from rai.communication.http.messages import HTTPMessage
@@ -19,19 +21,45 @@ class HTTPBaseConnector(BaseConnector[T]):
         self._api = HTTPAPI(mode, host, port)
         self._api.run()
         self._services = []
+        self.last_msg: Dict[str, T] = {}
 
     def send_message(self, message: T, target: str, **kwargs: Optional[Any]) -> None:
-        self._api.send_request(
-            message.method,
-            target,
-            None,
-            payload=message.payload,
-            headers=message.headers,
-        )
+        if message.protocol == "http":
+             self._api.send_request(
+                 message.method,
+                 target,
+                 None,
+                 payload=message.payload,
+                 headers=message.headers,
+             )
+        else:
+        #    self._api.
 
     def receive_message(
         self, source: str, timeout_sec: float, **kwargs: Optional[Any]
     ) -> T:
+        msg = None
+        if self._api.routes.get(source, None) is not None:
+            # a GET method has already been added...
+        else:
+            def local_callback(payload: Any) -> None:
+                msg = payload
+            self._api.add_route(
+                "GET",
+                source,
+                self.general_callback
+            )
+
+        start_time = time.time()
+        # wait for the message to be received
+        while time.time() - start_time < timeout_sec:
+            if source in self.last_msg:
+                return self.last_msg[source]
+            time.sleep(0.1)
+        else:
+            raise TimeoutError(
+                f"Message from {source} not received in {timeout_sec} seconds"
+            )
         raise NotImplementedError("This method should be implemented by the subclass.")
 
     def _safe_callback_wrapper(self, callback: Callable[[T], None], message: T) -> None:
@@ -74,6 +102,10 @@ class HTTPBaseConnector(BaseConnector[T]):
         **kwargs: Optional[Any],
     ) -> str:
         id_str = f"{method.upper()}_{service_name}"
+        if on_done is not None:
+            logging.warning(
+                f"not None on_done argument passed to create_service of {self.__class__}; will have no effect!"
+            )
         if id_str in self._services:
             raise HTTPAPIError(
                 f"Service {service_name} already has a {method.upper()} handler"
