@@ -309,10 +309,6 @@ def shutdown_executors_and_threads(
         except Exception as e:
             print(f"Error canceling ongoing tasks: {e}")
 
-    # Join threads with a timeout
-    for thread in threads:
-        thread.join(timeout=2.0)
-
     # Clean up any remaining nodes
     for executor in executors:
         try:
@@ -321,14 +317,16 @@ def shutdown_executors_and_threads(
         except Exception as e:
             print(f"Error destroying node: {e}")
 
-    time.sleep(0.5)
-
     # Shutdown executors
     for executor in executors:
         try:
             executor.shutdown()
         except Exception as e:
             print(f"Error shutting down executor: {e}")
+
+    # Join threads with a timeout
+    for thread in threads:
+        thread.join(timeout=2.0)
 
 
 @pytest.fixture(scope="function")
