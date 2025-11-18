@@ -22,8 +22,13 @@ except ImportError:
     pytest.skip("ROS2 is not installed", allow_module_level=True)
 
 
+import time
+
 from rai.communication.ros2.connectors import ROS2Connector
-from rai.tools.ros2 import CallROS2ServiceTool
+from rai.tools.ros2 import (
+    CallROS2ServiceTool,
+    GetROS2ServicesNamesAndTypesTool,
+)
 
 from tests.communication.ros2.helpers import (
     ServiceServer,
@@ -83,5 +88,92 @@ def test_service_call_tool_with_writable_service(
         )
         assert "Test service called" in response
         assert "success=True" in response
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_get_services_names_and_types_tool_no_restrictions(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    service_name = f"/{request.node.originalname}_service"  # type: ignore
+    connector = ROS2Connector()
+    server = ServiceServer(service_name=service_name)
+    executors, threads = multi_threaded_spinner([server])
+    try:
+        time.sleep(0.2)
+        tool = GetROS2ServicesNamesAndTypesTool(connector=connector)
+        response = tool._run()  # type: ignore
+        assert response != ""
+        assert service_name in response
+        assert "service:" in response
+        assert "type:" in response
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_get_services_names_and_types_tool_with_writable(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    writable_service = f"/{request.node.originalname}_writable_service"  # type: ignore
+    non_writable_service = f"/{request.node.originalname}_non_writable_service"  # type: ignore
+    connector = ROS2Connector()
+    server1 = ServiceServer(service_name=writable_service)
+    server2 = ServiceServer(service_name=non_writable_service)
+    executors, threads = multi_threaded_spinner([server1, server2])
+    try:
+        time.sleep(0.2)
+        tool = GetROS2ServicesNamesAndTypesTool(
+            connector=connector, writable=[writable_service]
+        )
+        response = tool._run()  # type: ignore
+        assert response != ""
+        assert writable_service in response
+        assert non_writable_service not in response
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_get_services_names_and_types_tool_with_forbidden(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    service_name = f"/{request.node.originalname}_service"  # type: ignore
+    forbidden_service = f"/{request.node.originalname}_forbidden_service"  # type: ignore
+    connector = ROS2Connector()
+    server1 = ServiceServer(service_name=service_name)
+    server2 = ServiceServer(service_name=forbidden_service)
+    executors, threads = multi_threaded_spinner([server1, server2])
+    try:
+        time.sleep(0.2)
+        tool = GetROS2ServicesNamesAndTypesTool(
+            connector=connector, forbidden=[forbidden_service]
+        )
+        response = tool._run()  # type: ignore
+        assert response != ""
+        assert service_name in response
+        assert forbidden_service not in response
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_get_services_names_and_types_tool_with_writable_and_forbidden(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    writable_service = f"/{request.node.originalname}_writable_service"  # type: ignore
+    forbidden_service = f"/{request.node.originalname}_forbidden_service"  # type: ignore
+    connector = ROS2Connector()
+    server1 = ServiceServer(service_name=writable_service)
+    server2 = ServiceServer(service_name=forbidden_service)
+    executors, threads = multi_threaded_spinner([server1, server2])
+    try:
+        time.sleep(0.2)
+        tool = GetROS2ServicesNamesAndTypesTool(
+            connector=connector,
+            writable=[writable_service],
+            forbidden=[forbidden_service],
+        )
+        response = tool._run()  # type: ignore
+        assert response != ""
+        assert writable_service in response
+        assert forbidden_service not in response
     finally:
         shutdown_executors_and_threads(executors, threads)
