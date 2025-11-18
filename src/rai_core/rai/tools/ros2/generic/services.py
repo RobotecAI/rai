@@ -66,9 +66,12 @@ class GetROS2ServicesNamesAndTypesTool(BaseROS2Tool):
             writable_services: List[Dict[str, Any]] = []
 
             for service, type in services_and_types:
-                if self.is_writable(service):
+                should_include, _, is_writable_service = (
+                    self._check_permission_and_include(service, check_readable=False)
+                )
+                # For services, only include writable ones (actionable for LLM agents)
+                if should_include and is_writable_service:
                     writable_services.append({"service": service, "type": type})
-                    continue
 
             text_response = "\n".join(
                 [

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import json
-from typing import Any, Dict, List, Literal, Optional, Tuple, Type
+from typing import Any, Dict, List, Literal, Tuple, Type
 
 import rclpy.time
 import rosidl_runtime_py.set_message
@@ -157,50 +157,6 @@ class GetROS2TopicsNamesAndTypesTool(BaseROS2Tool):
     name: str = "get_ros2_topics_names_and_types"
     description: str = "Get the names and types of all ROS2 topics"
 
-    def _should_include_topic(self, topic: str) -> Tuple[bool, bool, bool]:
-        """
-        Check if topic should be included and return readable/writable status.
-
-        Returns:
-            (should_include, is_readable, is_writable)
-        """
-        # Skip forbidden topics
-        if self.forbidden is not None and topic in self.forbidden:
-            return (False, False, False)
-
-        is_readable_topic = self.is_readable(topic)
-        is_writable_topic = self.is_writable(topic)
-
-        # Determine if topic should be included based on whitelist state
-        # If only readable is set: include only if topic is in readable list
-        # If only writable is set: include only if topic is in writable list
-        # If both are set: include if topic is in readable OR writable list
-        # If neither is set: include all topics (except forbidden)
-        should_include = True
-        if self.readable is not None and self.writable is not None:
-            # Both whitelists are set, topic must be in at least one
-            should_include = is_readable_topic or is_writable_topic
-        elif self.readable is not None:
-            # Only readable whitelist is set, topic must be readable
-            should_include = is_readable_topic
-        elif self.writable is not None:
-            # Only writable whitelist is set, topic must be writable
-            should_include = is_writable_topic
-
-        return (should_include, is_readable_topic, is_writable_topic)
-
-    def _categorize_topic(
-        self, is_readable_topic: bool, is_writable_topic: bool
-    ) -> Optional[str]:
-        """Categorize topic into readable, writable, or both. Returns category name."""
-        if is_readable_topic and is_writable_topic:
-            return "readable_and_writable"
-        elif is_readable_topic:
-            return "readable"
-        elif is_writable_topic:
-            return "writable"
-        return None
-
     def _run(self) -> str:
         topics_and_types = self.connector.get_topics_names_and_types()
         if all([self.readable is None, self.writable is None, self.forbidden is None]):
@@ -215,12 +171,12 @@ class GetROS2TopicsNamesAndTypesTool(BaseROS2Tool):
 
         for topic, type in topics_and_types:
             should_include, is_readable_topic, is_writable_topic = (
-                self._should_include_topic(topic)
+                self._check_permission_and_include(topic, check_readable=True)
             )
             if not should_include:
                 continue
 
-            category = self._categorize_topic(is_readable_topic, is_writable_topic)
+            category = self._categorize(is_readable_topic, is_writable_topic)
             if category is None:
                 continue
 

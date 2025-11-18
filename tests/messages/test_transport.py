@@ -14,6 +14,7 @@
 
 import os
 import threading
+import time
 import uuid
 from typing import List
 
@@ -26,6 +27,26 @@ from rclpy.node import Node
 from rclpy.qos import QoSPresetProfiles, QoSProfile
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
+
+
+def _safe_spin(executor: SingleThreadedExecutor) -> None:
+    """Wrapper around executor.spin() that suppresses expected shutdown errors."""
+    try:
+        executor.spin()
+    except Exception as e:
+        # Suppress expected errors during shutdown:
+        # - InvalidHandle errors (happen when publishers are destroyed while callbacks are queued)
+        # - Timer canceled errors
+        error_str = str(e)
+        if (
+            "cannot use Destroyable because destruction was requested" in error_str
+            or "timer is canceled" in error_str
+            or "timer is invalid" in error_str
+        ):
+            # Expected during shutdown, ignore
+            return
+        # Re-raise unexpected errors
+        raise
 
 
 def get_qos_profiles() -> List[str]:
@@ -95,7 +116,8 @@ def test_transport(qos_profile: str):
     publisher = TestPublisher(QoSPresetProfiles.get_from_short_key(qos_profile))
     executor = SingleThreadedExecutor()
     executor.add_node(publisher)
-    thread = threading.Thread(target=executor.spin)
+    thread = threading.Thread(target=_safe_spin, args=(executor,))
+    thread.daemon = True
     thread.start()
 
     connector = ROS2Connector(
@@ -107,6 +129,14 @@ def test_transport(qos_profile: str):
         for topic in topics:
             _ = connector.receive_message(topic, timeout_sec=5.0)
     finally:
+        # Cancel timers before shutdown to prevent callbacks from using destroyed publishers
+        try:
+            publisher.image_timer.cancel()
+            publisher.text_timer.cancel()
+        except Exception:
+            pass
+        # Give executor time to process cancellations
+        time.sleep(0.1)
         executor.shutdown()
         connector.shutdown()
         publisher.destroy_node()

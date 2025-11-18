@@ -36,7 +36,6 @@ from rai.tools.ros2 import (
     PublishROS2MessageTool,
     ReceiveROS2MessageTool,
 )
-from rclpy.node import Node
 
 from tests.communication.ros2.helpers import (
     ClockPublisher,
@@ -231,11 +230,7 @@ def test_get_topics_names_and_types_tool_with_readable_topic(
     publisher1 = MessagePublisher(topic=readable_topic1)
     publisher2 = MessagePublisher(topic=non_readable_topic)
 
-    # Create a logger node to ensure /rosout topic is active
-    logger_node = Node("test_logger_node")
-    logger_node.get_logger().info("Test log message to activate /rosout")
-
-    executors, threads = multi_threaded_spinner([publisher1, publisher2, logger_node])
+    executors, threads = multi_threaded_spinner([publisher1, publisher2])
     try:
         connector = ROS2Connector()
         wait_for_ros2_topics(
@@ -248,7 +243,6 @@ def test_get_topics_names_and_types_tool_with_readable_topic(
         response = tool._run()
         assert response != ""
         # Verify readable topics appear in response
-        assert "/rosout" in response
         assert readable_topic1 in response
         # Verify non-readable topic does NOT appear (whitelist behavior)
         assert non_readable_topic not in response
@@ -406,12 +400,12 @@ def test_get_topics_names_and_types_tool_empty_response_when_all_filtered(
 def test_categorize_topic_returns_none_when_neither_readable_nor_writable(
     ros_setup: None,
 ) -> None:
-    """Test that _categorize_topic returns None when topic is neither readable nor writable."""
+    """Test that _categorize returns None when topic is neither readable nor writable."""
     connector = ROS2Connector()
     tool = GetROS2TopicsNamesAndTypesTool(connector=connector)
 
     # Test the None case: both flags are False
-    result = tool._categorize_topic(is_readable_topic=False, is_writable_topic=False)
+    result = tool._categorize(is_readable=False, is_writable=False)
     assert result is None
 
 

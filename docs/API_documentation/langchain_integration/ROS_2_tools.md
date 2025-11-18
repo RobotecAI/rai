@@ -14,19 +14,20 @@ RAI provides various ROS 2 tools, both generic (mimics ros2cli) and specific (e.
 
 ROS2 tools implement a security model using three access control parameters:
 
--   **`readable`** (Allowlist for Reading): Whitelist of topics/services/actions the agent can read/subscribe to
+-   **`readable`** (Allowlist for Reading): Whitelist of topics the agent can read/subscribe to
 
     -   If `None`: all topics are readable (permissive)
     -   If set: only topics in the list are readable (restrictive)
+    -   Note: Only applies to topics; services and actions are not checked against this parameter
 
--   **`writable`** (Allowlist for Writing): Whitelist of topics/services/actions the agent can write/publish to
+-   **`writable`** (Allowlist for Writing): Whitelist of topics/actions/services the agent can write/publish to
 
-    -   If `None`: all topics are writable (permissive)
-    -   If set: only topics in the list are writable (restrictive)
+    -   If `None`: all topics/actions/services are writable (permissive)
+    -   If set: only topics/actions/services in the list are writable (restrictive)
 
--   **`forbidden`** (Blocklist): Blacklist of topics/services/actions that are always denied
+-   **`forbidden`** (Blocklist): Blacklist of topics/actions/services that are always denied
     -   Highest priority - checked first and overrides both `readable` and `writable`
-    -   If topic is forbidden, it cannot be accessed regardless of allowlists
+    -   If a resource is forbidden, it cannot be accessed regardless of allowlists
 
 **Priority Order:** `forbidden` > `readable`/`writable` > default (all allowed)
 
@@ -40,7 +41,7 @@ connector = ROS2Connector()
 
 BaseROS2Tool( # BaseROS2Tool cannot be used directly, this is just an example
     connector=connector,
-    readable=["/odom", "/scan"], # readable topics, services and actions
+    readable=["/odom", "/scan"], # readable topics
     writable=["/robot_position"], # writable topics, services and actions
     forbidden=["/cmd_vel"], # forbidden topics, services and actions
 )
