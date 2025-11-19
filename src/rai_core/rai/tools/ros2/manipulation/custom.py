@@ -260,7 +260,7 @@ class GetObjectPositionsToolInput(BaseModel):
     )
 
 
-@deprecated("Use GetObjectGrippingPointsTool from rai_open_set_vision instead")
+@deprecated("Use GetObjectGrippingPointsTool from rai_perception instead")
 class GetObjectPositionsTool(BaseROS2Tool):
     name: str = "get_object_positions"
     description: str = (
