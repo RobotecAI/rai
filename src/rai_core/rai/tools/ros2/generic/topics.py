@@ -161,44 +161,60 @@ class GetROS2TopicsNamesAndTypesTool(BaseROS2Tool):
         topics_and_types = self.connector.get_topics_names_and_types()
         if all([self.readable is None, self.writable is None, self.forbidden is None]):
             response = [
-                {"topic": topic, "type": type} for topic, type in topics_and_types
+                {"topic": topic, "type": topic_type}
+                for topic, topic_type in topics_and_types
             ]
             return "\n".join([stringify_dict(topic) for topic in response])
-        else:
-            readable_and_writable_topics: List[Dict[str, Any]] = []
-            readable_topics: List[Dict[str, Any]] = []
-            writable_topics: List[Dict[str, Any]] = []
 
-            for topic, type in topics_and_types:
-                if self.is_readable(topic) and self.is_writable(topic):
-                    readable_and_writable_topics.append({"topic": topic, "type": type})
-                    continue
-                if self.is_readable(topic):
-                    readable_topics.append({"topic": topic, "type": type})
-                if self.is_writable(topic):
-                    writable_topics.append({"topic": topic, "type": type})
+        readable_and_writable_topics: List[Dict[str, Any]] = []
+        readable_topics: List[Dict[str, Any]] = []
+        writable_topics: List[Dict[str, Any]] = []
 
-            text_response = "\n".join(
+        for topic, topic_type in topics_and_types:
+            should_include, is_readable_topic, is_writable_topic = (
+                self._check_permission_and_include(topic, check_readable=True)
+            )
+            if not should_include:
+                continue
+
+            category = self._categorize(is_readable_topic, is_writable_topic)
+            if category is None:
+                continue
+
+            topic_dict = {"topic": topic, "type": topic_type}
+
+            if category == "readable_and_writable":
+                readable_and_writable_topics.append(topic_dict)
+            elif category == "readable":
+                readable_topics.append(topic_dict)
+            elif category == "writable":
+                writable_topics.append(topic_dict)
+
+        text_response = "\n".join(
+            [
+                stringify_dict(topic_description)
+                for topic_description in readable_and_writable_topics
+            ]
+        )
+        if readable_topics:
+            if text_response:
+                text_response += "\n"
+            text_response += "Readable topics:\n" + "\n".join(
                 [
                     stringify_dict(topic_description)
-                    for topic_description in readable_and_writable_topics
+                    for topic_description in readable_topics
                 ]
             )
-            if readable_topics:
-                text_response += "\nReadable topics:" + "\n".join(
-                    [
-                        stringify_dict(topic_description)
-                        for topic_description in readable_topics
-                    ]
-                )
-            if writable_topics:
-                text_response += "\nWritable topics:" + "\n".join(
-                    [
-                        stringify_dict(topic_description)
-                        for topic_description in writable_topics
-                    ]
-                )
-            return text_response
+        if writable_topics:
+            if text_response:
+                text_response += "\n"
+            text_response += "Writable topics:\n" + "\n".join(
+                [
+                    stringify_dict(topic_description)
+                    for topic_description in writable_topics
+                ]
+            )
+        return text_response
 
 
 class GetROS2MessageInterfaceToolInput(BaseModel):

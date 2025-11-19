@@ -15,6 +15,7 @@
 import random
 import threading
 import time
+import uuid
 from typing import Any, Generator, List, Optional, Tuple
 
 import numpy as np
@@ -122,7 +123,7 @@ class TestActionServer(Node):
     __test__ = False
 
     def __init__(self, action_name: str):
-        super().__init__("test_action_server")
+        super().__init__(f"test_action_server_{str(uuid.uuid4())[-12:]}")
         self.action_server = ActionServer(
             self,
             action_type=NavigateToPose,
@@ -133,26 +134,61 @@ class TestActionServer(Node):
             callback_group=ReentrantCallbackGroup(),
         )
         self.cancelled: bool = False
+        self._shutdown_requested = False
+        self._active_actions = 0
+        self._actions_lock = threading.Lock()
+        self._all_actions_complete = threading.Event()
+        self._all_actions_complete.set()  # Initially set (no actions running)
 
     def handle_test_action(
         self, goal_handle: ServerGoalHandle
     ) -> NavigateToPose.Result:
-        for i in range(1, 11):
-            if goal_handle.is_cancel_requested:
-                print("Cancel detected in execute callback")
-                goal_handle.canceled()
-                result = NavigateToPose.Result()
-                result.error_code = 3
-                return result
-            feedback_msg = NavigateToPose.Feedback(distance_remaining=10.0 / i)
-            goal_handle.publish_feedback(feedback_msg)
-            time.sleep(0.01)
+        with self._actions_lock:
+            self._active_actions += 1
+            self._all_actions_complete.clear()
 
-        goal_handle.succeed()
+        try:
+            for i in range(1, 11):
+                if self._shutdown_requested:
+                    # Node is being destroyed, abort gracefully
+                    result = NavigateToPose.Result()
+                    result.error_code = 3
+                    return result
+                if goal_handle.is_cancel_requested:
+                    print("Cancel detected in execute callback")
+                    try:
+                        goal_handle.canceled()
+                    except Exception:
+                        # Node may be destroyed, return result anyway
+                        pass
+                    result = NavigateToPose.Result()
+                    result.error_code = 3
+                    return result
+                try:
+                    feedback_msg = NavigateToPose.Feedback(distance_remaining=10.0 / i)
+                    goal_handle.publish_feedback(feedback_msg)
+                except Exception:
+                    # Publisher may be invalid if node is being destroyed
+                    # Return result to exit gracefully
+                    result = NavigateToPose.Result()
+                    result.error_code = 3
+                    return result
+                time.sleep(0.01)
 
-        result = NavigateToPose.Result()
-        result.error_code = NavigateToPose.Result.NONE
-        return result
+            try:
+                goal_handle.succeed()
+            except Exception:
+                # Node may be destroyed, return result anyway
+                pass
+
+            result = NavigateToPose.Result()
+            result.error_code = NavigateToPose.Result.NONE
+            return result
+        finally:
+            with self._actions_lock:
+                self._active_actions -= 1
+                if self._active_actions == 0:
+                    self._all_actions_complete.set()
 
     def goal_accepted(self, goal_handle: ServerGoalHandle) -> GoalResponse:
         self.get_logger().info("Got goal, accepting")
@@ -222,7 +258,7 @@ class TestServiceClient(Node):
 
 class MessagePublisher(Node):
     def __init__(self, topic: str):
-        super().__init__("test_message_publisher")
+        super().__init__(f"test_message_publisher_{str(uuid.uuid4())[-12:]}")
         self.publisher = self.create_publisher(String, topic, 10)
         self.timer = self.create_timer(0.1, self.publish_message)
 
@@ -299,34 +335,65 @@ def multi_threaded_spinner(
 def shutdown_executors_and_threads(
     executors: List[MultiThreadedExecutor], threads: List[threading.Thread]
 ) -> None:
-    # Cancel any ongoing tasks/guard conditions
+    # Collect all nodes first (before shutting down executors)
+    all_nodes = []
     for executor in executors:
         try:
-            if hasattr(executor, "_futures"):
-                for future in executor._futures:
-                    if not future.done():
-                        future.cancel()
-        except Exception as e:
-            print(f"Error canceling ongoing tasks: {e}")
+            all_nodes.extend(executor.get_nodes())
+        except Exception:
+            pass
 
-    # Clean up any remaining nodes
-    for executor in executors:
+    # Signal action servers to stop executing
+    action_servers = []
+    for node in all_nodes:
         try:
-            for node in executor.get_nodes():
-                node.destroy_node()
-        except Exception as e:
-            print(f"Error destroying node: {e}")
+            if isinstance(node, TestActionServer):
+                node._shutdown_requested = True
+                action_servers.append(node)
+        except Exception:
+            pass
 
-    # Shutdown executors
+    # Wait for actions to complete gracefully (with timeout as fallback)
+    if action_servers:
+        for server in action_servers:
+            server._all_actions_complete.wait(timeout=0.15)
+
+    # Cancel all timers BEFORE shutting down executors
+    # This prevents executors from trying to call timers after they're canceled
+    for node in all_nodes:
+        try:
+            # Try to access and cancel timers through node's internal structure
+            if hasattr(node, "_timers"):
+                timers = node._timers
+                if isinstance(timers, dict):
+                    for timer in list(timers.values()):
+                        try:
+                            timer.cancel()
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+
+    # Give executor a moment to process timer cancellations and remove them from wait list
+    time.sleep(0.1)
+
+    # Now shutdown executors to stop spinning threads
     for executor in executors:
         try:
             executor.shutdown()
         except Exception as e:
             print(f"Error shutting down executor: {e}")
 
-    # Join threads with a timeout
+    # Wait for threads to actually finish (shutdown() is async)
     for thread in threads:
         thread.join(timeout=2.0)
+
+    # Clean up any remaining nodes (after executors are shut down and threads joined)
+    for node in all_nodes:
+        try:
+            node.destroy_node()
+        except Exception as e:
+            print(f"Error destroying node: {e}")
 
 
 @pytest.fixture(scope="function")

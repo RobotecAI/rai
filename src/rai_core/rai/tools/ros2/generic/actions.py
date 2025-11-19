@@ -133,9 +133,12 @@ class GetROS2ActionsNamesAndTypesTool(BaseROS2Tool):
             writable_actions: List[Dict[str, Any]] = []
 
             for action, type in actions_and_types:
-                if self.is_writable(action):
+                should_include, _, is_writable_action = (
+                    self._check_permission_and_include(action, check_readable=False)
+                )
+                # For actions, only include writable ones (actionable for LLM agents)
+                if should_include and is_writable_action:
                     writable_actions.append({"action": action, "type": type})
-                    continue
 
             text_response = "\n".join(
                 [
