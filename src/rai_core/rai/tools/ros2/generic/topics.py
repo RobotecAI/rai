@@ -161,7 +161,8 @@ class GetROS2TopicsNamesAndTypesTool(BaseROS2Tool):
         topics_and_types = self.connector.get_topics_names_and_types()
         if all([self.readable is None, self.writable is None, self.forbidden is None]):
             response = [
-                {"topic": topic, "type": type} for topic, type in topics_and_types
+                {"topic": topic, "type": topic_type}
+                for topic, topic_type in topics_and_types
             ]
             return "\n".join([stringify_dict(topic) for topic in response])
 
@@ -169,7 +170,7 @@ class GetROS2TopicsNamesAndTypesTool(BaseROS2Tool):
         readable_topics: List[Dict[str, Any]] = []
         writable_topics: List[Dict[str, Any]] = []
 
-        for topic, type in topics_and_types:
+        for topic, topic_type in topics_and_types:
             should_include, is_readable_topic, is_writable_topic = (
                 self._check_permission_and_include(topic, check_readable=True)
             )
@@ -180,7 +181,7 @@ class GetROS2TopicsNamesAndTypesTool(BaseROS2Tool):
             if category is None:
                 continue
 
-            topic_dict = {"topic": topic, "type": type}
+            topic_dict = {"topic": topic, "type": topic_type}
 
             if category == "readable_and_writable":
                 readable_and_writable_topics.append(topic_dict)

@@ -135,46 +135,60 @@ class TestActionServer(Node):
         )
         self.cancelled: bool = False
         self._shutdown_requested = False
+        self._active_actions = 0
+        self._actions_lock = threading.Lock()
+        self._all_actions_complete = threading.Event()
+        self._all_actions_complete.set()  # Initially set (no actions running)
 
     def handle_test_action(
         self, goal_handle: ServerGoalHandle
     ) -> NavigateToPose.Result:
-        for i in range(1, 11):
-            if self._shutdown_requested:
-                # Node is being destroyed, abort gracefully
-                result = NavigateToPose.Result()
-                result.error_code = 3
-                return result
-            if goal_handle.is_cancel_requested:
-                print("Cancel detected in execute callback")
-                try:
-                    goal_handle.canceled()
-                except Exception:
-                    # Node may be destroyed, return result anyway
-                    pass
-                result = NavigateToPose.Result()
-                result.error_code = 3
-                return result
-            try:
-                feedback_msg = NavigateToPose.Feedback(distance_remaining=10.0 / i)
-                goal_handle.publish_feedback(feedback_msg)
-            except Exception:
-                # Publisher may be invalid if node is being destroyed
-                # Return result to exit gracefully
-                result = NavigateToPose.Result()
-                result.error_code = 3
-                return result
-            time.sleep(0.01)
+        with self._actions_lock:
+            self._active_actions += 1
+            self._all_actions_complete.clear()
 
         try:
-            goal_handle.succeed()
-        except Exception:
-            # Node may be destroyed, return result anyway
-            pass
+            for i in range(1, 11):
+                if self._shutdown_requested:
+                    # Node is being destroyed, abort gracefully
+                    result = NavigateToPose.Result()
+                    result.error_code = 3
+                    return result
+                if goal_handle.is_cancel_requested:
+                    print("Cancel detected in execute callback")
+                    try:
+                        goal_handle.canceled()
+                    except Exception:
+                        # Node may be destroyed, return result anyway
+                        pass
+                    result = NavigateToPose.Result()
+                    result.error_code = 3
+                    return result
+                try:
+                    feedback_msg = NavigateToPose.Feedback(distance_remaining=10.0 / i)
+                    goal_handle.publish_feedback(feedback_msg)
+                except Exception:
+                    # Publisher may be invalid if node is being destroyed
+                    # Return result to exit gracefully
+                    result = NavigateToPose.Result()
+                    result.error_code = 3
+                    return result
+                time.sleep(0.01)
 
-        result = NavigateToPose.Result()
-        result.error_code = NavigateToPose.Result.NONE
-        return result
+            try:
+                goal_handle.succeed()
+            except Exception:
+                # Node may be destroyed, return result anyway
+                pass
+
+            result = NavigateToPose.Result()
+            result.error_code = NavigateToPose.Result.NONE
+            return result
+        finally:
+            with self._actions_lock:
+                self._active_actions -= 1
+                if self._active_actions == 0:
+                    self._all_actions_complete.set()
 
     def goal_accepted(self, goal_handle: ServerGoalHandle) -> GoalResponse:
         self.get_logger().info("Got goal, accepting")
@@ -301,22 +315,6 @@ class ClockPublisher(Node):
         self.publisher.publish(msg)
 
 
-def _safe_spin(executor: MultiThreadedExecutor) -> None:
-    """Wrapper around executor.spin() that suppresses expected shutdown errors."""
-    try:
-        executor.spin()
-    except Exception as e:
-        # Suppress expected errors during shutdown:
-        # - Timer canceled errors (happen when timers are canceled while executor is running)
-        # - Other RCLErrors that occur during cleanup
-        error_str = str(e)
-        if "timer is canceled" in error_str or "timer is invalid" in error_str:
-            # Expected during shutdown, ignore
-            return
-        # Re-raise unexpected errors
-        raise
-
-
 def multi_threaded_spinner(
     nodes: List[Node],
 ) -> Tuple[List[MultiThreadedExecutor], List[threading.Thread]]:
@@ -327,7 +325,7 @@ def multi_threaded_spinner(
         executor.add_node(node)
         executors.append(executor)
     for executor in executors:
-        executor_thread = threading.Thread(target=_safe_spin, args=(executor,))
+        executor_thread = threading.Thread(target=executor.spin)
         executor_thread.daemon = True
         executor_thread.start()
         executor_threads.append(executor_thread)
@@ -346,15 +344,19 @@ def shutdown_executors_and_threads(
             pass
 
     # Signal action servers to stop executing
+    action_servers = []
     for node in all_nodes:
         try:
             if isinstance(node, TestActionServer):
                 node._shutdown_requested = True
+                action_servers.append(node)
         except Exception:
             pass
 
-    # Give actions a moment to complete gracefully
-    time.sleep(0.15)
+    # Wait for actions to complete gracefully (with timeout as fallback)
+    if action_servers:
+        for server in action_servers:
+            server._all_actions_complete.wait(timeout=0.15)
 
     # Cancel all timers BEFORE shutting down executors
     # This prevents executors from trying to call timers after they're canceled
@@ -373,7 +375,7 @@ def shutdown_executors_and_threads(
             pass
 
     # Give executor a moment to process timer cancellations and remove them from wait list
-    time.sleep(0.15)
+    time.sleep(0.1)
 
     # Now shutdown executors to stop spinning threads
     for executor in executors:

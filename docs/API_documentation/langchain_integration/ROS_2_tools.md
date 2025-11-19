@@ -25,7 +25,7 @@ ROS2 tools implement a security model using three access control parameters:
     -   If `None`: all topics/actions/services are writable (permissive)
     -   If set: only topics/actions/services in the list are writable (restrictive)
 
--   **`forbidden`** (Blocklist): Blacklist of topics/actions/services that are always denied
+-   **`forbidden`** (Denylist): Blacklist of topics/actions/services that are always denied
     -   Highest priority - checked first and overrides both `readable` and `writable`
     -   If a resource is forbidden, it cannot be accessed regardless of allowlists
 

@@ -71,7 +71,7 @@ class BaseROS2Tool(BaseTool):
         Args:
             name: Resource name (topic/service/action)
             check_readable: If False, only checks writable (for services/actions).
-                           If True, checks both readable and writable (for topics).
+                            If True, checks both readable and writable (for topics).
 
         Returns:
             (should_include, is_readable, is_writable)

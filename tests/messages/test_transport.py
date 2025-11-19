@@ -29,26 +29,6 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import String
 
 
-def _safe_spin(executor: SingleThreadedExecutor) -> None:
-    """Wrapper around executor.spin() that suppresses expected shutdown errors."""
-    try:
-        executor.spin()
-    except Exception as e:
-        # Suppress expected errors during shutdown:
-        # - InvalidHandle errors (happen when publishers are destroyed while callbacks are queued)
-        # - Timer canceled errors
-        error_str = str(e)
-        if (
-            "cannot use Destroyable because destruction was requested" in error_str
-            or "timer is canceled" in error_str
-            or "timer is invalid" in error_str
-        ):
-            # Expected during shutdown, ignore
-            return
-        # Re-raise unexpected errors
-        raise
-
-
 def get_qos_profiles() -> List[str]:
     ros_distro = os.environ.get("ROS_DISTRO")
     match ros_distro:
@@ -116,7 +96,7 @@ def test_transport(qos_profile: str):
     publisher = TestPublisher(QoSPresetProfiles.get_from_short_key(qos_profile))
     executor = SingleThreadedExecutor()
     executor.add_node(publisher)
-    thread = threading.Thread(target=_safe_spin, args=(executor,))
+    thread = threading.Thread(target=executor.spin)
     thread.daemon = True
     thread.start()
 
