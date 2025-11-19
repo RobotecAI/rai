@@ -27,7 +27,7 @@ from unittest.mock import Mock
 
 import numpy as np
 from rai.communication.ros2.connectors import ROS2Connector
-from rai_open_set_vision import (
+from rai_perception import (
     GetObjectGrippingPointsTool,
     GrippingPointEstimator,
     GrippingPointEstimatorConfig,

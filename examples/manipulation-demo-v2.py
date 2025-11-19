@@ -28,7 +28,7 @@ from rai.tools.ros2.manipulation import (
     ResetArmTool,
 )
 from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
-from rai_open_set_vision import (
+from rai_perception import (
     GetObjectGrippingPointsTool,
     GrippingPointEstimatorConfig,
     PointCloudFilterConfig,
