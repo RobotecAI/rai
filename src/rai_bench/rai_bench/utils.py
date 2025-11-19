@@ -52,7 +52,7 @@ def parse_tool_calling_benchmark_args():
         type=int,
         nargs="+",
         help="Number of extra tools calls agent can make and still pass the task",
-        default=0,
+        default=[0],
     )
     parser.add_argument(
         "--complexities",

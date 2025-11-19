@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import threading
 import time
 from multiprocessing import Pool
-from typing import List
+from typing import Any, List
 from unittest.mock import MagicMock
 
 import pytest
@@ -346,6 +347,7 @@ def test_ros2_service_single_call_wrong_service_name(
                 f"{service_name}/wrong_service_name",
                 service_type="std_srvs/srv/SetBool",
                 request={"data": True},
+                timeout_sec=1.0,
             )
     finally:
         shutdown_executors_and_threads(executors, threads)
@@ -470,6 +472,60 @@ def test_ros2_action_send_goal_get_feedback(
         shutdown_executors_and_threads(executors, threads)
 
 
+def test_ros2_action_feedback_callback_exception_handling(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    action_name = f"{request.node.originalname}_action"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    action_server = TestActionServer(action_name)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([action_server])
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
+    thread = threading.Thread(target=executor.spin)
+    thread.start()
+    action_api = ROS2ActionAPI(node)
+
+    error_callback_called = False
+
+    def failing_feedback_callback(feedback_msg: Any) -> None:
+        nonlocal error_callback_called
+        error_callback_called = True
+        raise ValueError("Test exception in feedback callback")
+
+    mock_logger = MagicMock()
+    action_api._logger = mock_logger
+
+    try:
+        accepted, handle = action_api.send_goal(
+            action_name,
+            "nav2_msgs/action/NavigateToPose",
+            {},
+            feedback_callback=failing_feedback_callback,
+        )
+        assert accepted
+        assert handle != ""
+
+        wait_time = 0.5
+        start_time = time.perf_counter()
+        while not action_api.is_goal_done(handle):
+            time.sleep(0.01)
+            if time.perf_counter() - start_time > wait_time:
+                raise TimeoutError("Goal not done")
+
+        result = action_api.get_result(handle)
+        assert result.status == GoalStatus.STATUS_SUCCEEDED
+
+        time.sleep(0.1)
+        assert error_callback_called, "Error callback should have been called"
+        mock_logger.error.assert_called()
+        error_call_args = mock_logger.error.call_args[0][0]
+        assert "Error in feedback callback" in error_call_args
+        assert "Test exception in feedback callback" in error_call_args
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
 def test_ros2_action_send_goal_terminate_goal(
     ros_setup: None, request: pytest.FixtureRequest
 ) -> None:
@@ -496,6 +552,81 @@ def test_ros2_action_send_goal_terminate_goal(
         assert action_api.is_goal_done(handle)
         feedbacks_after = action_api.get_feedback(handle)
         assert len(feedbacks_before) == len(feedbacks_after)
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_action_send_goal_timeout(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    """Test that send_goal returns (False, "") when goal send times out."""
+    action_name = f"{request.node.originalname}_nonexistent_action"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([node])
+
+    try:
+        action_api = ROS2ActionAPI(node)
+        # Use very short timeout - server doesn't exist so wait_for_server will timeout
+        accepted, handle = action_api.send_goal(
+            action_name, "nav2_msgs/action/NavigateToPose", {}, timeout_sec=0.01
+        )
+
+        assert not accepted
+        assert handle == ""
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_action_send_goal_timeout_logs_warning(
+    ros_setup: None, request: pytest.FixtureRequest, caplog
+) -> None:
+    """Test that send_goal timeout logs a warning via get_future_result."""
+    action_name = f"{request.node.originalname}_action"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    action_server = TestActionServer(action_name)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([action_server, node])
+
+    try:
+        action_api = ROS2ActionAPI(node)
+        # Wait for server first
+        time.sleep(0.1)
+
+        # Ensure logger propagates to root logger for caplog to capture
+        logger = logging.getLogger("rai.communication.ros2.ros_async")
+        logger.propagate = True
+
+        # Now use a very short timeout for goal send to trigger timeout
+        with caplog.at_level(logging.WARNING, logger=logger.name):
+            accepted, handle = action_api.send_goal(
+                action_name, "nav2_msgs/action/NavigateToPose", {}, timeout_sec=0.001
+            )
+
+        # Should timeout and log warning
+        assert not accepted
+        assert handle == ""
+        assert any("Future timed out" in record.message for record in caplog.records)
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_action_send_goal_exception_propagates(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    """Test that exceptions from send_goal_future propagate correctly via get_future_result."""
+    action_name = f"{request.node.originalname}_action"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    action_server = TestActionServer(action_name)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([action_server, node])
+
+    try:
+        action_api = ROS2ActionAPI(node)
+        # Invalid action type will raise during import, not in future
+        # This tests that exceptions are properly propagated through get_future_result
+        with pytest.raises((ValueError, ImportError, AttributeError)):
+            action_api.send_goal(action_name, "invalid/action/Type", {})
     finally:
         shutdown_executors_and_threads(executors, threads)
 

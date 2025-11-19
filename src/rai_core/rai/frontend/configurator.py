@@ -707,15 +707,15 @@ def additional_features():
     """
     )
 
-    # OpenSET Instructions
-    st.subheader("OpenSET (Visual Understanding)")
+    # Perception Instructions
+    st.subheader("Perception (Visual Understanding)")
     st.markdown(
         """
-    OpenSET provides visual understanding through Grounding DINO and Grounded SAM models.
+    Perception provides visual understanding through Grounding DINO and Grounded SAM models.
 
-    To install OpenSET dependencies, run:
+    To install Perception dependencies, run:
     ```bash
-    poetry install --with openset
+    poetry install --with perception
     ```
 
     This will install:

@@ -152,3 +152,19 @@ base_url = "http://localhost:11434"
         return f.name, cleanup
 
     return _create_config
+
+
+@pytest.fixture
+def ros2_image():
+    import numpy as np
+    from sensor_msgs.msg import Image
+
+    msg = Image()
+    msg.header.frame_id = "test_frame"
+    msg.height = 100
+    msg.width = 100
+    msg.encoding = "rgb8"
+    msg.is_bigendian = False
+    msg.step = 300
+    msg.data = np.zeros((100, 100, 3), dtype=np.uint8).tobytes()
+    return msg

@@ -14,6 +14,7 @@
 
 import os
 import threading
+import time
 import uuid
 from typing import List
 
@@ -96,6 +97,7 @@ def test_transport(qos_profile: str):
     executor = SingleThreadedExecutor()
     executor.add_node(publisher)
     thread = threading.Thread(target=executor.spin)
+    thread.daemon = True
     thread.start()
 
     connector = ROS2Connector(
@@ -107,6 +109,14 @@ def test_transport(qos_profile: str):
         for topic in topics:
             _ = connector.receive_message(topic, timeout_sec=5.0)
     finally:
+        # Cancel timers before shutdown to prevent callbacks from using destroyed publishers
+        try:
+            publisher.image_timer.cancel()
+            publisher.text_timer.cancel()
+        except Exception:
+            pass
+        # Give executor time to process cancellations
+        time.sleep(0.1)
         executor.shutdown()
         connector.shutdown()
         publisher.destroy_node()

@@ -30,7 +30,7 @@ from rai.tools.ros2.manipulation import (
     ResetArmTool,
 )
 from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
-from rai_open_set_vision.tools import GetGrabbingPointTool
+from rai_perception.tools import GetGrabbingPointTool
 
 from rai_whoami.models import EmbodimentInfo
 

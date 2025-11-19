@@ -16,6 +16,7 @@ guide and tutorials. 📚
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 ![GitHub Release](https://img.shields.io/github/v/release/RobotecAI/rai)
 ![Contributors](https://img.shields.io/github/contributors/robotecai/rai)
+[![codecov](https://codecov.io/gh/RobotecAI/rai/graph/badge.svg?token=4EP49Q8GDG)](https://codecov.io/gh/RobotecAI/rai)
 [![arXiv](https://img.shields.io/badge/arXiv-2505.07532-b31b1b.svg)](https://arxiv.org/abs/2505.07532)
 
 ![Static Badge](https://img.shields.io/badge/Ubuntu-24.04-orange)
@@ -49,7 +50,7 @@ guide and tutorials. 📚
 -   [x] rai_tts: Text-to-speech models and tools.
 -   [x] rai_sim: Package for connecting RAI to simulation environments.
 -   [x] rai_bench: Benchmarking suite for RAI. Test agents, models, tools, simulators, etc.
--   [x] rai_openset: Openset detection models and tools.
+-   [x] rai_perception: Object detection tools based on open-set models and machine learning techniques.
 -   [x] rai_nomad: Integration with NoMaD for navigation.
 -   [ ] rai_finetune: Finetune LLMs on your embodied data.
 

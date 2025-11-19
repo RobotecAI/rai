@@ -22,8 +22,14 @@ except ImportError:
     pytest.skip("ROS2 is not installed", allow_module_level=True)
 
 
+import time
+
 from rai.communication.ros2 import ROS2Connector
-from rai.tools.ros2 import CancelROS2ActionTool, StartROS2ActionTool
+from rai.tools.ros2 import (
+    CancelROS2ActionTool,
+    GetROS2ActionsNamesAndTypesTool,
+    StartROS2ActionTool,
+)
 
 from tests.communication.ros2.helpers import (
     TestActionServer,
@@ -107,5 +113,92 @@ def test_cancel_action_tool(ros_setup: None, request: pytest.FixtureRequest) -> 
         )
         assert server.cancelled
 
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_get_actions_names_and_types_tool_no_restrictions(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    action_name = f"{request.node.originalname}_action"  # type: ignore
+    connector = ROS2Connector()
+    server = TestActionServer(action_name=action_name)
+    executors, threads = multi_threaded_spinner([server])
+    try:
+        time.sleep(0.2)
+        tool = GetROS2ActionsNamesAndTypesTool(connector=connector)
+        response = tool._run()  # type: ignore
+        assert response != ""
+        assert action_name in response
+        assert "action:" in response
+        assert "type:" in response
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_get_actions_names_and_types_tool_with_writable(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    writable_action = f"/{request.node.originalname}_writable_action"  # type: ignore
+    non_writable_action = f"/{request.node.originalname}_non_writable_action"  # type: ignore
+    connector = ROS2Connector()
+    server1 = TestActionServer(action_name=writable_action)
+    server2 = TestActionServer(action_name=non_writable_action)
+    executors, threads = multi_threaded_spinner([server1, server2])
+    try:
+        time.sleep(0.2)
+        tool = GetROS2ActionsNamesAndTypesTool(
+            connector=connector, writable=[writable_action]
+        )
+        response = tool._run()  # type: ignore
+        assert response != ""
+        assert writable_action in response
+        assert non_writable_action not in response
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_get_actions_names_and_types_tool_with_forbidden(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    action_name = f"/{request.node.originalname}_action"  # type: ignore
+    forbidden_action = f"/{request.node.originalname}_forbidden_action"  # type: ignore
+    connector = ROS2Connector()
+    server1 = TestActionServer(action_name=action_name)
+    server2 = TestActionServer(action_name=forbidden_action)
+    executors, threads = multi_threaded_spinner([server1, server2])
+    try:
+        time.sleep(0.2)
+        tool = GetROS2ActionsNamesAndTypesTool(
+            connector=connector, forbidden=[forbidden_action]
+        )
+        response = tool._run()  # type: ignore
+        assert response != ""
+        assert action_name in response
+        assert forbidden_action not in response
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_get_actions_names_and_types_tool_with_writable_and_forbidden(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    writable_action = f"/{request.node.originalname}_writable_action"  # type: ignore
+    forbidden_action = f"/{request.node.originalname}_forbidden_action"  # type: ignore
+    connector = ROS2Connector()
+    server1 = TestActionServer(action_name=writable_action)
+    server2 = TestActionServer(action_name=forbidden_action)
+    executors, threads = multi_threaded_spinner([server1, server2])
+    try:
+        time.sleep(0.2)
+        tool = GetROS2ActionsNamesAndTypesTool(
+            connector=connector,
+            writable=[writable_action],
+            forbidden=[forbidden_action],
+        )
+        response = tool._run()  # type: ignore
+        assert response != ""
+        assert writable_action in response
+        assert forbidden_action not in response
     finally:
         shutdown_executors_and_threads(executors, threads)

@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import copy
-import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
@@ -57,6 +56,7 @@ from rai.communication.ros2.api.base import (
     IROS2Message,
 )
 from rai.communication.ros2.api.conversion import import_message_from_str
+from rai.communication.ros2.ros_async import get_future_result
 
 
 class ROS2ActionData(TypedDict):
@@ -213,7 +213,9 @@ class ROS2ActionAPI(BaseROS2API):
 
         action_cls = import_message_from_str(action_type)
         action_goal = action_cls.Goal()  # type: ignore
-        rosidl_runtime_py.set_message.set_message_fields(action_goal, goal)
+        rosidl_runtime_py.set_message.set_message_fields(
+            action_goal, copy.deepcopy(goal)
+        )
 
         action_client = ActionClient(self.node, action_cls, action_name)
         if not action_client.wait_for_server(timeout_sec=timeout_sec):  # type: ignore
@@ -230,13 +232,10 @@ class ROS2ActionAPI(BaseROS2API):
         self.actions[handle]["action_client"] = action_client
         self.actions[handle]["goal_future"] = send_goal_future
 
-        start_time = time.time()
-        while time.time() - start_time < timeout_sec:
-            if send_goal_future.done():
-                break
-            time.sleep(0.01)
-
-        goal_handle = cast(Optional[ClientGoalHandle], send_goal_future.result())
+        goal_handle = cast(
+            Optional[ClientGoalHandle],
+            get_future_result(send_goal_future, timeout_sec=timeout_sec),
+        )
         if goal_handle is None:
             return False, ""
 

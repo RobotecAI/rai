@@ -43,7 +43,7 @@ from rai.tools.ros2 import (
     GetROS2TopicsNamesAndTypesTool,
     MoveToPointTool,
 )
-from rai_open_set_vision.tools import GetGrabbingPointTool
+from rai_perception.tools import GetGrabbingPointTool
 
 from rai_bench.base_benchmark import BaseBenchmark, RunSummary, TimeoutException
 from rai_bench.manipulation_o3de.interfaces import Task
