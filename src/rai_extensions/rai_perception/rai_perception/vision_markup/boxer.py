@@ -43,7 +43,7 @@ class Box:
     ) -> Detection2D:
         detection = Detection2D()
         detection.header = Header()
-        detection.header.stamp = timestamp
+        detection.header.stamp = timestamp.to_msg()
         detection.results = []
         hypothesis_with_pose = ObjectHypothesisWithPose()
         hypothesis_with_pose.hypothesis = ObjectHypothesis()
