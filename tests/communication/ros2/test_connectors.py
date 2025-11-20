@@ -232,7 +232,7 @@ def test_ros2_connector_send_goal_and_terminate_action(
         shutdown_executors_and_threads(executors, threads)
 
 
-def test_ros2_connector_send_goal_erronous_callback(
+def test_ros2_connector_send_goal_erroneous_callback(
     ros_setup: None, request: pytest.FixtureRequest
 ):
     action_name = f"{request.node.originalname}_action"  # type: ignore
@@ -244,7 +244,7 @@ def test_ros2_connector_send_goal_erronous_callback(
         handle = connector.start_action(
             action_data=message,
             target=action_name,
-            on_feedback=lambda feedback: 1 / 0,
+            on_feedback=lambda feedback: 1 / 0,  # trigger ZeroDivisionError
             msg_type="nav2_msgs/action/NavigateToPose",
         )
         assert handle is not None
@@ -313,6 +313,8 @@ def test_ros2_connector_create_service(ros_setup: None, request: pytest.FixtureR
             on_request=mock_callback,
         )
         assert handle is not None
+        # Give the connector's executor time to register the service in the ROS2 graph
+        time.sleep(0.005)
         service_client = TestServiceClient()
         executors, threads = multi_threaded_spinner([service_client])
         service_client.send_request()

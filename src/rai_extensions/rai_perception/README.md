@@ -2,7 +2,7 @@
 
 # RAI Perception
 
-This package provides ROS2 integration with [Idea-Research GroundingDINO Model](https://github.com/IDEA-Research/GroundingDINO) and [Grounded-SAM-2, RobotecAI fork](https://github.com/RobotecAI/Grounded-SAM-2) for object detection, segmentation, and gripping point calculation. The `GroundedSamAgent` and `GroundingDinoAgent` are ROS2 service nodes that can be readily added to ROS2 applications. It also provides tools that can be used with [RAI LLM agents](../../../docs/tutorials/walkthrough.md) to construct conversational scenarios.
+This package provides ROS2 integration with [Idea-Research GroundingDINO Model](https://github.com/IDEA-Research/GroundingDINO) and [Grounded-SAM-2, RobotecAI fork](https://github.com/RobotecAI/Grounded-SAM-2) for object detection, segmentation, and gripping point calculation. The `GroundedSamAgent` and `GroundingDinoAgent` are ROS2 service nodes that can be readily added to ROS2 applications. It also provides tools that can be used with [RAI LLM agents](../tutorials/walkthrough.md) to construct conversational scenarios.
 
 In addition to these building blocks, this package includes utilities to facilitate development, such as a ROS2 client that demonstrates interactions with agent nodes.
 
@@ -19,8 +19,7 @@ mkdir -p ~/rai_perception_ws/src
 cd ~/rai_perception_ws/src
 
 # only checkout rai_perception package
-# TODO:juliaj, update branch to main!
-git clone --depth 1 --branch jj/feat/rai-perception-pkg https://github.com/RobotecAI/rai.git temp
+git clone --depth 1 --branch main https://github.com/RobotecAI/rai.git temp
 cd temp
 git archive --format=tar --prefix=rai_perception/ HEAD:src/rai_extensions/rai_perception | tar -xf -
 mv rai_perception ../rai_perception

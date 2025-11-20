@@ -16,9 +16,10 @@
 import pytest
 from langchain_core.messages import BaseMessage as LangchainBaseMessage
 from langchain_core.messages import HumanMessage
-from PIL import Image
+from PIL import Image, ImageChops
 from pydub import AudioSegment
 from rai.communication import HRIMessage
+from rai.communication.hri_connector import HRIException
 from rai.messages import MultimodalMessage as RAIMultimodalMessage
 
 
@@ -132,3 +133,42 @@ def test_from_langchain_missing_type():
     rai_message = RAIMultimodalMessage(content="No type", type="")
     with pytest.raises(ValueError):
         HRIMessage.from_langchain(rai_message)
+
+
+def test_hri_exception_init():
+    msg = "Something happened"
+    with pytest.raises(HRIException) as e:
+        raise HRIException(msg)
+
+    assert str(e.value) == msg
+
+
+def test_hri_message_bool(audio, image):
+    from itertools import product
+
+    # True, False
+    for text, images, audios in product([True, False], [True, False], [True, False]):
+        message = HRIMessage(
+            text="text" if text else "",
+            images=[image] if images else [],
+            audios=[audio] if audios else [],
+        )
+        if any([text, images, audios]):
+            assert bool(message)
+        else:
+            assert not bool(message)
+
+
+def test_base64_to_and_from_image(image):
+    def images_equal(img1, img2):
+        return ImageChops.difference(img1, img2).getbbox() is None
+
+    base64_image = HRIMessage._image_to_base64(image)
+    assert isinstance(base64_image, str)
+    assert images_equal(HRIMessage._base64_to_image(base64_image), image)
+
+
+def test_base64_to_and_from_audio(audio):
+    base64_audio = HRIMessage._audio_to_base64(audio)
+    assert isinstance(base64_audio, str)
+    assert HRIMessage._base64_to_audio(base64_audio) == audio

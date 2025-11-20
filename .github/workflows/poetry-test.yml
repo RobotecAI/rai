@@ -6,6 +6,9 @@ on:
     branches:
       - development
       - main
+  push:
+    branches:
+      - main
 
 jobs:
   build-and-test-ros2:
@@ -71,4 +74,19 @@ jobs:
         shell: bash
         run: |
           source setup_shell.sh
-          pytest -m "not billable"
+          pytest -m "not billable" --cov=./src/rai_core --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
+
+      - name: Upload coverage to Codecov
+        if: ${{ matrix.ros_distro == 'jazzy' }}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          name: codecov-pytest
+          fail_ci_if_error: false
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() && matrix.ros_distro == 'jazzy' }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}

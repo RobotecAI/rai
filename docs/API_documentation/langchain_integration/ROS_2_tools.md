@@ -10,6 +10,27 @@ RAI provides various ROS 2 tools, both generic (mimics ros2cli) and specific (e.
 
 ::: rai.tools.ros2.base.BaseROS2Tool
 
+### Security Model
+
+ROS2 tools implement a security model using three access control parameters:
+
+-   **`readable`** (Allowlist for Reading): Whitelist of topics the agent can read/subscribe to
+
+    -   If `None`: all topics are readable (permissive)
+    -   If set: only topics in the list are readable (restrictive)
+    -   Note: Only applies to topics; services and actions are not checked against this parameter
+
+-   **`writable`** (Allowlist for Writing): Whitelist of topics/actions/services the agent can write/publish to
+
+    -   If `None`: all topics/actions/services are writable (permissive)
+    -   If set: only topics/actions/services in the list are writable (restrictive)
+
+-   **`forbidden`** (Denylist): Blacklist of topics/actions/services that are always denied
+    -   Highest priority - checked first and overrides both `readable` and `writable`
+    -   If a resource is forbidden, it cannot be accessed regardless of allowlists
+
+**Priority Order:** `forbidden` > `readable`/`writable` > default (all allowed)
+
 ### Usage example
 
 ```python
@@ -20,7 +41,7 @@ connector = ROS2Connector()
 
 BaseROS2Tool( # BaseROS2Tool cannot be used directly, this is just an example
     connector=connector,
-    readable=["/odom", "/scan"], # readable topics, services and actions
+    readable=["/odom", "/scan"], # readable topics
     writable=["/robot_position"], # writable topics, services and actions
     forbidden=["/cmd_vel"], # forbidden topics, services and actions
 )
@@ -50,6 +71,41 @@ Below is the list of tools provided by the generic ROS 2 toolkit that can also b
 | `GetROS2TopicsNamesAndTypesTool` | Tool for listing all available topics and their types |
 | `GetROS2MessageInterfaceTool`    | Tool for getting message interface information        |
 | `GetROS2TransformTool`           | Tool for retrieving transform data                    |
+
+#### GetROS2TopicsNamesAndTypesTool Behavior
+
+`GetROS2TopicsNamesAndTypesTool` lists ROS2 topics and their types with filtering and categorization based on `readable`, `writable`, and `forbidden` parameters:
+
+**Filtering Logic:**
+
+-   **Forbidden topics**: Always excluded regardless of allowlists
+-   **When only `readable` is set**: Only topics in the readable list are included
+-   **When only `writable` is set**: Only topics in the writable list are included
+-   **When both `readable` and `writable` are set**: Topics in readable **OR** writable lists are included (OR logic)
+-   **When neither is set**: All topics are included (except forbidden)
+
+**Output Format:**
+
+-   **No restrictions**: Simple list of all topics
+-   **With restrictions**: Topics are categorized and displayed in sections:
+    1. Topics in both readable and writable lists (no section header)
+    2. "Readable topics:" section (topics only in readable list)
+    3. "Writable topics:" section (topics only in writable list)
+
+**Example:**
+
+```python
+tool = GetROS2TopicsNamesAndTypesTool(
+    connector=connector,
+    readable=["/odom", "/scan", "/camera/image"],
+    writable=["/goal_pose", "/scan"],
+    forbidden=["/cmd_vel"]
+)
+# /scan appears in first section (both readable and writable)
+# /odom and /camera/image appear in "Readable topics:" section
+# /goal_pose appears in "Writable topics:" section
+# /cmd_vel is excluded (forbidden)
+```
 
 ### Services
 
