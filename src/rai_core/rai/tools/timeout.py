@@ -64,7 +64,7 @@ def timeout(seconds: float, timeout_message: str = None) -> Callable[[F], F]:
 
     Raises
     ------
-    TimeoutError
+    RaiTimeoutError
         When the decorated function exceeds the specified timeout
 
     Examples
@@ -77,7 +77,7 @@ def timeout(seconds: float, timeout_message: str = None) -> Callable[[F], F]:
     >>>
     >>> try:
     ...     result = slow_operation()
-    ... except TimeoutError as e:
+    ... except RaiTimeoutError as e:
     ...     print(f"Timeout: {e}")
     """
 
@@ -102,8 +102,10 @@ def timeout(seconds: float, timeout_message: str = None) -> Callable[[F], F]:
 
 def timeout_method(seconds: float, timeout_message: str = None) -> Callable[[F], F]:
     """
-    Decorator that adds timeout functionality to a method.
-    Similar to timeout but designed for class methods.
+    Decorator that adds timeout functionality to an instance method.
+
+    Similar to timeout but designed for instance methods. The default error
+    message includes the class name for better debugging context.
 
     Parameters
     ----------
@@ -117,6 +119,11 @@ def timeout_method(seconds: float, timeout_message: str = None) -> Callable[[F],
     Callable
         Decorated method with timeout functionality
 
+    Raises
+    ------
+    RaiTimeoutError
+        When the decorated method exceeds the specified timeout
+
     Examples
     --------
     >>> class MyClass:
@@ -125,6 +132,12 @@ def timeout_method(seconds: float, timeout_message: str = None) -> Callable[[F],
     ...         import time
     ...         time.sleep(5)
     ...         return "Done"
+    >>>
+    >>> obj = MyClass()
+    >>> try:
+    ...     result = obj.slow_method()
+    ... except RaiTimeoutError as e:
+    ...     print(f"Timeout: {e}")
     """
 
     def decorator(func: F) -> F:
