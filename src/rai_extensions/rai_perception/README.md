@@ -2,125 +2,139 @@
 
 # RAI Perception
 
-This package provides ROS2 integration with [Idea-Research GroundingDINO Model](https://github.com/IDEA-Research/GroundingDINO) and [Grounded-SAM-2, RobotecAI fork](https://github.com/RobotecAI/Grounded-SAM-2) for object detection, segmentation, and gripping point calculation. The `GroundedSamAgent` and `GroundingDinoAgent` are ROS2 service nodes that can be readily added to ROS2 applications. It also provides tools that can be used with [RAI LLM agents](../tutorials/walkthrough.md) to construct conversational scenarios.
+RAI Perception brings powerful computer vision capabilities to your ROS2 applications. It integrates [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO) and [Grounded-SAM-2](https://github.com/RobotecAI/Grounded-SAM-2) to detect objects, create segmentation masks, and calculate gripping points.
 
-In addition to these building blocks, this package includes utilities to facilitate development, such as a ROS2 client that demonstrates interactions with agent nodes.
+The package includes two ready-to-use ROS2 service nodes (`GroundedSamAgent` and `GroundingDinoAgent`) that you can easily add to your applications. It also provides tools that work seamlessly with [RAI LLM agents](../tutorials/walkthrough.md) to build conversational robot scenarios.
+
+## Prerequisites
+
+Before installing `rai-perception`, ensure you have:
+
+1. **ROS2 installed** (Jazzy recommended, or Humble). If you don't have ROS2 yet, follow the official ROS2 installation guide for [jazzy](https://docs.ros.org/en/jazzy/Installation.html) or [humble](https://docs.ros.org/en/humble/Installation.html).
+2. **Python 3.8+** and `pip` installed (usually pre-installed on Ubuntu).
+3. **NVIDIA GPU** with CUDA support (required for optimal performance).
+4. **wget** installed (required for downloading model weights):
+    ```bash
+    sudo apt install wget
+    ```
 
 ## Installation
 
-While installing `rai_perception` via Pip is being actively worked on, to incorporate it into your application, you will need to set up a ROS2 workspace.
-
-### ROS2 Workspace Setup
-
-Create a ROS2 workspace and copy this package:
+**Step 1:** Source ROS2 in your terminal:
 
 ```bash
-mkdir -p ~/rai_perception_ws/src
-cd ~/rai_perception_ws/src
+# For ROS2 Jazzy (recommended)
+source /opt/ros/jazzy/setup.bash
 
-# only checkout rai_perception package
-git clone --depth 1 --branch main https://github.com/RobotecAI/rai.git temp
-cd temp
-git archive --format=tar --prefix=rai_perception/ HEAD:src/rai_extensions/rai_perception | tar -xf -
-mv rai_perception ../rai_perception
-cd ..
-rm -rf temp
+# For ROS2 Humble
+source /opt/ros/humble/setup.bash
 ```
 
-### ROS2 Dependencies
-
-Add required ROS dependencies. From the workspace root, run
+**Step 2:** Install ROS2 dependencies. `rai-perception` requires its ROS2 packages that needs to be installed separately:
 
 ```bash
-rosdep install --from-paths src --ignore-src -r
+# Update package lists first
+sudo apt update
+
+# Install rai_interfaces as a debian package
+sudo apt install ros-jazzy-rai-interfaces  # or ros-humble-rai-interfaces for Humble
 ```
 
-### Build and Run
-
-Source ROS2 and build:
+**Step 3:** Install `rai-perception` via pip:
 
 ```bash
-# Source ROS2 (humble or jazzy)
-source /opt/ros/${ROS_DISTRO}/setup.bash
-
-# Build workspace
-cd ~/rai_perception_ws
-colcon build --symlink-install
-
-# Source ROS2 packages
-source install/setup.bash
-```
-
-### Python Dependencies
-
-`rai_perception` depends on `rai-core` and `sam2`. There are many ways to set up a virtual environment and install these dependencies. Below, we provide an example using Poetry.
-
-**Step 1:** Copy the following template to `pyproject.toml` in your workspace root, updating it according to your directory setup:
-
-```toml
-# rai_perception_project pyproject template
-[tool.poetry]
-name = "rai_perception_ws"
-version = "0.1.0"
-description = "ROS2 workspace for RAI perception"
-package-mode = false
-
-[tool.poetry.dependencies]
-python = "^3.10, <3.13"
-rai-core = ">=2.5.4"
-rai-perception = {path = "src/rai_perception", develop = true}
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
-```
-
-**Step 2:** Install dependencies:
-
-First, we create Virtual Environment with Poetry:
-
-```bash
-cd ~/rai_perception_ws
-poetry lock
-poetry install
-```
-
-Now, we are ready to launch perception agents:
-
-```bash
-# Activate virtual environment
-source "$(poetry env info --path)"/bin/activate
-export PYTHONPATH
-PYTHONPATH="$(dirname "$(dirname "$(poetry run which python)")")/lib/python$(poetry run python --version | awk '{print $2}' | cut -d. -f1,2)/site-packages:$PYTHONPATH"
-
-# run agents
-python src/rai_perception/scripts/run_perception_agents.py
+pip install rai-perception
 ```
 
 > [!TIP]
-> To manage ROS 2 + Poetry environment with less friction: Keep build tools (colcon) at system level, use Poetry only for runtime dependencies of your packages.
+> It's recommended to install `rai-perception` in a virtual environment to avoid conflicts with other Python packages.
+
+> [!TIP]
+> To avoid sourcing ROS2 in every new terminal, add the source command to your `~/.bashrc` file:
+>
+> ```bash
+> echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc  # or humble
+> ```
 
 <!--- --8<-- [end:sec1] -->
 
-`rai-perception` agents create two ROS 2 nodes: `grounding_dino` and `grounded_sam` using [ROS2Connector](../../../docs/API_documentation/connectors/ROS_2_Connectors.md).
-These agents can be triggered by ROS2 services:
+<!--- --8<-- [start:sec4] -->
 
--   `grounding_dino_classify`: `rai_interfaces/srv/RAIGroundingDino`
--   `grounded_sam_segment`: `rai_interfaces/srv/RAIGroundedSam`
+## Getting Started
+
+This section provides a step-by-step guide to get you up and running with RAI Perception.
+
+### Quick Start
+
+After installing `rai-perception`, launch the perception agents:
+
+**Step 1:** Open a terminal and source ROS2:
+
+```bash
+source /opt/ros/jazzy/setup.bash  # or humble
+```
+
+**Step 2:** Launch the perception agents:
+
+```bash
+python -m rai_perception.scripts.run_perception_agents
+```
+
+> [!NOTE]
+> The weights will be downloaded to `~/.cache/rai` directory on first use.
+
+The agents create two ROS 2 nodes: `grounding_dino` and `grounded_sam` using [ROS2Connector](../API_documentation/connectors/ROS_2_Connectors.md).
+
+### Testing with Example Client
+
+The `rai_perception/talker.py` example demonstrates how to use the perception services for object detection and segmentation. It shows the complete pipeline: GroundingDINO for object detection followed by GroundedSAM for instance segmentation, with visualization output.
+
+**Step 1:** Open a terminal and source ROS2:
+
+```bash
+source /opt/ros/jazzy/setup.bash  # or humble
+```
+
+**Step 2:** Launch the perception agents:
+
+```bash
+python -m rai_perception.scripts.run_perception_agents
+```
+
+**Step 3:** In a different terminal (remember to source ROS2 first), run the example client:
+
+```bash
+source /opt/ros/jazzy/setup.bash  # or humble
+python -m rai_perception.examples.talker --ros-args -p image_path:="<path-to-image>"
+```
+
+You can use any image containing objects like dragons, lizards, or dinosaurs. For example, use the `sample.jpg` from the package's `images` folder. The client will detect these objects and save a visualization with bounding boxes and masks to `masks.png` in the current directory.
 
 > [!TIP]
 >
 > If you wish to integrate open-set vision into your ros2 launch file, a premade launch
 > file can be found in `rai/src/rai_bringup/launch/openset.launch.py`
 
-> [!NOTE]
-> The weights will be downloaded to `~/.cache/rai` directory.
+### ROS2 Service Interface
 
-## RAI Tools
+The agents can be triggered by ROS2 services:
 
-`rai_perception` package contains tools that can be used by [RAI LLM agents](../../../docs/tutorials/walkthrough.md)
+-   `grounding_dino_classify`: `rai_interfaces/srv/RAIGroundingDino`
+-   `grounded_sam_segment`: `rai_interfaces/srv/RAIGroundedSam`
+
+<!--- --8<-- [end:sec4] -->
+
+<!--- --8<-- [start:sec5] -->
+
+## Dive Deeper: Tools and Integration
+
+This section provides information for developers looking to integrate RAI Perception tools into their applications.
+
+### RAI Tools
+
+`rai_perception` package contains tools that can be used by [RAI LLM agents](../tutorials/walkthrough.md)
 to enhance their perception capabilities. For more information on RAI Tools see
-[Tool use and development](../../../docs/tutorials/tools.md) tutorial.
+[Tool use and development](../tutorials/tools.md) tutorial.
 
 <!--- --8<-- [start:sec2] -->
 
@@ -132,7 +146,7 @@ This tool calls the GroundingDINO service to detect objects from a comma-separat
 
 > [!TIP]
 >
-> you can try example below with [rosbotxl demo](../../../docs/demos/rosbot_xl.md) binary.
+> you can try example below with [rosbotxl demo](../demos/rosbot_xl.md) binary.
 > The binary exposes `/camera/camera/color/image_raw` and `/camera/camera/depth/image_rect_raw` topics.
 
 <!--- --8<-- [start:sec3] -->
@@ -198,30 +212,6 @@ with ROS2Context():
 I have detected the following items in the picture desk: 2.43m away
 ```
 
-## Simple ROS2 Client Node Example
-
-The `rai_perception/talker.py` example demonstrates how to use the perception services for object detection and segmentation. It shows the complete pipeline: GroundingDINO for object detection followed by GroundedSAM for instance segmentation, with visualization output.
-
-This example is useful for:
-
--   Testing perception services integration
--   Understanding the ROS2 service call patterns
--   Seeing detection and segmentation results with bounding boxes and masks
-
-Run the example:
-
-```bash
-cd ~/rai_perception_ws
-python src/rai_perception/scripts/run_perception_agents.py
-```
-
-In a different window, run
-
-```bash
-cd ~/rai_perception_ws
-ros2 run rai_perception talker --ros-args -p image_path:=src/rai_perception/images/sample.jpg
-```
-
-The example will detect objects (dragon, lizard, dinosaur) and save a visualization with bounding boxes and masks to `masks.png`.
-
 <!--- --8<-- [end:sec3] -->
+
+<!--- --8<-- [end:sec5] -->

@@ -67,19 +67,46 @@ class BaseVisionAgent(BaseAgent):
                 raise e
 
     def _download_weights(self):
+        self.logger.info(
+            f"Downloading weights from {self.WEIGHTS_URL} to {self.weights_path}"
+        )
         try:
             subprocess.run(
                 [
                     "wget",
                     self.WEIGHTS_URL,
                     "-O",
-                    self.weights_path,
+                    str(self.weights_path),
                     "--progress=dot:giga",
-                ]
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
             )
-        except Exception:
-            self.logger.error("Could not download weights")
-            raise Exception("Could not download weights")
+            # Verify file exists and has reasonable size (> 1MB)
+            if not os.path.exists(self.weights_path):
+                raise Exception(f"Downloaded file not found at {self.weights_path}")
+            file_size = os.path.getsize(self.weights_path)
+            if file_size < 1024 * 1024:
+                raise Exception(
+                    f"Downloaded file is too small ({file_size} bytes), expected > 1MB"
+                )
+            self.logger.info(
+                f"Successfully downloaded weights ({file_size / (1024 * 1024):.2f} MB)"
+            )
+        except subprocess.CalledProcessError as e:
+            error_msg = e.stderr if e.stderr else e.stdout if e.stdout else str(e)
+            self.logger.error(f"wget failed: {error_msg}")
+            # Clean up partial download
+            if os.path.exists(self.weights_path):
+                os.remove(self.weights_path)
+            raise Exception(f"Could not download weights: {error_msg}")
+        except Exception as e:
+            self.logger.error(f"Could not download weights: {e}")
+            # Clean up partial download
+            if os.path.exists(self.weights_path):
+                os.remove(self.weights_path)
+            raise
 
     def _remove_weights(self):
         os.remove(self.weights_path)

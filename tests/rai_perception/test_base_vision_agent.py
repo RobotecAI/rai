@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import subprocess
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -31,67 +32,333 @@ class MockBaseVisionAgent(BaseVisionAgent):
         pass
 
 
+def create_valid_weights_file(weights_path: Path, size_mb: int = 2) -> None:
+    """Helper to create a valid weights file for testing.
+
+    Args:
+        weights_path: Path where the weights file should be created
+        size_mb: Size of the file in megabytes (default: 2MB)
+    """
+    weights_path.parent.mkdir(parents=True, exist_ok=True)
+    weights_path.write_bytes(b"0" * (size_mb * 1024 * 1024))
+
+
+def get_weights_path(tmp_path: Path) -> Path:
+    """Helper to get the standard weights path for testing.
+
+    Args:
+        tmp_path: Temporary directory path
+
+    Returns:
+        Path to the weights file
+    """
+    return tmp_path / "vision" / "weights" / "test_weights.pth"
+
+
+def create_agent_with_weights(
+    tmp_path: Path, weights_path: Path
+) -> MockBaseVisionAgent:
+    """Helper to create an agent with weights path set.
+
+    Args:
+        tmp_path: Temporary directory path
+        weights_path: Path to weights file
+
+    Returns:
+        Configured MockBaseVisionAgent instance
+    """
+    agent = MockBaseVisionAgent(weights_root_path=str(tmp_path), ros2_name="test_agent")
+    agent.weights_path = weights_path
+    return agent
+
+
+def cleanup_agent(agent: MockBaseVisionAgent) -> None:
+    """Helper to clean up agent and ROS2 context.
+
+    Args:
+        agent: Agent instance to clean up
+    """
+    agent.stop()
+    if rclpy.ok():
+        rclpy.shutdown()
+
+
+def extract_output_path_from_wget_args(args) -> Path:
+    """Helper to extract output path from wget subprocess args.
+
+    Args:
+        args: Arguments passed to subprocess.run (args[0] is the command list)
+
+    Returns:
+        Path object for the output file
+    """
+    output_path_str = args[0][3]  # -O argument is at index 3
+    return Path(output_path_str)
+
+
 class TestVisionWeightsDownload:
     """Test cases for BaseVisionAgent._download_weights method."""
 
     def test_download_weights_success(self, tmp_path):
         """Test successful weight download."""
-        # make sure we have multiple levels of directories
-        weights_path = tmp_path / "vision" / "weights" / "test_weights.pth"
+        weights_path = get_weights_path(tmp_path)
 
         # check whether file doesn't exist before download
         assert not weights_path.exists()
 
         def mock_wget(*args, **kwargs):
             # Simulate wget creating the file
-            output_path = args[0][3]  # -O argument is at index 3
-            output_path.write_text("downloaded weights content")
+            output_path = extract_output_path_from_wget_args(args)
+            create_valid_weights_file(output_path)
             return MagicMock(returncode=0)
 
         with patch("subprocess.run", side_effect=mock_wget) as mock_run:
-            agent = MockBaseVisionAgent(
-                weights_root_path=str(tmp_path), ros2_name="test_agent"
-            )
-            agent.weights_path = weights_path
+            agent = create_agent_with_weights(tmp_path, weights_path)
 
             mock_run.assert_called_once_with(
                 [
                     "wget",
                     "https://example.com/test_weights.pth",
                     "-O",
-                    weights_path,
+                    str(weights_path),
                     "--progress=dot:giga",
-                ]
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
             )
 
             # Verify file exists after download
             assert weights_path.exists()
 
-            # Clean up ROS2 node and context
-            agent.stop()
-            if rclpy.ok():
-                rclpy.shutdown()
+            cleanup_agent(agent)
 
     def test_download_weights_failure(self, tmp_path):
         """Test weight download failure raises exception."""
-        weights_path = tmp_path / "vision" / "weights" / "test_weights.pth"
+        weights_path = get_weights_path(tmp_path)
 
-        with patch("subprocess.run") as mock_run:
-            # First call succeeds (during initialization), second call fails
-            mock_run.side_effect = [
-                MagicMock(returncode=0),  # Initial download succeeds
-                subprocess.CalledProcessError(1, "wget"),  # Explicit call fails
-            ]
+        call_count = 0
 
-            agent = MockBaseVisionAgent(
-                weights_root_path=str(tmp_path), ros2_name="test_agent"
-            )
-            agent.weights_path = weights_path
+        def mock_wget(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                # First call succeeds (during initialization)
+                output_path = extract_output_path_from_wget_args(args)
+                create_valid_weights_file(output_path)
+                result = MagicMock()
+                result.returncode = 0
+                return result
+            else:
+                # Second call fails - raise CalledProcessError
+                # This will be caught and re-raised as "Could not download weights"
+                raise subprocess.CalledProcessError(
+                    returncode=1, cmd="wget", stderr="Download failed"
+                )
+
+        with patch("subprocess.run", side_effect=mock_wget):
+            agent = create_agent_with_weights(tmp_path, weights_path)
+
+            # Remove the file to force re-download
+            weights_path.unlink()
 
             with pytest.raises(Exception, match="Could not download weights"):
                 agent._download_weights()
 
-            # Clean up ROS2 node and context
+            cleanup_agent(agent)
+
+    def test_download_weights_file_too_small(self, tmp_path):
+        """Test download failure when file is too small."""
+        weights_path = get_weights_path(tmp_path)
+        # Create file first so initialization doesn't trigger download
+        create_valid_weights_file(weights_path)
+
+        def mock_wget(*args, **kwargs):
+            # Simulate wget creating a file that's too small
+            output_path = extract_output_path_from_wget_args(args)
+            output_path.write_bytes(b"0" * 100)  # 100 bytes, too small
+            return MagicMock(returncode=0)
+
+        with patch("subprocess.run", side_effect=mock_wget):
+            agent = create_agent_with_weights(tmp_path, weights_path)
+
+            with pytest.raises(Exception, match="Downloaded file is too small"):
+                agent._download_weights()
+
+            # Verify file was cleaned up
+            assert not weights_path.exists()
+
+            cleanup_agent(agent)
+
+
+class TestBaseVisionAgentInit:
+    """Test cases for BaseVisionAgent.__init__ method."""
+
+    def test_init_without_weights_filename(self):
+        """Test that ValueError is raised when WEIGHTS_FILENAME is not set."""
+
+        class InvalidAgent(BaseVisionAgent):
+            WEIGHTS_FILENAME = ""
+
+            def run(self):
+                """Dummy implementation of abstract run method."""
+                pass
+
+        with pytest.raises(ValueError, match="WEIGHTS_FILENAME is not set"):
+            InvalidAgent()
+
+    def test_init_with_path_string(self, tmp_path):
+        """Test initialization with string path."""
+        weights_path = tmp_path / "vision" / "weights" / "test_weights.pth"
+        create_valid_weights_file(weights_path)
+
+        agent = MockBaseVisionAgent(weights_root_path=str(tmp_path), ros2_name="test")
+        assert agent.weights_root_path == tmp_path
+        assert agent.weights_path == weights_path
+
+        agent.stop()
+        if rclpy.ok():
+            rclpy.shutdown()
+
+    def test_init_with_path_object(self, tmp_path):
+        """Test initialization with Path object."""
+        weights_path = tmp_path / "vision" / "weights" / "test_weights.pth"
+        create_valid_weights_file(weights_path)
+
+        agent = MockBaseVisionAgent(weights_root_path=tmp_path, ros2_name="test")
+        assert agent.weights_root_path == tmp_path
+        assert agent.weights_path == weights_path
+
+        agent.stop()
+        if rclpy.ok():
+            rclpy.shutdown()
+
+    def test_init_with_existing_file(self, tmp_path):
+        """Test initialization when weights file already exists."""
+        weights_path = tmp_path / "vision" / "weights" / "test_weights.pth"
+        create_valid_weights_file(weights_path)
+
+        with patch("subprocess.run") as mock_run:
+            agent = MockBaseVisionAgent(
+                weights_root_path=str(tmp_path), ros2_name="test_agent"
+            )
+            # Should not call download since file exists
+            mock_run.assert_not_called()
+
+        agent.stop()
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+class TestLoadModelWithErrorHandling:
+    """Test cases for BaseVisionAgent._load_model_with_error_handling method."""
+
+    def test_load_model_success(self, tmp_path):
+        """Test successful model loading."""
+        weights_path = tmp_path / "vision" / "weights" / "test_weights.pth"
+        create_valid_weights_file(weights_path)
+
+        class MockModel:
+            def __init__(self, weights_path):
+                self.weights_path = weights_path
+
+        agent = MockBaseVisionAgent(weights_root_path=str(tmp_path), ros2_name="test")
+        agent.weights_path = weights_path
+
+        model = agent._load_model_with_error_handling(MockModel)
+        assert model.weights_path == weights_path
+
+        agent.stop()
+        if rclpy.ok():
+            rclpy.shutdown()
+
+    def test_load_model_corrupted_weights(self, tmp_path):
+        """Test model loading with corrupted weights triggers redownload."""
+        weights_path = tmp_path / "vision" / "weights" / "test_weights.pth"
+        weights_path.parent.mkdir(parents=True, exist_ok=True)
+        weights_path.write_bytes(b"corrupted")
+
+        call_count = 0
+
+        class MockModel:
+            def __init__(self, weights_path):
+                nonlocal call_count
+                call_count += 1
+                self.weights_path = weights_path
+                if call_count == 1:
+                    raise RuntimeError("PytorchStreamReader failed")
+
+        def mock_wget(*args, **kwargs):
+            output_path_str = args[0][3]
+            output_path = Path(output_path_str)
+            output_path.write_bytes(b"0" * (2 * 1024 * 1024))
+            return MagicMock(returncode=0)
+
+        with patch("subprocess.run", side_effect=mock_wget):
+            agent = MockBaseVisionAgent(
+                weights_root_path=str(tmp_path), ros2_name="test"
+            )
+            agent.weights_path = weights_path
+
+            model = agent._load_model_with_error_handling(MockModel)
+            assert model.weights_path == weights_path
+            assert call_count == 2  # Called twice: once fails, once succeeds
+
+        agent.stop()
+        if rclpy.ok():
+            rclpy.shutdown()
+
+    def test_load_model_other_runtime_error(self, tmp_path):
+        """Test that non-corruption RuntimeErrors are re-raised."""
+        weights_path = tmp_path / "vision" / "weights" / "test_weights.pth"
+        create_valid_weights_file(weights_path)
+
+        class MockModel:
+            def __init__(self, weights_path):
+                raise RuntimeError("Some other error")
+
+        agent = MockBaseVisionAgent(weights_root_path=str(tmp_path), ros2_name="test")
+        agent.weights_path = weights_path
+
+        with pytest.raises(RuntimeError, match="Some other error"):
+            agent._load_model_with_error_handling(MockModel)
+
+        agent.stop()
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+class TestBaseVisionAgentMethods:
+    """Test cases for other BaseVisionAgent methods."""
+
+    def test_remove_weights(self, tmp_path):
+        """Test _remove_weights method."""
+        weights_path = tmp_path / "vision" / "weights" / "test_weights.pth"
+        weights_path.parent.mkdir(parents=True, exist_ok=True)
+        weights_path.write_bytes(b"test")
+
+        agent = MockBaseVisionAgent(weights_root_path=str(tmp_path), ros2_name="test")
+        agent.weights_path = weights_path
+
+        assert weights_path.exists()
+        agent._remove_weights()
+        assert not weights_path.exists()
+
+        agent.stop()
+        if rclpy.ok():
+            rclpy.shutdown()
+
+    def test_stop(self, tmp_path):
+        """Test stop method shuts down ROS2 connector."""
+        weights_path = tmp_path / "vision" / "weights" / "test_weights.pth"
+        create_valid_weights_file(weights_path)
+
+        agent = MockBaseVisionAgent(weights_root_path=str(tmp_path), ros2_name="test")
+        agent.weights_path = weights_path
+
+        with patch.object(agent.ros2_connector, "shutdown") as mock_shutdown:
             agent.stop()
-            if rclpy.ok():
-                rclpy.shutdown()
+            mock_shutdown.assert_called_once()
+
+        if rclpy.ok():
+            rclpy.shutdown()
