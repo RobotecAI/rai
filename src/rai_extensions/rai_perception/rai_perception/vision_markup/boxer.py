@@ -43,7 +43,16 @@ class Box:
     ) -> Detection2D:
         detection = Detection2D()
         detection.header = Header()
-        detection.header.stamp = timestamp.to_msg()
+        # TODO(juliaj): Investigate why timestamp is sometimes rclpy.time.Time and sometimes
+        # builtin_interfaces.msg.Time. The function signature expects rclpy.time.Time, but
+        # grounding_dino.py calls .to_msg() before passing it. Should we fix the caller or
+        # change the signature to accept Union[rclpy.time.Time, builtin_interfaces.msg.Time]?
+        # Handle both rclpy.time.Time (call to_msg()) and builtin_interfaces.msg.Time (use directly)
+        if hasattr(timestamp, "to_msg"):
+            detection.header.stamp = timestamp.to_msg()
+        else:
+            # Already a builtin_interfaces.msg.Time
+            detection.header.stamp = timestamp
         detection.results = []
         hypothesis_with_pose = ObjectHypothesisWithPose()
         hypothesis_with_pose.hypothesis = ObjectHypothesis()

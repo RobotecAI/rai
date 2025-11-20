@@ -35,16 +35,29 @@ def setup_mock_clock(agent):
 
     The code calls clock().now().to_msg() to get ts, then passes ts to
     to_detection_msg which expects rclpy.time.Time and calls ts.to_msg() again.
-    So clock().now().to_msg() must return a mock with to_msg() that returns BuiltinTime.
+    However, ts is also assigned to response.detections.header.stamp which expects
+    builtin_interfaces.msg.Time.
+
+    ROS2 Humble vs Jazzy difference:
+    - Humble: Strict type checking in __debug__ mode requires actual BuiltinTime
+      instances, not MagicMock objects. Using MagicMock causes AssertionError.
+    - Jazzy: More lenient with MagicMock, but BuiltinTime instances don't allow
+      dynamically adding methods (AttributeError when accessing to_msg).
+
+    Solution: Create a wrapper class that inherits from BuiltinTime and adds to_msg().
     """
     from builtin_interfaces.msg import Time as BuiltinTime
 
+    class TimeWithToMsg(BuiltinTime):
+        """BuiltinTime wrapper that adds to_msg() method for compatibility."""
+
+        def to_msg(self):
+            return self
+
     mock_clock = MagicMock()
     mock_time = MagicMock()
-    mock_time_msg = BuiltinTime()
-    # Create a mock that has to_msg() returning BuiltinTime (for the second to_msg() call)
-    mock_ts = MagicMock()
-    mock_ts.to_msg.return_value = mock_time_msg
+    # Create a TimeWithToMsg instance (passes isinstance checks and has to_msg())
+    mock_ts = TimeWithToMsg()
     mock_time.to_msg.return_value = mock_ts
     mock_clock.now.return_value = mock_time
     agent.ros2_connector._node.get_clock = MagicMock(return_value=mock_clock)
