@@ -7,7 +7,7 @@ These agents can be triggered by ROS2 services:
 
 > [!TIP]
 >
-> If you wish to integrate open-set vision into your ros2 launch file, a premade launch
+> If you wish to integrate open-set detection into your ros2 launch file, a premade launch
 > file can be found in `rai/src/rai_bringup/launch/openset.launch.py`
 
 > [!NOTE]
