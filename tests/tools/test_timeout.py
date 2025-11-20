@@ -15,7 +15,6 @@
 import time
 
 import pytest
-
 from rai.tools.timeout import RaiTimeoutError, timeout_method
 
 
@@ -56,8 +55,7 @@ def test_timeout_method_raises_timeout_error(obj):
     assert "slow_method" in str(exc_info.value)
     assert "TestClass" in str(exc_info.value)
     assert "0.5 seconds" in str(exc_info.value)
-    
+
     with pytest.raises(RaiTimeoutError) as exc_info:
         obj.slow_method_custom()
     assert str(exc_info.value) == "Custom timeout message"
-
