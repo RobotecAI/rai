@@ -34,6 +34,10 @@ class TestGetSegmentationTool:
         """Create a GetSegmentationTool instance."""
         tool = GetSegmentationTool()
         tool.connector = mock_connector
+        # Set actual float values since GetSegmentationTool uses Field annotations
+        # but isn't a Pydantic model, so self.box_threshold would be a Field object
+        tool.box_threshold = 0.35
+        tool.text_threshold = 0.45
         return tool
 
     def test_get_image_message_success(self, segmentation_tool, mock_connector):

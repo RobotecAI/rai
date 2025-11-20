@@ -30,6 +30,26 @@ from tests.rai_perception.test_base_vision_agent import (
 )
 
 
+def setup_mock_clock(agent):
+    """Setup mock clock for agent tests.
+
+    The code calls clock().now().to_msg() to get ts, then passes ts to
+    to_detection_msg which expects rclpy.time.Time and calls ts.to_msg() again.
+    So clock().now().to_msg() must return a mock with to_msg() that returns BuiltinTime.
+    """
+    from builtin_interfaces.msg import Time as BuiltinTime
+
+    mock_clock = MagicMock()
+    mock_time = MagicMock()
+    mock_time_msg = BuiltinTime()
+    # Create a mock that has to_msg() returning BuiltinTime (for the second to_msg() call)
+    mock_ts = MagicMock()
+    mock_ts.to_msg.return_value = mock_time_msg
+    mock_time.to_msg.return_value = mock_ts
+    mock_clock.now.return_value = mock_time
+    agent.ros2_connector._node.get_clock = MagicMock(return_value=mock_clock)
+
+
 class MockGDBoxer:
     """Mock GDBoxer for testing."""
 
@@ -154,12 +174,7 @@ class TestGroundingDinoAgent:
 
             response = RAIGroundingDino.Response()
 
-            # Mock clock
-            mock_clock = MagicMock()
-            mock_time = MagicMock()
-            mock_time.to_msg.return_value = MagicMock()
-            mock_clock.now.return_value = mock_time
-            agent.ros2_connector._node.get_clock = MagicMock(return_value=mock_clock)
+            setup_mock_clock(agent)
 
             # Call callback
             result = agent._classify_callback(request, response)
@@ -204,11 +219,7 @@ class TestGroundingDinoAgent:
 
             response = RAIGroundingDino.Response()
 
-            mock_clock = MagicMock()
-            mock_time = MagicMock()
-            mock_time.to_msg.return_value = MagicMock()
-            mock_clock.now.return_value = mock_time
-            agent.ros2_connector._node.get_clock = MagicMock(return_value=mock_clock)
+            setup_mock_clock(agent)
 
             result = agent._classify_callback(request, response)
 
