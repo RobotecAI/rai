@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+import logging
 from os import PathLike
 from typing import List
 
@@ -33,13 +34,18 @@ class GDSegmenter:
         weight_path: str | PathLike,
         use_cuda: bool = True,
     ):
+        self.logger = logging.getLogger(__name__)
         self.cfg_path = "seg_config.yml"
         hydra.core.global_hydra.GlobalHydra.instance().clear()
         hydra.initialize_config_module("rai_perception.configs")
 
         self.weight_path = str(weight_path)
         if use_cuda:
-            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+            if torch.cuda.is_available():
+                self.device = "cuda"
+            else:
+                self.logger.warning("CUDA is not available but requested, using CPU")
+                self.device = "cpu"
         else:
             self.device = "cpu"
         self.sam2_model = build_sam2(
