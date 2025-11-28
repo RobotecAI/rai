@@ -13,10 +13,12 @@
 # limitations under the License.
 
 
+import logging
 from os import PathLike
 from typing import Dict
 
 import cv2
+import torch
 from cv_bridge import CvBridge
 from groundingdino.util.inference import Model
 from rclpy.time import Time
@@ -73,14 +75,21 @@ class GDBoxer:
         weight_path: str | PathLike,
         use_cuda: bool = True,
     ):
+        self.logger = logging.getLogger(__name__)
         self.cfg_path = __file__.replace(
             "vision_markup/boxer.py", "configs/gdino_config.py"
         )
         self.weight_path = str(weight_path)
-        if not use_cuda:
-            self.model = Model(self.cfg_path, self.weight_path, device="cpu")
+        if use_cuda:
+            if torch.cuda.is_available():
+                self.device = "cuda"
+            else:
+                self.logger.warning("CUDA is not available but requested, using CPU")
+                self.device = "cpu"
         else:
-            self.model = Model(self.cfg_path, self.weight_path)
+            self.device = "cpu"
+
+        self.model = Model(self.cfg_path, self.weight_path, device=self.device)
         self.bridge = CvBridge()
 
     def get_boxes(
