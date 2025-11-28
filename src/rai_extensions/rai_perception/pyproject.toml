@@ -1,6 +1,7 @@
 [tool.poetry]
-name = "rai_perception"
-version = "0.1.2"
+name = "rai-perception"
+# TODO, update the version once it is published to PyPi
+version = "0.1.5"
 description = "Package for object detection, segmentation and gripping point detection."
 authors = ["Kajetan Rachwał <kajetan.rachwal@robotec.ai>"]
 readme = "README.md"
