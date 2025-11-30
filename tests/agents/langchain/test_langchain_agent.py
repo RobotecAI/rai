@@ -54,9 +54,13 @@ class TestTracingConfiguration:
 
     def test_tracing_with_missing_config_file(self):
         """Test that tracing gracefully handles missing config.toml file in langchain context."""
-        # This should not crash even without config.toml
-        callbacks = get_tracing_callbacks()
-        assert len(callbacks) == 0
+        # Mock load_config to simulate missing config file scenario.
+        # Without mocking, get_tracing_callbacks() would load the workspace's config.toml,
+        # If tracing is enabled, it'll prevent us from testing how it handles missing config files.
+        with patch("rai.initialization.model_initialization.load_config") as mock_load:
+            mock_load.side_effect = FileNotFoundError("Config file not found")
+            callbacks = get_tracing_callbacks()
+            assert len(callbacks) == 0
 
     def test_tracing_with_config_file_present(self, test_config_toml):
         """Test that tracing works when config.toml is present in langchain context."""
