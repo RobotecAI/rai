@@ -5376,8 +5376,8 @@ files = [
 [package.dependencies]
 numpy = [
     {version = ">=1.23.5", markers = "python_version >= \"3.11\""},
-    {version = ">=1.21.4", markers = "python_version >= \"3.10\" and platform_system == \"Darwin\""},
-    {version = ">=1.21.2", markers = "platform_system != \"Darwin\" and python_version >= \"3.10\""},
+    {version = ">=1.21.4", markers = "python_version == \"3.10\" and platform_system == \"Darwin\""},
+    {version = ">=1.21.2", markers = "platform_system != \"Darwin\" and python_version == \"3.10\""},
     {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
 ]
 
@@ -5401,8 +5401,8 @@ files = [
 [package.dependencies]
 numpy = [
     {version = ">=1.23.5", markers = "python_version >= \"3.11\""},
-    {version = ">=1.21.4", markers = "python_version == \"3.10\" and platform_system == \"Darwin\""},
-    {version = ">=1.21.2", markers = "platform_system != \"Darwin\" and python_version == \"3.10\""},
+    {version = ">=1.21.4", markers = "python_version >= \"3.10\" and platform_system == \"Darwin\""},
+    {version = ">=1.21.2", markers = "platform_system != \"Darwin\" and python_version >= \"3.10\""},
     {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
 ]
 
@@ -7357,7 +7357,7 @@ url = "src/rai_bench"
 
 [[package]]
 name = "rai-core"
-version = "2.5.9"
+version = "2.5.10"
 description = "Core functionality for RAI framework"
 optional = false
 python-versions = "^3.10, <3.13"
@@ -7395,13 +7395,13 @@ url = "src/rai_core"
 
 [[package]]
 name = "rai-gsam2"
-version = "1.0.0"
+version = "1.0.1"
 description = "SAM 2: Segment Anything in Images and Videos (RobotecAI fork)"
 optional = false
 python-versions = ">=3.10.0"
 groups = ["perception"]
 files = [
-    {file = "rai_gsam2-1.0.0.tar.gz", hash = "sha256:6d2d0acb24507fac08cc16aab2e0dc6a689b754c2c7f373466f07d9b2c562793"},
+    {file = "rai_gsam2-1.0.1.tar.gz", hash = "sha256:09310441dd5234b8aaea830541e5b87ff4a99f79c13e6ede06ad251850733952"},
 ]
 
 [package.dependencies]
@@ -7434,7 +7434,7 @@ develop = true
 
 [package.dependencies]
 rai_core = ">=2.0.0.a2,<3.0.0"
-rai-gsam2 = "1.0.0"
+rai-gsam2 = "1.0.1"
 rf-groundingdino = "^0.2.0"
 torch = "^2.3.1"
 torchvision = "^0.18.1"
