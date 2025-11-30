@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from pathlib import Path
 
 import pytest
@@ -124,3 +125,29 @@ def test_get_llm_model_unknown_vendor_raises(tmp_path, monkeypatch):
 
     with pytest.raises(AttributeError, match="has no attribute 'unsupported'"):
         model_initialization.get_llm_model("simple_model", config_path=str(config_path))
+
+
+def test_load_config_default_path(tmp_path):
+    """Test that load_config() defaults to './config.toml' in current directory."""
+    # Create a config.toml in a temporary directory
+    _ = write_config(tmp_path / "config.toml", CONFIG_TEMPLATE)
+
+    # Change to that directory to test default path behavior
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Call load_config without arguments - should load from current directory
+        config = model_initialization.load_config()
+
+        # Verify config was loaded correctly
+        assert config.vendor.simple_model == "openai"
+        assert config.vendor.complex_model == "aws"
+        assert config.openai.simple_model == "gpt-4o-mini"
+        assert config.aws.region_name == "us-west-2"
+        assert config.tracing.project == "rai"
+        assert config.tracing.langfuse.use_langfuse is False
+
+    finally:
+        # Restore original directory
+        os.chdir(original_cwd)
