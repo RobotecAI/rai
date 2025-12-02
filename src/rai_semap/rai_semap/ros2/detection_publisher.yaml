@@ -1,0 +1,14 @@
+detection_publisher:
+  ros__parameters:
+    camera_topic: "/camera/image_raw"
+    detection_topic: "/detection_array"
+    dino_service: "/grounding_dino_classify"
+    # Format: "class1:threshold1, class2, class3:threshold3"
+    # Classes without explicit thresholds use default_class_threshold
+    # Example: "person:0.5, cup, bottle:0.4, box" (person uses 0.5, cup uses default, bottle uses 0.4, box uses default)
+    detection_classes: |
+      person, cup, bottle, box, bag, chair, table, shelf, door, window, couch, sofa, bed
+    default_class_threshold: 0.3
+    detection_interval: 2.0
+    box_threshold: 0.3
+    text_threshold: 0.25

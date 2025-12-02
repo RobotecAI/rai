@@ -1,0 +1,25 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "rai_semap"
+version = "0.1.0"
+description = "Semantic mapping and spatial memory for RAI"
+authors = ["Julia Jia"]
+readme = "rai_semap/README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+]
+packages = [
+    { include = "rai_semap", from = "." },
+]
+
+[tool.poetry.dependencies]
+python = "^3.10, <3.13"
+rai_core = {path = "../rai_core", develop = true}
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.0"
