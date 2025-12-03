@@ -51,6 +51,9 @@ def test_can_import_all_modules_pathlib(module: ModuleType) -> None:
                 continue
             if path.is_file() and path.suffix != ".py" or path.name == "__init__.py":
                 continue
+            # Skip files with dots in name (e.g., semap.launch.py) as they can't be imported as modules
+            if path.is_file() and "." in path.stem:
+                continue
 
             relative_path = str(path.relative_to(package_path))
             subpage_name = relative_path.replace(os.path.sep, ".").replace(".py", "")

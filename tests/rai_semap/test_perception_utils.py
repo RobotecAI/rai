@@ -17,7 +17,7 @@ import pytest
 from cv_bridge import CvBridge
 from sensor_msgs.msg import CameraInfo
 from std_msgs.msg import Header
-from vision_msgs.msg import BoundingBox2D, Detection2D
+from vision_msgs.msg import BoundingBox2D, Detection2D, Point2D
 
 from rai_semap.ros2.perception_utils import (
     compute_3d_pose_from_bbox,
@@ -54,11 +54,9 @@ def depth_image(bridge):
 @pytest.fixture
 def detection2d():
     """Create a Detection2D message."""
-    from geometry_msgs.msg import Point
-
     detection = Detection2D()
     detection.bbox = BoundingBox2D()
-    detection.bbox.center.position = Point(x=320.0, y=240.0, z=0.0)
+    detection.bbox.center.position = Point2D(x=320.0, y=240.0)
     detection.bbox.size_x = 100.0
     detection.bbox.size_y = 80.0
     return detection
