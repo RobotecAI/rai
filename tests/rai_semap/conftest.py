@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Optional
 
 import pytest
+import rclpy
 from geometry_msgs.msg import Pose
 
 # Add src/rai_semap to Python path
@@ -31,6 +32,14 @@ TEST_LOCATION_ID = "test_location"
 TEST_DETECTION_SOURCE = "GroundingDINO"
 TEST_SOURCE_FRAME = "camera_frame"
 TEST_BASE_TIMESTAMP = 1234567890
+
+
+@pytest.fixture(scope="module")
+def ros2_context():
+    """Initialize ROS2 context for testing."""
+    rclpy.init()
+    yield
+    rclpy.shutdown()
 
 
 @pytest.fixture

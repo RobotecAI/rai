@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import argparse
+import logging
 import time
 from typing import List
 
@@ -22,6 +23,8 @@ from rai.communication.ros2 import ROS2Connector
 from rai.tools.ros2 import Nav2Toolkit
 from rai.tools.time import WaitForSecondsTool
 from rclpy.action import ActionClient
+
+from rai_semap.utils.ros2_log import ROS2LogHandler
 
 
 class NavigationCollector:
@@ -46,39 +49,30 @@ class NavigationCollector:
             return True
 
         node = self.connector.node
-        node.get_logger().info("Waiting for Nav2 action server to be available...")
-        node.get_logger().info("Checking action server at: navigate_to_pose")
+        node.get_logger().info("Waiting for Nav2 action server...")
 
         # Try different possible action names
         action_names = ["navigate_to_pose", "/navigate_to_pose"]
 
         for action_name in action_names:
-            node.get_logger().info(f"Trying action name: {action_name}")
             action_client = ActionClient(node, NavigateToPose, action_name)
             start_time = time.time()
 
             while time.time() - start_time < timeout_sec:
                 if action_client.wait_for_server(timeout_sec=2.0):
                     node.get_logger().info(
-                        f"Nav2 action server is ready at: {action_name}"
+                        f"Nav2 action server ready at: {action_name}"
                     )
                     self._nav_action_ready = True
                     return True
                 elapsed = time.time() - start_time
-                if int(elapsed) % 5 == 0 and elapsed > 0:
-                    node.get_logger().info(
-                        f"Still waiting for Nav2 action server... ({elapsed:.1f}s)"
-                    )
+                if int(elapsed) % 10 == 0 and elapsed > 0:
+                    node.get_logger().info(f"Waiting for Nav2... ({elapsed:.1f}s)")
 
         node.get_logger().error(
-            f"Nav2 action server not available after {timeout_sec} seconds"
+            f"Nav2 action server not available after {timeout_sec}s. "
+            "Check: ros2 action list | grep navigate"
         )
-        node.get_logger().error("Make sure Nav2 is launched and running. Check:")
-        node.get_logger().error(
-            "  1. Is the launch file running? (ros2 launch examples/rosbot-xl-semap.launch.py ...)"
-        )
-        node.get_logger().error("  2. Check: ros2 action list | grep navigate")
-        node.get_logger().error("  3. Check Nav2 logs for errors")
         return False
 
     def navigate_to_waypoints(self, waypoints: List[tuple]) -> None:
@@ -107,7 +101,7 @@ class NavigationCollector:
                 continue
 
             node.get_logger().info(
-                f"Navigating to waypoint {i + 1}/{len(waypoints)}: ({x}, {y}, yaw={yaw})"
+                f"Waypoint {i + 1}/{len(waypoints)}: ({x:.1f}, {y:.1f})"
             )
 
             # Use Nav2Toolkit to navigate
@@ -120,17 +114,13 @@ class NavigationCollector:
 
             if navigate_tool:
                 try:
-                    result = navigate_tool.invoke(
-                        {"x": x, "y": y, "z": 0.0, "yaw": yaw}
-                    )
-                    node.get_logger().info(f"Navigation result: {result}")
+                    navigate_tool.invoke({"x": x, "y": y, "z": 0.0, "yaw": yaw})
                 except Exception as e:
                     node.get_logger().warn(f"Navigation failed: {e}")
             else:
                 node.get_logger().warn("Navigate tool not found, skipping waypoint")
 
             # Wait at waypoint to allow detections to be collected
-            node.get_logger().info("Waiting at waypoint for detections...")
             self.wait_tool.invoke({"seconds": 5.0})
 
         node.get_logger().info("Navigation complete")
@@ -142,19 +132,18 @@ class NavigationCollector:
             duration_seconds: How long to collect detections.
         """
         node = self.connector.node
-        node.get_logger().info(
-            f"Collecting detections for {duration_seconds} seconds..."
-        )
+        node.get_logger().info(f"Collecting detections for {duration_seconds}s...")
 
         start_time = time.time()
         while time.time() - start_time < duration_seconds:
             self.wait_tool.invoke({"seconds": 2.0})
             elapsed = time.time() - start_time
-            node.get_logger().info(
-                f"Collecting... {elapsed:.1f}/{duration_seconds} seconds"
-            )
+            if int(elapsed) % 5 == 0:
+                node.get_logger().info(
+                    f"Collecting... {elapsed:.0f}/{duration_seconds}s"
+                )
 
-        node.get_logger().info("Detection collection complete")
+        node.get_logger().info("Collection complete")
 
 
 def main():
@@ -172,7 +161,7 @@ def main():
         "--collect-duration",
         type=float,
         default=10.0,
-        help="Duration to collect detections at each waypoint (seconds)",
+        help="Duration to collect detections at final location (seconds). Detections are collected in real-time during navigation, so this is typically minimal (default: 2.0)",
     )
     parser.add_argument(
         "--use-sim-time",
@@ -198,15 +187,26 @@ def main():
             use_sim_time=args.use_sim_time,
         )
 
+        # Configure Python logging to forward to ROS2 logger
+        handler = ROS2LogHandler(connector.node)
+        handler.setLevel(logging.DEBUG)
+        python_logger = logging.getLogger("rai_semap")
+        python_logger.setLevel(logging.DEBUG)
+        python_logger.handlers.clear()
+        python_logger.addHandler(handler)
+        python_logger.propagate = False
+
         collector = NavigationCollector(connector)
 
         # Navigate to waypoints
         collector.navigate_to_waypoints(waypoints)
 
-        # Final collection period
-        collector.collect_detections(duration_seconds=args.collect_duration)
+        # Brief wait to ensure final detections are processed
+        # (detections are collected in real-time during navigation, so this is minimal)
+        if args.collect_duration > 0:
+            collector.collect_detections(duration_seconds=args.collect_duration)
 
-        connector.node.get_logger().info("Navigation and collection complete")
+        connector.node.get_logger().info("Navigation completed")
 
     except KeyboardInterrupt:
         pass

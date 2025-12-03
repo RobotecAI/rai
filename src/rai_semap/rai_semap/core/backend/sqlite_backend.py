@@ -239,7 +239,7 @@ class SQLiteBackend(SpatialDBBackend):
         if rows_deleted > 0:
             logger.info(f"✓ Deleted annotation {annotation_id} from database")
         else:
-            logger.warn(f"✗ Annotation {annotation_id} not found for deletion")
+            logger.warning(f"✗ Annotation {annotation_id} not found for deletion")
 
         return rows_deleted > 0
 
@@ -333,7 +333,7 @@ class SQLiteBackend(SpatialDBBackend):
             if rows_updated > 0:
                 logger.info(f"✓ Updated annotation {annotation.id} in database")
             else:
-                logger.warn(f"✗ Annotation {annotation.id} not found for update")
+                logger.warning(f"✗ Annotation {annotation.id} not found for update")
 
             return rows_updated > 0
         except sqlite3.Error as e:

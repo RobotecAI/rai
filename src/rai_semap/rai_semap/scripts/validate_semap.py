@@ -152,7 +152,7 @@ def main():
     parser.add_argument(
         "--location-id",
         type=str,
-        default="rosbot_xl_demo",
+        default="default_location",
         help="Location identifier to query",
     )
 

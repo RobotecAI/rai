@@ -47,14 +47,57 @@ class DetectionPublisher(Node):
         self.last_depth_image: Optional[Image] = None
         self.last_camera_info: Optional[CameraInfo] = None
         self.last_detection_time = 0.0
+        self.last_log_time = 0.0
+        self.log_interval = 5.0  # Log summary every 5 seconds
 
     def _initialize_parameters(self):
         """Initialize ROS2 parameters from YAML files."""
         # Get directory containing this file
         current_dir = Path(__file__).parent
+        config_dir = current_dir / "config"
+
+        # Declare config file path parameters first
+        config_params = [
+            (
+                "detection_publisher_config",
+                "",
+                ParameterType.PARAMETER_STRING,
+                "Path to detection_publisher YAML config file (empty = use default in config/)",
+            ),
+            (
+                "perception_utils_config",
+                "",
+                ParameterType.PARAMETER_STRING,
+                "Path to perception_utils YAML config file (empty = use default in config/)",
+            ),
+        ]
+        for name, default, param_type, description in config_params:
+            self.declare_parameter(
+                name,
+                default,
+                descriptor=ParameterDescriptor(
+                    type=param_type, description=description
+                ),
+            )
+
+        # Get config file paths
+        detection_pub_config_path = (
+            self.get_parameter("detection_publisher_config")
+            .get_parameter_value()
+            .string_value
+        )
+        perception_utils_config_path = (
+            self.get_parameter("perception_utils_config")
+            .get_parameter_value()
+            .string_value
+        )
 
         # Load detection_publisher parameters
-        detection_pub_yaml = current_dir / "detection_publisher.yaml"
+        if detection_pub_config_path:
+            detection_pub_yaml = Path(detection_pub_config_path)
+        else:
+            detection_pub_yaml = config_dir / "detection_publisher.yaml"
+
         with open(detection_pub_yaml, "r") as f:
             detection_pub_config = yaml.safe_load(f)
         detection_pub_params = detection_pub_config.get("detection_publisher", {}).get(
@@ -62,7 +105,11 @@ class DetectionPublisher(Node):
         )
 
         # Load perception_utils parameters
-        perception_utils_yaml = current_dir / "perception_utils.yaml"
+        if perception_utils_config_path:
+            perception_utils_yaml = Path(perception_utils_config_path)
+        else:
+            perception_utils_yaml = config_dir / "perception_utils.yaml"
+
         with open(perception_utils_yaml, "r") as f:
             perception_utils_config = yaml.safe_load(f)
         perception_utils_params = perception_utils_config.get(
@@ -73,7 +120,9 @@ class DetectionPublisher(Node):
         parameters = [
             (
                 "camera_topic",
-                detection_pub_params.get("camera_topic", "/camera/image_raw"),
+                detection_pub_params.get(
+                    "camera_topic", "/camera/camera/color/image_raw"
+                ),
                 ParameterType.PARAMETER_STRING,
                 "Camera image topic to subscribe to",
             ),
@@ -204,7 +253,7 @@ class DetectionPublisher(Node):
                     class_names.append(class_name)
                     class_thresholds[class_name] = threshold
                 except ValueError:
-                    self.get_logger().warn(
+                    self.get_logger().warning(
                         f"Invalid threshold value in '{item}', using default"
                     )
                     class_names.append(class_name)
@@ -222,7 +271,7 @@ class DetectionPublisher(Node):
         self.dino_client = self.create_client(RAIGroundingDino, dino_service)
         self.get_logger().info(f"Waiting for DINO service: {dino_service}")
         if not self.dino_client.wait_for_service(timeout_sec=10.0):
-            self.get_logger().warn(f"DINO service not available: {dino_service}")
+            self.get_logger().warning(f"DINO service not available: {dino_service}")
         else:
             self.get_logger().info(f"DINO service ready: {dino_service}")
 
@@ -272,9 +321,12 @@ class DetectionPublisher(Node):
         """Initialize ROS2 publishers."""
         detection_topic = self._get_string_parameter("detection_topic")
         self.detection_publisher = self.create_publisher(
-            RAIDetectionArray, detection_topic, 10
+            RAIDetectionArray, detection_topic, qos_profile_sensor_data
         )
-        self.get_logger().info(f"Publishing to detection topic: {detection_topic}")
+        self.get_logger().info(
+            f"Publishing to detection topic: {detection_topic} "
+            f"(QoS: reliability={qos_profile_sensor_data.reliability.name})"
+        )
 
     def depth_callback(self, msg: Image):
         """Store latest depth image."""
@@ -286,7 +338,7 @@ class DetectionPublisher(Node):
 
     def image_callback(self, msg: Image):
         """Process incoming camera image."""
-        self.get_logger().info(
+        self.get_logger().debug(
             f"Received camera image (stamp: {msg.header.stamp.sec}.{msg.header.stamp.nanosec:09d}, "
             f"frame_id: {msg.header.frame_id})"
         )
@@ -302,13 +354,13 @@ class DetectionPublisher(Node):
             return
 
         self.last_image = msg
-        self.get_logger().info("Processing camera image...")
+        self.get_logger().debug("Processing camera image...")
         self._process_image(msg)
 
     def _process_image(self, image_msg: Image):
         """Call DINO service and publish detections."""
         if not self.dino_client.wait_for_service(timeout_sec=0.1):
-            self.get_logger().warn("DINO service not ready, skipping detection")
+            self.get_logger().warning("DINO service not ready, skipping detection")
             return
 
         detection_classes_str = self._get_string_parameter("detection_classes")
@@ -335,9 +387,8 @@ class DetectionPublisher(Node):
         request.box_threshold = box_threshold
         request.text_threshold = text_threshold
 
-        self.get_logger().info(
-            f"Calling DINO service with classes: {', '.join(class_names)} "
-            f"(box_threshold={box_threshold:.3f}, per-class thresholds: {class_thresholds})"
+        self.get_logger().debug(
+            f"Calling DINO service with {len(class_names)} classes (box_threshold={box_threshold:.3f})"
         )
 
         future = self.dino_client.call_async(request)
@@ -350,7 +401,7 @@ class DetectionPublisher(Node):
         try:
             response = future.result()
             if response is None:
-                self.get_logger().warn("DINO service returned None")
+                self.get_logger().warning("DINO service returned None")
                 return
 
             # Get class thresholds for filtering (set in _process_image)
@@ -425,26 +476,39 @@ class DetectionPublisher(Node):
 
             # Log detection details for debugging
             detection_count = len(detection_array.detections)
+            current_time = time.time()
+            should_log = current_time - self.last_log_time >= self.log_interval
+
             if detection_count > 0:
+                # Log individual detections only at DEBUG level
                 for i, det in enumerate(detection_array.detections):
                     results_count = len(det.results) if det.results else 0
                     if results_count > 0:
                         result = det.results[0]
-                        self.get_logger().info(
+                        self.get_logger().debug(
                             f"Detection {i}: class={result.hypothesis.class_id}, "
-                            f"score={result.hypothesis.score:.3f}, "
-                            f"results_count={results_count}, "
-                            f"frame_id={det.header.frame_id}"
+                            f"score={result.hypothesis.score:.3f}"
                         )
                     else:
-                        self.get_logger().warn(
+                        self.get_logger().warning(
                             f"Detection {i} has no results! frame_id={det.header.frame_id}"
                         )
-                self.get_logger().info(
-                    f"Published {detection_count} detections: {detection_array.detection_classes}"
-                )
+
+                # Throttled summary log
+                if should_log:
+                    classes_found = [
+                        det.results[0].hypothesis.class_id
+                        for det in detection_array.detections
+                        if det.results and len(det.results) > 0
+                    ]
+                    self.get_logger().info(
+                        f"Published {detection_count} detections: {', '.join(set(classes_found))}"
+                    )
+                    self.last_log_time = current_time
             else:
-                self.get_logger().info("No detections found in image")
+                if should_log:
+                    self.get_logger().debug("No detections found in image")
+                    self.last_log_time = current_time
 
             # Publish detections
             self.detection_publisher.publish(detection_array)

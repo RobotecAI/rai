@@ -22,7 +22,8 @@ def generate_launch_description():
         [
             ExecuteProcess(
                 cmd=["python", "run_perception_agents.py"],
-                cwd="src/rai_extensions/rai_perception/scripts",
+                # https://github.com/RobotecAI/rai/pull/722
+                cwd="src/rai_extensions/rai_perception/rai_perception/scripts",
                 output="screen",
             ),
         ]

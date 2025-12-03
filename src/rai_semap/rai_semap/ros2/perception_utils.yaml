@@ -1,5 +1,0 @@
-perception_utils:
-  ros__parameters:
-    depth_topic: ""
-    camera_info_topic: ""
-    depth_fallback_region_size: 5

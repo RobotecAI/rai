@@ -2,23 +2,23 @@
 
 ## Table of Contents
 
-- [Problem Definition](#problem-definition)
-  - [Q & A](#q--a)
-- [Concepts](#concepts)
-  - [High-Level Concepts](#high-level-concepts)
-  - [Data Models](#data-models)
-  - [Relationships](#relationships)
-  - [Non Goals](#non-goals)
-- [Design Proposal](#design-proposal)
-  - [BaseMemory Interface](#basememory-interface)
-  - [SemanticMapMemory Interface](#semanticmapmemory-interface)
-  - [Database Backend Abstraction](#database-backend-abstraction)
-  - [New Component: rai_semap](#new-component-rai_semap)
-  - [Usage Patterns from Other Layers](#usage-patterns-from-other-layers)
-  - [Implementation Phases](#implementation-phases)
-- [Reusability](#reusability)
-- [External Memory Systems](#external-memory-systems)
-- [Appendix](#appendix)
+-   [Problem Definition](#problem-definition)
+    -   [Q & A](#q--a)
+-   [Concepts](#concepts)
+    -   [High-Level Concepts](#high-level-concepts)
+    -   [Data Models](#data-models)
+    -   [Relationships](#relationships)
+    -   [Non Goals](#non-goals)
+-   [Design Proposal](#design-proposal)
+    -   [BaseMemory Interface](#basememory-interface)
+    -   [SemanticMapMemory Interface](#semanticmapmemory-interface)
+    -   [Database Backend Abstraction](#database-backend-abstraction)
+    -   [New Component: rai_semap](#new-component-rai_semap)
+    -   [Usage Patterns from Other Layers](#usage-patterns-from-other-layers)
+    -   [Implementation Phases](#implementation-phases)
+-   [Reusability](#reusability)
+-   [External Memory Systems](#external-memory-systems)
+-   [Appendix](#appendix)
 
 ## Problem Definition
 
@@ -26,9 +26,9 @@
 
 > "Robots often need to find out about their environment first, building a map and localizing themselves on it. During this process, RAI can be used to guide exploration for mapping or to build a semantic map during the SLAM which adds knowledge and memory, which can be used to reason about the area itself and tasks that are to be given in the area. A great start is to design solutions for RAI."
 
-Based on RAI's current capabilities (perception, navigation, multi-modal interaction), this roughly maps to three areas:
+Based on RAI's current capabilities (perception, navigation, multi-modal interaction), this roughly maps to three areas, listed as below. These areas build on each other: perception feeds the semantic map, exploration uses it to guide decisions, and memory enables task reasoning.
 
-1. Semantic Perception Layer which may be built on top of `rai_perception` (open-set detection), Grounded SAM 2 integration
+1. Semantic Perception Layer which may be built on top of `rai_perception` (open-set detection), GroundingDINO integration
    with a new semantic annotation pipeline that tags SLAM features/points with object identities during mapping
 
 2. Agent Guided Exploration Strategy which can be built on existing `rai_nomad` (navigation) where agent decides _where_ to explore based on goals ("find the kitchen", "map storage areas") rather than frontier-based exploration. Frontier-based exploration navigates to boundaries between known and unknown map regions to expand coverage.
@@ -37,8 +37,6 @@ Based on RAI's current capabilities (perception, navigation, multi-modal interac
 
     - The connection between spatial memory and other RAI memory systems (artifact_database.pkl, rai_whoami vector store, StateBasedAgent state) needs to be explored: spatial memory could be queried by these systems to provide spatial context, rather than serving as storage for them.
     - For example, could artifacts be annotated with spatial locations queried from spatial memory, could embodiment docs reference spatial locations that spatial memory could ground, or could recent spatial queries be included in StateBasedAgent state to provide spatial awareness during conversations?
-
-For explorative SLAM, these areas build on each other: perception feeds the semantic map, exploration uses it to guide decisions, and memory enables task reasoning.
 
 ### Q & A
 
@@ -58,20 +56,22 @@ Both may explore unknown regions, but the decision differs: frontier-based picks
 
 #### Semantic Annotation
 
-**A spatial-semantic record linking an object identity (class label, e.g., "red cup", "tool") to a 3D pose in the map frame, with metadata (timestamp, confidence, detection source).**
+**A spatial-semantic record linking an object identity (class label, e.g., "red cup", "tool") to a 3D position (centroid/center) in the map frame, with metadata (timestamp, confidence, detection source).**
 
-Unlike pure geometric SLAM, semantic annotations enable querying "what" and "where" simultaneously. This allows agents to reason about object locations for task planning and spatial reasoning. The combination of semantic labels and 3D poses creates a rich representation that bridges perception and spatial memory.
+Unlike pure geometric SLAM, semantic annotations enable querying "what" and "where" simultaneously. This allows agents to reason about object locations for task planning and spatial reasoning. The combination of semantic labels and 3D positions creates a different representation that bridges perception and spatial memory. The position is stored as a `Pose` object, where `pose.position` is the 3D point (computed from bounding box center or point cloud centroid when available) and `pose.orientation` is typically identity (not meaningful).
 
 ```python
-# Example: Semantic annotation structure
+# Example: Semantic annotation structure (simplified)
 {
     "object_class": "red cup",
-    "pose": {"x": 2.5, "y": 1.3, "z": 0.8, "orientation": {...}},
+    "pose": {"position": {"x": 2.5, "y": 1.3, "z": 0.8}, "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0}},
     "confidence": 0.92,
     "timestamp": "2025-01-15T10:23:00",
     "detection_source": "GroundingDINO",
     "source_frame": "camera_frame"
 }
+# Note: pose.position is a 3D point (centroid/center) in map frame, computed from bounding box center
+# or point cloud centroid when available. pose.orientation is typically identity (not meaningful).
 ```
 
 #### Spatial Memory
@@ -82,33 +82,34 @@ The storage can be implemented via database backends (SQLite/PostGIS) accessed t
 
 ```python
 # Example: Spatial query
-memory.query_nearby_objects(x=2.5, y=1.3, radius=2.0)
-# Returns: [{"object": "red cup", "distance": 0.5}, 
-#           {"object": "table", "distance": 1.2}]
+from geometry_msgs.msg import Point
+center = Point(x=2.5, y=1.3, z=0.0)
+results = memory.query_by_location(center, radius=2.0)
+# Returns: List[SemanticAnnotation] with objects within radius
 
 # Example: Semantic query
-memory.query_by_class("red cup")
-# Returns: [{"pose": (2.5, 1.3, 0.8), "confidence": 0.92, ...}]
+results = memory.query_by_class("red cup")
+# Returns: List[SemanticAnnotation] with all "red cup" annotations
 ```
 
 #### Camera-to-map Transformation
 
 **Converting detections from camera frame to map frame using TF transforms.**
 
-The perception layer (GroundingDINO, GroundedSAM) already provides 3D poses in `ObjectHypothesisWithPose`, so the system transforms these poses from the camera frame to the map frame using TF transforms (camera → base_link → map). This is critical for building a consistent spatial-semantic map across robot movements. Without proper frame transformation, detections from different robot positions would be stored in inconsistent coordinate systems, making spatial queries unreliable.
+The perception layer provides detections with 3D positions (in our implementation, GroundingDINO provides 2D bounding boxes, and we compute 3D poses from bounding box centers using depth images and camera intrinsics). These 3D positions are initially in the camera frame. The system transforms these positions from the camera frame to the map frame using TF transforms (camera → base_link → map). This is critical for building a consistent spatial-semantic map across robot movements. Without proper frame transformation, detections from different robot positions would be stored in inconsistent coordinate systems, making spatial queries unreliable.
 
 ```python
-# Example: Frame transformation flow
+# Example: Frame transformation flow (pseduo code)
 # Detection in camera frame
-camera_pose = {"x": 0.3, "y": 0.1, "z": 1.2}  # relative to camera
+camera_pose = (x=0.3, y=0.1, z=1.2)  # relative to camera
 
 # Transform to map frame via TF
-map_pose = tf_buffer.transform(
-    camera_pose, 
-    target_frame="map", 
-    source_frame="camera_frame"
+map_pose = transform_pose(
+    camera_pose,
+    source_frame="camera_frame",
+    target_frame="map"
 )
-# Result: {"x": 2.5, "y": 1.3, "z": 0.8}  # absolute map coordinates
+# Result: (x=2.5, y=1.3, z=0.8)  # absolute map coordinates
 
 # Same object detected from different angle → same map coordinates
 ```
@@ -190,12 +191,12 @@ confidence_thresholds = {
 
 **4. Bounding Box Size Filtering**
 
-Very small bounding boxes (below minimum area threshold, default: 500 pixels²) are filtered out as they are often false positives from partial occlusions or detection artifacts.
+Very small bounding boxes (below minimum area threshold, default: 100 pixels²) are filtered out as they are often false positives from partial occlusions or detection artifacts.
 
 ```python
 # Example: Size filtering
 bbox_area = width * height  # pixels²
-if bbox_area < 500:
+if bbox_area < min_bbox_area:  # default: 100 pixels²
     # Filtered out (likely false positive)
     return None
 ```
@@ -208,15 +209,17 @@ These query patterns enable agents to retrieve spatial-semantic information for 
 
 ```python
 # Spatial query: "What objects are within 2m of (x,y)?"
-results = memory.query_nearby_objects(x=2.5, y=1.3, radius=2.0)
+from geometry_msgs.msg import Point
+center = Point(x=2.5, y=1.3, z=0.0)
+results = memory.query_by_location(center, radius=2.0)
 
 # Semantic query: "Where did I see a red cup?"
 results = memory.query_by_class("red cup")
 
 # Hybrid query: "Find tools in the workshop" (semantic + spatial region)
-results = memory.query_by_class_and_region(
-    object_class="tool",
-    region_polygon=[(x1,y1), (x2,y2), (x3,y3), (x4,y4)]
+results = memory.query_by_region(
+    bbox=(x1, y1, x2, y2),  # (min_x, min_y, max_x, max_y)
+    object_class="tool"
 )
 ```
 
@@ -229,17 +232,17 @@ results = memory.query_by_class_and_region(
 This is the core data model that stores all semantic-spatial information in the memory system. Each annotation links a detected object to its location in the map frame, enabling spatial queries and temporal consistency tracking. The metadata field allows extensibility for point cloud features and other attributes without changing the core schema.
 
 ```python
-@dataclass
 class SemanticAnnotation:
-    id: UUID  # Unique identifier
+    id: str  # Unique identifier (UUID string)
     object_class: str  # e.g., "red cup", "tool"
     pose: Pose  # 3D pose in map frame (x, y, z, orientation)
     confidence: float  # 0.0-1.0
-    timestamp: Time  # ROS timestamp of detection
+    timestamp: Any  # ROS timestamp of detection
     detection_source: str  # e.g., "GroundingDINO", "GroundedSAM"
     source_frame: str  # Original camera frame_id
-    vision_detection_id: str  # ID from Detection2D for debugging
-    metadata: dict  # Optional JSON with pointcloud info when available
+    location_id: str  # Identifier for the physical location
+    vision_detection_id: Optional[str]  # ID from Detection2D for debugging
+    metadata: Dict[str, Any]  # Optional JSON with pointcloud info when available
     # metadata.pointcloud: {centroid, size_3d, point_count}
 ```
 
@@ -256,10 +259,10 @@ CREATE VIRTUAL TABLE annotations_rtree USING rtree(
 );
 
 -- Example: Efficient spatial query using index
-SELECT * FROM annotations 
+SELECT * FROM annotations
 WHERE id IN (
-    SELECT id FROM annotations_rtree 
-    WHERE minx <= x+radius AND maxx >= x-radius 
+    SELECT id FROM annotations_rtree
+    WHERE minx <= x+radius AND maxx >= x-radius
     AND miny <= y+radius AND maxy >= y-radius
 );
 ```
@@ -271,12 +274,12 @@ WHERE id IN (
 This metadata enables the system to correctly interpret spatial coordinates and maintain consistency with the underlying SLAM map. The resolution and origin are needed to convert between map coordinates and pixel coordinates for visualization. The last_updated timestamp helps track map freshness and coordinate system changes.
 
 ```python
-@dataclass
 class MapMetadata:
+    location_id: str  # Identifier for the physical location
     map_frame_id: str  # Frame ID of the SLAM map
     resolution: float  # OccupancyGrid resolution (meters/pixel)
-    origin: Pose  # Map origin pose
-    last_updated: Time  # Timestamp of last annotation
+    origin: Optional[Pose]  # Optional map origin pose
+    last_updated: Optional[Any]  # Timestamp of last annotation
 ```
 
 ### Relationships
@@ -289,8 +292,8 @@ The `detection_publisher` node bridges the service-based perception layer to top
 
 ```python
 # Flow: Camera → detection_publisher → RAIDetectionArray → semantic_map_node
-# detection_publisher subscribes to /camera/image_raw
-# Calls /grounding_dino/grounding_dino_classify service
+# detection_publisher subscribes to /camera/camera/color/image_raw (configurable)
+# Calls /grounding_dino_classify service (configurable)
 # Publishes RAIDetectionArray to /detection_array
 # semantic_map_node subscribes to /detection_array and stores annotations
 ```
@@ -316,9 +319,9 @@ This integration enables multi-step task planning where agents can query object 
 
 ```python
 # Example: Agent tool usage
-tool = QuerySemanticMapTool(memory)
-result = tool.invoke("red cup in kitchen")
-# Returns: {"object": "red cup", "location": (2.5, 1.3, 0.8), ...}
+tool = QuerySemanticMapTool(memory=memory)
+result = tool.invoke({"query": "red cup in kitchen", "room": "kitchen"})
+# Returns: String with object locations
 # Agent uses NavigateToPoseTool to go to location
 ```
 
@@ -342,13 +345,24 @@ Since no `BaseMemory` interface exists in RAI, we define this interface to enabl
 # Example: BaseMemory interface structure
 class BaseMemory(ABC):
     @abstractmethod
-    def store(self, data: Any) -> str:
-        """Store data and return identifier."""
+    def store(self, key: str, value: Any, metadata: Optional[Dict[str, Any]] = None) -> str:
+        """Store a value with optional metadata. Returns storage ID."""
         pass
-    
+
     @abstractmethod
-    def query(self, query: str) -> List[Any]:
-        """Query stored data."""
+    def retrieve(self, query: str, filters: Optional[Dict[str, Any]] = None) -> List[Any]:
+        """Retrieve values matching query and filters.
+
+        Designed for vector database use cases where query is text to embed
+        for similarity search, and filters are metadata constraints.
+        Not suitable for spatial databases which require concrete query methods
+        (e.g., query_by_location, query_by_region).
+        """
+        pass
+
+    @abstractmethod
+    def delete(self, key: str) -> bool:
+        """Delete a stored value. Returns success status."""
         pass
 ```
 
@@ -361,12 +375,16 @@ This interface provides the contract for spatial-semantic memory operations, ena
 ```python
 # Example: SemanticMapMemory interface methods
 class SemanticMapMemory(BaseMemory):
-    def query_nearby_objects(self, x: float, y: float, radius: float) -> List[SemanticAnnotation]:
-        """Query objects within radius of (x, y)."""
+    def query_by_location(self, center: Point, radius: float, object_class: Optional[str] = None, location_id: Optional[str] = None) -> List[SemanticAnnotation]:
+        """Query annotations within radius of center point."""
         pass
-    
-    def query_by_class(self, object_class: str) -> List[SemanticAnnotation]:
-        """Query all annotations of a given class."""
+
+    def query_by_class(self, object_class: str, confidence_threshold: float = 0.5, limit: Optional[int] = None, location_id: Optional[str] = None) -> List[SemanticAnnotation]:
+        """Query annotations by object class."""
+        pass
+
+    def query_by_region(self, bbox: Tuple[float, float, float, float], object_class: Optional[str] = None, location_id: Optional[str] = None) -> List[SemanticAnnotation]:
+        """Query annotations within bounding box region."""
         pass
 ```
 
@@ -383,7 +401,8 @@ Uses SpatiaLite extension for spatial indexing. Single-file database with no ext
 ```python
 # Example: SQLiteBackend usage
 backend = SQLiteBackend("semantic_map.db")
-memory = SemanticMapMemory(backend)
+backend.init_schema()  # Initialize database schema
+memory = SemanticMapMemory(backend, location_id="default_location")
 # Single file, no server needed
 ```
 
@@ -394,37 +413,10 @@ Full PostgreSQL + PostGIS for advanced spatial operations. Supports multi-robot 
 ```python
 # Example: PostGISBackend usage (future)
 backend = PostGISBackend(connection_string="postgresql://...")
-memory = SemanticMapMemory(backend)
+backend.init_schema()  # Initialize database schema
+memory = SemanticMapMemory(backend, location_id="warehouse_a")
 # Shared database for multi-robot coordination
 ```
-
-Configuration via ROS2 parameters (set via launch file or command line):
-
-Detection Publisher Node (`rai_semap.ros2.detection_publisher`):
-
--   `camera_topic`: Camera image topic to subscribe to (default: "/camera/image_raw")
--   `detection_topic`: Topic to publish RAIDetectionArray messages (default: "/detection_array")
--   `dino_service`: GroundingDINO service name (default: "/grounding_dino/grounding_dino_classify")
--   `detection_classes`: Comma-separated list of object classes to detect (default: "person, cup, bottle, box, bag, chair, table, shelf, door, window")
--   `detection_interval`: Minimum time between detections in seconds (default: 2.0)
--   `box_threshold`: DINO box threshold (default: 0.3)
--   `text_threshold`: DINO text threshold (default: 0.25)
-
-Semantic Map Node (`rai_semap.ros2.node`):
-
--   `database_path`: Path to SQLite database file (default: "semantic_map.db")
--   `confidence_threshold`: Minimum confidence score (0.0-1.0) for storing detections (default: 0.5)
--   `class_confidence_thresholds`: Class-specific confidence thresholds as 'class1:threshold1,class2:threshold2' (e.g., 'person:0.7,window:0.6,door:0.5')
--   `class_merge_thresholds`: Class-specific merge radii (meters) for deduplication as 'class1:radius1,class2:radius2' (e.g., 'couch:2.5,table:1.5,shelf:1.5,chair:0.8')
--   `min_bbox_area`: Minimum bounding box area (pixels²) to filter small false positives (default: 500.0)
--   `use_pointcloud_dedup`: Enable point cloud-based deduplication matching (default: true)
--   `depth_topic`: Depth image topic for point cloud extraction (optional, required if use_pointcloud_dedup=true)
--   `camera_info_topic`: Camera info topic for point cloud extraction (optional, required if use_pointcloud_dedup=true)
--   `detection_topic`: Topic for RAIDetectionArray messages (default: "/detection_array")
--   `map_topic`: Topic for OccupancyGrid map messages (default: "/map")
--   `map_frame_id`: Frame ID of the SLAM map (default: "map")
--   `location_id`: Identifier for the physical location (default: "default_location")
--   `map_resolution`: OccupancyGrid resolution in meters/pixel (default: 0.05)
 
 Future: PostGIS backend selection will be configurable (not yet implemented).
 
@@ -436,31 +428,16 @@ Architecture:
 
 1. Core Library (`rai_semap.core`):
 
-    - Frame Projection: Transform 3D poses from source frame (camera frame) to map frame using TF transforms. Detections already contain 3D poses in `ObjectHypothesisWithPose`, so depth estimation is handled by the perception layer.
-    - Temporal Filtering: Merge duplicate detections of same object using multi-strategy deduplication:
-        - Spatial clustering within class-specific merge thresholds
-        - Point cloud-based matching when depth data is available (uses 3D centroid and size validation)
-        - Confidence filtering with class-specific thresholds
-        - Bounding box size filtering to remove small false positives
-    - Confidence Aggregation: Update confidence scores for repeated observations (keeps maximum confidence)
+    - Frame Projection: Transform 3D poses from camera frame to map frame using TF transforms
+    - Temporal Filtering: Multi-strategy deduplication (spatial clustering, point cloud-based matching, confidence/size filtering) to merge duplicate detections
     - Storage: Persist annotations to `SemanticMapMemory` backend with point cloud features in metadata
-    - No ROS2 dependencies; pure Python library
+    - Pure Python library with no ROS2 dependencies
 
 2. ROS2 Node Wrapper (`rai_semap.ros2`):
 
-    - `detection_publisher` node:
-        - Subscribes to camera images (e.g., `/camera/image_raw`)
-        - Calls GroundingDINO service with configurable object classes
-        - Publishes `RAIDetectionArray` messages to `/detection_array` topic
-        - Throttles detections via `detection_interval` parameter to control processing rate
-    - `node` (semantic map node):
-        - Subscriptions:
-            - `RAIDetectionArray` topic (detections from `detection_publisher` or other sources)
-            - `/map` (OccupancyGrid from SLAM)
-        - TF handling via `tf2_ros.Buffer` and `TransformListener` (automatically subscribes to `/tf` and `/tf_static`)
-        - Converts ROS2 messages to core library data structures
-        - Calls core library processing functions
-        - Handles ROS2-specific concerns (TF lookups, message conversion)
+    - `detection_publisher` node: Subscribes to camera images, calls GroundingDINO service, publishes `RAIDetectionArray` messages with configurable throttling
+    - `node` (semantic map node): Subscribes to `RAIDetectionArray` and `/map` topics, handles TF transforms, converts ROS2 messages to core library data structures, and calls core processing functions
+    - `visualizer` node: Publishes semantic map annotations as RViz2 markers for real-time visualization, querying the database at configurable intervals
 
 3. Tools/Services:
     - `QuerySemanticMapTool`: LangChain tool for agent queries
@@ -477,27 +454,9 @@ Camera Images → detection_publisher → RAIDetectionArray → semantic_map_nod
 
 ### Usage Patterns from Other Layers
 
-Perception Layer Requirements:
+**Perception Layer**: The `detection_publisher` node bridges service-based perception (GroundingDINO) to topic-based messaging, processing camera images and publishing `RAIDetectionArray` messages for immediate processing with configurable confidence filtering and detection rate throttling.
 
--   Service-to-topic bridge: The `detection_publisher` node bridges the service-based perception layer (GroundingDINO, GroundedSAM) to topic-based messaging by continuously processing camera images and publishing detections
--   Topic-based processing: Handle `RAIDetectionArray` messages published to topics (from `detection_publisher` or other sources)
--   Immediate processing: Each detection array is processed immediately upon receipt in the callback
--   Confidence filtering: Only store high-confidence detections (configurable via ROS2 parameter `confidence_threshold`)
--   Configurable detection rate: The `detection_interval` parameter controls how frequently detections are processed to balance accuracy and computational load
-
-Exploration Layer Requirements (prioritized):
-
-1. Coverage tracking: Query which map regions have been semantically annotated (M)
-    - Foundation for other exploration features
-    - Requires spatial indexing of annotated regions (grid-based or region-based)
-    - Grid-based example: Divide map into fixed-size cells (e.g., 0.5m x 0.5m aligned with OccupancyGrid resolution), track which cells contain annotations
-    - Region-based example: Use spatial clustering or bounding polygons around annotated areas, define regions dynamically based on annotation density
-2. Goal-based queries: "Find unexplored regions with 'kitchen' objects" (M)
-    - Depends on: Coverage tracking, semantic queries
-    - Combines semantic search with coverage information
-3. Frontier detection: Identify boundaries between mapped and unmapped semantic regions (L)
-    - Depends on: Coverage tracking
-    - Requires boundary detection algorithms and spatial analysis
+**Exploration Layer** (preliminary): Future integration could support coverage tracking (identifying which map regions have been annotated), goal-based queries (finding unexplored regions with specific semantic properties), and frontier detection (boundaries between mapped/unmapped regions). These features would enable agent-guided exploration beyond geometric frontier-based methods.
 
 Agent Tool Integration:
 
@@ -529,8 +488,8 @@ Future direction (PostGIS Migration):
 
 -   Flow:
 
-1. Agent queries semantic map: `QuerySemanticMapTool("red cup", room="kitchen")`
-2. Semantic map returns: `{object: "red cup", location: (x: 2.5, y: 1.3, z: 0.8), timestamp: "2025-01-15T10:23:00", confidence: 0.92}`
+1. Agent queries semantic map: `QuerySemanticMapTool.invoke({"query": "red cup", "room": "kitchen"})`
+2. Semantic map returns: String with object locations including pose information
 3. Agent uses `NavigateToPoseTool` to go to that location
 4. Agent uses `GetDetectionTool` to confirm object presence
 5. Agent uses manipulation tools to grab and return the cup

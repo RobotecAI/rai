@@ -13,10 +13,12 @@
 # limitations under the License.
 
 import logging
+from pathlib import Path
 from typing import Optional, Tuple
 
 # ROS2 core
 import rclpy
+import yaml
 from cv_bridge import CvBridge
 
 # ROS2 geometry and transforms
@@ -36,27 +38,7 @@ from rai_interfaces.msg import RAIDetectionArray
 from rai_semap.core.backend.sqlite_backend import SQLiteBackend
 from rai_semap.core.semantic_map_memory import SemanticAnnotation, SemanticMapMemory
 from rai_semap.ros2.perception_utils import extract_pointcloud_from_bbox
-
-
-# Configure Python logging to use ROS2 logger
-class ROS2LogHandler(logging.Handler):
-    """Log handler that forwards Python logging to ROS2 logger."""
-
-    def __init__(self, ros2_node: Node):
-        super().__init__()
-        self.ros2_node = ros2_node
-
-    def emit(self, record):
-        log_msg = self.format(record)
-        if record.levelno >= logging.ERROR:
-            self.ros2_node.get_logger().error(log_msg)
-        elif record.levelno >= logging.WARNING:
-            self.ros2_node.get_logger().warn(log_msg)
-        elif record.levelno >= logging.INFO:
-            self.ros2_node.get_logger().info(log_msg)
-        else:
-            self.ros2_node.get_logger().debug(log_msg)
-
+from rai_semap.utils.ros2_log import ROS2LogHandler
 
 # Constants
 DEFAULT_QUEUE_SIZE = 10
@@ -109,84 +91,123 @@ class SemanticMapNode(Node):
         self._initialize_subscriptions()
 
     def _initialize_parameters(self):
-        """Initialize ROS2 parameters."""
-        # Define all parameters with their defaults and descriptions
+        """Initialize ROS2 parameters from YAML config file."""
+        current_dir = Path(__file__).parent
+        config_dir = current_dir / "config"
+
+        # Declare config file path parameter
+        self.declare_parameter(
+            "node_config",
+            "",
+            descriptor=ParameterDescriptor(
+                type=ParameterType.PARAMETER_STRING,
+                description="Path to node YAML config file (empty = use default in config/)",
+            ),
+        )
+
+        # Get config file path
+        node_config_path = (
+            self.get_parameter("node_config").get_parameter_value().string_value
+        )
+        if node_config_path:
+            node_yaml = Path(node_config_path)
+        else:
+            node_yaml = config_dir / "node.yaml"
+
+        # Load YAML config
+        with open(node_yaml, "r") as f:
+            node_config = yaml.safe_load(f)
+        node_params = node_config.get("rai_semap_node", {}).get("ros__parameters", {})
+
+        # Extract grouped parameters with defaults
+        storage = node_params.get("storage", {})
+        detection_filtering = node_params.get("detection_filtering", {})
+        deduplication = node_params.get("deduplication", {})
+        topics = node_params.get("topics", {})
+        map_config = node_params.get("map", {})
+
+        # Declare all parameters with descriptions
         parameters = [
+            # Storage
             (
                 "database_path",
-                "semantic_map.db",
+                storage.get("database_path", "semantic_map.db"),
                 ParameterType.PARAMETER_STRING,
                 "Path to SQLite database file",
             ),
             (
+                "location_id",
+                storage.get("location_id", "default_location"),
+                ParameterType.PARAMETER_STRING,
+                "Identifier for the physical location",
+            ),
+            # Detection filtering
+            (
                 "confidence_threshold",
-                0.5,
+                detection_filtering.get("confidence_threshold", 0.5),
                 ParameterType.PARAMETER_DOUBLE,
                 "Minimum confidence score (0.0-1.0) for storing detections",
             ),
             (
                 "class_confidence_thresholds",
-                "",
+                detection_filtering.get("class_confidence_thresholds", ""),
                 ParameterType.PARAMETER_STRING,
                 "Class-specific thresholds as 'class1:threshold1,class2:threshold2' (e.g., 'person:0.7,window:0.6')",
             ),
             (
+                "min_bbox_area",
+                detection_filtering.get("min_bbox_area", 100.0),
+                ParameterType.PARAMETER_DOUBLE,
+                "Minimum bounding box area (pixels^2) to filter small false positives",
+            ),
+            # Deduplication
+            (
                 "class_merge_thresholds",
-                "",
+                deduplication.get("class_merge_thresholds", ""),
                 ParameterType.PARAMETER_STRING,
                 "Class-specific merge radii (meters) for deduplication as 'class1:radius1,class2:radius2' (e.g., 'couch:2.5,table:1.5')",
             ),
             (
-                "min_bbox_area",
-                100.0,
-                ParameterType.PARAMETER_DOUBLE,
-                "Minimum bounding box area (pixels^2) to filter small false positives",
-            ),
-            (
                 "use_pointcloud_dedup",
-                True,
+                deduplication.get("use_pointcloud_dedup", True),
                 ParameterType.PARAMETER_BOOL,
                 "Use point cloud features for improved deduplication matching",
             ),
-            (
-                "depth_topic",
-                "",
-                ParameterType.PARAMETER_STRING,
-                "Depth image topic (optional, for point cloud extraction)",
-            ),
-            (
-                "camera_info_topic",
-                "",
-                ParameterType.PARAMETER_STRING,
-                "Camera info topic (optional, for point cloud extraction)",
-            ),
+            # Topics
             (
                 "detection_topic",
-                "/detection_array",
+                topics.get("detection_topic", "/detection_array"),
                 ParameterType.PARAMETER_STRING,
                 "Topic for RAIDetectionArray messages",
             ),
             (
                 "map_topic",
-                "/map",
+                topics.get("map_topic", "/map"),
                 ParameterType.PARAMETER_STRING,
                 "Topic for OccupancyGrid map messages",
             ),
             (
+                "depth_topic",
+                topics.get("depth_topic", ""),
+                ParameterType.PARAMETER_STRING,
+                "Depth image topic (optional, for point cloud extraction)",
+            ),
+            (
+                "camera_info_topic",
+                topics.get("camera_info_topic", ""),
+                ParameterType.PARAMETER_STRING,
+                "Camera info topic (optional, for point cloud extraction)",
+            ),
+            # Map/SLAM
+            (
                 "map_frame_id",
-                "map",
+                map_config.get("map_frame_id", "map"),
                 ParameterType.PARAMETER_STRING,
                 "Frame ID of the SLAM map",
             ),
             (
-                "location_id",
-                "default_location",
-                ParameterType.PARAMETER_STRING,
-                "Identifier for the physical location",
-            ),
-            (
                 "map_resolution",
-                0.05,
+                map_config.get("map_resolution", 0.05),
                 ParameterType.PARAMETER_DOUBLE,
                 "OccupancyGrid resolution (meters/pixel)",
             ),
@@ -231,7 +252,7 @@ class SemanticMapNode(Node):
                             f"Class-specific threshold: {class_name.strip()}={threshold:.3f}"
                         )
                     except ValueError:
-                        self.get_logger().warn(
+                        self.get_logger().warning(
                             f"Invalid threshold value in '{item}', skipping"
                         )
 
@@ -251,7 +272,7 @@ class SemanticMapNode(Node):
                             f"Class-specific merge radius: {class_name.strip()}={radius:.2f}m"
                         )
                     except ValueError:
-                        self.get_logger().warn(
+                        self.get_logger().warning(
                             f"Invalid merge radius value in '{item}', skipping"
                         )
 
@@ -284,7 +305,11 @@ class SemanticMapNode(Node):
             RAIDetectionArray,
             detection_topic,
             self.detection_callback,
-            DEFAULT_QUEUE_SIZE,
+            qos_profile_sensor_data,
+        )
+        self.get_logger().info(
+            f"Subscribed to detection topic: {detection_topic} "
+            f"(QoS: reliability={qos_profile_sensor_data.reliability.name})"
         )
         self.map_subscription = self.create_subscription(
             OccupancyGrid, map_topic, self.map_callback, DEFAULT_QUEUE_SIZE
@@ -356,12 +381,13 @@ class SemanticMapNode(Node):
         )
 
         if result is None:
-            self.get_logger().warn("Failed to extract point cloud from bbox")
+            self.get_logger().warning("Failed to extract point cloud from bbox")
 
         return result
 
     def detection_callback(self, msg: RAIDetectionArray):
         """Process detection array and store annotations."""
+        self.get_logger().debug("Entering detection_callback")
         confidence_threshold = self._get_double_parameter("confidence_threshold")
         map_frame_id = self._get_string_parameter("map_frame_id")
 
@@ -381,7 +407,7 @@ class SemanticMapNode(Node):
                     f"frame_id={det.header.frame_id}"
                 )
             else:
-                self.get_logger().warn(f"  Detection {i} has no results!")
+                self.get_logger().warning(f"  Detection {i} has no results!")
 
         timestamp = rclpy.time.Time.from_msg(msg.header.stamp)
         detection_source = msg.header.frame_id or "unknown"
@@ -389,6 +415,10 @@ class SemanticMapNode(Node):
         stored_count = 0
         skipped_count = 0
         default_frame_id = msg.header.frame_id
+        self.get_logger().debug(
+            f"Processing {len(msg.detections)} detections from source={detection_source}, "
+            f"confidence_threshold={confidence_threshold}"
+        )
         for detection in msg.detections:
             if self._process_detection(
                 detection,
@@ -407,7 +437,7 @@ class SemanticMapNode(Node):
                 f"Stored {stored_count} annotations, skipped {skipped_count} (low confidence or transform failed)"
             )
         elif len(msg.detections) > 0:
-            self.get_logger().warn(
+            self.get_logger().warning(
                 f"Received {len(msg.detections)} detections but none were stored "
                 f"(confidence threshold: {confidence_threshold})"
             )
@@ -426,6 +456,9 @@ class SemanticMapNode(Node):
         Returns:
             True if annotation was stored, False otherwise.
         """
+        self.get_logger().debug(
+            f"Entering _process_detection: source={detection_source}"
+        )
         if not detection.results:
             self.get_logger().debug("Detection has no results, skipping")
             return False
@@ -466,7 +499,7 @@ class SemanticMapNode(Node):
         # Use detection frame_id, fallback to message header frame_id if empty
         source_frame = detection.header.frame_id or default_frame_id
         if not source_frame:
-            self.get_logger().warn(
+            self.get_logger().warning(
                 f"Detection has no frame_id (detection.frame_id='{detection.header.frame_id}', "
                 f"default_frame_id='{default_frame_id}'), skipping"
             )
@@ -483,7 +516,7 @@ class SemanticMapNode(Node):
         )
 
         if pose_is_empty:
-            self.get_logger().warn(
+            self.get_logger().warning(
                 f"Detection for {object_class} has empty pose (0,0,0). "
                 f"GroundingDINO provides 2D bounding boxes but no 3D pose. "
                 f"Cannot store annotation without 3D position. "
@@ -510,7 +543,7 @@ class SemanticMapNode(Node):
                 f"z={pose_in_map_frame.position.z:.3f}"
             )
         except Exception as e:
-            self.get_logger().warn(
+            self.get_logger().warning(
                 f"Failed to transform pose from {source_frame} to {map_frame_id}: {e}"
             )
             return False
@@ -554,7 +587,7 @@ class SemanticMapNode(Node):
                         f"{pc_centroid_map.position.z:.2f})"
                     )
                 except Exception as e:
-                    self.get_logger().warn(
+                    self.get_logger().warning(
                         f"Failed to transform point cloud centroid: {e}"
                     )
 
@@ -680,7 +713,7 @@ class SemanticMapNode(Node):
         map_frame_id = self._get_string_parameter("map_frame_id")
 
         if msg.header.frame_id != map_frame_id:
-            self.get_logger().warn(
+            self.get_logger().warning(
                 f"Map frame_id mismatch: expected {map_frame_id}, got {msg.header.frame_id}"
             )
 

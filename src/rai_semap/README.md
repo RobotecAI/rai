@@ -2,39 +2,61 @@
 
 ⚠️ **Experimental Module**: This module is in active development. Features may change and some functionality is still in progress.
 
-## Moudle Overview
+## Overview
 
-When a robot explores a new environment, it builds a map of the space using SLAM (Simultaneous Localization and Mapping), which creates a geometric map showing walls, obstacles, and open areas. This module extends that map with semantic information, storing what objects the robot sees and where they are located. It provides persistent storage of semantic annotations (object class, 3D pose, confidence) indexed by both spatial coordinates and semantic labels. Using this semantic map memory, user can do queries like "where did I see a red cup?" and "what objects are within 2m of (x,y)?".
+Imagine your robot exploring a new warehouse or office building. Using SLAM (Simultaneous Localization and Mapping), it builds a geometric map showing walls and open areas, but it doesn't remember what objects it saw—like that tool cart or equipment in the storage area.
+
+RAI Semantic Map Memory solves this by adding a memory layer. As the robot explores, it remembers not just where walls are, but also what objects it detected and where they were located. Later, you can ask questions like "where did I see a pallet?" or "what objects are near the loading dock?" and the robot can answer using its stored memory.
+
+This module provides persistent storage of semantic annotations—linking object identities (like "shelf", "cart", "pallet") to their 3D locations in the map. It enables spatial-semantic queries that combine "what" and "where" information.
+
+## Some Usage Examples
+
+-   Store object detections with their locations as the robot explores
+-   Query objects by location: "what's near point (x, y)?"
+-   Visualize stored annotations overlaid on the SLAM map
 
 For detailed design and architecture, see [design.md](../design.md).
 
-## End-to-End Validation
+## Quick Start
 
-Phase 4 validation tests the full pipeline: launching the demo, collecting detections during navigation, and verifying stored data.
+The following examples use the ROSBot XL demo to illustrate how to use rai_semap.
 
 ### Prerequisites
 
 -   ROS2 environment set up
--   rai_semap package installed, `poetry install --with semap`
--   ROSBot XL demo setup, see general readme.
+-   rai_semap package installed: `poetry install --with semap`
+-   ROSBot XL demo setup, see instuctions at [rosbotxl demo](../demos/rosbot_xl.md)
 
-### Steps
+### Step 0: Launch the ROSBot XL demo
 
-1. Launch rosbot-xl demo with semantic map node:
+Follow the instruction from [rosbotxl demo](../demos/rosbot_xl.md).
+
+### Step 1: Launch the Semantic Map Node
+
+Start the semantic map node to begin collecting and storing detections:
 
 ```bash
-ros2 launch examples/rosbot-xl-semap.launch.py \
-    game_launcher:=./examples/rosbot-xl.launch.py game_launcher:=demo_assets/rosbot/RAIROSBotXLDemo/RAIROSBotXLDemo.GameLauncher \
-    database_path:=semantic_map.db \
-    location_id:=rosbot_xl_demo
+ros2 launch src/rai_semap/rai_semap/scripts/semap.launch.py
 ```
 
-2. Navigate and collect detections:
+This uses default configuration files from `rai_semap/ros2/config/`. The default configs assume depth topic `/camera/depth/image_rect_raw` and camera info topic `/camera/color/camera_info`. If your topics use different names, create custom config files or override parameters.
+
+To use custom configs:
+
+```bash
+ros2 launch src/rai_semap/rai_semap/scripts/semap.launch.py \
+    node_config:=/path/to/node.yaml \
+    detection_publisher_config:=/path/to/detection_publisher.yaml \
+    perception_utils_config:=/path/to/perception_utils.yaml
+```
+
+### Step 2: Collect Detections
 
 In a separate terminal, run the navigation script to move the robot through waypoints and collect detections:
 
 ```bash
-python examples/rosbot-xl-navigate-collect.py \
+python -m rai_semap.scripts.navigate_collect \
     --waypoints 2.0 0.0 4.0 0.0 2.0 2.0 \
     --collect-duration 10.0 \
     --use-sim-time
@@ -42,28 +64,51 @@ python examples/rosbot-xl-navigate-collect.py \
 
 The script navigates to each waypoint and waits to allow detections to be collected and stored in the semantic map.
 
-3. Validate stored data:
+### Step 3: Validate Stored Data
 
-After navigation completes, run the validation script to verify the database contents:
+After navigation completes, verify what was stored:
 
 ```bash
-python examples/validate-semantic-map.py \
+python -m rai_semap.scripts.validate_semap \
     --database-path semantic_map.db \
-    --location-id rosbot_xl_demo
+    --location-id default_location
 ```
 
-The validation script reports:
+The validation script shows total annotation count, annotations grouped by object class, confidence scores, and spatial distribution.
 
--   Total annotation count
--   Annotations grouped by object class
--   Average confidence scores per class
--   Detection sources
--   Spatial distribution of annotations
--   Field validation checks
+## Configuration
 
-### Query by Timestamp
+Configuration parameters (database_path, location_id, topics, etc.) are set in YAML config files. If config files are not provided, default configs in `rai_semap/ros2/config/` are used.
 
-To query annotations by timestamp, you can filter results after querying. Timestamps are stored as string representations of ROS2 Time objects. Here's an example Python script:
+## Visualization
+
+View your semantic map annotations overlaid on the SLAM map in RViz2.
+
+### Start the Visualizer
+
+```bash
+python -m rai_semap.ros2.visualizer \
+    --ros-args \
+    -p database_path:=semantic_map.db \
+    -p location_id:=default_location \
+    -p update_rate:=1.0 \
+    -p marker_scale:=0.3 \
+    -p show_text_labels:=true
+```
+
+### Setup RViz2
+
+1. Launch RViz2: `rviz2`
+2. Add displays:
+    - Add "Map" display → subscribe to `/map` topic
+    - Add "MarkerArray" display → subscribe to `/semantic_map_markers` topic
+3. Set Fixed Frame to `map` (or your map frame ID)
+
+The visualizer shows color-coded markers by object class (bed=blue, chair=green, door=orange, shelf=purple, table=violet). Marker transparency scales with confidence score, and optional text labels show object class names.
+
+## Querying the Semantic Map
+
+Query stored annotations programmatically using the Python API:
 
 ```python
 from geometry_msgs.msg import Point
@@ -79,102 +124,10 @@ memory = SemanticMapMemory(
     resolution=0.05,
 )
 
-# Query all annotations
-center = Point(x=0.0, y=0.0, z=0.0)
-all_annotations = memory.query_by_location(center, radius=1e10)
+# Query annotations near a location
+center = Point(x=2.0, y=0.0, z=0.0)
+annotations = memory.query_by_location(center, radius=2.0)
 
-# Filter by timestamp using string comparison
-# Timestamps are stored as strings in format: "Time(nanoseconds=...)"
-# Extract nanoseconds from timestamp string for comparison
-def parse_timestamp_ns(timestamp_str):
-    """Extract nanoseconds from timestamp string like 'Time(nanoseconds=123456789)'"""
-    if not timestamp_str or not timestamp_str.startswith("Time(nanoseconds="):
-        return None
-    try:
-        ns_str = timestamp_str.split("nanoseconds=")[1].rstrip(")")
-        return int(ns_str)
-    except (IndexError, ValueError):
-        return None
-
-# Example: Get annotations from last hour
-import time
-current_ns = int(time.time() * 1e9)
-one_hour_ns = int(3600 * 1e9)
-one_hour_ago_ns = current_ns - one_hour_ns
-
-recent_annotations = [
-    ann for ann in all_annotations
-    if ann.timestamp and (ann_ns := parse_timestamp_ns(ann.timestamp)) and ann_ns >= one_hour_ago_ns
-]
-
-print(f"Found {len(recent_annotations)} annotations from the last hour")
-
-# Filter by specific time range (using string comparison)
-start_time_str = "Time(nanoseconds=1700000000000000000)"  # Example timestamp
-end_time_str = "Time(nanoseconds=1700003600000000000)"   # Example timestamp
-
-time_range_annotations = [
-    ann for ann in all_annotations
-    if ann.timestamp and start_time_str <= ann.timestamp <= end_time_str
-]
-
-print(f"Found {len(time_range_annotations)} annotations in time range")
+for ann in annotations:
+    print(f"Found {ann.object_class} at ({ann.pose.position.x}, {ann.pose.position.y})")
 ```
-
-For more complex timestamp queries, you can also query the database directly using SQL:
-
-```python
-import sqlite3
-
-conn = sqlite3.connect("semantic_map.db")
-cursor = conn.cursor()
-
-# Example: Query annotations after a specific timestamp
-# Timestamps are stored as strings, so string comparison works for ordering
-cursor.execute("""
-    SELECT * FROM annotations
-    WHERE location_id = ?
-    AND timestamp >= ?
-    ORDER BY timestamp DESC
-""", ("rosbot_xl_demo", "Time(nanoseconds=1700000000000000000)"))
-
-rows = cursor.fetchall()
-print(f"Found {len(rows)} annotations after specified timestamp")
-```
-
-### Expected Output
-
-The validation script should show annotations stored from detections collected during navigation, with valid confidence scores, detection sources, and spatial coordinates in the map frame.
-
-## Utilities
-
-### Clear All Annotations
-
-To remove all annotations from the semantic map database:
-
-```bash
-python -m rai_semap.utils.clear_annotations \
-    --database-path semantic_map.db
-```
-
-To remove annotations for a specific location only:
-
-```bash
-python -m rai_semap.utils.clear_annotations \
-    --database-path semantic_map.db \
-    --location-id rosbot_xl_demo
-```
-
-To skip the confirmation prompt:
-
-```bash
-python -m rai_semap.utils.clear_annotations \
-    --database-path semantic_map.db \
-    --yes
-```
-
-The script will:
-
--   Show the number of annotations that will be deleted
--   Prompt for confirmation (unless `--yes` is used)
--   Delete the annotations and report the count deleted
