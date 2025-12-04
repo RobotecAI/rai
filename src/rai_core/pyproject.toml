@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "rai_core"
-version = "2.5.9"
+version = "2.5.10"
 description = "Core functionality for RAI framework"
 authors = ["Maciej Majek <maciej.majek@robotec.ai>", "Bartłomiej Boczek <bartlomiej.boczek@robotec.ai>", "Kajetan Rachwał <kajetan.rachwal@robotec.ai>"]
 readme = "README.md"
@@ -38,7 +38,7 @@ opencv-python = "^4.9.0.80"
 lark = "^1.1.9"
 transforms3d = "^0.4.1"
 pillow = "^11.0.0"
-langfuse = "^2.60.2"
+langfuse = "^3.10.5"
 pydub = "^0.25.1"
 streamlit = "^1.44"
 numpy = "<2.0"

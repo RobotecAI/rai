@@ -37,7 +37,7 @@ tqdm = ">=4.60.0, <4.67.0"
 huggingface-hub = ">=0.34.0, <0.37.0"  # Required by unsloth[colab-new], Python 3.10 compatible
 
 # Langfuse for LLM observability and evaluation
-langfuse = "^2.0.0, <3.0.0"
+langfuse = "^3.10.5"
 
 # Template engine for chat templates
 jinja2 = "^3.0.0, <4.0.0"

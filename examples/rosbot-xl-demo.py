@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import uuid
 from typing import List, cast
 
 import rclpy
@@ -88,13 +89,50 @@ def initialize_agent() -> Runnable[ReActAgentState, ReActAgentState]:
     return cast(Runnable[ReActAgentState, ReActAgentState], agent)
 
 
-def main():
-    run_streamlit_app(
-        initialize_agent(),
-        "RAI ROSBotXL Demo",
-        "Hi! I am a ROSBotXL robot. What can I do for you?",
-    )
+def _get_tracing_decorators():
+    """Get tracing decorators based on config.toml settings."""
+    from rai.initialization.model_initialization import load_config
 
+    try:
+        config = load_config()
+        if config.tracing.langfuse.use_langfuse:
+            from langfuse import observe, propagate_attributes
+            return observe, propagate_attributes
+    except Exception:
+        pass
+
+    # Return no-op decorators if langfuse is not enabled
+    def noop_decorator(func):
+        return func
+
+    from contextlib import nullcontext
+
+    def noop_context_manager(**kwargs):
+        return nullcontext()
+
+    return noop_decorator, noop_context_manager
+
+
+observe, propagate_attributes = _get_tracing_decorators()
+
+
+def generate_session_id(app_name: str) -> str:
+    """Generate a session ID using app name and UUID."""
+    session_uuid = str(uuid.uuid4())
+    return f"{app_name}-{session_uuid}"
+
+
+@observe()
+def main():
+    app_name = "rosbot-xl-demo"
+    session_id = generate_session_id(app_name)
+    with propagate_attributes(session_id=session_id):
+        # All nested observations automatically inherit session_id
+        run_streamlit_app(
+            initialize_agent(),
+            "RAI ROSBotXL Demo",
+            "Hi! I am a ROSBotXL robot. What can I do for you?",
+        )
 
 if __name__ == "__main__":
     main()
