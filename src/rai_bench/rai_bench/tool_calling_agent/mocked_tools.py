@@ -21,7 +21,7 @@ from unittest.mock import MagicMock
 import numpy as np
 import numpy.typing as npt
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel, ValidationError, computed_field
+from pydantic import BaseModel, SkipValidation, ValidationError, computed_field
 from rai.communication.ros2.api.conversion import import_message_from_str
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.communication.ros2.messages import ROS2Message
@@ -474,7 +474,9 @@ class MockGetROS2ActionFeedbackTool(GetROS2ActionFeedbackTool):
     connector: ROS2Connector = MagicMock(spec=ROS2Connector)
     available_feedbacks: Dict[str, List[Any]] = {}
     internal_action_id_mapping: Dict[str, str] = {}
-    action_feedbacks_store_lock: Lock = Lock()
+    # SkipValidation wrapper prevents Pydantic from attempting to validate the Lock object,
+    # which is a C built-in and cannot be validated as a Python type
+    action_feedbacks_store_lock: SkipValidation[Lock] = Lock()
 
     def _run(self, action_id: str) -> str:
         if action_id not in self.internal_action_id_mapping:
@@ -489,7 +491,9 @@ class MockGetROS2ActionFeedbackTool(GetROS2ActionFeedbackTool):
 class MockGetROS2ActionResultTool(GetROS2ActionResultTool):
     available_results: Dict[str, Any] = {}
     internal_action_id_mapping: Dict[str, str] = {}
-    action_results_store_lock: Lock = Lock()
+    # SkipValidation wrapper prevents Pydantic from attempting to validate the Lock object,
+    # which is a C built-in and cannot be validated as a Python type
+    action_results_store_lock: SkipValidation[Lock] = Lock()
 
     def _run(self, action_id: str) -> str:
         if action_id not in self.internal_action_id_mapping:
