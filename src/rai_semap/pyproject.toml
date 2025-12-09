@@ -7,7 +7,7 @@ name = "rai_semap"
 version = "0.1.0"
 description = "Semantic mapping and spatial memory for RAI"
 authors = ["Julia Jia"]
-readme = "rai_semap/README.md"
+readme = "README.md"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Development Status :: 4 - Beta",

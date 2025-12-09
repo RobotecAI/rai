@@ -26,11 +26,11 @@ The following examples use the ROSBot XL demo to illustrate how to use rai_semap
 
 -   ROS2 environment set up
 -   rai_semap package installed: `poetry install --with semap`
--   ROSBot XL demo setup, see instuctions at [rosbotxl demo](../demos/rosbot_xl.md)
+-   ROSBot XL demo setup, see instuctions at [ROSBot XL demo](../../docs/demos/rosbot_xl.md)
 
 ### Step 0: Launch the ROSBot XL demo
 
-Follow the instruction from [rosbotxl demo](../demos/rosbot_xl.md).
+Follow the instruction from [ROSBot XL demo](../../docs/demos/rosbot_xl.md).
 
 ### Step 1: Launch the Semantic Map Node
 
@@ -119,7 +119,7 @@ from rai_semap.core.semantic_map_memory import SemanticMapMemory
 backend = SQLiteBackend("semantic_map.db")
 memory = SemanticMapMemory(
     backend=backend,
-    location_id="rosbot_xl_demo",
+    location_id="default_location",
     map_frame_id="map",
     resolution=0.05,
 )
