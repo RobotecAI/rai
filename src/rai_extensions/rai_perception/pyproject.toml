@@ -15,7 +15,7 @@ torch = "^2.3.1"
 torchvision = "^0.18.1"
 rf-groundingdino = "^0.2.0"
 # TODO(juliaj): test-pypi is for testing purpose only, update to rai-gsam2 info once it is published to pypi
-rai-gsam2 = { version = "1.0.1", source = "test-pypi" }
+rai-gsam2 = { version = "1.1.3", source = "test-pypi" }
 rai_core = ">=2.0.0.a2,<3.0.0"
 
 [build-system]
