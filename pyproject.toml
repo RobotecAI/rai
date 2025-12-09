@@ -40,6 +40,13 @@ optional = true
 [tool.poetry.group.s2s.dependencies]
 rai_s2s = {path = "src/rai_s2s", develop = true, extras = ["all"]}
 
+[tool.poetry.group.semap]
+optional = true
+
+[tool.poetry.group.semap.dependencies]
+rai_semap = {path = "src/rai_semap", develop = true}
+
+
 [tool.poetry.group.simbench]
 optional = true
 
