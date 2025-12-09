@@ -246,6 +246,23 @@ class SemanticAnnotation:
     # metadata.pointcloud: {centroid, size_3d, point_count}
 ```
 
+Regarding the `timestamp` field, there is a choice of using Python `datetime`. While it provides type safety and easy comparison, using `datetime` has a few drawbacks. For example:
+
+1. Precision loss: ROS `rclpy.time.Time` has nanosecond precision (`sec` + `nanosec`), while Python `datetime` has microsecond precision.
+
+2. Conversion overhead: We'll need to convert `rclpy.time.Time` → `datetime` at the ROS boundary. Example:
+
+```python
+# Conversion needed
+ros_time = rclpy.time.Time.from_msg(msg.header.stamp)
+# Convert to datetime (loses nanosec precision)
+dt = datetime.fromtimestamp(ros_time.nanoseconds / 1e9)
+```
+
+3. Database storage: Both SQLite and PostgreSQL still require conversion:
+    - SQLite: No native datetime type; stored as TEXT (ISO format) or REAL/INTEGER (Unix timestamp)
+    - PostgreSQL: Has TIMESTAMP, but you still need to handle timezone (naive vs aware)
+
 #### SpatialIndex
 
 **Database-level spatial index (R-tree) for efficient spatial queries.**
