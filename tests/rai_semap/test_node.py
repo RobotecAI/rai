@@ -24,7 +24,6 @@ import rclpy
 # ROS2 message types
 from geometry_msgs.msg import Pose, Quaternion
 from nav_msgs.msg import MapMetaData, OccupancyGrid
-from rclpy.node import Node
 from std_msgs.msg import Header
 from vision_msgs.msg import Detection2D, ObjectHypothesis, ObjectHypothesisWithPose
 
@@ -54,10 +53,14 @@ def temp_db_path():
 
 @pytest.fixture
 def node(ros2_context, temp_db_path):
-    """Create a SemanticMapNode instance for testing."""
-    node = SemanticMapNode(database_path=temp_db_path)
+    """Create a SemanticMapNode instance for testing.
+
+    Uses single_threaded executor to avoid executor performance warnings
+    in simple unit tests that don't need multi-threaded execution.
+    """
+    node = SemanticMapNode(database_path=temp_db_path, executor_type="single_threaded")
     yield node
-    node.destroy_node()
+    node.shutdown()
 
 
 # Test helper functions
@@ -101,8 +104,10 @@ def create_detection(
 
 def test_node_creation(node):
     """Test that SemanticMapNode can be created with default parameters."""
-    assert isinstance(node, Node)
-    assert node.get_name() == "rai_semap_node"
+    from rai.communication.ros2 import ROS2Connector
+
+    assert isinstance(node, ROS2Connector)
+    assert node.node.get_name() == "rai_semap_node"
 
     expected_params = [
         "database_path",
@@ -114,33 +119,40 @@ def test_node_creation(node):
         "map_resolution",
     ]
     for param in expected_params:
-        assert node.has_parameter(param)
+        assert node.node.has_parameter(param)
 
 
 def test_node_parameter_defaults(node, temp_db_path):
     """Test that node parameters have correct default values."""
     assert (
-        node.get_parameter("database_path").get_parameter_value().string_value
+        node.node.get_parameter("database_path").get_parameter_value().string_value
         == temp_db_path
     )
     assert (
-        node.get_parameter("confidence_threshold").get_parameter_value().double_value
+        node.node.get_parameter("confidence_threshold")
+        .get_parameter_value()
+        .double_value
         == 0.5
     )
     assert (
-        node.get_parameter("detection_topic").get_parameter_value().string_value
+        node.node.get_parameter("detection_topic").get_parameter_value().string_value
         == "/detection_array"
     )
-    assert node.get_parameter("map_topic").get_parameter_value().string_value == "/map"
     assert (
-        node.get_parameter("map_frame_id").get_parameter_value().string_value == "map"
+        node.node.get_parameter("map_topic").get_parameter_value().string_value
+        == "/map"
     )
     assert (
-        node.get_parameter("location_id").get_parameter_value().string_value
+        node.node.get_parameter("map_frame_id").get_parameter_value().string_value
+        == "map"
+    )
+    assert (
+        node.node.get_parameter("location_id").get_parameter_value().string_value
         == "default_location"
     )
     assert (
-        node.get_parameter("map_resolution").get_parameter_value().double_value == 0.05
+        node.node.get_parameter("map_resolution").get_parameter_value().double_value
+        == 0.05
     )
 
 
@@ -160,7 +172,7 @@ def test_node_subscriptions_created(node):
 
 def test_detection_callback_low_confidence(node):
     """Test that detections below confidence threshold are filtered out."""
-    node.set_parameters(
+    node.node.set_parameters(
         [
             rclpy.parameter.Parameter(
                 "confidence_threshold", rclpy.parameter.Parameter.Type.DOUBLE, 0.8
@@ -180,7 +192,7 @@ def test_detection_callback_low_confidence(node):
 
 def test_detection_callback_high_confidence(node):
     """Test that high-confidence detections are processed."""
-    node.set_parameters(
+    node.node.set_parameters(
         [
             rclpy.parameter.Parameter(
                 "confidence_threshold", rclpy.parameter.Parameter.Type.DOUBLE, 0.5
@@ -203,7 +215,7 @@ def test_detection_callback_high_confidence(node):
 
 def test_map_callback_updates_metadata(node):
     """Test that map callback updates metadata."""
-    node.set_parameters(
+    node.node.set_parameters(
         [
             rclpy.parameter.Parameter(
                 "map_frame_id", rclpy.parameter.Parameter.Type.STRING, "map"

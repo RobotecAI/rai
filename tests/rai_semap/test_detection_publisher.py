@@ -20,21 +20,25 @@ from rai_semap.ros2.detection_publisher import DetectionPublisher
 
 def set_parameter(node, name: str, value, param_type):
     """Helper to set a single parameter on a node."""
-    node.set_parameters([rclpy.parameter.Parameter(name, param_type, value)])
+    node.node.set_parameters([rclpy.parameter.Parameter(name, param_type, value)])
 
 
 @pytest.fixture
 def detection_publisher(ros2_context):
-    """Create a DetectionPublisher instance for testing."""
-    node = DetectionPublisher()
+    """Create a DetectionPublisher instance for testing.
+
+    Uses single_threaded executor to avoid executor performance warnings
+    in simple unit tests that don't need multi-threaded execution.
+    """
+    node = DetectionPublisher(executor_type="single_threaded")
     yield node
-    node.destroy_node()
+    node.shutdown()
 
 
 def test_detection_publisher_initialization(detection_publisher):
     """Test that DetectionPublisher initializes correctly."""
     assert detection_publisher is not None
-    assert detection_publisher.get_name() == "detection_publisher"
+    assert detection_publisher.node.get_name() == "detection_publisher"
     assert detection_publisher.bridge is not None
     assert detection_publisher.last_image is None
     assert detection_publisher.last_depth_image is None

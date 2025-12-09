@@ -24,12 +24,11 @@ from cv_bridge import CvBridge
 # ROS2 geometry and transforms
 from geometry_msgs.msg import Point, Pose, PoseStamped
 from nav_msgs.msg import OccupancyGrid
+from rai.communication.ros2 import ROS2Connector
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
-from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import CameraInfo, Image
 from tf2_geometry_msgs import do_transform_pose_stamped
-from tf2_ros import Buffer, TransformListener
 
 # RAI interfaces
 from rai_interfaces.msg import RAIDetectionArray
@@ -45,15 +44,25 @@ DEFAULT_QUEUE_SIZE = 10
 TF_LOOKUP_TIMEOUT_SEC = 1.0
 
 
-class SemanticMapNode(Node):
+class SemanticMapNode(ROS2Connector):
     """ROS2 node for semantic map processing."""
 
-    def __init__(self, database_path: Optional[str] = None):
-        super().__init__("rai_semap_node")
+    def __init__(
+        self, database_path: Optional[str] = None, executor_type: str = "multi_threaded"
+    ):
+        """Initialize SemanticMapNode.
+
+        Args:
+            database_path: Optional path to SQLite database file.
+            executor_type: Type of executor to use ("single_threaded" or "multi_threaded").
+                Defaults to "multi_threaded" for production use. Use "single_threaded" for
+                simple unit tests to avoid executor performance warnings.
+        """
+        super().__init__(node_name="rai_semap_node", executor_type=executor_type)
 
         # Configure Python logging to forward to ROS2 logger
         # Configure all rai_semap loggers (including submodules)
-        handler = ROS2LogHandler(self)
+        handler = ROS2LogHandler(self.node)
         handler.setLevel(logging.DEBUG)
 
         # Configure root rai_semap logger
@@ -72,7 +81,7 @@ class SemanticMapNode(Node):
 
         self._initialize_parameters()
         if database_path is not None:
-            self.set_parameters(
+            self.node.set_parameters(
                 [
                     rclpy.parameter.Parameter(
                         "database_path",
@@ -96,7 +105,7 @@ class SemanticMapNode(Node):
         config_dir = current_dir / "config"
 
         # Declare config file path parameter
-        self.declare_parameter(
+        self.node.declare_parameter(
             "node_config",
             "",
             descriptor=ParameterDescriptor(
@@ -107,7 +116,7 @@ class SemanticMapNode(Node):
 
         # Get config file path
         node_config_path = (
-            self.get_parameter("node_config").get_parameter_value().string_value
+            self.node.get_parameter("node_config").get_parameter_value().string_value
         )
         if node_config_path:
             node_yaml = Path(node_config_path)
@@ -214,7 +223,7 @@ class SemanticMapNode(Node):
         ]
 
         for name, default, param_type, description in parameters:
-            self.declare_parameter(
+            self.node.declare_parameter(
                 name,
                 default,
                 descriptor=ParameterDescriptor(
@@ -224,17 +233,21 @@ class SemanticMapNode(Node):
             )
 
     def _initialize_tf(self):
-        """Initialize TF buffer and listener."""
-        self.tf_buffer = Buffer(node=self)
-        self.tf_listener = TransformListener(self.tf_buffer, self)
+        """Initialize TF buffer and listener.
+
+        Note: ROS2Connector already creates _tf_buffer and _tf_listener internally.
+        We access the connector's TF buffer to avoid duplication.
+        """
+        # Use the connector's internal TF buffer (already created in __init__)
+        self.tf_buffer = self._tf_buffer
 
     def _get_string_parameter(self, name: str) -> str:
         """Get string parameter value."""
-        return self.get_parameter(name).get_parameter_value().string_value
+        return self.node.get_parameter(name).get_parameter_value().string_value
 
     def _get_double_parameter(self, name: str) -> float:
         """Get double parameter value."""
-        return self.get_parameter(name).get_parameter_value().double_value
+        return self.node.get_parameter(name).get_parameter_value().double_value
 
     def _parse_class_thresholds(self):
         """Parse class-specific confidence thresholds from parameter."""
@@ -248,11 +261,11 @@ class SemanticMapNode(Node):
                     try:
                         threshold = float(threshold_str.strip())
                         self.class_thresholds[class_name.strip()] = threshold
-                        self.get_logger().info(
+                        self.node.get_logger().info(
                             f"Class-specific threshold: {class_name.strip()}={threshold:.3f}"
                         )
                     except ValueError:
-                        self.get_logger().warning(
+                        self.node.get_logger().warning(
                             f"Invalid threshold value in '{item}', skipping"
                         )
 
@@ -268,11 +281,11 @@ class SemanticMapNode(Node):
                     try:
                         radius = float(radius_str.strip())
                         self.class_merge_thresholds[class_name.strip()] = radius
-                        self.get_logger().info(
+                        self.node.get_logger().info(
                             f"Class-specific merge radius: {class_name.strip()}={radius:.2f}m"
                         )
                     except ValueError:
-                        self.get_logger().warning(
+                        self.node.get_logger().warning(
                             f"Invalid merge radius value in '{item}', skipping"
                         )
 
@@ -291,7 +304,7 @@ class SemanticMapNode(Node):
             map_frame_id=map_frame_id,
             resolution=map_resolution,
         )
-        self.get_logger().info(
+        self.node.get_logger().info(
             f"Initialized semantic map memory: location_id={location_id}, "
             f"map_frame_id={map_frame_id}, database_path={database_path}"
         )
@@ -301,17 +314,17 @@ class SemanticMapNode(Node):
         detection_topic = self._get_string_parameter("detection_topic")
         map_topic = self._get_string_parameter("map_topic")
 
-        self.detection_subscription = self.create_subscription(
+        self.detection_subscription = self.node.create_subscription(
             RAIDetectionArray,
             detection_topic,
             self.detection_callback,
             qos_profile_sensor_data,
         )
-        self.get_logger().info(
+        self.node.get_logger().info(
             f"Subscribed to detection topic: {detection_topic} "
             f"(QoS: reliability={qos_profile_sensor_data.reliability.name})"
         )
-        self.map_subscription = self.create_subscription(
+        self.map_subscription = self.node.create_subscription(
             OccupancyGrid, map_topic, self.map_callback, DEFAULT_QUEUE_SIZE
         )
 
@@ -319,31 +332,33 @@ class SemanticMapNode(Node):
         depth_topic = self._get_string_parameter("depth_topic")
         camera_info_topic = self._get_string_parameter("camera_info_topic")
         use_pointcloud = (
-            self.get_parameter("use_pointcloud_dedup").get_parameter_value().bool_value
+            self.node.get_parameter("use_pointcloud_dedup")
+            .get_parameter_value()
+            .bool_value
         )
 
         if use_pointcloud and depth_topic:
-            self.depth_subscription = self.create_subscription(
+            self.depth_subscription = self.node.create_subscription(
                 Image, depth_topic, self.depth_callback, qos_profile_sensor_data
             )
-            self.get_logger().info(f"Subscribed to depth topic: {depth_topic}")
+            self.node.get_logger().info(f"Subscribed to depth topic: {depth_topic}")
         else:
             self.depth_subscription = None
 
         if use_pointcloud and camera_info_topic:
-            self.camera_info_subscription = self.create_subscription(
+            self.camera_info_subscription = self.node.create_subscription(
                 CameraInfo,
                 camera_info_topic,
                 self.camera_info_callback,
                 qos_profile_sensor_data,
             )
-            self.get_logger().info(
+            self.node.get_logger().info(
                 f"Subscribed to camera info topic: {camera_info_topic}"
             )
         else:
             self.camera_info_subscription = None
 
-        self.get_logger().info(
+        self.node.get_logger().info(
             f"Subscribed to detection_topic={detection_topic}, map_topic={map_topic}"
         )
 
@@ -381,17 +396,17 @@ class SemanticMapNode(Node):
         )
 
         if result is None:
-            self.get_logger().warning("Failed to extract point cloud from bbox")
+            self.node.get_logger().warning("Failed to extract point cloud from bbox")
 
         return result
 
     def detection_callback(self, msg: RAIDetectionArray):
         """Process detection array and store annotations."""
-        self.get_logger().debug("Entering detection_callback")
+        self.node.get_logger().debug("Entering detection_callback")
         confidence_threshold = self._get_double_parameter("confidence_threshold")
         map_frame_id = self._get_string_parameter("map_frame_id")
 
-        self.get_logger().info(
+        self.node.get_logger().info(
             f"Received detection array with {len(msg.detections)} detections: {msg.detection_classes}, "
             f"header.frame_id={msg.header.frame_id}, confidence_threshold={confidence_threshold}"
         )
@@ -401,13 +416,13 @@ class SemanticMapNode(Node):
             results_count = len(det.results) if det.results else 0
             if results_count > 0:
                 result = det.results[0]
-                self.get_logger().debug(
+                self.node.get_logger().debug(
                     f"  Detection {i}: class={result.hypothesis.class_id}, "
                     f"score={result.hypothesis.score:.3f}, "
                     f"frame_id={det.header.frame_id}"
                 )
             else:
-                self.get_logger().warning(f"  Detection {i} has no results!")
+                self.node.get_logger().warning(f"  Detection {i} has no results!")
 
         timestamp = rclpy.time.Time.from_msg(msg.header.stamp)
         detection_source = msg.header.frame_id or "unknown"
@@ -415,7 +430,7 @@ class SemanticMapNode(Node):
         stored_count = 0
         skipped_count = 0
         default_frame_id = msg.header.frame_id
-        self.get_logger().debug(
+        self.node.get_logger().debug(
             f"Processing {len(msg.detections)} detections from source={detection_source}, "
             f"confidence_threshold={confidence_threshold}"
         )
@@ -433,11 +448,11 @@ class SemanticMapNode(Node):
                 skipped_count += 1
 
         if stored_count > 0:
-            self.get_logger().info(
+            self.node.get_logger().info(
                 f"Stored {stored_count} annotations, skipped {skipped_count} (low confidence or transform failed)"
             )
         elif len(msg.detections) > 0:
-            self.get_logger().warning(
+            self.node.get_logger().warning(
                 f"Received {len(msg.detections)} detections but none were stored "
                 f"(confidence threshold: {confidence_threshold})"
             )
@@ -456,11 +471,11 @@ class SemanticMapNode(Node):
         Returns:
             True if annotation was stored, False otherwise.
         """
-        self.get_logger().debug(
+        self.node.get_logger().debug(
             f"Entering _process_detection: source={detection_source}"
         )
         if not detection.results:
-            self.get_logger().debug("Detection has no results, skipping")
+            self.node.get_logger().debug("Detection has no results, skipping")
             return False
 
         result = detection.results[0]
@@ -474,7 +489,7 @@ class SemanticMapNode(Node):
         bbox_area = bbox_width * bbox_height
 
         if bbox_area < min_bbox_area:
-            self.get_logger().debug(
+            self.node.get_logger().debug(
                 f"Bounding box too small: area={bbox_area:.1f} < {min_bbox_area:.1f} pixels^2, "
                 f"skipping {object_class}"
             )
@@ -485,13 +500,13 @@ class SemanticMapNode(Node):
             object_class, confidence_threshold
         )
 
-        self.get_logger().info(
+        self.node.get_logger().info(
             f"Processing detection: class={object_class}, confidence={confidence:.3f}, "
             f"threshold={effective_threshold:.3f}, bbox_area={bbox_area:.1f}"
         )
 
         if confidence < effective_threshold:
-            self.get_logger().debug(
+            self.node.get_logger().debug(
                 f"Confidence {confidence:.3f} below threshold {effective_threshold:.3f}, skipping"
             )
             return False
@@ -499,7 +514,7 @@ class SemanticMapNode(Node):
         # Use detection frame_id, fallback to message header frame_id if empty
         source_frame = detection.header.frame_id or default_frame_id
         if not source_frame:
-            self.get_logger().warning(
+            self.node.get_logger().warning(
                 f"Detection has no frame_id (detection.frame_id='{detection.header.frame_id}', "
                 f"default_frame_id='{default_frame_id}'), skipping"
             )
@@ -516,7 +531,7 @@ class SemanticMapNode(Node):
         )
 
         if pose_is_empty:
-            self.get_logger().warning(
+            self.node.get_logger().warning(
                 f"Detection for {object_class} has empty pose (0,0,0). "
                 f"GroundingDINO provides 2D bounding boxes but no 3D pose. "
                 f"Cannot store annotation without 3D position. "
@@ -525,7 +540,7 @@ class SemanticMapNode(Node):
             )
             return False
 
-        self.get_logger().debug(
+        self.node.get_logger().debug(
             f"Pose in source frame ({source_frame}): "
             f"x={pose_in_source_frame.position.x:.3f}, "
             f"y={pose_in_source_frame.position.y:.3f}, "
@@ -536,14 +551,14 @@ class SemanticMapNode(Node):
             pose_in_map_frame = self._transform_pose_to_map(
                 pose_in_source_frame, source_frame, map_frame_id
             )
-            self.get_logger().info(
+            self.node.get_logger().info(
                 f"Transformed pose to map frame ({map_frame_id}): "
                 f"x={pose_in_map_frame.position.x:.3f}, "
                 f"y={pose_in_map_frame.position.y:.3f}, "
                 f"z={pose_in_map_frame.position.z:.3f}"
             )
         except Exception as e:
-            self.get_logger().warning(
+            self.node.get_logger().warning(
                 f"Failed to transform pose from {source_frame} to {map_frame_id}: {e}"
             )
             return False
@@ -552,7 +567,9 @@ class SemanticMapNode(Node):
 
         # Extract point cloud features if available
         use_pointcloud = (
-            self.get_parameter("use_pointcloud_dedup").get_parameter_value().bool_value
+            self.node.get_parameter("use_pointcloud_dedup")
+            .get_parameter_value()
+            .bool_value
         )
         pointcloud_features = None
         pointcloud_centroid_map = None
@@ -581,13 +598,13 @@ class SemanticMapNode(Node):
                         y=pc_centroid_map.position.y,
                         z=pc_centroid_map.position.z,
                     )
-                    self.get_logger().debug(
+                    self.node.get_logger().debug(
                         f"Point cloud features: size={pc_size:.2f}m, points={pc_count}, "
                         f"centroid=({pc_centroid_map.position.x:.2f}, {pc_centroid_map.position.y:.2f}, "
                         f"{pc_centroid_map.position.z:.2f})"
                     )
                 except Exception as e:
-                    self.get_logger().warning(
+                    self.node.get_logger().warning(
                         f"Failed to transform point cloud centroid: {e}"
                     )
 
@@ -606,7 +623,7 @@ class SemanticMapNode(Node):
         )
 
         try:
-            self.get_logger().info(
+            self.node.get_logger().info(
                 f"Storing annotation: class={object_class}, confidence={confidence:.3f}, "
                 f"merge_radius={merge_threshold:.2f}m, location_id={self.memory.location_id}"
             )
@@ -639,14 +656,14 @@ class SemanticMapNode(Node):
 
                             # If sizes are very different (>50% ratio and >0.5m diff), likely different objects
                             if size_ratio < 0.5 and size_diff > 0.5:
-                                self.get_logger().info(
+                                self.node.get_logger().info(
                                     f"Point cloud size mismatch: existing={existing_size:.2f}m, "
                                     f"new={pc_size:.2f}m, ratio={size_ratio:.2f}. Treating as different object."
                                 )
                             else:
                                 should_merge = True
                                 existing_id = existing.id
-                                self.get_logger().debug(
+                                self.node.get_logger().debug(
                                     f"Point cloud size match: existing={existing_size:.2f}m, "
                                     f"new={pc_size:.2f}m, ratio={size_ratio:.2f}"
                                 )
@@ -683,7 +700,7 @@ class SemanticMapNode(Node):
                     metadata=metadata if metadata else existing_ann.metadata,
                 )
                 self.memory.backend.update_annotation(updated)
-                self.get_logger().info(
+                self.node.get_logger().info(
                     f"Updated existing annotation for {object_class}"
                 )
             else:
@@ -699,13 +716,16 @@ class SemanticMapNode(Node):
                     vision_detection_id=vision_detection_id,
                     metadata=metadata if metadata else None,
                 )
-                self.get_logger().info(f"Created new annotation for {object_class}")
+                self.node.get_logger().info(
+                    f"Created new annotation for {object_class}"
+                )
 
             return True
-            self.get_logger().info(f"Successfully stored annotation for {object_class}")
-            return True
+
         except Exception as e:
-            self.get_logger().error(f"Failed to store annotation: {e}", exc_info=True)
+            self.node.get_logger().error(
+                f"Failed to store annotation: {e}", exc_info=True
+            )
             return False
 
     def map_callback(self, msg: OccupancyGrid):
@@ -713,14 +733,14 @@ class SemanticMapNode(Node):
         map_frame_id = self._get_string_parameter("map_frame_id")
 
         if msg.header.frame_id != map_frame_id:
-            self.get_logger().warning(
+            self.node.get_logger().warning(
                 f"Map frame_id mismatch: expected {map_frame_id}, got {msg.header.frame_id}"
             )
 
         self.memory.map_frame_id = msg.header.frame_id
         self.memory.resolution = msg.info.resolution
 
-        self.get_logger().debug(
+        self.node.get_logger().debug(
             f"Updated map metadata: frame_id={msg.header.frame_id}, "
             f"resolution={msg.info.resolution}"
         )
@@ -740,11 +760,11 @@ class SemanticMapNode(Node):
             return pose
 
         try:
-            transform = self.tf_buffer.lookup_transform(
-                target_frame,
-                source_frame,
-                rclpy.time.Time(),
-                timeout=rclpy.duration.Duration(seconds=TF_LOOKUP_TIMEOUT_SEC),
+            # Use ROS2Connector's get_transform method which handles waiting and errors
+            transform = self.get_transform(
+                target_frame=target_frame,
+                source_frame=source_frame,
+                timeout_sec=TF_LOOKUP_TIMEOUT_SEC,
             )
             pose_stamped = PoseStamped()
             pose_stamped.pose = pose
@@ -762,13 +782,13 @@ class SemanticMapNode(Node):
 def main(args=None):
     """Main entry point for the semantic map node."""
     rclpy.init(args=args)
-    node = SemanticMapNode()
+    semantic_map_node = SemanticMapNode()
     try:
-        rclpy.spin(node)
+        rclpy.spin(semantic_map_node.node)
     except KeyboardInterrupt:
         pass
     finally:
-        node.destroy_node()
+        semantic_map_node.shutdown()
         rclpy.shutdown()
 
 
