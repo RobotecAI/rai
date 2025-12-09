@@ -116,5 +116,6 @@ def convert_ros_img_to_base64(
         )
     else:
         cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
-        image_data = cv2.imencode(".png", cv_image)[1].tostring()  # type: ignore
+        # Use tobytes() instead of deprecated tostring() (deprecated since NumPy 1.9.0, removed in 2.0.0)
+        image_data = cv2.imencode(".png", cv_image)[1].tobytes()  # type: ignore
         return base64.b64encode(image_data).decode("utf-8")  # type: ignore
