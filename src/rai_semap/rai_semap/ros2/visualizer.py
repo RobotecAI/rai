@@ -20,6 +20,9 @@ import rclpy
 import yaml
 from builtin_interfaces.msg import Duration
 from geometry_msgs.msg import Point
+from geometry_msgs.msg import Pose as ROS2Pose
+from rai.types.base import ROS2BaseModel
+from rai.types.ros2.convert import to_ros2_msg
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.node import Node
 from std_msgs.msg import ColorRGBA
@@ -230,6 +233,15 @@ class SemanticMapVisualizer(Node):
             return self.class_colors[object_class]
         return self.default_color
 
+    def _convert_pose_to_ros2(self, pose) -> ROS2Pose:
+        """Convert pose to ROS2 message type if needed."""
+        if isinstance(pose, ROS2BaseModel):
+            # It's a rai.types.Pose, convert to geometry_msgs.msg.Pose
+            return to_ros2_msg(pose)
+        else:
+            # Already a geometry_msgs.msg.Pose
+            return pose
+
     def _create_sphere_marker(self, annotation, marker_id: int, scale: float) -> Marker:
         """Create a sphere marker for an annotation."""
         marker = Marker()
@@ -240,7 +252,7 @@ class SemanticMapVisualizer(Node):
         marker.type = Marker.SPHERE
         marker.action = Marker.ADD
 
-        marker.pose = annotation.pose
+        marker.pose = self._convert_pose_to_ros2(annotation.pose)
         marker.scale.x = scale
         marker.scale.y = scale
         marker.scale.z = scale
@@ -270,7 +282,7 @@ class SemanticMapVisualizer(Node):
         marker.type = Marker.TEXT_VIEW_FACING
         marker.action = Marker.ADD
 
-        marker.pose = annotation.pose
+        marker.pose = self._convert_pose_to_ros2(annotation.pose)
         marker.pose.position.z += scale * 0.5
         marker.scale.z = scale * 0.3
 

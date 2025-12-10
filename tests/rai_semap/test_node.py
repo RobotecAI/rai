@@ -377,6 +377,7 @@ def test_node_creation(node):
     assert node.connector.node.get_name() == "rai_semap_node"
 
     expected_params = [
+        "backend_type",
         "database_path",
         "confidence_threshold",
         "detection_topic",
@@ -391,6 +392,12 @@ def test_node_creation(node):
 
 def test_node_parameter_defaults(node, temp_db_path):
     """Test that node parameters have correct default values."""
+    assert (
+        node.connector.node.get_parameter("backend_type")
+        .get_parameter_value()
+        .string_value
+        == "sqlite"
+    )
     assert (
         node.connector.node.get_parameter("database_path")
         .get_parameter_value()

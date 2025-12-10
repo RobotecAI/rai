@@ -24,9 +24,9 @@ The following examples use the ROSBot XL demo to illustrate how to use rai_semap
 
 ### Prerequisites
 
--   ROS2 environment set up
--   rai_semap package installed: `poetry install --with semap`
--   ROSBot XL demo setup, see instuctions at [ROSBot XL demo](../../docs/demos/rosbot_xl.md)
+-   ROS2 environment configured
+-   rai_semap installed: `poetry install --with semap`
+-   ROSBot XL demo configured (see [ROSBot XL demo](../../docs/demos/rosbot_xl.md))
 
 ### Step 0: Launch the ROSBot XL demo
 
@@ -98,11 +98,17 @@ python -m rai_semap.ros2.visualizer \
 
 ### Setup RViz2
 
-1. Launch RViz2: `rviz2`
-2. Add displays:
-    - Add "Map" display → subscribe to `/map` topic
-    - Add "MarkerArray" display → subscribe to `/semantic_map_markers` topic
-3. Set Fixed Frame to `map` (or your map frame ID)
+Launch RViz2 with the provided config file:
+
+```bash
+rviz2 -d src/rai_semap/rai_semap/scripts/semantic_map.rviz
+```
+
+The config file includes:
+
+-   Map display subscribed to `/map` topic
+-   MarkerArray display subscribed to `/semantic_map_markers` topic
+-   Fixed Frame set to `map`
 
 The visualizer shows color-coded markers by object class (bed=blue, chair=green, door=orange, shelf=purple, table=violet). Marker transparency scales with confidence score, and optional text labels show object class names.
 

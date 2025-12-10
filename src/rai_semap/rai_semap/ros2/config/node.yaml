@@ -2,6 +2,7 @@ rai_semap_node:
   ros__parameters:
     # Storage configuration
     storage:
+      backend_type: "sqlite"  # Database backend: 'sqlite' (default) or 'postgres' (future)
       database_path: "semantic_map.db"
       location_id: "default_location"
 

@@ -29,6 +29,7 @@ from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import CameraInfo, Image
 from tf2_geometry_msgs import do_transform_pose_stamped
+from vision_msgs.msg import Detection2D
 
 # RAI interfaces
 from rai_interfaces.msg import RAIDetectionArray
@@ -140,10 +141,16 @@ class SemanticMapNode:
         parameters = [
             # Storage
             (
+                "backend_type",
+                storage.get("backend_type", "sqlite"),
+                ParameterType.PARAMETER_STRING,
+                "Database backend type: 'sqlite' (default) or 'postgres' (future)",
+            ),
+            (
                 "database_path",
                 storage.get("database_path", "semantic_map.db"),
                 ParameterType.PARAMETER_STRING,
-                "Path to SQLite database file",
+                "Path to database file (SQLite) or connection string (PostgreSQL)",
             ),
             (
                 "location_id",
@@ -287,12 +294,23 @@ class SemanticMapNode:
 
     def _initialize_memory(self):
         """Initialize semantic map memory backend."""
+        backend_type = self._get_string_parameter("backend_type")
         database_path = self._get_string_parameter("database_path")
         location_id = self._get_string_parameter("location_id")
         map_frame_id = self._get_string_parameter("map_frame_id")
         map_resolution = self._get_double_parameter("map_resolution")
 
-        backend = SQLiteBackend(database_path)
+        if backend_type == "sqlite":
+            backend = SQLiteBackend(database_path)
+        elif backend_type == "postgres":
+            raise NotImplementedError(
+                "PostgreSQL backend not yet implemented. Use 'sqlite' for now."
+            )
+        else:
+            raise ValueError(
+                f"Unknown backend_type: {backend_type}. Supported: 'sqlite'"
+            )
+
         backend.init_schema()
         self.memory = SemanticMapMemory(
             backend=backend,
@@ -301,8 +319,9 @@ class SemanticMapNode:
             resolution=map_resolution,
         )
         self.connector.node.get_logger().info(
-            f"Initialized semantic map memory: location_id={location_id}, "
-            f"map_frame_id={map_frame_id}, database_path={database_path}"
+            f"Initialized semantic map memory: backend={backend_type}, "
+            f"location_id={location_id}, map_frame_id={map_frame_id}, "
+            f"database_path={database_path}"
         )
 
     def _initialize_subscriptions(self):
@@ -464,7 +483,7 @@ class SemanticMapNode:
 
     def _process_detection(
         self,
-        detection,
+        detection: Detection2D,
         confidence_threshold: float,
         map_frame_id: str,
         timestamp: float,
@@ -517,7 +536,7 @@ class SemanticMapNode:
         )
 
     def _validate_and_extract_detection_data(
-        self, detection, confidence_threshold: float, default_frame_id: str
+        self, detection: Detection2D, confidence_threshold: float, default_frame_id: str
     ) -> Optional[Tuple[str, float, str, Pose]]:
         """Validate detection and extract basic data.
 
@@ -578,7 +597,7 @@ class SemanticMapNode:
         source_frame: str,
         map_frame_id: str,
         object_class: str,
-        detection,
+        detection: Detection2D,
     ) -> Optional[Pose]:
         """Validate pose and transform to map frame.
 

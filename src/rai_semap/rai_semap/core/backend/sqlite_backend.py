@@ -14,6 +14,7 @@
 
 import json
 import logging
+import re
 import sqlite3
 from typing import Any, Dict, List, Optional
 
@@ -210,12 +211,24 @@ class SQLiteBackend(SpatialDBBackend):
 
             metadata = json.loads(row["metadata"]) if row["metadata"] else {}
 
+            # Convert timestamp to float (handle ROS Time string representation)
+            timestamp = row["timestamp"]
+            if isinstance(timestamp, str):
+                # Extract nanoseconds from ROS Time string representation
+                # Format: "Time(nanoseconds=3119172..., clock_type=ROS_TIME)"
+                match = re.search(r"nanoseconds=(\d+)", timestamp)
+                if match:
+                    nanoseconds = int(match.group(1))
+                    timestamp = nanoseconds / 1e9
+                else:
+                    raise ValueError(f"Unable to parse timestamp: {timestamp}")
+
             annotation = SemanticAnnotation(
                 id=row["id"],
                 object_class=row["object_class"],
                 pose=pose,
                 confidence=row["confidence"],
-                timestamp=row["timestamp"],
+                timestamp=float(timestamp),
                 detection_source=row["detection_source"],
                 source_frame=row["source_frame"],
                 location_id=row["location_id"],
@@ -317,7 +330,7 @@ class SQLiteBackend(SpatialDBBackend):
                     qz,
                     qw,
                     annotation.confidence,
-                    str(annotation.timestamp),
+                    annotation.timestamp,
                     annotation.detection_source,
                     annotation.source_frame,
                     annotation.location_id,
