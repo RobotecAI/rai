@@ -15,7 +15,7 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from geometry_msgs.msg import Point
+from rai.types import Point
 
 if TYPE_CHECKING:
     from rai_semap.core.semantic_map_memory import SemanticAnnotation
@@ -62,4 +62,19 @@ class SpatialDBBackend(ABC):
     @abstractmethod
     def update_annotation(self, annotation: "SemanticAnnotation") -> bool:
         """Update existing annotation by ID. Returns success status."""
+        pass
+
+    @abstractmethod
+    def get_distinct_object_classes(
+        self, location_id: Optional[str] = None
+    ) -> List[str]:
+        """Get list of distinct object classes seen in a location.
+
+        Args:
+            location_id: If provided, only return classes for this location.
+                         If None, return classes for all locations.
+
+        Returns:
+            List of unique object class names.
+        """
         pass

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import pytest
-from geometry_msgs.msg import Point
+from rai.types import Point
 
 from rai_semap.core.backend.sqlite_backend import SQLiteBackend
 

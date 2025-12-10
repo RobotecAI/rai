@@ -23,7 +23,9 @@ from rai_semap.core.backend.sqlite_backend import SQLiteBackend
 from rai_semap.core.semantic_map_memory import SemanticMapMemory
 
 
-def validate_database(database_path: str, location_id: str = "rosbot_xl_demo") -> bool:
+def validate_database(
+    database_path: str, location_id: str = "default_location"
+) -> bool:
     """Validate stored data in semantic map database.
 
     Args:

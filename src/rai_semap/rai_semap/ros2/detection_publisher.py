@@ -33,28 +33,22 @@ from rai_semap.ros2.perception_utils import enhance_detection_with_3d_pose
 # It performs object detection and 3D pose computation, which are general perception
 # tasks not specific to semantic mapping. Consider moving to rai_perception when
 # that package has ROS2 node infrastructure in place.
-class DetectionPublisher(ROS2Connector):
+class DetectionPublisher:
     """ROS2 node that subscribes to camera images, calls DINO service, and publishes detections.
 
     Design Notes:
-    - Uses ROS2Connector for node lifecycle and infrastructure (TF, executor, etc.)
-    - Uses self.node.* methods directly for subscriptions/publishers because:
-      * We work with raw ROS2 messages (not connector's message wrappers)
-      * We need direct control over QoS profiles and message types
-    - Uses self.node.create_client() for async service calls because:
-      * ROS2Connector's service_call() is synchronous
-      * We need call_async() for non-blocking detection processing
+    - Uses ROS2Connector for node lifecycle and infrastructure
+    - Uses connector.node.* directly for raw ROS2 messages and QoS control
+    - Uses connector.node.create_client() for async service calls (non-blocking)
     """
 
-    def __init__(self, executor_type: str = "multi_threaded"):
+    def __init__(self, connector: ROS2Connector):
         """Initialize DetectionPublisher.
 
         Args:
-            executor_type: Type of executor to use ("single_threaded" or "multi_threaded").
-                Defaults to "multi_threaded" for production use. Use "single_threaded" for
-                simple unit tests to avoid executor performance warnings.
+            connector: ROS2Connector instance for ROS2 communication.
         """
-        super().__init__(node_name="detection_publisher", executor_type=executor_type)
+        self.connector = connector
         self._initialize_parameters()
         self.bridge = CvBridge()
         self._initialize_clients()
@@ -89,7 +83,7 @@ class DetectionPublisher(ROS2Connector):
             ),
         ]
         for name, default, param_type, description in config_params:
-            self.node.declare_parameter(
+            self.connector.node.declare_parameter(
                 name,
                 default,
                 descriptor=ParameterDescriptor(
@@ -99,12 +93,12 @@ class DetectionPublisher(ROS2Connector):
 
         # Get config file paths
         detection_pub_config_path = (
-            self.node.get_parameter("detection_publisher_config")
+            self.connector.node.get_parameter("detection_publisher_config")
             .get_parameter_value()
             .string_value
         )
         perception_utils_config_path = (
-            self.node.get_parameter("perception_utils_config")
+            self.connector.node.get_parameter("perception_utils_config")
             .get_parameter_value()
             .string_value
         )
@@ -191,7 +185,7 @@ class DetectionPublisher(ROS2Connector):
         ]
 
         for name, default, param_type, description in parameters:
-            self.node.declare_parameter(
+            self.connector.node.declare_parameter(
                 name,
                 default,
                 descriptor=ParameterDescriptor(
@@ -223,7 +217,7 @@ class DetectionPublisher(ROS2Connector):
         ]
 
         for name, default, param_type, description in perception_params:
-            self.node.declare_parameter(
+            self.connector.node.declare_parameter(
                 name,
                 default,
                 descriptor=ParameterDescriptor(
@@ -234,13 +228,19 @@ class DetectionPublisher(ROS2Connector):
 
     def _get_string_parameter(self, name: str) -> str:
         """Get string parameter value."""
-        return self.node.get_parameter(name).get_parameter_value().string_value
+        return (
+            self.connector.node.get_parameter(name).get_parameter_value().string_value
+        )
 
     def _get_double_parameter(self, name: str) -> float:
-        return self.node.get_parameter(name).get_parameter_value().double_value
+        return (
+            self.connector.node.get_parameter(name).get_parameter_value().double_value
+        )
 
     def _get_integer_parameter(self, name: str) -> int:
-        return self.node.get_parameter(name).get_parameter_value().integer_value
+        return (
+            self.connector.node.get_parameter(name).get_parameter_value().integer_value
+        )
 
     def _parse_detection_classes(
         self, detection_classes_str: str
@@ -270,7 +270,7 @@ class DetectionPublisher(ROS2Connector):
                     class_names.append(class_name)
                     class_thresholds[class_name] = threshold
                 except ValueError:
-                    self.node.get_logger().warning(
+                    self.connector.node.get_logger().warning(
                         f"Invalid threshold value in '{item}', using default"
                     )
                     class_names.append(class_name)
@@ -285,28 +285,33 @@ class DetectionPublisher(ROS2Connector):
     def _initialize_clients(self):
         """Initialize service clients.
 
-        Note: We use self.node.create_client() directly instead of ROS2Connector's
+        Note: We use self.connector.node.create_client() directly instead of ROS2Connector's
         service_call() because we need async service calls (call_async) for non-blocking
         detection processing. The connector's service_call() is synchronous and designed
         for the connector's message wrapper system.
         """
         dino_service = self._get_string_parameter("dino_service")
-        self.dino_client = self.node.create_client(RAIGroundingDino, dino_service)
-        self.node.get_logger().info(f"Waiting for DINO service: {dino_service}")
-        if not self.dino_client.wait_for_service(timeout_sec=10.0):
-            self.node.get_logger().warning(
+        self.dino_client = self.connector.node.create_client(
+            RAIGroundingDino, dino_service
+        )
+        self.connector.node.get_logger().info(
+            f"Waiting for DINO service: {dino_service}"
+        )
+        # Use short timeout - _process_image() will check again before actual use
+        if not self.dino_client.wait_for_service(timeout_sec=0.1):
+            self.connector.node.get_logger().warning(
                 f"DINO service not available: {dino_service}"
             )
         else:
-            self.node.get_logger().info(f"DINO service ready: {dino_service}")
+            self.connector.node.get_logger().info(f"DINO service ready: {dino_service}")
 
     def _initialize_subscriptions(self):
         """Initialize ROS2 subscriptions."""
         camera_topic = self._get_string_parameter("camera_topic")
-        self.image_subscription = self.node.create_subscription(
+        self.image_subscription = self.connector.node.create_subscription(
             Image, camera_topic, self.image_callback, qos_profile_sensor_data
         )
-        self.node.get_logger().info(
+        self.connector.node.get_logger().info(
             f"Subscribed to camera topic: {camera_topic} "
             f"(QoS: {qos_profile_sensor_data.reliability.name})"
         )
@@ -316,39 +321,41 @@ class DetectionPublisher(ROS2Connector):
         camera_info_topic = self._get_string_parameter("camera_info_topic")
 
         if depth_topic:
-            self.depth_subscription = self.node.create_subscription(
+            self.depth_subscription = self.connector.node.create_subscription(
                 Image, depth_topic, self.depth_callback, qos_profile_sensor_data
             )
-            self.node.get_logger().info(f"Subscribed to depth topic: {depth_topic}")
+            self.connector.node.get_logger().info(
+                f"Subscribed to depth topic: {depth_topic}"
+            )
         else:
             self.depth_subscription = None
-            self.node.get_logger().info(
+            self.connector.node.get_logger().info(
                 "No depth topic provided, 3D poses will not be computed"
             )
 
         if camera_info_topic:
-            self.camera_info_subscription = self.node.create_subscription(
+            self.camera_info_subscription = self.connector.node.create_subscription(
                 CameraInfo,
                 camera_info_topic,
                 self.camera_info_callback,
                 qos_profile_sensor_data,
             )
-            self.node.get_logger().info(
+            self.connector.node.get_logger().info(
                 f"Subscribed to camera info topic: {camera_info_topic}"
             )
         else:
             self.camera_info_subscription = None
-            self.node.get_logger().info(
+            self.connector.node.get_logger().info(
                 "No camera info topic provided, 3D poses will not be computed"
             )
 
     def _initialize_publishers(self):
         """Initialize ROS2 publishers."""
         detection_topic = self._get_string_parameter("detection_topic")
-        self.detection_publisher = self.node.create_publisher(
+        self.detection_publisher = self.connector.node.create_publisher(
             RAIDetectionArray, detection_topic, qos_profile_sensor_data
         )
-        self.node.get_logger().info(
+        self.connector.node.get_logger().info(
             f"Publishing to detection topic: {detection_topic} "
             f"(QoS: reliability={qos_profile_sensor_data.reliability.name})"
         )
@@ -363,7 +370,7 @@ class DetectionPublisher(ROS2Connector):
 
     def image_callback(self, msg: Image):
         """Process incoming camera image."""
-        self.node.get_logger().debug(
+        self.connector.node.get_logger().debug(
             f"Received camera image (stamp: {msg.header.stamp.sec}.{msg.header.stamp.nanosec:09d}, "
             f"frame_id: {msg.header.frame_id})"
         )
@@ -373,19 +380,21 @@ class DetectionPublisher(ROS2Connector):
         # Throttle detections
         if current_time - self.last_detection_time < detection_interval:
             time_since_last = current_time - self.last_detection_time
-            self.node.get_logger().debug(
+            self.connector.node.get_logger().debug(
                 f"Throttling: {time_since_last:.2f}s since last detection (interval: {detection_interval}s)"
             )
             return
 
         self.last_image = msg
-        self.node.get_logger().debug("Processing camera image...")
+        self.connector.node.get_logger().debug("Processing camera image...")
         self._process_image(msg)
 
     def _process_image(self, image_msg: Image):
         """Call DINO service and publish detections."""
         if not self.dino_client.wait_for_service(timeout_sec=0.1):
-            self.node.get_logger().warning("DINO service not ready, skipping detection")
+            self.connector.node.get_logger().warning(
+                "DINO service not ready, skipping detection"
+            )
             return
 
         detection_classes_str = self._get_string_parameter("detection_classes")
@@ -412,7 +421,7 @@ class DetectionPublisher(ROS2Connector):
         request.box_threshold = box_threshold
         request.text_threshold = text_threshold
 
-        self.node.get_logger().debug(
+        self.connector.node.get_logger().debug(
             f"Calling DINO service with {len(class_names)} classes (box_threshold={box_threshold:.3f})"
         )
 
@@ -426,7 +435,7 @@ class DetectionPublisher(ROS2Connector):
         try:
             response = future.result()
             if response is None:
-                self.node.get_logger().warning("DINO service returned None")
+                self.connector.node.get_logger().warning("DINO service returned None")
                 return
 
             # Get class thresholds for filtering (set in _process_image)
@@ -448,7 +457,7 @@ class DetectionPublisher(ROS2Connector):
                     if score >= threshold:
                         filtered_detections.append(det)
                     else:
-                        self.node.get_logger().debug(
+                        self.connector.node.get_logger().debug(
                             f"Filtered out {class_id} detection with score {score:.3f} "
                             f"(threshold: {threshold:.3f})"
                         )
@@ -481,7 +490,7 @@ class DetectionPublisher(ROS2Connector):
                     if det.results and len(det.results) > 0:
                         result = det.results[0]
                         computed_pose = result.pose.pose
-                        self.node.get_logger().debug(
+                        self.connector.node.get_logger().debug(
                             f"Computed 3D pose for {result.hypothesis.class_id}: "
                             f"({computed_pose.position.x:.3f}, {computed_pose.position.y:.3f}, "
                             f"{computed_pose.position.z:.3f})"
@@ -494,7 +503,7 @@ class DetectionPublisher(ROS2Connector):
                         and pose.position.y == 0.0
                         and pose.position.z == 0.0
                     ):
-                        self.node.get_logger().debug(
+                        self.connector.node.get_logger().debug(
                             f"Could not compute 3D pose for {result.hypothesis.class_id} "
                             f"(depth or camera info not available)"
                         )
@@ -510,12 +519,12 @@ class DetectionPublisher(ROS2Connector):
                     results_count = len(det.results) if det.results else 0
                     if results_count > 0:
                         result = det.results[0]
-                        self.node.get_logger().debug(
+                        self.connector.node.get_logger().debug(
                             f"Detection {i}: class={result.hypothesis.class_id}, "
                             f"score={result.hypothesis.score:.3f}"
                         )
                     else:
-                        self.node.get_logger().warning(
+                        self.connector.node.get_logger().warning(
                             f"Detection {i} has no results! frame_id={det.header.frame_id}"
                         )
 
@@ -526,13 +535,15 @@ class DetectionPublisher(ROS2Connector):
                         for det in detection_array.detections
                         if det.results and len(det.results) > 0
                     ]
-                    self.node.get_logger().info(
+                    self.connector.node.get_logger().info(
                         f"Published {detection_count} detections: {', '.join(set(classes_found))}"
                     )
                     self.last_log_time = current_time
             else:
                 if should_log:
-                    self.node.get_logger().debug("No detections found in image")
+                    self.connector.node.get_logger().debug(
+                        "No detections found in image"
+                    )
                     self.last_log_time = current_time
 
             # Publish detections
@@ -540,24 +551,31 @@ class DetectionPublisher(ROS2Connector):
             self.last_detection_time = time.time()
 
         except Exception as e:
-            self.node.get_logger().error(f"Error processing DINO response: {e}")
+            self.connector.node.get_logger().error(
+                f"Error processing DINO response: {e}"
+            )
 
 
 def main(args=None):
     """Main entry point for the detection publisher node."""
     rclpy.init(args=args)
-    detection_publisher = DetectionPublisher()
-    detection_publisher.node.get_logger().info("=" * 60)
-    detection_publisher.node.get_logger().info("Detection Publisher Node Started")
-    detection_publisher.node.get_logger().info("=" * 60)
+    connector = ROS2Connector(
+        node_name="detection_publisher", executor_type="multi_threaded"
+    )
+    detection_publisher = DetectionPublisher(connector=connector)
+    detection_publisher.connector.node.get_logger().info("=" * 60)
+    detection_publisher.connector.node.get_logger().info(
+        "Detection Publisher Node Started"
+    )
+    detection_publisher.connector.node.get_logger().info("=" * 60)
     try:
-        rclpy.spin(detection_publisher.node)
+        rclpy.spin(detection_publisher.connector.node)
     except KeyboardInterrupt:
-        detection_publisher.node.get_logger().info(
+        detection_publisher.connector.node.get_logger().info(
             "Shutting down detection publisher..."
         )
     finally:
-        detection_publisher.shutdown()
+        detection_publisher.connector.shutdown()
         rclpy.shutdown()
 
 

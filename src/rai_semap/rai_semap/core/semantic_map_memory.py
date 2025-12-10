@@ -15,113 +15,92 @@
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
-from geometry_msgs.msg import Point, Pose
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from rai.types import Point
 
 from rai_semap.core.backend.spatial_db_backend import SpatialDBBackend
 from rai_semap.core.base_memory import BaseMemory
 
-
-def _pose_to_dict(pose: Pose) -> Dict[str, Any]:
-    """Convert Pose to JSON-serializable dictionary."""
-    return {
-        "position": {"x": pose.position.x, "y": pose.position.y, "z": pose.position.z},
-        "orientation": {
-            "x": pose.orientation.x,
-            "y": pose.orientation.y,
-            "z": pose.orientation.z,
-            "w": pose.orientation.w,
-        },
-    }
+# Type alias for Pose - accepts both rai.types.Pose (Pydantic model) and geometry_msgs.msg.Pose (ROS2 message)
+# With arbitrary_types_allowed=True, Pydantic accepts ROS2 messages even though type annotation is rai.types.Pose
+# ROS2 messages are required because ROS2 transform functions (tf2_geometry_msgs) require and return ROS2 message types
+PoseType = Any
 
 
-class SemanticAnnotation:
+class SemanticAnnotation(BaseModel):
     """Spatial-semantic annotation data model."""
 
-    def __init__(
-        self,
-        id: str,
-        object_class: str,
-        pose: Pose,
-        confidence: float,
-        timestamp: Any,
-        detection_source: str,
-        source_frame: str,
-        location_id: str,
-        vision_detection_id: Optional[
-            str
-        ] = None,  # id from vision pipeline, mostly for debugging
-        metadata: Optional[Dict[str, Any]] = None,
-    ):
-        self.id = id
-        self.object_class = object_class
-        self.pose = pose
-        self.confidence = confidence
-        self.timestamp = timestamp
-        self.detection_source = detection_source
-        self.source_frame = source_frame
-        self.location_id = location_id
-        self.vision_detection_id = vision_detection_id
-        self.metadata = metadata or {}
+    # Allow ROS2 message types (e.g., Pose) that Pydantic doesn't validate natively.
+    # Other fields are still validated; ROS2 types are validated by ROS2.
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to JSON-serializable dictionary."""
-        return {
-            "id": self.id,
-            "object_class": self.object_class,
-            "pose": _pose_to_dict(self.pose),
-            "confidence": self.confidence,
-            "timestamp": str(self.timestamp) if self.timestamp is not None else None,
-            "detection_source": self.detection_source,
-            "source_frame": self.source_frame,
-            "location_id": self.location_id,
-            "vision_detection_id": self.vision_detection_id,
-            "metadata": self.metadata,
-        }
+    id: str
+    object_class: str
+    pose: PoseType
+    confidence: float = Field(
+        ge=0.0, le=1.0, description="Confidence score between 0 and 1"
+    )
+    timestamp: float = Field(description="Unix timestamp in seconds (timezone-naive)")
+    detection_source: str
+    source_frame: str
+    location_id: str
+    vision_detection_id: Optional[str] = Field(
+        default=None, description="ID from vision pipeline, mostly for debugging"
+    )
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("confidence")
+    @classmethod
+    def validate_confidence(cls, v: float) -> float:
+        """Validate confidence is in valid range."""
+        if not 0.0 <= v <= 1.0:
+            raise ValueError(f"confidence must be between 0 and 1, got {v}")
+        return v
+
+    @field_validator("metadata", mode="before")
+    @classmethod
+    def normalize_metadata(cls, v: Any) -> Dict[str, Any]:
+        """Convert None metadata to empty dict."""
+        if v is None:
+            return {}
+        return v
 
 
-class MapMetadata:
+class MapMetadata(BaseModel):
     """Metadata structure for a SLAM map (one per location, not per annotation).
 
     Tracks properties of the underlying SLAM map and semantic annotation activity.
     """
 
-    def __init__(
-        self,
-        location_id: str,
-        map_frame_id: str,
-        resolution: float,
-        origin: Optional[Pose] = None,
-        last_updated: Optional[Any] = None,
-    ):
-        """
-        Args:
-            location_id: Identifier for the physical location (e.g., "warehouse_a", "warehouse_b")
-            map_frame_id: Frame ID of the SLAM map
-            resolution: OccupancyGrid resolution (meters/pixel) from SLAM map configuration
-            origin: Optional map origin pose. Only needed for coordinate transformations
-                between map frame and world frame. Not required for semantic annotations
-                that are already stored in map frame.
-            last_updated: Optional timestamp of last semantic annotation update to this map
-        """
-        self.location_id = location_id
-        self.map_frame_id = map_frame_id
-        self.resolution = resolution
-        self.origin = origin
-        self.last_updated = last_updated
+    # Allow ROS2 message types (e.g., Pose) that Pydantic doesn't validate natively.
+    # Other fields are still validated; ROS2 types are validated by ROS2.
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to JSON-serializable dictionary."""
-        result = {
-            "location_id": self.location_id,
-            "map_frame_id": self.map_frame_id,
-            "resolution": self.resolution,
-            "last_updated": str(self.last_updated)
-            if self.last_updated is not None
-            else None,
-        }
-        if self.origin is not None:
-            result["origin"] = _pose_to_dict(self.origin)
-        return result
+    location_id: str = Field(
+        description="Identifier for the physical location (e.g., 'warehouse_a', 'warehouse_b')"
+    )
+    map_frame_id: str = Field(description="Frame ID of the SLAM map")
+    resolution: float = Field(
+        default=0.05,
+        gt=0.0,
+        description="OccupancyGrid resolution (meters/pixel) from SLAM map configuration",
+    )
+    origin: Optional[PoseType] = Field(
+        default=None,
+        description="Optional map origin pose (rai.types.Pose or geometry_msgs.msg.Pose). Only needed for coordinate transformations between map frame and world frame. Not required for semantic annotations that are already stored in map frame.",
+    )
+    last_updated: Optional[float] = Field(
+        default=None,
+        description="Optional Unix timestamp (seconds) of last semantic annotation update to this map",
+    )
+
+    @field_validator("resolution")
+    @classmethod
+    def validate_resolution(cls, v: float) -> float:
+        """Validate resolution is positive."""
+        if v <= 0.0:
+            raise ValueError(f"resolution must be positive, got {v}")
+        return v
 
 
 class SemanticMapMemory(BaseMemory):
@@ -217,9 +196,9 @@ class SemanticMapMemory(BaseMemory):
     def store_annotation(
         self,
         object_class: str,
-        pose: Pose,
+        pose: PoseType,
         confidence: float,
-        timestamp: Any,
+        timestamp: float,
         detection_source: str,
         source_frame: str,
         location_id: str,
@@ -244,12 +223,16 @@ class SemanticMapMemory(BaseMemory):
         )
         return self.backend.insert_annotation(annotation)
 
+    def update_annotation(self, annotation: SemanticAnnotation) -> bool:
+        """Update an existing annotation by ID. Returns success status."""
+        return self.backend.update_annotation(annotation)
+
     def store_or_update_annotation(
         self,
         object_class: str,
-        pose: Pose,
+        pose: PoseType,
         confidence: float,
-        timestamp: Any,
+        timestamp: float,
         detection_source: str,
         source_frame: str,
         location_id: str,
@@ -400,3 +383,15 @@ class SemanticMapMemory(BaseMemory):
             origin=None,
             last_updated=last_updated,
         )
+
+    def get_seen_object_classes(self, location_id: Optional[str] = None) -> List[str]:
+        """Get list of distinct object classes seen in a location.
+
+        Args:
+            location_id: If provided, only return classes for this location.
+                         If None, use the instance's location_id.
+
+        Returns:
+            List of unique object class names, sorted alphabetically.
+        """
+        pass

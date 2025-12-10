@@ -42,3 +42,31 @@ class QuerySemanticMapTool(BaseTool):
     def _run(self, query: str, room: Optional[str] = None) -> str:
         """Execute semantic map query."""
         pass
+
+
+class GetSeenObjectsToolInput(BaseModel):
+    """Input schema for GetSeenObjectsTool."""
+
+    location_id: Optional[str] = Field(
+        default=None,
+        description="Optional location ID. If not provided, uses the memory's default location.",
+    )
+
+
+class GetSeenObjectsTool(BaseTool):
+    """Tool for retrieving object types previously seen in a location."""
+
+    name: str = "get_seen_objects"
+    description: str = (
+        "Get a list of object types (e.g., 'bottle', 'cup', 'table') that have "
+        "been previously seen in a location. Useful for discovering what objects "
+        "exist before querying for specific instances."
+    )
+
+    args_schema: Type[GetSeenObjectsToolInput] = GetSeenObjectsToolInput
+
+    memory: SemanticMapMemory
+
+    def _run(self, location_id: Optional[str] = None) -> str:
+        """Get list of distinct object classes seen in a location."""
+        pass

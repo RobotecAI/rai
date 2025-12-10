@@ -237,7 +237,7 @@ class SemanticAnnotation:
     object_class: str  # e.g., "red cup", "tool"
     pose: Pose  # 3D pose in map frame (x, y, z, orientation)
     confidence: float  # 0.0-1.0
-    timestamp: Any  # ROS timestamp of detection
+    timestamp: float  # Unix timestamp in seconds (timezone-naive)
     detection_source: str  # e.g., "GroundingDINO", "GroundedSAM"
     source_frame: str  # Original camera frame_id
     location_id: str  # Identifier for the physical location
@@ -262,6 +262,8 @@ dt = datetime.fromtimestamp(ros_time.nanoseconds / 1e9)
 3. Database storage: Both SQLite and PostgreSQL still require conversion:
     - SQLite: No native datetime type; stored as TEXT (ISO format) or REAL/INTEGER (Unix timestamp)
     - PostgreSQL: Has TIMESTAMP, but you still need to handle timezone (naive vs aware)
+
+Implementation decision: We use `float` (Unix timestamp in seconds) for timezone-naive, PostgreSQL-compatible storage. Convert from `rclpy.time.Time` using `timestamp.nanoseconds / 1e9`. Nanosecond precision is lost but acceptable for timestamps.
 
 #### SpatialIndex
 

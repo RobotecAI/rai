@@ -44,25 +44,25 @@ DEFAULT_QUEUE_SIZE = 10
 TF_LOOKUP_TIMEOUT_SEC = 1.0
 
 
-class SemanticMapNode(ROS2Connector):
+class SemanticMapNode:
     """ROS2 node for semantic map processing."""
 
     def __init__(
-        self, database_path: Optional[str] = None, executor_type: str = "multi_threaded"
+        self,
+        connector: ROS2Connector,
+        database_path: Optional[str] = None,
     ):
         """Initialize SemanticMapNode.
 
         Args:
+            connector: ROS2Connector instance for ROS2 communication.
             database_path: Optional path to SQLite database file.
-            executor_type: Type of executor to use ("single_threaded" or "multi_threaded").
-                Defaults to "multi_threaded" for production use. Use "single_threaded" for
-                simple unit tests to avoid executor performance warnings.
         """
-        super().__init__(node_name="rai_semap_node", executor_type=executor_type)
+        self.connector = connector
 
         # Configure Python logging to forward to ROS2 logger
         # Configure all rai_semap loggers (including submodules)
-        handler = ROS2LogHandler(self.node)
+        handler = ROS2LogHandler(self.connector.node)
         handler.setLevel(logging.DEBUG)
 
         # Configure root rai_semap logger
@@ -81,7 +81,7 @@ class SemanticMapNode(ROS2Connector):
 
         self._initialize_parameters()
         if database_path is not None:
-            self.node.set_parameters(
+            self.connector.node.set_parameters(
                 [
                     rclpy.parameter.Parameter(
                         "database_path",
@@ -95,7 +95,6 @@ class SemanticMapNode(ROS2Connector):
         self.bridge = CvBridge()
         self.last_depth_image: Optional[Image] = None
         self.last_camera_info: Optional[CameraInfo] = None
-        self._initialize_tf()
         self._initialize_memory()
         self._initialize_subscriptions()
 
@@ -105,7 +104,7 @@ class SemanticMapNode(ROS2Connector):
         config_dir = current_dir / "config"
 
         # Declare config file path parameter
-        self.node.declare_parameter(
+        self.connector.node.declare_parameter(
             "node_config",
             "",
             descriptor=ParameterDescriptor(
@@ -116,7 +115,9 @@ class SemanticMapNode(ROS2Connector):
 
         # Get config file path
         node_config_path = (
-            self.node.get_parameter("node_config").get_parameter_value().string_value
+            self.connector.node.get_parameter("node_config")
+            .get_parameter_value()
+            .string_value
         )
         if node_config_path:
             node_yaml = Path(node_config_path)
@@ -223,7 +224,7 @@ class SemanticMapNode(ROS2Connector):
         ]
 
         for name, default, param_type, description in parameters:
-            self.node.declare_parameter(
+            self.connector.node.declare_parameter(
                 name,
                 default,
                 descriptor=ParameterDescriptor(
@@ -232,22 +233,17 @@ class SemanticMapNode(ROS2Connector):
                 ),
             )
 
-    def _initialize_tf(self):
-        """Initialize TF buffer and listener.
-
-        Note: ROS2Connector already creates _tf_buffer and _tf_listener internally.
-        We access the connector's TF buffer to avoid duplication.
-        """
-        # Use the connector's internal TF buffer (already created in __init__)
-        self.tf_buffer = self._tf_buffer
-
     def _get_string_parameter(self, name: str) -> str:
         """Get string parameter value."""
-        return self.node.get_parameter(name).get_parameter_value().string_value
+        return (
+            self.connector.node.get_parameter(name).get_parameter_value().string_value
+        )
 
     def _get_double_parameter(self, name: str) -> float:
         """Get double parameter value."""
-        return self.node.get_parameter(name).get_parameter_value().double_value
+        return (
+            self.connector.node.get_parameter(name).get_parameter_value().double_value
+        )
 
     def _parse_class_thresholds(self):
         """Parse class-specific confidence thresholds from parameter."""
@@ -261,11 +257,11 @@ class SemanticMapNode(ROS2Connector):
                     try:
                         threshold = float(threshold_str.strip())
                         self.class_thresholds[class_name.strip()] = threshold
-                        self.node.get_logger().info(
+                        self.connector.node.get_logger().info(
                             f"Class-specific threshold: {class_name.strip()}={threshold:.3f}"
                         )
                     except ValueError:
-                        self.node.get_logger().warning(
+                        self.connector.node.get_logger().warning(
                             f"Invalid threshold value in '{item}', skipping"
                         )
 
@@ -281,11 +277,11 @@ class SemanticMapNode(ROS2Connector):
                     try:
                         radius = float(radius_str.strip())
                         self.class_merge_thresholds[class_name.strip()] = radius
-                        self.node.get_logger().info(
+                        self.connector.node.get_logger().info(
                             f"Class-specific merge radius: {class_name.strip()}={radius:.2f}m"
                         )
                     except ValueError:
-                        self.node.get_logger().warning(
+                        self.connector.node.get_logger().warning(
                             f"Invalid merge radius value in '{item}', skipping"
                         )
 
@@ -304,7 +300,7 @@ class SemanticMapNode(ROS2Connector):
             map_frame_id=map_frame_id,
             resolution=map_resolution,
         )
-        self.node.get_logger().info(
+        self.connector.node.get_logger().info(
             f"Initialized semantic map memory: location_id={location_id}, "
             f"map_frame_id={map_frame_id}, database_path={database_path}"
         )
@@ -314,17 +310,17 @@ class SemanticMapNode(ROS2Connector):
         detection_topic = self._get_string_parameter("detection_topic")
         map_topic = self._get_string_parameter("map_topic")
 
-        self.detection_subscription = self.node.create_subscription(
+        self.detection_subscription = self.connector.node.create_subscription(
             RAIDetectionArray,
             detection_topic,
             self.detection_callback,
             qos_profile_sensor_data,
         )
-        self.node.get_logger().info(
+        self.connector.node.get_logger().info(
             f"Subscribed to detection topic: {detection_topic} "
             f"(QoS: reliability={qos_profile_sensor_data.reliability.name})"
         )
-        self.map_subscription = self.node.create_subscription(
+        self.map_subscription = self.connector.node.create_subscription(
             OccupancyGrid, map_topic, self.map_callback, DEFAULT_QUEUE_SIZE
         )
 
@@ -332,33 +328,35 @@ class SemanticMapNode(ROS2Connector):
         depth_topic = self._get_string_parameter("depth_topic")
         camera_info_topic = self._get_string_parameter("camera_info_topic")
         use_pointcloud = (
-            self.node.get_parameter("use_pointcloud_dedup")
+            self.connector.node.get_parameter("use_pointcloud_dedup")
             .get_parameter_value()
             .bool_value
         )
 
         if use_pointcloud and depth_topic:
-            self.depth_subscription = self.node.create_subscription(
+            self.depth_subscription = self.connector.node.create_subscription(
                 Image, depth_topic, self.depth_callback, qos_profile_sensor_data
             )
-            self.node.get_logger().info(f"Subscribed to depth topic: {depth_topic}")
+            self.connector.node.get_logger().info(
+                f"Subscribed to depth topic: {depth_topic}"
+            )
         else:
             self.depth_subscription = None
 
         if use_pointcloud and camera_info_topic:
-            self.camera_info_subscription = self.node.create_subscription(
+            self.camera_info_subscription = self.connector.node.create_subscription(
                 CameraInfo,
                 camera_info_topic,
                 self.camera_info_callback,
                 qos_profile_sensor_data,
             )
-            self.node.get_logger().info(
+            self.connector.node.get_logger().info(
                 f"Subscribed to camera info topic: {camera_info_topic}"
             )
         else:
             self.camera_info_subscription = None
 
-        self.node.get_logger().info(
+        self.connector.node.get_logger().info(
             f"Subscribed to detection_topic={detection_topic}, map_topic={map_topic}"
         )
 
@@ -396,17 +394,19 @@ class SemanticMapNode(ROS2Connector):
         )
 
         if result is None:
-            self.node.get_logger().warning("Failed to extract point cloud from bbox")
+            self.connector.node.get_logger().warning(
+                "Failed to extract point cloud from bbox"
+            )
 
         return result
 
     def detection_callback(self, msg: RAIDetectionArray):
         """Process detection array and store annotations."""
-        self.node.get_logger().debug("Entering detection_callback")
+        self.connector.node.get_logger().debug("Entering detection_callback")
         confidence_threshold = self._get_double_parameter("confidence_threshold")
         map_frame_id = self._get_string_parameter("map_frame_id")
 
-        self.node.get_logger().info(
+        self.connector.node.get_logger().info(
             f"Received detection array with {len(msg.detections)} detections: {msg.detection_classes}, "
             f"header.frame_id={msg.header.frame_id}, confidence_threshold={confidence_threshold}"
         )
@@ -416,21 +416,26 @@ class SemanticMapNode(ROS2Connector):
             results_count = len(det.results) if det.results else 0
             if results_count > 0:
                 result = det.results[0]
-                self.node.get_logger().debug(
+                self.connector.node.get_logger().debug(
                     f"  Detection {i}: class={result.hypothesis.class_id}, "
                     f"score={result.hypothesis.score:.3f}, "
                     f"frame_id={det.header.frame_id}"
                 )
             else:
-                self.node.get_logger().warning(f"  Detection {i} has no results!")
+                self.connector.node.get_logger().warning(
+                    f"  Detection {i} has no results!"
+                )
 
-        timestamp = rclpy.time.Time.from_msg(msg.header.stamp)
+        timestamp_ros = rclpy.time.Time.from_msg(msg.header.stamp)
+        timestamp = (
+            timestamp_ros.nanoseconds / 1e9
+        )  # Convert to Unix timestamp (seconds)
         detection_source = msg.header.frame_id or "unknown"
 
         stored_count = 0
         skipped_count = 0
         default_frame_id = msg.header.frame_id
-        self.node.get_logger().debug(
+        self.connector.node.get_logger().debug(
             f"Processing {len(msg.detections)} detections from source={detection_source}, "
             f"confidence_threshold={confidence_threshold}"
         )
@@ -448,11 +453,11 @@ class SemanticMapNode(ROS2Connector):
                 skipped_count += 1
 
         if stored_count > 0:
-            self.node.get_logger().info(
+            self.connector.node.get_logger().info(
                 f"Stored {stored_count} annotations, skipped {skipped_count} (low confidence or transform failed)"
             )
         elif len(msg.detections) > 0:
-            self.node.get_logger().warning(
+            self.connector.node.get_logger().warning(
                 f"Received {len(msg.detections)} detections but none were stored "
                 f"(confidence threshold: {confidence_threshold})"
             )
@@ -462,7 +467,7 @@ class SemanticMapNode(ROS2Connector):
         detection,
         confidence_threshold: float,
         map_frame_id: str,
-        timestamp: rclpy.time.Time,
+        timestamp: float,
         detection_source: str,
         default_frame_id: str,
     ) -> bool:
@@ -471,12 +476,58 @@ class SemanticMapNode(ROS2Connector):
         Returns:
             True if annotation was stored, False otherwise.
         """
-        self.node.get_logger().debug(
+        self.connector.node.get_logger().debug(
             f"Entering _process_detection: source={detection_source}"
         )
-        if not detection.results:
-            self.node.get_logger().debug("Detection has no results, skipping")
+
+        # Validate detection and extract basic data
+        validation_result = self._validate_and_extract_detection_data(
+            detection, confidence_threshold, default_frame_id
+        )
+        if not validation_result:
             return False
+
+        object_class, confidence, source_frame, pose_in_source_frame = validation_result
+
+        # Validate and transform pose to map frame
+        pose_in_map_frame = self._validate_and_transform_pose(
+            pose_in_source_frame, source_frame, map_frame_id, object_class, detection
+        )
+        if pose_in_map_frame is None:
+            return False
+
+        # Extract point cloud features if enabled
+        pointcloud_features, pointcloud_centroid_map, pc_size = (
+            self._extract_pointcloud_features(detection, source_frame, map_frame_id)
+        )
+
+        # Store or update annotation
+        vision_detection_id = detection.id if hasattr(detection, "id") else None
+        return self._store_or_update_annotation(
+            object_class=object_class,
+            confidence=confidence,
+            pose_in_map_frame=pose_in_map_frame,
+            pointcloud_centroid_map=pointcloud_centroid_map,
+            pointcloud_features=pointcloud_features,
+            pc_size=pc_size,
+            timestamp=timestamp,
+            detection_source=detection_source,
+            source_frame=source_frame,
+            vision_detection_id=vision_detection_id,
+        )
+
+    def _validate_and_extract_detection_data(
+        self, detection, confidence_threshold: float, default_frame_id: str
+    ) -> Optional[Tuple[str, float, str, Pose]]:
+        """Validate detection and extract basic data.
+
+        Returns:
+            Tuple of (object_class, confidence, source_frame, pose_in_source_frame) if valid,
+            None otherwise.
+        """
+        if not detection.results:
+            self.connector.node.get_logger().debug("Detection has no results, skipping")
+            return None
 
         result = detection.results[0]
         confidence = result.hypothesis.score
@@ -484,46 +535,57 @@ class SemanticMapNode(ROS2Connector):
 
         # Check bounding box size
         min_bbox_area = self._get_double_parameter("min_bbox_area")
-        bbox_width = detection.bbox.size_x
-        bbox_height = detection.bbox.size_y
-        bbox_area = bbox_width * bbox_height
+        bbox_area = detection.bbox.size_x * detection.bbox.size_y
 
         if bbox_area < min_bbox_area:
-            self.node.get_logger().debug(
+            self.connector.node.get_logger().debug(
                 f"Bounding box too small: area={bbox_area:.1f} < {min_bbox_area:.1f} pixels^2, "
                 f"skipping {object_class}"
             )
-            return False
+            return None
 
-        # Use class-specific threshold if available, otherwise use default
+        # Use class-specific threshold if available
         effective_threshold = self.class_thresholds.get(
             object_class, confidence_threshold
         )
 
-        self.node.get_logger().info(
+        self.connector.node.get_logger().info(
             f"Processing detection: class={object_class}, confidence={confidence:.3f}, "
             f"threshold={effective_threshold:.3f}, bbox_area={bbox_area:.1f}"
         )
 
         if confidence < effective_threshold:
-            self.node.get_logger().debug(
+            self.connector.node.get_logger().debug(
                 f"Confidence {confidence:.3f} below threshold {effective_threshold:.3f}, skipping"
             )
-            return False
+            return None
 
         # Use detection frame_id, fallback to message header frame_id if empty
         source_frame = detection.header.frame_id or default_frame_id
         if not source_frame:
-            self.node.get_logger().warning(
+            self.connector.node.get_logger().warning(
                 f"Detection has no frame_id (detection.frame_id='{detection.header.frame_id}', "
                 f"default_frame_id='{default_frame_id}'), skipping"
             )
-            return False
+            return None
 
         pose_in_source_frame = result.pose.pose
+        return (object_class, confidence, source_frame, pose_in_source_frame)
 
-        # Check if pose is empty (all zeros) - this happens when DINO doesn't provide 3D pose
-        # In that case, we can't store a meaningful annotation without depth information
+    def _validate_and_transform_pose(
+        self,
+        pose_in_source_frame: Pose,
+        source_frame: str,
+        map_frame_id: str,
+        object_class: str,
+        detection,
+    ) -> Optional[Pose]:
+        """Validate pose and transform to map frame.
+
+        Returns:
+            Transformed pose in map frame if successful, None otherwise.
+        """
+        # Check if pose is empty (all zeros)
         pose_is_empty = (
             pose_in_source_frame.position.x == 0.0
             and pose_in_source_frame.position.y == 0.0
@@ -531,16 +593,16 @@ class SemanticMapNode(ROS2Connector):
         )
 
         if pose_is_empty:
-            self.node.get_logger().warning(
+            self.connector.node.get_logger().warning(
                 f"Detection for {object_class} has empty pose (0,0,0). "
                 f"GroundingDINO provides 2D bounding boxes but no 3D pose. "
                 f"Cannot store annotation without 3D position. "
                 f"Bounding box center: ({detection.bbox.center.position.x:.1f}, "
                 f"{detection.bbox.center.position.y:.1f})"
             )
-            return False
+            return None
 
-        self.node.get_logger().debug(
+        self.connector.node.get_logger().debug(
             f"Pose in source frame ({source_frame}): "
             f"x={pose_in_source_frame.position.x:.3f}, "
             f"y={pose_in_source_frame.position.y:.3f}, "
@@ -551,64 +613,137 @@ class SemanticMapNode(ROS2Connector):
             pose_in_map_frame = self._transform_pose_to_map(
                 pose_in_source_frame, source_frame, map_frame_id
             )
-            self.node.get_logger().info(
+            self.connector.node.get_logger().info(
                 f"Transformed pose to map frame ({map_frame_id}): "
                 f"x={pose_in_map_frame.position.x:.3f}, "
                 f"y={pose_in_map_frame.position.y:.3f}, "
                 f"z={pose_in_map_frame.position.z:.3f}"
             )
+            return pose_in_map_frame
         except Exception as e:
-            self.node.get_logger().warning(
+            self.connector.node.get_logger().warning(
                 f"Failed to transform pose from {source_frame} to {map_frame_id}: {e}"
             )
-            return False
+            return None
 
-        vision_detection_id = detection.id if hasattr(detection, "id") else None
+    def _extract_pointcloud_features(
+        self, detection, source_frame: str, map_frame_id: str
+    ) -> Tuple[Optional[dict], Optional[Point], Optional[float]]:
+        """Extract point cloud features if enabled.
 
-        # Extract point cloud features if available
+        Returns:
+            Tuple of (pointcloud_features_dict, pointcloud_centroid_map, pc_size)
+        """
         use_pointcloud = (
-            self.node.get_parameter("use_pointcloud_dedup")
+            self.connector.node.get_parameter("use_pointcloud_dedup")
             .get_parameter_value()
             .bool_value
         )
-        pointcloud_features = None
-        pointcloud_centroid_map = None
-        pc_size = None
 
-        if use_pointcloud:
-            pc_result = self._extract_pointcloud_from_bbox(detection, source_frame)
-            if pc_result:
-                pc_centroid_source, pc_size, pc_count = pc_result
-                # Transform point cloud centroid to map frame
-                try:
-                    pc_centroid_map = self._transform_pose_to_map(
-                        Pose(position=pc_centroid_source), source_frame, map_frame_id
-                    )
-                    pointcloud_features = {
-                        "centroid": {
-                            "x": pc_centroid_map.position.x,
-                            "y": pc_centroid_map.position.y,
-                            "z": pc_centroid_map.position.z,
-                        },
-                        "size_3d": pc_size,
-                        "point_count": pc_count,
-                    }
-                    pointcloud_centroid_map = Point(
-                        x=pc_centroid_map.position.x,
-                        y=pc_centroid_map.position.y,
-                        z=pc_centroid_map.position.z,
-                    )
-                    self.node.get_logger().debug(
-                        f"Point cloud features: size={pc_size:.2f}m, points={pc_count}, "
-                        f"centroid=({pc_centroid_map.position.x:.2f}, {pc_centroid_map.position.y:.2f}, "
-                        f"{pc_centroid_map.position.z:.2f})"
-                    )
-                except Exception as e:
-                    self.node.get_logger().warning(
-                        f"Failed to transform point cloud centroid: {e}"
-                    )
+        if not use_pointcloud:
+            return (None, None, None)
 
-        # Use class-specific merge threshold if available, otherwise default to 0.5m
+        pc_result = self._extract_pointcloud_from_bbox(detection, source_frame)
+        if not pc_result:
+            return (None, None, None)
+
+        pc_centroid_source, pc_size, pc_count = pc_result
+
+        try:
+            pc_centroid_map = self._transform_pose_to_map(
+                Pose(position=pc_centroid_source), source_frame, map_frame_id
+            )
+            pointcloud_features = {
+                "centroid": {
+                    "x": pc_centroid_map.position.x,
+                    "y": pc_centroid_map.position.y,
+                    "z": pc_centroid_map.position.z,
+                },
+                "size_3d": pc_size,
+                "point_count": pc_count,
+            }
+            pointcloud_centroid_map = Point(
+                x=pc_centroid_map.position.x,
+                y=pc_centroid_map.position.y,
+                z=pc_centroid_map.position.z,
+            )
+            self.connector.node.get_logger().debug(
+                f"Point cloud features: size={pc_size:.2f}m, points={pc_count}, "
+                f"centroid=({pc_centroid_map.position.x:.2f}, {pc_centroid_map.position.y:.2f}, "
+                f"{pc_centroid_map.position.z:.2f})"
+            )
+            return (pointcloud_features, pointcloud_centroid_map, pc_size)
+        except Exception as e:
+            self.connector.node.get_logger().warning(
+                f"Failed to transform point cloud centroid: {e}"
+            )
+            return (None, None, None)
+
+    def _determine_merge_decision(
+        self,
+        nearby: list,
+        pointcloud_features: Optional[dict],
+        pc_size: Optional[float],
+        use_pointcloud: bool,
+    ) -> Tuple[bool, Optional[str]]:
+        """Determine if detection should merge with existing annotation.
+
+        Returns:
+            Tuple of (should_merge, existing_id)
+        """
+        if not nearby:
+            return (False, None)
+
+        existing = nearby[0]
+
+        # If both have point cloud data, check size similarity
+        if pointcloud_features and use_pointcloud and pc_size is not None:
+            if existing.metadata and "pointcloud" in existing.metadata:
+                existing_pc = existing.metadata["pointcloud"]
+                existing_size = existing_pc.get("size_3d", 0)
+
+                if existing_size > 0:
+                    size_ratio = min(pc_size, existing_size) / max(
+                        pc_size, existing_size
+                    )
+                    size_diff = abs(existing_size - pc_size)
+
+                    # If sizes are very different, likely different objects
+                    if size_ratio < 0.5 and size_diff > 0.5:
+                        self.connector.node.get_logger().info(
+                            f"Point cloud size mismatch: existing={existing_size:.2f}m, "
+                            f"new={pc_size:.2f}m, ratio={size_ratio:.2f}. Treating as different object."
+                        )
+                        return (False, None)
+                    else:
+                        self.connector.node.get_logger().debug(
+                            f"Point cloud size match: existing={existing_size:.2f}m, "
+                            f"new={pc_size:.2f}m, ratio={size_ratio:.2f}"
+                        )
+                        return (True, existing.id)
+
+        # Use spatial matching (either no point cloud or sizes match)
+        return (True, existing.id)
+
+    def _store_or_update_annotation(
+        self,
+        object_class: str,
+        confidence: float,
+        pose_in_map_frame: Pose,
+        pointcloud_centroid_map: Optional[Point],
+        pointcloud_features: Optional[dict],
+        pc_size: Optional[float],
+        timestamp: float,
+        detection_source: str,
+        source_frame: str,
+        vision_detection_id: Optional[str],
+    ) -> bool:
+        """Store or update annotation based on matching logic.
+
+        Returns:
+            True if annotation was stored/updated, False otherwise.
+        """
+        # Use class-specific merge threshold if available
         merge_threshold = self.class_merge_thresholds.get(object_class, 0.5)
 
         # Use point cloud centroid for matching if available, otherwise use pose
@@ -623,12 +758,12 @@ class SemanticMapNode(ROS2Connector):
         )
 
         try:
-            self.node.get_logger().info(
+            self.connector.node.get_logger().info(
                 f"Storing annotation: class={object_class}, confidence={confidence:.3f}, "
                 f"merge_radius={merge_threshold:.2f}m, location_id={self.memory.location_id}"
             )
 
-            # Enhanced matching with point cloud features
+            # Query nearby annotations
             nearby = self.memory.query_by_location(
                 match_center,
                 radius=merge_threshold,
@@ -636,50 +771,16 @@ class SemanticMapNode(ROS2Connector):
                 location_id=self.memory.location_id,
             )
 
-            should_merge = False
-            existing_id = None
+            use_pointcloud = (
+                self.connector.node.get_parameter("use_pointcloud_dedup")
+                .get_parameter_value()
+                .bool_value
+            )
+            should_merge, existing_id = self._determine_merge_decision(
+                nearby, pointcloud_features, pc_size, use_pointcloud
+            )
 
-            if nearby:
-                existing = nearby[0]
-
-                # If both have point cloud data, check size similarity
-                if pointcloud_features and use_pointcloud and pc_size is not None:
-                    if existing.metadata and "pointcloud" in existing.metadata:
-                        existing_pc = existing.metadata["pointcloud"]
-                        existing_size = existing_pc.get("size_3d", 0)
-
-                        if existing_size > 0:
-                            size_ratio = min(pc_size, existing_size) / max(
-                                pc_size, existing_size
-                            )
-                            size_diff = abs(existing_size - pc_size)
-
-                            # If sizes are very different (>50% ratio and >0.5m diff), likely different objects
-                            if size_ratio < 0.5 and size_diff > 0.5:
-                                self.node.get_logger().info(
-                                    f"Point cloud size mismatch: existing={existing_size:.2f}m, "
-                                    f"new={pc_size:.2f}m, ratio={size_ratio:.2f}. Treating as different object."
-                                )
-                            else:
-                                should_merge = True
-                                existing_id = existing.id
-                                self.node.get_logger().debug(
-                                    f"Point cloud size match: existing={existing_size:.2f}m, "
-                                    f"new={pc_size:.2f}m, ratio={size_ratio:.2f}"
-                                )
-                        else:
-                            should_merge = True
-                            existing_id = existing.id
-                    else:
-                        # Existing doesn't have point cloud, use spatial matching
-                        should_merge = True
-                        existing_id = existing.id
-                else:
-                    # No point cloud data, use spatial matching
-                    should_merge = True
-                    existing_id = existing.id
-
-            # Prepare metadata with point cloud features
+            # Prepare metadata
             metadata = {}
             if pointcloud_features:
                 metadata["pointcloud"] = pointcloud_features
@@ -699,8 +800,8 @@ class SemanticMapNode(ROS2Connector):
                     vision_detection_id=vision_detection_id,
                     metadata=metadata if metadata else existing_ann.metadata,
                 )
-                self.memory.backend.update_annotation(updated)
-                self.node.get_logger().info(
+                self.memory.update_annotation(updated)
+                self.connector.node.get_logger().info(
                     f"Updated existing annotation for {object_class}"
                 )
             else:
@@ -716,16 +817,14 @@ class SemanticMapNode(ROS2Connector):
                     vision_detection_id=vision_detection_id,
                     metadata=metadata if metadata else None,
                 )
-                self.node.get_logger().info(
+                self.connector.node.get_logger().info(
                     f"Created new annotation for {object_class}"
                 )
 
             return True
 
         except Exception as e:
-            self.node.get_logger().error(
-                f"Failed to store annotation: {e}", exc_info=True
-            )
+            self.connector.node.get_logger().error(f"Failed to store annotation: {e}")
             return False
 
     def map_callback(self, msg: OccupancyGrid):
@@ -733,14 +832,14 @@ class SemanticMapNode(ROS2Connector):
         map_frame_id = self._get_string_parameter("map_frame_id")
 
         if msg.header.frame_id != map_frame_id:
-            self.node.get_logger().warning(
+            self.connector.node.get_logger().warning(
                 f"Map frame_id mismatch: expected {map_frame_id}, got {msg.header.frame_id}"
             )
 
         self.memory.map_frame_id = msg.header.frame_id
         self.memory.resolution = msg.info.resolution
 
-        self.node.get_logger().debug(
+        self.connector.node.get_logger().debug(
             f"Updated map metadata: frame_id={msg.header.frame_id}, "
             f"resolution={msg.info.resolution}"
         )
@@ -761,7 +860,7 @@ class SemanticMapNode(ROS2Connector):
 
         try:
             # Use ROS2Connector's get_transform method which handles waiting and errors
-            transform = self.get_transform(
+            transform = self.connector.get_transform(
                 target_frame=target_frame,
                 source_frame=source_frame,
                 timeout_sec=TF_LOOKUP_TIMEOUT_SEC,
@@ -782,13 +881,16 @@ class SemanticMapNode(ROS2Connector):
 def main(args=None):
     """Main entry point for the semantic map node."""
     rclpy.init(args=args)
-    semantic_map_node = SemanticMapNode()
+    connector = ROS2Connector(
+        node_name="rai_semap_node", executor_type="multi_threaded"
+    )
+    semantic_map_node = SemanticMapNode(connector=connector)
     try:
-        rclpy.spin(semantic_map_node.node)
+        rclpy.spin(semantic_map_node.connector.node)
     except KeyboardInterrupt:
         pass
     finally:
-        semantic_map_node.shutdown()
+        semantic_map_node.connector.shutdown()
         rclpy.shutdown()
 
 

@@ -62,7 +62,7 @@ class SemanticMapVisualizer(Node):
             ),
             (
                 "location_id",
-                "rosbot_xl_demo",
+                "default_location",
                 ParameterType.PARAMETER_STRING,
                 "Location identifier to query",
             ),

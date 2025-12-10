@@ -17,7 +17,7 @@ import logging
 import sqlite3
 from typing import Any, Dict, List, Optional
 
-from geometry_msgs.msg import Point, Pose
+from rai.types import Point, Pose
 
 from rai_semap.core.backend.spatial_db_backend import SpatialDBBackend
 from rai_semap.core.semantic_map_memory import SemanticAnnotation
@@ -65,7 +65,7 @@ class SQLiteBackend(SpatialDBBackend):
                 qz REAL,
                 qw REAL,
                 confidence REAL NOT NULL,
-                timestamp TEXT NOT NULL,
+                timestamp REAL NOT NULL,
                 detection_source TEXT NOT NULL,
                 source_frame TEXT NOT NULL,
                 location_id TEXT NOT NULL,
@@ -130,7 +130,7 @@ class SQLiteBackend(SpatialDBBackend):
                     qz,
                     qw,
                     annotation.confidence,
-                    str(annotation.timestamp),
+                    annotation.timestamp,
                     annotation.detection_source,
                     annotation.source_frame,
                     annotation.location_id,
@@ -340,3 +340,10 @@ class SQLiteBackend(SpatialDBBackend):
             logger.error(f"SQLite error updating annotation {annotation.id}: {e}")
             conn.rollback()
             raise
+
+    def get_distinct_object_classes(
+        self, location_id: Optional[str] = None
+    ) -> List[str]:
+        """Get list of distinct object classes seen in a location."""
+
+    pass

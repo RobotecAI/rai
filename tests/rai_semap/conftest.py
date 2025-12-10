@@ -19,7 +19,7 @@ from typing import Optional
 
 import pytest
 import rclpy
-from geometry_msgs.msg import Pose
+from rai.types import Pose
 
 # Add src/rai_semap to Python path
 rai_semap_path = Path(__file__).parent.parent.parent / "src" / "rai_semap"
@@ -67,7 +67,7 @@ def make_annotation(
     y: float,
     z: float = 0.0,
     confidence: float = 0.9,
-    timestamp: int = TEST_BASE_TIMESTAMP,
+    timestamp: float = TEST_BASE_TIMESTAMP,
     detection_source: str = TEST_DETECTION_SOURCE,
     source_frame: str = TEST_SOURCE_FRAME,
     location_id: str = TEST_LOCATION_ID,
