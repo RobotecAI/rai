@@ -1,0 +1,11 @@
+# Format: [r, g, b, a] where r, g, b are in range [0.0, 1.0] and a is alpha [0.0, 1.0]
+# Default color
+default_color: [0.5, 0.5, 0.5, 0.8]
+
+# Color mapping for specific object classes
+class_colors:
+  bed: [0.2, 0.4, 0.8, 0.8]
+  chair: [0.2, 0.8, 0.4, 0.8]
+  door: [0.8, 0.6, 0.2, 0.8]
+  shelf: [0.8, 0.2, 0.6, 0.8]
+  table: [0.6, 0.2, 0.8, 0.8]

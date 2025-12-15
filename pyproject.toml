@@ -40,6 +40,13 @@ optional = true
 [tool.poetry.group.s2s.dependencies]
 rai_s2s = {path = "src/rai_s2s", develop = true, extras = ["all"]}
 
+[tool.poetry.group.semap]
+optional = true
+
+[tool.poetry.group.semap.dependencies]
+rai_semap = {path = "src/rai_semap", develop = true}
+
+
 [tool.poetry.group.simbench]
 optional = true
 
@@ -50,12 +57,6 @@ rai_bench = {path = "src/rai_bench", develop = true}
 [tool.poetry.group.perception]
 optional = true
 
-# TODO(juliaj): The test-pypi source is for testing purpose only, remove once rai-sam2 is published.
-# This source needs to be in this file in order to run poetry lock from the project root.
-[[tool.poetry.source]]
-name = "test-pypi"
-url = "https://test.pypi.org/simple/"
-priority = "explicit"
 [tool.poetry.group.perception.dependencies]
 rai_perception = {path = "src/rai_extensions/rai_perception", develop = true}
 

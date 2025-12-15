@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Robotec.AI
+# Copyright (C) 2025 Julia Jia
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,18 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-from launch import LaunchDescription
-from launch.actions import ExecuteProcess
-
-
-def generate_launch_description():
-    return LaunchDescription(
-        [
-            ExecuteProcess(
-                cmd=["python", "run_perception_agents.py"],
-                cwd="src/rai_extensions/rai_perception/rai_perception/scripts",
-                output="screen",
-            ),
-        ]
-    )
+"""Utility scripts for rai_semap."""

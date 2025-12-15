@@ -1,0 +1,34 @@
+rai_semap_node:
+  ros__parameters:
+    # Storage configuration
+    storage:
+      backend_type: "sqlite"  # Database backend: 'sqlite' (default) or 'postgres' (future)
+      database_path: "semantic_map.db"
+      location_id: "default_location"
+
+    # Detection filtering configuration
+    detection_filtering:
+      confidence_threshold: 0.5
+      class_confidence_thresholds: ""
+      # Minimum bounding box area in pixels^2 to filter small false positives
+      min_bbox_area: 100.0
+
+    # Deduplication configuration
+    deduplication:
+      class_merge_thresholds: ""
+      use_pointcloud_dedup: true
+
+    # Topic configuration
+    topics:
+      detection_topic: "/detection_array"
+      map_topic: "/map"
+      # Set these to your depth and camera info topics for point cloud extraction
+      # Leave empty if point cloud deduplication is not needed
+      depth_topic: "/camera/camera/depth/image_rect_raw"
+      camera_info_topic: "/camera/camera/color/camera_info"
+
+    # Map/SLAM configuration
+    map:
+      map_frame_id: "map"
+      # OccupancyGrid resolution in meters/pixel (0.05 = 5 cm per pixel)
+      map_resolution: 0.05

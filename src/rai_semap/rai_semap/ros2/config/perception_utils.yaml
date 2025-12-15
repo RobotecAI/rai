@@ -1,0 +1,7 @@
+perception_utils:
+  ros__parameters:
+    # Set these to your depth and camera info topics for 3D pose computation
+    # Leave empty if 3D poses are not needed
+    depth_topic: "/camera/camera/depth/image_rect_raw"
+    camera_info_topic: "/camera/camera/color/camera_info"
+    depth_fallback_region_size: 5
