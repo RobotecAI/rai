@@ -1,0 +1,144 @@
+name: Publish to Test PyPI
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [labeled]
+    branches:
+      - main
+
+jobs:
+  build_wheels:
+    name: Build wheels
+    if: github.event.label.name == 'publish-testpypi' || github.event_name == 'workflow_dispatch'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        package:
+          - name: rai-core
+            path: src/rai_core
+          - name: rai-perception
+            path: src/rai_extensions/rai_perception
+          - name: rai-bench
+            path: src/rai_bench
+          - name: rai-sim
+            path: src/rai_sim
+          - name: rai-whoami
+            path: src/rai_whoami
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel==2.16.2
+
+      - name: Build wheels
+        env:
+          CIBW_BUILD: cp310-* cp312-*
+          CIBW_SKIP: pp* *-win32 *-manylinux_i686
+          CIBW_BEFORE_BUILD: |
+            python -m pip install --upgrade pip
+            python -m pip install poetry
+            cd "${{ matrix.package.path }}"
+            poetry install --no-interaction --no-root --only main
+          CIBW_BUILD_FRONTEND: build
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10,<3.13"
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
+        working-directory: ${{ matrix.package.path }}
+        run: |
+          python -m cibuildwheel --output-dir wheelhouse
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.package.name }}-${{ matrix.os }}
+          path: ${{ matrix.package.path }}/wheelhouse/*.whl
+          retention-days: 7
+
+  build_sdist:
+    name: Build source distributions
+    if: github.event.label.name == 'publish-testpypi' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          # TODO(juliaj): poetry.lock generated with Poetry 2.1.4, consider pinning version here
+          version: 2.1.1
+
+      - name: Run tests
+        run: |
+          poetry install
+          poetry run pytest -m "not billable"
+
+      - name: Build source distributions
+        run: |
+          cd src/rai_core && poetry build --format sdist
+          cd ../rai_extensions/rai_perception && poetry build --format sdist
+          cd ../rai_bench && poetry build --format sdist
+          cd ../rai_sim && poetry build --format sdist
+          cd ../rai_whoami && poetry build --format sdist
+
+      - name: Upload source distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-distributions
+          path: |
+            src/rai_core/dist/*.tar.gz
+            src/rai_extensions/rai_perception/dist/*.tar.gz
+            src/rai_bench/dist/*.tar.gz
+            src/rai_sim/dist/*.tar.gz
+            src/rai_whoami/dist/*.tar.gz
+          retention-days: 7
+
+  publish:
+    name: Publish to Test PyPI
+    if: github.event.label.name == 'publish-testpypi' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    needs: [build_wheels, build_sdist]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all wheels
+        uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: wheels
+
+      - name: Download source distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: source-distributions
+          path: dist
+
+      # Use twine instead of Poetry publish because:
+      # 1. Distributions are collected from artifacts into a single location
+      # 2. We publish multiple packages (wheels + sdists) in one command
+      # 3. Poetry publish requires running from each package directory separately
+      - name: Install twine
+        run: python -m pip install --upgrade twine
+
+      - name: Publish to Test PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        run: |
+          twine upload --repository-url https://test.pypi.org/legacy/ wheels/**/*.whl dist/**/*.tar.gz
+
+      - name: Verify installation from Test PyPI
+        run: |
+          pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ rai-core rai-perception rai-bench rai-sim rai-whoami
+          python -c "import rai; import rai_perception; import rai_bench; import rai_sim; import rai_whoami; print('Packages installed successfully')"
