@@ -30,6 +30,8 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from rai.communication.observability import ObservabilityMeta, ObservabilityModule
+
 
 class ConnectorException(Exception):
     """Base exception for all connector exceptions."""
@@ -70,8 +72,15 @@ class ParametrizedCallback(BaseModel, Generic[T]):
     id: str = Field(default_factory=lambda: str(uuid4()))
 
 
-class BaseConnector(Generic[T]):
-    def __init__(self, callback_max_workers: int = 4):
+class BaseConnector(Generic[T], metaclass=ObservabilityMeta):
+    def __init__(
+        self,
+        callback_max_workers: int = 4,
+        name: Optional[str] = None,
+        namespace: Optional[str] = None,
+        observability_port: int = 9000,
+        observability_ip: str = "127.0.0.1",
+    ):
         self.callback_max_workers = callback_max_workers
         self.logger = logging.getLogger(self.__class__.__name__)
         self.registered_callbacks: Dict[str, Dict[str, ParametrizedCallback[T]]] = (
@@ -81,6 +90,10 @@ class BaseConnector(Generic[T]):
         self.callback_executor = ThreadPoolExecutor(
             max_workers=self.callback_max_workers
         )
+        self.name = name if name else f"{self.__class__.__name__}_{id(self)}"
+        self.namespace = namespace if namespace else "default_namespace"
+        self.observability_port = observability_port
+        self.observability_ip = observability_ip
 
         if not hasattr(self, "__orig_bases__"):
             self.__orig_bases__ = {}
@@ -90,6 +103,13 @@ class BaseConnector(Generic[T]):
                 " e.g. Connector[MessageType]()"
             )
         self.T_class: Type[T] = get_args(self.__orig_bases__[-1])[0]
+
+        self.observability_module = ObservabilityModule(
+            name=name if name else f"{self.__class__.__name__}_{id(self)}",
+            namespace=namespace if namespace else "default_namespace",
+            ip=self.observability_ip,
+            port=self.observability_port,
+        )
 
     def _generate_handle(self) -> str:
         return str(uuid4())
