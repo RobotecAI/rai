@@ -104,6 +104,8 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         destroy_subscribers: bool = False,
         executor_type: Literal["single_threaded", "multi_threaded"] = "multi_threaded",
         use_sim_time: bool = False,
+        observability_sink=None,
+        observability_endpoint: str | None = None,
     ):
         """Initialize the ROS2BaseConnector.
 
@@ -121,7 +123,10 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         ValueError
             If an invalid executor type is provided.
         """
-        super().__init__()
+        super().__init__(
+            observability_sink=observability_sink,
+            observability_endpoint=observability_endpoint,
+        )
 
         if not rclpy.ok():
             rclpy.init()

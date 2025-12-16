@@ -12,14 +12,49 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import logging
 from abc import ABC, abstractmethod
+from typing import Optional
+
+from rai.communication.base_connector import BaseConnector
+from rai.observability import ObservabilitySink, build_sink_from_env
 
 
 class BaseAgent(ABC):
-    def __init__(self):
-        """Initializes a new agent instance and sets up logging with the class name."""
-        self.logger = logging.getLogger(self.__class__.__name__)
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        observability_sink: Optional[ObservabilitySink] = None,
+        observability_endpoint: Optional[str] = None,
+    ):
+        """Initializes a new agent instance, logger, and optional observability sink."""
+        self.name = name or self.__class__.__name__
+        self.logger = logging.getLogger(self.name)
+        self.observability_sink = observability_sink or build_sink_from_env(
+            endpoint=observability_endpoint
+        )
+
+    def attach_connectors(self, *connectors: object) -> None:
+        """Annotate connectors with agent context without changing their constructors."""
+        for conn in connectors:
+            try:
+                setattr(conn, "agent_name", self.name)
+            except Exception:
+                # Best effort; do not raise
+                continue
+
+    def __setattr__(self, name: str, value: object) -> None:
+        """Automatically inject agent context into assigned connectors."""
+        # Use super().__setattr__ first to ensure the attribute is set
+        super().__setattr__(name, value)
+
+        # Then inspect and inject if it looks like a connector
+        # We avoid importing BaseConnector to prevent circular imports, use duck typing
+        if isinstance(value, BaseConnector):
+            value.agent_name = self.name
+            value.connector_name = value.__class__.__name__
+            value.observability_sink = self.observability_sink
 
     @abstractmethod
     def run(self):
