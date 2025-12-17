@@ -14,6 +14,7 @@
 
 from collections import deque
 
+import pytest
 from rai.communication.ros2 import waiters
 
 
@@ -77,3 +78,33 @@ def test_wait_for_ros2_actions(monkeypatch):
     monkeypatch.setattr(waiters.time, "sleep", lambda *_: None)
 
     waiters.wait_for_ros2_actions(connector, ["action_a"], time_interval=0)
+
+
+def test_wait_for_ros2_services_timeout(monkeypatch):
+    connector = DummyConnector(services_seq=[[]])
+    monkeypatch.setattr(waiters.time, "sleep", lambda *_: None)
+
+    with pytest.raises(TimeoutError):
+        waiters.wait_for_ros2_services(
+            connector, ["target_service"], time_interval=0.001, timeout=0.01
+        )
+
+
+def test_wait_for_ros2_topics_timeout(monkeypatch):
+    connector = DummyConnector(topics_seq=[[]])
+    monkeypatch.setattr(waiters.time, "sleep", lambda *_: None)
+
+    with pytest.raises(TimeoutError):
+        waiters.wait_for_ros2_topics(
+            connector, ["target_topic"], time_interval=0.001, timeout=0.01
+        )
+
+
+def test_wait_for_ros2_actions_timeout(monkeypatch):
+    connector = DummyConnector(actions_seq=[[]])
+    monkeypatch.setattr(waiters.time, "sleep", lambda *_: None)
+
+    with pytest.raises(TimeoutError):
+        waiters.wait_for_ros2_actions(
+            connector, ["target_action"], time_interval=0.001, timeout=0.01
+        )

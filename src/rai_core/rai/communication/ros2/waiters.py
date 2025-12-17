@@ -27,6 +27,7 @@ def wait_for_ros2_services(
     connector: "ROS2BaseConnector[Any]",
     requested_services: List[str],
     time_interval: float = 1.0,
+    timeout: float = 60.0,
 ) -> None:
     # make sure the requested services start with '/'
     requested_services = [
@@ -34,7 +35,9 @@ def wait_for_ros2_services(
         for service in requested_services
     ]
 
-    while True:
+    service_names: List[str] = []
+    start_time = time.time()
+    while time.time() - start_time < timeout:
         available_services = connector.get_services_names_and_types()
         service_names = [service[0] for service in available_services]
         if set(requested_services).issubset(set(service_names)):
@@ -43,12 +46,17 @@ def wait_for_ros2_services(
             f"Waiting for services {set(requested_services) - set(service_names)}..."
         )
         time.sleep(time_interval)
+    else:
+        raise TimeoutError(
+            f"Services {set(requested_services) - set(service_names)} not available within {timeout} seconds"
+        )
 
 
 def wait_for_ros2_topics(
     connector: "ROS2BaseConnector[Any]",
     requested_topics: List[str],
     time_interval: float = 1.0,
+    timeout: float = 60.0,
 ) -> None:
     # make sure the requested topics start with '/'
     requested_topics = [
@@ -56,19 +64,26 @@ def wait_for_ros2_topics(
         for topic in requested_topics
     ]
 
-    while True:
+    topic_names: List[str] = []
+    start_time = time.time()
+    while time.time() - start_time < timeout:
         available_topics = connector.get_topics_names_and_types()
         topic_names = [topic[0] for topic in available_topics]
         if set(requested_topics).issubset(set(topic_names)):
             break
         logger.info(f"Waiting for topics {set(requested_topics) - set(topic_names)}...")
         time.sleep(time_interval)
+    else:
+        raise TimeoutError(
+            f"Topics {set(requested_topics) - set(topic_names)} not available within {timeout} seconds. Available topics: {topic_names}"
+        )
 
 
 def wait_for_ros2_actions(
     connector: "ROS2BaseConnector[Any]",
     requested_actions: List[str],
     time_interval: float = 1.0,
+    timeout: float = 60.0,
 ) -> None:
     # make sure the requested actions start with '/'
     requested_actions = [
@@ -76,7 +91,9 @@ def wait_for_ros2_actions(
         for action in requested_actions
     ]
 
-    while True:
+    action_names: List[str] = []
+    start_time = time.time()
+    while time.time() - start_time < timeout:
         available_actions = connector.get_actions_names_and_types()
         action_names = [action[0] for action in available_actions]
         if set(requested_actions).issubset(set(action_names)):
@@ -85,3 +102,7 @@ def wait_for_ros2_actions(
             f"Waiting for actions {set(requested_actions) - set(action_names)}..."
         )
         time.sleep(time_interval)
+    else:
+        raise TimeoutError(
+            f"Actions {set(requested_actions) - set(action_names)} not available within {timeout} seconds. Available actions: {action_names}"
+        )
