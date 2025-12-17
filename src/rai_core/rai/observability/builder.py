@@ -92,7 +92,14 @@ def build_sink_from_env(
 
     buf_size = buffer_size if buffer_size is not None else default_buffer_size()
     if buf_size and buf_size > 0:
-        return BufferedSink(
+        wrapped = BufferedSink(
             sink, maxlen=buf_size, logger=logging.getLogger("BufferedSink")
         )
+        wrapped.start()
+        return wrapped
+    if hasattr(sink, "start"):
+        try:
+            sink.start()
+        except Exception:
+            pass
     return sink

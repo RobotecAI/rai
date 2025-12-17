@@ -15,6 +15,7 @@
 import logging
 import os
 import threading
+import time
 from collections import deque
 from typing import Any, Protocol
 
@@ -72,7 +73,11 @@ class StdoutSink:
 
 
 class BufferedSink:
-    """Wraps another sink, buffers on failure, and drops oldest when full."""
+    """Wraps another sink, buffers under backpressure, drops oldest when full.
+
+    Critical property: `record()` stays lightweight and does not synchronously
+    flush buffered events on the caller thread.
+    """
 
     def __init__(
         self,
@@ -84,37 +89,66 @@ class BufferedSink:
         self.maxlen = maxlen
         self.logger = logger or logging.getLogger("BufferedSink")
         self._lock = threading.Lock()
+        # Condition variable used to wake the worker thread when:
+        # - new events are enqueued (`record()`), or
+        # - we are stopping (`stop()`), so the worker can exit promptly.
+        self._condition = threading.Condition(self._lock)
         self._buf: deque[dict[str, Any]] = deque()
+        self._running = False
+        self._thread: threading.Thread | None = None
+        self._backoff_s = 0.05
+        self._max_backoff_s = 2.0
 
     def record(self, event: dict[str, Any]) -> None:
-        with self._lock:
-            # Try to flush buffered events first.
-            self._flush_locked()
-            self._record_one_locked(event)
-
-    def _record_one_locked(self, event: dict[str, Any]) -> None:
-        try:
-            self.inner.record(event)
-        except Exception:
+        # Hot path: enqueue only; never do a synchronous flush here.
+        with self._condition:
             if len(self._buf) >= self.maxlen:
                 self._buf.popleft()
                 self.logger.debug("BufferedSink dropping oldest event (buffer full)")
             self._buf.append(event)
+            self._condition.notify()
 
-    def _flush_locked(self) -> None:
-        pending = list(self._buf)
-        self._buf.clear()
+    def _worker(self) -> None:
+        backoff = self._backoff_s
+        while True:
+            with self._condition:
+                while self._running and not self._buf:
+                    self._condition.wait(timeout=0.5)
+                if not self._running and not self._buf:
+                    return
+                ev = self._buf.popleft()
+            try:
+                self.inner.record(ev)
+                backoff = self._backoff_s
+            except Exception:
+                # Put the event back at the front (best effort) and back off.
+                with self._condition:
+                    if len(self._buf) >= self.maxlen:
+                        self._buf.popleft()
+                        self.logger.debug(
+                            "BufferedSink dropping oldest event (buffer full)"
+                        )
+                    self._buf.appendleft(ev)
+                time.sleep(backoff)
+                backoff = min(self._max_backoff_s, backoff * 2.0)
+
+    def flush(self) -> None:
+        # Best-effort flush; may block caller, but this is not on the hot path.
+        pending: list[dict[str, Any]]
+        with self._condition:
+            pending = list(self._buf)
+            self._buf.clear()
         for ev in pending:
             try:
                 self.inner.record(ev)
             except Exception:
-                # Re-queue remaining events and stop to avoid tight retry loops.
-                self._buf.extend(pending[pending.index(ev) :])
+                # Re-queue remaining events and stop.
+                with self._condition:
+                    for back in pending[pending.index(ev) :]:
+                        if len(self._buf) >= self.maxlen:
+                            self._buf.popleft()
+                        self._buf.append(back)
                 break
-
-    def flush(self) -> None:
-        with self._lock:
-            self._flush_locked()
 
     def start(self) -> None:
         if hasattr(self.inner, "start"):
@@ -122,6 +156,14 @@ class BufferedSink:
                 self.inner.start()
             except Exception:
                 pass
+        with self._condition:
+            if self._running:
+                return
+            self._running = True
+            self._thread = threading.Thread(
+                target=self._worker, name="BufferedSinkWorker", daemon=True
+            )
+            self._thread.start()
 
     def stop(self) -> None:
         if hasattr(self.inner, "stop"):
@@ -129,6 +171,13 @@ class BufferedSink:
                 self.inner.stop()
             except Exception:
                 pass
+        with self._condition:
+            self._running = False
+            self._condition.notify_all()
+        t = self._thread
+        if t and t.is_alive():
+            t.join(timeout=1.0)
+        self._thread = None
 
 
 def default_buffer_size() -> int:

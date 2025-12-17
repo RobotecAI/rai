@@ -15,6 +15,7 @@
 
 import logging
 import time
+import weakref
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, Dict, Generic, Optional, Type, TypeVar, get_args
@@ -23,6 +24,7 @@ from uuid import uuid4
 from pydantic import BaseModel, ConfigDict, Field
 
 from rai.observability import ObservabilityMeta, ObservabilitySink, build_sink_from_env
+from rai.observability.lifecycle import emit_event, start_heartbeat
 
 
 class ConnectorException(Exception):
@@ -100,6 +102,7 @@ class BaseConnector(Generic[T], metaclass=ObservabilityMeta):
         self.observability_sink = observability_sink or build_sink_from_env(
             endpoint=observability_endpoint
         )
+        self._observability_heartbeat = None
 
         if not hasattr(self, "__orig_bases__"):
             self.__orig_bases__ = {}
@@ -462,4 +465,45 @@ class BaseConnector(Generic[T], metaclass=ObservabilityMeta):
 
     def shutdown(self):
         """Shuts down the connector and releases all resources."""
-        self.callback_executor.shutdown(wait=True)
+        try:
+            self.callback_executor.shutdown(wait=True)
+        finally:
+            try:
+                hb = getattr(self, "_observability_heartbeat", None)
+                if hb is not None:
+                    hb.stop()
+            except Exception:
+                pass
+            emit_event(
+                sink=getattr(self, "observability_sink", None),
+                event_type="connector_close",
+                component_type="connector",
+                agent_name=getattr(self, "agent_name", None),
+                connector_name=getattr(self, "connector_name", None),
+            )
+
+    def attach_observability(self, *, agent_name: str, sink: ObservabilitySink) -> None:
+        """Attach agent context + sink and emit connector lifecycle/heartbeat.
+
+        This is called by `BaseAgent` when it wires connectors, so `agent_name` is
+        known when we emit `connector_open` and start heartbeat.
+        """
+        self.agent_name = agent_name
+        self.connector_name = getattr(self, "connector_name", self.__class__.__name__)
+        self.observability_sink = sink
+        emit_event(
+            sink=self.observability_sink,
+            event_type="connector_open",
+            component_type="connector",
+            agent_name=self.agent_name,
+            connector_name=self.connector_name,
+        )
+        hb = start_heartbeat(
+            sink=self.observability_sink,
+            component_type="connector",
+            agent_name=self.agent_name,
+            connector_name=self.connector_name,
+        )
+        self._observability_heartbeat = hb
+        if hb is not None:
+            weakref.finalize(hb, hb.stop)

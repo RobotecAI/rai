@@ -13,6 +13,13 @@
 # limitations under the License.
 
 from .builder import build_sink_from_env
+from .correlation import (
+    get_observability_context,
+    observability_context,
+    reset_observability_context,
+    set_observability_context,
+)
+from .lifecycle import emit_event, start_heartbeat
 from .meta import EVENT_SCHEMA_VERSION, ObservabilityMeta
 from .sink import BufferedSink, LoggingSink, NoOpSink, ObservabilitySink
 
@@ -24,4 +31,10 @@ __all__ = [
     "ObservabilityMeta",
     "ObservabilitySink",
     "build_sink_from_env",
+    "emit_event",
+    "get_observability_context",
+    "observability_context",
+    "reset_observability_context",
+    "set_observability_context",
+    "start_heartbeat",
 ]
