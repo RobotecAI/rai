@@ -1,65 +1,121 @@
-name: Publish packages (Test PyPI to PyPI)
+name: Publish package to PyPI
 
 on:
   workflow_dispatch:
     inputs:
-      dry_run:
-        description: "If true, build/test and verify installs locally, but do not publish to Test PyPI or PyPI"
+      package:
+        description: "Package(s) to publish. Single package: 'rai_core'. Multiple packages (comma-separated): 'rai_core,rai-perception,rai-bench'. See list-packages job output for available packages."
+        required: true
+        type: string
+      publish_target:
+        description: "Publish target"
+        required: true
+        type: choice
+        options:
+          - test-pypi
+          - pypi
+      build_wheels:
+        description: "Build platform-specific wheels (required for packages with C extensions)"
         required: false
-        default: "false"
-  pull_request:
-    types: [labeled]
-    branches:
-      - main
-
-env:
-  DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+        type: boolean
+        default: false
 
 jobs:
-  require-version-bumps:
-    name: Require version bumps for changed packages
-    # The version bump check relies on PR base/head SHAs. For workflow_dispatch
-    # there is no PR context, so we skip this check.
-    if: github.event.label.name == 'publish-testpypi'
+  discover-packages:
+    name: Discover packages and validate
     runs-on: ubuntu-latest
-
+    outputs:
+      packages_json: ${{ steps.discover.outputs.packages_json }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Check versions
+      - name: Discover and validate packages
+        id: discover
         run: |
-          python scripts/pkg_version_bump.py \
-            --base-sha "${{ github.event.pull_request.base.sha }}" \
-            --head-sha "${{ github.event.pull_request.head.sha }}"
+          python scripts/discover_packages.py --output-format json > packages.json
+          
+          # Parse comma-separated package list and validate
+          PACKAGE_INPUT="${{ inputs.package }}"
+          python -c "
+          import json
+          import subprocess
+          import sys
+          
+          # Load discovered packages
+          with open('packages.json') as f:
+              all_packages = json.load(f)
+          
+          # Parse input packages (comma-separated)
+          package_input = '$PACKAGE_INPUT'
+          package_names = [p.strip() for p in package_input.split(',') if p.strip()]
+          
+          validated = []
+          errors = []
+          
+          for pkg_name in package_names:
+              if pkg_name not in all_packages:
+                  errors.append(f\"Package '{pkg_name}' not found in repository\")
+                  continue
+              
+              pkg_info = all_packages[pkg_name]
+              validated.append({
+                  'name': pkg_name,
+                  'path': pkg_info['path'],
+                  'version': pkg_info['version']
+              })
+              print(f\"Found package: {pkg_name} v{pkg_info['version']} at {pkg_info['path']}\")
+          
+          if errors:
+              print('\\nErrors:', file=sys.stderr)
+              for err in errors:
+                  print(f'  - {err}', file=sys.stderr)
+              print('\\nAvailable packages:', file=sys.stderr)
+              for name in sorted(all_packages.keys()):
+                  print(f'  - {name}', file=sys.stderr)
+              sys.exit(1)
+          
+          # Check PyPI versions
+          publish_target = '${{ inputs.publish_target }}'
+          for pkg in validated:
+              pkg_name = pkg['name']
+              pkg_version = pkg['version']
+              
+              if publish_target == 'pypi':
+                  result = subprocess.run(['python', 'scripts/check_pypi_version.py', pkg_name, pkg_version], 
+                                        capture_output=True, text=True)
+                  if result.returncode == 1:
+                      print(f\"::error::Version {pkg_version} of {pkg_name} already exists on PyPI. Bump version in pyproject.toml before publishing.\", file=sys.stderr)
+                      errors.append(f\"Version {pkg_version} of {pkg_name} already exists on PyPI\")
+              else:
+                  result = subprocess.run(['python', 'scripts/check_pypi_version.py', pkg_name, pkg_version, '--test-pypi'], 
+                                        capture_output=True, text=True)
+                  if result.returncode == 1:
+                      print(f\"::warning::Version {pkg_version} of {pkg_name} already exists on Test PyPI\")
+          
+          if errors:
+              sys.exit(1)
+          
+          # Output validated packages as JSON
+          packages_json = json.dumps(validated)
+          with open('$GITHUB_OUTPUT', 'a') as f:
+              print(f'packages_json={packages_json}', file=f)
+          print(f'Validated {len(validated)} package(s): {packages_json}')
+          "
 
   build_wheels:
     name: Build wheels
-    if: github.event.label.name == 'publish-testpypi' || github.event_name == 'workflow_dispatch'
-    runs-on: ${{ matrix.os }}
-    needs: [require-version-bumps]
+    if: inputs.build_wheels == true
+    runs-on: ubuntu-latest
+    needs: [discover-packages]
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        package:
-          - name: rai-core
-            path: src/rai_core
-          - name: rai-perception
-            path: src/rai_extensions/rai_perception
-          - name: rai-bench
-            path: src/rai_bench
-          - name: rai-sim
-            path: src/rai_sim
-          - name: rai-whoami
-            path: src/rai_whoami
-
+        package: ${{ fromJson(needs.discover-packages.outputs.packages_json) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -72,160 +128,165 @@ jobs:
         run: python -m pip install cibuildwheel==2.16.2
 
       - name: Build wheels
+        working-directory: ${{ matrix.package.path }}
         env:
           CIBW_BUILD: cp310-* cp312-*
           CIBW_SKIP: pp* *-win32 *-manylinux_i686
           CIBW_BEFORE_BUILD: |
-            python -m pip install --upgrade pip
+            set -e
+            # Upgrade pip first to ensure it can find pre-built wheels
+            python -m pip install --upgrade pip wheel setuptools
+            # Install Rust compiler for packages like tiktoken that need to build from source
+            if ! command -v rustc &> /dev/null; then
+              curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+              export PATH="$HOME/.cargo/bin:$PATH"
+            fi
+            # Install Poetry
             python -m pip install poetry
-            cd "${{ matrix.package.path }}"
-            poetry install --no-interaction --no-root --only main
+            # Configure pip to prefer binary wheels over source builds
+            export PIP_PREFER_BINARY=1
+            # Only use Poetry if poetry.lock exists
+            if [ -f poetry.lock ]; then
+              # Install package dependencies - Poetry will use pre-built wheels when available
+              poetry install --no-interaction --no-root --only main
+            fi
           CIBW_BUILD_FRONTEND: build
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10,<3.13"
-          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
-        working-directory: ${{ matrix.package.path }}
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
+          CIBW_ENVIRONMENT: 'PATH="$HOME/.cargo/bin:$PATH"'
         run: |
           python -m cibuildwheel --output-dir wheelhouse
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-${{ matrix.package.name }}-${{ matrix.os }}
+          name: wheels-${{ matrix.package.name }}
           path: ${{ matrix.package.path }}/wheelhouse/*.whl
           retention-days: 7
 
   build_sdist:
     name: Build source distributions
-    if: github.event.label.name == 'publish-testpypi' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    needs: [require-version-bumps]
-
+    needs: [discover-packages]
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJson(needs.discover-packages.outputs.packages_json) }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
-          # TODO(juliaj): poetry.lock generated with Poetry 2.1.4, consider pinning version here
           version: 2.1.1
 
-      - name: Run tests
+      - name: Build source distribution
+        working-directory: ${{ matrix.package.path }}
         run: |
-          poetry install
-          poetry run pytest -m "not billable"
+          poetry build --format sdist
 
-      - name: Build source distributions
-        run: |
-          cd src/rai_core && poetry build --format sdist
-          cd ../rai_extensions/rai_perception && poetry build --format sdist
-          cd ../rai_bench && poetry build --format sdist
-          cd ../rai_sim && poetry build --format sdist
-          cd ../rai_whoami && poetry build --format sdist
-
-      - name: Upload source distributions
+      - name: Upload source distribution
         uses: actions/upload-artifact@v4
         with:
-          name: source-distributions
-          path: |
-            src/rai_core/dist/*.tar.gz
-            src/rai_extensions/rai_perception/dist/*.tar.gz
-            src/rai_bench/dist/*.tar.gz
-            src/rai_sim/dist/*.tar.gz
-            src/rai_whoami/dist/*.tar.gz
+          name: sdist-${{ matrix.package.name }}
+          path: ${{ matrix.package.path }}/dist/*.tar.gz
           retention-days: 7
 
-  publish:
+  publish_test_pypi:
     name: Publish to Test PyPI
-    if: github.event.label.name == 'publish-testpypi' || github.event_name == 'workflow_dispatch'
+    if: inputs.publish_target == 'test-pypi'
     runs-on: ubuntu-latest
-    needs: [require-version-bumps, build_wheels, build_sdist]
+    needs: [discover-packages, build_sdist]
+    environment: test-pypi
+    permissions:
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download all wheels
+      - name: Download wheel artifacts
+        if: inputs.build_wheels == true
         uses: actions/download-artifact@v4
         with:
           pattern: wheels-*
           merge-multiple: true
           path: wheels
 
-      - name: Download source distributions
+      - name: Download all source distributions
         uses: actions/download-artifact@v4
         with:
-          name: source-distributions
+          pattern: sdist-*
+          merge-multiple: true
           path: dist
 
-      # Use twine instead of Poetry publish because:
-      # 1. Distributions are collected from artifacts into a single location
-      # 2. We publish multiple packages (wheels + sdists) in one command
-      # 3. Poetry publish requires running from each package directory separately
-      - name: Install twine
-        run: python -m pip install --upgrade twine
+      - name: Publish to Test PyPI (with wheels)
+        if: inputs.build_wheels == true
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: |
+            wheels
+            dist
+          repository-url: https://test.pypi.org/legacy/
 
-      # Version management:
-      # - Package versions are defined in each package's pyproject.toml file
-      # - Each package uses independent versioning (e.g., rai-core 2.5.10, rai-perception 0.1.5)
-      # - If a package version already exists on Test PyPI, twine will fail with an error
-      # - You must bump the version in pyproject.toml before publishing again
-      - name: Publish to Test PyPI
-        if: ${{ env.DRY_RUN != 'true' }}
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
-        run: |
-          twine upload --repository-url https://test.pypi.org/legacy/ wheels/**/*.whl dist/**/*.tar.gz
+      - name: Publish to Test PyPI (sdist only)
+        if: inputs.build_wheels == false
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+          repository-url: https://test.pypi.org/legacy/
 
       - name: Verify installation from Test PyPI
-        if: ${{ env.DRY_RUN != 'true' }}
         run: |
-          pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ rai-core rai-perception rai-bench rai-sim rai-whoami
-          python -c "import rai; import rai_perception; import rai_bench; import rai_sim; import rai_whoami; print('Packages installed successfully')"
-
-      - name: Dry-run verify installation from local wheels
-        if: ${{ env.DRY_RUN == 'true' }}
-        run: |
-          python -m pip install --upgrade pip
-          pip install wheels/**/*.whl --no-deps
-          python -c "import rai; import rai_perception; import rai_bench; import rai_sim; import rai_whoami; print('Packages installed successfully')"
+          PACKAGES_JSON='${{ needs.discover-packages.outputs.packages_json }}'
+          PACKAGE_NAMES=$(python -c "import json, sys; pkgs = json.loads(sys.argv[1]); print(' '.join([p['name'] for p in pkgs]))" "$PACKAGES_JSON")
+          pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ $PACKAGE_NAMES
+          echo "Packages published to Test PyPI: $PACKAGE_NAMES"
 
   publish_pypi:
-    name: Publish to PyPI (manual approval)
-    if: (github.event.label.name == 'publish-testpypi' || github.event_name == 'workflow_dispatch') && env.DRY_RUN != 'true'
+    name: Publish to PyPI
+    if: inputs.publish_target == 'pypi'
     runs-on: ubuntu-latest
-    needs: [publish]
-    # Configure this Environment in GitHub settings with required reviewers to
-    # enforce manual approval before publishing to production PyPI.
+    needs: [discover-packages, build_sdist]
     environment: pypi
+    permissions:
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download all wheels
+      - name: Download wheel artifacts
+        if: inputs.build_wheels == true
         uses: actions/download-artifact@v4
         with:
           pattern: wheels-*
           merge-multiple: true
           path: wheels
 
-      - name: Download source distributions
+      - name: Download all source distributions
         uses: actions/download-artifact@v4
         with:
-          name: source-distributions
+          pattern: sdist-*
+          merge-multiple: true
           path: dist
 
-      - name: Install twine
-        run: python -m pip install --upgrade twine
+      - name: Publish to PyPI (with wheels)
+        if: inputs.build_wheels == true
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: |
+            wheels
+            dist
 
-      - name: Publish to PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: |
-          twine upload wheels/**/*.whl dist/**/*.tar.gz
+      - name: Publish to PyPI (sdist only)
+        if: inputs.build_wheels == false
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
 
       - name: Verify installation from PyPI
         run: |
-          pip install rai-core rai-perception rai-bench rai-sim rai-whoami
-          python -c "import rai; import rai_perception; import rai_bench; import rai_sim; import rai_whoami; print('Packages installed successfully')"
+          PACKAGES_JSON='${{ needs.discover-packages.outputs.packages_json }}'
+          PACKAGE_NAMES=$(python -c "import json, sys; pkgs = json.loads(sys.argv[1]); print(' '.join([p['name'] for p in pkgs]))" "$PACKAGES_JSON")
+          pip install $PACKAGE_NAMES
+          echo "Packages published to PyPI: $PACKAGE_NAMES"

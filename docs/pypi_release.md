@@ -1,6 +1,6 @@
 # PyPI Release Workflow
 
-This document explains the build and publish process for RAI packages to PyPI. Publishing is handled via GitHub Actions workflows to keep API tokens and credentials secure using GitHub Secrets.
+This document explains the build and publish process for RAI packages to PyPI. Publishing is handled via GitHub Actions workflows using PyPI Trusted Publishers with OpenID Connect (OIDC) for secure authentication.
 
 Typical release flow:
 
@@ -46,47 +46,71 @@ Trigger: PR with label `publish-testpypi` or manual dispatch
 Steps:
 
 1. Run tests: `pytest -m "not billable"`
-2. Build wheels and source distributions for all packages
-3. Publish to Test PyPI and verify installation
-4. Manual approval (GitHub Environment: `pypi`)
-5. Publish to PyPI and verify installation
+2. Build wheels and source distributions for all packages (including `rai-tiny`)
+3. Publish `rai-tiny` to Test PyPI first (validates Trusted Publisher authentication)
+4. Publish other packages to Test PyPI and verify installation
+5. Manual approval (GitHub Environment: `pypi`)
+6. Publish `rai-tiny` to PyPI first (validates Trusted Publisher authentication)
+7. Publish other packages to PyPI and verify installation
 
 Dry-run (no publishing):
 
 1. Go to the repo Actions tab
-2. Select the workflow "Publish to Test PyPI" (from `pkg-publish.yaml`)
+2. Select the workflow "Publish packages (Test PyPI to PyPI)"
 3. Click "Run workflow"
 4. Set input `dry_run` to `true`
-5. Click the final "Run workflow" button
+5. Click "Run workflow"
 
-In dry-run mode, the workflow skips `twine upload` to Test PyPI and PyPI. It installs from the locally built wheels and runs the import smoke test. Use `dry_run=true` when changing `pkg-publish.yaml` (or related scripts) to validate the workflow logic without consuming Test PyPI/PyPI versions.
+In dry-run mode, the workflow skips publishing to Test PyPI and PyPI. It builds all distributions (including `rai-tiny`), installs from locally built wheels, and runs import verification tests. Use `dry_run=true` to validate workflow changes without consuming Test PyPI/PyPI versions.
 
 Notes:
 
+-   `rai-tiny` is a minimal test package used to validate the Trusted Publisher authentication path before publishing real packages. It is published to both Test PyPI and production PyPI as a canary to catch authentication issues early.
 -   Production publish is gated by a GitHub Environment named `pypi`. Configure this environment with required reviewers for manual approval.
 -   Publishing fails if the same package version already exists on Test PyPI or PyPI. Bump the version in the relevant `pyproject.toml` files before publishing again.
 
-## Required GitHub Secrets
+## GitHub Environment Setup
 
--   TEST_PYPI_API_TOKEN: Test PyPI API token
--   PYPI_API_TOKEN: Production PyPI API token
+The `pypi` environment must be configured to require manual approval before publishing to production PyPI.
 
-### Getting API Tokens
+To set up the environment:
 
-Test PyPI requires a separate account from production PyPI:
+1. Go to repository Settings > Environments
+2. Create or edit the `pypi` environment
+3. Configure protection rules:
+    - Required reviewers: Add trusted team members who must approve deployments
+    - Wait timer: Optional delay to allow cancellation of accidental deployments
+    - Deployment branches: Restrict to `main` branch only
+4. Save the configuration
 
-1. Create an account at [test.pypi.org](https://test.pypi.org/account/register/)
-2. Go to Account settings > API tokens
-3. Create a new API token with "Upload packages" scope
-4. Copy the token (it's only shown once)
+### Approving a Production Release
 
-Production PyPI:
+When the workflow reaches production PyPI publishing, it pauses for approval:
 
-1. Go to [pypi.org](https://pypi.org) and log in
-2. Go to Account settings > API tokens
-3. Create a new API token with "Upload packages" scope
-4. Copy the token (it's only shown once)
+1. Go to the repository Actions tab
+2. Find the workflow run with "Waiting" status
+3. Click the workflow run and locate the "Review deployments" section
+4. Review deployment details (packages, versions, test results)
+5. Click "Review deployments" and select "Approve and deploy" or "Reject"
 
-### Setting Up Secrets in GitHub
+Only configured reviewers can approve deployments. All approvals are logged for audit purposes.
 
-To add these tokens as secrets, go to your repository Settings > Secrets and variables > Actions, then add a new repository secret. See GitHub's documentation on [encrypted secrets](https://docs.github.com/actions/security-guides/encrypted-secrets) for detailed instructions.
+## Trusted Publishers Setup
+
+This project uses PyPI Trusted Publishers with OpenID Connect (OIDC) for authentication. This eliminates the need for manually managed API tokens and provides better security with short-lived credentials.
+
+### Setting Up Trusted Publishers
+
+Configure a Trusted Publisher at the organization level (recommended for multiple projects) or per-project:
+
+1. Go to your organization's page on [pypi.org](https://pypi.org) (e.g., `https://pypi.org/organizations/<org-name>/`) or your project's settings page on [test.pypi.org](https://test.pypi.org) or [pypi.org](https://pypi.org)
+2. Navigate to "Publishing" > "Add a new trusted publisher"
+3. Configure:
+    - Publisher: GitHub
+    - Repository: `RobotecAI/rai`
+    - Workflow filename: `pkg-publish.yaml`
+    - Environment name: leave empty for Test PyPI, `pypi` for production PyPI
+
+For new packages, create the project first, then add the Trusted Publisher. Organization-level publishers apply to all projects in the organization.
+
+For detailed instructions, see PyPI's documentation on [Trusted Publishers](https://docs.pypi.org/trusted-publishers/).

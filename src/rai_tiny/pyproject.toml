@@ -1,0 +1,20 @@
+[project]
+name = "rai-tiny"
+version = "0.0.2"
+description = "Minimal test package for validating PyPI publishing workflow"
+authors = [{name = "Julia Jia"}]
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["rai_tiny"]
+
