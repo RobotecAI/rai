@@ -14,11 +14,10 @@
 
 """Setup script for building rai_tiny C extension."""
 
-from setuptools import setup, Extension
+from setuptools import Extension, setup
 
 setup(
     ext_modules=[
         Extension("rai_tiny._tiny", sources=["rai_tiny/_tiny.c"]),
     ],
 )
-

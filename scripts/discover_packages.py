@@ -65,8 +65,12 @@ def discover_packages(repo_root: pathlib.Path) -> dict[str, dict[str, str]]:
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="Discover packages in monorepo")
-    parser.add_argument("--output-format", choices=["json", "list"], default="json",
-                       help="Output format")
+    parser.add_argument(
+        "--output-format",
+        choices=["json", "list"],
+        default="json",
+        help="Output format",
+    )
     args = parser.parse_args(argv)
 
     repo_root = pathlib.Path(__file__).resolve().parents[1]
@@ -83,4 +87,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
-

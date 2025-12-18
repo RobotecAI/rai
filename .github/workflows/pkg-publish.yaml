@@ -38,30 +38,30 @@ jobs:
         id: discover
         run: |
           python scripts/discover_packages.py --output-format json > packages.json
-          
+
           # Parse comma-separated package list and validate
           PACKAGE_INPUT="${{ inputs.package }}"
           python -c "
           import json
           import subprocess
           import sys
-          
+
           # Load discovered packages
           with open('packages.json') as f:
               all_packages = json.load(f)
-          
+
           # Parse input packages (comma-separated)
           package_input = '$PACKAGE_INPUT'
           package_names = [p.strip() for p in package_input.split(',') if p.strip()]
-          
+
           validated = []
           errors = []
-          
+
           for pkg_name in package_names:
               if pkg_name not in all_packages:
                   errors.append(f\"Package '{pkg_name}' not found in repository\")
                   continue
-              
+
               pkg_info = all_packages[pkg_name]
               validated.append({
                   'name': pkg_name,
@@ -69,7 +69,7 @@ jobs:
                   'version': pkg_info['version']
               })
               print(f\"Found package: {pkg_name} v{pkg_info['version']} at {pkg_info['path']}\")
-          
+
           if errors:
               print('\\nErrors:', file=sys.stderr)
               for err in errors:
@@ -78,28 +78,28 @@ jobs:
               for name in sorted(all_packages.keys()):
                   print(f'  - {name}', file=sys.stderr)
               sys.exit(1)
-          
+
           # Check PyPI versions
           publish_target = '${{ inputs.publish_target }}'
           for pkg in validated:
               pkg_name = pkg['name']
               pkg_version = pkg['version']
-              
+
               if publish_target == 'pypi':
-                  result = subprocess.run(['python', 'scripts/check_pypi_version.py', pkg_name, pkg_version], 
+                  result = subprocess.run(['python', 'scripts/check_pypi_version.py', pkg_name, pkg_version],
                                         capture_output=True, text=True)
                   if result.returncode == 1:
                       print(f\"::error::Version {pkg_version} of {pkg_name} already exists on PyPI. Bump version in pyproject.toml before publishing.\", file=sys.stderr)
                       errors.append(f\"Version {pkg_version} of {pkg_name} already exists on PyPI\")
               else:
-                  result = subprocess.run(['python', 'scripts/check_pypi_version.py', pkg_name, pkg_version, '--test-pypi'], 
+                  result = subprocess.run(['python', 'scripts/check_pypi_version.py', pkg_name, pkg_version, '--test-pypi'],
                                         capture_output=True, text=True)
                   if result.returncode == 1:
                       print(f\"::warning::Version {pkg_version} of {pkg_name} already exists on Test PyPI\")
-          
+
           if errors:
               sys.exit(1)
-          
+
           # Output validated packages as JSON
           packages_json = json.dumps(validated)
           with open('$GITHUB_OUTPUT', 'a') as f:

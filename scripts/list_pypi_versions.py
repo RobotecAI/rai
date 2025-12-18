@@ -47,7 +47,9 @@ def get_pypi_versions(package_name: str, test_pypi: bool = False) -> list[str]:
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="List versions of a package on PyPI")
     parser.add_argument("package", help="Package name")
-    parser.add_argument("--test-pypi", action="store_true", help="Check Test PyPI instead of PyPI")
+    parser.add_argument(
+        "--test-pypi", action="store_true", help="Check Test PyPI instead of PyPI"
+    )
     parser.add_argument("--json", action="store_true", help="Output as JSON")
     args = parser.parse_args(argv)
 
@@ -57,7 +59,9 @@ def main(argv: list[str]) -> int:
         print(json.dumps(versions))
     else:
         if versions:
-            print(f"Versions on {'Test PyPI' if args.test_pypi else 'PyPI'}: {', '.join(versions)}")
+            print(
+                f"Versions on {'Test PyPI' if args.test_pypi else 'PyPI'}: {', '.join(versions)}"
+            )
         else:
             print(f"No versions found on {'Test PyPI' if args.test_pypi else 'PyPI'}")
 
@@ -66,4 +70,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
-

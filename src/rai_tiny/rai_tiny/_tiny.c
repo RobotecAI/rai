@@ -39,4 +39,3 @@ static struct PyModuleDef tinymodule = {
 PyMODINIT_FUNC PyInit__tiny(void) {
     return PyModule_Create(&tinymodule);
 }
-

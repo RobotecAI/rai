@@ -45,21 +45,28 @@ def check_version(package_name: str, version: str, test_pypi: bool = False) -> b
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Check if package version exists on PyPI")
+    parser = argparse.ArgumentParser(
+        description="Check if package version exists on PyPI"
+    )
     parser.add_argument("package", help="Package name")
     parser.add_argument("version", help="Version to check")
-    parser.add_argument("--test-pypi", action="store_true", help="Check Test PyPI instead of PyPI")
+    parser.add_argument(
+        "--test-pypi", action="store_true", help="Check Test PyPI instead of PyPI"
+    )
     args = parser.parse_args(argv)
 
     exists = check_version(args.package, args.version, test_pypi=args.test_pypi)
     if exists:
-        print(f"Version {args.version} of {args.package} exists on {'Test PyPI' if args.test_pypi else 'PyPI'}")
+        print(
+            f"Version {args.version} of {args.package} exists on {'Test PyPI' if args.test_pypi else 'PyPI'}"
+        )
         return 1
     else:
-        print(f"Version {args.version} of {args.package} does not exist on {'Test PyPI' if args.test_pypi else 'PyPI'}")
+        print(
+            f"Version {args.version} of {args.package} does not exist on {'Test PyPI' if args.test_pypi else 'PyPI'}"
+        )
         return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
-
