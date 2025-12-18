@@ -1,4 +1,4 @@
-name: List package versions
+name: List package versions (PyPI / Test PyPI)
 
 on:
   workflow_dispatch:
@@ -46,7 +46,7 @@ jobs:
 
               # Get Test PyPI versions
               try:
-                  result = subprocess.run(["python", "scripts/list_pypi_versions.py", pkg_name, "--test-pypi", "--json"],
+                  result = subprocess.run(["python", "scripts/pypi_query.py", "--test-pypi", "list", pkg_name, "--json"],
                                         capture_output=True, text=True, timeout=10)
                   testpypi_versions = json.loads(result.stdout) if result.returncode == 0 and result.stdout.strip() else []
               except (json.JSONDecodeError, subprocess.TimeoutExpired):
@@ -54,7 +54,7 @@ jobs:
 
               # Get PyPI versions
               try:
-                  result = subprocess.run(["python", "scripts/list_pypi_versions.py", pkg_name, "--json"],
+                  result = subprocess.run(["python", "scripts/pypi_query.py", "list", pkg_name, "--json"],
                                         capture_output=True, text=True, timeout=10)
                   pypi_versions = json.loads(result.stdout) if result.returncode == 0 and result.stdout.strip() else []
               except (json.JSONDecodeError, subprocess.TimeoutExpired):
@@ -109,7 +109,7 @@ jobs:
 
               # Get Test PyPI versions
               try:
-                  result = subprocess.run(["python", "scripts/list_pypi_versions.py", pkg_name, "--test-pypi", "--json"],
+                  result = subprocess.run(["python", "scripts/pypi_query.py", "--test-pypi", "list", pkg_name, "--json"],
                                         capture_output=True, text=True, timeout=10)
                   testpypi_versions = json.loads(result.stdout) if result.returncode == 0 and result.stdout.strip() else []
               except (json.JSONDecodeError, subprocess.TimeoutExpired):
@@ -117,7 +117,7 @@ jobs:
 
               # Get PyPI versions
               try:
-                  result = subprocess.run(["python", "scripts/list_pypi_versions.py", pkg_name, "--json"],
+                  result = subprocess.run(["python", "scripts/pypi_query.py", "list", pkg_name, "--json"],
                                         capture_output=True, text=True, timeout=10)
                   pypi_versions = json.loads(result.stdout) if result.returncode == 0 and result.stdout.strip() else []
               except (json.JSONDecodeError, subprocess.TimeoutExpired):

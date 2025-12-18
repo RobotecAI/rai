@@ -59,6 +59,27 @@ colcon build --symlink-install
 pytest tests/
 ```
 
+### Package naming for PyPI releases
+
+When creating a new package for PyPI release, please use **hyphens** (`-`) in the package name defined in `pyproject.toml`. For example, use `rai-awesomepackage` rather than `rai_awesomepackage`.
+
+Define the package name in your `pyproject.toml` like this:
+
+```toml
+[tool.poetry]
+name = "rai-awesomepackage"
+version = "0.1.0"
+# ...
+```
+
+This convention:
+
+-   Aligns with PyPI best practices and improves readability
+-   Works seamlessly with our publishing workflow (which supports both formats for backward compatibility)
+-   Makes package names more user-friendly in URLs and command-line usage
+
+Note: The Python import name (in the `packages` field) typically uses underscores to match Python module naming conventions, which is perfectly fine. The distinction is between the PyPI package name (hyphens) and the Python module name (underscores).
+
 ### Starting the discussion
 
 Always try to engage in discussion first. Browse Issues and RFCs or start a discussion on

@@ -16,14 +16,10 @@
 
 __version__ = "0.0.2"
 
-try:
-    from rai_tiny._tiny import add
 
-    __all__ = ["add"]
-except ImportError:
-    # Fallback if extension not built
-    def add(a: int, b: int) -> int:
-        """Add two integers (pure Python fallback)."""
-        return a + b
+def add(a: int, b: int) -> int:
+    """Add two integers."""
+    return a + b
 
-    __all__ = ["add"]
+
+__all__ = ["add"]

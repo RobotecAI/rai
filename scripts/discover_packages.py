@@ -27,6 +27,9 @@ import sys
 
 VERSION_RE = re.compile(r'^\s*version\s*=\s*"([^"]+)"\s*$', re.MULTILINE)
 POETRY_NAME_RE = re.compile(r'^\s*name\s*=\s*"([^"]+)"\s*$', re.MULTILINE)
+HAS_C_EXTENSIONS_RE = re.compile(
+    r"^\s*has_c_extensions\s*=\s*(true|false)\s*$", re.MULTILINE
+)
 
 
 def _extract_poetry_name(pyproject_text: str) -> str | None:
@@ -37,6 +40,37 @@ def _extract_poetry_name(pyproject_text: str) -> str | None:
 def _extract_version(pyproject_text: str) -> str | None:
     m = VERSION_RE.search(pyproject_text)
     return None if m is None else m.group(1)
+
+
+def _has_c_extensions_marker(pyproject_text: str) -> bool | None:
+    """Check for explicit marker in [tool.rai] section."""
+    # Look for [tool.rai] section
+    tool_rai_match = re.search(r"\[tool\.rai\].*?(?=\[|$)", pyproject_text, re.DOTALL)
+    if tool_rai_match:
+        m = HAS_C_EXTENSIONS_RE.search(tool_rai_match.group(0))
+        if m:
+            return m.group(1).lower() == "true"
+    return None
+
+
+def _detect_c_extensions(package_dir: pathlib.Path) -> bool:
+    """Auto-detect if package has C extensions."""
+    # Check for setup.py with ext_modules
+    setup_py = package_dir / "setup.py"
+    if setup_py.exists():
+        try:
+            content = setup_py.read_text(encoding="utf-8")
+            if "ext_modules" in content or "Extension(" in content:
+                return True
+        except Exception:
+            pass
+
+    # Check for C/C++/Cython source files in package directory
+    for ext in (".c", ".cpp", ".cxx", ".cc", ".pyx"):
+        if any(package_dir.rglob(f"*{ext}")):
+            return True
+
+    return False
 
 
 def discover_packages(repo_root: pathlib.Path) -> dict[str, dict[str, str]]:
@@ -58,7 +92,16 @@ def discover_packages(repo_root: pathlib.Path) -> dict[str, dict[str, str]]:
         if name is None or version is None:
             continue
 
-        packages[name] = {"path": rel_dir, "version": version}
+        # Check for C extensions: explicit marker first, then auto-detect
+        has_c_ext = _has_c_extensions_marker(text)
+        if has_c_ext is None:
+            has_c_ext = _detect_c_extensions(pyproject.parent)
+
+        packages[name] = {
+            "path": rel_dir,
+            "version": version,
+            "has_c_extensions": has_c_ext,
+        }
 
     return packages
 

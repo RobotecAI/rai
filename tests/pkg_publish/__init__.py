@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Robotec.AI
+# Copyright (C) 2025 Julia Jia
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,13 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""Setup script for building rai_tiny C extension."""
-
-from setuptools import Extension, setup
-
-setup(
-    ext_modules=[
-        Extension("rai_tiny._tiny", sources=["rai_tiny/_tiny.c"]),
-    ],
-)

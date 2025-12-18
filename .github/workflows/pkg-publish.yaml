@@ -1,10 +1,10 @@
-name: Publish package to PyPI
+name: Publish package to PyPI / Test PyPI
 
 on:
   workflow_dispatch:
     inputs:
       package:
-        description: "Package(s) to publish. Single package: 'rai_core'. Multiple packages (comma-separated): 'rai_core,rai-perception,rai-bench'. See list-packages job output for available packages."
+        description: "Package(s) to publish. Single package: 'rai_core'. Multiple packages (comma-separated): 'rai_core,rai-perception'."
         required: true
         type: string
       publish_target:
@@ -14,11 +14,6 @@ on:
         options:
           - test-pypi
           - pypi
-      build_wheels:
-        description: "Build platform-specific wheels (required for packages with C extensions)"
-        required: false
-        type: boolean
-        default: false
 
 jobs:
   discover-packages:
@@ -38,78 +33,10 @@ jobs:
         id: discover
         run: |
           python scripts/discover_packages.py --output-format json > packages.json
-
-          # Parse comma-separated package list and validate
-          PACKAGE_INPUT="${{ inputs.package }}"
-          python -c "
-          import json
-          import subprocess
-          import sys
-
-          # Load discovered packages
-          with open('packages.json') as f:
-              all_packages = json.load(f)
-
-          # Parse input packages (comma-separated)
-          package_input = '$PACKAGE_INPUT'
-          package_names = [p.strip() for p in package_input.split(',') if p.strip()]
-
-          validated = []
-          errors = []
-
-          for pkg_name in package_names:
-              if pkg_name not in all_packages:
-                  errors.append(f\"Package '{pkg_name}' not found in repository\")
-                  continue
-
-              pkg_info = all_packages[pkg_name]
-              validated.append({
-                  'name': pkg_name,
-                  'path': pkg_info['path'],
-                  'version': pkg_info['version']
-              })
-              print(f\"Found package: {pkg_name} v{pkg_info['version']} at {pkg_info['path']}\")
-
-          if errors:
-              print('\\nErrors:', file=sys.stderr)
-              for err in errors:
-                  print(f'  - {err}', file=sys.stderr)
-              print('\\nAvailable packages:', file=sys.stderr)
-              for name in sorted(all_packages.keys()):
-                  print(f'  - {name}', file=sys.stderr)
-              sys.exit(1)
-
-          # Check PyPI versions
-          publish_target = '${{ inputs.publish_target }}'
-          for pkg in validated:
-              pkg_name = pkg['name']
-              pkg_version = pkg['version']
-
-              if publish_target == 'pypi':
-                  result = subprocess.run(['python', 'scripts/check_pypi_version.py', pkg_name, pkg_version],
-                                        capture_output=True, text=True)
-                  if result.returncode == 1:
-                      print(f\"::error::Version {pkg_version} of {pkg_name} already exists on PyPI. Bump version in pyproject.toml before publishing.\", file=sys.stderr)
-                      errors.append(f\"Version {pkg_version} of {pkg_name} already exists on PyPI\")
-              else:
-                  result = subprocess.run(['python', 'scripts/check_pypi_version.py', pkg_name, pkg_version, '--test-pypi'],
-                                        capture_output=True, text=True)
-                  if result.returncode == 1:
-                      print(f\"::warning::Version {pkg_version} of {pkg_name} already exists on Test PyPI\")
-
-          if errors:
-              sys.exit(1)
-
-          # Output validated packages as JSON
-          packages_json = json.dumps(validated)
-          with open('$GITHUB_OUTPUT', 'a') as f:
-              print(f'packages_json={packages_json}', file=f)
-          print(f'Validated {len(validated)} package(s): {packages_json}')
-          "
+          python scripts/validate_packages.py validate packages.json "${{ inputs.package }}" "${{ inputs.publish_target }}" "$GITHUB_OUTPUT"
 
   build_wheels:
     name: Build wheels
-    if: inputs.build_wheels == true
     runs-on: ubuntu-latest
     needs: [discover-packages]
     strategy:
@@ -124,14 +51,36 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==2.16.2
+      - name: Install build tools
+        # once we move to python 3.11+, we can upgrade cibuildwheel to 3.3.0
+        run: |
+          python -m pip install --upgrade pip wheel build
+          python -m pip install cibuildwheel==2.21.3 poetry
 
-      - name: Build wheels
+      - name: Check if package has C extensions
+        id: check_extensions
+        run: |
+          python scripts/validate_packages.py check-c-ext
+        env:
+          PACKAGE_JSON: ${{ toJson(matrix.package) }}
+
+      - name: Build wheels (pure Python)
+        if: steps.check_extensions.outputs.has_c_extensions == 'false'
+        working-directory: ${{ matrix.package.path }}
+        run: |
+          # Build universal wheels (py3-none-any.whl) for pure Python packages
+          # This ensures PyPI accepts the wheels without platform tag issues
+          python -m build --wheel
+          mkdir -p wheelhouse
+          cp dist/*.whl wheelhouse/
+
+      - name: Build wheels (with C extensions)
+        if: steps.check_extensions.outputs.has_c_extensions == 'true'
         working-directory: ${{ matrix.package.path }}
         env:
           CIBW_BUILD: cp310-* cp312-*
-          CIBW_SKIP: pp* *-win32 *-manylinux_i686
+          # Alpine Linux (musllinux) is not supported due to Rust compilation issues on musl-based systems
+          CIBW_SKIP: pp* *-win32 *-manylinux_i686 *-musllinux*
           CIBW_BEFORE_BUILD: |
             set -e
             # Upgrade pip first to ensure it can find pre-built wheels
@@ -141,19 +90,19 @@ jobs:
               curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
               export PATH="$HOME/.cargo/bin:$PATH"
             fi
-            # Install Poetry
+            # Install Poetry (already installed in main step, but needed in container)
             python -m pip install poetry
             # Configure pip to prefer binary wheels over source builds
             export PIP_PREFER_BINARY=1
             # Only use Poetry if poetry.lock exists
             if [ -f poetry.lock ]; then
-              # Install package dependencies - Poetry will use pre-built wheels when available
               poetry install --no-interaction --no-root --only main
             fi
           CIBW_BUILD_FRONTEND: build
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10,<3.13"
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
+          # add Rust's bin directory for compiling pkg like tiktoken
           CIBW_ENVIRONMENT: 'PATH="$HOME/.cargo/bin:$PATH"'
         run: |
           python -m cibuildwheel --output-dir wheelhouse
@@ -197,7 +146,7 @@ jobs:
     name: Publish to Test PyPI
     if: inputs.publish_target == 'test-pypi'
     runs-on: ubuntu-latest
-    needs: [discover-packages, build_sdist]
+    needs: [discover-packages, build_wheels, build_sdist]
     environment: test-pypi
     permissions:
       id-token: write
@@ -206,31 +155,60 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Download wheel artifacts
-        if: inputs.build_wheels == true
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           pattern: wheels-*
           merge-multiple: true
-          path: wheels
+          path: artifacts/wheels
 
-      - name: Download all source distributions
+      - name: Download sdist artifacts
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           pattern: sdist-*
           merge-multiple: true
-          path: dist
+          path: artifacts/sdist
 
-      - name: Publish to Test PyPI (with wheels)
-        if: inputs.build_wheels == true
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: |
-            wheels
-            dist
-          repository-url: https://test.pypi.org/legacy/
+      - name: Organize artifacts
+        run: |
+          mkdir -p dist
+          # Debug: show artifacts structure
+          echo "Artifacts directory structure:"
+          find artifacts -type f 2>/dev/null | head -20 || echo "No artifacts found"
+          # Copy wheels
+          if [ -d "artifacts/wheels" ]; then
+            echo "Copying wheels from artifacts/wheels"
+            find artifacts/wheels -type f \( -name "*.whl" -o -name "*.tar.gz" \) -exec cp {} dist/ \;
+          fi
+          # Copy sdist
+          if [ -d "artifacts/sdist" ]; then
+            echo "Copying sdist from artifacts/sdist"
+            find artifacts/sdist -type f \( -name "*.whl" -o -name "*.tar.gz" \) -exec cp {} dist/ \;
+          fi
+          # Also check if files are directly in artifacts subdirectories
+          for whl in artifacts/wheels/*.whl artifacts/sdist/*.whl; do
+            if [ -f "$whl" ]; then
+              echo "Copying wheel: $whl"
+              cp "$whl" dist/ 2>/dev/null || true
+            fi
+          done
+          for tarball in artifacts/wheels/*.tar.gz artifacts/sdist/*.tar.gz; do
+            if [ -f "$tarball" ]; then
+              echo "Copying sdist: $tarball"
+              cp "$tarball" dist/ 2>/dev/null || true
+            fi
+          done
+          # List contents for debugging
+          echo "Contents of dist directory:"
+          ls -la dist/ || true
+          # Fail if no packages found
+          if [ -z "$(ls -A dist/ 2>/dev/null)" ]; then
+            echo "Error: No distribution packages found in dist/"
+            exit 1
+          fi
 
-      - name: Publish to Test PyPI (sdist only)
-        if: inputs.build_wheels == false
+      - name: Publish to Test PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist
@@ -239,7 +217,7 @@ jobs:
       - name: Verify installation from Test PyPI
         run: |
           PACKAGES_JSON='${{ needs.discover-packages.outputs.packages_json }}'
-          PACKAGE_NAMES=$(python -c "import json, sys; pkgs = json.loads(sys.argv[1]); print(' '.join([p['name'] for p in pkgs]))" "$PACKAGES_JSON")
+          PACKAGE_NAMES=$(python scripts/validate_packages.py extract-names "$PACKAGES_JSON")
           pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ $PACKAGE_NAMES
           echo "Packages published to Test PyPI: $PACKAGE_NAMES"
 
@@ -247,7 +225,7 @@ jobs:
     name: Publish to PyPI
     if: inputs.publish_target == 'pypi'
     runs-on: ubuntu-latest
-    needs: [discover-packages, build_sdist]
+    needs: [discover-packages, build_wheels, build_sdist]
     environment: pypi
     permissions:
       id-token: write
@@ -256,30 +234,60 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Download wheel artifacts
-        if: inputs.build_wheels == true
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           pattern: wheels-*
           merge-multiple: true
-          path: wheels
+          path: artifacts/wheels
 
-      - name: Download all source distributions
+      - name: Download sdist artifacts
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           pattern: sdist-*
           merge-multiple: true
-          path: dist
+          path: artifacts/sdist
 
-      - name: Publish to PyPI (with wheels)
-        if: inputs.build_wheels == true
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: |
-            wheels
-            dist
+      - name: Organize artifacts
+        run: |
+          mkdir -p dist
+          # Debug: show artifacts structure
+          echo "Artifacts directory structure:"
+          find artifacts -type f 2>/dev/null | head -20 || echo "No artifacts found"
+          # Copy wheels
+          if [ -d "artifacts/wheels" ]; then
+            echo "Copying wheels from artifacts/wheels"
+            find artifacts/wheels -type f \( -name "*.whl" -o -name "*.tar.gz" \) -exec cp {} dist/ \;
+          fi
+          # Copy sdist
+          if [ -d "artifacts/sdist" ]; then
+            echo "Copying sdist from artifacts/sdist"
+            find artifacts/sdist -type f \( -name "*.whl" -o -name "*.tar.gz" \) -exec cp {} dist/ \;
+          fi
+          # Also check if files are directly in artifacts subdirectories
+          for whl in artifacts/wheels/*.whl artifacts/sdist/*.whl; do
+            if [ -f "$whl" ]; then
+              echo "Copying wheel: $whl"
+              cp "$whl" dist/ 2>/dev/null || true
+            fi
+          done
+          for tarball in artifacts/wheels/*.tar.gz artifacts/sdist/*.tar.gz; do
+            if [ -f "$tarball" ]; then
+              echo "Copying sdist: $tarball"
+              cp "$tarball" dist/ 2>/dev/null || true
+            fi
+          done
+          # List contents for debugging
+          echo "Contents of dist directory:"
+          ls -la dist/ || true
+          # Fail if no packages found
+          if [ -z "$(ls -A dist/ 2>/dev/null)" ]; then
+            echo "Error: No distribution packages found in dist/"
+            exit 1
+          fi
 
-      - name: Publish to PyPI (sdist only)
-        if: inputs.build_wheels == false
+      - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist
@@ -287,6 +295,6 @@ jobs:
       - name: Verify installation from PyPI
         run: |
           PACKAGES_JSON='${{ needs.discover-packages.outputs.packages_json }}'
-          PACKAGE_NAMES=$(python -c "import json, sys; pkgs = json.loads(sys.argv[1]); print(' '.join([p['name'] for p in pkgs]))" "$PACKAGES_JSON")
+          PACKAGE_NAMES=$(python scripts/validate_packages.py extract-names "$PACKAGES_JSON")
           pip install $PACKAGE_NAMES
           echo "Packages published to PyPI: $PACKAGE_NAMES"
