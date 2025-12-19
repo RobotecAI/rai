@@ -25,6 +25,7 @@ from action_msgs.srv import CancelGoal
 from geometry_msgs.msg import (
     Point,
     Pose,
+    PoseStamped,
     PoseWithCovariance,
     PoseWithCovarianceStamped,
     Quaternion,
@@ -95,7 +96,7 @@ _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
         (SetBool, False, True, False),
         (
             NavigateToPose.Goal(
-                pose=Pose(
+                pose=PoseStamped(
                     position=Point(x=1.0, y=2.0, z=3.0),
                     orientation=Quaternion(x=0.1, y=0.2, z=0.3, w=0.4),
                 )
