@@ -36,7 +36,12 @@ from rclpy.qos import (
 from rclpy.topic_endpoint_info import TopicEndpointInfo
 from rosidl_parser.definition import NamespacedType
 from rosidl_runtime_py.import_message import import_message_from_namespaced_type
-from rosidl_runtime_py.utilities import get_namespaced_type
+from rosidl_runtime_py.utilities import (
+    get_namespaced_type,
+    is_action,
+    is_message,
+    is_service,
+)
 
 from rai.communication.ros2.api.conversion import import_message_from_str
 
@@ -134,3 +139,15 @@ class BaseROS2API:
                     raise ValueError(f"Topic {topic} has multiple types: {types}")
                 return types[0]
         raise ValueError(f"Topic {topic} not found")
+
+    @staticmethod
+    def is_ros2_message(msg: Any) -> bool:
+        return is_message(msg)
+
+    @staticmethod
+    def is_ros2_service(msg: Any) -> bool:
+        return is_service(msg)
+
+    @staticmethod
+    def is_ros2_action(msg: Any) -> bool:
+        return is_action(msg)
