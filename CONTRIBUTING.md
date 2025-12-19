@@ -127,6 +127,7 @@ For more information about semantic versioning, see [https://semver.org/](https:
 
 During active development, pre release identifiers may be used to signal unstable or experimental states.
 These versions are not guaranteed to maintain backward compatibility and should not be relied upon in production systems.
+An example of a pre release version is `3.0.0a1`.
 
 ### Versioning scope
 
