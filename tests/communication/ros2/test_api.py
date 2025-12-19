@@ -97,8 +97,11 @@ _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
         (
             NavigateToPose.Goal(
                 pose=PoseStamped(
-                    position=Point(x=1.0, y=2.0, z=3.0),
-                    orientation=Quaternion(x=0.1, y=0.2, z=0.3, w=0.4),
+                    header=Header(),
+                    pose=Pose(
+                        position=Point(x=1.0, y=2.0, z=3.0),
+                        orientation=Quaternion(x=0.1, y=0.2, z=0.3, w=0.4),
+                    ),
                 )
             ),
             True,
