@@ -19,6 +19,14 @@ from typing import Any, List
 from unittest.mock import MagicMock
 
 import pytest
+from builtin_interfaces.msg import Time
+from geometry_msgs.msg import (
+    Point,
+    Pose,
+    PoseWithCovariance,
+    PoseWithCovarianceStamped,
+    Quaternion,
+)
 from nav2_msgs.action import NavigateToPose
 from PIL import Image
 from pydub import AudioSegment
@@ -33,7 +41,7 @@ from rclpy.callback_groups import (
     MutuallyExclusiveCallbackGroup,
     ReentrantCallbackGroup,
 )
-from std_msgs.msg import String
+from std_msgs.msg import Header, String
 from std_srvs.srv import SetBool
 
 from .helpers import (
@@ -52,21 +60,51 @@ from .helpers import (
 _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
 
 
-def test_ros2_connector_send_message(ros_setup: None, request: pytest.FixtureRequest):
+@pytest.mark.parametrize(
+    "message_content,msg_type,actual_type",
+    [
+        (ROS2Message(payload={"data": "Hello, ROS2!"}), "std_msgs/msg/String", String),
+        (String(data="Hello, ROS2!"), None, String),
+        (String(), None, String),
+        (Pose(), None, Pose),
+        (PoseWithCovarianceStamped(), None, PoseWithCovarianceStamped),
+        (
+            PoseWithCovarianceStamped(
+                header=Header(
+                    stamp=Time(sec=1, nanosec=100000000),
+                    frame_id="test_frame",
+                ),
+                pose=PoseWithCovariance(
+                    pose=Pose(
+                        position=Point(x=1.0, y=2.0, z=3.0),
+                        orientation=Quaternion(x=0.1, y=0.2, z=0.3, w=0.4),
+                    ),
+                    covariance=[0.0] * 36,
+                ),
+            ),
+            None,
+            PoseWithCovarianceStamped,
+        ),
+    ],
+)
+def test_ros2_connector_send_message(
+    ros_setup: None,
+    request: pytest.FixtureRequest,
+    message_content: ROS2Message,
+    msg_type: str | None,
+    actual_type: type,
+):
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
-    message_receiver = MessageSubscriber(topic_name)
+    message_receiver = MessageSubscriber(topic_name, actual_type)
     executors, threads = multi_threaded_spinner([message_receiver])
     connector = ROS2Connector()
     try:
-        message = ROS2Message(
-            payload={"data": "Hello, world!"},
-            metadata={"msg_type": "std_msgs/msg/String"},
-        )
         connector.send_message(
-            message=message, target=topic_name, msg_type="std_msgs/msg/String"
+            message=message_content, target=topic_name, msg_type=msg_type
         )
-        time.sleep(1)  # wait for the message to be received
-        assert message_receiver.received_messages == [String(data="Hello, world!")]
+        time.sleep(0.1)  # wait for the message to be received
+        assert len(message_receiver.received_messages) == 1
+        assert isinstance(message_receiver.received_messages[0], actual_type)
     finally:
         connector.shutdown()
         shutdown_executors_and_threads(executors, threads)
