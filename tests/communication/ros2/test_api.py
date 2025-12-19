@@ -35,6 +35,7 @@ from rai.communication.ros2.api import (
     ROS2ServiceAPI,
     ROS2TopicAPI,
 )
+from rai.communication.ros2.api.base import BaseROS2API
 from rclpy.callback_groups import (
     CallbackGroup,
     MutuallyExclusiveCallbackGroup,
@@ -57,6 +58,63 @@ from .helpers import (
 )
 
 _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
+
+
+@pytest.mark.parametrize(
+    "entity,is_message,is_service,is_action",
+    [
+        ({"data": "Hello, ROS2!"}, False, False, False),
+        ({}, False, False, False),
+        ("", False, False, False),
+        ("data: Hello, ROS2!", False, False, False),
+        (None, False, False, False),
+        (String(), True, False, False),
+        (Pose(), True, False, False),
+        (PoseWithCovarianceStamped(), True, False, False),
+        (
+            PoseWithCovarianceStamped(
+                header=Header(),
+                pose=PoseWithCovariance(
+                    pose=Pose(
+                        position=Point(x=1.0, y=2.0, z=3.0),
+                        orientation=Quaternion(x=0.1, y=0.2, z=0.3, w=0.4),
+                    )
+                ),
+            ),
+            True,
+            False,
+            False,
+        ),
+        (SetBool.Request(data=True), True, False, False),
+        (
+            SetBool.Response(success=True, message="Test service called"),
+            True,
+            False,
+            False,
+        ),
+        (SetBool, False, True, False),
+        (
+            NavigateToPose.Goal(
+                pose=Pose(
+                    position=Point(x=1.0, y=2.0, z=3.0),
+                    orientation=Quaternion(x=0.1, y=0.2, z=0.3, w=0.4),
+                )
+            ),
+            True,
+            False,
+            False,
+        ),
+        (NavigateToPose.Result(success=True), True, False, False),
+        (NavigateToPose.Feedback(feedback="Test feedback"), True, False, False),
+        (NavigateToPose, False, False, True),
+    ],
+)
+def test_is_message_type(
+    ros_setup: None, entity: Any, is_message: bool, is_service: bool, is_action: bool
+) -> None:
+    assert is_message == BaseROS2API.is_ros2_message(entity)
+    assert is_service == BaseROS2API.is_ros2_service(entity)
+    assert is_action == BaseROS2API.is_ros2_action(entity)
 
 
 @pytest.mark.parametrize(
@@ -179,6 +237,62 @@ def test_ros2_single_message_publish_wrong_qos_setup(
                 msg_type=msg_type,
                 auto_qos_matching=False,
                 qos_profile=None,
+            )
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_single_message_dict_no_type(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    message_receiver = MessageSubscriber(topic_name)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([message_receiver, node])
+
+    try:
+        topic_api = ROS2TopicAPI(node)
+        with pytest.raises(ValueError):
+            topic_api.publish(
+                topic_name,
+                {"data": "Hello, ROS2!"},
+                msg_type=None,
+            )
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+@pytest.mark.parametrize(
+    "message_content,msg_type",
+    [
+        ((), "std_msgs/msg/String"),
+        ((), None),
+        (None, "std_msgs/msg/String"),
+        (None, None),
+        ("data: Hello, ROS2!", "std_msgs/msg/String"),
+        ("data: Hello, ROS2!", None),
+    ],
+)
+def test_ros2_single_message_invalid_type(
+    ros_setup: None,
+    request: pytest.FixtureRequest,
+    message_content: Any,
+    msg_type: str | None,
+) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    message_receiver = MessageSubscriber(topic_name)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([message_receiver, node])
+
+    try:
+        topic_api = ROS2TopicAPI(node)
+        with pytest.raises(ValueError):
+            topic_api.publish(
+                topic_name,
+                message_content,
+                msg_type=msg_type,
             )
     finally:
         shutdown_executors_and_threads(executors, threads)
