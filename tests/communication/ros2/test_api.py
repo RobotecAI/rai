@@ -108,8 +108,8 @@ _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
             False,
             False,
         ),
-        (NavigateToPose.Result(success=True), True, False, False),
-        (NavigateToPose.Feedback(feedback="Test feedback"), True, False, False),
+        (NavigateToPose.Result(), True, False, False),
+        (NavigateToPose.Feedback(), True, False, False),
         (NavigateToPose, False, False, True),
     ],
 )
