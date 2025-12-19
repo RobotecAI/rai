@@ -16,7 +16,17 @@ import threading
 import time
 import uuid
 from functools import partial
-from typing import Any, Callable, Dict, Final, List, Literal, Optional, Tuple, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Final,
+    List,
+    Literal,
+    Optional,
+    Tuple,
+    TypeVar,
+)
 
 import rclpy
 import rclpy.executors
@@ -31,6 +41,7 @@ from tf2_ros import Buffer, LookupException, TransformListener, TransformStamped
 
 from rai.communication import BaseConnector
 from rai.communication.ros2.api import (
+    IROS2Message,
     ROS2ActionAPI,
     ROS2ServiceAPI,
     ROS2TopicAPI,
@@ -240,10 +251,10 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
 
     def send_message(
         self,
-        message: T,
+        message: T | IROS2Message,
         target: str,
         *,
-        msg_type: str,
+        msg_type: str | None = None,
         auto_qos_matching: bool = True,
         qos_profile: Optional[QoSProfile] = None,
         **kwargs: Any,
@@ -252,12 +263,12 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
 
         Parameters
         ----------
-        message : T
-            The message to send.
+        message : T | IROS2Message
+            The message to send. Can be a subclass of ROS2Message (payload is a dict) or any ROS2 message.
         target : str
             The target topic name.
-        msg_type : str
-            The ROS2 message type.
+        msg_type : str | None, optional
+            The ROS2 message type. If None, the message type will be inferred from the message content. Must be provided if msg_content is a ROS2Message subclass.
         auto_qos_matching : bool, optional
             Whether to automatically match QoS profiles, by default True.
         qos_profile : Optional[QoSProfile], optional
@@ -265,9 +276,13 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         **kwargs : Any
             Additional keyword arguments.
         """
+        if isinstance(message, ROS2Message):  # T class
+            msg_content = message.payload
+        else:  # An actual ROS 2 message
+            msg_content = message
         self._topic_api.publish(
             topic=target,
-            msg_content=message.payload,
+            msg_content=msg_content,
             msg_type=msg_type,
             auto_qos_matching=auto_qos_matching,
             qos_profile=qos_profile,

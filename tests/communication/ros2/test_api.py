@@ -22,6 +22,13 @@ from unittest.mock import MagicMock
 import pytest
 from action_msgs.msg import GoalStatus
 from action_msgs.srv import CancelGoal
+from geometry_msgs.msg import (
+    Point,
+    Pose,
+    PoseWithCovariance,
+    PoseWithCovarianceStamped,
+    Quaternion,
+)
 from nav2_msgs.action import NavigateToPose
 from rai.communication.ros2.api import (
     ROS2ActionAPI,
@@ -35,6 +42,7 @@ from rclpy.callback_groups import (
 )
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
+from std_msgs.msg import Header, String
 from std_srvs.srv import SetBool
 
 from .helpers import (
@@ -51,12 +59,39 @@ from .helpers import (
 _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
 
 
+@pytest.mark.parametrize(
+    "message_content,msg_type,actual_type",
+    [
+        ({"data": "Hello, ROS2!"}, "std_msgs/msg/String", String),
+        (String(data="Hello, ROS2!"), None, String),
+        (String(), None, String),
+        (Pose(), None, Pose),
+        (PoseWithCovarianceStamped(), None, PoseWithCovarianceStamped),
+        (
+            PoseWithCovarianceStamped(
+                header=Header(),
+                pose=PoseWithCovariance(
+                    pose=Pose(
+                        position=Point(x=1.0, y=2.0, z=3.0),
+                        orientation=Quaternion(x=0.1, y=0.2, z=0.3, w=0.4),
+                    )
+                ),
+            ),
+            None,
+            PoseWithCovarianceStamped,
+        ),
+    ],
+)
 def test_ros2_single_message_publish(
-    ros_setup: None, request: pytest.FixtureRequest
+    ros_setup: None,
+    request: pytest.FixtureRequest,
+    message_content: Any,
+    msg_type: str | None,
+    actual_type: type,
 ) -> None:
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
-    message_receiver = MessageSubscriber(topic_name)
+    message_receiver = MessageSubscriber(topic_name, actual_type)
     node = Node(node_name)
     executors, threads = multi_threaded_spinner([message_receiver, node])
 
@@ -64,12 +99,12 @@ def test_ros2_single_message_publish(
         topic_api = ROS2TopicAPI(node)
         topic_api.publish(
             topic_name,
-            {"data": "Hello, ROS2!"},
-            msg_type="std_msgs/msg/String",
+            message_content,
+            msg_type=msg_type,
         )
-        time.sleep(1)
+        time.sleep(0.1)
         assert len(message_receiver.received_messages) == 1
-        assert message_receiver.received_messages[0].data == "Hello, ROS2!"
+        assert isinstance(message_receiver.received_messages[0], actual_type)
     finally:
         shutdown_executors_and_threads(executors, threads)
 
@@ -116,8 +151,18 @@ def test_ros2_single_message_publish_wrong_msg_content(
         shutdown_executors_and_threads(executors, threads)
 
 
+@pytest.mark.parametrize(
+    "message_content,msg_type",
+    [
+        ({"data": "Hello, ROS2!"}, "std_msgs/msg/String"),
+        (String(data="Hello, ROS2!"), None),
+    ],
+)
 def test_ros2_single_message_publish_wrong_qos_setup(
-    ros_setup: None, request: pytest.FixtureRequest
+    ros_setup: None,
+    request: pytest.FixtureRequest,
+    message_content: Any,
+    msg_type: str | None,
 ) -> None:
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
@@ -130,8 +175,8 @@ def test_ros2_single_message_publish_wrong_qos_setup(
         with pytest.raises(ValueError):
             topic_api.publish(
                 topic_name,
-                {"data": "Hello, ROS2!"},
-                msg_type="std_msgs/msg/String",
+                message_content,
+                msg_type=msg_type,
                 auto_qos_matching=False,
                 qos_profile=None,
             )
@@ -363,7 +408,9 @@ def test_ros2_action_send_goal(ros_setup: None, request: pytest.FixtureRequest) 
     try:
         action_api = ROS2ActionAPI(node)
         accepted, handle = action_api.send_goal(
-            action_name, "nav2_msgs/action/NavigateToPose", {}
+            action_name,
+            {},
+            "nav2_msgs/action/NavigateToPose",
         )
 
         assert accepted
@@ -384,7 +431,9 @@ def test_ros2_action_send_goal_get_result(
     try:
         action_api = ROS2ActionAPI(node)
         accepted, handle = action_api.send_goal(
-            action_name, "nav2_msgs/action/NavigateToPose", {}
+            action_name,
+            {},
+            "nav2_msgs/action/NavigateToPose",
         )
         import time
 
@@ -416,10 +465,16 @@ def test_ros2_action_send_goal_wrong_action_type(
         action_api = ROS2ActionAPI(node)
         with pytest.raises(ModuleNotFoundError):
             action_api.send_goal(
-                action_name, "nav2_msgs/action/NavigateToPose/WrongActionType", {}
+                action_name,
+                {},
+                "nav2_msgs/action/NavigateToPose/WrongActionType",
             )
         with pytest.raises(AttributeError):
-            action_api.send_goal(action_name, "nav2_msgs/action/NavigateToPoses", {})
+            action_api.send_goal(
+                action_name,
+                {},
+                "nav2_msgs/action/NavigateToPoses",
+            )
     finally:
         shutdown_executors_and_threads(executors, threads)
 
@@ -436,7 +491,9 @@ def test_ros2_action_send_goal_wrong_action_name(
     try:
         action_api = ROS2ActionAPI(node)
         accepted, handle = action_api.send_goal(
-            "WrongActionName", "nav2_msgs/action/NavigateToPose", {}
+            "WrongActionName",
+            {},
+            "nav2_msgs/action/NavigateToPose",
         )
         assert not accepted
         assert handle == ""
@@ -458,7 +515,9 @@ def test_ros2_action_send_goal_get_feedback(
     thread.start()
     action_api = ROS2ActionAPI(node)
     accepted, handle = action_api.send_goal(
-        action_name, "nav2_msgs/action/NavigateToPose", {}
+        action_name,
+        {},
+        "nav2_msgs/action/NavigateToPose",
     )
     assert accepted
     assert handle != ""
@@ -499,8 +558,8 @@ def test_ros2_action_feedback_callback_exception_handling(
     try:
         accepted, handle = action_api.send_goal(
             action_name,
-            "nav2_msgs/action/NavigateToPose",
             {},
+            action_type="nav2_msgs/action/NavigateToPose",
             feedback_callback=failing_feedback_callback,
         )
         assert accepted
@@ -541,7 +600,9 @@ def test_ros2_action_send_goal_terminate_goal(
     action_api = ROS2ActionAPI(node)
     try:
         accepted, handle = action_api.send_goal(
-            action_name, "nav2_msgs/action/NavigateToPose", {}
+            action_name,
+            {},
+            "nav2_msgs/action/NavigateToPose",
         )
         assert accepted
         assert handle != ""
@@ -569,7 +630,7 @@ def test_ros2_action_send_goal_timeout(
         action_api = ROS2ActionAPI(node)
         # Use very short timeout - server doesn't exist so wait_for_server will timeout
         accepted, handle = action_api.send_goal(
-            action_name, "nav2_msgs/action/NavigateToPose", {}, timeout_sec=0.01
+            action_name, {}, "nav2_msgs/action/NavigateToPose", timeout_sec=0.01
         )
 
         assert not accepted
@@ -600,7 +661,7 @@ def test_ros2_action_send_goal_timeout_logs_warning(
         # Now use a very short timeout for goal send to trigger timeout
         with caplog.at_level(logging.WARNING, logger=logger.name):
             accepted, handle = action_api.send_goal(
-                action_name, "nav2_msgs/action/NavigateToPose", {}, timeout_sec=0.001
+                action_name, {}, "nav2_msgs/action/NavigateToPose", timeout_sec=0.001
             )
 
         # Should timeout and log warning
@@ -626,7 +687,11 @@ def test_ros2_action_send_goal_exception_propagates(
         # Invalid action type will raise during import, not in future
         # This tests that exceptions are properly propagated through get_future_result
         with pytest.raises((ValueError, ImportError, AttributeError)):
-            action_api.send_goal(action_name, "invalid/action/Type", {})
+            action_api.send_goal(
+                action_name,
+                {},
+                action_type="invalid/action/Type",
+            )
     finally:
         shutdown_executors_and_threads(executors, threads)
 

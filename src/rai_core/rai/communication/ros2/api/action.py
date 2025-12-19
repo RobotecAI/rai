@@ -193,8 +193,8 @@ class ROS2ActionAPI(BaseROS2API):
     def send_goal(
         self,
         action_name: str,
-        action_type: str,
-        goal: Dict[str, Any],
+        goal: IROS2Message | Any,
+        action_type: str | None = None,
         *,
         feedback_callback: Callable[[Any], None] = lambda _: None,
         done_callback: Callable[
@@ -211,11 +211,18 @@ class ROS2ActionAPI(BaseROS2API):
             feedbacks=[],
         )
 
-        action_cls = import_message_from_str(action_type)
-        action_goal = action_cls.Goal()  # type: ignore
-        rosidl_runtime_py.set_message.set_message_fields(
-            action_goal, copy.deepcopy(goal)
-        )
+        if self.is_ros2_action(goal):
+            action_goal, action_cls = goal, type(goal)
+        elif isinstance(goal, dict) and action_type is not None:
+            action_cls = import_message_from_str(action_type)
+            action_goal = action_cls.Goal()  # type: ignore
+            rosidl_runtime_py.set_message.set_message_fields(
+                action_goal, copy.deepcopy(goal)
+            )
+        elif isinstance(goal, dict) and action_type is None:
+            raise ValueError("action_type must be provided if goal is a dict")
+        else:
+            raise ValueError(f"Invalid goal type: {type(goal)}")
 
         action_client = ActionClient(self.node, action_cls, action_name)
         if not action_client.wait_for_server(timeout_sec=timeout_sec):  # type: ignore
