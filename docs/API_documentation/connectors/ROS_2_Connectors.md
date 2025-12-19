@@ -33,7 +33,7 @@ The `ROS2Connector` is the main interface for publishing, subscribing, and calli
 ### Example Usage
 
 ```python
-from rai.communication.ros2.connectors import ROS2Connector
+from rai.communication.ros2.connectors import ROS2Connector, ROS2Message
 from std_msgs.msg import String
 
 connector = ROS2Connector()
@@ -46,7 +46,7 @@ connector.send_message(
 
 # Send a message using a dictionary (msg_type is required)
 connector.send_message(
-    message={"data": "Hello"},
+    message=ROS2Message(payload={"data": "Hello"}),
     target="/my_topic",
     msg_type="std_msgs/msg/String"
 )
