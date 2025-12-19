@@ -34,12 +34,19 @@ The `ROS2Connector` is the main interface for publishing, subscribing, and calli
 
 ```python
 from rai.communication.ros2.connectors import ROS2Connector
+from std_msgs.msg import String
 
 connector = ROS2Connector()
 
-# Send a message to a topic
+# Send a raw ROS 2 message (msg_type is inferred)
 connector.send_message(
-    message=my_msg,  # ROS2Message
+    message=String(data="Hello"),
+    target="/my_topic"
+)
+
+# Send a message using a dictionary (msg_type is required)
+connector.send_message(
+    message={"data": "Hello"},
     target="/my_topic",
     msg_type="std_msgs/msg/String"
 )
