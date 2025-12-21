@@ -26,6 +26,7 @@ langchain = "*"
 langchain-aws = "*"
 langchain-openai = "*"
 langchain-ollama = "^0.3.4"
+langchain-google-genai = "*"
 langchain-community = "*"
 
 requests = "^2.32.2"
