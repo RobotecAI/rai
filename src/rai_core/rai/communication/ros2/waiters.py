@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import logging
 import time
-from typing import TYPE_CHECKING, Any, List
+from typing import TYPE_CHECKING, Any, Callable, List
 
 logger = logging.getLogger(__name__)
 
@@ -23,65 +22,172 @@ if TYPE_CHECKING:
     from rai.communication.ros2.connectors.base import ROS2BaseConnector
 
 
+def ensure_slash(name: str) -> str:
+    return name if name.startswith("/") else f"/{name}"
+
+
+def get_missing_entities(
+    callable_get_entities: Callable[[], List[str]],
+    requested_entities: List[str],
+) -> set[str]:
+    requested_set = set(requested_entities)
+    available_set = set(callable_get_entities())
+    return requested_set - available_set
+
+
+def wait_for_ros2_entities(
+    requested: List[str],
+    get_entities: Callable[[], List[str]],
+    entity_type: str = "entity",
+    time_interval: float = 1.0,
+    timeout: float = 0.0,
+) -> None:
+    requested = [ensure_slash(name) for name in requested]
+
+    if timeout < 0:
+        raise ValueError("Timeout must be 0 (wait forever) or a positive value.")
+    start_time = time.time()
+
+    while timeout == 0 or time.time() - start_time < timeout:
+        missing = get_missing_entities(get_entities, requested)
+        if not missing:
+            return
+        logger.info(f"Waiting for {entity_type} {missing}...")
+        time.sleep(time_interval)
+
+    available_entities = get_entities()
+
+    missing = set(requested) - set(available_entities)
+    raise TimeoutError(
+        f"{entity_type.capitalize()} {missing} not available within {timeout} seconds. "
+    )
+
+
 def wait_for_ros2_services(
     connector: "ROS2BaseConnector[Any]",
     requested_services: List[str],
     time_interval: float = 1.0,
+    timeout: float = 0.0,
 ) -> None:
-    # make sure the requested services start with '/'
-    requested_services = [
-        f"/{service}" if not service.startswith("/") else service
-        for service in requested_services
-    ]
+    """Wait for specified ROS2 services to become available.
 
-    while True:
-        available_services = connector.get_services_names_and_types()
-        service_names = [service[0] for service in available_services]
-        if set(requested_services).issubset(set(service_names)):
-            break
-        logger.info(
-            f"Waiting for services {set(requested_services) - set(service_names)}..."
-        )
-        time.sleep(time_interval)
+    Parameters
+    ----------
+    connector : ROS2BaseConnector[Any]
+        ROS2 connector providing access to system service information.
+    requested_services : List[str]
+        List of service names to wait for.
+    time_interval : float, optional
+        Wait interval (seconds) between polling checks, by default 1.0.
+    timeout : float, optional
+        Timeout in seconds. If set to 0 (default), wait indefinitely.
+
+    Raises
+    ------
+    TimeoutError
+        If not all requested services become available within the timeout period.
+    ValueError
+        If `timeout` is set to a negative value.
+
+    Notes
+    -----
+    - If `timeout == 0`, this function waits indefinitely and never raises `TimeoutError`.
+    - If `timeout > 0`, a `TimeoutError` is raised if the services are not found in time.
+    - Raises ValueError if timeout < 0.
+    """
+    get_services = lambda: [
+        service[0] for service in connector.get_services_names_and_types()
+    ]
+    return wait_for_ros2_entities(
+        requested_services,
+        get_services,
+        entity_type="service",
+        time_interval=time_interval,
+        timeout=timeout,
+    )
 
 
 def wait_for_ros2_topics(
     connector: "ROS2BaseConnector[Any]",
     requested_topics: List[str],
     time_interval: float = 1.0,
+    timeout: float = 0.0,
 ) -> None:
-    # make sure the requested topics start with '/'
-    requested_topics = [
-        f"/{topic}" if not topic.startswith("/") else topic
-        for topic in requested_topics
-    ]
+    """Wait for specified ROS2 topics to become available.
 
-    while True:
-        available_topics = connector.get_topics_names_and_types()
-        topic_names = [topic[0] for topic in available_topics]
-        if set(requested_topics).issubset(set(topic_names)):
-            break
-        logger.info(f"Waiting for topics {set(requested_topics) - set(topic_names)}...")
-        time.sleep(time_interval)
+    Parameters
+    ----------
+    connector : ROS2BaseConnector[Any]
+        ROS2 connector providing access to system topic information.
+    requested_topics : List[str]
+        List of topic names to wait for.
+    time_interval : float, optional
+        Wait interval (seconds) between polling checks, by default 1.0.
+    timeout : float, optional
+        Timeout in seconds. If set to 0 (default), wait indefinitely.
+
+    Raises
+    ------
+    TimeoutError
+        If not all requested topics become available within the timeout period.
+    ValueError
+        If `timeout` is set to a negative value.
+
+    Notes
+    -----
+    - If `timeout == 0`, this function waits indefinitely and never raises `TimeoutError`.
+    - If `timeout > 0`, a `TimeoutError` is raised if the topics are not found in time.
+    - Raises ValueError if timeout < 0.
+    """
+    get_topics = lambda: [topic[0] for topic in connector.get_topics_names_and_types()]
+    return wait_for_ros2_entities(
+        requested_topics,
+        get_topics,
+        entity_type="topic",
+        time_interval=time_interval,
+        timeout=timeout,
+    )
 
 
 def wait_for_ros2_actions(
     connector: "ROS2BaseConnector[Any]",
     requested_actions: List[str],
     time_interval: float = 1.0,
+    timeout: float = 0.0,
 ) -> None:
-    # make sure the requested actions start with '/'
-    requested_actions = [
-        f"/{action}" if not action.startswith("/") else action
-        for action in requested_actions
-    ]
+    """Wait for specified ROS2 actions to become available.
 
-    while True:
-        available_actions = connector.get_actions_names_and_types()
-        action_names = [action[0] for action in available_actions]
-        if set(requested_actions).issubset(set(action_names)):
-            break
-        logger.info(
-            f"Waiting for actions {set(requested_actions) - set(action_names)}..."
-        )
-        time.sleep(time_interval)
+    Parameters
+    ----------
+    connector : ROS2BaseConnector[Any]
+        ROS2 connector providing access to system action information.
+    requested_actions : List[str]
+        List of action names to wait for.
+    time_interval : float, optional
+        Wait interval (seconds) between polling checks, by default 1.0.
+    timeout : float, optional
+        Timeout in seconds. If set to 0 (default), wait indefinitely.
+
+    Raises
+    ------
+    TimeoutError
+        If not all requested actions become available within the timeout period.
+    ValueError
+        If `timeout` is set to a negative value.
+
+    Notes
+    -----
+    - If `timeout == 0`, this function waits indefinitely and never raises `TimeoutError`.
+    - If `timeout > 0`, a `TimeoutError` is raised if the actions are not found in time.
+    - Raises ValueError if timeout < 0.
+    """
+    get_actions = lambda: [
+        action[0] for action in connector.get_actions_names_and_types()
+    ]
+    return wait_for_ros2_entities(
+        requested_actions,
+        get_actions,
+        entity_type="action",
+        time_interval=time_interval,
+        timeout=timeout,
+    )
