@@ -24,7 +24,6 @@ Run `pkg-publish.yaml` workflow with these inputs:
 
 -   **package**: Single (`rai_core`) or multiple comma-separated (`rai_core,rai-perception`)
 -   **publish_target**: `test-pypi` or `pypi`
--   **build_wheels**: Enable to build wheels (default: false)
 
 Workflow validates packages, builds distributions, publishes to target, and verifies installation.
 
@@ -35,7 +34,7 @@ Workflow validates packages, builds distributions, publishes to target, and veri
 
 ## Building Wheels
 
-Wheels are pre-built binary distributions that install faster than source distributions. The workflow automatically detects package type and uses the appropriate build method.
+Wheels are pre-built binary distributions that install faster than source distributions. The workflow automatically detects package type and uses the appropriate build method. Currently, only Linux wheels are released.
 
 ### Pure Python Packages
 
@@ -56,9 +55,10 @@ has_c_extensions = false
 
 ### Packages with C Extensions
 
-Packages with C extensions contain compiled code (e.g., `rai_tiny` with its `_tiny.c` module).
+Packages with C extensions contain compiled code.
 
 **Build process:**
+This is enabled for future-proofing; currently, RAI doesn't have any packages with C extensions.
 
 -   Workflow detects C extensions automatically or via `[tool.rai] has_c_extensions = true` marker
 -   Uses `cibuildwheel` to build platform-specific wheels with proper `manylinux*` tags
@@ -78,29 +78,6 @@ Packages with C extensions contain compiled code (e.g., `rai_tiny` with its `_ti
 [tool.rai]
 has_c_extensions = true
 ```
-
-## GitHub Environment Setup
-
-Create two environments in repository Settings > Environments:
-
--   **test-pypi**: No protection rules required
--   **pypi**: Configure required reviewers and restrict to main branch
-
-When publishing to PyPI, workflow pauses for approval. Configured reviewers must approve in Actions tab > workflow run > "Review deployments".
-
-## Trusted Publishers Setup
-
-Configure Trusted Publishers on [Test PyPI](https://test.pypi.org/manage/account/publishing/) and [PyPI](https://pypi.org/manage/account/publishing/):
-
-**Settings:**
-
--   Publisher: GitHub
--   Owner: `RobotecAI` (your username/org)
--   Repository: `rai`
--   Workflow: `pkg-publish.yaml`
--   Environment: `pypi` (for PyPI) or `test-pypi` (for Test PyPI)
-
-Add publisher before first publish. See [PyPI Trusted Publishers docs](https://docs.pypi.org/trusted-publishers/) for details.
 
 ## For Maintainers
 
@@ -127,6 +104,29 @@ Key test files:
 -   `test_discover_packages.py`: Tests package discovery and metadata extraction
 -   `test_validate_packages.py`: Tests validation, variant matching, and PyPI version checks
 -   `test_pypi_query.py`: Tests PyPI version checking and listing functionality
+
+### GitHub Environment Setup
+
+Create two environments in repository Settings > Environments:
+
+-   **test-pypi**: No protection rules required
+-   **pypi**: Configure required reviewers and restrict to main branch
+
+When publishing to PyPI, workflow pauses for approval. Configured reviewers must approve in Actions tab > workflow run > "Review deployments".
+
+### Trusted Publishers Setup
+
+Configure Trusted Publishers on [Test PyPI](https://test.pypi.org/manage/account/publishing/) and [PyPI](https://pypi.org/manage/account/publishing/):
+
+**Settings:**
+
+-   Publisher: GitHub
+-   Owner: `RobotecAI` (your username/org)
+-   Repository: `rai`
+-   Workflow: `pkg-publish.yaml`
+-   Environment: `pypi` (for PyPI) or `test-pypi` (for Test PyPI)
+
+Add publisher before running the publish workflow. If the trusted publisher is configured per project/package, for any new package, manually push the first time, then update the authentication on that project. See [PyPI Trusted Publishers docs](https://docs.pypi.org/trusted-publishers/) for details.
 
 ### Troubleshooting
 
