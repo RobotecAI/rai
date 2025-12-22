@@ -88,6 +88,7 @@ def initialize_tools(
             segmentation_config=segmentation_config,
             estimator_config=estimator_config,
             filter_config=filter_config,
+            timeout_sec=20.0,
         ),
         MoveObjectFromToTool(connector=connector, manipulator_frame=manipulator_frame),
         camera_tool,
