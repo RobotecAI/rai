@@ -100,7 +100,7 @@ manipulation techniques.
 3.  Run the docker container with the following command:
 
     ```shell
-    docker run --net=host --ipc=host --pid=host -e ROS_DOMAIN_ID=$ROS_DOMAIN_ID -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --gpus all -it rai:jazzy # or rai:humble
+    docker run -e DISPLAY=$DISPLAY -e OPENAI_API_KEY=$OPENAI_API_KEY -v /tmp/.X11-unix:/tmp/.X11-unix --gpus all -it rai:jazzy # or rai:humble
     ```
 
     !!! tip "NVIDIA Container Toolkit"
