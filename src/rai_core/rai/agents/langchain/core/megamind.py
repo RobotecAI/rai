@@ -297,7 +297,7 @@ def create_megamind(
     megamind_llm: BaseChatModel,
     executors: List[Executor],
     megamind_system_prompt: Optional[str] = None,
-    anylyzer_prompt: Optional[str] = None,
+    task_planning_prompt: Optional[str] = None,
     plan_prompts: Optional[PlanPrompts] = None,
     context_providers: List[ContextProvider] = [],
 ) -> CompiledStateGraph:
@@ -325,7 +325,7 @@ def create_megamind(
             llm=executor.llm,
             tools=executor.tools,
             system_prompt=executor.system_prompt,
-            planning_prompt=anylyzer_prompt,
+            planning_prompt=task_planning_prompt,
         )
 
         handoff_tools.append(
