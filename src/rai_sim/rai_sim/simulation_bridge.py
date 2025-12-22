@@ -136,19 +136,19 @@ class SceneConfig(BaseModel):
                     position=Point(
                         **entity["pose"]["translation"]
                     ),  # TODO(boczekbartek): adapt yaml configs to ros2 naming convension
-                    orientation=Quaternion(
-                        **entity["pose"].get("rotation", dict())
-                    ),
+                    orientation=Quaternion(**entity["pose"].get("rotation", dict())),
                 ),
             )
             # Ensure the object has the correct _prefix field
             pose_stamped._prefix = "geometry_msgs/msg"
-            
-            entities.append(Entity(
-                name=entity["name"],
-                prefab_name=entity["prefab_name"],
-                pose=pose_stamped,
-            ))
+
+            entities.append(
+                Entity(
+                    name=entity["name"],
+                    prefab_name=entity["prefab_name"],
+                    pose=pose_stamped,
+                )
+            )
 
         return cls(entities=entities)
 
