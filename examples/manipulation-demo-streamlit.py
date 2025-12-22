@@ -105,7 +105,7 @@ def initialize_o3de(scenario_path: str, o3de_config_path: str):
         scene_config=scene_config,
         scene_config_path=scenario_path,
     )
-    o3de = O3DEngineArmManipulationBridge(ROS2Connector())
+    o3de = O3DEngineArmManipulationBridge(ROS2Connector("multi_threaded"))
 
     # Clear scene at the beginning
     o3de.init_simulation(simulation_config=simulation_config)
@@ -336,17 +336,15 @@ def main(simulation_config: O3DExROS2SimulationConfig):
 
 
 if __name__ == "__main__":
-    # try:
-    levels = [
-        "medium",
-        "hard",
-        "very_hard",
-    ]
-    scenarios: list[Scenario] = get_scenarios(levels=levels)
-    o3de_config_path = (
-        "src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/o3de_config.yaml"
-    )
-    main(o3de_config_path)
-    # except Exception as e:
-    #     st.error(f"Application error: {str(e)}")
-    #     st.stop()
+    try:
+        levels = [
+            "medium",
+            "hard",
+            "very_hard",
+        ]
+        scenarios: list[Scenario] = get_scenarios(levels=levels)
+        o3de_config_path = "src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/o3de_config.yaml"
+        main(o3de_config_path)
+    except Exception as e:
+        st.error(f"Application error: {str(e)}")
+        st.stop()
