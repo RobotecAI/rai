@@ -130,9 +130,8 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
         self.timeout_sec = (
             node.get_parameter(f"{param_prefix}.timeout_sec").value
             if node.has_parameter(f"{param_prefix}.timeout_sec")
-            else 10.0
+            else 20.0
         )
-
         # conversion ratio for point cloud from segmentation
         self.conversion_ratio = (
             node.get_parameter(f"{param_prefix}.conversion_ratio").value
