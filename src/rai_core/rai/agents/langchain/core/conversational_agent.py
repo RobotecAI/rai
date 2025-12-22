@@ -17,22 +17,19 @@ import logging
 from functools import partial
 from typing import List, Optional, TypedDict
 
-from langchain_core.messages import HumanMessage
-from rai.messages import HumanMultimodalMessage
 from langchain.chat_models.base import BaseChatModel
 from langchain_core.messages import (
     BaseMessage,
     SystemMessage,
 )
-from pydantic import BaseModel, Field
-from rai.communication.ros2.connectors import ROS2Connector
 from langchain_core.tools import BaseTool
-from langgraph.graph import START, StateGraph, END
+from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt.tool_node import tools_condition
-from rai.tools.ros2.manipulation import ResetArmTool
+from pydantic import BaseModel, Field
 
 from rai.agents.langchain.core.tool_runner import ToolRunner
+from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
 
 
@@ -63,53 +60,34 @@ def agent(
         )
         state["messages"].insert(0, system_msg)
         logger.info("📋 Added system message to conversation")
-    
+
     logger.info("🧠 Invoking LLM with current messages")
     ai_msg = llm.invoke(state["messages"])
     state["messages"].append(ai_msg)
-    
+
     # Log the AI response
-    if hasattr(ai_msg, 'content') and ai_msg.content:
-        logger.info(f"💬 AI Response: {ai_msg.content[:100]}{'...' if len(ai_msg.content) > 100 else ''}")
-    
+    if hasattr(ai_msg, "content") and ai_msg.content:
+        logger.info(
+            f"💬 AI Response: {ai_msg.content[:100]}{'...' if len(ai_msg.content) > 100 else ''}"
+        )
+
     # Log tool calls if any
-    if hasattr(ai_msg, 'tool_calls') and ai_msg.tool_calls:
+    if hasattr(ai_msg, "tool_calls") and ai_msg.tool_calls:
         logger.info(f"🔧 AI requested {len(ai_msg.tool_calls)} tool calls")
         for i, tool_call in enumerate(ai_msg.tool_calls):
-            logger.info(f"   Tool {i+1}: {tool_call.get('name', 'unknown')}")
-    
+            logger.info(f"   Tool {i + 1}: {tool_call.get('name', 'unknown')}")
+
     return state
+
 
 class BoolAnswerWithJustification(BaseModel):
     """A boolean answer to the user question along with justification for the answer."""
 
-    answer: bool = Field(..., description="Whether the task has been completed successfully.")
+    answer: bool = Field(
+        ..., description="Whether the task has been completed successfully."
+    )
     justification: str = Field(..., description="Justification for the answer.")
 
-def tools_condition(state: State, logger: logging.Logger, messages_key: str = "messages", connector: ROS2Connector = None, manipulator_frame: str = "manipulator_base_link") -> str:
-    logger.info("🔀 Running tools_condition to determine next step")
-    
-    if isinstance(state, list):
-        ai_message = state[-1]
-        logger.info(f"📝 State is list with {len(state)} items")
-    elif isinstance(state, dict) and (messages := state.get(messages_key, [])):
-        ai_message = messages[-1]
-        logger.info(f"📝 State is dict with {len(messages)} messages")
-    elif messages := getattr(state, messages_key, []):
-        ai_message = messages[-1]
-        logger.info(f"📝 State has messages attribute with {len(messages)} messages")
-    else:
-        logger.error(f"❌ No messages found in input state: {type(state)} - {state}")
-        raise ValueError(f"No messages found in input state to tool_edge: {state}")
-    
-    # Check if the AI message has tool calls
-    if hasattr(ai_message, "tool_calls") and len(ai_message.tool_calls) > 0:
-        logger.info(f"🔧 AI message has {len(ai_message.tool_calls)} tool calls - routing to tools")
-        return "tools"
-
-    reset_arm_tool = ResetArmTool(connector=connector, manipulator_frame=manipulator_frame)
-    reset_arm_tool._run()
-    return "__end__"
 
 def create_conversational_agent(
     llm: BaseChatModel,
@@ -133,7 +111,7 @@ def create_conversational_agent(
 
     llm_with_tools = llm.bind_tools(tools)
     _logger.info("🔗 LLM bound with tools")
-    
+
     tool_node = ToolRunner(tools=tools, logger=_logger)
     _logger.info("🛠️ Tool runner created")
 
@@ -148,8 +126,13 @@ def create_conversational_agent(
 
     workflow.add_conditional_edges(
         "thinker",
-        partial(tools_condition, logger=_logger, connector=connector, manipulator_frame=manipulator_frame),
-        {"thinker": "thinker", "tools": "tools", "__end__": END}
+        partial(
+            tools_condition,
+            logger=_logger,
+            connector=connector,
+            manipulator_frame=manipulator_frame,
+        ),
+        {"thinker": "thinker", "tools": "tools", "__end__": END},
     )
     _logger.info("🔀 Added conditional edges from thinker")
 
