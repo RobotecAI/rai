@@ -14,8 +14,6 @@
 
 """Minimal test package for validating PyPI publishing workflow."""
 
-__version__ = "0.0.2"
-
 
 def add(a: int, b: int) -> int:
     """Add two integers."""

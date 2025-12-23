@@ -83,11 +83,19 @@ has_c_extensions = true
 
 ### Workflow Components
 
-The publishing workflow consists of several Python scripts in `scripts/`:
+The publishing workflow consists of several Python scripts in `scripts/` and reusable GitHub Actions:
+
+**Python Scripts:**
 
 -   `discover_packages.py`: Scans `src/` for packages and extracts metadata from `pyproject.toml`
 -   `validate_packages.py`: Validates package names, checks PyPI versions, and supports variant matching (`-` and `_`)
 -   `pypi_query.py`: Queries PyPI and Test PyPI for package versions (commands: `check`, `list`)
+-   `list_package_versions.py`: Lists and compares package versions across local repo, PyPI, and Test PyPI (used by `list-packages.yaml` workflow)
+
+**GitHub Actions:**
+
+-   `.github/actions/organize-artifacts/`: Composite action that organizes wheel and sdist artifacts into a `dist/` directory for publishing. Used by both Test PyPI and PyPI publish jobs to avoid code duplication.
+    GitHub Actions are reusable automation units. You can think of them as functions which can be called from workflows to avoid code duplication. Composite actions bundle shell scripts or multiple steps into a single reusable component.
 
 The workflow YAML (`.github/workflows/pkg-publish.yaml`) orchestrates discovery, validation, building, and publishing.
 
@@ -104,6 +112,7 @@ Key test files:
 -   `test_discover_packages.py`: Tests package discovery and metadata extraction
 -   `test_validate_packages.py`: Tests validation, variant matching, and PyPI version checks
 -   `test_pypi_query.py`: Tests PyPI version checking and listing functionality
+-   `test_list_package_versions.py`: Tests package version listing and comparison functionality
 
 ### GitHub Environment Setup
 

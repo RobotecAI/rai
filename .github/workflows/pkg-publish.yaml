@@ -171,42 +171,7 @@ jobs:
           path: artifacts/sdist
 
       - name: Organize artifacts
-        run: |
-          mkdir -p dist
-          # Debug: show artifacts structure
-          echo "Artifacts directory structure:"
-          find artifacts -type f 2>/dev/null | head -20 || echo "No artifacts found"
-          # Copy wheels
-          if [ -d "artifacts/wheels" ]; then
-            echo "Copying wheels from artifacts/wheels"
-            find artifacts/wheels -type f \( -name "*.whl" -o -name "*.tar.gz" \) -exec cp {} dist/ \;
-          fi
-          # Copy sdist
-          if [ -d "artifacts/sdist" ]; then
-            echo "Copying sdist from artifacts/sdist"
-            find artifacts/sdist -type f \( -name "*.whl" -o -name "*.tar.gz" \) -exec cp {} dist/ \;
-          fi
-          # Also check if files are directly in artifacts subdirectories
-          for whl in artifacts/wheels/*.whl artifacts/sdist/*.whl; do
-            if [ -f "$whl" ]; then
-              echo "Copying wheel: $whl"
-              cp "$whl" dist/ 2>/dev/null || true
-            fi
-          done
-          for tarball in artifacts/wheels/*.tar.gz artifacts/sdist/*.tar.gz; do
-            if [ -f "$tarball" ]; then
-              echo "Copying sdist: $tarball"
-              cp "$tarball" dist/ 2>/dev/null || true
-            fi
-          done
-          # List contents for debugging
-          echo "Contents of dist directory:"
-          ls -la dist/ || true
-          # Fail if no packages found
-          if [ -z "$(ls -A dist/ 2>/dev/null)" ]; then
-            echo "Error: No distribution packages found in dist/"
-            exit 1
-          fi
+        uses: ./.github/actions/organize-artifacts
 
       - name: Publish to Test PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -250,42 +215,7 @@ jobs:
           path: artifacts/sdist
 
       - name: Organize artifacts
-        run: |
-          mkdir -p dist
-          # Debug: show artifacts structure
-          echo "Artifacts directory structure:"
-          find artifacts -type f 2>/dev/null | head -20 || echo "No artifacts found"
-          # Copy wheels
-          if [ -d "artifacts/wheels" ]; then
-            echo "Copying wheels from artifacts/wheels"
-            find artifacts/wheels -type f \( -name "*.whl" -o -name "*.tar.gz" \) -exec cp {} dist/ \;
-          fi
-          # Copy sdist
-          if [ -d "artifacts/sdist" ]; then
-            echo "Copying sdist from artifacts/sdist"
-            find artifacts/sdist -type f \( -name "*.whl" -o -name "*.tar.gz" \) -exec cp {} dist/ \;
-          fi
-          # Also check if files are directly in artifacts subdirectories
-          for whl in artifacts/wheels/*.whl artifacts/sdist/*.whl; do
-            if [ -f "$whl" ]; then
-              echo "Copying wheel: $whl"
-              cp "$whl" dist/ 2>/dev/null || true
-            fi
-          done
-          for tarball in artifacts/wheels/*.tar.gz artifacts/sdist/*.tar.gz; do
-            if [ -f "$tarball" ]; then
-              echo "Copying sdist: $tarball"
-              cp "$tarball" dist/ 2>/dev/null || true
-            fi
-          done
-          # List contents for debugging
-          echo "Contents of dist directory:"
-          ls -la dist/ || true
-          # Fail if no packages found
-          if [ -z "$(ls -A dist/ 2>/dev/null)" ]; then
-            echo "Error: No distribution packages found in dist/"
-            exit 1
-          fi
+        uses: ./.github/actions/organize-artifacts
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

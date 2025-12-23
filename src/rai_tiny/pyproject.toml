@@ -4,9 +4,9 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "rai-tiny"
-version = "0.0.5"
+version = "0.0.6"
 description = "Minimal test package for validating PyPI publishing workflow"
-authors = ["Julia Jia"]
+authors = ["Julia Jia <juliajster@gmail.com>"]
 readme = "README.md"
 classifiers = [
     "Programming Language :: Python :: 3",
