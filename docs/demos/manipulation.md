@@ -81,66 +81,27 @@ manipulation techniques.
 
 ### Docker Setup
 
-!!! note "ROS 2 required"
-
-    The docker setup requires a working Humble or Jazzy ROS 2 installation on the host machine. Make sure that ROS 2 is sourced on the host machine and the `ROS_DOMAIN_ID` environment variable is set to the same value as in the [Docker setup](../setup/setup_docker.md#2-set-up-communications-between-docker-and-host-optional)
-
-!!! warning "ROS 2 distributions"
-
-    It is highly recommended that ROS 2 distribution on the host machine matches the ROS 2 distribution of the docker container. A distribution version mismatch may result in the demo not working correctly.
-
 #### 1. Setting up the demo
 
 1.  Set up docker as outlined in the [docker setup guide](../setup/setup_docker.md). During the setup, build the docker image with all dependencies (i.e., use the `--build-arg DEPENDENCIES=all_groups` argument)
-    and configure communication between the container and the host ([link](../setup/setup_docker.md#2-set-up-communications-between-docker-and-host-optional)).
 
-2.  On the host machine, download the latest binary release for the Robotic Arm Demo:
-
-    ```shell
-    ./scripts/download_demo.sh manipulation
-    ```
-
-3.  Run the docker container (if not already running):
+2.  Enable X11 access for the docker container:
 
     ```shell
-    docker run --net=host --ipc=host --pid=host -e ROS_DOMAIN_ID=$ROS_DOMAIN_ID -it rai:jazzy # or rai:humble
+    xhost +local:root
     ```
 
-    !!! tip "NVIDIA GPU acceleration"
-
-        If the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) is set up on your host machine, you can use the GPU within the RAI docker container for faster inference by adding the `--gpus all` option:
-
-        ```shell
-        docker run --net=host --ipc=host --pid=host -e ROS_DOMAIN_ID=$ROS_DOMAIN_ID --gpus all -it rai:jazzy # or rai:humble
-        ```
-
-        Sometimes, passing GPUs to the docker container may result in an error:
-
-        ```shell
-        docker: Error response from daemon: could not select device driver "" with capabilities: [[gpu]].
-        ```
-
-        Restarting the docker service should resolve this error:
-
-        ```shell
-        sudo systemctl restart docker
-        ```
-
-4.  (Inside the container shell) Download additional ROS 2 dependencies:
+3.  Run the docker container with the following command:
 
     ```shell
-    vcs import < demos.repos
-    rosdep install --from-paths src/examples/rai-manipulation-demo/ros2_ws/src --ignore-src -r -y
+    docker run --net=host --ipc=host --pid=host -e ROS_DOMAIN_ID=$ROS_DOMAIN_ID -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --gpus all -it rai:jazzy # or rai:humble
     ```
 
-5.  (Inside the container shell) Build the ROS 2 workspace:
+    !!! tip "NVIDIA Container Toolkit"
 
-    ```shell
-    source /opt/ros/${ROS_DISTRO}/setup.bash
-    colcon build --symlink-install
-    ```
+        In order to use the `--gpus all` flag, the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) must be installed on the host machine.
 
-6.  (Inside the docker container) By default, RAI uses OpenAI as the vendor. Thus, it is necessary
+4.  (Inside the docker container) By default, RAI uses OpenAI as the vendor. Thus, it is necessary
     to set the `$OPENAI_API_KEY` environmental variable. The command below may be utilized to set
     the variable and add it to the container's `.bashrc` file:
 
@@ -153,35 +114,15 @@ manipulation techniques.
 
         The default vendor can be changed to a different provider via the [RAI configuration tool](../setup/install.md#15-configure-rai)
 
-#### 2. Running the demo
+5.  After this, follow the steps in the [Local Setup](#local-setup) from step 2 onwards.
 
-!!! note Source the setup shell
+    !!! tip "New terminal in docker"
 
-    Ensure ROS 2 is sourced on the host machine and the `ROS_DOMAIN_ID` environment variable is set to the same value as in the [Docker setup](../setup/setup_docker.md#2-set-up-communications-between-docker-and-host-optional). Ensure that every command inside the docker container is run in a sourced shell using `source setup_shell.sh`.
+        In order to open a new terminal in the same docker container, you can use the following command:
 
-1. Launch the Robotic Arm Visualization on the host machine:
-
-    ```shell
-    ./demo_assets/manipulation/RAIManipulationDemo/RAIManipulationDemo.GameLauncher
-    ```
-
-2. (Inside the container shell) Launch the Robotic Arm Demo script inside of the docker container:
-
-    ```shell
-    ros2 launch examples/manipulation-demo.launch.py
-    ```
-
-3. (Inside the container shell) Open a new terminal for the docker container (e.g., `docker exec -it CONTAINER_ID /bin/bash`) and launch the streamlit interface:
-
-    ```shell
-    streamlit run examples/manipulation-demo-streamlit.py
-    ```
-
-    Alternatively, run the simpler command-line version:
-
-    ```shell
-    python examples/manipulation-demo.py
-    ```
+        ```shell
+        docker exec -it <container_id> bash
+        ```
 
 ## How it works
 
