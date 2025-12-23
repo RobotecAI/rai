@@ -12,23 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import logging
 import time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Generic,
-    Optional,
-    Type,
-    TypeVar,
-    get_args,
-)
+from typing import Any, Callable, Dict, Generic, Optional, Type, TypeVar, get_args
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from rai.observability import ObservabilityMeta, ObservabilitySink, build_sink_from_env
 
 
 class ConnectorException(Exception):
@@ -70,8 +64,24 @@ class ParametrizedCallback(BaseModel, Generic[T]):
     id: str = Field(default_factory=lambda: str(uuid4()))
 
 
-class BaseConnector(Generic[T]):
-    def __init__(self, callback_max_workers: int = 4):
+class BaseConnector(Generic[T], metaclass=ObservabilityMeta):
+    __observability_methods__ = (
+        "send_message",
+        "receive_message",
+        "service_call",
+        "call_service",
+        "create_service",
+        "create_action",
+        "start_action",
+        "terminate_action",
+    )
+
+    def __init__(
+        self,
+        callback_max_workers: int = 4,
+        observability_sink: Optional[ObservabilitySink] = None,
+        observability_endpoint: Optional[str] = None,
+    ):
         self.callback_max_workers = callback_max_workers
         self.logger = logging.getLogger(self.__class__.__name__)
         self.registered_callbacks: Dict[str, Dict[str, ParametrizedCallback[T]]] = (
@@ -80,6 +90,15 @@ class BaseConnector(Generic[T]):
         self.callback_id_mapping: Dict[str, tuple[str, ParametrizedCallback[T]]] = {}
         self.callback_executor = ThreadPoolExecutor(
             max_workers=self.callback_max_workers
+        )
+
+        # Storing agent_name in a connector is useful for observability purposes,
+        # but storing such high level information in a low level class may be problematic.
+        # Raised by @Juliaj
+        self.agent_name: str | None = None
+        self.connector_name = self.__class__.__name__
+        self.observability_sink = observability_sink or build_sink_from_env(
+            endpoint=observability_endpoint
         )
 
         if not hasattr(self, "__orig_bases__"):
