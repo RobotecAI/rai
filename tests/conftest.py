@@ -18,6 +18,18 @@ import tempfile
 import pytest
 
 
+# 3D gripping point detection strategy
+def pytest_addoption(parser):
+    parser.addoption(
+        "--strategy", action="store", default="centroid", help="Gripping point strategy"
+    )
+
+
+@pytest.fixture
+def strategy(request):
+    return request.config.getoption("--strategy")
+
+
 @pytest.fixture
 def test_config_toml():
     """
