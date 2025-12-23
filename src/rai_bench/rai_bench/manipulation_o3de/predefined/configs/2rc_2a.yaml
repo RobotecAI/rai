@@ -1,6 +1,6 @@
 entities:
-  - name: carrot1
-    prefab_name: carrot
+  - name: red_cube1
+    prefab_name: red_cube
     pose:
       translation:
         x: 0.5
@@ -24,8 +24,8 @@ entities:
         z: 0.0
         w: 1.0
 
-  - name: carrot2
-    prefab_name: carrot
+  - name: red_cube2
+    prefab_name: red_cube
     pose:
       translation:
         x: 0.4

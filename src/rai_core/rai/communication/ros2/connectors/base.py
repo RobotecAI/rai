@@ -100,7 +100,7 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
 
     def __init__(
         self,
-        node_name: str = f"rai_ros2_connector_{str(uuid.uuid4())[-12:]}",
+        node_name: str | None = None,
         destroy_subscribers: bool = False,
         executor_type: Literal["single_threaded", "multi_threaded"] = "multi_threaded",
         use_sim_time: bool = False,
@@ -122,7 +122,8 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
             If an invalid executor type is provided.
         """
         super().__init__()
-
+        if node_name is None:
+            node_name = f"rai_ros2_connector_{str(uuid.uuid4())[-12:]}"
         if not rclpy.ok():
             rclpy.init()
             self.logger.warning(

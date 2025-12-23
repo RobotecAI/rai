@@ -1,34 +1,9 @@
 entities:
-  - name: carrot1
-    prefab_name: carrot
+  - name: apple1
+    prefab_name: apple
     pose:
       translation:
-        x: 0.0
-        y: -0.2
-        z: 0.05
-      rotation:
-        x: 0.0
-        y: 0.0
-        z: 0.0
-        w: 1.0
-  - name: carrot2
-    prefab_name: carrot
-    pose:
-      translation:
-        x: 0.05
-        y: -0.2
-        z: 0.05
-      rotation:
-        x: 0.0
-        y: 0.0
-        z: 0.0
-        w: 1.0
-
-  - name: carrot3
-    prefab_name: carrot
-    pose:
-      translation:
-        x: 0.05
+        x: 0.4
         y: -0.3
         z: 0.05
       rotation:
@@ -36,13 +11,12 @@ entities:
         y: 0.0
         z: 0.0
         w: 1.0
-
-  - name: apple1
+  - name: apple2
     prefab_name: apple
     pose:
       translation:
-        x: 0.2
-        y: -0.1
+        x: 0.3
+        y: -0.2
         z: 0.05
       rotation:
         x: 0.0
@@ -50,32 +24,8 @@ entities:
         z: 0.0
         w: 1.0
 
-  - name: blue_cube1
-    prefab_name: blue_cube
-    pose:
-      translation:
-        x: 0.4
-        y: 0.4
-        z: 0.05
-      rotation:
-        x: 0.0
-        y: 0.0
-        z: 0.0
-        w: 1.0
-  - name: red_cube1
-    prefab_name: red_cube
-    pose:
-      translation:
-        x: 0.45
-        y: 0.4
-        z: 0.05
-      rotation:
-        x: 0.0
-        y: 0.0
-        z: 0.0
-        w: 1.0
-  - name: yellow_cube1
-    prefab_name: yellow_cube
+  - name: apple3
+    prefab_name: apple
     pose:
       translation:
         x: 0.5
@@ -86,11 +36,48 @@ entities:
         y: 0.0
         z: 0.0
         w: 1.0
+
   - name: corn1
     prefab_name: corn
     pose:
       translation:
-        x: 0.6
+        x: 0.4
+        y: -0.4
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.707
+        z: 0.0
+        w: 0.707
+  - name: corn2
+    prefab_name: corn
+    pose:
+      translation:
+        x: 0.4
+        y: 0.4
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.707
+        z: 0.0
+        w: 0.707
+  - name: corn3
+    prefab_name: corn
+    pose:
+      translation:
+        x: 0.3
+        y: -0.4
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.707
+        z: 0.0
+        w: 0.707
+  - name: corn4
+    prefab_name: corn
+    pose:
+      translation:
+        x: 0.5
         y: 0.3
         z: 0.05
       rotation:
@@ -98,12 +85,24 @@ entities:
         y: 0.707
         z: 0.0
         w: 0.707
+  - name: blue_cube1
+    prefab_name: blue_cube
+    pose:
+      translation:
+        x: 0.5
+        y: -0.1
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
   - name: blue_cube2
     prefab_name: blue_cube
     pose:
       translation:
-        x: 0.4
-        y: 0.45
+        x: 0.35
+        y: 0.2
         z: 0.05
       rotation:
         x: 0.0

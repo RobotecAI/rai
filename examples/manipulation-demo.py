@@ -1,5 +1,3 @@
-# Copyright (C) 2024 Robotec.AI
-#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,7 +15,6 @@ import logging
 from typing import List
 
 import rclpy
-import rclpy.qos
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.tools import BaseTool
 from rai import get_llm_model
@@ -27,7 +24,6 @@ from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2.manipulation import (
     GetObjectPositionsTool,
     MoveObjectFromToTool,
-    ResetArmTool,
 )
 from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
 from rai_perception.tools import GetGrabbingPointTool
@@ -45,6 +41,7 @@ def create_agent():
     required_topics = ["/color_image5", "/depth_image5", "/color_camera_info5"]
     wait_for_ros2_services(connector, required_services)
     wait_for_ros2_topics(connector, required_topics)
+    camera_tool = GetROS2ImageConfiguredTool(connector=connector, topic="/color_image5")
 
     node = connector.node
     node.declare_parameter("conversion_ratio", 1.0)
@@ -60,8 +57,7 @@ def create_agent():
             get_grabbing_point_tool=GetGrabbingPointTool(connector=connector),
         ),
         MoveObjectFromToTool(connector=connector, manipulator_frame="panda_link0"),
-        ResetArmTool(connector=connector, manipulator_frame="panda_link0"),
-        GetROS2ImageConfiguredTool(connector=connector, topic="/color_image5"),
+        camera_tool,
     ]
 
     llm = get_llm_model(model_type="complex_model", streaming=True)
@@ -73,11 +69,11 @@ def create_agent():
         tools=tools,
         system_prompt=embodiment_info.to_langchain(),
     )
-    return agent
+    return agent, camera_tool
 
 
 def main():
-    agent = create_agent()
+    agent, camera_tool = create_agent()
     messages: List[BaseMessage] = []
 
     while True:
