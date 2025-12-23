@@ -123,8 +123,15 @@ def validate_packages(
         pkg_version = pkg["version"]
 
         if publish_target == "pypi":
+            # Use sys.executable to ensure same Python interpreter as current script
             result = subprocess.run(
-                ["python", "scripts/pypi_query.py", "check", pkg_name, pkg_version],
+                [
+                    sys.executable,
+                    "scripts/pypi_query.py",
+                    "check",
+                    pkg_name,
+                    pkg_version,
+                ],
                 capture_output=True,
                 text=True,
             )
@@ -138,9 +145,10 @@ def validate_packages(
                     f"Version {pkg_version} of {pkg_name} already exists on PyPI"
                 )
         else:
+            # Use sys.executable to ensure same Python interpreter as current script
             result = subprocess.run(
                 [
-                    "python",
+                    sys.executable,
                     "scripts/pypi_query.py",
                     "--test-pypi",
                     "check",
