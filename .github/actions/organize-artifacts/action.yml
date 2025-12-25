@@ -1,0 +1,58 @@
+name: 'Organize Artifacts'
+description: 'Organize wheel and sdist artifacts into dist directory for publishing'
+
+inputs:
+  artifacts-path:
+    description: 'Path to artifacts directory'
+    required: false
+    default: 'artifacts'
+  dist-path:
+    description: 'Path to output dist directory'
+    required: false
+    default: 'dist'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Create dist directory
+      shell: bash
+      run: |
+        mkdir -p ${{ inputs.dist-path }}
+
+    - name: Organize artifacts
+      shell: bash
+      run: |
+        # Debug: show artifacts structure
+        echo "Artifacts directory structure:"
+        find ${{ inputs.artifacts-path }} -type f 2>/dev/null | head -20 || echo "No artifacts found"
+        # Copy wheels
+        if [ -d "${{ inputs.artifacts-path }}/wheels" ]; then
+          echo "Copying wheels from ${{ inputs.artifacts-path }}/wheels"
+          find ${{ inputs.artifacts-path }}/wheels -type f \( -name "*.whl" -o -name "*.tar.gz" \) -exec cp {} ${{ inputs.dist-path }}/ \;
+        fi
+        # Copy sdist
+        if [ -d "${{ inputs.artifacts-path }}/sdist" ]; then
+          echo "Copying sdist from ${{ inputs.artifacts-path }}/sdist"
+          find ${{ inputs.artifacts-path }}/sdist -type f \( -name "*.whl" -o -name "*.tar.gz" \) -exec cp {} ${{ inputs.dist-path }}/ \;
+        fi
+        # Also check if files are directly in artifacts subdirectories
+        for whl in ${{ inputs.artifacts-path }}/wheels/*.whl ${{ inputs.artifacts-path }}/sdist/*.whl; do
+          if [ -f "$whl" ]; then
+            echo "Copying wheel: $whl"
+            cp "$whl" ${{ inputs.dist-path }}/ 2>/dev/null || true
+          fi
+        done
+        for tarball in ${{ inputs.artifacts-path }}/wheels/*.tar.gz ${{ inputs.artifacts-path }}/sdist/*.tar.gz; do
+          if [ -f "$tarball" ]; then
+            echo "Copying sdist: $tarball"
+            cp "$tarball" ${{ inputs.dist-path }}/ 2>/dev/null || true
+          fi
+        done
+        # List contents for debugging
+        echo "Contents of ${{ inputs.dist-path }} directory:"
+        ls -la ${{ inputs.dist-path }}/ || true
+        # Fail if no packages found
+        if [ -z "$(ls -A ${{ inputs.dist-path }}/ 2>/dev/null)" ]; then
+          echo "Error: No distribution packages found in ${{ inputs.dist-path }}/"
+          exit 1
+        fi

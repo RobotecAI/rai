@@ -23,7 +23,7 @@ import pytest
 
 
 def rai_python_modules():
-    ignore_packages = ["rai_finetune"]
+    ignore_packages = ["rai_finetune", "rai_tiny"]
 
     packages = glob.glob("src/rai*") + glob.glob("src/*/rai*")
     package_names = [
