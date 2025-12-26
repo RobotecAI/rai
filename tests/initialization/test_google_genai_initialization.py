@@ -21,9 +21,7 @@ OpenAI, AWS, and Ollama integrations.
 
 from pathlib import Path
 
-import pytest
 from rai.initialization import model_initialization
-
 
 # Config template including Google vendor section
 GOOGLE_CONFIG_TEMPLATE = """
@@ -113,9 +111,7 @@ class TestGoogleVendorConfiguration:
         config_with_openai_default = GOOGLE_CONFIG_TEMPLATE.replace(
             'simple_model = "google"', 'simple_model = "openai"', 1
         )
-        config_path = write_config(
-            tmp_path / "config.toml", config_with_openai_default
-        )
+        config_path = write_config(tmp_path / "config.toml", config_with_openai_default)
 
         model_config, vendor = model_initialization.get_llm_model_config_and_vendor(
             "simple_model", vendor="google", config_path=str(config_path)
@@ -132,9 +128,7 @@ class TestGoogleLLMModelFactory:
         """Test that get_llm_model returns ChatGoogleGenerativeAI for google vendor."""
         config_path = write_config(tmp_path / "config.toml", GOOGLE_CONFIG_TEMPLATE)
 
-        monkeypatch.setattr(
-            "langchain_google_genai.ChatGoogleGenerativeAI", DummyModel
-        )
+        monkeypatch.setattr("langchain_google_genai.ChatGoogleGenerativeAI", DummyModel)
 
         google_model = model_initialization.get_llm_model(
             "simple_model", vendor="google", config_path=str(config_path)
@@ -147,9 +141,7 @@ class TestGoogleLLMModelFactory:
         """Test that get_llm_model returns correct complex model for google vendor."""
         config_path = write_config(tmp_path / "config.toml", GOOGLE_CONFIG_TEMPLATE)
 
-        monkeypatch.setattr(
-            "langchain_google_genai.ChatGoogleGenerativeAI", DummyModel
-        )
+        monkeypatch.setattr("langchain_google_genai.ChatGoogleGenerativeAI", DummyModel)
 
         google_model = model_initialization.get_llm_model(
             "complex_model", vendor="google", config_path=str(config_path)
@@ -162,9 +154,7 @@ class TestGoogleLLMModelFactory:
         """Test that additional kwargs are passed through to ChatGoogleGenerativeAI."""
         config_path = write_config(tmp_path / "config.toml", GOOGLE_CONFIG_TEMPLATE)
 
-        monkeypatch.setattr(
-            "langchain_google_genai.ChatGoogleGenerativeAI", DummyModel
-        )
+        monkeypatch.setattr("langchain_google_genai.ChatGoogleGenerativeAI", DummyModel)
 
         google_model = model_initialization.get_llm_model(
             "simple_model",
@@ -185,9 +175,7 @@ class TestGoogleLLMModelDirect:
         """Test that get_llm_model_direct returns ChatGoogleGenerativeAI."""
         config_path = write_config(tmp_path / "config.toml", GOOGLE_CONFIG_TEMPLATE)
 
-        monkeypatch.setattr(
-            "langchain_google_genai.ChatGoogleGenerativeAI", DummyModel
-        )
+        monkeypatch.setattr("langchain_google_genai.ChatGoogleGenerativeAI", DummyModel)
 
         google_model = model_initialization.get_llm_model_direct(
             model_name="gemini-2.0-flash-exp",
