@@ -23,7 +23,6 @@ from langchain_aws import ChatBedrock
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.embeddings import Embeddings
 from langchain_core.tracers.langchain import LangChainTracer
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langsmith import Client
@@ -139,7 +138,7 @@ def get_llm_model(
     vendor: Optional[str] = None,
     config_path: Optional[str] = None,
     **kwargs: Any,
-) -> ChatOpenAI | ChatBedrock | ChatOllama | ChatGoogleGenerativeAI:
+) -> ChatOpenAI | ChatBedrock | ChatOllama | Any:
     model_config, vendor = get_llm_model_config_and_vendor(
         model_type, vendor, config_path
     )
@@ -180,7 +179,7 @@ def get_llm_model_direct(
     vendor: str,
     config_path: Optional[str] = None,
     **kwargs: Any,
-) -> ChatOpenAI | ChatBedrock | ChatOllama | ChatGoogleGenerativeAI:
+) -> ChatOpenAI | ChatBedrock | ChatOllama | Any:
     config = load_config(config_path)
     model_config = getattr(config, vendor)
 

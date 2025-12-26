@@ -15,7 +15,14 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langchain_google_genai import ChatGoogleGenerativeAI
+
+try:
+    from langchain_google_genai import ChatGoogleGenerativeAI
+except ImportError:
+    pytest.skip(
+        "langchain-google-genai not installed, skipping Google GenAI tests",
+        allow_module_level=True,
+    )
 
 
 class TestLangChainGoogleGenAIIntegration:
