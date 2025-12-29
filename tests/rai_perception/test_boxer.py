@@ -109,7 +109,7 @@ class TestGDBoxer:
             mock_logger = MagicMock()
             mock_get_logger.return_value = mock_logger
 
-            boxer = GDBoxer(str(weights_path), use_cuda=False)
+            boxer = GDBoxer(str(weights_path), use_cuda=True)
 
             assert boxer.device == "cpu"
             assert boxer.weight_path == str(weights_path)
