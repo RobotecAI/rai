@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import importlib
 import logging
 from typing import (
     Any,
@@ -36,7 +37,12 @@ from rclpy.qos import (
 from rclpy.topic_endpoint_info import TopicEndpointInfo
 from rosidl_parser.definition import NamespacedType
 from rosidl_runtime_py.import_message import import_message_from_namespaced_type
-from rosidl_runtime_py.utilities import get_namespaced_type
+from rosidl_runtime_py.utilities import (
+    get_namespaced_type,
+    is_action,
+    is_message,
+    is_service,
+)
 
 from rai.communication.ros2.api.conversion import import_message_from_str
 
@@ -134,3 +140,210 @@ class BaseROS2API:
                     raise ValueError(f"Topic {topic} has multiple types: {types}")
                 return types[0]
         raise ValueError(f"Topic {topic} not found")
+
+    @staticmethod
+    def is_ros2_message(msg: Any) -> bool:
+        return is_message(msg)
+
+    @staticmethod
+    def is_ros2_service(msg: Any) -> bool:
+        return is_service(msg)
+
+    @staticmethod
+    def is_ros2_action(msg: Any) -> bool:
+        return is_action(msg)
+
+    @staticmethod
+    def _is_nested_instance(obj: Any, nested_names: List[str]) -> bool:
+        """Check if object is a nested class instance (e.g., SetBool.Request).
+
+        Parameters
+        ----------
+        obj : Any
+            The object to check.
+        nested_names : List[str]
+            List of nested class names to check for (e.g., ["Request", "Response"]).
+
+        Returns
+        -------
+        bool
+            True if object is a nested class instance matching one of the names.
+        """
+        obj_type = type(obj) if obj is not None else None
+        return (
+            obj_type is not None
+            and hasattr(obj_type, "__qualname__")
+            and any(name in obj_type.__qualname__ for name in nested_names)
+            and not isinstance(obj, dict)
+        )
+
+    @staticmethod
+    def extract_service_class_from_request(request: Any) -> Tuple[Type[Any], str]:
+        """Extract service base class and type string from Request/Response instance.
+
+        Uses introspection to get the parent service class from nested Request/Response
+        classes. For example, from SetBool.Request() extracts SetBool class.
+
+        Parameters
+        ----------
+        request : Any
+            Service Request or Response instance (e.g., SetBool.Request())
+
+        Returns
+        -------
+        Tuple[Type[Any], str]
+            Tuple of (service_class, service_type_string)
+            e.g., (SetBool, "std_srvs/srv/SetBool")
+
+        Raises
+        ------
+        ValueError
+            If unable to extract service class from request instance.
+        """
+        request_type = type(request)
+        qualname = request_type.__qualname__
+        module_name = request_type.__module__
+
+        # Parse qualname to get base class name
+        # ROS2 uses underscores: "SetBool_Request" -> "SetBool"
+        # Also handle dot notation: "SetBool.Request" -> "SetBool"
+        if "_" in qualname:
+            # ROS2 format: ServiceName_Request or ServiceName_Response
+            parts = qualname.split("_")
+            if len(parts) >= 2 and parts[-1] in ["Request", "Response"]:
+                base_class_name = "_".join(parts[:-1])
+            else:
+                raise ValueError(
+                    f"Request/Response class {qualname} does not appear to be nested in a service class"
+                )
+        elif "." in qualname:
+            # Dot notation: ServiceName.Request or ServiceName.Response
+            base_class_name = qualname.split(".")[0]
+        else:
+            raise ValueError(
+                f"Request/Response class {qualname} does not appear to be nested in a service class"
+            )
+
+        # Import the module and get the base class
+        module = importlib.import_module(module_name)
+        service_cls = getattr(module, base_class_name, None)
+
+        if service_cls is None:
+            raise ValueError(
+                f"Could not find service class {base_class_name} in module {module_name}"
+            )
+
+        # Convert to service type string (e.g., "std_srvs/srv/SetBool")
+        # Extract package and service name from module path
+        # ROS2 service modules follow pattern: package.srv._service_name
+        # e.g., "std_srvs.srv._set_bool" -> "std_srvs/srv/SetBool"
+        module_parts = module_name.split(".")
+        if len(module_parts) >= 2:
+            package = module_parts[0]
+            # Construct service type: package/srv/ServiceName
+            service_type = f"{package}/srv/{base_class_name}"
+        else:
+            raise ValueError(
+                f"Could not determine service type from module {module_name}"
+            )
+
+        return service_cls, service_type
+
+    @staticmethod
+    def extract_action_class_from_goal(goal: Any) -> Tuple[Type[Any], str]:
+        """Extract action base class and type string from Goal/Result/Feedback instance.
+
+        Uses introspection to get the parent action class from nested Goal/Result/Feedback
+        classes. For example, from MoveGroup.Goal() extracts MoveGroup class.
+
+        Parameters
+        ----------
+        goal : Any
+            Action Goal, Result, or Feedback instance (e.g., MoveGroup.Goal())
+
+        Returns
+        -------
+        Tuple[Type[Any], str]
+            Tuple of (action_class, action_type_string)
+            e.g., (MoveGroup, "moveit_msgs/action/MoveGroup")
+
+        Raises
+        ------
+        ValueError
+            If unable to extract action class from goal instance.
+        """
+        goal_type = type(goal)
+        qualname = goal_type.__qualname__
+        module_name = goal_type.__module__
+
+        # Parse qualname to get base class name
+        # ROS2 uses underscores: "NavigateToPose_Goal" -> "NavigateToPose"
+        # Also handle dot notation: "MoveGroup.Goal" -> "MoveGroup"
+        if "_" in qualname:
+            # ROS2 format: ActionName_Goal, ActionName_Result, or ActionName_Feedback
+            parts = qualname.split("_")
+            if len(parts) >= 2 and parts[-1] in ["Goal", "Result", "Feedback"]:
+                base_class_name = "_".join(parts[:-1])
+            else:
+                raise ValueError(
+                    f"Goal/Result/Feedback class {qualname} does not appear to be nested in an action class"
+                )
+        elif "." in qualname:
+            # Dot notation: ActionName.Goal, ActionName.Result, or ActionName.Feedback
+            base_class_name = qualname.split(".")[0]
+        else:
+            raise ValueError(
+                f"Goal/Result/Feedback class {qualname} does not appear to be nested in an action class"
+            )
+
+        # Import the module and get the base class
+        import importlib
+
+        module = importlib.import_module(module_name)
+        action_cls = getattr(module, base_class_name, None)
+
+        if action_cls is None:
+            raise ValueError(
+                f"Could not find action class {base_class_name} in module {module_name}"
+            )
+
+        # Convert to action type string (e.g., "moveit_msgs/action/MoveGroup")
+        # Extract package and action name from module path
+        # ROS2 action modules follow pattern: package.action._action_name
+        # e.g., "moveit_msgs.action._move_group" -> "moveit_msgs/action/MoveGroup"
+        module_parts = module_name.split(".")
+        if len(module_parts) >= 2:
+            package = module_parts[0]
+            # Construct action type: package/action/ActionName
+            action_type = f"{package}/action/{base_class_name}"
+        else:
+            raise ValueError(
+                f"Could not determine action type from module {module_name}"
+            )
+
+        return action_cls, action_type
+
+    @staticmethod
+    def dict_to_message(
+        msg_type: str | type[rclpy.node.MsgType], msg_dict: Dict[str, Any]
+    ) -> IROS2Message:
+        """Convert a dictionary to a ROS2 message class instance.
+
+        This utility bridges LLM-oriented dict-based APIs with typed (human-friendly)
+        typed message classes. LLMs can generate dicts, then convert them to
+        message classes for type safety and IDE support.
+
+        Parameters
+        ----------
+        msg_type : str | type[rclpy.node.MsgType]
+            The ROS2 message type as string (e.g., 'geometry_msgs/msg/PoseStamped')
+            or message class.
+        msg_dict : Dict[str, Any]
+            Dictionary containing message fields.
+
+        Returns
+        -------
+        IROS2Message
+            ROS2 message class instance.
+        """
+        return BaseROS2API.build_ros2_msg(msg_type, msg_dict)

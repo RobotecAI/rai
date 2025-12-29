@@ -34,6 +34,7 @@ from rclpy.topic_endpoint_info import TopicEndpointInfo
 
 from rai.communication.ros2.api.base import (
     BaseROS2API,
+    IROS2Message,
 )
 from rai.communication.ros2.api.conversion import import_message_from_str
 
@@ -140,8 +141,8 @@ class ROS2TopicAPI(BaseROS2API):
     def publish(
         self,
         topic: str,
-        msg_content: Dict[str, Any],
-        msg_type: str,
+        msg_content: IROS2Message | Dict[str, Any],
+        msg_type: str | None = None,
         *,
         auto_qos_matching: bool = True,
         qos_profile: Optional[QoSProfile] = None,
@@ -162,7 +163,14 @@ class ROS2TopicAPI(BaseROS2API):
             topic, auto_qos_matching, qos_profile, for_publisher=True
         )
 
-        msg = self.build_ros2_msg(msg_type, msg_content)
+        if self.is_ros2_message(msg_content):
+            msg = msg_content
+        elif isinstance(msg_content, dict) and msg_type is not None:
+            msg = self.build_ros2_msg(msg_type, msg_content)
+        elif isinstance(msg_content, dict) and msg_type is None:
+            raise ValueError("msg_type must be provided if msg_content is a dict")
+        else:
+            raise ValueError(f"Invalid message content type: {type(msg_content)}")
         publisher = self._get_or_create_publisher(topic, type(msg), qos_profile)
         publisher.publish(msg)
 

@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any
+from typing import Any, Union
 
-from rai.communication.ros2.api import ROS2ServiceAPI
+from rai.communication.ros2.api import IROS2Message, ROS2ServiceAPI
 from rai.communication.ros2.messages import ROS2Message
 
 
@@ -35,21 +35,73 @@ class ROS2ServiceMixin:
 
     def service_call(
         self,
-        message: ROS2Message,
+        message: Union[ROS2Message, IROS2Message],
         target: str,
         timeout_sec: float = 5.0,
         *,
-        msg_type: str,
+        msg_type: str | None = None,
         reuse_client: bool = True,
         **kwargs: Any,
-    ) -> ROS2Message:
-        msg = self._service_api.call_service(
+    ) -> Union[ROS2Message, IROS2Message]:
+        """Call a ROS2 service.
+
+        Provides dual support:
+        - LLM support: ROS2Message with dict payload + msg_type string
+        - Typed (human-friendly): Direct service Request class instance (msg_type inferred)
+
+        Parameters
+        ----------
+        message : Union[ROS2Message, IROS2Message]
+            The service request. Can be:
+            - ROS2Message with dict payload (requires msg_type)
+            - Service Request class instance (e.g., SetBool.Request(), msg_type optional)
+        target : str
+            The target service name.
+        timeout_sec : float, optional
+            Timeout in seconds, by default 5.0.
+        msg_type : str | None, optional
+            The ROS2 service type string (e.g., 'std_srvs/srv/SetBool').
+            Required if message is ROS2Message (dict), optional if message is Request instance.
+        reuse_client : bool, optional
+            Whether to reuse cached client, by default True.
+        **kwargs : Any
+            Additional keyword arguments.
+
+        Returns
+        -------
+        Union[ROS2Message, IROS2Message]
+            Service response. Returns ROS2Message if input was ROS2Message,
+            otherwise returns Response class instance.
+        """
+        # Check if message is ROS2Message (dict) or Request class instance
+        if isinstance(message, ROS2Message):
+            # LLM support path: dict-based message
+            if msg_type is None:
+                raise ValueError(
+                    "msg_type must be provided when message is ROS2Message (dict-based). "
+                    "Either pass msg_type or use a Request class instance directly."
+                )
+            request = message.payload
+        else:
+            # Typed (human-friendly) path: Request class instance
+            if msg_type is not None:
+                # Allow explicit msg_type but warn it's redundant
+                pass  # Will be ignored in call_service if introspection succeeds
+            request = message
+
+        response = self._service_api.call_service(
             service_name=target,
             service_type=msg_type,
-            request=message.payload,
+            request=request,
             timeout_sec=timeout_sec,
             reuse_client=reuse_client,
         )
-        return ROS2Message(
-            payload=msg, metadata={"msg_type": str(type(msg)), "service": target}
-        )
+
+        # Return type matches input: ROS2Message for dicts, Response instance for classes
+        if isinstance(message, ROS2Message):
+            return ROS2Message(
+                payload=response,
+                metadata={"msg_type": str(type(response)), "service": target},
+            )
+        else:
+            return response

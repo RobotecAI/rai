@@ -30,16 +30,30 @@ The `ROS2Connector` is the main interface for publishing, subscribing, and calli
 -   TF (Transform) operations, see [ROS 2 TF](https://docs.ros.org/en/jazzy/Tutorials/Intermediate/Tf2/Introduction-To-Tf2.html)
 -   Callback registration for asynchronous notifications
 
+### Dual Support API
+
+The connector provides dual support for services and actions:
+
+-   **Typed (human-friendly)**: Direct ROS 2 message class instances (e.g., `SetBool.Request()`, `MoveGroup.Goal()`). The `msg_type` parameter is optional as it's inferred via introspection. Provides type safety and IDE support.
+-   **LLM support**: `ROS2Message` wrapper with dict payload. The `msg_type` parameter is required. No imports needed, easier for LLMs to generate.
+
 ### Example Usage
 
 ```python
-from rai.communication.ros2.connectors import ROS2Connector
+from rai.communication.ros2.connectors import ROS2Connector, ROS2Message
+from std_msgs.msg import String
 
 connector = ROS2Connector()
 
-# Send a message to a topic
+# Send a raw ROS 2 message (msg_type is inferred)
 connector.send_message(
-    message=my_msg,  # ROS2Message
+    message=String(data="Hello"),
+    target="/my_topic"
+)
+
+# Send a message using a dictionary (msg_type is required)
+connector.send_message(
+    message=ROS2Message(payload={"data": "Hello"}),
     target="/my_topic",
     msg_type="std_msgs/msg/String"
 )
@@ -51,18 +65,42 @@ connector.register_callback(
     msg_type="std_msgs/msg/String"
 )
 
-# Call a service
+# Call a service - Typed (human-friendly): Direct Request class instance (msg_type inferred)
+from std_srvs.srv import SetBool
+
+request = SetBool.Request()
+request.data = True
 response = connector.service_call(
-    message=my_request_msg,
-    target="/my_service",
-    msg_type="my_package/srv/MyService"
+    message=request,
+    target="/my_service"
+    # msg_type is optional when using Request class instances
 )
 
-# Start an action
+# Call a service - LLM support: ROS2Message with dict payload (msg_type required)
+response = connector.service_call(
+    message=ROS2Message(payload={"data": True}),
+    target="/my_service",
+    msg_type="std_srvs/srv/SetBool"
+)
+
+# Start an action - Typed (human-friendly): Direct Goal class instance (msg_type inferred)
+from moveit_msgs.action import MoveGroup
+
+goal = MoveGroup.Goal()
+# ... set goal fields ...
 handle = connector.start_action(
-    action_data=my_goal_msg,
+    action_data=goal,
     target="/my_action",
-    msg_type="my_package/action/MyAction",
+    on_feedback=feedback_cb,
+    on_done=done_cb
+    # msg_type is optional when using Goal class instances
+)
+
+# Start an action - LLM support: ROS2Message with dict payload (msg_type required)
+handle = connector.start_action(
+    action_data=ROS2Message(payload={"target": "pose1"}),
+    target="/my_action",
+    msg_type="moveit_msgs/action/MoveGroup",
     on_feedback=feedback_cb,
     on_done=done_cb
 )

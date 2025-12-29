@@ -57,8 +57,13 @@ class ROS2ServiceAPI(BaseROS2API):
     def call_service(
         self,
         service_name: str,
-        service_type: str,
-        request: Any,
+        service_type: str | None = None,
+        # TODO(juliaj): Type safety options for request parameter:
+        # - Any: Simplest, but no type checking (current)
+        # - Dict[str, Any] | object | None: More descriptive, but object is too broad
+        # - Protocol-based: More precise, but requires defining interface for Request instances
+        # Request classes are dynamically generated from ROS2 service types, limiting static typing options
+        request: Any = None,
         timeout_sec: float = 5.0,
         *,
         reuse_client: bool = True,
@@ -66,10 +71,15 @@ class ROS2ServiceAPI(BaseROS2API):
         """
         Call a ROS 2 service.
 
+        Provides dual support:
+        - LLM support: dict request + service_type string
+        - Typed (human-friendly): Request class instance (service_type inferred via introspection)
+
         Args:
             service_name: Fully-qualified service name.
             service_type: ROS 2 service type string (e.g., 'std_srvs/srv/SetBool').
-            request: Request payload dict.
+                Required if request is a dict, optional if request is a Request instance.
+            request: Dict with request fields, or Request class instance.
             timeout_sec: Seconds to wait for availability/response.
             reuse_client: Reuse a cached client. Client creation is synchronized; set
                 False to create a new client per call.
@@ -78,7 +88,7 @@ class ROS2ServiceAPI(BaseROS2API):
             Response message instance.
 
         Raises:
-            ValueError: Service not available within the timeout.
+            ValueError: Service not available within the timeout, or invalid request/service_type combination.
             AttributeError: Service type or request cannot be constructed.
 
         Note:
@@ -87,7 +97,30 @@ class ROS2ServiceAPI(BaseROS2API):
             through the same client. Use reuse_client=False for per-call clients
             when concurrent service calls are required.
         """
-        srv_msg, srv_cls = self.build_ros2_service_request(service_type, request)
+        # Check if request is a Request/Response instance (has .Request or .Response in qualname)
+        is_request_instance = self._is_nested_instance(request, ["Request", "Response"])
+
+        if is_request_instance:
+            # Typed (human-friendly): Request class instance - extract service class via introspection
+            if service_type is not None:
+                self._logger.warning(  # type: ignore
+                    "service_type provided but request is a service Request instance. "
+                    "Ignoring service_type and using introspection."
+                )
+            srv_cls, service_type = self.extract_service_class_from_request(request)
+            srv_msg = request
+        elif isinstance(request, dict):
+            # LLM support: dict + service_type string
+            if service_type is None:
+                raise ValueError(
+                    "service_type must be provided when request is a dict. "
+                    "Either pass service_type or use a Request class instance."
+                )
+            srv_msg, srv_cls = self.build_ros2_service_request(service_type, request)
+        else:
+            raise ValueError(
+                f"request must be either a dict or a service Request instance, got {type(request)}"
+            )
 
         def _call_service(client: Client, timeout_sec: float) -> Any:
             is_service_available = client.wait_for_service(timeout_sec=timeout_sec)

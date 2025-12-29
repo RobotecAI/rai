@@ -17,17 +17,26 @@ import threading
 import time
 from multiprocessing import Pool
 from typing import Any, List
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from action_msgs.msg import GoalStatus
 from action_msgs.srv import CancelGoal
+from geometry_msgs.msg import (
+    Point,
+    Pose,
+    PoseStamped,
+    PoseWithCovariance,
+    PoseWithCovarianceStamped,
+    Quaternion,
+)
 from nav2_msgs.action import NavigateToPose
 from rai.communication.ros2.api import (
     ROS2ActionAPI,
     ROS2ServiceAPI,
     ROS2TopicAPI,
 )
+from rai.communication.ros2.api.base import BaseROS2API
 from rclpy.callback_groups import (
     CallbackGroup,
     MutuallyExclusiveCallbackGroup,
@@ -35,6 +44,7 @@ from rclpy.callback_groups import (
 )
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
+from std_msgs.msg import Header, String
 from std_srvs.srv import SetBool
 
 from .helpers import (
@@ -51,12 +61,99 @@ from .helpers import (
 _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
 
 
+@pytest.mark.parametrize(
+    "entity,is_message,is_service,is_action",
+    [
+        ({"data": "Hello, ROS2!"}, False, False, False),
+        ({}, False, False, False),
+        ("", False, False, False),
+        ("data: Hello, ROS2!", False, False, False),
+        (None, False, False, False),
+        (String(), True, False, False),
+        (Pose(), True, False, False),
+        (PoseWithCovarianceStamped(), True, False, False),
+        (
+            PoseWithCovarianceStamped(
+                header=Header(),
+                pose=PoseWithCovariance(
+                    pose=Pose(
+                        position=Point(x=1.0, y=2.0, z=3.0),
+                        orientation=Quaternion(x=0.1, y=0.2, z=0.3, w=0.4),
+                    )
+                ),
+            ),
+            True,
+            False,
+            False,
+        ),
+        (SetBool.Request(data=True), True, False, False),
+        (
+            SetBool.Response(success=True, message="Test service called"),
+            True,
+            False,
+            False,
+        ),
+        (SetBool, False, True, False),
+        (
+            NavigateToPose.Goal(
+                pose=PoseStamped(
+                    header=Header(),
+                    pose=Pose(
+                        position=Point(x=1.0, y=2.0, z=3.0),
+                        orientation=Quaternion(x=0.1, y=0.2, z=0.3, w=0.4),
+                    ),
+                )
+            ),
+            True,
+            False,
+            False,
+        ),
+        (NavigateToPose.Result(), True, False, False),
+        (NavigateToPose.Feedback(), True, False, False),
+        (NavigateToPose, False, False, True),
+    ],
+)
+def test_is_message_type(
+    ros_setup: None, entity: Any, is_message: bool, is_service: bool, is_action: bool
+) -> None:
+    assert is_message == BaseROS2API.is_ros2_message(entity)
+    assert is_service == BaseROS2API.is_ros2_service(entity)
+    assert is_action == BaseROS2API.is_ros2_action(entity)
+
+
+@pytest.mark.parametrize(
+    "message_content,msg_type,actual_type",
+    [
+        ({"data": "Hello, ROS2!"}, "std_msgs/msg/String", String),
+        (String(data="Hello, ROS2!"), None, String),
+        (String(), None, String),
+        (Pose(), None, Pose),
+        (PoseWithCovarianceStamped(), None, PoseWithCovarianceStamped),
+        (
+            PoseWithCovarianceStamped(
+                header=Header(),
+                pose=PoseWithCovariance(
+                    pose=Pose(
+                        position=Point(x=1.0, y=2.0, z=3.0),
+                        orientation=Quaternion(x=0.1, y=0.2, z=0.3, w=0.4),
+                    )
+                ),
+            ),
+            None,
+            PoseWithCovarianceStamped,
+        ),
+    ],
+)
 def test_ros2_single_message_publish(
-    ros_setup: None, request: pytest.FixtureRequest
+    ros_setup: None,
+    request: pytest.FixtureRequest,
+    message_content: Any,
+    msg_type: str | None,
+    actual_type: type,
 ) -> None:
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
-    message_receiver = MessageSubscriber(topic_name)
+    message_receiver = MessageSubscriber(topic_name, actual_type)
     node = Node(node_name)
     executors, threads = multi_threaded_spinner([message_receiver, node])
 
@@ -64,12 +161,12 @@ def test_ros2_single_message_publish(
         topic_api = ROS2TopicAPI(node)
         topic_api.publish(
             topic_name,
-            {"data": "Hello, ROS2!"},
-            msg_type="std_msgs/msg/String",
+            message_content,
+            msg_type=msg_type,
         )
-        time.sleep(1)
+        time.sleep(0.1)
         assert len(message_receiver.received_messages) == 1
-        assert message_receiver.received_messages[0].data == "Hello, ROS2!"
+        assert isinstance(message_receiver.received_messages[0], actual_type)
     finally:
         shutdown_executors_and_threads(executors, threads)
 
@@ -116,7 +213,40 @@ def test_ros2_single_message_publish_wrong_msg_content(
         shutdown_executors_and_threads(executors, threads)
 
 
+@pytest.mark.parametrize(
+    "message_content,msg_type",
+    [
+        ({"data": "Hello, ROS2!"}, "std_msgs/msg/String"),
+        (String(data="Hello, ROS2!"), None),
+    ],
+)
 def test_ros2_single_message_publish_wrong_qos_setup(
+    ros_setup: None,
+    request: pytest.FixtureRequest,
+    message_content: Any,
+    msg_type: str | None,
+) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    message_receiver = MessageSubscriber(topic_name)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([message_receiver, node])
+
+    try:
+        topic_api = ROS2TopicAPI(node)
+        with pytest.raises(ValueError):
+            topic_api.publish(
+                topic_name,
+                message_content,
+                msg_type=msg_type,
+                auto_qos_matching=False,
+                qos_profile=None,
+            )
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_single_message_dict_no_type(
     ros_setup: None, request: pytest.FixtureRequest
 ) -> None:
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
@@ -131,9 +261,42 @@ def test_ros2_single_message_publish_wrong_qos_setup(
             topic_api.publish(
                 topic_name,
                 {"data": "Hello, ROS2!"},
-                msg_type="std_msgs/msg/String",
-                auto_qos_matching=False,
-                qos_profile=None,
+                msg_type=None,
+            )
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+@pytest.mark.parametrize(
+    "message_content,msg_type",
+    [
+        ((), "std_msgs/msg/String"),
+        ((), None),
+        (None, "std_msgs/msg/String"),
+        (None, None),
+        ("data: Hello, ROS2!", "std_msgs/msg/String"),
+        ("data: Hello, ROS2!", None),
+    ],
+)
+def test_ros2_single_message_invalid_type(
+    ros_setup: None,
+    request: pytest.FixtureRequest,
+    message_content: Any,
+    msg_type: str | None,
+) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    message_receiver = MessageSubscriber(topic_name)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([message_receiver, node])
+
+    try:
+        topic_api = ROS2TopicAPI(node)
+        with pytest.raises(ValueError):
+            topic_api.publish(
+                topic_name,
+                message_content,
+                msg_type=msg_type,
             )
     finally:
         shutdown_executors_and_threads(executors, threads)
@@ -679,3 +842,333 @@ def test_ros2_create_create_service(ros_setup: None, request: pytest.FixtureRequ
     finally:
         shutdown_executors_and_threads(executors, threads)
         assert mock_callback.called
+
+
+# Tests for hybrid API support and introspection methods
+
+
+@pytest.mark.parametrize(
+    "obj, nested_names, expected",
+    [
+        (SetBool.Request(data=True), ["Request", "Response"], True),
+        (SetBool.Response(success=True), ["Request", "Response"], True),
+        (NavigateToPose.Goal(), ["Goal", "Result", "Feedback"], True),
+        (NavigateToPose.Result(), ["Goal", "Result", "Feedback"], True),
+        (NavigateToPose.Feedback(), ["Goal", "Result", "Feedback"], True),
+        (String(), ["Request", "Response"], False),
+        (String(), ["Goal", "Result", "Feedback"], False),
+        ({"data": True}, ["Request", "Response"], False),
+        (None, ["Request", "Response"], False),
+        (SetBool.Request(data=True), ["Goal"], False),
+        (NavigateToPose.Goal(), ["Request"], False),
+    ],
+)
+def test_is_nested_instance(
+    ros_setup: None, obj: Any, nested_names: List[str], expected: bool
+) -> None:
+    """Test the _is_nested_instance helper method."""
+    result = BaseROS2API._is_nested_instance(obj, nested_names)
+    assert result == expected
+
+
+def test_extract_service_class_from_request(ros_setup: None) -> None:
+    """Test extracting service class from Request instance."""
+    request = SetBool.Request(data=True)
+    service_cls, service_type = BaseROS2API.extract_service_class_from_request(request)
+
+    assert service_cls == SetBool
+    assert service_type == "std_srvs/srv/SetBool"
+
+
+def test_extract_service_class_from_response(ros_setup: None) -> None:
+    """Test extracting service class from Response instance."""
+    response = SetBool.Response(success=True, message="test")
+    service_cls, service_type = BaseROS2API.extract_service_class_from_request(response)
+
+    assert service_cls == SetBool
+    assert service_type == "std_srvs/srv/SetBool"
+
+
+def test_extract_service_class_invalid(ros_setup: None) -> None:
+    """Test that extract_service_class_from_request raises error for invalid input."""
+    with pytest.raises(ValueError, match="does not appear to be nested"):
+        BaseROS2API.extract_service_class_from_request(String())
+
+
+def test_extract_action_class_from_goal(ros_setup: None) -> None:
+    """Test extracting action class from Goal instance."""
+    goal = NavigateToPose.Goal()
+    action_cls, action_type = BaseROS2API.extract_action_class_from_goal(goal)
+
+    assert action_cls == NavigateToPose
+    assert action_type == "nav2_msgs/action/NavigateToPose"
+
+
+def test_extract_action_class_from_result(ros_setup: None) -> None:
+    """Test extracting action class from Result instance."""
+    result = NavigateToPose.Result()
+    action_cls, action_type = BaseROS2API.extract_action_class_from_goal(result)
+
+    assert action_cls == NavigateToPose
+    assert action_type == "nav2_msgs/action/NavigateToPose"
+
+
+def test_extract_action_class_from_feedback(ros_setup: None) -> None:
+    """Test extracting action class from Feedback instance."""
+    feedback = NavigateToPose.Feedback()
+    action_cls, action_type = BaseROS2API.extract_action_class_from_goal(feedback)
+
+    assert action_cls == NavigateToPose
+    assert action_type == "nav2_msgs/action/NavigateToPose"
+
+
+def test_extract_action_class_invalid(ros_setup: None) -> None:
+    """Test that extract_action_class_from_goal raises error for invalid input."""
+    with pytest.raises(ValueError, match="does not appear to be nested"):
+        BaseROS2API.extract_action_class_from_goal(String())
+
+
+def test_dict_to_message(ros_setup: None) -> None:
+    """Test dict_to_message utility converts dict to message class."""
+    msg_dict = {"data": "Hello, ROS2!"}
+    msg = BaseROS2API.dict_to_message("std_msgs/msg/String", msg_dict)
+
+    assert isinstance(msg, String)
+    assert msg.data == "Hello, ROS2!"
+
+
+def test_dict_to_message_with_class_type(ros_setup: None) -> None:
+    """Test dict_to_message with message class instead of string."""
+    msg_dict = {"data": "Hello, ROS2!"}
+    msg = BaseROS2API.dict_to_message(String, msg_dict)
+
+    assert isinstance(msg, String)
+    assert msg.data == "Hello, ROS2!"
+
+
+@pytest.mark.parametrize(
+    "callback_group",
+    [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
+    ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
+)
+def test_ros2_service_call_with_request_instance(
+    ros_setup: None, request: pytest.FixtureRequest, callback_group: CallbackGroup
+) -> None:
+    """Test service call using Request class instance (typed human-friendly API)."""
+    service_name = f"{request.node.originalname}_service"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    service_server = ServiceServer(service_name, callback_group)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([service_server, node])
+
+    try:
+        service_api = ROS2ServiceAPI(node)
+        # Use Request class instance instead of dict
+        request_instance = SetBool.Request(data=True)
+        response = service_api.call_service(
+            service_name,
+            service_type=None,  # Should be inferred from Request instance
+            request=request_instance,
+        )
+        assert response.success
+        assert response.message == "Test service called"
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+@pytest.mark.parametrize(
+    "callback_group",
+    [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
+    ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
+)
+def test_ros2_service_call_with_request_instance_warns_on_service_type(
+    ros_setup: None,
+    request: pytest.FixtureRequest,
+    callback_group: CallbackGroup,
+    caplog,
+) -> None:
+    """Test that providing service_type with Request instance logs warning."""
+    service_name = f"{request.node.originalname}_service"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    service_server = ServiceServer(service_name, callback_group)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([service_server, node])
+
+    try:
+        service_api = ROS2ServiceAPI(node)
+        request_instance = SetBool.Request(data=True)
+        # Mock the logger to verify warning is called
+        # ROS2 loggers don't integrate with Python's logging module
+        with patch.object(service_api._logger, "warning") as mock_warning:
+            response = service_api.call_service(
+                service_name,
+                service_type="std_srvs/srv/SetBool",  # Should be ignored
+                request=request_instance,
+            )
+        assert response.success
+        # Check that warning was called with expected message
+        mock_warning.assert_called_once()
+        assert "service_type provided but request is a service Request instance" in str(
+            mock_warning.call_args[0][0]
+        )
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+@pytest.mark.parametrize(
+    "callback_group",
+    [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
+    ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
+)
+def test_ros2_service_call_dict_requires_service_type(
+    ros_setup: None, request: pytest.FixtureRequest, callback_group: CallbackGroup
+) -> None:
+    """Test that dict request requires service_type parameter."""
+    service_name = f"{request.node.originalname}_service"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    service_server = ServiceServer(service_name, callback_group)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([service_server, node])
+
+    try:
+        service_api = ROS2ServiceAPI(node)
+        with pytest.raises(ValueError, match="service_type must be provided"):
+            service_api.call_service(
+                service_name,
+                service_type=None,
+                request={"data": True},
+            )
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+@pytest.mark.parametrize(
+    "callback_group",
+    [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
+    ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
+)
+def test_ros2_service_call_invalid_request_type(
+    ros_setup: None, request: pytest.FixtureRequest, callback_group: CallbackGroup
+) -> None:
+    """Test that invalid request type raises ValueError."""
+    service_name = f"{request.node.originalname}_service"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    service_server = ServiceServer(service_name, callback_group)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([service_server, node])
+
+    try:
+        service_api = ROS2ServiceAPI(node)
+        with pytest.raises(
+            ValueError, match="must be either a dict or a service Request instance"
+        ):
+            service_api.call_service(
+                service_name,
+                service_type="std_srvs/srv/SetBool",
+                request="invalid_request",  # type: ignore
+            )
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_action_send_goal_with_goal_instance(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    """Test action send_goal using Goal class instance (typed human-friendly API)."""
+    action_name = f"{request.node.originalname}_action"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    action_server = TestActionServer(action_name)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([action_server, node])
+
+    try:
+        action_api = ROS2ActionAPI(node)
+        # Use Goal class instance instead of dict
+        goal_instance = NavigateToPose.Goal()
+        accepted, handle = action_api.send_goal(
+            action_name,
+            action_type=None,  # Should be inferred from Goal instance
+            goal=goal_instance,
+        )
+
+        assert accepted
+        assert handle != ""
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_action_send_goal_with_goal_instance_warns_on_action_type(
+    ros_setup: None, request: pytest.FixtureRequest, caplog
+) -> None:
+    """Test that providing action_type with Goal instance logs warning."""
+    action_name = f"{request.node.originalname}_action"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    action_server = TestActionServer(action_name)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([action_server, node])
+
+    try:
+        action_api = ROS2ActionAPI(node)
+        goal_instance = NavigateToPose.Goal()
+        # Mock the logger to verify warning is called
+        # ROS2 loggers don't integrate with Python's logging module
+        with patch.object(action_api.node.get_logger(), "warning") as mock_warning:
+            accepted, handle = action_api.send_goal(
+                action_name,
+                action_type="nav2_msgs/action/NavigateToPose",  # Should be ignored
+                goal=goal_instance,
+            )
+        assert accepted
+        # Check that warning was called with expected message
+        mock_warning.assert_called_once()
+        assert "action_type provided but goal is an action Goal instance" in str(
+            mock_warning.call_args[0][0]
+        )
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_action_send_goal_dict_requires_action_type(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    """Test that dict goal requires action_type parameter."""
+    action_name = f"{request.node.originalname}_action"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    action_server = TestActionServer(action_name)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([action_server, node])
+
+    try:
+        action_api = ROS2ActionAPI(node)
+        with pytest.raises(ValueError, match="action_type must be provided"):
+            action_api.send_goal(
+                action_name,
+                action_type=None,
+                goal={},
+            )
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_action_send_goal_invalid_goal_type(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    """Test that invalid goal type raises ValueError."""
+    action_name = f"{request.node.originalname}_action"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    action_server = TestActionServer(action_name)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([action_server, node])
+
+    try:
+        action_api = ROS2ActionAPI(node)
+        with pytest.raises(
+            ValueError, match="must be either a dict or an action Goal instance"
+        ):
+            action_api.send_goal(
+                action_name,
+                action_type="nav2_msgs/action/NavigateToPose",
+                goal="invalid_goal",  # type: ignore
+            )
+    finally:
+        shutdown_executors_and_threads(executors, threads)

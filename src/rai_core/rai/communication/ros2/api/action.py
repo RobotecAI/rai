@@ -193,8 +193,13 @@ class ROS2ActionAPI(BaseROS2API):
     def send_goal(
         self,
         action_name: str,
-        action_type: str,
-        goal: Dict[str, Any],
+        action_type: str | None = None,
+        # TODO(juliaj): Type safety options for goal parameter:
+        # - Any: Simplest, but no type checking (current)
+        # - Dict[str, Any] | object | None: More descriptive, but object is too broad
+        # - Protocol-based: More precise, but requires defining interface for Goal instances
+        # Goal classes are dynamically generated from ROS2 action types, limiting static typing options
+        goal: Any = None,
         *,
         feedback_callback: Callable[[Any], None] = lambda _: None,
         done_callback: Callable[
@@ -202,6 +207,28 @@ class ROS2ActionAPI(BaseROS2API):
         ] = lambda _: None,  # TODO: handle done callback
         timeout_sec: float = 1.0,
     ) -> Tuple[bool, Annotated[str, "action handle"]]:
+        """
+        Send an action goal.
+
+        Provides dual support:
+        - LLM support: dict goal + action_type string
+        - Typed (human-friendly): Goal class instance (action_type inferred via introspection)
+
+        Args:
+            action_name: Fully-qualified action name.
+            action_type: ROS 2 action type string (e.g., 'moveit_msgs/action/MoveGroup').
+                Required if goal is a dict, optional if goal is a Goal instance.
+            goal: Dict with goal fields, or Goal class instance.
+            feedback_callback: Callback for feedback messages.
+            done_callback: Callback when action completes.
+            timeout_sec: Seconds to wait for action server availability.
+
+        Returns:
+            Tuple of (accepted: bool, handle: str).
+
+        Raises:
+            ValueError: If invalid goal/action_type combination.
+        """
         handle = self._generate_handle()
         self.actions[handle] = ROS2ActionData(
             action_client=None,
@@ -211,11 +238,36 @@ class ROS2ActionAPI(BaseROS2API):
             feedbacks=[],
         )
 
-        action_cls = import_message_from_str(action_type)
-        action_goal = action_cls.Goal()  # type: ignore
-        rosidl_runtime_py.set_message.set_message_fields(
-            action_goal, copy.deepcopy(goal)
+        # Check if goal is a Goal instance (has .Goal, .Result, or .Feedback in qualname)
+        is_goal_instance = self._is_nested_instance(
+            goal, ["Goal", "Result", "Feedback"]
         )
+
+        if is_goal_instance:
+            # Typed (human-friendly): Goal class instance - extract action class via introspection
+            if action_type is not None:
+                self.node.get_logger().warning(
+                    "action_type provided but goal is an action Goal instance. "
+                    "Ignoring action_type and using introspection."
+                )
+            action_cls, action_type = self.extract_action_class_from_goal(goal)
+            action_goal = goal
+        elif isinstance(goal, dict):
+            # LLM support: dict + action_type string
+            if action_type is None:
+                raise ValueError(
+                    "action_type must be provided when goal is a dict. "
+                    "Either pass action_type or use a Goal class instance."
+                )
+            action_cls = import_message_from_str(action_type)
+            action_goal = action_cls.Goal()  # type: ignore
+            rosidl_runtime_py.set_message.set_message_fields(
+                action_goal, copy.deepcopy(goal)
+            )
+        else:
+            raise ValueError(
+                f"goal must be either a dict or an action Goal instance, got {type(goal)}"
+            )
 
         action_client = ActionClient(self.node, action_cls, action_name)
         if not action_client.wait_for_server(timeout_sec=timeout_sec):  # type: ignore
