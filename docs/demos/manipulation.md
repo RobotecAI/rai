@@ -18,6 +18,10 @@ manipulation techniques.
 
     Make sure ROS 2 is sourced. (e.g. `source /opt/ros/humble/setup.bash`)
 
+### Local Setup
+
+#### Setting up the demo
+
 1. Follow the RAI setup instructions in the [quick setup guide](../setup/install.md#setting-up-developer-environment).
 2. Download additional dependencies:
 
@@ -39,7 +43,7 @@ manipulation techniques.
     colcon build --symlink-install
     ```
 
-## Running the Demo
+#### Running the demo
 
 !!! note "Remain in sourced shell"
 
@@ -74,6 +78,51 @@ manipulation techniques.
 !!! tip "Changing camera view"
 
     To change camera in the simulation use 1-7 keys on your keyboard once it's window is focused.
+
+### Docker Setup
+
+#### 1. Setting up the demo
+
+1.  Set up docker as outlined in the [docker setup guide](../setup/setup_docker.md). During the setup, build the docker image with all dependencies (i.e., use the `--build-arg DEPENDENCIES=all_groups` argument)
+
+2.  Enable X11 access for the docker container:
+
+    ```shell
+    xhost +local:root
+    ```
+
+3.  Run the docker container with the following command:
+
+    ```shell
+    docker run --net=host --ipc=host --pid=host -e ROS_DOMAIN_ID=$ROS_DOMAIN_ID -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --gpus all -it rai:jazzy # or rai:humble
+    ```
+
+    !!! tip "NVIDIA Container Toolkit"
+
+        In order to use the `--gpus all` flag, the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) must be installed on the host machine.
+
+4.  (Inside the docker container) By default, RAI uses OpenAI as the vendor. Thus, it is necessary
+    to set the `$OPENAI_API_KEY` environmental variable. The command below may be utilized to set
+    the variable and add it to the container's `.bashrc` file:
+
+    ```shell
+    export OPENAI_API_KEY=YOUR_OPEN_AI_API_KEY
+    echo "export OPENAI_API_KEY=$OPENAI_API_KEY" >> ~/.bashrc
+    ```
+
+    !!! note AI vendor change
+
+        The default vendor can be changed to a different provider via the [RAI configuration tool](../setup/install.md#15-configure-rai)
+
+5.  After this, follow the steps in the [Local Setup](#local-setup) from step 2 onwards.
+
+    !!! tip "New terminal in docker"
+
+        In order to open a new terminal in the same docker container, you can use the following command:
+
+        ```shell
+        docker exec -it <container_id> bash
+        ```
 
 ## How it works
 

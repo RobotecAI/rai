@@ -87,9 +87,8 @@ class GDBoxer:
                 self.logger.warning("CUDA is not available but requested, using CPU")
                 self.device = "cpu"
         else:
-            self.device = "cpu"
-
-        self.model = Model(self.cfg_path, self.weight_path, device=self.device)
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            self.model = Model(self.cfg_path, self.weight_path, device=device)
         self.bridge = CvBridge()
 
     def get_boxes(
