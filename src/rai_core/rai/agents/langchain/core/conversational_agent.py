@@ -27,10 +27,12 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.graph import START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
-from langgraph.prebuilt.tool_node import tools_condition
+from pydantic import BaseModel, Field
 
 from rai.agents.langchain.core.tool_runner import ToolRunner
 from rai.agents.langchain.invocation_helpers import invoke_llm_with_tracing
+from rai.communication.ros2.connectors import ROS2Connector
+from rai.tools.ros2.manipulation import ResetArmTool
 
 
 class State(TypedDict):
@@ -69,6 +71,51 @@ def agent(
     "Use rai.agents.langchain.core.create_react_runnable instead. "
     "Support for the conversational agent will be removed in the 3.0 release."
 )
+class BoolAnswerWithJustification(BaseModel):
+    """A boolean answer to the user question along with justification for the answer."""
+
+    answer: bool = Field(
+        ..., description="Whether the task has been completed successfully."
+    )
+    justification: str = Field(..., description="Justification for the answer.")
+
+
+def tools_condition(
+    state: State,
+    logger: logging.Logger,
+    messages_key: str = "messages",
+    connector: ROS2Connector = None,
+    manipulator_frame: str = "manipulator_base_link",
+) -> str:
+    logger.info("🔀 Running tools_condition to determine next step")
+
+    if isinstance(state, list):
+        ai_message = state[-1]
+        logger.info(f"📝 State is list with {len(state)} items")
+    elif isinstance(state, dict) and (messages := state.get(messages_key, [])):
+        ai_message = messages[-1]
+        logger.info(f"📝 State is dict with {len(messages)} messages")
+    elif messages := getattr(state, messages_key, []):
+        ai_message = messages[-1]
+        logger.info(f"📝 State has messages attribute with {len(messages)} messages")
+    else:
+        logger.error(f"❌ No messages found in input state: {type(state)} - {state}")
+        raise ValueError(f"No messages found in input state to tool_edge: {state}")
+
+    # Check if the AI message has tool calls
+    if hasattr(ai_message, "tool_calls") and len(ai_message.tool_calls) > 0:
+        logger.info(
+            f"🔧 AI message has {len(ai_message.tool_calls)} tool calls - routing to tools"
+        )
+        return "tools"
+
+    reset_arm_tool = ResetArmTool(
+        connector=connector, manipulator_frame=manipulator_frame
+    )
+    reset_arm_tool._run()
+    return "__end__"
+
+
 def create_conversational_agent(
     llm: BaseChatModel,
     tools: List[BaseTool],
