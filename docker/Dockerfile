@@ -57,19 +57,6 @@ ENV PATH="/root/.local/bin:$PATH"
 COPY . /rai
 WORKDIR /rai
 
-RUN vcs import < demos.repos
-
-# Install ROS dependencies
-RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && \
-    rosdep install --from-paths src --ignore-src -r -y'
-
-# Build the workspace
-RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && colcon build --symlink-install'
-
-# Set up the environment to use Fast DDS
-ENV FASTRTPS_DEFAULT_PROFILES_FILE=/rai/docker/fastrtps_config.xml
-ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-
 ENV POETRY_REQUESTS_TIMEOUT=100 \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -84,7 +71,13 @@ else \
   poetry install --all-groups -v; \
 fi'
 
-RUN bash -c ". setup_shell.sh && python src/rai_extensions/rai_open_set_vision/scripts/download_weights.py"
-RUN ./scripts/download_demo.sh manipulation
+# Install ROS dependencies
+RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && \
+    rosdep install --from-paths src --ignore-src -r -y'
 
-ENTRYPOINT ["bash", "-c", ". setup_shell.sh && streamlit run examples/manipulation-demo-streamlit.py \"$@\""]
+# Build the workspace
+RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && colcon build --symlink-install'
+
+# Set up the environment to use Fast DDS
+ENV FASTRTPS_DEFAULT_PROFILES_FILE=/rai/docker/fastrtps_config.xml
+ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
