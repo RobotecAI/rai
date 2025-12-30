@@ -32,7 +32,8 @@ RUN apt update && apt install -y \
     python3-pip \
     git \
     wget \
-    zip
+    zip \
+    ros-${ROS_DISTRO}-rai-interfaces
 
 # Install Poetry
 RUN curl -sSL https://install.python-poetry.org | python3 - --version 2.1.3
@@ -73,5 +74,6 @@ RUN apt install -y \
     libxcb-xinput0 \
     libpcre2-16-0 \
     libunwind-dev
+
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=all
