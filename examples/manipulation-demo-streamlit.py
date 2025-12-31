@@ -12,13 +12,15 @@
 # See the License for the specific language goveself.rning permissions and
 # limitations under the License.
 
-import importlib
 from pathlib import Path
 
 import rclpy
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage
-from manipulation_common import get_manipulation_launch_description_no_binary
+from manipulation_common import (
+    create_agent,
+    get_manipulation_launch_description_no_binary,
+)
 from rai.agents.integrations.streamlit import get_streamlit_cb, streamlit_invoke
 from rai.communication.ros2.connectors.ros2_connector import ROS2Connector
 from rai.messages import HumanMultimodalMessage
@@ -30,8 +32,6 @@ from rai_sim.o3de.o3de_bridge import (
     O3DExROS2SimulationConfig,
 )
 from rai_sim.simulation_bridge import SceneConfig
-
-manipulation_demo = importlib.import_module("manipulation-demo")
 
 
 @st.cache_resource
@@ -48,7 +48,7 @@ def init_ros():
 
 @st.cache_resource
 def initialize_graph():
-    agent, camera_tool = manipulation_demo.create_agent()
+    agent, camera_tool = create_agent()
     return agent, camera_tool
 
 

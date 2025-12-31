@@ -19,7 +19,6 @@ from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2.manipulation import (
     GetObjectPositionsTool,
     MoveObjectFromToTool,
-    ResetArmTool,
 )
 from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
 from rai_perception.tools import GetGrabbingPointTool
@@ -38,6 +37,7 @@ def create_agent():
     node = connector.node
     node.declare_parameter("conversion_ratio", 1.0)
 
+    camera_tool = GetROS2ImageConfiguredTool(connector=connector, topic="/color_image5")
     tools: List[BaseTool] = [
         GetObjectPositionsTool(
             connector=connector,
@@ -49,8 +49,7 @@ def create_agent():
             get_grabbing_point_tool=GetGrabbingPointTool(connector=connector),
         ),
         MoveObjectFromToTool(connector=connector, manipulator_frame="panda_link0"),
-        ResetArmTool(connector=connector, manipulator_frame="panda_link0"),
-        GetROS2ImageConfiguredTool(connector=connector, topic="/color_image5"),
+        camera_tool,
     ]
 
     llm = get_llm_model(model_type="complex_model", streaming=True)
@@ -63,7 +62,7 @@ def create_agent():
         tools=tools,
         system_prompt=embodiment_info.to_langchain(),
     )
-    return agent
+    return agent, camera_tool
 
 
 def get_manipulation_launch_description():
