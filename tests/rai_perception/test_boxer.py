@@ -91,6 +91,35 @@ class TestGDBoxer:
             assert boxer.model == mock_model_instance
             mock_model.assert_called_once()
 
+    def test_gdboxer_initialization_use_cuda_false(self, tmp_path):
+        """Test GDBoxer initialization with use_cuda=False to verify CPU device selection."""
+        weights_path = tmp_path / "weights.pth"
+        weights_path.parent.mkdir(parents=True, exist_ok=True)
+        weights_path.write_bytes(b"test")
+
+        with (
+            patch("rai_perception.vision_markup.boxer.Model") as mock_model,
+            patch(
+                "rai_perception.vision_markup.boxer.logging.getLogger"
+            ) as mock_get_logger,
+        ):
+            mock_model_instance = MagicMock()
+            mock_model.return_value = mock_model_instance
+
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            boxer = GDBoxer(str(weights_path), use_cuda=False)
+
+            assert boxer.device == "cpu"
+            assert boxer.weight_path == str(weights_path)
+            assert hasattr(boxer, "model")
+            assert boxer.model == mock_model_instance
+            mock_model.assert_called_once_with(
+                boxer.cfg_path, boxer.weight_path, device="cpu"
+            )
+            mock_logger.warning.assert_not_called()
+
     def test_gdboxer_get_boxes(self, tmp_path):
         """Test GDBoxer get_boxes method with use_cuda=True to verify model is initialized."""
         weights_path = tmp_path / "weights.pth"
