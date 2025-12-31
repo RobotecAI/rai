@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    agent = create_agent()
+    agent, _ = create_agent()
     messages: List[BaseMessage] = []
 
     while True:
