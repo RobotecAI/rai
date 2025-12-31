@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from examples.manipulation_common import get_manipulation_launch_description
+"""RAI Examples Package
 
-
-def generate_launch_description():
-    return get_manipulation_launch_description()
+This package contains example scripts and demonstrations for RAI.
+"""
