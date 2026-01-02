@@ -316,9 +316,7 @@ class ResetArmToolInput(BaseModel):
 
 class ResetArmTool(BaseROS2Tool):
     name: str = "reset_arm"
-    description: str = (
-        "Reset the arm to the initial position. Use when the arm is stuck or when arm obstructs the objects."
-    )
+    description: str = "Reset the arm to the initial position. Use when the arm is stuck or when arm obstructs the objects."
 
     args_schema: Type[ResetArmToolInput] = ResetArmToolInput
 
