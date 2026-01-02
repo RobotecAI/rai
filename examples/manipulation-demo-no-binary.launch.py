@@ -12,9 +12,45 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from manipulation_common import get_manipulation_launch_description_no_binary
+from launch import LaunchDescription
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
 
 
 # TODO (mkotynia) think about separation of launches
 def generate_launch_description():
-    return get_manipulation_launch_description_no_binary()
+    launch_moveit = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            [
+                "src/examples/rai-manipulation-demo/Project/Examples/panda_moveit_config_demo.launch.py",
+            ]
+        )
+    )
+
+    launch_robotic_manipulation = Node(
+        package="robotic_manipulation",
+        executable="robotic_manipulation",
+        output="screen",
+        parameters=[
+            {"use_sim_time": True},
+        ],
+    )
+
+    launch_openset = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            [
+                FindPackageShare("rai_bringup"),
+                "/launch/openset.launch.py",
+            ]
+        ),
+    )
+
+    return LaunchDescription(
+        [
+            launch_openset,
+            launch_moveit,
+            launch_robotic_manipulation,
+        ]
+    )

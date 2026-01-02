@@ -12,8 +12,65 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from examples.manipulation_common import get_manipulation_launch_description
+from launch import LaunchDescription
+from launch.actions import (
+    DeclareLaunchArgument,
+    ExecuteProcess,
+    IncludeLaunchDescription,
+)
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    return get_manipulation_launch_description()
+    game_launcher_arg = DeclareLaunchArgument(
+        "game_launcher",
+        default_value="",
+        description="Path to the game launcher executable",
+    )
+
+    launch_game_launcher = ExecuteProcess(
+        cmd=[
+            LaunchConfiguration("game_launcher"),
+            "-bg_ConnectToAssetProcessor=0",
+        ],
+        output="screen",
+    )
+
+    launch_moveit = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            [
+                "src/examples/rai-manipulation-demo/Project/Examples/panda_moveit_config_demo.launch.py",
+            ]
+        )
+    )
+
+    launch_robotic_manipulation = Node(
+        package="robotic_manipulation",
+        executable="robotic_manipulation",
+        output="screen",
+        parameters=[
+            {"use_sim_time": True},
+        ],
+    )
+
+    launch_openset = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            [
+                FindPackageShare("rai_bringup"),
+                "/launch/openset.launch.py",
+            ]
+        ),
+    )
+
+    return LaunchDescription(
+        [
+            game_launcher_arg,
+            launch_game_launcher,
+            launch_openset,
+            launch_moveit,
+            launch_robotic_manipulation,
+        ]
+    )
