@@ -17,10 +17,14 @@ from pathlib import Path
 import rclpy
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage
-from manipulation_common import (
-    create_agent,
-    get_manipulation_launch_description_no_binary,
+from launch import LaunchDescription
+from launch.actions import (
+    IncludeLaunchDescription,
 )
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
+from manipulation_common import create_agent
 from rai.agents.integrations.streamlit import get_streamlit_cb, streamlit_invoke
 from rai.communication.ros2.connectors.ros2_connector import ROS2Connector
 from rai.messages import HumanMultimodalMessage
@@ -32,6 +36,42 @@ from rai_sim.o3de.o3de_bridge import (
     O3DExROS2SimulationConfig,
 )
 from rai_sim.simulation_bridge import SceneConfig
+
+
+def launch_description():
+    launch_moveit = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            [
+                "src/examples/rai-manipulation-demo/Project/Examples/panda_moveit_config_demo.launch.py",
+            ]
+        )
+    )
+
+    launch_robotic_manipulation = Node(
+        package="robotic_manipulation",
+        executable="robotic_manipulation",
+        output="screen",
+        parameters=[
+            {"use_sim_time": True},
+        ],
+    )
+
+    launch_openset = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            [
+                FindPackageShare("rai_bringup"),
+                "/launch/openset.launch.py",
+            ]
+        ),
+    )
+
+    return LaunchDescription(
+        [
+            launch_openset,
+            launch_moveit,
+            launch_robotic_manipulation,
+        ]
+    )
 
 
 @st.cache_resource
@@ -69,7 +109,7 @@ def initialize_o3de(scenario_path: str, o3de_config_path: str):
     o3de.init_simulation(simulation_config=simulation_config)
     o3de.launch_robotic_stack(
         required_robotic_ros2_interfaces=simulation_config.required_robotic_ros2_interfaces,
-        launch_description=get_manipulation_launch_description_no_binary(),
+        launch_description=launch_description(),
     )
     o3de.setup_scene(scenario.scene_config)
     return o3de, scenario
@@ -105,7 +145,7 @@ def get_scenario_path(scenarios, selected_layout: str):
     return selected_scenario_path
 
 
-def main(simulation_config: O3DExROS2SimulationConfig):
+def main(o3de_config_path: str):
     st.set_page_config(
         page_title="RAI Manipulation Demo",
         page_icon=":robot:",
@@ -253,7 +293,7 @@ def main(simulation_config: O3DExROS2SimulationConfig):
             st.error(f"❌ Could not find scenario: {scenario}")
             st.stop()
         o3de, initial_scenario = initialize_o3de(
-            selected_scenario_path, simulation_config
+            selected_scenario_path, o3de_config_path
         )
         st.session_state["o3de"] = o3de
         st.session_state["current_scenario"] = initial_scenario

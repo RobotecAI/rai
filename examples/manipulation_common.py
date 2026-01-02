@@ -1,17 +1,6 @@
 from typing import List
 
-import rclpy
 from langchain_core.tools import BaseTool
-from launch import LaunchDescription
-from launch.actions import (
-    DeclareLaunchArgument,
-    ExecuteProcess,
-    IncludeLaunchDescription,
-)
-from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node
-from launch_ros.substitutions import FindPackageShare
 from rai import get_llm_model
 from rai.agents.langchain.core import create_react_runnable
 from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
@@ -63,91 +52,3 @@ def create_agent():
         system_prompt=embodiment_info.to_langchain(),
     )
     return agent, camera_tool
-
-
-def get_manipulation_launch_description():
-    game_launcher_arg = DeclareLaunchArgument(
-        "game_launcher",
-        default_value="",
-        description="Path to the game launcher executable",
-    )
-
-    launch_game_launcher = ExecuteProcess(
-        cmd=[
-            LaunchConfiguration("game_launcher"),
-            "-bg_ConnectToAssetProcessor=0",
-        ],
-        output="screen",
-    )
-
-    launch_moveit = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            [
-                "src/examples/rai-manipulation-demo/Project/Examples/panda_moveit_config_demo.launch.py",
-            ]
-        )
-    )
-
-    launch_robotic_manipulation = Node(
-        package="robotic_manipulation",
-        executable="robotic_manipulation",
-        output="screen",
-        parameters=[
-            {"use_sim_time": True},
-        ],
-    )
-
-    launch_openset = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            [
-                FindPackageShare("rai_bringup"),
-                "/launch/openset.launch.py",
-            ]
-        ),
-    )
-
-    return LaunchDescription(
-        [
-            game_launcher_arg,
-            launch_game_launcher,
-            launch_openset,
-            launch_moveit,
-            launch_robotic_manipulation,
-        ]
-    )
-
-
-def get_manipulation_launch_description_no_binary():
-    launch_moveit = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            [
-                "src/examples/rai-manipulation-demo/Project/Examples/panda_moveit_config_demo.launch.py",
-            ]
-        )
-    )
-
-    launch_robotic_manipulation = Node(
-        package="robotic_manipulation",
-        executable="robotic_manipulation",
-        output="screen",
-        parameters=[
-            {"use_sim_time": True},
-        ],
-    )
-
-    launch_openset = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            [
-                FindPackageShare("rai_bringup"),
-                "/launch/openset.launch.py",
-            ]
-        ),
-    )
-
-    return LaunchDescription(
-        [
-            launch_openset,
-            launch_moveit,
-            launch_robotic_manipulation,
-        ]
-    )
