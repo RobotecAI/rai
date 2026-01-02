@@ -25,6 +25,7 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
+    # Declare the game_launcher argument
     game_launcher_arg = DeclareLaunchArgument(
         "game_launcher",
         default_value="",
