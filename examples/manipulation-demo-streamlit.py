@@ -14,7 +14,6 @@
 
 from pathlib import Path
 
-import rclpy
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage
 from launch import LaunchDescription
@@ -72,18 +71,6 @@ def launch_description():
             launch_robotic_manipulation,
         ]
     )
-
-
-@st.cache_resource
-def init_ros():
-    try:
-        if not rclpy.ok():
-            rclpy.init()
-    except Exception:
-        # ROS2 might already be initialized or there might be event loop conflicts
-        # This is often safe to ignore in Streamlit context
-        pass
-    return ""
 
 
 @st.cache_resource
@@ -277,15 +264,6 @@ def main(o3de_config_path: str):
                 st.sidebar.error("❌ Could not find scenario path for current layout")
         else:
             st.sidebar.warning("⚠️ Demo not initialized yet")
-
-    if "ros" not in st.session_state:
-        try:
-            ros = init_ros()
-            st.session_state["ros"] = ros
-        except Exception as e:
-            # Handle ROS2 initialization errors gracefully
-            st.session_state["ros"] = ""
-            st.sidebar.warning(f"⚠️ ROS2 initialization warning: {str(e)}")
 
     if "o3de" not in st.session_state:
         selected_scenario_path = get_scenario_path(scenarios, scenario)
