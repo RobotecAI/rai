@@ -16,8 +16,6 @@
 import logging
 from typing import List
 
-import rclpy
-import rclpy.qos
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.tools import BaseTool
 from rai import get_llm_model
@@ -38,8 +36,6 @@ logger = logging.getLogger(__name__)
 
 
 def create_agent():
-    if not rclpy.ok():
-        rclpy.init()
     connector = ROS2Connector(executor_type="single_threaded")
 
     required_services = ["/grounded_sam_segment", "/grounding_dino_classify"]
