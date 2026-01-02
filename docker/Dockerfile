@@ -32,9 +32,7 @@ RUN apt update && apt install -y \
     python3-pip \
     git \
     wget \
-    zip \
-    ros-${ROS_DISTRO}-rai-interfaces
-
+    zip
 # Install Poetry
 RUN curl -sSL https://install.python-poetry.org | python3 - --version 2.1.3
 ENV PATH="/root/.local/bin:$PATH"
