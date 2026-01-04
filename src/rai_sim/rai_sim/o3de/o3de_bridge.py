@@ -298,12 +298,15 @@ class O3DExROS2Bridge(SimulationBridge):
         )
         return False
 
+    def clear_scene(self):
+        while self.spawned_entities:
+            self._despawn_entity(self.spawned_entities[0])
+
     def setup_scene(
         self,
         scene_config: SceneConfig,
     ):
-        while self.spawned_entities:
-            self._despawn_entity(self.spawned_entities[0])
+        self.clear_scene()
         self.logger.info(f"Entities after despawn: {self.spawned_entities}")
 
         for entity in scene_config.entities:
