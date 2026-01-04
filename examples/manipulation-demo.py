@@ -16,12 +16,10 @@
 import logging
 from typing import List
 
-import rclpy
-import rclpy.qos
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.tools import BaseTool
 from rai import get_llm_model
-from rai.agents.langchain.core import create_conversational_agent
+from rai.agents.langchain.core import create_react_runnable
 from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2.manipulation import (
@@ -38,7 +36,6 @@ logger = logging.getLogger(__name__)
 
 
 def create_agent():
-    rclpy.init()
     connector = ROS2Connector(executor_type="single_threaded")
 
     required_services = ["/grounded_sam_segment", "/grounding_dino_classify"]
@@ -68,7 +65,8 @@ def create_agent():
     embodiment_info = EmbodimentInfo.from_file(
         "examples/embodiments/manipulation_embodiment.json"
     )
-    agent = create_conversational_agent(
+
+    agent = create_react_runnable(
         llm=llm,
         tools=tools,
         system_prompt=embodiment_info.to_langchain(),
