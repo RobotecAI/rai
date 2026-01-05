@@ -93,19 +93,18 @@ To allow the container to communicate with the host machine, configure the host 
 ### 3.1. Humble
 
 ```bash
-docker run --net=host --ipc=host --pid=host -e ROS_DOMAIN_ID=$ROS_DOMAIN_ID -it rai:humble
+docker run -e ROS_DOMAIN_ID=$ROS_DOMAIN_ID -it rai:humble
 ```
 
 ### 3.2. Jazzy
 
 ```bash
-docker run --net=host --ipc=host --pid=host -e ROS_DOMAIN_ID=$ROS_DOMAIN_ID -it rai:jazzy
+docker run -e ROS_DOMAIN_ID=$ROS_DOMAIN_ID -it rai:jazzy
 ```
 
 ## 4. Run the tests to confirm the setup
 
 ```sh
-cd /rai
 source setup_shell.sh
 poetry run pytest tests/{agents,messages,tools,types}
 ```
