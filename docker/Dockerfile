@@ -73,6 +73,7 @@ fi'
 
 # Install ROS dependencies
 RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && \
+    rosdep update && \
     rosdep install --from-paths src --ignore-src -r -y'
 
 # Build the workspace
