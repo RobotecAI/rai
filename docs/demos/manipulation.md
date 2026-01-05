@@ -26,7 +26,7 @@ manipulation techniques.
 2. Download additional dependencies:
 
     ```shell
-    poetry install --with perception
+    poetry install --with perception,simbench
     vcs import < demos.repos
     rosdep install --from-paths src/examples/rai-manipulation-demo/ros2_ws/src --ignore-src -r -y
     ```
