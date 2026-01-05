@@ -18,9 +18,18 @@ FROM rai:${ROS_DISTRO}
 # Import additional repos for demo
 RUN vcs import < demos.repos
 
+# Install ROS dependencies for newly imported repos
+RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && \
+    rosdep install --from-paths src --ignore-src -r -y'
+
+# TODO add installing binary from script when it is updated
+
 # Install all dependencies
 RUN --mount=type=cache,target=/root/.cache/pypoetry/cache \
     --mount=type=cache,target=/root/.cache/pypoetry/artifacts \
-    /bin/bash -c 'poetry install --all-groups -v'
+    /bin/bash -c 'poetry install --with perception,simbench -v'
 
+RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && colcon build --symlink-install'
+
+RUN /bin/bash -c ". setup_shell.sh && poetry run python src/rai_extensions/rai_perception/rai_perception/scripts/download_weights.py"
 ENTRYPOINT ["bash", "-c", ". setup_shell.sh && streamlit run examples/manipulation-demo-streamlit.py \"$@\""]
