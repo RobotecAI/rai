@@ -180,7 +180,7 @@ def main(o3de_config_path: str):
         st.session_state["current_layout"] = selected_layout
     elif st.session_state["current_layout"] != selected_layout:
         # User selected a predefined layout
-        st.sidebar.success("🔄 Layout changed! Setting up new scene...")
+        st.sidebar.success("Layout changed! Setting up new scene...")
         # Find the scenario path for the selected layout
         selected_scenario_path = None
         selected_scenario_path = get_scenario_path(scenarios, selected_layout)
@@ -196,7 +196,7 @@ def main(o3de_config_path: str):
                             st.session_state["o3de"].spawned_entities[0]
                         )
                 except Exception as clear_error:
-                    st.sidebar.warning(f"⚠️ Could not clear scene: {str(clear_error)}")
+                    st.sidebar.warning(f"Could not clear scene: {str(clear_error)}")
 
                 # Setup new scene
                 new_scenario = setup_new_scene(
@@ -211,13 +211,13 @@ def main(o3de_config_path: str):
                 ]
                 st.rerun()
             except Exception as e:
-                st.sidebar.error(f"❌ Failed to setup new scene: {str(e)}")
+                st.sidebar.error(f"Failed to setup new scene: {str(e)}")
         else:
             st.session_state["current_layout"] = selected_layout
 
     # Add reload button in configuration section
     st.sidebar.markdown("---")
-    if st.sidebar.button("🔄 Reload Layout", help="Reload the current scene layout"):
+    if st.sidebar.button("Reload Layout", help="Reload the current scene layout"):
         if "o3de" in st.session_state and "current_layout" in st.session_state:
             # Find the scenario path for the current layout
             current_scenario_path = None
@@ -229,18 +229,16 @@ def main(o3de_config_path: str):
             if current_scenario_path:
                 try:
                     # Clear the current scene first
-                    st.sidebar.info("🧹 Clearing current scene...")
+                    st.sidebar.info("Clearing current scene...")
                     try:
                         st.session_state["o3de"].clear_scene()
-                        st.sidebar.success("✅ Scene cleared")
+                        st.sidebar.success("Scene cleared")
                     except Exception as clear_error:
-                        st.sidebar.warning(
-                            f"⚠️ Could not clear scene: {str(clear_error)}"
-                        )
+                        st.sidebar.warning(f"Could not clear scene: {str(clear_error)}")
 
                     # Reload the scene
                     st.sidebar.info(
-                        f"🔄 Reloading scene: {st.session_state['current_layout']}"
+                        f"Reloading scene: {st.session_state['current_layout']}"
                     )
                     new_scenario = setup_new_scene(
                         st.session_state["o3de"], current_scenario_path
@@ -256,19 +254,19 @@ def main(o3de_config_path: str):
                     st.rerun()
 
                     st.sidebar.success(
-                        f"✅ Scene reloaded: {st.session_state['current_layout']}"
+                        f"Scene reloaded: {st.session_state['current_layout']}"
                     )
                 except Exception as e:
-                    st.sidebar.error(f"❌ Failed to reload scene: {str(e)}")
+                    st.sidebar.error(f"Failed to reload scene: {str(e)}")
             else:
-                st.sidebar.error("❌ Could not find scenario path for current layout")
+                st.sidebar.error("Could not find scenario path for current layout")
         else:
-            st.sidebar.warning("⚠️ Demo not initialized yet")
+            st.sidebar.warning("Demo not initialized yet")
 
     if "o3de" not in st.session_state:
         selected_scenario_path = get_scenario_path(scenarios, scenario)
         if selected_scenario_path is None:
-            st.error(f"❌ Could not find scenario: {scenario}")
+            st.error(f"Could not find scenario: {scenario}")
             st.stop()
         o3de, initial_scenario = initialize_o3de(
             selected_scenario_path, o3de_config_path
