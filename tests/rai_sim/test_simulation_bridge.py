@@ -144,6 +144,7 @@ def test_load_base_config(sample_base_yaml_config: Path):
 
     assert isinstance(config.entities, list)
     assert all(isinstance(e, Entity) for e in config.entities)
+    assert all(e.pose._prefix == "geometry_msgs/msg" for e in config.entities)
 
     assert len(config.entities) == 2
 
