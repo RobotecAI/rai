@@ -128,12 +128,24 @@ class MoveToPointTool(BaseROS2Tool):
 
 
 class MoveObjectFromToToolInput(BaseModel):
-    x: float = Field(description="The x coordinate of the point to move from")
-    y: float = Field(description="The y coordinate of the point to move from")
-    z: float = Field(description="The z coordinate of the point to move from")
-    x1: float = Field(description="The x coordinate of the point to move to")
-    y1: float = Field(description="The y coordinate of the point to move to")
-    z1: float = Field(description="The z coordinate of the point to move to")
+    x: float = Field(
+        description="The x coordinate of the source point (pick-up location) in the manipulator frame"
+    )
+    y: float = Field(
+        description="The y coordinate of the source point (pick-up location) in the manipulator frame"
+    )
+    z: float = Field(
+        description="The z coordinate of the source point (pick-up location) in the manipulator frame"
+    )
+    x1: float = Field(
+        description="The x coordinate of the destination point (drop-off location) in the manipulator frame"
+    )
+    y1: float = Field(
+        description="The y coordinate of the destination point (drop-off location) in the manipulator frame"
+    )
+    z1: float = Field(
+        description="The z coordinate of the destination point (drop-off location) in the manipulator frame"
+    )
 
 
 class MoveObjectFromToTool(BaseROS2Tool):
