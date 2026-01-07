@@ -139,8 +139,6 @@ class SceneConfig(BaseModel):
                     orientation=Quaternion(**entity["pose"].get("rotation", dict())),
                 ),
             )
-            # Ensure the object has the correct _prefix field
-            pose_stamped._prefix = "geometry_msgs/msg"
 
             entities.append(
                 Entity(
