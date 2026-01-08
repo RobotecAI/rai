@@ -22,6 +22,7 @@ from typing import Any, List, Optional, Set, cast
 import yaml
 from geometry_msgs.msg import Pose as ROS2Pose
 from geometry_msgs.msg import PoseStamped as ROS2PoseStamped
+from geometry_msgs.msg import TransformStamped
 from launch import LaunchDescription
 from rai.communication.ros2 import ROS2Connector, ROS2Message
 from rai.communication.ros2.ros_async import get_future_result
@@ -32,6 +33,7 @@ from rai.types import (
 )
 from rai.types.ros2 import from_ros2_msg, to_ros2_msg
 from tf2_geometry_msgs import do_transform_pose, do_transform_pose_stamped
+from tf2_ros import StaticTransformBroadcaster
 
 from rai_interfaces.srv import ManipulatorMoveTo
 from rai_sim.launch_manager import ROS2LaunchManager
@@ -70,6 +72,8 @@ class O3DExROS2Bridge(SimulationBridge):
         self.manager = ROS2LaunchManager()
         self.current_sim_process = None
         self.current_binary_path = None
+        self._static_tf_broadcaster = None
+        self._static_tf_broadcaster = None
 
     def init_simulation(self, simulation_config: O3DExROS2SimulationConfig):
         if self.current_binary_path != simulation_config.binary_path:
@@ -176,12 +180,51 @@ class O3DExROS2Bridge(SimulationBridge):
             msg, target="spawn_entity", msg_type="gazebo_msgs/srv/SpawnEntity"
         )
         if response and response.payload.success:
-            self.spawned_entities.append(
-                SpawnedEntity(id=response.payload.status_message, **entity.model_dump())
+            spawned = SpawnedEntity(
+                id=response.payload.status_message, **entity.model_dump()
             )
+            self.spawned_entities.append(spawned)
+            # Publish static transform from world to object's odom frame
+            # This connects the object's TF tree to MoveIt's planning frame
+            self._publish_object_tf_to_world(spawned, pose)
         else:
             raise RuntimeError(
                 f"Failed to spawn entity {entity.name}. Response: {response.payload.status_message}"
+            )
+
+    def _publish_object_tf_to_world(
+        self, entity: SpawnedEntity, pose_in_world: ROS2PoseStamped
+    ):
+        """Publish static transform from world to object's odom frame.
+
+        This connects the object's TF tree (created by O3DE) to the world frame,
+        which is required for MoveIt's planning scene monitor to transform
+        object poses to the planning frame.
+        """
+        if self._static_tf_broadcaster is None:
+            self._static_tf_broadcaster = StaticTransformBroadcaster(
+                self.connector.node
+            )
+
+        # O3DE creates frames like {entity_name}/odom for spawned objects
+        object_odom_frame = f"{entity.name}/odom"
+
+        transform = TransformStamped()
+        transform.header.stamp = self.connector.node.get_clock().now().to_msg()
+        transform.header.frame_id = "world"
+        transform.child_frame_id = object_odom_frame
+
+        # Use the pose that's already transformed to world frame
+        transform.transform.translation.x = pose_in_world.pose.position.x
+        transform.transform.translation.y = pose_in_world.pose.position.y
+        transform.transform.translation.z = pose_in_world.pose.position.z
+        transform.transform.rotation = pose_in_world.pose.orientation
+
+        self._static_tf_broadcaster.sendTransform(transform)
+
+        if self.logger:
+            self.logger.debug(
+                f"Published static transform from world to {object_odom_frame}"
             )
 
     def _despawn_entity(self, entity: SpawnedEntity):

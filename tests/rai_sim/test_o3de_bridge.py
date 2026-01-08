@@ -273,6 +273,48 @@ class TestO3DExROS2Bridge(unittest.TestCase):
         self.bridge._try_service_call.assert_called_once()
         self.assertEqual(names, ["cube", "carrot"])
 
+    @patch("rai_sim.o3de.o3de_bridge.StaticTransformBroadcaster")
+    def test_publish_object_tf_to_world(self, mock_broadcaster_class):
+        """Test that static transform is published from world to object's odom frame."""
+        # Setup mocks
+        mock_broadcaster = MagicMock()
+        mock_broadcaster_class.return_value = mock_broadcaster
+
+        mock_node = MagicMock()
+        mock_clock = MagicMock()
+        mock_time = MagicMock()
+        mock_clock.now.return_value.to_msg.return_value = mock_time
+        mock_node.get_clock.return_value = mock_clock
+        self.mock_connector.node = mock_node
+
+        # Create pose in world frame
+        from geometry_msgs.msg import PoseStamped as ROS2PoseStamped
+
+        pose_in_world = ROS2PoseStamped()
+        pose_in_world.header.frame_id = "world"
+        pose_in_world.pose.position.x = 1.0
+        pose_in_world.pose.position.y = 2.0
+        pose_in_world.pose.position.z = 3.0
+        pose_in_world.pose.orientation.w = 1.0
+
+        # Call the method
+        self.bridge._publish_object_tf_to_world(self.test_spawned_entity, pose_in_world)
+
+        # Verify broadcaster was created
+        mock_broadcaster_class.assert_called_once_with(mock_node)
+
+        # Verify sendTransform was called
+        self.assertEqual(mock_broadcaster.sendTransform.call_count, 1)
+
+        # Verify transform parameters
+        call_args = mock_broadcaster.sendTransform.call_args[0][0]
+        self.assertEqual(call_args.header.frame_id, "world")
+        self.assertEqual(call_args.child_frame_id, "test_entity1/odom")
+        self.assertEqual(call_args.transform.translation.x, 1.0)
+        self.assertEqual(call_args.transform.translation.y, 2.0)
+        self.assertEqual(call_args.transform.translation.z, 3.0)
+        self.assertEqual(call_args.transform.rotation.w, 1.0)
+
 
 class TestROS2ConnectorInterface(unittest.TestCase):
     """Tests to ensure the ROS2Connector interface meets the expectations of O3DExROS2Bridge."""
