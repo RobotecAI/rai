@@ -15,8 +15,7 @@
 import pytest
 import rclpy
 from rai.communication.ros2 import ROS2Connector
-
-from rai_semap.ros2.detection_publisher import DetectionPublisher
+from rai_perception.ros2.detection_publisher import DetectionPublisher
 
 
 @pytest.fixture(scope="module")
