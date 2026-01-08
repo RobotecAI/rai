@@ -73,7 +73,6 @@ class O3DExROS2Bridge(SimulationBridge):
         self.current_sim_process = None
         self.current_binary_path = None
         self._static_tf_broadcaster = None
-        self._static_tf_broadcaster = None
 
     def init_simulation(self, simulation_config: O3DExROS2SimulationConfig):
         if self.current_binary_path != simulation_config.binary_path:

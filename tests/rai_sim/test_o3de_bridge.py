@@ -280,12 +280,14 @@ class TestO3DExROS2Bridge(unittest.TestCase):
         mock_broadcaster = MagicMock()
         mock_broadcaster_class.return_value = mock_broadcaster
 
+        # Use shared utility to create mock clock with proper Time message
+        from tests.communication.ros2 import setup_mock_clock_for_node
+
         mock_node = MagicMock()
-        mock_clock = MagicMock()
-        mock_time = MagicMock()
-        mock_clock.now.return_value.to_msg.return_value = mock_time
-        mock_node.get_clock.return_value = mock_clock
         self.mock_connector.node = mock_node
+        mock_clock, mock_time = setup_mock_clock_for_node(
+            mock_node, use_time_wrapper=False
+        )
 
         # Create pose in world frame
         from geometry_msgs.msg import PoseStamped as ROS2PoseStamped
