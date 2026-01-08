@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Julia Jia
+# Copyright (C) 2025 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,13 +26,9 @@ from sensor_msgs.msg import CameraInfo, Image
 
 from rai_interfaces.msg import RAIDetectionArray
 from rai_interfaces.srv import RAIGroundingDino
-from rai_semap.ros2.perception_utils import enhance_detection_with_3d_pose
+from rai_perception.ros2.perception_utils import enhance_detection_with_3d_pose
 
 
-# NOTE: This module contains perception layer logic that may belong to rai_perception.
-# It performs object detection and 3D pose computation, which are general perception
-# tasks not specific to semantic mapping. Consider moving to rai_perception when
-# that package has ROS2 node infrastructure in place.
 class DetectionPublisher:
     """ROS2 node that subscribes to camera images, calls DINO service, and publishes detections.
 

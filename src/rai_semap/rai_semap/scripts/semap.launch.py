@@ -28,7 +28,7 @@ def generate_detection_publisher_cmd(context):
     cmd = [
         "python",
         "-m",
-        "rai_semap.ros2.detection_publisher",
+        "rai_perception.ros2.detection_publisher",
         "--ros-args",
     ]
 

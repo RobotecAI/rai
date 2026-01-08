@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Julia Jia
+# Copyright (C) 2025 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 """Perception utilities for 3D pose computation and point cloud extraction.
 
-This module contains perception layer logic that may belong to rai_perception:
+This module contains perception layer logic:
 - 3D pose computation from 2D bounding boxes using depth images
 - Point cloud extraction from bounding box regions
 - Detection enhancement (filling empty poses from 2D detections)

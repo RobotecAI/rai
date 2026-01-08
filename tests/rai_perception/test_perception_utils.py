@@ -15,14 +15,13 @@
 import numpy as np
 import pytest
 from cv_bridge import CvBridge
-from sensor_msgs.msg import CameraInfo
-from std_msgs.msg import Header
-from vision_msgs.msg import BoundingBox2D, Detection2D, Point2D
-
-from rai_semap.ros2.perception_utils import (
+from rai_perception.ros2.perception_utils import (
     compute_3d_pose_from_bbox,
     extract_pointcloud_from_bbox,
 )
+from sensor_msgs.msg import CameraInfo
+from std_msgs.msg import Header
+from vision_msgs.msg import BoundingBox2D, Detection2D, Point2D
 
 
 @pytest.fixture
