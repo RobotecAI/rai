@@ -183,22 +183,22 @@ class O3DExROS2Bridge(SimulationBridge):
                 id=response.payload.status_message, **entity.model_dump()
             )
             self.spawned_entities.append(spawned)
-            # Publish static transform from world to object's odom frame
-            # This connects the object's TF tree to MoveIt's planning frame
-            self._publish_object_tf_to_world(spawned, pose)
+            # Connect the object's TF tree (created by O3DE) to the world frame
+            # This enables MoveIt's planning scene monitor to transform object poses
+            self._connect_object_tf_tree_to_world(spawned, pose)
         else:
             raise RuntimeError(
                 f"Failed to spawn entity {entity.name}. Response: {response.payload.status_message}"
             )
 
-    def _publish_object_tf_to_world(
+    def _connect_object_tf_tree_to_world(
         self, entity: SpawnedEntity, pose_in_world: ROS2PoseStamped
     ):
-        """Publish static transform from world to object's odom frame.
+        """Connect the object's TF tree (created by O3DE) to the world frame.
 
-        This connects the object's TF tree (created by O3DE) to the world frame,
-        which is required for MoveIt's planning scene monitor to transform
-        object poses to the planning frame.
+        Publishes a static transform from world to the object's odom frame.
+        This enables MoveIt's planning scene monitor to transform object poses
+        to the planning frame.
         """
         if self._static_tf_broadcaster is None:
             self._static_tf_broadcaster = StaticTransformBroadcaster(

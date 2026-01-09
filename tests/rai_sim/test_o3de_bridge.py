@@ -274,7 +274,7 @@ class TestO3DExROS2Bridge(unittest.TestCase):
         self.assertEqual(names, ["cube", "carrot"])
 
     @patch("rai_sim.o3de.o3de_bridge.StaticTransformBroadcaster")
-    def test_publish_object_tf_to_world(self, mock_broadcaster_class):
+    def test_connect_object_tf_tree_to_world(self, mock_broadcaster_class):
         """Test that static transform is published from world to object's odom frame."""
         # Setup mocks
         mock_broadcaster = MagicMock()
@@ -300,7 +300,9 @@ class TestO3DExROS2Bridge(unittest.TestCase):
         pose_in_world.pose.orientation.w = 1.0
 
         # Call the method
-        self.bridge._publish_object_tf_to_world(self.test_spawned_entity, pose_in_world)
+        self.bridge._connect_object_tf_tree_to_world(
+            self.test_spawned_entity, pose_in_world
+        )
 
         # Verify broadcaster was created
         mock_broadcaster_class.assert_called_once_with(mock_node)
