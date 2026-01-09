@@ -114,13 +114,13 @@ def setup_new_scene(o3de, scenario_path: str):
     return scenario
 
 
-SCENARIO_NAMES = [
-    "3rc",
-    "4carrots",
-    "2rc_2a",
-    "3rc_2a_1carrot",
-    "3carrots_3a_2rc",
-]
+SCENARIO_NAMES = {
+    "3rc": "3 Red Cubes",
+    "4carrots": "4 Carrots",
+    "2rc_2a": "2 Red Cubes, 2 Apples",
+    "3rc_2a_1carrot": "3 Red Cubes, 2 Apples, 1 Carrot",
+    "3carrots_3a_2rc": "3 Carrots, 3 Apples, 2 Red Cubes",
+}
 
 
 def get_scenario_path(scenarios, selected_layout: str):
@@ -151,18 +151,19 @@ def main(o3de_config_path: str):
     ]
 
     # Create layout selection widget
-    layout_options = SCENARIO_NAMES
+    layout_options = list(SCENARIO_NAMES.keys())
     scenario = "3rc"
     # Determine the current selection index
     current_index = (
-        SCENARIO_NAMES.index(Path(scenario).stem)
-        if Path(scenario).stem in SCENARIO_NAMES
+        layout_options.index(Path(scenario).stem)
+        if Path(scenario).stem in layout_options
         else 0
     )
 
     selected_layout_option = st.sidebar.selectbox(
         "Select Layout:",
         options=layout_options,
+        format_func=lambda x: str(SCENARIO_NAMES.get(x, x)),
         index=current_index,
         help="Choose a scene layout for the manipulation demo",
     )
@@ -171,7 +172,7 @@ def main(o3de_config_path: str):
     selected_layout = selected_layout_option
 
     # Display selected layout info
-    st.sidebar.info(f"Selected: {selected_layout}")
+    st.sidebar.info(f"Selected: {SCENARIO_NAMES.get(selected_layout, selected_layout)}")
 
     # Display current scene info if available (removed to reduce log noise)
 
