@@ -91,3 +91,67 @@ This prevents easy migration to other models (e.g., YOLO) without code changes.
 **Rationale:** These changes align `rai_bench` with the model-agnostic service naming convention used in `rai_perception`. Tools now read service names from ROS2 parameters (defaulting to `/detection` and `/segmentation`), making the system model-agnostic and allowing easy switching between detection/segmentation models without code changes.
 
 **Note:** These changes are currently in a feature branch and need to be merged to main after `rai_perception` service name changes are finalized.
+
+## Related Changes in Other Packages
+
+**Status:** Changes made in branch `jj/feat/3dpipe_and_usability` that support `rai_perception` improvements.
+
+**Overview:** Changes across multiple packages to support the tiered API design, configuration infrastructure, and service naming improvements in `rai_perception`.
+
+### Documentation
+
+-   `docs/api_design_considerations.md` - API design considerations document (used for reviewing `rai_perception` design)
+
+### Examples
+
+-   `examples/manipulation-demo.py` - Manipulation demo updates
+-   `examples/manipulation-demo-v2.py` - Manipulation demo v2 updates
+
+### Configuration
+
+-   `pyproject.toml` - Project configuration updates
+-   `.github/workflows/poetry-test.yml` - CI/CD workflow updates
+
+### rai_core Changes
+
+**Purpose:** Infrastructure support for `rai_perception` tiered API design.
+
+-   `src/rai_core/rai/__init__.py` - Core package exports
+-   `src/rai_core/rai/communication/ros2/__init__.py` - ROS2 communication exports
+-   `src/rai_core/rai/communication/ros2/exceptions.py` - ROS2-specific exceptions (e.g., `ROS2ServiceError`, `ROS2ParameterError`)
+-   `src/rai_core/rai/communication/ros2/parameters.py` - Parameter retrieval utilities (`get_param_value()`)
+-   `src/rai_core/rai/config/__init__.py` - Configuration utilities exports
+-   `src/rai_core/rai/config/loader.py` - Unified YAML/Python config loading
+-   `src/rai_core/rai/config/merger.py` - Config merging with precedence (defaults → ROS2 params → overrides)
+-   `src/rai_core/rai/tools/__init__.py` - Tools package exports
+-   `src/rai_core/rai/tools/ros2/manipulation/custom.py` - Manipulation tool updates
+-   `src/rai_core/rai/tools/timeout.py` - Timeout utilities (`RaiTimeoutError`, `timeout` decorator)
+
+**Rationale:** These `rai_core` changes provide the infrastructure layer that `rai_perception` depends on:
+
+-   Configuration loading/merging utilities for presets and component configs
+-   ROS2 parameter helpers for service name retrieval
+-   Exception hierarchy for better error handling
+-   Timeout utilities for tool execution
+
+### rai_semap Changes
+
+**Purpose:** Integration updates to work with new `rai_perception` service names and components.
+
+-   `src/rai_semap/rai_semap/ros2/config/detection_publisher.yaml` - Configuration updates
+-   `src/rai_semap/rai_semap/ros2/node.py` - Node updates for service integration
+-   `src/rai_semap/rai_semap/scripts/semap.launch.py` - Launch file updates
+
+**Rationale:** `rai_semap` integrates with `rai_perception` services and components, so it needs updates to work with the new service naming and component structure.
+
+**Review Notes:**
+
+-   Verify that `rai_core` infrastructure changes don't break other extensions
+-   Check that `rai_semap` integration still works with updated service names
+-   Ensure examples still function correctly with updated APIs
+-   Confirm CI/CD workflow changes don't introduce regressions
+
+## Related Pull Requests and Resources
+
+-   [PR #750: feat: redesign rai_perception API with tiered structure and improve 3D gripping point detection](https://github.com/RobotecAI/rai/pull/750)
+-   [tests/rai_sim](https://github.com/RobotecAI/rai/tree/main/tests/rai_sim) - Tests for rai_sim package
