@@ -24,7 +24,9 @@ from .api import (
 )
 from .connectors import ROS2Connector, ROS2HRIConnector
 from .context import ROS2Context
+from .exceptions import ROS2ParameterError, ROS2ServiceError
 from .messages import ROS2HRIMessage, ROS2Message
+from .parameters import get_param_value
 from .waiters import wait_for_ros2_actions, wait_for_ros2_services, wait_for_ros2_topics
 
 __all__ = [
@@ -34,6 +36,9 @@ __all__ = [
     "ROS2HRIConnector",
     "ROS2HRIMessage",
     "ROS2Message",
+    "ROS2ParameterError",
+    "ROS2ServiceError",
+    "get_param_value",
     "wait_for_ros2_actions",
     "wait_for_ros2_services",
     "wait_for_ros2_topics",

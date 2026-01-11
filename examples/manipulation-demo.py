@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 def create_agent():
     connector = ROS2Connector(executor_type="single_threaded")
 
-    required_services = ["/grounded_sam_segment", "/grounding_dino_classify"]
+    required_services = ["/segmentation", "/detection"]
     required_topics = ["/color_image5", "/depth_image5", "/color_camera_info5"]
     wait_for_ros2_services(connector, required_services)
     wait_for_ros2_topics(connector, required_topics)

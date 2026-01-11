@@ -51,8 +51,8 @@ def test_load_config(sample_o3dexros2_config: Path):
     }
     assert config.required_robotic_ros2_interfaces == {
         "services": [
-            "/grounding_dino_classify",
-            "/grounded_sam_segment",
+            "/detection",
+            "/segmentation",
             "/manipulator_move_to",
         ],
         "topics": [],

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, List, Optional, Sequence, Type
+from typing import Any, List, Sequence, Type
 
 import cv2
 import numpy as np
@@ -33,7 +33,7 @@ from rclpy.exceptions import (
 )
 
 from rai_interfaces.srv import RAIGroundedSam, RAIGroundingDino
-from rai_perception import GDINO_SERVICE_NAME
+from rai_perception.algorithms.point_cloud import depth_to_point_cloud
 
 # --------------------- Inputs ---------------------
 
@@ -78,13 +78,19 @@ class GetSegmentationTool:
 
     args_schema: Type[GetSegmentationInput] = GetSegmentationInput
 
-    def _get_gdino_response(
-        self, future: Future
-    ) -> Optional[RAIGroundingDino.Response]:
-        return get_future_result(future)
+    def _get_detection_service_name(self) -> str:
+        """Get detection service name from ROS2 parameter or use default."""
+        from rai_perception.components.service_utils import get_detection_service_name
 
-    def _get_gsam_response(self, future: Future) -> Optional[RAIGroundedSam.Response]:
-        return get_future_result(future)
+        return get_detection_service_name(self.connector)
+
+    def _get_segmentation_service_name(self) -> str:
+        """Get segmentation service name from ROS2 parameter or use default."""
+        from rai_perception.components.service_utils import (
+            get_segmentation_service_name,
+        )
+
+        return get_segmentation_service_name(self.connector)
 
     def _get_image_message(self, topic: str) -> sensor_msgs.msg.Image:
         msg = self.connector.receive_message(topic).payload
@@ -96,34 +102,30 @@ class GetSegmentationTool:
     def _call_gdino_node(
         self, camera_img_message: sensor_msgs.msg.Image, object_name: str
     ) -> Future:
-        cli = self.connector.node.create_client(RAIGroundingDino, GDINO_SERVICE_NAME)
-        while not cli.wait_for_service(timeout_sec=1.0):
-            self.connector.node.get_logger().info(
-                f"service {GDINO_SERVICE_NAME} not available, waiting again..."
-            )
+        from rai_perception.components.service_utils import create_service_client
+
+        service_name = self._get_detection_service_name()
+        cli = create_service_client(self.connector, RAIGroundingDino, service_name)
         req = RAIGroundingDino.Request()
         req.source_img = camera_img_message
         req.classes = object_name
         req.box_threshold = self.box_threshold
         req.text_threshold = self.text_threshold
 
-        future = cli.call_async(req)
-        return future
+        return cli.call_async(req)
 
     def _call_gsam_node(
         self, camera_img_message: sensor_msgs.msg.Image, data: RAIGroundingDino.Response
-    ):
-        cli = self.connector.node.create_client(RAIGroundedSam, "grounded_sam_segment")
-        while not cli.wait_for_service(timeout_sec=1.0):
-            self.connector.node.get_logger().info(
-                "service grounded_sam_segment not available, waiting again..."
-            )
+    ) -> Future:
+        from rai_perception.components.service_utils import create_service_client
+
+        service_name = self._get_segmentation_service_name()
+        cli = create_service_client(self.connector, RAIGroundedSam, service_name)
         req = RAIGroundedSam.Request()
         req.detections = data.detections
         req.source_img = camera_img_message
-        future = cli.call_async(req)
 
-        return future
+        return cli.call_async(req)
 
     def _run(
         self,
@@ -150,7 +152,7 @@ class GetSegmentationTool:
             conversion_ratio = 0.001
         resolved = None
         while rclpy.ok():
-            resolved = self._get_gdino_response(future)
+            resolved = get_future_result(future)
             if resolved is not None:
                 break
 
@@ -159,39 +161,12 @@ class GetSegmentationTool:
 
         ret = []
         while rclpy.ok():
-            resolved = self._get_gsam_response(future)
+            resolved = get_future_result(future)
             if resolved is not None:
                 for img_msg in resolved.masks:
                     ret.append(convert_ros_img_to_base64(img_msg))
                 break
         return "", {"segmentations": ret}
-
-
-def depth_to_point_cloud(
-    depth_image: np.ndarray, fx: float, fy: float, cx: float, cy: float
-):
-    height, width = depth_image.shape
-
-    # Create grid of pixel coordinates
-    x = np.arange(width)
-    y = np.arange(height)
-    x_grid, y_grid = np.meshgrid(x, y)
-
-    # Calculate 3D coordinates
-    z = depth_image
-    x = (x_grid - cx) * z / fx
-    y = (y_grid - cy) * z / fy
-
-    # Stack the coordinates
-    points = np.stack((x, y, z), axis=-1)
-
-    # Reshape to a list of points
-    points = points.reshape(-1, 3)
-
-    # Remove points with zero depth
-    points = points[points[:, 2] > 0]
-
-    return points
 
 
 class GetGrabbingPointTool(BaseTool):
@@ -205,13 +180,19 @@ class GetGrabbingPointTool(BaseTool):
     box_threshold: float = Field(default=0.35, description="Box threshold for GDINO")
     text_threshold: float = Field(default=0.45, description="Text threshold for GDINO")
 
-    def _get_gdino_response(
-        self, future: Future
-    ) -> Optional[RAIGroundingDino.Response]:
-        return get_future_result(future)
+    def _get_detection_service_name(self) -> str:
+        """Get detection service name from ROS2 parameter or use default."""
+        from rai_perception.components.service_utils import get_detection_service_name
 
-    def _get_gsam_response(self, future: Future) -> Optional[RAIGroundedSam.Response]:
-        return get_future_result(future)
+        return get_detection_service_name(self.connector)
+
+    def _get_segmentation_service_name(self) -> str:
+        """Get segmentation service name from ROS2 parameter or use default."""
+        from rai_perception.components.service_utils import (
+            get_segmentation_service_name,
+        )
+
+        return get_segmentation_service_name(self.connector)
 
     def _get_image_message(self, topic: str) -> sensor_msgs.msg.Image:
         msg = self.connector.receive_message(topic).payload
@@ -223,34 +204,30 @@ class GetGrabbingPointTool(BaseTool):
     def _call_gdino_node(
         self, camera_img_message: sensor_msgs.msg.Image, object_name: str
     ) -> Future:
-        cli = self.connector.node.create_client(RAIGroundingDino, GDINO_SERVICE_NAME)
-        while not cli.wait_for_service(timeout_sec=1.0):
-            self.connector.node.get_logger().info(
-                "service not available, waiting again..."
-            )
+        from rai_perception.components.service_utils import create_service_client
+
+        service_name = self._get_detection_service_name()
+        cli = create_service_client(self.connector, RAIGroundingDino, service_name)
         req = RAIGroundingDino.Request()
         req.source_img = camera_img_message
         req.classes = object_name
         req.box_threshold = self.box_threshold
         req.text_threshold = self.text_threshold
 
-        future = cli.call_async(req)
-        return future
+        return cli.call_async(req)
 
     def _call_gsam_node(
         self, camera_img_message: sensor_msgs.msg.Image, data: RAIGroundingDino.Response
-    ):
-        cli = self.connector.node.create_client(RAIGroundedSam, "grounded_sam_segment")
-        while not cli.wait_for_service(timeout_sec=1.0):
-            self.connector.node.get_logger().info(
-                "service not available, waiting again..."
-            )
+    ) -> Future:
+        from rai_perception.components.service_utils import create_service_client
+
+        service_name = self._get_segmentation_service_name()
+        cli = create_service_client(self.connector, RAIGroundedSam, service_name)
         req = RAIGroundedSam.Request()
         req.detections = data.detections
         req.source_img = camera_img_message
-        future = cli.call_async(req)
 
-        return future
+        return cli.call_async(req)
 
     def _get_camera_info_message(self, topic: str) -> sensor_msgs.msg.CameraInfo:
         for _ in range(3):

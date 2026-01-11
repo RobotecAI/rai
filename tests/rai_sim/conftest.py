@@ -63,8 +63,8 @@ def sample_o3dexros2_config(tmp_path: Path) -> Path:
       actions: []
     required_robotic_ros2_interfaces:
       services:
-        - /grounding_dino_classify
-        - /grounded_sam_segment
+        - /detection
+        - /segmentation
         - /manipulator_move_to
       topics: []
       actions:

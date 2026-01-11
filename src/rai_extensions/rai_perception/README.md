@@ -212,6 +212,10 @@ with ROS2Context():
 I have detected the following items in the picture desk: 2.43m away
 ```
 
+### Debug Mode
+
+Tools like `GetObjectGrippingPointsTool` support an optional `debug` parameter that enables progressive evaluation and debugging. When `debug=True`, the tool publishes intermediate pipeline results to ROS2 topics for visualization in RVIZ and logs detailed stage information including point counts and timing. This allows you to inspect individual pipeline stages (point cloud extraction, filtering, estimation) without running the full pipeline. Topics published include `/debug/gripping_points/raw_point_clouds` and `/debug/gripping_points/filtered_point_clouds`. Note that debug mode adds computational overhead and is not suitable for production use.
+
 <!--- --8<-- [end:sec3] -->
 
 <!--- --8<-- [end:sec5] -->
