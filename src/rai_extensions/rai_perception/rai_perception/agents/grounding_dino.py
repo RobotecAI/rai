@@ -13,58 +13,61 @@
 # limitations under the License.
 
 
+import warnings
 from pathlib import Path
 
-from rai_interfaces.msg import RAIDetectionArray
-from rai_perception.agents.base_vision_agent import BaseVisionAgent
-from rai_perception.vision_markup.boxer import GDBoxer
+from rai.agents import BaseAgent
+
+from rai_perception.agents._helpers import create_service_wrapper
+from rai_perception.services.detection_service import DetectionService
 
 GDINO_NODE_NAME = "grounding_dino"
 GDINO_SERVICE_NAME = "grounding_dino_classify"
 
 
-class GroundingDinoAgent(BaseVisionAgent):
-    WEIGHTS_URL = "https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth"
-    WEIGHTS_FILENAME = "groundingdino_swint_ogc.pth"
+class GroundingDinoAgent(BaseAgent):
+    """Deprecated: Use DetectionService from rai_perception.services instead.
+
+    This class is deprecated and will be removed in a future version.
+
+    Architecture Note:
+    - This was incorrectly named an "agent" - it's actually a ROS2 service node wrapper.
+    - Real RAI agents (rai.agents.BaseAgent) are high-level abstractions that orchestrate
+      behavior and use services/tools, not ROS2 service nodes themselves.
+    - DetectionService is the correct abstraction for ROS2 detection service nodes.
+    - If you need a real RAI agent that uses detection, create an agent that uses
+      DetectionService as a tool/service, don't inherit from this class.
+
+    This is a thin compatibility wrapper that delegates to DetectionService.
+    """
 
     def __init__(
         self,
         weights_root_path: str | Path = Path.home() / Path(".cache/rai"),
         ros2_name: str = GDINO_NODE_NAME,
     ):
-        super().__init__(weights_root_path, ros2_name)
-        self._boxer = self._load_model_with_error_handling(GDBoxer)
-        self.logger.info(f"{self.__class__.__name__} initialized")
+        warnings.warn(
+            "GroundingDinoAgent is deprecated. Use DetectionService from "
+            "rai_perception.services instead. DetectionService supports model-agnostic "
+            "detection via ROS2 parameters.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__()
+
+        self.ros2_connector, self._service = create_service_wrapper(
+            DetectionService,
+            ros2_name,
+            "grounding_dino",
+            GDINO_SERVICE_NAME,
+            weights_root_path,
+        )
+        self.logger = self._service.logger
 
     def run(self):
-        self.ros2_connector.create_service(
-            GDINO_SERVICE_NAME,
-            self._classify_callback,
-            service_type="rai_interfaces/srv/RAIGroundingDino",
-        )
+        """Delegate to the service."""
+        self._service.run()
 
-    def _classify_callback(self, request, response: RAIDetectionArray):
-        self.logger.info(
-            f"Request received: {request.classes}, {request.box_threshold}, {request.text_threshold}"
-        )
-
-        class_array = request.classes.split(",")
-        class_array = [class_name.strip() for class_name in class_array]
-        class_dict = {class_name: i for i, class_name in enumerate(class_array)}
-
-        boxes = self._boxer.get_boxes(
-            request.source_img,
-            class_array,
-            request.box_threshold,
-            request.text_threshold,
-        )
-
-        ts = self.ros2_connector._node.get_clock().now().to_msg()
-        response.detections.detections = [  # type: ignore
-            box.to_detection_msg(class_dict, ts)
-            for box in boxes  # type: ignore
-        ]
-        response.detections.header.stamp = ts  # type: ignore
-        response.detections.detection_classes = class_array  # type: ignore
-
-        return response
+    def stop(self):
+        """Delegate to the service."""
+        self._service.stop()

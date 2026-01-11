@@ -19,17 +19,21 @@ GSAM_SERVICE_NAME = "grounded_sam_segment"
 GSAM_NODE_NAME = "grounded_sam_node"
 
 from .agents import GroundedSamAgent, GroundingDinoAgent  # noqa: E402
-from .tools import GetDetectionTool, GetDistanceToObjectsTool  # noqa: E402
-from .tools.pcl_detection import (  # noqa: E402
+from .algorithms.point_cloud import depth_to_point_cloud  # noqa: E402
+from .components.gripping_points import (  # noqa: E402
     GrippingPointEstimator,
     GrippingPointEstimatorConfig,
     PointCloudFilter,
     PointCloudFilterConfig,
     PointCloudFromSegmentation,
     PointCloudFromSegmentationConfig,
-    depth_to_point_cloud,
 )
-from .tools.pcl_detection_tools import (  # noqa: E402
+from .components.topic_utils import (  # noqa: E402
+    discover_camera_topics,
+    wait_for_perception_dependencies,
+)
+from .tools import GetDetectionTool, GetDistanceToObjectsTool  # noqa: E402
+from .tools.gripping_points_tools import (  # noqa: E402
     GetObjectGrippingPointsTool,
     GetObjectGrippingPointsToolInput,
 )
@@ -52,4 +56,6 @@ __all__ = [
     "PointCloudFromSegmentation",
     "PointCloudFromSegmentationConfig",
     "depth_to_point_cloud",
+    "discover_camera_topics",
+    "wait_for_perception_dependencies",
 ]

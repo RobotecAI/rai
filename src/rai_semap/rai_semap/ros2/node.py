@@ -25,7 +25,7 @@ from cv_bridge import CvBridge
 from geometry_msgs.msg import Point, Pose, PoseStamped
 from nav_msgs.msg import OccupancyGrid
 from rai.communication.ros2 import ROS2Connector
-from rai_perception.ros2.perception_utils import extract_pointcloud_from_bbox
+from rai_perception.components.perception_utils import extract_pointcloud_from_bbox
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import CameraInfo, Image

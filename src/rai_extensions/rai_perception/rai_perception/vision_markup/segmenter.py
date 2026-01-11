@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Robotec.AI
+# Copyright (C) 2025 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,80 +12,47 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Deprecated: Use rai_perception.algorithms.segmenter instead.
 
-import logging
+This module is deprecated and will be removed in a future version.
+All classes delegate to rai_perception.algorithms.segmenter.
+"""
+
+import warnings
 from os import PathLike
-from typing import List
 
-import hydra
-import numpy as np
-import torch
-from cv_bridge import CvBridge
-from rai.communication.ros2.api import convert_ros_img_to_ndarray
-from sam2.build_sam import build_sam2
-from sam2.sam2_image_predictor import SAM2ImagePredictor
-from sensor_msgs.msg import Image
-from vision_msgs.msg import BoundingBox2D
+from rai_perception.algorithms.segmenter import GDSegmenter as AlgorithmsGDSegmenter
 
 
-class GDSegmenter:
+class GDSegmenter(AlgorithmsGDSegmenter):
+    """Deprecated: Use rai_perception.algorithms.segmenter.GDSegmenter instead.
+
+    This class is deprecated and will be removed in a future version.
+    It delegates to rai_perception.algorithms.segmenter.GDSegmenter.
+    """
+
     def __init__(
         self,
         weight_path: str | PathLike,
+        config_path: str | PathLike | None = None,
         use_cuda: bool = True,
     ):
-        self.logger = logging.getLogger(__name__)
-        self.cfg_path = "seg_config.yml"
-        hydra.core.global_hydra.GlobalHydra.instance().clear()
-        hydra.initialize_config_module("rai_perception.configs")
+        """Initialize GDSegmenter (deprecated wrapper).
 
-        self.weight_path = str(weight_path)
-        if use_cuda:
-            if torch.cuda.is_available():
-                self.device = "cuda"
-            else:
-                self.logger.warning("CUDA is not available but requested, using CPU")
-                self.device = "cpu"
-        else:
-            self.device = "cpu"
-        self.sam2_model = build_sam2(
-            self.cfg_path, self.weight_path, device=self.device
+        Args:
+            weight_path: Path to model weights file
+            config_path: Ignored (kept for API compatibility, SAM2 uses Hydra config module)
+            use_cuda: Whether to use CUDA if available
+        """
+        warnings.warn(
+            "rai_perception.vision_markup.segmenter.GDSegmenter is deprecated. "
+            "Use rai_perception.algorithms.segmenter.GDSegmenter instead.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        self.sam2_predictor = SAM2ImagePredictor(self.sam2_model)
-        self.bridge = CvBridge()
 
-    def _get_boxes_xyxy(self, bboxes: List[BoundingBox2D]) -> List[np.ndarray]:
-        data = []
-        for bbox in bboxes:
-            center_x = bbox.center.position.x
-            center_y = bbox.center.position.y
-            data.append(
-                np.array(
-                    [
-                        center_x - bbox.size_x / 2,
-                        center_y - bbox.size_y / 2,
-                        center_x + bbox.size_x / 2,
-                        center_y + bbox.size_y / 2,
-                    ]
-                )
-            )
-        return data
+        # Delegate to algorithms version (config_path is ignored for SAM2 anyway)
+        super().__init__(weight_path, config_path=config_path, use_cuda=use_cuda)
 
-    def get_segmentation(
-        self, image_msg: Image, ros_bboxes: List[BoundingBox2D]
-    ) -> List[np.ndarray]:
-        img_array = convert_ros_img_to_ndarray(image_msg, image_msg.encoding)
-        self.sam2_predictor.set_image(img_array)
-        bboxes = self._get_boxes_xyxy(ros_bboxes)
 
-        all_masks: List[np.ndarray] = []
-        for box in bboxes:
-            mask, _, _ = self.sam2_predictor.predict(
-                point_coords=None,
-                point_labels=None,
-                box=box,
-                multimask_output=False,
-            )
-            all_masks.append(mask)
-
-        return all_masks
+__all__ = ["GDSegmenter"]
