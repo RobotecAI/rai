@@ -29,6 +29,39 @@ from sensor_msgs.msg import CameraInfo, Image
 from vision_msgs.msg import Detection2D
 
 
+def get_camera_intrinsics(camera_info: CameraInfo) -> Tuple[float, float, float, float]:
+    """Extract camera intrinsics from CameraInfo message.
+
+    Args:
+        camera_info: Camera info message with intrinsics
+
+    Returns:
+        Tuple of (fx, fy, cx, cy) camera intrinsics
+    """
+    fx = float(camera_info.k[0])
+    fy = float(camera_info.k[4])
+    cx = float(camera_info.k[2])
+    cy = float(camera_info.k[5])
+    return fx, fy, cx, cy
+
+
+def convert_depth_to_meters(depth_array: np.ndarray, depth_image: Image) -> np.ndarray:
+    """Convert depth array to meters based on image encoding.
+
+    Handles common depth encodings: 16UC1/mono16 (mm) and 32FC1 (m).
+
+    Args:
+        depth_array: Depth array from image conversion
+        depth_image: Original depth image message for encoding check
+
+    Returns:
+        Depth array in meters
+    """
+    if depth_image.encoding in ["16UC1", "mono16"]:
+        return depth_array.astype(np.float32) / 1000.0  # mm to meters
+    return depth_array.astype(np.float32)
+
+
 def compute_3d_pose_from_bbox(
     bbox_center_x: float,
     bbox_center_y: float,
@@ -83,10 +116,7 @@ def compute_3d_pose_from_bbox(
             depth_value = depth_value / 1000.0  # mm to meters
 
         # Get camera intrinsics
-        fx = camera_info.k[0]
-        fy = camera_info.k[4]
-        cx = camera_info.k[2]
-        cy = camera_info.k[5]
+        fx, fy, cx, cy = get_camera_intrinsics(camera_info)
 
         # Project pixel to 3D
         z = depth_value
@@ -146,17 +176,13 @@ def extract_pointcloud_from_bbox(
             return None
 
         # Get camera intrinsics
-        fx = camera_info.k[0]
-        fy = camera_info.k[4]
-        cx = camera_info.k[2]
-        cy = camera_info.k[5]
+        fx, fy, cx, cy = get_camera_intrinsics(camera_info)
 
         # Extract depth region
         depth_region = depth_array[y_min:y_max, x_min:x_max]
 
         # Convert depth to meters if needed
-        if depth_image.encoding in ["16UC1", "mono16"]:
-            depth_region = depth_region.astype(np.float32) / 1000.0
+        depth_region = convert_depth_to_meters(depth_region, depth_image)
 
         # Extract valid points and convert to 3D
         valid_mask = depth_region > 0

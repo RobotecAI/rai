@@ -41,7 +41,8 @@ def detection_publisher(ros2_context):
 
     Uses single_threaded executor to avoid executor performance warnings
     in simple unit tests that don't need multi-threaded execution.
-    Mocks the DINO service client to prevent warnings about unavailable service.
+    Mocks the DINO service client and check_service_available to prevent warnings
+    about unavailable service.
     """
     connector = ROS2Connector(
         node_name="detection_publisher", executor_type="single_threaded"
@@ -51,7 +52,13 @@ def detection_publisher(ros2_context):
     mock_client = MagicMock()
     mock_client.wait_for_service.return_value = True
 
-    with patch.object(connector.node, "create_client", return_value=mock_client):
+    with (
+        patch.object(connector.node, "create_client", return_value=mock_client),
+        patch(
+            "rai_perception.components.detection_publisher.check_service_available",
+            return_value=True,
+        ),
+    ):
         node = DetectionPublisher(connector=connector)
         yield node
         node.connector.shutdown()
@@ -106,41 +113,6 @@ def test_parse_detection_classes_with_thresholds(detection_publisher):
     assert class_thresholds["person"] == 0.7
     assert class_thresholds["cup"] == 0.3
     assert class_thresholds["bottle"] == 0.4
-
-
-def test_get_string_parameter(detection_publisher):
-    """Test getting string parameter."""
-    set_parameter(
-        detection_publisher,
-        "camera_topic",
-        "/test/camera",
-        rclpy.parameter.Parameter.Type.STRING,
-    )
-    assert detection_publisher._get_string_parameter("camera_topic") == "/test/camera"
-
-
-def test_get_double_parameter(detection_publisher):
-    """Test getting double parameter."""
-    set_parameter(
-        detection_publisher,
-        "default_class_threshold",
-        0.5,
-        rclpy.parameter.Parameter.Type.DOUBLE,
-    )
-    assert detection_publisher._get_double_parameter("default_class_threshold") == 0.5
-
-
-def test_get_integer_parameter(detection_publisher):
-    """Test getting integer parameter."""
-    set_parameter(
-        detection_publisher,
-        "depth_fallback_region_size",
-        10,
-        rclpy.parameter.Parameter.Type.INTEGER,
-    )
-    assert (
-        detection_publisher._get_integer_parameter("depth_fallback_region_size") == 10
-    )
 
 
 def test_parse_detection_classes_empty_string(detection_publisher):

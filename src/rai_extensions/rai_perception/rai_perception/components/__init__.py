@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Re-export general config utilities from rai_core for convenience
-from rai.config.loader import get_config_path, load_python_config, load_yaml_config
-from rai.config.merger import merge_configs, merge_nested_configs
-
 from .exceptions import (
     PerceptionAlgorithmError,
     PerceptionError,
@@ -42,11 +38,6 @@ __all__ = [
     "PointCloudFromSegmentation",
     "PointCloudFromSegmentationConfig",
     "apply_preset",
-    "get_config_path",
     "get_preset",
     "list_presets",
-    "load_python_config",
-    "load_yaml_config",
-    "merge_configs",
-    "merge_nested_configs",
 ]

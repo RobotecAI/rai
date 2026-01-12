@@ -18,8 +18,10 @@ from cv_bridge import CvBridge
 from geometry_msgs.msg import Point, Pose
 from rai_perception.components.perception_utils import (
     compute_3d_pose_from_bbox,
+    convert_depth_to_meters,
     enhance_detection_with_3d_pose,
     extract_pointcloud_from_bbox,
+    get_camera_intrinsics,
 )
 from sensor_msgs.msg import CameraInfo
 from std_msgs.msg import Header
@@ -177,3 +179,57 @@ def test_enhance_detection_with_3d_pose_no_results(
     )
 
     assert success is False
+
+
+def test_get_camera_intrinsics(camera_info):
+    """Test extracting camera intrinsics from CameraInfo message."""
+    fx, fy, cx, cy = get_camera_intrinsics(camera_info)
+
+    assert fx == 500.0
+    assert fy == 500.0
+    assert cx == 320.0
+    assert cy == 240.0
+
+
+def test_convert_depth_to_meters_mm_encoding(bridge):
+    """Test converting depth from mm encoding to meters."""
+    # Create depth array in mm (16UC1 encoding)
+    depth_array = np.array([[1000, 2000], [3000, 4000]], dtype=np.uint16)
+    depth_image = bridge.cv2_to_imgmsg(depth_array, encoding="16UC1")
+
+    result = convert_depth_to_meters(depth_array, depth_image)
+
+    assert result.dtype == np.float32
+    np.testing.assert_array_almost_equal(
+        result, depth_array.astype(np.float32) / 1000.0
+    )
+    assert result[0, 0] == 1.0
+    assert result[0, 1] == 2.0
+    assert result[1, 0] == 3.0
+    assert result[1, 1] == 4.0
+
+
+def test_convert_depth_to_meters_meters_encoding(bridge):
+    """Test converting depth that's already in meters (32FC1 encoding)."""
+    # Create depth array already in meters
+    depth_array = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+    depth_image = bridge.cv2_to_imgmsg(depth_array, encoding="32FC1")
+
+    result = convert_depth_to_meters(depth_array, depth_image)
+
+    assert result.dtype == np.float32
+    np.testing.assert_array_almost_equal(result, depth_array)
+    assert result[0, 0] == 1.0
+    assert result[0, 1] == 2.0
+
+
+def test_convert_depth_to_meters_mono16_encoding(bridge):
+    """Test converting depth from mono16 encoding (mm) to meters."""
+    depth_array = np.array([[5000, 6000]], dtype=np.uint16)
+    depth_image = bridge.cv2_to_imgmsg(depth_array, encoding="mono16")
+
+    result = convert_depth_to_meters(depth_array, depth_image)
+
+    assert result.dtype == np.float32
+    assert result[0, 0] == 5.0
+    assert result[0, 1] == 6.0

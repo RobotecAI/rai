@@ -18,7 +18,7 @@ import numpy as np
 import sensor_msgs.msg
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
-from rai.communication.ros2 import ROS2Connector
+from rai.communication.ros2 import ROS2Connector, ROS2ServiceError
 from rai.communication.ros2.api import convert_ros_img_to_ndarray
 from rai.communication.ros2.ros_async import get_future_result
 from rclpy.exceptions import (
@@ -243,6 +243,7 @@ class GetDetectionTool(GroundingDinoBaseTool):
         camera_img_msg = self._get_image_message(camera_topic)
         future = self._call_gdino_node(camera_img_msg, object_names)
 
+        service_name = self._get_detection_service_name()
         resolved = get_future_result(future)
 
         if resolved is not None:
@@ -252,7 +253,12 @@ class GetDetectionTool(GroundingDinoBaseTool):
                 f"I have detected the following items in the picture {names or 'None'}"
             )
         else:
-            return "Service call failed. Can't get detections."
+            raise ROS2ServiceError(
+                service_name=service_name,
+                timeout_sec=5.0,
+                service_state="call_failed",
+                suggestion="Service call timed out or returned no response. Check if detection service is running and responding.",
+            )
 
 
 class GetDistanceToObjectsTool(GroundingDinoBaseTool):
@@ -371,6 +377,7 @@ class GetDistanceToObjectsTool(GroundingDinoBaseTool):
         depth_img_msg = self._get_image_message(depth_topic)
         future = self._call_gdino_node(camera_img_msg, object_names)
 
+        service_name = self._get_detection_service_name()
         resolved = get_future_result(future)
         if resolved is not None:
             detected = self._parse_detection_array(resolved)
@@ -387,7 +394,13 @@ class GetDistanceToObjectsTool(GroundingDinoBaseTool):
                 ]
             )
             return f"I have detected the following items in the picture {measurement_string or 'no objects'}"
-        return "Failed"
+        else:
+            raise ROS2ServiceError(
+                service_name=service_name,
+                timeout_sec=5.0,
+                service_state="call_failed",
+                suggestion="Service call timed out or returned no response. Check if detection service is running and responding.",
+            )
 
     def get_pipeline_info(self) -> Dict[str, Any]:
         """Get information about the tool's pipeline stages.

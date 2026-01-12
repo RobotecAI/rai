@@ -259,10 +259,6 @@ The folder structure organizes code by abstraction level to support progressive 
 
 ```
 rai_core/rai/
-├── config/                      # General configuration utilities
-│   ├── loader.py               # Unified YAML/Python config loading
-│   └── merger.py               # Config merging with precedence: defaults → ROS2 params → overrides
-│
 └── communication/ros2/           # ROS2 communication infrastructure
     └── parameters.py            # get_param_value() helper for extracting ROS2 parameter values
 
@@ -343,15 +339,9 @@ The configuration system follows a multi-tier approach with clear separation of 
 
 3. **Component Configs (Mid-level)**: Pydantic Config classes (`PointCloudFilterConfig`, `GrippingPointEstimatorConfig`) handle algorithm parameters. Defined in `components/gripping_points.py`, instantiated from ROS2 params or defaults.
 
-4. **Presets (High-level)**: Semantic presets map user-friendly names to component configs. Tools use presets internally. Flow: `tools/*.py` → `components/perception_presets.py` → `rai.config.merger` → component configs.
-
-5. **Config Merging**: `rai.config.merger` (in `rai_core`) handles precedence: defaults → ROS2 params → user overrides. Ensures consistent configuration resolution.
+4. **Presets (High-level)**: Semantic presets map user-friendly names to component configs. Tools use presets internally. Flow: `tools/*.py` → `components/perception_presets.py` → component configs.
 
 **Configuration Infrastructure Status:**
-
--   `rai.config.loader` (in `rai_core/rai/config/`): Unified YAML/Python config loading implemented. Replaces manual YAML loading in nodes. Handles ROS2 config pattern: `{node_name}: ros__parameters: {...}`.
-
--   `rai.config.merger` (in `rai_core/rai/config/`): Config merging logic implemented. Merges with precedence: defaults → ROS2 params → user overrides. Supports nested configs.
 
 -   `rai.communication.ros2.get_param_value()` (in `rai_core/rai/communication/ros2/`): Helper function for extracting ROS2 parameter values with automatic type conversion.
 
@@ -361,8 +351,6 @@ The configuration system follows a multi-tier approach with clear separation of 
 
 1. Model Registry: Implement `models/detection.py` and `models/segmentation.py` with capability-based registries
 2. Configuration Infrastructure: ✅ Implemented:
-    - `rai.config.loader` (in `rai_core/rai/config/`): Unified YAML/Python config loading to replace manual loading in nodes
-    - `rai.config.merger` (in `rai_core/rai/config/`): Config merging with precedence (defaults → ROS2 params → overrides)
     - `components/perception_presets.py`: Semantic presets for high-level tools (quality="precise_grasp", approach="top_grasp")
     - `components/exceptions.py`: Perception-specific exceptions with rich metadata
 3. Component Migration: ✅ Partially implemented, needs migration:
@@ -688,5 +676,22 @@ For the default case (`config_path=None`), we use full file system paths instead
 **Design Principle Alignment:**
 
 This approach aligns with the tiered API design: high-level users get simple, reliable defaults without understanding Hydra, while mid-level users can still access Hydra's advanced features when needed. The key is that implementation details (Hydra) don't leak to the high-level API.
+
+---
+
+## Good to Have
+
+**Config Utilities (`rai.config`):**
+
+-   `load_yaml_config()`: Unified YAML loading with ROS2 parameter extraction (`{node_name}: ros__parameters: {...}`). Would reduce boilerplate in `detection_publisher.py` but current manual loading is readable and explicit.
+-   `get_config_path()`: Standardizes ROS2 parameter path resolution with defaults. Would eliminate duplication but only used in one place currently.
+-   `merge_nested_configs()`: Handles nested dict merging correctly vs. simple `.update()`. Useful if presets become nested; current flat presets work fine with manual updates.
+-   **Trade-off**: Utilities reduce duplication but add abstraction layer. Current manual approach is explicit and maintainable for single usage. Main benefit is consistency if adopted across packages.
+
+**Multi-Stage Pipeline Service Failures:**
+
+-   Tools like `GetObjectGrippingPointsTool` call multiple services in sequence (detection → segmentation). Currently, failures don't indicate which pipeline stage failed.
+-   **Use case**: Raise `ROS2ServiceError` with pipeline stage info (e.g., "Failed at detection stage", "Failed at segmentation stage") to enable stage-specific recovery strategies.
+-   **Benefit**: Enables automatic retry at specific stages, provides clearer diagnostics for multi-stage operations, helps LLM agents understand partial failures.
 
 ---

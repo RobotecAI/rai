@@ -130,6 +130,29 @@ agent = ReActAgent(
 agent.subscribe_source("/from_human", hri_connector)
 ```
 
+## ROS2 Utilities
+
+RAI provides utilities for error handling and parameter access when working with ROS2 connectors:
+
+-   `ROS2ServiceError`: Exception raised for service-related errors (e.g., service unavailable, timeout). Includes service name, timeout duration, and diagnostic suggestions.
+
+-   `ROS2ParameterError`: Exception raised for parameter-related errors (e.g., missing parameter, type mismatch). Includes parameter name, expected type/value, and suggestions for resolution.
+
+-   `get_param_value()`: Utility function for simplified ROS2 parameter access with automatic type conversion and default value support. Reduces boilerplate compared to direct ROS2 parameter API usage.
+
+```python
+from rai.communication.ros2 import ROS2ServiceError, ROS2ParameterError, get_param_value
+
+# Access parameters with defaults
+service_name = get_param_value(node, "/my_service/name", default="/default_service")
+
+# Handle service errors
+try:
+    response = connector.service_call(...)
+except ROS2ServiceError as e:
+    print(f"Service {e.service_name} unavailable: {e.suggestion}")
+```
+
 ## See Also
 
 -   [Connectors Overview](./overview.md)
