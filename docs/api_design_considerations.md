@@ -5,53 +5,37 @@ This document synthesizes research on API usability and LLM-compatible API desig
 ## Table of Contents
 
 -   [Classic Usability Dimensions](#classic-usability-dimensions)
-    -   [Progressive Disclosure Pattern](#progressive-disclosure-pattern)
 -   [LLM App Design Patterns for RAI](#llm-app-design-patterns-for-rai)
 -   [RAI Framework Audience Analysis](#rai-framework-audience-analysis)
-    -   [Multiple Audiences with Clear Separation](#multiple-audiences-with-clear-separation)
-    -   [API Similarities & Differences](#api-similarities--differences)
-    -   [Use Case Differences](#use-case-differences)
-    -   [Research Opportunities for RAI](#research-opportunities-for-rai)
 -   [Tiered API Design for RAI](#tiered-api-design-for-rai)
     -   [Three-Tier Structure](#three-tier-structure)
     -   [Key Design Considerations](#key-design-considerations)
+    -   [Case Study: rai_perception Implementation](#case-study-rai_perception-implementation)
     -   [Common Usability Concerns in RAI](#common-usability-concerns-in-rai)
     -   [Validation Approaches](#validation-approaches)
--   [References: Detailed Research Findings](#references-detailed-research-findings)
-    -   [Classic API Usability Research](#classic-api-usability-research)
-    -   [Abstraction Level Trade-offs in Robotics](#abstraction-level-trade-offs-in-robotics)
-    -   [Progressive Disclosure](#progressive-disclosure)
-    -   [Designing APIs for LLM Agents](#designing-apis-for-llm-agents)
+-   [Research Findings and Practical Takeaways](#research-findings-and-practical-takeaways)
 -   [Reading List](#reading-list)
 
 ---
 
 ## Classic Usability Dimensions
 
-The [Cognitive Dimensions Framework](#cognitive-dimensions-framework) provides a systematic way to evaluate API design. Key dimensions may be relevant to RAI API evaluation:
+The Cognitive Dimensions Framework provides a systematic way to evaluate API design. Key dimensions relevant to RAI API evaluation:
 
--   Abstraction Level: Range of abstraction exposed and usable by target developers
--   Progressive Evaluation: Ability to test partially completed code
--   Penetrability: Ease of exploring and understanding API components
--   Consistency: How much can be inferred once part of the API is learned
--   Domain Correspondence: How clearly API components map to the robotics domain
--   Role Expressiveness: How apparent the relationship between components and the program is
+-   **Abstraction Level**: Range of abstraction exposed and usable by target developers
+-   **Progressive Evaluation**: Ability to test partially completed code
+-   **Penetrability**: Ease of exploring and understanding API components
+-   **Consistency**: How much can be inferred once part of the API is learned
+-   **Domain Correspondence**: How clearly API components map to the robotics domain
+-   **Role Expressiveness**: How apparent the relationship between components and the program is
 
-Key findings from empirical studies:
+**Key findings from empirical studies:**
 
 -   48% of developers had to understand implementation details to use APIs (Piccioni et al., 2013)
 -   Method placement dramatically affects learnability—developers were 2-11x faster when methods were on expected classes (Stylos & Myers, 2008)
 -   High abstraction levels improve usability but reduce control—the ideal level depends on task and audience (Diprose et al., 2016)
 
-### Progressive Disclosure Pattern
-
-Progressive disclosure (Nielsen, 1995) defers advanced features to reduce cognitive load. For APIs, this could translate to tiered or layered API design:
-
--   Start with simple, intent-based methods
--   Reveal complexity progressively as needed
--   Maintain consistent patterns across tiers
-
-For technical contexts, "layered API design" or "tiered abstraction" is preferred over UX terminology.
+**Progressive Disclosure Pattern**: Progressive disclosure (Nielsen, 1995) defers advanced features to reduce cognitive load. For APIs, this translates to tiered or layered API design: start with simple, intent-based methods, reveal complexity progressively as needed, and maintain consistent patterns across tiers. For technical contexts, "layered API design" or "tiered abstraction" is preferred over UX terminology.
 
 ## LLM App Design Patterns for RAI
 
@@ -99,65 +83,45 @@ RAI serves four distinct roles at different architectural levels:
 -   Core Developers: Implement new framework components (connectors, agents)
 -   LLM agents: Consume Tools at runtime via tool-calling mechanisms
 
-The paper states Tools are "compatible with langchain, enabling seamless integration with tool-calling-enabled LLMs" while also being "used by Agents utilizing other decision-making mechanisms."
+The RAI framework paper (Rachwał et al., 2025) states Tools are "compatible with langchain, enabling seamless integration with tool-calling-enabled LLMs" while also being "used by Agents utilizing other decision-making mechanisms."
 
 ### API Similarities & Differences
 
-_Similarities:_
+All roles interact with the Tools abstraction and access the same underlying capabilities (ROS 2 services, perception, navigation). However, their interaction patterns differ:
 
--   All roles interact with the Tools abstraction (Section 2.1)
--   All access the same underlying capabilities (ROS 2 services, perception, navigation)
+-   **Application Developers**: Configure Agents (Conversational, StateBased), Connectors (ROS2Connector), and system architecture
+-   **Extension Developers**: Create custom tools extending `BaseROS2Tool`, implement domain-specific functionality
+-   **Core Developers**: Implement new connector types, agent types, framework infrastructure
+-   **LLM agents**: Invoke Tools at runtime (CallROS2Service, GetDistanceToObjects)
 
-_Differences:_
-
--   Application Developers: Configure Agents (Conversational, StateBased), Connectors (ROS2Connector), and system architecture
--   Extension Developers: Create custom tools extending `BaseROS2Tool`, implement domain-specific functionality
--   Core Developers: Implement new connector types, agent types, framework infrastructure
--   LLM agents: Invoke Tools at runtime (CallROS2Service, GetDistanceToObjects)
-
-_Key difference:_ Application Developers architect the system; LLM agents execute within it. Extension and Core Developers extend the framework itself. RAI maintains clear separation: Application Developers configure, LLM agents operate, Extension/Core Developers extend. However, APIs need to serve multiple audiences simultaneously, which may benefit from tiered design that supports progressive disclosure.
+Application Developers architect the system; LLM agents execute within it. Extension and Core Developers extend the framework itself. RAI maintains clear separation: Application Developers configure, LLM agents operate, Extension/Core Developers extend. However, APIs need to serve multiple audiences simultaneously, which benefits from tiered design that supports progressive disclosure.
 
 ### Use Case Differences
 
-_Application Developers:_
+_Application Developers:_ System design and configuration, debugging, multi-agent setup decisions
 
--   System design: "A series of experiments was conducted using different architecture configurations" (Section 3.1)
--   Debugging: "advantages such as...easier debugging"
--   Multi-agent setup: Choosing between single agent vs. multi-agent architectures (Figure 6)
+_Extension Developers:_ Tool creation (extending `BaseROS2Tool`), component extension, custom aggregators
 
-_Extension Developers:_
+_Core Developers:_ Framework infrastructure, new connector/agent types, low-level integration
 
--   Tool creation: Extending `BaseROS2Tool` to create domain-specific tools
--   Component extension: Creating custom aggregators, specialized connectors
-
-_Core Developers:_
-
--   Framework infrastructure: Implementing new connector types, agent architectures
--   Low-level integration: Creating new communication patterns, message types
-
-_LLM agents:_
-
--   Runtime decisions: "The Agent was also responsible for deciding when to report completion or failure"
--   Tool invocation: Using open-set detection, navigation planning, manipulation
--   Task execution: "Navigate to the chair", object sorting, stacking
+_LLM agents:_ Runtime tool invocation, task execution, decision-making during task performance
 
 ### Research Opportunities for RAI
 
-RAI's multi-audience architecture and tiered API design present novel research opportunities that have not been formally studied:
+RAI's multi-audience architecture and tiered API design present novel research opportunities:
 
-1. _Tiered APIs for dual human/LLM audiences_: No formal research exists on tiered APIs serving both human developers and LLM agents simultaneously. Current work focuses on either human-focused OR LLM-focused APIs, not both.
+1. **Tiered APIs for dual human/LLM audiences**: No formal research exists on tiered APIs serving both human developers and LLM agents simultaneously
+2. **Empirical studies of LLM agent API usage**: Limited empirical work exists on how LLM agents interact with APIs
+3. **Progressive disclosure patterns in APIs**: While established in UI design, it hasn't been formalized for programmatic interfaces
+4. **Frameworks for evaluating multi-audience robotics APIs**: No established frameworks exist for evaluating robotics APIs that serve multiple audiences with different needs
 
-2. _Empirical studies of LLM agent API usage_: Limited empirical work exists on how LLM agents interact with APIs. Most guidance is anecdotal or practitioner advice rather than rigorous user studies.
-
-3. _Progressive disclosure patterns in APIs_: While progressive disclosure is established in UI design, it hasn't been formalized for programmatic interfaces. RAI could establish patterns for progressive disclosure in API design.
-
-4. _Frameworks for evaluating multi-audience robotics APIs_: No established frameworks exist for evaluating robotics APIs that serve multiple audiences (Application Developers, Extension Developers, Core Developers, and LLM agents) with different needs that must be balanced.
-
-_Research opportunity:_ RAI could be among the first to empirically study how LLM agents navigate tiered APIs vs. how humans do, and whether a single design can serve both well across robotics domains. The framework's unique position at the intersection of classical API usability research, emerging LLM-optimized design, and robotics domain requirements provides a unique opportunity to validate tiered API patterns empirically.
+RAI could be among the first to empirically study how LLM agents navigate tiered APIs vs. how humans do, and whether a single design can serve both well across robotics domains.
 
 ## Tiered API Design for RAI
 
 A tiered API structure could organize code into three abstraction levels to support progressive disclosure and reduce cognitive load. This pattern might apply across RAI extensions (perception, navigation, manipulation, etc.).
+
+_Note:_ The `rai_perception` extension has implemented a tiered API structure as an exploration of these design principles. See [`rai_perception/rethinking_usability.md`](../../src/rai_extensions/rai_perception/rethinking_usability.md) for detailed analysis and implementation examples.
 
 ### Three-Tier Structure
 
@@ -176,6 +140,54 @@ _Low-level layer (Expert control):_ Core algorithms providing direct access to m
 3. _Rich result metadata_: Tools could return confidence scores, strategy used, and alternative options to help LLM agents make better decisions about retrying or adjusting approaches.
 
 4. _Progressive evaluation support_: Users might benefit from being able to test individual pipeline stages without running the full pipeline, enabling incremental debugging and validation.
+
+### Case Study: rai_perception Implementation
+
+The `rai_perception` extension provides a concrete implementation of tiered API design principles, demonstrating how theoretical considerations translate to practice. Key implementations include:
+
+_Progressive Disclosure:_
+
+-   Three-tier structure: Tools (`tools/`), Components (`components/`), Algorithms (`algorithms/`)
+-   Semantic presets (`perception_presets.py`) with self-documenting names: `"default_grasp"`, `"precise_grasp"`, `"top_grasp"`
+-   Presets map to component configurations, enabling high-level tool simplification
+
+_Configuration Management:_
+
+-   Multi-tier configuration: algorithm configs (model registry), ROS2 parameters (deployment), component configs (Pydantic classes), presets (semantic mappings)
+-   Helper function `rai.communication.ros2.get_param_value()` for consistent parameter extraction with automatic type conversion
+-   Model registry pattern enables switching detection models without code changes
+
+_Domain Correspondence:_
+
+-   Semantic parameter names: `outlier_fraction` instead of `if_contamination`, `neighborhood_size` instead of `lof_n_neighbors`
+-   Domain-oriented strategy names: `"aggressive_outlier_removal"` instead of `"isolation_forest"`, `"density_based"` instead of `"dbscan"`
+-   Parameter names describe outcomes rather than algorithm implementation details
+
+_Consistency:_
+
+-   Input schema naming pattern: `{ToolName}Input` (e.g., `GetObjectGrippingPointsToolInput`)
+-   Standardized parameter handling: `_load_parameters()` method with consistent prefixes (`perception.gripping_points.*`)
+-   Once learned, patterns apply across all tools
+
+_Role Expressiveness:_
+
+-   Pipeline visibility: Tools expose `pipeline_stages` attributes and `get_pipeline_info()` methods
+-   Service dependency clarity: `required_services` attributes and `check_service_dependencies()` methods
+-   Makes component relationships explicit without requiring implementation knowledge
+
+_Progressive Evaluation:_
+
+-   Debug mode (`debug=True`) publishes intermediate results to ROS2 topics for RVIZ visualization
+-   Enables inspection of pipeline stages without code modification
+-   Future: expose intermediate results as optional return values for programmatic access
+
+_Model Registry Pattern:_
+
+-   Enables switching between detection models (e.g., GroundingDINO, YOLO) via ROS2 parameters
+-   No code changes required—service reads `model_name` parameter and queries registry
+-   Supports extensibility: new models added by implementing algorithm and registering in registry
+
+These implementations demonstrate how tiered API design addresses usability concerns identified in research while maintaining flexibility for expert users. The `rai_perception` exploration serves as a reference implementation for other RAI extensions considering similar refactoring.
 
 ### Common Usability Concerns in RAI
 
@@ -203,124 +215,76 @@ Based on analysis of RAI extensions, common usability issues include:
 
 Tiered API structures could be validated through the following scenarios:
 
-_High-Level Tier:_
+**High-Level Tier:**
 
--   Zero-shot agent usage: LLM agents can use tools (e.g., `GetObjectGrippingPointsTool(object_name="cup")`) without examples or parameter tuning
--   Error recovery: Tools return actionable error messages with suggestions (e.g., "Try with quality='high'")
--   Common task success: 80%+ of tasks solvable with high-level API alone, 1-2 tool calls per task
+-   Zero-shot agent usage without examples or parameter tuning
+-   Error recovery with actionable error messages
+-   80%+ of tasks solvable with high-level API alone, 1-2 tool calls per task
 
-_Mid-Level Tier:_
+**Mid-Level Tier:**
 
--   Edge case handling: Components handle non-standard scenarios with semantic parameters (e.g., `noise_handling="aggressive"`)
--   Strategy comparison: Users can experiment with different approaches without understanding low-level algorithms
--   Environment adaptation: Same API works across different robot/sensor setups via configuration
+-   Edge case handling with semantic parameters
+-   Strategy comparison without understanding low-level algorithms
+-   Environment adaptation across different robot/sensor setups
 
-_Low-Level Tier:_
+**Low-Level Tier:**
 
--   Custom pipelines: Users can inject custom algorithms and compose pipeline stages independently
--   Algorithm reproduction: Every stage is accessible and configurable for research use cases
+-   Custom pipelines with independent algorithm composition
+-   Algorithm reproduction with full stage accessibility
 
-_Tier Transitions:_
+**Success Metrics (examples to consider):**
 
--   Gradual complexity: Users can progress from simple to advanced without rewriting code
--   API discoverability: Docstrings and type hints guide users to appropriate tiers
-
-_Performance:_
-
--   Abstraction overhead: High-level tools might aim for <5% overhead compared to direct algorithm usage
-
-_Success Metrics (examples to consider):_
-
--   Target: 90% of new users succeed with high-level tier
--   Target: 15% of power users utilize low-level tier
--   Target: > 85% LLM agent success rate
+-   90% of new users succeed with high-level tier
+-   15% of power users utilize low-level tier
+-   > 85% LLM agent success rate
 -   Natural progression between tiers over time
+-   <5% abstraction overhead compared to direct algorithm usage
 
 ---
 
-## References: Detailed Research Findings
+## Research Findings and Practical Takeaways
 
-### Classic API Usability Research
+### Key Research Findings
 
-#### Cognitive Dimensions Framework
+**Piccioni et al. (2013)** - Study of 25 programmers using a persistence library API:
 
-The foundational work for evaluating API usability comes from the Cognitive Dimensions Framework, which provides a systematic way to assess API design trade-offs.
-
-_Key Research Findings:_
-
--   Piccioni et al. (2013) - "An Empirical Study of API Usability" studied API abstraction levels and found that 48% of participants had to understand implementation details to use APIs, revealing abstraction deficiencies. The study involved 25 programmers (students, researchers, professionals) using a persistence library API.
-
--   Clarke & Becker (2003-2006) - Applied Cognitive Dimensions to characterize API design trade-offs and evaluate Microsoft .NET libraries.
-
--   Systematic mapping study (2019) - Reviewed 47 primary studies on API usability evaluation methods, showing 32 appeared from 2010-2018, indicating growing research interest.
-
-_Key Cognitive Dimensions for RAI:_
-
--   Abstraction Level: Range of abstraction exposed and usable by developers
--   Progressive Evaluation: Ability to test partially completed code
--   Penetrability: Ease of exploring and understanding API components
--   Consistency: How much can be inferred once part of the API is learned
--   Domain Correspondence: How clearly API components map to the robotics domain
--   Role Expressiveness: How apparent the relationship between components and the program is
-
-_Key Findings from Piccioni et al. (2013):_
-
-Study of 25 programmers using a persistence library API revealed:
-
--   Naming is critical: Finding descriptive, non-ambiguous names is challenging (e.g., "CRUD" unfamiliar to 44%)
--   Type relationships are unclear: Discovering connections between API classes requires significant effort
+-   48% of participants had to understand implementation details to use APIs—a clear abstraction failure
+-   Naming is critical: Finding descriptive, non-ambiguous names is challenging
 -   Documentation is critical: ALL major usability flaws traced to incomplete/unclear documentation
 -   Flexibility cuts both ways: Experienced programmers leverage it; novices get confused by choices
--   _Key insight:_ 48% of participants had to peek at implementation details to understand the API—a clear abstraction failure
 
-_Key Findings from Stylos & Myers (2008):_
-
-Study of 10 programmers testing method placement found:
+**Stylos & Myers (2008)** - Study of 10 programmers testing method placement:
 
 -   Method placement dramatically affects API learnability (2-11x faster when methods are on expected classes)
 -   Programmers gravitate to the same starting classes and discover other classes through method signatures
--   _Practical impact:_ Place methods on classes where developers naturally start exploring
 
-### Abstraction Level Trade-offs in Robotics
-
-_Diprose et al. (2016-2017)_ studied social robot programming APIs and found: high-level primitives with close domain mapping improved usability, BUT the main trade-off was that hiding implementation details made progressive evaluation difficult—programmers were suddenly exposed to low-level details when debugging.
-
-This directly validates the concern about "better abstractions → reduced flexibility."
-
-User evaluations showed that while high abstraction levels hide lower-level implementation details and provide close mapping to the problem domain, they can take away too much control from programmers.
-
-_Key findings from Diprose et al. (2016):_
+**Diprose et al. (2016)** - Study of social robot programming APIs:
 
 -   High-level primitives with close domain mapping improve usability but may need to preserve necessary control
 -   The ideal abstraction level depends on task and audience—some need lower levels, others higher
--   Benefits: close domain mapping, hides implementation details, terse notation, good role-expressiveness
 -   Main trade-off: Low remote visibility makes progressive evaluation difficult—programmers exposed to low-level details when debugging
 
-### Progressive Disclosure
+**Nielsen (2006)** - Progressive disclosure defers advanced features to reduce cognitive load, making applications easier to learn and less error-prone. For RAI, this translates to tiered API design: start simple, reveal complexity as needed.
 
-_Summary from Nielsen (2006):_ Progressive disclosure defers advanced or rarely used features to reduce cognitive load, making applications easier to learn and less error-prone. For RAI, this translates to tiered API design: start simple, reveal complexity as needed. Terminology such as "layered API design" or "tiered abstraction" is preferred over UX terminology for developer audiences.
+**LLM API Design (2023-2025)** - Emerging research, mostly practitioner-focused:
 
-### Designing APIs for LLM Agents
+-   APIs for LLMs serve two primary functions: grounding (fetching real-time data) and action (executing tasks)
+-   An API is "AI-ready" when designed for efficient interaction with LLMs, providing structured, unambiguous data
+-   The utility of large language models can be largely attributed to API designers creating abstractions that fit real use cases well
 
-_Emerging Research (2023-2025):_ This is a very new area, mostly practitioner-focused, with limited formal academic research. APIs for LLMs serve two primary functions: grounding (fetching real-time, factual data to prevent hallucination) and action (executing tasks in external systems).
+### Practical Takeaways for RAI Core Developers
 
-_What makes an API ready for AI?_ An API is "AI-ready" when designed for efficient interaction with LLMs, providing structured, unambiguous data that prioritizes explicit machine readability over human interpretation.
+1. **Tiered approach aligns with research**: High-level primitives work well but abstraction may need to preserve necessary control. This aligns with RAI's tiered API structure across extensions.
 
-_Key Insight:_ The utility of large language models can be largely attributed to API designers creating abstractions that fit real use cases well (Myers & Stylos, 2016; Piccioni et al., 2013). Core principles and common mistakes are covered in the [LLM App Design Patterns](#llm-app-design-patterns-for-rai) section above.
+2. **Method placement matters**: Place methods on classes where developers naturally start exploring. Research suggests this can make APIs 2-11x faster to learn.
 
-_Practical Takeaways for RAI Core Developers (to consider):_
+3. **Documentation is critical**: All major usability flaws trace to incomplete/unclear documentation. Method signatures, comments, and contracts should be comprehensive.
 
-1. _Robotics API research suggests tiered approach_: The findings show high-level primitives work well but abstraction may need to preserve necessary control. This aligns with RAI's tiered API structure across extensions.
+4. **Address abstraction gaps**: If 48% of users need to peek at implementation details, the abstraction level needs adjustment. Provide clear paths between tiers without requiring implementation knowledge. The `rai_perception` implementation addresses this through semantic presets and discoverable component relationships.
 
-2. _Method placement may matter_: When designing tools and components, consider placing methods on the classes where developers naturally start exploring. Research suggests this can make APIs 2-11x faster to learn.
+5. **Enable progressive evaluation**: High abstraction levels make progressive evaluation difficult. Allow testing of individual stages without running full pipelines. `rai_perception` implements debug mode that publishes intermediate results to ROS2 topics, enabling visualization without code changes.
 
-3. _Documentation appears critical_: Research shows all major usability flaws trace to incomplete/unclear documentation. Method signatures, comments, and contracts might benefit from being comprehensive.
-
-4. _Abstraction gaps may indicate usability issues_: If 48% of users need to peek at implementation details, the abstraction level might need adjustment. RAI could consider providing clear paths between tiers without requiring implementation knowledge.
-
-5. _Progressive evaluation may enable debugging_: High abstraction levels make progressive evaluation difficult. RAI's tiered structure might benefit from allowing testing of individual stages without running full pipelines.
-
-6. _Semantic clarity for LLM agents_: Consider using self-descriptive names, structured responses, and actionable error messages. LLM agents may benefit from explicit machine-readable data, rather than ambiguous responses requiring complex parsing.
+6. **Semantic clarity for LLM agents**: Use self-descriptive names, structured responses, and actionable error messages. `rai_perception` demonstrates this through semantic parameter names (`outlier_fraction` vs `if_contamination`) and preset names that are self-documenting.
 
 ---
 
@@ -342,3 +306,6 @@ _Practical Takeaways for RAI Core Developers (to consider):_
 
 6. **Jakob Nielsen (2006)** - "Progressive disclosure" - https://www.nngroup.com/articles/progressive-disclosure/  
    Defers advanced features to reduce cognitive load—applies to tiered API design.
+
+7. **Rachwał et al. (2025)** - "RAI: Flexible Agent Framework for Embodied AI" - https://arxiv.org/abs/2505.07532  
+   Introduces the RAI framework for creating embodied Multi Agent Systems for robotics, with integration for ROS 2, Large Language Models, and simulations. Describes the framework's architecture, tools, and mechanisms for agent embodiment.
