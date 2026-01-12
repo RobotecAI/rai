@@ -104,15 +104,26 @@ class SegmentationService(BaseVisionService):
 
             image = request.source_img
 
-            assert self._segmenter is not None
+            if self._segmenter is None:
+                raise RuntimeError("Segmentation model not initialized")
+
             masks = self._segmenter.get_segmentation(image, received_boxes)
+
+            if masks is None:
+                masks = []
 
             img_arr = []
             for mask in masks:
-                if len(mask.shape) > 2:
-                    mask = np.squeeze(mask)
-                arr = (mask * 255).astype(np.uint8)
-                img_arr.append(self._bridge.cv2_to_imgmsg(arr, encoding="mono8"))
+                try:
+                    if len(mask.shape) > 2:
+                        mask = np.squeeze(mask)
+                    arr = (mask * 255).astype(np.uint8)
+                    img_arr.append(self._bridge.cv2_to_imgmsg(arr, encoding="mono8"))
+                except Exception as mask_error:
+                    self.logger.error(
+                        f"Error processing mask: {mask_error}",
+                        exc_info=True,
+                    )
 
             response.masks = img_arr
 
