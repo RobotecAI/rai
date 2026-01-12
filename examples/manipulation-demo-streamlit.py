@@ -253,10 +253,6 @@ def main(o3de_config_path: str):
                         )
                     ]
                     st.rerun()
-
-                    st.sidebar.success(
-                        f"Scene reloaded: {st.session_state['current_layout']}"
-                    )
                 except Exception as e:
                     st.sidebar.error(f"Failed to reload scene: {str(e)}")
             else:
