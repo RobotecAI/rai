@@ -16,11 +16,8 @@
 
 from typing import Type
 
+from rai.communication.ros2 import ROS2ServiceError, get_param_value
 from rai.communication.ros2.connectors import ROS2Connector
-from rclpy.exceptions import (
-    ParameterNotDeclaredException,
-    ParameterUninitializedException,
-)
 
 
 def get_detection_service_name(connector: ROS2Connector) -> str:
@@ -36,19 +33,14 @@ def get_detection_service_name(connector: ROS2Connector) -> str:
         Service name string
     """
     default_service = "/detection"
-    try:
-        service_name = connector.node.get_parameter(
-            "/detection_tool/service_name"
-        ).value
-        if isinstance(service_name, str) and service_name:
-            return service_name
-        connector.node.get_logger().warning(
-            f"Parameter /detection_tool/service_name is invalid, using default: {default_service}"
-        )
-    except (ParameterUninitializedException, ParameterNotDeclaredException):
-        connector.node.get_logger().debug(
-            f"Parameter /detection_tool/service_name not found, using default: {default_service}"
-        )
+    service_name = get_param_value(
+        connector.node, "/detection_tool/service_name", default=default_service
+    )
+    if isinstance(service_name, str) and service_name:
+        return service_name
+    connector.node.get_logger().warning(
+        f"Parameter /detection_tool/service_name is invalid, using default: {default_service}"
+    )
     return default_service
 
 
@@ -65,19 +57,14 @@ def get_segmentation_service_name(connector: ROS2Connector) -> str:
         Service name string
     """
     default_service = "/segmentation"
-    try:
-        service_name = connector.node.get_parameter(
-            "/segmentation_tool/service_name"
-        ).value
-        if isinstance(service_name, str) and service_name:
-            return service_name
-        connector.node.get_logger().warning(
-            f"Parameter /segmentation_tool/service_name is invalid, using default: {default_service}"
-        )
-    except (ParameterUninitializedException, ParameterNotDeclaredException):
-        connector.node.get_logger().debug(
-            f"Parameter /segmentation_tool/service_name not found, using default: {default_service}"
-        )
+    service_name = get_param_value(
+        connector.node, "/segmentation_tool/service_name", default=default_service
+    )
+    if isinstance(service_name, str) and service_name:
+        return service_name
+    connector.node.get_logger().warning(
+        f"Parameter /segmentation_tool/service_name is invalid, using default: {default_service}"
+    )
     return default_service
 
 
@@ -104,8 +91,12 @@ def check_service_available(
     try:
         cli = connector.node.create_client(Empty, service_name)
         return cli.wait_for_service(timeout_sec=timeout_sec)
-    except Exception:
-        # If service creation fails, service is not available
+    except Exception as e:
+        # If service creation fails, log error and return False
+        # This preserves the check function's boolean return while capturing error context
+        connector.node.get_logger().debug(
+            f"Service client creation failed for {service_name}: {e}"
+        )
         return False
 
 
@@ -114,6 +105,7 @@ def create_service_client(
     service_type: Type,
     service_name: str,
     timeout_sec: float = 1.0,
+    max_wait_time: float = 0.0,
 ) -> object:
     """Create ROS2 service client and wait for service to be available.
 
@@ -121,13 +113,34 @@ def create_service_client(
         connector: ROS2 connector with node
         service_type: ROS2 service type class
         service_name: Service name to connect to
-        timeout_sec: Timeout for waiting for service (default: 1.0)
+        timeout_sec: Timeout for each wait attempt (default: 1.0)
+        max_wait_time: Maximum total wait time. If 0, wait indefinitely (default: 0.0)
 
     Returns:
         Service client instance
+
+    Raises:
+        ROS2ServiceError: If service is not available within max_wait_time
     """
+    import time
+
     cli = connector.node.create_client(service_type, service_name)
+    start_time = time.time()
     while not cli.wait_for_service(timeout_sec=timeout_sec):
+        if max_wait_time > 0 and time.time() - start_time >= max_wait_time:
+            available_services = [
+                s[0] for s in connector.node.get_service_names_and_types()
+            ]
+            raise ROS2ServiceError(
+                service_name=service_name,
+                timeout_sec=max_wait_time,
+                service_state="unavailable",
+                suggestion=(
+                    f"Service not available after {max_wait_time}s. "
+                    f"Available services: {sorted(available_services)[:10]}. "
+                    f"Check if service is running or verify service name."
+                ),
+            )
         connector.node.get_logger().info(
             f"service {service_name} not available, waiting again..."
         )

@@ -118,11 +118,10 @@ This prevents easy migration to other models (e.g., YOLO) without code changes.
 
 -   `src/rai_core/rai/__init__.py` - Core package exports
 -   `src/rai_core/rai/communication/ros2/__init__.py` - ROS2 communication exports
--   `src/rai_core/rai/communication/ros2/exceptions.py` - ROS2-specific exceptions (e.g., `ROS2ServiceError`, `ROS2ParameterError`)
+-   `src/rai_core/rai/communication/ros2/exceptions.py` - ROS2-specific exceptions (`ROS2ServiceError`, `ROS2ParameterError`)
+    -   **Usage**: `ROS2ServiceError` used in 5 places (tools, services, components). `ROS2ParameterError` raised by `get_param_value()` when param missing without default.
 -   `src/rai_core/rai/communication/ros2/parameters.py` - Parameter retrieval utilities (`get_param_value()`)
--   `src/rai_core/rai/config/__init__.py` - Configuration utilities exports
--   `src/rai_core/rai/config/loader.py` - Unified YAML/Python config loading
--   `src/rai_core/rai/config/merger.py` - Config merging with precedence (defaults → ROS2 params → overrides)
+    -   **Usage**: Used in 3 places (`base_vision_service.py`, `models/__init__.py`, `service_utils.py`). Simplifies param access with auto type conversion and defaults.
 -   `src/rai_core/rai/tools/__init__.py` - Tools package exports
 -   `src/rai_core/rai/tools/ros2/manipulation/custom.py` - Manipulation tool updates
 -   `src/rai_core/rai/tools/timeout.py` - Timeout utilities (`RaiTimeoutError`, `timeout` decorator)
@@ -133,16 +132,6 @@ This prevents easy migration to other models (e.g., YOLO) without code changes.
 -   ROS2 parameter helpers for service name retrieval
 -   Exception hierarchy for better error handling
 -   Timeout utilities for tool execution
-
-### rai_semap Changes
-
-**Purpose:** Integration updates to work with new `rai_perception` service names and components.
-
--   `src/rai_semap/rai_semap/ros2/config/detection_publisher.yaml` - Configuration updates
--   `src/rai_semap/rai_semap/ros2/node.py` - Node updates for service integration
--   `src/rai_semap/rai_semap/scripts/semap.launch.py` - Launch file updates
-
-**Rationale:** `rai_semap` integrates with `rai_perception` services and components, so it needs updates to work with the new service naming and component structure.
 
 **Review Notes:**
 

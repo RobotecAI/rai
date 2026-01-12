@@ -288,12 +288,9 @@ class PointCloudFromSegmentation:
     def _get_intrinsic_from_camera_info(
         self, camera_info: sensor_msgs.msg.CameraInfo
     ) -> tuple[float, float, float, float]:
-        k = camera_info.k  # type: ignore[reportUnknownMemberType]
-        fx = float(k[0])
-        fy = float(k[4])
-        cx = float(k[2])
-        cy = float(k[5])
-        return fx, fy, cx, cy
+        from rai_perception.components.perception_utils import get_camera_intrinsics
+
+        return get_camera_intrinsics(camera_info)
 
     def _get_detection_service_name(self) -> str:
         """Get detection service name from ROS2 parameter or use default."""

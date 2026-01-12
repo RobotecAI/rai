@@ -33,71 +33,66 @@ from rai_perception import (
 from rai_perception.tools.gripping_points_tools import GRIPPING_POINTS_TOOL_PARAM_PREFIX
 
 
+def _setup_gripping_points_tool_params(node, **kwargs):
+    """Helper to set up parameters for GetObjectGrippingPointsTool."""
+    defaults = {
+        "target_frame": "test_frame",
+        "source_frame": "camera_frame",
+        "camera_topic": "/test/camera",
+        "depth_topic": "/test/depth",
+        "camera_info_topic": "/test/camera_info",
+    }
+    defaults.update(kwargs)
+
+    for key, value in defaults.items():
+        node.declare_parameter(f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.{key}", value)
+
+
+@pytest.fixture
+def ros2_connector():
+    """Fixture for ROS2Connector with proper setup/teardown."""
+    rclpy.init()
+    try:
+        connector = ROS2Connector(executor_type="single_threaded")
+        yield connector
+    finally:
+        connector.shutdown()
+        rclpy.shutdown()
+
+
 class TestWaitForPerceptionDependencies:
     """Test cases for wait_for_perception_dependencies utility."""
 
-    def test_with_get_object_gripping_points_tool(self):
+    def test_with_get_object_gripping_points_tool(self, ros2_connector):
         """Test that utility extracts services and topics from GetObjectGrippingPointsTool."""
-        rclpy.init()
-        try:
-            connector = ROS2Connector(executor_type="single_threaded")
-            node = connector.node
+        _setup_gripping_points_tool_params(ros2_connector.node)
+        tool = GetObjectGrippingPointsTool(connector=ros2_connector)
 
-            # Set up parameters for the tool
-            node.declare_parameter(
-                f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.target_frame", "test_frame"
-            )
-            node.declare_parameter(
-                f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.source_frame", "camera_frame"
-            )
-            node.declare_parameter(
-                f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.camera_topic", "/test/camera"
-            )
-            node.declare_parameter(
-                f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.depth_topic", "/test/depth"
-            )
-            node.declare_parameter(
-                f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.camera_info_topic",
-                "/test/camera_info",
-            )
+        with (
+            patch(
+                "rai_perception.components.topic_utils.wait_for_ros2_services"
+            ) as mock_wait_services,
+            patch(
+                "rai_perception.components.topic_utils.wait_for_ros2_topics"
+            ) as mock_wait_topics,
+        ):
+            wait_for_perception_dependencies(ros2_connector, [tool])
 
-            # Create tool
-            tool = GetObjectGrippingPointsTool(connector=connector)
-            tools = [tool]
+            # Verify services were extracted and waited for
+            mock_wait_services.assert_called_once()
+            services = mock_wait_services.call_args[0][1]
+            assert len(services) == 2
+            assert tool.detection_service_name in services
+            assert tool.segmentation_service_name in services
 
-            # Mock the wait functions to verify they're called with correct values
-            with (
-                patch(
-                    "rai_perception.components.topic_utils.wait_for_ros2_services"
-                ) as mock_wait_services,
-                patch(
-                    "rai_perception.components.topic_utils.wait_for_ros2_topics"
-                ) as mock_wait_topics,
-            ):
-                wait_for_perception_dependencies(connector, tools)
-
-                # Verify services were extracted and waited for
-                mock_wait_services.assert_called_once()
-                call_args = mock_wait_services.call_args
-                assert call_args[0][0] == connector
-                services = call_args[0][1]
-                assert len(services) == 2
-                assert tool.detection_service_name in services
-                assert tool.segmentation_service_name in services
-
-                # Verify topics were extracted and waited for
-                mock_wait_topics.assert_called_once()
-                call_args = mock_wait_topics.call_args
-                assert call_args[0][0] == connector
-                topics = call_args[0][1]
-                assert len(topics) == 3
-                config = tool.get_config()
-                assert config["camera_topic"] in topics
-                assert config["depth_topic"] in topics
-                assert config["camera_info_topic"] in topics
-
-        finally:
-            rclpy.shutdown()
+            # Verify topics were extracted and waited for
+            mock_wait_topics.assert_called_once()
+            topics = mock_wait_topics.call_args[0][1]
+            assert len(topics) == 3
+            config = tool.get_config()
+            assert config["camera_topic"] in topics
+            assert config["depth_topic"] in topics
+            assert config["camera_info_topic"] in topics
 
     def test_with_tool_having_service_name_property(self):
         """Test that utility works with tools that have service_name property."""
@@ -136,79 +131,41 @@ class TestWaitForPerceptionDependencies:
         with pytest.raises(RuntimeError, match="Required perception tools not found"):
             wait_for_perception_dependencies(connector, tools)
 
-    def test_with_multiple_tools(self):
+    def test_with_multiple_tools(self, ros2_connector):
         """Test that utility works when multiple tools are present."""
-        rclpy.init()
-        try:
-            connector = ROS2Connector(executor_type="single_threaded")
-            node = connector.node
+        _setup_gripping_points_tool_params(ros2_connector.node)
+        perception_tool = GetObjectGrippingPointsTool(connector=ros2_connector)
+        tools = [Mock(spec=BaseTool), perception_tool, Mock(spec=BaseTool)]
 
-            # Set up parameters
-            node.declare_parameter(
-                f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.target_frame", "test_frame"
-            )
-            node.declare_parameter(
-                f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.source_frame", "camera_frame"
-            )
-            node.declare_parameter(
-                f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.camera_topic", "/test/camera"
-            )
-            node.declare_parameter(
-                f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.depth_topic", "/test/depth"
-            )
-            node.declare_parameter(
-                f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.camera_info_topic",
-                "/test/camera_info",
-            )
+        with (
+            patch(
+                "rai_perception.components.topic_utils.wait_for_ros2_services"
+            ) as mock_wait_services,
+            patch(
+                "rai_perception.components.topic_utils.wait_for_ros2_topics"
+            ) as mock_wait_topics,
+        ):
+            wait_for_perception_dependencies(ros2_connector, tools)
 
-            # Create perception tool and other tools
-            perception_tool = GetObjectGrippingPointsTool(connector=connector)
-            other_tool = Mock(spec=BaseTool)
-            tools = [other_tool, perception_tool, Mock(spec=BaseTool)]
-
-            # Should work - finds perception tool in the list
-            with (
-                patch(
-                    "rai_perception.components.topic_utils.wait_for_ros2_services"
-                ) as mock_wait_services,
-                patch(
-                    "rai_perception.components.topic_utils.wait_for_ros2_topics"
-                ) as mock_wait_topics,
-            ):
-                wait_for_perception_dependencies(connector, tools)
-
-                # Verify it was called
-                mock_wait_services.assert_called_once()
-                mock_wait_topics.assert_called_once()
-
-        finally:
-            rclpy.shutdown()
+            mock_wait_services.assert_called_once()
+            mock_wait_topics.assert_called_once()
 
 
 class TestDiscoverCameraTopics:
     """Test cases for discover_camera_topics utility."""
 
-    def test_discover_camera_topics(self):
+    def test_discover_camera_topics(self, ros2_connector):
         """Test camera topic discovery utility."""
-        rclpy.init()
-        try:
-            connector = ROS2Connector(executor_type="single_threaded")
+        discovered = discover_camera_topics(ros2_connector)
 
-            # Discover topics
-            discovered = discover_camera_topics(connector)
+        assert isinstance(discovered, dict)
+        assert "image_topics" in discovered
+        assert "depth_topics" in discovered
+        assert "camera_info_topics" in discovered
+        assert "all_topics" in discovered
 
-            # Verify structure
-            assert isinstance(discovered, dict)
-            assert "image_topics" in discovered
-            assert "depth_topics" in discovered
-            assert "camera_info_topics" in discovered
-            assert "all_topics" in discovered
-
-            # All should be lists
-            assert isinstance(discovered["image_topics"], list)
-            assert isinstance(discovered["depth_topics"], list)
-            assert isinstance(discovered["camera_info_topics"], list)
-            assert isinstance(discovered["all_topics"], list)
-
-        finally:
-            rclpy.shutdown()
+        # All should be lists
+        assert isinstance(discovered["image_topics"], list)
+        assert isinstance(discovered["depth_topics"], list)
+        assert isinstance(discovered["camera_info_topics"], list)
+        assert isinstance(discovered["all_topics"], list)

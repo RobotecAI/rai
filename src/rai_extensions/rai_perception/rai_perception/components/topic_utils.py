@@ -163,16 +163,26 @@ def wait_for_perception_dependencies(
         )
 
     # Wait for services
+    from rai.communication.ros2 import ROS2ServiceError
+
     try:
         wait_for_ros2_services(connector, required_services)
     except TimeoutError as e:
         available_services = [s[0] for s in connector.get_services_names_and_types()]
-        raise TimeoutError(
-            f"{str(e)}\n"
-            f"Available services: {sorted(available_services)[:10]}\n"
-            f"Expected: {required_services}\n"
-            f"Tip: Set ROS2 parameters '/detection_tool/service_name' and "
-            f"'/segmentation_tool/service_name' to match your service names."
+        missing_services = set(required_services) - set(available_services)
+        raise ROS2ServiceError(
+            service_name=", ".join(missing_services)
+            if missing_services
+            else ", ".join(required_services),
+            timeout_sec=0.0,  # wait_for_ros2_services uses default timeout
+            service_state="unavailable",
+            suggestion=(
+                f"Services not available. Available: {sorted(available_services)[:10]}. "
+                f"Expected: {required_services}. "
+                f"Set ROS2 parameters '/detection_tool/service_name' and "
+                f"'/segmentation_tool/service_name' to match your service names."
+            ),
+            underlying_error=e,
         ) from e
 
     # Wait for topics

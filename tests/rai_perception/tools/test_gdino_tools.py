@@ -16,7 +16,9 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
+import rclpy
 import sensor_msgs.msg
+from rai.communication.ros2 import ROS2ServiceError
 from rai_perception.tools.gdino_tools import (
     BoundingBox,
     DetectionData,
@@ -24,8 +26,73 @@ from rai_perception.tools.gdino_tools import (
     GetDistanceToObjectsTool,
     GroundingDinoBaseTool,
 )
+from rclpy.parameter import Parameter
+from vision_msgs.msg import (
+    BoundingBox2D,
+    Detection2D,
+    ObjectHypothesis,
+    ObjectHypothesisWithPose,
+)
 
+from rai_interfaces.msg import RAIDetectionArray
 from rai_interfaces.srv import RAIGroundingDino
+
+
+def _create_detection2d(
+    x: float, y: float, size_x: float, size_y: float, class_id: str, score: float
+):
+    """Helper to create Detection2D message with class and score."""
+    detection = Detection2D()
+    detection.bbox = BoundingBox2D()
+    detection.bbox.center.position.x = x
+    detection.bbox.center.position.y = y
+    detection.bbox.size_x = size_x
+    detection.bbox.size_y = size_y
+    detection.results = [ObjectHypothesisWithPose()]
+    detection.results[0].hypothesis = ObjectHypothesis()
+    detection.results[0].hypothesis.class_id = class_id
+    detection.results[0].hypothesis.score = score
+    return detection
+
+
+def _create_detection_response(*detections):
+    """Helper to create RAIGroundingDino.Response with detections."""
+    response = RAIGroundingDino.Response()
+    response.detections = RAIDetectionArray()
+    response.detections.detections = list(detections)
+    return response
+
+
+def _setup_mock_service_client(mock_connector, available: bool = True):
+    """Helper to set up mock service client."""
+    mock_client = MagicMock()
+    mock_client.wait_for_service.return_value = available
+    mock_client.call_async.return_value = MagicMock()
+    mock_connector.node.create_client.return_value = mock_client
+    return mock_client
+
+
+def _setup_distance_tool_params(mock_connector):
+    """Helper to set up distance tool parameters."""
+    mock_connector.node.set_parameters(
+        [
+            Parameter(
+                "perception.distance_to_objects.outlier_sigma_threshold",
+                rclpy.parameter.Parameter.Type.DOUBLE,
+                1.0,
+            ),
+            Parameter(
+                "perception.distance_to_objects.conversion_ratio",
+                rclpy.parameter.Parameter.Type.DOUBLE,
+                0.001,
+            ),
+        ]
+    )
+
+
+def _create_depth_array(shape=(200, 200), depth_mm: int = 1000):
+    """Helper to create depth image array."""
+    return np.ones(shape, dtype=np.uint16) * depth_mm
 
 
 # Create a concrete test subclass for GroundingDinoBaseTool
@@ -75,19 +142,8 @@ class TestGroundingDinoBaseTool:
 
         assert result == image_msg
 
-    def test_get_detection_service_name_default(self, base_tool, mock_connector):
-        """Test _get_detection_service_name returns default when parameter not set."""
-        # Parameter not set, so get_parameter will raise ParameterNotDeclaredException
-        # which is already handled by the mock_connector fixture
-        service_name = base_tool._get_detection_service_name()
-        assert service_name == "/detection"
-
     def test_get_detection_service_name_from_param(self, base_tool, mock_connector):
         """Test _get_detection_service_name reads from ROS2 parameter."""
-        import rclpy
-        from rclpy.parameter import Parameter
-
-        # Set the parameter
         mock_connector.node.set_parameters(
             [
                 Parameter(
@@ -104,11 +160,8 @@ class TestGroundingDinoBaseTool:
     def test_call_gdino_node(self, base_tool, mock_connector):
         """Test _call_gdino_node creates service call."""
         image_msg = sensor_msgs.msg.Image()
-        mock_client = MagicMock()
-        mock_client.wait_for_service.return_value = True
-        mock_connector.node.create_client.return_value = mock_client
+        mock_client = _setup_mock_service_client(mock_connector)
 
-        # Parameter not set, so will use default service name
         future = base_tool._call_gdino_node(image_msg, ["dinosaur", "dragon"])
 
         assert future is not None
@@ -118,41 +171,9 @@ class TestGroundingDinoBaseTool:
 
     def test_parse_detection_array(self, base_tool):
         """Test _parse_detection_array converts response correctly."""
-        response = RAIGroundingDino.Response()
-
-        from vision_msgs.msg import (
-            BoundingBox2D,
-            Detection2D,
-            ObjectHypothesis,
-            ObjectHypothesisWithPose,
-        )
-
-        from rai_interfaces.msg import RAIDetectionArray
-
-        detection1 = Detection2D()
-        detection1.bbox = BoundingBox2D()
-        detection1.bbox.center.position.x = 50.0
-        detection1.bbox.center.position.y = 50.0
-        detection1.bbox.size_x = 40.0
-        detection1.bbox.size_y = 40.0
-        detection1.results = [ObjectHypothesisWithPose()]
-        detection1.results[0].hypothesis = ObjectHypothesis()
-        detection1.results[0].hypothesis.class_id = "dinosaur"
-        detection1.results[0].hypothesis.score = 0.9
-
-        detection2 = Detection2D()
-        detection2.bbox = BoundingBox2D()
-        detection2.bbox.center.position.x = 100.0
-        detection2.bbox.center.position.y = 100.0
-        detection2.bbox.size_x = 30.0
-        detection2.bbox.size_y = 30.0
-        detection2.results = [ObjectHypothesisWithPose()]
-        detection2.results[0].hypothesis = ObjectHypothesis()
-        detection2.results[0].hypothesis.class_id = "dragon"
-        detection2.results[0].hypothesis.score = 0.8
-
-        response.detections = RAIDetectionArray()
-        response.detections.detections = [detection1, detection2]
+        detection1 = _create_detection2d(50.0, 50.0, 40.0, 40.0, "dinosaur", 0.9)
+        detection2 = _create_detection2d(100.0, 100.0, 30.0, 30.0, "dragon", 0.8)
+        response = _create_detection_response(detection1, detection2)
 
         result = base_tool._parse_detection_array(response)
 
@@ -178,37 +199,10 @@ class TestGetDetectionTool:
         """Test GetDetectionTool._run with successful detection."""
         image_msg = sensor_msgs.msg.Image()
         mock_connector.receive_message.return_value.payload = image_msg
+        _setup_mock_service_client(mock_connector)
 
-        mock_client = MagicMock()
-        mock_client.wait_for_service.return_value = True
-        mock_connector.node.create_client.return_value = mock_client
-
-        mock_future = MagicMock()
-        mock_client.call_async.return_value = mock_future
-
-        # Parameter not set, so will use default service name
-
-        response = RAIGroundingDino.Response()
-        from vision_msgs.msg import (
-            BoundingBox2D,
-            Detection2D,
-            ObjectHypothesis,
-            ObjectHypothesisWithPose,
-        )
-
-        from rai_interfaces.msg import RAIDetectionArray
-
-        detection = Detection2D()
-        detection.bbox = BoundingBox2D()
-        detection.bbox.center.position.x = 50.0
-        detection.bbox.center.position.y = 50.0
-        detection.results = [ObjectHypothesisWithPose()]
-        detection.results[0].hypothesis = ObjectHypothesis()
-        detection.results[0].hypothesis.class_id = "dinosaur"
-        detection.results[0].hypothesis.score = 0.9
-
-        response.detections = RAIDetectionArray()
-        response.detections.detections = [detection]
+        detection = _create_detection2d(50.0, 50.0, 40.0, 40.0, "dinosaur", 0.9)
+        response = _create_detection_response(detection)
 
         with patch(
             "rai_perception.tools.gdino_tools.get_future_result",
@@ -255,9 +249,6 @@ class TestGetDistanceToObjectsTool:
 
     def test_get_distance_tool_run(self, distance_tool, mock_connector):
         """Test GetDistanceToObjectsTool._run."""
-        import rclpy
-        from rclpy.parameter import Parameter
-
         image_msg = sensor_msgs.msg.Image()
         depth_msg = sensor_msgs.msg.Image()
         mock_connector.receive_message.side_effect = [
@@ -265,57 +256,13 @@ class TestGetDistanceToObjectsTool:
             MagicMock(payload=depth_msg),
         ]
 
-        mock_client = MagicMock()
-        mock_client.wait_for_service.return_value = True
-        mock_connector.node.create_client.return_value = mock_client
-
-        # Set ROS2 parameters with prefix
-        mock_connector.node.set_parameters(
-            [
-                Parameter(
-                    "perception.distance_to_objects.outlier_sigma_threshold",
-                    rclpy.parameter.Parameter.Type.DOUBLE,
-                    1.0,
-                ),
-                Parameter(
-                    "perception.distance_to_objects.conversion_ratio",
-                    rclpy.parameter.Parameter.Type.DOUBLE,
-                    0.001,
-                ),
-            ]
-        )
-
-        # Load parameters (model_construct doesn't call model_post_init)
+        _setup_mock_service_client(mock_connector)
+        _setup_distance_tool_params(mock_connector)
         distance_tool._load_parameters()
 
-        # Service name parameter not set, so will use default
-        # Other parameters are already set via set_parameters above
-
-        response = RAIGroundingDino.Response()
-        from vision_msgs.msg import (
-            BoundingBox2D,
-            Detection2D,
-            ObjectHypothesis,
-            ObjectHypothesisWithPose,
-        )
-
-        from rai_interfaces.msg import RAIDetectionArray
-
-        detection = Detection2D()
-        detection.bbox = BoundingBox2D()
-        detection.bbox.center.position.x = 50.0
-        detection.bbox.center.position.y = 50.0
-        detection.bbox.size_x = 40.0
-        detection.bbox.size_y = 40.0
-        detection.results = [ObjectHypothesisWithPose()]
-        detection.results[0].hypothesis = ObjectHypothesis()
-        detection.results[0].hypothesis.class_id = "dinosaur"
-        detection.results[0].hypothesis.score = 0.9
-
-        response.detections = RAIDetectionArray()
-        response.detections.detections = [detection]
-
-        depth_arr = np.ones((200, 200), dtype=np.uint16) * 1000
+        detection = _create_detection2d(50.0, 50.0, 40.0, 40.0, "dinosaur", 0.9)
+        response = _create_detection_response(detection)
+        depth_arr = _create_depth_array()
 
         with (
             patch(
@@ -332,3 +279,30 @@ class TestGetDistanceToObjectsTool:
             assert "detected" in result.lower()
             assert "dinosaur" in result
             assert "away" in result
+
+    def test_get_distance_tool_service_call_failure(
+        self, distance_tool, mock_connector
+    ):
+        """Test GetDistanceToObjectsTool raises ROS2ServiceError when service call fails."""
+        image_msg = sensor_msgs.msg.Image()
+        depth_msg = sensor_msgs.msg.Image()
+        mock_connector.receive_message.side_effect = [
+            MagicMock(payload=image_msg),
+            MagicMock(payload=depth_msg),
+        ]
+
+        _setup_mock_service_client(mock_connector)
+        _setup_distance_tool_params(mock_connector)
+        distance_tool._load_parameters()
+
+        with patch(
+            "rai_perception.tools.gdino_tools.get_future_result",
+            return_value=None,
+        ):
+            with pytest.raises(ROS2ServiceError) as exc_info:
+                distance_tool._run("camera_topic", "depth_topic", ["dinosaur"])
+
+        assert exc_info.value.service_name == "/detection"
+        assert exc_info.value.timeout_sec == 5.0
+        assert exc_info.value.service_state == "call_failed"
+        assert "Service call timed out" in exc_info.value.suggestion

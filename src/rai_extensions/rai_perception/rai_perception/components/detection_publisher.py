@@ -28,7 +28,7 @@ from typing import Dict, List, Optional, Tuple
 import rclpy
 import yaml
 from cv_bridge import CvBridge
-from rai.communication.ros2 import ROS2Connector
+from rai.communication.ros2 import ROS2Connector, ROS2ServiceError
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import CameraInfo, Image
@@ -36,6 +36,9 @@ from sensor_msgs.msg import CameraInfo, Image
 from rai_interfaces.msg import RAIDetectionArray
 from rai_interfaces.srv import RAIGroundingDino
 from rai_perception.components.perception_utils import enhance_detection_with_3d_pose
+from rai_perception.components.service_utils import (
+    check_service_available,
+)
 
 
 class DetectionPublisher:
@@ -290,25 +293,26 @@ class DetectionPublisher:
     def _initialize_clients(self):
         """Initialize service clients.
 
-        Note: We use self.connector.node.create_client() directly instead of ROS2Connector's
-        service_call() because we need async service calls (call_async) for non-blocking
-        detection processing. The connector's service_call() is synchronous and designed
-        for the connector's message wrapper system.
+        Note: We use create_service_client from service_utils but create the client
+        without waiting during initialization. The client supports async service calls
+        (call_async) for non-blocking detection processing.
         """
         dino_service = self._get_string_parameter("dino_service")
+        self.connector.node.get_logger().info(
+            f"Checking DINO service availability: {dino_service}"
+        )
+        # Check availability without blocking during initialization
+        if check_service_available(self.connector, dino_service, timeout_sec=0.1):
+            self.connector.node.get_logger().info(f"DINO service ready: {dino_service}")
+        else:
+            self.connector.node.get_logger().warning(
+                f"DINO service not available: {dino_service}. "
+                "Will check again before use."
+            )
+        # Create client without waiting - _process_image() will ensure it's ready
         self.dino_client = self.connector.node.create_client(
             RAIGroundingDino, dino_service
         )
-        self.connector.node.get_logger().info(
-            f"Waiting for DINO service: {dino_service}"
-        )
-        # Use short timeout - _process_image() will check again before actual use
-        if not self.dino_client.wait_for_service(timeout_sec=0.1):
-            self.connector.node.get_logger().warning(
-                f"DINO service not available: {dino_service}"
-            )
-        else:
-            self.connector.node.get_logger().info(f"DINO service ready: {dino_service}")
 
     def _initialize_subscriptions(self):
         """Initialize ROS2 subscriptions."""
@@ -396,11 +400,15 @@ class DetectionPublisher:
 
     def _process_image(self, image_msg: Image):
         """Call DINO service and publish detections."""
-        if not self.dino_client.wait_for_service(timeout_sec=0.1):
-            self.connector.node.get_logger().warning(
-                "DINO service not ready, skipping detection"
+        dino_service = self._get_string_parameter("dino_service")
+        # Ensure service is available before use
+        if not check_service_available(self.connector, dino_service, timeout_sec=0.1):
+            raise ROS2ServiceError(
+                service_name=dino_service,
+                timeout_sec=0.1,
+                service_state="unavailable",
+                suggestion="DINO service not ready. Check if detection service is running.",
             )
-            return
 
         detection_classes_str = self._get_string_parameter("detection_classes")
         class_names, class_thresholds = self._parse_detection_classes(
