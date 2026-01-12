@@ -75,20 +75,51 @@ class SegmentationService(BaseVisionService):
 
     def _segment_callback(self, request, response: RAIGroundedSam.Response):
         """Handle segmentation service requests."""
-        received_boxes = []
-        for detection in request.detections.detections:
-            received_boxes.append(detection.bbox)
+        try:
+            # Validate image
+            image_data_size = (
+                len(request.source_img.data) if request.source_img.data else 0
+            )
 
-        image = request.source_img
+            if not request.source_img.data or image_data_size == 0:
+                self.logger.error("Received empty image data in segmentation request")
+                response.masks = []
+                return response
 
-        assert self._segmenter is not None
-        masks = self._segmenter.get_segmentation(image, received_boxes)
-        img_arr = []
-        for mask in masks:
-            if len(mask.shape) > 2:
-                mask = np.squeeze(mask)
-            arr = (mask * 255).astype(np.uint8)
-            img_arr.append(self._bridge.cv2_to_imgmsg(arr, encoding="mono8"))
+            # Validate detections
+            num_detections = (
+                len(request.detections.detections)
+                if request.detections.detections
+                else 0
+            )
 
-        response.masks = img_arr
+            if num_detections == 0:
+                self.logger.warning("Received empty detections in segmentation request")
+                response.masks = []
+                return response
+
+            received_boxes = []
+            for detection in request.detections.detections:
+                received_boxes.append(detection.bbox)
+
+            image = request.source_img
+
+            assert self._segmenter is not None
+            masks = self._segmenter.get_segmentation(image, received_boxes)
+
+            img_arr = []
+            for mask in masks:
+                if len(mask.shape) > 2:
+                    mask = np.squeeze(mask)
+                arr = (mask * 255).astype(np.uint8)
+                img_arr.append(self._bridge.cv2_to_imgmsg(arr, encoding="mono8"))
+
+            response.masks = img_arr
+
+        except Exception as e:
+            self.logger.error(
+                f"Error processing segmentation request: {e}", exc_info=True
+            )
+            response.masks = []
+
         return response

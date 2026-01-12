@@ -70,27 +70,44 @@ class DetectionService(BaseVisionService):
 
     def _classify_callback(self, request, response: RAIDetectionArray):
         """Handle detection service requests."""
-        self.logger.info(
-            f"Request received: {request.classes}, {request.box_threshold}, {request.text_threshold}"
-        )
+        try:
+            # Validate image
+            image_data_size = (
+                len(request.source_img.data) if request.source_img.data else 0
+            )
 
-        class_array = request.classes.split(",")
-        class_array = [class_name.strip() for class_name in class_array]
-        class_dict = {class_name: i for i, class_name in enumerate(class_array)}
+            if not request.source_img.data or image_data_size == 0:
+                self.logger.error("Received empty image data in detection request")
+                ts = self.ros2_connector.node.get_clock().now().to_msg()
+                response.detections.detections = []  # type: ignore
+                response.detections.header.stamp = ts  # type: ignore
+                response.detections.detection_classes = []  # type: ignore
+                return response
 
-        boxes = self._boxer.get_boxes(
-            request.source_img,
-            class_array,
-            request.box_threshold,
-            request.text_threshold,
-        )
+            class_array = request.classes.split(",")
+            class_array = [class_name.strip() for class_name in class_array]
+            class_dict = {class_name: i for i, class_name in enumerate(class_array)}
 
-        ts = self.ros2_connector.node.get_clock().now().to_msg()
-        response.detections.detections = [  # type: ignore
-            box.to_detection_msg(class_dict, ts)
-            for box in boxes  # type: ignore
-        ]
-        response.detections.header.stamp = ts  # type: ignore
-        response.detections.detection_classes = class_array  # type: ignore
+            boxes = self._boxer.get_boxes(
+                request.source_img,
+                class_array,
+                request.box_threshold,
+                request.text_threshold,
+            )
+
+            ts = self.ros2_connector.node.get_clock().now().to_msg()
+            response.detections.detections = [  # type: ignore
+                box.to_detection_msg(class_dict, ts)
+                for box in boxes  # type: ignore
+            ]
+            response.detections.header.stamp = ts  # type: ignore
+            response.detections.detection_classes = class_array  # type: ignore
+
+        except Exception as e:
+            self.logger.error(f"Error processing detection request: {e}", exc_info=True)
+            ts = self.ros2_connector.node.get_clock().now().to_msg()
+            response.detections.detections = []  # type: ignore
+            response.detections.header.stamp = ts  # type: ignore
+            response.detections.detection_classes = []  # type: ignore
 
         return response

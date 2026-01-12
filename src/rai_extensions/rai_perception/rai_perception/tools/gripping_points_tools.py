@@ -17,7 +17,6 @@ import time
 from typing import Any, Callable, Dict, Optional, Type
 
 import numpy as np
-from geometry_msgs.msg import Point32
 from pydantic import BaseModel, Field
 from rai.tools.ros2.base import BaseROS2Tool
 from rai.tools.timeout import RaiTimeoutError, timeout
@@ -25,7 +24,8 @@ from rclpy.exceptions import (
     ParameterNotDeclaredException,
     ParameterUninitializedException,
 )
-from sensor_msgs.msg import PointCloud
+from sensor_msgs.msg import PointCloud2
+from sensor_msgs_py import point_cloud2
 
 from rai_perception.components.gripping_points import (
     GrippingPointEstimator,
@@ -653,18 +653,16 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
         )
 
         all_points = np.concatenate(point_clouds, axis=0)
-        msg = PointCloud()
-        self._set_point_cloud_header(msg)
-        msg.points = [
-            Point32(x=float(p[0]), y=float(p[1]), z=float(p[2])) for p in all_points
-        ]
+        msg = point_cloud2.create_cloud_xyz32(
+            self._create_point_cloud2_header(), all_points
+        )
 
-        pub = self.connector.node.create_publisher(PointCloud, topic_name, 10)
+        pub = self.connector.node.create_publisher(PointCloud2, topic_name, 10)
         sleep_duration = 1.0 / DEBUG_PUBLISH_RATE_HZ
         start_time = time.time()
 
         while time.time() - start_time < publish_duration:
-            self._update_point_cloud_header(msg)
+            msg.header.stamp = self.connector.node.get_clock().now().to_msg()
             pub.publish(msg)
             time.sleep(sleep_duration)
 
@@ -692,11 +690,11 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
             publish_duration=publish_duration,
         )
 
-    def _set_point_cloud_header(self, msg: PointCloud) -> None:
-        """Set initial header for PointCloud message."""
-        msg.header.frame_id = self.target_frame
-        msg.header.stamp = self.connector.node.get_clock().now().to_msg()
+    def _create_point_cloud2_header(self):
+        """Create header for PointCloud2 message."""
+        from std_msgs.msg import Header
 
-    def _update_point_cloud_header(self, msg: PointCloud) -> None:
-        """Update timestamp in PointCloud message header."""
-        msg.header.stamp = self.connector.node.get_clock().now().to_msg()
+        header = Header()
+        header.frame_id = self.target_frame
+        header.stamp = self.connector.node.get_clock().now().to_msg()
+        return header

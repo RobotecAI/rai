@@ -26,6 +26,11 @@ from .gripping_points import (
     PointCloudFromSegmentationConfig,
 )
 from .perception_presets import apply_preset, get_preset, list_presets
+from .visualization_utils import (
+    draw_gripping_points_on_image,
+    save_gripping_points_annotated_image,
+    transform_points_between_frames,
+)
 
 __all__ = [
     "GrippingPointEstimator",
@@ -38,6 +43,9 @@ __all__ = [
     "PointCloudFromSegmentation",
     "PointCloudFromSegmentationConfig",
     "apply_preset",
+    "draw_gripping_points_on_image",
     "get_preset",
     "list_presets",
+    "save_gripping_points_annotated_image",
+    "transform_points_between_frames",
 ]

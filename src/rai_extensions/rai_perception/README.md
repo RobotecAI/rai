@@ -214,7 +214,92 @@ I have detected the following items in the picture desk: 2.43m away
 
 ### Debug Mode
 
-Tools like `GetObjectGrippingPointsTool` support an optional `debug` parameter that enables progressive evaluation and debugging. When `debug=True`, the tool publishes intermediate pipeline results to ROS2 topics for visualization in RVIZ and logs detailed stage information including point counts and timing. This allows you to inspect individual pipeline stages (point cloud extraction, filtering, estimation) without running the full pipeline. Topics published include `/debug/gripping_points/raw_point_clouds` and `/debug/gripping_points/filtered_point_clouds`. Note that debug mode adds computational overhead and is not suitable for production use.
+Tools like `GetObjectGrippingPointsTool` support an optional `debug` parameter that enables progressive evaluation and debugging. When `debug=True`, the tool publishes intermediate pipeline results to ROS2 topics for visualization in RViz2 and logs detailed stage information including point counts and timing. This allows you to inspect individual pipeline stages (point cloud extraction, filtering, estimation) without running the full pipeline.
+
+**Debug Topics Published:**
+
+-   `/debug/gripping_points/raw_point_clouds` (PointCloud2) - Raw point clouds from segmentation stage
+-   `/debug/gripping_points/filtered_point_clouds` (PointCloud2) - Filtered point clouds after outlier removal
+-   `/debug_gripping_points_pointcloud` (PointCloud2) - Final object point cloud
+-   `/debug_gripping_points_markerarray` (MarkerArray) - Gripping points as red sphere markers
+
+> [!WARNING]
+> Debug mode adds computational overhead and network traffic. It is not suitable for production use. Debug topics publish for 5 seconds after each detection.
+
+#### Visualizing Gripping Points in RViz2 with Manipulation Demo
+
+> [!NOTE]
+> The manipulation demo must be started before running the debug visualization. Launch the demo using:
+>
+> ```bash
+> ros2 launch examples/manipulation-demo.launch.py game_launcher:=demo_assets/manipulation/RAIManipulationDemo/RAIManipulationDemo.GameLauncher
+> ```
+
+To debug gripping point locations using the manipulation demo:
+
+Step 1: Enable debug mode by modifying `examples/manipulation-demo.py` to pass `debug=True` when the tool is called, or call the tool directly:
+
+```python
+import rclpy
+from rai_perception import GetObjectGrippingPointsTool
+from rai.communication.ros2 import ROS2Connector
+from rai_perception.tools.gripping_points_tools import GRIPPING_POINTS_TOOL_PARAM_PREFIX
+
+rclpy.init()
+connector = ROS2Connector(executor_type="single_threaded")
+node = connector.node
+
+# Set ROS2 parameters to match your robot/simulation setup
+node.declare_parameter(
+    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.camera_topic", "/color_image5"
+)
+node.declare_parameter(
+    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.depth_topic", "/depth_image5"
+)
+node.declare_parameter(
+    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.camera_info_topic", "/color_camera_info5"
+)
+node.declare_parameter(
+    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.target_frame", "panda_link0"
+)
+node.declare_parameter(
+    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.source_frame", "RGBDCamera5"
+)
+
+tool = GetObjectGrippingPointsTool(connector=connector)
+result = tool._run(object_name="box", debug=True)
+```
+
+Alternatively, you can use the integration test which performs similar setup and includes additional visualization features:
+
+```bash
+# Run the integration test with debug mode enabled
+pytest tests/rai_perception/components/test_gripping_points_integration.py::test_gripping_points_manipulation_demo -m "manual" -s -v --grasp default_grasp
+```
+
+The test requires the manipulation demo to be running and will:
+
+-   Detect gripping points for the specified object
+-   Publish debug data to ROS2 topics for RViz2 visualization
+-   Save an annotated image showing gripping points projected onto the camera view
+
+Step 2: Launch RViz2 in a separate terminal:
+
+```bash
+rviz2
+```
+
+Step 3: In RViz2, configure the visualization:
+
+1. Set Fixed Frame to your target frame (default: `panda_link0` for manipulation demo)
+2. Add MarkerArray display (essential):
+    - `/debug_gripping_points_markerarray` (gripping points as red spheres, 0.04m radius)
+3. Optionally add PointCloud2 displays for pipeline debugging:
+    - `/debug/gripping_points/raw_point_clouds` (raw point clouds from stage 1)
+    - `/debug/gripping_points/filtered_point_clouds` (filtered point clouds from stage 2)
+    - `/debug_gripping_points_pointcloud` (final object points)
+
+Step 4: Trigger gripping point detection through the manipulation demo or tool call. The debug topics will publish for 5 seconds, showing the pipeline stages and final gripping point locations.
 
 <!--- --8<-- [end:sec3] -->
 
