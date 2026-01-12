@@ -57,7 +57,7 @@ manipulation techniques.
     ```
 
     Alternatively, you can run the simpler command-line version, which also serves as an example of
-    how to use the RAI API for you own applications:
+    how to use the RAI API for your own applications:
 
     1. Run Simulation
 
