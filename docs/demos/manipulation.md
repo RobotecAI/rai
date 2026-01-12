@@ -75,7 +75,7 @@ manipulation techniques.
 
     ```
     "Place every apple on top of the cube"
-    "Stack all cubes into a tower"
+    "Build a tower from cubes"
     "Arrange objects in a line"
     "Put two boxes closer to each other. Move only one box."
     "Move cubes to the left side of the table"
