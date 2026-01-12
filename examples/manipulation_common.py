@@ -23,6 +23,7 @@ from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2.manipulation import (
     GetObjectPositionsTool,
     MoveObjectFromToTool,
+    ResetArmTool,
 )
 from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
 from rai_perception.tools import GetGrabbingPointTool
@@ -53,6 +54,7 @@ def create_agent():
             get_grabbing_point_tool=GetGrabbingPointTool(connector=connector),
         ),
         MoveObjectFromToTool(connector=connector, manipulator_frame="panda_link0"),
+        ResetArmTool(connector=connector, manipulator_frame="panda_link0"),
         camera_tool,
     ]
 
