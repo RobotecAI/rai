@@ -23,7 +23,7 @@ from typing import Optional
 
 from rai.communication.ros2 import ROS2Connector
 
-from rai_interfaces.msg import RAIDetectionArray
+from rai_interfaces.srv import RAIGroundingDino
 from rai_perception.models.detection import get_model
 from rai_perception.services.base_vision_service import BaseVisionService
 
@@ -68,9 +68,13 @@ class DetectionService(BaseVisionService):
             "Detection",
         )
 
-    def _classify_callback(self, request, response: RAIDetectionArray):
+    def _classify_callback(self, request, response: RAIGroundingDino.Response):
         """Handle detection service requests."""
         try:
+            # Parse classes first (needed even if image is empty)
+            class_array = request.classes.split(",")
+            class_array = [class_name.strip() for class_name in class_array]
+
             # Validate image
             image_data_size = (
                 len(request.source_img.data) if request.source_img.data else 0
@@ -81,12 +85,13 @@ class DetectionService(BaseVisionService):
                 ts = self.ros2_connector.node.get_clock().now().to_msg()
                 response.detections.detections = []  # type: ignore
                 response.detections.header.stamp = ts  # type: ignore
-                response.detections.detection_classes = []  # type: ignore
+                response.detections.detection_classes = class_array  # type: ignore
                 return response
 
-            class_array = request.classes.split(",")
-            class_array = [class_name.strip() for class_name in class_array]
             class_dict = {class_name: i for i, class_name in enumerate(class_array)}
+
+            if self._boxer is None:
+                raise RuntimeError("Detection model not initialized")
 
             boxes = self._boxer.get_boxes(
                 request.source_img,
@@ -95,19 +100,34 @@ class DetectionService(BaseVisionService):
                 request.text_threshold,
             )
 
+            if boxes is None:
+                boxes = []
+
             ts = self.ros2_connector.node.get_clock().now().to_msg()
-            response.detections.detections = [  # type: ignore
-                box.to_detection_msg(class_dict, ts)
-                for box in boxes  # type: ignore
-            ]
+            detections_list = []
+            for box in boxes:
+                try:
+                    detections_list.append(box.to_detection_msg(class_dict, ts))
+                except Exception as box_error:
+                    self.logger.error(
+                        f"Error converting box to detection message: {box_error}",
+                        exc_info=True,
+                    )
+            response.detections.detections = detections_list  # type: ignore
             response.detections.header.stamp = ts  # type: ignore
             response.detections.detection_classes = class_array  # type: ignore
 
         except Exception as e:
             self.logger.error(f"Error processing detection request: {e}", exc_info=True)
             ts = self.ros2_connector.node.get_clock().now().to_msg()
+            # Try to preserve requested classes even on error
+            try:
+                class_array = request.classes.split(",")
+                class_array = [class_name.strip() for class_name in class_array]
+            except Exception:
+                class_array = []
             response.detections.detections = []  # type: ignore
             response.detections.header.stamp = ts  # type: ignore
-            response.detections.detection_classes = []  # type: ignore
+            response.detections.detection_classes = class_array  # type: ignore
 
         return response

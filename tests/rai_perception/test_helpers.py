@@ -284,6 +284,12 @@ def create_detection_request(
 
     request = RAIGroundingDino.Request()
     request.source_img = Image()
+    # Add minimal image data to pass validation (100x100 RGB image)
+    request.source_img.width = 100
+    request.source_img.height = 100
+    request.source_img.encoding = "rgb8"
+    # Use bytes for ROS2 Image.data field
+    request.source_img.data = bytes([0] * (100 * 100 * 3))  # 3 bytes per pixel
     request.classes = classes
     request.box_threshold = box_threshold
     request.text_threshold = text_threshold
@@ -306,6 +312,12 @@ def create_segmentation_request(detections=None):
 
     request = RAIGroundedSam.Request()
     request.source_img = Image()
+    # Add minimal image data to pass validation (100x100 RGB image)
+    request.source_img.width = 100
+    request.source_img.height = 100
+    request.source_img.encoding = "rgb8"
+    # Use bytes for ROS2 Image.data field
+    request.source_img.data = bytes([0] * (100 * 100 * 3))  # 3 bytes per pixel
     request.detections = RAIDetectionArray()
     request.detections.detections = detections or []
     return request
