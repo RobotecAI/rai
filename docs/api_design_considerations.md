@@ -121,7 +121,7 @@ RAI could be among the first to empirically study how LLM agents navigate tiered
 
 A tiered API structure could organize code into three abstraction levels to support progressive disclosure and reduce cognitive load. This pattern might apply across RAI extensions (perception, navigation, manipulation, etc.).
 
-_Note:_ The `rai_perception` extension has implemented a tiered API structure as an exploration of these design principles. See [`rai_perception/rethinking_usability.md`](../../src/rai_extensions/rai_perception/rethinking_usability.md) for detailed analysis and implementation examples.
+_Note:_ The `rai_perception` extension has implemented a tiered API structure as an exploration of these design principles. See [`rethinking_usability.md`](extensions/rethinking_usability.md) for detailed analysis and implementation examples.
 
 ### Three-Tier Structure
 
