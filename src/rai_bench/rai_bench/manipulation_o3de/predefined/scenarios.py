@@ -64,7 +64,6 @@ SCENE_CONFIG_PATHS: Dict[str, List[str]] = {
     "hard": [
         CONFIGS_DIR + "3carrots_1a_1t_2bc_2yc.yaml",
         CONFIGS_DIR + "1carrot_1a_2t_1bc_1rc_3yc_stacked.yaml",
-        CONFIGS_DIR + "1carrot_3a_1bc_1rc_3yc_stacked.yaml",
         CONFIGS_DIR + "2carrots_1a_1t_1bc_1rc_1yc_1corn.yaml",
         CONFIGS_DIR + "2rc_3bc_4yc_stacked.yaml",
         CONFIGS_DIR + "2t_3a_1corn_2rc.yaml",
