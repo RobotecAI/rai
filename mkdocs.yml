@@ -1,6 +1,13 @@
 site_name: RAI documentation
 theme:
   name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
   features:
     - navigation.sections
     - navigation.expand
