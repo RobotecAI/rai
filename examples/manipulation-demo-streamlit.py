@@ -90,7 +90,7 @@ def initialize_o3de(scenario_path: str, o3de_config_path: str):
         scene_config=scene_config,
         scene_config_path=scenario_path,
     )
-    o3de = O3DEngineArmManipulationBridge(ROS2Connector("multi_threaded"))
+    o3de = O3DEngineArmManipulationBridge(ROS2Connector(executor_type="multi_threaded"))
 
     # Clear scene at the beginning
     o3de.init_simulation(simulation_config=simulation_config)
