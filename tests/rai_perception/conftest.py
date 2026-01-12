@@ -19,6 +19,16 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
+def pytest_addoption(parser):
+    """Add custom command line options."""
+    parser.addoption(
+        "--grasp",
+        action="store",
+        default="default_grasp",
+        help="Grasp preset configuration: default_grasp, precise_grasp, or top_grasp",
+    )
+
+
 def pytest_configure(config):
     """Configure pytest to suppress deprecation warnings for deprecated agent classes."""
     config.addinivalue_line(
@@ -49,6 +59,12 @@ def pytest_configure(config):
         "filterwarnings",
         "ignore:rai_perception.vision_markup is deprecated:DeprecationWarning",
     )
+
+
+@pytest.fixture
+def grasp(request):
+    """Fixture to get grasp preset from command line."""
+    return request.config.getoption("--grasp")
 
 
 @pytest.fixture

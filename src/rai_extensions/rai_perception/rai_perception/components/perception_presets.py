@@ -53,6 +53,7 @@ _PRESETS: Dict[PresetName, Dict[str, Any]] = {
         },
         "estimator_config": {
             "strategy": "centroid",
+            # Following params are unused by centroid strategy but included for config consistency
             "ransac_iterations": 200,
             "distance_threshold_m": 0.01,
             "min_points": 10,
@@ -68,6 +69,7 @@ _PRESETS: Dict[PresetName, Dict[str, Any]] = {
         },
         "estimator_config": {
             "strategy": "top_plane",
+            # Following params are unused by top_plane strategy but included for config consistency
             "ransac_iterations": 500,
             "distance_threshold_m": 0.005,
         },
@@ -82,6 +84,7 @@ _PRESETS: Dict[PresetName, Dict[str, Any]] = {
         "estimator_config": {
             "strategy": "top_plane",
             "top_percentile": 0.05,
+            # ransac_iterations is unused by top_plane strategy but included for config consistency
             "ransac_iterations": 300,
         },
     },

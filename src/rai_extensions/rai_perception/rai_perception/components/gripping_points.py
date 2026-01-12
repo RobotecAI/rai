@@ -180,8 +180,9 @@ def _publish_gripping_point_debug_data(
         publish_duration: Duration in seconds to publish the data (default: 10.0).
     """
 
-    from geometry_msgs.msg import Point, Point32, Pose, Vector3
-    from sensor_msgs.msg import PointCloud
+    from geometry_msgs.msg import Point, Pose, Vector3
+    from sensor_msgs.msg import PointCloud2
+    from sensor_msgs_py import point_cloud2
     from std_msgs.msg import Header
     from visualization_msgs.msg import Marker, MarkerArray
 
@@ -199,11 +200,12 @@ def _publish_gripping_point_debug_data(
         else np.zeros((0, 3), dtype=np.float32)
     )
 
-    msg = PointCloud()  # type: ignore[reportUnknownArgumentType]
-    msg.header.frame_id = base_frame_id  # type: ignore[reportUnknownMemberType]
-    msg.points = [Point32(x=float(p[0]), y=float(p[1]), z=float(p[2])) for p in points]  # type: ignore[reportUnknownArgumentType]
+    header = Header()
+    header.frame_id = base_frame_id
+    header.stamp = connector.node.get_clock().now().to_msg()
+    msg = point_cloud2.create_cloud_xyz32(header, points)
     pub = connector.node.create_publisher(  # type: ignore[reportUnknownMemberType]
-        PointCloud, debug_gripping_points_pointcloud_topic, 10
+        PointCloud2, debug_gripping_points_pointcloud_topic, 10
     )
 
     marker_pub = connector.node.create_publisher(  # type: ignore[reportUnknownMemberType]
@@ -379,6 +381,7 @@ class PointCloudFromSegmentation:
     # --------------------- Public API ---------------------
     def run(self, object_name: str) -> list[NDArray[np.float32]]:
         """Return Nx3 numpy array [X, Y, Z] of the object's masked point cloud in target frame."""
+        logger = self.connector.node.get_logger()
 
         camera_img_msg = self._get_image_message(self.camera_topic)
         depth_msg = self.connector.receive_message(self.depth_topic).payload
@@ -387,21 +390,28 @@ class PointCloudFromSegmentation:
         fx, fy, cx, cy = self._get_intrinsic_from_camera_info(camera_info)
 
         gdino_future = self._call_gdino_node(camera_img_msg, object_name)
-
         gdino_resolved = get_future_result(gdino_future)
         if gdino_resolved is None:
+            logger.warning("Detection service returned None")
             return []
 
         gsam_future = self._call_gsam_node(camera_img_msg, gdino_resolved)
         gsam_resolved = get_future_result(gsam_future)
-        if gsam_resolved is None or len(gsam_resolved.masks) == 0:
+        if gsam_resolved is None:
+            logger.warning("Segmentation service returned None")
+            return []
+
+        if not gsam_resolved.masks or len(gsam_resolved.masks) == 0:
+            logger.warning("No masks returned from segmentation service")
             return []
 
         depth = convert_ros_img_to_ndarray(depth_msg).astype(np.float32)
+
         all_points: List[NDArray[np.float32]] = []
-        for mask_msg in gsam_resolved.masks:
+        for i, mask_msg in enumerate(gsam_resolved.masks):
             mask = cast(NDArray[np.uint8], convert_ros_img_to_ndarray(mask_msg))
             binary_mask = mask == 255
+
             masked_depth_image: NDArray[np.float32] = np.zeros_like(
                 depth, dtype=np.float32
             )
@@ -411,16 +421,21 @@ class PointCloudFromSegmentation:
             points_camera: NDArray[np.float32] = depth_to_point_cloud(
                 masked_depth_image, fx, fy, cx, cy
             )
-            if points_camera.size:
+
+            if points_camera.size == 0:
+                logger.warning(f"Point cloud {i} is empty after depth_to_point_cloud")
+            else:
                 all_points.append(points_camera)
 
         if not all_points:
+            logger.warning("No valid point clouds extracted from masks")
             return []
 
         points_target = [
             self._transform_points_source_to_target(points_source).astype(np.float32)
             for points_source in all_points
         ]
+
         return points_target
 
 

@@ -12,24 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/usr/bin/env python3
 """
 Manual test for GetGrippingPointTool with various demo scenarios. Each test:
 - Finds gripping points of specified object in the target frame.
 - Publishes debug data for visualization.
 - Saves annotated image of the gripping points.
 
-The demo app and rivz2 need to be started before running the test. The test will fail if the gripping points are not found.
+The manipulation demo app and rviz2 need to be started before running the test. The test will fail if the gripping points are not found.
 
 Usage:
-pytest tests/rai_perception/components/test_gripping_points_integration.py::test_gripping_points_manipulation_demo -m "manual" -s -v --strategy <strategy>
+pytest tests/rai_perception/components/test_gripping_points_integration.py::test_gripping_points_manipulation_demo -m "manual" -s -v --grasp default_grasp
 """
 
-import cv2
+import re
+import traceback
+
 import numpy as np
 import pytest
 import rclpy
-from cv_bridge import CvBridge
 from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
 from rai_perception import GetObjectGrippingPointsTool
@@ -37,244 +37,118 @@ from rai_perception.components.gripping_points import (
     GrippingPointEstimatorConfig,
     PointCloudFilterConfig,
     PointCloudFromSegmentationConfig,
-    _publish_gripping_point_debug_data,
+)
+from rai_perception.components.perception_presets import apply_preset
+from rai_perception.components.visualization_utils import (
+    save_gripping_points_annotated_image,
 )
 from rai_perception.tools.gripping_points_tools import GRIPPING_POINTS_TOOL_PARAM_PREFIX
 
+# Default configurations
+MANIPULATION_DEMO_TOPICS = {
+    "camera": "/color_image5",
+    "depth": "/depth_image5",
+    "camera_info": "/color_camera_info5",
+}
 
-def draw_points_on_image(image_msg, points, camera_info):
-    """Draw points on the camera image."""
-    # Convert ROS image to OpenCV
-    bridge = CvBridge()
-    cv_image = bridge.imgmsg_to_cv2(image_msg, "bgr8")
+MANIPULATION_DEMO_FRAMES = {"target": "panda_link0", "source": "RGBDCamera5"}
 
-    # Get camera intrinsics
-    fx = camera_info.k[0]
-    fy = camera_info.k[4]
-    cx = camera_info.k[2]
-    cy = camera_info.k[5]
-
-    # Project 3D points to 2D
-    for i, point in enumerate(points):
-        x, y, z = point[0], point[1], point[2]
-
-        # Check if point is in front of camera
-        if z <= 0:
-            continue
-
-        # Project to pixel coordinates
-        u = int((x * fx / z) + cx)
-        v = int((y * fy / z) + cy)
-
-        # Check if point is within image bounds
-        if 0 <= u < cv_image.shape[1] and 0 <= v < cv_image.shape[0]:
-            # Draw circle and label
-            cv2.circle(cv_image, (u, v), 10, (0, 0, 255), -1)  # Red filled circle
-            cv2.circle(cv_image, (u, v), 15, (0, 255, 0), 2)  # Green outline
-            cv2.putText(
-                cv_image,
-                f"GP{i + 1}",
-                (u + 20, v - 10),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                (255, 255, 255),
-                2,
-            )
-
-    return cv_image
+REQUIRED_SERVICES = ["/segmentation", "/detection"]
 
 
-def extract_gripping_points(result: str) -> list[np.ndarray]:
-    """Extract gripping points from the result."""
+def extract_gripping_points_from_result(result: str) -> list[np.ndarray]:
+    """Extract gripping points from tool result string.
+
+    Args:
+        result: Formatted result string from GetObjectGrippingPointsTool
+
+    Returns:
+        List of gripping points as numpy arrays (Nx3)
+    """
+    pattern = r"\[([0-9.eE\-\+\s]+)\]"
+    matches = re.findall(pattern, result)
     gripping_points = []
-    lines = result.split("\n")
-    for line in lines:
-        if "gripping point" in line and "is [" in line:
-            # Extract coordinates from line like "is [0.39972728 0.16179778 0.04179673]"
-            start = line.find("[") + 1
-            end = line.find("]")
-            if start > 0 and end > start:
-                coords_str = line[start:end]
-                coords = [float(x) for x in coords_str.split()]
-                gripping_points.append(np.array(coords))
+    for match in matches:
+        coords = [float(x) for x in match.split()]
+        if len(coords) == 3:
+            gripping_points.append(np.array(coords, dtype=np.float32))
     return gripping_points
 
 
-def transform_points_to_target_frame(connector, points, source_frame, target_frame):
-    """Transform points from source frame(e.g. camera frame) to target frame(e.g. robot frame)."""
-    try:
-        # Get transform from target frame to source frame
-        transform = connector.get_transform(source_frame, target_frame)
-
-        # Extract translation and rotation
-        t = transform.transform.translation
-        r = transform.transform.rotation
-
-        # Convert quaternion to rotation matrix
-        qw, qx, qy, qz = float(r.w), float(r.x), float(r.y), float(r.z)
-
-        # Quaternion to rotation matrix conversion
-        rotation_matrix = np.array(
-            [
-                [
-                    1 - 2 * (qy * qy + qz * qz),
-                    2 * (qx * qy - qw * qz),
-                    2 * (qx * qz + qw * qy),
-                ],
-                [
-                    2 * (qx * qy + qw * qz),
-                    1 - 2 * (qx * qx + qz * qz),
-                    2 * (qy * qz - qw * qx),
-                ],
-                [
-                    2 * (qx * qz - qw * qy),
-                    2 * (qy * qz + qw * qx),
-                    1 - 2 * (qx * qx + qy * qy),
-                ],
-            ]
-        )
-
-        translation = np.array([float(t.x), float(t.y), float(t.z)])
-
-        # Transform points: R * point + translation (forward transform)
-        transformed_points = []
-        for point in points:
-            # Apply forward transform: R * point + translation
-            transformed_point = rotation_matrix @ point + translation
-            transformed_points.append(transformed_point)
-
-        return transformed_points
-    except Exception as e:
-        print(f"Transform error: {e}")
-        return points
+def _setup_ros2_parameters(
+    node,
+    topics: dict[str, str],
+    frames: dict[str, str],
+    timeout_sec: float = 30.0,
+    conversion_ratio: float = 1.0,
+) -> None:
+    """Set up ROS2 parameters for the gripping points tool."""
+    param_prefix = GRIPPING_POINTS_TOOL_PARAM_PREFIX
+    parameters = {
+        "target_frame": frames["target"],
+        "source_frame": frames["source"],
+        "camera_topic": topics["camera"],
+        "depth_topic": topics["depth"],
+        "camera_info_topic": topics["camera_info"],
+        "timeout_sec": timeout_sec,
+        "conversion_ratio": conversion_ratio,
+    }
+    for param_name, param_value in parameters.items():
+        node.declare_parameter(f"{param_prefix}.{param_name}", param_value)
 
 
-def save_annotated_image(
-    connector,
-    gripping_points,
-    camera_topic,
-    camera_info_topic,
-    source_frame,
-    target_frame,
-    filename: str = "gripping_points_annotated.jpg",
-):
-    camera_frame_points = transform_points_to_target_frame(
-        connector,
-        gripping_points,
-        source_frame,
-        target_frame,
+def _create_tool(
+    connector: ROS2Connector,
+    filter_config: PointCloudFilterConfig,
+    estimator_config: GrippingPointEstimatorConfig,
+) -> GetObjectGrippingPointsTool:
+    """Create and configure GetObjectGrippingPointsTool."""
+    return GetObjectGrippingPointsTool(
+        connector=connector,
+        segmentation_config=PointCloudFromSegmentationConfig(),
+        estimator_config=estimator_config,
+        filter_config=filter_config,
     )
 
-    # Get current camera image and draw points
-    image_msg = connector.receive_message(camera_topic).payload
-    camera_info_msg = connector.receive_message(camera_info_topic).payload
 
-    # Draw gripping points on image
-    annotated_image = draw_points_on_image(
-        image_msg, camera_frame_points, camera_info_msg
-    )
-
-    cv2.imwrite(filename, annotated_image)
-
-
-def main(
-    test_object: str = "cube",
-    strategy: str = "centroid",
-    topics: dict = None,
-    frames: dict = None,
-    estimator_config: dict = None,
-    filter_config: dict = None,
+def run_gripping_points_test(
+    test_object: str,
+    grasp: str,
+    topics: dict[str, str],
+    frames: dict[str, str],
     debug_enabled: bool = False,
-):
-    # Default configuration for manipulation-demo
-    if topics is None:
-        topics = {
-            "camera": "/color_image5",
-            "depth": "/depth_image5",
-            "camera_info": "/color_camera_info5",
-        }
-
-    if frames is None:
-        frames = {"target": "panda_link0", "source": "RGBDCamera5"}
-
-    if estimator_config is None:
-        estimator_config = {"strategy": strategy}
-
-    if filter_config is None:
-        filter_config = {
-            "strategy": "aggressive_outlier_removal",
-            "max_samples": "auto",
-            "outlier_fraction": 0.05,
-        }
-
-    services = ["/segmentation", "/detection"]
-
-    # Initialize ROS2
+) -> None:
+    """Run gripping points test with given grasp preset configuration."""
     rclpy.init()
-
     connector = ROS2Connector(executor_type="single_threaded")
 
     try:
-        # Wait for required services and topics
         print("Waiting for ROS2 services and topics...")
-        wait_for_ros2_services(connector, services)
+        wait_for_ros2_services(connector, REQUIRED_SERVICES)
         wait_for_ros2_topics(connector, list(topics.values()))
-        print("✅ All services and topics available")
+        print("All services and topics available")
 
-        # Set up node parameters
-        node = connector.node
-
-        param_prefix = GRIPPING_POINTS_TOOL_PARAM_PREFIX
-        # Declare and set ROS2 parameters for deployment configuration
-        parameters_to_set = [
-            (f"{param_prefix}.target_frame", frames["target"]),
-            (f"{param_prefix}.source_frame", frames["source"]),
-            (f"{param_prefix}.camera_topic", topics["camera"]),
-            (f"{param_prefix}.depth_topic", topics["depth"]),
-            (f"{param_prefix}.camera_info_topic", topics["camera_info"]),
-            (f"{param_prefix}.timeout_sec", 10.0),
-            (f"{param_prefix}.conversion_ratio", 1.0),
-        ]
-
-        # Declare and set each parameter
-        for param_name, param_value in parameters_to_set:
-            node.declare_parameter(param_name, param_value)
+        _setup_ros2_parameters(connector.node, topics, frames)
 
         print(
-            f"\nTesting GetGrippingPointTool with object '{test_object}', strategy '{strategy}'"
+            f"\nTesting GetGrippingPointTool with object '{test_object}', grasp '{grasp}'"
         )
 
-        # Create the tool with algorithm configurations
-        tool = GetObjectGrippingPointsTool(
-            connector=connector,
-            segmentation_config=PointCloudFromSegmentationConfig(),
-            estimator_config=GrippingPointEstimatorConfig(**estimator_config),
-            filter_config=PointCloudFilterConfig(**filter_config),
-        )
+        filter_config, estimator_config = apply_preset(grasp)
+        tool = _create_tool(connector, filter_config, estimator_config)
+        result = tool._run(object_name=test_object, debug=debug_enabled)
+        print(f"\nTool result:\n{result}")
 
-        pcl = tool.point_cloud_from_segmentation.run(test_object)
-        if len(pcl) == 0:
-            print(f"No {test_object}s detected.")
-            return
-
-        pcl_filtered = tool.point_cloud_filter.run(pcl)
-        gripping_points = tool.gripping_point_estimator.run(pcl_filtered)
+        gripping_points = extract_gripping_points_from_result(result)
         assert len(gripping_points) > 0, "No gripping points found"
 
-        print(f"\nFound {len(gripping_points)} gripping points in target frame:")
-
-        for i, gp in enumerate(gripping_points):
-            print(f"  GP{i + 1}: [{gp[0]:.3f}, {gp[1]:.3f}, {gp[2]:.3f}]")
+        print(f"\nFound {len(gripping_points)} gripping point(s) in target frame:")
+        for i, gp in enumerate(gripping_points, 1):
+            print(f"  GP{i}: [{gp[0]:.3f}, {gp[1]:.3f}, {gp[2]:.3f}]")
 
         if debug_enabled:
-            _publish_gripping_point_debug_data(
-                connector,
-                pcl_filtered,
-                gripping_points,
-                frames["target"],
-            )
-            annotated_image_path = f"{test_object}_{strategy}_gripping_points.jpg"
-            save_annotated_image(
+            annotated_image_path = f"{test_object}_{grasp}_gripping_points.jpg"
+            save_gripping_points_annotated_image(
                 connector,
                 gripping_points,
                 topics["camera"],
@@ -283,13 +157,12 @@ def main(
                 frames["target"],
                 annotated_image_path,
             )
-            print(f"✅ Saved annotated image as '{annotated_image_path}'")
+            print(f"Saved annotated image as '{annotated_image_path}'")
 
     except Exception as e:
-        print(f"❌ Setup failed: {e}")
-        import traceback
-
+        print(f"Test failed: {e}")
         traceback.print_exc()
+        raise
 
     finally:
         if hasattr(connector, "executor"):
@@ -298,34 +171,12 @@ def main(
 
 
 @pytest.mark.manual
-def test_gripping_points_manipulation_demo(strategy):
+def test_gripping_points_manipulation_demo(grasp) -> None:
     """Manual test requiring manipulation-demo app to be started."""
-    main("cube", strategy, debug_enabled=True)
-
-
-@pytest.mark.manual
-def test_gripping_points_maciej_demo(strategy):
-    """Manual test requiring demo app to be started."""
-    main(
-        test_object="box",
-        strategy=strategy,
-        topics={
-            "camera": "/rgbd_camera/camera_image_color",
-            "depth": "/rgbd_camera/camera_image_depth",
-            "camera_info": "/rgbd_camera/camera_info",
-        },
-        frames={
-            "target": "egoarm_base_link",
-            "source": "egofront_rgbd_camera_depth_optical_frame",
-        },
-        estimator_config={
-            "strategy": strategy or "biggest_plane",
-            "ransac_iterations": 400,
-            "distance_threshold_m": 0.008,
-        },
-        filter_config={
-            "strategy": "aggressive_outlier_removal",
-            "max_samples": "auto",
-            "outlier_fraction": 0.05,
-        },
+    run_gripping_points_test(
+        test_object="cube",
+        grasp=grasp,
+        topics=MANIPULATION_DEMO_TOPICS,
+        frames=MANIPULATION_DEMO_FRAMES,
+        debug_enabled=True,
     )
