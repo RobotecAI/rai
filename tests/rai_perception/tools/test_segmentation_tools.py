@@ -54,16 +54,20 @@ class TestGetSegmentationTool:
         """Test _call_gdino_node creates service call."""
         image_msg = sensor_msgs.msg.Image()
         mock_client = MagicMock()
-        mock_client.wait_for_service.return_value = True
         mock_connector.node.create_client.return_value = mock_client
 
-        # Parameter not set, so will use default service name
-        future = segmentation_tool._call_gdino_node(image_msg, "dinosaur")
+        with patch(
+            "rai_perception.components.service_utils.wait_for_ros2_services"
+        ) as mock_wait:
+            mock_wait.return_value = None  # No exception means success
 
-        assert future is not None
-        mock_connector.node.create_client.assert_called_once()
-        mock_client.wait_for_service.assert_called_once()
-        mock_client.call_async.assert_called_once()
+            # Parameter not set, so will use default service name
+            future = segmentation_tool._call_gdino_node(image_msg, "dinosaur")
+
+            assert future is not None
+            mock_wait.assert_called_once()
+            mock_connector.node.create_client.assert_called_once()
+            mock_client.call_async.assert_called_once()
 
     def test_call_gsam_node(self, segmentation_tool, mock_connector):
         """Test _call_gsam_node creates service call."""
@@ -74,16 +78,20 @@ class TestGetSegmentationTool:
         gdino_response.detections = RAIDetectionArray()
 
         mock_client = MagicMock()
-        mock_client.wait_for_service.return_value = True
         mock_connector.node.create_client.return_value = mock_client
 
-        # Parameter not set, so will use default service name
-        future = segmentation_tool._call_gsam_node(image_msg, gdino_response)
+        with patch(
+            "rai_perception.components.service_utils.wait_for_ros2_services"
+        ) as mock_wait:
+            mock_wait.return_value = None  # No exception means success
 
-        assert future is not None
-        mock_connector.node.create_client.assert_called_once()
-        mock_client.wait_for_service.assert_called_once()
-        mock_client.call_async.assert_called_once()
+            # Parameter not set, so will use default service name
+            future = segmentation_tool._call_gsam_node(image_msg, gdino_response)
+
+            assert future is not None
+            mock_wait.assert_called_once()
+            mock_connector.node.create_client.assert_called_once()
+            mock_client.call_async.assert_called_once()
 
     def test_run_success(self, segmentation_tool, mock_connector):
         """Test _run method with successful segmentation."""
@@ -91,9 +99,7 @@ class TestGetSegmentationTool:
         mock_connector.receive_message.return_value.payload = image_msg
 
         mock_gdino_client = MagicMock()
-        mock_gdino_client.wait_for_service.return_value = True
         mock_gsam_client = MagicMock()
-        mock_gsam_client.wait_for_service.return_value = True
 
         def create_client_side_effect(service_type, service_name):
             if "GroundingDino" in str(service_type):
@@ -127,12 +133,16 @@ class TestGetSegmentationTool:
 
         with (
             patch(
+                "rai_perception.components.service_utils.wait_for_ros2_services"
+            ) as mock_wait,
+            patch(
                 "rai_perception.tools.segmentation_tools.get_future_result"
             ) as mock_get_result,
             patch(
                 "rai_perception.tools.segmentation_tools.convert_ros_img_to_base64"
             ) as mock_convert,
         ):
+            mock_wait.return_value = None  # No exception means success
             mock_get_result.side_effect = [gdino_response, gsam_response]
             mock_convert.side_effect = ["base64_1", "base64_2"]
 
@@ -227,9 +237,7 @@ class TestGetGrabbingPointTool:
         ]
 
         mock_gdino_client = MagicMock()
-        mock_gdino_client.wait_for_service.return_value = True
         mock_gsam_client = MagicMock()
-        mock_gsam_client.wait_for_service.return_value = True
 
         def create_client_side_effect(service_type, service_name):
             if "GroundingDino" in str(service_type):
@@ -286,6 +294,9 @@ class TestGetGrabbingPointTool:
         # calls this function which internally uses cv2.cvtColor on empty mock images
         with (
             patch(
+                "rai_perception.components.service_utils.wait_for_ros2_services"
+            ) as mock_wait,
+            patch(
                 "rai_perception.tools.segmentation_tools.get_future_result"
             ) as mock_get_result,
             patch(
@@ -302,6 +313,7 @@ class TestGetGrabbingPointTool:
                 side_effect=convert_side_effect,
             ),
         ):
+            mock_wait.return_value = None  # No exception means success
             mock_get_result.side_effect = [gdino_response, gsam_response]
             mock_min_area.return_value = ((50.0, 50.0), (60.0, 60.0), 0.0)
 

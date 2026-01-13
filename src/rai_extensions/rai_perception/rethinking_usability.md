@@ -6,11 +6,12 @@ _How not to make the API so hard to use_
 
 Perception is a critical component in robotics applications, enabling object detection, segmentation, 3D gripping point estimation, and point cloud processing for ROS2-based systems. Within the RAI Framework, `rai_perception` serves as an extension providing vision capabilities through tools (`GetDetectionTool`, `GetObjectGrippingPointsTool`), ROS2 service nodes (`DetectionService`, `SegmentationService`), and utilities that integrate with other RAI components (e.g., `rai_semap`, `rai_bench`).
 
-As the codebase grows with recent work on [3D gripping point detection](https://github.com/RobotecAI/rai/pull/694) and new perception functionality in `rai_semap`, the current API design reveals significant usability challenges because most new APIs are designed for expert-level users, requiring deep understanding of algorithms, pipeline architecture, and domain-specific concepts. The configuration supporting these APIs is also complex. The existing APIs lack support for use cases where developers need to switch to different detection models.
+As the codebase grows with recent work on [3D gripping point detection PR](https://github.com/RobotecAI/rai/pull/694) and new perception functionality in `rai_semap`, the current API design reveals significant usability challenges because most new APIs are designed for expert-level users, requiring deep understanding of algorithms, pipeline architecture, and domain-specific concepts. The configuration supporting these APIs is also complex. The existing APIs lack support for use cases where developers need to switch to different detection models.
 
-This document explores a potential redesign approach that addresses some of these challenges by organizing code into a tiered API structure that supports progressive disclosure. The exploration draws on design principles from [`api_design_considerations.md`](../../../docs/api_design_considerations.md) and illustrates concepts with examples from refactored `rai_perception` implementation.
+This document explores a potential redesign approach that addresses some of these challenges by organizing code into a tiered API structure that supports progressive disclosure, in addition to other exploration drawing on design principles from [`api_design_considerations.md`](../../../docs/api_design_considerations.md). Mainly,
 
-Rather than focusing solely on API surface changes, the exploration considers cognitive load and provides clear paths from simple, agent-friendly tools to configurable components to expert-level algorithms, balancing accessibility with flexibility. Another goal is to lay out the foundation for enabling developers to switch between different detection models without code changes (see the "Switching Between Detection Models" use case below).
+-   Rather than focusing solely on API surface changes, the exploration considers cognitive load and provides clear paths from simple, agent-friendly tools to configurable components to expert-level algorithms, balancing accessibility with flexibility.
+-   Another goal is to lay out the foundation for enabling developers to switch between different detection models with no or little code changes (see the "Switching Between Detection Models" use case below).
 
 ---
 
@@ -30,7 +31,7 @@ Rather than focusing solely on API surface changes, the exploration considers co
         -   [Consistency](#consistency)
         -   [Domain Correspondence](#domain-correspondence)
         -   [Role Expressiveness](#role-expressiveness)
-    -   [Why Agents are Renamed as Services](#why-agents-are-renamed-as-services)
+        -   [Why Agents are Renamed as Services](#why-agents-are-renamed-as-services)
     -   [Use Cases and Impact Evaluation](#use-cases-and-impact-evaluation)
         -   [Existing Use Cases](#existing-use-cases)
         -   [New Use Case: Switching Between Detection Models](#new-use-case-switching-between-detection-models)
@@ -44,6 +45,8 @@ Rather than focusing solely on API surface changes, the exploration considers co
 
 ## Current State Analysis (As of Jan 2026)
 
+The analysis is based on the existing code from `rai_perception`, [3D gripping point detection PR](https://github.com/RobotecAI/rai/pull/694) and new perception functionality([1](https://github.com/RobotecAI/rai/pull/727/changes#diff-34da25859105afd46b93e69382dbf4a6308bf42840966f8e73dbe889da71f5c5) and [2](https://github.com/RobotecAI/rai/pull/727/changes#diff-8c31dac39311638747cc904c4bd9250a8a2bf6067e350f842703bb4880eb21c7)) in `rai_semap`.
+
 ### Audiences and Roles
 
 `rai_perception` serves four roles within the RAI Framework:
@@ -55,7 +58,7 @@ Rather than focusing solely on API surface changes, the exploration considers co
 
 ### Usability Concerns
 
-The multi-tier abstraction (high-level tools, mid-level components, low-level algorithms) reveals significant usability challenges:
+The current multi-tier abstraction (high-level tools, mid-level components, low-level algorithms) reveals significant usability challenges:
 
 1. Abstraction gap: Large jump from high-level tool usage (simple `object_name` parameter) to mid-level configuration (10+ algorithm parameters with domain-specific knowledge required)
 2. Configuration complexity: `GetObjectGrippingPointsTool` requires 6+ ROS2 parameters (`target_frame`, `source_frame`, `camera_topic`, `depth_topic`, `camera_info_topic`, `timeout_sec`) plus 3 configuration objects with 10+ parameters each
@@ -69,7 +72,7 @@ The multi-tier abstraction (high-level tools, mid-level components, low-level al
 
 ## Proposed Design
 
-The proposed design addresses the usability concerns identified above through a tiered API structure that supports progressive disclosure. This section outlines the architecture and explores how it improves usability along key cognitive dimensions.
+The key part of the proposed design addresses the usability concerns identified above through a tiered API structure that supports progressive disclosure. This section outlines the architecture and explores how it improves usability along key cognitive dimensions.
 
 ### Tiered API Structure
 
@@ -81,11 +84,11 @@ The tiered API structure organizes code into three abstraction levels:
 
 -   _Low-level layer (Expert control):_ Algorithms in `algorithms/` like `GDBoxer` and `GDSegmenter` that load their own configs and provide direct access to model inference and processing stages.
 
-This tiered structure is reflected in the folder organization, where each abstraction level maps to a specific directory.
+With this arrangement, users start with simple high-level tools, can configure mid-level components with semantic parameters (e.g., `strategy="aggressive_outlier_removal"`), and access low-level algorithms only when needed.
 
 ### Folder Structure
 
-The folder structure supports progressive disclosure and reduces cognitive load by organizing code by abstraction level. Each folder maps to a specific audience and tier, making it easier to discover appropriate APIs and understand component relationships:
+The folder structure is now associated with abstraction level and each folder maps to a specific audience and tier:
 
 ```
 rai_core/rai/
@@ -110,19 +113,19 @@ rai_perception/
 
 ```
 
-This structure aligns with cognitive dimensions: abstraction level (tools → components → algorithms), penetrability (easy to find code by tier), domain correspondence (domain concepts visible within each tier), and role expressiveness (clear mapping to audiences). All configs are consolidated in `configs/` as user-facing runtime settings, reducing cognitive load from separating deployment vs algorithm configs.
+This structure aligns with cognitive dimensions: abstraction level (tools → components → algorithms). All configs are consolidated in `configs/` as user-facing runtime settings.
 
 ### Usability Improvements Along Cognitive Dimensions
 
-The following sections detail how the proposed design addresses usability concerns through improvements along key cognitive dimensions, with specific implementation examples from the refactored `rai_perception` codebase.
+The following sections provide some examples on how the proposed design addresses usability concerns based on the refactored `rai_perception` codebase.
 
 #### Progressive Disclosure
 
-The tiered API structure spans three abstraction levels for progressive disclosure: agent-friendly tools in `tools/`, configurable components in `components/`, and expert-level algorithms in `algorithms/`. Each layer exposes only the knobs that each audience needs, letting agents issue intent-level commands, integrators adjust meaningful parameters, and experts directly control core implementations without wrestling with irrelevant details.
+The tiered API structure spans three abstraction levels: agent-friendly tools in `tools/`, configurable components in `components/`, and expert-level algorithms in `algorithms/`. Each layer exposes only the knobs that each audience needs, and enables experts to directly control core implementations without wrestling with irrelevant details.
 
 #### Configuration Management
 
-The configuration system uses a multi-tier approach: algorithm configs (loaded from model registry), ROS2 parameters (deployment settings), component configs (Pydantic classes for algorithm tuning), and presets (semantic mappings for tools). Each tier serves a specific audience and abstraction level, reducing cognitive load by hiding irrelevant configuration details.
+The configuration system contains multiple components: algorithm configs (loaded from model registry), ROS2 parameters (deployment settings), component configs (Pydantic classes for algorithm tuning), and presets (semantic mappings for tools).
 
 _Configuration Infrastructure Highlights:_
 
@@ -133,15 +136,15 @@ _Note on External Dependencies: Hydra Configuration System_
 
 _Challenge:_ The `GDSegmenter` algorithm uses Hydra (required by SAM2) for configuration management. Hydra's config module discovery system requires proper package setup and can fail in ways that leak implementation details to high-level users, breaking API simplicity.
 
-_Solution:_ For the default case (`config_path=None`), we use full file system paths instead of Hydra's config module discovery system. This preserves high-level API simplicity—application developers using tools don't encounter Hydra-specific errors or need to understand Hydra's package structure requirements. Advanced users can still use Hydra's module system for config composition and overrides when needed, maintaining progressive disclosure.
+_Solution:_ For the default case (`config_path=None`), we use full file system paths instead of Hydra's config module discovery system. This preserves high-level API simplicity, application developers using tools don't encounter Hydra-specific errors or need to understand Hydra's package structure requirements. Advanced users can still use Hydra's module system for config composition and overrides when needed.
 
 #### Progressive Evaluation
 
-_Current limitation:_ Cannot test individual pipeline stages—must run full pipeline to see results. This makes debugging and incremental development difficult.
+_Current situation:_ Cannot test individual pipeline stages to see results. This makes debugging and incremental development difficult.
 
-_Partial solution implemented:_ Debug mode (`debug=True`) added to `GetObjectGrippingPointsTool` publishes intermediate results to ROS2 topics and logs stage-level metadata, enabling visualization of pipeline stages in RVIZ. This allows users to inspect intermediate pipeline outputs without modifying code.
+_Partial solution implemented:_ Debug mode (`debug=True`) added to `GetObjectGrippingPointsTool` publishes intermediate results to ROS2 topics and logs stage-level metadata, enabling visualization of pipeline stages in Rviz2. This allows users to inspect intermediate pipeline outputs without modifying code.
 
-_Future improvements:_ Extend debug mode to other tools and consider exposing intermediate results as optional return values for programmatic access. This would enable progressive evaluation: users can test individual pipeline stages without running the full pipeline, supporting incremental debugging and validation.
+_Future improvements:_ Extend debug mode to other tools and consider exposing intermediate results as optional return values for programmatic access. This would enable users to test individual pipeline stages without running the full pipeline, supporting debugging and validation in isolation.
 
 #### Penetrability
 
@@ -157,7 +160,7 @@ Consistency refers to how much can be inferred once part of the API is learned. 
 
 _Consistent naming pattern:_ Input schema classes follow the pattern `{ToolName}Input` (e.g., `GetObjectGrippingPointsToolInput`, `GetDetectionToolInput`, `GetDistanceToObjectsInput`). Once users learn this pattern, they can infer all input schema names without looking them up.
 
-_Consistent parameter handling:_ Tools use a standardized `_load_parameters()` method called in `model_post_init()` with parameter prefixes (e.g., `perception.gripping_points.*`, `perception.distance_to_objects.*`). Once users learn this pattern from one tool, they can infer how all tools handle ROS2 parameters—parameters are loaded at initialization with auto-declaration, type checking, and consistent error handling. This eliminates the need to read implementation details to understand parameter handling across different tools.
+_Consistent parameter handling:_ Now tools use a standardized `_load_parameters()` method called in `model_post_init()` with parameter prefixes (e.g., `perception.gripping_points.*`, `perception.distance_to_objects.*`).
 
 #### Domain Correspondence
 
@@ -176,15 +179,15 @@ _Trade-off:_ The tiered API design attempts to balance both needs:
 -   Mid-level components: Use semantic parameter names (`outlier_fraction` instead of `if_contamination`) but document algorithm mapping
 -   Low-level algorithms: Direct algorithm access remains available for ML engineers who need full control
 
-This approach improves domain correspondence (API components map clearly to robotics domain concepts) while maintaining access to algorithm-level control for expert users.
+We need to evaluate whether these increase the learning curve for Machine Learning engineers to understand the new mapping.
 
 #### Role Expressiveness
 
-Role expressiveness refers to how apparent the relationship between components and the program is. The tiered design makes pipeline stages and service dependencies explicit, improving understanding of component relationships.
+Role expressiveness refers to how apparent the relationship between components and the program is.
 
 _Role Expressiveness Improvements (2025):_ Tools have been enhanced to make pipeline/data flow and service dependencies explicit:
 
--   Pipeline visibility: Tools now expose `pipeline_stages` class attributes and `get_pipeline_info()` methods that document the internal pipeline stages (e.g., `GetObjectGrippingPointsTool` documents its 3-stage pipeline: Point Cloud Extraction → Point Cloud Filtering → Gripping Point Estimation). This makes it clear what stages a tool executes and helps users understand tool behavior and debug pipeline issues.
+-   Pipeline visibility: Tools now expose `pipeline_stages` class attributes and `get_pipeline_info()` methods that document the internal pipeline stages (e.g., `GetObjectGrippingPointsTool` documents its 3-stage pipeline: Point Cloud Extraction → Point Cloud Filtering → Gripping Point Estimation).
 
 -   Service dependency clarity: Tools now expose `required_services` class attributes, `get_service_info()` methods, and `check_service_dependencies()` methods that document which ROS2 services are required and their current availability status. This makes it clear that tools depend on services (e.g., `GetDetectionTool` requires `DetectionService`), helps users understand deployment requirements, and provides better error messages when services are unavailable.
 
@@ -196,7 +199,7 @@ _Future improvements:_ Results should include confidence and metadata. Tools sho
 
 The classes previously named "agents" (e.g., `GroundingDinoAgent`, `GroundedSamAgent`) are being renamed to "services" (e.g., `DetectionService`, `SegmentationService`) for two key reasons:
 
-1. Abstraction Confusion: These classes were incorrectly named "agents" despite being ROS2 service nodes, not RAI agents. The RAI framework has a distinct `rai.agents.BaseAgent` abstraction for high-level agent orchestration that uses connectors and tools. Calling ROS2 service nodes "agents" creates confusion about the architecture and makes it unclear what these classes actually do.
+1. Abstraction Confusion: The name "agents" is a misnomer because these are ROS2 service nodes, not RAI agents. The RAI framework has a distinct `rai.agents.BaseAgent` abstraction for high-level agent orchestration that uses connectors and tools. Calling ROS2 service nodes "agents" creates confusion about the architecture and makes it unclear what these classes actually do.
 
 2. ROS2-Specific Implementation: These classes are tightly coupled to ROS2 infrastructure—they create `ROS2Connector` instances, use ROS2 parameters (`rclpy.parameter.Parameter`), expose ROS2 services, and cannot work with other connector types. They are ROS2 service nodes, not abstracted agents that could work with different communication backends.
 
@@ -210,63 +213,57 @@ This section evaluates how the proposed design impacts existing use cases and en
 
 _1. Tools in RAI Agents_
 
-Tools used:
-
--   `GetDetectionTool`: Used in manipulation demos (`examples/manipulation-demo-v2.py`, `examples/rosbot-xl-demo.py`) for object detection
--   `GetObjectGrippingPointsTool`: Used in manipulation scenarios for 3D gripping point estimation
--   `GetDistanceToObjectsTool`: Used for distance calculations to detected objects
+Three tools are avaialble for RAI agents:`GetDetectionTool`, `GetObjectGrippingPointsTool` and `GetDistanceToObjectsTool`.
 
 Impact of proposed design:
 
--   Positive: No breaking changes for `GetDetectionTool`/`GetDistanceToObjectsTool` - tools read service_name from ROS2 params (backward compatible with defaults)
+-   Positive: No breaking changes for `GetDetectionTool`/`GetDistanceToObjectsTool` - tools read service_name from ROS2 params (backward compatible with defaults "/detection" and "/segmentation")
 -   Positive: `GetObjectGrippingPointsTool` requires no changes - already uses ROS2 params for configuration, config objects remain in `components/`
 -   Positive: Model flexibility - can switch detection models via ROS2 param without code changes
--   Issue: Service name changes - examples hardcode service names in `wait_for_ros2_services()` calls (e.g., `"/grounding_dino_classify"`). Need to update to use parameter registry or configurable service names
--   Issue: Backward compatibility - existing launch files/configs assume specific service names. Migration path needed
--   Issue: Tool initialization - tools must read ROS2 params at initialization. If params not set, need sensible defaults matching current behavior
-
-Migration strategy:
-
--   Tools default to current service names (`"/grounding_dino_classify"`, `"/grounded_sam_segment"`) if params not set
--   Examples can continue working without changes
--   New deployments can use model-agnostic service names via params
+-   Positive: `wait_for_perception_dependencies()` automatically extracts service names from tools, eliminating need for hardcoded service names in most cases
+-   Issue: Legacy examples - some examples (e.g., `manipulation-demo-v1.py`) still hardcode old service names (`"/grounding_dino_classify"`, `"/grounded_sam_segment"`). Should be updated to use `wait_for_perception_dependencies()` or read from ROS2 params
+-   Issue: Backward compatibility - existing launch files/configs may assume old model-specific service names. Defaults are now generic (`"/detection"`, `"/segmentation"`), so migration requires setting ROS2 parameters or updating service names
+-   Resolved: Tool initialization - tools read ROS2 params at initialization with sensible defaults (`"/detection"` and `"/segmentation"`), matching current behavior
 
 _2. ROS2 Service Nodes_
 
 -   `DetectionService`, `SegmentationService`: Model-agnostic ROS2 service nodes providing detection/segmentation services
 -   Launched via `rai_perception.scripts.run_perception_services`
--   Legacy agents (`GroundedSamAgent`, `GroundingDinoAgent`) are deprecated and located in `agents/` folder
+-   Legacy agents (`GroundedSamAgent`, `GroundingDinoAgent`) are deprecated (emit deprecation warnings) and located in `agents/` folder
 
 _3. Integration with Other RAI Components_
 
--   `rai_semap`: Uses `rai_perception.ros2.perception_utils.extract_pointcloud_from_bbox` for semantic mapping; detection results flow from `rai_perception` services into `rai_semap` for map annotation
+-   `rai_semap`: Uses `rai_perception.components.perception_utils.extract_pointcloud_from_bbox` for semantic mapping; detection results flow from `rai_perception` services into `rai_semap` for map annotation
 -   `rai_bench`: Used for tool-calling agent evaluation and manipulation benchmarks
 
 Impact of proposed design:
 
--   No breaking changes: Tools remain in `tools/`, import paths unchanged; `perception_utils.py` moves to `components/` but import path can be maintained via `__init__.py` or alias
--   Service dependencies: Both `rai_semap` and `rai_bench` may reference service names that changed to model-agnostic defaults, but defaults maintain compatibility
+-   No breaking changes: Tools remain in `tools/`, import paths unchanged; `perception_utils.py` is already in `components/` and `rai_semap` uses the correct import path
+-   Service dependencies: Service name defaults changed from model-specific (`"/grounding_dino_classify"`, `"/grounded_sam_segment"`) to generic (`"/detection"`, `"/segmentation"`). Migration guide available in `MIGRATION.md`. Tools and services can be configured via ROS2 parameters to maintain compatibility
 -   Model flexibility: Can test different models via ROS2 params without code changes
 
 #### New Use Case: Switching Between Detection Models
 
-The tiered API structure enables a new capability: switching detection models without code changes through the model registry pattern. This addresses the limitation identified in the current state where APIs lack support for model switching.
+The tiered API structure enables a new capability: switching detection models with minimal code changes through the model registry pattern. This addresses the limitation identified in the current state where APIs lack support for model switching.
 
 _Workflow:_
 
-1. Check available models: `list_available_models()` in `models/detection.py` registry shows "grounding_dino", "yolo", etc.
-2. Set ROS2 parameter: `/detection_service/model_name = "yolo"` (or desired model)
-3. Service reads parameter and queries registry: `get_model("yolo")` returns `(AlgorithmClass, config_path)`
-4. Service instantiates algorithm: `algorithm = AlgorithmClass(weights_path, config_path=config_path)`
-5. Algorithm loads its own config (self-contained)
-6. Tools read service name from parameter registry (default: "/detection")
-7. Use tools normally—no code changes needed
+```
+1. list_available_models() → ["grounding_dino", "yolo", ...]
+2. Set ROS2 param: /detection_service/model_name = "yolo"
+3. Service startup:
+   ├─ Reads model_name param
+   ├─ get_model("yolo") → (AlgorithmClass, config_path)
+   └─ AlgorithmClass(weights_path, config_path)
+4. Tools read service_name param (default: "/detection")
+5. Use tools → no code changes
+```
 
 _Remaining Issues:_
 
--   Error handling: If `model_name` doesn't match registry, only runtime error occurs. No validation at parameter declaration time.
--   Multiple instances: Running multiple models simultaneously requires multiple service instances with different service names, but no documented pattern exists.
--   Model registration: Adding a new model requires creating algorithm, registering in registry, and adding config—process is clear but not documented as workflow.
+-   Error handling: No validation at parameter declaration time; invalid `model_name` only fails at runtime
+-   Multiple instances: No documented pattern for running multiple models simultaneously
+-   Model registration: Process exists but lacks documentation
 
 #### Adding New Models to the Registry
 
@@ -289,20 +286,18 @@ _Florence-2 (Unified Vision-Language Model):_
 
 ## Good to Have (deferred)
 
-## Good to Have (deferred)
-
 _Config Utilities (`rai.config`):_
 
--   `load_yaml_config()`: Unified YAML loading with ROS2 parameter extraction (`{node_name}: ros__parameters: {...}`). Would reduce boilerplate in `detection_publisher.py` but current manual loading is readable and explicit.
--   `get_config_path()`: Standardizes ROS2 parameter path resolution with defaults. Would eliminate duplication but only used in one place currently.
--   `merge_nested_configs()`: Handles nested dict merging correctly vs. simple `.update()`. Useful if presets become nested; current flat presets work fine with manual updates.
--   Trade-off: Utilities reduce duplication but add abstraction layer. Current manual approach is explicit and maintainable for single usage. Main benefit is consistency if adopted across packages.
+-   `load_yaml_config()`: Unified YAML loading with ROS2 parameter extraction; reduces boilerplate but current manual approach is explicit
+-   `get_config_path()`: Standardizes ROS2 parameter path resolution; only used in one place currently
+-   `merge_nested_configs()`: Handles nested dict merging; current flat presets work fine with manual updates
+-   Trade-off: Utilities reduce duplication but add abstraction; current approach is explicit and maintainable
 
 _Multi-Stage Pipeline Service Failures:_
 
--   Tools like `GetObjectGrippingPointsTool` call multiple services in sequence (detection → segmentation). Currently, failures don't indicate which pipeline stage failed.
--   Use case: Raise `ROS2ServiceError` with pipeline stage info (e.g., "Failed at detection stage", "Failed at segmentation stage") to enable stage-specific recovery strategies.
--   Benefit: Enables automatic retry at specific stages, provides clearer diagnostics for multi-stage operations, helps LLM agents understand partial failures.
+-   Multi-stage tools (e.g., `GetObjectGrippingPointsTool`) don't indicate which pipeline stage failed
+-   Solution: Raise `ROS2ServiceError` with pipeline stage info for stage-specific recovery
+-   Benefit: Enables stage-specific retry, clearer diagnostics, better LLM agent error understanding
 
 ---
 

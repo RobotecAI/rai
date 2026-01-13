@@ -18,6 +18,7 @@ from typing import Dict, List
 from langchain_core.tools import BaseTool
 from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
+from rai.communication.ros2.waiters import get_missing_entities
 
 logger = logging.getLogger(__name__)
 
@@ -81,26 +82,6 @@ def discover_camera_topics(connector: ROS2Connector) -> Dict[str, List[str]]:
         "camera_info_topics": sorted(camera_info_topics),
         "all_topics": sorted(all_topic_names),
     }
-
-
-def _validate_topics(connector: ROS2Connector, required_topics: List[str]) -> List[str]:
-    """Validate topics exist.
-
-    Args:
-        connector: ROS2 connector
-        required_topics: List of required topic names
-
-    Returns:
-        List of missing topic names
-    """
-    try:
-        available_topics = [
-            topic[0] for topic in connector.get_topics_names_and_types()
-        ]
-    except Exception:
-        available_topics = []
-
-    return [t for t in required_topics if t not in available_topics]
 
 
 def wait_for_perception_dependencies(
@@ -189,12 +170,15 @@ def wait_for_perception_dependencies(
     try:
         wait_for_ros2_topics(connector, required_topics)
     except TimeoutError as e:
-        missing_at_timeout = _validate_topics(connector, required_topics)
+        get_topics = lambda: [
+            topic[0] for topic in connector.get_topics_names_and_types()
+        ]
+        missing_at_timeout = get_missing_entities(get_topics, required_topics)
         discovered = discover_camera_topics(connector)
 
         raise TimeoutError(
             f"{str(e)}\n"
-            f"Missing topics: {missing_at_timeout}\n"
+            f"Missing topics: {sorted(missing_at_timeout)}\n"
             f"Available image topics: {discovered['image_topics'][:5]}\n"
             f"Available depth topics: {discovered['depth_topics'][:5]}\n"
             f"Available camera_info topics: {discovered['camera_info_topics'][:5]}\n"
