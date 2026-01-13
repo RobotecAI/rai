@@ -14,7 +14,7 @@
 
 import logging
 from pathlib import Path
-from typing import List, Literal
+from typing import Dict, List, Literal
 
 from rai_bench.manipulation_o3de.benchmark import ManipulationO3DEBenchmark, Scenario
 from rai_bench.manipulation_o3de.interfaces import Task
@@ -29,34 +29,71 @@ from rai_sim.simulation_bridge import SceneConfig
 
 CONFIGS_DIR = "src/rai_bench/rai_bench/manipulation_o3de/predefined/configs/"
 
-
-def trivial_scenarios(logger: logging.Logger | None) -> List[Scenario]:
-    """Packet of trivial scenarios. The grading is subjective.
-    This packet contains easy variants of 'easy' tasks with minimalistic scenes setups(1 object).
-
-    In this packet:
-        PlaceObjectAtCoordTask with large allowable_displacement
-        MoveObjectsToLeftTask with only 1 object type
-
-    This level of difficulty requires recognizing position of object and moving it once
-
-
-    Returns
-    -------
-    List[Scenario[O3DExROS2SimulationConfig]]
-        list of trivial scenarios
-    """
-    scene_configs_paths: List[str] = [
+# Configurations for scenario paths by "difficulty" and "purpose"
+SCENE_CONFIG_PATHS: Dict[str, List[str]] = {
+    # Base sets
+    "trivial": [
         CONFIGS_DIR + "1a.yaml",
         CONFIGS_DIR + "1rc.yaml",
         CONFIGS_DIR + "1t.yaml",
         CONFIGS_DIR + "1yc.yaml",
         CONFIGS_DIR + "1carrot.yaml",
+    ],
+    "easy": [
+        CONFIGS_DIR + "1a_1t.yaml",
+        CONFIGS_DIR + "1a_2bc.yaml",
+        CONFIGS_DIR + "1bc_1rc_1yc.yaml",
+        CONFIGS_DIR + "1carrot_1bc.yaml",
+        CONFIGS_DIR + "1carrot_1corn.yaml",
+        CONFIGS_DIR + "1yc_1rc.yaml",
+        CONFIGS_DIR + "2rc.yaml",
+        CONFIGS_DIR + "2t.yaml",
+        CONFIGS_DIR + "2a_1bc.yaml",
+        CONFIGS_DIR + "1carrot_1t_1rc.yaml",
+    ],
+    "medium": [
+        CONFIGS_DIR + "1rc_2bc_3yc.yaml",
+        CONFIGS_DIR + "2carrots_2a.yaml",
+        CONFIGS_DIR + "2yc_1bc_1rc.yaml",
+        CONFIGS_DIR + "4carrots.yaml",
+        CONFIGS_DIR + "4bc.yaml",
+        CONFIGS_DIR + "2a_1c_2rc.yaml",
+        CONFIGS_DIR + "2rc_2a.yaml",
+        CONFIGS_DIR + "3rc_2a_1carrot.yaml",
+    ],
+    "hard": [
+        CONFIGS_DIR + "3carrots_1a_1t_2bc_2yc.yaml",
+        CONFIGS_DIR + "1carrot_1a_2t_1bc_1rc_3yc_stacked.yaml",
+        CONFIGS_DIR + "2carrots_1a_1t_1bc_1rc_1yc_1corn.yaml",
+        CONFIGS_DIR + "2rc_3bc_4yc_stacked.yaml",
+        CONFIGS_DIR + "2t_3a_1corn_2rc.yaml",
+        CONFIGS_DIR + "3a_4corn_2bc.yaml",
+        CONFIGS_DIR + "3a_4corn_2rc.yaml",
+        CONFIGS_DIR + "2rc.yaml",
+        CONFIGS_DIR + "3carrots_1a_2bc_1rc_1yc_1corn.yaml",
+        CONFIGS_DIR + "3rc_3bc_stacked.yaml",
+        CONFIGS_DIR + "3carrots_3a_2rc.yaml",
+    ],
+}
+
+# For sets reused for scenario generation (e.g., easy_scene_configs_paths for medium-level tasks)
+SCENE_CONFIG_ALIASES: Dict[str, List[str]] = {
+    "easy_for_medium": SCENE_CONFIG_PATHS["easy"]
+    + [
+        CONFIGS_DIR + "3rc.yaml",  # Only in medium, not in 'easy' base tasks
     ]
-    scene_configs = [
-        SceneConfig.load_base_config(Path(path)) for path in scene_configs_paths
-    ]
-    # place object at coordss
+}
+
+
+def get_scene_configs(paths: List[str]) -> List[SceneConfig]:
+    """Helper to load base config objects from given paths."""
+    return [SceneConfig.load_base_config(Path(path)) for path in paths]
+
+
+def trivial_scenarios(logger: logging.Logger | None) -> List[Scenario]:
+    scene_configs_paths = SCENE_CONFIG_PATHS["trivial"]
+    scene_configs = get_scene_configs(scene_configs_paths)
+    # place object at coords
     place_obj_types = [
         "apple",
         "carrot",
@@ -99,37 +136,8 @@ def trivial_scenarios(logger: logging.Logger | None) -> List[Scenario]:
 
 
 def easy_scenarios(logger: logging.Logger | None) -> List[Scenario]:
-    """Packet of easy scenarios. The grading is subjective.
-    This packet contains easy variants of 'easy' tasks with scenes containg no more than 3 objects
-
-    In this packet:
-        PlaceObjectAtCoordTask with small allowable_displacement
-        MoveObjectsToLeftTask with only 1 object type
-        PlaceCubesTask with large threshold
-
-    This level of difficulty requires recognizing proper type of object.
-    Some scenarios will require moving more than 1 object or moving with more precision.
-
-    Returns
-    -------
-    List[Scenario[O3DExROS2SimulationConfig]]
-        list of easy scenarios
-    """
-    scene_configs_paths: List[str] = [
-        CONFIGS_DIR + "1a_1t.yaml",
-        CONFIGS_DIR + "1a_2bc.yaml",
-        CONFIGS_DIR + "1bc_1rc_1yc.yaml",
-        CONFIGS_DIR + "1carrot_1bc.yaml",
-        CONFIGS_DIR + "1carrot_1corn.yaml",
-        CONFIGS_DIR + "1yc_1rc.yaml",
-        CONFIGS_DIR + "2rc.yaml",
-        CONFIGS_DIR + "2t.yaml",
-        CONFIGS_DIR + "2a_1bc.yaml",
-        CONFIGS_DIR + "1carrot_1t_1rc.yaml",
-    ]
-    scene_configs = [
-        SceneConfig.load_base_config(Path(path)) for path in scene_configs_paths
-    ]
+    scene_configs_paths = SCENE_CONFIG_PATHS["easy"]
+    scene_configs = get_scene_configs(scene_configs_paths)
     # place object at coords
     place_obj_types = [
         "apple",
@@ -194,54 +202,11 @@ def easy_scenarios(logger: logging.Logger | None) -> List[Scenario]:
 
 
 def medium_scenarios(logger: logging.Logger | None) -> List[Scenario]:
-    """Packet of medium scenarios. The grading is subjective.
-    This packet contains harder variants of 'easy' tasks with scenes containg 4-7 objects
-    and easy variants of 'hard' tasks with scenes contating 2-3 objects
-
-    In this packet:
-        MoveObjectsToLeftTask with multiple object types to move
-        PlaceCubesTask with small threshold
-        BuildTowerTask with only one type of objects to move
-        GroupObjectsTask with only one type of objects to move
-
-    This level of difficulty requires recognizing multiple proper type of objects.
-    All scenarios will require moving more than 1 object.
-    Some tasks will require good spacial awareness to make structures.
-
-
-    Returns
-    -------
-    List[Scenario[O3DExROS2SimulationConfig]]
-        list of easy scenarios
-    """
-    medium_scene_configs_paths: List[str] = [
-        CONFIGS_DIR + "1rc_2bc_3yc.yaml",
-        CONFIGS_DIR + "2carrots_2a.yaml",
-        CONFIGS_DIR + "2yc_1bc_1rc.yaml",
-        CONFIGS_DIR + "4carrots.yaml",
-        CONFIGS_DIR + "1carrot_1a_1t_1bc_1corn.yaml",
-        CONFIGS_DIR + "4bc.yaml",
-        CONFIGS_DIR + "2a_1c_2rc.yaml",
-    ]
-
-    easy_scene_configs_paths: List[str] = [
-        CONFIGS_DIR + "1a_1t.yaml",
-        CONFIGS_DIR + "1a_2bc.yaml",
-        CONFIGS_DIR + "1bc_1rc_1yc.yaml",
-        CONFIGS_DIR + "1carrot_1bc.yaml",
-        CONFIGS_DIR + "1carrot_1corn.yaml",
-        CONFIGS_DIR + "1yc_1rc.yaml",
-        CONFIGS_DIR + "2rc.yaml",
-        CONFIGS_DIR + "2t.yaml",
-        CONFIGS_DIR + "2a_1bc.yaml",
-        CONFIGS_DIR + "1carrot_1t_1rc.yaml",
-    ]
-    medium_scene_configs = [
-        SceneConfig.load_base_config(Path(path)) for path in medium_scene_configs_paths
-    ]
-    easy_scene_configs = [
-        SceneConfig.load_base_config(Path(path)) for path in easy_scene_configs_paths
-    ]
+    medium_scene_configs_paths = SCENE_CONFIG_PATHS["medium"]
+    # Extend easy config for medium-level grouping/tower tasks needing smaller scenes
+    easy_scene_configs_paths = SCENE_CONFIG_ALIASES["easy_for_medium"]
+    medium_scene_configs = get_scene_configs(medium_scene_configs_paths)
+    easy_scene_configs = get_scene_configs(easy_scene_configs_paths)
     # move objects to the left
     object_groups = [
         ["red_cube", "blue_cube"],
@@ -323,55 +288,14 @@ def medium_scenarios(logger: logging.Logger | None) -> List[Scenario]:
 
 
 def hard_scenarios(logger: logging.Logger | None) -> List[Scenario]:
-    """Packet of hard scenarios. The grading is subjective.
-    This packet contains harder variants of 'easy' tasks with majority of scenes containg 8+ objects,
-    Objects can be positioned in an unusual way, for example stacked.
-    And easy variants of 'hard' tasks with scenes containing 4-7 objects
-
-    In this packet:
-        MoveObjectsToLeftTask with multiple object types to move
-        PlaceCubesTask with small threshold
-        BuildTowerTask with all cubes available
-        GroupObjectsTask with 1-2 types of objects to be grouped
-
-    This level of difficulty requires recognizing multiple proper type of objects.
-    All scenarios will require moving multiple objects.
-    Some tasks will require good spacial awareness to make structures.
-
-
-
-    Returns
-    -------
-    List[Scenario[O3DExROS2SimulationConfig]]
-        list of easy scenarios
-    """
-    medium_scene_configs_paths: List[str] = [
-        CONFIGS_DIR + "1rc_2bc_3yc.yaml",
-        CONFIGS_DIR + "2carrots_2a.yaml",
-        CONFIGS_DIR + "2yc_1bc_1rc.yaml",
-        CONFIGS_DIR + "4carrots.yaml",
-        CONFIGS_DIR + "1carrot_1a_1t_1bc_1corn.yaml",
-        CONFIGS_DIR + "4bc.yaml",
-        CONFIGS_DIR + "2a_1c_2rc.yaml",
+    medium_scene_configs_paths = SCENE_CONFIG_PATHS["medium"] + [
+        CONFIGS_DIR + "1a_1t_1bc_2corn.yaml"  # Only in hard, not medium set before
     ]
-
-    hard_scene_configs_paths: List[str] = [
-        CONFIGS_DIR + "3carrots_1a_1t_2bc_2yc.yaml",
-        CONFIGS_DIR + "1carrot_1a_2t_1bc_1rc_3yc_stacked.yaml",
-        CONFIGS_DIR + "2carrots_1a_1t_1bc_1rc_1yc_1corn.yaml",
-        CONFIGS_DIR + "2rc_3bc_4yc_stacked.yaml",
-        CONFIGS_DIR + "2t_3a_1corn_2rc.yaml",
-        CONFIGS_DIR + "3a_4t_2bc.yaml",
-        CONFIGS_DIR + "2rc.yaml",
-        CONFIGS_DIR + "3carrots_1a_2bc_1rc_1yc_1corn.yaml",
-        CONFIGS_DIR + "3rc_3bc_stacked.yaml",
-    ]
-    medium_scene_configs = [
-        SceneConfig.load_base_config(Path(path)) for path in medium_scene_configs_paths
-    ]
-    hard_scene_configs = [
-        SceneConfig.load_base_config(Path(path)) for path in hard_scene_configs_paths
-    ]
+    # All the hard configs
+    hard_scene_configs_paths = SCENE_CONFIG_PATHS["hard"]
+    # Hard config also needs medium configs for 'build tower' and 'group objects' tasks
+    medium_scene_configs = get_scene_configs(medium_scene_configs_paths)
+    hard_scene_configs = get_scene_configs(hard_scene_configs_paths)
     # move objects to the left
     object_groups = [
         ["red_cube", "blue_cube"],
@@ -454,38 +378,8 @@ def hard_scenarios(logger: logging.Logger | None) -> List[Scenario]:
 
 
 def very_hard_scenarios(logger: logging.Logger | None) -> List[Scenario]:
-    """Packet of very_hard scenarios. The grading is subjective.
-    This packet contains harder variants of 'hard' tasks with majority of scenes containg 8+ objects,
-    Objects can be positioned in an unusual way, for example stacked.
-    In this packet:
-        BuildTowerTask with only ceratin type of cubes
-        GroupObjectsTask with multiple objects to be grouped
-
-    This level of difficulty requires recognizing multiple proper type of objects.
-    All scenarios will require moving multiple objects.
-    All tasks will require very good spacial awareness to make structures.
-
-
-
-    Returns
-    -------
-    List[Scenario[O3DExROS2SimulationConfig]]
-        list of easy scenarios
-    """
-    hard_scene_configs_paths: List[str] = [
-        CONFIGS_DIR + "3carrots_1a_1t_2bc_2yc.yaml",
-        CONFIGS_DIR + "1carrot_1a_2t_1bc_1rc_3yc_stacked.yaml",
-        CONFIGS_DIR + "2carrots_1a_1t_1bc_1rc_1yc_1corn.yaml",
-        CONFIGS_DIR + "2rc_3bc_4yc_stacked.yaml",
-        CONFIGS_DIR + "2t_3a_1corn_2rc.yaml",
-        CONFIGS_DIR + "3a_4t_2bc.yaml",
-        CONFIGS_DIR + "2rc.yaml",
-        CONFIGS_DIR + "3carrots_1a_2bc_1rc_1yc_1corn.yaml",
-        CONFIGS_DIR + "3rc_3bc_stacked.yaml",
-    ]
-    hard_scene_configs = [
-        SceneConfig.load_base_config(Path(path)) for path in hard_scene_configs_paths
-    ]
+    hard_scene_configs_paths = SCENE_CONFIG_PATHS["hard"]
+    hard_scene_configs = get_scene_configs(hard_scene_configs_paths)
     # build tower task
     object_groups = [
         ["red_cube", "blue_cube"],

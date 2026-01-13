@@ -26,7 +26,7 @@ manipulation techniques.
 2. Download additional dependencies:
 
     ```shell
-    poetry install --with perception
+    poetry install --with perception,simbench
     vcs import < demos.repos
     rosdep install --from-paths src/examples/rai-manipulation-demo/ros2_ws/src --ignore-src -r -y
     ```
@@ -50,29 +50,35 @@ manipulation techniques.
     Ensure that every command is run in a sourced shell using `source setup_shell.sh`
     Ensure ROS 2 is sourced.
 
-1. Start the demo
-
-    ```shell
-    ros2 launch examples/manipulation-demo.launch.py game_launcher:=demo_assets/manipulation/RAIManipulationDemo/RAIManipulationDemo.GameLauncher
-    ```
-
-2. In the second terminal, run the streamlit interface:
+1. Run the Demo:
 
     ```shell
     streamlit run examples/manipulation-demo-streamlit.py
     ```
 
     Alternatively, you can run the simpler command-line version, which also serves as an example of
-    how to use the RAI API for you own applications:
+    how to use the RAI API for your own applications:
+
+    1. Run Simulation
+
+    ```shell
+    ros2 launch examples/manipulation-demo.launch.py game_launcher:=demo_assets/manipulation/RAIManipulationDemo/RAIManipulationDemo.GameLauncher
+    ```
+
+    2. Run cmd app
 
     ```shell
     python examples/manipulation-demo.py
     ```
 
-3. Interact with the robot arm using natural language commands. For example:
+2. Interact with the robot arm using natural language commands. For example:
 
     ```
-    Enter a prompt: Pick up the red cube and drop it on another cube
+    "Place every apple on top of the cube"
+    "Build a tower from cubes"
+    "Arrange objects in a line"
+    "Put two boxes closer to each other. Move only one box."
+    "Move cubes to the left side of the table"
     ```
 
 !!! tip "Changing camera view"

@@ -345,3 +345,17 @@ def test_ros2_connector_action_call(ros_setup: None, request: pytest.FixtureRequ
         assert mock_callback.called
     finally:
         shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_connector_unique_names(ros_setup: None):
+    connector1 = ROS2Connector()
+    connector2 = ROS2Connector()
+    try:
+        name1 = connector1.node.get_name()
+        name2 = connector2.node.get_name()
+        assert name1 != name2
+        assert "rai_ros2_connector_" in name1
+        assert "rai_ros2_connector_" in name2
+    finally:
+        connector1.shutdown()
+        connector2.shutdown()
