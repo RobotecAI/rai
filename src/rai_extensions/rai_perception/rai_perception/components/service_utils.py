@@ -16,7 +16,11 @@
 
 from typing import Type
 
-from rai.communication.ros2 import ROS2ServiceError, get_param_value
+from rai.communication.ros2 import (
+    ROS2ServiceError,
+    get_param_value,
+    wait_for_ros2_services,
+)
 from rai.communication.ros2.connectors import ROS2Connector
 
 
@@ -73,8 +77,7 @@ def check_service_available(
 ) -> bool:
     """Check if a ROS2 service is available without waiting.
 
-    Uses a generic service type to check availability. This is a lightweight check
-    that doesn't require knowing the exact service type.
+    Uses wait_for_ros2_services with a short timeout to check availability.
 
     Args:
         connector: ROS2 connector with node
@@ -84,19 +87,10 @@ def check_service_available(
     Returns:
         True if service is available, False otherwise
     """
-    # Use std_srvs/Empty as a generic service type for availability checking
-    # This works for any service since we only check if the service exists
-    from std_srvs.srv import Empty
-
     try:
-        cli = connector.node.create_client(Empty, service_name)
-        return cli.wait_for_service(timeout_sec=timeout_sec)
-    except Exception as e:
-        # If service creation fails, log error and return False
-        # This preserves the check function's boolean return while capturing error context
-        connector.node.get_logger().debug(
-            f"Service client creation failed for {service_name}: {e}"
-        )
+        wait_for_ros2_services(connector, [service_name], timeout=timeout_sec)
+        return True
+    except (TimeoutError, ValueError):
         return False
 
 
@@ -113,7 +107,7 @@ def create_service_client(
         connector: ROS2 connector with node
         service_type: ROS2 service type class
         service_name: Service name to connect to
-        timeout_sec: Timeout for each wait attempt (default: 1.0)
+        timeout_sec: Timeout for each wait attempt (default: 1.0, unused but kept for compatibility)
         max_wait_time: Maximum total wait time. If 0, wait indefinitely (default: 0.0)
 
     Returns:
@@ -122,26 +116,21 @@ def create_service_client(
     Raises:
         ROS2ServiceError: If service is not available within max_wait_time
     """
-    import time
+    try:
+        wait_for_ros2_services(connector, [service_name], timeout=max_wait_time)
+    except TimeoutError as e:
+        available_services = [s[0] for s in connector.get_services_names_and_types()]
+        raise ROS2ServiceError(
+            service_name=service_name,
+            timeout_sec=max_wait_time,
+            service_state="unavailable",
+            suggestion=(
+                f"Service not available after {max_wait_time}s. "
+                f"Available services: {sorted(available_services)[:10]}. "
+                f"Check if service is running or verify service name."
+            ),
+            underlying_error=e,
+        ) from e
 
     cli = connector.node.create_client(service_type, service_name)
-    start_time = time.time()
-    while not cli.wait_for_service(timeout_sec=timeout_sec):
-        if max_wait_time > 0 and time.time() - start_time >= max_wait_time:
-            available_services = [
-                s[0] for s in connector.node.get_service_names_and_types()
-            ]
-            raise ROS2ServiceError(
-                service_name=service_name,
-                timeout_sec=max_wait_time,
-                service_state="unavailable",
-                suggestion=(
-                    f"Service not available after {max_wait_time}s. "
-                    f"Available services: {sorted(available_services)[:10]}. "
-                    f"Check if service is running or verify service name."
-                ),
-            )
-        connector.node.get_logger().info(
-            f"service {service_name} not available, waiting again..."
-        )
     return cli

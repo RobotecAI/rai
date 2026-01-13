@@ -162,12 +162,17 @@ class TestGroundingDinoBaseTool:
         image_msg = sensor_msgs.msg.Image()
         mock_client = _setup_mock_service_client(mock_connector)
 
-        future = base_tool._call_gdino_node(image_msg, ["dinosaur", "dragon"])
+        with patch(
+            "rai_perception.components.service_utils.wait_for_ros2_services"
+        ) as mock_wait:
+            mock_wait.return_value = None  # No exception means success
 
-        assert future is not None
-        mock_connector.node.create_client.assert_called_once()
-        mock_client.wait_for_service.assert_called_once()
-        mock_client.call_async.assert_called_once()
+            future = base_tool._call_gdino_node(image_msg, ["dinosaur", "dragon"])
+
+            assert future is not None
+            mock_wait.assert_called_once()
+            mock_connector.node.create_client.assert_called_once()
+            mock_client.call_async.assert_called_once()
 
     def test_parse_detection_array(self, base_tool):
         """Test _parse_detection_array converts response correctly."""
@@ -204,10 +209,17 @@ class TestGetDetectionTool:
         detection = _create_detection2d(50.0, 50.0, 40.0, 40.0, "dinosaur", 0.9)
         response = _create_detection_response(detection)
 
-        with patch(
-            "rai_perception.tools.gdino_tools.get_future_result",
-            return_value=response,
+        with (
+            patch(
+                "rai_perception.components.service_utils.wait_for_ros2_services"
+            ) as mock_wait,
+            patch(
+                "rai_perception.tools.gdino_tools.get_future_result",
+                return_value=response,
+            ),
         ):
+            mock_wait.return_value = None  # No exception means success
+
             result = detection_tool._run("test_topic", ["dinosaur", "dragon"])
 
             assert "detected" in result.lower()
@@ -266,6 +278,9 @@ class TestGetDistanceToObjectsTool:
 
         with (
             patch(
+                "rai_perception.components.service_utils.wait_for_ros2_services"
+            ) as mock_wait,
+            patch(
                 "rai_perception.tools.gdino_tools.get_future_result",
                 return_value=response,
             ),
@@ -274,6 +289,8 @@ class TestGetDistanceToObjectsTool:
                 return_value=depth_arr,
             ),
         ):
+            mock_wait.return_value = None  # No exception means success
+
             result = distance_tool._run("camera_topic", "depth_topic", ["dinosaur"])
 
             assert "detected" in result.lower()
@@ -295,10 +312,17 @@ class TestGetDistanceToObjectsTool:
         _setup_distance_tool_params(mock_connector)
         distance_tool._load_parameters()
 
-        with patch(
-            "rai_perception.tools.gdino_tools.get_future_result",
-            return_value=None,
+        with (
+            patch(
+                "rai_perception.components.service_utils.wait_for_ros2_services"
+            ) as mock_wait,
+            patch(
+                "rai_perception.tools.gdino_tools.get_future_result",
+                return_value=None,
+            ),
         ):
+            mock_wait.return_value = None  # No exception means success
+
             with pytest.raises(ROS2ServiceError) as exc_info:
                 distance_tool._run("camera_topic", "depth_topic", ["dinosaur"])
 

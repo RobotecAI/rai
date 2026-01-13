@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import MagicMock
+
 import pytest
 import rclpy
 from rai.communication.ros2.exceptions import ROS2ParameterError
-from rai.communication.ros2.parameters import get_param_value
+from rai.communication.ros2.parameters import _extract_param_value, get_param_value
+from rclpy.parameter import Parameter, ParameterValue
 
 
 @pytest.fixture
@@ -69,3 +72,34 @@ class TestGetParamValue:
         ros2_node.declare_parameter("test_bool", True)
         value = get_param_value(ros2_node, "test_bool")
         assert value is True
+
+    @pytest.mark.parametrize(
+        "param_name,param_value,expected",
+        [
+            ("byte_array", [1, 2, 3], [1, 2, 3]),
+            ("bool_array", [True, False, True], [True, False, True]),
+            ("int_array", [1, 2, 3], [1, 2, 3]),
+            ("double_array", [1.1, 2.2, 3.3], [1.1, 2.2, 3.3]),
+            ("string_array", ["a", "b", "c"], ["a", "b", "c"]),
+        ],
+    )
+    def test_returns_array_parameters(
+        self, ros2_node, param_name, param_value, expected
+    ):
+        """Test returns array parameter values."""
+        ros2_node.declare_parameter(param_name, param_value)
+        value = get_param_value(ros2_node, param_name)
+        assert value == expected
+        assert isinstance(value, list)
+
+    def test_extract_param_value_unknown_type_returns_none(self):
+        """Test _extract_param_value returns None for unknown parameter type."""
+        mock_param = MagicMock(spec=Parameter)
+        mock_param_value = MagicMock(spec=ParameterValue)
+        mock_param.get_parameter_value.return_value = mock_param_value
+        # Use an invalid type value that doesn't match any known ParameterType
+        mock_param.type_ = MagicMock()
+        mock_param.type_.value = 999  # Invalid type value
+
+        result = _extract_param_value(mock_param)
+        assert result is None

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import rclpy
@@ -65,45 +65,50 @@ class TestGetSegmentationServiceName:
 class TestCheckServiceAvailable:
     """Test cases for check_service_available."""
 
-    def _create_mock_client(self, available: bool):
-        """Helper to create mock service client."""
-        mock_client = MagicMock()
-        mock_client.wait_for_service.return_value = available
-        return mock_client
-
     def test_service_available(self, mock_connector):
         """Test returns True when service is available."""
-        mock_client = self._create_mock_client(True)
-        mock_connector.node.create_client.return_value = mock_client
+        with patch(
+            "rai_perception.components.service_utils.wait_for_ros2_services"
+        ) as mock_wait:
+            mock_wait.return_value = None  # No exception means success
 
-        result = check_service_available(
-            mock_connector, "/test_service", timeout_sec=0.1
-        )
+            result = check_service_available(
+                mock_connector, "/test_service", timeout_sec=0.1
+            )
 
-        assert result is True
-        mock_client.wait_for_service.assert_called_once_with(timeout_sec=0.1)
+            assert result is True
+            mock_wait.assert_called_once_with(
+                mock_connector, ["/test_service"], timeout=0.1
+            )
 
     def test_service_unavailable(self, mock_connector):
         """Test returns False when service is not available."""
-        mock_client = self._create_mock_client(False)
-        mock_connector.node.create_client.return_value = mock_client
+        with patch(
+            "rai_perception.components.service_utils.wait_for_ros2_services"
+        ) as mock_wait:
+            mock_wait.side_effect = TimeoutError("Service not available")
 
-        result = check_service_available(
-            mock_connector, "/test_service", timeout_sec=0.1
-        )
+            result = check_service_available(
+                mock_connector, "/test_service", timeout_sec=0.1
+            )
 
-        assert result is False
+            assert result is False
+            mock_wait.assert_called_once_with(
+                mock_connector, ["/test_service"], timeout=0.1
+            )
 
-    def test_client_creation_failure(self, mock_connector):
-        """Test returns False when client creation fails."""
-        mock_connector.node.create_client.side_effect = Exception("Connection failed")
+    def test_invalid_timeout_returns_false(self, mock_connector):
+        """Test returns False when ValueError is raised (invalid timeout)."""
+        with patch(
+            "rai_perception.components.service_utils.wait_for_ros2_services"
+        ) as mock_wait:
+            mock_wait.side_effect = ValueError("Invalid timeout")
 
-        result = check_service_available(
-            mock_connector, "/test_service", timeout_sec=0.1
-        )
+            result = check_service_available(
+                mock_connector, "/test_service", timeout_sec=-1.0
+            )
 
-        assert result is False
-        mock_connector.node.get_logger().debug.assert_called()
+            assert result is False
 
 
 class TestCreateServiceClient:
@@ -116,39 +121,50 @@ class TestCreateServiceClient:
 
         return Empty
 
-    def _create_mock_client(self, wait_results):
-        """Helper to create mock client with wait_for_service results."""
-        mock_client = MagicMock()
-        if isinstance(wait_results, list):
-            mock_client.wait_for_service.side_effect = wait_results
-        else:
-            mock_client.wait_for_service.return_value = wait_results
-        return mock_client
-
     def test_service_available_immediately(self, mock_connector, service_type):
         """Test returns client when service is available immediately."""
-        mock_client = self._create_mock_client(True)
+        mock_client = MagicMock()
         mock_connector.node.create_client.return_value = mock_client
 
-        result = create_service_client(
-            mock_connector, service_type, "/test_service", timeout_sec=1.0
-        )
+        with patch(
+            "rai_perception.components.service_utils.wait_for_ros2_services"
+        ) as mock_wait:
+            mock_wait.return_value = None  # No exception means success
 
-        assert result == mock_client
-        mock_client.wait_for_service.assert_called_once_with(timeout_sec=1.0)
+            result = create_service_client(
+                mock_connector, service_type, "/test_service", timeout_sec=1.0
+            )
 
-    def test_service_available_after_wait(self, mock_connector, service_type):
-        """Test returns client when service becomes available after waiting."""
-        mock_client = self._create_mock_client([False, True])
-        mock_connector.node.create_client.return_value = mock_client
+            assert result == mock_client
+            mock_wait.assert_called_once_with(
+                mock_connector, ["/test_service"], timeout=0.0
+            )
+            mock_connector.node.create_client.assert_called_once_with(
+                service_type, "/test_service"
+            )
 
-        result = create_service_client(
-            mock_connector,
-            service_type,
-            "/test_service",
-            timeout_sec=1.0,
-            max_wait_time=0.0,
-        )
+    def test_service_timeout_raises_error(self, mock_connector, service_type):
+        """Test raises ROS2ServiceError when service times out."""
+        from rai.communication.ros2 import ROS2ServiceError
 
-        assert result == mock_client
-        assert mock_client.wait_for_service.call_count == 2
+        mock_connector.get_services_names_and_types.return_value = [
+            ("/other_service", ["std_srvs/srv/Empty"])
+        ]
+
+        with patch(
+            "rai_perception.components.service_utils.wait_for_ros2_services"
+        ) as mock_wait:
+            mock_wait.side_effect = TimeoutError("Service not available")
+
+            with pytest.raises(ROS2ServiceError) as exc_info:
+                create_service_client(
+                    mock_connector,
+                    service_type,
+                    "/test_service",
+                    timeout_sec=1.0,
+                    max_wait_time=5.0,
+                )
+
+            assert exc_info.value.service_name == "/test_service"
+            assert exc_info.value.timeout_sec == 5.0
+            assert "Service not available after 5.0s" in exc_info.value.suggestion

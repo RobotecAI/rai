@@ -11,8 +11,7 @@ This document synthesizes research on API usability and LLM-compatible API desig
     -   [Three-Tier Structure](#three-tier-structure)
     -   [Key Design Considerations](#key-design-considerations)
     -   [Case Study: rai_perception Implementation](#case-study-rai_perception-implementation)
-    -   [Common Usability Concerns in RAI](#common-usability-concerns-in-rai)
-    -   [Validation Approaches](#validation-approaches)
+    -   [Common Usability Concerns in RAI extension](#common-usability-concerns-in-rai-extension)
 -   [Research Findings and Practical Takeaways](#research-findings-and-practical-takeaways)
 -   [Reading List](#reading-list)
 
@@ -76,14 +75,12 @@ These patterns may help evaluate whether RAI APIs are optimized for both human d
 
 ### Multiple Audiences with Clear Separation
 
-RAI serves four distinct roles at different architectural levels:
+The [RAI framework paper](https://arxiv.org/abs/2505.07532}) (Rachwał et al., 2025) states Tools are "compatible with langchain, enabling seamless integration with tool-calling-enabled LLMs" while also being "used by Agents utilizing other decision-making mechanisms.". Based on this paper, RAI serves four distinct roles at different architectural levels:
 
 -   Application Developers: Design and configure the system (choose Agents, Connectors, Tools)
 -   Extension Developers: Extend RAI by creating custom tools and components
 -   Core Developers: Implement new framework components (connectors, agents)
 -   LLM agents: Consume Tools at runtime via tool-calling mechanisms
-
-The RAI framework paper (Rachwał et al., 2025) states Tools are "compatible with langchain, enabling seamless integration with tool-calling-enabled LLMs" while also being "used by Agents utilizing other decision-making mechanisms."
 
 ### API Similarities & Differences
 
@@ -143,55 +140,48 @@ _Low-level layer (Expert control):_ Core algorithms providing direct access to m
 
 ### Case Study: rai_perception Implementation
 
-The `rai_perception` extension provides a concrete implementation of tiered API design principles, demonstrating how theoretical considerations translate to practice. Key implementations include:
+The refactored `rai_perception` extension provides a concrete implementation of tiered API design principles, demonstrating how theoretical considerations translate to practice. Key implementations include:
 
 _Progressive Disclosure:_
 
 -   Three-tier structure: Tools (`tools/`), Components (`components/`), Algorithms (`algorithms/`)
 -   Semantic presets (`perception_presets.py`) with self-documenting names: `"default_grasp"`, `"precise_grasp"`, `"top_grasp"`
--   Presets map to component configurations, enabling high-level tool simplification
 
 _Configuration Management:_
 
 -   Multi-tier configuration: algorithm configs (model registry), ROS2 parameters (deployment), component configs (Pydantic classes), presets (semantic mappings)
 -   Helper function `rai.communication.ros2.get_param_value()` for consistent parameter extraction with automatic type conversion
--   Model registry pattern enables switching detection models without code changes
 
 _Domain Correspondence:_
 
 -   Semantic parameter names: `outlier_fraction` instead of `if_contamination`, `neighborhood_size` instead of `lof_n_neighbors`
 -   Domain-oriented strategy names: `"aggressive_outlier_removal"` instead of `"isolation_forest"`, `"density_based"` instead of `"dbscan"`
--   Parameter names describe outcomes rather than algorithm implementation details
 
 _Consistency:_
 
 -   Input schema naming pattern: `{ToolName}Input` (e.g., `GetObjectGrippingPointsToolInput`)
 -   Standardized parameter handling: `_load_parameters()` method with consistent prefixes (`perception.gripping_points.*`)
--   Once learned, patterns apply across all tools
 
 _Role Expressiveness:_
 
 -   Pipeline visibility: Tools expose `pipeline_stages` attributes and `get_pipeline_info()` methods
 -   Service dependency clarity: `required_services` attributes and `check_service_dependencies()` methods
--   Makes component relationships explicit without requiring implementation knowledge
 
 _Progressive Evaluation:_
 
 -   Debug mode (`debug=True`) publishes intermediate results to ROS2 topics for RVIZ visualization
 -   Enables inspection of pipeline stages without code modification
--   Future: expose intermediate results as optional return values for programmatic access
 
 _Model Registry Pattern:_
 
 -   Enables switching between detection models (e.g., GroundingDINO, YOLO) via ROS2 parameters
 -   No code changes required—service reads `model_name` parameter and queries registry
--   Supports extensibility: new models added by implementing algorithm and registering in registry
 
 These implementations demonstrate how tiered API design addresses usability concerns identified in research while maintaining flexibility for expert users. The `rai_perception` exploration serves as a reference implementation for other RAI extensions considering similar refactoring.
 
-### Common Usability Concerns in RAI
+### Common Usability Concerns in RAI extension
 
-Based on analysis of RAI extensions, common usability issues include:
+Based on analysis of RAI extensions, common usability issues may include:
 
 1. _Configuration complexity_: Tools requiring 6+ ROS2 parameters plus multiple configuration objects with 10+ parameters each create high cognitive load.
 
@@ -211,66 +201,7 @@ Based on analysis of RAI extensions, common usability issues include:
 
 9. _Code duplication_: Infrastructure-level duplication (service client creation, message retrieval, parameter handling) creates maintenance burden and inconsistent error handling.
 
-### Validation Approaches
-
-Tiered API structures could be validated through the following scenarios:
-
-**High-Level Tier:**
-
--   Zero-shot agent usage without examples or parameter tuning
--   Error recovery with actionable error messages
--   80%+ of tasks solvable with high-level API alone, 1-2 tool calls per task
-
-**Mid-Level Tier:**
-
--   Edge case handling with semantic parameters
--   Strategy comparison without understanding low-level algorithms
--   Environment adaptation across different robot/sensor setups
-
-**Low-Level Tier:**
-
--   Custom pipelines with independent algorithm composition
--   Algorithm reproduction with full stage accessibility
-
-**Success Metrics (examples to consider):**
-
--   90% of new users succeed with high-level tier
--   15% of power users utilize low-level tier
--   > 85% LLM agent success rate
--   Natural progression between tiers over time
--   <5% abstraction overhead compared to direct algorithm usage
-
----
-
 ## Research Findings and Practical Takeaways
-
-### Key Research Findings
-
-**Piccioni et al. (2013)** - Study of 25 programmers using a persistence library API:
-
--   48% of participants had to understand implementation details to use APIs—a clear abstraction failure
--   Naming is critical: Finding descriptive, non-ambiguous names is challenging
--   Documentation is critical: ALL major usability flaws traced to incomplete/unclear documentation
--   Flexibility cuts both ways: Experienced programmers leverage it; novices get confused by choices
-
-**Stylos & Myers (2008)** - Study of 10 programmers testing method placement:
-
--   Method placement dramatically affects API learnability (2-11x faster when methods are on expected classes)
--   Programmers gravitate to the same starting classes and discover other classes through method signatures
-
-**Diprose et al. (2016)** - Study of social robot programming APIs:
-
--   High-level primitives with close domain mapping improve usability but may need to preserve necessary control
--   The ideal abstraction level depends on task and audience—some need lower levels, others higher
--   Main trade-off: Low remote visibility makes progressive evaluation difficult—programmers exposed to low-level details when debugging
-
-**Nielsen (2006)** - Progressive disclosure defers advanced features to reduce cognitive load, making applications easier to learn and less error-prone. For RAI, this translates to tiered API design: start simple, reveal complexity as needed.
-
-**LLM API Design (2023-2025)** - Emerging research, mostly practitioner-focused:
-
--   APIs for LLMs serve two primary functions: grounding (fetching real-time data) and action (executing tasks)
--   An API is "AI-ready" when designed for efficient interaction with LLMs, providing structured, unambiguous data
--   The utility of large language models can be largely attributed to API designers creating abstractions that fit real use cases well
 
 ### Practical Takeaways for RAI Core Developers
 
