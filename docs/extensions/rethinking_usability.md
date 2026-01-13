@@ -8,7 +8,7 @@ Perception is a critical component in robotics applications, enabling object det
 
 As the codebase grows with recent work on [3D gripping point detection PR](https://github.com/RobotecAI/rai/pull/694) and new perception functionality in `rai_semap`, the current API design reveals significant usability challenges because most new APIs are designed for expert-level users, requiring deep understanding of algorithms, pipeline architecture, and domain-specific concepts. The configuration supporting these APIs is also complex. The existing APIs lack support for use cases where developers need to switch to different detection models.
 
-This document explores a potential redesign approach that addresses some of these challenges by organizing code into a tiered API structure that supports progressive disclosure, in addition to other exploration drawing on design principles from [`api_design_considerations.md`](../../../docs/api_design_considerations.md). Mainly,
+This document explores a potential redesign approach that addresses some of these challenges by organizing code into a tiered API structure that supports progressive disclosure, in addition to other exploration drawing on design principles from [`api_design_considerations.md`](../api_design_considerations.md). Mainly,
 
 -   Rather than focusing solely on API surface changes, the exploration considers cognitive load and provides clear paths from simple, agent-friendly tools to configurable components to expert-level algorithms, balancing accessibility with flexibility.
 -   Another goal is to lay out the foundation for enabling developers to switch between different detection models with no or little code changes (see the "Switching Between Detection Models" use case below).
