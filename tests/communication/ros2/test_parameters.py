@@ -18,7 +18,7 @@ import pytest
 import rclpy
 from rai.communication.ros2.exceptions import ROS2ParameterError
 from rai.communication.ros2.parameters import _extract_param_value, get_param_value
-from rclpy.parameter import Parameter, ParameterValue
+from rclpy.parameter import Parameter, ParameterType, ParameterValue
 
 
 @pytest.fixture
@@ -76,7 +76,6 @@ class TestGetParamValue:
     @pytest.mark.parametrize(
         "param_name,param_value,expected",
         [
-            ("byte_array", [1, 2, 3], [1, 2, 3]),
             ("bool_array", [True, False, True], [True, False, True]),
             ("int_array", [1, 2, 3], [1, 2, 3]),
             ("double_array", [1.1, 2.2, 3.3], [1.1, 2.2, 3.3]),
@@ -91,6 +90,20 @@ class TestGetParamValue:
         value = get_param_value(ros2_node, param_name)
         assert value == expected
         assert isinstance(value, list)
+
+    def test_extract_param_value_byte_array(self):
+        """Test _extract_param_value returns list for PARAMETER_BYTE_ARRAY."""
+        mock_param = MagicMock(spec=Parameter)
+        mock_param_value = MagicMock(spec=ParameterValue)
+        mock_param_value.byte_array_value = bytes([1, 2, 3])
+        mock_param.get_parameter_value.return_value = mock_param_value
+        # ParameterType.PARAMETER_BYTE_ARRAY is an int (5), so set type_ to match
+        mock_param.type_ = MagicMock()
+        mock_param.type_.value = ParameterType.PARAMETER_BYTE_ARRAY
+
+        result = _extract_param_value(mock_param)
+        assert result == [1, 2, 3]
+        assert isinstance(result, list)
 
     def test_extract_param_value_unknown_type_returns_none(self):
         """Test _extract_param_value returns None for unknown parameter type."""
