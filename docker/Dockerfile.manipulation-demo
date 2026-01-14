@@ -22,7 +22,7 @@ RUN vcs import < demos.repos
 RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && \
     rosdep install --from-paths src --ignore-src -r -y'
 
-# TODO add installing binary from script when it is updated
+RUN ./scripts/download_demo.sh manipulation
 
 # Install all dependencies
 RUN --mount=type=cache,target=/root/.cache/pypoetry/cache \
