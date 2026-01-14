@@ -1,10 +1,47 @@
 entities:
+  - name: carrot1
+    prefab_name: carrot
+    pose:
+      translation:
+        x: 0.30
+        y: -0.45
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+  - name: carrot2
+    prefab_name: carrot
+    pose:
+      translation:
+        x: 0.45
+        y: 0.30
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+  - name: carrot3
+    prefab_name: carrot
+    pose:
+      translation:
+        x: 0.50
+        y: -0.45
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+
   - name: apple1
     prefab_name: apple
     pose:
       translation:
-        x: 0.4
-        y: -0.3
+        x: 0.35
+        y: -0.10
         z: 0.05
       rotation:
         x: 0.0
@@ -15,21 +52,20 @@ entities:
     prefab_name: apple
     pose:
       translation:
-        x: 0.3
-        y: -0.2
+        x: 0.30
+        y: 0.10
         z: 0.05
       rotation:
         x: 0.0
         y: 0.0
         z: 0.0
         w: 1.0
-
   - name: apple3
     prefab_name: apple
     pose:
       translation:
-        x: 0.5
-        y: 0.4
+        x: 0.40
+        y: 0.45
         z: 0.05
       rotation:
         x: 0.0
@@ -37,73 +73,24 @@ entities:
         z: 0.0
         w: 1.0
 
-  - name: tomato1
-    prefab_name: tomato
+  - name: red_cube1
+    prefab_name: red_cube
     pose:
       translation:
-        x: 0.4
-        y: -0.35
+        x: 0.45
+        y: 0.1
         z: 0.05
       rotation:
         x: 0.0
         y: 0.0
         z: 0.0
         w: 1.0
-
-  - name: tomato2
-    prefab_name: tomato
+  - name: red_cube2
+    prefab_name: red_cube
     pose:
       translation:
-        x: 0.4
-        y: 0.4
-        z: 0.05
-      rotation:
-        x: 0.0
-        y: 0.0
-        z: 0.0
-        w: 1.0
-  - name: tomato3
-    prefab_name: tomato
-    pose:
-      translation:
-        x: 0.1
-        y: -0.4
-        z: 0.05
-      rotation:
-        x: 0.0
-        y: 0.0
-        z: 0.0
-        w: 1.0
-  - name: tomato4
-    prefab_name: tomato
-    pose:
-      translation:
-        x: 0.5
-        y: 0.35
-        z: 0.05
-      rotation:
-        x: 0.0
-        y: 0.0
-        z: 0.0
-        w: 1.0
-  - name: blue_cube1
-    prefab_name: blue_cube
-    pose:
-      translation:
-        x: 0.6
+        x: 0.45
         y: -0.3
-        z: 0.05
-      rotation:
-        x: 0.0
-        y: 0.0
-        z: 0.0
-        w: 1.0
-  - name: blue_cube2
-    prefab_name: blue_cube
-    pose:
-      translation:
-        x: 0.35
-        y: 0.30
         z: 0.05
       rotation:
         x: 0.0

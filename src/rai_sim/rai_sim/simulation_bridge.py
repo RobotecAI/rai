@@ -127,24 +127,26 @@ class SceneConfig(BaseModel):
         with open(base_config_path) as f:
             content = yaml.safe_load(f)
         frame_id = content.get("frame_id", "odom")
-        entities = [
-            Entity(
-                name=entity["name"],
-                prefab_name=entity["prefab_name"],
-                pose=PoseStamped(
-                    header=Header(frame_id=frame_id),
-                    pose=Pose(
-                        position=Point(
-                            **entity["pose"]["translation"]
-                        ),  # TODO(boczekbartek): adapt yaml configs to ros2 naming convension
-                        orientation=Quaternion(
-                            **entity["pose"].get("rotation", dict())
-                        ),
-                    ),
+        entities = []
+        for entity in content["entities"]:
+            # Create PoseStamped object with proper ROS2BaseModel inheritance
+            pose_stamped = PoseStamped(
+                header=Header(frame_id=frame_id),
+                pose=Pose(
+                    position=Point(
+                        **entity["pose"]["translation"]
+                    ),  # TODO(boczekbartek): adapt yaml configs to ros2 naming convension
+                    orientation=Quaternion(**entity["pose"].get("rotation", dict())),
                 ),
             )
-            for entity in content["entities"]
-        ]
+
+            entities.append(
+                Entity(
+                    name=entity["name"],
+                    prefab_name=entity["prefab_name"],
+                    pose=pose_stamped,
+                )
+            )
 
         return cls(entities=entities)
 

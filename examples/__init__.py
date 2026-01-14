@@ -11,27 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-import logging
-from typing import List
-
-from langchain_core.messages import BaseMessage, HumanMessage
-from manipulation_common import create_agent
-
-logger = logging.getLogger(__name__)
-
-
-def main():
-    agent, _ = create_agent()
-    messages: List[BaseMessage] = []
-
-    while True:
-        prompt = input("Enter a prompt: ")
-        messages.append(HumanMessage(content=prompt))
-        output = agent.invoke({"messages": messages})
-        output["messages"][-1].pretty_print()
-
-
-if __name__ == "__main__":
-    main()

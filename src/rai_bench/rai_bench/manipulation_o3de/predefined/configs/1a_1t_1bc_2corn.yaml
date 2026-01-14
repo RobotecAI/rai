@@ -1,16 +1,4 @@
 entities:
-  - name: carrot1
-    prefab_name: carrot
-    pose:
-      translation:
-        x: 0.1
-        y: -0.2
-        z: 0.05
-      rotation:
-        x: 0.0
-        y: 0.0
-        z: 0.0
-        w: 1.0
   - name: apple1
     prefab_name: apple
     pose:
@@ -27,8 +15,8 @@ entities:
     prefab_name: tomato
     pose:
       translation:
-        x: 0.35
-        y: -0.1
+        x: 0.3
+        y: 0.4
         z: 0.05
       rotation:
         x: 0.0
@@ -39,31 +27,7 @@ entities:
     prefab_name: blue_cube
     pose:
       translation:
-        x: 0.5
-        y: 0.5
-        z: 0.05
-      rotation:
-        x: 0.0
-        y: 0.0
-        z: 0.0
-        w: 1.0
-  - name: red_cube1
-    prefab_name: red_cube
-    pose:
-      translation:
-        x: 0.55
-        y: 0.5
-        z: 0.05
-      rotation:
-        x: 0.0
-        y: 0.0
-        z: 0.0
-        w: 1.0
-  - name: yellow_cube1
-    prefab_name: yellow_cube
-    pose:
-      translation:
-        x: 0.6
+        x: 0.4
         y: 0.5
         z: 0.05
       rotation:
@@ -75,23 +39,24 @@ entities:
     prefab_name: corn
     pose:
       translation:
-        x: 0.6
-        y: 0.4
+        x: 0.55
+        y: 0.5
         z: 0.05
       rotation:
         x: 0.0
         y: 0.707
         z: 0.0
         w: 0.707
-  - name: carrot2
-    prefab_name: carrot
+
+  - name: corn2
+    prefab_name: corn
     pose:
       translation:
-        x: 0.15
-        y: -0.2
+        x: 0.55
+        y: -0.3
         z: 0.05
       rotation:
         x: 0.0
-        y: 0.0
+        y: 0.707
         z: 0.0
-        w: 1.0
+        w: 0.707
