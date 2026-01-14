@@ -1,94 +1,88 @@
 entities:
-  - name: carrot1
-    prefab_name: carrot
-    pose:
-      translation:
-        x: 0.1
-        y: -0.2
-        z: 0.05
-      rotation:
-        x: 0.0
-        y: 0.0
-        z: 0.0
-        w: 1.0
   - name: apple1
     prefab_name: apple
     pose:
       translation:
-        x: 0.3
-        y: -0.1
+        x: 0.25
+        y: 0.10
         z: 0.05
       rotation:
         x: 0.0
         y: 0.0
         z: 0.0
         w: 1.0
-  - name: tomato1
-    prefab_name: tomato
+
+  - name: apple2
+    prefab_name: apple
     pose:
       translation:
         x: 0.35
-        y: -0.1
+        y: -0.10
         z: 0.05
       rotation:
         x: 0.0
         y: 0.0
         z: 0.0
         w: 1.0
-  - name: blue_cube1
-    prefab_name: blue_cube
+
+  - name: apple3
+    prefab_name: apple
     pose:
       translation:
-        x: 0.5
-        y: 0.5
+        x: 0.45
+        y: 0.30
         z: 0.05
       rotation:
         x: 0.0
         y: 0.0
         z: 0.0
         w: 1.0
-  - name: red_cube1
-    prefab_name: red_cube
-    pose:
-      translation:
-        x: 0.55
-        y: 0.5
-        z: 0.05
-      rotation:
-        x: 0.0
-        y: 0.0
-        z: 0.0
-        w: 1.0
-  - name: yellow_cube1
-    prefab_name: yellow_cube
-    pose:
-      translation:
-        x: 0.6
-        y: 0.5
-        z: 0.05
-      rotation:
-        x: 0.0
-        y: 0.0
-        z: 0.0
-        w: 1.0
+
   - name: corn1
     prefab_name: corn
     pose:
       translation:
-        x: 0.6
-        y: 0.4
+        x: 0.30
+        y: 0.35
         z: 0.05
       rotation:
         x: 0.0
         y: 0.707
         z: 0.0
         w: 0.707
-  - name: carrot2
-    prefab_name: carrot
+
+  - name: corn2
+    prefab_name: corn
     pose:
       translation:
-        x: 0.15
-        y: -0.2
+        x: 0.20
+        y: -0.35
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.707
+        z: 0.0
+        w: 0.707
+
+  - name: red_cube1
+    prefab_name: red_cube
+    pose:
+      translation:
+        x: 0.25
+        y: -0.25
+        z: 0.05
+      rotation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+
+  - name: red_cube2
+    prefab_name: red_cube
+    pose:
+      translation:
+        x: 0.45
+        y: -0.30
         z: 0.05
       rotation:
         x: 0.0

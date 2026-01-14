@@ -1,6 +1,6 @@
 entities:
-  - name: blue_cube1
-    prefab_name: blue_cube
+  - name: red_cube1
+    prefab_name: red_cube
     pose:
       translation:
         x: 0.3
@@ -11,7 +11,7 @@ entities:
         y: 0.0
         z: 0.0
         w: 1.0
-  - name: red_cube1
+  - name: red_cube2
     prefab_name: red_cube
     pose:
       translation:
@@ -23,8 +23,8 @@ entities:
         y: 0.0
         z: 0.0
         w: 1.0
-  - name: yellow_cube1
-    prefab_name: yellow_cube
+  - name: red_cube3
+    prefab_name: red_cube
     pose:
       translation:
         x: 0.3

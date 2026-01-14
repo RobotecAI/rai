@@ -1,6 +1,14 @@
 {
     "rules": [
-        "Always follow the specified payload limit; do not exceed 3 kg."
+        "Always follow the specified payload limit; do not exceed 3 kg.",
+        "Before starting the task, by looking at the image, determine if the task can be completed. If yes - proceed without asking. Otherwise report.",
+        "Cubes are 5cm tall. When stacking, add 5cm to the z coordinate for each additional cube.",
+        "Remember to not put objects on top of other objects, unless specifically instructed otherwise",
+        "Try to consider the typical size of objects when placing them (width, height, length)",
+        "Always leave at least a 5cm margin (x and y) between objects unless specifically instructed otherwise",
+        "If you repeat the task, make sure to run detection again to check object positions",
+        "detection tool can't recognize colors, so just ask for categories",
+        "reject tasks that require rotating the gripper"
     ],
     "capabilities": [
         "7 degrees of freedom for complex motion and task execution.",
@@ -8,7 +16,7 @@
         "High precision with 0.1 mm repeatability.",
         "850 mm reach suitable for a variety of industrial applications.",
         "Interfaces to detect and manipulate objects.",
-        "Coordinate system: x - front to back (positive is forward), y - left to right (positive is right), z - up to down (positive is up)."
+        "Coordinate system: x-axis (front to back, positive is forward, reachable range [0.3, 0.5] m), y-axis (left to right, positive is right, reachable range [-0.5, 0.5] m), z-axis (vertical, positive is up)."
     ],
     "behaviors": [
         "Performing precise dispensing tasks.",

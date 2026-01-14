@@ -319,6 +319,31 @@ class TestO3DExROS2Bridge(unittest.TestCase):
         self.assertEqual(call_args.transform.translation.z, 3.0)
         self.assertEqual(call_args.transform.rotation.w, 1.0)
 
+    def test_clear_scene(self):
+        self.bridge.spawned_entities = [
+            self.test_spawned_entity,
+            SpawnedEntity(
+                id="entity_id_456",
+                name="test_entity2",
+                prefab_name="cube",
+                pose=self.test_spawned_entity.pose,
+            ),
+        ]
+
+        def side_effect(entity):
+            if entity in self.bridge.spawned_entities:
+                self.bridge.spawned_entities.remove(entity)
+
+        self.bridge._despawn_entity = MagicMock(side_effect=side_effect)
+
+        # Call clear_scene
+        self.bridge.clear_scene()
+
+        # Verify all entities were despawned
+        self.assertEqual(len(self.bridge.spawned_entities), 0)
+        # Verify _despawn_entity was called twice
+        self.assertEqual(self.bridge._despawn_entity.call_count, 2)
+
 
 class TestROS2ConnectorInterface(unittest.TestCase):
     """Tests to ensure the ROS2Connector interface meets the expectations of O3DExROS2Bridge."""
