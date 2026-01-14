@@ -13,27 +13,43 @@
 # limitations under the License.
 
 ARG ROS_DISTRO=jazzy
-
 FROM osrf/ros:${ROS_DISTRO}-desktop-full
+
+ARG DEPENDENCIES=core_only
 ENV DEBIAN_FRONTEND=noninteractive
+# Increase timeout for Poetry requests.
+ENV POETRY_REQUESTS_TIMEOUT=300
+
+# Check whether the $DEPENDENCIES ARG has a valid value
+RUN /bin/bash -c 'if [ "${DEPENDENCIES}" != "core_only" ] && [ "${DEPENDENCIES}" != "all_groups" ]; then \
+  echo Error: invalid DEPENDENCIES value. Valid values "core_only", "all_groups" && exit 1; \
+fi'
+
 
 # Install dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt update && apt install -y \
     python3 \
     python3-pip \
     git \
-    wget
-
+    wget \
+    zip
 # Install Poetry
-RUN curl -sSL https://install.python-poetry.org | python3 - --version 2.1.1
+RUN curl -sSL https://install.python-poetry.org | python3 - --version 2.1.3
 ENV PATH="/root/.local/bin:$PATH"
 
-# Clone and setup RAI
+# Copy the RAI repository
+COPY . /rai
 WORKDIR /rai
-RUN git clone https://github.com/RobotecAI/rai.git .
 
-# Install Python dependencies with Poetry
-RUN poetry install --with nomad,perception
+# Set up the environment to use Fast DDS
+ENV FASTRTPS_DEFAULT_PROFILES_FILE=/rai/docker/fastrtps_config.xml
+ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+
+RUN /bin/bash -c 'if [ "${DEPENDENCIES}" = "core_only" ]; then \
+  poetry install; \
+else \
+  poetry install --all-groups; \
+fi'
 
 # Install ROS dependencies
 RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && \
@@ -41,3 +57,21 @@ RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && \
 
 # Build the workspace
 RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && colcon build --symlink-install'
+
+# Install libraries required for GUI and NVIDIA support
+RUN apt install -y \
+    libglu1-mesa-dev \
+    libxcb-xinerama0 \
+    libfontconfig1-dev \
+    libnvidia-gl-470 \
+    libxcb-xkb-dev \
+    libxkbcommon-x11-dev \
+    libxkbcommon-dev \
+    libxcb-xfixes0-dev \
+    libxcb-xinput-dev \
+    libxcb-xinput0 \
+    libpcre2-16-0 \
+    libunwind-dev
+
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=all

@@ -6,6 +6,8 @@
   <maintainer email="maciej.majek@robotec.ai">Maciej Majek</maintainer>
   <license>Apache-2.0</license>
 
+  <exec_depend>rai_interfaces</exec_depend>
+
   <test_depend>python3-pytest</test_depend>
 
   <export>

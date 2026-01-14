@@ -128,12 +128,24 @@ class MoveToPointTool(BaseROS2Tool):
 
 
 class MoveObjectFromToToolInput(BaseModel):
-    x: float = Field(description="The x coordinate of the point to move to")
-    y: float = Field(description="The y coordinate of the point to move to")
-    z: float = Field(description="The z coordinate of the point to move to")
-    x1: float = Field(description="The x coordinate of the point to move to")
-    y1: float = Field(description="The y coordinate of the point to move to")
-    z1: float = Field(description="The z coordinate of the point to move to")
+    x: float = Field(
+        description="The x coordinate of the source point (pick-up location) in the manipulator frame"
+    )
+    y: float = Field(
+        description="The y coordinate of the source point (pick-up location) in the manipulator frame"
+    )
+    z: float = Field(
+        description="The z coordinate of the source point (pick-up location) in the manipulator frame"
+    )
+    x1: float = Field(
+        description="The x coordinate of the destination point (drop-off location) in the manipulator frame"
+    )
+    y1: float = Field(
+        description="The y coordinate of the destination point (drop-off location) in the manipulator frame"
+    )
+    z1: float = Field(
+        description="The z coordinate of the destination point (drop-off location) in the manipulator frame"
+    )
 
 
 class MoveObjectFromToTool(BaseROS2Tool):
@@ -170,6 +182,11 @@ class MoveObjectFromToTool(BaseROS2Tool):
         y1: float,
         z1: float,
     ) -> str:
+        # Used to reset arm after tool call
+        reset_tool = ResetArmTool(
+            connector=self.connector, manipulator_frame=self.manipulator_frame
+        )
+
         # NOTE: create_client could be refactored into self.connector.service_call
         self.connector.service_call
         client = self.connector.node.create_client(
@@ -246,7 +263,7 @@ class MoveObjectFromToTool(BaseROS2Tool):
 
         if response is None:
             return f"Service call failed for point ({x1:.2f}, {y1:.2f}, {z1:.2f})."
-
+        reset_tool._run()
         if response.success:
             return f"End effector successfully positioned at coordinates ({x1:.2f}, {y1:.2f}, {z1:.2f}). Note: The status of object interaction (grab/drop) is not confirmed by this movement."
         else:

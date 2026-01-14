@@ -80,15 +80,12 @@ class GDBoxer:
             "vision_markup/boxer.py", "configs/gdino_config.py"
         )
         self.weight_path = str(weight_path)
-        if use_cuda:
-            if torch.cuda.is_available():
-                self.device = "cuda"
-            else:
-                self.logger.warning("CUDA is not available but requested, using CPU")
-                self.device = "cpu"
+        if use_cuda and torch.cuda.is_available():
+            self.device = "cuda"
         else:
+            if use_cuda:
+                self.logger.warning("CUDA is not available but requested, using CPU")
             self.device = "cpu"
-
         self.model = Model(self.cfg_path, self.weight_path, device=self.device)
         self.bridge = CvBridge()
 
