@@ -103,8 +103,7 @@ manipulation techniques.
     xhost +local:root
     ```
 
-4.  (Inside the docker container) By default, RAI uses OpenAI as the vendor. Thus, it is necessary
-    to set the `$OPENAI_API_KEY` environmental variable.
+4.  Set the `$OPENAI_API_KEY` environmental variable.
 
     ```shell
     export OPENAI_API_KEY=YOUR_OPEN_AI_API_KEY
@@ -117,7 +116,7 @@ manipulation techniques.
 5.  Run the docker container with the following command:
 
     ```shell
-    docker run -e DISPLAY=$DISPLAY -e OPENAI_API_KEY=$OPENAI_API_KEY -v /tmp/.X11-unix:/tmp/.X11-unix --gpus all -it rai:jazzy # or rai:humble
+    docker run -p 8501:8501 -e DISPLAY=$DISPLAY -e OPENAI_API_KEY=$OPENAI_API_KEY -v /tmp/.X11-unix:/tmp/.X11-unix --gpus all -it rai-manipulation-demo:jazzy # or rai:humble
     ```
 
     !!! tip "NVIDIA Container Toolkit"
