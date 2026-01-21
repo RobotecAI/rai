@@ -49,6 +49,9 @@ def create_agent():
         # ... etc
 
     Or set them in launch files/YAML configs. See tool logs for current parameter values.
+
+    Note: This demo uses the new model-agnostic service names (/detection, /segmentation).
+    Legacy service names are disabled in run_perception_services.py.
     """
     rclpy.init()
     connector = ROS2Connector(executor_type="single_threaded")

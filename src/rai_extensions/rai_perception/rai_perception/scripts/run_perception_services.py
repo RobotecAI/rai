@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+import os
+
 import rclpy
 from rai.agents import wait_for_shutdown
 from rai.communication.ros2 import ROS2Connector
@@ -32,6 +34,16 @@ def main():
     )
     segmentation_connector = ROS2Connector(
         "segmentation_service", executor_type="single_threaded"
+    )
+
+    # Read enable_legacy_service_names from environment variable or default to True (backward compatible)
+    # Set via launch file: env={'ENABLE_LEGACY_SERVICE_NAMES': 'false'} or command line
+    enable_legacy = os.getenv("ENABLE_LEGACY_SERVICE_NAMES", "true").lower() == "true"
+    detection_connector.node.declare_parameter(
+        "enable_legacy_service_names", enable_legacy
+    )
+    segmentation_connector.node.declare_parameter(
+        "enable_legacy_service_names", enable_legacy
     )
 
     # Services read model_name from ROS2 params (defaults: "grounding_dino", "grounded_sam")

@@ -14,14 +14,29 @@
 
 
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, SetEnvironmentVariable
+from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
+    # Launch argument to control legacy service name registration
+    # Default: True (backward compatible - existing apps continue working)
+    # Set to False for new apps using only new service names
+    enable_legacy_arg = DeclareLaunchArgument(
+        "enable_legacy_service_names",
+        default_value="true",
+        description="Enable legacy service names for backward compatibility (default: true)",
+    )
+
     return LaunchDescription(
         [
+            enable_legacy_arg,
+            SetEnvironmentVariable(
+                "ENABLE_LEGACY_SERVICE_NAMES",
+                LaunchConfiguration("enable_legacy_service_names"),
+            ),
             ExecuteProcess(
-                cmd=["python", "run_perception_agents.py"],
+                cmd=["python", "run_perception_services.py"],
                 cwd="src/rai_extensions/rai_perception/rai_perception/scripts",
                 output="screen",
             ),

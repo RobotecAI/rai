@@ -34,6 +34,8 @@ class DetectionService(BaseVisionService):
     Reads ROS2 parameters:
     - model_name: Detection model to use (default: "grounding_dino")
     - service_name: ROS2 service name to expose (default: "/detection")
+    - enable_legacy_service_names: Register legacy service name "/grounding_dino_classify"
+      for backward compatibility (default: True)
 
     Note: Currently uses hardcoded weights for grounding_dino. Future enhancement:
     move weights URL to registry for full model-agnostic support.
@@ -66,6 +68,37 @@ class DetectionService(BaseVisionService):
             self._classify_callback,
             "rai_interfaces/srv/RAIGroundingDino",
             "Detection",
+        )
+
+        # Register legacy service name for backward compatibility
+        if self._should_register_legacy_name():
+            legacy_service_name = "/grounding_dino_classify"
+            self._create_service(
+                legacy_service_name,
+                self._classify_callback,
+                "rai_interfaces/srv/RAIGroundingDino",
+                "Detection (legacy)",
+            )
+            self.logger.info(
+                f"Legacy service name '{legacy_service_name}' registered for backward compatibility. "
+                f"Consider migrating to '{service_name}'."
+            )
+
+    def _should_register_legacy_name(self) -> bool:
+        """Check if legacy service name should be registered.
+
+        Reads ROS2 parameter: enable_legacy_service_names
+        Default: True (for backward compatibility)
+
+        Returns:
+            True if legacy service name should be registered, False otherwise
+        """
+        from rai.communication.ros2 import get_param_value
+
+        return get_param_value(
+            self.ros2_connector.node,
+            "enable_legacy_service_names",
+            default=True,
         )
 
     def _classify_callback(self, request, response: RAIGroundingDino.Response):
