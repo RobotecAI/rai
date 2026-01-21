@@ -23,7 +23,7 @@ try:
 except ImportError:
     pytest.skip("ROS2 is not installed", allow_module_level=True)
 
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import numpy as np
 from rai.communication.ros2.connectors import ROS2Connector
@@ -204,27 +204,41 @@ def test_get_object_gripping_points_tool_auto_declaration():
             if node.has_parameter(param_name):
                 node.undeclare_parameter(param_name)
 
-        # Initialize tool - should auto-declare with defaults
-        with patch("rai_perception.tools.gripping_points_tools.logger") as mock_logger:
-            tool = GetObjectGrippingPointsTool(connector=connector)
+            # Initialize tool - should auto-declare with defaults
+            with (
+                patch(
+                    "rai_perception.tools.gripping_points_tools.logger"
+                ) as mock_logger,
+                patch.object(connector.node, "get_logger") as mock_get_logger,
+            ):
+                mock_node_logger = MagicMock()
+                mock_get_logger.return_value = mock_node_logger
 
-            # Verify defaults are used
-            assert tool.target_frame == "base_link"
-            assert tool.source_frame == "camera_link"
-            assert tool.camera_topic == "/camera/rgb/image_raw"
-            assert tool.depth_topic == "/camera/depth/image_raw"
-            assert tool.camera_info_topic == "/camera/rgb/camera_info"
-            assert tool.timeout_sec == 10.0
-            assert tool.conversion_ratio == 0.001
+                tool = GetObjectGrippingPointsTool(connector=connector)
 
-            # Verify logging occurred
-            assert mock_logger.info.called
-            log_calls = [str(call) for call in mock_logger.info.call_args_list]
-            assert any("Auto-declared parameter" in str(call) for call in log_calls)
-            assert any(
-                "GetObjectGrippingPointsTool initialized" in str(call)
-                for call in log_calls
-            )
+                # Verify defaults are used
+                assert tool.target_frame == "base_link"
+                assert tool.source_frame == "camera_link"
+                assert tool.camera_topic == "/camera/rgb/image_raw"
+                assert tool.depth_topic == "/camera/depth/image_raw"
+                assert tool.camera_info_topic == "/camera/rgb/camera_info"
+                assert tool.timeout_sec == 10.0
+                assert tool.conversion_ratio == 1.0
+
+                # Verify logging occurred
+                assert mock_logger.info.called
+                log_calls = [str(call) for call in mock_logger.info.call_args_list]
+                assert any("Auto-declared parameter" in str(call) for call in log_calls)
+
+                # Verify initialization message via node logger
+                assert mock_node_logger.info.called
+                node_log_calls = [
+                    str(call) for call in mock_node_logger.info.call_args_list
+                ]
+                assert any(
+                    "GetObjectGrippingPointsTool initialized" in str(call)
+                    for call in node_log_calls
+                )
 
         # Test 2: Override parameters before initialization
         # Undeclare parameters from Test 1 first

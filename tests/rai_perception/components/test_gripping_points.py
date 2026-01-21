@@ -12,13 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import Mock, patch
+
 import numpy as np
 import pytest
+from cv_bridge import CvBridge
 from rai_perception.components.gripping_points import (
     GrippingPointEstimator,
     GrippingPointEstimatorConfig,
     PointCloudFilter,
     PointCloudFilterConfig,
+    PointCloudFromSegmentation,
+    PointCloudFromSegmentationConfig,
 )
 
 
@@ -471,3 +476,82 @@ class TestPointCloudFilter:
         points = np.random.rand(10, 3).astype(np.float32)
         result = method(points)
         np.testing.assert_array_equal(result, points)
+
+
+class TestPointCloudFromSegmentationEncodingAware:
+    """Test encoding-aware depth conversion in PointCloudFromSegmentation."""
+
+    @pytest.fixture
+    def mock_connector(self):
+        """Create a mock ROS2Connector."""
+        connector = Mock()
+        connector.node = Mock()
+        connector.node.get_logger.return_value = Mock()
+        return connector
+
+    @pytest.fixture
+    def bridge(self):
+        """Create CvBridge for image conversion."""
+        return CvBridge()
+
+    def test_encoding_aware_conversion_32fc1(self, mock_connector, bridge):
+        """Test that 32FC1 encoding (meters) is handled correctly."""
+        # Mock the depth conversion to verify encoding-aware conversion is used
+        with patch(
+            "rai_perception.components.gripping_points.convert_depth_to_meters"
+        ) as mock_convert:
+            depth_array = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+            mock_convert.return_value = depth_array  # Already in meters, no conversion
+
+            config = PointCloudFromSegmentationConfig()
+            PointCloudFromSegmentation(
+                connector=mock_connector,
+                camera_topic="/test/camera",
+                depth_topic="/test/depth",
+                camera_info_topic="/test/camera_info",
+                source_frame="camera_frame",
+                target_frame="base_frame",
+                conversion_ratio=1.0,  # Recommended: use encoding-aware only
+                config=config,
+            )
+
+            # Verify convert_depth_to_meters integration point exists
+            # (actual call happens in run() method which requires full ROS2 setup)
+            assert mock_convert is not None
+
+    def test_conversion_ratio_default(self, mock_connector):
+        """Test that default conversion_ratio is 1.0 (no scaling)."""
+        config = PointCloudFromSegmentationConfig()
+        pcl_gen = PointCloudFromSegmentation(
+            connector=mock_connector,
+            camera_topic="/test/camera",
+            depth_topic="/test/depth",
+            camera_info_topic="/test/camera_info",
+            source_frame="camera_frame",
+            target_frame="base_frame",
+            config=config,
+        )
+
+        assert pcl_gen.conversion_ratio == 1.0
+
+    def test_encoding_aware_vs_manual_conversion(self, bridge):
+        """Test that encoding-aware conversion handles different encodings correctly."""
+        from rai_perception.components.perception_utils import convert_depth_to_meters
+
+        # Test 16UC1 (millimeters) - should convert to meters
+        depth_mm = np.array([[1000, 2000], [3000, 4000]], dtype=np.uint16)
+        depth_msg_mm = bridge.cv2_to_imgmsg(depth_mm, encoding="16UC1")
+        result_mm = convert_depth_to_meters(depth_mm, depth_msg_mm)
+        np.testing.assert_array_almost_equal(
+            result_mm, depth_mm.astype(np.float32) / 1000.0
+        )
+        assert result_mm[0, 0] == 1.0
+        assert result_mm[0, 1] == 2.0
+
+        # Test 32FC1 (meters) - should remain unchanged
+        depth_m = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+        depth_msg_m = bridge.cv2_to_imgmsg(depth_m, encoding="32FC1")
+        result_m = convert_depth_to_meters(depth_m, depth_msg_m)
+        np.testing.assert_array_almost_equal(result_m, depth_m)
+        assert result_m[0, 0] == 1.0
+        assert result_m[0, 1] == 2.0

@@ -50,6 +50,7 @@ from rclpy import Future
 
 from rai_interfaces.srv import RAIGroundedSam, RAIGroundingDino
 from rai_perception.algorithms.point_cloud import depth_to_point_cloud
+from rai_perception.components.perception_utils import convert_depth_to_meters
 
 
 class PointCloudFromSegmentationConfig(BaseModel):
@@ -258,7 +259,7 @@ class PointCloudFromSegmentation:
         camera_info_topic: str,
         source_frame: str,
         target_frame: str,
-        conversion_ratio: float = 0.001,
+        conversion_ratio: float = 1.0,
         config: PointCloudFromSegmentationConfig,
     ) -> None:
         self.connector = connector
@@ -373,10 +374,13 @@ class PointCloudFromSegmentation:
         qx = float(r.x)  # type: ignore[reportUnknownMemberType]
         qy = float(r.y)  # type: ignore[reportUnknownMemberType]
         qz = float(r.z)  # type: ignore[reportUnknownMemberType]
+
         rotation_matrix = self._quaternion_to_rotation_matrix(qx, qy, qz, qw)
         translation = np.array([float(t.x), float(t.y), float(t.z)], dtype=np.float64)  # type: ignore[reportUnknownMemberType]
 
-        return (points_xyz.astype(np.float64) @ rotation_matrix.T) + translation
+        transformed = (points_xyz.astype(np.float64) @ rotation_matrix.T) + translation
+
+        return transformed
 
     # --------------------- Public API ---------------------
     def run(self, object_name: str) -> list[NDArray[np.float32]]:
@@ -405,7 +409,21 @@ class PointCloudFromSegmentation:
             logger.warning("No masks returned from segmentation service")
             return []
 
-        depth = convert_ros_img_to_ndarray(depth_msg).astype(np.float32)
+        depth_raw = convert_ros_img_to_ndarray(depth_msg)
+
+        # Use encoding-aware conversion as standard approach (ROS2 best practice)
+        # This automatically handles 16UC1/mono16 (mm) and 32FC1 (m) encodings
+        depth = convert_depth_to_meters(depth_raw, depth_msg)
+
+        # Apply optional conversion_ratio override if set (default is 1.0, no scaling)
+        if self.conversion_ratio != 1.0:
+            depth = depth * float(self.conversion_ratio)
+
+        valid_depth = depth[depth > 0]
+        if valid_depth.size == 0:
+            logger.warning(
+                "PointCloudFromSegmentation: No valid depth values found in depth image"
+            )
 
         all_points: List[NDArray[np.float32]] = []
         for i, mask_msg in enumerate(gsam_resolved.masks):
@@ -416,7 +434,6 @@ class PointCloudFromSegmentation:
                 depth, dtype=np.float32
             )
             masked_depth_image[binary_mask] = depth[binary_mask]
-            masked_depth_image = masked_depth_image * float(self.conversion_ratio)
 
             points_camera: NDArray[np.float32] = depth_to_point_cloud(
                 masked_depth_image, fx, fy, cx, cy

@@ -151,7 +151,13 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
     target_frame: str = Field(default="base_link", exclude=True)
     source_frame: str = Field(default="camera_link", exclude=True)
     timeout_sec: float = Field(default=10.0, exclude=True)
-    conversion_ratio: float = Field(default=0.001, exclude=True)
+    conversion_ratio: float = Field(
+        default=1.0,
+        exclude=True,
+        description="Optional scaling factor applied after encoding-aware depth conversion. "
+        "Encoding-aware conversion automatically handles 16UC1/mono16 (mm) and 32FC1 (m) encodings. "
+        "Default 1.0 means no additional scaling (recommended).",
+    )
 
     args_schema: Type[GetObjectGrippingPointsToolInput] = (
         GetObjectGrippingPointsToolInput
@@ -210,6 +216,14 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
                 if debug
                 else None,
             )
+
+            # Log warnings for invalid gripping points
+            node_logger = self.connector.node.get_logger()
+            for i, gp in enumerate(gripping_points):
+                if not (isinstance(gp, np.ndarray) and len(gp) >= 3):
+                    node_logger.warning(
+                        f"GetObjectGrippingPointsTool: Gripping point {i + 1} has unexpected format: {gp}"
+                    )
 
             return self._format_result_message(object_name, gripping_points)
 
@@ -349,7 +363,15 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
         self._validate_topics_early()
         self._initialize_components()
 
-        logger.info("GetObjectGrippingPointsTool initialized")
+        # Log configuration for troubleshooting
+        node_logger = self.connector.node.get_logger()
+        node_logger.info("GetObjectGrippingPointsTool initialized")
+        node_logger.info(
+            f"GetObjectGrippingPointsTool configuration: "
+            f"target_frame='{self.target_frame}', source_frame='{self.source_frame}', "
+            f"camera_topic='{self.camera_topic}', depth_topic='{self.depth_topic}', "
+            f"camera_info_topic='{self.camera_info_topic}', conversion_ratio={self.conversion_ratio}"
+        )
 
     def _load_parameters(self) -> None:
         """Load ROS2 parameters with defaults."""
@@ -391,7 +413,7 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
         self.target_frame = get_param("target_frame", "base_link", str)
         self.source_frame = get_param("source_frame", "camera_link", str)
         self.timeout_sec = get_param("timeout_sec", 10.0, float)
-        self.conversion_ratio = get_param("conversion_ratio", 0.001, float)
+        self.conversion_ratio = get_param("conversion_ratio", 1.0, float)
 
         # Log auto-declared parameters
         if auto_declared:
@@ -572,15 +594,15 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
     def _format_result_message(self, object_name: str, gripping_points: list) -> str:
         """Format the final result message from gripping points."""
         if len(gripping_points) == 0:
-            return f"No gripping point found for the object {object_name}\n"
+            return f"No gripping point found for {object_name}\n"
         elif len(gripping_points) == 1:
-            return f"The gripping point of the object {object_name} is {gripping_points[0]}\n"
+            return f"Gripping point for {object_name}: {gripping_points[0]}\n"
         else:
-            message = f"Multiple gripping points found for the object {object_name}\n"
+            message = (
+                f"Found {len(gripping_points)} gripping points for {object_name}:\n"
+            )
             for i, gp in enumerate(gripping_points):
-                message += (
-                    f"The gripping point of the object {i + 1} {object_name} is {gp}\n"
-                )
+                message += f"  Point {i + 1}: {gp}\n"
             return message
 
     # --------------------- Debug Helpers ---------------------
