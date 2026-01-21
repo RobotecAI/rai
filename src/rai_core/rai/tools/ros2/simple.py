@@ -36,6 +36,7 @@ class GetROS2ImageConfiguredTool(BaseROS2Tool):
     response_format: Literal["content", "content_and_artifact"] = "content_and_artifact"
 
     topic: str = Field(..., description="The topic to get the image from")
+    timeout_sec: float = Field(default=5.0, description="The timeout in seconds")
 
     def model_post_init(self, __context: Any) -> None:
         if not self.is_readable(topic=self.topic):
@@ -45,7 +46,7 @@ class GetROS2ImageConfiguredTool(BaseROS2Tool):
         tool = GetROS2ImageTool(
             connector=self.connector,
         )
-        return tool._run(topic=self.topic)
+        return tool._run(topic=self.topic, timeout_sec=self.timeout_sec)
 
 
 class GetROS2TransformConfiguredTool(BaseROS2Tool):
@@ -54,7 +55,7 @@ class GetROS2TransformConfiguredTool(BaseROS2Tool):
 
     source_frame: str = Field(..., description="The source frame")
     target_frame: str = Field(..., description="The target frame")
-    timeout_sec: float = Field(default=5.0, description="The timeout in seconds")
+    timeout_sec: float = Field(default=10.0, description="The timeout in seconds")
 
     def _run(self) -> Any:
         tool = GetROS2TransformTool(

@@ -67,6 +67,20 @@ class TestGroundedSamAgent:
         with patch_segmentation_agent_dependencies(
             mock_connector, MockGDSegmenter, weights_path
         ):
+            # Disable legacy service names for test to verify single service creation
+            import rclpy
+            from rclpy.parameter import Parameter
+
+            mock_connector.node.set_parameters(
+                [
+                    Parameter(
+                        "enable_legacy_service_names",
+                        rclpy.parameter.Parameter.Type.BOOL,
+                        False,
+                    )
+                ]
+            )
+
             agent = GroundedSamAgent(weights_root_path=str(tmp_path), ros2_name="test")
 
             with patch.object(

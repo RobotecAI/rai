@@ -47,6 +47,11 @@ def setup_service_parameters(mock_connector, model_name: str, service_name: str)
                 rclpy.parameter.Parameter.Type.STRING,
                 service_name,
             ),
+            Parameter(
+                "enable_legacy_service_names",
+                rclpy.parameter.Parameter.Type.BOOL,
+                False,  # Disable legacy services for tests to verify single service creation
+            ),
         ]
     )
 

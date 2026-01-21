@@ -66,6 +66,13 @@ class MoveToPointTool(BaseROS2Tool):
     additional_height: float = Field(
         default=0.05, description="Additional height for the place task [m]"
     )
+    timeout_sec: float = Field(
+        default=20.0, description="Timeout for service calls in seconds"
+    )
+    service_availability_timeout_sec: float = Field(
+        default=5.0,
+        description="Timeout for waiting for service to become available in seconds",
+    )
 
     # constant quaternion
     quaternion: Quaternion = Field(
@@ -86,6 +93,20 @@ class MoveToPointTool(BaseROS2Tool):
             ManipulatorMoveTo,
             "/manipulator_move_to",
         )
+
+        # Wait for service to be available
+        if not client.wait_for_service(
+            timeout_sec=self.service_availability_timeout_sec
+        ):
+            available_services = [
+                s[0] for s in self.connector.get_services_names_and_types()
+            ]
+            return (
+                f"Service '/manipulator_move_to' is not available. "
+                f"Available services: {sorted(available_services)[:10]}. "
+                f"Please ensure the manipulator service is running."
+            )
+
         pose_stamped = PoseStamped()
         pose_stamped.header.frame_id = self.manipulator_frame
         pose_stamped.pose = Pose(
@@ -118,9 +139,13 @@ class MoveToPointTool(BaseROS2Tool):
         self.connector.node.get_logger().debug(
             f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
         )
-        response = get_future_result(future, timeout_sec=20.0)
+        response = get_future_result(future, timeout_sec=self.timeout_sec)
         if response is None:
-            return f"Service call failed for point ({x:.2f}, {y:.2f}, {z:.2f})."
+            return (
+                f"Service call to '/manipulator_move_to' timed out after {self.timeout_sec}s "
+                f"for point ({x:.2f}, {y:.2f}, {z:.2f}). "
+                f"The service may be unresponsive or the operation is taking longer than expected."
+            )
 
         if response.success:
             return f"End effector successfully positioned at coordinates ({x:.2f}, {y:.2f}, {z:.2f}). Note: The status of object interaction (grab/drop) is not confirmed by this movement."
@@ -165,6 +190,13 @@ class MoveObjectFromToTool(BaseROS2Tool):
     additional_height: float = Field(
         default=0.05, description="Additional height for the place task [m]"
     )
+    timeout_sec: float = Field(
+        default=20.0, description="Timeout for service calls in seconds"
+    )
+    service_availability_timeout_sec: float = Field(
+        default=5.0,
+        description="Timeout for waiting for service to become available in seconds",
+    )
 
     # constant quaternion
     quaternion: Quaternion = Field(
@@ -189,11 +221,24 @@ class MoveObjectFromToTool(BaseROS2Tool):
         )
 
         # NOTE: create_client could be refactored into self.connector.service_call
-        self.connector.service_call
         client = self.connector.node.create_client(
             ManipulatorMoveTo,
             "/manipulator_move_to",
         )
+
+        # Wait for service to be available
+        if not client.wait_for_service(
+            timeout_sec=self.service_availability_timeout_sec
+        ):
+            available_services = [
+                s[0] for s in self.connector.get_services_names_and_types()
+            ]
+            return (
+                f"Service '/manipulator_move_to' is not available. "
+                f"Available services: {sorted(available_services)[:10]}. "
+                f"Please ensure the manipulator service is running."
+            )
+
         pose_stamped = PoseStamped()
         pose_stamped.header.frame_id = self.manipulator_frame
         pose_stamped.pose = Pose(
@@ -234,10 +279,14 @@ class MoveObjectFromToTool(BaseROS2Tool):
         self.connector.node.get_logger().debug(
             f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
         )
-        response = get_future_result(future, timeout_sec=5.0)
+        response = get_future_result(future, timeout_sec=self.timeout_sec)
 
         if response is None:
-            return f"Service call failed for point ({x:.2f}, {y:.2f}, {z:.2f})."
+            return (
+                f"Service call to '/manipulator_move_to' timed out after {self.timeout_sec}s "
+                f"for point ({x:.2f}, {y:.2f}, {z:.2f}). "
+                f"The service may be unresponsive or the operation is taking longer than expected."
+            )
 
         if response.success:
             self.connector.logger.info(
@@ -260,10 +309,14 @@ class MoveObjectFromToTool(BaseROS2Tool):
             f"Calling ManipulatorMoveTo service with request: x={request.target_pose.pose.position.x:.2f}, y={request.target_pose.pose.position.y:.2f}, z={request.target_pose.pose.position.z:.2f}"
         )
 
-        response = get_future_result(future, timeout_sec=20.0)
+        response = get_future_result(future, timeout_sec=self.timeout_sec)
 
         if response is None:
-            return f"Service call failed for point ({x1:.2f}, {y1:.2f}, {z1:.2f})."
+            return (
+                f"Service call to '/manipulator_move_to' timed out after {self.timeout_sec}s "
+                f"for point ({x1:.2f}, {y1:.2f}, {z1:.2f}). "
+                f"The service may be unresponsive or the operation is taking longer than expected."
+            )
         reset_tool._run()
         if response.success:
             return f"End effector successfully positioned at coordinates ({x1:.2f}, {y1:.2f}, {z1:.2f}). Note: The status of object interaction (grab/drop) is not confirmed by this movement."

@@ -298,8 +298,10 @@ class GetGrabbingPointTool(BaseTool):
         camera_info_topic: str,
         object_name: str,
     ):
-        camera_img_msg = self.connector.receive_message(camera_topic).payload
-        depth_msg = self.connector.receive_message(depth_topic).payload
+        camera_img_msg = self.connector.receive_message(
+            camera_topic, timeout_sec=5.0
+        ).payload
+        depth_msg = self.connector.receive_message(depth_topic, timeout_sec=5.0).payload
         camera_info = self._get_camera_info_message(camera_info_topic)
 
         intrinsic = self._get_intrinsic_from_camera_info(camera_info)
