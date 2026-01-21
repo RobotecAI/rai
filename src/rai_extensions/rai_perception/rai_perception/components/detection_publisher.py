@@ -396,7 +396,13 @@ class DetectionPublisher:
 
         self.last_image = msg
         self.connector.node.get_logger().debug("Processing camera image...")
-        self._process_image(msg)
+        try:
+            self._process_image(msg)
+        except ROS2ServiceError as e:
+            self.connector.node.get_logger().warning(
+                f"Failed to process image: {e.service_name}. {e.suggestion}"
+            )
+            return
 
     def _process_image(self, image_msg: Image):
         """Call DINO service and publish detections."""

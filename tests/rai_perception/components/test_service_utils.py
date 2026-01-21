@@ -110,6 +110,36 @@ class TestCheckServiceAvailable:
 
             assert result is False
 
+    def test_non_blocking_check_timeout_zero(self, mock_connector):
+        """Test that timeout=0 performs non-blocking check without calling wait_for_ros2_services."""
+        mock_connector.get_services_names_and_types.return_value = [
+            ("/test_service", ["std_srvs/srv/Empty"]),
+            ("/other_service", ["std_srvs/srv/Empty"]),
+        ]
+
+        with patch(
+            "rai_perception.components.service_utils.wait_for_ros2_services"
+        ) as mock_wait:
+            result = check_service_available(
+                mock_connector, "/test_service", timeout_sec=0.0
+            )
+
+            assert result is True
+            # Should not call wait_for_ros2_services when timeout <= 0
+            mock_wait.assert_not_called()
+
+        # Test with negative timeout
+        with patch(
+            "rai_perception.components.service_utils.wait_for_ros2_services"
+        ) as mock_wait:
+            result = check_service_available(
+                mock_connector, "/nonexistent_service", timeout_sec=-0.1
+            )
+
+            assert result is False
+            # Should not call wait_for_ros2_services when timeout <= 0
+            mock_wait.assert_not_called()
+
 
 class TestCreateServiceClient:
     """Test cases for create_service_client."""

@@ -18,6 +18,7 @@ import pytest
 import rclpy
 from rai.communication.ros2 import ROS2Connector
 from rai_perception.components.detection_publisher import DetectionPublisher
+from sensor_msgs.msg import Image
 
 
 @pytest.fixture(scope="module")
@@ -150,3 +151,67 @@ def test_parse_detection_classes_invalid_threshold(detection_publisher):
     # Invalid threshold should fall back to default
     assert class_thresholds["person"] == 0.3
     assert class_thresholds["cup"] == 0.3
+
+
+def test_image_callback_handles_service_error(ros2_context):
+    """Test that image_callback catches ROS2ServiceError and logs warning without crashing."""
+    connector = ROS2Connector(
+        node_name="detection_publisher", executor_type="single_threaded"
+    )
+
+    # Mock the service client
+    mock_client = MagicMock()
+    mock_client.wait_for_service.return_value = True
+
+    # Mock logger to verify warning is logged
+    mock_logger = MagicMock()
+    connector.node.get_logger = MagicMock(return_value=mock_logger)
+
+    # Mock check_service_available to return False, which will cause ROS2ServiceError
+    with (
+        patch.object(connector.node, "create_client", return_value=mock_client),
+        patch(
+            "rai_perception.components.detection_publisher.check_service_available",
+            return_value=False,
+        ),
+    ):
+        detection_publisher = DetectionPublisher(connector=connector)
+
+        # Set required parameters
+        set_parameter(
+            detection_publisher,
+            "detection_interval",
+            0.0,
+            rclpy.parameter.Parameter.Type.DOUBLE,
+        )
+        set_parameter(
+            detection_publisher,
+            "dino_service",
+            "/test_dino_service",
+            rclpy.parameter.Parameter.Type.STRING,
+        )
+
+        # Create a mock Image message
+        image_msg = Image()
+        image_msg.header.frame_id = "test_frame"
+        image_msg.header.stamp.sec = 0
+        image_msg.header.stamp.nanosec = 0
+
+        # Call image_callback - should not raise exception
+        detection_publisher.image_callback(image_msg)
+
+        # Verify warning was logged (called at least once - may be called during init and in callback)
+        assert mock_logger.warning.call_count >= 1
+
+        # Verify that the image_callback warning was logged with expected message
+        warning_calls = [call[0][0] for call in mock_logger.warning.call_args_list]
+        image_callback_warning = next(
+            (msg for msg in warning_calls if "Failed to process image" in msg), None
+        )
+        assert image_callback_warning is not None, (
+            "Expected warning from image_callback not found"
+        )
+        assert "/test_dino_service" in image_callback_warning
+        assert "Failed to process image" in image_callback_warning
+
+        detection_publisher.connector.shutdown()

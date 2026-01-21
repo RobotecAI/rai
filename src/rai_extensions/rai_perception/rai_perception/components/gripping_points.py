@@ -60,6 +60,10 @@ class PointCloudFromSegmentationConfig(BaseModel):
     text_threshold: float = Field(
         default=0.45, description="Text threshold for GDINO object detection"
     )
+    service_timeout: float = Field(
+        default=60.0,
+        description="Timeout in seconds for GDINO/GSAM service calls. GDINO/GSAM can take longer than the default 5s, especially on CPU.",
+    )
 
 
 class GrippingPointEstimatorConfig(BaseModel):
@@ -394,13 +398,17 @@ class PointCloudFromSegmentation:
         fx, fy, cx, cy = self._get_intrinsic_from_camera_info(camera_info)
 
         gdino_future = self._call_gdino_node(camera_img_msg, object_name)
-        gdino_resolved = get_future_result(gdino_future)
+        gdino_resolved = get_future_result(
+            gdino_future, timeout_sec=self.config.service_timeout
+        )
         if gdino_resolved is None:
             logger.warning("Detection service returned None")
             return []
 
         gsam_future = self._call_gsam_node(camera_img_msg, gdino_resolved)
-        gsam_resolved = get_future_result(gsam_future)
+        gsam_resolved = get_future_result(
+            gsam_future, timeout_sec=self.config.service_timeout
+        )
         if gsam_resolved is None:
             logger.warning("Segmentation service returned None")
             return []

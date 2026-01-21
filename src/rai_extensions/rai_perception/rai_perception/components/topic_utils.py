@@ -92,6 +92,12 @@ def wait_for_perception_dependencies(
     Automatically extracts service names and topics from perception tools
     in the tools list and waits for them to be available.
 
+    Supports two types of perception tools:
+    - GetObjectGrippingPointsTool: Requires both detection and segmentation
+      services, plus camera, depth, and camera_info topics.
+    - Detection-only tools (tools with service_name property): Only requires
+      detection service; topics are optional and not waited for.
+
     Args:
         connector: ROS2 connector to use for waiting
         tools: List of tools that may include perception tools
@@ -106,6 +112,7 @@ def wait_for_perception_dependencies(
     # Extract service names from perception tools
     detection_service = None
     segmentation_service = None
+    is_detection_only = False
 
     for tool in tools:
         if isinstance(tool, GetObjectGrippingPointsTool):
@@ -114,16 +121,27 @@ def wait_for_perception_dependencies(
             break
         elif hasattr(tool, "service_name"):
             # For tools that only use detection service
+            # service_name is a property, accessing it returns the value directly
             detection_service = tool.service_name
+            is_detection_only = True
             break
 
-    if detection_service is None or segmentation_service is None:
+    if detection_service is None:
         raise RuntimeError(
             "Required perception tools not found in tools list. "
             "GetObjectGrippingPointsTool or tools with service_name property required."
         )
 
-    required_services = [detection_service, segmentation_service]
+    # For detection-only tools, only wait for detection service
+    # For gripping points tools, wait for both services
+    if is_detection_only:
+        required_services = [detection_service]
+    else:
+        if segmentation_service is None:
+            raise RuntimeError(
+                "GetObjectGrippingPointsTool requires both detection and segmentation services."
+            )
+        required_services = [detection_service, segmentation_service]
 
     # Extract topics from perception tools
     required_topics = None
@@ -135,6 +153,12 @@ def wait_for_perception_dependencies(
                 config["depth_topic"],
                 config["camera_info_topic"],
             ]
+            break
+        elif is_detection_only:
+            # For detection-only tools, topics are optional
+            # They may get topics from parameters or other sources
+            # Skip topic waiting for detection-only tools
+            required_topics = []
             break
 
     if required_topics is None:
@@ -166,22 +190,23 @@ def wait_for_perception_dependencies(
             underlying_error=e,
         ) from e
 
-    # Wait for topics
-    try:
-        wait_for_ros2_topics(connector, required_topics)
-    except TimeoutError as e:
-        get_topics = lambda: [
-            topic[0] for topic in connector.get_topics_names_and_types()
-        ]
-        missing_at_timeout = get_missing_entities(get_topics, required_topics)
-        discovered = discover_camera_topics(connector)
+    # Wait for topics (skip if empty list for detection-only tools)
+    if required_topics:
+        try:
+            wait_for_ros2_topics(connector, required_topics)
+        except TimeoutError as e:
+            get_topics = lambda: [
+                topic[0] for topic in connector.get_topics_names_and_types()
+            ]
+            missing_at_timeout = get_missing_entities(get_topics, required_topics)
+            discovered = discover_camera_topics(connector)
 
-        raise TimeoutError(
-            f"{str(e)}\n"
-            f"Missing topics: {sorted(missing_at_timeout)}\n"
-            f"Available image topics: {discovered['image_topics'][:5]}\n"
-            f"Available depth topics: {discovered['depth_topics'][:5]}\n"
-            f"Available camera_info topics: {discovered['camera_info_topics'][:5]}\n"
-            f"Tip: Override topic parameters before tool initialization:\n"
-            f"  node.declare_parameter('perception.gripping_points.camera_topic', '/your/topic')"
-        ) from e
+            raise TimeoutError(
+                f"{str(e)}\n"
+                f"Missing topics: {sorted(missing_at_timeout)}\n"
+                f"Available image topics: {discovered['image_topics'][:5]}\n"
+                f"Available depth topics: {discovered['depth_topics'][:5]}\n"
+                f"Available camera_info topics: {discovered['camera_info_topics'][:5]}\n"
+                f"Tip: Override topic parameters before tool initialization:\n"
+                f"  node.declare_parameter('perception.gripping_points.camera_topic', '/your/topic')"
+            ) from e

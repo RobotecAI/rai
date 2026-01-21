@@ -78,15 +78,25 @@ def check_service_available(
     """Check if a ROS2 service is available without waiting.
 
     Uses wait_for_ros2_services with a short timeout to check availability.
+    If timeout_sec is 0 or negative, performs a non-blocking check of current
+    service list without waiting.
 
     Args:
         connector: ROS2 connector with node
         service_name: Service name to check
-        timeout_sec: Timeout for checking service availability (default: 0.1)
+        timeout_sec: Timeout for checking service availability (default: 0.1).
+            If <= 0, performs non-blocking check without waiting.
 
     Returns:
         True if service is available, False otherwise
     """
+    # For non-blocking check (timeout <= 0), just check current service list
+    if timeout_sec <= 0.0:
+        available_services = [
+            service[0] for service in connector.get_services_names_and_types()
+        ]
+        return service_name in available_services
+
     try:
         wait_for_ros2_services(connector, [service_name], timeout=timeout_sec)
         return True

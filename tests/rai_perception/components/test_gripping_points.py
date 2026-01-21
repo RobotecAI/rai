@@ -555,3 +555,117 @@ class TestPointCloudFromSegmentationEncodingAware:
         np.testing.assert_array_almost_equal(result_m, depth_m)
         assert result_m[0, 0] == 1.0
         assert result_m[0, 1] == 2.0
+
+
+class TestPointCloudFromSegmentationTimeout:
+    """Test service timeout configuration for PointCloudFromSegmentation."""
+
+    @pytest.fixture
+    def mock_connector(self):
+        """Create a mock ROS2Connector."""
+        connector = Mock()
+        connector.node = Mock()
+        connector.node.get_logger.return_value = Mock()
+        return connector
+
+    def test_service_timeout_default(self, mock_connector):
+        """Test that default service_timeout is 60.0 seconds."""
+        config = PointCloudFromSegmentationConfig()
+        assert config.service_timeout == 60.0
+
+    def test_service_timeout_custom(self, mock_connector):
+        """Test that custom service_timeout can be set."""
+        config = PointCloudFromSegmentationConfig(service_timeout=120.0)
+        assert config.service_timeout == 120.0
+
+        pcl_gen = PointCloudFromSegmentation(
+            connector=mock_connector,
+            camera_topic="/test/camera",
+            depth_topic="/test/depth",
+            camera_info_topic="/test/camera_info",
+            source_frame="camera_frame",
+            target_frame="base_frame",
+            config=config,
+        )
+        assert pcl_gen.config.service_timeout == 120.0
+
+    def test_get_future_result_uses_timeout(self, mock_connector):
+        """Test that get_future_result is called with the configured timeout."""
+        from rclpy import Future
+
+        config = PointCloudFromSegmentationConfig(service_timeout=90.0)
+        pcl_gen = PointCloudFromSegmentation(
+            connector=mock_connector,
+            camera_topic="/test/camera",
+            depth_topic="/test/depth",
+            camera_info_topic="/test/camera_info",
+            source_frame="camera_frame",
+            target_frame="base_frame",
+            config=config,
+        )
+
+        # Mock the service calls and get_future_result
+        mock_gdino_future = Mock(spec=Future)
+        mock_gsam_future = Mock(spec=Future)
+        mock_gdino_response = Mock()
+        mock_gsam_response = Mock()
+        mock_gdino_response.detections = Mock()
+        mock_gsam_response.masks = [Mock()]
+
+        with (
+            patch.object(pcl_gen, "_get_image_message") as mock_get_image,
+            patch.object(pcl_gen, "_call_gdino_node", return_value=mock_gdino_future),
+            patch.object(pcl_gen, "_call_gsam_node", return_value=mock_gsam_future),
+            patch(
+                "rai_perception.components.gripping_points.get_future_result"
+            ) as mock_get_future_result,
+            patch.object(pcl_gen.connector, "receive_message") as mock_receive_message,
+            patch.object(pcl_gen, "_get_camera_info_message") as mock_get_camera_info,
+            patch.object(
+                pcl_gen, "_get_intrinsic_from_camera_info"
+            ) as mock_get_intrinsic,
+            patch(
+                "rai_perception.components.gripping_points.convert_ros_img_to_ndarray"
+            ) as mock_convert_img,
+            patch.object(
+                pcl_gen, "_transform_points_source_to_target"
+            ) as mock_transform,
+            patch(
+                "rai_perception.components.gripping_points.depth_to_point_cloud"
+            ) as mock_depth_to_pcl,
+        ):
+            # Setup mocks
+            mock_get_image.return_value = Mock()
+            mock_receive_message.return_value.payload = Mock()
+            mock_get_camera_info.return_value = Mock()
+            mock_get_intrinsic.return_value = (100.0, 100.0, 50.0, 50.0)
+            mock_convert_img.return_value = np.zeros((10, 10), dtype=np.float32)
+            mock_transform.return_value = np.array([[0.0, 0.0, 0.0]], dtype=np.float64)
+            mock_depth_to_pcl.return_value = np.array(
+                [[0.0, 0.0, 0.0]], dtype=np.float32
+            )
+
+            # Configure get_future_result to return responses
+            def get_future_side_effect(future, timeout_sec=None):
+                if future == mock_gdino_future:
+                    return mock_gdino_response
+                elif future == mock_gsam_future:
+                    return mock_gsam_response
+                return None
+
+            mock_get_future_result.side_effect = get_future_side_effect
+
+            # Call run method
+            pcl_gen.run("test_object")
+
+            # Verify get_future_result was called twice with the configured timeout
+            assert mock_get_future_result.call_count == 2
+            calls = mock_get_future_result.call_args_list
+
+            # First call should be for GDINO with timeout
+            assert calls[0][0][0] == mock_gdino_future
+            assert calls[0][1]["timeout_sec"] == 90.0
+
+            # Second call should be for GSAM with timeout
+            assert calls[1][0][0] == mock_gsam_future
+            assert calls[1][1]["timeout_sec"] == 90.0

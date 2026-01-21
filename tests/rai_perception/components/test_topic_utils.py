@@ -94,20 +94,38 @@ class TestWaitForPerceptionDependencies:
             assert config["depth_topic"] in topics
             assert config["camera_info_topic"] in topics
 
-    def test_with_tool_having_service_name_property(self):
-        """Test that utility works with tools that have service_name property."""
+    def test_with_detection_only_tool(self):
+        """Test that utility works with detection-only tools (tools with service_name property)."""
         connector = Mock(spec=ROS2Connector)
         connector.node = Mock()
+        connector.get_services_names_and_types.return_value = [
+            ("/test/detection_service", ["std_srvs/srv/Empty"])
+        ]
 
-        # Create a mock tool with service_name property
+        # Create a mock tool with service_name property (detection-only tool)
         mock_tool = Mock(spec=BaseTool)
         mock_tool.service_name = "/test/detection_service"
 
         tools = [mock_tool]
 
-        # Should raise RuntimeError because segmentation_service is None
-        with pytest.raises(RuntimeError, match="Required perception tools not found"):
+        with (
+            patch(
+                "rai_perception.components.topic_utils.wait_for_ros2_services"
+            ) as mock_wait_services,
+            patch(
+                "rai_perception.components.topic_utils.wait_for_ros2_topics"
+            ) as mock_wait_topics,
+        ):
             wait_for_perception_dependencies(connector, tools)
+
+            # Verify only detection service was waited for (not segmentation)
+            mock_wait_services.assert_called_once()
+            services = mock_wait_services.call_args[0][1]
+            assert len(services) == 1
+            assert "/test/detection_service" in services
+
+            # Verify topics were not waited for (detection-only tools skip topics)
+            mock_wait_topics.assert_not_called()
 
     def test_without_perception_tools(self):
         """Test that utility raises error when no perception tools are found."""
