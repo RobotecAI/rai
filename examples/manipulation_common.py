@@ -22,7 +22,9 @@ from rai.agents.langchain.core import create_react_runnable
 from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2.manipulation import (
-    GetObjectPositionsTool,
+    GetObjectPositionsTool as LegacyGetObjectPositionsTool,
+)
+from rai.tools.ros2.manipulation import (
     MoveObjectFromToTool,
     ResetArmTool,
 )
@@ -31,7 +33,7 @@ from rai_perception import (
     GetObjectGrippingPointsTool,
     wait_for_perception_dependencies,
 )
-from rai_perception.tools import GetGrabbingPointTool
+from rai_perception.tools import GetGrabbingPointTool, GetObjectPositionsTool
 from rai_perception.tools.gripping_points_tools import GRIPPING_POINTS_TOOL_PARAM_PREFIX
 
 from rai_whoami.models import EmbodimentInfo
@@ -85,7 +87,7 @@ def _create_agent_v1():
 
     camera_tool = GetROS2ImageConfiguredTool(connector=connector, topic="/color_image5")
     tools: List[BaseTool] = [
-        GetObjectPositionsTool(
+        LegacyGetObjectPositionsTool(
             connector=connector,
             target_frame="panda_link0",
             source_frame="RGBDCamera5",
@@ -141,8 +143,13 @@ def _create_agent_v2():
     gripping_points_tool = GetObjectGrippingPointsTool(connector=connector)
     config = gripping_points_tool.get_config()
 
+    # GetObjectPositionsTool wraps GetObjectGrippingPointsTool with default_grasp preset
+    # for backward compatibility and clearer tool selection
+    positions_tool = GetObjectPositionsTool(connector=connector)
+
     tools: List[BaseTool] = [
-        gripping_points_tool,
+        positions_tool,  # get_object_positions - for general position queries
+        gripping_points_tool,  # get_object_gripping_points - for advanced gripping strategies
         MoveObjectFromToTool(
             connector=connector, manipulator_frame=config["target_frame"]
         ),

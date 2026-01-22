@@ -286,6 +286,17 @@ def main(o3de_config_path: str):
         else:
             st.sidebar.warning("Demo not initialized yet")
 
+    # Clear conversation history button - resets cached tool results
+    # This forces the agent to query object positions fresh for each new task
+    # instead of using cached ToolMessage results from previous interactions
+    if st.sidebar.button(
+        "Clear Conversation History", help="Clear all previous tool calls and messages"
+    ):
+        st.session_state["messages"] = [
+            AIMessage(content="Hi! I am a robotic arm. What can I do for you?")
+        ]
+        st.rerun()
+
     if "o3de" not in st.session_state:
         selected_scenario_path = get_scenario_path(scenarios, scenario)
         if selected_scenario_path is None:

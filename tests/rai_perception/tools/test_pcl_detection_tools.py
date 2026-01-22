@@ -34,6 +34,7 @@ from rai_perception import (
     PointCloudFromSegmentation,
     PointCloudFromSegmentationConfig,
 )
+from rai_perception.tools import GetObjectPositionsTool
 from rai_perception.tools.gripping_points_tools import GRIPPING_POINTS_TOOL_PARAM_PREFIX
 
 
@@ -275,3 +276,35 @@ def test_get_object_gripping_points_tool_auto_declaration():
 
     finally:
         rclpy.shutdown()
+
+
+def test_get_object_positions_tool_wrapper():
+    """Test GetObjectPositionsTool wrapper delegates to GetObjectGrippingPointsTool with default_grasp."""
+    mock_connector = Mock(spec=ROS2Connector)
+    mock_gripping_tool = Mock(spec=GetObjectGrippingPointsTool)
+
+    # Create tool using model_construct to bypass initialization, then set mock
+    tool = GetObjectPositionsTool.model_construct(connector=mock_connector)
+    tool.gripping_points_tool = mock_gripping_tool
+
+    # Test delegation
+    mock_gripping_tool._run.return_value = "Centroids of detected apples in panda_link0 frame: [Centroid(x=0.5, y=0.3, z=0.04)]."
+    result = tool._run("apple")
+
+    assert "Centroids of detected apples" in result
+    mock_gripping_tool._run.assert_called_once_with(object_name="apple")
+
+    # Test get_config delegation
+    mock_gripping_tool.get_config.return_value = {
+        "target_frame": "panda_link0",
+        "camera_topic": "/color_image5",
+    }
+    config = tool.get_config()
+
+    assert config["target_frame"] == "panda_link0"
+    assert config["camera_topic"] == "/color_image5"
+    mock_gripping_tool.get_config.assert_called_once()
+
+    # Test tool name and description
+    assert tool.name == "get_object_positions"
+    assert "positions" in tool.description.lower()

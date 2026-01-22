@@ -82,7 +82,7 @@ manipulation techniques.
 2. Interact with the robot arm using natural language commands. For example:
 
     ```
-    "Place every apple on top of the cube"
+    "Place each apple on top of a cube"
     "Build a tower from cubes"
     "Arrange objects in a line"
     "Put two boxes closer to each other. Move only one box."

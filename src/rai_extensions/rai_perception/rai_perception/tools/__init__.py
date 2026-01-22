@@ -26,6 +26,8 @@ from .gdino_tools import DistanceMeasurement, GetDetectionTool, GetDistanceToObj
 from .gripping_points_tools import (
     GetObjectGrippingPointsTool,
     GetObjectGrippingPointsToolInput,
+    GetObjectPositionsTool,
+    GetObjectPositionsToolInput,
 )
 from .segmentation_tools import GetGrabbingPointTool, GetSegmentationTool
 
@@ -36,6 +38,8 @@ __all__ = [
     "GetGrabbingPointTool",
     "GetObjectGrippingPointsTool",
     "GetObjectGrippingPointsToolInput",
+    "GetObjectPositionsTool",
+    "GetObjectPositionsToolInput",
     "GetSegmentationTool",
     # PCL Detection APIs
     "GrippingPointEstimator",

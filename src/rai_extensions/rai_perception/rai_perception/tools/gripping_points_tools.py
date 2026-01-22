@@ -82,9 +82,11 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
 
     name: str = "get_object_gripping_points"
     description: str = (
-        "Get gripping points for all detected objects of a specified type in the target frame. "
-        "This tool provides accurate gripping point data but does not distinguish between different colors of the same object type. "
-        "While gripping point detection is reliable, please note that object classification may occasionally be inaccurate."
+        "Get gripping points for all detected objects of a specified type in the target frame using advanced strategies. "
+        "This tool supports multiple gripping strategies (top_grasp, precise_grasp) optimized for specific grasping scenarios. "
+        "For general object position queries, use get_object_positions instead. "
+        "This tool provides accurate positional data but does not distinguish between different colors of the same object type. "
+        "While position detection is reliable, please note that object classification may occasionally be inaccurate."
     )
 
     # Pipeline stages for role expressiveness
@@ -802,3 +804,82 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
         header.frame_id = self.target_frame
         header.stamp = self.connector.node.get_clock().now().to_msg()
         return header
+
+
+class GetObjectPositionsToolInput(BaseModel):
+    """Input schema for GetObjectPositionsTool."""
+
+    object_name: str = Field(
+        ...,
+        description="The name of the object type to get the positions of (e.g., 'apple', 'cube', 'carrot')",
+    )
+
+
+class GetObjectPositionsTool(BaseROS2Tool):
+    """Wrapper tool that provides get_object_positions interface using GetObjectGrippingPointsTool.
+
+    This tool wraps GetObjectGrippingPointsTool with the default_grasp preset (centroid strategy)
+    to provide a simple interface for retrieving object positions. It maintains backward compatibility
+    with the v1 GetObjectPositionsTool interface while using the new perception pipeline.
+
+    The tool uses centroid estimation, which provides object positions suitable for general
+    manipulation tasks. For advanced gripping strategies (top_grasp, precise_grasp), use
+    GetObjectGrippingPointsTool directly.
+
+    Note: The name "get_object_positions" provides better spatial interpretation for agents,
+    making it more likely to be used for spatial reasoning tasks compared to "get_object_gripping_points".
+    """
+
+    name: str = "get_object_positions"
+    description: str = (
+        "Retrieve the positions of all objects of a specified type in the target frame. "
+        "This tool provides accurate positional data but does not distinguish between different colors of the same object type. "
+        "While position detection is reliable, please note that object classification may occasionally be inaccurate."
+    )
+
+    args_schema: Type[GetObjectPositionsToolInput] = GetObjectPositionsToolInput
+
+    # Internal wrapped tool - initialized in model_post_init
+    gripping_points_tool: Optional[GetObjectGrippingPointsTool] = Field(
+        default=None, exclude=True
+    )
+
+    def model_post_init(self, __context: Any) -> None:
+        """Initialize the wrapped GetObjectGrippingPointsTool with default_grasp preset."""
+        # Apply default_grasp preset (centroid strategy) for position retrieval
+        filter_config, estimator_config = apply_preset("default_grasp")
+
+        # Initialize the wrapped tool with default_grasp preset
+        self.gripping_points_tool = GetObjectGrippingPointsTool(
+            connector=self.connector,
+            filter_config=filter_config,
+            estimator_config=estimator_config,
+        )
+
+    def get_config(self) -> Dict[str, Any]:
+        """Get configuration from the wrapped GetObjectGrippingPointsTool.
+
+        Returns:
+            Dictionary with configuration (target_frame, camera_topic, etc.)
+        """
+        if self.gripping_points_tool is None:
+            raise RuntimeError(
+                "GetObjectPositionsTool not properly initialized. gripping_points_tool is None."
+            )
+        return self.gripping_points_tool.get_config()
+
+    def _run(self, object_name: str) -> str:
+        """Get object positions by delegating to GetObjectGrippingPointsTool with default_grasp preset.
+
+        Args:
+            object_name: Name of the object type to get positions for
+
+        Returns:
+            Formatted string with object positions (centroids)
+        """
+        if self.gripping_points_tool is None:
+            raise RuntimeError(
+                "GetObjectPositionsTool not properly initialized. gripping_points_tool is None."
+            )
+        # Delegate to the wrapped tool - it will return centroids with default_grasp preset
+        return self.gripping_points_tool._run(object_name=object_name)
