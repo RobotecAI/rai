@@ -22,6 +22,8 @@ except ImportError:
 import base64
 import io
 import time
+from contextlib import contextmanager
+from typing import Generator, List, Optional
 
 from PIL import Image
 from rai.communication.ros2.connectors import ROS2Connector
@@ -36,6 +38,7 @@ from rai.tools.ros2 import (
     PublishROS2MessageTool,
     ReceiveROS2MessageTool,
 )
+from rclpy.executors import MultiThreadedExecutor
 
 from tests.communication.ros2.helpers import (
     ClockPublisher,
@@ -49,6 +52,32 @@ from tests.communication.ros2.helpers import (
 )
 
 _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
+
+
+@contextmanager
+def connector_and_executors_cleanup(
+    executors: Optional[List[MultiThreadedExecutor]] = None,
+    threads: Optional[List] = None,
+) -> Generator[List[Optional[ROS2Connector]], None, None]:
+    """Context manager to ensure proper cleanup order: connector first, then executors/threads.
+
+    Args:
+        executors: List of executors to shutdown
+        threads: List of threads to join
+
+    Yields:
+        List containing connector reference (set connector[0] = ROS2Connector() inside block)
+    """
+    connector_ref: List[Optional[ROS2Connector]] = [None]
+    try:
+        yield connector_ref
+    finally:
+        # Shutdown connector first (before destroying nodes it might be using)
+        if connector_ref[0] is not None:
+            connector_ref[0].shutdown()
+        # Then shutdown executors and threads
+        if executors is not None and threads is not None:
+            shutdown_executors_and_threads(executors, threads)
 
 
 def test_publish_message_tool(ros_setup: None, request: pytest.FixtureRequest) -> None:
@@ -175,9 +204,10 @@ def test_get_topics_names_and_types_tool(
     topic_name = f"/{request.node.originalname}_topic"  # type: ignore
     publisher = MessagePublisher(topic=topic_name)
     executors, threads = multi_threaded_spinner([publisher])
-    try:
+    with connector_and_executors_cleanup(executors, threads) as connector_ref:
         time.sleep(0.2)  # Give time for topic to be discovered
         connector = ROS2Connector()
+        connector_ref[0] = connector
         tool = GetROS2TopicsNamesAndTypesTool(connector=connector)
         response = tool._run()
         assert response != ""
@@ -186,8 +216,6 @@ def test_get_topics_names_and_types_tool(
         # Verify response contains expected format (topic and type)
         assert "topic:" in response
         assert "type:" in response
-    finally:
-        shutdown_executors_and_threads(executors, threads)
 
 
 def test_get_topics_names_and_types_tool_with_forbidden_topic(
@@ -201,8 +229,9 @@ def test_get_topics_names_and_types_tool_with_forbidden_topic(
     publisher2 = MessagePublisher(topic=forbidden_topic)
 
     executors, threads = multi_threaded_spinner([publisher1, publisher2])
-    try:
+    with connector_and_executors_cleanup(executors, threads) as connector_ref:
         connector = ROS2Connector()
+        connector_ref[0] = connector
         wait_for_ros2_topics(
             connector, [topic_name, forbidden_topic], time_interval=0.1
         )
@@ -215,8 +244,6 @@ def test_get_topics_names_and_types_tool_with_forbidden_topic(
         assert topic_name in response
         # Verify forbidden topic does NOT appear
         assert forbidden_topic not in response
-    finally:
-        shutdown_executors_and_threads(executors, threads)
 
 
 def test_get_topics_names_and_types_tool_with_readable_topic(
@@ -382,8 +409,9 @@ def test_get_topics_names_and_types_tool_empty_response_when_all_filtered(
 
     publisher = MessagePublisher(topic=topic_name)
     executors, threads = multi_threaded_spinner([publisher])
-    try:
+    with connector_and_executors_cleanup(executors, threads) as connector_ref:
         connector = ROS2Connector()
+        connector_ref[0] = connector
         wait_for_ros2_topics(connector, [topic_name], time_interval=0.1)
         # Set readable to a topic that doesn't exist, so all topics are filtered
         tool = GetROS2TopicsNamesAndTypesTool(
@@ -393,8 +421,6 @@ def test_get_topics_names_and_types_tool_empty_response_when_all_filtered(
         response = tool._run()
         # Response should be empty string when all topics are filtered
         assert response == ""
-    finally:
-        shutdown_executors_and_threads(executors, threads)
 
 
 def test_categorize_topic_returns_none_when_neither_readable_nor_writable(
@@ -584,23 +610,25 @@ def test_get_transform_tool_with_stale_tf_data_sim_time(
     executors, threads = multi_threaded_spinner([clock_publisher, publisher])
     tool = GetROS2TransformTool(connector=connector)
 
-    # Let the publishers run for a bit to establish transforms and clock
-    time.sleep(1.0)
-    response = tool._run(
-        source_frame="map",
-        target_frame="base_link",
-        timeout_sec=5.0,
-    )  # type: ignore
-    assert "translation" in response
-    assert "rotation" in response
+    with connector_and_executors_cleanup(executors, threads) as connector_ref:
+        connector_ref[0] = connector
 
-    # stop the /tf publisher
-    publisher.timer.cancel()
+        # Let the publishers run for a bit to establish transforms and clock
+        time.sleep(1.0)
+        response = tool._run(
+            source_frame="map",
+            target_frame="base_link",
+            timeout_sec=5.0,
+        )  # type: ignore
+        assert "translation" in response
+        assert "rotation" in response
 
-    # wait for some time to pass then get the transform again
-    time.sleep(2.0)
+        # stop the /tf publisher
+        publisher.timer.cancel()
 
-    try:
+        # wait for some time to pass then get the transform again
+        time.sleep(2.0)
+
         response = tool._run(
             source_frame="map",
             target_frame="base_link",
@@ -626,13 +654,11 @@ def test_get_transform_tool_with_stale_tf_data_sim_time(
                 "Expected behavior: Either include staleness warning in response or raise appropriate error."
             )
 
-    finally:
+        # Cancel timers before context manager exits
         clock_publisher.timer.cancel()
-        # wait for the timer to be canceled
+        publisher.timer.cancel()
+        # Wait for timers to be canceled
         time.sleep(0.1)
-        shutdown_executors_and_threads(executors, threads)
-        # Shutdown connector to prevent segfault
-        connector.shutdown()
 
 
 def test_get_ros2_image_configured_tool_model_post_init_raises_on_non_readable(
