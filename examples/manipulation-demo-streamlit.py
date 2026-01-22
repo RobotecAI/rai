@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from pathlib import Path
 
 import streamlit as st
@@ -35,6 +36,8 @@ from rai_sim.o3de.o3de_bridge import (
     O3DExROS2SimulationConfig,
 )
 from rai_sim.simulation_bridge import SceneConfig
+
+logger = logging.getLogger(__name__)
 
 
 def launch_description():
@@ -62,6 +65,9 @@ def launch_description():
                 "/launch/openset.launch.py",
             ]
         ),
+        launch_arguments={
+            "enable_legacy_service_names": "true",  # Enable both legacy and new service names for v1/v2 compatibility
+        }.items(),
     )
 
     return LaunchDescription(
@@ -74,8 +80,8 @@ def launch_description():
 
 
 @st.cache_resource
-def initialize_graph():
-    agent, camera_tool = create_agent()
+def initialize_graph(version: str):
+    agent, camera_tool = create_agent(version=version)
     return agent, camera_tool
 
 
@@ -142,6 +148,14 @@ def main(o3de_config_path: str):
 
     # Layout selection in sidebar
     st.sidebar.header("Configuration")
+
+    # Agent version selection
+    agent_version = st.sidebar.selectbox(
+        "Agent Version:",
+        options=["v1", "v2"],
+        index=0,
+        help="Select the agent version. v1 uses legacy tools, v2 uses new gripping points tool.",
+    )
 
     # Get available scenarios for layout selection
     levels = ["medium", "hard", "very_hard"]
@@ -271,8 +285,25 @@ def main(o3de_config_path: str):
         st.session_state["o3de"] = o3de
         st.session_state["current_scenario"] = initial_scenario
 
+    # Check if version changed and clear graph cache if needed
+    if "agent_version" not in st.session_state:
+        st.session_state["agent_version"] = agent_version
+        logger.info(f"Initializing agent version: {agent_version}")
+    elif st.session_state["agent_version"] != agent_version:
+        # Version changed, clear the graph cache
+        old_version = st.session_state["agent_version"]
+        logger.info(f"Switching agent version from {old_version} to {agent_version}")
+        if "graph" in st.session_state:
+            del st.session_state["graph"]
+            del st.session_state["camera_tool"]
+        st.session_state["agent_version"] = agent_version
+        st.session_state["messages"] = [
+            AIMessage(content="Hi! I am a robotic arm. What can I do for you?")
+        ]
+        st.rerun()
+
     if "graph" not in st.session_state:
-        graph, camera_tool = initialize_graph()
+        graph, camera_tool = initialize_graph(version=agent_version)
         st.session_state["graph"] = graph
         st.session_state["camera_tool"] = camera_tool
 
