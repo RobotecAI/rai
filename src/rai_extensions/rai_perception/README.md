@@ -4,7 +4,7 @@
 
 RAI Perception brings powerful computer vision capabilities to your ROS2 applications. It integrates [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO) and [Grounded-SAM-2](https://github.com/RobotecAI/Grounded-SAM-2) to detect objects, create segmentation masks, and calculate gripping points.
 
-The package includes two ready-to-use ROS2 service nodes (`GroundedSamAgent` and `GroundingDinoAgent`) that you can easily add to your applications. It also provides tools that work seamlessly with [RAI LLM agents](../tutorials/walkthrough.md) to build conversational robot scenarios.
+The package includes model-agnostic ROS2 service nodes (`DetectionService` and `SegmentationService`) that provide detection and segmentation capabilities. Legacy agents (`GroundedSamAgent` and `GroundingDinoAgent`) are deprecated in favor of these services. It also provides tools that work seamlessly with [RAI LLM agents](../tutorials/walkthrough.md) to build conversational robot scenarios, including `GetObjectPositionsTool` for general spatial reasoning and `GetObjectGrippingPointsTool` for advanced gripping strategies.
 
 ## Prerequisites
 
@@ -66,7 +66,7 @@ This section provides a step-by-step guide to get you up and running with RAI Pe
 
 ### Quick Start
 
-After installing `rai-perception`, launch the perception agents:
+After installing `rai-perception`, launch the perception services:
 
 **Step 1:** Open a terminal and source ROS2:
 
@@ -74,16 +74,20 @@ After installing `rai-perception`, launch the perception agents:
 source /opt/ros/jazzy/setup.bash  # or humble
 ```
 
-**Step 2:** Launch the perception agents:
+**Step 2:** Launch the perception services:
 
 ```bash
-python -m rai_perception.scripts.run_perception_agents
+python -m rai_perception.scripts.run_perception_services
 ```
 
 > [!NOTE]
 > The weights will be downloaded to `~/.cache/rai` directory on first use.
 
-The agents create two ROS 2 nodes: `grounding_dino` and `grounded_sam` using [ROS2Connector](../API_documentation/connectors/ROS_2_Connectors.md).
+> [!NOTE] > **Legacy Service Names:** The services register both new service names (`/detection`, `/segmentation`) and legacy service names (`/grounding_dino_classify`, `/grounded_sam_segment`) for backward compatibility. Legacy service names will be removed in a future release. Migrate your code to use the new service names.
+
+The services create two ROS 2 nodes: `detection_service` and `segmentation_service` using [ROS2Connector](../API_documentation/connectors/ROS_2_Connectors.md).
+
+> [!WARNING] > **Deprecated:** The legacy script `run_perception_agents` and agents (`GroundedSamAgent`, `GroundingDinoAgent`) are deprecated. Use `run_perception_services` instead, which launches `DetectionService` and `SegmentationService`.
 
 ### Testing with Example Client
 
@@ -95,10 +99,10 @@ The `rai_perception/talker.py` example demonstrates how to use the perception se
 source /opt/ros/jazzy/setup.bash  # or humble
 ```
 
-**Step 2:** Launch the perception agents:
+**Step 2:** Launch the perception services:
 
 ```bash
-python -m rai_perception.scripts.run_perception_agents
+python -m rai_perception.scripts.run_perception_services
 ```
 
 **Step 3:** In a different terminal (remember to source ROS2 first), run the example client:
@@ -117,10 +121,17 @@ You can use any image containing objects like dragons, lizards, or dinosaurs. Fo
 
 ### ROS2 Service Interface
 
-The agents can be triggered by ROS2 services:
+The services can be triggered by ROS2 services:
 
--   `grounding_dino_classify`: `rai_interfaces/srv/RAIGroundingDino`
--   `grounded_sam_segment`: `rai_interfaces/srv/RAIGroundedSam`
+**New service names (recommended):**
+
+-   `/detection`: `rai_interfaces/srv/RAIGroundingDino`
+-   `/segmentation`: `rai_interfaces/srv/RAIGroundedSam`
+
+**Legacy service names (deprecated, will be removed):**
+
+-   `/grounding_dino_classify`: `rai_interfaces/srv/RAIGroundingDino`
+-   `/grounded_sam_segment`: `rai_interfaces/srv/RAIGroundedSam`
 
 <!--- --8<-- [end:sec4] -->
 
@@ -136,20 +147,19 @@ This section provides information for developers looking to integrate RAI Percep
 to enhance their perception capabilities. For more information on RAI Tools see
 [Tool use and development](../tutorials/tools.md) tutorial.
 
-<!--- --8<-- [start:sec2] -->
+The tools fall into two categories:
+
+-   **Detection tools**: `GetDetectionTool` and `GetDistanceToObjectsTool` for object detection and distance estimation
+-   **Position and gripping tools**: `GetObjectPositionsTool` for general spatial queries and `GetObjectGrippingPointsTool` for advanced gripping strategies
 
 ### `GetDetectionTool`
 
 This tool calls the GroundingDINO service to detect objects from a comma-separated prompt in the provided camera topic.
 
-<!--- --8<-- [end:sec2] -->
-
 > [!TIP]
 >
 > you can try example below with [rosbotxl demo](../demos/rosbot_xl.md) binary.
 > The binary exposes `/camera/camera/color/image_raw` and `/camera/camera/depth/image_rect_raw` topics.
-
-<!--- --8<-- [start:sec3] -->
 
 **Example call**
 
@@ -212,9 +222,111 @@ with ROS2Context():
 I have detected the following items in the picture desk: 2.43m away
 ```
 
+### `GetObjectPositionsTool`
+
+This tool retrieves the 3D positions (centroids) of all detected objects of a specified type in the target frame. It uses the `default_grasp` preset with centroid strategy, making it ideal for general spatial reasoning tasks like arranging objects or placing objects relative to each other.
+
+The tool name `get_object_positions` provides better spatial interpretation for agents, making it more likely to be used for spatial reasoning tasks compared to `get_object_gripping_points`.
+
+> [!NOTE]
+> For general position queries, use `GetObjectPositionsTool`. For advanced gripping strategies (top-down grasping, precise grasping), use `GetObjectGrippingPointsTool` instead.
+
+**Example call**
+
+```python
+import rclpy
+from rai_perception.tools import GetObjectPositionsTool
+from rai.communication.ros2 import ROS2Connector
+from rai_perception.tools.gripping_points_tools import GRIPPING_POINTS_TOOL_PARAM_PREFIX
+
+rclpy.init()
+connector = ROS2Connector(executor_type="single_threaded")
+node = connector.node
+
+# Set ROS2 parameters to match your robot/simulation setup
+node.declare_parameter(
+    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.camera_topic", "/color_image5"
+)
+node.declare_parameter(
+    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.depth_topic", "/depth_image5"
+)
+node.declare_parameter(
+    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.camera_info_topic", "/color_camera_info5"
+)
+node.declare_parameter(
+    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.target_frame", "panda_link0"
+)
+node.declare_parameter(
+    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.source_frame", "RGBDCamera5"
+)
+
+tool = GetObjectPositionsTool(connector=connector)
+result = tool._run(object_name="apple")
+print(result)
+```
+
+**Example output**
+
+```
+Centroids of detected apples in panda_link0 frame: [Centroid(x=0.51, y=0.391241, z=0.038238), Centroid(x=0.36, y=0.392357, z=0.037558)]. Sizes of the detected objects are unknown.
+```
+
+### `GetObjectGrippingPointsTool`
+
+This tool provides advanced gripping point strategies optimized for specific grasping scenarios. It supports multiple presets:
+
+-   `default_grasp`: Centroid-based estimation (used internally by `GetObjectPositionsTool`)
+-   `top_grasp`: Optimized for top-down grasping from above
+-   `precise_grasp`: High-quality preset with aggressive outlier filtering and precise top-plane estimation
+
+Use this tool when you need advanced gripping strategies beyond simple position queries. For general spatial reasoning tasks, `GetObjectPositionsTool` is recommended.
+
+**Example call**
+
+```python
+import rclpy
+from rai_perception import GetObjectGrippingPointsTool
+from rai.communication.ros2 import ROS2Connector
+from rai_perception.components.perception_presets import apply_preset
+from rai_perception.tools.gripping_points_tools import GRIPPING_POINTS_TOOL_PARAM_PREFIX
+
+rclpy.init()
+connector = ROS2Connector(executor_type="single_threaded")
+node = connector.node
+
+# Set ROS2 parameters
+node.declare_parameter(
+    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.camera_topic", "/color_image5"
+)
+node.declare_parameter(
+    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.depth_topic", "/depth_image5"
+)
+node.declare_parameter(
+    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.camera_info_topic", "/color_camera_info5"
+)
+node.declare_parameter(
+    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.target_frame", "panda_link0"
+)
+node.declare_parameter(
+    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.source_frame", "RGBDCamera5"
+)
+
+# Apply top_grasp preset for top-down grasping
+filter_config, estimator_config = apply_preset("top_grasp")
+tool = GetObjectGrippingPointsTool(
+    connector=connector,
+    filter_config=filter_config,
+    estimator_config=estimator_config,
+)
+result = tool._run(object_name="cube")
+print(result)
+```
+
+<!--- --8<-- [start:sec3] -->
+
 ### Debug Mode
 
-Tools like `GetObjectGrippingPointsTool` support an optional `debug` parameter that enables progressive evaluation and debugging. When `debug=True`, the tool publishes intermediate pipeline results to ROS2 topics for visualization in RViz2 and logs detailed stage information including point counts and timing. This allows you to inspect individual pipeline stages (point cloud extraction, filtering, estimation) without running the full pipeline.
+Both `GetObjectPositionsTool` and `GetObjectGrippingPointsTool` support an optional `debug` parameter that enables progressive evaluation and debugging. When `debug=True`, the tool publishes intermediate pipeline results to ROS2 topics for visualization in RViz2 and logs detailed stage information including point counts and timing. This allows you to inspect individual pipeline stages (point cloud extraction, filtering, estimation) without running the full pipeline.
 
 **Debug Topics Published:**
 

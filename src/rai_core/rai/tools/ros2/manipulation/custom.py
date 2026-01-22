@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import logging
-from typing import Literal, Type
+from typing import Any, Literal, Type
 
 import numpy as np
 from deprecated import deprecated
@@ -347,6 +347,22 @@ class GetObjectPositionsTool(BaseROS2Tool):
     get_grabbing_point_tool: "GetGrabbingPointTool"
 
     args_schema: Type[GetObjectPositionsToolInput] = GetObjectPositionsToolInput
+
+    def model_post_init(self, __context: Any) -> None:
+        """Warn if the new GetObjectPositionsTool from rai_perception might be present."""
+        try:
+            from rai_perception.tools import GetObjectPositionsTool  # noqa: F401
+
+            self.connector.logger.warning(
+                f"Deprecated tool '{self.__class__.__name__}' is being used. "
+                f"A newer version exists in rai_perception.tools.GetObjectPositionsTool. "
+                f"If both tools are registered with the same name '{self.name}', "
+                f"the newer tool will overwrite this deprecated one. "
+                f"Please migrate to the new tool from rai_perception."
+            )
+        except ImportError:
+            # rai_perception not installed, no conflict possible
+            pass
 
     @staticmethod
     def format_pose(pose: Pose):
