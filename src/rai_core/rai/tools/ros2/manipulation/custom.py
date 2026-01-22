@@ -296,7 +296,7 @@ class MoveObjectFromToTool(BaseROS2Tool):
             self.connector.logger.error(
                 f"Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
             )
-            return "Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
+            return f"Failed to position end effector at coordinates ({x:.2f}, {y:.2f}, {z:.2f})."
 
         request = ManipulatorMoveTo.Request()
         request.target_pose = pose_stamped1

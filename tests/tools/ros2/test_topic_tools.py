@@ -27,9 +27,11 @@ from PIL import Image
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.communication.ros2.waiters import wait_for_ros2_topics
 from rai.tools.ros2 import (
+    GetROS2ImageConfiguredTool,
     GetROS2ImageTool,
     GetROS2MessageInterfaceTool,
     GetROS2TopicsNamesAndTypesTool,
+    GetROS2TransformConfiguredTool,
     GetROS2TransformTool,
     PublishROS2MessageTool,
     ReceiveROS2MessageTool,
@@ -628,4 +630,68 @@ def test_get_transform_tool_with_stale_tf_data_sim_time(
         clock_publisher.timer.cancel()
         # wait for the timer to be canceled
         time.sleep(0.1)
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_get_ros2_image_configured_tool_model_post_init_raises_on_non_readable(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    """Test that GetROS2ImageConfiguredTool raises ValueError when topic is not readable."""
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    connector = ROS2Connector()
+    with pytest.raises(
+        ValueError, match=f"Bad configuration: topic {topic_name} is not readable"
+    ):
+        GetROS2ImageConfiguredTool(
+            connector=connector,
+            topic=topic_name,
+            readable=[f"{request.node.originalname}_other_topic"],  # type: ignore
+        )
+
+
+def test_get_ros2_image_configured_tool_run(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    """Test that GetROS2ImageConfiguredTool successfully runs and returns image data."""
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    connector = ROS2Connector()
+    publisher = ImagePublisher(topic=topic_name)
+    executors, threads = multi_threaded_spinner([publisher])
+    tool = GetROS2ImageConfiguredTool(
+        connector=connector,
+        topic=topic_name,
+        readable=[topic_name],
+    )
+    time.sleep(1)
+    try:
+        _, artifact_dict = tool._run()  # type: ignore
+        images = artifact_dict["images"]
+        assert len(images) == 1
+        image = images[0]
+        image = Image.open(io.BytesIO(base64.b64decode(image)))
+        assert image.size == (100, 100)
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_get_ros2_transform_configured_tool_run(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    """Test that GetROS2TransformConfiguredTool successfully runs and returns transform data."""
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    connector = ROS2Connector()
+    publisher = TransformPublisher(topic=topic_name)
+    executors, threads = multi_threaded_spinner([publisher])
+    tool = GetROS2TransformConfiguredTool(
+        connector=connector,
+        source_frame=publisher.child_frame_id,
+        target_frame=publisher.frame_id,
+        timeout_sec=1.0,
+    )
+    time.sleep(1.0)
+    try:
+        response = tool._run()  # type: ignore
+        assert "translation" in response
+        assert "rotation" in response
+    finally:
         shutdown_executors_and_threads(executors, threads)
