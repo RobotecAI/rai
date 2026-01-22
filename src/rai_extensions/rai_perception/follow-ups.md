@@ -11,6 +11,9 @@
     -   [Progressive Evaluation: GetDistanceToObjectsTool](#progressive-evaluation-getdistancetoobjectstool)
     -   [Legacy Service Name Handling](#legacy-service-name-handling)
     -   [Service Name Updates in rai_bench](#service-name-updates-in-rai_bench)
+    -   [Preset Selection for GetObjectGrippingPointsTool](#preset-selection-for-getobjectgrippingpointstool)
+    -   [GetObjectPositionsTool Name Collision Warning](#getobjectpositionstool-name-collision-warning)
+    -   [Streamlit Process Cleanup on Ctrl+C](#streamlit-process-cleanup-on-ctrlc)
 
 ---
 
@@ -193,6 +196,130 @@ _Rationale:_ These changes align `rai_bench` with the model-agnostic service nam
 _Note:_ These changes are currently in a feature branch and need to be merged to main after `rai_perception` service name changes are finalized.
 
 _Issue:_ `rai_sim` package may also need update.
+
+### Preset Selection for GetObjectGrippingPointsTool
+
+_Status:_ Feature request.
+
+_Issue:_ Currently, users must manually apply presets (e.g., `default_grasp`, `top_grasp`, `precise_grasp`) by calling `apply_preset()` and passing configs to the tool constructor. This requires code changes and prevents runtime configuration.
+
+_Current Workflow:_
+
+```python
+from rai_perception.components.perception_presets import apply_preset
+
+filter_config, estimator_config = apply_preset("top_grasp")
+tool = GetObjectGrippingPointsTool(
+    connector=connector,
+    filter_config=filter_config,
+    estimator_config=estimator_config
+)
+```
+
+_Proposed Solution:_
+
+1. **Constructor Parameter:** Add optional `preset` parameter to `GetObjectGrippingPointsTool`:
+
+    ```python
+    tool = GetObjectGrippingPointsTool(
+        connector=connector,
+        preset="top_grasp"  # Simple preset selection
+    )
+    ```
+
+2. **ROS2 Parameter Support:** Add `perception.gripping_points.preset` parameter for runtime configuration:
+
+    ```python
+    node.declare_parameter("perception.gripping_points.preset", "default_grasp")
+    ```
+
+3. **Priority Logic:** If both `preset` and explicit `filter_config`/`estimator_config` are provided, explicit configs take precedence (or raise error for clarity).
+
+_Benefits:_
+
+-   Simplifies preset selection (no need to call `apply_preset()` manually)
+-   Enables runtime configuration via ROS2 parameters
+-   Maintains backward compatibility (preset is optional, defaults to `"default_grasp"`)
+-   Allows easy switching between presets without code changes
+
+_Estimated Effort:_ Small to medium (30 minutes - 2 hours depending on scope)
+
+### GetObjectPositionsTool Name Collision Warning
+
+_Status:_ Implemented with warning mechanism.
+
+_Issue:_ The deprecated `GetObjectPositionsTool` in `rai.tools.ros2.manipulation.custom` and the new `GetObjectPositionsTool` in `rai_perception.tools` both use the same tool name `"get_object_positions"`. If both tools are registered in the same agent, the newer tool will silently overwrite the deprecated one, which could cause unexpected behavior.
+
+_Current Implementation:_
+
+The deprecated `GetObjectPositionsTool` in `src/rai_core/rai/tools/ros2/manipulation/custom.py` includes a warning mechanism:
+
+-   When the deprecated tool is initialized, it checks if `rai_perception` is installed
+-   If the new tool class is available, it emits a warning that both tools exist and may conflict
+-   The warning advises users to migrate to the new tool from `rai_perception`
+
+_Impact:_
+
+-   Both tools can coexist for backward compatibility
+-   Users will see warnings when using the deprecated tool if `rai_perception` is installed
+-   If both tools are registered, the one registered last will be used (typically the new one)
+
+_Migration:_
+
+-   Update code to use `GetObjectPositionsTool` from `rai_perception.tools` instead of `rai.tools.ros2.manipulation.custom`
+-   Remove the deprecated tool from tool lists once migration is complete
+-   The deprecated tool will be removed in a future version
+
+_Note:_ The deprecated tool remains exported from `rai.tools.ros2` for backward compatibility but should not be used in new code.
+
+### Streamlit Process Cleanup on Ctrl+C
+
+_Status:_ Issue identified, fix needed.
+
+_Issue:_ When running Streamlit applications (e.g., `examples/manipulation-demo-streamlit.py`), pressing Ctrl+C leaves orphaned Python processes behind. This occurs because Streamlit spawns multiple child processes (main process, server process, watcher process), and the SIGINT signal from Ctrl+C may not properly propagate to all child processes.
+
+_Symptoms:_ After pressing Ctrl+C, processes remain running:
+
+```bash
+juliajia   75268  0.0  1.1 22978828 744872 pts/0 SNl  20:07   0:00 /home/juliajia/.cache/pypoetry/virtualenvs/rai-framework-kS72TEbF-py3.12/bin/python /home/juliajia/.cache/pypoetry/virtualenvs/rai-framework-kS72TEbF-py3.12/bin/streamlit run examples/manipulation-demo-streamlit.py
+```
+
+_Root Cause:_ Streamlit's process management doesn't always clean up all child processes when the parent receives SIGINT. The parent process exits, but child processes continue running.
+
+_Proposed Solution:_
+
+1. **Wrapper Script Approach (Recommended):** Create a wrapper script that traps signals and ensures all Streamlit processes are killed:
+
+    ```bash
+    #!/bin/bash
+    # run_streamlit.sh
+    trap "pkill -9 -f streamlit; exit" INT TERM
+    streamlit run examples/manipulation-demo-streamlit.py
+    ```
+
+2. **Manual Cleanup Command:** Document the cleanup command for users (note: requires `-9` flag to force kill):
+
+    ```bash
+    pkill -9 -f streamlit
+    ```
+
+    _Note:_ The `-9` flag sends SIGKILL which cannot be ignored. Without it, `pkill` sends SIGTERM which some processes may ignore.
+
+3. **Alternative: Signal Handling in Python (Limited Effectiveness):** Add signal handlers to the Streamlit script, though this has limited effectiveness since Streamlit manages its own processes. Signal handlers in the script may not catch signals sent to Streamlit's child processes.
+
+_Implementation:_
+
+-   Create wrapper scripts for Streamlit demos in `examples/` directory
+-   Update documentation to mention the cleanup command
+-   Consider adding cleanup instructions to README or demo documentation
+
+_Benefits:_
+
+-   Prevents resource leaks from orphaned processes
+-   Improves user experience by avoiding manual process cleanup
+-   Reduces confusion about why processes remain after stopping the application
+
+_Estimated Effort:_ Small (15-30 minutes)
 
 -   [PR #750: feat: redesign rai_perception API with tiered structure and improve 3D gripping point detection](https://github.com/RobotecAI/rai/pull/750)
 -   [tests/rai_sim](https://github.com/RobotecAI/rai/tree/main/tests/rai_sim) - Tests for rai_sim package
