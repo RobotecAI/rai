@@ -631,6 +631,8 @@ def test_get_transform_tool_with_stale_tf_data_sim_time(
         # wait for the timer to be canceled
         time.sleep(0.1)
         shutdown_executors_and_threads(executors, threads)
+        # Shutdown connector to prevent segfault
+        connector.shutdown()
 
 
 def test_get_ros2_image_configured_tool_model_post_init_raises_on_non_readable(
