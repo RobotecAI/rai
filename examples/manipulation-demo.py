@@ -14,8 +14,10 @@
 
 
 import logging
+import signal
 from typing import List
 
+import rclpy
 from langchain_core.messages import BaseMessage, HumanMessage
 
 logger = logging.getLogger(__name__)
@@ -37,11 +39,28 @@ def main():
     agent = create_agent()
     messages: List[BaseMessage] = []
 
-    while True:
-        prompt = input("Enter a prompt: ")
-        messages.append(HumanMessage(content=prompt))
-        output = agent.invoke({"messages": messages})
-        output["messages"][-1].pretty_print()
+    def cleanup(signum, frame):
+        """Cleanup handler for graceful shutdown."""
+        logger.info("Shutting down...")
+        if rclpy.ok():
+            rclpy.shutdown()
+        exit(0)
+
+    signal.signal(signal.SIGINT, cleanup)
+
+    try:
+        while True:
+            prompt = input("Enter a prompt: ")
+            messages.append(HumanMessage(content=prompt))
+            output = agent.invoke({"messages": messages})
+            output["messages"][-1].pretty_print()
+    except KeyboardInterrupt:
+        cleanup(None, None)
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        if rclpy.ok():
+            rclpy.shutdown()
+        raise
 
 
 if __name__ == "__main__":

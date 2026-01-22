@@ -213,7 +213,7 @@ This section evaluates how the proposed design impacts existing use cases and en
 
 _1. Tools in RAI Agents_
 
-Three tools are avaialble for RAI agents:`GetDetectionTool`, `GetObjectGrippingPointsTool` and `GetDistanceToObjectsTool`.
+Three tools are available for RAI agents: `GetDetectionTool`, `GetObjectGrippingPointsTool` and `GetDistanceToObjectsTool`.
 
 Impact of proposed design:
 

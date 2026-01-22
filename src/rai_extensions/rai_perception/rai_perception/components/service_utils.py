@@ -73,7 +73,9 @@ def get_segmentation_service_name(connector: ROS2Connector) -> str:
 
 
 def check_service_available(
-    connector: ROS2Connector, service_name: str, timeout_sec: float = 0.1
+    connector: ROS2Connector,
+    service_name: str,
+    timeout_sec: float = 0.1,  # noqa: ARG001
 ) -> bool:
     """Check if a ROS2 service is available without waiting.
 

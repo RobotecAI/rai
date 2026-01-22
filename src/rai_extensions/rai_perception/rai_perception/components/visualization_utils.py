@@ -157,9 +157,6 @@ def transform_points_between_frames(
     Returns:
         List of transformed 3D points (Nx3 arrays) in target frame.
         Returns original points if transform fails.
-
-    Raises:
-        RuntimeError: If transform lookup fails
     """
     try:
         transform = connector.get_transform(target_frame, source_frame)

@@ -24,7 +24,7 @@ class MockGDBoxer:
     def __init__(self, weights_path):
         self.weights_path = weights_path
 
-    def get_boxes(self, image_msg, classes, box_threshold, text_threshold):
+    def get_boxes(self, _image_msg, classes, _box_threshold, _text_threshold):
         """Mock box detection."""
         box1 = Box((50.0, 50.0), 40.0, 40.0, classes[0], 0.9)
         box2 = Box((100.0, 100.0), 30.0, 30.0, classes[1], 0.8)
@@ -37,7 +37,7 @@ class MockGDSegmenter:
     def __init__(self, weights_path):
         self.weights_path = weights_path
 
-    def get_segmentation(self, image, boxes):
+    def get_segmentation(self, _image, _boxes):
         """Mock segmentation that returns simple masks."""
         mask1 = np.zeros((100, 100), dtype=np.float32)
         mask1[10:50, 10:50] = 1.0
@@ -52,7 +52,7 @@ class EmptyBoxer:
     def __init__(self, weights_path):
         self.weights_path = weights_path
 
-    def get_boxes(self, image_msg, classes, box_threshold, text_threshold):
+    def get_boxes(self, _image_msg, _classes, _box_threshold, _text_threshold):
         """Return empty list of boxes."""
         return []
 
@@ -63,6 +63,6 @@ class EmptySegmenter:
     def __init__(self, weights_path):
         self.weights_path = weights_path
 
-    def get_segmentation(self, image, boxes):
+    def get_segmentation(self, _image, _boxes):
         """Return empty list of masks."""
         return []

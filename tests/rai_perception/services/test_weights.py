@@ -39,7 +39,9 @@ class TestDownloadWeights:
             create_valid_weights_file(weights_path)
             return MagicMock(returncode=0)
 
-        with patch("subprocess.run", side_effect=mock_wget):
+        with patch(
+            "rai_perception.services.weights.subprocess.run", side_effect=mock_wget
+        ):
             download_weights(weights_path, logger, "https://example.com/weights.pth")
 
             assert weights_path.exists()
@@ -51,7 +53,7 @@ class TestDownloadWeights:
         logger = MagicMock()
 
         with patch(
-            "subprocess.run",
+            "rai_perception.services.weights.subprocess.run",
             side_effect=subprocess.CalledProcessError(
                 returncode=1, cmd="wget", stderr="Download failed"
             ),
@@ -70,7 +72,9 @@ class TestDownloadWeights:
             weights_path.write_bytes(b"0" * 100)  # 100 bytes, too small
             return MagicMock(returncode=0)
 
-        with patch("subprocess.run", side_effect=mock_wget):
+        with patch(
+            "rai_perception.services.weights.subprocess.run", side_effect=mock_wget
+        ):
             with pytest.raises(Exception, match="Downloaded file is too small"):
                 download_weights(
                     weights_path, logger, "https://example.com/weights.pth"
@@ -117,7 +121,9 @@ class TestLoadModelWithErrorHandling:
             create_valid_weights_file(weights_path)
             return MagicMock(returncode=0)
 
-        with patch("subprocess.run", side_effect=mock_wget):
+        with patch(
+            "rai_perception.services.weights.subprocess.run", side_effect=mock_wget
+        ):
             model = load_model_with_error_handling(
                 MockModel, weights_path, logger, "https://example.com/weights.pth"
             )

@@ -48,6 +48,8 @@ class BaseVisionService:
         # (remove Optional and default None). Services should always receive a connector.
         if not self.WEIGHTS_FILENAME:
             raise ValueError("WEIGHTS_FILENAME is not set")
+        if not self.WEIGHTS_URL:
+            raise ValueError("WEIGHTS_URL is not set")
         self.weights_root_path = Path(weights_root_path)
         self.weights_path = (
             self.weights_root_path / self.WEIGHTS_DIR_PATH_PART / self.WEIGHTS_FILENAME

@@ -115,4 +115,8 @@ def remove_weights(weights_path: Path):
     Args:
         weights_path: Path to weights file to remove
     """
-    os.remove(weights_path)
+    try:
+        os.remove(weights_path)
+    except FileNotFoundError:
+        # File already removed, idempotent operation
+        pass

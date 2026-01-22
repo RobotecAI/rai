@@ -106,7 +106,9 @@ class DetectionService(BaseVisionService):
         try:
             # Parse classes first (needed even if image is empty)
             class_array = request.classes.split(",")
-            class_array = [class_name.strip() for class_name in class_array]
+            class_array = [
+                class_name.strip() for class_name in class_array if class_name.strip()
+            ]
 
             # Validate image
             image_data_size = (
@@ -156,7 +158,11 @@ class DetectionService(BaseVisionService):
             # Try to preserve requested classes even on error
             try:
                 class_array = request.classes.split(",")
-                class_array = [class_name.strip() for class_name in class_array]
+                class_array = [
+                    class_name.strip()
+                    for class_name in class_array
+                    if class_name.strip()
+                ]
             except Exception:
                 class_array = []
             response.detections.detections = []  # type: ignore

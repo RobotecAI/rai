@@ -91,7 +91,7 @@ _PRESETS: Dict[PresetName, Dict[str, Any]] = {
 }
 
 
-def get_preset(preset_name: PresetName) -> Dict[str, any]:
+def get_preset(preset_name: PresetName) -> Dict[str, Any]:
     """Get preset configuration by name.
 
     Args:

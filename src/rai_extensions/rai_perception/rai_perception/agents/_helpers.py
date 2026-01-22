@@ -21,13 +21,15 @@ import rclpy
 from rai.communication.ros2 import ROS2Connector
 from rclpy.parameter import Parameter
 
+_DEFAULT_WEIGHTS_PATH = Path.home() / Path(".cache/rai")
+
 
 def create_service_wrapper(
     service_class: Type,
     ros2_name: str,
     model_name: str,
     service_name: str,
-    weights_root_path: str | Path = Path.home() / Path(".cache/rai"),
+    weights_root_path: str | Path | None = None,
 ) -> tuple[ROS2Connector, object]:
     """Create a service instance with ROS2 parameters configured.
 
@@ -43,6 +45,9 @@ def create_service_wrapper(
     Returns:
         Tuple of (ros2_connector, service_instance)
     """
+    if weights_root_path is None:
+        weights_root_path = _DEFAULT_WEIGHTS_PATH
+
     ros2_connector = ROS2Connector(ros2_name, executor_type="single_threaded")
 
     ros2_connector.node.set_parameters(

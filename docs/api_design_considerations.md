@@ -75,7 +75,7 @@ These patterns may help evaluate whether RAI APIs are optimized for both human d
 
 ### Multiple Audiences with Clear Separation
 
-The [RAI framework paper](https://arxiv.org/abs/2505.07532}) (Rachwał et al., 2025) states Tools are "compatible with langchain, enabling seamless integration with tool-calling-enabled LLMs" while also being "used by Agents utilizing other decision-making mechanisms.". Based on this paper, RAI serves four distinct roles at different architectural levels:
+The [RAI framework paper](https://arxiv.org/abs/2505.07532) (Rachwał et al., 2025) states Tools are "compatible with langchain, enabling seamless integration with tool-calling-enabled LLMs" while also being "used by Agents utilizing other decision-making mechanisms." Based on this paper, RAI serves four distinct roles at different architectural levels:
 
 -   Application Developers: Design and configure the system (choose Agents, Connectors, Tools)
 -   Extension Developers: Extend RAI by creating custom tools and components
@@ -239,4 +239,4 @@ Based on analysis of RAI extensions, common usability issues may include:
    Defers advanced features to reduce cognitive load—applies to tiered API design.
 
 7. **Rachwał et al. (2025)** - "RAI: Flexible Agent Framework for Embodied AI" - https://arxiv.org/abs/2505.07532  
-   Introduces the RAI framework for creating embodied Multi Agent Systems for robotics, with integration for ROS 2, Large Language Models, and simulations. Describes the framework's architecture, tools, and mechanisms for agent embodiment.
+   Introduces the RAI framework for creating embodied Multi-Agent Systems for robotics, with integration for ROS 2, Large Language Models, and simulations. Describes the framework's architecture, tools, and mechanisms for agent embodiment.

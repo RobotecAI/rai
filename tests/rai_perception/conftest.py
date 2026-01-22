@@ -106,13 +106,21 @@ def mock_connector():
             raise ParameterNotDeclaredException(f"Parameter '{name}' not found")
         return _parameters[name]
 
+    def declare_parameter(name, value=None):
+        """Declare and store parameter for later retrieval."""
+        from rclpy.parameter import Parameter
+
+        param = Parameter(name, value=value)
+        _parameters[name] = param
+        return param
+
     # Mock the node with all required methods
     mock_node = MagicMock()
     mock_node.create_client = MagicMock()
     mock_node.get_logger = MagicMock(return_value=MagicMock())
     mock_node.get_parameter = get_parameter
     mock_node.has_parameter = has_parameter
-    mock_node.declare_parameter = MagicMock()
+    mock_node.declare_parameter = declare_parameter
     mock_node.set_parameters = set_parameters
     mock_node.get_clock = MagicMock()
     mock_node.create_service = MagicMock()

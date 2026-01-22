@@ -41,7 +41,7 @@ class GDSegmenter(AlgorithmsGDSegmenter):
 
         Args:
             weight_path: Path to model weights file
-            config_path: Ignored (kept for API compatibility, SAM2 uses Hydra config module)
+            config_path: Forwarded to parent class (kept for API compatibility, SAM2 uses Hydra config module)
             use_cuda: Whether to use CUDA if available
         """
         warnings.warn(
@@ -51,7 +51,7 @@ class GDSegmenter(AlgorithmsGDSegmenter):
             stacklevel=2,
         )
 
-        # Delegate to algorithms version (config_path is ignored for SAM2 anyway)
+        # Delegate to algorithms version
         super().__init__(weight_path, config_path=config_path, use_cuda=use_cuda)
 
 

@@ -9,6 +9,7 @@
 -   [Post-PR Follow-ups](#post-pr-follow-ups)
     -   [Generic Detection Tools Abstraction](#generic-detection-tools-abstraction)
     -   [Progressive Evaluation: GetDistanceToObjectsTool](#progressive-evaluation-getdistancetoobjectstool)
+    -   [Legacy Service Name Handling](#legacy-service-name-handling)
     -   [Service Name Updates in rai_bench](#service-name-updates-in-rai_bench)
 
 ---
@@ -84,7 +85,7 @@ _Problem:_ `gdino_tools.py` is tightly coupled to GroundingDINO model and servic
 
 This prevents easy migration to other models (e.g., YOLO) without code changes.
 
-_Proposed Solution: Service-Level Abstraction_
+#### Proposed Solution: Service-Level Abstraction
 
 1. Generic Service Interface (`rai_interfaces/`): Create `RAIDetection.srv` with generic fields:
 
@@ -117,6 +118,50 @@ _Proposed:_ Add optional `debug` parameter to expose intermediate results:
 -   Publish detection bounding boxes to ROS2 topic for visualization
 -   Log detection confidence scores and counts per stage
 -   Optional depth ROI visualization to debug bounding box alignment and outlier filtering
+
+### Legacy Service Name Handling
+
+_Status:_ Implemented with backward compatibility support.
+
+_Overview:_ The perception services support both legacy and new service names simultaneously to maintain backward compatibility during the migration period.
+
+_Configuration:_
+
+The `enable_legacy_service_names` parameter controls whether legacy service names are registered alongside the new generic names:
+
+-   **Default:** `true` (for backward compatibility)
+-   **Location:** Set via environment variable `ENABLE_LEGACY_SERVICE_NAMES` or ROS2 parameter
+-   **Launch file:** `src/rai_bringup/launch/openset.launch.py` declares this as a launch argument
+
+_Service Name Registration:_
+
+When `enable_legacy_service_names=true`:
+
+-   Detection service registers both: `/detection` (new) and `/grounding_dino_classify` (legacy)
+-   Segmentation service registers both: `/segmentation` (new) and `/grounded_sam_segment` (legacy)
+
+When `enable_legacy_service_names=false`:
+
+-   Only new service names are registered: `/detection` and `/segmentation`
+
+_Agent Version Compatibility:_
+
+-   **v1 agents** (legacy tools): Use legacy service names (`/grounding_dino_classify`, `/grounded_sam_segment`)
+-   **v2 agents** (new tools): Use new service names (`/detection`, `/segmentation`)
+
+For applications that need to support both v1 and v2 agents (e.g., `manipulation-demo-streamlit.py`), set `enable_legacy_service_names=true` in the launch file to ensure both naming schemes are available.
+
+_Implementation Details:_
+
+-   Services check the parameter in `_should_register_legacy_name()` method
+-   Legacy service names are registered conditionally in `run()` method
+-   Default behavior maintains backward compatibility (legacy names enabled by default)
+
+_Migration Path:_
+
+1. **Phase 1 (Current):** Legacy names enabled by default, both v1 and v2 work
+2. **Phase 2 (Future):** Legacy names disabled by default, only v2 works
+3. **Phase 3 (Future):** Legacy names removed entirely
 
 ### Service Name Updates in rai_bench
 
