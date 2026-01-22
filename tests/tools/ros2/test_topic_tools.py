@@ -16,8 +16,6 @@ import pytest
 
 try:
     import rclpy  # noqa: F401
-
-    _ = rclpy  # noqa: F841
 except ImportError:
     pytest.skip("ROS2 is not installed", allow_module_level=True)
 

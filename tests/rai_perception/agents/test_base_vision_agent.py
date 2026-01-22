@@ -129,6 +129,7 @@ class TestVisionWeightsDownload:
                 check=True,
                 capture_output=True,
                 text=True,
+                timeout=600,
             )
 
             # Verify file exists after download

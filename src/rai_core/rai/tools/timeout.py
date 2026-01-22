@@ -46,7 +46,7 @@ class RaiTimeoutError(Exception):
     pass
 
 
-def timeout(seconds: float, timeout_message: str = None) -> Callable[[F], F]:
+def timeout(seconds: float, timeout_message: str | None = None) -> Callable[[F], F]:
     """
     Decorator that adds timeout functionality to a function.
 
@@ -88,19 +88,21 @@ def timeout(seconds: float, timeout_message: str = None) -> Callable[[F], F]:
                 future = executor.submit(func, *args, **kwargs)
                 try:
                     return future.result(timeout=seconds)
-                except concurrent.futures.TimeoutError:
+                except concurrent.futures.TimeoutError as err:
                     message = (
                         timeout_message
                         or f"Function '{func.__name__}' timed out after {seconds} seconds"
                     )
-                    raise RaiTimeoutError(message)
+                    raise RaiTimeoutError(message) from err
 
         return wrapper
 
     return decorator
 
 
-def timeout_method(seconds: float, timeout_message: str = None) -> Callable[[F], F]:
+def timeout_method(
+    seconds: float, timeout_message: str | None = None
+) -> Callable[[F], F]:
     """
     Decorator that adds timeout functionality to an instance method.
 
@@ -147,12 +149,12 @@ def timeout_method(seconds: float, timeout_message: str = None) -> Callable[[F],
                 future = executor.submit(func, self, *args, **kwargs)
                 try:
                     return future.result(timeout=seconds)
-                except concurrent.futures.TimeoutError:
+                except concurrent.futures.TimeoutError as err:
                     message = (
                         timeout_message
                         or f"Method '{func.__name__}' of {self.__class__.__name__} timed out after {seconds} seconds"
                     )
-                    raise RaiTimeoutError(message)
+                    raise RaiTimeoutError(message) from err
 
         return wrapper
 

@@ -46,7 +46,7 @@ class DetectionService(BaseVisionService):
 
     def __init__(
         self,
-        weights_root_path: str | Path = Path.home() / Path(".cache/rai"),
+        weights_root_path: str | Path = BaseVisionService.DEFAULT_WEIGHTS_ROOT_PATH,
         ros2_name: str = "detection_service",
         ros2_connector: Optional[ROS2Connector] = None,
     ):

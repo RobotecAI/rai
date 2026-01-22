@@ -26,38 +26,8 @@ from cv_bridge import CvBridge
 from rai.communication.ros2.connectors import ROS2Connector
 from sensor_msgs.msg import CameraInfo, Image
 
+from rai_perception.components.math_utils import quaternion_to_rotation_matrix
 from rai_perception.components.perception_utils import get_camera_intrinsics
-
-
-def _quaternion_to_rotation_matrix(
-    qx: float, qy: float, qz: float, qw: float
-) -> np.ndarray:
-    """Convert quaternion to rotation matrix (optimized implementation).
-
-    Args:
-        qx, qy, qz, qw: Quaternion components
-
-    Returns:
-        3x3 rotation matrix as numpy array
-    """
-    xx = qx * qx
-    yy = qy * qy
-    zz = qz * qz
-    xy = qx * qy
-    xz = qx * qz
-    yz = qy * qz
-    wx = qw * qx
-    wy = qw * qy
-    wz = qw * qz
-
-    return np.array(
-        [
-            [1.0 - 2.0 * (yy + zz), 2.0 * (xy - wz), 2.0 * (xz + wy)],
-            [2.0 * (xy + wz), 1.0 - 2.0 * (xx + zz), 2.0 * (yz - wx)],
-            [2.0 * (xz - wy), 2.0 * (yz + wx), 1.0 - 2.0 * (xx + yy)],
-        ],
-        dtype=np.float64,
-    )
 
 
 def _project_3d_to_2d(
@@ -148,6 +118,11 @@ def transform_points_between_frames(
 ) -> list[np.ndarray]:
     """Transform 3D points from source frame to target frame using TF.
 
+    This function is designed for visualization purposes where a graceful fallback
+    is preferred over raising exceptions. If the transform fails, the original
+    points are returned to allow visualization to proceed, though the results
+    will be in the wrong frame. Errors are logged for debugging.
+
     Args:
         connector: ROS2Connector instance for TF access
         points: List of 3D points (Nx3 arrays) in source frame
@@ -156,14 +131,18 @@ def transform_points_between_frames(
 
     Returns:
         List of transformed 3D points (Nx3 arrays) in target frame.
-        Returns original points if transform fails.
+        Returns original points if transform fails (silent fallback for visualization).
+
+    Note:
+        Callers should check logs if visualization results appear incorrect,
+        as transform failures are not programmatically detectable from the return value.
     """
     try:
         transform = connector.get_transform(target_frame, source_frame)
         t = transform.transform.translation
         r = transform.transform.rotation
 
-        rotation_matrix = _quaternion_to_rotation_matrix(
+        rotation_matrix = quaternion_to_rotation_matrix(
             float(r.x), float(r.y), float(r.z), float(r.w)
         )
         translation = np.array([float(t.x), float(t.y), float(t.z)], dtype=np.float64)

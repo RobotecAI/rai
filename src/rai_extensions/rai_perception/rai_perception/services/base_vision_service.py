@@ -79,6 +79,20 @@ class BaseVisionService:
             model_class, self.weights_path, self.logger, self.WEIGHTS_URL, config_path
         )
 
+    def _get_param_value(self, param_name: str, default):
+        """Get ROS2 parameter value with deferred import to avoid circular dependencies.
+
+        Args:
+            param_name: Parameter name to retrieve
+            default: Default value if parameter not set
+
+        Returns:
+            Parameter value or default
+        """
+        from rai.communication.ros2 import get_param_value
+
+        return get_param_value(self.ros2_connector.node, param_name, default=default)
+
     def _initialize_model_from_registry(
         self, get_model_func, default_model_name: str, model_type_name: str
     ):
@@ -92,11 +106,7 @@ class BaseVisionService:
         Returns:
             Tuple of (model_instance, model_name)
         """
-        from rai.communication.ros2 import get_param_value
-
-        model_name = get_param_value(
-            self.ros2_connector.node, "model_name", default=default_model_name
-        )
+        model_name = self._get_param_value("model_name", default_model_name)
         AlgorithmClass, config_path = get_model_func(model_name)
         self.logger.info(
             f"Loading {model_type_name} model '{model_name}' (config: {config_path})"
@@ -118,11 +128,7 @@ class BaseVisionService:
         Returns:
             Service name string
         """
-        from rai.communication.ros2 import get_param_value
-
-        return get_param_value(
-            self.ros2_connector.node, "service_name", default=default_service_name
-        )
+        return self._get_param_value("service_name", default_service_name)
 
     def _create_service(
         self, service_name: str, callback, service_type: str, service_type_name: str

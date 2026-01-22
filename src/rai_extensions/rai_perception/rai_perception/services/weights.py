@@ -85,6 +85,7 @@ def download_weights(weights_path: Path, logger: Logger, weights_url: str):
             check=True,
             capture_output=True,
             text=True,
+            timeout=600,  # 10 minute timeout to avoid hanging downloads
         )
         if not os.path.exists(weights_path):
             raise Exception(f"Downloaded file not found at {weights_path}")
@@ -95,6 +96,13 @@ def download_weights(weights_path: Path, logger: Logger, weights_url: str):
             )
         logger.info(
             f"Successfully downloaded weights ({file_size / (1024 * 1024):.2f} MB)"
+        )
+    except subprocess.TimeoutExpired as e:
+        logger.error(f"wget timed out after {e.timeout} seconds")
+        if os.path.exists(weights_path):
+            os.remove(weights_path)
+        raise Exception(
+            f"Could not download weights: download timed out after {e.timeout} seconds"
         )
     except subprocess.CalledProcessError as e:
         error_msg = e.stderr if e.stderr else e.stdout if e.stdout else str(e)

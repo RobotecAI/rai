@@ -146,17 +146,26 @@ class SegmentationService(BaseVisionService):
                 masks = []
 
             img_arr = []
+            total_masks = len(masks)
+            successful_masks = 0
             for mask in masks:
                 try:
                     if len(mask.shape) > 2:
                         mask = np.squeeze(mask)
                     arr = (mask * 255).astype(np.uint8)
                     img_arr.append(self._bridge.cv2_to_imgmsg(arr, encoding="mono8"))
+                    successful_masks += 1
                 except Exception as mask_error:
                     self.logger.error(
                         f"Error processing mask: {mask_error}",
                         exc_info=True,
                     )
+
+            if total_masks > 0 and successful_masks < total_masks:
+                self.logger.warning(
+                    f"Processed {successful_masks}/{total_masks} masks successfully. "
+                    f"{total_masks - successful_masks} mask(s) failed to process."
+                )
 
             response.masks = img_arr
 

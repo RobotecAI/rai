@@ -342,28 +342,6 @@ class PointCloudFromSegmentation:
         return cli.call_async(req)
 
     # --------------------- Geometry helpers ---------------------
-    @staticmethod
-    def _quaternion_to_rotation_matrix(
-        qx: float, qy: float, qz: float, qw: float
-    ) -> NDArray[np.float64]:
-        xx = qx * qx
-        yy = qy * qy
-        zz = qz * qz
-        xy = qx * qy
-        xz = qx * qz
-        yz = qy * qz
-        wx = qw * qx
-        wy = qw * qy
-        wz = qw * qz
-
-        return np.array(
-            [
-                [1.0 - 2.0 * (yy + zz), 2.0 * (xy - wz), 2.0 * (xz + wy)],
-                [2.0 * (xy + wz), 1.0 - 2.0 * (xx + zz), 2.0 * (yz - wx)],
-                [2.0 * (xz - wy), 2.0 * (yz + wx), 1.0 - 2.0 * (xx + yy)],
-            ],
-            dtype=np.float64,
-        )
 
     def _transform_points_source_to_target(
         self, points_xyz: NDArray[np.float32]
@@ -379,7 +357,9 @@ class PointCloudFromSegmentation:
         qy = float(r.y)  # type: ignore[reportUnknownMemberType]
         qz = float(r.z)  # type: ignore[reportUnknownMemberType]
 
-        rotation_matrix = self._quaternion_to_rotation_matrix(qx, qy, qz, qw)
+        from rai_perception.components.math_utils import quaternion_to_rotation_matrix
+
+        rotation_matrix = quaternion_to_rotation_matrix(qx, qy, qz, qw)
         translation = np.array([float(t.x), float(t.y), float(t.z)], dtype=np.float64)  # type: ignore[reportUnknownMemberType]
 
         transformed = (points_xyz.astype(np.float64) @ rotation_matrix.T) + translation
