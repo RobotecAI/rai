@@ -82,11 +82,9 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
 
     name: str = "get_object_gripping_points"
     description: str = (
-        "Get gripping points for specified object/objects. Returns 3D coordinates where a robot gripper can grasp the object. "
-        "Executes a 3-stage pipeline: (1) Point Cloud Extraction from detection/segmentation, "
-        "(2) Point Cloud Filtering to remove outliers, (3) Gripping Point Estimation. "
-        "Requires detection and segmentation services to be running. "
-        "Set debug=True to publish intermediate pipeline results to ROS2 topics for visualization in RVIZ (adds overhead, not for production)."
+        "Get gripping points for all detected objects of a specified type in the target frame. "
+        "This tool provides accurate gripping point data but does not distinguish between different colors of the same object type. "
+        "While gripping point detection is reliable, please note that object classification may occasionally be inaccurate."
     )
 
     # Pipeline stages for role expressiveness
@@ -144,6 +142,20 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
     )
     filter_config: Optional[PointCloudFilterConfig] = Field(default=None, exclude=True)
 
+    # Output format customization (optional - defaults to strategy-based formatting)
+    output_point_label: Optional[str] = Field(
+        default=None,
+        exclude=True,
+        description="Custom label for points in output (e.g., 'Centroid', 'GrippingPoint'). "
+        "If None, automatically determined from estimator strategy.",
+    )
+    output_description_suffix: Optional[str] = Field(
+        default=None,
+        exclude=True,
+        description="Custom description suffix for output message (e.g., ' (center of top plane)'). "
+        "If None, automatically determined from estimator strategy.",
+    )
+
     # ROS2 parameters loaded in _load_parameters()
     camera_topic: str = Field(default="/camera/rgb/image_raw", exclude=True)
     depth_topic: str = Field(default="/camera/depth/image_raw", exclude=True)
@@ -158,6 +170,9 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
         "Encoding-aware conversion automatically handles 16UC1/mono16 (mm) and 32FC1 (m) encodings. "
         "Default 1.0 means no additional scaling (recommended).",
     )
+    # Output format parameters (can be set via ROS2 parameters, loaded in _load_parameters)
+    output_point_label_ros2: Optional[str] = Field(default=None, exclude=True)
+    output_description_suffix_ros2: Optional[str] = Field(default=None, exclude=True)
 
     args_schema: Type[GetObjectGrippingPointsToolInput] = (
         GetObjectGrippingPointsToolInput
@@ -415,6 +430,14 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
         self.timeout_sec = get_param("timeout_sec", 10.0, float)
         self.conversion_ratio = get_param("conversion_ratio", 1.0, float)
 
+        # Load optional output format customization parameters
+        # Use empty string as sentinel (ROS2 params can't be None), convert to None
+        output_label = get_param("output_point_label", "", str)
+        self.output_point_label_ros2 = output_label if output_label else None
+
+        output_desc = get_param("output_description_suffix", "", str)
+        self.output_description_suffix_ros2 = output_desc if output_desc else None
+
         # Log auto-declared parameters
         if auto_declared:
             for name, default in auto_declared:
@@ -594,16 +617,75 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
     def _format_result_message(self, object_name: str, gripping_points: list) -> str:
         """Format the final result message from gripping points."""
         if len(gripping_points) == 0:
-            return f"No gripping point found for {object_name}\n"
-        elif len(gripping_points) == 1:
-            return f"Gripping point for {object_name}: {gripping_points[0]}\n"
-        else:
-            message = (
-                f"Found {len(gripping_points)} gripping points for {object_name}:\n"
+            return f"No {object_name}s detected."
+
+        # Use custom labels if provided (from constructor or ROS2 parameter), otherwise determine from estimator strategy
+        custom_label = self.output_point_label or self.output_point_label_ros2
+        if custom_label is not None:
+            point_label = custom_label
+            points_label = (
+                f"{custom_label}s" if not custom_label.endswith("s") else custom_label
             )
-            for i, gp in enumerate(gripping_points):
-                message += f"  Point {i + 1}: {gp}\n"
-            return message
+        else:
+            # Auto-determine from strategy
+            strategy = (
+                self.estimator_config.strategy if self.estimator_config else "centroid"
+            )
+            if strategy == "centroid":
+                point_label = "Centroid"
+                points_label = "Centroids"
+            elif strategy == "top_plane":
+                point_label = "Centroid"
+                points_label = "Centroids"
+            elif strategy == "biggest_plane":
+                point_label = "Centroid"
+                points_label = "Centroids"
+            else:
+                point_label = "GrippingPoint"
+                points_label = "Gripping points"
+
+        # Use custom description if provided (from constructor or ROS2 parameter), otherwise determine from strategy
+        custom_description = (
+            self.output_description_suffix or self.output_description_suffix_ros2
+        )
+        if custom_description is not None:
+            description = custom_description
+        else:
+            # Auto-determine from strategy
+            strategy = (
+                self.estimator_config.strategy if self.estimator_config else "centroid"
+            )
+            if strategy == "centroid":
+                description = ""  # No additional description needed for centroid
+            elif strategy == "top_plane":
+                description = (
+                    " (center of top plane)"  # Clarify it's the top plane center
+                )
+            elif strategy == "biggest_plane":
+                description = " (center of largest plane)"  # Clarify it's the largest plane center
+            else:
+                description = ""
+
+        def format_point(gp, label: str) -> str:
+            """Format a single point with the given label."""
+            if isinstance(gp, np.ndarray):
+                if len(gp) >= 3:
+                    return f"{label}(x={gp[0]:.6f}, y={gp[1]:.6f}, z={gp[2]:.6f})"
+                else:
+                    return str(gp)
+            elif isinstance(gp, (list, tuple)) and len(gp) >= 3:
+                return f"{label}(x={gp[0]:.6f}, y={gp[1]:.6f}, z={gp[2]:.6f})"
+            else:
+                return str(gp)
+
+        if len(gripping_points) == 1:
+            formatted_point = format_point(gripping_points[0], point_label)
+            return f"{points_label} of detected {object_name}{description} in {self.target_frame} frame: {formatted_point}."
+        else:
+            # Multiple instances detected
+            formatted_points = [format_point(gp, point_label) for gp in gripping_points]
+            points_str = ", ".join(formatted_points)
+            return f"{points_label} of detected {object_name}s{description} in {self.target_frame} frame: [{points_str}]. Sizes of the detected objects are unknown."
 
     # --------------------- Debug Helpers ---------------------
 

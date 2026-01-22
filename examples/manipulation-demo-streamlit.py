@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+import os
 from pathlib import Path
 
 import streamlit as st
@@ -86,10 +87,26 @@ def initialize_graph(version: str):
 
 
 @st.cache_resource
-def initialize_o3de(scenario_path: str, o3de_config_path: str):
+def initialize_o3de(
+    scenario_path: str, o3de_config_path: str, agent_version: str = "v2"
+):
     simulation_config = O3DExROS2SimulationConfig.load_config(
         config_path=Path(o3de_config_path)
     )
+
+    # Adjust required services based on agent version
+    # v1 uses legacy service names, v2 uses new service names
+    if agent_version == "v2":
+        # Replace legacy service names with new ones for v2
+        services = simulation_config.required_robotic_ros2_interfaces["services"]
+        services = [
+            "/detection" if s == "/grounding_dino_classify" else s for s in services
+        ]
+        services = [
+            "/segmentation" if s == "/grounded_sam_segment" else s for s in services
+        ]
+        simulation_config.required_robotic_ros2_interfaces["services"] = services
+
     scene_config = SceneConfig.load_base_config(Path(scenario_path))
     scenario = Scenario(
         task=None,
@@ -149,13 +166,8 @@ def main(o3de_config_path: str):
     # Layout selection in sidebar
     st.sidebar.header("Configuration")
 
-    # Agent version selection
-    agent_version = st.sidebar.selectbox(
-        "Agent Version:",
-        options=["v1", "v2"],
-        index=0,
-        help="Select the agent version. v1 uses legacy tools, v2 uses new gripping points tool.",
-    )
+    # Agent version from environment variable
+    agent_version = os.getenv("AGENT_VERSION", "v2")
 
     # Get available scenarios for layout selection
     levels = ["medium", "hard", "very_hard"]
@@ -280,29 +292,13 @@ def main(o3de_config_path: str):
             st.error(f"Could not find scenario: {scenario}")
             st.stop()
         o3de, initial_scenario = initialize_o3de(
-            selected_scenario_path, o3de_config_path
+            selected_scenario_path, o3de_config_path, agent_version=agent_version
         )
         st.session_state["o3de"] = o3de
         st.session_state["current_scenario"] = initial_scenario
 
-    # Check if version changed and clear graph cache if needed
-    if "agent_version" not in st.session_state:
-        st.session_state["agent_version"] = agent_version
-        logger.info(f"Initializing agent version: {agent_version}")
-    elif st.session_state["agent_version"] != agent_version:
-        # Version changed, clear the graph cache
-        old_version = st.session_state["agent_version"]
-        logger.info(f"Switching agent version from {old_version} to {agent_version}")
-        if "graph" in st.session_state:
-            del st.session_state["graph"]
-            del st.session_state["camera_tool"]
-        st.session_state["agent_version"] = agent_version
-        st.session_state["messages"] = [
-            AIMessage(content="Hi! I am a robotic arm. What can I do for you?")
-        ]
-        st.rerun()
-
     if "graph" not in st.session_state:
+        logger.info(f"Initializing agent version: {agent_version}")
         graph, camera_tool = initialize_graph(version=agent_version)
         st.session_state["graph"] = graph
         st.session_state["camera_tool"] = camera_tool
