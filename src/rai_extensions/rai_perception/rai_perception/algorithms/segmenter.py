@@ -31,8 +31,6 @@ from sam2.sam2_image_predictor import SAM2ImagePredictor
 from sensor_msgs.msg import Image
 from vision_msgs.msg import BoundingBox2D
 
-from rai_perception.components.exceptions import PerceptionError
-
 
 class GDSegmenter:
     """Grounded SAM segmentation algorithm.
@@ -72,7 +70,7 @@ class GDSegmenter:
                 "seg_config.yml", self.weight_path, device=self.device
             )
         except Exception as e:
-            raise PerceptionError(f"Failed to build SAM2 model: {str(e)}") from e
+            raise Exception(f"Failed to build SAM2 model: {str(e)}") from e
 
         self.sam2_predictor = SAM2ImagePredictor(self.sam2_model)
         self.bridge = CvBridge()

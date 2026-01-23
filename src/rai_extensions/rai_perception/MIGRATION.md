@@ -1,6 +1,6 @@
 # Migration Guide
 
-PR [feat: redesign rai_perception API with tiered structure and improve 3D gripping point detection](https://github.com/RobotecAI/rai/pull/750) has introduced several breaking changes, including class deprecation and service name changes. This guide provides step-by-step instructions for migrating to the new codebase.
+PR [#750 feat: redesign rai_perception API with tiered structure and improve 3D gripping point detection](https://github.com/RobotecAI/rai/pull/750) has introduced several breaking changes, including class deprecation and service name changes. This guide provides step-by-step instructions for migrating to the new codebase.
 
 At a high level, the migration can be a gradual process. Several backward compatibility measures have been introduced to reduce the impact on existing demos and applications.
 
@@ -18,14 +18,10 @@ At a high level, the migration can be a gradual process. Several backward compat
     -   [Service Name Updates in rai_bench](#service-name-updates-in-rai_bench)
     -   [Preset Selection for GetObjectGrippingPointsTool](#preset-selection-for-getobjectgrippingpointstool)
     -   [GetObjectPositionsTool Name Collision Warning](#getobjectpositionstool-name-collision-warning)
-    -   [Generic Detection Tools Abstraction](#generic-detection-tools-abstraction)
-    -   [Progressive Evaluation: GetDistanceToObjectsTool](#progressive-evaluation-getdistancetoobjectstool)
 -   [Additional Issues Found But Not Directly Related to PR](#additional-issues-found-but-not-directly-related-to-pr)
     -   [Architectural Improvements](#architectural-improvements)
         -   [Generic Detection Tools Abstraction](#generic-detection-tools-abstraction)
         -   [Progressive Evaluation: GetDistanceToObjectsTool](#progressive-evaluation-getdistancetoobjectstool)
-    -   [Operational Issues](#operational-issues)
-        -   [Streamlit Process Cleanup on Ctrl+C](#streamlit-process-cleanup-on-ctrlc)
 
 ---
 
@@ -307,61 +303,3 @@ _Proposed:_ Add optional `debug` parameter to expose intermediate results:
 -   Publish detection bounding boxes to ROS2 topic for visualization
 -   Log detection confidence scores and counts per stage
 -   Optional depth ROI visualization to debug bounding box alignment and outlier filtering
-
-### Operational Issues
-
-#### Streamlit Process Cleanup on Ctrl+C
-
-_Status:_ Issue identified, fix needed.
-
-_Issue:_ When running Streamlit applications (e.g., `examples/manipulation-demo-streamlit.py`), pressing Ctrl+C leaves orphaned Python processes behind. This occurs because Streamlit spawns multiple child processes (main process, server process, watcher process), and the SIGINT signal from Ctrl+C may not properly propagate to all child processes.
-
-_Symptoms:_ After pressing Ctrl+C, processes remain running:
-
-```bash
-juliajia   75268  0.0  1.1 22978828 744872 pts/0 SNl  20:07   0:00 /home/juliajia/.cache/pypoetry/virtualenvs/rai-framework-kS72TEbF-py3.12/bin/python /home/juliajia/.cache/pypoetry/virtualenvs/rai-framework-kS72TEbF-py3.12/bin/streamlit run examples/manipulation-demo-streamlit.py
-```
-
-_Root Cause:_ Streamlit's process management doesn't always clean up all child processes when the parent receives SIGINT. The parent process exits, but child processes continue running.
-
-_Proposed Solution:_
-
-1. **Wrapper Script Approach (Recommended):** Create a wrapper script that traps signals and ensures all Streamlit processes are killed:
-
-    ```bash
-    #!/bin/bash
-    # run_streamlit.sh
-    trap "pkill -9 -f streamlit; exit" INT TERM
-    streamlit run examples/manipulation-demo-streamlit.py
-    ```
-
-2. **Manual Cleanup Command:** Document the cleanup command for users (note: requires `-9` flag to force kill):
-
-    ```bash
-    pkill -9 -f streamlit
-    ```
-
-    _Note:_ The `-9` flag sends SIGKILL which cannot be ignored. Without it, `pkill` sends SIGTERM which some processes may ignore.
-
-3. **Alternative: Signal Handling in Python (Limited Effectiveness):** Add signal handlers to the Streamlit script, though this has limited effectiveness since Streamlit manages its own processes. Signal handlers in the script may not catch signals sent to Streamlit's child processes.
-
-_Implementation:_
-
--   Create wrapper scripts for Streamlit demos in `examples/` directory
--   Update documentation to mention the cleanup command
--   Consider adding cleanup instructions to README or demo documentation
-
-_Benefits:_
-
--   Prevents resource leaks from orphaned processes
--   Improves user experience by avoiding manual process cleanup
--   Reduces confusion about why processes remain after stopping the application
-
-_Estimated Effort:_ Small (15-30 minutes)
-
----
-
-## References
-
--   [PR #750: feat: redesign rai_perception API with tiered structure and improve 3D gripping point detection](https://github.com/RobotecAI/rai/pull/750)
--   [tests/rai_sim](https://github.com/RobotecAI/rai/tree/main/tests/rai_sim) - Tests for rai_sim package
