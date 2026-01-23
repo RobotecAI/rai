@@ -151,3 +151,42 @@ def test_load_config_default_path(tmp_path):
     finally:
         # Restore original directory
         os.chdir(original_cwd)
+
+
+def test_get_embeddings_model_openai_with_base_url(monkeypatch, tmp_path):
+    """Test that OpenAI embeddings model receives base_url parameter."""
+    config_path = write_config(tmp_path / "config.toml", CONFIG_TEMPLATE)
+
+    # Update config to use OpenAI for embeddings
+    openai_embeddings_config = CONFIG_TEMPLATE.replace(
+        'embeddings_model = "ollama"', 'embeddings_model = "openai"', 1
+    )
+    config_path = write_config(tmp_path / "config.toml", openai_embeddings_config)
+
+    monkeypatch.setattr("langchain_openai.OpenAIEmbeddings", DummyModel)
+
+    embeddings = model_initialization.get_embeddings_model(config_path=str(config_path))
+
+    assert isinstance(embeddings, DummyModel)
+    assert embeddings.kwargs["model"] == "text-embedding-ada-002"
+    assert embeddings.kwargs["base_url"] == "https://openai.example/v1/"
+
+
+def test_get_embeddings_model_return_kwargs_openai(monkeypatch, tmp_path):
+    """Test that return_kwargs includes base_url for OpenAI embeddings."""
+    openai_embeddings_config = CONFIG_TEMPLATE.replace(
+        'embeddings_model = "ollama"', 'embeddings_model = "openai"', 1
+    )
+    config_path = write_config(tmp_path / "config.toml", openai_embeddings_config)
+
+    monkeypatch.setattr("langchain_openai.OpenAIEmbeddings", DummyModel)
+
+    embeddings, kwargs = model_initialization.get_embeddings_model(
+        config_path=str(config_path), return_kwargs=True
+    )
+
+    assert isinstance(embeddings, DummyModel)
+    assert kwargs["model"] == "text-embedding-ada-002"
+    assert kwargs["base_url"] == "https://openai.example/v1/"
+    assert kwargs["vendor"] == "openai"
+    assert "class" in kwargs
