@@ -31,6 +31,7 @@ platform in a nice apartment.
     vcs import < demos.repos
     rosdep install --from-paths src --ignore-src -r -y
     poetry install --with perception
+    colcon build
     ```
 
 !!! tip "Alternative: Demo source build"
@@ -45,12 +46,18 @@ platform in a nice apartment.
 1. Running rai nodes and agents, navigation stack and O3DE simulation.
 
     ```bash
+    source setup_shell.sh
     ros2 launch ./examples/rosbot-xl.launch.py game_launcher:=demo_assets/rosbot/RAIROSBotXLDemo/RAIROSBotXLDemo.GameLauncher
     ```
 
 2. Run streamlit gui:
 
+!!! tip "Choosing the right model"
+
+    Due to the multimodal requirements of the demo (such as processing camera images), the best results will be achieved with tool-calling LLMs that support vision, such as those from OpenAI, Anthropic, and similar providers. You can use local models (e.g., `gpt-oss-20b`, `qwen3`) configured in `config.toml`, but with these, image-based tasks (like interpreting the robot's camera feed) will not work—the agent will have a reduced scope of capabilities.
+
     ```bash
+    source setup_shell.sh
     streamlit run examples/rosbot-xl-demo.py
     ```
 
