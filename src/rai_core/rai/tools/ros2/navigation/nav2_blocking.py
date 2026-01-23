@@ -23,6 +23,29 @@ from tf_transformations import quaternion_from_euler
 from rai.tools.ros2.base import BaseROS2Tool
 
 
+class GetCurrentPoseToolInput(BaseModel):
+    pass
+
+
+class GetCurrentPoseTool(BaseROS2Tool):
+    name: str = "get_current_pose"
+    description: str = "Get the current pose of the robot"
+    frame_id: str = Field(
+        default="map", description="The frame id of the Nav2 stack (map, odom, etc.)"
+    )
+    robot_frame_id: str = Field(
+        default="base_link",
+        description="The frame id of the robot's base frame (base_link, base_footprint, etc.)",
+    )
+    args_schema: Type[GetCurrentPoseToolInput] = GetCurrentPoseToolInput
+
+    def _run(self) -> str:
+        transform_stamped = self.connector.get_transform(
+            self.frame_id, self.robot_frame_id
+        )
+        return str(transform_stamped)
+
+
 class NavigateToPoseBlockingToolInput(BaseModel):
     x: float = Field(..., description="The x coordinate of the pose")
     y: float = Field(..., description="The y coordinate of the pose")
