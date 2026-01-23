@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from .exceptions import (
-    PerceptionAlgorithmError,
     PerceptionError,
     PerceptionValidationError,
 )
@@ -35,7 +34,6 @@ from .visualization_utils import (
 __all__ = [
     "GrippingPointEstimator",
     "GrippingPointEstimatorConfig",
-    "PerceptionAlgorithmError",
     "PerceptionError",
     "PerceptionValidationError",
     "PointCloudFilter",

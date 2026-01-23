@@ -21,28 +21,6 @@ class PerceptionError(Exception):
     pass
 
 
-class PerceptionAlgorithmError(PerceptionError):
-    """Exception raised for algorithm-specific failures in perception pipelines."""
-
-    def __init__(
-        self,
-        algorithm_stage: str,
-        strategy: Optional[str] = None,
-        suggestion: Optional[str] = None,
-        input_info: Optional[dict] = None,
-    ):
-        self.algorithm_stage = algorithm_stage  # "ransac", "filtering", "estimation"
-        self.strategy = strategy  # "top_plane", "isolation_forest"
-        self.suggestion = suggestion  # "Try strategy='centroid'"
-        self.input_info = input_info  # {"point_count": 100, "noise_level": "high"}
-        message = f"Algorithm error at {algorithm_stage}"
-        if strategy:
-            message += f" (strategy: {strategy})"
-        if suggestion:
-            message += f". {suggestion}"
-        super().__init__(message)
-
-
 class PerceptionValidationError(PerceptionError):
     """Exception raised for input validation failures beyond Pydantic validation."""
 

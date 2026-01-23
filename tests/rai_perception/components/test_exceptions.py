@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from rai_perception.components.exceptions import (
-    PerceptionAlgorithmError,
     PerceptionError,
     PerceptionValidationError,
 )
@@ -24,46 +23,6 @@ def test_perception_error_is_base_exception():
     error = PerceptionError("test error")
     assert isinstance(error, Exception)
     assert str(error) == "test error"
-
-
-def test_perception_algorithm_error_basic():
-    """Test PerceptionAlgorithmError with minimal parameters."""
-    error = PerceptionAlgorithmError(algorithm_stage="ransac")
-    assert isinstance(error, PerceptionError)
-    assert error.algorithm_stage == "ransac"
-    assert error.strategy is None
-    assert "ransac" in str(error)
-
-
-def test_perception_algorithm_error_with_strategy():
-    """Test PerceptionAlgorithmError with strategy."""
-    error = PerceptionAlgorithmError(
-        algorithm_stage="filtering", strategy="aggressive_outlier_removal"
-    )
-    assert error.algorithm_stage == "filtering"
-    assert error.strategy == "aggressive_outlier_removal"
-    assert "filtering" in str(error)
-    assert "aggressive_outlier_removal" in str(error)
-
-
-def test_perception_algorithm_error_with_suggestion():
-    """Test PerceptionAlgorithmError with suggestion."""
-    error = PerceptionAlgorithmError(
-        algorithm_stage="estimation",
-        strategy="top_plane",
-        suggestion="Try strategy='centroid'",
-    )
-    assert error.suggestion == "Try strategy='centroid'"
-    assert "Try strategy='centroid'" in str(error)
-
-
-def test_perception_algorithm_error_with_input_info():
-    """Test PerceptionAlgorithmError with input info."""
-    error = PerceptionAlgorithmError(
-        algorithm_stage="ransac",
-        input_info={"point_count": 100, "noise_level": "high"},
-    )
-    assert error.input_info == {"point_count": 100, "noise_level": "high"}
 
 
 def test_perception_validation_error_basic():
