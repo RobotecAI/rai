@@ -340,61 +340,91 @@ def shutdown_executors_and_threads(
     all_nodes = []
     for executor in executors:
         try:
-            all_nodes.extend(executor.get_nodes())
-        except Exception:
+            if executor is not None:
+                nodes = executor.get_nodes()
+                if nodes is not None:
+                    all_nodes.extend(nodes)
+        except (AttributeError, RuntimeError, Exception):
+            # Executor may be in invalid state, skip
             pass
 
     # Signal action servers to stop executing
     action_servers = []
     for node in all_nodes:
         try:
-            if isinstance(node, TestActionServer):
+            if node is not None and isinstance(node, TestActionServer):
                 node._shutdown_requested = True
                 action_servers.append(node)
-        except Exception:
+        except (AttributeError, RuntimeError, Exception):
             pass
 
     # Wait for actions to complete gracefully (with timeout as fallback)
     if action_servers:
         for server in action_servers:
-            server._all_actions_complete.wait(timeout=0.15)
+            try:
+                if server is not None and hasattr(server, "_all_actions_complete"):
+                    server._all_actions_complete.wait(timeout=0.15)
+            except (AttributeError, RuntimeError, Exception):
+                pass
 
     # Cancel all timers BEFORE shutting down executors
     # This prevents executors from trying to call timers after they're canceled
     for node in all_nodes:
         try:
-            # Try to access and cancel timers through node's internal structure
-            if hasattr(node, "_timers"):
-                timers = node._timers
-                if isinstance(timers, dict):
-                    for timer in list(timers.values()):
-                        try:
-                            timer.cancel()
-                        except Exception:
-                            pass
-        except Exception:
+            if node is not None:
+                # Try to access and cancel timers through node's internal structure
+                if hasattr(node, "_timers"):
+                    timers = node._timers
+                    if timers is not None and isinstance(timers, dict):
+                        for timer in list(timers.values()):
+                            try:
+                                if timer is not None:
+                                    timer.cancel()
+                            except (AttributeError, RuntimeError, Exception):
+                                pass
+        except (AttributeError, RuntimeError, Exception):
             pass
 
     # Give executor a moment to process timer cancellations and remove them from wait list
-    time.sleep(0.1)
+    # Use shorter sleep to reduce chance of accessing invalid state
+    try:
+        time.sleep(0.05)
+    except Exception:
+        pass
 
     # Now shutdown executors to stop spinning threads
     for executor in executors:
         try:
-            executor.shutdown()
-        except Exception as e:
-            print(f"Error shutting down executor: {e}")
+            if executor is not None:
+                executor.shutdown()
+        except (AttributeError, RuntimeError, Exception):
+            # Executor may already be shut down or in invalid state
+            pass
 
     # Wait for threads to actually finish (shutdown() is async)
     for thread in threads:
-        thread.join(timeout=2.0)
+        try:
+            if thread is not None and thread.is_alive():
+                thread.join(timeout=2.0)
+        except (AttributeError, RuntimeError, Exception):
+            pass
 
     # Clean up any remaining nodes (after executors are shut down and threads joined)
+    # Only destroy nodes that haven't been destroyed yet
     for node in all_nodes:
         try:
-            node.destroy_node()
-        except Exception as e:
-            print(f"Error destroying node: {e}")
+            if node is not None:
+                # Check if node is still valid before destroying
+                # In ROS2 Humble, accessing destroyed nodes can cause segfaults
+                try:
+                    # Try a safe operation to check if node is still valid
+                    _ = node.get_name()
+                    node.destroy_node()
+                except (AttributeError, RuntimeError):
+                    # Node already destroyed or invalid, skip
+                    pass
+        except (AttributeError, RuntimeError, Exception):
+            pass
 
 
 def _create_time_with_to_msg_class():
