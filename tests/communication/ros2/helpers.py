@@ -17,6 +17,7 @@ import threading
 import time
 import uuid
 from typing import Any, Generator, List, Optional, Tuple
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
@@ -394,6 +395,62 @@ def shutdown_executors_and_threads(
             node.destroy_node()
         except Exception as e:
             print(f"Error destroying node: {e}")
+
+
+def _create_time_with_to_msg_class():
+    """Create a TimeWithToMsg class for ROS2 Humble/Jazzy compatibility.
+
+    ROS2 Humble vs Jazzy difference:
+    - Humble: Strict type checking in __debug__ mode requires actual BuiltinTime
+      instances, not MagicMock objects. Using MagicMock causes AssertionError.
+    - Jazzy: More lenient with MagicMock, but BuiltinTime instances don't allow
+      dynamically adding methods (AttributeError when accessing to_msg).
+
+    Solution: Create a wrapper class that inherits from BuiltinTime and adds to_msg().
+    This is used by both create_mock_connector_with_clock() and setup_mock_clock()
+    in test_grounding_dino.py.
+    """
+    from builtin_interfaces.msg import Time as BuiltinTime
+
+    class TimeWithToMsg(BuiltinTime):
+        """BuiltinTime wrapper that adds to_msg() method for compatibility."""
+
+        def to_msg(self):
+            return self
+
+    return TimeWithToMsg
+
+
+def create_mock_connector_with_clock() -> Any:
+    """Create a mock ROS2Connector with properly configured clock for testing.
+
+    This helper creates a mock connector that works with ROS2 Humble's strict
+    type checking for Time messages. The clock's now().to_msg() returns a real
+    builtin_interfaces.msg.Time instance that can be assigned to message stamps.
+
+    This is similar to setup_mock_clock() in test_grounding_dino.py but creates
+    a new mock connector instead of modifying an existing agent's connector.
+
+    Returns:
+        MagicMock: A mock ROS2Connector with node and clock configured.
+    """
+    from rai.communication.ros2.connectors import ROS2Connector
+
+    TimeWithToMsg = _create_time_with_to_msg_class()
+
+    connector = MagicMock(spec=ROS2Connector)
+    mock_node = MagicMock()
+    mock_clock = MagicMock()
+    mock_time = MagicMock()
+
+    # Create a TimeWithToMsg instance (passes isinstance checks and has to_msg())
+    mock_ts = TimeWithToMsg()
+    mock_time.to_msg.return_value = mock_ts
+    mock_clock.now.return_value = mock_time
+    mock_node.get_clock.return_value = mock_clock
+
+    connector.node = mock_node
+    return connector
 
 
 @pytest.fixture(scope="function")

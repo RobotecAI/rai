@@ -34,6 +34,7 @@ from rai.tools.ros2.navigation.nav2_blocking import (
 )
 
 from tests.communication.ros2.helpers import (
+    create_mock_connector_with_clock,
     ros_setup,
 )
 
@@ -85,23 +86,11 @@ def test_get_error_message() -> None:
     assert "Error message: Planner failed to find path" in error_msg
 
 
-def _create_mock_connector() -> MagicMock:
-    """Helper to create a mock connector with node and clock."""
-    connector = MagicMock(spec=ROS2Connector)
-    mock_node = MagicMock()
-    mock_clock = MagicMock()
-    mock_time = MagicMock()
-    mock_clock.now.return_value.to_msg.return_value = mock_time
-    connector.node = mock_node
-    mock_node.get_clock.return_value = mock_clock
-    return connector
-
-
 def test_navigate_to_pose_blocking_tool(
     ros_setup: None, request: pytest.FixtureRequest
 ) -> None:
     """Test navigation tool success, error, and None result scenarios."""
-    connector = _create_mock_connector()
+    connector = create_mock_connector_with_clock()
     tool = NavigateToPoseBlockingTool(connector=connector)
 
     with patch(
