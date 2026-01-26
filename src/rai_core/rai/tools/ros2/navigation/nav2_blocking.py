@@ -23,6 +23,49 @@ from tf_transformations import quaternion_from_euler
 from rai.tools.ros2.base import BaseROS2Tool
 
 
+def _get_error_code_string(error_code: int) -> str:
+    """Convert NavigateToPose error code to human-readable string."""
+    error_code_map = {
+        0: "NONE",
+        1: "UNKNOWN",
+        2: "TIMEOUT",
+        3: "CANCELED",
+        4: "FAILED",
+        5: "INVALID_POSE",
+        6: "PLANNER_FAILED",
+        7: "CONTROLLER_FAILED",
+        8: "RECOVERY_FAILED",
+    }
+    return error_code_map.get(error_code, f"UNKNOWN_ERROR_CODE_{error_code}")
+
+
+def _get_error_message(result) -> str:
+    """Extract error message from NavigateToPose result."""
+    error_parts = []
+
+    # Get error code string for context
+    error_code_str = _get_error_code_string(result.error_code)
+    error_parts.append(f"({error_code_str})")
+
+    # Check for additional error message fields (if they exist)
+    # These may vary between ROS2 versions, so we check safely
+    if hasattr(result, "error_message") and result.error_message:
+        error_parts.append(f"Error message: {result.error_message}")
+    elif hasattr(result, "error_msg") and result.error_msg:
+        error_parts.append(f"Error message: {result.error_msg}")
+    elif hasattr(result, "message") and result.message:
+        error_parts.append(f"Message: {result.message}")
+
+    # Include full result string representation for debugging
+    result_str = str(result)
+    if result_str and result_str != str(result.error_code):
+        # Only add if it provides additional info beyond just the error code
+        if len(result_str) > 50:  # Only if it's substantial
+            error_parts.append(f"Full result: {result_str}")
+
+    return ". ".join(error_parts)
+
+
 class GetCurrentPoseToolInput(BaseModel):
     pass
 
@@ -86,7 +129,8 @@ class NavigateToPoseBlockingTool(BaseROS2Tool):
         if result is None:
             return "Navigate to pose action failed. Please try again."
 
-        if result.result.error_code != 0:
-            return f"Navigate to pose action failed. Error code: {result.result.error_code}"
+        if result.error_code != 0:
+            error_msg = _get_error_message(result)
+            return f"Navigate to pose action failed. Error code: {result.error_code}. {error_msg}"
 
         return "Navigate to pose successful."
