@@ -14,6 +14,7 @@
 
 from typing import Type
 
+from action_msgs.msg import GoalStatus
 from geometry_msgs.msg import PoseStamped, Quaternion
 from nav2_msgs.action import NavigateToPose
 from pydantic import BaseModel, Field
@@ -23,47 +24,37 @@ from tf_transformations import quaternion_from_euler
 from rai.tools.ros2.base import BaseROS2Tool
 
 
-def _get_error_code_string(error_code: int) -> str:
-    """Convert NavigateToPose error code to human-readable string."""
-    error_code_map = {
-        0: "NONE",
-        1: "UNKNOWN",
-        2: "TIMEOUT",
-        3: "CANCELED",
-        4: "FAILED",
-        5: "INVALID_POSE",
-        6: "PLANNER_FAILED",
-        7: "CONTROLLER_FAILED",
-        8: "RECOVERY_FAILED",
+def _get_status_string(status: int) -> str:
+    """Convert GoalStatus to human-readable string.
+
+    Reference: https://github.com/ros2/rcl_interfaces/blob/rolling/action_msgs/msg/GoalStatus.msg
+    """
+    status_map = {
+        GoalStatus.STATUS_UNKNOWN: "UNKNOWN",
+        GoalStatus.STATUS_ACCEPTED: "ACCEPTED",
+        GoalStatus.STATUS_EXECUTING: "EXECUTING",
+        GoalStatus.STATUS_CANCELING: "CANCELING",
+        GoalStatus.STATUS_SUCCEEDED: "SUCCEEDED",
+        GoalStatus.STATUS_CANCELED: "CANCELED",
+        GoalStatus.STATUS_ABORTED: "ABORTED",
     }
-    return error_code_map.get(error_code, f"UNKNOWN_ERROR_CODE_{error_code}")
+    return status_map.get(status, f"UNKNOWN_STATUS_{status}")
 
 
-def _get_error_message(result) -> str:
-    """Extract error message from NavigateToPose result."""
-    error_parts = []
+def _get_error_message(result_response) -> str:
+    """Extract error message from NavigateToPose result response.
 
-    # Get error code string for context
-    error_code_str = _get_error_code_string(result.error_code)
-    error_parts.append(f"({error_code_str})")
+    Args:
+        result_response: GetResultService.Response containing status and result fields
+            - status (int8): GoalStatus value (how action ended)
+            - result.error_msg (string): Nav2 error details (why it failed)
+    """
+    status_str = _get_status_string(result_response.status)
 
-    # Check for additional error message fields (if they exist)
-    # These may vary between ROS2 versions, so we check safely
-    if hasattr(result, "error_message") and result.error_message:
-        error_parts.append(f"Error message: {result.error_message}")
-    elif hasattr(result, "error_msg") and result.error_msg:
-        error_parts.append(f"Error message: {result.error_msg}")
-    elif hasattr(result, "message") and result.message:
-        error_parts.append(f"Message: {result.message}")
+    if result_response.result.error_msg:
+        return f"Status: {status_str}. {result_response.result.error_msg}"
 
-    # Include full result string representation for debugging
-    result_str = str(result)
-    if result_str and result_str != str(result.error_code):
-        # Only add if it provides additional info beyond just the error code
-        if len(result_str) > 50:  # Only if it's substantial
-            error_parts.append(f"Full result: {result_str}")
-
-    return ". ".join(error_parts)
+    return f"Status: {status_str}"
 
 
 class GetCurrentPoseToolInput(BaseModel):
@@ -124,13 +115,14 @@ class NavigateToPoseBlockingTool(BaseROS2Tool):
         goal = NavigateToPose.Goal()
         goal.pose = pose
 
-        result = action_client.send_goal(goal)
+        result_response = action_client.send_goal(goal)
 
-        if result is None:
+        if result_response is None:
             return "Navigate to pose action failed. Please try again."
 
-        if result.error_code != 0:
-            error_msg = _get_error_message(result)
-            return f"Navigate to pose action failed. Error code: {result.error_code}. {error_msg}"
+        # Check goal status (SUCCEEDED = 4)
+        if result_response.status != GoalStatus.STATUS_SUCCEEDED:
+            error_msg = _get_error_message(result_response)
+            return f"Navigate to pose action failed. {error_msg}"
 
         return "Navigate to pose successful."
