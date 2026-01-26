@@ -25,7 +25,6 @@ except ImportError:
 from unittest.mock import MagicMock, patch
 
 from geometry_msgs.msg import TransformStamped
-from nav2_msgs.action import NavigateToPose
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2.navigation.nav2_blocking import (
     GetCurrentPoseTool,
@@ -72,7 +71,7 @@ def test_get_error_code_string() -> None:
 def test_get_error_message() -> None:
     """Test error message extraction with error code and optional message."""
     # Test with error code only
-    result = NavigateToPose.Result()
+    result = MagicMock()
     result.error_code = 2
     error_msg = _get_error_message(result)
     assert "(TIMEOUT)" in error_msg
@@ -112,14 +111,14 @@ def test_navigate_to_pose_blocking_tool(
         mock_action_client_class.return_value = mock_action_client
 
         # Test success
-        success_result = NavigateToPose.Result()
+        success_result = MagicMock()
         success_result.error_code = 0
         mock_action_client.send_goal.return_value = success_result
         result = tool._run(x=1.0, y=2.0, z=0.0, yaw=0.5)
         assert result == "Navigate to pose successful."
 
         # Test error with error code
-        error_result = NavigateToPose.Result()
+        error_result = MagicMock()
         error_result.error_code = 2
         mock_action_client.send_goal.return_value = error_result
         result = tool._run(x=1.0, y=2.0, z=0.0, yaw=0.5)
