@@ -115,14 +115,41 @@ class NavigateToPoseBlockingTool(BaseROS2Tool):
         goal = NavigateToPose.Goal()
         goal.pose = pose
 
-        result_response = action_client.send_goal(goal)
+        try:
+            result_response = action_client.send_goal(goal)
+        except Exception as e:
+            return f"Navigate to pose action failed with exception: {type(e).__name__}: {e}"
 
         if result_response is None:
             return "Navigate to pose action failed. Please try again."
 
-        # Check goal status (SUCCEEDED = 4)
-        if result_response.status != GoalStatus.STATUS_SUCCEEDED:
-            error_msg = _get_error_message(result_response)
-            return f"Navigate to pose action failed. {error_msg}"
+        # Validate response structure for debugging
+        try:
+            # Check status field (used for success/failure)
+            if not hasattr(result_response, "status"):
+                return (
+                    f"Navigate to pose action failed. Response missing 'status' field. "
+                    f"Response type: {type(result_response).__name__}"
+                )
+
+            # Check error_code field (original error source)
+            if hasattr(result_response, "result") and not hasattr(
+                result_response.result, "error_code"
+            ):
+                return (
+                    f"Navigate to pose action failed. Result missing 'error_code' field. "
+                    f"Result type: {type(result_response.result).__name__}"
+                )
+
+            # Check goal status (SUCCEEDED = 4)
+            if result_response.status != GoalStatus.STATUS_SUCCEEDED:
+                error_msg = _get_error_message(result_response)
+                return f"Navigate to pose action failed. {error_msg}"
+
+        except AttributeError as e:
+            return (
+                f"Navigate to pose action failed. AttributeError: {e}. "
+                f"Response type: {type(result_response).__name__}"
+            )
 
         return "Navigate to pose successful."
