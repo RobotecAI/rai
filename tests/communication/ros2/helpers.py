@@ -17,6 +17,7 @@ import threading
 import time
 import uuid
 from typing import Any, Generator, List, Optional, Tuple
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
@@ -339,61 +340,147 @@ def shutdown_executors_and_threads(
     all_nodes = []
     for executor in executors:
         try:
-            all_nodes.extend(executor.get_nodes())
-        except Exception:
+            if executor is not None:
+                nodes = executor.get_nodes()
+                if nodes is not None:
+                    all_nodes.extend(nodes)
+        except (AttributeError, RuntimeError, Exception):
+            # Executor may be in invalid state, skip
             pass
 
     # Signal action servers to stop executing
     action_servers = []
     for node in all_nodes:
         try:
-            if isinstance(node, TestActionServer):
+            if node is not None and isinstance(node, TestActionServer):
                 node._shutdown_requested = True
                 action_servers.append(node)
-        except Exception:
+        except (AttributeError, RuntimeError, Exception):
             pass
 
     # Wait for actions to complete gracefully (with timeout as fallback)
     if action_servers:
         for server in action_servers:
-            server._all_actions_complete.wait(timeout=0.15)
+            try:
+                if server is not None and hasattr(server, "_all_actions_complete"):
+                    server._all_actions_complete.wait(timeout=0.15)
+            except (AttributeError, RuntimeError, Exception):
+                pass
 
     # Cancel all timers BEFORE shutting down executors
     # This prevents executors from trying to call timers after they're canceled
     for node in all_nodes:
         try:
-            # Try to access and cancel timers through node's internal structure
-            if hasattr(node, "_timers"):
-                timers = node._timers
-                if isinstance(timers, dict):
-                    for timer in list(timers.values()):
-                        try:
-                            timer.cancel()
-                        except Exception:
-                            pass
-        except Exception:
+            if node is not None:
+                # Try to access and cancel timers through node's internal structure
+                if hasattr(node, "_timers"):
+                    timers = node._timers
+                    if timers is not None and isinstance(timers, dict):
+                        for timer in list(timers.values()):
+                            try:
+                                if timer is not None:
+                                    timer.cancel()
+                            except (AttributeError, RuntimeError, Exception):
+                                pass
+        except (AttributeError, RuntimeError, Exception):
             pass
 
     # Give executor a moment to process timer cancellations and remove them from wait list
-    time.sleep(0.1)
+    # Use shorter sleep to reduce chance of accessing invalid state
+    try:
+        time.sleep(0.05)
+    except Exception:
+        pass
 
     # Now shutdown executors to stop spinning threads
     for executor in executors:
         try:
-            executor.shutdown()
-        except Exception as e:
-            print(f"Error shutting down executor: {e}")
+            if executor is not None:
+                executor.shutdown()
+        except (AttributeError, RuntimeError, Exception):
+            # Executor may already be shut down or in invalid state
+            pass
 
     # Wait for threads to actually finish (shutdown() is async)
     for thread in threads:
-        thread.join(timeout=2.0)
+        try:
+            if thread is not None and thread.is_alive():
+                thread.join(timeout=2.0)
+        except (AttributeError, RuntimeError, Exception):
+            pass
 
     # Clean up any remaining nodes (after executors are shut down and threads joined)
+    # Only destroy nodes that haven't been destroyed yet
     for node in all_nodes:
         try:
-            node.destroy_node()
-        except Exception as e:
-            print(f"Error destroying node: {e}")
+            if node is not None:
+                # Check if node is still valid before destroying
+                # In ROS2 Humble, accessing destroyed nodes can cause segfaults
+                try:
+                    # Try a safe operation to check if node is still valid
+                    _ = node.get_name()
+                    node.destroy_node()
+                except (AttributeError, RuntimeError):
+                    # Node already destroyed or invalid, skip
+                    pass
+        except (AttributeError, RuntimeError, Exception):
+            pass
+
+
+def _create_time_with_to_msg_class():
+    """Create a TimeWithToMsg class for ROS2 Humble/Jazzy compatibility.
+
+    ROS2 Humble vs Jazzy difference:
+    - Humble: Strict type checking in __debug__ mode requires actual BuiltinTime
+      instances, not MagicMock objects. Using MagicMock causes AssertionError.
+    - Jazzy: More lenient with MagicMock, but BuiltinTime instances don't allow
+      dynamically adding methods (AttributeError when accessing to_msg).
+
+    Solution: Create a wrapper class that inherits from BuiltinTime and adds to_msg().
+    This is used by both create_mock_connector_with_clock() and setup_mock_clock()
+    in test_grounding_dino.py.
+    """
+    from builtin_interfaces.msg import Time as BuiltinTime
+
+    class TimeWithToMsg(BuiltinTime):
+        """BuiltinTime wrapper that adds to_msg() method for compatibility."""
+
+        def to_msg(self):
+            return self
+
+    return TimeWithToMsg
+
+
+def create_mock_connector_with_clock() -> Any:
+    """Create a mock ROS2Connector with properly configured clock for testing.
+
+    This helper creates a mock connector that works with ROS2 Humble's strict
+    type checking for Time messages. The clock's now().to_msg() returns a real
+    builtin_interfaces.msg.Time instance that can be assigned to message stamps.
+
+    This is similar to setup_mock_clock() in test_grounding_dino.py but creates
+    a new mock connector instead of modifying an existing agent's connector.
+
+    Returns:
+        MagicMock: A mock ROS2Connector with node and clock configured.
+    """
+    from rai.communication.ros2.connectors import ROS2Connector
+
+    TimeWithToMsg = _create_time_with_to_msg_class()
+
+    connector = MagicMock(spec=ROS2Connector)
+    mock_node = MagicMock()
+    mock_clock = MagicMock()
+    mock_time = MagicMock()
+
+    # Create a TimeWithToMsg instance (passes isinstance checks and has to_msg())
+    mock_ts = TimeWithToMsg()
+    mock_time.to_msg.return_value = mock_ts
+    mock_clock.now.return_value = mock_time
+    mock_node.get_clock.return_value = mock_clock
+
+    connector.node = mock_node
+    return connector
 
 
 @pytest.fixture(scope="function")

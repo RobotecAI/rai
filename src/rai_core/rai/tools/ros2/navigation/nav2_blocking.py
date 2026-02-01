@@ -14,6 +14,7 @@
 
 from typing import Type
 
+from action_msgs.msg import GoalStatus
 from geometry_msgs.msg import PoseStamped, Quaternion
 from nav2_msgs.action import NavigateToPose
 from pydantic import BaseModel, Field
@@ -21,6 +22,39 @@ from rclpy.action import ActionClient
 from tf_transformations import quaternion_from_euler
 
 from rai.tools.ros2.base import BaseROS2Tool
+
+
+def _get_status_string(status: int) -> str:
+    """Convert GoalStatus to human-readable string.
+
+    Reference: https://github.com/ros2/rcl_interfaces/blob/rolling/action_msgs/msg/GoalStatus.msg
+    """
+    status_map = {
+        GoalStatus.STATUS_UNKNOWN: "UNKNOWN",
+        GoalStatus.STATUS_ACCEPTED: "ACCEPTED",
+        GoalStatus.STATUS_EXECUTING: "EXECUTING",
+        GoalStatus.STATUS_CANCELING: "CANCELING",
+        GoalStatus.STATUS_SUCCEEDED: "SUCCEEDED",
+        GoalStatus.STATUS_CANCELED: "CANCELED",
+        GoalStatus.STATUS_ABORTED: "ABORTED",
+    }
+    return status_map.get(status, f"UNKNOWN_STATUS_{status}")
+
+
+def _get_error_message(result_response) -> str:
+    """Extract error message from NavigateToPose result response.
+
+    Args:
+        result_response: GetResultService.Response containing status and result fields
+            - status (int8): GoalStatus value (how action ended)
+            - result.error_msg (string): Nav2 error details (why it failed)
+    """
+    status_str = _get_status_string(result_response.status)
+
+    if result_response.result.error_msg:
+        return f"Status: {status_str}. {result_response.result.error_msg}"
+
+    return f"Status: {status_str}"
 
 
 class GetCurrentPoseToolInput(BaseModel):
@@ -81,12 +115,41 @@ class NavigateToPoseBlockingTool(BaseROS2Tool):
         goal = NavigateToPose.Goal()
         goal.pose = pose
 
-        result = action_client.send_goal(goal)
+        try:
+            result_response = action_client.send_goal(goal)
+        except Exception as e:
+            return f"Navigate to pose action failed with exception: {type(e).__name__}: {e}"
 
-        if result is None:
+        if result_response is None:
             return "Navigate to pose action failed. Please try again."
 
-        if result.result.error_code != 0:
-            return f"Navigate to pose action failed. Error code: {result.result.error_code}"
+        # Validate response structure for debugging
+        try:
+            # Check status field (used for success/failure)
+            if not hasattr(result_response, "status"):
+                return (
+                    f"Navigate to pose action failed. Response missing 'status' field. "
+                    f"Response type: {type(result_response).__name__}"
+                )
+
+            # Check error_code field (original error source)
+            if hasattr(result_response, "result") and not hasattr(
+                result_response.result, "error_code"
+            ):
+                return (
+                    f"Navigate to pose action failed. Result missing 'error_code' field. "
+                    f"Result type: {type(result_response.result).__name__}"
+                )
+
+            # Check goal status (SUCCEEDED = 4)
+            if result_response.status != GoalStatus.STATUS_SUCCEEDED:
+                error_msg = _get_error_message(result_response)
+                return f"Navigate to pose action failed. {error_msg}"
+
+        except AttributeError as e:
+            return (
+                f"Navigate to pose action failed. AttributeError: {e}. "
+                f"Response type: {type(result_response).__name__}"
+            )
 
         return "Navigate to pose successful."
