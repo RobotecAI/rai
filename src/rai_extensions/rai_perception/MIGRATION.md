@@ -262,13 +262,13 @@ The following issues were identified during the migration but are not directly r
 
 #### Generic Detection Tools Abstraction
 
-_Problem:_ `gdino_tools.py` is tightly coupled to GroundingDINO model and service interface:
+_Problem:_ Several modules are tightly coupled to GroundingDINO model and service interface:
 
--   Hardcoded `RAIGroundingDino` service type
--   Model-specific parameters (`box_threshold`, `text_threshold`) as class fields
--   Direct parsing of `RAIGroundingDino.Response` structure
+-   `tools/gdino_tools.py`: Hardcoded `RAIGroundingDino` service type, model-specific parameters (`box_threshold`, `text_threshold`) as class fields, direct parsing of `RAIGroundingDino.Response` structure
+-   `components/gripping_points.py`: Uses `RAIGroundingDino` service type, `box_threshold`/`text_threshold` in `PointCloudFromSegmentationConfig`, DINO-specific method names (`_call_gdino_node`)
+-   `tools/segmentation_tools.py`: Uses `RAIGroundingDino` service type, `box_threshold`/`text_threshold` parameters, DINO-specific method names
 
-This prevents easy migration to other models (e.g., YOLO) without code changes.
+This prevents easy migration to other models (e.g., YOLO) without code changes. The coupling includes service types, parameter names, and response structures that are all GroundingDINO-specific.
 
 #### Proposed Solution: Service-Level Abstraction
 
@@ -283,12 +283,15 @@ This prevents easy migration to other models (e.g., YOLO) without code changes.
     - YOLO: extract `confidence_threshold`, `nms_threshold`, etc.
     - Update service to use `RAIDetection` interface
 
-3. Tool Updates (`tools/gdino_tools.py`):
-    - Replace `RAIGroundingDino` → `RAIDetection` service type
-    - Replace hardcoded parameter fields → `model_params` dict
-    - Parse `RAIDetectionArray` directly (already returned by service)
+3. Tool/Component Updates:
+    - `tools/gdino_tools.py`: Replace `RAIGroundingDino` → `RAIDetection` service type, replace hardcoded parameter fields → `model_params` dict
+    - `components/gripping_points.py`: Abstract detection parameters, rename DINO-specific methods, use generic service interface
+    - `tools/segmentation_tools.py`: Abstract detection parameters, rename DINO-specific methods, use generic service interface
+    - All modules: Parse `RAIDetectionArray` directly (already returned by service)
 
-_Benefits:_ Tools become model-agnostic. New models only require registry entry + parameter mapping in service. Minimal tool code changes for model switching.
+_Benefits:_ Tools and components become model-agnostic. New models only require registry entry + parameter mapping in service. Minimal code changes for model switching.
+
+_Note:_ This requires careful evaluation of parameter abstractions, service interface changes, and backward compatibility. The current PR scope is large (120+ files), so this will be addressed in a follow-up PR after merging.
 
 #### Progressive Evaluation: GetDistanceToObjectsTool
 
