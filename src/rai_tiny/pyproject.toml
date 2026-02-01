@@ -1,0 +1,24 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "rai-tiny"
+version = "0.0.6"
+description = "Minimal test package for validating PyPI publishing workflow"
+authors = ["Julia Jia <juliajster@gmail.com>"]
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+]
+packages = [
+    { include = "rai_tiny", from = "." },
+]
+
+[tool.poetry.dependencies]
+python = "^3.10, <3.13"
+
+[tool.rai]
+has_c_extensions = false

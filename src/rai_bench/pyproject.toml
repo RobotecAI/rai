@@ -9,7 +9,7 @@ packages = [
     { include = "rai_bench", from = "." },
 ]
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.10, <3.13"
 inflect = "7.5.0"
 plotly = "^6.0.1"
 rai_core = ">=2.0.0.a2,<3.0.0"
