@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from rai_perception.agents.grounding_dino import (
     GDINO_SERVICE_NAME,
@@ -33,34 +33,12 @@ from tests.rai_perception.test_base_vision_agent import (
 def setup_mock_clock(agent):
     """Setup mock clock for agent tests.
 
-    The code calls clock().now().to_msg() to get ts, then passes ts to
-    to_detection_msg which expects rclpy.time.Time and calls ts.to_msg() again.
-    However, ts is also assigned to response.detections.header.stamp which expects
-    builtin_interfaces.msg.Time.
-
-    ROS2 Humble vs Jazzy difference:
-    - Humble: Strict type checking in __debug__ mode requires actual BuiltinTime
-      instances, not MagicMock objects. Using MagicMock causes AssertionError.
-    - Jazzy: More lenient with MagicMock, but BuiltinTime instances don't allow
-      dynamically adding methods (AttributeError when accessing to_msg).
-
-    Solution: Create a wrapper class that inherits from BuiltinTime and adds to_msg().
+    Uses the shared utility from tests.communication.ros2.helpers to handle
+    ROS2 Humble vs Jazzy differences.
     """
-    from builtin_interfaces.msg import Time as BuiltinTime
+    from tests.communication.ros2 import setup_mock_clock_for_agent
 
-    class TimeWithToMsg(BuiltinTime):
-        """BuiltinTime wrapper that adds to_msg() method for compatibility."""
-
-        def to_msg(self):
-            return self
-
-    mock_clock = MagicMock()
-    mock_time = MagicMock()
-    # Create a TimeWithToMsg instance (passes isinstance checks and has to_msg())
-    mock_ts = TimeWithToMsg()
-    mock_time.to_msg.return_value = mock_ts
-    mock_clock.now.return_value = mock_time
-    agent.ros2_connector._node.get_clock = MagicMock(return_value=mock_clock)
+    setup_mock_clock_for_agent(agent, use_time_wrapper=True)
 
 
 class MockGDBoxer:

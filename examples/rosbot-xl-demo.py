@@ -29,7 +29,10 @@ from rai.tools.ros2 import (
     GetObjectPositionsTool,
     GetROS2ImageConfiguredTool,
     GetROS2TransformConfiguredTool,
-    Nav2Toolkit,
+)
+from rai.tools.ros2.navigation.nav2_blocking import (
+    GetCurrentPoseTool,
+    NavigateToPoseBlockingTool,
 )
 from rai.tools.time import WaitForSecondsTool
 from rai_perception.tools import GetGrabbingPointTool
@@ -74,7 +77,12 @@ def initialize_agent() -> Runnable[ReActAgentState, ReActAgentState]:
                 connector=connector,
             ),
         ),
-        *Nav2Toolkit(connector=connector).get_tools(),
+        NavigateToPoseBlockingTool(
+            connector=connector, frame_id="map", action_name="navigate_to_pose"
+        ),
+        GetCurrentPoseTool(
+            connector=connector, frame_id="map", robot_frame_id="base_link"
+        ),
     ]
 
     agent = ReActAgent(

@@ -815,7 +815,8 @@ def review_and_save():
                 ]
                 if embeddings_model_vendor_name == "openai":
                     embeddings_model = OpenAIEmbeddings(
-                        model=st.session_state.config["openai"]["embeddings_model"]
+                        model=st.session_state.config["openai"]["embeddings_model"],
+                        base_url=st.session_state.config["openai"]["base_url"],
                     )
                 elif embeddings_model_vendor_name == "aws":
                     embeddings_model = BedrockEmbeddings(
