@@ -483,6 +483,96 @@ def create_mock_connector_with_clock() -> Any:
     return connector
 
 
+def create_mock_clock_with_time(use_time_wrapper: bool = False):
+    """Create a mock clock that returns a compatible Time message.
+
+    This utility handles ROS2 Humble vs Jazzy differences:
+    - Humble: Strict type checking in __debug__ mode requires actual BuiltinTime
+      instances, not MagicMock objects. Using MagicMock causes AssertionError.
+    - Jazzy: More lenient with MagicMock, but BuiltinTime instances don't allow
+      dynamically adding methods (AttributeError when accessing to_msg).
+
+    Parameters
+    ----------
+    use_time_wrapper : bool, optional
+        If True, creates a TimeWithToMsg wrapper that adds to_msg() method
+        for compatibility when time.to_msg() is called multiple times.
+        If False, returns a simple Time message (default).
+
+    Returns
+    -------
+    tuple
+        (mock_clock, mock_time) where:
+        - mock_clock: MagicMock configured with now().to_msg() returning mock_time
+        - mock_time: Either a Time message or TimeWithToMsg instance
+    """
+    from unittest.mock import MagicMock
+
+    from builtin_interfaces.msg import Time as BuiltinTime
+
+    if use_time_wrapper:
+
+        class TimeWithToMsg(BuiltinTime):
+            """BuiltinTime wrapper that adds to_msg() method for compatibility."""
+
+            def to_msg(self):
+                return self
+
+        mock_time = TimeWithToMsg()
+    else:
+        mock_time = BuiltinTime(sec=1234567890, nanosec=0)
+
+    mock_clock = MagicMock()
+    mock_clock.now.return_value.to_msg.return_value = mock_time
+
+    return mock_clock, mock_time
+
+
+def setup_mock_clock_for_node(node, use_time_wrapper: bool = False):
+    """Setup mock clock for a node.
+
+    Parameters
+    ----------
+    node : Any
+        Node object (or mock) that has a get_clock() method
+    use_time_wrapper : bool, optional
+        See create_mock_clock_with_time() for details
+
+    Returns
+    -------
+    tuple
+        (mock_clock, mock_time) from create_mock_clock_with_time()
+    """
+    from unittest.mock import MagicMock
+
+    mock_clock, mock_time = create_mock_clock_with_time(use_time_wrapper)
+    node.get_clock = MagicMock(return_value=mock_clock)
+    return mock_clock, mock_time
+
+
+def setup_mock_clock_for_agent(agent, use_time_wrapper: bool = True):
+    """Setup mock clock for an agent with ros2_connector.
+
+    This is a convenience wrapper for agents that have agent.ros2_connector._node.
+
+    Parameters
+    ----------
+    agent : Any
+        Agent object with ros2_connector._node attribute
+    use_time_wrapper : bool, optional
+        Defaults to True for agent tests that may call to_msg() multiple times
+
+    Returns
+    -------
+    tuple
+        (mock_clock, mock_time) from create_mock_clock_with_time()
+    """
+    mock_clock, mock_time = setup_mock_clock_for_node(
+        agent.ros2_connector._node, use_time_wrapper=use_time_wrapper
+    )
+    return mock_clock, mock_time
+
+
 @pytest.fixture(scope="function")
 def ros_setup() -> Generator[None, None, None]:
     rclpy.init()
