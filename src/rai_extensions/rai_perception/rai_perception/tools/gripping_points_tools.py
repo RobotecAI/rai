@@ -34,7 +34,6 @@ from rai_perception.components.gripping_points import (
     PointCloudFilterConfig,
     PointCloudFromSegmentation,
     PointCloudFromSegmentationConfig,
-    _publish_gripping_point_debug_data,
 )
 from rai_perception.components.perception_presets import apply_preset
 from rai_perception.components.topic_utils import discover_camera_topics
@@ -735,7 +734,9 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
 
         # Publish gripping points for stage 3
         if stage == 3 and gripping_points and filtered_point_clouds:
-            self._publish_gripping_points_debug(filtered_point_clouds, gripping_points)
+            self._publish_gripping_point_debug_data(
+                filtered_point_clouds, gripping_points
+            )
 
     def _publish_point_cloud_debug(
         self,
@@ -772,29 +773,83 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
             pub.publish(msg)
             time.sleep(sleep_duration)
 
-    def _publish_gripping_points_debug(
+    def _publish_gripping_point_debug_data(
         self,
         point_clouds: list,
         gripping_points: list,
         publish_duration: float = DEBUG_PUBLISH_DURATION_SEC,
     ) -> None:
-        """Publish gripping points debug data to ROS2 topics for visualization in RVIZ.
+        """Publish gripping point debug data to ROS2 topics for visualization in RVIZ.
 
         Args:
             point_clouds: List of filtered point cloud arrays (Nx3) per instance
             gripping_points: List of gripping point arrays (3,) per instance
             publish_duration: Duration in seconds to publish the data
         """
+        from geometry_msgs.msg import Point, Pose, Vector3
+        from sensor_msgs.msg import PointCloud2
+        from sensor_msgs_py import point_cloud2
+        from std_msgs.msg import Header
+        from visualization_msgs.msg import Marker, MarkerArray
+
+        debug_gripping_points_pointcloud_topic = "/debug_gripping_points_pointcloud"
+        debug_gripping_points_markerarray_topic = "/debug_gripping_points_markerarray"
+
+        self.connector.node.get_logger().warning(
+            "Debug data publishing adds computational overhead and network traffic and impact the performance - not suitable for production. "
+            f"Data will be published to {debug_gripping_points_pointcloud_topic} and {debug_gripping_points_markerarray_topic} for {publish_duration} seconds."
+        )
+
+        # Convert inputs to numpy arrays
         obj_points_xyz = [np.array(pc, dtype=np.float32) for pc in point_clouds]
         gripping_points_xyz = [np.array(gp, dtype=np.float32) for gp in gripping_points]
 
-        _publish_gripping_point_debug_data(
-            self.connector,
-            obj_points_xyz,
-            gripping_points_xyz,
-            base_frame_id=self.target_frame,
-            publish_duration=publish_duration,
+        points = (
+            np.concatenate(obj_points_xyz, axis=0)
+            if obj_points_xyz
+            else np.zeros((0, 3), dtype=np.float32)
         )
+
+        header = Header()
+        header.frame_id = self.target_frame
+        header.stamp = self.connector.node.get_clock().now().to_msg()
+        msg = point_cloud2.create_cloud_xyz32(header, points)
+        pub = self.connector.node.create_publisher(  # type: ignore[reportUnknownMemberType]
+            PointCloud2, debug_gripping_points_pointcloud_topic, 10
+        )
+
+        marker_pub = self.connector.node.create_publisher(  # type: ignore[reportUnknownMemberType]
+            MarkerArray, debug_gripping_points_markerarray_topic, 10
+        )
+        marker_array = MarkerArray()
+        header = Header()
+        header.frame_id = self.target_frame
+        header.stamp = self.connector.node.get_clock().now().to_msg()
+        markers = []
+        for i, p in enumerate(gripping_points_xyz):
+            m = Marker()
+            m.header = header
+            m.type = Marker.SPHERE
+            m.action = Marker.ADD
+            m.pose = Pose(position=Point(x=float(p[0]), y=float(p[1]), z=float(p[2])))
+            m.scale = Vector3(x=0.04, y=0.04, z=0.04)
+            m.id = i
+            m.color.r = 1.0  # type: ignore[reportUnknownMemberType]
+            m.color.g = 0.0  # type: ignore[reportUnknownMemberType]
+            m.color.b = 0.0  # type: ignore[reportUnknownMemberType]
+            m.color.a = 1.0  # type: ignore[reportUnknownMemberType]
+
+            markers.append(m)  # type: ignore[reportUnknownArgumentType]
+        marker_array.markers = markers
+
+        start_time = time.time()
+        publish_rate = 10.0  # Hz
+        sleep_duration = 1.0 / publish_rate
+
+        while time.time() - start_time < publish_duration:
+            marker_pub.publish(marker_array)
+            pub.publish(msg)
+            time.sleep(sleep_duration)
 
     def _create_point_cloud2_header(self):
         """Create header for PointCloud2 message."""

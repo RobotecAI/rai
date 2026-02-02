@@ -34,7 +34,6 @@ This module provides components for extracting gripping points from segmented ob
     - GrippingPointEstimatorConfig
 """
 
-import time
 from typing import List, Literal, Optional, cast
 
 import numpy as np
@@ -166,85 +165,6 @@ class PointCloudFilterConfig(BaseModel):
             "Maps to Local Outlier Factor n_neighbors when strategy='conservative_outlier_removal'"
         ),
     )
-
-
-def _publish_gripping_point_debug_data(
-    connector: ROS2Connector,
-    obj_points_xyz: NDArray[np.float32],
-    gripping_points_xyz: list[NDArray[np.float32]],
-    base_frame_id: str = "egoarm_base_link",
-    publish_duration: float = 5.0,
-) -> None:
-    """Publish the gripping point debug data to ROS2 topics which can be visualized in RVIZ.
-
-    Args:
-        connector: The ROS2 connector.
-        obj_points_xyz: The list of objects found in the image.
-        gripping_points_xyz: The list of gripping points in the base frame.
-        base_frame_id: The base frame id.
-        publish_duration: Duration in seconds to publish the data (default: 10.0).
-    """
-
-    from geometry_msgs.msg import Point, Pose, Vector3
-    from sensor_msgs.msg import PointCloud2
-    from sensor_msgs_py import point_cloud2
-    from std_msgs.msg import Header
-    from visualization_msgs.msg import Marker, MarkerArray
-
-    debug_gripping_points_pointcloud_topic = "/debug_gripping_points_pointcloud"
-    debug_gripping_points_markerarray_topic = "/debug_gripping_points_markerarray"
-
-    connector.node.get_logger().warning(
-        "Debug data publishing adds computational overhead and network traffic and impact the performance - not suitable for production. "
-        f"Data will be published to {debug_gripping_points_pointcloud_topic} and {debug_gripping_points_markerarray_topic} for {publish_duration} seconds."
-    )
-
-    points = (
-        np.concatenate(obj_points_xyz, axis=0)
-        if obj_points_xyz
-        else np.zeros((0, 3), dtype=np.float32)
-    )
-
-    header = Header()
-    header.frame_id = base_frame_id
-    header.stamp = connector.node.get_clock().now().to_msg()
-    msg = point_cloud2.create_cloud_xyz32(header, points)
-    pub = connector.node.create_publisher(  # type: ignore[reportUnknownMemberType]
-        PointCloud2, debug_gripping_points_pointcloud_topic, 10
-    )
-
-    marker_pub = connector.node.create_publisher(  # type: ignore[reportUnknownMemberType]
-        MarkerArray, debug_gripping_points_markerarray_topic, 10
-    )
-    marker_array = MarkerArray()
-    header = Header()
-    header.frame_id = base_frame_id
-    header.stamp = connector.node.get_clock().now().to_msg()
-    markers = []
-    for i, p in enumerate(gripping_points_xyz):
-        m = Marker()
-        m.header = header
-        m.type = Marker.SPHERE
-        m.action = Marker.ADD
-        m.pose = Pose(position=Point(x=float(p[0]), y=float(p[1]), z=float(p[2])))
-        m.scale = Vector3(x=0.04, y=0.04, z=0.04)
-        m.id = i
-        m.color.r = 1.0  # type: ignore[reportUnknownMemberType]
-        m.color.g = 0.0  # type: ignore[reportUnknownMemberType]
-        m.color.b = 0.0  # type: ignore[reportUnknownMemberType]
-        m.color.a = 1.0  # type: ignore[reportUnknownMemberType]
-
-        markers.append(m)  # type: ignore[reportUnknownArgumentType]
-    marker_array.markers = markers
-
-    start_time = time.time()
-    publish_rate = 10.0  # Hz
-    sleep_duration = 1.0 / publish_rate
-
-    while time.time() - start_time < publish_duration:
-        marker_pub.publish(marker_array)
-        pub.publish(msg)
-        time.sleep(sleep_duration)
 
 
 class PointCloudFromSegmentation:
