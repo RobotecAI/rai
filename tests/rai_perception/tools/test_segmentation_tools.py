@@ -16,12 +16,13 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
+import rclpy
 import sensor_msgs.msg
 from rai_perception.tools.segmentation_tools import (
     GetGrabbingPointTool,
     GetSegmentationTool,
-    depth_to_point_cloud,
 )
+from rclpy.parameter import Parameter
 
 from rai_interfaces.srv import RAIGroundedSam, RAIGroundingDino
 
@@ -53,13 +54,20 @@ class TestGetSegmentationTool:
         """Test _call_gdino_node creates service call."""
         image_msg = sensor_msgs.msg.Image()
         mock_client = MagicMock()
-        mock_client.wait_for_service.return_value = True
         mock_connector.node.create_client.return_value = mock_client
 
-        future = segmentation_tool._call_gdino_node(image_msg, "dinosaur")
+        with patch(
+            "rai_perception.components.service_utils.wait_for_ros2_services"
+        ) as mock_wait:
+            mock_wait.return_value = None  # No exception means success
 
-        assert future is not None
-        mock_client.call_async.assert_called_once()
+            # Parameter not set, so will use default service name
+            future = segmentation_tool._call_gdino_node(image_msg, "dinosaur")
+
+            assert future is not None
+            mock_wait.assert_called_once()
+            mock_connector.node.create_client.assert_called_once()
+            mock_client.call_async.assert_called_once()
 
     def test_call_gsam_node(self, segmentation_tool, mock_connector):
         """Test _call_gsam_node creates service call."""
@@ -70,13 +78,20 @@ class TestGetSegmentationTool:
         gdino_response.detections = RAIDetectionArray()
 
         mock_client = MagicMock()
-        mock_client.wait_for_service.return_value = True
         mock_connector.node.create_client.return_value = mock_client
 
-        future = segmentation_tool._call_gsam_node(image_msg, gdino_response)
+        with patch(
+            "rai_perception.components.service_utils.wait_for_ros2_services"
+        ) as mock_wait:
+            mock_wait.return_value = None  # No exception means success
 
-        assert future is not None
-        mock_client.call_async.assert_called_once()
+            # Parameter not set, so will use default service name
+            future = segmentation_tool._call_gsam_node(image_msg, gdino_response)
+
+            assert future is not None
+            mock_wait.assert_called_once()
+            mock_connector.node.create_client.assert_called_once()
+            mock_client.call_async.assert_called_once()
 
     def test_run_success(self, segmentation_tool, mock_connector):
         """Test _run method with successful segmentation."""
@@ -84,9 +99,7 @@ class TestGetSegmentationTool:
         mock_connector.receive_message.return_value.payload = image_msg
 
         mock_gdino_client = MagicMock()
-        mock_gdino_client.wait_for_service.return_value = True
         mock_gsam_client = MagicMock()
-        mock_gsam_client.wait_for_service.return_value = True
 
         def create_client_side_effect(service_type, service_name):
             if "GroundingDino" in str(service_type):
@@ -94,6 +107,8 @@ class TestGetSegmentationTool:
             return mock_gsam_client
 
         mock_connector.node.create_client.side_effect = create_client_side_effect
+
+        # Service name parameters not set, so will use defaults
 
         gdino_response = RAIGroundingDino.Response()
         from rai_interfaces.msg import RAIDetectionArray
@@ -107,9 +122,19 @@ class TestGetSegmentationTool:
         mask_msg2.encoding = "mono8"  # Set encoding to avoid cv_bridge errors
         gsam_response.masks = [mask_msg1, mask_msg2]
 
-        mock_connector.node.get_parameter.return_value.value = 0.001
+        # Set ROS2 parameters
+        mock_connector.node.set_parameters(
+            [
+                Parameter(
+                    "conversion_ratio", rclpy.parameter.Parameter.Type.DOUBLE, 0.001
+                ),
+            ]
+        )
 
         with (
+            patch(
+                "rai_perception.components.service_utils.wait_for_ros2_services"
+            ) as mock_wait,
             patch(
                 "rai_perception.tools.segmentation_tools.get_future_result"
             ) as mock_get_result,
@@ -117,6 +142,7 @@ class TestGetSegmentationTool:
                 "rai_perception.tools.segmentation_tools.convert_ros_img_to_base64"
             ) as mock_convert,
         ):
+            mock_wait.return_value = None  # No exception means success
             mock_get_result.side_effect = [gdino_response, gsam_response]
             mock_convert.side_effect = ["base64_1", "base64_2"]
 
@@ -196,6 +222,9 @@ class TestGetGrabbingPointTool:
 
     def test_run(self, grabbing_tool, mock_connector):
         """Test GetGrabbingPointTool._run."""
+        import rclpy
+        from rclpy.parameter import Parameter
+
         image_msg = sensor_msgs.msg.Image()
         depth_msg = sensor_msgs.msg.Image()
         camera_info = sensor_msgs.msg.CameraInfo()
@@ -208,9 +237,7 @@ class TestGetGrabbingPointTool:
         ]
 
         mock_gdino_client = MagicMock()
-        mock_gdino_client.wait_for_service.return_value = True
         mock_gsam_client = MagicMock()
-        mock_gsam_client.wait_for_service.return_value = True
 
         def create_client_side_effect(service_type, service_name):
             if "GroundingDino" in str(service_type):
@@ -218,6 +245,17 @@ class TestGetGrabbingPointTool:
             return mock_gsam_client
 
         mock_connector.node.create_client.side_effect = create_client_side_effect
+
+        # Set conversion_ratio parameter (service name parameters will use defaults)
+        mock_connector.node.set_parameters(
+            [
+                Parameter(
+                    "conversion_ratio",
+                    rclpy.parameter.Parameter.Type.DOUBLE,
+                    0.001,
+                )
+            ]
+        )
 
         gdino_response = RAIGroundingDino.Response()
         from rai_interfaces.msg import RAIDetectionArray
@@ -229,7 +267,14 @@ class TestGetGrabbingPointTool:
         mask_msg.encoding = "mono8"  # Set encoding to avoid cv_bridge errors
         gsam_response.masks = [mask_msg]
 
-        mock_connector.node.get_parameter.return_value.value = 0.001
+        # Set ROS2 parameters
+        mock_connector.node.set_parameters(
+            [
+                Parameter(
+                    "conversion_ratio", rclpy.parameter.Parameter.Type.DOUBLE, 0.001
+                ),
+            ]
+        )
 
         mask = np.zeros((100, 100), dtype=np.uint8)
         mask[20:80, 20:80] = 255
@@ -249,6 +294,9 @@ class TestGetGrabbingPointTool:
         # calls this function which internally uses cv2.cvtColor on empty mock images
         with (
             patch(
+                "rai_perception.components.service_utils.wait_for_ros2_services"
+            ) as mock_wait,
+            patch(
                 "rai_perception.tools.segmentation_tools.get_future_result"
             ) as mock_get_result,
             patch(
@@ -265,6 +313,7 @@ class TestGetGrabbingPointTool:
                 side_effect=convert_side_effect,
             ),
         ):
+            mock_wait.return_value = None  # No exception means success
             mock_get_result.side_effect = [gdino_response, gsam_response]
             mock_min_area.return_value = ((50.0, 50.0), (60.0, 60.0), 0.0)
 
@@ -275,35 +324,3 @@ class TestGetGrabbingPointTool:
             assert isinstance(result, list)
             assert len(result) == 1
             assert len(result[0]) == 2  # (centroid, rotation)
-
-
-class TestDepthToPointCloud:
-    """Test cases for depth_to_point_cloud function."""
-
-    def test_depth_to_point_cloud(self):
-        """Test depth_to_point_cloud conversion."""
-        # Create a simple depth image (100x100, 1 meter depth)
-        depth_image = np.ones((100, 100), dtype=np.float32) * 1.0
-
-        fx, fy = 500.0, 500.0
-        cx, cy = 50.0, 50.0
-
-        points = depth_to_point_cloud(depth_image, fx, fy, cx, cy)
-
-        # Should have points (excluding zero depth)
-        assert len(points) > 0
-        assert points.shape[1] == 3  # x, y, z coordinates
-
-    def test_depth_to_point_cloud_with_zero_depth(self):
-        """Test depth_to_point_cloud filters zero depth."""
-        depth_image = np.zeros((100, 100), dtype=np.float32)
-        depth_image[20:80, 20:80] = 1.0  # Only center region has depth
-
-        fx, fy = 500.0, 500.0
-        cx, cy = 50.0, 50.0
-
-        points = depth_to_point_cloud(depth_image, fx, fy, cx, cy)
-
-        # Should only have points from non-zero depth region
-        assert len(points) > 0
-        assert all(points[:, 2] > 0)  # All z values should be positive

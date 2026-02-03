@@ -20,6 +20,7 @@ from .initialization import (
     get_llm_model_direct,
     get_tracing_callbacks,
 )
+from .tools import timeout
 
 __all__ = [
     "AgentRunner",
@@ -29,4 +30,5 @@ __all__ = [
     "get_llm_model_config_and_vendor",
     "get_llm_model_direct",
     "get_tracing_callbacks",
+    "timeout",
 ]

@@ -3,6 +3,7 @@
         "Always follow the specified payload limit; do not exceed 3 kg.",
         "Before starting the task, by looking at the image, determine if the task can be completed. If yes - proceed without asking. Otherwise report.",
         "Cubes are 5cm tall. When stacking, add 5cm to the z coordinate for each additional cube.",
+        "When placing objects 'on top' of other objects (different object types), you must add a height offset to the target object's z-coordinate. The height offset should be approximately 5cm (0.05m) for most objects. Never use the target object's centroid z-coordinate directly - always add the height offset. For stacking tasks (same object type), follow the stacking rule instead.",
         "Remember to not put objects on top of other objects, unless specifically instructed otherwise",
         "Try to consider the typical size of objects when placing them (width, height, length)",
         "Always leave at least a 5cm margin (x and y) between objects unless specifically instructed otherwise",

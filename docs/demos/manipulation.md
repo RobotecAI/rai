@@ -65,16 +65,24 @@ manipulation techniques.
     ros2 launch examples/manipulation-demo.launch.py game_launcher:=demo_assets/manipulation/RAIManipulationDemo/RAIManipulationDemo.GameLauncher
     ```
 
+    By default, perception services register both new model-agnostic service names (`/detection`, `/segmentation`) and legacy names (`/grounding_dino_classify`, `/grounded_sam_segment`) for backward compatibility. To disable legacy names, add the launch argument:
+
+    ```shell
+    ros2 launch examples/manipulation-demo.launch.py game_launcher:=... enable_legacy_service_names:=false
+    ```
+
     2. Run cmd app
 
     ```shell
     python examples/manipulation-demo.py
     ```
 
+    Note: `manipulation-demo.py` uses the new service names (`/detection`, `/segmentation`). Legacy examples like `manipulation-demo-v1.py` use legacy service names and require `enable_legacy_service_names:=true` (default).
+
 2. Interact with the robot arm using natural language commands. For example:
 
     ```
-    "Place every apple on top of the cube"
+    "Place each apple on top of a cube"
     "Build a tower from cubes"
     "Arrange objects in a line"
     "Put two boxes closer to each other. Move only one box."
@@ -134,7 +142,7 @@ manipulation techniques.
 
 The manipulation demo utilizes several components:
 
-1. Vision processing using Grounded SAM 2 and Grounding DINO for object detection and segmentation.
+1. Vision processing using Grounded SAM 2 and Grounding DINO for object detection and segmentation via ROS2 services (`/detection`, `/segmentation`).
 2. RAI agent to process the request and plan the manipulation sequence.
 3. Robot arm control for executing the planned movements.
 
@@ -143,6 +151,21 @@ The main logic of the demo is implemented in the `create_agent` function, which 
 ```python
 examples/manipulation-demo.py
 ```
+
+### Service Names and Backward Compatibility
+
+Perception services support both new model-agnostic service names and legacy names for backward compatibility:
+
+-   New service names (default): `/detection`, `/segmentation`
+-   Legacy service names: `/grounding_dino_classify`, `/grounded_sam_segment`
+
+By default, both sets of names are registered. To disable legacy names (for new applications only), launch with:
+
+```shell
+ros2 launch examples/manipulation-demo.launch.py game_launcher:=... enable_legacy_service_names:=false
+```
+
+Existing applications using legacy service names will continue to work with the default configuration.
 
 ## Known Limitations
 

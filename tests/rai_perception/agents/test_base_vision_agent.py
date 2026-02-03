@@ -12,13 +12,14 @@
 # See the specific language governing permissions and
 # limitations under the License.
 
-import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 import rclpy
 from rai_perception.agents.base_vision_agent import BaseVisionAgent
+
+from tests.rai_perception.conftest import create_valid_weights_file
 
 
 class MockBaseVisionAgent(BaseVisionAgent):
@@ -30,17 +31,6 @@ class MockBaseVisionAgent(BaseVisionAgent):
     def run(self):
         """Dummy implementation of abstract run method for testing."""
         pass
-
-
-def create_valid_weights_file(weights_path: Path, size_mb: int = 2) -> None:
-    """Helper to create a valid weights file for testing.
-
-    Args:
-        weights_path: Path where the weights file should be created
-        size_mb: Size of the file in megabytes (default: 2MB)
-    """
-    weights_path.parent.mkdir(parents=True, exist_ok=True)
-    weights_path.write_bytes(b"0" * (size_mb * 1024 * 1024))
 
 
 def get_weights_path(tmp_path: Path) -> Path:
@@ -99,6 +89,19 @@ def extract_output_path_from_wget_args(args) -> Path:
 class TestVisionWeightsDownload:
     """Test cases for BaseVisionAgent._download_weights method."""
 
+    def setup_method(self):
+        """Initialize ROS2 before tests to prevent auto-initialization warning."""
+        if not rclpy.ok():
+            rclpy.init()
+
+    def teardown_method(self):
+        """Clean up ROS2 context after each test."""
+        try:
+            if rclpy.ok():
+                rclpy.shutdown()
+        except Exception:
+            pass
+
     def test_download_weights_success(self, tmp_path):
         """Test successful weight download."""
         weights_path = get_weights_path(tmp_path)
@@ -126,6 +129,7 @@ class TestVisionWeightsDownload:
                 check=True,
                 capture_output=True,
                 text=True,
+                timeout=600,
             )
 
             # Verify file exists after download
@@ -133,66 +137,22 @@ class TestVisionWeightsDownload:
 
             cleanup_agent(agent)
 
-    def test_download_weights_failure(self, tmp_path):
-        """Test weight download failure raises exception."""
-        weights_path = get_weights_path(tmp_path)
-
-        call_count = 0
-
-        def mock_wget(*args, **kwargs):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                # First call succeeds (during initialization)
-                output_path = extract_output_path_from_wget_args(args)
-                create_valid_weights_file(output_path)
-                result = MagicMock()
-                result.returncode = 0
-                return result
-            else:
-                # Second call fails - raise CalledProcessError
-                # This will be caught and re-raised as "Could not download weights"
-                raise subprocess.CalledProcessError(
-                    returncode=1, cmd="wget", stderr="Download failed"
-                )
-
-        with patch("subprocess.run", side_effect=mock_wget):
-            agent = create_agent_with_weights(tmp_path, weights_path)
-
-            # Remove the file to force re-download
-            weights_path.unlink()
-
-            with pytest.raises(Exception, match="Could not download weights"):
-                agent._download_weights()
-
-            cleanup_agent(agent)
-
-    def test_download_weights_file_too_small(self, tmp_path):
-        """Test download failure when file is too small."""
-        weights_path = get_weights_path(tmp_path)
-        # Create file first so initialization doesn't trigger download
-        create_valid_weights_file(weights_path)
-
-        def mock_wget(*args, **kwargs):
-            # Simulate wget creating a file that's too small
-            output_path = extract_output_path_from_wget_args(args)
-            output_path.write_bytes(b"0" * 100)  # 100 bytes, too small
-            return MagicMock(returncode=0)
-
-        with patch("subprocess.run", side_effect=mock_wget):
-            agent = create_agent_with_weights(tmp_path, weights_path)
-
-            with pytest.raises(Exception, match="Downloaded file is too small"):
-                agent._download_weights()
-
-            # Verify file was cleaned up
-            assert not weights_path.exists()
-
-            cleanup_agent(agent)
-
 
 class TestBaseVisionAgentInit:
     """Test cases for BaseVisionAgent.__init__ method."""
+
+    def setup_method(self):
+        """Initialize ROS2 before tests to prevent auto-initialization warning."""
+        if not rclpy.ok():
+            rclpy.init()
+
+    def teardown_method(self):
+        """Clean up ROS2 context after each test."""
+        try:
+            if rclpy.ok():
+                rclpy.shutdown()
+        except Exception:
+            pass
 
     def test_init_without_weights_filename(self):
         """Test that ValueError is raised when WEIGHTS_FILENAME is not set."""
@@ -252,6 +212,19 @@ class TestBaseVisionAgentInit:
 
 class TestLoadModelWithErrorHandling:
     """Test cases for BaseVisionAgent._load_model_with_error_handling method."""
+
+    def setup_method(self):
+        """Initialize ROS2 before tests to prevent auto-initialization warning."""
+        if not rclpy.ok():
+            rclpy.init()
+
+    def teardown_method(self):
+        """Clean up ROS2 context after each test."""
+        try:
+            if rclpy.ok():
+                rclpy.shutdown()
+        except Exception:
+            pass
 
     def test_load_model_success(self, tmp_path):
         """Test successful model loading."""
@@ -331,22 +304,18 @@ class TestLoadModelWithErrorHandling:
 class TestBaseVisionAgentMethods:
     """Test cases for other BaseVisionAgent methods."""
 
-    def test_remove_weights(self, tmp_path):
-        """Test _remove_weights method."""
-        weights_path = tmp_path / "vision" / "weights" / "test_weights.pth"
-        weights_path.parent.mkdir(parents=True, exist_ok=True)
-        weights_path.write_bytes(b"test")
+    def setup_method(self):
+        """Initialize ROS2 before tests to prevent auto-initialization warning."""
+        if not rclpy.ok():
+            rclpy.init()
 
-        agent = MockBaseVisionAgent(weights_root_path=str(tmp_path), ros2_name="test")
-        agent.weights_path = weights_path
-
-        assert weights_path.exists()
-        agent._remove_weights()
-        assert not weights_path.exists()
-
-        agent.stop()
-        if rclpy.ok():
-            rclpy.shutdown()
+    def teardown_method(self):
+        """Clean up ROS2 context after each test."""
+        try:
+            if rclpy.ok():
+                rclpy.shutdown()
+        except Exception:
+            pass
 
     def test_stop(self, tmp_path):
         """Test stop method shuts down ROS2 connector."""

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+import os
 from pathlib import Path
 
 import streamlit as st
@@ -35,6 +37,8 @@ from rai_sim.o3de.o3de_bridge import (
     O3DExROS2SimulationConfig,
 )
 from rai_sim.simulation_bridge import SceneConfig
+
+logger = logging.getLogger(__name__)
 
 
 def launch_description():
@@ -62,6 +66,9 @@ def launch_description():
                 "/launch/openset.launch.py",
             ]
         ),
+        launch_arguments={
+            "enable_legacy_service_names": "true",  # Enable both legacy and new service names for v1/v2 compatibility
+        }.items(),
     )
 
     return LaunchDescription(
@@ -74,16 +81,32 @@ def launch_description():
 
 
 @st.cache_resource
-def initialize_graph():
-    agent, camera_tool = create_agent()
+def initialize_graph(version: str):
+    agent, camera_tool = create_agent(version=version)
     return agent, camera_tool
 
 
 @st.cache_resource
-def initialize_o3de(scenario_path: str, o3de_config_path: str):
+def initialize_o3de(
+    scenario_path: str, o3de_config_path: str, agent_version: str = "v2"
+):
     simulation_config = O3DExROS2SimulationConfig.load_config(
         config_path=Path(o3de_config_path)
     )
+
+    # Adjust required services based on agent version
+    # v1 uses legacy service names, v2 uses new service names
+    if agent_version == "v2":
+        # Replace legacy service names with new ones for v2
+        services = simulation_config.required_robotic_ros2_interfaces["services"]
+        services = [
+            "/detection" if s == "/grounding_dino_classify" else s for s in services
+        ]
+        services = [
+            "/segmentation" if s == "/grounded_sam_segment" else s for s in services
+        ]
+        simulation_config.required_robotic_ros2_interfaces["services"] = services
+
     scene_config = SceneConfig.load_base_config(Path(scenario_path))
     scenario = Scenario(
         task=None,
@@ -142,6 +165,9 @@ def main(o3de_config_path: str):
 
     # Layout selection in sidebar
     st.sidebar.header("Configuration")
+
+    # Agent version from environment variable
+    agent_version = os.getenv("AGENT_VERSION", "v2")
 
     # Get available scenarios for layout selection
     levels = ["medium", "hard", "very_hard"]
@@ -260,19 +286,31 @@ def main(o3de_config_path: str):
         else:
             st.sidebar.warning("Demo not initialized yet")
 
+    # Clear conversation history button - resets cached tool results
+    # This forces the agent to query object positions fresh for each new task
+    # instead of using cached ToolMessage results from previous interactions
+    if st.sidebar.button(
+        "Clear Conversation History", help="Clear all previous tool calls and messages"
+    ):
+        st.session_state["messages"] = [
+            AIMessage(content="Hi! I am a robotic arm. What can I do for you?")
+        ]
+        st.rerun()
+
     if "o3de" not in st.session_state:
         selected_scenario_path = get_scenario_path(scenarios, scenario)
         if selected_scenario_path is None:
             st.error(f"Could not find scenario: {scenario}")
             st.stop()
         o3de, initial_scenario = initialize_o3de(
-            selected_scenario_path, o3de_config_path
+            selected_scenario_path, o3de_config_path, agent_version=agent_version
         )
         st.session_state["o3de"] = o3de
         st.session_state["current_scenario"] = initial_scenario
 
     if "graph" not in st.session_state:
-        graph, camera_tool = initialize_graph()
+        logger.info(f"Initializing agent version: {agent_version}")
+        graph, camera_tool = initialize_graph(version=agent_version)
         st.session_state["graph"] = graph
         st.session_state["camera_tool"] = camera_tool
 

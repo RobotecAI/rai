@@ -12,6 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""ROS2 node component that subscribes to camera images, calls detection services, and publishes detections.
+
+Architectural Note:
+This belongs in `components/` (not `services/`) because it's a client component:
+- Services expose ROS2 services (server-side, e.g., DetectionService)
+- Components are client-side: subscribe/publish topics, call services
+This node subscribes to camera topics, calls detection services, and publishes results - it does not expose a service.
+"""
+
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -19,20 +28,19 @@ from typing import Dict, List, Optional, Tuple
 import rclpy
 import yaml
 from cv_bridge import CvBridge
-from rai.communication.ros2 import ROS2Connector
+from rai.communication.ros2 import ROS2Connector, ROS2ServiceError
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import CameraInfo, Image
 
 from rai_interfaces.msg import RAIDetectionArray
 from rai_interfaces.srv import RAIGroundingDino
-from rai_semap.ros2.perception_utils import enhance_detection_with_3d_pose
+from rai_perception.components.perception_utils import enhance_detection_with_3d_pose
+from rai_perception.components.service_utils import (
+    check_service_available,
+)
 
 
-# NOTE: This module contains perception layer logic that may belong to rai_perception.
-# It performs object detection and 3D pose computation, which are general perception
-# tasks not specific to semantic mapping. Consider moving to rai_perception when
-# that package has ROS2 node infrastructure in place.
 class DetectionPublisher:
     """ROS2 node that subscribes to camera images, calls DINO service, and publishes detections.
 
@@ -63,9 +71,9 @@ class DetectionPublisher:
 
     def _initialize_parameters(self):
         """Initialize ROS2 parameters from YAML files."""
-        # Get directory containing this file
-        current_dir = Path(__file__).parent
-        config_dir = current_dir / "config"
+        # Get config directory (configs folder at package root)
+        package_root = Path(__file__).parent.parent
+        config_dir = package_root / "configs"
 
         # Declare config file path parameters first
         config_params = [
@@ -145,7 +153,7 @@ class DetectionPublisher:
             ),
             (
                 "dino_service",
-                detection_pub_params.get("dino_service", "/grounding_dino_classify"),
+                detection_pub_params.get("dino_service", "/detection"),
                 ParameterType.PARAMETER_STRING,
                 "GroundingDINO service name",
             ),
@@ -285,25 +293,26 @@ class DetectionPublisher:
     def _initialize_clients(self):
         """Initialize service clients.
 
-        Note: We use self.connector.node.create_client() directly instead of ROS2Connector's
-        service_call() because we need async service calls (call_async) for non-blocking
-        detection processing. The connector's service_call() is synchronous and designed
-        for the connector's message wrapper system.
+        Note: We use create_service_client from service_utils but create the client
+        without waiting during initialization. The client supports async service calls
+        (call_async) for non-blocking detection processing.
         """
         dino_service = self._get_string_parameter("dino_service")
+        self.connector.node.get_logger().info(
+            f"Checking DINO service availability: {dino_service}"
+        )
+        # Check availability without blocking during initialization
+        if check_service_available(self.connector, dino_service, timeout_sec=0.1):
+            self.connector.node.get_logger().info(f"DINO service ready: {dino_service}")
+        else:
+            self.connector.node.get_logger().warning(
+                f"DINO service not available: {dino_service}. "
+                "Will check again before use."
+            )
+        # Create client without waiting - _process_image() will ensure it's ready
         self.dino_client = self.connector.node.create_client(
             RAIGroundingDino, dino_service
         )
-        self.connector.node.get_logger().info(
-            f"Waiting for DINO service: {dino_service}"
-        )
-        # Use short timeout - _process_image() will check again before actual use
-        if not self.dino_client.wait_for_service(timeout_sec=0.1):
-            self.connector.node.get_logger().warning(
-                f"DINO service not available: {dino_service}"
-            )
-        else:
-            self.connector.node.get_logger().info(f"DINO service ready: {dino_service}")
 
     def _initialize_subscriptions(self):
         """Initialize ROS2 subscriptions."""
@@ -387,15 +396,25 @@ class DetectionPublisher:
 
         self.last_image = msg
         self.connector.node.get_logger().debug("Processing camera image...")
-        self._process_image(msg)
+        try:
+            self._process_image(msg)
+        except ROS2ServiceError as e:
+            self.connector.node.get_logger().warning(
+                f"Failed to process image: {e.service_name}. {e.suggestion}"
+            )
+            return
 
     def _process_image(self, image_msg: Image):
         """Call DINO service and publish detections."""
-        if not self.dino_client.wait_for_service(timeout_sec=0.1):
-            self.connector.node.get_logger().warning(
-                "DINO service not ready, skipping detection"
+        dino_service = self._get_string_parameter("dino_service")
+        # Ensure service is available before use
+        if not check_service_available(self.connector, dino_service, timeout_sec=0.1):
+            raise ROS2ServiceError(
+                service_name=dino_service,
+                timeout_sec=0.1,
+                service_state="unavailable",
+                suggestion="DINO service not ready. Check if detection service is running.",
             )
-            return
 
         detection_classes_str = self._get_string_parameter("detection_classes")
         class_names, class_thresholds = self._parse_detection_classes(

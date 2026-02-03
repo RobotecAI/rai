@@ -9,54 +9,36 @@
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the specific language governing permissions and
+# See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Base test class for GDBoxer - shared test logic for algorithms and vision_markup."""
+
 import time
+from abc import ABC, abstractmethod
 from unittest.mock import MagicMock, patch
 
-import numpy as np
 import rclpy
-from rai_perception.vision_markup.boxer import Box, GDBoxer
-from rclpy.time import Time
 from sensor_msgs.msg import Image
-from vision_msgs.msg import Detection2D
+
+from tests.rai_perception.algorithms.test_utils import (
+    create_mock_image_array,
+    create_test_weights_file,
+)
 
 
-class TestBox:
-    """Test cases for Box class."""
+class TestGDBoxerBase(ABC):
+    """Base test class for GDBoxer - shared test logic."""
 
-    def test_box_initialization(self):
-        """Test Box initialization."""
-        box = Box((50.0, 50.0), 40.0, 40.0, "dinosaur", 0.9)
+    @abstractmethod
+    def get_boxer_class(self):
+        """Return the GDBoxer class to test (from algorithms or vision_markup)."""
+        pass
 
-        assert box.center == (50.0, 50.0)
-        assert box.size_x == 40.0
-        assert box.size_y == 40.0
-        assert box.phrase == "dinosaur"
-        assert box.confidence == 0.9
-
-    def test_box_to_detection_msg(self):
-        """Test Box conversion to Detection2D message."""
-        box = Box((50.0, 50.0), 40.0, 40.0, "dinosaur", 0.9)
-
-        class_dict = {"dinosaur": 0, "dragon": 1}
-        timestamp = Time()
-
-        detection = box.to_detection_msg(class_dict, timestamp)
-
-        assert isinstance(detection, Detection2D)
-        assert detection.bbox.center.position.x == 50.0
-        assert detection.bbox.center.position.y == 50.0
-        assert detection.bbox.size_x == 40.0
-        assert detection.bbox.size_y == 40.0
-        assert detection.results[0].hypothesis.class_id == "dinosaur"
-        assert detection.results[0].hypothesis.score == 0.9
-        assert detection.header.stamp == timestamp.to_msg()
-
-
-class TestGDBoxer:
-    """Test cases for GDBoxer class."""
+    @abstractmethod
+    def get_patch_path(self, target):
+        """Return the patch path for the given target (algorithms or vision_markup)."""
+        pass
 
     def setup_method(self):
         """Initialize ROS2 before tests that use Time() or ROS2 messages."""
@@ -67,20 +49,18 @@ class TestGDBoxer:
         """Clean up ROS2 context after each test to prevent thread exceptions."""
         try:
             if rclpy.ok():
-                # Give any executor threads a moment to finish before shutting down
                 time.sleep(0.1)
                 rclpy.shutdown()
         except Exception:
-            # Ignore errors during shutdown - thread may have already been cleaned up
             pass
 
     def test_gdboxer_initialization(self, tmp_path):
-        """Test GDBoxer initialization with use_cuda=True to verify model is always initialized."""
-        weights_path = tmp_path / "weights.pth"
-        weights_path.parent.mkdir(parents=True, exist_ok=True)
-        weights_path.write_bytes(b"test")
+        """Test GDBoxer initialization with use_cuda=True."""
+        weights_path = create_test_weights_file(tmp_path)
+        GDBoxer = self.get_boxer_class()
+        patch_path = self.get_patch_path("Model")
 
-        with patch("rai_perception.vision_markup.boxer.Model") as mock_model:
+        with patch(patch_path) as mock_model:
             mock_model_instance = MagicMock()
             mock_model.return_value = mock_model_instance
 
@@ -92,16 +72,15 @@ class TestGDBoxer:
             mock_model.assert_called_once()
 
     def test_gdboxer_initialization_use_cuda_false(self, tmp_path):
-        """Test GDBoxer initialization with use_cuda=False to verify CPU device selection."""
-        weights_path = tmp_path / "weights.pth"
-        weights_path.parent.mkdir(parents=True, exist_ok=True)
-        weights_path.write_bytes(b"test")
+        """Test GDBoxer initialization with use_cuda=False."""
+        weights_path = create_test_weights_file(tmp_path)
+        GDBoxer = self.get_boxer_class()
+        patch_path = self.get_patch_path("Model")
+        logger_path = self.get_patch_path("logging.getLogger")
 
         with (
-            patch("rai_perception.vision_markup.boxer.Model") as mock_model,
-            patch(
-                "rai_perception.vision_markup.boxer.logging.getLogger"
-            ) as mock_get_logger,
+            patch(patch_path) as mock_model,
+            patch(logger_path) as mock_get_logger,
         ):
             mock_model_instance = MagicMock()
             mock_model.return_value = mock_model_instance
@@ -121,32 +100,28 @@ class TestGDBoxer:
             mock_logger.warning.assert_not_called()
 
     def test_gdboxer_get_boxes(self, tmp_path):
-        """Test GDBoxer get_boxes method with use_cuda=True to verify model is initialized."""
-        weights_path = tmp_path / "weights.pth"
-        weights_path.parent.mkdir(parents=True, exist_ok=True)
-        weights_path.write_bytes(b"test")
+        """Test GDBoxer get_boxes method."""
+        weights_path = create_test_weights_file(tmp_path)
+        GDBoxer = self.get_boxer_class()
+        model_patch = self.get_patch_path("Model")
+        bridge_patch = self.get_patch_path("CvBridge")
 
         with (
-            patch("rai_perception.vision_markup.boxer.Model") as mock_model,
-            patch("rai_perception.vision_markup.boxer.CvBridge") as mock_bridge,
+            patch(model_patch) as mock_model,
+            patch(bridge_patch) as mock_bridge,
         ):
             mock_model_instance = MagicMock()
             mock_model.return_value = mock_model_instance
 
-            # Mock predictions
             mock_predictions = MagicMock()
             mock_predictions.xyxy = [[10, 10, 50, 50], [60, 60, 90, 90]]
             mock_predictions.class_id = [0, 1]
             mock_predictions.confidence = [0.9, 0.8]
             mock_model_instance.predict_with_classes.return_value = mock_predictions
 
-            # Mock bridge
             mock_bridge_instance = MagicMock()
             mock_bridge.return_value = mock_bridge_instance
-            # Return a valid numpy array (BGR format) that cv2.cvtColor can process
-            mock_bridge_instance.imgmsg_to_cv2.return_value = np.zeros(
-                (100, 100, 3), dtype=np.uint8
-            )
+            mock_bridge_instance.imgmsg_to_cv2.return_value = create_mock_image_array()
 
             boxer = GDBoxer(str(weights_path), use_cuda=True)
 
@@ -163,13 +138,14 @@ class TestGDBoxer:
 
     def test_gdboxer_get_boxes_empty(self, tmp_path):
         """Test GDBoxer get_boxes with no detections."""
-        weights_path = tmp_path / "weights.pth"
-        weights_path.parent.mkdir(parents=True, exist_ok=True)
-        weights_path.write_bytes(b"test")
+        weights_path = create_test_weights_file(tmp_path)
+        GDBoxer = self.get_boxer_class()
+        model_patch = self.get_patch_path("Model")
+        bridge_patch = self.get_patch_path("CvBridge")
 
         with (
-            patch("rai_perception.vision_markup.boxer.Model") as mock_model,
-            patch("rai_perception.vision_markup.boxer.CvBridge") as mock_bridge,
+            patch(model_patch) as mock_model,
+            patch(bridge_patch) as mock_bridge,
         ):
             mock_model_instance = MagicMock()
             mock_model.return_value = mock_model_instance
@@ -180,10 +156,7 @@ class TestGDBoxer:
 
             mock_bridge_instance = MagicMock()
             mock_bridge.return_value = mock_bridge_instance
-            # Return a valid numpy array (BGR format) that cv2.cvtColor can process
-            mock_bridge_instance.imgmsg_to_cv2.return_value = np.zeros(
-                (100, 100, 3), dtype=np.uint8
-            )
+            mock_bridge_instance.imgmsg_to_cv2.return_value = create_mock_image_array()
 
             boxer = GDBoxer(str(weights_path), use_cuda=False)
 

@@ -32,6 +32,13 @@ def generate_launch_description():
         description="Path to the game launcher executable",
     )
 
+    # Declare argument for legacy service names (forwarded to openset.launch.py)
+    enable_legacy_arg = DeclareLaunchArgument(
+        "enable_legacy_service_names",
+        default_value="true",
+        description="Enable legacy service names for backward compatibility (default: true)",
+    )
+
     launch_game_launcher = ExecuteProcess(
         cmd=[
             LaunchConfiguration("game_launcher"),
@@ -64,11 +71,17 @@ def generate_launch_description():
                 "/launch/openset.launch.py",
             ]
         ),
+        launch_arguments={
+            "enable_legacy_service_names": LaunchConfiguration(
+                "enable_legacy_service_names"
+            ),
+        }.items(),
     )
 
     return LaunchDescription(
         [
             game_launcher_arg,
+            enable_legacy_arg,
             launch_game_launcher,
             launch_openset,
             launch_moveit,

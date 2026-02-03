@@ -1,0 +1,179 @@
+# Copyright (C) 2025 Robotec.AI
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Detection service with algorithm registry support.
+
+This service can switch detection algorithms via the model registry (reads model_name
+from ROS2 parameters), but the ROS2 service interface is currently hardcoded to
+GroundingDINO (RAIGroundingDino service type, box_threshold/text_threshold parameters).
+
+Model support: Currently model-specific (GroundingDINO). For future model-agnostic
+support, a generic RAIDetection service interface would be needed. Alternatively,
+model-specific services can be created for each model (e.g., YoloDetectionService).
+See MIGRATION.md for details.
+"""
+
+from pathlib import Path
+from typing import Optional
+
+from rai.communication.ros2 import ROS2Connector
+
+from rai_interfaces.srv import RAIGroundingDino
+from rai_perception.models.detection import get_model
+from rai_perception.services.base_vision_service import BaseVisionService
+
+
+class DetectionService(BaseVisionService):
+    """Detection service with algorithm registry support.
+
+    Note: Service interface is still coupled to GroundingDINO (RAIGroundingDino service type,
+    box_threshold/text_threshold parameters). Algorithm switching via model_name parameter
+    only changes the implementation, not the interface.
+
+    Reads ROS2 parameters:
+    - model_name: Detection algorithm to use (default: "grounding_dino")
+    - service_name: ROS2 service name to expose (default: "/detection")
+    - enable_legacy_service_names: Register legacy service name "/grounding_dino_classify"
+      for backward compatibility (default: True)
+    """
+
+    WEIGHTS_URL = "https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth"
+    WEIGHTS_FILENAME = "groundingdino_swint_ogc.pth"
+
+    def __init__(
+        self,
+        weights_root_path: str | Path = BaseVisionService.DEFAULT_WEIGHTS_ROOT_PATH,
+        ros2_name: str = "detection_service",
+        ros2_connector: Optional[ROS2Connector] = None,
+    ):
+        # TODO: After agents are deprecated, make ros2_connector a required parameter
+        super().__init__(weights_root_path, ros2_name, ros2_connector=ros2_connector)
+        self._initialize_model()
+
+    def _initialize_model(self):
+        """Initialize detection model from registry based on ROS2 parameter."""
+        self._boxer, _ = self._initialize_model_from_registry(
+            get_model, "grounding_dino", "detection"
+        )
+
+    def run(self):
+        """Start the ROS2 service."""
+        service_name = self._get_service_name("/detection")
+        self._create_service(
+            service_name,
+            self._classify_callback,
+            "rai_interfaces/srv/RAIGroundingDino",
+            "Detection",
+        )
+
+        # Register legacy service name for backward compatibility
+        if self._should_register_legacy_name():
+            legacy_service_name = "/grounding_dino_classify"
+            self._create_service(
+                legacy_service_name,
+                self._classify_callback,
+                "rai_interfaces/srv/RAIGroundingDino",
+                "Detection (legacy)",
+            )
+            self.logger.info(
+                f"Legacy service name '{legacy_service_name}' registered for backward compatibility. "
+                f"Consider migrating to '{service_name}'."
+            )
+
+    def _should_register_legacy_name(self) -> bool:
+        """Check if legacy service name should be registered.
+
+        Reads ROS2 parameter: enable_legacy_service_names
+        Default: True (for backward compatibility)
+
+        Returns:
+            True if legacy service name should be registered, False otherwise
+        """
+        from rai.communication.ros2 import get_param_value
+
+        return get_param_value(
+            self.ros2_connector.node,
+            "enable_legacy_service_names",
+            default=True,
+        )
+
+    def _classify_callback(self, request, response: RAIGroundingDino.Response):
+        """Handle detection service requests."""
+        try:
+            # Parse classes first (needed even if image is empty)
+            class_array = request.classes.split(",")
+            class_array = [
+                class_name.strip() for class_name in class_array if class_name.strip()
+            ]
+
+            # Validate image
+            image_data_size = (
+                len(request.source_img.data) if request.source_img.data else 0
+            )
+
+            if not request.source_img.data or image_data_size == 0:
+                self.logger.error("Received empty image data in detection request")
+                ts = self.ros2_connector.node.get_clock().now().to_msg()
+                response.detections.detections = []  # type: ignore
+                response.detections.header.stamp = ts  # type: ignore
+                response.detections.detection_classes = class_array  # type: ignore
+                return response
+
+            class_dict = {class_name: i for i, class_name in enumerate(class_array)}
+
+            if self._boxer is None:
+                raise RuntimeError("Detection model not initialized")
+
+            boxes = self._boxer.get_boxes(
+                request.source_img,
+                class_array,
+                request.box_threshold,
+                request.text_threshold,
+            )
+
+            if boxes is None:
+                boxes = []
+
+            ts = self.ros2_connector.node.get_clock().now().to_msg()
+            detections_list = []
+            for box in boxes:
+                try:
+                    detections_list.append(box.to_detection_msg(class_dict, ts))
+                except Exception as box_error:
+                    self.logger.error(
+                        f"Error converting box to detection message: {box_error}",
+                        exc_info=True,
+                    )
+            response.detections.detections = detections_list  # type: ignore
+            response.detections.header.stamp = ts  # type: ignore
+            response.detections.detection_classes = class_array  # type: ignore
+
+        except Exception as e:
+            self.logger.error(f"Error processing detection request: {e}", exc_info=True)
+            ts = self.ros2_connector.node.get_clock().now().to_msg()
+            # Try to preserve requested classes even on error
+            try:
+                class_array = request.classes.split(",")
+                class_array = [
+                    class_name.strip()
+                    for class_name in class_array
+                    if class_name.strip()
+                ]
+            except Exception:
+                class_array = []
+            response.detections.detections = []  # type: ignore
+            response.detections.header.stamp = ts  # type: ignore
+            response.detections.detection_classes = class_array  # type: ignore
+
+        return response

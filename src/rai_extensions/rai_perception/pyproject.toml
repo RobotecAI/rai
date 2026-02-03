@@ -1,9 +1,9 @@
 [tool.poetry]
 name = "rai-perception"
 # TODO, update the version once it is published to PyPi
-version = "0.1.5"
+version = "0.2.0"
 description = "Package for object detection, segmentation and gripping point detection."
-authors = ["Kajetan Rachwał <kajetan.rachwal@robotec.ai>"]
+authors = ["Maciej Majek <maciej.majek@robotec.ai>", "Julia Jia <juliajster@gmail.com>", "Kajetan Rachwał <kajetan.rachwal@robotec.ai>"]
 readme = "README.md"
 packages = [
     { include = "rai_perception", from = "." },
@@ -16,6 +16,7 @@ torchvision = "^0.18.1"
 rf-groundingdino = "^0.2.0"
 rai-gsam2 = "^1.1.2"
 rai_core = ">=2.0.0.a2,<3.0.0"
+scikit-learn = ">=1.0.0,<1.4.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
