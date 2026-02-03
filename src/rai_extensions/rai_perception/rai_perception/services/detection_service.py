@@ -12,10 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Model-agnostic detection service.
+"""Detection service with algorithm registry support.
 
-It reads the model name from ROS2 parameters and uses the detection model registry
-to dynamically load the appropriate detection algorithm.
+This service can switch detection algorithms via the model registry (reads model_name
+from ROS2 parameters), but the ROS2 service interface is currently hardcoded to
+GroundingDINO (RAIGroundingDino service type, box_threshold/text_threshold parameters).
+
+Model support: Currently model-specific (GroundingDINO). For future model-agnostic
+support, a generic RAIDetection service interface would be needed. Alternatively,
+model-specific services can be created for each model (e.g., YoloDetectionService).
+See MIGRATION.md for details.
 """
 
 from pathlib import Path
@@ -29,16 +35,17 @@ from rai_perception.services.base_vision_service import BaseVisionService
 
 
 class DetectionService(BaseVisionService):
-    """Model-agnostic detection service that uses the detection model registry.
+    """Detection service with algorithm registry support.
+
+    Note: Service interface is still coupled to GroundingDINO (RAIGroundingDino service type,
+    box_threshold/text_threshold parameters). Algorithm switching via model_name parameter
+    only changes the implementation, not the interface.
 
     Reads ROS2 parameters:
-    - model_name: Detection model to use (default: "grounding_dino")
+    - model_name: Detection algorithm to use (default: "grounding_dino")
     - service_name: ROS2 service name to expose (default: "/detection")
     - enable_legacy_service_names: Register legacy service name "/grounding_dino_classify"
       for backward compatibility (default: True)
-
-    Note: Currently uses hardcoded weights for grounding_dino. Future enhancement:
-    move weights URL to registry for full model-agnostic support.
     """
 
     WEIGHTS_URL = "https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth"

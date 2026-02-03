@@ -12,6 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Segmentation and grabbing point tools.
+
+Note: Tools are coupled to GroundingDINO and Grounded SAM interfaces
+(RAIGroundingDino/RAIGroundedSam service types, box_threshold/text_threshold parameters).
+
+Model support: Currently model-specific (GroundingDINO + Grounded SAM). For future
+model-agnostic support, generic RAIDetection/RAISegmentation service interfaces would
+be needed. Alternatively, model-specific tools can be created for each model.
+"""
+
 from typing import Any, List, Sequence, Type
 
 import cv2

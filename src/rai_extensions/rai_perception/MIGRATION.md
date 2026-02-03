@@ -293,6 +293,12 @@ _Benefits:_ Tools and components become model-agnostic. New models only require 
 
 _Note:_ This requires careful evaluation of parameter abstractions, service interface changes, and backward compatibility. The current PR scope is large (120+ files), so this will be addressed in a follow-up PR after merging.
 
+#### Alternative Approach: Model-Specific Services/Tools
+
+_Approach:_ Create separate services and tools for each model (e.g., `GroundingDinoDetectionService`, `YoloDetectionService`, `GroundingDinoDetectionTool`, `YoloDetectionTool`) while keeping shared infrastructure (registry, `BaseVisionService`, utilities).
+
+_Complexity:_ Lower implementation complexity (no parameter abstraction layer), faster to implement but may result in code duplication and require code changes to switch models. Suitable when model count is low (2-3 models) or models have significantly different interfaces.
+
 #### Progressive Evaluation: GetDistanceToObjectsTool
 
 _Measure:_ [Progressive Evaluation](docs/api_design_considerations.md#progressive-evaluation-ability-to-test-partially-completed-code)

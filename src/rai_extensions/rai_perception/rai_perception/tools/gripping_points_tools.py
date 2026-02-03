@@ -12,6 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Tools for extracting 3D gripping points from objects.
+
+Note: Tools depend on PointCloudFromSegmentation component which is coupled to
+GroundingDINO and Grounded SAM interfaces (RAIGroundingDino/RAIGroundedSam service types).
+
+Model support: Currently model-specific (GroundingDINO + Grounded SAM). For future
+model-agnostic support, generic RAIDetection/RAISegmentation service interfaces would
+be needed. Alternatively, model-specific tools/services can be created for each model.
+"""
+
 import logging
 import time
 from typing import Any, Callable, Dict, Optional, Type

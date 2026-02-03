@@ -14,9 +14,12 @@
 
 """Base class for ROS2 vision services.
 
-It reads the model name from ROS2 parameters and uses the vision model registry to dynamically load the appropriate vision algorithm.
+This base class provides infrastructure for algorithm switching via the model registry
+(reads model_name from ROS2 parameters). However, subclasses may still have model-specific
+service interfaces that prevent full model switching.
 
-Note: This class is named "service" (not "agent") to avoid confusion with the RAI agent abstraction (rai.agents.BaseAgent).
+Note: This class is named "service" (not "agent") to avoid confusion with the RAI agent
+abstraction (rai.agents.BaseAgent).
 """
 
 from pathlib import Path

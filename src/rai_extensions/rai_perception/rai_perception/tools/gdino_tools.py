@@ -12,6 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Detection tools for object detection and distance measurement.
+
+Note: Tools are coupled to GroundingDINO interface (RAIGroundingDino service type,
+box_threshold/text_threshold parameters).
+
+Model support: Currently model-specific (GroundingDINO). For future model-agnostic
+support, a generic RAIDetection service interface would be needed. Alternatively,
+model-specific tools can be created for each model (e.g., YoloDetectionTool).
+"""
+
 from typing import Any, Dict, List, NamedTuple, Type
 
 import numpy as np

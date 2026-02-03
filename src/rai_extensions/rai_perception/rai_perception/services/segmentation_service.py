@@ -12,10 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Model-agnostic segmentation service.
+"""Segmentation service with algorithm registry support.
 
-It reads the model name from ROS2 parameters and uses the segmentation model registry
-to dynamically load the appropriate segmentation algorithm.
+This service can switch segmentation algorithms via the model registry (reads model_name
+from ROS2 parameters), but the ROS2 service interface is currently hardcoded to
+Grounded SAM (RAIGroundedSam service type).
+
+Model support: Currently model-specific (Grounded SAM). For future model-agnostic
+support, a generic RAISegmentation service interface would be needed. Alternatively,
+model-specific services can be created for each model.
 """
 
 from pathlib import Path
@@ -31,16 +36,16 @@ from rai_perception.services.base_vision_service import BaseVisionService
 
 
 class SegmentationService(BaseVisionService):
-    """Model-agnostic segmentation service that uses the segmentation model registry.
+    """Segmentation service with algorithm registry support.
+
+    Note: Service interface is still coupled to Grounded SAM (RAIGroundedSam service type).
+    Algorithm switching via model_name parameter only changes the implementation, not the interface.
 
     Reads ROS2 parameters:
-    - model_name: Segmentation model to use (default: "grounded_sam")
+    - model_name: Segmentation algorithm to use (default: "grounded_sam")
     - service_name: ROS2 service name to expose (default: "/segmentation")
     - enable_legacy_service_names: Register legacy service name "/grounded_sam_segment"
       for backward compatibility (default: True)
-
-    Note: Currently uses hardcoded weights for grounded_sam. Future enhancement:
-    move weights URL to registry for full model-agnostic support.
     """
 
     WEIGHTS_URL = (
