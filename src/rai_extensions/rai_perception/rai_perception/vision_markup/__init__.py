@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Robotec.AI
+# Copyright (C) 2025 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,3 +11,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+"""Deprecated: Use rai_perception.algorithms instead.
+
+This module is deprecated and will be removed in a future version.
+All exports delegate to rai_perception.algorithms.
+"""
+
+import warnings
+
+from .boxer import Box, GDBoxer
+from .segmenter import GDSegmenter
+
+warnings.warn(
+    "rai_perception.vision_markup is deprecated. "
+    "Use rai_perception.algorithms instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+__all__ = ["Box", "GDBoxer", "GDSegmenter"]

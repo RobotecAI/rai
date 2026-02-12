@@ -95,9 +95,9 @@ entities:
         z: 0.05
       rotation:
         x: 0.0
-        y: 0.0
+        y: 0.707
         z: 0.0
-        w: 1.0
+        w: 0.707
   - name: blue_cube2
     prefab_name: blue_cube
     pose:

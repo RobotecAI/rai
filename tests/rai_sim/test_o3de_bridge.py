@@ -273,6 +273,77 @@ class TestO3DExROS2Bridge(unittest.TestCase):
         self.bridge._try_service_call.assert_called_once()
         self.assertEqual(names, ["cube", "carrot"])
 
+    @patch("rai_sim.o3de.o3de_bridge.StaticTransformBroadcaster")
+    def test_connect_object_tf_tree_to_world(self, mock_broadcaster_class):
+        """Test that static transform is published from world to object's odom frame."""
+        # Setup mocks
+        mock_broadcaster = MagicMock()
+        mock_broadcaster_class.return_value = mock_broadcaster
+
+        # Use shared utility to create mock clock with proper Time message
+        from tests.communication.ros2 import setup_mock_clock_for_node
+
+        mock_node = MagicMock()
+        self.mock_connector.node = mock_node
+        mock_clock, mock_time = setup_mock_clock_for_node(
+            mock_node, use_time_wrapper=False
+        )
+
+        # Create pose in world frame
+        from geometry_msgs.msg import PoseStamped as ROS2PoseStamped
+
+        pose_in_world = ROS2PoseStamped()
+        pose_in_world.header.frame_id = "world"
+        pose_in_world.pose.position.x = 1.0
+        pose_in_world.pose.position.y = 2.0
+        pose_in_world.pose.position.z = 3.0
+        pose_in_world.pose.orientation.w = 1.0
+
+        # Call the method
+        self.bridge._connect_object_tf_tree_to_world(
+            self.test_spawned_entity, pose_in_world
+        )
+
+        # Verify broadcaster was created
+        mock_broadcaster_class.assert_called_once_with(mock_node)
+
+        # Verify sendTransform was called
+        self.assertEqual(mock_broadcaster.sendTransform.call_count, 1)
+
+        # Verify transform parameters
+        call_args = mock_broadcaster.sendTransform.call_args[0][0]
+        self.assertEqual(call_args.header.frame_id, "world")
+        self.assertEqual(call_args.child_frame_id, "test_entity1/odom")
+        self.assertEqual(call_args.transform.translation.x, 1.0)
+        self.assertEqual(call_args.transform.translation.y, 2.0)
+        self.assertEqual(call_args.transform.translation.z, 3.0)
+        self.assertEqual(call_args.transform.rotation.w, 1.0)
+
+    def test_clear_scene(self):
+        self.bridge.spawned_entities = [
+            self.test_spawned_entity,
+            SpawnedEntity(
+                id="entity_id_456",
+                name="test_entity2",
+                prefab_name="cube",
+                pose=self.test_spawned_entity.pose,
+            ),
+        ]
+
+        def side_effect(entity):
+            if entity in self.bridge.spawned_entities:
+                self.bridge.spawned_entities.remove(entity)
+
+        self.bridge._despawn_entity = MagicMock(side_effect=side_effect)
+
+        # Call clear_scene
+        self.bridge.clear_scene()
+
+        # Verify all entities were despawned
+        self.assertEqual(len(self.bridge.spawned_entities), 0)
+        # Verify _despawn_entity was called twice
+        self.assertEqual(self.bridge._despawn_entity.call_count, 2)
+
 
 class TestROS2ConnectorInterface(unittest.TestCase):
     """Tests to ensure the ROS2Connector interface meets the expectations of O3DExROS2Bridge."""

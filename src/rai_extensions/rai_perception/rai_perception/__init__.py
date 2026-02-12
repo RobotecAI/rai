@@ -12,14 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Service names for ROS2 - defined here to avoid circular imports
+GDINO_SERVICE_NAME = "grounding_dino_classify"
+GDINO_NODE_NAME = "grounding_dino_node"
+GSAM_SERVICE_NAME = "grounded_sam_segment"
+GSAM_NODE_NAME = "grounded_sam_node"
 
-from .agents.grounded_sam import GSAM_NODE_NAME, GSAM_SERVICE_NAME, GroundedSamAgent
-from .agents.grounding_dino import (
-    GDINO_NODE_NAME,
-    GDINO_SERVICE_NAME,
-    GroundingDinoAgent,
+from .agents import GroundedSamAgent, GroundingDinoAgent  # noqa: E402
+from .algorithms.point_cloud import depth_to_point_cloud  # noqa: E402
+from .components.gripping_points import (  # noqa: E402
+    GrippingPointEstimator,
+    GrippingPointEstimatorConfig,
+    PointCloudFilter,
+    PointCloudFilterConfig,
+    PointCloudFromSegmentation,
+    PointCloudFromSegmentationConfig,
 )
-from .tools import GetDetectionTool, GetDistanceToObjectsTool
+from .components.topic_utils import (  # noqa: E402
+    discover_camera_topics,
+    wait_for_perception_dependencies,
+)
+from .tools import GetDetectionTool, GetDistanceToObjectsTool  # noqa: E402
+from .tools.gripping_points_tools import (  # noqa: E402
+    GetObjectGrippingPointsTool,
+    GetObjectGrippingPointsToolInput,
+)
 
 __all__ = [
     "GDINO_NODE_NAME",
@@ -28,6 +45,17 @@ __all__ = [
     "GSAM_SERVICE_NAME",
     "GetDetectionTool",
     "GetDistanceToObjectsTool",
+    "GetObjectGrippingPointsTool",
+    "GetObjectGrippingPointsToolInput",
+    "GrippingPointEstimator",
+    "GrippingPointEstimatorConfig",
     "GroundedSamAgent",
     "GroundingDinoAgent",
+    "PointCloudFilter",
+    "PointCloudFilterConfig",
+    "PointCloudFromSegmentation",
+    "PointCloudFromSegmentationConfig",
+    "depth_to_point_cloud",
+    "discover_camera_topics",
+    "wait_for_perception_dependencies",
 ]

@@ -251,7 +251,7 @@ class GetROS2MessageInterfaceTool(BaseROS2Tool):
 class GetROS2TransformToolInput(BaseModel):
     target_frame: str = Field(..., description="The target frame")
     source_frame: str = Field(..., description="The source frame")
-    timeout_sec: float = Field(default=5.0, description="The timeout in seconds")
+    timeout_sec: float = Field(default=10.0, description="The timeout in seconds")
 
 
 class GetROS2TransformTool(BaseROS2Tool):

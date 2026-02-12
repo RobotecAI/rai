@@ -20,6 +20,7 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.10, <3.13"
 rai_core = {path = "../rai_core", develop = true}
+rai_perception = {path = "../rai_extensions/rai_perception", develop = true}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.0"

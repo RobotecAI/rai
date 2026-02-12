@@ -13,15 +13,25 @@
 # limitations under the License.
 
 
-import os
-import subprocess
+import warnings
 from pathlib import Path
 
 from rai.agents import BaseAgent
 from rai.communication.ros2 import ROS2Connector
 
+from rai_perception.services.weights import (
+    download_weights,
+    load_model_with_error_handling,
+)
+
 
 class BaseVisionAgent(BaseAgent):
+    """Deprecated: Use BaseVisionService from rai_perception.services instead.
+
+    This base class is deprecated and will be removed in a future version.
+    Use BaseVisionService for ROS2 service nodes (not RAI agents).
+    """
+
     WEIGHTS_URL: str = ""
     DEFAULT_WEIGHTS_ROOT_PATH: Path = Path.home() / Path(".cache/rai/")
     WEIGHTS_DIR_PATH_PART: Path = Path("vision/weights")
@@ -32,6 +42,13 @@ class BaseVisionAgent(BaseAgent):
         weights_root_path: str | Path = DEFAULT_WEIGHTS_ROOT_PATH,
         ros2_name: str = "",
     ):
+        warnings.warn(
+            "BaseVisionAgent is deprecated. Use BaseVisionService from "
+            "rai_perception.services instead. BaseVisionService is for ROS2 service nodes, "
+            "not RAI agents.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if not self.WEIGHTS_FILENAME:
             raise ValueError("WEIGHTS_FILENAME is not set")
         super().__init__()
@@ -42,7 +59,7 @@ class BaseVisionAgent(BaseAgent):
         # create the directory structure
         self.weights_path.parent.mkdir(parents=True, exist_ok=True)
         if not self.weights_path.exists():
-            self._download_weights()
+            download_weights(self.weights_path, self.logger, self.WEIGHTS_URL)
         self.ros2_connector = ROS2Connector(ros2_name, executor_type="single_threaded")
 
     def _load_model_with_error_handling(self, model_class):
@@ -54,62 +71,9 @@ class BaseVisionAgent(BaseAgent):
         Returns:
             The loaded model instance
         """
-        try:
-            return model_class(self.weights_path)
-        except RuntimeError as e:
-            self.logger.error(f"Could not load model: {e}")
-            if "PytorchStreamReader" in str(e):
-                self.logger.error("The weights might be corrupted. Redownloading...")
-                self._remove_weights()
-                self._download_weights()
-                return model_class(self.weights_path)
-            else:
-                raise e
-
-    def _download_weights(self):
-        self.logger.info(
-            f"Downloading weights from {self.WEIGHTS_URL} to {self.weights_path}"
+        return load_model_with_error_handling(
+            model_class, self.weights_path, self.logger, self.WEIGHTS_URL
         )
-        try:
-            subprocess.run(
-                [
-                    "wget",
-                    self.WEIGHTS_URL,
-                    "-O",
-                    str(self.weights_path),
-                    "--progress=dot:giga",
-                ],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-            # Verify file exists and has reasonable size (> 1MB)
-            if not os.path.exists(self.weights_path):
-                raise Exception(f"Downloaded file not found at {self.weights_path}")
-            file_size = os.path.getsize(self.weights_path)
-            if file_size < 1024 * 1024:
-                raise Exception(
-                    f"Downloaded file is too small ({file_size} bytes), expected > 1MB"
-                )
-            self.logger.info(
-                f"Successfully downloaded weights ({file_size / (1024 * 1024):.2f} MB)"
-            )
-        except subprocess.CalledProcessError as e:
-            error_msg = e.stderr if e.stderr else e.stdout if e.stdout else str(e)
-            self.logger.error(f"wget failed: {error_msg}")
-            # Clean up partial download
-            if os.path.exists(self.weights_path):
-                os.remove(self.weights_path)
-            raise Exception(f"Could not download weights: {error_msg}")
-        except Exception as e:
-            self.logger.error(f"Could not download weights: {e}")
-            # Clean up partial download
-            if os.path.exists(self.weights_path):
-                os.remove(self.weights_path)
-            raise
-
-    def _remove_weights(self):
-        os.remove(self.weights_path)
 
     def stop(self):
         self.ros2_connector.shutdown()

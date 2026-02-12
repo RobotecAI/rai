@@ -16,8 +16,6 @@ import pytest
 
 try:
     import rclpy  # noqa: F401
-
-    _ = rclpy  # noqa: F841
 except ImportError:
     pytest.skip("ROS2 is not installed", allow_module_level=True)
 
@@ -48,6 +46,7 @@ def test_action_call_tool(ros_setup: None, request: pytest.FixtureRequest) -> No
     executors, threads = multi_threaded_spinner([server])
     tool = StartROS2ActionTool(connector=connector)
     try:
+        time.sleep(0.2)  # Wait for action server to be ready
         response = tool._run(  # type: ignore
             action_name=action_name,
             action_type="nav2_msgs/action/NavigateToPose",
@@ -82,6 +81,7 @@ def test_action_call_tool_with_writable_action(
     executors, threads = multi_threaded_spinner([server])
     tool = StartROS2ActionTool(connector=connector, writable=[action_name])
     try:
+        time.sleep(0.2)  # Wait for action server to be ready
         response = tool._run(  # type: ignore
             action_name=action_name,
             action_type="nav2_msgs/action/NavigateToPose",
@@ -101,6 +101,7 @@ def test_cancel_action_tool(ros_setup: None, request: pytest.FixtureRequest) -> 
     start_tool = StartROS2ActionTool(connector=connector)
     cancel_tool = CancelROS2ActionTool(connector=connector)
     try:
+        time.sleep(0.2)  # Wait for action server to be ready
         response = start_tool._run(  # type: ignore
             action_name=action_name,
             action_type="nav2_msgs/action/NavigateToPose",

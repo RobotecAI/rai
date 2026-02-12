@@ -230,7 +230,9 @@ def get_embeddings_model(
         from langchain_openai import OpenAIEmbeddings
 
         model_config = cast(OpenAIConfig, model_config)
-        embeddings = OpenAIEmbeddings(model=model_config.embeddings_model)
+        embeddings = OpenAIEmbeddings(
+            model=model_config.embeddings_model, base_url=model_config.base_url
+        )
         if return_kwargs:
             c = (
                 str(embeddings.__class__)
@@ -241,6 +243,7 @@ def get_embeddings_model(
             return embeddings, {
                 "class": c,
                 "model": model_config.embeddings_model,
+                "base_url": model_config.base_url,
                 "vendor": vendor,
             }
         return embeddings

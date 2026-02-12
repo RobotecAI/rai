@@ -12,7 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from rai_perception.algorithms.point_cloud import depth_to_point_cloud
+from rai_perception.components.gripping_points import (
+    GrippingPointEstimator,
+    GrippingPointEstimatorConfig,
+    PointCloudFilter,
+    PointCloudFilterConfig,
+    PointCloudFromSegmentation,
+    PointCloudFromSegmentationConfig,
+)
+
 from .gdino_tools import DistanceMeasurement, GetDetectionTool, GetDistanceToObjectsTool
+from .gripping_points_tools import (
+    GetObjectGrippingPointsTool,
+    GetObjectGrippingPointsToolInput,
+    GetObjectPositionsTool,
+    GetObjectPositionsToolInput,
+)
 from .segmentation_tools import GetGrabbingPointTool, GetSegmentationTool
 
 __all__ = [
@@ -20,5 +36,17 @@ __all__ = [
     "GetDetectionTool",
     "GetDistanceToObjectsTool",
     "GetGrabbingPointTool",
+    "GetObjectGrippingPointsTool",
+    "GetObjectGrippingPointsToolInput",
+    "GetObjectPositionsTool",
+    "GetObjectPositionsToolInput",
     "GetSegmentationTool",
+    # PCL Detection APIs
+    "GrippingPointEstimator",
+    "GrippingPointEstimatorConfig",
+    "PointCloudFilter",
+    "PointCloudFilterConfig",
+    "PointCloudFromSegmentation",
+    "PointCloudFromSegmentationConfig",
+    "depth_to_point_cloud",
 ]

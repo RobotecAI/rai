@@ -13,20 +13,25 @@
 # limitations under the License.
 
 
-import rclpy
-from rai.agents import wait_for_shutdown
-
-from rai_perception.agents import GroundedSamAgent, GroundingDinoAgent
+import warnings
 
 
 def main():
-    rclpy.init()
-    agent1 = GroundingDinoAgent()
-    agent2 = GroundedSamAgent()
-    agent1.run()
-    agent2.run()
-    wait_for_shutdown([agent1, agent2])
-    rclpy.shutdown()
+    """Deprecated: Use run_perception_services.py instead.
+
+    This script is deprecated and will be removed in a future version.
+    Use 'python -m rai_perception.scripts.run_perception_services' instead.
+    """
+    warnings.warn(
+        "run_perception_agents.py is deprecated. "
+        "Use run_perception_services.py instead. "
+        "This script will be removed in a future version.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    from rai_perception.scripts.run_perception_services import main as services_main
+
+    services_main()
 
 
 if __name__ == "__main__":
