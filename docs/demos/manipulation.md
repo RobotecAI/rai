@@ -99,7 +99,7 @@ manipulation techniques.
 
 1.  Set up docker as outlined in the [docker setup guide](../setup/setup_docker.md).
 
-2.  Build docker manipulaiton demo image:
+2.  Build docker manipulation demo image:
 
     ```shell
     docker build -t rai-manipulation-demo:jazzy --build-arg ROS_DISTRO=jazzy -f docker/Dockerfile.manipulation-demo .
@@ -111,7 +111,7 @@ manipulation techniques.
     xhost +local:root
     ```
 
-4.  Set the `$OPENAI_API_KEY` environmental variable.
+4.  Set the `$OPENAI_API_KEY` environment variable.
 
     ```shell
     export OPENAI_API_KEY=YOUR_OPEN_AI_API_KEY
@@ -124,7 +124,7 @@ manipulation techniques.
 5.  Run the docker container with the following command:
 
     ```shell
-    docker run -p 8501:8501 -e DISPLAY=$DISPLAY -e OPENAI_API_KEY=$OPENAI_API_KEY -v /tmp/.X11-unix:/tmp/.X11-unix --gpus all -it rai-manipulation-demo:jazzy # or rai:humble
+    docker run -p 8501:8501 -e DISPLAY=$DISPLAY -e OPENAI_API_KEY=$OPENAI_API_KEY -v /tmp/.X11-unix:/tmp/.X11-unix --gpus all -it rai-manipulation-demo:jazzy # or rai-manipulation-demo:humble
     ```
 
     !!! tip "NVIDIA Container Toolkit"
