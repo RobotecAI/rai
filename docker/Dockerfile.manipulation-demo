@@ -1,0 +1,35 @@
+# Copyright (C) 2024 Robotec.AI
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+ARG ROS_DISTRO=jazzy
+FROM rai:${ROS_DISTRO}
+
+# Import additional repos for demo
+RUN vcs import < demos.repos
+
+# Install ROS dependencies for newly imported repos
+RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && \
+    rosdep install --from-paths src --ignore-src -r -y'
+
+RUN ./scripts/download_demo.sh manipulation
+
+# Install all dependencies
+RUN --mount=type=cache,target=/root/.cache/pypoetry/cache \
+    --mount=type=cache,target=/root/.cache/pypoetry/artifacts \
+    /bin/bash -c 'poetry install --with perception,simbench -v'
+
+RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && colcon build --symlink-install'
+
+RUN /bin/bash -c ". setup_shell.sh && poetry run python src/rai_extensions/rai_perception/rai_perception/scripts/download_weights.py"
+ENTRYPOINT ["bash", "-c", ". setup_shell.sh && streamlit run examples/manipulation-demo-streamlit.py \"$@\""]
