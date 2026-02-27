@@ -66,7 +66,7 @@ Try RAI yourself with these demos:
 | Mission and obstacle reasoning in orchards | Autonomous tractor | In a beautiful scene of a virtual orchard, RAI goes beyond obstacle detection to analyze best course of action for a given unexpected situation. | [link](https://robotecai.github.io/rai/demos/agriculture/) |
 | Manipulation tasks with natural language | Robot Arm (Franka Panda) | Complete flexible manipulation tasks thanks to RAI and Grounded SAM 2 | [link](https://robotecai.github.io/rai/demos/manipulation/) |
 | Autonomous mobile robot demo | Husarion ROSbot XL | Demonstrate RAI's interaction with an autonomous mobile robot platform for navigation and control | [link](https://robotecai.github.io/rai/demos/rosbot_xl/) |
-| Agentic mobile manipulator | RB-KAIROS  | A comprehensive demo with on-board execution | [link](https://github.com/RobotecAI/agentic-mobile-manipulator) |
+| Agentic mobile manipulator | RB-KAIROS | A comprehensive demo with on-board execution | [link](https://github.com/RobotecAI/agentic-mobile-manipulator) |
 
 ## Community
 
