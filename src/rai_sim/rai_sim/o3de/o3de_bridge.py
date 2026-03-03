@@ -314,26 +314,26 @@ class O3DExROS2Bridge(SimulationBridge):
                 if action not in available_actions_names
             ]
 
-            if missing_services:
-                self.logger.warning(
-                    f"Waiting for missing services {missing_services} out of required services: {required_services}"
-                )
-
-            if missing_topics:
-                self.logger.warning(
-                    f"Waiting for missing topics: {missing_topics} out of required topics: {required_topics}"
-                )
-
-            if missing_actions:
-                self.logger.warning(
-                    f"Waiting for missing actions: {missing_actions} out of required actions: {required_actions}"
-                )
-
-            if not (missing_services or missing_topics or missing_actions):
-                self.logger.info("All required ROS2 stack components are available.")
-                return True
-
-            time.sleep(0.5)
+            if missing_services or missing_topics or missing_actions:
+                missing_info = []
+                if missing_services:
+                    missing_info.append(f"services: {missing_services}")
+                if missing_topics:
+                    missing_info.append(f"topics: {missing_topics}")
+                if missing_actions:
+                    missing_info.append(f"actions: {missing_actions}")
+                
+                # Only log every 10th retry (5 seconds) to avoid spam, or on the first try
+                if i % 10 == 0:
+                    self.logger.warning(
+                        f"Still waiting for ROS2 components to initialize. Missing {', '.join(missing_info)}. "
+                        "Note: perception services like detection and segmentation may take several minutes to download weights on their first run."
+                    )
+                time.sleep(0.5)
+                continue
+            
+            self.logger.info("All required ROS2 stack components are available.")
+            return True
 
         self.logger.error(
             "Maximum number of retries reached. Required ROS2 stack components are not fully available."
