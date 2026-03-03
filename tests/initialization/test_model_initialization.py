@@ -42,6 +42,11 @@ complex_model = "llama-complex"
 embeddings_model = "llama-embed"
 base_url = "http://localhost:11434"
 
+[google]
+simple_model = "gemini-3-flash"
+complex_model = "gemini-3-pro"
+embeddings_model = "text-embedding-004"
+
 [tracing]
 project = "rai"
 
