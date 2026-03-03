@@ -62,6 +62,12 @@ class OpenAIConfig(ModelConfig):
 
 
 @dataclass
+class GoogleConfig(ModelConfig):
+    # API key is read from GOOGLE_API_KEY env var by ChatGoogleGenerativeAI
+    pass
+
+
+@dataclass
 class LangfuseConfig:
     use_langfuse: bool
     host: str
@@ -86,6 +92,7 @@ class RAIConfig:
     aws: AWSConfig
     openai: OpenAIConfig
     ollama: OllamaConfig
+    google: GoogleConfig
     tracing: TracingConfig
 
 
@@ -101,6 +108,7 @@ def load_config(config_path: Optional[str] = None) -> RAIConfig:
         aws=AWSConfig(**config_dict["aws"]),
         openai=OpenAIConfig(**config_dict["openai"]),
         ollama=OllamaConfig(**config_dict["ollama"]),
+        google=GoogleConfig(**config_dict["google"]),
         tracing=TracingConfig(
             project=config_dict["tracing"]["project"],
             langfuse=LangfuseConfig(**config_dict["tracing"]["langfuse"]),
@@ -130,7 +138,7 @@ def get_llm_model(
     vendor: Optional[str] = None,
     config_path: Optional[str] = None,
     **kwargs: Any,
-) -> ChatOpenAI | ChatBedrock | ChatOllama:
+) -> ChatOpenAI | ChatBedrock | ChatOllama | Any:
     model_config, vendor = get_llm_model_config_and_vendor(
         model_type, vendor, config_path
     )
@@ -157,6 +165,11 @@ def get_llm_model(
 
         model_config = cast(OllamaConfig, model_config)
         return ChatOllama(model=model, base_url=model_config.base_url, **kwargs)
+    elif vendor == "google":
+        from langchain_google_genai import ChatGoogleGenerativeAI
+
+        model_config = cast(GoogleConfig, model_config)
+        return ChatGoogleGenerativeAI(model=model, **kwargs)
     else:
         raise ValueError(f"Unknown LLM vendor: {vendor}")
 
@@ -166,7 +179,7 @@ def get_llm_model_direct(
     vendor: str,
     config_path: Optional[str] = None,
     **kwargs: Any,
-) -> ChatOpenAI | ChatBedrock | ChatOllama:
+) -> ChatOpenAI | ChatBedrock | ChatOllama | Any:
     config = load_config(config_path)
     model_config = getattr(config, vendor)
 
@@ -194,6 +207,11 @@ def get_llm_model_direct(
         logging.getLogger("httpx").setLevel(logging.WARNING)
         model_config = cast(OllamaConfig, model_config)
         return ChatOllama(model=model_name, base_url=model_config.base_url, **kwargs)
+    elif vendor == "google":
+        from langchain_google_genai import ChatGoogleGenerativeAI
+
+        model_config = cast(GoogleConfig, model_config)
+        return ChatGoogleGenerativeAI(model=model_name, **kwargs)
     else:
         raise ValueError(f"Unknown LLM vendor: {vendor}")
 
@@ -270,6 +288,24 @@ def get_embeddings_model(
                 "class": c,
                 "model": model_config.embeddings_model,
                 "base_url": model_config.base_url,
+                "vendor": vendor,
+            }
+        return embeddings
+    elif vendor == "google":
+        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
+        model_config = cast(GoogleConfig, model_config)
+        embeddings = GoogleGenerativeAIEmbeddings(model=model_config.embeddings_model)
+        if return_kwargs:
+            c = (
+                str(embeddings.__class__)
+                .strip("<>")
+                .replace("class '", "")
+                .replace("'", "")
+            )
+            return embeddings, {
+                "class": c,
+                "model": model_config.embeddings_model,
                 "vendor": vendor,
             }
         return embeddings
