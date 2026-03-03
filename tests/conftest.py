@@ -69,6 +69,11 @@ complex_model = "llama2"
 embeddings_model = "llama2"
 base_url = "http://localhost:11434"
 
+[google]
+simple_model = "gemini-3-flash"
+complex_model = "gemini-3-pro"
+embeddings_model = "text-embedding-004"
+
 [tracing]
 project = "test-project"
 
@@ -137,6 +142,11 @@ simple_model = "llama2"
 complex_model = "llama2"
 embeddings_model = "llama2"
 base_url = "http://localhost:11434"
+
+[google]
+simple_model = "gemini-3-flash"
+complex_model = "gemini-3-pro"
+embeddings_model = "text-embedding-004"
 """
 
         f.write(config_content)
