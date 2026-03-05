@@ -322,7 +322,7 @@ class O3DExROS2Bridge(SimulationBridge):
                     missing_info.append(f"topics: {missing_topics}")
                 if missing_actions:
                     missing_info.append(f"actions: {missing_actions}")
-                
+
                 # Only log every 10th retry (5 seconds) to avoid spam, or on the first try
                 if i % 10 == 0:
                     self.logger.warning(
@@ -331,7 +331,7 @@ class O3DExROS2Bridge(SimulationBridge):
                     )
                 time.sleep(0.5)
                 continue
-            
+
             self.logger.info("All required ROS2 stack components are available.")
             return True
 

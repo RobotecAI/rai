@@ -57,14 +57,16 @@ def main():
 
     def init_segmentation():
         nonlocal segmentation_service
-        segmentation_service = SegmentationService(ros2_connector=segmentation_connector)
+        segmentation_service = SegmentationService(
+            ros2_connector=segmentation_connector
+        )
 
     t1 = threading.Thread(target=init_detection)
     t2 = threading.Thread(target=init_segmentation)
 
     t1.start()
     t2.start()
-    
+
     t1.join()
     t2.join()
 
