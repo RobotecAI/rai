@@ -14,6 +14,7 @@
 
 
 import os
+import threading
 
 import rclpy
 from rai.agents import wait_for_shutdown
@@ -46,12 +47,33 @@ def main():
         "enable_legacy_service_names", enable_legacy
     )
 
-    # Services read model_name from ROS2 params (defaults: "grounding_dino", "grounded_sam")
-    detection_service = DetectionService(ros2_connector=detection_connector)
-    segmentation_service = SegmentationService(ros2_connector=segmentation_connector)
+    # Use threading to initialize and download weights concurrently
+    detection_service = None
+    segmentation_service = None
 
-    detection_service.run()
-    segmentation_service.run()
+    def init_detection():
+        nonlocal detection_service
+        detection_service = DetectionService(ros2_connector=detection_connector)
+
+    def init_segmentation():
+        nonlocal segmentation_service
+        segmentation_service = SegmentationService(
+            ros2_connector=segmentation_connector
+        )
+
+    t1 = threading.Thread(target=init_detection)
+    t2 = threading.Thread(target=init_segmentation)
+
+    t1.start()
+    t2.start()
+
+    t1.join()
+    t2.join()
+
+    if detection_service is not None:
+        detection_service.run()
+    if segmentation_service is not None:
+        segmentation_service.run()
 
     wait_for_shutdown([detection_service, segmentation_service])
     rclpy.shutdown()
