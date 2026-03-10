@@ -12,10 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai_perception.agents import GroundedSamAgent, GroundingDinoAgent
+import logging
+
+from rai_perception.services.detection_service import DetectionService
+from rai_perception.services.segmentation_service import SegmentationService
+from rai_perception.services.weights import download_weights
+
+SERVICES = [DetectionService, SegmentationService]
 
 if __name__ == "__main__":
-    agent1 = GroundingDinoAgent()
-    agent2 = GroundedSamAgent()
-    agent1.stop()
-    agent2.stop()
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+
+    for service_class in SERVICES:
+        weights_path = (
+            service_class.DEFAULT_WEIGHTS_ROOT_PATH
+            / service_class.WEIGHTS_DIR_PATH_PART
+            / service_class.WEIGHTS_FILENAME
+        )
+        weights_path.parent.mkdir(parents=True, exist_ok=True)
+        if not weights_path.exists():
+            download_weights(weights_path, logger, service_class.WEIGHTS_URL)
+        else:
+            logger.info(f"Weights already exist at {weights_path}, skipping download.")
