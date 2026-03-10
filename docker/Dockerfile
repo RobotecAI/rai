@@ -75,7 +75,7 @@ RUN apt install -y \
 
 # Install Poetry
 RUN --mount=type=cache,target=/root/.cache/pypoetry/cache curl -sSL https://install.python-poetry.org \
-    | python3 - --version 2.1.3
+    | python3 - --version 2.3.2
 
 ENV PATH="/root/.local/bin:$PATH"
 
