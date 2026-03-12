@@ -221,7 +221,7 @@ def test_get_object_gripping_points_tool_auto_declaration():
                 assert tool.camera_topic == "/camera/rgb/image_raw"
                 assert tool.depth_topic == "/camera/depth/image_raw"
                 assert tool.camera_info_topic == "/camera/rgb/camera_info"
-                assert tool.timeout_sec == 10.0
+                assert tool.timeout_sec == 60.0
                 assert tool.conversion_ratio == 1.0
 
                 # Verify logging occurred
@@ -270,7 +270,7 @@ def test_get_object_gripping_points_tool_auto_declaration():
         assert isinstance(config, dict)
         assert config["target_frame"] == "custom_frame"
         assert config["camera_topic"] == "/custom/camera"
-        assert config["timeout_sec"] == 10.0
+        assert config["timeout_sec"] == 60.0
         assert "detection_service_name" in config
         assert "segmentation_service_name" in config
 

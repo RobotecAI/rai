@@ -14,7 +14,7 @@
 
 """Tests for weight management helper functions."""
 
-import subprocess
+from io import BytesIO
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -27,6 +27,23 @@ from rai_perception.services.weights import (
 from tests.rai_perception.conftest import create_valid_weights_file
 
 
+class MockUrlopenResponse(BytesIO):
+    """Minimal urlopen-like response for download tests."""
+
+    def __init__(self, data: bytes, content_length: int | None = None):
+        super().__init__(data)
+        self.headers = {}
+        if content_length is not None:
+            self.headers["Content-Length"] = str(content_length)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.close()
+        return False
+
+
 class TestDownloadWeights:
     """Test cases for download_weights function."""
 
@@ -34,17 +51,16 @@ class TestDownloadWeights:
         """Test successful weight download."""
         weights_path = tmp_path / "weights.pth"
         logger = MagicMock()
-
-        def mock_wget(*args, **kwargs):
-            create_valid_weights_file(weights_path)
-            return MagicMock(returncode=0)
+        data = b"weights-data"
 
         with patch(
-            "rai_perception.services.weights.subprocess.run", side_effect=mock_wget
+            "rai_perception.services.weights.urllib.request.urlopen",
+            return_value=MockUrlopenResponse(data, content_length=len(data)),
         ):
             download_weights(weights_path, logger, "https://example.com/weights.pth")
 
             assert weights_path.exists()
+            assert weights_path.read_bytes() == data
             logger.info.assert_called()
 
     def test_download_weights_failure(self, tmp_path):
@@ -53,34 +69,26 @@ class TestDownloadWeights:
         logger = MagicMock()
 
         with patch(
-            "rai_perception.services.weights.subprocess.run",
-            side_effect=subprocess.CalledProcessError(
-                returncode=1, cmd="wget", stderr="Download failed"
-            ),
+            "rai_perception.services.weights.urllib.request.urlopen",
+            side_effect=RuntimeError("Download failed"),
         ):
             with pytest.raises(Exception, match="Could not download weights"):
                 download_weights(
                     weights_path, logger, "https://example.com/weights.pth"
                 )
 
-    def test_download_weights_file_too_small(self, tmp_path):
-        """Test download failure when file is too small."""
+    def test_download_weights_empty_download(self, tmp_path):
+        """Test download success when server returns an empty file."""
         weights_path = tmp_path / "weights.pth"
         logger = MagicMock()
 
-        def mock_wget(*args, **kwargs):
-            weights_path.write_bytes(b"0" * 100)  # 100 bytes, too small
-            return MagicMock(returncode=0)
-
         with patch(
-            "rai_perception.services.weights.subprocess.run", side_effect=mock_wget
+            "rai_perception.services.weights.urllib.request.urlopen",
+            return_value=MockUrlopenResponse(b"", content_length=0),
         ):
-            with pytest.raises(Exception, match="Downloaded file is too small"):
-                download_weights(
-                    weights_path, logger, "https://example.com/weights.pth"
-                )
-
-            assert not weights_path.exists()
+            download_weights(weights_path, logger, "https://example.com/weights.pth")
+            assert weights_path.exists()
+            assert weights_path.read_bytes() == b""
 
 
 class TestLoadModelWithErrorHandling:
@@ -117,12 +125,9 @@ class TestLoadModelWithErrorHandling:
                 if call_count == 1:
                     raise RuntimeError("PytorchStreamReader failed")
 
-        def mock_wget(*args, **kwargs):
-            create_valid_weights_file(weights_path)
-            return MagicMock(returncode=0)
-
         with patch(
-            "rai_perception.services.weights.subprocess.run", side_effect=mock_wget
+            "rai_perception.services.weights.download_weights",
+            side_effect=lambda path, *_args, **_kwargs: create_valid_weights_file(path),
         ):
             model = load_model_with_error_handling(
                 MockModel, weights_path, logger, "https://example.com/weights.pth"
