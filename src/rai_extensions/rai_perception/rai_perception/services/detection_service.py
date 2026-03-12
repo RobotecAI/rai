@@ -24,6 +24,7 @@ model-specific services can be created for each model (e.g., YoloDetectionServic
 See MIGRATION.md for details.
 """
 
+import traceback
 from pathlib import Path
 from typing import Optional
 
@@ -152,15 +153,17 @@ class DetectionService(BaseVisionService):
                     detections_list.append(box.to_detection_msg(class_dict, ts))
                 except Exception as box_error:
                     self.logger.error(
-                        f"Error converting box to detection message: {box_error}",
-                        exc_info=True,
+                        f"Error converting box to detection message: {box_error}\n"
+                        + traceback.format_exc()
                     )
             response.detections.detections = detections_list  # type: ignore
             response.detections.header.stamp = ts  # type: ignore
             response.detections.detection_classes = class_array  # type: ignore
 
         except Exception as e:
-            self.logger.error(f"Error processing detection request: {e}", exc_info=True)
+            self.logger.error(
+                f"Error processing detection request: {e}\n" + traceback.format_exc()
+            )
             ts = self.ros2_connector.node.get_clock().now().to_msg()
             # Try to preserve requested classes even on error
             try:

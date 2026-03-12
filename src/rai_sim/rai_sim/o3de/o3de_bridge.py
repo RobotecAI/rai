@@ -275,46 +275,69 @@ class O3DExROS2Bridge(SimulationBridge):
         return SceneState(entities=entities)
 
     def _is_ros2_stack_ready(
-        self, required_ros2_stack: dict[str, List[str]], retries: int = 360
+        self,
+        required_ros2_stack: dict[str, List[str]],
+        stale_timeout: float = 120.0,
+        poll_interval: float = 0.5,
     ) -> bool:
-        for i in range(retries):
+        """Wait until all required ROS2 interfaces are available.
+
+        Instead of a fixed retry count, uses an activity-based stale timeout:
+        the timer resets whenever new interfaces appear, so the wait extends
+        automatically while the stack is still coming up (e.g. downloading
+        perception weights) and times out only when no new interfaces have
+        appeared for *stale_timeout* seconds.
+
+        Args:
+            required_ros2_stack: Dict with keys "services", "topics", "actions".
+            stale_timeout: Seconds of inactivity (no new interfaces) before giving up.
+            poll_interval: Seconds between polls.
+        """
+        seen: Set[str] = set()
+        stale_since = time.monotonic()
+        last_log = time.monotonic()
+        log_interval = 10.0
+
+        while True:
             available_topics = self.connector.get_topics_names_and_types()
             available_services = self.connector.node.get_service_names_and_types()
             available_topics_names = [tp[0] for tp in available_topics]
             available_services_names = [srv[0] for srv in available_services]
 
-            # Extract action names
             available_actions_names: Set[str] = set()
             for service in available_services_names:
                 if "/_action" in service:
-                    action_name = service.split("/_action")[0]
-                    available_actions_names.add(action_name)
+                    available_actions_names.add(service.split("/_action")[0])
+
+            current = (
+                set(available_services_names)
+                | set(available_topics_names)
+                | available_actions_names
+            )
+            if current - seen:
+                stale_since = time.monotonic()
+                seen = current
 
             required_services = required_ros2_stack["services"]
             required_topics = required_ros2_stack["topics"]
             required_actions = required_ros2_stack["actions"]
-            self.logger.info(f"required services: {required_services}")
-            self.logger.info(f"required topics: {required_topics}")
-            self.logger.info(f"required actions: {required_actions}")
-            self.logger.info(f"available actions: {available_actions_names}")
 
             missing_services = [
-                service
-                for service in required_services
-                if service not in available_services_names
+                s for s in required_services if s not in available_services_names
             ]
             missing_topics = [
-                topic
-                for topic in required_topics
-                if topic not in available_topics_names
+                t for t in required_topics if t not in available_topics_names
             ]
             missing_actions = [
-                action
-                for action in required_actions
-                if action not in available_actions_names
+                a for a in required_actions if a not in available_actions_names
             ]
 
-            if missing_services or missing_topics or missing_actions:
+            if not (missing_services or missing_topics or missing_actions):
+                self.logger.info("All required ROS2 stack components are available.")
+                return True
+
+            elapsed_stale = time.monotonic() - stale_since
+            if elapsed_stale >= stale_timeout:
                 missing_info = []
                 if missing_services:
                     missing_info.append(f"services: {missing_services}")
@@ -322,23 +345,29 @@ class O3DExROS2Bridge(SimulationBridge):
                     missing_info.append(f"topics: {missing_topics}")
                 if missing_actions:
                     missing_info.append(f"actions: {missing_actions}")
+                self.logger.error(
+                    f"No new ROS2 interfaces appeared for {stale_timeout:.0f}s. "
+                    f"Required components still missing — {', '.join(missing_info)}"
+                )
+                return False
 
-                # Only log every 10th retry (5 seconds) to avoid spam, or on the first try
-                if i % 10 == 0:
-                    self.logger.warning(
-                        f"Still waiting for ROS2 components to initialize. Missing {', '.join(missing_info)}. "
-                        "Note: perception services like detection and segmentation may take several minutes to download weights on their first run."
-                    )
-                time.sleep(0.5)
-                continue
+            now = time.monotonic()
+            if now - last_log >= log_interval:
+                missing_info = []
+                if missing_services:
+                    missing_info.append(f"services: {missing_services}")
+                if missing_topics:
+                    missing_info.append(f"topics: {missing_topics}")
+                if missing_actions:
+                    missing_info.append(f"actions: {missing_actions}")
+                self.logger.warning(
+                    f"Still waiting for ROS2 components to initialize. Missing {', '.join(missing_info)}. "
+                    "Note: perception services like detection and segmentation may take several minutes "
+                    "to download weights on their first run."
+                )
+                last_log = now
 
-            self.logger.info("All required ROS2 stack components are available.")
-            return True
-
-        self.logger.error(
-            "Maximum number of retries reached. Required ROS2 stack components are not fully available."
-        )
-        return False
+            time.sleep(poll_interval)
 
     def clear_scene(self):
         while self.spawned_entities:

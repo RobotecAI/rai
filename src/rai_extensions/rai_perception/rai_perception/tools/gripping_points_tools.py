@@ -173,7 +173,7 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
     camera_info_topic: str = Field(default="/camera/rgb/camera_info", exclude=True)
     target_frame: str = Field(default="base_link", exclude=True)
     source_frame: str = Field(default="camera_link", exclude=True)
-    timeout_sec: float = Field(default=10.0, exclude=True)
+    timeout_sec: float = Field(default=60.0, exclude=True)
     conversion_ratio: float = Field(
         default=1.0,
         exclude=True,
@@ -438,7 +438,7 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
         )
         self.target_frame = get_param("target_frame", "base_link", str)
         self.source_frame = get_param("source_frame", "camera_link", str)
-        self.timeout_sec = get_param("timeout_sec", 10.0, float)
+        self.timeout_sec = get_param("timeout_sec", 60.0, float)
         self.conversion_ratio = get_param("conversion_ratio", 1.0, float)
 
         # Load optional output format customization parameters
