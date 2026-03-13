@@ -908,11 +908,12 @@ version = "15.0.1"
 description = "Colored terminal output for Python's logging module"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
-groups = ["main", "perception", "semap", "simbench"]
+groups = ["main", "perception", "s2s", "semap", "simbench"]
 files = [
     {file = "coloredlogs-15.0.1-py2.py3-none-any.whl", hash = "sha256:612ee75c546f53e92e70049c9dbfcc18c935a2b9a53b66085ce9ef6a6e5c0934"},
     {file = "coloredlogs-15.0.1.tar.gz", hash = "sha256:7c991aa71a4577af2f82600d8f8f3a89f936baeaf9b50a9c197da014e5bf16b0"},
 ]
+markers = {s2s = "python_version == \"3.10\" and platform_machine == \"x86_64\""}
 
 [package.dependencies]
 humanfriendly = ">=9.1"
@@ -2906,11 +2907,12 @@ version = "10.0"
 description = "Human friendly output for text interfaces using Python"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
-groups = ["main", "perception", "semap", "simbench"]
+groups = ["main", "perception", "s2s", "semap", "simbench"]
 files = [
     {file = "humanfriendly-10.0-py2.py3-none-any.whl", hash = "sha256:1697e1a8a8f550fd43c2865cd84542fc175a61dcb779b6fee18cf6b6ccba1477"},
     {file = "humanfriendly-10.0.tar.gz", hash = "sha256:6b0b831ce8f15f7300721aa49829fc4e83921a9a301cc7f606be6686a2288ddc"},
 ]
+markers = {s2s = "python_version == \"3.10\" and platform_machine == \"x86_64\""}
 
 [package.dependencies]
 pyreadline3 = {version = "*", markers = "sys_platform == \"win32\" and python_version >= \"3.8\""}
@@ -5461,12 +5463,44 @@ sympy = "*"
 
 [[package]]
 name = "onnxruntime-gpu"
+version = "1.23.2"
+description = "ONNX Runtime is a runtime accelerator for Machine Learning models"
+optional = false
+python-versions = ">=3.10"
+groups = ["s2s"]
+markers = "python_version == \"3.10\" and platform_machine == \"x86_64\""
+files = [
+    {file = "onnxruntime_gpu-1.23.2-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:18de50c6c8eea50acc405ea13d299aec593e46478d7a22cd32cdbbdf7c42899d"},
+    {file = "onnxruntime_gpu-1.23.2-cp310-cp310-win_amd64.whl", hash = "sha256:deba091e15357355aa836fd64c6c4ac97dd0c4609c38b08a69675073ea46b321"},
+    {file = "onnxruntime_gpu-1.23.2-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:d76d1ac7a479ecc3ac54482eea4ba3b10d68e888a0f8b5f420f0bdf82c5eec59"},
+    {file = "onnxruntime_gpu-1.23.2-cp311-cp311-win_amd64.whl", hash = "sha256:054282614c2fc9a4a27d74242afbae706a410f1f63cc35bc72f99709029a5ba4"},
+    {file = "onnxruntime_gpu-1.23.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:4f2d1f720685d729b5258ec1b36dee1de381b8898189908c98cbeecdb2f2b5c2"},
+    {file = "onnxruntime_gpu-1.23.2-cp312-cp312-win_amd64.whl", hash = "sha256:fe925a84b00e291e0ad3fac29bfd8f8e06112abc760cdc82cb711b4f3935bd95"},
+    {file = "onnxruntime_gpu-1.23.2-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:1e8f75af5da07329d0c3a5006087f4051d8abd133b4be7c9bae8cdab7bea4c26"},
+    {file = "onnxruntime_gpu-1.23.2-cp313-cp313-win_amd64.whl", hash = "sha256:7f1b3f49e5e126b99e23ec86b4203db41c2a911f6165f7624f2bc8267aaca767"},
+    {file = "onnxruntime_gpu-1.23.2-cp313-cp313t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:20959cd4ae358aab6579ab9123284a7b1498f7d51ec291d429a5edc26511306f"},
+]
+
+[package.dependencies]
+coloredlogs = "*"
+flatbuffers = "*"
+numpy = ">=1.21.6"
+packaging = "*"
+protobuf = "*"
+sympy = "*"
+
+[package.extras]
+cuda = ["nvidia-cuda-nvrtc-cu12 (>=12.0,<13.0)", "nvidia-cuda-runtime-cu12 (>=12.0,<13.0)", "nvidia-cufft-cu12 (>=11.0,<12.0)", "nvidia-curand-cu12 (>=10.0,<11.0)"]
+cudnn = ["nvidia-cudnn-cu12 (>=9.0,<10.0)"]
+
+[[package]]
+name = "onnxruntime-gpu"
 version = "1.24.3"
 description = "ONNX Runtime is a runtime accelerator for Machine Learning models"
 optional = false
 python-versions = ">=3.10"
 groups = ["s2s"]
-markers = "(python_version == \"3.10\" or python_version == \"3.12\") and platform_machine == \"x86_64\""
+markers = "python_version == \"3.12\" and platform_machine == \"x86_64\""
 files = [
     {file = "onnxruntime_gpu-1.24.3-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:ac922633819e1cdc81c9b3a28b5e37d788805307bbaa708a01a3d7150e345625"},
     {file = "onnxruntime_gpu-1.24.3-cp311-cp311-win_amd64.whl", hash = "sha256:0fe6ece3042db149f36f4991cbebd19a690b7ffd82af89450a261b47f4704a37"},
@@ -7189,12 +7223,12 @@ version = "3.5.4"
 description = "A python implementation of GNU readline."
 optional = false
 python-versions = ">=3.8"
-groups = ["main", "perception", "semap", "simbench"]
-markers = "sys_platform == \"win32\""
+groups = ["main", "perception", "s2s", "semap", "simbench"]
 files = [
     {file = "pyreadline3-3.5.4-py3-none-any.whl", hash = "sha256:eaf8e6cc3c49bcccf145fc6067ba8643d1df34d604a1ec0eccbf7a18e6d3fae6"},
     {file = "pyreadline3-3.5.4.tar.gz", hash = "sha256:8d57d53039a1c75adba8e50dd3d992b28143480816187ea5efbd5c78e6c885b7"},
 ]
+markers = {main = "sys_platform == \"win32\"", perception = "sys_platform == \"win32\"", s2s = "python_version == \"3.10\" and platform_machine == \"x86_64\" and sys_platform == \"win32\"", semap = "sys_platform == \"win32\"", simbench = "sys_platform == \"win32\""}
 
 [package.extras]
 dev = ["build", "flake8", "mypy", "pytest", "twine"]
@@ -7711,8 +7745,8 @@ elevenlabs = {version = "^1.4.1", optional = true}
 faster-whisper = {version = "^1.1.1", optional = true}
 kokoro-onnx = {version = "0.3.3", optional = true}
 onnxruntime-gpu = [
-    {version = ">=1.23,<2.0", markers = "python_version == \"3.10\" and platform_machine == \"x86_64\""},
-    {version = ">=1.24,<2.0", markers = "python_version == \"3.12\" and platform_machine == \"x86_64\""},
+    {version = ">=1.23,<1.24", markers = "python_version == \"3.10\" and platform_machine == \"x86_64\""},
+    {version = ">=1.24,<1.25", markers = "python_version == \"3.12\" and platform_machine == \"x86_64\""},
 ]
 openai-whisper = {version = "^20250625", optional = true}
 openwakeword = {git = "https://github.com/maciejmajek/openWakeWord.git", branch = "chore/remove-tflite-backend", optional = true}
@@ -7722,10 +7756,10 @@ sounddevice = "^0.4.7"
 torchaudio = "2.3.1"
 
 [package.extras]
-all = ["elevenlabs (>=1.4.1,<2.0.0)", "faster-whisper (>=1.1.1,<2.0.0)", "kokoro-onnx (==0.3.3)", "onnxruntime-gpu (>=1.23,<2.0) ; python_version == \"3.10\" and platform_machine == \"x86_64\"", "onnxruntime-gpu (>=1.24,<2.0) ; python_version == \"3.12\" and platform_machine == \"x86_64\"", "openai-whisper (>=20250625,<20250626)", "openwakeword @ git+https://github.com/maciejmajek/openWakeWord.git@chore/remove-tflite-backend"]
+all = ["elevenlabs (>=1.4.1,<2.0.0)", "faster-whisper (>=1.1.1,<2.0.0)", "kokoro-onnx (==0.3.3)", "onnxruntime-gpu (>=1.23,<1.24) ; python_version == \"3.10\" and platform_machine == \"x86_64\"", "onnxruntime-gpu (>=1.24,<1.25) ; python_version == \"3.12\" and platform_machine == \"x86_64\"", "openai-whisper (>=20250625,<20250626)", "openwakeword @ git+https://github.com/maciejmajek/openWakeWord.git@chore/remove-tflite-backend"]
 elevenlabs = ["elevenlabs (>=1.4.1,<2.0.0)"]
 fasterwhisper = ["faster-whisper (>=1.1.1,<2.0.0)"]
-gpu = ["onnxruntime-gpu (>=1.23,<2.0) ; python_version == \"3.10\" and platform_machine == \"x86_64\"", "onnxruntime-gpu (>=1.24,<2.0) ; python_version == \"3.12\" and platform_machine == \"x86_64\""]
+gpu = ["onnxruntime-gpu (>=1.23,<1.24) ; python_version == \"3.10\" and platform_machine == \"x86_64\"", "onnxruntime-gpu (>=1.24,<1.25) ; python_version == \"3.12\" and platform_machine == \"x86_64\""]
 kokoro = ["kokoro-onnx (==0.3.3)"]
 wakeword = ["openwakeword @ git+https://github.com/maciejmajek/openWakeWord.git@chore/remove-tflite-backend"]
 whisper = ["openai-whisper (>=20250625,<20250626)"]
