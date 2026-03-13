@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import logging
-from typing import Any, Literal, Type
+from typing import Any, Literal, Optional, Type
 
 import numpy as np
 from deprecated import deprecated
@@ -47,6 +47,10 @@ class MoveToPointToolInput(BaseModel):
         description="Specify the intended action: use 'grab' to pick up an object, or 'drop' to release it. "
         "This determines the gripper's behavior during the movement."
     )
+    qx: Optional[float] = Field(default=None, description="Orientation quaternion x (from grasp detection)")
+    qy: Optional[float] = Field(default=None, description="Orientation quaternion y (from grasp detection)")
+    qz: Optional[float] = Field(default=None, description="Orientation quaternion z (from grasp detection)")
+    qw: Optional[float] = Field(default=None, description="Orientation quaternion w (from grasp detection)")
 
 
 class MoveToPointTool(BaseROS2Tool):
@@ -88,6 +92,10 @@ class MoveToPointTool(BaseROS2Tool):
         y: float,
         z: float,
         task: Literal["grab", "drop"],
+        qx: Optional[float] = None,
+        qy: Optional[float] = None,
+        qz: Optional[float] = None,
+        qw: Optional[float] = None,
     ) -> str:
         client = self.connector.node.create_client(
             ManipulatorMoveTo,
@@ -109,9 +117,14 @@ class MoveToPointTool(BaseROS2Tool):
 
         pose_stamped = PoseStamped()
         pose_stamped.header.frame_id = self.manipulator_frame
+        if all(v is not None for v in (qx, qy, qz, qw)):
+            orientation = Quaternion(x=qx, y=qy, z=qz, w=qw)
+        else:
+            orientation = self.quaternion
+
         pose_stamped.pose = Pose(
             position=Point(x=x, y=y, z=z),
-            orientation=self.quaternion,
+            orientation=orientation,
         )
 
         if task == "drop":
@@ -172,6 +185,14 @@ class MoveObjectFromToToolInput(BaseModel):
     z1: float = Field(
         description="The z coordinate of the destination point (drop-off location) in the manipulator frame"
     )
+    qx: Optional[float] = Field(default=None, description="Pick orientation quaternion x (from grasp detection)")
+    qy: Optional[float] = Field(default=None, description="Pick orientation quaternion y (from grasp detection)")
+    qz: Optional[float] = Field(default=None, description="Pick orientation quaternion z (from grasp detection)")
+    qw: Optional[float] = Field(default=None, description="Pick orientation quaternion w (from grasp detection)")
+    qx1: Optional[float] = Field(default=None, description="Place orientation quaternion x")
+    qy1: Optional[float] = Field(default=None, description="Place orientation quaternion y")
+    qz1: Optional[float] = Field(default=None, description="Place orientation quaternion z")
+    qw1: Optional[float] = Field(default=None, description="Place orientation quaternion w")
 
 
 class MoveObjectFromToTool(BaseROS2Tool):
@@ -214,6 +235,14 @@ class MoveObjectFromToTool(BaseROS2Tool):
         x1: float,
         y1: float,
         z1: float,
+        qx: Optional[float] = None,
+        qy: Optional[float] = None,
+        qz: Optional[float] = None,
+        qw: Optional[float] = None,
+        qx1: Optional[float] = None,
+        qy1: Optional[float] = None,
+        qz1: Optional[float] = None,
+        qw1: Optional[float] = None,
     ) -> str:
         # Used to reset arm after tool call
         reset_tool = ResetArmTool(
@@ -239,18 +268,28 @@ class MoveObjectFromToTool(BaseROS2Tool):
                 f"Please ensure the manipulator service is running."
             )
 
+        if all(v is not None for v in (qx, qy, qz, qw)):
+            pick_orientation = Quaternion(x=qx, y=qy, z=qz, w=qw)
+        else:
+            pick_orientation = self.quaternion
+
         pose_stamped = PoseStamped()
         pose_stamped.header.frame_id = self.manipulator_frame
         pose_stamped.pose = Pose(
             position=Point(x=x, y=y, z=z),
-            orientation=self.quaternion,
+            orientation=pick_orientation,
         )
+
+        if all(v is not None for v in (qx1, qy1, qz1, qw1)):
+            place_orientation = Quaternion(x=qx1, y=qy1, z=qz1, w=qw1)
+        else:
+            place_orientation = self.quaternion
 
         pose_stamped1 = PoseStamped()
         pose_stamped1.header.frame_id = self.manipulator_frame
         pose_stamped1.pose = Pose(
             position=Point(x=x1, y=y1, z=z1),
-            orientation=self.quaternion,
+            orientation=place_orientation,
         )
 
         pose_stamped.pose.position.x += self.calibration_x

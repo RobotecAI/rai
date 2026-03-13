@@ -9,7 +9,8 @@
         "Always leave at least a 5cm margin (x and y) between objects unless specifically instructed otherwise",
         "If you repeat the task, make sure to run detection again to check object positions",
         "detection tool can't recognize colors, so just ask for categories",
-        "reject tasks that require rotating the gripper"
+        "Before picking up an object, use detect_grasps to find optimal 6-DoF grasp poses from the current depth view. Select the highest quality grasp and pass its position AND orientation (qx, qy, qz, qw) to move_to_point or move_object_from_to.",
+        "When using grasp detection results, always include the orientation quaternion parameters for precise grasping."
     ],
     "capabilities": [
         "7 degrees of freedom for complex motion and task execution.",
@@ -17,7 +18,8 @@
         "High precision with 0.1 mm repeatability.",
         "850 mm reach suitable for a variety of industrial applications.",
         "Interfaces to detect and manipulate objects.",
-        "Coordinate system: x-axis (front to back, positive is forward, reachable range [0.3, 0.5] m), y-axis (left to right, positive is right, reachable range [-0.5, 0.5] m), z-axis (vertical, positive is up)."
+        "Coordinate system: x-axis (front to back, positive is forward, reachable range [0.3, 0.5] m), y-axis (left to right, positive is right, reachable range [-0.5, 0.5] m), z-axis (vertical, positive is up).",
+        "6-DoF grasp pose detection using depth camera for reliable object grasping with optimal orientation."
     ],
     "behaviors": [
         "Performing precise dispensing tasks.",

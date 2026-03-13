@@ -36,6 +36,7 @@ from rai_perception import (
 from rai_perception.tools import GetGrabbingPointTool, GetObjectPositionsTool
 from rai_perception.tools.gripping_points_tools import GRIPPING_POINTS_TOOL_PARAM_PREFIX
 
+from rai_giga_tools import DetectGraspsTool
 from rai_whoami.models import EmbodimentInfo
 
 logger = logging.getLogger(__name__)
@@ -77,7 +78,7 @@ def _create_agent_v1():
     """Create v1 agent with legacy tools."""
     connector = ROS2Connector(executor_type="single_threaded")
 
-    required_services = ["/grounded_sam_segment", "/grounding_dino_classify"]
+    required_services = ["/grounded_sam_segment", "/grounding_dino_classify", "/vla/grasp/estimate"]
     required_topics = ["/color_image5", "/depth_image5", "/color_camera_info5"]
     wait_for_ros2_services(connector, required_services)
     wait_for_ros2_topics(connector, required_topics)
@@ -98,6 +99,12 @@ def _create_agent_v1():
         ),
         MoveObjectFromToTool(connector=connector, manipulator_frame="panda_link0"),
         ResetArmTool(connector=connector, manipulator_frame="panda_link0"),
+        DetectGraspsTool(
+            connector=connector,
+            depth_topic="/depth_image5",
+            camera_info_topic="/color_camera_info5",
+            service_name="/vla/grasp/estimate",
+        ),
         camera_tool,
     ]
 
@@ -154,6 +161,12 @@ def _create_agent_v2():
             connector=connector, manipulator_frame=config["target_frame"]
         ),
         ResetArmTool(connector=connector, manipulator_frame=config["target_frame"]),
+        DetectGraspsTool(
+            connector=connector,
+            depth_topic="/depth_image5",
+            camera_info_topic="/color_camera_info5",
+            service_name="/vla/grasp/estimate",
+        ),
         GetROS2ImageConfiguredTool(connector=connector, topic=config["camera_topic"]),
     ]
 
