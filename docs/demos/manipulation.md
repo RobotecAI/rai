@@ -97,7 +97,7 @@ manipulation techniques.
 
 #### 1. Setting up the demo
 
-1.  Set up docker as outlined in the [docker setup guide](../setup/setup_docker.md). Build base image with flag `DEPENDENCIES=core_only` 
+1.  Set up docker as outlined in the [docker setup guide](../setup/setup_docker.md). Build base image with flag `DEPENDENCIES=core_only`
 
 2.  Build docker manipulation demo image:
 
