@@ -1,14 +1,27 @@
-import asyncio
-import threading
-import time
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from aiohttp import web
+# Copyright (C) 2026 Kajetan Rachwał
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+import asyncio
+import time
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from aiohttp import web
 from rai.communication.http.api import HTTPAPI, HTTPAPIError, HTTPConnectorMode
 
-
 # ── Fixtures ──────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def client_api():
@@ -36,6 +49,7 @@ def client_server_api():
 
 # ── HTTPConnectorMode ─────────────────────────────────────────────────────────
 
+
 class TestHTTPConnectorMode:
     def test_client_value(self):
         assert HTTPConnectorMode.client == 1
@@ -58,10 +72,14 @@ class TestHTTPConnectorMode:
         assert HTTPConnectorMode.server & HTTPConnectorMode.client_server
 
     def test_client_flag_not_in_server_only(self):
-        assert not (HTTPConnectorMode.client & HTTPConnectorMode.server == HTTPConnectorMode.client_server)
+        assert not (
+            HTTPConnectorMode.client & HTTPConnectorMode.server
+            == HTTPConnectorMode.client_server
+        )
 
 
 # ── Initialisation ────────────────────────────────────────────────────────────
+
 
 class TestHTTPAPIInit:
     def test_default_attributes(self):
@@ -91,6 +109,7 @@ class TestHTTPAPIInit:
 
 # ── run() / stop() lifecycle ──────────────────────────────────────────────────
 
+
 class TestLifecycle:
     def test_run_sets_started_event(self, client_api):
         assert client_api._started_event.is_set()
@@ -117,6 +136,7 @@ class TestLifecycle:
 
 
 # ── add_route() ───────────────────────────────────────────────────────────────
+
 
 class TestAddRoute:
     def test_add_route_ignored_in_client_only_mode(self, client_api):
@@ -163,12 +183,12 @@ class TestAddRoute:
 
 # ── send_request() ────────────────────────────────────────────────────────────
 
+
 class TestSendRequest:
     def test_raises_in_server_only_mode(self, server_api):
         with pytest.raises(HTTPAPIError, match="client mode disabled"):
             server_api.send_request(
-                "GET", "http://example.com", timeout=1.0,
-                payload=None, headers=None
+                "GET", "http://example.com", timeout=1.0, payload=None, headers=None
             )
 
     def test_returns_empty_string_and_200_when_no_timeout(self, client_api):
@@ -176,8 +196,7 @@ class TestSendRequest:
         with patch.object(client_api, "_request", new_callable=AsyncMock) as mock_req:
             mock_req.return_value = ("", 200)
             body, status = client_api.send_request(
-                "GET", "http://example.com", timeout=None,
-                payload=None, headers=None
+                "GET", "http://example.com", timeout=None, payload=None, headers=None
             )
         assert body == ""
         assert status == 200
@@ -244,8 +263,7 @@ class TestSendRequest:
             mock_req.return_value = ("", 200)
             before = len(client_api.unresolved_futures)
             client_api.send_request(
-                "GET", "http://example.com", timeout=None,
-                payload=None, headers=None
+                "GET", "http://example.com", timeout=None, payload=None, headers=None
             )
             time.sleep(0.05)
             # future is appended even for fire-and-forget
@@ -263,6 +281,7 @@ class TestSendRequest:
 
 
 # ── shutdown() ────────────────────────────────────────────────────────────────
+
 
 class TestShutdown:
     def test_shutdown_clears_unresolved_futures(self, client_api):
@@ -298,6 +317,7 @@ class TestShutdown:
 
 
 # ── _request() (internal async helper) ───────────────────────────────────────
+
 
 class TestInternalRequest:
     def test_request_returns_text_and_status(self, client_server_api):

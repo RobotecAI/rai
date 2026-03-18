@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Literal
+from typing import Literal, Optional
+
 from rai.communication.base_connector import BaseMessage
 from rai.communication.hri_connector import HRIMessage
 

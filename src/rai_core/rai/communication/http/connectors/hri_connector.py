@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Optional
 
 from rai.communication import HRIConnector
 from rai.communication.http.api import HTTPConnectorMode
@@ -66,12 +65,10 @@ class HTTPHRIConnector(HTTPBaseConnector[HTTPHRIMessage], HRIConnector[HTTPHRIMe
         return HTTPHRIMessage(
             text=data.get("text", ""),
             images=[
-                HTTPHRIMessage._base64_to_image(img)
-                for img in data.get("images", [])
+                HTTPHRIMessage._base64_to_image(img) for img in data.get("images", [])
             ],
             audios=[
-                HTTPHRIMessage._base64_to_audio(aud)
-                for aud in data.get("audios", [])
+                HTTPHRIMessage._base64_to_audio(aud) for aud in data.get("audios", [])
             ],
             message_author=data.get("message_author", "human"),
             communication_id=data.get("communication_id"),

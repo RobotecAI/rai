@@ -1,20 +1,30 @@
+# Copyright (C) 2026 Kajetan Rachwał
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import base64
-import threading
 import time
 from io import BytesIO
-from typing import Any
-from unittest.mock import MagicMock, patch
 
 import pytest
 from aiohttp import web
 from PIL import Image
-
 from rai.communication.http.api import HTTPConnectorMode
 from rai.communication.http.connectors import HTTPConnector, HTTPHRIConnector
 from rai.communication.http.messages import HTTPHRIMessage, HTTPMessage
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _make_image() -> Image.Image:
     img = Image.new("RGB", (4, 4), color=(255, 0, 0))
@@ -28,6 +38,7 @@ def _image_b64(img: Image.Image) -> str:
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def client_connector():
@@ -46,7 +57,9 @@ def server_connector():
 @pytest.fixture
 def cs_connector():
     """Client-server connector, useful for end-to-end tests."""
-    c = HTTPConnector(host="localhost", port=19082, mode=HTTPConnectorMode.client_server)
+    c = HTTPConnector(
+        host="localhost", port=19082, mode=HTTPConnectorMode.client_server
+    )
     yield c
     c.shutdown()
 
@@ -60,12 +73,15 @@ def hri_client_connector():
 
 @pytest.fixture
 def hri_cs_connector():
-    c = HTTPHRIConnector(host="localhost", port=19084, mode=HTTPConnectorMode.client_server)
+    c = HTTPHRIConnector(
+        host="localhost", port=19084, mode=HTTPConnectorMode.client_server
+    )
     yield c
     c.shutdown()
 
 
 # ── HTTPConnector – initialisation ────────────────────────────────────────────
+
 
 class TestHTTPConnectorInit:
     def test_api_started(self, client_connector):
@@ -80,6 +96,7 @@ class TestHTTPConnectorInit:
 
 # ── HTTPConnector – service_call (request-response) ───────────────────────────
 
+
 class TestHTTPConnectorServiceCall:
     def test_service_call_returns_http_message(self, cs_connector):
         async def handler(request):
@@ -89,7 +106,9 @@ class TestHTTPConnectorServiceCall:
         time.sleep(0.1)
 
         msg = HTTPMessage(method="GET", payload=None)
-        response = cs_connector.service_call(msg, "http://localhost:19082/ping", timeout_sec=5.0)
+        response = cs_connector.service_call(
+            msg, "http://localhost:19082/ping", timeout_sec=5.0
+        )
 
         assert isinstance(response, HTTPMessage)
         assert response.payload == "pong"
@@ -119,11 +138,14 @@ class TestHTTPConnectorServiceCall:
         time.sleep(0.1)
 
         msg = HTTPMessage(method="PUT", payload=None)
-        response = cs_connector.service_call(msg, "http://localhost:19082/put", timeout_sec=5.0)
+        response = cs_connector.service_call(
+            msg, "http://localhost:19082/put", timeout_sec=5.0
+        )
         assert response.method == "PUT"
 
 
 # ── HTTPConnector – create_service ────────────────────────────────────────────
+
 
 class TestHTTPConnectorCreateService:
     def test_create_service_returns_path(self, cs_connector):
@@ -183,6 +205,7 @@ class TestHTTPConnectorCreateService:
 
 # ── HTTPConnector – shutdown ───────────────────────────────────────────────────
 
+
 class TestHTTPConnectorShutdown:
     def test_shutdown_stops_event_loop(self):
         c = HTTPConnector(host="localhost", port=19090, mode=HTTPConnectorMode.client)
@@ -192,6 +215,7 @@ class TestHTTPConnectorShutdown:
 
 
 # ── HTTPHRIConnector – build_message (HRIConnector mixin) ────────────────────
+
 
 class TestHTTPHRIConnectorBuildMessage:
     def test_build_message_from_human_message(self, hri_client_connector):

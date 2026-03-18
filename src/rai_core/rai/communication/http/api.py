@@ -13,11 +13,10 @@
 # limitations under the License.
 
 import asyncio
+import logging
 import threading
 from enum import IntFlag
-from typing import Callable, Optional, Any
-import json
-import logging
+from typing import Callable, Optional
 
 import aiohttp
 from aiohttp import ClientSession, ClientTimeout, web
@@ -153,4 +152,3 @@ class HTTPAPI:
             except Exception as e:
                 logging.warning(f"Background request failed or timed out: {e}")
         self.unresolved_futures.clear()
-

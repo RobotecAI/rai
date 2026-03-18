@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
-from functools import partial
 from typing import Any, Callable, Dict, Optional, TypeVar
 
 from aiohttp import web
@@ -76,7 +74,9 @@ class HTTPBaseConnector(BaseConnector[T]):
             payload=message.payload,
             headers=message.metadata.get("headers"),
         )
-        return self.T_class(payload=ret, method=message.method, metadata={"return_code": code})  # type: ignore[call-arg]
+        return self.T_class(
+            payload=ret, method=message.method, metadata={"return_code": code}
+        )  # type: ignore[call-arg]
 
     def create_service(
         self,
