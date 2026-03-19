@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 import rclpy
@@ -74,16 +74,15 @@ def cleanup_agent(agent: MockBaseVisionAgent) -> None:
 
 
 def extract_output_path_from_wget_args(args) -> Path:
-    """Helper to extract output path from wget subprocess args.
+    """Helper to extract output path from patched download_weights args.
 
     Args:
-        args: Arguments passed to subprocess.run (args[0] is the command list)
+        args: Arguments passed to download_weights
 
     Returns:
         Path object for the output file
     """
-    output_path_str = args[0][3]  # -O argument is at index 3
-    return Path(output_path_str)
+    return Path(args[0])
 
 
 class TestVisionWeightsDownload:
@@ -109,27 +108,20 @@ class TestVisionWeightsDownload:
         # check whether file doesn't exist before download
         assert not weights_path.exists()
 
-        def mock_wget(*args, **kwargs):
-            # Simulate wget creating the file
+        def mock_download(*args, **kwargs):
             output_path = extract_output_path_from_wget_args(args)
             create_valid_weights_file(output_path)
-            return MagicMock(returncode=0)
 
-        with patch("subprocess.run", side_effect=mock_wget) as mock_run:
+        with patch(
+            "rai_perception.agents.base_vision_agent.download_weights",
+            side_effect=mock_download,
+        ) as mock_download_weights:
             agent = create_agent_with_weights(tmp_path, weights_path)
 
-            mock_run.assert_called_once_with(
-                [
-                    "wget",
-                    "https://example.com/test_weights.pth",
-                    "-O",
-                    str(weights_path),
-                    "--progress=dot:giga",
-                ],
-                check=True,
-                capture_output=True,
-                text=True,
-                timeout=600,
+            mock_download_weights.assert_called_once_with(
+                weights_path,
+                agent.logger,
+                "https://example.com/test_weights.pth",
             )
 
             # Verify file exists after download
@@ -198,12 +190,14 @@ class TestBaseVisionAgentInit:
         weights_path = tmp_path / "vision" / "weights" / "test_weights.pth"
         create_valid_weights_file(weights_path)
 
-        with patch("subprocess.run") as mock_run:
+        with patch(
+            "rai_perception.agents.base_vision_agent.download_weights"
+        ) as mock_download_weights:
             agent = MockBaseVisionAgent(
                 weights_root_path=str(tmp_path), ros2_name="test_agent"
             )
             # Should not call download since file exists
-            mock_run.assert_not_called()
+            mock_download_weights.assert_not_called()
 
         agent.stop()
         if rclpy.ok():
@@ -261,13 +255,10 @@ class TestLoadModelWithErrorHandling:
                 if call_count == 1:
                     raise RuntimeError("PytorchStreamReader failed")
 
-        def mock_wget(*args, **kwargs):
-            output_path_str = args[0][3]
-            output_path = Path(output_path_str)
-            output_path.write_bytes(b"0" * (2 * 1024 * 1024))
-            return MagicMock(returncode=0)
-
-        with patch("subprocess.run", side_effect=mock_wget):
+        with patch(
+            "rai_perception.services.weights.download_weights",
+            side_effect=lambda path, *_args, **_kwargs: create_valid_weights_file(path),
+        ):
             agent = MockBaseVisionAgent(
                 weights_root_path=str(tmp_path), ros2_name="test"
             )
