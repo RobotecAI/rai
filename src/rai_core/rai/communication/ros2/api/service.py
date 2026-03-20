@@ -131,5 +131,8 @@ class ROS2ServiceAPI(BaseROS2API):
     def shutdown(self) -> None:
         for service in self._services.values():
             service.destroy()
-        for client in self._persistent_clients.values():
-            client.destroy()
+        self._services.clear()
+        with self._persistent_clients_lock:
+            for client in self._persistent_clients.values():
+                client.destroy()
+            self._persistent_clients.clear()
