@@ -122,10 +122,12 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
             If an invalid executor type is provided.
         """
         super().__init__()
+        self._owns_rclpy_context: bool = False
         if node_name is None:
             node_name = f"rai_ros2_connector_{str(uuid.uuid4())[-12:]}"
         if not rclpy.ok():
             rclpy.init()
+            self._owns_rclpy_context = True
             self.logger.warning(
                 "Auto-initializing ROS2, but manual initialization is recommended. "
                 "For better control and predictability, call rclpy.init() or ROS2Context before creating this connector."
@@ -464,11 +466,12 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
             raise LookupException(
                 f"Could not find transform from {source_frame} to {target_frame} in {timeout_sec} seconds"
             )
+        seconds, nanoseconds = divmod(timeout_sec * 1e9, 1e9)
         transform: TransformStamped = self._tf_buffer.lookup_transform(
             target_frame,
             source_frame,
             rclpy.time.Time(),
-            timeout=Duration(seconds=int(timeout_sec)),
+            timeout=Duration(seconds=int(seconds), nanoseconds=int(nanoseconds)),
         )
 
         return transform
@@ -563,10 +566,14 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         4. Shuts down the topic API
         5. Shuts down the executor
         6. Joins the executor thread
+        7. Shuts down ROS2 context only if this connector initialized it
         """
         self._tf_listener.unregister()
-        self._node.destroy_node()
-        self._actions_api.shutdown()
         self._topic_api.shutdown()
+        self._service_api.shutdown()
+        self._actions_api.shutdown()
+        self._node.destroy_node()
         self._executor.shutdown()
         self._thread.join()
+        if self._owns_rclpy_context:
+            rclpy.shutdown()

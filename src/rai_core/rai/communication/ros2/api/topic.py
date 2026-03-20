@@ -68,17 +68,16 @@ class ROS2TopicAPI(BaseROS2API):
         # While this may lead to memory/performance issues, it's preferable to
         # preventing node crashes.
         self._last_msg: Dict[str, Tuple[float, Any]] = {}
-        self._subscriptions: Dict[str, rclpy.node.Subscription] = {}
         self._destroy_subscribers: bool = destroy_subscribers
         self.node = node
-        self.subscriptions: Dict[str, Subscription] = {}
-        self.publishers: Dict[str, Publisher] = {}
+        self._subscriptions: Dict[str, Subscription] = {}
+        self._publishers: Dict[str, Publisher] = {}
 
     def subscriber_exists(self, topic: str) -> bool:
-        return topic in self.subscriptions
+        return topic in self._subscriptions
 
     def publisher_exists(self, topic: str) -> bool:
-        return topic in self.publishers
+        return topic in self._publishers
 
     def create_subscriber(
         self,
@@ -102,7 +101,7 @@ class ROS2TopicAPI(BaseROS2API):
         subscription = self.node.create_subscription(
             topic=topic, msg_type=msg_cls, callback=callback, qos_profile=qos
         )
-        self.subscriptions[topic] = subscription
+        self._subscriptions[topic] = subscription
         return subscription
 
     def create_publisher(
@@ -124,7 +123,7 @@ class ROS2TopicAPI(BaseROS2API):
         publisher = self.node.create_publisher(
             topic=topic, msg_type=msg_cls, qos_profile=qos
         )
-        self.publishers[topic] = publisher
+        self._publishers[topic] = publisher
         return publisher
 
     def get_topic_names_and_types(
@@ -247,3 +246,6 @@ class ROS2TopicAPI(BaseROS2API):
         """Cleanup publishers when object is destroyed."""
         for publisher in self._publishers.values():
             publisher.destroy()
+
+        for subscription in self._subscriptions.values():
+            subscription.destroy()

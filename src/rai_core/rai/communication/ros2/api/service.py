@@ -127,3 +127,9 @@ class ROS2ServiceAPI(BaseROS2API):
         handle = str(uuid.uuid4())
         self._services[handle] = service
         return handle
+
+    def shutdown(self) -> None:
+        for service in self._services.values():
+            service.destroy()
+        for client in self._persistent_clients.values():
+            client.destroy()
