@@ -60,7 +60,6 @@ class ROS2TopicAPI(BaseROS2API):
         """
         self._node = node
         self._logger = node.get_logger()
-        self._publishers: Dict[str, Publisher] = {}
 
         # TODO: These fields are a workaround to prevent subscriber destruction,
         # which often fails as described in https://github.com/ros2/rclpy/issues/1142
