@@ -97,10 +97,18 @@ class RAIConfig:
 
 
 # Default placeholder configs for vendors not present in the TOML file.
-_DEFAULT_AWS = AWSConfig(simple_model="", complex_model="", embeddings_model="", region_name="")
-_DEFAULT_OPENAI = OpenAIConfig(simple_model="", complex_model="", embeddings_model="", base_url="")
-_DEFAULT_OLLAMA = OllamaConfig(simple_model="", complex_model="", embeddings_model="", base_url="")
-_DEFAULT_GOOGLE = GoogleConfig(simple_model="", complex_model="", embeddings_model="")
+_DEFAULT_AWS = AWSConfig(
+    simple_model="", complex_model="", embeddings_model="", region_name=""
+)
+_DEFAULT_OPENAI = OpenAIConfig(
+    simple_model="", complex_model="", embeddings_model="", base_url=""
+)
+_DEFAULT_OLLAMA = OllamaConfig(
+    simple_model="", complex_model="", embeddings_model="", base_url=""
+)
+_DEFAULT_GOOGLE = GoogleConfig(
+    simple_model="", complex_model="", embeddings_model=""
+)
 _DEFAULT_TRACING = TracingConfig(
     project="",
     langfuse=LangfuseConfig(use_langfuse=False, host=""),
@@ -119,9 +127,21 @@ def load_config(config_path: Optional[str] = None) -> RAIConfig:
     # Only require config sections for vendors actually referenced in [vendor].
     # Missing sections get safe defaults so single-vendor setups work.
     aws = AWSConfig(**config_dict["aws"]) if "aws" in config_dict else _DEFAULT_AWS
-    openai = OpenAIConfig(**config_dict["openai"]) if "openai" in config_dict else _DEFAULT_OPENAI
-    ollama = OllamaConfig(**config_dict["ollama"]) if "ollama" in config_dict else _DEFAULT_OLLAMA
-    google = GoogleConfig(**config_dict["google"]) if "google" in config_dict else _DEFAULT_GOOGLE
+    openai = (
+        OpenAIConfig(**config_dict["openai"])
+        if "openai" in config_dict
+        else _DEFAULT_OPENAI
+    )
+    ollama = (
+        OllamaConfig(**config_dict["ollama"])
+        if "ollama" in config_dict
+        else _DEFAULT_OLLAMA
+    )
+    google = (
+        GoogleConfig(**config_dict["google"])
+        if "google" in config_dict
+        else _DEFAULT_GOOGLE
+    )
 
     if "tracing" in config_dict:
         tracing = TracingConfig(
