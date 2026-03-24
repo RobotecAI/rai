@@ -11,13 +11,13 @@ There are two ways to start using RAI:
 
 1. Installing RAI using pip (recommended for end users)
 
-2. Setting up a developer environment using poetry (recommended for developers)
+2. Setting up a developer environment using uv (recommended for developers)
 
 ## Installing RAI
 
 ??? tip "Virtual environment"
 
-    We recommend installing RAI in a virtual environment (e.g., [virtualenv](https://docs.python.org/3/library/venv.html), [uv](https://docs.astral.sh/uv/), or [poetry](https://python-poetry.org/docs/)) to keep your dependencies organized. Make sure to use the same version of python as the one used for ROS 2 (typically `python3.10` for Humble and `python3.12` for Jazzy).
+    We recommend installing RAI in a virtual environment (e.g., [virtualenv](https://docs.python.org/3/library/venv.html) or [uv](https://docs.astral.sh/uv/)) to keep your dependencies organized. Make sure to use the same version of python as the one used for ROS 2 (typically `python3.10` for Humble and `python3.12` for Jazzy).
 
     If you plan to use ROS 2 commands (`ros2 run` or `ros2 launch`), you'll need to add your virtual environment's Python packages to your `$PYTHONPATH`. This step is only necessary for ROS 2 integration - if you're just running RAI directly with Python, you can skip this step.
 
@@ -74,17 +74,17 @@ There are two ways to start using RAI:
 
 ## Setting up developer environment
 
-### 1.1 Install poetry
+### 1.1 Install uv
 
-RAI uses [Poetry](https://python-poetry.org/)(2.1+) for python packaging and dependency management.
-Install poetry with the following line:
+RAI uses [uv](https://docs.astral.sh/uv/) for python packaging and dependency management.
+Install uv with the following line:
 
 ```bash
-curl -sSL https://install.python-poetry.org | python3 -
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 Alternatively, you can opt to do so by following the
-[official docs](https://python-poetry.org/docs/#installation).
+[official docs](https://docs.astral.sh/uv/getting-started/installation/).
 
 ### 1.2 Clone the repository:
 
@@ -99,10 +99,10 @@ cd rai
 vcs import < ros_deps.repos
 ```
 
-### 1.4 Create poetry virtual environment and install dependencies:
+### 1.4 Create virtual environment and install dependencies:
 
 ```bash
-poetry install
+uv sync
 rosdep install --from-paths src --ignore-src -r -y
 ```
 
@@ -113,7 +113,7 @@ rosdep install --from-paths src --ignore-src -r -y
     install additional dependencies:
 
     ```bash
-    poetry install --with perception,nomad,s2s,simbench # or `--all-groups` for full setup
+    uv sync --group perception --group nomad --group s2s --group simbench # or `--all-groups` for full setup
     ```
 
     | Group Name | Description | Dependencies |
@@ -129,7 +129,7 @@ rosdep install --from-paths src --ignore-src -r -y
 Run the configuration tool to set up your LLM vendor and other settings:
 
 ```bash
-poetry run streamlit run src/rai_core/rai/frontend/configurator.py
+uv run streamlit run src/rai_core/rai/frontend/configurator.py
 ```
 
 !!! tip "Web browser"

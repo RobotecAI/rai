@@ -107,5 +107,5 @@ docker run --net=host --ipc=host --pid=host -e ROS_DOMAIN_ID=$ROS_DOMAIN_ID -it 
 ```sh
 cd /rai
 source setup_shell.sh
-poetry run pytest tests/{agents,messages,tools,types}
+uv run pytest tests/{agents,messages,tools,types}
 ```

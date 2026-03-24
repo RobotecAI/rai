@@ -7,7 +7,15 @@ cd src/rai_finetune || {
     echo "Error: Failed to change to src/rai_finetune directory" >&2
     exit 1
 }
-. "$(poetry env info --path)"/bin/activate
+
+if [ -f ".venv/bin/activate" ]; then
+    # Suppress ShellCheck warning about not following external file
+    # shellcheck disable=SC1091
+    . ".venv/bin/activate"
+else
+    echo "Missing src/rai_finetune/.venv. Run 'uv sync' in src/rai_finetune first." >&2
+    exit 1
+fi
 
 # go back to the root directory
 cd - || {
@@ -16,5 +24,6 @@ cd - || {
 }
 
 export PYTHONPATH
-PYTHONPATH="$(dirname "$(dirname "$(poetry run which python)")")/lib/python$(poetry run python --version | awk '{print $2}' | cut -d. -f1,2)/site-packages:$PYTHONPATH"
+PYTHON_SITE_PACKAGES="$(python -c 'import site; print(site.getsitepackages()[0])')"
+PYTHONPATH="${PYTHON_SITE_PACKAGES}:$PYTHONPATH"
 PYTHONPATH="src/rai_finetune:$PYTHONPATH"

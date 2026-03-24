@@ -6,7 +6,10 @@ if [ -f ".venv/bin/activate" ]; then
     . ".venv/bin/activate"
 else
     echo "Missing .venv. Run 'uv sync' first."
-    return 1 2>/dev/null || exit 1
+    if (return 0 2>/dev/null); then
+        return 1
+    fi
+    exit 1
 fi
 
 # Suppress ShellCheck warning about not following external file
