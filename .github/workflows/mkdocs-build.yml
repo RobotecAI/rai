@@ -20,6 +20,11 @@ jobs:
         with:
           clean: true
 
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get --yes install git
+
       - name: Cache uv and pip
         uses: actions/cache@v4
         with:
