@@ -39,10 +39,9 @@ from rai.communication.ros2.connectors import ROS2Connector
 from rai.messages import HumanMultimodalMessage
 from rai.tools.ros2 import (
     GetObjectPositionsTool,
-    GetROS2ImageTool,
-    GetROS2TopicsNamesAndTypesTool,
     MoveToPointTool,
 )
+from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
 from rai_perception.tools import GetGrabbingPointTool
 
 from rai_bench.base_benchmark import BaseBenchmark, RunSummary, TimeoutException
@@ -395,8 +394,7 @@ def _setup_benchmark_environment(
             get_grabbing_point_tool=GetGrabbingPointTool(connector=connector),
         ),
         MoveToPointTool(connector=connector, manipulator_frame="panda_link0"),
-        GetROS2ImageTool(connector=connector),
-        GetROS2TopicsNamesAndTypesTool(connector=connector),
+        GetROS2ImageConfiguredTool(connector=connector, topic="/color_image5"),
     ]
 
     # define o3de bridge
