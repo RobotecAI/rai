@@ -1,23 +1,27 @@
-[tool.poetry]
+[project]
 name = "rai-sim"
 version = "0.0.2"
 description = "Package to run simulations"
-authors = ["Jakub Matejczyk <jakub.matejczyk@robotec.ai>", "Magdalena Kotynia <magdalena.kotynia@robotec.ai>", "Kacper Dąbrowski <kacper.dabrowski@robotec.ai>"]
 readme = "README.md"
+requires-python = ">=3.10,<3.13"
+authors = [
+    { name = "Jakub Matejczyk", email = "jakub.matejczyk@robotec.ai" },
+    { name = "Magdalena Kotynia", email = "magdalena.kotynia@robotec.ai" },
+    { name = "Kacper Dabrowski", email = "kacper.dabrowski@robotec.ai" },
+]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: Apache Software License",
 ]
-packages = [
-    { include = "rai_sim", from = "." },
+dependencies = [
+    "PyYAML",
+    "rai_core>=2.0.0a2,<3.0.0",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.10, <3.13"
-PyYAML = "*"
-rai_core = ">=2.0.0.a2,<3.0.0"
+[tool.hatch.build.targets.wheel]
+packages = ["rai_sim"]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -20,28 +20,28 @@ jobs:
         with:
           clean: true
 
-      - name: Cache Poetry and pip
+      - name: Cache uv and pip
         uses: actions/cache@v4
         with:
           path: |
-            ~/.cache/pypoetry
+            ~/.cache/uv
             ~/.cache/pip
-          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
           restore-keys: |
-            ${{ runner.os }}-poetry-
+            ${{ runner.os }}-uv-
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          version: 2.1.1
+          enable-cache: true
 
       - name: Install python dependencies
-        run: poetry install --with docs
+        run: uv sync --group docs
 
       - name: Install rai packages
-        run: poetry run pip install src/rai_core src/rai_sim src/rai_bench src/rai_s2s --no-deps
+        run: uv run pip install src/rai_core src/rai_sim src/rai_bench src/rai_s2s --no-deps
 
       - name: Build docs
         shell: bash
         run: |
-          poetry run mkdocs build --strict
+          uv run mkdocs build --strict

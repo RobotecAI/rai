@@ -1,47 +1,50 @@
-[tool.poetry]
+[project]
 name = "rai_s2s"
 version = "1.0.0"
 description = "Speech-to-Speech module for RAI framework"
-authors = ["Kajetan Rachwał <kajetan.rachwal@robotec.ai>"]
 readme = "README.md"
+requires-python = ">=3.10,<3.13"
+authors = [{ name = "Kajetan Rachwal", email = "kajetan.rachwal@robotec.ai" }]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: Apache Software License",
 ]
-packages = [
-    { include = "rai_s2s", from = "." },
+dependencies = [
+    "sounddevice>=0.4.7,<0.5.0",
+    "scipy>=1.14.0,<2.0.0",
+    "pydub>=0.25.1,<0.26.0",
+    "torchaudio==2.3.1",
+    "onnxruntime>=1.23,<1.24; python_version >= '3.10' and python_version < '3.11' and platform_machine == 'x86_64'",
+    "onnxruntime>=1.24,<1.25; python_version >= '3.12' and python_version < '3.13' and platform_machine == 'x86_64'",
 ]
+
+[project.optional-dependencies]
+elevenlabs = ["elevenlabs>=1.4.1,<2.0.0"]
+whisper = ["openai-whisper>=20250625,<20250626"]
+fasterwhisper = ["faster-whisper>=1.1.1,<2.0.0"]
+wakeword = ["openwakeword @ git+https://github.com/maciejmajek/openWakeWord.git@chore/remove-tflite-backend"]
+kokoro = ["kokoro-onnx==0.3.3"]
+gpu = [
+    "onnxruntime-gpu>=1.23,<1.24; python_version >= '3.10' and python_version < '3.11' and platform_machine == 'x86_64'",
+    "onnxruntime-gpu>=1.24,<1.25; python_version >= '3.12' and python_version < '3.13' and platform_machine == 'x86_64'",
+]
+all = [
+    "elevenlabs>=1.4.1,<2.0.0",
+    "openai-whisper>=20250625,<20250626",
+    "faster-whisper>=1.1.1,<2.0.0",
+    "openwakeword @ git+https://github.com/maciejmajek/openWakeWord.git@chore/remove-tflite-backend",
+    "kokoro-onnx==0.3.3",
+    "onnxruntime-gpu>=1.23,<1.24; python_version >= '3.10' and python_version < '3.11' and platform_machine == 'x86_64'",
+    "onnxruntime-gpu>=1.24,<1.25; python_version >= '3.12' and python_version < '3.13' and platform_machine == 'x86_64'",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["rai_s2s"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.dependencies]
-python = "^3.10, <3.13"
-sounddevice = "^0.4.7"
-scipy = "^1.14.0"
-pydub = "^0.25.1"
-torchaudio = "2.3.1"
-# Optional dependencies (won't be installed unless requested)
-elevenlabs = { version = "^1.4.1", optional = true }
-openai-whisper = { version = "^20250625", optional = true }
-faster-whisper = { version = "^1.1.1", optional = true }
-openwakeword = { git = "https://github.com/maciejmajek/openWakeWord.git", branch = "chore/remove-tflite-backend", optional = true }
-kokoro-onnx = { version = "0.3.3", optional = true }
-onnxruntime-gpu = [
-    { version = "~1.23", markers = "python_version >= '3.10' and python_version < '3.11' and platform_machine == 'x86_64'" },
-    { version = "~1.24", markers = "python_version >= '3.12' and python_version < '3.13' and platform_machine == 'x86_64'" }
-]
-onnxruntime = [
-    { version = "~1.23", markers = "python_version >= '3.10' and python_version < '3.11' and platform_machine == 'x86_64'" },
-    { version = "~1.24", markers = "python_version >= '3.12' and python_version < '3.13' and platform_machine == 'x86_64'" }
-]
-[tool.poetry.extras]
-elevenlabs = ["elevenlabs"]
-whisper = ["openai-whisper"]
-fasterwhisper = ["faster-whisper"]
-wakeword = ["openwakeword"]
-kokoro = ["kokoro-onnx"]
-gpu = ["onnxruntime-gpu"]
-all = ["elevenlabs", "openai-whisper", "faster-whisper", "openwakeword", "kokoro-onnx", "onnxruntime-gpu"]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

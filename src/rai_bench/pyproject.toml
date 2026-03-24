@@ -1,20 +1,23 @@
-[tool.poetry]
+[project]
 name = "rai-bench"
 version = "0.2.0"
 description = "Package for running and creating benchmarks."
-authors = ["Jakub Matejczyk <jakub.matejczyk@robotec.ai>", "Magdalena Kotynia <magdalena.kotynia@robotec.ai>"]
 readme = "README.md"
-
-packages = [
-    { include = "rai_bench", from = "." },
+requires-python = ">=3.10"
+authors = [
+    { name = "Jakub Matejczyk", email = "jakub.matejczyk@robotec.ai" },
+    { name = "Magdalena Kotynia", email = "magdalena.kotynia@robotec.ai" },
 ]
-[tool.poetry.dependencies]
-python = "^3.10"
-inflect = "7.5.0"
-plotly = "^6.0.1"
-rai_core = ">=2.0.0.a2,<3.0.0"
-rai_sim = ">=0.0.2,<1.0.0"
+dependencies = [
+    "inflect==7.5.0",
+    "plotly>=6.0.1,<7.0.0",
+    "rai_core>=2.0.0a2,<3.0.0",
+    "rai_sim>=0.0.2,<1.0.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["rai_bench"]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
