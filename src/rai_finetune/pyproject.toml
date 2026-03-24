@@ -13,7 +13,7 @@ dependencies = [
     "datasets>=3.4.1,<4.0.0",
     "accelerate>=0.34.1",
     # Unsloth for efficient fine-tuning (with zoo dependency)
-    "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git",
+    "unsloth[colab-new]",
     "unsloth-zoo>=2025.8.3",  # Required by unsloth[colab-new], Python 3.10 compatible
     # PEFT for parameter-efficient fine-tuning
     "peft>=0.17.0",  # Required for training with unsloth

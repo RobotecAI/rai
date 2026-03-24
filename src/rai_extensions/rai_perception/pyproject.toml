@@ -4,7 +4,7 @@ name = "rai-perception"
 version = "0.2.1"
 description = "Package for object detection, segmentation and gripping point detection."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10,<3.13"
 authors = [
     { name = "Maciej Majek", email = "maciej.majek@robotec.ai" },
     { name = "Julia Jia", email = "juliajster@gmail.com" },
