@@ -9,9 +9,9 @@ Alternatively vendors can be configured manually in `config.toml` file.
 
 The table summarizes vendor alternative for core AI service and optional RAI modules:
 
-| Module                                          | Open source        | Alternative             | Why to consider alternative?                                             | More information                                                                                                                                                                 |
-| ----------------------------------------------- | ------------------ | ----------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [LLM service](#llm-model-configuration-in-rai)  | Ollama             | OpenAI, Bedrock         | Overall performance of the LLM models, supported modalities and features | [LangChain models](https://docs.langchain4j.dev/integrations/language-models/)                                                                                                   |
+| Module                                          | Open source        | Alternative                    | Why to consider alternative?                                             | More information                                                                                                                                                                 |
+| ----------------------------------------------- | ------------------ | ------------------------------ | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [LLM service](#llm-model-configuration-in-rai)  | Ollama             | OpenAI, Bedrock, MiniMax       | Overall performance of the LLM models, supported modalities and features | [LangChain models](https://docs.langchain4j.dev/integrations/language-models/)                                                                                                   |
 | **Optional:** [Tracing tool](./tracing.md)      | Langfuse           | LangSmith               | Better integration with LangChain                                        | [Comparison](https://langfuse.com/faq/all/langsmith-alternative)                                                                                                                 |
 | **Optional:** [Text to speech](#text-to-speech) | KokoroTTS, OpenTTS | ElevenLabs              | Arguably, significantly better voice synthesis                           | <li> [KokoroTTS](https://huggingface.co/hexgrad/Kokoro-82M#usage) </li><li> [OpenTTS GitHub](https://github.com/synesthesiam/opentts) </li><li> [RAI voice interface][s2s] </li> |
 | **Optional:** [Speech to text](#speech-to-text) | Whisper            | OpenAI Whisper (hosted) | When suitable local GPU is not an option                                 | <li> [Whisper GitHub](https://github.com/openai/whisper) </li><li> [RAI voice interface][s2s] </li>                                                                              |
@@ -66,6 +66,34 @@ Ollama can be used to host models locally.
     ```
 
 2. Use [RAI Configurator][configurator] -> `Model Selection` -> `bedrock` vendor
+
+### MiniMax
+
+MiniMax provides high-capacity cloud LLM models (M2.7, M2.7-highspeed) with a 204K context
+window via an OpenAI-compatible API.
+
+1. Obtain a MiniMax API key from [https://www.minimax.io](https://www.minimax.io) and set it:
+
+    ```bash
+    export MINIMAX_API_KEY="your-api-key"
+    ```
+
+2. In `config.toml`, set the vendor and model:
+
+    ```toml
+    [vendor]
+    simple_model = "minimax"
+    complex_model = "minimax"
+
+    [minimax]
+    simple_model = "MiniMax-M2.7-highspeed"
+    complex_model = "MiniMax-M2.7"
+    base_url = "https://api.minimax.io/v1"
+    ```
+
+> [!NOTE]
+> MiniMax does not provide a public embeddings API. Use a different vendor
+> (e.g. `openai` or `ollama`) for the `embeddings_model` setting.
 
 ## Complex LLM Model Configuration
 
