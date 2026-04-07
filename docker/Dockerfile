@@ -17,8 +17,6 @@ FROM osrf/ros:${ROS_DISTRO}-desktop-full
 
 ARG DEPENDENCIES=core_only
 ENV DEBIAN_FRONTEND=noninteractive
-# Increase timeout for Poetry requests.
-ENV POETRY_REQUESTS_TIMEOUT=300
 
 # Check whether the $DEPENDENCIES ARG has a valid value
 RUN /bin/bash -c 'if [ "${DEPENDENCIES}" != "core_only" ] && [ "${DEPENDENCIES}" != "all_groups" ]; then \
@@ -33,8 +31,8 @@ RUN apt update && apt install -y \
     git \
     wget \
     zip
-# Install Poetry
-RUN curl -sSL https://install.python-poetry.org | python3 - --version 2.1.3
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
 
 # Copy the RAI repository
@@ -46,9 +44,9 @@ ENV FASTRTPS_DEFAULT_PROFILES_FILE=/rai/docker/fastrtps_config.xml
 ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 
 RUN /bin/bash -c 'if [ "${DEPENDENCIES}" = "core_only" ]; then \
-  poetry install; \
+  uv sync --frozen; \
 else \
-  poetry install --all-groups; \
+  uv sync --frozen --all-groups; \
 fi'
 
 # Install ROS dependencies

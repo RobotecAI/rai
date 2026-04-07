@@ -1,8 +1,16 @@
 #!/usr/bin/env sh
 
-# Suppress ShellCheck warning about not following external file
-# shellcheck disable=SC1091
-. "$(poetry env info --path)"/bin/activate
+if [ -f ".venv/bin/activate" ]; then
+    # Suppress ShellCheck warning about not following external file
+    # shellcheck disable=SC1091
+    . ".venv/bin/activate"
+else
+    echo "Missing .venv. Run 'uv sync' first."
+    if (return 0 2>/dev/null); then
+        return 1
+    fi
+    exit 1
+fi
 
 # Suppress ShellCheck warning about not following external file
 # shellcheck disable=SC1091
@@ -29,7 +37,8 @@ case "$SHELL" in
 esac
 
 export PYTHONPATH
-PYTHONPATH="$(dirname "$(dirname "$(poetry run which python)")")/lib/python$(poetry run python --version | awk '{print $2}' | cut -d. -f1,2)/site-packages:$PYTHONPATH"
+PYTHON_SITE_PACKAGES="$(python -c 'import site; print(site.getsitepackages()[0])')"
+PYTHONPATH="${PYTHON_SITE_PACKAGES}:$PYTHONPATH"
 PYTHONPATH="src/rai_core:$PYTHONPATH"
 PYTHONPATH="src/rai_sim:$PYTHONPATH"
 PYTHONPATH="src/rai_s2s:$PYTHONPATH"

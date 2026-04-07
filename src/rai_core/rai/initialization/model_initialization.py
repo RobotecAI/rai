@@ -106,6 +106,29 @@ class RAIConfig:
     tracing: TracingConfig
 
 
+# Default placeholder configs for vendors not present in the TOML file.
+_DEFAULT_AWS = AWSConfig(
+    simple_model="", complex_model="", embeddings_model="", region_name=""
+)
+_DEFAULT_OPENAI = OpenAIConfig(
+    simple_model="", complex_model="", embeddings_model="", base_url=""
+)
+_DEFAULT_OLLAMA = OllamaConfig(
+    simple_model="", complex_model="", embeddings_model="", base_url=""
+)
+_DEFAULT_GOOGLE = GoogleConfig(simple_model="", complex_model="", embeddings_model="")
+_DEFAULT_MINIMAX = MiniMaxConfig(
+    simple_model="",
+    complex_model="",
+    base_url=_MINIMAX_DEFAULT_BASE_URL,
+)
+_DEFAULT_TRACING = TracingConfig(
+    project="",
+    langfuse=LangfuseConfig(use_langfuse=False, host=""),
+    langsmith=LangsmithConfig(use_langsmith=False, host=""),
+)
+
+
 def load_config(config_path: Optional[str] = None) -> RAIConfig:
     if config_path is None:
         with open("config.toml", "rb") as f:
@@ -113,27 +136,48 @@ def load_config(config_path: Optional[str] = None) -> RAIConfig:
     else:
         with open(config_path, "rb") as f:
             config_dict = tomli.load(f)
-    return RAIConfig(
-        vendor=VendorConfig(**config_dict["vendor"]),
-        aws=AWSConfig(**config_dict["aws"]),
-        openai=OpenAIConfig(**config_dict["openai"]),
-        ollama=OllamaConfig(**config_dict["ollama"]),
-        google=GoogleConfig(**config_dict["google"]),
-        minimax=MiniMaxConfig(
-            **config_dict.get(
-                "minimax",
-                {
-                    "simple_model": "MiniMax-M2.7-highspeed",
-                    "complex_model": "MiniMax-M2.7",
-                    "base_url": _MINIMAX_DEFAULT_BASE_URL,
-                },
-            )
-        ),
-        tracing=TracingConfig(
+
+    # Only require config sections for vendors actually referenced in [vendor].
+    # Missing sections get safe defaults so single-vendor setups work.
+    aws = AWSConfig(**config_dict["aws"]) if "aws" in config_dict else _DEFAULT_AWS
+    openai = (
+        OpenAIConfig(**config_dict["openai"])
+        if "openai" in config_dict
+        else _DEFAULT_OPENAI
+    )
+    ollama = (
+        OllamaConfig(**config_dict["ollama"])
+        if "ollama" in config_dict
+        else _DEFAULT_OLLAMA
+    )
+    google = (
+        GoogleConfig(**config_dict["google"])
+        if "google" in config_dict
+        else _DEFAULT_GOOGLE
+    )
+    minimax = (
+        MiniMaxConfig(**config_dict["minimax"])
+        if "minimax" in config_dict
+        else _DEFAULT_MINIMAX
+    )
+
+    if "tracing" in config_dict:
+        tracing = TracingConfig(
             project=config_dict["tracing"]["project"],
             langfuse=LangfuseConfig(**config_dict["tracing"]["langfuse"]),
             langsmith=LangsmithConfig(**config_dict["tracing"]["langsmith"]),
-        ),
+        )
+    else:
+        tracing = _DEFAULT_TRACING
+
+    return RAIConfig(
+        vendor=VendorConfig(**config_dict["vendor"]),
+        aws=aws,
+        openai=openai,
+        ollama=ollama,
+        google=google,
+        minimax=minimax,
+        tracing=tracing,
     )
 
 

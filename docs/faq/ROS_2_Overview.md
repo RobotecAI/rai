@@ -11,7 +11,7 @@ At the heart of this integration is the `rai.communication.ros2.ROS2Connector`, 
     1. **Dependency Management**
          - ROS 2's dependency system (rosdep) is too vague and inflexible for RAI's needs
          - RAI heavily relies on the Python ecosystem, particularly for AI/LLM integration
-         - Poetry provides more precise version control and dependency resolution, crucial for AI/ML components
+         - uv provides more precise version control and dependency resolution, crucial for AI/ML components
 
     2. **Architectural Separation**
          - The initial ROS 2 package approach made it difficult to maintain clear separation between:
