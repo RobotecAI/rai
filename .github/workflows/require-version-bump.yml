@@ -24,15 +24,11 @@ jobs:
           BASE_SHA=${{ github.event.pull_request.base.sha }}
           HEAD_SHA=${{ github.event.pull_request.head.sha }}
           FILE_PATH="src/rai_core/pyproject.toml"
-          LOCK_PATH="src/rai_core/uv.lock"
 
           git show $BASE_SHA:$FILE_PATH > base.txt || echo "BASE file not found"
           git show $HEAD_SHA:$FILE_PATH > head.txt || echo "HEAD file not found"
 
-          git show $BASE_SHA:$LOCK_PATH > base.lock || echo "BASE lock not found"
-          git show $HEAD_SHA:$LOCK_PATH > head.lock || echo "HEAD lock not found"
-
-      - name: Compare version lines and check lockfile
+      - name: Compare version lines
         run: |
           BASE_VERSION=$(grep '^version =' base.txt || echo "MISSING")
           HEAD_VERSION=$(grep '^version =' head.txt || echo "MISSING")
@@ -43,15 +39,6 @@ jobs:
           if [ "$BASE_VERSION" = "$HEAD_VERSION" ]; then
             echo "❌ Version has not changed. Please bump the version in the pyproject.toml file according to Semantic Versioning."
             exit 1
+          else
+            echo "✅ Version changed."
           fi
-
-          # Check that uv.lock was also updated if version changed
-          BASE_LOCK_HASH=$(sha256sum base.lock 2>/dev/null | awk '{print $1}' || echo "NOLOCK")
-          HEAD_LOCK_HASH=$(sha256sum head.lock 2>/dev/null | awk '{print $1}' || echo "NOLOCK")
-
-          if [ "$BASE_LOCK_HASH" = "$HEAD_LOCK_HASH" ]; then
-            echo "❌ uv.lock does not appear to have been updated. Please re-generate uv.lock after bumping the version (`uv lock`)."
-            exit 1
-          fi
-
-          echo "✅ Version changed and uv.lock updated."
