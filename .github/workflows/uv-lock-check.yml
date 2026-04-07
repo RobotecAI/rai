@@ -1,0 +1,16 @@
+name: uv lock check
+
+on:
+  pull_request:
+
+jobs:
+  uv-lock-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: |
+          if ! uv lock --check; then
+            echo "uv.lock is outdated; regenerate using uv lock"
+            exit 1
+          fi
