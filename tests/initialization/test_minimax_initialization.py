@@ -20,9 +20,9 @@ ChatOpenAI with the MiniMax base URL and API key, and that temperature
 clamping (>0.0) is applied before construction.
 """
 
-import pytest
 from pathlib import Path
 
+import pytest
 from rai.initialization import model_initialization
 
 # ---------------------------------------------------------------------------
@@ -111,9 +111,9 @@ class TestMiniMaxConfig:
             line
             for line in MINIMAX_CONFIG_TEMPLATE.splitlines()
             if not line.startswith("[minimax]")
-            and not line.startswith("simple_model = \"MiniMax")
-            and not line.startswith("complex_model = \"MiniMax")
-            and not line.startswith("base_url = \"https://api.minimax")
+            and not line.startswith('simple_model = "MiniMax')
+            and not line.startswith('complex_model = "MiniMax')
+            and not line.startswith('base_url = "https://api.minimax')
         )
         config_path = write_config(tmp_path / "config.toml", config_without_minimax)
         config = model_initialization.load_config(str(config_path))
@@ -188,9 +188,7 @@ class TestMiniMaxLLMModelFactory:
         assert isinstance(model, DummyModel)
         assert model.kwargs["model"] == "MiniMax-M2.7"
 
-    def test_get_llm_model_reads_minimax_api_key_env_var(
-        self, monkeypatch, tmp_path
-    ):
+    def test_get_llm_model_reads_minimax_api_key_env_var(self, monkeypatch, tmp_path):
         config_path = write_config(tmp_path / "config.toml", MINIMAX_CONFIG_TEMPLATE)
         monkeypatch.setenv("MINIMAX_API_KEY", "test-minimax-key")
         monkeypatch.setattr("langchain_openai.ChatOpenAI", DummyModel)
@@ -266,9 +264,7 @@ class TestMiniMaxLLMModelFactory:
 class TestMiniMaxLLMModelDirect:
     """Tests for get_llm_model_direct with MiniMax vendor."""
 
-    def test_get_llm_model_direct_uses_provided_model_name(
-        self, monkeypatch, tmp_path
-    ):
+    def test_get_llm_model_direct_uses_provided_model_name(self, monkeypatch, tmp_path):
         config_path = write_config(tmp_path / "config.toml", MINIMAX_CONFIG_TEMPLATE)
         monkeypatch.setattr("langchain_openai.ChatOpenAI", DummyModel)
 
@@ -282,9 +278,7 @@ class TestMiniMaxLLMModelDirect:
         assert model.kwargs["model"] == "MiniMax-M2.7-highspeed"
         assert model.kwargs["base_url"] == "https://api.minimax.io/v1"
 
-    def test_get_llm_model_direct_clamps_zero_temperature(
-        self, monkeypatch, tmp_path
-    ):
+    def test_get_llm_model_direct_clamps_zero_temperature(self, monkeypatch, tmp_path):
         config_path = write_config(tmp_path / "config.toml", MINIMAX_CONFIG_TEMPLATE)
         monkeypatch.setattr("langchain_openai.ChatOpenAI", DummyModel)
 
@@ -325,5 +319,7 @@ class TestMiniMaxEmbeddingsNotSupported:
         )
         config_path = write_config(tmp_path / "config.toml", minimax_embeddings_config)
 
-        with pytest.raises(ValueError, match="MiniMax does not provide a public embeddings API"):
+        with pytest.raises(
+            ValueError, match="MiniMax does not provide a public embeddings API"
+        ):
             model_initialization.get_embeddings_model(config_path=str(config_path))
