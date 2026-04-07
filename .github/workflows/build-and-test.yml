@@ -34,10 +34,10 @@ jobs:
         with:
           clean: true
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          version: 2.1.1
+          enable-cache: true
 
       - name: Create virtual audio device
         run: |
@@ -46,7 +46,7 @@ jobs:
           jackd -d dummy -r 44100 &
 
       - name: Install python dependencies
-        run: poetry install --with perception,nomad,s2s,simbench
+        run: uv sync --all-groups
 
       - name: Update rosdep
         shell: bash

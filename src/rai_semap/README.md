@@ -25,7 +25,7 @@ The following examples use the ROSBot XL demo to illustrate how to use rai_semap
 ### Prerequisites
 
 -   ROS2 environment configured
--   rai_semap installed: `poetry install --with semap`
+-   rai_semap installed: `uv sync --group semap`
 -   ROSBot XL demo configured (see [ROSBot XL demo](../../docs/demos/rosbot_xl.md))
 
 ### Step 0: Launch the ROSBot XL demo

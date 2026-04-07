@@ -9,7 +9,7 @@ This package provides a ROS2 Node which loads and runs the [NoMaD](https://gener
 In the base directory of the `RAI` package install dependencies:
 
 ```
-poetry install --with nomad
+uv sync --group nomad
 ```
 
 Source the ros installation
