@@ -19,9 +19,10 @@ dependencies = [
     "rai_core>=2.0.0a2,<3.0.0",
 ]
 
-[tool.hatch.build.targets.wheel]
-packages = ["rai_sim"]
+[tool.uv.build-backend]
+module-root = ""
+module-name = "rai_sim"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.11.3,<0.12"]
+build-backend = "uv_build"

@@ -39,12 +39,10 @@ all = [
     "onnxruntime-gpu>=1.24,<1.25; python_version >= '3.12' and python_version < '3.13' and platform_machine == 'x86_64'",
 ]
 
-[tool.hatch.build.targets.wheel]
-packages = ["rai_s2s"]
-
-[tool.hatch.metadata]
-allow-direct-references = true
+[tool.uv.build-backend]
+module-root = ""
+module-name = "rai_s2s"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.11.3,<0.12"]
+build-backend = "uv_build"

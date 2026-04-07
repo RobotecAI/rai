@@ -49,9 +49,10 @@ dev = [
     "flake8>=5.0.0,<6.1.0",
 ]
 
-[tool.hatch.build.targets.wheel]
-packages = ["rai_finetune"]
+[tool.uv.build-backend]
+module-root = ""
+module-name = "rai_finetune"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.11.3,<0.12"]
+build-backend = "uv_build"

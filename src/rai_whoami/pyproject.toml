@@ -23,9 +23,10 @@ dependencies = [
 build-whoami = "rai_whoami.build_whoami:main"
 initialize-docs = "rai_whoami.initialize_docs_directory:main"
 
-[tool.hatch.build.targets.wheel]
-packages = ["rai_whoami"]
+[tool.uv.build-backend]
+module-root = ""
+module-name = "rai_whoami"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.11.3,<0.12"]
+build-backend = "uv_build"
