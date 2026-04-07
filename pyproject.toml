@@ -53,10 +53,6 @@ rai_sim = { path = "src/rai_sim", editable = true }
 rai_bench = { path = "src/rai_bench", editable = true }
 rai_perception = { path = "src/rai_extensions/rai_perception", editable = true }
 
-[build-system]
-requires = ["uv_build>=0.11.3,<0.12"]
-build-backend = "uv_build"
-
 
 [tool.pytest.ini_options]
 markers = [
