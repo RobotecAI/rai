@@ -242,12 +242,11 @@ class ROS2TopicAPI(BaseROS2API):
         return topic_endpoints
 
     def shutdown(self) -> None:
-        """Cleanup publishers when object is destroyed."""
+        """Cleanup publishers and subscribers when object is destroyed."""
         for publisher in self._publishers.values():
             publisher.destroy()
         self._publishers.clear()
 
-        if self._destroy_subscribers:
-            for subscription in self._subscriptions.values():
-                subscription.destroy()
-            self._subscriptions.clear()
+        for subscription in self._subscriptions.values():
+            subscription.destroy()
+        self._subscriptions.clear()
