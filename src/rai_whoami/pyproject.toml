@@ -1,32 +1,32 @@
-[tool.poetry]
+[project]
 name = "rai_whoami"
 version = "0.0.5"
 description = "Package to extract embodiment information from robot documentation"
-authors = ["Maciej Majek <maciej.majek@robotec.ai>"]
 readme = "README.md"
+requires-python = ">=3.10,<3.13"
+authors = [{ name = "Maciej Majek", email = "maciej.majek@robotec.ai" }]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: Apache Software License",
 ]
-packages = [
-    { include = "rai_whoami", from = "." },
+dependencies = [
+    "PyYAML",
+    "langchain",
+    "PyPDF2",
+    "Pillow",
+    "faiss-cpu",
+    "pypdf>=5.4.0,<6.0.0",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.10, <3.13"
-PyYAML = "*"
-langchain = "*"
-PyPDF2 = "*"
-Pillow = "*"
-faiss-cpu = "*"
-pypdf = "^5.4.0"
-
-[tool.poetry.scripts]
+[project.scripts]
 build-whoami = "rai_whoami.build_whoami:main"
 initialize-docs = "rai_whoami.initialize_docs_directory:main"
 
+[tool.uv.build-backend]
+module-root = ""
+module-name = "rai_whoami"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.11.3,<0.12"]
+build-backend = "uv_build"

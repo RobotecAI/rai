@@ -30,7 +30,7 @@ platform in a nice apartment.
     sudo apt install ros-${ROS_DISTRO}-navigation2 ros-${ROS_DISTRO}-nav2-bringup
     vcs import < demos.repos
     rosdep install --from-paths src --ignore-src -r -y
-    poetry install --with perception
+    uv sync --group perception
     colcon build
     ```
 

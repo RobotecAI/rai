@@ -98,7 +98,7 @@ source ~/.bashrc
 pyenv install 3.10
 ```
 
-### 3. Set up Poetry Environment
+### 3. Set up UV Environment
 
 ```bash
 cd src/rai_finetune
@@ -106,13 +106,12 @@ cd src/rai_finetune
 # Set local Python version
 pyenv local 3.10
 
-# Install Poetry if not already installed
-curl -sSL https://install.python-poetry.org | python3 -
+# Install uv if not already installed
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Create and activate Poetry environment
-poetry env use python
-poetry install
-poetry run pip install flash-attn --no-build-isolation
+# Create and sync uv environment
+uv sync --python 3.10
+uv run pip install flash-attn --no-build-isolation
 
 # Activate the environment
 . ./setup_finetune_shell.sh

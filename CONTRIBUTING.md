@@ -54,7 +54,7 @@ pre-commit run -a # Run the checks before committing
 Optionally, install all RAI dependencies and run the tests:
 
 ```bash
-poetry install --all-groups
+uv sync --all-groups
 colcon build --symlink-install
 pytest tests/
 ```

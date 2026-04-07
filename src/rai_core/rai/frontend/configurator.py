@@ -715,7 +715,7 @@ def additional_features():
 
     To install Perception dependencies, run:
     ```bash
-    poetry install --with perception
+    uv sync --group perception
     ```
 
     This will install:
@@ -733,7 +733,7 @@ def additional_features():
 
     To install NOMAD dependencies, run:
     ```bash
-    poetry install --with nomad
+    uv sync --group nomad
     ```
 
     This will install:
@@ -979,7 +979,7 @@ def setup_steps():
 
     if importlib.util.find_spec("rai_s2s") is None:
         logging.warning(
-            "Skipping speech recognition, rai_s2s not installed - install `poetry install --with s2s`"
+            "Skipping speech recognition, rai_s2s not installed - install `uv sync --group s2s`"
         )
         st.session_state.features["s2s"] = False
     else:
