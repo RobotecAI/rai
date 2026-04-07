@@ -106,9 +106,7 @@ _DEFAULT_OPENAI = OpenAIConfig(
 _DEFAULT_OLLAMA = OllamaConfig(
     simple_model="", complex_model="", embeddings_model="", base_url=""
 )
-_DEFAULT_GOOGLE = GoogleConfig(
-    simple_model="", complex_model="", embeddings_model=""
-)
+_DEFAULT_GOOGLE = GoogleConfig(simple_model="", complex_model="", embeddings_model="")
 _DEFAULT_TRACING = TracingConfig(
     project="",
     langfuse=LangfuseConfig(use_langfuse=False, host=""),
