@@ -1,6 +1,6 @@
 [project]
 name = "rai_core"
-version = "2.11.1"
+version = "2.11.2"
 description = "Core functionality for RAI framework"
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
