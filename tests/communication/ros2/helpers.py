@@ -573,8 +573,16 @@ def setup_mock_clock_for_agent(agent, use_time_wrapper: bool = True):
     return mock_clock, mock_time
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def ros_setup() -> Generator[None, None, None]:
+    """Initialize ROS2 once per test session.
+    
+    Using session scope instead of function scope to reduce the frequency
+    of rclpy.init()/shutdown() cycles, which can trigger race conditions
+    in ROS2 Humble's C++ layer during cleanup of multi-threaded action servers.
+    
+    See issue #759: https://github.com/RobotecAI/rai/issues/759
+    """
     rclpy.init()
     yield
     rclpy.shutdown()

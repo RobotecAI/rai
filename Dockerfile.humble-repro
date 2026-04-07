@@ -1,0 +1,27 @@
+# Dockerfile for reproducing ROS2 Humble segfault issue #759
+# Based on ROS2 Humble to match the CI environment where the issue occurs
+
+FROM osrf/ros:humble-desktop-full
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install Python dependencies
+RUN apt-get update && apt-get install -y \
+    python3-pip \
+    ros-humble-nav2-msgs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up ROS2 environment
+RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+
+# Create working directory
+WORKDIR /repro
+
+# Copy the minimal reproduction script
+COPY minimal_repro.py /repro/
+
+# Make the script executable
+RUN chmod +x /repro/minimal_repro.py
+
+# Default command runs the reproduction script
+CMD ["/bin/bash", "-c", "source /opt/ros/humble/setup.bash && python3 /repro/minimal_repro.py"]
