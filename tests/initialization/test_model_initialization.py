@@ -195,3 +195,54 @@ def test_get_embeddings_model_return_kwargs_openai(monkeypatch, tmp_path):
     assert kwargs["base_url"] == "https://openai.example/v1/"
     assert kwargs["vendor"] == "openai"
     assert "class" in kwargs
+
+
+def test_load_config_allows_missing_unused_vendor_sections(tmp_path):
+    sparse_config = """
+[vendor]
+simple_model = "openai"
+complex_model = "openai"
+embeddings_model = "openai"
+
+[openai]
+simple_model = "gpt-4o-mini"
+complex_model = "gpt-4o"
+embeddings_model = "text-embedding-3-small"
+base_url = "https://openai.example/v1/"
+"""
+    config_path = write_config(tmp_path / "config.toml", sparse_config)
+
+    config = model_initialization.load_config(str(config_path))
+
+    assert config.openai.simple_model == "gpt-4o-mini"
+    assert config.openai.complex_model == "gpt-4o"
+    assert config.openai.embeddings_model == "text-embedding-3-small"
+    assert config.openai.base_url == "https://openai.example/v1/"
+    assert config.aws.simple_model == ""
+    assert config.aws.region_name == ""
+    assert config.ollama.base_url == ""
+    assert config.google.embeddings_model == ""
+
+
+def test_load_config_uses_default_tracing_when_section_missing(tmp_path):
+    sparse_config = """
+[vendor]
+simple_model = "openai"
+complex_model = "openai"
+embeddings_model = "openai"
+
+[openai]
+simple_model = "gpt-4o-mini"
+complex_model = "gpt-4o"
+embeddings_model = "text-embedding-3-small"
+base_url = "https://openai.example/v1/"
+"""
+    config_path = write_config(tmp_path / "config.toml", sparse_config)
+
+    config = model_initialization.load_config(str(config_path))
+
+    assert config.tracing.project == ""
+    assert config.tracing.langfuse.use_langfuse is False
+    assert config.tracing.langfuse.host == ""
+    assert config.tracing.langsmith.use_langsmith is False
+    assert config.tracing.langsmith.host == ""
