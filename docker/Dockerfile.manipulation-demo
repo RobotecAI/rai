@@ -28,7 +28,6 @@ RUN ./scripts/download_demo.sh manipulation
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --group perception --group simbench
 
-
 RUN /bin/bash -c '. /opt/ros/${ROS_DISTRO}/setup.bash && colcon build --symlink-install'
 
 RUN /bin/bash -c ". setup_shell.sh && python src/rai_extensions/rai_perception/rai_perception/scripts/download_weights.py"
