@@ -245,6 +245,9 @@ class ROS2TopicAPI(BaseROS2API):
         """Cleanup publishers when object is destroyed."""
         for publisher in self._publishers.values():
             publisher.destroy()
+        self._publishers.clear()
 
-        for subscription in self._subscriptions.values():
-            subscription.destroy()
+        if self._destroy_subscribers:
+            for subscription in self._subscriptions.values():
+                subscription.destroy()
+            self._subscriptions.clear()
