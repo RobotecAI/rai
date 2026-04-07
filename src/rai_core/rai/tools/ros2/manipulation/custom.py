@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import logging
-from typing import Any, Literal, Type
+from typing import TYPE_CHECKING, Any, Literal, Type
 
 import numpy as np
 from deprecated import deprecated
@@ -31,12 +31,8 @@ except ImportError:
         "rai_interfaces is not installed, ManipulatorMoveTo tool will not work."
     )
 
-try:
+if TYPE_CHECKING:
     from rai_perception.tools import GetGrabbingPointTool
-except ImportError:
-    logging.warning(
-        "rai-perception is not installed, GetGrabbingPointTool will not work"
-    )
 
 
 class MoveToPointToolInput(BaseModel):

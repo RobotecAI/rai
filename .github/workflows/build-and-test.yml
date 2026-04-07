@@ -2,13 +2,17 @@ name: build and test
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, edited, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - development
       - main
   push:
     branches:
       - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-test-ros2:
