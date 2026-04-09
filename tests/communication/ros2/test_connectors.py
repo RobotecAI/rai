@@ -388,7 +388,7 @@ def test_ros2_connector_executor_performance_warning(ros_setup: None) -> None:
     connector = ROS2Connector()
     try:
         # Simulate the executor running far behind schedule — covers the warning branch
-        connector.last_executor_performance_time = time.time() - 10.0
+        connector._last_executor_performance_time = time.time() - 10.0
         connector._executor_performance_callback()
         # Warning goes to the rclpy stderr logger; we just verify it doesn't raise
     finally:

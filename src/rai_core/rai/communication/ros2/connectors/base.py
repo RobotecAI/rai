@@ -156,12 +156,14 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         elif self._executor_type == "single_threaded":
             self._executor = SingleThreadedExecutor()
         else:
+            self._tf_listener.unregister()
+            self._node.destroy_node()
             raise ValueError(f"Invalid executor type: {self._executor_type}")
 
         self._executor.add_node(self._node)
         self._thread = threading.Thread(target=self._executor.spin)
         self._thread.start()
-        self.last_executor_performance_time = time.time()
+        self._last_executor_performance_time = time.time()
 
     def _executor_performance_callback(self) -> None:
         """Monitor executor performance and log warnings if it falls behind schedule.
@@ -173,7 +175,7 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         current_time = time.time()
         time_behind = (
             current_time
-            - self.last_executor_performance_time
+            - self._last_executor_performance_time
             - self._executor_performance_time_delta
         )
         threshold = (
@@ -190,9 +192,7 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
                 f"{self._executor.__class__.__name__} is {time_behind:.2f} seconds behind. "
                 f"If you see this message frequently, consider switching to {', '.join(alternative_executors)}."
             )
-            self.last_executor_performance_time = current_time
-        else:
-            self.last_executor_performance_time = current_time
+        self._last_executor_performance_time = current_time
 
     def get_topics_names_and_types(self) -> List[Tuple[str, List[str]]]:
         """Get list of available topics and their message types.
@@ -531,6 +531,7 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         4. Shuts down the topic API
         5. Shuts down the executor
         6. Joins the executor thread
+
         """
         self._tf_listener.unregister()
         self._node.destroy_node()
