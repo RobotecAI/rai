@@ -60,7 +60,6 @@ class ROS2TopicAPI(BaseROS2API):
         """
         self._node = node
         self._logger = node.get_logger()
-        self._publishers: Dict[str, Publisher] = {}
 
         # TODO: These fields are a workaround to prevent subscriber destruction,
         # which often fails as described in https://github.com/ros2/rclpy/issues/1142
@@ -68,17 +67,16 @@ class ROS2TopicAPI(BaseROS2API):
         # While this may lead to memory/performance issues, it's preferable to
         # preventing node crashes.
         self._last_msg: Dict[str, Tuple[float, Any]] = {}
-        self._subscriptions: Dict[str, rclpy.node.Subscription] = {}
         self._destroy_subscribers: bool = destroy_subscribers
         self.node = node
-        self.subscriptions: Dict[str, Subscription] = {}
-        self.publishers: Dict[str, Publisher] = {}
+        self._subscriptions: Dict[str, Subscription] = {}
+        self._publishers: Dict[str, Publisher] = {}
 
     def subscriber_exists(self, topic: str) -> bool:
-        return topic in self.subscriptions
+        return topic in self._subscriptions
 
     def publisher_exists(self, topic: str) -> bool:
-        return topic in self.publishers
+        return topic in self._publishers
 
     def create_subscriber(
         self,
@@ -102,7 +100,7 @@ class ROS2TopicAPI(BaseROS2API):
         subscription = self.node.create_subscription(
             topic=topic, msg_type=msg_cls, callback=callback, qos_profile=qos
         )
-        self.subscriptions[topic] = subscription
+        self._subscriptions[topic] = subscription
         return subscription
 
     def create_publisher(
@@ -124,7 +122,7 @@ class ROS2TopicAPI(BaseROS2API):
         publisher = self.node.create_publisher(
             topic=topic, msg_type=msg_cls, qos_profile=qos
         )
-        self.publishers[topic] = publisher
+        self._publishers[topic] = publisher
         return publisher
 
     def get_topic_names_and_types(
@@ -244,6 +242,11 @@ class ROS2TopicAPI(BaseROS2API):
         return topic_endpoints
 
     def shutdown(self) -> None:
-        """Cleanup publishers when object is destroyed."""
+        """Cleanup publishers and subscribers when object is destroyed."""
         for publisher in self._publishers.values():
             publisher.destroy()
+        self._publishers.clear()
+
+        for subscription in self._subscriptions.values():
+            subscription.destroy()
+        self._subscriptions.clear()
