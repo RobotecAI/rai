@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import time
+from functools import partial
 from typing import (
     Any,
     Callable,
@@ -242,6 +243,73 @@ class ROS2TopicAPI(BaseROS2API):
         if not topic_endpoints:
             raise ValueError(f"No publisher found for topic: {topic}")
         return topic_endpoints
+
+    def receive_message(
+        self,
+        topic: str,
+        timeout_sec: float = 1.0,
+        msg_type: Optional[str] = None,
+        qos_profile: Optional[QoSProfile] = None,
+        auto_qos_matching: bool = True,
+    ) -> Any:
+        """Receive a single message from a ROS2 topic.
+
+        Creates an internal subscriber for the topic if one does not yet exist.
+        Checks the message cache first; if a sufficiently recent message is found
+        it is returned immediately.  Otherwise polls until a message arrives or the
+        timeout expires.
+
+        If ``destroy_subscribers`` was set to ``True`` at construction time the
+        subscriber is destroyed immediately after the first message is received.
+        This frees resources but may trigger the rclpy executor crash described in
+        https://github.com/ros2/rclpy/issues/1142, so the default is ``False``.
+
+        Args:
+            topic: Name of the topic to receive from.
+            timeout_sec: Maximum time to wait for a message, in seconds.
+            msg_type: ROS2 message type string.  Auto-detected when not provided.
+            qos_profile: QoS profile to use when creating the subscriber.
+            auto_qos_matching: Automatically match QoS with existing publishers.
+
+        Returns:
+            The first raw ROS2 message received from the topic.
+
+        Raises:
+            TimeoutError: If no message is received within ``timeout_sec``.
+        """
+        if topic not in self._subscriptions:
+            sub_qos = self._resolve_qos_profile(
+                topic, auto_qos_matching, qos_profile, for_publisher=False
+            )
+            if msg_type is None:
+                msg_type = self.get_topic_type(topic)
+            msg_cls = self.import_message_from_str(msg_type)
+            subscription = self.node.create_subscription(
+                topic=topic,
+                msg_type=msg_cls,
+                callback=partial(self._generic_callback, topic),
+                qos_profile=sub_qos,
+            )
+            self._subscriptions[topic] = subscription
+        else:
+            # Subscriber already exists; serve from cache if fresh enough.
+            if topic in self._last_msg:
+                timestamp, msg = self._last_msg[topic]
+                if timestamp > time.time() - timeout_sec:
+                    return msg
+
+        start_time = time.time()
+        while time.time() - start_time < timeout_sec:
+            if topic in self._last_msg:
+                _, msg = self._last_msg[topic]
+                if self._destroy_subscribers and topic in self._subscriptions:
+                    self.node.destroy_subscription(self._subscriptions.pop(topic))
+                return msg
+            time.sleep(0.1)
+
+        raise TimeoutError(
+            f"Message from {topic} not received in {timeout_sec} seconds"
+        )
 
     def shutdown(self) -> None:
         """Cleanup publishers when object is destroyed."""
