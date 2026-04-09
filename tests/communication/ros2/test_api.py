@@ -35,6 +35,8 @@ from rclpy.callback_groups import (
 )
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
+from rclpy.qos import QoSProfile
+from std_msgs.msg import String
 from std_srvs.srv import SetBool
 
 from .helpers import (
@@ -109,6 +111,222 @@ def test_ros2_topic_api_receive_message_destroy_subscriber(
         assert msg.data == "Hello, ROS2!"
         # Subscriber should have been torn down after first message
         assert topic_name not in topic_api._subscriptions
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_topic_api_subscriber_and_publisher_exists(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([node])
+
+    try:
+        topic_api = ROS2TopicAPI(node)
+        assert not topic_api.subscriber_exists(topic_name)
+        assert not topic_api.publisher_exists(topic_name)
+
+        topic_api.create_subscriber(
+            topic_name,
+            callback=lambda msg: None,
+            msg_type="std_msgs/msg/String",
+        )
+        assert topic_api.subscriber_exists(topic_name)
+
+        topic_api.create_publisher(topic_name, msg_type="std_msgs/msg/String")
+        assert topic_api.publisher_exists(topic_name)
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_topic_api_create_subscriber_explicit_qos(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([node])
+
+    try:
+        topic_api = ROS2TopicAPI(node)
+        sub = topic_api.create_subscriber(
+            topic_name,
+            callback=lambda msg: None,
+            msg_type="std_msgs/msg/String",
+            qos_profile=QoSProfile(depth=1),
+            auto_qos_matching=False,
+        )
+        assert sub is not None
+        assert topic_api.subscriber_exists(topic_name)
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_topic_api_create_subscriber_no_qos_raises(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([node])
+
+    try:
+        topic_api = ROS2TopicAPI(node)
+        with pytest.raises(ValueError, match="Either qos_profile or auto_qos_matching"):
+            topic_api.create_subscriber(
+                topic_name,
+                callback=lambda msg: None,
+                msg_type="std_msgs/msg/String",
+                qos_profile=None,
+                auto_qos_matching=False,
+            )
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_topic_api_create_publisher_explicit_qos(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([node])
+
+    try:
+        topic_api = ROS2TopicAPI(node)
+        pub = topic_api.create_publisher(
+            topic_name,
+            msg_type="std_msgs/msg/String",
+            qos_profile=QoSProfile(depth=1),
+            auto_qos_matching=False,
+        )
+        assert pub is not None
+        assert topic_api.publisher_exists(topic_name)
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_topic_api_create_publisher_no_qos_raises(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([node])
+
+    try:
+        topic_api = ROS2TopicAPI(node)
+        with pytest.raises(ValueError, match="Either qos_profile or auto_qos_matching"):
+            topic_api.create_publisher(
+                topic_name,
+                msg_type="std_msgs/msg/String",
+                qos_profile=None,
+                auto_qos_matching=False,
+            )
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_topic_api_verify_receive_args(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([node])
+
+    try:
+        topic_api = ROS2TopicAPI(node)
+        with pytest.raises(ValueError, match="Cannot provide both"):
+            topic_api._verify_receive_args(
+                "topic", auto_topic_type=True, msg_type="std_msgs/msg/String"
+            )
+        with pytest.raises(ValueError, match="msg_type must be provided"):
+            topic_api._verify_receive_args(
+                "topic", auto_topic_type=False, msg_type=None
+            )
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_topic_api_generic_callback(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([node])
+
+    try:
+        topic_api = ROS2TopicAPI(node)
+        msg = String(data="test")
+        topic_api._generic_callback("test_topic", msg)
+        assert "test_topic" in topic_api._last_msg
+        timestamp, stored_msg = topic_api._last_msg["test_topic"]
+        assert stored_msg is msg
+        assert timestamp <= time.time()
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_topic_api_is_topic_available(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    message_publisher = MessagePublisher(topic_name)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([message_publisher, node])
+
+    try:
+        topic_api = ROS2TopicAPI(node)
+        assert topic_api._is_topic_available(topic_name, timeout_sec=2.0)
+        assert not topic_api._is_topic_available(
+            "/definitely_nonexistent_topic_xyz", timeout_sec=0.3
+        )
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_topic_api_resolve_qos_profile_branches(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([node])
+
+    try:
+        topic_api = ROS2TopicAPI(node)
+        qos = QoSProfile(depth=5)
+
+        # auto_qos_matching=True AND qos_profile provided → logs warning, returns qos_profile
+        result = topic_api._resolve_qos_profile(
+            topic_name, True, qos, for_publisher=True
+        )
+        assert result is qos
+
+        # auto_qos_matching=False, qos_profile provided → returns qos_profile directly
+        result2 = topic_api._resolve_qos_profile(
+            topic_name, False, qos, for_publisher=True
+        )
+        assert result2 is qos
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_topic_api_verify_publisher_exists_raises(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([node])
+
+    try:
+        topic_api = ROS2TopicAPI(node)
+        with pytest.raises(ValueError, match="No publisher found"):
+            topic_api._verify_publisher_exists(topic_name)
     finally:
         shutdown_executors_and_threads(executors, threads)
 
