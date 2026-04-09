@@ -16,7 +16,7 @@ import threading
 import time
 import uuid
 from functools import partial
-from typing import Any, Callable, Dict, Final, List, Literal, Optional, Tuple, TypeVar
+from typing import Any, Callable, Final, List, Literal, Optional, Tuple, TypeVar
 
 import rclpy
 import rclpy.executors
@@ -156,15 +156,14 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         elif self._executor_type == "single_threaded":
             self._executor = SingleThreadedExecutor()
         else:
+            self._tf_listener.unregister()
+            self._node.destroy_node()
             raise ValueError(f"Invalid executor type: {self._executor_type}")
 
         self._executor.add_node(self._node)
         self._thread = threading.Thread(target=self._executor.spin)
         self._thread.start()
-        self.last_executor_performance_time = time.time()
-
-        # cache for last received messages
-        self.last_msg: Dict[str, T] = {}
+        self._last_executor_performance_time = time.time()
 
     def _executor_performance_callback(self) -> None:
         """Monitor executor performance and log warnings if it falls behind schedule.
@@ -176,7 +175,7 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         current_time = time.time()
         time_behind = (
             current_time
-            - self.last_executor_performance_time
+            - self._last_executor_performance_time
             - self._executor_performance_time_delta
         )
         threshold = (
@@ -193,21 +192,7 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
                 f"{self._executor.__class__.__name__} is {time_behind:.2f} seconds behind. "
                 f"If you see this message frequently, consider switching to {', '.join(alternative_executors)}."
             )
-            self.last_executor_performance_time = current_time
-        else:
-            self.last_executor_performance_time = current_time
-
-    def _last_message_callback(self, source: str, msg: T):
-        """Store the last received message for a given source.
-
-        Parameters
-        ----------
-        source : str
-            The topic source identifier.
-        msg : T
-            The received message.
-        """
-        self.last_msg[source] = msg
+        self._last_executor_performance_time = current_time
 
     def get_topics_names_and_types(self) -> List[Tuple[str, List[str]]]:
         """Get list of available topics and their message types.
@@ -372,31 +357,14 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         TimeoutError
             If no message is received within the timeout period.
         """
-        if self._topic_api.subscriber_exists(source):
-            # trying to hit cache first
-            if source in self.last_msg:
-                if self.last_msg[source].timestamp > time.time() - timeout_sec:
-                    return self.last_msg[source]
-        else:
-            self._topic_api.create_subscriber(
-                topic=source,
-                callback=partial(self.general_callback, source),
-                msg_type=msg_type,
-                qos_profile=qos_profile,
-                auto_qos_matching=auto_qos_matching,
-            )
-            self.register_callback(source, partial(self._last_message_callback, source))
-
-        start_time = time.time()
-        # wait for the message to be received
-        while time.time() - start_time < timeout_sec:
-            if source in self.last_msg:
-                return self.last_msg[source]
-            time.sleep(0.1)
-        else:
-            raise TimeoutError(
-                f"Message from {source} not received in {timeout_sec} seconds"
-            )
+        raw_msg = self._topic_api.receive_message(
+            topic=source,
+            timeout_sec=timeout_sec,
+            msg_type=msg_type,
+            qos_profile=qos_profile,
+            auto_qos_matching=auto_qos_matching,
+        )
+        return self.general_callback_preprocessor(raw_msg)
 
     @staticmethod
     def wait_for_transform(
@@ -563,6 +531,7 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         4. Shuts down the topic API
         5. Shuts down the executor
         6. Joins the executor thread
+
         """
         self._tf_listener.unregister()
         self._node.destroy_node()

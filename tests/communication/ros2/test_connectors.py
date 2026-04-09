@@ -19,6 +19,7 @@ from typing import Any, List
 from unittest.mock import MagicMock
 
 import pytest
+import rclpy
 from nav2_msgs.action import NavigateToPose
 from PIL import Image
 from pydub import AudioSegment
@@ -35,6 +36,7 @@ from rclpy.callback_groups import (
 )
 from std_msgs.msg import String
 from std_srvs.srv import SetBool
+from tf2_ros import LookupException
 
 from .helpers import (
     HRIMessageSubscriber,
@@ -44,6 +46,7 @@ from .helpers import (
     TestActionClient,
     TestActionServer,
     TestServiceClient,
+    TransformPublisher,
     multi_threaded_spinner,
     ros_setup,
     shutdown_executors_and_threads,
@@ -359,3 +362,88 @@ def test_ros2_connector_unique_names(ros_setup: None):
     finally:
         connector1.shutdown()
         connector2.shutdown()
+
+
+def test_ros2_connector_auto_init() -> None:
+    """Connector initializes rclpy automatically when it is not yet running."""
+    if rclpy.ok():
+        rclpy.shutdown()
+    connector = None
+    try:
+        connector = ROS2Connector()
+        assert rclpy.ok()
+    finally:
+        if connector:
+            connector.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+def test_ros2_connector_invalid_executor_type(ros_setup: None) -> None:
+    with pytest.raises(ValueError, match="Invalid executor type"):
+        ROS2Connector(executor_type="invalid_type")  # type: ignore[arg-type]
+
+
+def test_ros2_connector_executor_performance_warning(ros_setup: None) -> None:
+    connector = ROS2Connector()
+    try:
+        # Simulate the executor running far behind schedule — covers the warning branch
+        connector._last_executor_performance_time = time.time() - 10.0
+        connector._executor_performance_callback()
+        # Warning goes to the rclpy stderr logger; we just verify it doesn't raise
+    finally:
+        connector.shutdown()
+
+
+def test_ros2_connector_register_callback(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    message_publisher = MessagePublisher(topic_name)
+    executors, threads = multi_threaded_spinner([message_publisher])
+    connector = ROS2Connector()
+    received: List[Any] = []
+    try:
+        callback_id = connector.register_callback(
+            topic_name,
+            lambda msg: received.append(msg),
+            msg_type="std_msgs/msg/String",
+        )
+        assert callback_id is not None
+        time.sleep(0.5)
+        assert len(received) > 0
+    finally:
+        connector.shutdown()
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_connector_wait_for_transform_found(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    transform_publisher = TransformPublisher(f"{request.node.originalname}_tf")  # type: ignore
+    executors, threads = multi_threaded_spinner([transform_publisher])
+    connector = ROS2Connector()
+    try:
+        result = connector.wait_for_transform(
+            connector._tf_buffer,
+            target_frame="map",
+            source_frame="base_link",
+            timeout_sec=3.0,
+        )
+        assert result is True
+    finally:
+        connector.shutdown()
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_connector_get_transform_lookup_exception(ros_setup: None) -> None:
+    connector = ROS2Connector()
+    try:
+        with pytest.raises(LookupException):
+            connector.get_transform(
+                target_frame="nonexistent_frame",
+                source_frame="also_nonexistent",
+                timeout_sec=0.2,
+            )
+    finally:
+        connector.shutdown()
