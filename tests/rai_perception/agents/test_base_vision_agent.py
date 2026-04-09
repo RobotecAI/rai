@@ -316,9 +316,10 @@ class TestBaseVisionAgentMethods:
         agent = MockBaseVisionAgent(weights_root_path=str(tmp_path), ros2_name="test")
         agent.weights_path = weights_path
 
-        with patch.object(agent.ros2_connector, "shutdown") as mock_shutdown:
+        with patch.object(
+            agent.ros2_connector,
+            "shutdown",
+            wraps=agent.ros2_connector.shutdown,
+        ) as mock_shutdown:
             agent.stop()
             mock_shutdown.assert_called_once()
-
-        if rclpy.ok():
-            rclpy.shutdown()
