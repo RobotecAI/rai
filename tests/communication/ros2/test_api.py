@@ -38,6 +38,7 @@ from rclpy.node import Node
 from std_srvs.srv import SetBool
 
 from .helpers import (
+    MessagePublisher,
     MessageSubscriber,
     ServiceServer,
     TestActionClient,
@@ -49,6 +50,67 @@ from .helpers import (
 )
 
 _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
+
+
+def test_ros2_topic_api_receive_message(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    message_publisher = MessagePublisher(topic_name)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([message_publisher, node])
+
+    try:
+        topic_api = ROS2TopicAPI(node)
+        # First call: creates internal subscriber and waits for message
+        msg = topic_api.receive_message(topic_name, timeout_sec=2.0)
+        assert msg.data == "Hello, ROS2!"
+        # Second call: subscriber already exists, message is in cache → cache-hit branch
+        msg2 = topic_api.receive_message(topic_name, timeout_sec=2.0)
+        assert msg2.data == "Hello, ROS2!"
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_topic_api_receive_message_timeout(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([node])
+
+    try:
+        topic_api = ROS2TopicAPI(node)
+        # No publisher active → subscriber is created but no messages arrive
+        with pytest.raises(TimeoutError):
+            topic_api.receive_message(
+                topic_name,
+                timeout_sec=0.3,
+                msg_type="std_msgs/msg/String",
+            )
+    finally:
+        shutdown_executors_and_threads(executors, threads)
+
+
+def test_ros2_topic_api_receive_message_destroy_subscriber(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    topic_name = f"{request.node.originalname}_topic"  # type: ignore
+    node_name = f"{request.node.originalname}_node"  # type: ignore
+    message_publisher = MessagePublisher(topic_name)
+    node = Node(node_name)
+    executors, threads = multi_threaded_spinner([message_publisher, node])
+
+    try:
+        topic_api = ROS2TopicAPI(node, destroy_subscribers=True)
+        msg = topic_api.receive_message(topic_name, timeout_sec=2.0)
+        assert msg.data == "Hello, ROS2!"
+        # Subscriber should have been torn down after first message
+        assert topic_name not in topic_api._subscriptions
+    finally:
+        shutdown_executors_and_threads(executors, threads)
 
 
 def test_ros2_single_message_publish(
