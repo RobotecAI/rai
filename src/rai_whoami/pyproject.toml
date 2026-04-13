@@ -12,7 +12,8 @@ classifiers = [
 ]
 dependencies = [
     "PyYAML",
-    "langchain",
+    "langchain>=1.0.0,<2.0.0",
+    "langchain-community",
     "PyPDF2",
     "Pillow",
     "faiss-cpu",

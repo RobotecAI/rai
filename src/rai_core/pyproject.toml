@@ -15,13 +15,13 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
 ]
 dependencies = [
-    "langchain-core>=0.3,<0.4",
-    "langgraph",
+    "langchain-core>=1.2.10,<2.0.0",
+    "langgraph>=1.1.5,<2.0.0",
     "langgraph-prebuilt",
-    "langchain",
+    "langchain>=1.0.0,<2.0.0",
     "langchain-aws",
     "langchain-openai",
-    "langchain-ollama>=0.3.4,<0.4.0",
+    "langchain-ollama",
     "langchain-google-genai",
     "langchain-community",
     "requests>=2.32.2,<3.0.0",
