@@ -18,7 +18,7 @@ from functools import partial
 from typing import List, Optional, TypedDict
 
 from deprecated import deprecated
-from langchain.chat_models.base import BaseChatModel
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import (
     BaseMessage,
     SystemMessage,

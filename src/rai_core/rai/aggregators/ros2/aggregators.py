@@ -14,7 +14,7 @@
 
 from typing import Any, List, cast
 
-from langchain.chat_models.base import BaseChatModel
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 from rcl_interfaces.msg import Log

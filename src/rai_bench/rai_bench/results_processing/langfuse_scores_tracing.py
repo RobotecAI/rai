@@ -17,7 +17,7 @@ from uuid import UUID
 
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.tracers.langchain import LangChainTracer
-from langfuse.callback import CallbackHandler
+from langfuse.langchain import CallbackHandler
 from rai.initialization import get_tracing_callbacks
 
 

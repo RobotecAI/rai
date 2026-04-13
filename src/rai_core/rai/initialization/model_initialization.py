@@ -367,18 +367,24 @@ def get_tracing_callbacks(
 
     callbacks: List[BaseCallbackHandler] = []
     if config.tracing.langfuse.use_langfuse:
-        from langfuse.callback import CallbackHandler  # type: ignore
+        from langfuse import Langfuse
+        from langfuse.langchain import CallbackHandler  # type: ignore
 
         public_key = os.getenv("LANGFUSE_PUBLIC_KEY", None)
         secret_key = os.getenv("LANGFUSE_SECRET_KEY", None)
         if public_key is None or secret_key is None:
             raise ValueError("LANGFUSE_PUBLIC_KEY or LANGFUSE_SECRET_KEY is not set")
 
-        callback = CallbackHandler(
+        # Initialize Langfuse singleton client with credentials
+        # This configures the global client that CallbackHandler will use
+        Langfuse(
             public_key=public_key,
             secret_key=secret_key,
             host=config.tracing.langfuse.host,
         )
+
+        # Create callback handler (uses the configured singleton client)
+        callback = CallbackHandler()
         callbacks.append(callback)
 
     if config.tracing.langsmith.use_langsmith:

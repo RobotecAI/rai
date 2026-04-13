@@ -46,6 +46,16 @@ Ruff uses `--fix` by default through pre-commit, so it auto-fixes import orderin
 
 ### Testing
 
+**Important**: Before running the full test suite, install all dependency groups:
+
+```bash
+uv sync --all-groups
+```
+
+This ensures all optional dependencies (docs, s2s, semap, etc.) are installed, which is required for collecting and running all tests.
+
+Then run the test suite:
+
 ```bash
 python -m pytest tests/ --timeout=60 -m "not billable and not ci_only and not manual" --ignore=src
 ```
@@ -53,6 +63,35 @@ python -m pytest tests/ --timeout=60 -m "not billable and not ci_only and not ma
 The `pyproject.toml` already sets these default markers and `--ignore=src`.
 
 **Sound device tests**: Tests under `tests/communication/sounds_device/` require virtual audio input/output devices. In headless environments without audio hardware, these tests will error during collection. Either skip them (`--ignore=tests/communication/sounds_device`) or create virtual PulseAudio/ALSA devices before running.
+
+### Commit conventions
+
+This project follows the [Conventional Commits](https://www.conventionalcommits.org/) specification. Commit messages should be structured as:
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+**Common types:**
+
+-   `feat`: A new feature
+-   `fix`: A bug fix
+-   `docs`: Documentation only changes
+-   `style`: Changes that don't affect code meaning (formatting, etc.)
+-   `refactor`: Code change that neither fixes a bug nor adds a feature
+-   `perf`: Performance improvements
+-   `test`: Adding or correcting tests
+-   `chore`: Changes to build process or auxiliary tools
+
+**Examples:**
+
+-   `feat(agents): add support for custom tool schemas`
+-   `fix(ros2): handle service call timeouts correctly`
+-   `docs: update testing instructions in AGENTS.md`
 
 ### Key gotchas
 

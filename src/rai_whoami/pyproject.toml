@@ -1,6 +1,6 @@
 [project]
 name = "rai_whoami"
-version = "0.0.5"
+version = "0.1.0"
 description = "Package to extract embodiment information from robot documentation"
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
@@ -12,7 +12,8 @@ classifiers = [
 ]
 dependencies = [
     "PyYAML",
-    "langchain",
+    "langchain>=1.0.0,<2.0.0",
+    "langchain-community",
     "PyPDF2",
     "Pillow",
     "faiss-cpu",
