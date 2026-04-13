@@ -1,6 +1,6 @@
 [project]
 name = "rai-bench"
-version = "0.2.0"
+version = "0.3.0"
 description = "Package for running and creating benchmarks."
 readme = "README.md"
 requires-python = ">=3.10"
