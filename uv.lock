@@ -4695,7 +4695,7 @@ wheels = [
 
 [[package]]
 name = "rai-bench"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "src/rai_bench" }
 dependencies = [
     { name = "inflect" },
@@ -4714,7 +4714,7 @@ requires-dist = [
 
 [[package]]
 name = "rai-core"
-version = "2.11.1"
+version = "2.12.0"
 source = { editable = "src/rai_core" }
 dependencies = [
     { name = "coloredlogs" },
@@ -4971,7 +4971,7 @@ requires-dist = [
 
 [[package]]
 name = "rai-whoami"
-version = "0.0.5"
+version = "0.1.0"
 source = { editable = "src/rai_whoami" }
 dependencies = [
     { name = "faiss-cpu" },
