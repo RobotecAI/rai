@@ -182,6 +182,7 @@ def test_get_gripping_point_tool_timeout():
 
 def test_get_object_gripping_points_tool_auto_declaration():
     """Test that GetObjectGrippingPointsTool auto-declares parameters with defaults."""
+    connector = None
     rclpy.init()
     try:
         connector = ROS2Connector(executor_type="single_threaded")
@@ -275,7 +276,10 @@ def test_get_object_gripping_points_tool_auto_declaration():
         assert "segmentation_service_name" in config
 
     finally:
-        rclpy.shutdown()
+        if connector is not None:
+            connector.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 def test_get_object_positions_tool_wrapper():

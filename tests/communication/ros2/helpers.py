@@ -573,7 +573,7 @@ def setup_mock_clock_for_agent(agent, use_time_wrapper: bool = True):
     return mock_clock, mock_time
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def ros_setup() -> Generator[None, None, None]:
     rclpy.init()
     yield
