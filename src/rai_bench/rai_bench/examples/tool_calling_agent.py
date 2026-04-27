@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+import warnings
+
+if "--debug" not in sys.argv:
+    warnings.filterwarnings("ignore")
+
 from pathlib import Path
 
 from rai_bench import (
@@ -26,9 +32,12 @@ from rai_bench.utils import get_llm_for_benchmark
 
 if __name__ == "__main__":
     args = parse_tool_calling_benchmark_args()
+
     experiment_dir = Path(args.out_dir)
     experiment_dir.mkdir(parents=True, exist_ok=True)
-    bench_logger = define_benchmark_logger(out_dir=experiment_dir)
+    bench_logger = define_benchmark_logger(
+        out_dir=experiment_dir, add_console_handler=args.debug
+    )
 
     tasks = get_tasks(
         extra_tool_calls=args.extra_tool_calls,
@@ -37,6 +46,8 @@ if __name__ == "__main__":
         n_shots=args.n_shots,
         prompt_detail=args.prompt_detail,
     )
+    if args.n_cases is not None:
+        tasks = tasks[: args.n_cases]
     for task in tasks:
         task.set_logger(bench_logger)
 
