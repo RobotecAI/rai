@@ -362,7 +362,7 @@ class GetObjectPositionsTool(BaseROS2Tool):
 
     @staticmethod
     def format_pose(pose: Pose):
-        return f"Centroid(x={pose.position.x:.2f}, y={pose.position.y:2f}, z={pose.position.z:2f})"
+        return f"Centroid(x={pose.position.x:.2f}, y={pose.position.y:.2f}, z={pose.position.z:.2f})"
 
     def _run(self, object_name: str):
         transform = self.connector.get_transform(
