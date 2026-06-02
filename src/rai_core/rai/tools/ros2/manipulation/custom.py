@@ -388,6 +388,15 @@ class GetObjectPositionsTool(BaseROS2Tool):
             mani_frame_pose = do_transform_pose(pose, transform)
             mani_frame_poses.append(mani_frame_pose)
 
+        # Sort by rounded position for a stable, deterministic ordering across runs.
+        mani_frame_poses.sort(
+            key=lambda p: (
+                round(p.position.x, 2),
+                round(p.position.y, 2),
+                round(p.position.z, 2),
+            )
+        )
+
         if len(mani_frame_poses) == 0:
             return f"No {object_name}s detected."
         else:
