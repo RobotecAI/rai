@@ -362,7 +362,7 @@ class GetObjectPositionsTool(BaseROS2Tool):
 
     @staticmethod
     def format_pose(pose: Pose):
-        return f"Centroid(x={pose.position.x:.2f}, y={pose.position.y:2f}, z={pose.position.z:2f})"
+        return f"Centroid(x={pose.position.x:.2f}, y={pose.position.y:.2f}, z={pose.position.z:.2f})"
 
     def _run(self, object_name: str):
         transform = self.connector.get_transform(
@@ -387,6 +387,15 @@ class GetObjectPositionsTool(BaseROS2Tool):
         for pose in poses:
             mani_frame_pose = do_transform_pose(pose, transform)
             mani_frame_poses.append(mani_frame_pose)
+
+        # Sort by rounded position for a stable, deterministic ordering across runs.
+        mani_frame_poses.sort(
+            key=lambda p: (
+                round(p.position.x, 2),
+                round(p.position.y, 2),
+                round(p.position.z, 2),
+            )
+        )
 
         if len(mani_frame_poses) == 0:
             return f"No {object_name}s detected."
