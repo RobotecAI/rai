@@ -84,30 +84,32 @@ class ToolRunner(RunnableCallable):
                     f"Tool {call['name']} output: \n\n{str(output.content)}"
                 )
             except ValidationError as e:
-                errors = e.errors()
-                for error in errors:
-                    error.pop(
-                        "url"
-                    )  # get rid of the  https://errors.pydantic.dev/... url
-
-                error_message = f"""
-                                    Validation error in tool {call["name"]}:
-                                    {e.title}
-                                    Number of errors: {e.error_count()}
-                                    Errors:
-                                    {json.dumps(errors, indent=2)}
-                                """
-                self.logger.info(error_message)
+                self.logger.info(
+                    f"Validation error in tool {call['name']}: "
+                    f"{e.title}, {e.error_count()} error(s): "
+                    f"{json.dumps(e.errors(), indent=2)}"
+                )
                 output = ToolMessage(
-                    content=error_message,
+                    content=(
+                        f"Validation error in tool '{call['name']}': "
+                        f"{e.error_count()} validation error(s). "
+                        f"Please check the tool's input arguments and try again."
+                    ),
                     name=call["name"],
                     tool_call_id=call["id"],
                     status="error",
                 )
             except Exception as e:
-                self.logger.info(f'Error in "{call["name"]}", error: {e}')
+                self.logger.info(
+                    f'Error in "{call["name"]}", '
+                    f"error type: {type(e).__name__}, error: {e}"
+                )
                 output = ToolMessage(
-                    content=f"Failed to run tool. Error: {e}",
+                    content=(
+                        f"Failed to run tool '{call['name']}' "
+                        f"({type(e).__name__}). "
+                        f"Please try again or rephrase your request."
+                    ),
                     name=call["name"],
                     tool_call_id=call["id"],
                     status="error",
