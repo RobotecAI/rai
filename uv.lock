@@ -4865,7 +4865,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/a3/ec/d16bb3d94ccf45524
 
 [[package]]
 name = "rai-perception"
-version = "0.3.0"
+version = "0.3.1"
 source = { editable = "src/rai_extensions/rai_perception" }
 dependencies = [
     { name = "rai-core" },
