@@ -1,7 +1,7 @@
 [project]
 name = "rai-perception"
 # TODO, update the version once it is published to PyPi
-version = "0.2.2"
+version = "0.3.0"
 description = "Package for object detection, segmentation and gripping point detection."
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
@@ -19,6 +19,9 @@ dependencies = [
     "scikit-learn>=1.0.0,<1.4.0",
     "transformers<5.0.0",
 ]
+
+[project.scripts]
+download-perception-models = "rai_perception.scripts.download_weights:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["rai_perception"]

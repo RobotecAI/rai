@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+import threading
 
 from rai_perception.services.detection_service import DetectionService
 from rai_perception.services.segmentation_service import SegmentationService
@@ -20,11 +21,12 @@ from rai_perception.services.weights import download_weights
 
 SERVICES = [DetectionService, SegmentationService]
 
-if __name__ == "__main__":
+
+def main():
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
-    for service_class in SERVICES:
+    def _download(service_class):
         weights_path = (
             service_class.DEFAULT_WEIGHTS_ROOT_PATH
             / service_class.WEIGHTS_DIR_PATH_PART
@@ -35,3 +37,13 @@ if __name__ == "__main__":
             download_weights(weights_path, logger, service_class.WEIGHTS_URL)
         else:
             logger.info(f"Weights already exist at {weights_path}, skipping download.")
+
+    threads = [threading.Thread(target=_download, args=(svc,)) for svc in SERVICES]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+
+if __name__ == "__main__":
+    main()
