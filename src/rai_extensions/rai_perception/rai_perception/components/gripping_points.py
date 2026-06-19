@@ -287,6 +287,71 @@ class PointCloudFromSegmentation:
         return transformed
 
     # --------------------- Public API ---------------------
+    def run_multi_class(
+        self, classes: list[str]
+    ) -> dict[str, list[NDArray[np.float32]]]:
+        """Single GDINO + GSAM pass for all classes.
+
+        Returns {class_id: [per-instance point clouds in target frame]}.
+        Masks from GSAM are associated back to their class via the class_id
+        stored in each GDINO detection result, so the order of masks in the
+        GSAM response is assumed to match the order of detections.
+        """
+        logger = self.connector.node.get_logger()
+        result: dict[str, list[NDArray[np.float32]]] = {c: [] for c in classes}
+
+        camera_img_msg = self._get_image_message(self.camera_topic)
+        depth_msg = self.connector.receive_message(self.depth_topic).payload
+        camera_info = self._get_camera_info_message(self.camera_info_topic)
+        fx, fy, cx, cy = self._get_intrinsic_from_camera_info(camera_info)
+
+        gdino_future = self._call_gdino_node(camera_img_msg, ", ".join(classes))
+        gdino_resolved = get_future_result(
+            gdino_future, timeout_sec=self.config.service_timeout
+        )
+        if gdino_resolved is None:
+            logger.warning("Detection service returned None")
+            return result
+
+        gsam_future = self._call_gsam_node(camera_img_msg, gdino_resolved)
+        gsam_resolved = get_future_result(
+            gsam_future, timeout_sec=self.config.service_timeout
+        )
+        if gsam_resolved is None or not gsam_resolved.masks:
+            logger.warning("Segmentation service returned None or empty masks")
+            return result
+
+        depth_raw = convert_ros_img_to_ndarray(depth_msg)
+        depth = convert_depth_to_meters(depth_raw, depth_msg)
+        if self.conversion_ratio != 1.0:
+            depth = depth * float(self.conversion_ratio)
+
+        detections = gdino_resolved.detections.detections
+        for i, mask_msg in enumerate(gsam_resolved.masks):
+            if i >= len(detections):
+                break
+            det = detections[i]
+            class_id = det.results[0].hypothesis.class_id if det.results else None
+            if class_id not in result:
+                logger.warning(
+                    f"Detected class '{class_id}' not in requested classes, skipping"
+                )
+                continue
+            mask = cast(NDArray[np.uint8], convert_ros_img_to_ndarray(mask_msg))
+            masked_depth = np.zeros_like(depth, dtype=np.float32)
+            masked_depth[mask == 255] = depth[mask == 255]
+            points_camera = depth_to_point_cloud(masked_depth, fx, fy, cx, cy)
+            if points_camera.size == 0:
+                logger.warning(f"Point cloud for '{class_id}' instance {i} is empty")
+                continue
+            result[class_id].append(
+                self._transform_points_source_to_target(points_camera).astype(
+                    np.float32
+                )
+            )
+
+        return result
+
     def run(self, object_name: str) -> list[NDArray[np.float32]]:
         """Return Nx3 numpy array [X, Y, Z] of the object's masked point cloud in target frame."""
         logger = self.connector.node.get_logger()
