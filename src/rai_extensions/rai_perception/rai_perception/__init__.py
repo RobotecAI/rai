@@ -36,6 +36,8 @@ from .tools import GetDetectionTool, GetDistanceToObjectsTool  # noqa: E402
 from .tools.gripping_points_tools import (  # noqa: E402
     GetObjectGrippingPointsTool,
     GetObjectGrippingPointsToolInput,
+    GetObjectsGrippingPointsTool,
+    GetObjectsGrippingPointsToolInput,
 )
 
 __all__ = [
@@ -47,6 +49,8 @@ __all__ = [
     "GetDistanceToObjectsTool",
     "GetObjectGrippingPointsTool",
     "GetObjectGrippingPointsToolInput",
+    "GetObjectsGrippingPointsTool",
+    "GetObjectsGrippingPointsToolInput",
     "GrippingPointEstimator",
     "GrippingPointEstimatorConfig",
     "GroundedSamAgent",

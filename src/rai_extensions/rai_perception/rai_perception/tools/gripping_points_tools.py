@@ -948,3 +948,111 @@ class GetObjectPositionsTool(BaseROS2Tool):
             )
         # Delegate to the wrapped tool - it will return centroids with default_grasp preset
         return self.gripping_points_tool._run(object_name=object_name)
+
+
+# ---------------------------------------------------------------------------
+# Multi-class tool
+# ---------------------------------------------------------------------------
+
+
+class GetObjectsGrippingPointsToolInput(BaseModel):
+    object_names: list[str] = Field(
+        ...,
+        description=(
+            "List of object class names to detect and get gripping points for, "
+            "e.g. ['cube', 'cylinder', 'triangle']. All classes are detected in "
+            "a single GDINO + GSAM forward pass."
+        ),
+    )
+    debug: bool = Field(
+        default=False,
+        description="Publish intermediate pipeline results to ROS2 topics for RVIZ visualization.",
+    )
+
+
+class GetObjectsGrippingPointsTool(GetObjectGrippingPointsTool):
+    """Multi-class variant of GetObjectGrippingPointsTool.
+
+    Detects all requested classes in a single GDINO + GSAM forward pass, then
+    runs PointCloudFilter and GrippingPointEstimator per class. Prefer this over
+    calling GetObjectGrippingPointsTool once per class.
+    """
+
+    name: str = "get_objects_gripping_points"
+    description: str = (
+        "Get gripping points for all detected objects of multiple specified types "
+        "in a single perception pass. More efficient than get_object_gripping_points "
+        "when querying more than one class at a time."
+    )
+    args_schema: Type[GetObjectsGrippingPointsToolInput] = (  # type: ignore[assignment]
+        GetObjectsGrippingPointsToolInput
+    )
+
+    def _run(self, object_names: list[str], debug: bool = False) -> str:  # type: ignore[override]
+        @timeout(
+            self.timeout_sec,
+            f"Gripping point detection for {object_names} exceeded {self.timeout_sec} seconds",
+        )
+        def _run_with_timeout():
+            per_class_pcls = self.point_cloud_from_segmentation.run_multi_class(
+                object_names
+            )
+
+            if debug:
+                all_raw = [pc for pcs in per_class_pcls.values() for pc in pcs]
+                if all_raw:
+                    self._publish_point_cloud_debug(
+                        all_raw, "/debug/gripping_points/raw_point_clouds"
+                    )
+
+            per_class_gripping_points: dict[str, list] = {}
+            all_filtered: list = []
+            all_gripping_points: list = []
+            for class_id, point_clouds in per_class_pcls.items():
+                if not point_clouds:
+                    per_class_gripping_points[class_id] = []
+                    continue
+                filtered = self.point_cloud_filter.run(point_clouds)
+                gripping_points = (
+                    self.gripping_point_estimator.run(filtered) if filtered else []
+                )
+                per_class_gripping_points[class_id] = gripping_points
+                if debug:
+                    all_filtered.extend(filtered)
+                    all_gripping_points.extend(gripping_points)
+
+            if debug:
+                if all_filtered:
+                    self._publish_point_cloud_debug(
+                        all_filtered, "/debug/gripping_points/filtered_point_clouds"
+                    )
+                if all_gripping_points and all_filtered:
+                    self._publish_gripping_point_debug_data(
+                        all_filtered, all_gripping_points
+                    )
+
+            return self._format_result_message(object_names, per_class_gripping_points)
+
+        try:
+            return _run_with_timeout()
+        except RaiTimeoutError as e:
+            self.connector.node.get_logger().warning(f"Timeout: {e}")
+            return f"Timeout: Gripping point detection for {object_names} exceeded {self.timeout_sec} seconds"
+        except Exception:
+            raise
+
+    def _format_result_message(  # type: ignore[override]
+        self, object_names: list[str], per_class_gripping_points: dict[str, list]
+    ) -> str:
+        lines = []
+        for class_id, gripping_points in per_class_gripping_points.items():
+            if not gripping_points:
+                lines.append(f"No {class_id}s detected.")
+                continue
+            pts = ", ".join(
+                f"({float(gp[0]):.6f}, {float(gp[1]):.6f}, {float(gp[2]):.6f})"
+                for gp in gripping_points
+                if isinstance(gp, np.ndarray) and len(gp) >= 3
+            )
+            lines.append(f"{class_id}: [{pts}]")
+        return "\n".join(lines)
