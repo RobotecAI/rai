@@ -47,6 +47,11 @@ simple_model = "gemini-3-flash"
 complex_model = "gemini-3-pro"
 embeddings_model = "text-embedding-004"
 
+[minimax]
+simple_model = "MiniMax-M2.7-highspeed"
+complex_model = "MiniMax-M2.7"
+base_url = "https://api.minimax.io/v1"
+
 [tracing]
 project = "rai"
 
