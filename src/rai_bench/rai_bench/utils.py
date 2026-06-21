@@ -94,6 +94,18 @@ def parse_tool_calling_benchmark_args():
         ],
         help="Types of tasks to include in the benchmark",
     )
+    parser.add_argument(
+        "--n-cases",
+        type=int,
+        default=None,
+        help="Maximum number of test cases to run (randomly sampled from full set)",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        default=False,
+        help="Enable verbose console logging and show all warnings",
+    )
     return parser.parse_args()
 
 
@@ -123,27 +135,33 @@ def parse_vlm_benchmark_args():
     return parser.parse_args()
 
 
-def define_benchmark_logger(out_dir: Path, level: int = logging.INFO) -> logging.Logger:
+def define_benchmark_logger(
+    out_dir: Path,
+    level: int = logging.INFO,
+    add_console_handler: bool = True,
+) -> logging.Logger:
     log_file = out_dir / "benchmark.log"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    file_handler = logging.FileHandler(log_file)
-    file_handler.setLevel(level)
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
+
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(level)
     file_handler.setFormatter(formatter)
 
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(formatter)
-
     bench_logger = logging.getLogger("Benchmark logger")
-    for handler in bench_logger.handlers:
+    for handler in bench_logger.handlers[:]:
         bench_logger.removeHandler(handler)
     bench_logger.setLevel(level)
     bench_logger.addHandler(file_handler)
-    bench_logger.addHandler(console_handler)
+
+    if add_console_handler:
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+        console_handler.setFormatter(formatter)
+        bench_logger.addHandler(console_handler)
 
     return bench_logger
 
