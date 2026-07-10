@@ -121,7 +121,7 @@ def test_models(
         raise ValueError("Number of passed models must match number of passed vendors")
     else:
         for bench_conf in benchmark_configs:
-            # for each bench configuration seperate run folder
+            # for each bench configuration separate run folder
             now = datetime.now()
             run_name = f"run_{now.strftime('%Y-%m-%d_%H-%M-%S')}"
             for i, model_name in enumerate(model_names):
