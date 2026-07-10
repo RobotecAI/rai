@@ -193,3 +193,15 @@ def test_ros2_img_vlm_diff_aggregator(ros2_image: Image):
         )
         assert aggregator.get_buffer() == []
         assert aggregator.get() is None
+
+
+def test_ros2_logs_aggregator_unknown_log_level_does_not_keyerror():
+    """ROS log levels outside the fixed map must not crash get()."""
+    aggregator = ROS2LogsAggregator()
+    aggregator(
+        DummyLog(level=25, name="demo_node", function="do_work", msg="custom severity")
+    )
+    summary = aggregator.get()
+    assert isinstance(summary, HumanMessage)
+    assert "custom severity" in summary.content
+    assert "[25]" in summary.content

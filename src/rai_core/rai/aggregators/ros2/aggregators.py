@@ -37,7 +37,7 @@ class ROS2LogsAggregator(BaseAggregator[Log]):
         prev_parsed = None
         counter = 0
         for log in msgs:
-            level = self.levels[log.level]
+            level = self.levels.get(log.level, str(log.level))
             parsed = f"[{log.name}] [{level}] [{log.function}] {log.msg}"
             if parsed == prev_parsed:
                 counter += 1
