@@ -126,3 +126,43 @@ def test_wait_for_ros2_negative_timeout(
 
     with pytest.raises(ValueError):
         wait_func(connector, [name], time_interval=0.001, timeout=-0.01)
+
+
+def test_wait_for_ros2_services_available_without_slash(monkeypatch):
+    """Discovery may omit leading slash; required names should still match."""
+    connector = DummyConnector(
+        services_seq=[
+            [("target_service", ["srv/Type"])],
+        ]
+    )
+    monkeypatch.setattr(waiters.time, "sleep", lambda *_: None)
+    waiters.wait_for_ros2_services(connector, ["target_service"], time_interval=0, timeout=1.0)
+
+
+def test_wait_for_ros2_topics_available_without_slash(monkeypatch):
+    connector = DummyConnector(
+        topics_seq=[
+            [("topic_a", ["msg/A"])],
+        ]
+    )
+    monkeypatch.setattr(waiters.time, "sleep", lambda *_: None)
+    waiters.wait_for_ros2_topics(connector, ["topic_a"], time_interval=0, timeout=1.0)
+
+
+def test_wait_for_ros2_actions_available_without_slash(monkeypatch):
+    connector = DummyConnector(
+        actions_seq=[
+            [("action_a", ["action/A"])],
+        ]
+    )
+    monkeypatch.setattr(waiters.time, "sleep", lambda *_: None)
+    waiters.wait_for_ros2_actions(connector, ["action_a"], time_interval=0, timeout=1.0)
+
+
+def test_wait_for_ros2_entities_negative_timeout():
+    with pytest.raises(ValueError):
+        waiters.wait_for_ros2_entities(
+            requested=["/a"],
+            get_entities=lambda: [],
+            timeout=-1,
+        )
