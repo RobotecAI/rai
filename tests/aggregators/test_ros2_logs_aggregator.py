@@ -205,3 +205,42 @@ def test_ros2_logs_aggregator_unknown_log_level_does_not_keyerror():
     assert isinstance(summary, HumanMessage)
     assert "custom severity" in summary.content
     assert "[25]" in summary.content
+
+
+def test_ros2_img_vlm_diff_get_key_elements():
+    assert ROS2ImgVLMDiffAggregator.get_key_elements([]) == []
+    assert ROS2ImgVLMDiffAggregator.get_key_elements([1]) == [1]
+    assert ROS2ImgVLMDiffAggregator.get_key_elements([1, 2]) == [1, 2]
+    assert ROS2ImgVLMDiffAggregator.get_key_elements([1, 2, 3]) == [1, 2, 3]
+    assert ROS2ImgVLMDiffAggregator.get_key_elements([1, 2, 3, 4, 5]) == [1, 3, 5]
+    assert ROS2ImgVLMDiffAggregator.get_key_elements([1, 2, 3, 4, 5, 6]) == [1, 4, 6]
+
+
+def test_ros2_img_vlm_diff_aggregator_original_count(ros2_image: Image):
+    """When buffer has >3 images, message must report original_count, not selected len."""
+
+    class ROS2ImgDiffOutput(BaseModel):
+        are_different: bool = Field(..., description="Whether the images are different")
+        differences: List[str] = Field(..., description="Description of the difference")
+
+    class DummyModel(FakeChatModel):
+        def invoke(self, *args, **kwargs):
+            return ROS2ImgDiffOutput(
+                are_different=True,
+                differences=["moved"],
+            )
+
+        def with_structured_output(self, *args, **kwargs):
+            return self
+
+    with patch(
+        "rai.aggregators.ros2.aggregators.get_llm_model",
+        side_effect=lambda *args, **kwargs: DummyModel(),
+    ):
+        aggregator = ROS2ImgVLMDiffAggregator()
+        for _ in range(5):
+            aggregator(ros2_image)
+        result = aggregator.get()
+        assert result is not None
+        assert "selected from 5 last images" in result.content
+        assert "analysis of the 3 keyframes" in result.content
