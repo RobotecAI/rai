@@ -25,3 +25,34 @@ def test_wait_for_seconds_tool_caps_duration():
 
     mock_sleep.assert_called_once_with(10)
     assert result == "Waited for 10 seconds."
+
+
+def test_wait_for_seconds_tool_happy_path():
+    tool = WaitForSecondsTool()
+    with patch("rai.tools.time.time.sleep") as mock_sleep:
+        result = tool._run(3)
+    mock_sleep.assert_called_once_with(3)
+    assert result == "Waited for 3 seconds."
+
+
+def test_wait_for_seconds_tool_rejects_non_positive():
+    tool = WaitForSecondsTool()
+    for bad in (0, -3):
+        with patch("rai.tools.time.time.sleep") as mock_sleep:
+            try:
+                tool._run(bad)
+                raise AssertionError(f"expected ValueError for {bad}")
+            except ValueError as exc:
+                assert "positive" in str(exc).lower()
+            mock_sleep.assert_not_called()
+
+
+def test_wait_for_seconds_tool_rejects_bool():
+    tool = WaitForSecondsTool()
+    with patch("rai.tools.time.time.sleep") as mock_sleep:
+        try:
+            tool._run(True)  # type: ignore[arg-type]
+            raise AssertionError("expected ValueError for bool")
+        except ValueError:
+            pass
+        mock_sleep.assert_not_called()

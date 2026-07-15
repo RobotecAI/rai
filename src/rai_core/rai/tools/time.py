@@ -41,6 +41,16 @@ class WaitForSecondsTool(BaseTool):
 
     def _run(self, seconds: int):
         """Waits for the specified number of seconds."""
+        # bool is a subclass of int; reject it so True/False never sleep.
+        if isinstance(seconds, bool) or not isinstance(seconds, int):
+            raise ValueError(
+                "WaitForSecondsTool requires a positive integer number of seconds"
+            )
+        if seconds <= 0:
+            raise ValueError(
+                "WaitForSecondsTool requires a positive number of seconds "
+                f"(got {seconds})"
+            )
         if seconds > 10:
             seconds = 10
         time.sleep(seconds)
