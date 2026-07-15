@@ -58,9 +58,59 @@ def test_ros2_logs_aggregator_deduplicates_and_clears_buffer():
     assert isinstance(summary, HumanMessage)
     assert (
         summary.content
-        == "Logs summary: ['[demo_node] [WARNING] [do_work] System warming up', 'Log above repeated 1 times']"
+        == "Logs summary: ['[demo_node] [WARNING] [do_work] System warming up', "
+        "'Log above repeated 1 times', "
+        "'[demo_node] [ERROR] [do_work] System failure detected']"
     )
     assert aggregator.get_buffer() == []
+
+
+def test_ros2_logs_aggregator_trailing_run_flushes_repeat_count():
+    aggregator = ROS2LogsAggregator()
+    for _ in range(3):
+        aggregator(
+            DummyLog(
+                level=30,
+                name="demo_node",
+                function="do_work",
+                msg="System warming up",
+            )
+        )
+
+    summary = aggregator.get()
+    assert summary.content == (
+        "Logs summary: ['[demo_node] [WARNING] [do_work] System warming up', "
+        "'Log above repeated 2 times']"
+    )
+    assert aggregator.get_buffer() == []
+
+
+def test_ros2_logs_aggregator_trailing_second_run():
+    aggregator = ROS2LogsAggregator()
+    aggregator(
+        DummyLog(level=30, name="demo_node", function="do_work", msg="warm")
+    )
+    for _ in range(3):
+        aggregator(
+            DummyLog(level=40, name="demo_node", function="do_work", msg="fail")
+        )
+
+    summary = aggregator.get()
+    assert summary.content == (
+        "Logs summary: ['[demo_node] [WARNING] [do_work] warm', "
+        "'[demo_node] [ERROR] [do_work] fail', "
+        "'Log above repeated 2 times']"
+    )
+
+
+def test_ros2_logs_aggregator_single_log_has_no_repeat_line():
+    aggregator = ROS2LogsAggregator()
+    aggregator(
+        DummyLog(level=20, name="n", function="f", msg="once")
+    )
+    summary = aggregator.get()
+    assert summary.content == "Logs summary: ['[n] [INFO] [f] once']"
+    assert "repeated" not in summary.content
 
 
 def test_ros2_logs_aggregator_str():

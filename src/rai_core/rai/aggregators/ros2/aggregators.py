@@ -33,21 +33,33 @@ class ROS2LogsAggregator(BaseAggregator[Log]):
 
     def get(self) -> HumanMessage:
         msgs = self.get_buffer()
-        buffer = []
-        prev_parsed = None
+        buffer: List[str] = []
+        prev_parsed: str | None = None
         counter = 0
+
+        def flush_run() -> None:
+            nonlocal counter, prev_parsed
+            if prev_parsed is None:
+                return
+            buffer.append(prev_parsed)
+            if counter > 0:
+                buffer.append(f"Log above repeated {counter} times")
+            counter = 0
+
         for log in msgs:
             level = self.levels[log.level]
             parsed = f"[{log.name}] [{level}] [{log.function}] {log.msg}"
+            if prev_parsed is None:
+                prev_parsed = parsed
+                counter = 0
+                continue
             if parsed == prev_parsed:
                 counter += 1
                 continue
-            else:
-                if counter != 0:
-                    parsed = f"Log above repeated {counter} times"
-            buffer.append(parsed)
-            counter = 0
+            flush_run()
             prev_parsed = parsed
+        flush_run()
+
         result = f"Logs summary: {list(dict.fromkeys(buffer))}"
         self.clear_buffer()
         return HumanMessage(content=result)
