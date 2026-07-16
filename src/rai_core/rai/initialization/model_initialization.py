@@ -68,6 +68,19 @@ class GoogleConfig(ModelConfig):
 
 
 @dataclass
+class MiniMaxEndpointConfig:
+    openai_base_url: str
+    anthropic_base_url: str
+
+
+@dataclass
+class MiniMaxConfig(ModelConfig):
+    protocol: Literal["openai", "anthropic"]
+    region: str
+    endpoints: Dict[str, MiniMaxEndpointConfig]
+
+
+@dataclass
 class LangfuseConfig:
     use_langfuse: bool
     host: str
@@ -93,6 +106,7 @@ class RAIConfig:
     openai: OpenAIConfig
     ollama: OllamaConfig
     google: GoogleConfig
+    minimax: MiniMaxConfig
     tracing: TracingConfig
 
 
@@ -107,6 +121,14 @@ _DEFAULT_OLLAMA = OllamaConfig(
     simple_model="", complex_model="", embeddings_model="", base_url=""
 )
 _DEFAULT_GOOGLE = GoogleConfig(simple_model="", complex_model="", embeddings_model="")
+_DEFAULT_MINIMAX = MiniMaxConfig(
+    simple_model="",
+    complex_model="",
+    embeddings_model="",
+    protocol="openai",
+    region="global_en",
+    endpoints={},
+)
 _DEFAULT_TRACING = TracingConfig(
     project="",
     langfuse=LangfuseConfig(use_langfuse=False, host=""),
@@ -140,6 +162,21 @@ def load_config(config_path: Optional[str] = None) -> RAIConfig:
         if "google" in config_dict
         else _DEFAULT_GOOGLE
     )
+    if "minimax" in config_dict:
+        minimax_dict = config_dict["minimax"]
+        minimax = MiniMaxConfig(
+            simple_model=minimax_dict["simple_model"],
+            complex_model=minimax_dict["complex_model"],
+            embeddings_model=minimax_dict.get("embeddings_model", ""),
+            protocol=minimax_dict.get("protocol", "openai"),
+            region=minimax_dict.get("region", "global_en"),
+            endpoints={
+                region: MiniMaxEndpointConfig(**endpoint)
+                for region, endpoint in minimax_dict.get("endpoints", {}).items()
+            },
+        )
+    else:
+        minimax = _DEFAULT_MINIMAX
 
     if "tracing" in config_dict:
         tracing = TracingConfig(
@@ -156,8 +193,46 @@ def load_config(config_path: Optional[str] = None) -> RAIConfig:
         openai=openai,
         ollama=ollama,
         google=google,
+        minimax=minimax,
         tracing=tracing,
     )
+
+
+def _create_minimax_chat_model(
+    model: str,
+    model_config: MiniMaxConfig,
+    kwargs: Dict[str, Any],
+) -> Any:
+    try:
+        endpoint = model_config.endpoints[model_config.region]
+    except KeyError as exc:
+        raise ValueError(
+            f"MiniMax endpoint is not configured for region: {model_config.region}"
+        ) from exc
+
+    model_kwargs = dict(kwargs)
+    if "api_key" not in model_kwargs:
+        api_key = os.getenv("MINIMAX_API_KEY")
+        if api_key:
+            model_kwargs["api_key"] = api_key
+
+    if model_config.protocol == "openai":
+        from langchain_openai import ChatOpenAI
+
+        return ChatOpenAI(
+            model=model,
+            base_url=endpoint.openai_base_url,
+            **model_kwargs,
+        )
+    if model_config.protocol == "anthropic":
+        from langchain_anthropic import ChatAnthropic
+
+        return ChatAnthropic(
+            model=model,
+            base_url=endpoint.anthropic_base_url,
+            **model_kwargs,
+        )
+    raise ValueError(f"Unknown MiniMax protocol: {model_config.protocol}")
 
 
 def get_llm_model_config_and_vendor(
@@ -213,6 +288,12 @@ def get_llm_model(
 
         model_config = cast(GoogleConfig, model_config)
         return ChatGoogleGenerativeAI(model=model, **kwargs)
+    elif vendor == "minimax":
+        return _create_minimax_chat_model(
+            model,
+            cast(MiniMaxConfig, model_config),
+            kwargs,
+        )
     else:
         raise ValueError(f"Unknown LLM vendor: {vendor}")
 
@@ -255,6 +336,12 @@ def get_llm_model_direct(
 
         model_config = cast(GoogleConfig, model_config)
         return ChatGoogleGenerativeAI(model=model_name, **kwargs)
+    elif vendor == "minimax":
+        return _create_minimax_chat_model(
+            model_name,
+            cast(MiniMaxConfig, model_config),
+            kwargs,
+        )
     else:
         raise ValueError(f"Unknown LLM vendor: {vendor}")
 
@@ -267,6 +354,12 @@ def get_embeddings_model(
     vendor = config.vendor.embeddings_model
 
     model_config = getattr(config, vendor)
+
+    if vendor == "minimax":
+        raise ValueError(
+            "MiniMax does not provide an embeddings model. "
+            "Configure embeddings with a separate supported vendor."
+        )
 
     logger.info(f"Using embeddings model: {vendor}-{model_config.embeddings_model}")
     if vendor == "openai":

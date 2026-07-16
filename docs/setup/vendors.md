@@ -9,9 +9,9 @@ Alternatively vendors can be configured manually in `config.toml` file.
 
 The table summarizes vendor alternative for core AI service and optional RAI modules:
 
-| Module                                          | Open source        | Alternative             | Why to consider alternative?                                             | More information                                                                                                                                                                 |
-| ----------------------------------------------- | ------------------ | ----------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [LLM service](#llm-model-configuration-in-rai)  | Ollama             | OpenAI, Bedrock         | Overall performance of the LLM models, supported modalities and features | [LangChain models](https://docs.langchain4j.dev/integrations/language-models/)                                                                                                   |
+| Module                                          | Open source        | Alternative                      | Why to consider alternative?                                             | More information                                                                                                                                                                 |
+| ----------------------------------------------- | ------------------ | -------------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [LLM service](#llm-model-configuration-in-rai)  | Ollama             | OpenAI, Bedrock, MiniMax         | Overall performance of the LLM models, supported modalities and features | [LangChain models](https://docs.langchain4j.dev/integrations/language-models/)                                                                                                   |
 | **Optional:** [Tracing tool](./tracing.md)      | Langfuse           | LangSmith               | Better integration with LangChain                                        | [Comparison](https://langfuse.com/faq/all/langsmith-alternative)                                                                                                                 |
 | **Optional:** [Text to speech](#text-to-speech) | KokoroTTS, OpenTTS | ElevenLabs              | Arguably, significantly better voice synthesis                           | <li> [KokoroTTS](https://huggingface.co/hexgrad/Kokoro-82M#usage) </li><li> [OpenTTS GitHub](https://github.com/synesthesiam/opentts) </li><li> [RAI voice interface][s2s] </li> |
 | **Optional:** [Speech to text](#speech-to-text) | Whisper            | OpenAI Whisper (hosted) | When suitable local GPU is not an option                                 | <li> [Whisper GitHub](https://github.com/openai/whisper) </li><li> [RAI voice interface][s2s] </li>                                                                              |
@@ -66,6 +66,47 @@ Ollama can be used to host models locally.
     ```
 
 2. Use [RAI Configurator][configurator] -> `Model Selection` -> `bedrock` vendor
+
+### MiniMax
+
+MiniMax can be configured through either its OpenAI-compatible or Anthropic-compatible
+chat API. Set the API key before starting RAI:
+
+```bash
+export MINIMAX_API_KEY="your-api-key"
+```
+
+The generated `config.toml` contains both supported regions and both protocols. Select the
+active combination with `protocol` and `region`:
+
+```toml
+[vendor]
+simple_model = "minimax"
+complex_model = "minimax"
+
+[minimax]
+simple_model = "MiniMax-M2.7"
+complex_model = "MiniMax-M3"
+embeddings_model = ""
+protocol = "openai"
+region = "global_en"
+
+[minimax.endpoints.global_en]
+openai_base_url = "https://api.minimax.io/v1"
+anthropic_base_url = "https://api.minimax.io/anthropic"
+
+[minimax.endpoints.cn_zh]
+openai_base_url = "https://api.minimaxi.com/v1"
+anthropic_base_url = "https://api.minimaxi.com/anthropic"
+```
+
+The Anthropic-compatible base URL must end in `/anthropic`; the client appends the
+`/v1/messages` request path. MiniMax does not provide an embeddings model in this
+configuration, so keep `embeddings_model` assigned to a separate supported vendor.
+
+See the [global API documentation](https://platform.minimax.io/docs/api-reference/api-overview)
+or the [China API documentation](https://platform.minimaxi.com/docs/api-reference/api-overview)
+for service-specific details.
 
 ## Complex LLM Model Configuration
 
