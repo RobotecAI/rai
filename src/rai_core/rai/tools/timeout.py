@@ -34,10 +34,25 @@ Alternatives considered:
 """
 
 import concurrent.futures
+import math
 from functools import wraps
 from typing import Any, Callable, TypeVar
 
 F = TypeVar("F", bound=Callable[..., Any])
+
+
+
+def _normalize_timeout_seconds(seconds: float) -> float:
+    """Return a positive finite timeout duration or raise ValueError."""
+    try:
+        seconds_f = float(seconds)
+    except (TypeError, ValueError) as err:
+        raise ValueError(
+            "timeout seconds must be a positive finite number"
+        ) from err
+    if not math.isfinite(seconds_f) or seconds_f <= 0:
+        raise ValueError("timeout seconds must be a positive finite number")
+    return seconds_f
 
 
 class RaiTimeoutError(Exception):
@@ -53,7 +68,7 @@ def timeout(seconds: float, timeout_message: str | None = None) -> Callable[[F],
     Parameters
     ----------
     seconds : float
-        Timeout duration in seconds
+        Timeout duration in seconds (must be positive and finite)
     timeout_message : str, optional
         Custom timeout message. If not provided, a default message will be used.
 
@@ -64,6 +79,8 @@ def timeout(seconds: float, timeout_message: str | None = None) -> Callable[[F],
 
     Raises
     ------
+    ValueError
+        If ``seconds`` is not a positive finite number
     RaiTimeoutError
         When the decorated function exceeds the specified timeout
 
@@ -80,6 +97,7 @@ def timeout(seconds: float, timeout_message: str | None = None) -> Callable[[F],
     ... except RaiTimeoutError as e:
     ...     print(f"Timeout: {e}")
     """
+    seconds = _normalize_timeout_seconds(seconds)
 
     def decorator(func: F) -> F:
         @wraps(func)
@@ -112,7 +130,7 @@ def timeout_method(
     Parameters
     ----------
     seconds : float
-        Timeout duration in seconds
+        Timeout duration in seconds (must be positive and finite)
     timeout_message : str, optional
         Custom timeout message. If not provided, a default message will be used.
 
@@ -123,6 +141,8 @@ def timeout_method(
 
     Raises
     ------
+    ValueError
+        If ``seconds`` is not a positive finite number
     RaiTimeoutError
         When the decorated method exceeds the specified timeout
 
@@ -141,6 +161,7 @@ def timeout_method(
     ... except RaiTimeoutError as e:
     ...     print(f"Timeout: {e}")
     """
+    seconds = _normalize_timeout_seconds(seconds)
 
     def decorator(func: F) -> F:
         @wraps(func)

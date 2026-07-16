@@ -59,3 +59,21 @@ def test_timeout_method_raises_timeout_error(obj):
     with pytest.raises(RaiTimeoutError) as exc_info:
         obj.slow_method_custom()
     assert str(exc_info.value) == "Custom timeout message"
+
+
+def test_timeout_rejects_non_positive():
+    import pytest
+    from rai.tools.timeout import timeout, timeout_method
+
+    for bad in (0, -1.0, float("nan")):
+        with pytest.raises(ValueError):
+            @timeout(bad)
+            def _fn():
+                return None
+
+        with pytest.raises(ValueError):
+            class _C:
+                @timeout_method(bad)
+                def m(self):
+                    return None
+
