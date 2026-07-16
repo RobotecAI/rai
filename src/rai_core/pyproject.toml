@@ -1,6 +1,6 @@
 [project]
 name = "rai_core"
-version = "2.12.1"
+version = "2.13.0"
 description = "Core functionality for RAI framework"
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
@@ -21,6 +21,7 @@ dependencies = [
     "langchain>=1.0.0,<2.0.0",
     "langchain-aws",
     "langchain-openai",
+    "langchain-anthropic",
     "langchain-ollama",
     "langchain-google-genai",
     "langchain-community",

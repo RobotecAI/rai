@@ -26,6 +26,21 @@ simple_model = "gemini-3-flash"
 complex_model = "gemini-3-pro"
 embeddings_model = "text-embedding-004"
 
+[minimax]
+simple_model = "MiniMax-M2.7"
+complex_model = "MiniMax-M3"
+embeddings_model = ""
+protocol = "openai"
+region = "global_en"
+
+[minimax.endpoints.global_en]
+openai_base_url = "https://api.minimax.io/v1"
+anthropic_base_url = "https://api.minimax.io/anthropic"
+
+[minimax.endpoints.cn_zh]
+openai_base_url = "https://api.minimaxi.com/v1"
+anthropic_base_url = "https://api.minimaxi.com/anthropic"
+
 [tracing]
 project = "rai"
 
