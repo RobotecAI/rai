@@ -47,6 +47,12 @@ simple_model = "gemini-3-flash"
 complex_model = "gemini-3-pro"
 embeddings_model = "text-embedding-004"
 
+[mistralai]
+simple_model = "mistral-small-latest"
+complex_model = "mistral-large-latest"
+embeddings_model = "mistral-embed"
+base_url = "https://api.mistral.ai/v1/"
+
 [tracing]
 project = "rai"
 
