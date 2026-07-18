@@ -44,6 +44,10 @@ def wait_for_ros2_entities(
 ) -> None:
     requested = [ensure_slash(name) for name in requested]
 
+    if time_interval <= 0:
+        raise ValueError(
+            f"time_interval must be positive, got {time_interval!r}"
+        )
     if timeout < 0:
         raise ValueError("Timeout must be 0 (wait forever) or a positive value.")
     start_time = time.time()

@@ -53,7 +53,7 @@ def test_wait_for_ros2_services_adds_prefix_and_stops(monkeypatch):
     )
     monkeypatch.setattr(waiters.time, "sleep", lambda *_: None)
 
-    waiters.wait_for_ros2_services(connector, ["target_service"], time_interval=0)
+    waiters.wait_for_ros2_services(connector, ["target_service"], time_interval=0.001)
 
 
 def test_wait_for_ros2_topics(monkeypatch):
@@ -65,7 +65,7 @@ def test_wait_for_ros2_topics(monkeypatch):
     )
     monkeypatch.setattr(waiters.time, "sleep", lambda *_: None)
 
-    waiters.wait_for_ros2_topics(connector, ["topic_a"], time_interval=0)
+    waiters.wait_for_ros2_topics(connector, ["topic_a"], time_interval=0.001)
 
 
 def test_wait_for_ros2_actions(monkeypatch):
@@ -77,7 +77,7 @@ def test_wait_for_ros2_actions(monkeypatch):
     )
     monkeypatch.setattr(waiters.time, "sleep", lambda *_: None)
 
-    waiters.wait_for_ros2_actions(connector, ["action_a"], time_interval=0)
+    waiters.wait_for_ros2_actions(connector, ["action_a"], time_interval=0.001)
 
 
 def test_wait_for_ros2_services_timeout(monkeypatch):
@@ -137,7 +137,7 @@ def test_wait_for_ros2_services_available_without_slash(monkeypatch):
     )
     monkeypatch.setattr(waiters.time, "sleep", lambda *_: None)
     waiters.wait_for_ros2_services(
-        connector, ["target_service"], time_interval=0, timeout=1.0
+        connector, ["target_service"], time_interval=0.001, timeout=1.0
     )
 
 
@@ -148,7 +148,9 @@ def test_wait_for_ros2_topics_available_without_slash(monkeypatch):
         ]
     )
     monkeypatch.setattr(waiters.time, "sleep", lambda *_: None)
-    waiters.wait_for_ros2_topics(connector, ["topic_a"], time_interval=0, timeout=1.0)
+    waiters.wait_for_ros2_topics(
+        connector, ["topic_a"], time_interval=0.001, timeout=1.0
+    )
 
 
 def test_wait_for_ros2_actions_available_without_slash(monkeypatch):
@@ -158,7 +160,9 @@ def test_wait_for_ros2_actions_available_without_slash(monkeypatch):
         ]
     )
     monkeypatch.setattr(waiters.time, "sleep", lambda *_: None)
-    waiters.wait_for_ros2_actions(connector, ["action_a"], time_interval=0, timeout=1.0)
+    waiters.wait_for_ros2_actions(
+        connector, ["action_a"], time_interval=0.001, timeout=1.0
+    )
 
 
 def test_wait_for_ros2_entities_negative_timeout():
@@ -168,3 +172,34 @@ def test_wait_for_ros2_entities_negative_timeout():
             get_entities=lambda: [],
             timeout=-1,
         )
+
+
+def test_wait_for_ros2_entities_rejects_non_positive_time_interval(monkeypatch):
+    monkeypatch.setattr(waiters.time, "sleep", lambda *_: None)
+    with pytest.raises(ValueError, match="time_interval"):
+        waiters.wait_for_ros2_entities(
+            ["/x"], lambda: [], time_interval=0, timeout=0.01
+        )
+    with pytest.raises(ValueError, match="time_interval"):
+        waiters.wait_for_ros2_entities(
+            ["/x"], lambda: [], time_interval=-0.1, timeout=0.01
+        )
+
+
+@pytest.mark.parametrize(
+    "seq_type, wait_func, name",
+    [
+        ("services_seq", waiters.wait_for_ros2_services, "target_service"),
+        ("topics_seq", waiters.wait_for_ros2_topics, "target_topic"),
+        ("actions_seq", waiters.wait_for_ros2_actions, "target_action"),
+    ],
+)
+def test_wait_wrappers_reject_non_positive_time_interval(
+    monkeypatch, seq_type, wait_func, name
+):
+    connector = DummyConnector(**{seq_type: [[]]})
+    monkeypatch.setattr(waiters.time, "sleep", lambda *_: None)
+    with pytest.raises(ValueError, match="time_interval"):
+        wait_func(connector, [name], time_interval=0, timeout=0.01)
+    with pytest.raises(ValueError, match="time_interval"):
+        wait_func(connector, [name], time_interval=-1, timeout=0.01)
