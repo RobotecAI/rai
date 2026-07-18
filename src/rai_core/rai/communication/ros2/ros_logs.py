@@ -159,6 +159,8 @@ class LlmRosoutParser(BaseLogsParser):
             self._buffer.popleft()
 
     def get_raw_logs(self, last_n: int = 30) -> str:
+        if last_n <= 0:
+            raise ValueError(f"last_n must be positive, got {last_n}")
         return "\n".join(list(self._buffer)[-last_n:])
 
     def summarize(self):
