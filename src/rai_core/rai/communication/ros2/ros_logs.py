@@ -94,6 +94,13 @@ class RaiStateLogsParser(BaseLogsParser):
         return "\n".join(response.string_list)
 
 
+def validate_bufsize(bufsize: int) -> int:
+    """Return bufsize if positive; raise ValueError otherwise."""
+    if bufsize <= 0:
+        raise ValueError(f"bufsize must be positive, got {bufsize!r}")
+    return bufsize
+
+
 class LlmRosoutParser(BaseLogsParser):
     """Bufferize `/rosout` and summarize is with LLM"""
 
@@ -104,7 +111,7 @@ class LlmRosoutParser(BaseLogsParser):
         callback_group: rclpy.callback_groups.CallbackGroup,
         bufsize: int = 100,
     ):
-        self.bufsize = bufsize
+        self.bufsize = validate_bufsize(bufsize)
         self._buffer: Deque[str] = deque()
         self.template = ChatPromptTemplate.from_messages(
             [
