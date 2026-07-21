@@ -15,7 +15,6 @@
 from unittest.mock import MagicMock
 
 import pytest
-
 from rai.agents.langchain.agent import LangChainAgent
 
 
