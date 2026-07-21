@@ -37,6 +37,8 @@ def wait_for_shutdown(agents: List[BaseAgent]):
     an interrupt signal (SIGINT, e.g., Ctrl+C) or SIGTERM. It installs signal handlers to
     capture these events and invokes the agent's ``stop()`` method as part of the shutdown process.
     """
+    if not agents:
+        raise ValueError("agents must be a non-empty list")
     shutdown_event = Event()
 
     def signal_handler(signum, frame):
@@ -58,6 +60,8 @@ def run_agents(agents: List[BaseAgent]):
     Args:
         agents: List of agent instances
     """
+    if not agents:
+        raise ValueError("agents must be a non-empty list")
     logger.info(
         "run_agents is an experimental function. \
                    If you believe that your agents are not running properly, \
@@ -84,6 +88,8 @@ class AgentRunner:
         agents : List[BaseAgent]
             List of agent instances to be managed by the runner.
         """
+        if not agents:
+            raise ValueError("agents must be a non-empty list")
         self.agents = agents
         self.logger = logging.getLogger(__name__)
 
