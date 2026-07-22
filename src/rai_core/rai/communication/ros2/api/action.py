@@ -152,8 +152,19 @@ class ROS2ActionAPI(BaseROS2API):
             The handle for the created action server
 
         Raises:
-            ValueError: If the action server cannot be created
+            TypeError: If result_timeout is not a positive number (bool rejected).
+            ValueError: If the action server cannot be created or result_timeout <= 0.
         """
+        if isinstance(result_timeout, bool) or not isinstance(
+            result_timeout, (int, float)
+        ):
+            raise TypeError(
+                f"result_timeout must be a positive number, got {type(result_timeout).__name__}"
+            )
+        if result_timeout <= 0:
+            raise ValueError(
+                f"result_timeout must be positive, got {result_timeout!r}"
+            )
         handle = self._generate_handle()
         action_ros_type = import_message_from_str(action_type)
         try:
