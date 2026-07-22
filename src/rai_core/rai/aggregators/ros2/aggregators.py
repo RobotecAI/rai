@@ -112,7 +112,7 @@ class ROS2ImgVLMDescriptionAggregator(BaseAggregator[Image | CompressedImage]):
 class ROS2ImgVLMDiffAggregator(BaseAggregator[Image | CompressedImage]):
     """
     Returns the LLM analysis of the differences between 3 images in the
-    aggregation buffer: 1st, midden, last
+    aggregation buffer: 1st, middle, last
     """
 
     SYSTEM_PROMPT = "You are an expert in image analysis and your speciality is the comparison of 3 images"
@@ -142,6 +142,7 @@ class ROS2ImgVLMDiffAggregator(BaseAggregator[Image | CompressedImage]):
             return None
 
         b64_images = [convert_ros_img_to_base64(msg) for msg in msgs]
+        original_count = len(b64_images)
 
         self.clear_buffer()
 
@@ -165,5 +166,8 @@ class ROS2ImgVLMDiffAggregator(BaseAggregator[Image | CompressedImage]):
         llm = self.llm.with_structured_output(ROS2ImgDiffOutput)
         response = cast(ROS2ImgDiffOutput, llm.invoke(task))
         return HumanMessage(
-            content=f"Result of the analysis of the {len(b64_images)} keyframes selected from {len(b64_images)} last images:\n{response}"
+            content=(
+                f"Result of the analysis of the {len(b64_images)} keyframes "
+                f"selected from {original_count} last images:\n{response}"
+            )
         )
