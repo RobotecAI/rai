@@ -34,6 +34,7 @@ import rclpy.task
 from rclpy.client import Client
 from rclpy.service import Service
 
+from rai.communication.timeout_validate import require_positive_timeout
 from rai.communication.ros2.api.base import (
     BaseROS2API,
 )
@@ -87,6 +88,7 @@ class ROS2ServiceAPI(BaseROS2API):
             through the same client. Use reuse_client=False for per-call clients
             when concurrent service calls are required.
         """
+        require_positive_timeout(timeout_sec)
         srv_msg, srv_cls = self.build_ros2_service_request(service_type, request)
 
         def _call_service(client: Client, timeout_sec: float) -> Any:
