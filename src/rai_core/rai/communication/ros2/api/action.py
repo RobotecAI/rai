@@ -59,6 +59,18 @@ from rai.communication.ros2.api.conversion import import_message_from_str
 from rai.communication.ros2.ros_async import get_future_result
 
 
+
+def _require_positive_timeout(timeout_sec: float, *, name: str = "timeout_sec") -> float:
+    """Fail closed: timeout must be a finite number > 0 (bool is rejected)."""
+    if isinstance(timeout_sec, bool) or not isinstance(timeout_sec, (int, float)):
+        raise TypeError(
+            f"{name} must be a positive number, got {type(timeout_sec).__name__}"
+        )
+    if timeout_sec <= 0:
+        raise ValueError(f"{name} must be positive, got {timeout_sec!r}")
+    return float(timeout_sec)
+
+
 class ROS2ActionData(TypedDict):
     action_client: Optional[ActionClient]
     goal_future: Optional[rclpy.task.Future]
@@ -202,6 +214,7 @@ class ROS2ActionAPI(BaseROS2API):
         ] = lambda _: None,  # TODO: handle done callback
         timeout_sec: float = 1.0,
     ) -> Tuple[bool, Annotated[str, "action handle"]]:
+        _require_positive_timeout(timeout_sec)
         handle = self._generate_handle()
         self.actions[handle] = ROS2ActionData(
             action_client=None,
