@@ -136,7 +136,9 @@ def test_wait_for_ros2_services_available_without_slash(monkeypatch):
         ]
     )
     monkeypatch.setattr(waiters.time, "sleep", lambda *_: None)
-    waiters.wait_for_ros2_services(connector, ["target_service"], time_interval=0, timeout=1.0)
+    waiters.wait_for_ros2_services(
+        connector, ["target_service"], time_interval=0, timeout=1.0
+    )
 
 
 def test_wait_for_ros2_topics_available_without_slash(monkeypatch):

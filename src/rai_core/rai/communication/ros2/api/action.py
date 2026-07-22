@@ -162,9 +162,7 @@ class ROS2ActionAPI(BaseROS2API):
                 f"result_timeout must be a positive number, got {type(result_timeout).__name__}"
             )
         if result_timeout <= 0:
-            raise ValueError(
-                f"result_timeout must be positive, got {result_timeout!r}"
-            )
+            raise ValueError(f"result_timeout must be positive, got {result_timeout!r}")
         handle = self._generate_handle()
         action_ros_type = import_message_from_str(action_type)
         try:
