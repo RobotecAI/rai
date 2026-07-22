@@ -16,6 +16,7 @@
 
 import importlib.util
 import sys
+import types
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -33,40 +34,29 @@ _CLI_PATH = (
 
 
 def _load_cli_module():
-    """Load cli.py without package __init__ (which requires ROS2 sourced)."""
+    """Load cli.py directly, bypassing the package __init__ (which requires
+    ROS2 sourced) and stubbing langchain_core.tools if it is not installed."""
     name = "_rai_cli_timeout_ut"
     if name in sys.modules:
         return sys.modules[name]
+
+    # Provide a minimal langchain_core.tools stub only when the real package is
+    # unavailable, so the offline import of cli.py succeeds without ROS2/langchain.
+    if importlib.util.find_spec("langchain_core") is None:
+        lc = types.ModuleType("langchain_core")
+        lc_tools = types.ModuleType("langchain_core.tools")
+        lc_tools.BaseTool = object
+        lc_tools.BaseToolkit = type("BaseToolkit", (), {"get_tools": lambda self: []})
+        lc_tools.tool = lambda f=None, **_k: (f if f is not None else (lambda x: x))
+        lc.tools = lc_tools
+        sys.modules.setdefault("langchain_core", lc)
+        sys.modules.setdefault("langchain_core.tools", lc_tools)
+
     spec = importlib.util.spec_from_file_location(name, _CLI_PATH)
     assert spec is not None and spec.loader is not None
     mod = importlib.util.module_from_spec(spec)
     sys.modules[name] = mod
-    try:
-        spec.loader.exec_module(mod)
-    except ModuleNotFoundError:
-        del sys.modules[name]
-        # langchain_core missing: still load pure helpers with lightweight stubs
-        from subprocess import PIPE, Popen
-        from threading import Timer
-        from typing import List, Literal, Optional
-
-        src = _CLI_PATH.read_text(encoding="utf-8")
-        ns = {
-            "__name__": name,
-            "PIPE": PIPE,
-            "Popen": Popen,
-            "Timer": Timer,
-            "List": List,
-            "Literal": Literal,
-            "Optional": Optional,
-            "BaseTool": object,
-            "BaseToolkit": type("BaseToolkit", (), {"get_tools": lambda self: []}),
-            "tool": lambda f=None, **_k: (f if f is not None else (lambda x: x)),
-        }
-        exec(compile(src, str(_CLI_PATH), "exec"), ns)
-        mod = type(sys)(name)
-        mod.__dict__.update(ns)
-        sys.modules[name] = mod
+    spec.loader.exec_module(mod)
     return mod
 
 
