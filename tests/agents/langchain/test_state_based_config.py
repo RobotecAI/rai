@@ -14,7 +14,6 @@
 
 import pytest
 from pydantic import ValidationError
-
 from rai.agents.langchain.state_based_agent import StateBasedConfig
 
 
