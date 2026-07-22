@@ -26,18 +26,18 @@ def store_artifacts(
     tool_call_id: str, artifacts: List[Any], db_path="artifact_database.pkl"
 ):
     # TODO(boczekbartek): refactor
-    db_path = Path(db_path)
-    if not db_path.is_file():
-        artifact_database = {}
-        with open("artifact_database.pkl", "wb") as file:
+    path = Path(db_path)
+    if not path.is_file():
+        artifact_database: dict = {}
+        with path.open("wb") as file:
             pickle.dump(artifact_database, file)
-    with open("artifact_database.pkl", "rb") as file:
+    with path.open("rb") as file:
         artifact_database = pickle.load(file)
         if tool_call_id not in artifact_database:
             artifact_database[tool_call_id] = artifacts
         else:
             artifact_database[tool_call_id].extend(artifacts)
-    with open("artifact_database.pkl", "wb") as file:
+    with path.open("wb") as file:
         pickle.dump(artifact_database, file)
 
 
