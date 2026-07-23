@@ -25,6 +25,7 @@ from rclpy.action import CancelResponse
 
 from rai.communication.ros2 import ROS2Message
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
+from rai.tools.names import require_non_empty_name
 
 internal_action_id_mapping: Dict[str, str] = {}
 action_results_store: Dict[str, Any] = {}
@@ -170,6 +171,8 @@ class StartROS2ActionTool(BaseROS2Tool):
     def _run(
         self, action_name: str, action_type: str, action_args: Dict[str, Any]
     ) -> str:
+        action_name = require_non_empty_name(action_name, name="action_name")
+        action_type = require_non_empty_name(action_type, name="action_type")
         if not self.is_writable(action_name):
             raise ValueError(f"Action {action_name} is not writable")
         message = ROS2Message(payload=action_args)
