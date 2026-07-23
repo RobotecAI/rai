@@ -32,6 +32,7 @@ from rai_s2s.sound_device import (
     SoundDeviceConnector,
     SoundDeviceMessage,
 )
+from rai_s2s.positive_params import require_positive_number
 from rai_s2s.tts.agents.tts_agent import PlayData
 from rai_s2s.tts.models.base import TTSModel
 
@@ -87,7 +88,9 @@ class SpeechToSpeechAgent(BaseAgent):
         self.transcription_model = transcription_model
 
         self.vad: BaseVoiceDetectionModel = vad
-        self.grace_period = grace_period
+        self.grace_period = require_positive_number(
+            grace_period, name="grace_period"
+        )
         self.grace_period_start = 0
 
         self.sample_buffer = []

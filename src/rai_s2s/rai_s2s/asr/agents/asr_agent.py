@@ -32,6 +32,7 @@ from typing_extensions import Self
 
 from rai_s2s.asr.agents.initialization import load_config
 from rai_s2s.asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
+from rai_s2s.positive_params import require_positive_number
 from rai_s2s.sound_device import (
     SoundDeviceConfig,
     SoundDeviceConnector,
@@ -93,7 +94,9 @@ class SpeechRecognitionAgent(BaseAgent):
 
         self.vad: BaseVoiceDetectionModel = vad
 
-        self.grace_period = grace_period
+        self.grace_period = require_positive_number(
+            grace_period, name="grace_period"
+        )
         self.grace_period_start = 0
 
         self.recording_started = False
