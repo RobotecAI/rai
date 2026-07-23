@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 from tf2_geometry_msgs import do_transform_pose
 
 from rai.communication.ros2.ros_async import get_future_result
+from rai.tools.positive_params import require_positive_number
 from rai.tools.ros2.base import BaseROS2Tool
 
 try:
@@ -85,6 +86,13 @@ class MoveToPointTool(BaseROS2Tool):
         z: float,
         task: Literal["grab", "drop"],
     ) -> str:
+        self.timeout_sec = require_positive_number(
+            self.timeout_sec, name="timeout_sec"
+        )
+        self.service_availability_timeout_sec = require_positive_number(
+            self.service_availability_timeout_sec,
+            name="service_availability_timeout_sec",
+        )
         client = self.connector.node.create_client(
             ManipulatorMoveTo,
             "/manipulator_move_to",
@@ -211,6 +219,13 @@ class MoveObjectFromToTool(BaseROS2Tool):
         y1: float,
         z1: float,
     ) -> str:
+        self.timeout_sec = require_positive_number(
+            self.timeout_sec, name="timeout_sec"
+        )
+        self.service_availability_timeout_sec = require_positive_number(
+            self.service_availability_timeout_sec,
+            name="service_availability_timeout_sec",
+        )
         # Used to reset arm after tool call
         reset_tool = ResetArmTool(
             connector=self.connector, manipulator_frame=self.manipulator_frame
