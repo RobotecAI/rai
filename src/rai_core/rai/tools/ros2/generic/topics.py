@@ -28,6 +28,7 @@ from rai.communication.ros2 import ROS2Connector, ROS2Message
 from rai.communication.ros2.api.conversion import ros2_message_to_dict
 from rai.messages import MultimodalArtifact, preprocess_image
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
+from rai.tools.names import require_non_empty_name
 from rai.tools.ros2.generic.interface_parser import render_interface_string
 
 
@@ -264,6 +265,8 @@ class GetROS2TransformTool(BaseROS2Tool):
     STALE_TRANSFORM_THRESHOLD_SEC: float = 1.0
 
     def _run(self, target_frame: str, source_frame: str, timeout_sec: float) -> str:
+        target_frame = require_non_empty_name(target_frame, name="target_frame")
+        source_frame = require_non_empty_name(source_frame, name="source_frame")
         transform = self.connector.get_transform(
             target_frame=target_frame,
             source_frame=source_frame,
