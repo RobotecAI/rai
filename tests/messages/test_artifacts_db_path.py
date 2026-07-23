@@ -32,3 +32,14 @@ def test_store_artifacts_creates_file_at_path(tmp_path: Path):
     db.parent.mkdir(parents=True)
     store_artifacts("x", [1], db_path=str(db))
     assert get_stored_artifacts("x", db_path=str(db)) == [1]
+
+
+def test_store_artifacts_rejects_empty_tool_call_id(tmp_path: Path):
+    import pytest
+
+    db = tmp_path / "db.pkl"
+    for bad in ("", "   ", None, 123):
+        with pytest.raises(ValueError, match="tool_call_id must be a non-empty string"):
+            store_artifacts(bad, ["a"], db_path=str(db))  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="tool_call_id must be a non-empty string"):
+            get_stored_artifacts(bad, db_path=str(db))  # type: ignore[arg-type]

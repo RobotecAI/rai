@@ -26,6 +26,10 @@ def store_artifacts(
     tool_call_id: str, artifacts: List[Any], db_path="artifact_database.pkl"
 ):
     # TODO(boczekbartek): refactor
+    if not isinstance(tool_call_id, str) or not tool_call_id.strip():
+        raise ValueError(
+            f"tool_call_id must be a non-empty string, got {tool_call_id!r}"
+        )
     path = Path(db_path)
     if not path.is_file():
         artifact_database: dict = {}
@@ -45,6 +49,10 @@ def get_stored_artifacts(
     tool_call_id: str, db_path="artifact_database.pkl"
 ) -> List[Any]:
     # TODO(boczekbartek): refactor
+    if not isinstance(tool_call_id, str) or not tool_call_id.strip():
+        raise ValueError(
+            f"tool_call_id must be a non-empty string, got {tool_call_id!r}"
+        )
     db_path = Path(db_path)
     if not db_path.is_file():
         return []
