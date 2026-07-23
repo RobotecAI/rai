@@ -28,6 +28,7 @@ from rai.communication.ros2 import ROS2Connector, ROS2Message
 from rai.communication.ros2.api.conversion import ros2_message_to_dict
 from rai.messages import MultimodalArtifact, preprocess_image
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
+from rai.tools.names import require_non_empty_name
 from rai.tools.ros2.generic.interface_parser import render_interface_string
 
 
@@ -88,6 +89,7 @@ class PublishROS2MessageTool(BaseROS2Tool):
     args_schema: Type[PublishROS2MessageToolInput] = PublishROS2MessageToolInput
 
     def _run(self, topic: str, message: Dict[str, Any], message_type: str) -> str:
+        topic = require_non_empty_name(topic, name="topic")
         if not self.is_writable(topic):
             raise ValueError(f"Topic {topic} is not writable")
         ros_message = ROS2Message(
@@ -110,6 +112,7 @@ class ReceiveROS2MessageTool(BaseROS2Tool):
     args_schema: Type[ReceiveROS2MessageToolInput] = ReceiveROS2MessageToolInput
 
     def _run(self, topic: str, timeout_sec: float = 1.0) -> str:
+        topic = require_non_empty_name(topic, name="topic")
         if not self.is_readable(topic):
             raise ValueError(f"Topic {topic} is not readable")
         message = self.connector.receive_message(topic, timeout_sec=timeout_sec)
@@ -131,6 +134,7 @@ class GetROS2ImageTool(BaseROS2Tool):
     def _run(
         self, topic: str, timeout_sec: float = 1.0
     ) -> Tuple[str, MultimodalArtifact]:
+        topic = require_non_empty_name(topic, name="topic")
         if not self.is_readable(topic):
             raise ValueError(f"Topic {topic} is not readable")
         message = self.connector.receive_message(topic, timeout_sec=timeout_sec)
