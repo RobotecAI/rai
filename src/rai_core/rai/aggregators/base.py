@@ -28,8 +28,15 @@ class BaseAggregator(ABC, Generic[T]):
 
     def __init__(self, max_size: int | None = None) -> None:
         super().__init__()
-        if max_size is not None and max_size <= 0:
-            raise ValueError(f"max_size must be positive or None, got {max_size}")
+        if max_size is not None:
+            if isinstance(max_size, bool) or not isinstance(max_size, int):
+                raise TypeError(
+                    f"max_size must be a positive int or None, got {type(max_size).__name__}"
+                )
+            if max_size <= 0:
+                raise ValueError(
+                    f"max_size must be positive or None, got {max_size}"
+                )
         self._buffer: Deque[T] = deque()
         self.max_size = max_size
 

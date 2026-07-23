@@ -29,6 +29,14 @@ def test_base_aggregator_rejects_nonpositive_max_size():
         DummyAggregator(max_size=-1)
 
 
+def test_base_aggregator_rejects_bool_and_non_int_max_size():
+    for bad in (True, False, 1.5, "2"):
+        with pytest.raises(
+            TypeError, match="max_size must be a positive int or None"
+        ):
+            DummyAggregator(max_size=bad)  # type: ignore[arg-type]
+
+
 def test_base_aggregator_accepts_none_and_positive_max_size():
     unbounded = DummyAggregator(max_size=None)
     assert unbounded.max_size is None
