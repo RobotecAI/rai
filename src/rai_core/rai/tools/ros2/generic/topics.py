@@ -27,6 +27,7 @@ from sensor_msgs.msg import CompressedImage, Image
 from rai.communication.ros2 import ROS2Connector, ROS2Message
 from rai.communication.ros2.api.conversion import ros2_message_to_dict
 from rai.messages import MultimodalArtifact, preprocess_image
+from rai.tools.positive_params import require_positive_number
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
 from rai.tools.ros2.generic.interface_parser import render_interface_string
 
@@ -110,6 +111,7 @@ class ReceiveROS2MessageTool(BaseROS2Tool):
     args_schema: Type[ReceiveROS2MessageToolInput] = ReceiveROS2MessageToolInput
 
     def _run(self, topic: str, timeout_sec: float = 1.0) -> str:
+        timeout_sec = require_positive_number(timeout_sec, name="timeout_sec")
         if not self.is_readable(topic):
             raise ValueError(f"Topic {topic} is not readable")
         message = self.connector.receive_message(topic, timeout_sec=timeout_sec)
@@ -131,6 +133,7 @@ class GetROS2ImageTool(BaseROS2Tool):
     def _run(
         self, topic: str, timeout_sec: float = 1.0
     ) -> Tuple[str, MultimodalArtifact]:
+        timeout_sec = require_positive_number(timeout_sec, name="timeout_sec")
         if not self.is_readable(topic):
             raise ValueError(f"Topic {topic} is not readable")
         message = self.connector.receive_message(topic, timeout_sec=timeout_sec)
@@ -264,6 +267,7 @@ class GetROS2TransformTool(BaseROS2Tool):
     STALE_TRANSFORM_THRESHOLD_SEC: float = 1.0
 
     def _run(self, target_frame: str, source_frame: str, timeout_sec: float) -> str:
+        timeout_sec = require_positive_number(timeout_sec, name="timeout_sec")
         transform = self.connector.get_transform(
             target_frame=target_frame,
             source_frame=source_frame,
