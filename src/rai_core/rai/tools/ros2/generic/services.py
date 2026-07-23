@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 
 from rai.communication.ros2 import ROS2Message
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
+from rai.tools.names import require_non_empty_name
 
 
 class ROS2ServicesToolkit(BaseROS2Toolkit):
@@ -107,6 +108,8 @@ class CallROS2ServiceTool(BaseROS2Tool):
         service_args: Optional[Dict[str, Any]] = None,
         timeout_sec: float = 5.0,
     ) -> str:
+        service_name = require_non_empty_name(service_name, name="service_name")
+        service_type = require_non_empty_name(service_type, name="service_type")
         if not self.is_writable(service_name):
             raise ValueError(f"Service {service_name} is not writable")
         if service_args is None:
