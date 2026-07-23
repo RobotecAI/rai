@@ -17,6 +17,8 @@ from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
 import numpy as np
+
+from rai_s2s.positive_params import require_positive_number
 import sounddevice as sd
 from numpy._typing import NDArray
 from pydub import AudioSegment
@@ -182,6 +184,7 @@ class SoundDeviceAPI:
         if not self.read_flag:
             raise SoundDeviceError(f"{self.device_name} does not support reading!")
 
+        time = require_positive_number(time, name="time")
         frames = int(time * self.sample_rate)
         recording = sd.rec(
             frames=frames,
