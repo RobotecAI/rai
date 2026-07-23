@@ -29,6 +29,7 @@ from rai.communication.ros2 import ROS2Message
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.messages import MultimodalArtifact
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
+from rai.tools.numbers import require_finite_float
 
 current_action_id: Optional[str] = None
 current_feedback: Optional[NavigateToPose.Feedback] = None
@@ -86,6 +87,10 @@ class NavigateToPoseTool(BaseROS2Tool):
         current_result = result
 
     def _run(self, x: float, y: float, z: float, yaw: float) -> str:
+        x = require_finite_float(x, name="x")
+        y = require_finite_float(y, name="y")
+        z = require_finite_float(z, name="z")
+        yaw = require_finite_float(yaw, name="yaw")
         pose = PoseStamped()
         pose.header.frame_id = self.frame_id
         pose.header.stamp = self.connector.node.get_clock().now().to_msg()
