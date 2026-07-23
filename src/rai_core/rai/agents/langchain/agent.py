@@ -115,6 +115,10 @@ class LangChainAgent(BaseAgent):
         max_size: int = 100,
     ):
         super().__init__()
+        if isinstance(max_size, bool) or not isinstance(max_size, int):
+            raise TypeError(
+                f"max_size must be a positive int, got {type(max_size).__name__}"
+            )
         if max_size <= 0:
             raise ValueError(f"max_size must be positive, got {max_size!r}")
         self.logger = logging.getLogger(__name__)

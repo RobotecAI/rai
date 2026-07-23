@@ -27,8 +27,14 @@ def _make_agent(max_size: int) -> LangChainAgent:
 
 
 def test_max_size_must_be_positive():
-    for bad in (0, -1, False):
+    for bad in (0, -1):
         with pytest.raises(ValueError, match="max_size must be positive"):
+            _make_agent(bad)
+
+
+def test_max_size_rejects_bool_and_non_int():
+    for bad in (True, False, 1.5, "10", None):
+        with pytest.raises(TypeError, match="max_size must be a positive int"):
             _make_agent(bad)  # type: ignore[arg-type]
 
 
