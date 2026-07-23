@@ -24,6 +24,7 @@ from typing import Any, Literal
 from pydantic import Field
 
 from rai.tools.ros2.base import BaseROS2Tool
+from rai.tools.timeout import require_positive_timeout
 from rai.tools.ros2.generic.topics import (
     GetROS2ImageTool,
     GetROS2TransformTool,
@@ -43,10 +44,11 @@ class GetROS2ImageConfiguredTool(BaseROS2Tool):
             raise ValueError(f"Bad configuration: topic {self.topic} is not readable")
 
     def _run(self) -> Any:
+        timeout_sec = require_positive_timeout(self.timeout_sec)
         tool = GetROS2ImageTool(
             connector=self.connector,
         )
-        return tool._run(topic=self.topic, timeout_sec=self.timeout_sec)
+        return tool._run(topic=self.topic, timeout_sec=timeout_sec)
 
 
 class GetROS2TransformConfiguredTool(BaseROS2Tool):
@@ -58,11 +60,12 @@ class GetROS2TransformConfiguredTool(BaseROS2Tool):
     timeout_sec: float = Field(default=10.0, description="The timeout in seconds")
 
     def _run(self) -> Any:
+        timeout_sec = require_positive_timeout(self.timeout_sec)
         tool = GetROS2TransformTool(
             connector=self.connector,
         )
         return tool._run(
             source_frame=self.source_frame,
             target_frame=self.target_frame,
-            timeout_sec=self.timeout_sec,
+            timeout_sec=timeout_sec,
         )
