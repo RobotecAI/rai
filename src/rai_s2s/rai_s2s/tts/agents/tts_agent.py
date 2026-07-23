@@ -37,6 +37,7 @@ from rai_s2s.sound_device import (
     SoundDeviceConnector,
     SoundDeviceMessage,
 )
+from rai_s2s.positive_params import require_positive_int
 from rai_s2s.tts.models import TTSModel
 
 from .initialization import load_config
@@ -84,6 +85,9 @@ class TextToSpeechAgent(BaseAgent):
         logger: Optional[logging.Logger] = None,
         max_speech_history=64,
     ):
+        self.max_speech_history = require_positive_int(
+            max_speech_history, name="max_speech_history"
+        )
         if logger is None:
             self.logger = logging.getLogger(__name__)
         else:
@@ -259,7 +263,7 @@ class TextToSpeechAgent(BaseAgent):
         ):
             self.current_speech_id = msg.communication_id
             self.remembered_speech_ids.append(self.current_speech_id)
-            if len(self.remembered_speech_ids) > 64:
+            if len(self.remembered_speech_ids) > self.max_speech_history:
                 self.remembered_speech_ids.pop(0)
         if self.current_speech_id == msg.communication_id:
             self.text_queues[self.current_transcription_id].put(msg.text)
