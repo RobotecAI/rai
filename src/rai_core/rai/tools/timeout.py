@@ -159,3 +159,23 @@ def timeout_method(
         return wrapper
 
     return decorator
+
+
+def require_positive_timeout(timeout_sec: object, *, name: str = "timeout_sec") -> float:
+    """Validate timeout is a real positive number (bool rejected).
+
+    Returns the value as float. Raises ValueError on invalid input.
+    """
+    if timeout_sec is True or timeout_sec is False:
+        raise ValueError(f"{name} must be a positive number")
+    if isinstance(timeout_sec, int) and not isinstance(timeout_sec, bool):
+        value = float(timeout_sec)
+    elif isinstance(timeout_sec, float):
+        value = float(timeout_sec)
+    else:
+        raise ValueError(f"{name} must be a positive number")
+    if value != value:  # NaN
+        raise ValueError(f"{name} must be a positive number")
+    if value <= 0:
+        raise ValueError(f"{name} must be positive")
+    return value

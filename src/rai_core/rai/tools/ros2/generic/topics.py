@@ -28,6 +28,7 @@ from rai.communication.ros2 import ROS2Connector, ROS2Message
 from rai.communication.ros2.api.conversion import ros2_message_to_dict
 from rai.messages import MultimodalArtifact, preprocess_image
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
+from rai.tools.timeout import require_positive_timeout
 from rai.tools.ros2.generic.interface_parser import render_interface_string
 
 
@@ -112,6 +113,7 @@ class ReceiveROS2MessageTool(BaseROS2Tool):
     def _run(self, topic: str, timeout_sec: float = 1.0) -> str:
         if not self.is_readable(topic):
             raise ValueError(f"Topic {topic} is not readable")
+        timeout_sec = require_positive_timeout(timeout_sec)
         message = self.connector.receive_message(topic, timeout_sec=timeout_sec)
         return str({"payload": message.payload, "metadata": message.metadata})
 
@@ -133,6 +135,7 @@ class GetROS2ImageTool(BaseROS2Tool):
     ) -> Tuple[str, MultimodalArtifact]:
         if not self.is_readable(topic):
             raise ValueError(f"Topic {topic} is not readable")
+        timeout_sec = require_positive_timeout(timeout_sec)
         message = self.connector.receive_message(topic, timeout_sec=timeout_sec)
         msg_type = type(message.payload)
         if msg_type == Image:
@@ -264,6 +267,7 @@ class GetROS2TransformTool(BaseROS2Tool):
     STALE_TRANSFORM_THRESHOLD_SEC: float = 1.0
 
     def _run(self, target_frame: str, source_frame: str, timeout_sec: float) -> str:
+        timeout_sec = require_positive_timeout(timeout_sec)
         transform = self.connector.get_transform(
             target_frame=target_frame,
             source_frame=source_frame,
