@@ -36,6 +36,7 @@ from tf2_geometry_msgs import do_transform_pose, do_transform_pose_stamped
 from tf2_ros import StaticTransformBroadcaster
 
 from rai_interfaces.srv import ManipulatorMoveTo
+from rai_sim.positive_params import require_positive_number
 from rai_sim.launch_manager import ROS2LaunchManager
 from rai_sim.simulation_bridge import (
     Entity,
@@ -108,6 +109,8 @@ class O3DExROS2Bridge(SimulationBridge):
         """
         if not process:
             return
+
+        timeout = int(require_positive_number(timeout, name="timeout"))
 
         # Try SIGINT with timeout
         process.send_signal(signal.SIGINT)
@@ -293,6 +296,13 @@ class O3DExROS2Bridge(SimulationBridge):
             stale_timeout: Seconds of inactivity (no new interfaces) before giving up.
             poll_interval: Seconds between polls.
         """
+        stale_timeout = require_positive_number(
+            stale_timeout, name="stale_timeout"
+        )
+        poll_interval = require_positive_number(
+            poll_interval, name="poll_interval"
+        )
+
         seen: Set[str] = set()
         stale_since = time.monotonic()
         last_log = time.monotonic()
