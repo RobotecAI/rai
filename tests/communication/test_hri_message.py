@@ -82,7 +82,27 @@ def test_to_langchain_human():
     assert langchain_message.content == "Hi there"
 
 
-def test_to_langchain_ai_multimodal(image, audio):
+def test_to_langchain_ai_images_only(image):
+    """AI messages with images (no audio) must map audios correctly and succeed."""
+    from rai.messages.multimodal import AIMultimodalMessage
+
+    message = HRIMessage(
+        text="Response",
+        images=[image],
+        audios=[],
+        message_author="ai",
+        communication_id=HRIMessage.generate_communication_id(),
+        seq_no=0,
+        seq_end=True,
+    )
+    langchain_message = message.to_langchain()
+    assert isinstance(langchain_message, AIMultimodalMessage)
+    assert langchain_message.images is not None
+    assert len(langchain_message.images) == 1
+
+
+def test_to_langchain_ai_with_audio_still_unsupported(image, audio):
+    """Audio on MultimodalMessage remains unsupported until issue #370."""
     message = HRIMessage(
         text="Response",
         images=[image],
@@ -92,16 +112,10 @@ def test_to_langchain_ai_multimodal(image, audio):
         seq_no=0,
         seq_end=True,
     )
-
-    with pytest.raises(
-        ValueError
-    ):  # NOTE: update when https://github.com/RobotecAI/rai/issues/370 is resolved
+    with pytest.raises(ValueError, match="Audio is not yet supported"):
         _ = message.to_langchain()
 
-    # assert isinstance(langchain_message, AIMultimodalMessage)
-    # assert langchain_message.content == "Response"
-    # assert langchain_message.images == ["img"]
-    # assert langchain_message.audios == ["audio"]
+
 
 
 def test_from_langchain_human():
