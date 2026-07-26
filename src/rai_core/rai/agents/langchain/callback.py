@@ -39,6 +39,10 @@ class HRICallbackHandler(BaseCallbackHandler):
         self.stream_response = stream_response
         self.splitting_chars = splitting_chars or ["\n", ".", "!", "?"]
         self.chunks_buffer = ""
+        if not isinstance(max_buffer_size, int) or isinstance(max_buffer_size, bool):
+            raise ValueError("max_buffer_size must be a positive int")
+        if max_buffer_size <= 0:
+            raise ValueError("max_buffer_size must be a positive int")
         self.max_buffer_size = max_buffer_size
         self._buffer_lock = threading.Lock()
         self.logger = logger or logging.getLogger(__name__)
