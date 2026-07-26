@@ -154,7 +154,11 @@ class NodeDiscovery:
         period_sec: float = 0.5,
         setters: Optional[List[Callable]] = None,
     ) -> None:
-        self.period_sec = period_sec
+        if not isinstance(period_sec, (int, float)) or isinstance(period_sec, bool):
+            raise ValueError("period_sec must be a positive number")
+        if not (period_sec > 0) or period_sec != period_sec:  # NaN check
+            raise ValueError("period_sec must be positive")
+        self.period_sec = float(period_sec)
         self.node = node
 
         self.topics_and_types: Dict[str, str] = dict()
