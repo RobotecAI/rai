@@ -73,9 +73,20 @@ class ToolRunner(RunnableCallable):
             self.logger.info(f"Running tool: {call['name']}, args: {call['args']}")
             artifact = None
 
+            tool = self.tools_by_name.get(call["name"])
+            if tool is None:
+                error_message = f'Unknown tool: "{call["name"]}"'
+                self.logger.info(error_message)
+                return ToolMessage(
+                    content=error_message,
+                    name=call["name"],
+                    tool_call_id=call["id"],
+                    status="error",
+                )
+
             try:
                 ts = time.perf_counter()
-                output = self.tools_by_name[call["name"]].invoke(call, config)  # type: ignore
+                output = tool.invoke(call, config)  # type: ignore
                 te = time.perf_counter() - ts
                 self.logger.info(
                     f"Tool {call['name']} completed in {te:.2f} seconds. Tool output: {str(output.content)[:100]}{'...' if len(str(output.content)) > 100 else ''}"
