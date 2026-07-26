@@ -59,6 +59,11 @@ class OpenWakeWord(BaseVoiceDetectionModel):
         """
         super(OpenWakeWord, self).__init__()
         self.model_name = "open_wake_word"
+        if not isinstance(threshold, (int, float)) or isinstance(threshold, bool):
+            raise ValueError("threshold must be a number in (0, 1]")
+        if not (0.0 < float(threshold) <= 1.0) or threshold != threshold:
+            raise ValueError("threshold must be in (0, 1]")
+        self.threshold = float(threshold)
         download_models()
         self.model = OWWModel(
             wakeword_models=[
@@ -66,7 +71,6 @@ class OpenWakeWord(BaseVoiceDetectionModel):
             ],
             inference_framework="onnx",
         )
-        self.threshold = threshold
 
     def detect(
         self, audio_data: NDArray, input_parameters: dict[str, Any]
