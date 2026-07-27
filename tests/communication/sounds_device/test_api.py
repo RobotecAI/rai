@@ -299,3 +299,21 @@ def test_close_read_stream(input_device_id, mock_sd, has_stream):
         assert api.in_stream is None
     else:
         api.close_read_stream()  # Should not raise an error
+
+
+def test_config_rejects_non_positive_block_size():
+    from rai_s2s.sound_device.api import SoundDeviceConfig
+    import pytest
+
+    with pytest.raises(ValueError, match="block_size"):
+        SoundDeviceConfig(device_number=0, is_input=True, block_size=0)
+    with pytest.raises(ValueError, match="block_size"):
+        SoundDeviceConfig(device_number=0, is_input=True, block_size=-8)
+
+
+def test_config_rejects_non_positive_channels():
+    from rai_s2s.sound_device.api import SoundDeviceConfig
+    import pytest
+
+    with pytest.raises(ValueError, match="channels"):
+        SoundDeviceConfig(device_number=0, is_input=True, channels=0)

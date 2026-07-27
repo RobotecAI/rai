@@ -79,6 +79,18 @@ class SoundDeviceConfig:
             raise ValueError("Either 'device_number' or 'device_name' must be set.")
         if not self.is_input and not self.is_output:
             raise ValueError("Either 'is_input' or 'is_output' must be True.")
+        if not isinstance(self.block_size, int) or isinstance(self.block_size, bool) or self.block_size <= 0:
+            raise ValueError("block_size must be a positive integer.")
+        if self.channels is not None:
+            if not isinstance(self.channels, int) or isinstance(self.channels, bool) or self.channels <= 0:
+                raise ValueError("channels must be a positive integer when set.")
+        if self.consumer_sampling_rate is not None:
+            if (
+                not isinstance(self.consumer_sampling_rate, int)
+                or isinstance(self.consumer_sampling_rate, bool)
+                or self.consumer_sampling_rate <= 0
+            ):
+                raise ValueError("consumer_sampling_rate must be a positive integer when set.")
 
 
 class SoundDeviceAPI:
