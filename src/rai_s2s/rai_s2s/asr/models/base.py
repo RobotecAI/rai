@@ -131,6 +131,12 @@ class BaseTranscriptionModel(ABC):
         language : str, optional
             The language of the transcription output. Default is "en" (English).
         """
+        if not isinstance(model_name, str) or not model_name.strip():
+            raise ValueError("model_name must be a non-empty string.")
+        if not isinstance(sample_rate, int) or isinstance(sample_rate, bool) or sample_rate <= 0:
+            raise ValueError("sample_rate must be a positive integer.")
+        if not isinstance(language, str) or not language.strip():
+            raise ValueError("language must be a non-empty string.")
         self.model_name = model_name
         self.sample_rate = sample_rate
         self.language = language
