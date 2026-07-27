@@ -59,6 +59,15 @@ class SileroVAD(BaseVoiceDetectionModel):
 
     def __init__(self, sampling_rate: Literal[8000, 16000] = 16000, threshold=0.5):
         super(SileroVAD, self).__init__()
+        try:
+            thr = float(threshold)
+        except (TypeError, ValueError) as e:
+            raise ValueError("threshold must be a finite number") from e
+        if thr != thr or thr in (float("inf"), float("-inf")):  # NaN/inf
+            raise ValueError("threshold must be a finite number")
+        if not (0.0 < thr <= 1.0):
+            raise ValueError("threshold must be in the interval (0, 1]")
+        threshold = thr
         self.model_name = "silero_vad"
         self.model, _ = torch.hub.load(
             repo_or_dir="snakers4/silero-vad",
