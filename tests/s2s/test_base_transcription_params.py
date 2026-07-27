@@ -1,8 +1,8 @@
 # Copyright (C) 2026
 import importlib.util
 import sys
+import types
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -11,11 +11,23 @@ BASE = ROOT / "src/rai_s2s/rai_s2s/asr/models/base.py"
 
 
 def _load_base():
-    sys.modules.setdefault("numpy", MagicMock())
-    sys.modules.setdefault("numpy.typing", MagicMock())
+    # Prefer real numpy; otherwise install minimal package stubs with _typing.
+    try:
+        import numpy  # noqa: F401
+    except Exception:
+        np = types.ModuleType("numpy")
+        npt = types.ModuleType("numpy.typing")
+        npt.NDArray = object
+        sys.modules["numpy"] = np
+        sys.modules["numpy.typing"] = npt
+        # package mark
+        np.__path__ = []  # type: ignore
     for name in ["rai_s2s", "rai_s2s.asr", "rai_s2s.asr.models"]:
-        sys.modules.setdefault(name, MagicMock())
-    spec = importlib.util.spec_from_file_location("rai_s2s.asr.models.base", BASE)
+        if name not in sys.modules:
+            m = types.ModuleType(name)
+            m.__path__ = []  # type: ignore
+            sys.modules[name] = m
+    spec = importlib.util.spec_from_file_location("rai_s2s_asr_models_base_under_test", BASE)
     mod = importlib.util.module_from_spec(spec)
     assert spec and spec.loader
     spec.loader.exec_module(mod)
