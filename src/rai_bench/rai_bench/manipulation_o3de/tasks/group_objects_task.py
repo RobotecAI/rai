@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
+import math
 from typing import List, Sequence, Tuple, Union
 
 from rclpy.impl.rcutils_logger import RcutilsLogger
@@ -44,6 +45,13 @@ class GroupObjectsTask(ManipulationTask):
             when building the neighbourhood list. Defaults to 0.15.
         """
         super().__init__(logger)
+        if not obj_types:
+            raise ValueError("obj_types must be a non-empty list")
+        if not math.isfinite(threshold_distance) or threshold_distance <= 0:
+            raise ValueError(
+                "threshold_distance must be a finite number greater than 0, "
+                f"got {threshold_distance!r}"
+            )
         self.obj_types = obj_types
         self.threshold_distance = threshold_distance
 

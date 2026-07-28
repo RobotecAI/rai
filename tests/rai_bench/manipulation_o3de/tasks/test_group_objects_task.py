@@ -115,3 +115,17 @@ def test_calculate_no_specified_objects() -> None:
 
     assert correct == 0
     assert misclustered == 0
+
+
+import pytest
+
+
+@pytest.mark.parametrize("bad", [0, -1.0, float("nan"), float("inf")])
+def test_group_objects_rejects_bad_threshold(bad):
+    with pytest.raises(ValueError, match="threshold_distance"):
+        GroupObjectsTask(obj_types=["red_cube"], threshold_distance=bad)
+
+
+def test_group_objects_rejects_empty_obj_types():
+    with pytest.raises(ValueError, match="obj_types"):
+        GroupObjectsTask(obj_types=[], threshold_distance=0.15)
