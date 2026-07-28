@@ -59,3 +59,15 @@ def test_calculate_2_clusters_adjacent() -> None:
     correct, incorrect = task.calculate_correct([e1, e2, e3, e4])
     assert correct == 4
     assert incorrect == 0
+
+import math
+import pytest
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [0, -0.1, float("nan"), float("inf"), float("-inf")],
+)
+def test_place_cubes_task_rejects_non_positive_threshold(bad):
+    with pytest.raises(ValueError, match="threshold_distance"):
+        PlaceCubesTask(threshold_distance=bad)
