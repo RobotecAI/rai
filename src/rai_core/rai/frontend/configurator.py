@@ -467,7 +467,7 @@ def asr():
 
     # Get the current vendor from config and convert to display name
     current_vendor = st.session_state.config.get("asr", {}).get(
-        "transciption_model", TRANSCRIBE_MODELS[0]
+        "transcription_model", TRANSCRIBE_MODELS[0]
     )
 
     asr_vendor = st.selectbox(
