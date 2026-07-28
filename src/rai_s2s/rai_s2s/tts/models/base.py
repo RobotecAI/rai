@@ -35,6 +35,12 @@ class TTSModel(ABC):
         pass
 
     def set_tts_params(self, target_sample_rate: int, channels: int):
+        if not isinstance(target_sample_rate, int) or isinstance(target_sample_rate, bool) or target_sample_rate <= 0:
+            raise ValueError(
+                f"target_sample_rate must be a positive int, got {target_sample_rate!r}"
+            )
+        if not isinstance(channels, int) or isinstance(channels, bool) or channels <= 0:
+            raise ValueError(f"channels must be a positive int, got {channels!r}")
         self.sample_rate = target_sample_rate
         self.channels = channels
 
