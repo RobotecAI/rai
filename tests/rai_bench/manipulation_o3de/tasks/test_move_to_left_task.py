@@ -43,3 +43,15 @@ def test_calculate_other_types() -> None:
     correct, incorrect = task.calculate_correct([e1, e2])
     assert correct == 1
     assert incorrect == 0
+
+import pytest
+
+
+def test_reject_empty_obj_types() -> None:
+    with pytest.raises(ValueError):
+        MoveObjectsToLeftTask([])
+
+
+def test_reject_blank_obj_type() -> None:
+    with pytest.raises(ValueError):
+        MoveObjectsToLeftTask(["red_cube", "  "])

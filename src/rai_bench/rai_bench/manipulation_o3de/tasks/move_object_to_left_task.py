@@ -35,7 +35,11 @@ class MoveObjectsToLeftTask(ManipulationTask):
             A list of object types to be moved.
         """
         super().__init__(logger=logger)
-        self.obj_types = obj_types
+        if not obj_types:
+            raise ValueError("obj_types must be a non-empty list")
+        if not all(isinstance(x, str) and x.strip() for x in obj_types):
+            raise ValueError("obj_types must contain non-empty strings")
+        self.obj_types = list(obj_types)
 
     @property
     def task_prompt(self) -> str:
