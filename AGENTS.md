@@ -98,3 +98,15 @@ This project follows the [Conventional Commits](https://www.conventionalcommits.
 -   The `config.toml` in the repo root is the working config file; `rai-config-init` is only for pip-installed users, not developers using the repo.
 -   The Streamlit configurator (`rai/frontend/configurator.py`) is an optional GUI; all configuration can be done by editing `config.toml` directly.
 -   Many test modules import ROS 2 packages (`rclpy`, `geometry_msgs`, etc.) at module level, so ROS 2 must be sourced even to collect tests.
+
+## Fresh clone / correct worktree (PERMANENT — Daniel 2026-07-28)
+
+Before PR audit, main-comparison greps, salvage, rebase, or Cursor coding on this repo:
+
+1. `git remote -v` + `git rev-parse --show-toplevel` must match the intended `org/repo` (this Bartok9 repo or the upstream you are patching).
+2. Prefer a disposable clone for read-only “still needed on main?” audits: `/tmp/<repo>-review-$$` via `gh repo clone … -- --depth=1`.
+3. Existing clones OK only after fetch + correct branch tip; confirm PR-touched paths exist.
+4. Wrong tree once → **re-clone**. Do not keep grepping a foreign or polluted worktree (openpi 2026-07-28).
+5. Never `git reset --hard` on shared/production worktrees; delete disposable `/tmp` clones instead.
+6. Full law: skill `upstream-pr-engineering` **§27** · clawd `AGENTS.md`.
+

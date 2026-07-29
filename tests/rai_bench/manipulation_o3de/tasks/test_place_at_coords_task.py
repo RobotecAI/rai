@@ -60,3 +60,23 @@ def test_calculate_multiple_objects_none_correct() -> None:
     correct, incorrect = task.calculate_correct([e1, e2])
     assert correct == 0
     assert incorrect == 1
+
+import math
+import pytest
+
+
+def test_reject_non_positive_allowable_displacement() -> None:
+    with pytest.raises(ValueError):
+        PlaceObjectAtCoordTask("carrot", (0.5, 0.5), allowable_displacement=0.0)
+    with pytest.raises(ValueError):
+        PlaceObjectAtCoordTask("carrot", (0.5, 0.5), allowable_displacement=-0.01)
+
+
+def test_reject_empty_obj_type() -> None:
+    with pytest.raises(ValueError):
+        PlaceObjectAtCoordTask("", (0.5, 0.5))
+
+
+def test_reject_non_finite_target() -> None:
+    with pytest.raises(ValueError):
+        PlaceObjectAtCoordTask("carrot", (math.nan, 0.5))

@@ -49,9 +49,21 @@ class PlaceObjectAtCoordTask(ManipulationTask):
             Defaults to 0.02.
         """
         super().__init__(logger)
+        if not isinstance(obj_type, str) or not obj_type.strip():
+            raise ValueError("obj_type must be a non-empty string")
+        if (
+            not isinstance(target_position, tuple)
+            or len(target_position) != 2
+            or not all(isinstance(v, (int, float)) and math.isfinite(float(v)) for v in target_position)
+        ):
+            raise ValueError("target_position must be a pair of finite numbers")
+        if not isinstance(allowable_displacement, (int, float)) or not math.isfinite(float(allowable_displacement)):
+            raise ValueError("allowable_displacement must be a finite number")
+        if float(allowable_displacement) <= 0:
+            raise ValueError("allowable_displacement must be positive")
         self.obj_type = obj_type
-        self.target_position = target_position
-        self.allowable_displacement = allowable_displacement
+        self.target_position = (float(target_position[0]), float(target_position[1]))
+        self.allowable_displacement = float(allowable_displacement)
 
     @property
     def task_prompt(self) -> str:
