@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
+import math
 from typing import Literal, Optional
 
 import tomli
@@ -24,6 +25,20 @@ class VADConfig:
     threshold: float = 0.5
     silence_grace_period: float = 0.3
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.threshold, (int, float)) or not math.isfinite(float(self.threshold)):
+            raise ValueError("threshold must be a finite number")
+        thr = float(self.threshold)
+        if thr <= 0.0 or thr > 1.0:
+            raise ValueError("threshold must be in (0, 1]")
+        if (
+            not isinstance(self.silence_grace_period, (int, float))
+            or not math.isfinite(float(self.silence_grace_period))
+        ):
+            raise ValueError("silence_grace_period must be a finite number")
+        if float(self.silence_grace_period) <= 0.0:
+            raise ValueError("silence_grace_period must be positive")
+
 
 @dataclass
 class WWConfig:
@@ -31,6 +46,13 @@ class WWConfig:
     model_type: Literal["OpenWakeWord"] = "OpenWakeWord"
     threshold: float = 0.01
     is_used: bool = False
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.threshold, (int, float)) or not math.isfinite(float(self.threshold)):
+            raise ValueError("threshold must be a finite number")
+        thr = float(self.threshold)
+        if thr <= 0.0 or thr > 1.0:
+            raise ValueError("threshold must be in (0, 1]")
 
 
 TRANSCRIBE_MODELS = ["LocalWhisper", "FasterWhisper", "OpenAI"]
