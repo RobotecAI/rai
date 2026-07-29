@@ -91,3 +91,23 @@ def test_calculate_error_above_threshold() -> None:
     # The rotation error is 10°, so it exceeds the 5° threshold.
     assert correct == 0
     assert incorrect == 1
+
+import pytest
+
+
+def test_reject_empty_obj_types() -> None:
+    target = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
+    with pytest.raises(ValueError):
+        RotateObjectTask([], target_quaternion=target)
+
+
+def test_reject_non_finite_quaternion() -> None:
+    target = Quaternion(x=float("nan"), y=0.0, z=0.0, w=1.0)
+    with pytest.raises(ValueError):
+        RotateObjectTask(["apple"], target_quaternion=target)
+
+
+def test_reject_zero_norm_quaternion() -> None:
+    target = Quaternion(x=0.0, y=0.0, z=0.0, w=0.0)
+    with pytest.raises(ValueError):
+        RotateObjectTask(["apple"], target_quaternion=target)

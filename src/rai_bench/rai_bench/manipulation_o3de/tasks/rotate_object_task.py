@@ -14,6 +14,7 @@
 
 import logging
 import math
+import math
 from typing import List, Sequence, Tuple, Union
 
 from rai.types import Quaternion
@@ -46,7 +47,22 @@ class RotateObjectTask(ManipulationTask):
             The target rotation expressed as a quaternion (x, y, z, w).
         """
         super().__init__(logger=logger)
-        self.obj_types = obj_types
+        if not obj_types:
+            raise ValueError("obj_types must be a non-empty list")
+        if not all(isinstance(x, str) and x.strip() for x in obj_types):
+            raise ValueError("obj_types must contain non-empty strings")
+        comps = (
+            float(target_quaternion.x),
+            float(target_quaternion.y),
+            float(target_quaternion.z),
+            float(target_quaternion.w),
+        )
+        if not all(math.isfinite(c) for c in comps):
+            raise ValueError("target_quaternion components must be finite")
+        norm = math.sqrt(sum(c * c for c in comps))
+        if not math.isfinite(norm) or norm < 1e-6:
+            raise ValueError("target_quaternion must have non-zero norm")
+        self.obj_types = list(obj_types)
         self.target_quaternion = target_quaternion
 
     @property
