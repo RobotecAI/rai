@@ -79,6 +79,18 @@ def test_too_big_displacement() -> None:
         BuildCubeTowerTask(["red_cube"], allowable_displacement=0.1)
 
 
+def test_empty_obj_types_raises() -> None:
+    with pytest.raises(ValueError, match="non-empty"):
+        BuildCubeTowerTask([])
+
+
+def test_non_positive_allowable_displacement_raises() -> None:
+    with pytest.raises(ValueError, match="positive"):
+        BuildCubeTowerTask(["red_cube"], allowable_displacement=0.0)
+    with pytest.raises(ValueError, match="positive"):
+        BuildCubeTowerTask(["red_cube"], allowable_displacement=-0.01)
+
+
 def test_not_allowable_type() -> None:
     with pytest.raises(TypeError):
         BuildCubeTowerTask(["red_cube", "apple"], allowable_displacement=0.1)

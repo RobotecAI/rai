@@ -63,6 +63,12 @@ class BuildCubeTowerTask(ManipulationTask):
         # we could check the z distance between entities
         # or trust user with this
         super().__init__(logger)
+        if not obj_types:
+            raise ValueError("obj_types must be a non-empty list")
+        if allowable_displacement <= 0:
+            raise ValueError(
+                f"allowable_displacement must be positive, got {allowable_displacement}"
+            )
         if not set(obj_types).issubset(self.ALLOWED_OBJECTS):
             raise TypeError(
                 f"Invalid obj_types provided: {obj_types}. Allowed objects: {self.ALLOWED_OBJECTS}"
