@@ -103,6 +103,8 @@ class Scenario:
         self.scene_config = scene_config
         # NOTE (jmatejcz) needed for logging which config was used,
         # there probably is better way to do it
+        if not isinstance(scene_config_path, str) or not scene_config_path.strip():
+            raise ValueError("scene_config_path must be a non-empty string")
         self.scene_config_path = scene_config_path
         if not level:
             self.level = "not_declared"
