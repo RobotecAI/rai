@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple
 from langchain_core.messages import AIMessage, BaseMessage, ToolCall
 from langchain_core.runnables.config import DEFAULT_RECURSION_LIMIT
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from rai_bench.tool_calling_agent.results_tracking import SubTaskResult, ValidatorResult
 
@@ -487,6 +487,16 @@ class TaskArgs(BaseModel):
     extra_tool_calls: int = 0
     prompt_detail: Literal["brief", "descriptive"] = "brief"
     examples_in_system_prompt: Literal[0, 2, 5] = 0
+
+    @field_validator("extra_tool_calls", mode="before")
+    @classmethod
+    def _extra_tool_calls_non_negative(cls, v: object) -> int:
+        # bool is a subclass of int; reject it explicitly (before coercion).
+        if isinstance(v, bool) or not isinstance(v, int):
+            raise ValueError("extra_tool_calls must be a non-negative int")
+        if v < 0:
+            raise ValueError("extra_tool_calls must be >= 0")
+        return v
 
 
 class Task(ABC):
