@@ -46,6 +46,8 @@ def wait_for_ros2_entities(
 
     if timeout < 0:
         raise ValueError("Timeout must be 0 (wait forever) or a positive value.")
+    if time_interval <= 0:
+        raise ValueError("time_interval must be positive.")
     start_time = time.time()
 
     while timeout == 0 or time.time() - start_time < timeout:

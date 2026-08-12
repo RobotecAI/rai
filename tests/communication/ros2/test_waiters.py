@@ -168,3 +168,17 @@ def test_wait_for_ros2_entities_negative_timeout():
             get_entities=lambda: [],
             timeout=-1,
         )
+
+
+def test_wait_for_entities_rejects_non_positive_time_interval():
+    import pytest
+    from rai.communication.ros2 import waiters
+
+    with pytest.raises(ValueError, match="time_interval"):
+        waiters.wait_for_ros2_entities(
+            ["/x"], lambda: [], time_interval=0, timeout=1.0
+        )
+    with pytest.raises(ValueError, match="time_interval"):
+        waiters.wait_for_ros2_entities(
+            ["/x"], lambda: [], time_interval=-0.5, timeout=1.0
+        )
