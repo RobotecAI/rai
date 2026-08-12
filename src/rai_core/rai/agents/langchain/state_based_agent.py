@@ -21,7 +21,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from rai.agents.langchain.agent import LangChainAgent, newMessageBehaviorType
 from rai.agents.langchain.core import ReActAgentState, create_state_based_runnable
@@ -41,6 +41,20 @@ class StateBasedConfig(BaseModel):
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
     )
+
+    @field_validator("time_interval")
+    @classmethod
+    def _time_interval_positive(cls, v: float) -> float:
+        if v <= 0:
+            raise ValueError(f"time_interval must be positive, got {v!r}")
+        return v
+
+    @field_validator("max_workers")
+    @classmethod
+    def _max_workers_positive(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError(f"max_workers must be positive, got {v!r}")
+        return v
 
 
 class BaseStateBasedAgent(LangChainAgent, ABC):
