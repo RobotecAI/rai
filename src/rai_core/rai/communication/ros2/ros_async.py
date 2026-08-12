@@ -26,8 +26,13 @@ def get_future_result(
     future: rclpy.task.Future, timeout_sec: float = 5.0
 ) -> Any | None:
     """Replaces rclpy.spin_until_future_complete"""
-    if timeout_sec <= 0:
-        raise ValueError(f"timeout_sec must be positive, got {timeout_sec}")
+    if timeout_sec is True or timeout_sec is False or not isinstance(
+        timeout_sec, (int, float)
+    ):
+        raise ValueError("timeout_sec must be a positive number")
+    timeout_sec = float(timeout_sec)
+    if timeout_sec != timeout_sec or timeout_sec <= 0:
+        raise ValueError("timeout_sec must be positive")
     result = None
     event = threading.Event()
 
