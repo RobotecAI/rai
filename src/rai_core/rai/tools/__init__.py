@@ -12,5 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from .coordinates import (
+    validate_finite_coordinate as validate_finite_coordinate,
+)
+from .coordinates import (
+    validate_pose_within_bounds as validate_pose_within_bounds,
+)
+from .coordinates import (
+    validate_workspace_bounds as validate_workspace_bounds,
+)
 from .timeout import timeout as timeout
 from .timeout import timeout_method as timeout_method

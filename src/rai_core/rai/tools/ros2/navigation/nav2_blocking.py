@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Type
 
 from action_msgs.msg import GoalStatus
 from geometry_msgs.msg import PoseStamped, Quaternion
@@ -22,6 +21,7 @@ from rclpy.action import ActionClient
 from tf_transformations import quaternion_from_euler
 
 from rai.tools.ros2.base import BaseROS2Tool
+from rai.tools.ros2.navigation.bounds import validate_pose_within_bounds
 
 
 def _get_status_string(status: int) -> str:
@@ -71,7 +71,7 @@ class GetCurrentPoseTool(BaseROS2Tool):
         default="base_link",
         description="The frame id of the robot's base frame (base_link, base_footprint, etc.)",
     )
-    args_schema: Type[GetCurrentPoseToolInput] = GetCurrentPoseToolInput
+    args_schema: type[GetCurrentPoseToolInput] = GetCurrentPoseToolInput
 
     def _run(self) -> str:
         transform_stamped = self.connector.get_transform(
@@ -96,9 +96,25 @@ class NavigateToPoseBlockingTool(BaseROS2Tool):
     action_name: str = Field(
         default="navigate_to_pose", description="The name of the Nav2 action"
     )
-    args_schema: Type[NavigateToPoseBlockingToolInput] = NavigateToPoseBlockingToolInput
+    workspace_bounds_min: tuple[float, float, float] | None = Field(
+        default=None,
+        description="Optional minimum (x, y, z) workspace bounds for navigation goals",
+    )
+    workspace_bounds_max: tuple[float, float, float] | None = Field(
+        default=None,
+        description="Optional maximum (x, y, z) workspace bounds for navigation goals",
+    )
+    args_schema: type[NavigateToPoseBlockingToolInput] = NavigateToPoseBlockingToolInput
 
     def _run(self, x: float, y: float, z: float, yaw: float) -> str:
+        x, y, z, yaw = validate_pose_within_bounds(
+            x=x,
+            y=y,
+            z=z,
+            yaw=yaw,
+            bounds_min=self.workspace_bounds_min,
+            bounds_max=self.workspace_bounds_max,
+        )
         action_client = ActionClient(
             self.connector.node, NavigateToPose, self.action_name
         )
