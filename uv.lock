@@ -4714,7 +4714,7 @@ requires-dist = [
 
 [[package]]
 name = "rai-core"
-version = "2.12.2"
+version = "2.12.3"
 source = { editable = "src/rai_core" }
 dependencies = [
     { name = "coloredlogs" },
@@ -4890,7 +4890,7 @@ requires-dist = [
 
 [[package]]
 name = "rai-s2s"
-version = "1.0.0"
+version = "1.0.1"
 source = { editable = "src/rai_s2s" }
 dependencies = [
     { name = "onnxruntime", version = "1.23.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' and platform_machine == 'x86_64'" },

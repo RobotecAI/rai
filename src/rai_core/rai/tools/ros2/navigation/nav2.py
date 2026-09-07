@@ -58,10 +58,18 @@ class Nav2Toolkit(BaseROS2Toolkit):
 
 
 class NavigateToPoseToolInput(BaseModel):
-    x: float = Field(..., description="The x coordinate of the pose")
-    y: float = Field(..., description="The y coordinate of the pose")
-    z: float = Field(..., description="The z coordinate of the pose")
-    yaw: float = Field(..., description="The yaw angle of the pose")
+    x: float = Field(
+        ..., allow_inf_nan=False, description="The x coordinate of the pose"
+    )
+    y: float = Field(
+        ..., allow_inf_nan=False, description="The y coordinate of the pose"
+    )
+    z: float = Field(
+        ..., allow_inf_nan=False, description="The z coordinate of the pose"
+    )
+    yaw: float = Field(
+        ..., allow_inf_nan=False, description="The yaw angle of the pose"
+    )
 
 
 class NavigateToPoseTool(BaseROS2Tool):

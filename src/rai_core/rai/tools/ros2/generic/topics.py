@@ -77,9 +77,11 @@ class ROS2TopicsToolkit(BaseROS2Toolkit):
 
 
 class PublishROS2MessageToolInput(BaseModel):
-    topic: str = Field(..., description="The topic to publish the message to")
+    topic: str = Field(
+        ..., min_length=1, description="The topic to publish the message to"
+    )
     message: Dict[str, Any] = Field(..., description="The message to publish")
-    message_type: str = Field(..., description="The type of the message")
+    message_type: str = Field(..., min_length=1, description="The type of the message")
 
 
 class PublishROS2MessageTool(BaseROS2Tool):
@@ -99,8 +101,10 @@ class PublishROS2MessageTool(BaseROS2Tool):
 
 
 class ReceiveROS2MessageToolInput(BaseModel):
-    topic: str = Field(..., description="The topic to receive the message from")
-    timeout_sec: float = Field(1.0, description="The timeout in seconds")
+    topic: str = Field(
+        ..., min_length=1, description="The topic to receive the message from"
+    )
+    timeout_sec: float = Field(1.0, gt=0, description="The timeout in seconds")
 
 
 class ReceiveROS2MessageTool(BaseROS2Tool):
@@ -117,8 +121,10 @@ class ReceiveROS2MessageTool(BaseROS2Tool):
 
 
 class GetROS2ImageToolInput(BaseModel):
-    topic: str = Field(..., description="The topic to receive the image from")
-    timeout_sec: float = Field(1.0, description="The timeout in seconds")
+    topic: str = Field(
+        ..., min_length=1, description="The topic to receive the image from"
+    )
+    timeout_sec: float = Field(1.0, gt=0, description="The timeout in seconds")
 
 
 class GetROS2ImageTool(BaseROS2Tool):
@@ -249,9 +255,9 @@ class GetROS2MessageInterfaceTool(BaseROS2Tool):
 
 
 class GetROS2TransformToolInput(BaseModel):
-    target_frame: str = Field(..., description="The target frame")
-    source_frame: str = Field(..., description="The source frame")
-    timeout_sec: float = Field(default=10.0, description="The timeout in seconds")
+    target_frame: str = Field(..., min_length=1, description="The target frame")
+    source_frame: str = Field(..., min_length=1, description="The source frame")
+    timeout_sec: float = Field(default=10.0, gt=0, description="The timeout in seconds")
 
 
 class GetROS2TransformTool(BaseROS2Tool):
