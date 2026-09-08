@@ -1,6 +1,6 @@
 [project]
 name = "rai_s2s"
-version = "1.0.1"
+version = "1.0.2"
 description = "Speech-to-Speech module for RAI framework"
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
