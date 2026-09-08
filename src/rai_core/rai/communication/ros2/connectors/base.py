@@ -58,6 +58,21 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         Type of executor to use for processing ROS2 callbacks, by default "multi_threaded".
     use_sim_time : bool, optional
         Whether to use simulation time or system time, by default False.
+    context : int or rclpy.Context or None, optional
+        Controls which ROS2 context (and therefore which DDS domain) this
+        connector participates in. Three forms are accepted:
+
+        - ``None`` (default): use the process-global default context.
+          ``rclpy.init()`` must have been called before constructing the
+          connector, or the connector will auto-initialize and warn.
+        - ``int``: a domain ID shorthand. The connector creates and owns a
+          fresh ``rclpy.Context``, initialises it with the given domain ID,
+          and shuts it down when ``connector.shutdown()`` is called.  Use
+          this to run multiple isolated connectors in the same process
+          (e.g. parallel simulation instances on different domains).
+        - ``rclpy.Context``: an already-initialised context supplied by the
+          caller.  The connector uses it as-is and does **not** shut it down
+          — the caller retains ownership of the context lifecycle.
 
     Methods
     -------
@@ -96,6 +111,17 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         - False (default): Subscribers remain active after message reception
             - Pros: More stable operation, avoids potential crashes
             - Cons: May lead to memory/performance overhead from inactive subscribers
+
+    Context Lifecycle:
+        Ownership of the underlying ``rclpy.Context`` follows a simple rule:
+        *the party that created it is responsible for shutting it down.*
+
+        - ``context=None``: the global context is managed externally
+          (e.g. via ``ROS2Context``) — ``shutdown()`` does not touch it.
+        - ``context=<int>``: the connector created the context, so
+          ``shutdown()`` calls ``rclpy.shutdown(context=...)``.
+        - ``context=<rclpy.Context>``: the caller created the context, so
+          ``shutdown()`` leaves it alone.
     """
 
     def __init__(
@@ -104,6 +130,7 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         destroy_subscribers: bool = False,
         executor_type: Literal["single_threaded", "multi_threaded"] = "multi_threaded",
         use_sim_time: bool = False,
+        context: Optional[int | rclpy.Context] = None,
     ):
         """Initialize the ROS2BaseConnector.
 
@@ -115,6 +142,22 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
             Whether to destroy subscribers after receiving a message, by default False.
         executor_type : Literal["single_threaded", "multi_threaded"], optional
             Type of executor to use for processing ROS2 callbacks, by default "multi_threaded".
+        use_sim_time : bool, optional
+            Whether to use simulation time or system time, by default False.
+        context : int or rclpy.Context or None, optional
+            Controls which ROS2 context this connector uses.
+
+            - ``None`` (default): uses the process-global default context.
+              Auto-initializes via ``rclpy.init()`` with a warning if not
+              already initialized.
+            - ``int``: domain ID shorthand — the connector creates a new
+              ``rclpy.Context``, calls ``rclpy.init(context=...,
+              domain_id=<value>)``, and **owns** the context (shuts it down
+              on ``shutdown()``).  Safe to use alongside other connectors
+              on different domain IDs in the same process.
+            - ``rclpy.Context``: an already-initialized context.  The
+              connector uses it directly and does **not** call
+              ``rclpy.shutdown`` on it — the caller owns the lifecycle.
 
         Raises
         ------
@@ -124,14 +167,26 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         super().__init__()
         if node_name is None:
             node_name = f"rai_ros2_connector_{str(uuid.uuid4())[-12:]}"
-        if not rclpy.ok():
-            rclpy.init()
-            self.logger.warning(
-                "Auto-initializing ROS2, but manual initialization is recommended. "
-                "For better control and predictability, call rclpy.init() or ROS2Context before creating this connector."
-            )
+
+        if isinstance(context, int):
+            self._rclpy_context: Optional[rclpy.Context] = rclpy.Context()
+            rclpy.init(context=self._rclpy_context, domain_id=context)
+            self._owns_context = True
+        elif isinstance(context, rclpy.Context):
+            self._rclpy_context = context
+            self._owns_context = False
+        else:
+            self._rclpy_context = None
+            self._owns_context = False
+            if not rclpy.ok():
+                rclpy.init()
+                self.logger.warning(
+                    "Auto-initializing ROS2, but manual initialization is recommended. "
+                    "For better control and predictability, call rclpy.init() or ROS2Context before creating this connector."
+                )
+
         self._executor_type = executor_type
-        self._node = Node(node_name)
+        self._node = Node(node_name, context=self._rclpy_context)
         if use_sim_time:
             self._node.set_parameters(
                 [Parameter("use_sim_time", Parameter.Type.BOOL, True)]
@@ -152,9 +207,9 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
             "SingleThreadedExecutor",
         }
         if self._executor_type == "multi_threaded":
-            self._executor = MultiThreadedExecutor()
+            self._executor = MultiThreadedExecutor(context=self._rclpy_context)
         elif self._executor_type == "single_threaded":
-            self._executor = SingleThreadedExecutor()
+            self._executor = SingleThreadedExecutor(context=self._rclpy_context)
         else:
             raise ValueError(f"Invalid executor type: {self._executor_type}")
 
@@ -570,3 +625,5 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         self._topic_api.shutdown()
         self._executor.shutdown()
         self._thread.join()
+        if self._owns_context and self._rclpy_context is not None:
+            rclpy.shutdown(context=self._rclpy_context)
