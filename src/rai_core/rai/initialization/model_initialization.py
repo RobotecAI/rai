@@ -23,6 +23,8 @@ from langchain_aws import ChatBedrock
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.embeddings import Embeddings
 from langchain_core.tracers.langchain import LangChainTracer
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_mistralai import ChatMistralAI
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langsmith import Client
@@ -68,6 +70,11 @@ class GoogleConfig(ModelConfig):
 
 
 @dataclass
+class MistralAIConfig(ModelConfig):
+    base_url: str
+
+
+@dataclass
 class LangfuseConfig:
     use_langfuse: bool
     host: str
@@ -93,6 +100,7 @@ class RAIConfig:
     openai: OpenAIConfig
     ollama: OllamaConfig
     google: GoogleConfig
+    mistralai: MistralAIConfig
     tracing: TracingConfig
 
 
@@ -107,6 +115,9 @@ _DEFAULT_OLLAMA = OllamaConfig(
     simple_model="", complex_model="", embeddings_model="", base_url=""
 )
 _DEFAULT_GOOGLE = GoogleConfig(simple_model="", complex_model="", embeddings_model="")
+_DEFAULT_MISTRALAI = MistralAIConfig(
+    simple_model="", complex_model="", embeddings_model="", base_url=""
+)
 _DEFAULT_TRACING = TracingConfig(
     project="",
     langfuse=LangfuseConfig(use_langfuse=False, host=""),
@@ -140,6 +151,11 @@ def load_config(config_path: Optional[str] = None) -> RAIConfig:
         if "google" in config_dict
         else _DEFAULT_GOOGLE
     )
+    mistralai = (
+        MistralAIConfig(**config_dict["mistralai"])
+        if "mistralai" in config_dict
+        else _DEFAULT_MISTRALAI
+    )
 
     if "tracing" in config_dict:
         tracing = TracingConfig(
@@ -156,6 +172,7 @@ def load_config(config_path: Optional[str] = None) -> RAIConfig:
         openai=openai,
         ollama=ollama,
         google=google,
+        mistralai=mistralai,
         tracing=tracing,
     )
 
@@ -181,7 +198,7 @@ def get_llm_model(
     vendor: Optional[str] = None,
     config_path: Optional[str] = None,
     **kwargs: Any,
-) -> ChatOpenAI | ChatBedrock | ChatOllama | Any:
+) -> ChatOpenAI | ChatBedrock | ChatOllama | ChatGoogleGenerativeAI | ChatMistralAI:
     model_config, vendor = get_llm_model_config_and_vendor(
         model_type, vendor, config_path
     )
@@ -213,6 +230,12 @@ def get_llm_model(
 
         model_config = cast(GoogleConfig, model_config)
         return ChatGoogleGenerativeAI(model=model, **kwargs)
+    elif vendor == "mistralai":
+        from langchain_mistralai import ChatMistralAI
+
+        model_config = cast(MistralAIConfig, model_config)
+
+        return ChatMistralAI(model=model, base_url=model_config.base_url, **kwargs)
     else:
         raise ValueError(f"Unknown LLM vendor: {vendor}")
 
@@ -222,7 +245,7 @@ def get_llm_model_direct(
     vendor: str,
     config_path: Optional[str] = None,
     **kwargs: Any,
-) -> ChatOpenAI | ChatBedrock | ChatOllama | Any:
+) -> ChatOpenAI | ChatBedrock | ChatOllama | ChatGoogleGenerativeAI | ChatMistralAI:
     config = load_config(config_path)
     model_config = getattr(config, vendor)
 
@@ -255,6 +278,12 @@ def get_llm_model_direct(
 
         model_config = cast(GoogleConfig, model_config)
         return ChatGoogleGenerativeAI(model=model_name, **kwargs)
+    elif vendor == "mistralai":
+        from langchain_mistralai import ChatMistralAI
+
+        model_config = cast(MistralAIConfig, model_config)
+
+        return ChatMistralAI(model=model, base_url=model_config.base_url, **kwargs)
     else:
         raise ValueError(f"Unknown LLM vendor: {vendor}")
 
@@ -349,6 +378,25 @@ def get_embeddings_model(
             return embeddings, {
                 "class": c,
                 "model": model_config.embeddings_model,
+                "vendor": vendor,
+            }
+        return embeddings
+    elif vendor == "mistralai":
+        from langchain_mistralai import MistralAIEmbeddings
+
+        model_config = cast(MistralAIConfig, model_config)
+        embeddings = MistralAIEmbeddings(model=model_config.embeddings_model)
+        if return_kwargs:
+            c = (
+                str(embeddings.__class__)
+                .strip("<>")
+                .replace("class '", "")
+                .replace("'", "")
+            )
+            return embeddings, {
+                "class": c,
+                "model": model_config.embeddings_model,
+                "base_url": model_config.base_url,
                 "vendor": vendor,
             }
         return embeddings
