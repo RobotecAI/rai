@@ -116,9 +116,19 @@ class ToolRunner(RunnableCallable):
                     status="error",
                 )
             except Exception as e:
-                self.logger.info(f'Error in "{call["name"]}", error: {e}')
+                # Log full exception details server-side only. Do NOT include
+                # the raw exception message in the ToolMessage returned to the
+                # LLM/user, as it may contain sensitive internals (file paths,
+                # stack traces, connection strings, credentials, internal IPs).
+                # See CWE-209: Generation of Error Message Containing Sensitive Information.
+                self.logger.exception(
+                    f'Error in "{call["name"]}": {type(e).__name__}'
+                )
                 output = ToolMessage(
-                    content=f"Failed to run tool. Error: {e}",
+                    content=(
+                        f"Tool '{call['name']}' failed with {type(e).__name__}. "
+                        "Please try again or rephrase your request."
+                    ),
                     name=call["name"],
                     tool_call_id=call["id"],
                     status="error",
