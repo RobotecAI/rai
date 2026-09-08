@@ -22,6 +22,7 @@ from rclpy.action import ActionClient
 from tf_transformations import quaternion_from_euler
 
 from rai.tools.ros2.base import BaseROS2Tool
+from rai.tools.ros2.navigation.bounds import WorkspaceBounds
 
 
 def _get_status_string(status: int) -> str:
@@ -81,13 +82,21 @@ class GetCurrentPoseTool(BaseROS2Tool):
 
 
 class NavigateToPoseBlockingToolInput(BaseModel):
-    x: float = Field(..., description="The x coordinate of the pose")
-    y: float = Field(..., description="The y coordinate of the pose")
-    z: float = Field(..., description="The z coordinate of the pose")
-    yaw: float = Field(..., description="The yaw angle of the pose")
+    x: float = Field(
+        ..., allow_inf_nan=False, description="The x coordinate of the pose"
+    )
+    y: float = Field(
+        ..., allow_inf_nan=False, description="The y coordinate of the pose"
+    )
+    z: float = Field(
+        ..., allow_inf_nan=False, description="The z coordinate of the pose"
+    )
+    yaw: float = Field(
+        ..., allow_inf_nan=False, description="The yaw angle of the pose"
+    )
 
 
-class NavigateToPoseBlockingTool(BaseROS2Tool):
+class NavigateToPoseBlockingTool(WorkspaceBounds, BaseROS2Tool):
     name: str = "navigate_to_pose_blocking"
     description: str = "Navigate to a specific pose"
     frame_id: str = Field(
@@ -99,6 +108,7 @@ class NavigateToPoseBlockingTool(BaseROS2Tool):
     args_schema: Type[NavigateToPoseBlockingToolInput] = NavigateToPoseBlockingToolInput
 
     def _run(self, x: float, y: float, z: float, yaw: float) -> str:
+        self.reject_out_of_bounds(x, y, z)
         action_client = ActionClient(
             self.connector.node, NavigateToPose, self.action_name
         )
