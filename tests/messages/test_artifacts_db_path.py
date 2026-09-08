@@ -28,7 +28,6 @@ def test_store_artifacts_honors_db_path(tmp_path: Path):
 
 
 def test_store_artifacts_creates_file_at_path(tmp_path: Path):
-    db = tmp_path / "nested" / "db.pkl"
-    db.parent.mkdir(parents=True)
+    db = tmp_path / "nested" / "dir" / "db.pkl"
     store_artifacts("x", [1], db_path=str(db))
     assert get_stored_artifacts("x", db_path=str(db)) == [1]
