@@ -14,7 +14,7 @@
 
 import base64
 import time
-from typing import cast
+from typing import List, Optional, Type, cast
 
 import cv2
 import numpy as np
@@ -29,14 +29,14 @@ from rai.communication.ros2 import ROS2Message
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.messages import MultimodalArtifact
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
-from rai.tools.ros2.navigation.bounds import validate_pose_within_bounds
+from rai.tools.ros2.navigation.bounds import WorkspaceBounds
 
-current_action_id: str | None = None
-current_feedback: NavigateToPose.Feedback | None = None
-current_result: NavigateToPose.Result | None = None
+current_action_id: Optional[str] = None
+current_feedback: Optional[NavigateToPose.Feedback] = None
+current_result: Optional[NavigateToPose.Result] = None
 
 
-class Nav2Toolkit(BaseROS2Toolkit):
+class Nav2Toolkit(WorkspaceBounds, BaseROS2Toolkit):
     connector: ROS2Connector
     frame_id: str = Field(
         default="map", description="The frame id of the Nav2 stack (map, odom, etc.)"
@@ -44,16 +44,8 @@ class Nav2Toolkit(BaseROS2Toolkit):
     action_name: str = Field(
         default="navigate_to_pose", description="The name of the NavigateToPose action"
     )
-    workspace_bounds_min: tuple[float, float, float] | None = Field(
-        default=None,
-        description="Optional minimum (x, y, z) workspace bounds for navigation goals",
-    )
-    workspace_bounds_max: tuple[float, float, float] | None = Field(
-        default=None,
-        description="Optional maximum (x, y, z) workspace bounds for navigation goals",
-    )
 
-    def get_tools(self) -> list[BaseTool]:
+    def get_tools(self) -> List[BaseTool]:
         return [
             NavigateToPoseTool(
                 connector=self.connector,
@@ -83,25 +75,17 @@ class NavigateToPoseToolInput(BaseModel):
     )
 
 
-class NavigateToPoseTool(BaseROS2Tool):
+class NavigateToPoseTool(WorkspaceBounds, BaseROS2Tool):
     name: str = "navigate_to_pose"
     description: str = "Navigate to a specific pose"
 
-    args_schema: type[NavigateToPoseToolInput] = NavigateToPoseToolInput
+    args_schema: Type[NavigateToPoseToolInput] = NavigateToPoseToolInput
 
     frame_id: str = Field(
         default="map", description="The frame id of the Nav2 stack (map, odom, etc.)"
     )
     action_name: str = Field(
         default="navigate_to_pose", description="The name of the NavigateToPose action"
-    )
-    workspace_bounds_min: tuple[float, float, float] | None = Field(
-        default=None,
-        description="Optional minimum (x, y, z) workspace bounds for navigation goals",
-    )
-    workspace_bounds_max: tuple[float, float, float] | None = Field(
-        default=None,
-        description="Optional maximum (x, y, z) workspace bounds for navigation goals",
     )
 
     def on_feedback(self, feedback: NavigateToPose.Feedback) -> None:
@@ -113,14 +97,7 @@ class NavigateToPoseTool(BaseROS2Tool):
         current_result = result
 
     def _run(self, x: float, y: float, z: float, yaw: float) -> str:
-        x, y, z, yaw = validate_pose_within_bounds(
-            x=x,
-            y=y,
-            z=z,
-            yaw=yaw,
-            bounds_min=self.workspace_bounds_min,
-            bounds_max=self.workspace_bounds_max,
-        )
+        self.reject_out_of_bounds(x, y, z)
         pose = PoseStamped()
         pose.header.frame_id = self.frame_id
         pose.header.stamp = self.connector.node.get_clock().now().to_msg()
