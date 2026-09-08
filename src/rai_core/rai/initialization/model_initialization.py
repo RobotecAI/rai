@@ -27,6 +27,8 @@ from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langsmith import Client
 
+_MINIMAX_DEFAULT_BASE_URL = "https://api.minimax.io/v1"
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 coloredlogs.install(level="INFO")  # type: ignore
@@ -68,6 +70,13 @@ class GoogleConfig(ModelConfig):
 
 
 @dataclass
+class MiniMaxConfig:
+    simple_model: str
+    complex_model: str
+    base_url: str
+
+
+@dataclass
 class LangfuseConfig:
     use_langfuse: bool
     host: str
@@ -93,6 +102,7 @@ class RAIConfig:
     openai: OpenAIConfig
     ollama: OllamaConfig
     google: GoogleConfig
+    minimax: MiniMaxConfig
     tracing: TracingConfig
 
 
@@ -107,6 +117,11 @@ _DEFAULT_OLLAMA = OllamaConfig(
     simple_model="", complex_model="", embeddings_model="", base_url=""
 )
 _DEFAULT_GOOGLE = GoogleConfig(simple_model="", complex_model="", embeddings_model="")
+_DEFAULT_MINIMAX = MiniMaxConfig(
+    simple_model="",
+    complex_model="",
+    base_url=_MINIMAX_DEFAULT_BASE_URL,
+)
 _DEFAULT_TRACING = TracingConfig(
     project="",
     langfuse=LangfuseConfig(use_langfuse=False, host=""),
@@ -140,6 +155,11 @@ def load_config(config_path: Optional[str] = None) -> RAIConfig:
         if "google" in config_dict
         else _DEFAULT_GOOGLE
     )
+    minimax = (
+        MiniMaxConfig(**config_dict["minimax"])
+        if "minimax" in config_dict
+        else _DEFAULT_MINIMAX
+    )
 
     if "tracing" in config_dict:
         tracing = TracingConfig(
@@ -156,6 +176,7 @@ def load_config(config_path: Optional[str] = None) -> RAIConfig:
         openai=openai,
         ollama=ollama,
         google=google,
+        minimax=minimax,
         tracing=tracing,
     )
 
@@ -213,6 +234,18 @@ def get_llm_model(
 
         model_config = cast(GoogleConfig, model_config)
         return ChatGoogleGenerativeAI(model=model, **kwargs)
+    elif vendor == "minimax":
+        from langchain_openai import ChatOpenAI
+
+        model_config = cast(MiniMaxConfig, model_config)
+        if "temperature" in kwargs and kwargs["temperature"] <= 0.0:
+            kwargs["temperature"] = 0.01
+        return ChatOpenAI(
+            model=model,
+            base_url=model_config.base_url,
+            api_key=os.environ.get("MINIMAX_API_KEY", ""),
+            **kwargs,
+        )
     else:
         raise ValueError(f"Unknown LLM vendor: {vendor}")
 
@@ -255,6 +288,18 @@ def get_llm_model_direct(
 
         model_config = cast(GoogleConfig, model_config)
         return ChatGoogleGenerativeAI(model=model_name, **kwargs)
+    elif vendor == "minimax":
+        from langchain_openai import ChatOpenAI
+
+        model_config = cast(MiniMaxConfig, model_config)
+        if "temperature" in kwargs and kwargs["temperature"] <= 0.0:
+            kwargs["temperature"] = 0.01
+        return ChatOpenAI(
+            model=model_name,
+            base_url=model_config.base_url,
+            api_key=os.environ.get("MINIMAX_API_KEY", ""),
+            **kwargs,
+        )
     else:
         raise ValueError(f"Unknown LLM vendor: {vendor}")
 
@@ -267,6 +312,12 @@ def get_embeddings_model(
     vendor = config.vendor.embeddings_model
 
     model_config = getattr(config, vendor)
+
+    if vendor == "minimax":
+        raise ValueError(
+            "MiniMax does not provide a public embeddings API. "
+            "Please use a different vendor for embeddings (e.g., 'openai', 'ollama')."
+        )
 
     logger.info(f"Using embeddings model: {vendor}-{model_config.embeddings_model}")
     if vendor == "openai":
