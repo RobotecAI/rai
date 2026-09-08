@@ -41,6 +41,7 @@ def test_tool_runner_invalid_call():
         "Tool output is not a tool message"
     )
     assert output["messages"][1].status == "error"
+    assert "Unknown tool" in output["messages"][1].content
 
 
 def test_tool_runner():

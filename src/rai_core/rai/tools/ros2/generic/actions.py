@@ -150,8 +150,10 @@ class GetROS2ActionsNamesAndTypesTool(BaseROS2Tool):
 
 
 class StartROS2ActionToolInput(BaseModel):
-    action_name: str = Field(..., description="The name of the action to start")
-    action_type: str = Field(..., description="The type of the action")
+    action_name: str = Field(
+        ..., min_length=1, description="The name of the action to start"
+    )
+    action_type: str = Field(..., min_length=1, description="The type of the action")
     action_args: Dict[str, Any] = Field(
         ..., description="The arguments to pass to the action"
     )

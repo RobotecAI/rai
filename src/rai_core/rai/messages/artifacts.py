@@ -28,6 +28,7 @@ def store_artifacts(
     # TODO(boczekbartek): refactor
     path = Path(db_path)
     if not path.is_file():
+        path.parent.mkdir(parents=True, exist_ok=True)
         artifact_database: dict = {}
         with path.open("wb") as file:
             pickle.dump(artifact_database, file)

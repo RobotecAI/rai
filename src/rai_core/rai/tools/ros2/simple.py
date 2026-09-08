@@ -35,8 +35,8 @@ class GetROS2ImageConfiguredTool(BaseROS2Tool):
     description: str = "Get the current image from the camera"
     response_format: Literal["content", "content_and_artifact"] = "content_and_artifact"
 
-    topic: str = Field(..., description="The topic to get the image from")
-    timeout_sec: float = Field(default=5.0, description="The timeout in seconds")
+    topic: str = Field(..., min_length=1, description="The topic to get the image from")
+    timeout_sec: float = Field(default=5.0, gt=0, description="The timeout in seconds")
 
     def model_post_init(self, __context: Any) -> None:
         if not self.is_readable(topic=self.topic):
@@ -53,9 +53,9 @@ class GetROS2TransformConfiguredTool(BaseROS2Tool):
     name: str = "get_ros2_robot_position"
     description: str = "Get the robot's position"
 
-    source_frame: str = Field(..., description="The source frame")
-    target_frame: str = Field(..., description="The target frame")
-    timeout_sec: float = Field(default=10.0, description="The timeout in seconds")
+    source_frame: str = Field(..., min_length=1, description="The source frame")
+    target_frame: str = Field(..., min_length=1, description="The target frame")
+    timeout_sec: float = Field(default=10.0, gt=0, description="The timeout in seconds")
 
     def _run(self) -> Any:
         tool = GetROS2TransformTool(
