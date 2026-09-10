@@ -35,6 +35,8 @@ The `ROS2Connector` is the main interface for publishing, subscribing, and calli
 ```python
 from rai.communication.ros2.connectors import ROS2Connector, ROS2Message
 from std_msgs.msg import String
+from std_srvs.srv import SetBool
+from nav2_msgs.action import NavigateToPose
 
 connector = ROS2Connector()
 
@@ -44,7 +46,7 @@ connector.send_message(
     target="/my_topic"
 )
 
-# Send a message using a dictionary (msg_type is required)
+# Send a message using a dictionary (msg_type is required, as a string or class)
 connector.send_message(
     message=ROS2Message(payload={"data": "Hello"}),
     target="/my_topic",
@@ -58,18 +60,32 @@ connector.register_callback(
     msg_type="std_msgs/msg/String"
 )
 
-# Call a service
+# Call a service with a request instance (msg_type is inferred)
 response = connector.service_call(
-    message=my_request_msg,
-    target="/my_service",
-    msg_type="my_package/srv/MyService"
+    message=SetBool.Request(data=True),
+    target="/my_service"
 )
 
-# Start an action
+# Call a service using a dictionary (msg_type is required)
+response = connector.service_call(
+    message=ROS2Message(payload={"data": True}),
+    target="/my_service",
+    msg_type=SetBool
+)
+
+# Start an action with a goal instance (msg_type is inferred)
 handle = connector.start_action(
-    action_data=my_goal_msg,
+    action_data=NavigateToPose.Goal(),
     target="/my_action",
-    msg_type="my_package/action/MyAction",
+    on_feedback=feedback_cb,
+    on_done=done_cb
+)
+
+# Start an action using a dictionary (msg_type is required)
+handle = connector.start_action(
+    action_data=ROS2Message(payload={}),
+    target="/my_action",
+    msg_type="nav2_msgs/action/NavigateToPose",
     on_feedback=feedback_cb,
     on_done=done_cb
 )

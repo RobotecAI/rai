@@ -25,6 +25,7 @@ from typing import (
     Literal,
     Optional,
     Tuple,
+    Type,
     TypeVar,
 )
 
@@ -255,7 +256,7 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         message: T | IROS2Message,
         target: str,
         *,
-        msg_type: str | None = None,
+        msg_type: str | Type[Any] | None = None,
         auto_qos_matching: bool = True,
         qos_profile: Optional[QoSProfile] = None,
         **kwargs: Any,
@@ -265,11 +266,12 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         Parameters
         ----------
         message : T | IROS2Message
-            The message to send. Can be a subclass of ROS2Message (payload is a dict) or any ROS2 message.
+            The message to send. Either a ROS2Message with a dictionary payload or a ROS2 message instance.
         target : str
             The target topic name.
-        msg_type : str | None, optional
-            The ROS2 message type. If None, the message type will be inferred from the message content. Must be provided if msg_content is a ROS2Message subclass.
+        msg_type : str | Type[Any] | None, optional
+            The ROS2 message type as string, e.g. 'std_msgs/msg/String', or class. Required when
+            message is a ROS2Message, inferred from the instance otherwise.
         auto_qos_matching : bool, optional
             Whether to automatically match QoS profiles, by default True.
         qos_profile : Optional[QoSProfile], optional
@@ -277,10 +279,7 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         **kwargs : Any
             Additional keyword arguments.
         """
-        if isinstance(message, ROS2Message):  # T class
-            msg_content = message.payload
-        else:  # An actual ROS 2 message
-            msg_content = message
+        msg_content = message.payload if isinstance(message, ROS2Message) else message
         self._topic_api.publish(
             topic=target,
             msg_content=msg_content,

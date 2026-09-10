@@ -64,7 +64,9 @@ _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
     "message_content,msg_type,actual_type",
     [
         (ROS2Message(payload={"data": "Hello, ROS2!"}), "std_msgs/msg/String", String),
+        (ROS2Message(payload={"data": "Hello, ROS2!"}), String, String),
         (String(data="Hello, ROS2!"), None, String),
+        (String(data="Hello, ROS2!"), "std_msgs/msg/String", String),
         (String(), None, String),
         (Pose(), None, Pose),
         (PoseWithCovarianceStamped(), None, PoseWithCovarianceStamped),
@@ -90,8 +92,8 @@ _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
 def test_ros2_connector_send_message(
     ros_setup: None,
     request: pytest.FixtureRequest,
-    message_content: ROS2Message,
-    msg_type: str | None,
+    message_content: Any,
+    msg_type: str | type | None,
     actual_type: type,
 ):
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
@@ -125,14 +127,45 @@ def test_ros2_connector_receive_message(
         shutdown_executors_and_threads(executors, threads)
 
 
-def service_call_helper(service_name: str, connector: ROS2Connector):
-    message = ROS2Message(payload={"data": True})
-    response = connector.service_call(
-        message, target=service_name, msg_type="std_srvs/srv/SetBool"
-    )
+def service_call_helper(
+    service_name: str,
+    connector: ROS2Connector,
+    message: Any = None,
+    msg_type: str | type | None = "std_srvs/srv/SetBool",
+):
+    if message is None:
+        message = ROS2Message(payload={"data": True})
+    response = connector.service_call(message, target=service_name, msg_type=msg_type)
     assert response.payload == SetBool.Response(
         success=True, message="Test service called"
     )
+
+
+@pytest.mark.parametrize(
+    "message,msg_type",
+    [
+        (ROS2Message(payload={"data": True}), "std_srvs/srv/SetBool"),
+        (ROS2Message(payload={"data": True}), SetBool),
+        (SetBool.Request(data=True), None),
+        (SetBool.Request(data=True), "std_srvs/srv/SetBool"),
+        (SetBool.Request(data=True), SetBool),
+    ],
+)
+def test_ros2_connector_service_call_message_types(
+    ros_setup: None,
+    request: pytest.FixtureRequest,
+    message: Any,
+    msg_type: str | type | None,
+):
+    service_name = f"{request.node.originalname}_service"  # type: ignore
+    service_server = ServiceServer(service_name, ReentrantCallbackGroup())
+    executors, threads = multi_threaded_spinner([service_server])
+    connector = ROS2Connector()
+    try:
+        service_call_helper(service_name, connector, message, msg_type)
+    finally:
+        connector.shutdown()
+        shutdown_executors_and_threads(executors, threads)
 
 
 @pytest.mark.parametrize(
@@ -223,19 +256,31 @@ def test_ros2_connector_service_call_multiple_calls_at_the_same_time_multiproces
         shutdown_executors_and_threads(executors, threads)
 
 
-def test_ros2_connector_send_goal(ros_setup: None, request: pytest.FixtureRequest):
+@pytest.mark.parametrize(
+    "action_data,msg_type",
+    [
+        (ROS2Message(payload={}), "nav2_msgs/action/NavigateToPose"),
+        (ROS2Message(payload={}), NavigateToPose),
+        (NavigateToPose.Goal(), None),
+        (NavigateToPose.Goal(), "nav2_msgs/action/NavigateToPose"),
+        (NavigateToPose.Goal(), NavigateToPose),
+    ],
+)
+def test_ros2_connector_send_goal(
+    ros_setup: None,
+    request: pytest.FixtureRequest,
+    action_data: Any,
+    msg_type: str | type | None,
+):
     action_name = f"{request.node.originalname}_action"  # type: ignore
     action_server = TestActionServer(action_name)
     executors, threads = multi_threaded_spinner([action_server])
     connector = ROS2Connector()
     try:
-        message = ROS2Message(
-            payload={},
-        )
         handle = connector.start_action(
-            action_data=message,
+            action_data=action_data,
             target=action_name,
-            msg_type="nav2_msgs/action/NavigateToPose",
+            msg_type=msg_type,
         )
         assert handle is not None
     finally:
