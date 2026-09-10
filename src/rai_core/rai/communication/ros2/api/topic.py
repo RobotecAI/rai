@@ -34,6 +34,7 @@ from rclpy.topic_endpoint_info import TopicEndpointInfo
 
 from rai.communication.ros2.api.base import (
     BaseROS2API,
+    IROS2Message,
 )
 from rai.communication.ros2.api.conversion import import_message_from_str
 
@@ -140,8 +141,8 @@ class ROS2TopicAPI(BaseROS2API):
     def publish(
         self,
         topic: str,
-        msg_content: Dict[str, Any],
-        msg_type: str,
+        msg_content: IROS2Message | Dict[str, Any],
+        msg_type: str | Type[Any] | None = None,
         *,
         auto_qos_matching: bool = True,
         qos_profile: Optional[QoSProfile] = None,
@@ -150,20 +151,22 @@ class ROS2TopicAPI(BaseROS2API):
 
         Args:
             topic: Name of the topic to publish to
-            msg_content: Dictionary containing the message content
-            msg_type: ROS2 message type as string (e.g. 'std_msgs/msg/String')
+            msg_content: ROS2 message instance or dictionary containing the message content
+            msg_type: ROS2 message type as string (e.g. 'std_msgs/msg/String') or class,
+                required when msg_content is a dictionary
             auto_qos_matching: Whether to automatically match QoS with subscribers
             qos_profile: Optional custom QoS profile to use
 
         Raises:
-            ValueError: If neither auto_qos_matching is True nor qos_profile is provided
+            ValueError: If neither auto_qos_matching is True nor qos_profile is provided,
+                if msg_content is a dictionary without msg_type, or if msg_type does not
+                match the ROS2 message instance
         """
         qos_profile = self._resolve_qos_profile(
             topic, auto_qos_matching, qos_profile, for_publisher=True
         )
-
-        msg = self.build_ros2_msg(msg_type, msg_content)
-        publisher = self._get_or_create_publisher(topic, type(msg), qos_profile)
+        msg, msg_cls = self.resolve_content(msg_content, msg_type)
+        publisher = self._get_or_create_publisher(topic, msg_cls, qos_profile)
         publisher.publish(msg)
 
     def _verify_receive_args(
