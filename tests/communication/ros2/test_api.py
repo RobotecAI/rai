@@ -32,7 +32,12 @@ from geometry_msgs.msg import (
     PoseWithCovarianceStamped,
     Quaternion,
 )
-from nav2_msgs.action import NavigateThroughPoses, NavigateToPose
+from nav2_msgs.action import (
+    ComputePathThroughPoses,
+    NavigateThroughPoses,
+    NavigateToPose,
+)
+from nav2_msgs.srv import GetCostmap
 from rai.communication.ros2.api import (
     ROS2ActionAPI,
     ROS2ServiceAPI,
@@ -47,9 +52,15 @@ from rclpy.callback_groups import (
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from std_msgs.msg import Header, String
-from std_srvs.srv import SetBool, Trigger
+from std_srvs.srv import SetBool
 
 from .helpers import (
+    COSTMAP_SPECS_DICT,
+    COSTMAP_SPECS_MSG,
+    PATH_GOAL_DICT,
+    PATH_GOAL_MSG,
+    ComputePathThroughPosesServer,
+    GetCostmapServer,
     MessageSubscriber,
     ServiceServer,
     TestActionClient,
@@ -367,16 +378,12 @@ def test_ros2_single_message_invalid_type(
 
 
 def invoke_set_bool_service(
-    service_name: str,
-    service_api: ROS2ServiceAPI,
-    reuse_client: bool = True,
-    service_type: str | type | None = "std_srvs/srv/SetBool",
-    request: Any = None,
+    service_name: str, service_api: ROS2ServiceAPI, reuse_client: bool = True
 ):
     response = service_api.call_service(
         service_name,
-        service_type=service_type,
-        request={"data": True} if request is None else request,
+        service_type="std_srvs/srv/SetBool",
+        request={"data": True},
         reuse_client=reuse_client,
     )
     assert response.success
@@ -386,11 +393,11 @@ def invoke_set_bool_service(
 @pytest.mark.parametrize(
     "service_type,request_content",
     [
-        ("std_srvs/srv/SetBool", {"data": True}),
-        (SetBool, {"data": True}),
-        (None, SetBool.Request(data=True)),
-        ("std_srvs/srv/SetBool", SetBool.Request(data=True)),
-        (SetBool, SetBool.Request(data=True)),
+        ("nav2_msgs/srv/GetCostmap", {"specs": COSTMAP_SPECS_DICT}),
+        (GetCostmap, {"specs": COSTMAP_SPECS_DICT}),
+        (None, GetCostmap.Request(specs=COSTMAP_SPECS_MSG)),
+        ("nav2_msgs/srv/GetCostmap", GetCostmap.Request(specs=COSTMAP_SPECS_MSG)),
+        (GetCostmap, GetCostmap.Request(specs=COSTMAP_SPECS_MSG)),
     ],
 )
 def test_ros2_service_single_call_request_types(
@@ -401,18 +408,18 @@ def test_ros2_service_single_call_request_types(
 ) -> None:
     service_name = f"{request.node.originalname}_service"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
-    service_server = ServiceServer(service_name, ReentrantCallbackGroup())
+    service_server = GetCostmapServer(service_name, ReentrantCallbackGroup())
     node = Node(node_name)
     executors, threads = multi_threaded_spinner([service_server, node])
 
     try:
         service_api = ROS2ServiceAPI(node)
-        invoke_set_bool_service(
-            service_name,
-            service_api,
-            service_type=service_type,
-            request=request_content,
+        response = service_api.call_service(
+            service_name, service_type=service_type, request=request_content
         )
+        assert response.map.header.frame_id == "map"
+        assert response.map.metadata == COSTMAP_SPECS_MSG
+        assert len(response.map.data) == 6
     finally:
         shutdown_executors_and_threads(executors, threads)
 
@@ -420,13 +427,13 @@ def test_ros2_service_single_call_request_types(
 @pytest.mark.parametrize(
     "service_type,request_content",
     [
-        (None, {"data": True}),
+        (None, {"specs": COSTMAP_SPECS_DICT}),
         (None, None),
-        (None, SetBool.Request),
-        (None, SetBool),
-        (None, SetBool.Response()),
-        ("std_srvs/srv/Trigger", SetBool.Request(data=True)),
-        (Trigger, SetBool.Request(data=True)),
+        (None, GetCostmap.Request),
+        (None, GetCostmap),
+        (None, GetCostmap.Response()),
+        ("std_srvs/srv/SetBool", GetCostmap.Request()),
+        (SetBool, GetCostmap.Request()),
     ],
 )
 def test_ros2_service_single_call_invalid_request(
@@ -437,7 +444,7 @@ def test_ros2_service_single_call_invalid_request(
 ) -> None:
     service_name = f"{request.node.originalname}_service"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
-    service_server = ServiceServer(service_name, ReentrantCallbackGroup())
+    service_server = GetCostmapServer(service_name, ReentrantCallbackGroup())
     node = Node(node_name)
     executors, threads = multi_threaded_spinner([service_server, node])
 
@@ -655,11 +662,11 @@ def test_ros2_service_single_call_wrong_service_name(
 @pytest.mark.parametrize(
     "action_type,goal",
     [
-        ("nav2_msgs/action/NavigateToPose", {}),
-        (NavigateToPose, {}),
-        (None, NavigateToPose.Goal()),
-        ("nav2_msgs/action/NavigateToPose", NavigateToPose.Goal()),
-        (NavigateToPose, NavigateToPose.Goal()),
+        ("nav2_msgs/action/ComputePathThroughPoses", PATH_GOAL_DICT),
+        (ComputePathThroughPoses, PATH_GOAL_DICT),
+        (None, PATH_GOAL_MSG),
+        ("nav2_msgs/action/ComputePathThroughPoses", PATH_GOAL_MSG),
+        (ComputePathThroughPoses, PATH_GOAL_MSG),
     ],
 )
 def test_ros2_action_send_goal(
@@ -670,16 +677,26 @@ def test_ros2_action_send_goal(
 ) -> None:
     action_name = f"{request.node.originalname}_action"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
-    action_server = TestActionServer(action_name)
+    action_server = ComputePathThroughPosesServer(action_name)
     node = Node(node_name)
     executors, threads = multi_threaded_spinner([action_server, node])
 
     try:
         action_api = ROS2ActionAPI(node)
         accepted, handle = action_api.send_goal(action_name, action_type, goal)
-
         assert accepted
         assert handle != ""
+
+        start_time = time.perf_counter()
+        while not action_api.is_goal_done(handle):
+            time.sleep(0.01)
+            if time.perf_counter() - start_time > 1.0:
+                raise TimeoutError("Goal not done")
+        result = action_api.get_result(handle)
+
+        assert result.status == GoalStatus.STATUS_SUCCEEDED
+        assert result.result.path.header.frame_id == "map"
+        assert result.result.path.poses == [PATH_GOAL_MSG.start, *PATH_GOAL_MSG.goals]
     finally:
         shutdown_executors_and_threads(executors, threads)
 
@@ -687,13 +704,17 @@ def test_ros2_action_send_goal(
 @pytest.mark.parametrize(
     "action_type,goal",
     [
-        (None, {}),
+        (None, PATH_GOAL_DICT),
         (None, None),
-        (None, NavigateToPose.Goal),
-        (None, NavigateToPose),
-        (None, NavigateToPose.Result()),
-        ("nav2_msgs/action/NavigateToPose", NavigateToPose.Feedback()),
-        ("nav2_msgs/action/NavigateThroughPoses", NavigateToPose.Goal()),
+        (None, ComputePathThroughPoses.Goal),
+        (None, ComputePathThroughPoses),
+        (None, ComputePathThroughPoses.Result()),
+        (
+            "nav2_msgs/action/ComputePathThroughPoses",
+            ComputePathThroughPoses.Feedback(),
+        ),
+        ("nav2_msgs/action/NavigateToPose", ComputePathThroughPoses.Goal()),
+        (NavigateToPose, ComputePathThroughPoses.Goal()),
     ],
 )
 def test_ros2_action_send_goal_invalid_goal(
@@ -704,7 +725,7 @@ def test_ros2_action_send_goal_invalid_goal(
 ) -> None:
     action_name = f"{request.node.originalname}_action"  # type: ignore
     node_name = f"{request.node.originalname}_node"  # type: ignore
-    action_server = TestActionServer(action_name)
+    action_server = ComputePathThroughPosesServer(action_name)
     node = Node(node_name)
     executors, threads = multi_threaded_spinner([action_server, node])
 

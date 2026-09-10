@@ -19,6 +19,7 @@ from typing import Any, List
 from unittest.mock import MagicMock
 
 import pytest
+from action_msgs.msg import GoalStatus
 from builtin_interfaces.msg import Time
 from geometry_msgs.msg import (
     Point,
@@ -27,7 +28,8 @@ from geometry_msgs.msg import (
     PoseWithCovarianceStamped,
     Quaternion,
 )
-from nav2_msgs.action import NavigateToPose
+from nav2_msgs.action import ComputePathThroughPoses, NavigateToPose
+from nav2_msgs.srv import GetCostmap
 from PIL import Image
 from pydub import AudioSegment
 from rai.communication.ros2 import (
@@ -45,6 +47,12 @@ from std_msgs.msg import Header, String
 from std_srvs.srv import SetBool
 
 from .helpers import (
+    COSTMAP_SPECS_DICT,
+    COSTMAP_SPECS_MSG,
+    PATH_GOAL_DICT,
+    PATH_GOAL_MSG,
+    ComputePathThroughPosesServer,
+    GetCostmapServer,
     HRIMessageSubscriber,
     MessagePublisher,
     MessageSubscriber,
@@ -127,15 +135,11 @@ def test_ros2_connector_receive_message(
         shutdown_executors_and_threads(executors, threads)
 
 
-def service_call_helper(
-    service_name: str,
-    connector: ROS2Connector,
-    message: Any = None,
-    msg_type: str | type | None = "std_srvs/srv/SetBool",
-):
-    if message is None:
-        message = ROS2Message(payload={"data": True})
-    response = connector.service_call(message, target=service_name, msg_type=msg_type)
+def service_call_helper(service_name: str, connector: ROS2Connector):
+    message = ROS2Message(payload={"data": True})
+    response = connector.service_call(
+        message, target=service_name, msg_type="std_srvs/srv/SetBool"
+    )
     assert response.payload == SetBool.Response(
         success=True, message="Test service called"
     )
@@ -144,11 +148,14 @@ def service_call_helper(
 @pytest.mark.parametrize(
     "message,msg_type",
     [
-        (ROS2Message(payload={"data": True}), "std_srvs/srv/SetBool"),
-        (ROS2Message(payload={"data": True}), SetBool),
-        (SetBool.Request(data=True), None),
-        (SetBool.Request(data=True), "std_srvs/srv/SetBool"),
-        (SetBool.Request(data=True), SetBool),
+        (
+            ROS2Message(payload={"specs": COSTMAP_SPECS_DICT}),
+            "nav2_msgs/srv/GetCostmap",
+        ),
+        (ROS2Message(payload={"specs": COSTMAP_SPECS_DICT}), GetCostmap),
+        (GetCostmap.Request(specs=COSTMAP_SPECS_MSG), None),
+        (GetCostmap.Request(specs=COSTMAP_SPECS_MSG), "nav2_msgs/srv/GetCostmap"),
+        (GetCostmap.Request(specs=COSTMAP_SPECS_MSG), GetCostmap),
     ],
 )
 def test_ros2_connector_service_call_message_types(
@@ -158,11 +165,16 @@ def test_ros2_connector_service_call_message_types(
     msg_type: str | type | None,
 ):
     service_name = f"{request.node.originalname}_service"  # type: ignore
-    service_server = ServiceServer(service_name, ReentrantCallbackGroup())
+    service_server = GetCostmapServer(service_name, ReentrantCallbackGroup())
     executors, threads = multi_threaded_spinner([service_server])
     connector = ROS2Connector()
     try:
-        service_call_helper(service_name, connector, message, msg_type)
+        response = connector.service_call(
+            message, target=service_name, msg_type=msg_type
+        )
+        assert response.payload.map.header.frame_id == "map"
+        assert response.payload.map.metadata == COSTMAP_SPECS_MSG
+        assert len(response.payload.map.data) == 6
     finally:
         connector.shutdown()
         shutdown_executors_and_threads(executors, threads)
@@ -259,11 +271,14 @@ def test_ros2_connector_service_call_multiple_calls_at_the_same_time_multiproces
 @pytest.mark.parametrize(
     "action_data,msg_type",
     [
-        (ROS2Message(payload={}), "nav2_msgs/action/NavigateToPose"),
-        (ROS2Message(payload={}), NavigateToPose),
-        (NavigateToPose.Goal(), None),
-        (NavigateToPose.Goal(), "nav2_msgs/action/NavigateToPose"),
-        (NavigateToPose.Goal(), NavigateToPose),
+        (
+            ROS2Message(payload=PATH_GOAL_DICT),
+            "nav2_msgs/action/ComputePathThroughPoses",
+        ),
+        (ROS2Message(payload=PATH_GOAL_DICT), ComputePathThroughPoses),
+        (PATH_GOAL_MSG, None),
+        (PATH_GOAL_MSG, "nav2_msgs/action/ComputePathThroughPoses"),
+        (PATH_GOAL_MSG, ComputePathThroughPoses),
     ],
 )
 def test_ros2_connector_send_goal(
@@ -273,16 +288,30 @@ def test_ros2_connector_send_goal(
     msg_type: str | type | None,
 ):
     action_name = f"{request.node.originalname}_action"  # type: ignore
-    action_server = TestActionServer(action_name)
+    action_server = ComputePathThroughPosesServer(action_name)
     executors, threads = multi_threaded_spinner([action_server])
     connector = ROS2Connector()
+    results: List[Any] = []
     try:
         handle = connector.start_action(
             action_data=action_data,
             target=action_name,
+            on_done=lambda future: results.append(future.result()),
             msg_type=msg_type,
         )
         assert handle is not None
+
+        start_time = time.perf_counter()
+        while not results:
+            time.sleep(0.01)
+            if time.perf_counter() - start_time > 1.0:
+                raise TimeoutError("Goal not done")
+
+        assert results[0].status == GoalStatus.STATUS_SUCCEEDED
+        assert results[0].result.path.poses == [
+            PATH_GOAL_MSG.start,
+            *PATH_GOAL_MSG.goals,
+        ]
     finally:
         connector.shutdown()
         shutdown_executors_and_threads(executors, threads)
