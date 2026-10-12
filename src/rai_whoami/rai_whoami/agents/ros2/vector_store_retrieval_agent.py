@@ -71,7 +71,7 @@ class ROS2VectorStoreRetrievalAgent(BaseAgent):
         response.success = True
         response.message = "Success"
         response.documents = [result[0].page_content for result in vdb_results]
-        response.scores = [result[1] for result in vdb_results]
+        response.scores = [float(result[1]) for result in vdb_results]
         self.logger.info(f"Sending response to query: {request.query}")
         return response
 
