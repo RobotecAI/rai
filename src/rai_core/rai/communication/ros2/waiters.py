@@ -30,8 +30,8 @@ def get_missing_entities(
     callable_get_entities: Callable[[], List[str]],
     requested_entities: List[str],
 ) -> set[str]:
-    requested_set = set(requested_entities)
-    available_set = set(callable_get_entities())
+    requested_set = {ensure_slash(name) for name in requested_entities}
+    available_set = {ensure_slash(name) for name in callable_get_entities()}
     return requested_set - available_set
 
 

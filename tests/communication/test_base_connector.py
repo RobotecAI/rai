@@ -138,3 +138,15 @@ def test_base_connector_msg_class_obj_type():
 
     connector = InternalDerivedConnector()
     assert connector.T_class == DerivedMessage
+
+
+@pytest.mark.parametrize("bad", [0, -1, -4])
+def test_base_connector_rejects_nonpositive_callback_max_workers(bad):
+    with pytest.raises(ValueError, match="callback_max_workers must be positive"):
+        DummyConnector(callback_max_workers=bad)
+
+
+def test_base_connector_accepts_positive_callback_max_workers():
+    connector = DummyConnector(callback_max_workers=1)
+    assert connector.callback_max_workers == 1
+    connector.shutdown()

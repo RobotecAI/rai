@@ -98,10 +98,23 @@ def test_to_langchain_ai_multimodal(image, audio):
     ):  # NOTE: update when https://github.com/RobotecAI/rai/issues/370 is resolved
         _ = message.to_langchain()
 
-    # assert isinstance(langchain_message, AIMultimodalMessage)
-    # assert langchain_message.content == "Response"
-    # assert langchain_message.images == ["img"]
-    # assert langchain_message.audios == ["audio"]
+
+def test_to_langchain_ai_images_only(image):
+    message = HRIMessage(
+        text="Response",
+        images=[image],
+        audios=[],
+        message_author="ai",
+        communication_id=HRIMessage.generate_communication_id(),
+        seq_no=0,
+        seq_end=True,
+    )
+
+    langchain_message = message.to_langchain()
+
+    assert isinstance(langchain_message, RAIMultimodalMessage)
+    assert len(langchain_message.images) == 1
+    assert langchain_message.audios == []
 
 
 def test_from_langchain_human():

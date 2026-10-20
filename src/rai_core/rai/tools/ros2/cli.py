@@ -22,6 +22,12 @@ FORBIDDEN_CHARACTERS = ["&", ";", "|", "&&", "||", "(", ")", "<", ">", ">>", "<<
 
 
 def run_with_timeout(cmd: List[str], timeout_sec: int):
+    if isinstance(timeout_sec, bool) or not isinstance(timeout_sec, (int, float)):
+        raise TypeError(
+            f"timeout_sec must be a positive number, got {type(timeout_sec).__name__}"
+        )
+    if timeout_sec <= 0:
+        raise ValueError(f"timeout_sec must be positive, got {timeout_sec!r}")
     proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
     timer = Timer(timeout_sec, proc.kill)
     try:

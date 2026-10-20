@@ -63,7 +63,7 @@ def test_calculate_single_entity() -> None:
     assert incorrect == 1
 
 
-def test_calculate_seperate_entities() -> None:
+def test_calculate_separate_entities() -> None:
     task = BuildCubeTowerTask(["red_cube"])
     e1 = create_entity("cube1", "red_cube", 0.0, 0.0, 0.0)
     e2 = create_entity("cube2", "red_cube", 0.2, 0.2, 0.0)

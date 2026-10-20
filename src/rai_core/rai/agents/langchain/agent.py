@@ -115,6 +115,8 @@ class LangChainAgent(BaseAgent):
         max_size: int = 100,
     ):
         super().__init__()
+        if max_size <= 0:
+            raise ValueError(f"max_size must be positive, got {max_size!r}")
         self.logger = logging.getLogger(__name__)
         self.agent = runnable
         self.stream_response = stream_response

@@ -83,14 +83,15 @@ class GetROS2ServicesNamesAndTypesTool(BaseROS2Tool):
 
 
 class CallROS2ServiceToolInput(BaseModel):
-    service_name: str = Field(description="The service to call")
-    service_type: str = Field(description="The type of the service")
+    service_name: str = Field(min_length=1, description="The service to call")
+    service_type: str = Field(min_length=1, description="The type of the service")
     service_args: Optional[Dict[str, Any]] = Field(
         default={},
         description="A dictionary mapping each field name of the service request message to its value. For example, for std_srvs/srv/SetBool use {'data': True}.",
     )
     timeout_sec: float = Field(
         default=5.0,
+        gt=0,
         description="The timeout for the service call in seconds",
     )
 

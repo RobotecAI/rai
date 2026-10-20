@@ -61,3 +61,26 @@ def test_agent_runner_wait_for_shutdown_stops_agents(monkeypatch):
 
     assert thread.is_alive() is False
     assert all(agent.stop_called for agent in agents)
+
+
+def test_agent_runner_rejects_empty_agents():
+    import pytest
+
+    with pytest.raises(ValueError, match="non-empty"):
+        AgentRunner([])
+
+
+def test_wait_for_shutdown_rejects_empty_agents():
+    import pytest
+    from rai.agents.runner import wait_for_shutdown
+
+    with pytest.raises(ValueError, match="non-empty"):
+        wait_for_shutdown([])
+
+
+def test_run_agents_rejects_empty_agents():
+    import pytest
+    from rai.agents.runner import run_agents
+
+    with pytest.raises(ValueError, match="non-empty"):
+        run_agents([])

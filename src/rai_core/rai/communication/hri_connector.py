@@ -92,7 +92,7 @@ class HRIMessage(BaseMessage):
                 if self.images == [] and self.audios == []:
                     return AIMessage(content=self.text)
                 return AIMultimodalMessage(
-                    content=self.text, images=base64_images, audios=base64_images
+                    content=self.text, images=base64_images, audios=base64_audios
                 )
             case _:
                 raise ValueError(

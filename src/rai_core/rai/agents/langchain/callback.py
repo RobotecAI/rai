@@ -34,6 +34,14 @@ class HRICallbackHandler(BaseCallbackHandler):
         logger: Optional[logging.Logger] = None,
         stream_response: bool = True,
     ):
+        if isinstance(max_buffer_size, bool) or not isinstance(max_buffer_size, int):
+            raise TypeError(
+                f"max_buffer_size must be a positive int, got {type(max_buffer_size).__name__}"
+            )
+        if max_buffer_size <= 0:
+            raise ValueError(
+                f"max_buffer_size must be positive, got {max_buffer_size!r}"
+            )
         self.connectors = connectors
         self.aggregate_chunks = aggregate_chunks
         self.stream_response = stream_response

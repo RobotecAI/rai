@@ -72,6 +72,10 @@ class ParametrizedCallback(BaseModel, Generic[T]):
 
 class BaseConnector(Generic[T]):
     def __init__(self, callback_max_workers: int = 4):
+        if callback_max_workers <= 0:
+            raise ValueError(
+                f"callback_max_workers must be positive, got {callback_max_workers!r}"
+            )
         self.callback_max_workers = callback_max_workers
         self.logger = logging.getLogger(self.__class__.__name__)
         self.registered_callbacks: Dict[str, Dict[str, ParametrizedCallback[T]]] = (

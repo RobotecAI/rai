@@ -30,7 +30,7 @@ from rai.communication.ros2 import (
 )
 from typing_extensions import Self
 
-from rai_s2s.asr.agents.initialization import load_config
+from rai_s2s.asr.agents.initialization import TRANSCRIBE_MODELS, load_config
 from rai_s2s.asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
 from rai_s2s.sound_device import (
     SoundDeviceConfig,
@@ -121,32 +121,39 @@ class SpeechRecognitionAgent(BaseAgent):
             is_output=False,
         )
         match cfg.transcribe.model_type:
-            case "LocalWhisper (Free)":
+            case "LocalWhisper":
                 from rai_s2s.asr.models import LocalWhisper
 
                 model = LocalWhisper(
                     cfg.transcribe.model_name, 16000, language=cfg.transcribe.language
                 )
-            case "FasterWhisper (Free)":
+            case "FasterWhisper":
                 from rai_s2s.asr.models import FasterWhisper
 
                 model = FasterWhisper(
                     cfg.transcribe.model_name, 16000, language=cfg.transcribe.language
                 )
-            case "OpenAI (Cloud)":
+            case "OpenAI":
                 from rai_s2s.asr.models import OpenAIWhisper
 
                 model = OpenAIWhisper(
                     cfg.transcribe.model_name, 16000, language=cfg.transcribe.language
                 )
             case _:
-                raise ValueError(f"Unknown model name f{cfg.transcribe.model_name}")
+                raise ValueError(
+                    f"Unknown transcription model: {cfg.transcribe.model_type}. "
+                    f"Must be one of {TRANSCRIBE_MODELS}"
+                )
 
         match cfg.voice_activity_detection.model_name:
             case "SileroVAD":
                 from rai_s2s.asr.models import SileroVAD
 
                 vad = SileroVAD(16000, cfg.voice_activity_detection.threshold)
+            case _:
+                raise ValueError(
+                    f"Unknown VAD model: {cfg.voice_activity_detection.model_name}"
+                )
 
         agent = cls(microphone_configuration, "rai_auto_asr_agent", model, vad)
         if cfg.wakeword.is_used:

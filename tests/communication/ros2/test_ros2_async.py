@@ -125,10 +125,10 @@ def test_get_future_result_cancelled_during_wait():
 
 # Edge case timeout tests
 def test_get_future_result_zero_timeout():
-    """Test with zero timeout."""
+    """Test that a zero timeout is rejected as non-positive."""
     future = Future()
-    result = get_future_result(future, timeout_sec=0.0)
-    assert result is None
+    with pytest.raises(ValueError, match="timeout_sec must be positive"):
+        get_future_result(future, timeout_sec=0.0)
 
 
 def test_get_future_result_very_short_timeout():
