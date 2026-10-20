@@ -27,7 +27,7 @@ complex_model = "gemini-3-pro"
 embeddings_model = "text-embedding-004"
 
 [minimax]
-simple_model = "MiniMax-M2.7"
+simple_model = "MiniMax-M3.1-Flash"
 complex_model = "MiniMax-M3"
 embeddings_model = ""
 protocol = "openai"

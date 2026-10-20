@@ -76,7 +76,12 @@ chat API. Set the API key before starting RAI:
 export MINIMAX_API_KEY="your-api-key"
 ```
 
-The generated `config.toml` contains both supported regions and both protocols. Select the
+New configurations use `MiniMax-M3.1-Flash` for simple tasks and `MiniMax-M3` for
+complex tasks. Existing saved model IDs and explicit `get_llm_model_direct` model
+names are passed through unchanged. Configure MiniMax by editing `config.toml`;
+the optional configurator does not currently list this vendor.
+
+The generated `config.toml` contains both regions and both protocols. Select the
 active combination with `protocol` and `region`:
 
 ```toml
@@ -85,7 +90,7 @@ simple_model = "minimax"
 complex_model = "minimax"
 
 [minimax]
-simple_model = "MiniMax-M2.7"
+simple_model = "MiniMax-M3.1-Flash"
 complex_model = "MiniMax-M3"
 embeddings_model = ""
 protocol = "openai"
