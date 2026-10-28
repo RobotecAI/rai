@@ -1,6 +1,6 @@
 [project]
 name = "rai_core"
-version = "2.12.4"
+version = "2.13.0"
 description = "Core functionality for RAI framework"
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
@@ -39,6 +39,14 @@ dependencies = [
     "pydub>=0.25.1,<0.26.0",
     "streamlit>=1.44,<2.0.0",
     "numpy<2.0",
+]
+
+[project.optional-dependencies]
+# LiteLLM vendor: one config section for Anthropic, Bedrock, Vertex, Azure,
+# Ollama and other providers. Opt-in; bounded to the range it is tested with.
+litellm = [
+    "langchain-litellm>=0.6.4,<0.7.0",
+    "litellm>=1.97.0,<1.106.0",
 ]
 
 [project.scripts]
