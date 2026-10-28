@@ -222,6 +222,8 @@ base_url = "https://openai.example/v1/"
     assert config.aws.region_name == ""
     assert config.ollama.base_url == ""
     assert config.google.embeddings_model == ""
+    assert config.litellm.simple_model == ""
+    assert config.litellm.api_base == ""
 
 
 def test_load_config_uses_default_tracing_when_section_missing(tmp_path):

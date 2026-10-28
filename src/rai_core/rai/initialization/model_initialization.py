@@ -68,6 +68,21 @@ class GoogleConfig(ModelConfig):
 
 
 @dataclass
+class LiteLLMConfig(ModelConfig):
+    # Models use LiteLLM's "provider/model" form (e.g. "anthropic/claude-sonnet-4-6",
+    # "bedrock/...", "vertex_ai/..."). Credentials come from each provider's own
+    # env vars (ANTHROPIC_API_KEY, AWS_*, ...). api_base is only needed for
+    # self-hosted endpoints such as ollama/ or hosted_vllm/.
+    api_base: str = ""
+
+
+_LITELLM_INSTALL_HINT = (
+    "The litellm vendor needs the optional litellm dependencies: "
+    "pip install 'rai_core[litellm]'"
+)
+
+
+@dataclass
 class LangfuseConfig:
     use_langfuse: bool
     host: str
@@ -94,6 +109,7 @@ class RAIConfig:
     ollama: OllamaConfig
     google: GoogleConfig
     tracing: TracingConfig
+    litellm: LiteLLMConfig
 
 
 # Default placeholder configs for vendors not present in the TOML file.
@@ -107,6 +123,7 @@ _DEFAULT_OLLAMA = OllamaConfig(
     simple_model="", complex_model="", embeddings_model="", base_url=""
 )
 _DEFAULT_GOOGLE = GoogleConfig(simple_model="", complex_model="", embeddings_model="")
+_DEFAULT_LITELLM = LiteLLMConfig(simple_model="", complex_model="", embeddings_model="")
 _DEFAULT_TRACING = TracingConfig(
     project="",
     langfuse=LangfuseConfig(use_langfuse=False, host=""),
@@ -140,6 +157,11 @@ def load_config(config_path: Optional[str] = None) -> RAIConfig:
         if "google" in config_dict
         else _DEFAULT_GOOGLE
     )
+    litellm = (
+        LiteLLMConfig(**config_dict["litellm"])
+        if "litellm" in config_dict
+        else _DEFAULT_LITELLM
+    )
 
     if "tracing" in config_dict:
         tracing = TracingConfig(
@@ -157,6 +179,7 @@ def load_config(config_path: Optional[str] = None) -> RAIConfig:
         ollama=ollama,
         google=google,
         tracing=tracing,
+        litellm=litellm,
     )
 
 
@@ -174,6 +197,22 @@ def get_llm_model_config_and_vendor(
 
     model_config = getattr(config, vendor)
     return model_config, vendor
+
+
+def _get_litellm_chat_model(
+    model: str, model_config: LiteLLMConfig, **kwargs: Any
+) -> Any:
+    try:
+        from langchain_litellm import ChatLiteLLM
+    except ImportError as e:
+        raise ImportError(_LITELLM_INSTALL_HINT) from e
+
+    if model_config.api_base:
+        kwargs.setdefault("api_base", model_config.api_base)
+    # simple_model and complex_model may point at different providers; drop
+    # parameters a provider does not accept instead of failing the request.
+    model_kwargs = {"drop_params": True, **kwargs.pop("model_kwargs", {})}
+    return ChatLiteLLM(model=model, model_kwargs=model_kwargs, **kwargs)
 
 
 def get_llm_model(
@@ -213,6 +252,9 @@ def get_llm_model(
 
         model_config = cast(GoogleConfig, model_config)
         return ChatGoogleGenerativeAI(model=model, **kwargs)
+    elif vendor == "litellm":
+        model_config = cast(LiteLLMConfig, model_config)
+        return _get_litellm_chat_model(model, model_config, **kwargs)
     else:
         raise ValueError(f"Unknown LLM vendor: {vendor}")
 
@@ -255,6 +297,9 @@ def get_llm_model_direct(
 
         model_config = cast(GoogleConfig, model_config)
         return ChatGoogleGenerativeAI(model=model_name, **kwargs)
+    elif vendor == "litellm":
+        model_config = cast(LiteLLMConfig, model_config)
+        return _get_litellm_chat_model(model_name, model_config, **kwargs)
     else:
         raise ValueError(f"Unknown LLM vendor: {vendor}")
 
@@ -351,6 +396,26 @@ def get_embeddings_model(
                 "model": model_config.embeddings_model,
                 "vendor": vendor,
             }
+        return embeddings
+    elif vendor == "litellm":
+        try:
+            from langchain_litellm import LiteLLMEmbeddings
+        except ImportError as e:
+            raise ImportError(_LITELLM_INSTALL_HINT) from e
+
+        model_config = cast(LiteLLMConfig, model_config)
+        embeddings_kwargs: Dict[str, Any] = {"model": model_config.embeddings_model}
+        if model_config.api_base:
+            embeddings_kwargs["api_base"] = model_config.api_base
+        embeddings = LiteLLMEmbeddings(**embeddings_kwargs)
+        if return_kwargs:
+            c = (
+                str(embeddings.__class__)
+                .strip("<>")
+                .replace("class '", "")
+                .replace("'", "")
+            )
+            return embeddings, {"class": c, **embeddings_kwargs, "vendor": vendor}
         return embeddings
     else:
         raise ValueError(f"Unknown embeddings vendor: {vendor}")

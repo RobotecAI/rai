@@ -4714,7 +4714,7 @@ requires-dist = [
 
 [[package]]
 name = "rai-core"
-version = "2.12.4"
+version = "2.13.0"
 source = { editable = "src/rai_core" }
 dependencies = [
     { name = "coloredlogs" },
@@ -4752,12 +4752,14 @@ requires-dist = [
     { name = "langchain-community" },
     { name = "langchain-core", specifier = ">=1.2.10,<2.0.0" },
     { name = "langchain-google-genai" },
+    { name = "langchain-litellm", marker = "extra == 'litellm'", specifier = ">=0.6.4,<0.7.0" },
     { name = "langchain-ollama" },
     { name = "langchain-openai" },
     { name = "langfuse", specifier = ">=3.8.0,<4.0.0" },
     { name = "langgraph", specifier = ">=1.1.5,<2.0.0" },
     { name = "langgraph-prebuilt" },
     { name = "lark", specifier = ">=1.1.9,<2.0.0" },
+    { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.97.0,<1.106.0" },
     { name = "numpy", specifier = "<2.0" },
     { name = "opencv-python", specifier = ">=4.9.0.80,<5.0.0.0" },
     { name = "opencv-python-headless", specifier = ">=4.9.0.80,<5.0.0.0" },
@@ -4770,6 +4772,7 @@ requires-dist = [
     { name = "tqdm", specifier = ">=4.66.4,<5.0.0" },
     { name = "transforms3d", specifier = ">=0.4.1,<0.5.0" },
 ]
+provides-extras = ["litellm"]
 
 [[package]]
 name = "rai-framework"
