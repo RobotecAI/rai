@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+import os
 import signal
 import subprocess
 import time
@@ -51,6 +52,7 @@ from rai_sim.simulation_bridge import (
 class O3DExROS2SimulationConfig(SimulationConfig):
     binary_path: Path
     level: Optional[str] = None
+    domain_id: Optional[int] = None
     required_simulation_ros2_interfaces: dict[str, List[str]]
     required_robotic_ros2_interfaces: dict[str, List[str]]
 
@@ -393,8 +395,12 @@ class O3DExROS2Bridge(SimulationBridge):
         if simulation_config.level:
             command.append(f"+LoadLevel {simulation_config.level}")
         self.logger.info(f"Running command: {command}")
+        env = {**os.environ}
+        if simulation_config.domain_id is not None:
+            env["ROS_DOMAIN_ID"] = str(simulation_config.domain_id)
         self.current_sim_process = subprocess.Popen(
             command,
+            env=env,
         )
         if not self._has_process_started(process=self.current_sim_process):
             raise RuntimeError("Process did not start in time.")
@@ -407,8 +413,9 @@ class O3DExROS2Bridge(SimulationBridge):
         self,
         required_robotic_ros2_interfaces: dict[str, List[str]],
         launch_description: LaunchDescription,
+        domain_id: Optional[int] = None,
     ):
-        self.manager.start(launch_description=launch_description)
+        self.manager.start(launch_description=launch_description, domain_id=domain_id)
 
         if not self._is_ros2_stack_ready(
             required_ros2_stack=required_robotic_ros2_interfaces
