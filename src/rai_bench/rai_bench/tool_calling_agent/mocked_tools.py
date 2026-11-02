@@ -183,6 +183,9 @@ class MockGetObjectPositionsTool(GetObjectPositionsTool):
     get_grabbing_point_tool: GetGrabbingPointTool = MagicMock(spec=GetGrabbingPointTool)
     mock_objects: dict[str, List[Point]]
 
+    def model_post_init(self, __context: Any) -> None:
+        pass  # skip deprecation check that calls self.connector.logger
+
     def _run(self, object_name: str) -> str:
         """Method that returns a mock message with the object positions
         if the object_name is present in the mock_objects dictionary.
@@ -198,7 +201,6 @@ class MockGetObjectPositionsTool(GetObjectPositionsTool):
             Message from the tool
         """
         expected_positions = self.mock_objects.get(object_name, [])
-        print(f"Expected positions: {expected_positions}")
         if len([expected_positions]) == 0:
             return f"No {object_name}s detected."
         else:

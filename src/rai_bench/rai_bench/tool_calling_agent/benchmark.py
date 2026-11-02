@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import csv
+import io
 import logging
 import statistics
 import time
@@ -27,6 +29,7 @@ from rai.agents.langchain.core import (
     create_conversational_agent,
 )
 from rai.messages import HumanMultimodalMessage
+from tqdm import tqdm
 
 from rai_bench.base_benchmark import BaseBenchmark, TimeoutException
 from rai_bench.results_processing.langfuse_scores_tracing import ScoreTracingHandler
@@ -205,6 +208,81 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         self.csv_writerow(self.summary_filename, summary)
 
 
+def _print_results_table(task_results: List[TaskResult]) -> None:
+    rows = [
+        {
+            "task_prompt": r.task_prompt,
+            "type": r.type,
+            "complexity": r.complexity,
+            "n_shots": r.examples_in_system_prompt,
+            "prompt_detail": r.prompt_detail,
+            "score": f"{r.score:.2f}",
+        }
+        for r in task_results
+    ]
+    avg = statistics.mean(r.score for r in task_results)
+
+    buf = io.StringIO()
+    writer = csv.DictWriter(
+        buf,
+        fieldnames=[
+            "task_prompt",
+            "type",
+            "complexity",
+            "n_shots",
+            "prompt_detail",
+            "score",
+        ],
+    )
+    writer.writeheader()
+    writer.writerows(rows)
+    writer.writerow(
+        {
+            "task_prompt": "AVERAGE",
+            "type": "",
+            "complexity": "",
+            "n_shots": "",
+            "prompt_detail": "",
+            "score": f"{avg:.2f}",
+        }
+    )
+
+    col_widths = {
+        "task_prompt": 45,
+        "type": 18,
+        "complexity": 10,
+        "n_shots": 6,
+        "prompt_detail": 13,
+        "score": 5,
+    }
+    header = {k: k for k in col_widths}
+
+    def fmt_row(d: dict) -> str:
+        return "  ".join(
+            str(d[k]).ljust(col_widths[k])[: col_widths[k]] for k in col_widths
+        )
+
+    separator = "  ".join("-" * w for w in col_widths.values())
+    print("\n" + fmt_row(header))
+    print(separator)
+    for r in rows:
+        print(fmt_row(r))
+    print(separator)
+    print(
+        fmt_row(
+            {
+                "task_prompt": "AVERAGE",
+                "type": "",
+                "complexity": "",
+                "n_shots": "",
+                "prompt_detail": "",
+                "score": f"{avg:.2f}",
+            }
+        )
+    )
+    print()
+
+
 def run_benchmark(
     llm: BaseChatModel,
     out_dir: Path,
@@ -219,21 +297,27 @@ def run_benchmark(
         results_dir=out_dir,
     )
 
-    for task in tasks:
-        agent = create_conversational_agent(
-            llm=llm,
-            tools=task.available_tools,
-            system_prompt=task.get_system_prompt(),
-            logger=bench_logger,
-        )
-        benchmark.run_next(
-            agent=agent,
-            initial_state={
-                "messages": [HumanMultimodalMessage(content=task.get_prompt())]
-            },
-            experiment_id=experiment_id,
-        )
+    with tqdm(total=len(tasks), unit="task", dynamic_ncols=True) as pbar:
+        for task in tasks:
+            short_prompt = task.get_base_prompt()[:50].replace("\n", " ")
+            pbar.set_description(f"{short_prompt!r}")
+            agent = create_conversational_agent(
+                llm=llm,
+                tools=task.available_tools,
+                system_prompt=task.get_system_prompt(),
+                logger=bench_logger,
+            )
+            benchmark.run_next(
+                agent=agent,
+                initial_state={
+                    "messages": [HumanMultimodalMessage(content=task.get_prompt())]
+                },
+                experiment_id=experiment_id,
+            )
+            avg_score = statistics.mean(r.score for r in benchmark.task_results)
+            last_score = benchmark.task_results[-1].score
+            pbar.set_postfix(avg=f"{avg_score:.2f}", last=f"{last_score:.2f}")
+            pbar.update(1)
 
-    bench_logger.info("===============================================================")
     bench_logger.info("ALL SCENARIOS DONE. BENCHMARK COMPLETED!")
-    bench_logger.info("===============================================================")
+    _print_results_table(benchmark.task_results)
