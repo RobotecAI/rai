@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Type
 
-from rai.communication.ros2.api import ROS2ActionAPI
+from rai.communication.ros2.api import IROS2Message, ROS2ActionAPI
 from rai.communication.ros2.messages import ROS2HRIMessage, ROS2Message
 
 
@@ -32,21 +32,22 @@ class ROS2ActionMixin:
 
     def start_action(
         self,
-        action_data: Optional[ROS2Message | ROS2HRIMessage],
+        action_data: Optional[ROS2Message | ROS2HRIMessage | IROS2Message],
         target: str,
         on_feedback: Callable[[Any], None] = lambda _: None,
         on_done: Callable[[Any], None] = lambda _: None,
         timeout_sec: float = 1.0,
         *,
-        msg_type: str,
+        msg_type: str | Type[Any] | None = None,
         **kwargs: Any,
     ) -> str:
-        if not isinstance(action_data, ROS2Message):
-            raise ValueError("Action data must be of type ROS2Message")
+        goal = (
+            action_data.payload if isinstance(action_data, ROS2Message) else action_data
+        )
         accepted, handle = self._actions_api.send_goal(
             action_name=target,
             action_type=msg_type,
-            goal=action_data.payload,
+            goal=goal,
             timeout_sec=timeout_sec,
             feedback_callback=on_feedback,
             done_callback=on_done,

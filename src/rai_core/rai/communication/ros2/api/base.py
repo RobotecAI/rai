@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
+import importlib
 import logging
 from typing import (
     Any,
@@ -36,7 +38,12 @@ from rclpy.qos import (
 from rclpy.topic_endpoint_info import TopicEndpointInfo
 from rosidl_parser.definition import NamespacedType
 from rosidl_runtime_py.import_message import import_message_from_namespaced_type
-from rosidl_runtime_py.utilities import get_namespaced_type
+from rosidl_runtime_py.utilities import (
+    get_namespaced_type,
+    is_action,
+    is_message,
+    is_service,
+)
 
 from rai.communication.ros2.api.conversion import import_message_from_str
 
@@ -126,6 +133,67 @@ class BaseROS2API:
         msg_namespaced_type: NamespacedType = get_namespaced_type(msg_type)
         return import_message_from_namespaced_type(msg_namespaced_type)
 
+    @staticmethod
+    def resolve_interface_type(interface_type: str | Type[Any]) -> Type[Any]:
+        """Return the interface class for a type string like 'std_srvs/srv/SetBool' or the class itself."""
+        if isinstance(interface_type, str):
+            return import_message_from_str(interface_type)
+        return interface_type
+
+    @staticmethod
+    def get_interface_type(instance: IROS2Message) -> Type[Any]:
+        """Return the interface class an instance belongs to, e.g. SetBool for SetBool.Request()."""
+        cls = type(instance)
+        package = importlib.import_module(cls.__module__.rsplit(".", 1)[0])
+        return getattr(package, cls.__name__.partition("_")[0])
+
+    @classmethod
+    def resolve_content(
+        cls,
+        content: IROS2Message | Dict[str, Any],
+        interface_type: str | Type[Any] | None,
+        member: str | None = None,
+    ) -> Tuple[IROS2Message, Type[Any]]:
+        """Resolve a dictionary or ROS 2 instance into (instance, interface class).
+
+        Args:
+            content: ROS 2 instance or dictionary of field values.
+            interface_type: Interface type string or class. Required for dictionaries,
+                validated against the instance otherwise.
+            member: Nested interface class the content must be an instance of,
+                e.g. 'Request' for services or 'Goal' for actions.
+
+        Raises:
+            ValueError: If content is neither a dictionary nor a ROS 2 instance,
+                if a dictionary is given without interface_type, or if the instance
+                does not match interface_type or member.
+        """
+        if isinstance(content, dict):
+            if interface_type is None:
+                raise ValueError("Interface type must be provided if content is a dict")
+            interface_cls = cls.resolve_interface_type(interface_type)
+            instance_cls = getattr(interface_cls, member) if member else interface_cls
+            instance = instance_cls()
+            # set_message_fields mutates nested lists, see ros2/rosidl_runtime_py#33
+            rosidl_runtime_py.set_message.set_message_fields(
+                instance, copy.deepcopy(content)
+            )
+            return instance, interface_cls
+        if isinstance(content, type) or not is_message(content):
+            raise ValueError(f"Invalid content type: {type(content)}")
+        interface_cls = cls.get_interface_type(content) if member else type(content)
+        instance_cls = getattr(interface_cls, member) if member else interface_cls
+        if type(content) is not instance_cls:
+            raise ValueError(f"Expected {instance_cls}, got {type(content)}")
+        if (
+            interface_type is not None
+            and cls.resolve_interface_type(interface_type) is not interface_cls
+        ):
+            raise ValueError(
+                f"Interface type {interface_type} does not match {type(content)}"
+            )
+        return content, interface_cls
+
     def get_topic_type(self, topic: str) -> str:
         names_and_types = self.node.get_topic_names_and_types(no_demangle=False)
         for name, types in names_and_types:
@@ -134,3 +202,15 @@ class BaseROS2API:
                     raise ValueError(f"Topic {topic} has multiple types: {types}")
                 return types[0]
         raise ValueError(f"Topic {topic} not found")
+
+    @staticmethod
+    def is_ros2_message(msg: Any) -> bool:
+        return is_message(msg)
+
+    @staticmethod
+    def is_ros2_service(msg: Any) -> bool:
+        return is_service(msg)
+
+    @staticmethod
+    def is_ros2_action(msg: Any) -> bool:
+        return is_action(msg)
