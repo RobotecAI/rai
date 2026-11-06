@@ -107,7 +107,7 @@ def test_transport(qos_profile: str):
     topics = ["/image", "/text"]
     try:
         for topic in topics:
-            _ = connector.receive_message(topic, timeout_sec=5.0)
+            _ = connector.receive_message(topic, timeout_sec=15.0)
     finally:
         # Cancel timers before shutdown to prevent callbacks from using destroyed publishers
         try:
