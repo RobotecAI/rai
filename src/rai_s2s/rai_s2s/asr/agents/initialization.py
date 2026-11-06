@@ -35,7 +35,15 @@ class VADConfig:
 
 @dataclass
 class WWConfig:
-    model_name: str = "hey jarvis"
+    """Wake word detection. Off unless `is_used` is set, and there is no default model.
+
+    `model_name` is a path to your own openWakeWord model, or the name of an openWakeWord
+    pre-trained model (e.g. "hey jarvis"). The pre-trained models are licensed CC BY-NC-SA 4.0
+    (non-commercial, https://github.com/dscripka/openWakeWord#license); naming one opts in to
+    downloading it and to that licence.
+    """
+
+    model_name: str = ""
     model_type: Literal["OpenWakeWord"] = "OpenWakeWord"
     threshold: float = 0.01
     is_used: bool = False
@@ -43,6 +51,12 @@ class WWConfig:
     def __post_init__(self):
         if not 0.0 < self.threshold <= 1.0:
             raise ValueError(f"threshold must be in (0, 1], got {self.threshold}")
+        if self.is_used and not self.model_name.strip():
+            raise ValueError(
+                "use_wake_word is set but wake_word_model_name is empty: name a path to your own "
+                "openWakeWord model, or an openWakeWord pre-trained model (CC BY-NC-SA 4.0, "
+                "non-commercial)"
+            )
 
 
 TRANSCRIBE_MODELS = ["LocalWhisper", "FasterWhisper", "OpenAI"]

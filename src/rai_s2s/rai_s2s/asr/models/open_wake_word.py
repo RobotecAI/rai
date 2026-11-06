@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from typing import Any, Tuple
 
+import openwakeword
 from numpy.typing import NDArray
 from openwakeword.model import Model as OWWModel
 from openwakeword.utils import download_models
@@ -53,16 +55,34 @@ class OpenWakeWord(BaseVoiceDetectionModel):
         Parameters
         ----------
         wake_word_model_path : str
-            Path to the wake word model file.
+            Path to the wake word model file, or the name of an openWakeWord pre-trained
+            model. The pre-trained models are licensed CC BY-NC-SA 4.0 (non-commercial).
         threshold : float, optional
             Confidence threshold for wake word detection. Default is 0.1.
         """
         super(OpenWakeWord, self).__init__()
         self.model_name = "open_wake_word"
-        download_models()
+        model = wake_word_model_path.strip()
+        if os.path.isfile(model):
+            # An own model. download_models() with no names fetches every pre-trained wake word
+            # model (CC BY-NC-SA 4.0) and matches names as substrings of their file names; an
+            # absolute path is in none of them, so only the feature extraction and VAD models come.
+            download_models(model_names=[os.path.abspath(model)])
+        else:
+            key = model.replace(" ", "_")
+            if key not in openwakeword.MODELS:
+                raise ValueError(
+                    f"OpenWakeWord needs a model: {wake_word_model_path!r} is not a file, nor the name "
+                    f"of an openWakeWord pre-trained model ({', '.join(sorted(openwakeword.MODELS))}; "
+                    "CC BY-NC-SA 4.0, non-commercial)"
+                )
+            # The file name of exactly this model, so no other pre-trained model is fetched.
+            file_name = openwakeword.MODELS[key]["download_url"].split("/")[-1]
+            download_models(model_names=[file_name.removesuffix(".tflite")])
+            model = key
         self.model = OWWModel(
             wakeword_models=[
-                wake_word_model_path,
+                model,
             ],
             inference_framework="onnx",
         )

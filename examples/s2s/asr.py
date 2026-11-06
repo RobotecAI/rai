@@ -48,6 +48,14 @@ def parse_arguments():
         help="OpenWakeWord threshold (default: 0.1)",
     )
     parser.add_argument(
+        "--wake-word-model",
+        type=str,
+        default=None,
+        help="Path to an openWakeWord model, or the name of an openWakeWord pre-trained model "
+        "(e.g. 'hey jarvis'; the pre-trained models are CC BY-NC-SA 4.0, non-commercial). "
+        "Default: no wake word",
+    )
+    parser.add_argument(
         "--vad-sampling-rate",
         type=int,
         choices=[8000, 16000],
@@ -91,7 +99,6 @@ if __name__ == "__main__":
         is_output=False,
     )
     vad = SileroVAD(args.vad_sampling_rate, args.vad_threshold)
-    oww = OpenWakeWord("hey jarvis", args.oww_threshold)
     whisper = LocalWhisper("tiny", args.vad_sampling_rate)
     # you can easily switch the the provider by changing the whisper object
     # whisper = OpenAIWhisper("whisper-1", args.vad_sampling_rate, "en")
@@ -101,7 +108,9 @@ if __name__ == "__main__":
 
     agent = SpeechRecognitionAgent(microphone_configuration, ros2_name, whisper, vad)
     # optionally add additional models to decide when to record data for transcription
-    # agent.add_detection_model(oww, pipeline="record")
+    if args.wake_word_model:
+        oww = OpenWakeWord(args.wake_word_model, args.oww_threshold)
+        agent.add_detection_model(oww, pipeline="record")
 
     agent.run()
 

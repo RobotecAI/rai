@@ -32,6 +32,14 @@ def test_negative_silence_grace_period_rejected():
         VADConfig(silence_grace_period=-1.0)
 
 
+def test_wake_word_has_no_default_model():
+    assert WWConfig().model_name == ""
+    for empty in ("", " "):
+        with pytest.raises(ValueError, match="wake_word_model_name"):
+            WWConfig(is_used=True, model_name=empty)
+    assert WWConfig(is_used=True, model_name="my_model.onnx").is_used
+
+
 def test_defaults_are_valid():
     assert VADConfig().threshold == 0.5
     assert WWConfig().threshold == 0.01

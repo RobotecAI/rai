@@ -281,6 +281,8 @@ class GetGrabbingPointTool(BaseTool):
         # TODO: Filter out outliers
         points = pcd
 
+        # The grasp height and rotation below are adapted from tabletop-handybot by Yifei Cheng,
+        # Apache License 2.0 (as its package.xml and setup.py declare); see the NOTICE of rai_perception.
         # https://github.com/ycheng517/tabletop-handybot/blob/6d401e577e41ea86529d091b406fbfc936f37a8d/tabletop_handybot/tabletop_handybot/tabletop_handybot_node.py#L413-L424
         grasp_z = points[:, 2].max()
         near_grasp_z_points = points[points[:, 2] > grasp_z - 0.008]

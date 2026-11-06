@@ -30,6 +30,10 @@ Takes the audio data encoded as 2 byte ints and returns the string with transcri
 
 [OpenWakeWord](https://github.com/dscripka/openWakeWord) is an open source package containing multiple pre-configured models, as well as allowing for using custom wake words.
 Refer to the package documentation for adding custom wake words.
+No wake word model is set by default. The openWakeWord code is Apache-2.0, but its pre-trained wake word
+models (for example "hey jarvis") are licensed [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+(non-commercial). Naming a pre-trained model opts in to downloading it and to that licence; for commercial use,
+train and set your own model.
 
 The model is expected to return `True` if the wake word is detected in the audio sample contains it.
 

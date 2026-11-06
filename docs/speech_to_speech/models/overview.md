@@ -50,6 +50,9 @@ This method takes raw audio data encoded as 2-byte integers and returns the corr
 
 -   Open source project: [GitHub](https://github.com/dscripka/openWakeWord)
 -   Supports predefined and custom wake words
+-   No wake word model is set by default. The predefined (pre-trained) models are licensed
+    [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) (non-commercial); for commercial
+    use, train and set your own model
 -   Returns `True` when the specified wake word is detected in the audio
 
 ??? info "OpenWakeWord"
