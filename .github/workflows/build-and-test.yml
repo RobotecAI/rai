@@ -18,11 +18,10 @@ jobs:
   build-and-test-ros2:
     if: github.event.pull_request.draft == false
 
-    runs-on:
-      - self-hosted
-      - ${{ matrix.ros_distro }}
+    runs-on: ubuntu-24.04
 
     continue-on-error: true
+    timeout-minutes: 45
 
     strategy:
       matrix:
@@ -49,8 +48,14 @@ jobs:
           DEBIAN_FRONTEND=noninteractive apt-get --yes install jackd
           jackd -d dummy -r 44100 &
 
+      # CPU-only torch: the CUDA build does not fit on a GitHub-hosted runner.
+      # --no-deps keeps the exact versions from uv.lock.
       - name: Install python dependencies
-        run: uv sync --all-groups
+        shell: bash
+        run: |
+          uv export --all-groups --frozen --no-hashes | grep -vE '^(nvidia-|triton==)' > /tmp/requirements-cpu.txt
+          uv venv --python /usr/bin/python3
+          uv pip install --no-deps --torch-backend cpu -r /tmp/requirements-cpu.txt
 
       - name: Update rosdep
         shell: bash
@@ -78,7 +83,7 @@ jobs:
         shell: bash
         run: |
           source setup_shell.sh
-          pytest -m "not billable and not manual" --cov=./src/rai_core --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
+          pytest -m "not billable and not manual" --timeout=120 --timeout-method=thread --cov=./src/rai_core --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
 
       - name: Upload coverage to Codecov
         if: ${{ matrix.ros_distro == 'jazzy' }}
