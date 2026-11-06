@@ -27,6 +27,7 @@ from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 from rclpy.qos import QoSProfile
+from rclpy.task import Future
 from tf2_ros import Buffer, LookupException, TransformListener, TransformStamped
 
 from rai.communication import BaseConnector
@@ -159,23 +160,19 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
             raise ValueError(f"Invalid executor type: {self._executor_type}")
 
         self._executor.add_node(self._node)
-        self._stop_spinning = threading.Event()
-        self._thread = threading.Thread(target=self._spin)
+        # Spin until shutdown() completes this future. Completing it wakes the
+        # executor, so the thread exits at once. Calling Executor.shutdown()
+        # while spin() runs in another thread can leave spin() waiting forever.
+        self._stop_spinning = Future()
+        self._thread = threading.Thread(
+            target=self._executor.spin_until_future_complete,
+            args=(self._stop_spinning,),
+        )
         self._thread.start()
         self.last_executor_performance_time = time.time()
 
         # cache for last received messages
         self.last_msg: Dict[str, T] = {}
-
-    def _spin(self) -> None:
-        """Spin until shutdown() sets the stop flag.
-
-        Same loop as ``Executor.spin()``, but each wait is bounded so the flag is
-        checked. ``Executor.shutdown()`` from another thread can leave ``spin()``
-        waiting forever.
-        """
-        while not self._stop_spinning.is_set():
-            self._executor.spin_once(timeout_sec=0.1)
 
     def _executor_performance_callback(self) -> None:
         """Monitor executor performance and log warnings if it falls behind schedule.
@@ -575,7 +572,8 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         5. Shuts down the executor
         6. Destroys the ROS2 node
         """
-        self._stop_spinning.set()
+        if not self._stop_spinning.done():
+            self._stop_spinning.set_result(None)
         self._thread.join()
         self._tf_listener.unregister()
         self._actions_api.shutdown()
