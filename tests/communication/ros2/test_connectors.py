@@ -359,3 +359,9 @@ def test_ros2_connector_unique_names(ros_setup: None):
     finally:
         connector1.shutdown()
         connector2.shutdown()
+
+
+@pytest.mark.timeout(60)
+def test_ros2_connector_shutdown_does_not_hang(ros_setup: None):
+    for _ in range(100):
+        ROS2Connector().shutdown()
