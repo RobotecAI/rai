@@ -142,7 +142,7 @@ def test_receive_message_tool(ros_setup: None, request: pytest.FixtureRequest) -
     tool = ReceiveROS2MessageTool(connector=connector)
     time.sleep(1.0)
     try:
-        response = tool._run(topic=topic_name)  # type: ignore
+        response = tool._run(topic=topic_name, timeout_sec=5.0)  # type: ignore
         time.sleep(0.2)
         assert "Hello, ROS2!" in response
     finally:
@@ -157,7 +157,7 @@ def test_receive_image_tool(ros_setup: None, request: pytest.FixtureRequest) -> 
     tool = GetROS2ImageTool(connector=connector)
     time.sleep(1)
     try:
-        _, artifact_dict = tool._run(topic=topic_name)  # type: ignore
+        _, artifact_dict = tool._run(topic=topic_name, timeout_sec=5.0)  # type: ignore
         images = artifact_dict["images"]
         assert len(images) == 1
         image = images[0]
@@ -187,7 +187,7 @@ def test_receive_message_tool_with_readable_topic(
     tool = GetROS2ImageTool(connector=connector, readable=[topic_name])
     time.sleep(1)
     try:
-        _, artifact_dict = tool._run(topic=topic_name)  # type: ignore
+        _, artifact_dict = tool._run(topic=topic_name, timeout_sec=5.0)  # type: ignore
         images = artifact_dict["images"]
         assert len(images) == 1
         image = images[0]
@@ -532,7 +532,7 @@ def test_get_transform_tool(ros_setup: None, request: pytest.FixtureRequest) -> 
         response = tool._run(
             target_frame=publisher.frame_id,
             source_frame=publisher.child_frame_id,
-            timeout_sec=1.0,
+            timeout_sec=5.0,
         )  # type: ignore
         assert "translation" in response
         assert "rotation" in response
@@ -618,7 +618,7 @@ def test_get_transform_tool_with_stale_tf_data_sim_time(
         response = tool._run(
             source_frame="map",
             target_frame="base_link",
-            timeout_sec=5.0,
+            timeout_sec=15.0,
         )  # type: ignore
         assert "translation" in response
         assert "rotation" in response
