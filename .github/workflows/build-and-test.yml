@@ -23,6 +23,7 @@ jobs:
       - ${{ matrix.ros_distro }}
 
     continue-on-error: true
+    timeout-minutes: 30
 
     strategy:
       matrix:
@@ -78,7 +79,7 @@ jobs:
         shell: bash
         run: |
           source setup_shell.sh
-          pytest -m "not billable and not manual" --cov=./src/rai_core --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
+          pytest -m "not billable and not manual" --timeout=120 --timeout-method=thread --cov=./src/rai_core --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
 
       - name: Upload coverage to Codecov
         if: ${{ matrix.ros_distro == 'jazzy' }}
