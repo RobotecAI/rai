@@ -23,11 +23,7 @@ import rclpy.executors
 import rclpy.node
 import rclpy.time
 from rclpy.duration import Duration
-from rclpy.executors import (
-    ExternalShutdownException,
-    MultiThreadedExecutor,
-    SingleThreadedExecutor,
-)
+from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 from rclpy.qos import QoSProfile
@@ -172,17 +168,14 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         self.last_msg: Dict[str, T] = {}
 
     def _spin(self) -> None:
-        """Spin the executor until shutdown.
+        """Spin until shutdown() sets the stop flag.
 
-        Uses a bounded wait instead of ``Executor.spin()``. Calling
-        ``Executor.shutdown()`` from another thread can leave ``spin()`` waiting
-        forever on an empty wait set.
+        Same loop as ``Executor.spin()``, but each wait is bounded so the flag is
+        checked. ``Executor.shutdown()`` from another thread can leave ``spin()``
+        waiting forever.
         """
-        try:
-            while not self._stop_spinning.is_set() and self._node.context.ok():
-                self._executor.spin_once(timeout_sec=0.1)
-        except ExternalShutdownException:
-            pass
+        while not self._stop_spinning.is_set():
+            self._executor.spin_once(timeout_sec=0.1)
 
     def _executor_performance_callback(self) -> None:
         """Monitor executor performance and log warnings if it falls behind schedule.
@@ -575,7 +568,7 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         """Shutdown the connector and clean up resources.
 
         This method:
-        1. Stops the executor thread and waits for it
+        1. Stops the executor thread
         2. Unregisters the TF listener
         3. Shuts down the action API
         4. Shuts down the topic API
@@ -583,9 +576,7 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         6. Destroys the ROS2 node
         """
         self._stop_spinning.set()
-        self._thread.join(timeout=5.0)
-        if self._thread.is_alive():
-            self.logger.warning("Executor thread did not stop within 5 s")
+        self._thread.join()
         self._tf_listener.unregister()
         self._actions_api.shutdown()
         self._topic_api.shutdown()
