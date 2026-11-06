@@ -37,7 +37,8 @@ dependencies = [
     "pillow>=11.0.0,<12.0.0",
     "langfuse>=3.8.0,<4.0.0",
     "pydub>=0.25.1,<0.26.0",
-    "streamlit>=1.44,<2.0.0",
+    "streamlit>=1.67,<2.0.0; python_version >= '3.11'",
+    "streamlit>=1.65,<2.0.0; python_version < '3.11'",
     "numpy<2.0",
 ]
 
