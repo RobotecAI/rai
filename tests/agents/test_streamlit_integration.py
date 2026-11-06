@@ -31,6 +31,8 @@ def test_streams_tokens_and_matches_tool_calls_by_run_id():
     for token in ["Hello", " robot"]:
         cb.on_llm_new_token(token, run_id=uuid4())
     assert answer.markdown.call_args.args[0].startswith("Hello robot")
+    cb.on_llm_end(None)
+    assert answer.markdown.call_args.args[0] == "Hello robot"
 
     camera_id, pose_id = uuid4(), uuid4()
     cb.on_tool_start({"name": "camera"}, "{}", run_id=camera_id)
@@ -48,6 +50,27 @@ def test_streams_tokens_and_matches_tool_calls_by_run_id():
     assert pose.update.call_args.kwargs["state"] == "complete"
 
 
-def test_streamlit_invoke_requires_list():
+def test_tool_error_marks_block_failed_and_ignores_unknown_run_id():
+    parent = MagicMock()
+    status = parent.container.return_value.status.return_value
+    cb = get_streamlit_cb(parent)
+
+    run_id = uuid4()
+    cb.on_tool_start({"name": "arm"}, "{}", run_id=run_id)
+    cb.on_tool_error(RuntimeError("stuck"), run_id=run_id)
+    status.error.assert_called_once_with("RuntimeError: stuck")
+    assert status.update.call_args.kwargs["state"] == "error"
+
+    cb.on_tool_end("late", run_id=uuid4())
+    cb.on_tool_error(RuntimeError("late"), run_id=uuid4())
+    status.code.assert_called_once()  # only the input, nothing from unknown runs
+
+
+def test_streamlit_invoke():
+    graph, handler = MagicMock(), MagicMock()
+    streamlit_invoke(graph, [], [handler])
+    _, kwargs = graph.invoke.call_args
+    assert graph.invoke.call_args.args[0] == {"messages": []}
+    assert kwargs["config"]["callbacks"] == [handler]
     with pytest.raises(TypeError):
-        streamlit_invoke(MagicMock(), [], ())
+        streamlit_invoke(graph, [], ())
