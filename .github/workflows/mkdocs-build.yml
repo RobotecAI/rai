@@ -16,7 +16,7 @@ jobs:
       image: python:3.12-slim
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           clean: true
 
