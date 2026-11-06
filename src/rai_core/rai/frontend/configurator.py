@@ -553,7 +553,9 @@ def asr():
             value=st.session_state.config.get("asr", {}).get(
                 "wake_word_model_name", ""
             ),
-            help="Specific wake word model to use",
+            help="Path to your own openWakeWord model, or the name of an openWakeWord "
+            "pre-trained model (e.g. 'hey jarvis'). The pre-trained models are licensed "
+            "CC BY-NC-SA 4.0 (non-commercial). No model is set by default.",
             key="wake_word_model_name_input",
             on_change=on_wake_word_model_name_change,
         )
