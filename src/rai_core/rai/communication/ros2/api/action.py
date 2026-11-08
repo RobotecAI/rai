@@ -206,9 +206,8 @@ class ROS2ActionAPI(BaseROS2API):
         goal: Dict[str, Any],
         *,
         feedback_callback: Callable[[Any], None] = lambda _: None,
-        done_callback: Callable[
-            [Any], None
-        ] = lambda _: None,  # TODO: handle done callback
+        # TODO: handle done callback
+        done_callback: Callable[[Any], None] = lambda _: None,
         timeout_sec: float = 1.0,
     ) -> Tuple[bool, Annotated[str, "action handle"]]:
         handle = self._generate_handle()

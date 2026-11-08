@@ -58,6 +58,29 @@ rai_bench = { path = "src/rai_bench", editable = true }
 rai_perception = { path = "src/rai_extensions/rai_perception", editable = true }
 
 
+[tool.ruff]
+# Python snippets in docs are not formatted.
+extend-exclude = ["*.md"]
+
+[tool.ruff.lint]
+# Keep the rule set that ruff used by default before 0.15; pre-commit extends it with I and RUF022.
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.lint.isort]
+# Workspace packages live in src/<name>/<name>, which newer ruff no longer resolves as first-party on its own.
+known-first-party = [
+    "rai_bench",
+    "rai_bringup",
+    "rai_core",
+    "rai_extensions",
+    "rai_finetune",
+    "rai_interfaces",
+    "rai_s2s",
+    "rai_semap",
+    "rai_sim",
+    "rai_whoami",
+]
+
 [tool.pytest.ini_options]
 markers = [
     "billable: marks test as billable  (deselect with '-m \"not billable\"')",
