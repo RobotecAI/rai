@@ -27,6 +27,7 @@ from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 from rclpy.qos import QoSProfile
+from rclpy.task import Future
 from tf2_ros import Buffer, LookupException, TransformListener, TransformStamped
 
 from rai.communication import BaseConnector
@@ -159,7 +160,14 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
             raise ValueError(f"Invalid executor type: {self._executor_type}")
 
         self._executor.add_node(self._node)
-        self._thread = threading.Thread(target=self._executor.spin)
+        # Spin until shutdown() completes this future. Completing it wakes the
+        # executor, so the thread exits at once. Calling Executor.shutdown()
+        # while spin() runs in another thread can leave spin() waiting forever.
+        self._stop_spinning = Future()
+        self._thread = threading.Thread(
+            target=self._executor.spin_until_future_complete,
+            args=(self._stop_spinning,),
+        )
         self._thread.start()
         self.last_executor_performance_time = time.time()
 
@@ -557,16 +565,18 @@ class ROS2BaseConnector(ROS2ActionMixin, ROS2ServiceMixin, BaseConnector[T]):
         """Shutdown the connector and clean up resources.
 
         This method:
-        1. Unregisters the TF listener
-        2. Destroys the ROS2 node
+        1. Stops the executor thread
+        2. Unregisters the TF listener
         3. Shuts down the action API
         4. Shuts down the topic API
         5. Shuts down the executor
-        6. Joins the executor thread
+        6. Destroys the ROS2 node
         """
+        if not self._stop_spinning.done():
+            self._stop_spinning.set_result(None)
+        self._thread.join()
         self._tf_listener.unregister()
-        self._node.destroy_node()
         self._actions_api.shutdown()
         self._topic_api.shutdown()
         self._executor.shutdown()
-        self._thread.join()
+        self._node.destroy_node()
