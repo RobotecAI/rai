@@ -873,7 +873,7 @@ def review_and_save():
                         "text": "Hello, world!",
                     }
                     response = requests.get(
-                        "http://localhost:5500/api/tts", params=params
+                        "http://localhost:5500/api/tts", params=params, timeout=(5, 60)
                     )
                     if response.status_code == 200:
                         return True
