@@ -15,10 +15,20 @@
 """Helper functions for model weight management and loading."""
 
 import os
+import shutil
 import time
 import urllib.request
 from logging import Logger
 from pathlib import Path
+from typing import Callable, Optional
+
+# Substrings of errors raised when a weights file is truncated or corrupted.
+_CORRUPTION_MARKERS = (
+    "PytorchStreamReader",  # torch.load on a damaged .pt/.pth zip archive
+    "Error while deserializing header",  # safetensors
+    "incomplete metadata",  # safetensors
+    "SafetensorError",
+)
 
 
 def load_model_with_error_handling(
@@ -27,39 +37,44 @@ def load_model_with_error_handling(
     logger: Logger,
     weights_url: str,
     config_path: str | Path | None = None,
+    redownload: Optional[Callable[[], None]] = None,
 ):
     """Load model with automatic error handling for corrupted weights.
 
     Args:
         model_class: A class that can be instantiated with weights_path and optionally config_path
-        weights_path: Path to model weights file
+        weights_path: Path to model weights file or directory
         logger: Logger instance for error messages
         weights_url: URL to download weights from if corrupted
         config_path: Optional path to config file
+        redownload: Optional callable that re-fetches the weights to ``weights_path``.
+            Defaults to downloading ``weights_url`` as a single file.
 
     Returns:
         The loaded model instance
 
     Raises:
-        RuntimeError: If model loading fails (after retry)
+        Exception: If model loading fails (after retry)
     """
-    try:
+
+    def _instantiate():
         if config_path is not None:
             return model_class(weights_path, config_path=config_path)
-        else:
-            return model_class(weights_path)
-    except RuntimeError as e:
+        return model_class(weights_path)
+
+    try:
+        return _instantiate()
+    except Exception as e:
         logger.error(f"Could not load model: {e}")
-        if "PytorchStreamReader" in str(e):
+        if any(marker in f"{type(e).__name__}: {e}" for marker in _CORRUPTION_MARKERS):
             logger.error("The weights might be corrupted. Redownloading...")
             remove_weights(weights_path)
-            download_weights(weights_path, logger, weights_url)
-            if config_path is not None:
-                return model_class(weights_path, config_path=config_path)
+            if redownload is not None:
+                redownload()
             else:
-                return model_class(weights_path)
-        else:
-            raise e
+                download_weights(weights_path, logger, weights_url)
+            return _instantiate()
+        raise e
 
 
 def _log_progress(
@@ -140,14 +155,65 @@ def download_weights(
         raise Exception(f"Could not download weights: {e}") from e
 
 
-def remove_weights(weights_path: Path):
-    """Remove weights file.
+def download_hf_snapshot(
+    local_dir: Path,
+    logger: Logger,
+    repo_id: str,
+    revision: Optional[str] = None,
+) -> None:
+    """Download a Hugging Face Hub model repository into ``local_dir``.
+
+    Only safetensors weights plus the JSON/text config, tokenizer and preprocessor files
+    are fetched; pickle-based ``*.bin`` weights are skipped. The snapshot is written to a
+    ``.part`` directory and renamed into place, so a failed download never leaves a
+    partial model at ``local_dir``.
 
     Args:
-        weights_path: Path to weights file to remove
+        local_dir: Directory where the model files should end up
+        logger: Logger instance for status messages
+        repo_id: Hugging Face Hub repository id, e.g. "IDEA-Research/grounding-dino-tiny"
+        revision: Optional git revision (commit sha, branch or tag) to pin
+
+    Raises:
+        Exception: If download fails
+    """
+    from huggingface_hub import snapshot_download
+
+    logger.info(
+        f"Downloading {repo_id}@{revision or 'main'} from the Hugging Face Hub to {local_dir}"
+    )
+    tmp_dir = local_dir.with_name(local_dir.name + ".part")
+    try:
+        if tmp_dir.exists():
+            shutil.rmtree(tmp_dir)
+        snapshot_download(
+            repo_id=repo_id,
+            revision=revision,
+            local_dir=tmp_dir,
+            allow_patterns=["*.json", "*.txt", "*.safetensors"],
+        )
+        if local_dir.exists():
+            remove_weights(local_dir)
+        tmp_dir.rename(local_dir)
+        size = sum(f.stat().st_size for f in local_dir.rglob("*") if f.is_file())
+        logger.info(f"Successfully downloaded {repo_id} ({size / 1024**2:.2f} MB)")
+    except Exception as e:
+        if tmp_dir.exists():
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+        raise Exception(f"Could not download weights: {e}") from e
+
+
+def remove_weights(weights_path: Path):
+    """Remove a weights file or a downloaded model directory.
+
+    Args:
+        weights_path: Path to weights file or directory to remove
     """
     try:
-        os.remove(weights_path)
+        if Path(weights_path).is_dir():
+            shutil.rmtree(weights_path)
+        else:
+            os.remove(weights_path)
     except FileNotFoundError:
         # File already removed, idempotent operation
         pass

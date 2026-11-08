@@ -34,6 +34,22 @@ def create_test_weights_file(tmp_path, filename="weights.pth"):
     return weights_path
 
 
+def create_test_model_dir(tmp_path, dirname="grounding-dino-tiny"):
+    """Helper to create a stand-in transformers model directory.
+
+    Args:
+        tmp_path: Temporary directory path
+        dirname: Name of the model directory
+
+    Returns:
+        Path to created directory
+    """
+    model_dir = tmp_path / dirname
+    model_dir.mkdir(parents=True, exist_ok=True)
+    (model_dir / "config.json").write_text("{}")
+    return model_dir
+
+
 def create_mock_image_array(shape=(100, 100, 3), dtype=np.uint8):
     """Helper to create a mock image array for testing.
 

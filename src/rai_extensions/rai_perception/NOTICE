@@ -5,10 +5,6 @@ Portions of this software are copyright of their respective contributors as indi
 file headers, licensed under the Apache License, Version 2.0.
 
 Third-party components:
-- GroundingDINO configuration
-  (rai_perception/configs/gdino_config.py),
-  Copyright IDEA-Research, Apache License 2.0,
-  https://github.com/IDEA-Research/GroundingDINO
 - SAM 2 model configuration
   (rai_perception/configs/seg_config.yml, adapted from sam2_hiera_l.yaml),
   Copyright Meta Platforms, Inc. and affiliates, Apache License 2.0,

@@ -22,6 +22,7 @@ import rclpy
 from rclpy.parameter import Parameter
 
 from tests.rai_perception.conftest import (
+    create_valid_model_dir,
     create_valid_weights_file,
     patch_ros2_for_service_tests,
 )
@@ -72,6 +73,7 @@ def patch_detection_service_dependencies(
         patch("rai_perception.models.detection.get_model") as mock_get_model,
         patch_ros2_for_service_tests(mock_connector),
         patch("rai_perception.services.base_vision_service.download_weights"),
+        patch("rai_perception.services.base_vision_service.download_hf_snapshot"),
         patch(
             "rai_perception.services.detection_service.DetectionService._load_model_with_error_handling"
         ) as mock_load_model,
@@ -126,6 +128,7 @@ def patch_detection_agent_dependencies(mock_connector, mock_boxer_class, weights
         patch("rai_perception.models.detection.get_model") as mock_get_model,
         patch_ros2_for_agent_tests(mock_connector),
         patch("rai_perception.services.base_vision_service.download_weights"),
+        patch("rai_perception.services.base_vision_service.download_hf_snapshot"),
         patch(
             "rai_perception.services.detection_service.DetectionService._load_model_with_error_handling"
         ) as mock_load_model,
@@ -173,10 +176,10 @@ def get_detection_weights_path(tmp_path: Path) -> Path:
         tmp_path: Temporary directory path
 
     Returns:
-        Path to detection weights file
+        Path to detection model directory
     """
-    weights_path = tmp_path / "vision" / "weights" / "groundingdino_swint_ogc.pth"
-    create_valid_weights_file(weights_path)
+    weights_path = tmp_path / "vision" / "weights" / "grounding-dino-tiny"
+    create_valid_model_dir(weights_path)
     return weights_path
 
 
@@ -198,9 +201,9 @@ def get_default_detection_weights_path() -> Path:
     """Get default detection weights path in home directory.
 
     Returns:
-        Path to default detection weights file
+        Path to default detection model directory
     """
-    return Path.home() / ".cache/rai/vision/weights/groundingdino_swint_ogc.pth"
+    return Path.home() / ".cache/rai/vision/weights/grounding-dino-tiny"
 
 
 def get_default_segmentation_weights_path() -> Path:
@@ -230,6 +233,7 @@ def patch_detection_agent_dependencies_default_path(
         patch("rai_perception.models.detection.get_model") as mock_get_model,
         patch_ros2_for_agent_tests(mock_connector),
         patch("rai_perception.services.base_vision_service.download_weights"),
+        patch("rai_perception.services.base_vision_service.download_hf_snapshot"),
         patch(
             "rai_perception.services.detection_service.DetectionService._load_model_with_error_handling"
         ) as mock_load_model,

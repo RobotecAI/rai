@@ -20,7 +20,6 @@ All classes delegate to rai_perception.algorithms.boxer.
 
 import warnings
 from os import PathLike
-from pathlib import Path
 
 from rai_perception.algorithms.boxer import Box
 from rai_perception.algorithms.boxer import GDBoxer as AlgorithmsGDBoxer
@@ -41,7 +40,7 @@ class GDBoxer(AlgorithmsGDBoxer):
         """Initialize GDBoxer (deprecated wrapper).
 
         Args:
-            weight_path: Path to model weights file
+            weight_path: Model weights (see rai_perception.algorithms.boxer.GDBoxer)
             use_cuda: Whether to use CUDA if available
         """
         warnings.warn(
@@ -51,10 +50,7 @@ class GDBoxer(AlgorithmsGDBoxer):
             stacklevel=2,
         )
 
-        # Map old hardcoded config path to new default
-
-        config_path = Path(__file__).parent.parent / "configs" / "gdino_config.py"
-        super().__init__(weight_path, config_path=config_path, use_cuda=use_cuda)
+        super().__init__(weight_path, use_cuda=use_cuda)
 
 
 # Re-export Box class for backward compatibility

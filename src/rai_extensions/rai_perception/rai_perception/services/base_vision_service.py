@@ -22,12 +22,17 @@ Note: This class is named "service" (not "agent") to avoid confusion with the RA
 abstraction (rai.agents.BaseAgent).
 """
 
+from logging import Logger
 from pathlib import Path
 from typing import Optional
 
 from rai.communication.ros2 import ROS2Connector
 
-from .weights import download_weights, load_model_with_error_handling
+from .weights import (
+    download_hf_snapshot,
+    download_weights,
+    load_model_with_error_handling,
+)
 
 
 class BaseVisionService:
@@ -40,6 +45,10 @@ class BaseVisionService:
     DEFAULT_WEIGHTS_ROOT_PATH: Path = Path.home() / Path(".cache/rai/")
     WEIGHTS_DIR_PATH_PART: Path = Path("vision/weights")
     WEIGHTS_FILENAME: str = ""
+    # When set, weights are a Hugging Face Hub snapshot downloaded into the directory
+    # WEIGHTS_FILENAME instead of a single file fetched from WEIGHTS_URL.
+    HF_REPO_ID: str = ""
+    HF_REVISION: Optional[str] = None
 
     def __init__(
         self,
@@ -64,7 +73,19 @@ class BaseVisionService:
         self.logger = self.ros2_connector.node.get_logger()
 
         if not self.weights_path.exists():
-            download_weights(self.weights_path, self.logger, self.WEIGHTS_URL)
+            self.fetch_weights(self.weights_path, self.logger)
+
+    @classmethod
+    def fetch_weights(cls, weights_path: Path, logger: Logger) -> None:
+        """Download this service's weights to ``weights_path``.
+
+        Uses the Hugging Face Hub snapshot when ``HF_REPO_ID`` is set, otherwise
+        downloads ``WEIGHTS_URL`` as a single file.
+        """
+        if cls.HF_REPO_ID:
+            download_hf_snapshot(weights_path, logger, cls.HF_REPO_ID, cls.HF_REVISION)
+        else:
+            download_weights(weights_path, logger, cls.WEIGHTS_URL)
 
     def _load_model_with_error_handling(
         self, model_class, config_path: str | Path | None = None
@@ -79,7 +100,12 @@ class BaseVisionService:
             The loaded model instance
         """
         return load_model_with_error_handling(
-            model_class, self.weights_path, self.logger, self.WEIGHTS_URL, config_path
+            model_class,
+            self.weights_path,
+            self.logger,
+            self.WEIGHTS_URL,
+            config_path,
+            redownload=lambda: self.fetch_weights(self.weights_path, self.logger),
         )
 
     def _get_param_value(self, param_name: str, default):
