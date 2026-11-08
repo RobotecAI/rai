@@ -7,6 +7,9 @@ on:
       - development
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   pre-commit:
     runs-on: ubuntu-24.04
@@ -20,8 +23,9 @@ jobs:
           apt update && apt install -y python3-pip shellcheck python-is-python3
 
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - run: |
@@ -33,6 +37,6 @@ jobs:
           vcs import . < ros_deps.repos
 
       - name: Run pre-commit
-        uses: pre-commit/action@v3.0.1
+        uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
         with:
           extra_args: "--all-files"

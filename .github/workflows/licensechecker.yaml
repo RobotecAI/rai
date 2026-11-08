@@ -1,9 +1,14 @@
 name: Check License Lines
 on: [pull_request]
+permissions:
+  contents: read
+
 jobs:
   check-license-lines:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Check License Lines
-        uses: kt3k/license_checker@v1.0.6
+        uses: kt3k/license_checker@d12a6d90c58e30fefed09f2c4d03ba57f4c673a8 # v1.0.6
