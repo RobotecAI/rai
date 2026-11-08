@@ -37,7 +37,7 @@ semap = ["rai_semap"]
 simbench = ["rai_sim", "rai_bench"]
 perception = ["rai_perception"]
 nomad = [
-    "visualnav_transformer @ git+https://github.com/RobotecAI/visualnav-transformer-ros2.git@bdbac0425eb7bc4ca161bf7dac8d707f7a1f6cd7",
+    "visualnav_transformer @ git+https://github.com/RobotecAI/visualnav-transformer-ros2.git@bdced61b2499f52f755454ebca0fb415adfc4d25",
     "gdown>=5.2.0,<6.0.0",
 ]
 

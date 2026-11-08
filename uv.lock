@@ -1366,25 +1366,60 @@ wheels = [
 
 [[package]]
 name = "diffusers"
-version = "0.29.2"
+version = "0.41.0"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version < '3.11' and sys_platform == 'darwin'",
+    "python_full_version < '3.11' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux')",
+    "python_full_version < '3.11' and sys_platform == 'emscripten'",
+]
 dependencies = [
-    { name = "filelock", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "filelock", version = "4.2.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "filelock", version = "4.1.0", source = { registry = "https://pypi.org/simple" } },
     { name = "huggingface-hub" },
-    { name = "importlib-metadata", version = "9.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "importlib-metadata", version = "10.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "importlib-metadata", version = "9.0.1", source = { registry = "https://pypi.org/simple" } },
     { name = "numpy" },
-    { name = "pillow", version = "12.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "pillow", version = "13.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "regex", version = "2026.9.29", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "regex", version = "2026.11.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "pillow", version = "12.3.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "regex", version = "2026.9.29", source = { registry = "https://pypi.org/simple" } },
     { name = "requests" },
     { name = "safetensors" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/15/bc/5a408779c6704cd60d07758bf15931c581214549c1b197203f4989b36ac6/diffusers-0.29.2.tar.gz", hash = "sha256:b85f277668e22089cf68b40dd9b76940db7d24ba9cdac107533ed10ab8e4e9db", size = 1748951, upload-time = "2024-06-27T03:58:41.588Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a8/bc/34a91d366fe8e546637d702403e4d8cd5dbdf705a15fb3725d34a7ab3416/diffusers-0.41.0.tar.gz", hash = "sha256:69dcced7230b6bc0b70b5c6cfdff1aa62da487ab52ae74b642e46b1b9bfacc47", size = 5026281, upload-time = "2026-10-06T06:24:14.884Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ee/22/2e6e90c87e718e63b1a860cb627bcf27ac4998edb5f190561b5c6cde6c62/diffusers-0.29.2-py3-none-any.whl", hash = "sha256:d5e9bb13c8097b4eed10df23d1294d2e5a418f53e3f89c7ef228b5b982970428", size = 2231100, upload-time = "2024-06-27T03:58:38.466Z" },
+    { url = "https://files.pythonhosted.org/packages/fe/c4/5bf8afd1ff3a8d99da7a18b1067ae0b4e2a037c38f3851890a989c511fd3/diffusers-0.41.0-py3-none-any.whl", hash = "sha256:ea8918b7dfd92ce793b6db689a551b8cd25d52c6c0fcd3ade0706a5fd2a25990", size = 6063887, upload-time = "2026-10-06T06:24:12.455Z" },
+]
+
+[[package]]
+name = "diffusers"
+version = "0.42.1"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.12' and sys_platform == 'darwin'",
+    "python_full_version >= '3.12' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version >= '3.12' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version >= '3.12' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux')",
+    "python_full_version >= '3.12' and sys_platform == 'emscripten'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'darwin'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version >= '3.11.5' and python_full_version < '3.12' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux')",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten'",
+    "python_full_version >= '3.11' and python_full_version < '3.11.5' and sys_platform == 'darwin'",
+    "python_full_version >= '3.11' and python_full_version < '3.11.5' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version >= '3.11' and python_full_version < '3.11.5' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version >= '3.11' and python_full_version < '3.11.5' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux')",
+    "python_full_version >= '3.11' and python_full_version < '3.11.5' and sys_platform == 'emscripten'",
+]
+dependencies = [
+    { name = "filelock", version = "4.2.9", source = { registry = "https://pypi.org/simple" } },
+    { name = "huggingface-hub" },
+    { name = "importlib-metadata", version = "10.1.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "numpy" },
+    { name = "pillow", version = "13.0.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "regex", version = "2026.11.7", source = { registry = "https://pypi.org/simple" } },
+    { name = "requests" },
+    { name = "safetensors" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a1/4f/21d79e9a2f040416ef4707fbd1bcbaa6f31d33cf63159d78647f78944792/diffusers-0.42.1.tar.gz", hash = "sha256:ce855ab670c8cd1c7a61be8f12fbc68c081bca8ec5e747273946d8d6c2aff23b", size = 5264977, upload-time = "2026-10-27T07:22:26.434Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e1/e9/4328c781bc64f8b74363f66674c00e65021e9a857fb9cb4882ed447956cd/diffusers-0.42.1-py3-none-any.whl", hash = "sha256:9154faa704ce00e0b77f568e0d64786064368528aab5fc14eeea92f87d788014", size = 6355908, upload-time = "2026-10-27T07:22:24.331Z" },
 ]
 
 [[package]]
@@ -1402,7 +1437,8 @@ dependencies = [
     { name = "cmake" },
     { name = "cython" },
     { name = "datasets" },
-    { name = "diffusers" },
+    { name = "diffusers", version = "0.41.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "diffusers", version = "0.42.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "dill" },
     { name = "einops" },
     { name = "gym" },
@@ -6807,7 +6843,7 @@ docs = [
 ]
 nomad = [
     { name = "gdown", specifier = ">=5.2.0,<6.0.0" },
-    { name = "visualnav-transformer", git = "https://github.com/RobotecAI/visualnav-transformer-ros2.git?rev=bdbac0425eb7bc4ca161bf7dac8d707f7a1f6cd7" },
+    { name = "visualnav-transformer", git = "https://github.com/RobotecAI/visualnav-transformer-ros2.git?rev=bdced61b2499f52f755454ebca0fb415adfc4d25" },
 ]
 perception = [{ name = "rai-perception", editable = "src/rai_extensions/rai_perception" }]
 s2s = [{ name = "rai-s2s", extras = ["all"], editable = "src/rai_s2s" }]
@@ -8932,9 +8968,10 @@ wheels = [
 [[package]]
 name = "visualnav-transformer"
 version = "0.1.0"
-source = { git = "https://github.com/RobotecAI/visualnav-transformer-ros2.git?rev=bdbac0425eb7bc4ca161bf7dac8d707f7a1f6cd7#bdbac0425eb7bc4ca161bf7dac8d707f7a1f6cd7" }
+source = { git = "https://github.com/RobotecAI/visualnav-transformer-ros2.git?rev=bdced61b2499f52f755454ebca0fb415adfc4d25#bdced61b2499f52f755454ebca0fb415adfc4d25" }
 dependencies = [
-    { name = "diffusers" },
+    { name = "diffusers", version = "0.41.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "diffusers", version = "0.42.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "diffusion-policy" },
     { name = "efficientnet-pytorch" },
     { name = "numpy" },
