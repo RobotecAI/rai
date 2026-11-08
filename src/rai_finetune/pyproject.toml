@@ -10,7 +10,7 @@ dependencies = [
     "torch>=2.4.0",
     "torchvision>=0.19.0",
     "transformers>=4.51.3",
-    "datasets>=3.4.1,<4.0.0",
+    "datasets>=3.4.1,<5.0.0",  # unsloth requires datasets<5 (the 5.0.1 security fix is not reachable yet)
     "accelerate>=0.34.1",
     # Unsloth for efficient fine-tuning (with zoo dependency)
     "unsloth[colab-new]",
@@ -20,7 +20,7 @@ dependencies = [
     # Scientific computing and utilities
     "numpy>=1.21.0,<1.25.0",
     "scipy>=1.7.0,<1.12.0",
-    "scikit-learn>=1.0.0,<1.4.0",
+    "scikit-learn>=1.5.0,<2.0.0",
     "tqdm>=4.60.0,<4.67.0",
     # Hugging Face Hub integration
     "huggingface-hub>=0.34.0,<0.37.0",  # Required by unsloth[colab-new], Python 3.10 compatible
@@ -33,7 +33,7 @@ dependencies = [
     # GGUF conversion and Ollama compatibility
     "llama-cpp-python>=0.1.0,<0.3.0",
     "sentencepiece>=0.2.0,<0.3.0",  # Required by unsloth[colab-new], Python 3.10 compatible
-    "protobuf>=3.20.0,<4.22.0",
+    "protobuf>=5.29.6,<7.0.0",
     "mistral-common>=1.0.0,<2.0.0",
 ]
 
