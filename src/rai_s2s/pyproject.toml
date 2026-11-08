@@ -23,7 +23,7 @@ dependencies = [
 elevenlabs = ["elevenlabs>=1.4.1,<2.0.0"]
 whisper = ["openai-whisper>=20250625,<20250626"]
 fasterwhisper = ["faster-whisper>=1.1.1,<2.0.0"]
-wakeword = ["openwakeword @ git+https://github.com/maciejmajek/openWakeWord.git@chore/remove-tflite-backend"]
+wakeword = ["openwakeword @ git+https://github.com/maciejmajek/openWakeWord.git@f2340d82a39fe7bfb972c8c4114642fa87e5dc59"]
 kokoro = ["kokoro-onnx==0.3.3"]
 gpu = [
     "onnxruntime-gpu>=1.23,<1.24; python_version < '3.11' and platform_machine == 'x86_64'",
@@ -33,7 +33,7 @@ all = [
     "elevenlabs>=1.4.1,<2.0.0",
     "openai-whisper>=20250625,<20250626",
     "faster-whisper>=1.1.1,<2.0.0",
-    "openwakeword @ git+https://github.com/maciejmajek/openWakeWord.git@chore/remove-tflite-backend",
+    "openwakeword @ git+https://github.com/maciejmajek/openWakeWord.git@f2340d82a39fe7bfb972c8c4114642fa87e5dc59",
     "kokoro-onnx==0.3.3",
     "onnxruntime-gpu>=1.23,<1.24; python_version < '3.11' and platform_machine == 'x86_64'",
     "onnxruntime-gpu>=1.24,<2.0; python_version >= '3.11' and platform_machine == 'x86_64'",

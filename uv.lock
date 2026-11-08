@@ -20,6 +20,9 @@ resolution-markers = [
     "python_full_version < '3.11' and sys_platform == 'emscripten'",
 ]
 
+[manifest]
+overrides = [{ name = "diffusion-policy", git = "https://github.com/RobotecAI/diffusion_policy.git?rev=2356a7fbbfaf0ccccf9883b972b5a434d0f5ede3" }]
+
 [[package]]
 name = "absl-py"
 version = "2.5.1"
@@ -1363,12 +1366,11 @@ wheels = [
 
 [[package]]
 name = "diffusers"
-version = "0.39.0"
+version = "0.29.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "filelock", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "filelock", version = "4.2.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "httpx" },
     { name = "huggingface-hub" },
     { name = "importlib-metadata", version = "9.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "importlib-metadata", version = "10.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
@@ -1380,15 +1382,15 @@ dependencies = [
     { name = "requests" },
     { name = "safetensors" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1a/81/6095237b86a3116c4789f28c4435d5296c00c0fc74ffde99008fd6b3a36c/diffusers-0.39.0.tar.gz", hash = "sha256:14bb1d98c85a0e463d734c99aaa73b480a7bc9bad22af30fbf730ef8f09c1d67", size = 4651240, upload-time = "2026-07-03T08:48:47.904Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/15/bc/5a408779c6704cd60d07758bf15931c581214549c1b197203f4989b36ac6/diffusers-0.29.2.tar.gz", hash = "sha256:b85f277668e22089cf68b40dd9b76940db7d24ba9cdac107533ed10ab8e4e9db", size = 1748951, upload-time = "2024-06-27T03:58:41.588Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3f/3f/7469c46e9d22307ea686bab687d70e6bf328722952f9d10339f5e913e608/diffusers-0.39.0-py3-none-any.whl", hash = "sha256:912aca51b5787365110806e984d5555735bf8a461073bb8459029d0bca7870ef", size = 5631176, upload-time = "2026-07-03T08:48:45.337Z" },
+    { url = "https://files.pythonhosted.org/packages/ee/22/2e6e90c87e718e63b1a860cb627bcf27ac4998edb5f190561b5c6cde6c62/diffusers-0.29.2-py3-none-any.whl", hash = "sha256:d5e9bb13c8097b4eed10df23d1294d2e5a418f53e3f89c7ef228b5b982970428", size = 2231100, upload-time = "2024-06-27T03:58:38.466Z" },
 ]
 
 [[package]]
 name = "diffusion-policy"
 version = "0.1.0"
-source = { git = "https://github.com/RobotecAI/diffusion_policy.git?branch=main#2356a7fbbfaf0ccccf9883b972b5a434d0f5ede3" }
+source = { git = "https://github.com/RobotecAI/diffusion_policy.git?rev=2356a7fbbfaf0ccccf9883b972b5a434d0f5ede3#2356a7fbbfaf0ccccf9883b972b5a434d0f5ede3" }
 dependencies = [
     { name = "accelerate" },
     { name = "av", version = "17.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -5282,7 +5284,7 @@ wheels = [
 [[package]]
 name = "openwakeword"
 version = "0.6.0"
-source = { git = "https://github.com/maciejmajek/openWakeWord.git?rev=chore%2Fremove-tflite-backend#f2340d82a39fe7bfb972c8c4114642fa87e5dc59" }
+source = { git = "https://github.com/maciejmajek/openWakeWord.git?rev=f2340d82a39fe7bfb972c8c4114642fa87e5dc59#f2340d82a39fe7bfb972c8c4114642fa87e5dc59" }
 dependencies = [
     { name = "onnxruntime", version = "1.23.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "onnxruntime", version = "1.31.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
@@ -6805,7 +6807,7 @@ docs = [
 ]
 nomad = [
     { name = "gdown", specifier = ">=5.2.0,<6.0.0" },
-    { name = "visualnav-transformer", git = "https://github.com/RobotecAI/visualnav-transformer-ros2.git?rev=main" },
+    { name = "visualnav-transformer", git = "https://github.com/RobotecAI/visualnav-transformer-ros2.git?rev=bdbac0425eb7bc4ca161bf7dac8d707f7a1f6cd7" },
 ]
 perception = [{ name = "rai-perception", editable = "src/rai_extensions/rai_perception" }]
 s2s = [{ name = "rai-s2s", extras = ["all"], editable = "src/rai_s2s" }]
@@ -6906,8 +6908,8 @@ requires-dist = [
     { name = "onnxruntime-gpu", marker = "python_full_version < '3.11' and platform_machine == 'x86_64' and extra == 'gpu'", specifier = ">=1.23,<1.24" },
     { name = "openai-whisper", marker = "extra == 'all'", specifier = ">=20250625,<20250626" },
     { name = "openai-whisper", marker = "extra == 'whisper'", specifier = ">=20250625,<20250626" },
-    { name = "openwakeword", marker = "extra == 'all'", git = "https://github.com/maciejmajek/openWakeWord.git?rev=chore%2Fremove-tflite-backend" },
-    { name = "openwakeword", marker = "extra == 'wakeword'", git = "https://github.com/maciejmajek/openWakeWord.git?rev=chore%2Fremove-tflite-backend" },
+    { name = "openwakeword", marker = "extra == 'all'", git = "https://github.com/maciejmajek/openWakeWord.git?rev=f2340d82a39fe7bfb972c8c4114642fa87e5dc59" },
+    { name = "openwakeword", marker = "extra == 'wakeword'", git = "https://github.com/maciejmajek/openWakeWord.git?rev=f2340d82a39fe7bfb972c8c4114642fa87e5dc59" },
     { name = "pydub", specifier = ">=0.25.1,<0.26.0" },
     { name = "scipy", specifier = ">=1.14.0,<2.0.0" },
     { name = "sounddevice", specifier = ">=0.5.0,<0.6.0" },
@@ -8930,7 +8932,7 @@ wheels = [
 [[package]]
 name = "visualnav-transformer"
 version = "0.1.0"
-source = { git = "https://github.com/RobotecAI/visualnav-transformer-ros2.git?rev=main#9cabe7d7703468259a75784d262d642ec5e1b0e5" }
+source = { git = "https://github.com/RobotecAI/visualnav-transformer-ros2.git?rev=bdbac0425eb7bc4ca161bf7dac8d707f7a1f6cd7#bdbac0425eb7bc4ca161bf7dac8d707f7a1f6cd7" }
 dependencies = [
     { name = "diffusers" },
     { name = "diffusion-policy" },
