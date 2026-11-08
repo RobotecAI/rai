@@ -21,6 +21,7 @@ from typing import (
     Dict,
     List,
     Tuple,
+    Type,
 )
 
 import rclpy
@@ -36,8 +37,8 @@ from rclpy.service import Service
 
 from rai.communication.ros2.api.base import (
     BaseROS2API,
+    IROS2Message,
 )
-from rai.communication.ros2.api.conversion import import_message_from_str
 
 
 class ROS2ServiceAPI(BaseROS2API):
@@ -57,8 +58,8 @@ class ROS2ServiceAPI(BaseROS2API):
     def call_service(
         self,
         service_name: str,
-        service_type: str,
-        request: Any,
+        service_type: str | Type[Any] | None = None,
+        request: IROS2Message | Dict[str, Any] | None = None,
         timeout_sec: float = 5.0,
         *,
         reuse_client: bool = True,
@@ -68,8 +69,9 @@ class ROS2ServiceAPI(BaseROS2API):
 
         Args:
             service_name: Fully-qualified service name.
-            service_type: ROS 2 service type string (e.g., 'std_srvs/srv/SetBool').
-            request: Request payload dict.
+            service_type: ROS 2 service type string (e.g., 'std_srvs/srv/SetBool') or class.
+                Required when request is a dict, inferred from the instance otherwise.
+            request: Request payload dict or request instance (e.g., SetBool.Request()).
             timeout_sec: Seconds to wait for availability/response.
             reuse_client: Reuse a cached client. Client creation is synchronized; set
                 False to create a new client per call.
@@ -78,7 +80,8 @@ class ROS2ServiceAPI(BaseROS2API):
             Response message instance.
 
         Raises:
-            ValueError: Service not available within the timeout.
+            ValueError: Service not available within the timeout, request is a dict
+                without service_type, or request does not match service_type.
             AttributeError: Service type or request cannot be constructed.
 
         Note:
@@ -87,7 +90,7 @@ class ROS2ServiceAPI(BaseROS2API):
             through the same client. Use reuse_client=False for per-call clients
             when concurrent service calls are required.
         """
-        srv_msg, srv_cls = self.build_ros2_service_request(service_type, request)
+        srv_msg, srv_cls = self.resolve_content(request, service_type, "Request")
 
         def _call_service(client: Client, timeout_sec: float) -> Any:
             is_service_available = client.wait_for_service(timeout_sec=timeout_sec)
@@ -118,11 +121,11 @@ class ROS2ServiceAPI(BaseROS2API):
     def create_service(
         self,
         service_name: str,
-        service_type: str,
+        service_type: str | Type[Any],
         callback: Callable[[Any, Any], Any],
         **kwargs,
     ) -> str:
-        srv_cls = import_message_from_str(service_type)
+        srv_cls = self.resolve_interface_type(service_type)
         service = self.node.create_service(srv_cls, service_name, callback, **kwargs)
         handle = str(uuid.uuid4())
         self._services[handle] = service

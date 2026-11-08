@@ -23,7 +23,10 @@ import numpy as np
 import pytest
 import rclpy
 from cv_bridge import CvBridge
-from nav2_msgs.action import NavigateToPose
+from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
+from nav2_msgs.action import ComputePathThroughPoses, NavigateToPose
+from nav2_msgs.msg import CostmapMetaData
+from nav2_msgs.srv import GetCostmap
 from pydub import AudioSegment
 from rclpy.action import ActionClient, ActionServer, CancelResponse, GoalResponse
 from rclpy.action.server import ServerGoalHandle
@@ -32,7 +35,7 @@ from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rosgraph_msgs.msg import Clock
 from sensor_msgs.msg import Image
-from std_msgs.msg import String
+from std_msgs.msg import Header, String
 from std_srvs.srv import SetBool
 from tf2_ros import TransformBroadcaster, TransformStamped
 
@@ -118,6 +121,98 @@ class MessageSubscriber(Node):
 
     def handle_test_message(self, msg: Any) -> None:
         self.received_messages.append(msg)
+
+
+COSTMAP_SPECS_DICT = {
+    "layer": "static_layer",
+    "resolution": 0.5,
+    "size_x": 3,
+    "size_y": 2,
+    "origin": {"position": {"x": 1.0, "y": 2.0}, "orientation": {"w": 1.0}},
+}
+COSTMAP_SPECS_MSG = CostmapMetaData(
+    layer="static_layer",
+    resolution=0.5,
+    size_x=3,
+    size_y=2,
+    origin=Pose(position=Point(x=1.0, y=2.0), orientation=Quaternion(w=1.0)),
+)
+
+PATH_GOAL_DICT = {
+    "start": {"header": {"frame_id": "map"}, "pose": {"orientation": {"w": 1.0}}},
+    "goals": [
+        {
+            "header": {"frame_id": "map"},
+            "pose": {"position": {"x": 1.0, "y": 2.0}, "orientation": {"w": 1.0}},
+        },
+        {
+            "header": {"frame_id": "map"},
+            "pose": {"position": {"x": 3.0, "y": 4.0}, "orientation": {"w": 1.0}},
+        },
+    ],
+    "planner_id": "GridBased",
+    "use_start": True,
+}
+PATH_GOAL_MSG = ComputePathThroughPoses.Goal(
+    start=PoseStamped(
+        header=Header(frame_id="map"), pose=Pose(orientation=Quaternion(w=1.0))
+    ),
+    goals=[
+        PoseStamped(
+            header=Header(frame_id="map"),
+            pose=Pose(position=Point(x=1.0, y=2.0), orientation=Quaternion(w=1.0)),
+        ),
+        PoseStamped(
+            header=Header(frame_id="map"),
+            pose=Pose(position=Point(x=3.0, y=4.0), orientation=Quaternion(w=1.0)),
+        ),
+    ],
+    planner_id="GridBased",
+    use_start=True,
+)
+
+
+class GetCostmapServer(Node):
+    def __init__(
+        self, service_name: str, callback_group: Optional[CallbackGroup] = None
+    ):
+        super().__init__("test_get_costmap_server")
+        self.srv = self.create_service(
+            GetCostmap,
+            service_name,
+            self.handle_get_costmap,
+            callback_group=callback_group,
+        )
+
+    def handle_get_costmap(
+        self, request: GetCostmap.Request, response: GetCostmap.Response
+    ) -> GetCostmap.Response:
+        response.map.header.frame_id = "map"
+        response.map.metadata = request.specs
+        response.map.data = [0] * (request.specs.size_x * request.specs.size_y)
+        return response
+
+
+class ComputePathThroughPosesServer(Node):
+    def __init__(self, action_name: str):
+        super().__init__(f"test_compute_path_server_{str(uuid.uuid4())[-12:]}")
+        self.action_server = ActionServer(
+            self,
+            action_type=ComputePathThroughPoses,
+            action_name=action_name,
+            execute_callback=self.handle_compute_path,
+            callback_group=ReentrantCallbackGroup(),
+        )
+
+    def handle_compute_path(
+        self, goal_handle: ServerGoalHandle
+    ) -> ComputePathThroughPoses.Result:
+        goal: ComputePathThroughPoses.Goal = goal_handle.request
+        goal_handle.succeed()
+        result = ComputePathThroughPoses.Result()
+        result.path.header.frame_id = goal.start.header.frame_id
+        result.path.poses = [goal.start, *goal.goals]
+        return result
 
 
 class TestActionServer(Node):

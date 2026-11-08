@@ -19,7 +19,17 @@ from typing import Any, List
 from unittest.mock import MagicMock
 
 import pytest
-from nav2_msgs.action import NavigateToPose
+from action_msgs.msg import GoalStatus
+from builtin_interfaces.msg import Time
+from geometry_msgs.msg import (
+    Point,
+    Pose,
+    PoseWithCovariance,
+    PoseWithCovarianceStamped,
+    Quaternion,
+)
+from nav2_msgs.action import ComputePathThroughPoses, NavigateToPose
+from nav2_msgs.srv import GetCostmap
 from PIL import Image
 from pydub import AudioSegment
 from rai.communication.ros2 import (
@@ -33,10 +43,16 @@ from rclpy.callback_groups import (
     MutuallyExclusiveCallbackGroup,
     ReentrantCallbackGroup,
 )
-from std_msgs.msg import String
+from std_msgs.msg import Header, String
 from std_srvs.srv import SetBool
 
 from .helpers import (
+    COSTMAP_SPECS_DICT,
+    COSTMAP_SPECS_MSG,
+    PATH_GOAL_DICT,
+    PATH_GOAL_MSG,
+    ComputePathThroughPosesServer,
+    GetCostmapServer,
     HRIMessageSubscriber,
     MessagePublisher,
     MessageSubscriber,
@@ -52,21 +68,53 @@ from .helpers import (
 _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
 
 
-def test_ros2_connector_send_message(ros_setup: None, request: pytest.FixtureRequest):
+@pytest.mark.parametrize(
+    "message_content,msg_type,actual_type",
+    [
+        (ROS2Message(payload={"data": "Hello, ROS2!"}), "std_msgs/msg/String", String),
+        (ROS2Message(payload={"data": "Hello, ROS2!"}), String, String),
+        (String(data="Hello, ROS2!"), None, String),
+        (String(data="Hello, ROS2!"), "std_msgs/msg/String", String),
+        (String(), None, String),
+        (Pose(), None, Pose),
+        (PoseWithCovarianceStamped(), None, PoseWithCovarianceStamped),
+        (
+            PoseWithCovarianceStamped(
+                header=Header(
+                    stamp=Time(sec=1, nanosec=100000000),
+                    frame_id="test_frame",
+                ),
+                pose=PoseWithCovariance(
+                    pose=Pose(
+                        position=Point(x=1.0, y=2.0, z=3.0),
+                        orientation=Quaternion(x=0.1, y=0.2, z=0.3, w=0.4),
+                    ),
+                    covariance=[0.0] * 36,
+                ),
+            ),
+            None,
+            PoseWithCovarianceStamped,
+        ),
+    ],
+)
+def test_ros2_connector_send_message(
+    ros_setup: None,
+    request: pytest.FixtureRequest,
+    message_content: Any,
+    msg_type: str | type | None,
+    actual_type: type,
+):
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
-    message_receiver = MessageSubscriber(topic_name)
+    message_receiver = MessageSubscriber(topic_name, actual_type)
     executors, threads = multi_threaded_spinner([message_receiver])
     connector = ROS2Connector()
     try:
-        message = ROS2Message(
-            payload={"data": "Hello, world!"},
-            metadata={"msg_type": "std_msgs/msg/String"},
-        )
         connector.send_message(
-            message=message, target=topic_name, msg_type="std_msgs/msg/String"
+            message=message_content, target=topic_name, msg_type=msg_type
         )
-        time.sleep(1)  # wait for the message to be received
-        assert message_receiver.received_messages == [String(data="Hello, world!")]
+        time.sleep(0.1)  # wait for the message to be received
+        assert len(message_receiver.received_messages) == 1
+        assert isinstance(message_receiver.received_messages[0], actual_type)
     finally:
         connector.shutdown()
         shutdown_executors_and_threads(executors, threads)
@@ -95,6 +143,41 @@ def service_call_helper(service_name: str, connector: ROS2Connector):
     assert response.payload == SetBool.Response(
         success=True, message="Test service called"
     )
+
+
+@pytest.mark.parametrize(
+    "message,msg_type",
+    [
+        (
+            ROS2Message(payload={"specs": COSTMAP_SPECS_DICT}),
+            "nav2_msgs/srv/GetCostmap",
+        ),
+        (ROS2Message(payload={"specs": COSTMAP_SPECS_DICT}), GetCostmap),
+        (GetCostmap.Request(specs=COSTMAP_SPECS_MSG), None),
+        (GetCostmap.Request(specs=COSTMAP_SPECS_MSG), "nav2_msgs/srv/GetCostmap"),
+        (GetCostmap.Request(specs=COSTMAP_SPECS_MSG), GetCostmap),
+    ],
+)
+def test_ros2_connector_service_call_message_types(
+    ros_setup: None,
+    request: pytest.FixtureRequest,
+    message: Any,
+    msg_type: str | type | None,
+):
+    service_name = f"{request.node.originalname}_service"  # type: ignore
+    service_server = GetCostmapServer(service_name, ReentrantCallbackGroup())
+    executors, threads = multi_threaded_spinner([service_server])
+    connector = ROS2Connector()
+    try:
+        response = connector.service_call(
+            message, target=service_name, msg_type=msg_type
+        )
+        assert response.payload.map.header.frame_id == "map"
+        assert response.payload.map.metadata == COSTMAP_SPECS_MSG
+        assert len(response.payload.map.data) == 6
+    finally:
+        connector.shutdown()
+        shutdown_executors_and_threads(executors, threads)
 
 
 @pytest.mark.parametrize(
@@ -185,21 +268,50 @@ def test_ros2_connector_service_call_multiple_calls_at_the_same_time_multiproces
         shutdown_executors_and_threads(executors, threads)
 
 
-def test_ros2_connector_send_goal(ros_setup: None, request: pytest.FixtureRequest):
+@pytest.mark.parametrize(
+    "action_data,msg_type",
+    [
+        (
+            ROS2Message(payload=PATH_GOAL_DICT),
+            "nav2_msgs/action/ComputePathThroughPoses",
+        ),
+        (ROS2Message(payload=PATH_GOAL_DICT), ComputePathThroughPoses),
+        (PATH_GOAL_MSG, None),
+        (PATH_GOAL_MSG, "nav2_msgs/action/ComputePathThroughPoses"),
+        (PATH_GOAL_MSG, ComputePathThroughPoses),
+    ],
+)
+def test_ros2_connector_send_goal(
+    ros_setup: None,
+    request: pytest.FixtureRequest,
+    action_data: Any,
+    msg_type: str | type | None,
+):
     action_name = f"{request.node.originalname}_action"  # type: ignore
-    action_server = TestActionServer(action_name)
+    action_server = ComputePathThroughPosesServer(action_name)
     executors, threads = multi_threaded_spinner([action_server])
     connector = ROS2Connector()
+    results: List[Any] = []
     try:
-        message = ROS2Message(
-            payload={},
-        )
         handle = connector.start_action(
-            action_data=message,
+            action_data=action_data,
             target=action_name,
-            msg_type="nav2_msgs/action/NavigateToPose",
+            on_done=lambda future: results.append(future.result()),
+            msg_type=msg_type,
         )
         assert handle is not None
+
+        start_time = time.perf_counter()
+        while not results:
+            time.sleep(0.01)
+            if time.perf_counter() - start_time > 1.0:
+                raise TimeoutError("Goal not done")
+
+        assert results[0].status == GoalStatus.STATUS_SUCCEEDED
+        assert results[0].result.path.poses == [
+            PATH_GOAL_MSG.start,
+            *PATH_GOAL_MSG.goals,
+        ]
     finally:
         connector.shutdown()
         shutdown_executors_and_threads(executors, threads)

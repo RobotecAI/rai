@@ -33,7 +33,6 @@ import rclpy
 import rclpy.action
 import rclpy.node
 import rclpy.task
-import rosidl_runtime_py.set_message
 from action_msgs.srv import CancelGoal
 from rclpy.action import ActionClient, CancelResponse, GoalResponse
 from rclpy.action.client import ClientGoalHandle
@@ -55,7 +54,6 @@ from rai.communication.ros2.api.base import (
     BaseROS2API,
     IROS2Message,
 )
-from rai.communication.ros2.api.conversion import import_message_from_str
 from rai.communication.ros2.ros_async import get_future_result
 
 
@@ -111,7 +109,7 @@ class ROS2ActionAPI(BaseROS2API):
 
     def create_action_server(
         self,
-        action_type: str,
+        action_type: str | Type[Any],
         action_name: str,
         execute_callback: Callable[[ServerGoalHandle], Type[IROS2Message]],
         *,
@@ -164,7 +162,7 @@ class ROS2ActionAPI(BaseROS2API):
         if result_timeout <= 0:
             raise ValueError(f"result_timeout must be positive, got {result_timeout!r}")
         handle = self._generate_handle()
-        action_ros_type = import_message_from_str(action_type)
+        action_ros_type = self.resolve_interface_type(action_type)
         try:
             action_server = ActionServer(
                 node=self.node,
@@ -202,8 +200,8 @@ class ROS2ActionAPI(BaseROS2API):
     def send_goal(
         self,
         action_name: str,
-        action_type: str,
-        goal: Dict[str, Any],
+        action_type: str | Type[Any] | None = None,
+        goal: IROS2Message | Dict[str, Any] | None = None,
         *,
         feedback_callback: Callable[[Any], None] = lambda _: None,
         done_callback: Callable[
@@ -220,11 +218,7 @@ class ROS2ActionAPI(BaseROS2API):
             feedbacks=[],
         )
 
-        action_cls = import_message_from_str(action_type)
-        action_goal = action_cls.Goal()  # type: ignore
-        rosidl_runtime_py.set_message.set_message_fields(
-            action_goal, copy.deepcopy(goal)
-        )
+        action_goal, action_cls = self.resolve_content(goal, action_type, "Goal")
 
         action_client = ActionClient(self.node, action_cls, action_name)
         if not action_client.wait_for_server(timeout_sec=timeout_sec):  # type: ignore

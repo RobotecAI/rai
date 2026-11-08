@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any
+from typing import Any, Type
 
-from rai.communication.ros2.api import ROS2ServiceAPI
+from rai.communication.ros2.api import IROS2Message, ROS2ServiceAPI
 from rai.communication.ros2.messages import ROS2Message
 
 
@@ -35,18 +35,19 @@ class ROS2ServiceMixin:
 
     def service_call(
         self,
-        message: ROS2Message,
+        message: ROS2Message | IROS2Message,
         target: str,
         timeout_sec: float = 5.0,
         *,
-        msg_type: str,
+        msg_type: str | Type[Any] | None = None,
         reuse_client: bool = True,
         **kwargs: Any,
     ) -> ROS2Message:
+        request = message.payload if isinstance(message, ROS2Message) else message
         msg = self._service_api.call_service(
             service_name=target,
             service_type=msg_type,
-            request=message.payload,
+            request=request,
             timeout_sec=timeout_sec,
             reuse_client=reuse_client,
         )
