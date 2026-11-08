@@ -26,6 +26,13 @@ simple_model = "gemini-3-flash"
 complex_model = "gemini-3-pro"
 embeddings_model = "text-embedding-004"
 
+[litellm]
+# LiteLLM "provider/model" ids; credentials come from each provider's env vars.
+simple_model = "anthropic/claude-haiku-4-5"
+complex_model = "anthropic/claude-sonnet-4-6"
+embeddings_model = "openai/text-embedding-3-small"
+api_base = ""
+
 [tracing]
 project = "rai"
 

@@ -42,6 +42,14 @@ dependencies = [
     "numpy<2.0",
 ]
 
+[project.optional-dependencies]
+# LiteLLM vendor: one config section for Anthropic, Bedrock, Vertex, Azure,
+# Ollama and other providers. Opt-in; bounded to the range it is tested with.
+litellm = [
+    "langchain-litellm>=0.6.4,<0.7.0",
+    "litellm>=1.97.0,<1.106.0",
+]
+
 [project.scripts]
 rai-config-init = "rai.initialization.config_initialization:main"
 
