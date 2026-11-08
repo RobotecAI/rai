@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v6.0.0
     hooks:
       - id: check-json
       - id: check-merge-conflict
@@ -21,14 +21,14 @@ repos:
         files: \.md$
 
   - repo: https://github.com/gruntwork-io/pre-commit
-    rev: v0.1.23
+    rev: v0.1.30
     hooks:
       - id: shellcheck
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.4
+    rev: v0.17.4
     hooks:
-      - id: ruff
+      - id: ruff-check
         args: [--extend-select, "I,RUF022", --fix, --ignore, E731]
         exclude: src/rai_core/rai/frontend/configurator.py
       - id: ruff-format

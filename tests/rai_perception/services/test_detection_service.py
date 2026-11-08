@@ -17,7 +17,7 @@
 Tests the model-agnostic detection service that uses the detection model registry.
 """
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from rai_perception.services.detection_service import DetectionService
@@ -161,3 +161,50 @@ class TestDetectionService:
             assert result is response
 
             instance.stop()
+
+
+class TestDetectionServiceWeights:
+    """Weights for detection come from a pinned Hugging Face Hub snapshot."""
+
+    def test_fetch_weights_downloads_pinned_hf_snapshot(self, tmp_path):
+        from rai_perception.algorithms.boxer import (
+            GDINO_HF_MODEL_ID,
+            GDINO_HF_MODEL_REVISION,
+        )
+
+        logger = MagicMock()
+        target = tmp_path / DetectionService.WEIGHTS_FILENAME
+        with (
+            patch(
+                "rai_perception.services.base_vision_service.download_hf_snapshot"
+            ) as mock_snapshot,
+            patch(
+                "rai_perception.services.base_vision_service.download_weights"
+            ) as mock_download,
+        ):
+            DetectionService.fetch_weights(target, logger)
+
+        mock_snapshot.assert_called_once_with(
+            target, logger, GDINO_HF_MODEL_ID, GDINO_HF_MODEL_REVISION
+        )
+        mock_download.assert_not_called()
+
+    def test_segmentation_still_downloads_single_file(self, tmp_path):
+        from rai_perception.services.segmentation_service import SegmentationService
+
+        logger = MagicMock()
+        target = tmp_path / SegmentationService.WEIGHTS_FILENAME
+        with (
+            patch(
+                "rai_perception.services.base_vision_service.download_hf_snapshot"
+            ) as mock_snapshot,
+            patch(
+                "rai_perception.services.base_vision_service.download_weights"
+            ) as mock_download,
+        ):
+            SegmentationService.fetch_weights(target, logger)
+
+        mock_download.assert_called_once_with(
+            target, logger, SegmentationService.WEIGHTS_URL
+        )
+        mock_snapshot.assert_not_called()

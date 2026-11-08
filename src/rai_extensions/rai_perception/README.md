@@ -2,7 +2,7 @@
 
 # RAI Perception
 
-RAI Perception brings powerful computer vision capabilities to your ROS2 applications. It integrates [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO) and [Grounded-SAM-2](https://github.com/RobotecAI/Grounded-SAM-2) to detect objects, create segmentation masks, and calculate gripping points.
+RAI Perception brings powerful computer vision capabilities to your ROS2 applications. It integrates [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO) (through its [Hugging Face transformers implementation](https://huggingface.co/docs/transformers/model_doc/grounding-dino)) and [Grounded-SAM-2](https://github.com/RobotecAI/Grounded-SAM-2) to detect objects, create segmentation masks, and calculate gripping points.
 
 The package includes model-agnostic ROS2 service nodes (`DetectionService` and `SegmentationService`) that provide detection and segmentation capabilities. Legacy agents (`GroundedSamAgent` and `GroundingDinoAgent`) are deprecated in favor of these services. It also provides tools that work seamlessly with [RAI LLM agents](../tutorials/walkthrough.md) to build conversational robot scenarios, including `GetObjectPositionsTool` for general spatial reasoning and `GetObjectGrippingPointsTool` for advanced gripping strategies.
 
@@ -81,7 +81,7 @@ python -m rai_perception.scripts.run_perception_services
 ```
 
 > [!NOTE]
-> The weights will be downloaded to `~/.cache/rai` directory on first use.
+> The weights will be downloaded to `~/.cache/rai/vision/weights/` on first use: Grounding DINO as the [`IDEA-Research/grounding-dino-tiny`](https://huggingface.co/IDEA-Research/grounding-dino-tiny) checkpoint (pinned revision, safetensors only) in `grounding-dino-tiny/`, and SAM 2 as `sam2_hiera_large.pt`. A `groundingdino_swint_ogc.pth` file left there by older versions is no longer used and can be deleted.
 
 > [!NOTE] > **Legacy Service Names:** The services register both new service names (`/detection`, `/segmentation`) and legacy service names (`/grounding_dino_classify`, `/grounded_sam_segment`) for backward compatibility. Legacy service names will be removed in a future release. Migrate your code to use the new service names.
 

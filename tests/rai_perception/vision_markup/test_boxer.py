@@ -15,7 +15,6 @@
 """Tests for vision_markup.boxer - deprecated wrapper that delegates to algorithms."""
 
 import warnings
-from unittest.mock import patch
 
 from rai_perception.vision_markup.boxer import Box, GDBoxer
 
@@ -32,7 +31,8 @@ class TestVisionMarkupGDBoxer(TestGDBoxerBase):
     def get_patch_path(self, target):
         """Return patch path for algorithms module (delegation target)."""
         patch_map = {
-            "Model": "rai_perception.algorithms.boxer.Model",
+            "AutoProcessor": "rai_perception.algorithms.boxer.AutoProcessor",
+            "AutoModel": "rai_perception.algorithms.boxer.AutoModelForZeroShotObjectDetection",
             "CvBridge": "rai_perception.algorithms.boxer.CvBridge",
             "logging.getLogger": "rai_perception.algorithms.boxer.logging.getLogger",
         }
@@ -40,14 +40,14 @@ class TestVisionMarkupGDBoxer(TestGDBoxerBase):
 
     def test_deprecation_warning(self, tmp_path):
         """Test that vision_markup.GDBoxer emits deprecation warning."""
-        from tests.rai_perception.algorithms.test_utils import create_test_weights_file
+        from tests.rai_perception.algorithms.test_utils import create_test_model_dir
 
-        weights_path = create_test_weights_file(tmp_path)
+        model_dir = create_test_model_dir(tmp_path)
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            with patch("rai_perception.algorithms.boxer.Model"):
-                GDBoxer(str(weights_path), use_cuda=False)
+            with self.patch_hf():
+                GDBoxer(str(model_dir), use_cuda=False)
 
             assert len(w) == 1
             assert issubclass(w[0].category, DeprecationWarning)
@@ -58,12 +58,12 @@ class TestVisionMarkupGDBoxer(TestGDBoxerBase):
         """Test that vision_markup.GDBoxer is a subclass of algorithms.GDBoxer."""
         from rai_perception.algorithms.boxer import GDBoxer as AlgorithmsGDBoxer
 
-        from tests.rai_perception.algorithms.test_utils import create_test_weights_file
+        from tests.rai_perception.algorithms.test_utils import create_test_model_dir
 
-        weights_path = create_test_weights_file(tmp_path)
+        model_dir = create_test_model_dir(tmp_path)
 
-        with patch("rai_perception.algorithms.boxer.Model"):
-            vision_markup_boxer = GDBoxer(str(weights_path), use_cuda=False)
+        with self.patch_hf():
+            vision_markup_boxer = GDBoxer(str(model_dir), use_cuda=False)
             assert isinstance(vision_markup_boxer, AlgorithmsGDBoxer)
 
 

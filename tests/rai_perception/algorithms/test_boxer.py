@@ -12,11 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai_perception.algorithms.boxer import Box, GDBoxer
+from unittest.mock import MagicMock, patch
+
+import pytest
+from rai_perception.algorithms.boxer import (
+    GDINO_HF_MODEL_ID,
+    GDINO_HF_MODEL_REVISION,
+    Box,
+    GDBoxer,
+)
 from rclpy.time import Time
 from vision_msgs.msg import Detection2D
 
 from tests.rai_perception.algorithms.test_base_boxer import TestGDBoxerBase
+from tests.rai_perception.algorithms.test_utils import (
+    create_test_model_dir,
+    create_test_weights_file,
+)
 
 
 class TestBox:
@@ -61,7 +73,8 @@ class TestGDBoxer(TestGDBoxerBase):
     def get_patch_path(self, target):
         """Return patch path for algorithms module."""
         patch_map = {
-            "Model": "rai_perception.algorithms.boxer.Model",
+            "AutoProcessor": "rai_perception.algorithms.boxer.AutoProcessor",
+            "AutoModel": "rai_perception.algorithms.boxer.AutoModelForZeroShotObjectDetection",
             "CvBridge": "rai_perception.algorithms.boxer.CvBridge",
             "logging.getLogger": "rai_perception.algorithms.boxer.logging.getLogger",
         }
@@ -79,7 +92,8 @@ class TestGDBoxerViaAgent(TestGDBoxerBase):
     def get_patch_path(self, target):
         """Return patch path for algorithms module (delegation target)."""
         patch_map = {
-            "Model": "rai_perception.algorithms.boxer.Model",
+            "AutoProcessor": "rai_perception.algorithms.boxer.AutoProcessor",
+            "AutoModel": "rai_perception.algorithms.boxer.AutoModelForZeroShotObjectDetection",
             "CvBridge": "rai_perception.algorithms.boxer.CvBridge",
             "logging.getLogger": "rai_perception.algorithms.boxer.logging.getLogger",
         }
@@ -183,3 +197,54 @@ class TestGDBoxerViaAgent(TestGDBoxerBase):
             assert result.detections.detection_classes == ["dinosaur"]
 
             cleanup_agent(agent)
+
+
+class TestGDBoxerModelSource:
+    """Test how GDBoxer resolves weight_path into a transformers source."""
+
+    def _boxer(self):
+        boxer = GDBoxer.__new__(GDBoxer)
+        boxer.logger = MagicMock()
+        return boxer
+
+    def test_local_directory(self, tmp_path):
+        model_dir = create_test_model_dir(tmp_path)
+        assert self._boxer()._resolve_model_source(str(model_dir)) == (
+            str(model_dir),
+            None,
+        )
+
+    def test_legacy_checkpoint_file_falls_back_to_pinned_hub_model(self, tmp_path):
+        legacy = create_test_weights_file(tmp_path, "groundingdino_swint_ogc.pth")
+        boxer = self._boxer()
+        assert boxer._resolve_model_source(str(legacy)) == (
+            GDINO_HF_MODEL_ID,
+            GDINO_HF_MODEL_REVISION,
+        )
+        boxer.logger.warning.assert_called_once()
+
+    def test_default_hub_id_uses_pinned_revision(self):
+        assert self._boxer()._resolve_model_source(GDINO_HF_MODEL_ID) == (
+            GDINO_HF_MODEL_ID,
+            GDINO_HF_MODEL_REVISION,
+        )
+
+    def test_other_hub_id_uses_default_revision(self):
+        assert self._boxer()._resolve_model_source(
+            "IDEA-Research/grounding-dino-base"
+        ) == ("IDEA-Research/grounding-dino-base", None)
+
+    def test_missing_path_raises(self, tmp_path):
+        with pytest.raises(FileNotFoundError):
+            self._boxer()._resolve_model_source(str(tmp_path / "missing"))
+
+    def test_config_path_is_ignored_with_deprecation_warning(self, tmp_path):
+        model_dir = create_test_model_dir(tmp_path)
+        with (
+            patch("rai_perception.algorithms.boxer.AutoProcessor"),
+            patch(
+                "rai_perception.algorithms.boxer.AutoModelForZeroShotObjectDetection"
+            ),
+            pytest.warns(DeprecationWarning, match="config_path is ignored"),
+        ):
+            GDBoxer(str(model_dir), config_path="gdino_config.py", use_cuda=False)

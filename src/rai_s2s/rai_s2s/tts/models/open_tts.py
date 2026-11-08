@@ -68,7 +68,8 @@ class OpenTTS(TTSModel):
             "text": text,
         }
         try:
-            response = requests.get(self.url, params=params)
+            # (connect, read) seconds; synthesis of long text on CPU can take a while.
+            response = requests.get(self.url, params=params, timeout=(5, 60))
         except requests.exceptions.RequestException as e:
             raise TTSModelError(
                 f"Error occurred while fetching audio: {e}, check if OpenTTS server is running correctly."

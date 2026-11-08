@@ -19,6 +19,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from rai_perception.services.weights import (
+    download_hf_snapshot,
     download_weights,
     load_model_with_error_handling,
     remove_weights,
@@ -135,6 +136,35 @@ class TestLoadModelWithErrorHandling:
             assert model.weights_path == weights_path
             assert call_count == 2
 
+    def test_load_model_corrupted_safetensors_uses_redownload(self, tmp_path):
+        """Test safetensors corruption triggers the provided redownload callable."""
+        model_dir = tmp_path / "model"
+        model_dir.mkdir()
+        (model_dir / "model.safetensors").write_bytes(b"corrupted")
+        logger = MagicMock()
+        redownload = MagicMock(side_effect=lambda: model_dir.mkdir())
+
+        call_count = 0
+
+        class MockModel:
+            def __init__(self, weights_path):
+                nonlocal call_count
+                call_count += 1
+                self.weights_path = weights_path
+                if call_count == 1:
+                    raise OSError(
+                        "Unable to load weights: Error while deserializing header"
+                    )
+
+        with patch("rai_perception.services.weights.download_weights") as mock_dl:
+            model = load_model_with_error_handling(
+                MockModel, model_dir, logger, "unused", redownload=redownload
+            )
+        assert model.weights_path == model_dir
+        assert call_count == 2
+        redownload.assert_called_once()
+        mock_dl.assert_not_called()
+
     def test_load_model_other_runtime_error(self, tmp_path):
         """Test that non-corruption RuntimeErrors are re-raised."""
         weights_path = tmp_path / "weights.pth"
@@ -162,3 +192,52 @@ class TestRemoveWeights:
         assert weights_path.exists()
         remove_weights(weights_path)
         assert not weights_path.exists()
+
+    def test_remove_weights_directory(self, tmp_path):
+        """Test remove_weights removes a downloaded model directory."""
+        model_dir = tmp_path / "model"
+        model_dir.mkdir()
+        (model_dir / "config.json").write_text("{}")
+
+        remove_weights(model_dir)
+        assert not model_dir.exists()
+
+
+class TestDownloadHfSnapshot:
+    """Test cases for download_hf_snapshot function."""
+
+    def test_download_success_renames_into_place(self, tmp_path):
+        local_dir = tmp_path / "grounding-dino-tiny"
+        logger = MagicMock()
+
+        def fake_snapshot_download(repo_id, revision, local_dir, allow_patterns):
+            assert repo_id == "org/model"
+            assert revision == "abc123"
+            assert local_dir.name.endswith(".part")
+            assert "*.safetensors" in allow_patterns
+            assert not any(pattern.endswith(".bin") for pattern in allow_patterns)
+            local_dir.mkdir(parents=True)
+            (local_dir / "config.json").write_text("{}")
+
+        with patch("huggingface_hub.snapshot_download", fake_snapshot_download):
+            download_hf_snapshot(local_dir, logger, "org/model", "abc123")
+
+        assert (local_dir / "config.json").exists()
+        assert not local_dir.with_name("grounding-dino-tiny.part").exists()
+
+    def test_download_failure_cleans_up(self, tmp_path):
+        local_dir = tmp_path / "grounding-dino-tiny"
+        logger = MagicMock()
+
+        def failing_snapshot_download(repo_id, revision, local_dir, allow_patterns):
+            local_dir.mkdir(parents=True)
+            raise RuntimeError("network down")
+
+        with (
+            patch("huggingface_hub.snapshot_download", failing_snapshot_download),
+            pytest.raises(Exception, match="Could not download weights"),
+        ):
+            download_hf_snapshot(local_dir, logger, "org/model")
+
+        assert not local_dir.exists()
+        assert not local_dir.with_name("grounding-dino-tiny.part").exists()

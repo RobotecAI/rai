@@ -8,14 +8,18 @@ on:
       - 'src/rai_core/pyproject.toml'
       - 'src/rai_core/**'
 
+permissions:
+  contents: read
+
 jobs:
   require-version-bump:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Get rai_core version from BASE and HEAD

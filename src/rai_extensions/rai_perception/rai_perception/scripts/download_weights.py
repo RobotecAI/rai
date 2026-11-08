@@ -17,7 +17,6 @@ import threading
 
 from rai_perception.services.detection_service import DetectionService
 from rai_perception.services.segmentation_service import SegmentationService
-from rai_perception.services.weights import download_weights
 
 SERVICES = [DetectionService, SegmentationService]
 
@@ -34,7 +33,7 @@ def main():
         )
         weights_path.parent.mkdir(parents=True, exist_ok=True)
         if not weights_path.exists():
-            download_weights(weights_path, logger, service_class.WEIGHTS_URL)
+            service_class.fetch_weights(weights_path, logger)
         else:
             logger.info(f"Weights already exist at {weights_path}, skipping download.")
 

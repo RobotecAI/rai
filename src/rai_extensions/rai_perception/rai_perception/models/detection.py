@@ -23,7 +23,6 @@ Example:
     boxer = AlgorithmClass(weights_path, config_path=config_path)
 """
 
-from pathlib import Path
 from typing import Tuple, Type
 
 from rai_perception.algorithms.boxer import GDBoxer
@@ -32,8 +31,9 @@ from rai_perception.algorithms.boxer import GDBoxer
 # To add a new detection model, add an entry here with the model name, algorithm class, and config path.
 #
 # IMPORTANT: Config loading is model-specific. Different model libraries handle configs differently:
-# - Some accept file paths directly (e.g., GroundingDINO's Model class - see boxer.py)
+# - Some accept file paths directly
 # - Some use Hydra internally (e.g., SAM2's build_sam2 function - see segmenter.py)
+# - Some ship their config inside the checkpoint (e.g., transformers Grounding DINO - see boxer.py)
 # - Some may use other config systems
 #
 # When adding a new model:
@@ -41,27 +41,25 @@ from rai_perception.algorithms.boxer import GDBoxer
 # 2. If the library initializes its own config system (like Hydra), don't interfere - let it handle initialization
 # 3. Return the appropriate config identifier (full path, config name, etc.) based on what the library expects
 #
-# For GroundingDINO (grounding_dino): Model class accepts file paths directly, no special handling needed.
+# For GroundingDINO (grounding_dino): the transformers checkpoint directory includes config.json,
+# so no separate config path is needed (None).
 #
 # Note: Decorator-based registration (e.g., @register_detection_model("name")) is an alternative
 # that allows classes to register themselves. Consider switching to decorators if you have many models
 # (10+) or want registration at the class definition site rather than a central registry.
-_DETECTION_REGISTRY: dict[str, Tuple[Type, str]] = {
-    "grounding_dino": (
-        GDBoxer,
-        str(Path(__file__).parent.parent / "configs" / "gdino_config.py"),
-    ),
+_DETECTION_REGISTRY: dict[str, Tuple[Type, str | None]] = {
+    "grounding_dino": (GDBoxer, None),
 }
 
 
-def get_model(name: str) -> Tuple[Type, str]:
+def get_model(name: str) -> Tuple[Type, str | None]:
     """Get detection model class and config path by name.
 
     Args:
         name: Model name (e.g., "grounding_dino")
 
     Returns:
-        Tuple of (AlgorithmClass, config_path)
+        Tuple of (AlgorithmClass, config_path), where config_path may be None
 
     Raises:
         ValueError: If model name not found in registry

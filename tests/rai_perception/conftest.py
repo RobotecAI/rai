@@ -191,6 +191,17 @@ def create_valid_weights_file(weights_path: Path, size_mb: int = 2) -> None:
     weights_path.write_bytes(b"0" * (size_mb * 1024 * 1024))
 
 
+def create_valid_model_dir(model_dir: Path) -> None:
+    """Helper to create a stand-in Hugging Face model directory for testing.
+
+    Args:
+        model_dir: Directory where the model files should be created
+    """
+    model_dir.mkdir(parents=True, exist_ok=True)
+    (model_dir / "config.json").write_text("{}")
+    (model_dir / "model.safetensors").write_bytes(b"0" * 1024)
+
+
 def get_weights_path(tmp_path: Path) -> Path:
     """Helper to get the standard weights path for testing.
 

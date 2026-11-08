@@ -16,9 +16,9 @@ classifiers = [
 dependencies = [
     "rai_core",
     "rai_whoami",
-    "pre-commit>=3.7.0,<4.0.0",
-    "tabulate>=0.9.0,<0.10.0",
-    "pytest>=8.2.0,<9.0.0",
+    "pre-commit>=4.0.0,<5.0.0",
+    "tabulate>=0.10.0,<0.11.0",
+    "pytest>=9.0.3,<10.0.0",
     "pytest-timeout>=2.3.1,<3.0.0",
     "pytest-cov>=7.0.0,<8.0.0",
 ]
@@ -37,12 +37,16 @@ semap = ["rai_semap"]
 simbench = ["rai_sim", "rai_bench"]
 perception = ["rai_perception"]
 nomad = [
-    "visualnav_transformer @ git+https://github.com/RobotecAI/visualnav-transformer-ros2.git@main",
+    "visualnav_transformer @ git+https://github.com/RobotecAI/visualnav-transformer-ros2.git@bdced61b2499f52f755454ebca0fb415adfc4d25",
     "gdown>=5.2.0,<6.0.0",
 ]
 
 [tool.uv]
 package = false
+# diffusion_policy is pulled in by visualnav_transformer from its main branch; pin the commit.
+override-dependencies = [
+    "diffusion-policy @ git+https://github.com/RobotecAI/diffusion_policy.git@2356a7fbbfaf0ccccf9883b972b5a434d0f5ede3",
+]
 
 [tool.uv.sources]
 rai_core = { path = "src/rai_core", editable = true }
@@ -54,12 +58,37 @@ rai_bench = { path = "src/rai_bench", editable = true }
 rai_perception = { path = "src/rai_extensions/rai_perception", editable = true }
 
 
+[tool.ruff]
+# Python snippets in docs are not formatted.
+extend-exclude = ["*.md"]
+
+[tool.ruff.lint]
+# Keep the rule set that ruff used by default before 0.15; pre-commit extends it with I and RUF022.
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.lint.isort]
+# Workspace packages live in src/<name>/<name>, which newer ruff no longer resolves as first-party on its own.
+known-first-party = [
+    "rai_bench",
+    "rai_bringup",
+    "rai_core",
+    "rai_extensions",
+    "rai_finetune",
+    "rai_interfaces",
+    "rai_s2s",
+    "rai_semap",
+    "rai_sim",
+    "rai_whoami",
+]
+
 [tool.pytest.ini_options]
 markers = [
     "billable: marks test as billable  (deselect with '-m \"not billable\"')",
     "ci_only: marks test as cli only (deselect with '-m \"not ci_only\"')",
     "manual: marks tests as manual (may require demo app to be running, deselect with '-m \"manual\")",
 ]
-addopts = "-m 'not billable and not ci_only and not manual' --ignore=src"
+# ROS 2 (Humble and Jazzy) auto-loads launch_testing pytest plugins that are incompatible with pytest 9.
+# RAI does not use launch tests, so they are disabled.
+addopts = "-m 'not billable and not ci_only and not manual' --ignore=src -p no:launch_testing -p no:launch_ros"
 log_cli = true
 log_cli_level = "INFO"

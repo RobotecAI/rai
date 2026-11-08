@@ -22,7 +22,8 @@ def test_get_model_valid():
     AlgorithmClass, config_path = get_model("grounding_dino")
 
     assert AlgorithmClass is GDBoxer
-    assert config_path.endswith("gdino_config.py")
+    # The transformers checkpoint ships its own config.json
+    assert config_path is None
 
 
 def test_get_model_invalid_name():

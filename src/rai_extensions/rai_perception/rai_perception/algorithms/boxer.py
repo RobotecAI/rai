@@ -14,27 +14,40 @@
 
 """Detection algorithm: GDBoxer.
 
-Low-level detection algorithm that loads its own config from config_path
-provided by the model registry.
+Grounding DINO open-vocabulary detector, backed by the Hugging Face transformers
+implementation (``AutoModelForZeroShotObjectDetection``). The default checkpoint,
+``IDEA-Research/grounding-dino-tiny``, is the transformers conversion of the Swin-T OGC
+checkpoint (``groundingdino_swint_ogc.pth``) that RAI used previously.
 """
 
+import bisect
 import logging
+import re
+import warnings
 from os import PathLike
-from typing import Dict
+from pathlib import Path
+from typing import Dict, List, Optional, Sequence, Tuple
 
-import cv2
+import numpy as np
 import torch
 from cv_bridge import CvBridge
-from groundingdino.util.inference import Model
+from PIL import Image as PILImage
 from rclpy.time import Time
 from sensor_msgs.msg import Image
 from std_msgs.msg import Header
+from transformers import AutoModelForZeroShotObjectDetection, AutoProcessor
 from vision_msgs.msg import (
     BoundingBox2D,
     Detection2D,
     ObjectHypothesis,
     ObjectHypothesisWithPose,
 )
+
+GDINO_HF_MODEL_ID = "IDEA-Research/grounding-dino-tiny"
+# Pinned commit of GDINO_HF_MODEL_ID so a changed upstream repo cannot silently change the model.
+GDINO_HF_MODEL_REVISION = "a2bb814dd30d776dcf7e30523b00659f4f141c71"
+
+_HUB_ID_PATTERN = re.compile(r"^[\w.-]+/[\w.-]+$")
 
 
 class Box:
@@ -78,10 +91,20 @@ class Box:
 
 
 class GDBoxer:
-    """GroundingDINO detection algorithm.
+    """Grounding DINO detector.
 
-    Algorithm loads its own config from config_path provided by registry.
-    Example: GDBoxer(weights_path, config_path="configs/gdino_config.py")
+    Args:
+        weight_path: One of:
+            - a local directory with a transformers Grounding DINO checkpoint
+              (``config.json``, ``model.safetensors``, tokenizer and preprocessor files),
+              as downloaded by ``DetectionService`` / ``download-perception-models``;
+            - a Hugging Face Hub model id (e.g. ``"IDEA-Research/grounding-dino-tiny"``);
+            - a legacy original-format checkpoint file (``groundingdino_swint_ogc.pth``).
+              Those can no longer be loaded, so the equivalent transformers checkpoint
+              ``GDINO_HF_MODEL_ID`` is loaded from the Hub instead, with a warning.
+        config_path: Ignored. The transformers checkpoint carries its own config.
+            Kept for backward compatibility with the model registry interface.
+        use_cuda: Whether to use CUDA if available.
     """
 
     def __init__(
@@ -90,20 +113,14 @@ class GDBoxer:
         config_path: str | PathLike | None = None,
         use_cuda: bool = True,
     ):
-        """Initialize GDBoxer.
-
-        Args:
-            weight_path: Path to model weights file
-            config_path: Path to config file. If None, uses default location
-            use_cuda: Whether to use CUDA if available
-        """
         self.logger = logging.getLogger(__name__)
-        if config_path is None:
-            # Default config path for backward compatibility
-            from pathlib import Path
-
-            config_path = Path(__file__).parent.parent / "configs" / "gdino_config.py"
-        self.cfg_path = str(config_path)
+        if config_path is not None:
+            warnings.warn(
+                "GDBoxer config_path is ignored: the transformers Grounding DINO "
+                "checkpoint carries its own config.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         self.weight_path = str(weight_path)
         if use_cuda and torch.cuda.is_available():
             self.device = "cuda"
@@ -111,8 +128,33 @@ class GDBoxer:
             if use_cuda:
                 self.logger.warning("CUDA is not available but requested, using CPU")
             self.device = "cpu"
-        self.model = Model(self.cfg_path, self.weight_path, device=self.device)
+
+        source, revision = self._resolve_model_source(self.weight_path)
+        self.processor = AutoProcessor.from_pretrained(source, revision=revision)
+        self.model = AutoModelForZeroShotObjectDetection.from_pretrained(
+            source, revision=revision, use_safetensors=True
+        )
+        self.model.to(self.device)
+        self.model.eval()
         self.bridge = CvBridge()
+
+    def _resolve_model_source(self, weight_path: str) -> Tuple[str, Optional[str]]:
+        """Map ``weight_path`` to a ``from_pretrained`` source and revision."""
+        path = Path(weight_path)
+        if path.is_dir():
+            return str(path), None
+        if path.is_file():
+            self.logger.warning(
+                f"'{weight_path}' is an original-format Grounding DINO checkpoint, which "
+                f"is no longer supported. Loading the equivalent transformers checkpoint "
+                f"'{GDINO_HF_MODEL_ID}' from the Hugging Face Hub instead."
+            )
+            return GDINO_HF_MODEL_ID, GDINO_HF_MODEL_REVISION
+        if _HUB_ID_PATTERN.match(weight_path):
+            if weight_path == GDINO_HF_MODEL_ID:
+                return weight_path, GDINO_HF_MODEL_REVISION
+            return weight_path, None
+        raise FileNotFoundError(f"Grounding DINO weights not found: {weight_path}")
 
     def get_boxes(
         self,
@@ -132,28 +174,13 @@ class GDBoxer:
         Returns:
             List of Box objects with detections
         """
-        # TODO: move this to method, or use RAI canonical one
-        image = self.bridge.imgmsg_to_cv2(
-            image_msg, desired_encoding=image_msg.encoding
+        image = self.bridge.imgmsg_to_cv2(image_msg, desired_encoding="rgb8")
+        xyxy, confidences, phrases = self._predict(
+            image, ". ".join(classes), box_threshold, text_threshold
         )
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        class_ids = self._phrases_to_class_ids(phrases, classes)
 
-        predictions = self.model.predict_with_classes(
-            image=image,
-            classes=classes,
-            box_threshold=box_threshold,
-            text_threshold=text_threshold,
-        )
         packed_boxes = []
-        xyxy = predictions.xyxy
-        class_ids = predictions.class_id
-        confidences = predictions.confidence
-        if len(xyxy) == 0:
-            return []
-        else:
-            assert class_ids is not None
-            assert confidences is not None
-
         for i in range(len(xyxy)):
             if class_ids[i] is None:
                 continue
@@ -165,3 +192,75 @@ class GDBoxer:
             size_y = y2 - y1
             packed_boxes.append(Box(center, size_x, size_y, phrase, confidence))
         return packed_boxes
+
+    def _predict(
+        self,
+        image_rgb: np.ndarray,
+        caption: str,
+        box_threshold: float,
+        text_threshold: float,
+    ) -> Tuple[np.ndarray, np.ndarray, List[str]]:
+        """Run the model and return pixel xyxy boxes, confidences and matched phrases.
+
+        Post-processing mirrors the original GroundingDINO ``predict(..., remove_combined=True)``:
+        each box keeps the tokens above ``text_threshold`` within the caption segment
+        (between separators) that holds its highest-scoring token.
+        """
+        caption = caption.lower().strip()
+        if not caption.endswith("."):
+            caption = caption + "."
+
+        inputs = self.processor(
+            images=PILImage.fromarray(image_rgb), text=caption, return_tensors="pt"
+        ).to(self.device)
+        with torch.no_grad():
+            outputs = self.model(**inputs)
+
+        logits = outputs.logits.sigmoid()[0].cpu()  # (num_queries, max_text_len)
+        boxes = outputs.pred_boxes[0].cpu()  # (num_queries, 4), normalized cxcywh
+        keep = logits.max(dim=1)[0] > box_threshold
+        logits = logits[keep]
+        boxes = boxes[keep]
+
+        input_ids: List[int] = inputs["input_ids"][0].tolist()
+        tokenizer = self.processor.tokenizer
+        separator_ids = {
+            tokenizer.cls_token_id,
+            tokenizer.sep_token_id,
+            tokenizer.convert_tokens_to_ids("."),
+        }
+        separator_idx = [i for i, t in enumerate(input_ids) if t in separator_ids]
+
+        phrases = []
+        for logit in logits:
+            max_idx = int(logit.argmax())
+            insert_idx = bisect.bisect_left(separator_idx, max_idx)
+            right_idx = separator_idx[insert_idx]
+            left_idx = separator_idx[insert_idx - 1]
+            token_mask = logit > text_threshold
+            token_mask[: left_idx + 1] = False
+            token_mask[right_idx:] = False
+            token_ids = [
+                input_ids[i] for i in token_mask.nonzero(as_tuple=True)[0].tolist()
+            ]
+            phrases.append(tokenizer.decode(token_ids).replace(".", ""))
+
+        height, width = image_rgb.shape[:2]
+        cx, cy, w, h = (boxes * torch.tensor([width, height, width, height])).unbind(-1)
+        xyxy = torch.stack([cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2], dim=-1)
+        return xyxy.numpy(), logits.max(dim=1)[0].numpy(), phrases
+
+    @staticmethod
+    def _phrases_to_class_ids(
+        phrases: Sequence[str], classes: Sequence[str]
+    ) -> List[Optional[int]]:
+        """Map each phrase to the index of the first class contained in it, else None."""
+        class_ids: List[Optional[int]] = []
+        for phrase in phrases:
+            for class_id, class_name in enumerate(classes):
+                if class_name in phrase:
+                    class_ids.append(class_id)
+                    break
+            else:
+                class_ids.append(None)
+        return class_ids

@@ -18,13 +18,14 @@ Note: Algorithm functionality is tested via TestGDBoxerViaAgent in test_boxer.py
 This file only contains agent-specific tests (default path, service creation, etc.).
 """
 
+import shutil
 from unittest.mock import patch
 
 import pytest
 from rai_perception.agents.grounding_dino import GroundingDinoAgent
 
 from tests.rai_perception.agents.test_base_vision_agent import cleanup_agent
-from tests.rai_perception.conftest import create_valid_weights_file
+from tests.rai_perception.conftest import create_valid_model_dir
 from tests.rai_perception.test_helpers import (
     get_default_detection_weights_path,
     get_detection_weights_path,
@@ -46,18 +47,23 @@ class TestGroundingDinoAgent:
     def test_init_default_path(self, mock_connector):
         """Test GroundingDinoAgent initialization with default path."""
         weights_path = get_default_detection_weights_path()
-        weights_path.parent.mkdir(parents=True, exist_ok=True)
-        create_valid_weights_file(weights_path)
+        # Never touch a real model a developer already downloaded to the default path.
+        created = not weights_path.exists()
+        if created:
+            create_valid_model_dir(weights_path)
 
-        with patch_detection_agent_dependencies_default_path(
-            mock_connector, MockGDBoxer, weights_path
-        ):
-            agent = GroundingDinoAgent(ros2_name="test")
+        try:
+            with patch_detection_agent_dependencies_default_path(
+                mock_connector, MockGDBoxer, weights_path
+            ):
+                agent = GroundingDinoAgent(ros2_name="test")
 
-            assert agent._service._boxer is not None
+                assert agent._service._boxer is not None
 
-            cleanup_agent(agent)
-            weights_path.unlink()
+                cleanup_agent(agent)
+        finally:
+            if created:
+                shutil.rmtree(weights_path)
 
     @pytest.mark.timeout(10)
     def test_run_creates_service(self, tmp_path, mock_connector):

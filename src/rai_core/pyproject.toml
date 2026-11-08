@@ -1,6 +1,6 @@
 [project]
 name = "rai_core"
-version = "2.13.0"
+version = "2.14.0"
 description = "Core functionality for RAI framework"
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
@@ -15,16 +15,16 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
 ]
 dependencies = [
-    "langchain-core>=1.2.10,<2.0.0",
-    "langgraph>=1.1.5,<2.0.0",
+    "langchain-core>=1.7.0,<2.0.0",
+    "langgraph>=1.2.0,<2.0.0",
     "langgraph-prebuilt",
-    "langchain>=1.0.0,<2.0.0",
+    "langchain>=1.4.0,<2.0.0",
     "langchain-aws",
     "langchain-openai",
     "langchain-ollama",
     "langchain-google-genai",
     "langchain-community",
-    "requests>=2.32.2,<3.0.0",
+    "requests>=2.33.0,<3.0.0",
     "coloredlogs>=15.0.1,<16.0.0",
     "tqdm>=4.66.4,<5.0.0",
     "deprecated>=1.2.14,<2.0.0",
@@ -34,11 +34,14 @@ dependencies = [
     "opencv-python-headless>=4.9.0.80,<5.0.0.0",
     "lark>=1.1.9,<2.0.0",
     "transforms3d>=0.4.1,<0.5.0",
-    "pillow>=11.0.0,<12.0.0",
-    "langfuse>=3.8.0,<4.0.0",
+    # Pillow 13 dropped Python 3.10 (ROS 2 Humble); 12.3 is the last 3.10-compatible line.
+    "pillow>=13.0.0,<14.0.0; python_version >= '3.11'",
+    "pillow>=12.3.0,<13.0.0; python_version < '3.11'",
+    "langfuse>=4.0.0,<5.0.0",
     "pydub>=0.25.1,<0.26.0",
     "streamlit>=1.67,<2.0.0; python_version >= '3.11'",
     "streamlit>=1.65,<2.0.0; python_version < '3.11'",
+    # ROS 2 (Humble and Jazzy) python bindings such as cv_bridge are built against numpy 1.x.
     "numpy<2.0",
 ]
 
@@ -50,5 +53,5 @@ module-root = ""
 module-name = "rai"
 
 [build-system]
-requires = ["uv_build>=0.11.3,<0.12"]
+requires = ["uv_build>=0.13.0,<0.14"]
 build-backend = "uv_build"

@@ -31,6 +31,7 @@ from typing import Optional
 from rai.communication.ros2 import ROS2Connector
 
 from rai_interfaces.srv import RAIGroundingDino
+from rai_perception.algorithms.boxer import GDINO_HF_MODEL_ID, GDINO_HF_MODEL_REVISION
 from rai_perception.models.detection import get_model
 from rai_perception.services.base_vision_service import BaseVisionService
 
@@ -49,8 +50,13 @@ class DetectionService(BaseVisionService):
       for backward compatibility (default: True)
     """
 
-    WEIGHTS_URL = "https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth"
-    WEIGHTS_FILENAME = "groundingdino_swint_ogc.pth"
+    # Weights are a Hugging Face Hub snapshot stored in the directory WEIGHTS_FILENAME.
+    HF_REPO_ID = GDINO_HF_MODEL_ID
+    HF_REVISION = GDINO_HF_MODEL_REVISION
+    WEIGHTS_URL = (
+        f"https://huggingface.co/{GDINO_HF_MODEL_ID}/tree/{GDINO_HF_MODEL_REVISION}"
+    )
+    WEIGHTS_FILENAME = "grounding-dino-tiny"
 
     def __init__(
         self,
