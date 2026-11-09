@@ -1,8 +1,10 @@
 [project]
 name = "rai_core"
-version = "2.14.0"
+version = "2.14.1"
 description = "Core functionality for RAI framework"
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.10,<3.13"
 authors = [
     { name = "Maciej Majek", email = "maciej.majek@robotec.ai" },
@@ -12,7 +14,6 @@ authors = [
 classifiers = [
     "Programming Language :: Python :: 3",
     "Development Status :: 4 - Beta",
-    "License :: OSI Approved :: Apache Software License",
 ]
 dependencies = [
     "langchain-core>=1.7.0,<2.0.0",

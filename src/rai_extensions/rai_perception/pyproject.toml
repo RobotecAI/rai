@@ -4,6 +4,8 @@ name = "rai-perception"
 version = "0.4.0"
 description = "Package for object detection, segmentation and gripping point detection."
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.10,<3.13"
 authors = [
     { name = "Maciej Majek", email = "maciej.majek@robotec.ai" },
@@ -28,5 +30,5 @@ download-perception-models = "rai_perception.scripts.download_weights:main"
 packages = ["rai_perception"]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"

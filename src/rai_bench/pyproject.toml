@@ -3,6 +3,8 @@ name = "rai-bench"
 version = "0.4.0"
 description = "Package for running and creating benchmarks."
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.10"
 authors = [
     { name = "Jakub Matejczyk", email = "jakub.matejczyk@robotec.ai" },

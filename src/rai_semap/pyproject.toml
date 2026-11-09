@@ -3,12 +3,13 @@ name = "rai_semap"
 version = "0.1.0"
 description = "Semantic mapping and spatial memory for RAI"
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.10,<3.13"
 authors = [{ name = "Julia Jia" }]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Development Status :: 4 - Beta",
-    "License :: OSI Approved :: Apache Software License",
 ]
 dependencies = [
     "rai_core",

@@ -3,6 +3,8 @@ name = "rai_finetune"
 version = "0.1.0-alpha"
 description = "RAI fine-tuning utilities using Unsloth - standalone package"
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.10,<3.12"  # Python3.10 is recommended for better compatibility with other Rai components' setup.
 authors = [{ name = "Julia Jia", email = "juliajster@gmail.com" }]
 dependencies = [
