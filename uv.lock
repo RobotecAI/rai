@@ -6714,7 +6714,7 @@ requires-dist = [
 
 [[package]]
 name = "rai-core"
-version = "2.14.0"
+version = "2.14.1"
 source = { editable = "src/rai_core" }
 dependencies = [
     { name = "coloredlogs" },

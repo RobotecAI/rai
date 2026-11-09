@@ -3,12 +3,13 @@ name = "rai_s2s"
 version = "1.1.0"
 description = "Speech-to-Speech module for RAI framework"
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.10,<3.13"
 authors = [{ name = "Kajetan Rachwal", email = "kajetan.rachwal@robotec.ai" }]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Development Status :: 4 - Beta",
-    "License :: OSI Approved :: Apache Software License",
 ]
 dependencies = [
     "sounddevice>=0.5.0,<0.6.0",

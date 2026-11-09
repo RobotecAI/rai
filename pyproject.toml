@@ -3,6 +3,8 @@ name = "rai_framework"
 version = "1.0.0"
 description = "RAI is a framework for building general multi-agent systems, bringing Gen AI features to ROS enabled robots."
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.10,<3.13"
 authors = [
     { name = "Maciej Majek", email = "maciej.majek@robotec.ai" },
@@ -11,7 +13,6 @@ authors = [
 classifiers = [
     "Programming Language :: Python :: 3",
     "Development Status :: 4 - Beta",
-    "License :: OSI Approved :: Apache Software License",
 ]
 dependencies = [
     "rai_core",
