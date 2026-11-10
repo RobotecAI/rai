@@ -21,7 +21,6 @@ from pathlib import Path
 from typing import Literal, Tuple
 
 import numpy as np
-from kokoro_onnx import Kokoro
 from pydub import AudioSegment
 
 from rai_s2s.tts.models import TTSModel, TTSModelError
@@ -70,6 +69,12 @@ class KokoroTTS(TTSModel):
         model_size: Literal["small", "medium", "large"] = "large",
         cache_dir: str | Path = Path.home() / ".cache/rai/kokoro/",
     ):
+        try:
+            from kokoro_onnx import Kokoro
+        except ImportError as e:
+            raise ImportError(
+                "KokoroTTS requires the 'kokoro' extra: install rai_s2s[kokoro]"
+            ) from e
         phonemizer_logger = logging.getLogger("phonemizer")
         phonemizer_logger.addFilter(_PhonemizerLogsFilter())
         self.voice = voice

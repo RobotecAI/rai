@@ -124,6 +124,8 @@ rosdep install --from-paths src --ignore-src -r -y
     | [nomad][nomad] | Visual Navigation - NoMaD integration | visualnav_transformer |
     | docs | Documentation-related dependencies | mkdocs, mkdocs-material, pymdown-extensions |
 
+    KokoroTTS is not included in the `s2s` group because its dependencies are GPL-3.0 licensed. Install it explicitly with `uv pip install -e "src/rai_s2s[kokoro]"` (a later `uv sync` removes it again unless run with `--inexact`).
+
 ### 1.5 Configure RAI
 
 Run the configuration tool to set up your LLM vendor and other settings:
