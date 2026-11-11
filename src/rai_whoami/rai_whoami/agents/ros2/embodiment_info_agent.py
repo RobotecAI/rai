@@ -48,11 +48,13 @@ class ROS2EmbodimentInfoAgent(SyncAgent):
         self, request: EmbodimentInfoSrv.Request, response: EmbodimentInfoSrv.Response
     ):
         self.logger.info(f"Received request: {request}")
-        response.rules = self.embodiment_info.rules
-        response.capabilities = self.embodiment_info.capabilities
-        response.behaviors = self.embodiment_info.behaviors
-        response.description = self.embodiment_info.description
-        response.images = self.embodiment_info.images
+        # Unset fields of the embodiment info are None; message fields take no None.
+        info = self.embodiment_info
+        response.rules = info.rules or []
+        response.capabilities = info.capabilities or []
+        response.behaviors = info.behaviors or []
+        response.description = info.description or ""
+        response.images = info.images or []
         self.logger.info("Sending response.")
         return response
 
