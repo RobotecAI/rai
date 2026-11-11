@@ -132,7 +132,7 @@ rosdep install --from-paths src --ignore-src -r -y
 Run the configuration tool to set up your LLM vendor and other settings:
 
 ```bash
-uv run streamlit run src/rai_core/rai/frontend/configurator.py
+uv run streamlit run src/rai_core/rai/ui/configurator.py
 ```
 
 !!! tip "Web browser"

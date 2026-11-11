@@ -15,8 +15,8 @@
 import streamlit as st
 from rai import get_llm
 from rai.agents import ReActAgent
-from rai.frontend import run_streamlit_app
 from rai.tools.ros2 import ROS2CLIToolkit
+from rai.ui.streamlit import chat
 
 from rai_whoami import EmbodimentInfo
 
@@ -31,7 +31,7 @@ def initialize_agent():
         llm,
         ROS2CLIToolkit().get_tools(),
         system_prompt=embodiment_info.to_langchain(),
-    ).graph
+    )
 
 
 st.set_page_config(
@@ -39,14 +39,8 @@ st.set_page_config(
     page_icon=":robot:",
 )
 
-
-def main():
-    run_streamlit_app(
-        initialize_agent(),
-        page_title="ROS 2 Debugging Assistant",
-        initial_message="Hi! I am a ROS 2 assistant. How can I help you?",
-    )
-
-
-if __name__ == "__main__":
-    main()
+chat(
+    initialize_agent(),
+    title="ROS 2 Debugging Assistant",
+    greeting="Hi! I am a ROS 2 assistant. How can I help you?",
+)

@@ -12,6 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ..frontend.streamlit import run_streamlit_app
-
-__all__ = ["run_streamlit_app"]
+"""Streamlit UIs (``rai_core[ui]``): :func:`rai.ui.streamlit.chat` and the
+settings editor ``streamlit run src/rai_core/rai/ui/configurator.py``."""

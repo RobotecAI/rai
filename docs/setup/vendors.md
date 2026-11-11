@@ -44,8 +44,8 @@ Ollama can be used to host models locally.
 1. Install `Ollama` see: [https://ollama.com/download](https://ollama.com/download)
 2. Start Ollama server: `ollama serve`
 3. Choose LLM model and endpoint type. Ollama server deliveres 2 endpoints:
-    - Ollama endpoint: [RAI Configurator][configurator] -> `Model Selection` -> `ollama` vendor
-    - OpenAI endpoint: [RAI Configurator][configurator] -> `Model Selection` -> `openai` vendor -> `Use OpenAI compatible API`
+    - Ollama endpoint: in the [RAI Configurator][configurator], use `ollama:<model>` models
+    - OpenAI endpoint: in the [RAI Configurator][configurator], use `openai:<model>` models and set the `openai` base_url to the Ollama server
       Both endpoints should work interchangeably and decision is only dedicated by user's convenience.
 
 ### OpenAI
@@ -53,7 +53,7 @@ Ollama can be used to host models locally.
 1. Setup your [OpenAI account](https://platform.openai.com/docs/overview), generate
    and set the API key:
    `bash export OPENAI_API_KEY="sk-..." `
-2. Use [RAI Configurator][configurator] -> `Model Selection` -> `ollama` vendor
+2. In the [RAI Configurator][configurator], use `openai:<model>` models
 
 ### AWS Bedrock
 
@@ -65,7 +65,7 @@ Ollama can be used to host models locally.
     export AWS_SESSION_TOKEN="..."
     ```
 
-2. Use [RAI Configurator][configurator] -> `Model Selection` -> `bedrock` vendor
+2. In the [RAI Configurator][configurator], use `bedrock_converse:<model id>` models
 
 ## Complex LLM Model Configuration
 
@@ -83,13 +83,13 @@ llm = ChatBedrock(model="anthropic.claude-3-opus-20240229-v1:0")
 
 ## Text To Speech
 
-For configuration use `Text To Speech` tab in [RAI Configurator][configurator].
+Configure it in the `[tts]` table of `rai.toml`.
 
 Usage examples can be found in [Voice Interface Tutorial][s2s]
 
 ## Speech To Text
 
-For configuration use `Speech Recognition` tab in [RAI Configurator][configurator].
+Configure it in the `[asr]` table of `rai.toml`.
 
 Usage examples can be found in [Voice Interface Tutorial][s2s]
 

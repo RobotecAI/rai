@@ -10,8 +10,3 @@ coverage:
     patch:
       default:
         target: 85%
-
-# Streamlit UI without tests; also omitted in pyproject.toml [tool.coverage.run] until it
-# leaves rai_core or gets tests.
-ignore:
-  - src/rai_core/rai/frontend/*

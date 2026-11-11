@@ -79,9 +79,6 @@ select = ["E4", "E7", "E9", "F", "TID251", "TID253"]
 [tool.ruff.lint.per-file-ignores]
 # The layering rules below apply to rai_core only.
 "!src/rai_core/**" = ["TID251", "TID253"]
-# The Streamlit apps need streamlit at import time (rai_core[ui]).
-"src/rai_core/rai/frontend/**" = ["TID253"]
-"src/rai_core/rai/agents/integrations/streamlit.py" = ["TID253"]
 
 [tool.ruff.lint.flake8-tidy-imports]
 # Optional dependencies (extras) must be imported lazily so the base install works.
@@ -134,8 +131,6 @@ log_cli_level = "INFO"
 # floor with --cov-fail-under) and by local runs: pytest --cov=src/rai_core/rai.
 [tool.coverage.run]
 source = ["src/rai_core/rai"]
-# Streamlit UI with no tests (rai3-plan/04 §4.3). Omitted until it leaves rai_core or gets tests.
-omit = ["*/rai/frontend/*"]
 # Repo-relative paths in coverage.xml, so Codecov maps files without path fixes.
 relative_files = true
 

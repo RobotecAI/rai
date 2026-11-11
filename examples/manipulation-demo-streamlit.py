@@ -17,7 +17,6 @@ import os
 from pathlib import Path
 
 import streamlit as st
-from langchain_core.messages import AIMessage, HumanMessage
 from launch import LaunchDescription
 from launch.actions import (
     IncludeLaunchDescription,
@@ -26,9 +25,9 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from manipulation_common import create_agent
-from rai.agents.integrations.streamlit import get_streamlit_cb, streamlit_invoke
 from rai.communication.ros2.connectors.ros2_connector import ROS2Connector
 from rai.messages import HumanMultimodalMessage
+from rai.ui.streamlit import chat, reset
 
 from rai_bench.manipulation_o3de import get_scenarios
 from rai_bench.manipulation_o3de.benchmark import Scenario
@@ -81,9 +80,8 @@ def launch_description():
 
 
 @st.cache_resource
-def initialize_graph(version: str):
-    agent, camera_tool = create_agent(version=version)
-    return agent, camera_tool
+def initialize_agent(version: str):
+    return create_agent(version=version)
 
 
 @st.cache_resource
@@ -160,191 +158,74 @@ def main(o3de_config_path: str):
         page_title="RAI Manipulation Demo",
         page_icon=":robot:",
     )
-    st.title("RAI Manipulation Demo")
-    st.markdown("---")
-
-    # Layout selection in sidebar
     st.sidebar.header("Configuration")
 
-    # Agent version from environment variable
     agent_version = os.getenv("AGENT_VERSION", "v2")
 
-    # Get available scenarios for layout selection
     levels = ["medium", "hard", "very_hard"]
     scenarios: list[Scenario] = get_scenarios(levels=levels)
     scenarios = [
         s for s in scenarios if Path(s.scene_config_path).stem in SCENARIO_NAMES
     ]
 
-    # Create layout selection widget
-    layout_options = list(SCENARIO_NAMES.keys())
-    scenario = "3rc"
-    # Determine the current selection index
-    current_index = (
-        layout_options.index(Path(scenario).stem)
-        if Path(scenario).stem in layout_options
-        else 0
-    )
-
-    selected_layout_option = st.sidebar.selectbox(
+    selected_layout = st.sidebar.selectbox(
         "Select Layout:",
-        options=layout_options,
+        options=list(SCENARIO_NAMES),
         format_func=lambda x: str(SCENARIO_NAMES.get(x, x)),
-        index=current_index,
         help="Choose a scene layout for the manipulation demo",
     )
-
-    # Convert selection back to layout name
-    selected_layout = selected_layout_option
-
-    # Display selected layout info
     st.sidebar.info(f"Selected: {SCENARIO_NAMES.get(selected_layout, selected_layout)}")
 
-    # Display current scene info if available (removed to reduce log noise)
-
-    # Check if layout has changed
-    if "current_layout" not in st.session_state:
-        st.session_state["current_layout"] = selected_layout
-    elif st.session_state["current_layout"] != selected_layout:
-        # User selected a predefined layout
-        st.sidebar.success("Layout changed! Setting up new scene...")
-        # Find the scenario path for the selected layout
-        selected_scenario_path = None
-        selected_scenario_path = get_scenario_path(scenarios, selected_layout)
-
-        if selected_scenario_path and "o3de" in st.session_state:
-            # Setup new scene with the selected layout
-            try:
-                # Clear the current scene first
-                try:
-                    # Actually clear the scene by despawning all entities
-                    while st.session_state["o3de"].spawned_entities:
-                        st.session_state["o3de"]._despawn_entity(
-                            st.session_state["o3de"].spawned_entities[0]
-                        )
-                except Exception as clear_error:
-                    st.sidebar.warning(f"Could not clear scene: {str(clear_error)}")
-
-                # Setup new scene
-                new_scenario = setup_new_scene(
-                    st.session_state["o3de"], selected_scenario_path
-                )
-                st.session_state["current_scenario"] = new_scenario
-                st.session_state["current_layout"] = selected_layout
-
-                # Reset agent history for new layout
-                st.session_state["messages"] = [
-                    AIMessage(content="Hi! I am a robotic arm. What can I do for you?")
-                ]
-                st.rerun()
-            except Exception as e:
-                st.sidebar.error(f"Failed to setup new scene: {str(e)}")
-        else:
-            st.session_state["current_layout"] = selected_layout
-
-    # Add reload button in configuration section
-    st.sidebar.markdown("---")
-    if st.sidebar.button("Reload Layout", help="Reload the current scene layout"):
-        if "o3de" in st.session_state and "current_layout" in st.session_state:
-            # Find the scenario path for the current layout
-            current_scenario_path = None
-            for s in scenarios:
-                if Path(s.scene_config_path).stem == st.session_state["current_layout"]:
-                    current_scenario_path = s.scene_config_path
-                    break
-
-            if current_scenario_path:
-                try:
-                    # Clear the current scene first
-                    st.sidebar.info("Clearing current scene...")
-                    try:
-                        st.session_state["o3de"].clear_scene()
-                        st.sidebar.success("Scene cleared")
-                    except Exception as clear_error:
-                        st.sidebar.warning(f"Could not clear scene: {str(clear_error)}")
-
-                    # Reload the scene
-                    st.sidebar.info(
-                        f"Reloading scene: {st.session_state['current_layout']}"
-                    )
-                    new_scenario = setup_new_scene(
-                        st.session_state["o3de"], current_scenario_path
-                    )
-                    st.session_state["current_scenario"] = new_scenario
-
-                    # Reset agent history for reloaded scene
-                    st.session_state["messages"] = [
-                        AIMessage(
-                            content="Hi! I am a robotic arm. What can I do for you?"
-                        )
-                    ]
-                    st.rerun()
-                except Exception as e:
-                    st.sidebar.error(f"Failed to reload scene: {str(e)}")
-            else:
-                st.sidebar.error("Could not find scenario path for current layout")
-        else:
-            st.sidebar.warning("Demo not initialized yet")
-
-    # Clear conversation history button - resets cached tool results
-    # This forces the agent to query object positions fresh for each new task
-    # instead of using cached ToolMessage results from previous interactions
-    if st.sidebar.button(
-        "Clear Conversation History", help="Clear all previous tool calls and messages"
-    ):
-        st.session_state["messages"] = [
-            AIMessage(content="Hi! I am a robotic arm. What can I do for you?")
-        ]
-        st.rerun()
-
     if "o3de" not in st.session_state:
-        selected_scenario_path = get_scenario_path(scenarios, scenario)
-        if selected_scenario_path is None:
-            st.error(f"Could not find scenario: {scenario}")
+        initial_layout = list(SCENARIO_NAMES)[0]
+        scenario_path = get_scenario_path(scenarios, initial_layout)
+        if scenario_path is None:
+            st.error(f"Could not find scenario: {initial_layout}")
             st.stop()
         o3de, initial_scenario = initialize_o3de(
-            selected_scenario_path, o3de_config_path, agent_version=agent_version
+            scenario_path, o3de_config_path, agent_version=agent_version
         )
         st.session_state["o3de"] = o3de
         st.session_state["current_scenario"] = initial_scenario
+        st.session_state["current_layout"] = initial_layout
 
-    if "graph" not in st.session_state:
-        logger.info(f"Initializing agent version: {agent_version}")
-        graph, camera_tool = initialize_graph(version=agent_version)
-        st.session_state["graph"] = graph
-        st.session_state["camera_tool"] = camera_tool
-
-    if "messages" not in st.session_state:
-        st.session_state["messages"] = [
-            AIMessage(content="Hi! I am a robotic arm. What can I do for you?")
-        ]
-
-    prompt = st.chat_input()
-    for msg in st.session_state.messages:
-        if isinstance(msg, AIMessage):
-            if msg.content:
-                st.chat_message("assistant").write(msg.content)
-        elif isinstance(msg, HumanMultimodalMessage):
-            continue
-        elif isinstance(msg, HumanMessage):
-            st.chat_message("user").write(msg.content)
-
-    if prompt:
-        if "camera_tool" in st.session_state:
-            _, artifact = st.session_state["camera_tool"]._run()
+    # After O3DE: the agent waits for the perception services it launches.
+    logger.info(f"Initializing agent version: {agent_version}")
+    agent, camera_tool = initialize_agent(version=agent_version)
+    o3de = st.session_state["o3de"]
+    changed = st.session_state["current_layout"] != selected_layout
+    st.sidebar.markdown("---")
+    reload = st.sidebar.button("Reload Layout", help="Reload the current scene layout")
+    if changed or reload:
+        scenario_path = get_scenario_path(scenarios, selected_layout)
+        if scenario_path is None:
+            st.sidebar.error("Could not find scenario path for the layout")
         else:
-            artifact = None
-        message = HumanMultimodalMessage(
-            content=prompt, images=artifact.get("images", [])
-        )
-        st.session_state.messages.append(message)
+            try:
+                try:
+                    o3de.clear_scene()
+                except Exception as clear_error:
+                    st.sidebar.warning(f"Could not clear scene: {clear_error}")
+                st.session_state["current_scenario"] = setup_new_scene(
+                    o3de, scenario_path
+                )
+                st.session_state["current_layout"] = selected_layout
+            except Exception as e:
+                st.sidebar.error(f"Failed to set up the scene: {e}")
+            else:
+                reset(agent)  # a new scene makes earlier object positions stale
+                st.rerun()
 
-        st.chat_message("user").write(prompt)
-        with st.chat_message("assistant"):
-            st_callback = get_streamlit_cb(st.container())
-            streamlit_invoke(
-                st.session_state["graph"], st.session_state.messages, [st_callback]
-            )
+    def with_camera_image(prompt: str) -> HumanMultimodalMessage:
+        _, artifact = camera_tool._run()
+        return HumanMultimodalMessage(content=prompt, images=artifact.get("images", []))
+
+    chat(
+        agent,
+        title="RAI Manipulation Demo",
+        greeting="Hi! I am a robotic arm. What can I do for you?",
+        prepare=with_camera_image,
+    )
 
 
 if __name__ == "__main__":

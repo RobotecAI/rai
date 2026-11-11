@@ -15,63 +15,17 @@
 
 import rclpy
 import streamlit as st
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from rai.agents import ReActAgent
-from rai.agents.integrations.streamlit import get_streamlit_cb, streamlit_invoke
 from rai.communication.ros2 import ROS2Connector
-from rai.messages import HumanMultimodalMessage
 from rai.tools.ros2 import ROS2Toolkit
+from rai.ui.streamlit import chat
 
 
 @st.cache_resource
-def initialize_graph():
+def make_agent() -> ReActAgent:
     rclpy.init()
-    ros2_connector = ROS2Connector()
-    tools = ROS2Toolkit(connector=ros2_connector).get_tools()
-    return ReActAgent(tools=tools).graph
+    return ReActAgent(tools=ROS2Toolkit(connector=ROS2Connector()).get_tools())
 
 
-def main():
-    st.set_page_config(
-        page_title="RAI Manipulation Demo",
-        page_icon=":robot:",
-    )
-    st.title("RAI Manipulation Demo")
-    st.markdown("---")
-
-    st.sidebar.header("Tool Calls History")
-
-    if "graph" not in st.session_state:
-        graph = initialize_graph()
-        st.session_state["graph"] = graph
-
-    if "messages" not in st.session_state:
-        st.session_state["messages"] = [
-            AIMessage(content="Hi! I am a robotic arm. What can I do for you?")
-        ]
-
-    prompt = st.chat_input()
-    for msg in st.session_state.messages:
-        if isinstance(msg, AIMessage):
-            if msg.content:
-                st.chat_message("assistant").write(msg.content)
-        elif isinstance(msg, HumanMultimodalMessage):
-            continue
-        elif isinstance(msg, HumanMessage):
-            st.chat_message("user").write(msg.content)
-        elif isinstance(msg, ToolMessage):
-            with st.sidebar.expander(f"Tool: {msg.name}", expanded=False):
-                st.code(msg.content, language="json")
-
-    if prompt:
-        st.session_state.messages.append(HumanMessage(content=prompt))
-        st.chat_message("user").write(prompt)
-        with st.chat_message("assistant"):
-            st_callback = get_streamlit_cb(st.container())
-            streamlit_invoke(
-                st.session_state["graph"], st.session_state.messages, [st_callback]
-            )
-
-
-if __name__ == "__main__":
-    main()
+st.set_page_config(page_title="RAI ReAct agent", page_icon=":robot:")
+chat(make_agent(), title="RAI ReAct agent", greeting="Hi! What can I do for you?")

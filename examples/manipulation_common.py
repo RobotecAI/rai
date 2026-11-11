@@ -48,7 +48,7 @@ def create_agent(
 
     Args:
         version: Agent version to create. "v1" uses legacy tools, "v2" uses GetObjectGrippingPointsTool.
-                 Both return the graph of a ReActAgent.
+                 Both return a ReActAgent.
 
     Returns:
         Tuple of (agent, camera_tool) for both versions
@@ -106,7 +106,7 @@ def _create_agent_v1():
         "examples/embodiments/manipulation_embodiment.json"
     )
 
-    agent = ReActAgent(llm, tools, system_prompt=embodiment_info.to_langchain()).graph
+    agent = ReActAgent(llm, tools, system_prompt=embodiment_info.to_langchain())
     return agent, camera_tool
 
 
@@ -159,7 +159,7 @@ def _create_agent_v2():
     embodiment_info = EmbodimentInfo.from_file(
         "examples/embodiments/manipulation_embodiment.json"
     )
-    agent = ReActAgent(llm, tools, system_prompt=embodiment_info.to_langchain()).graph
+    agent = ReActAgent(llm, tools, system_prompt=embodiment_info.to_langchain())
     # Extract camera_tool from tools for consistency with v1
     camera_tool = tools[-1]  # camera_tool is the last tool
     return agent, camera_tool

@@ -17,11 +17,9 @@ from typing import List
 import rclpy
 import streamlit as st
 from langchain_core.tools import BaseTool
-from langgraph.graph.state import CompiledStateGraph
 from rai import get_llm
 from rai.agents import ReActAgent
 from rai.communication.ros2 import ROS2Connector
-from rai.frontend.streamlit import run_streamlit_app
 from rai.tools.ros2 import (
     GetObjectPositionsTool,
     GetROS2ImageConfiguredTool,
@@ -32,6 +30,7 @@ from rai.tools.ros2.navigation.nav2_blocking import (
     NavigateToPoseBlockingTool,
 )
 from rai.tools.time import WaitForSecondsTool
+from rai.ui.streamlit import chat
 from rai_perception.tools import GetGrabbingPointTool
 
 from rai_whoami import EmbodimentInfo
@@ -44,7 +43,7 @@ st.set_page_config(
 
 
 @st.cache_resource
-def initialize_agent() -> CompiledStateGraph:
+def initialize_agent() -> ReActAgent:
     rclpy.init()
     embodiment_info = EmbodimentInfo.from_file(
         "examples/embodiments/rosbotxl_embodiment.json"
@@ -86,19 +85,14 @@ def initialize_agent() -> CompiledStateGraph:
         get_llm("complex", streaming=True),
         tools,
         system_prompt=embodiment_info.to_langchain(),
-    ).graph
+    )
     connector.node.declare_parameter("conversion_ratio", 1.0)
 
     return agent
 
 
-def main():
-    run_streamlit_app(
-        initialize_agent(),
-        "RAI ROSBotXL Demo",
-        "Hi! I am a ROSBotXL robot. What can I do for you?",
-    )
-
-
-if __name__ == "__main__":
-    main()
+chat(
+    initialize_agent(),
+    title="RAI ROSBotXL Demo",
+    greeting="Hi! I am a ROSBotXL robot. What can I do for you?",
+)
