@@ -40,7 +40,7 @@ plugins:
     handlers:
       python:
         # Static analysis: the docs build does not install rai.
-        paths: [src/rai_core]
+        paths: [src/rai_core, src/rai_bench, src/rai_s2s, src/rai_semap, src/rai_sim, src/rai_whoami, src/rai_extensions/rai_perception]
         options:
           docstring_style: numpy
           show_root_heading: true

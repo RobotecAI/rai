@@ -1,55 +1,22 @@
 # Runners
 
-There are two ways to manage the agents in RAI:
+`rai.run(*agents)` starts the agents, waits for SIGINT, SIGTERM or every agent finishing, then stops them in reverse order. `ThreadedAgent` runs one agent on its own thread and event loop, for code that is not async.
 
-1. `AgentRunner` - a class for starting and stopping the agents
-2. `wait_for_shutdown` - a function for waiting for interruption signals
+## run
 
-!!! info "Usage of `Runners` is optional"
+::: rai.agents.runner.run
 
-    You can start and stop the agents manually for more control over the agents lifecycle.
+## ThreadedAgent
 
-## AgentRunner class definition
+::: rai.agents.runner.ThreadedAgent
 
-::: rai.agents.runner.AgentRunner
-
-## wait_for_shutdown function definition
-
-::: rai.agents.runner.wait_for_shutdown
-
-## Usage examples
-
-### AgentRunner
+## Usage
 
 ```python
-from rai.agents import AgentRunner
-from rai.agents.ros2 import ROS2StateBasedAgent
+import rai
 from rai.agents import ReActAgent
 
-state_based_agent = ROS2StateBasedAgent()
-react_agent = ReActAgent()
-
-runner = AgentRunner([state_based_agent, react_agent])
-
-runner.run_and_wait_for_shutdown() # starts the agents and blocks until the shutdown signal (Ctrl+C or SIGTERM)
-```
-
-### wait_for_shutdown
-
-```python
-from rai.agents import wait_for_shutdown
-from rai.agents.ros2 import ROS2StateBasedAgent
-from rai.agents import ReActAgent
-
-state_based_agent = ROS2StateBasedAgent()
-react_agent = ReActAgent()
-
-# start the agents manually
-state_based_agent.run()
-react_agent.run()
-
-# blocks until the shutdown signal (Ctrl+C or SIGTERM)
-wait_for_shutdown([state_based_agent, react_agent])
+rai.run(ReActAgent())  # blocks until Ctrl+C or SIGTERM
 ```
 
 ## See Also
