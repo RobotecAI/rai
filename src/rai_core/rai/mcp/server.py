@@ -81,6 +81,7 @@ def mcp_tool(tool: BaseTool) -> Tool:
     async def call(**arguments: Any) -> CallToolResult:
         return await call_tool(rai_tool, arguments)
 
+    call.rai_tool = rai_tool  # type: ignore[attr-defined]  # read by rai_tools
     return Tool(
         fn=call,
         name=rai_tool.name,
@@ -97,6 +98,12 @@ def add_tool(server: FastMCP, tool: BaseTool) -> None:
     """Register `tool` on a running or built server (e.g. from a setup function)."""
     mcp = mcp_tool(tool)
     server._tool_manager._tools[mcp.name] = mcp  # FastMCP only adds functions
+
+
+def rai_tools(server: FastMCP) -> list[RaiTool]:
+    """The RaiTools behind the tools registered on `server` (e.g. for the manifest)."""
+    tools = server._tool_manager.list_tools()
+    return [t.fn.rai_tool for t in tools if hasattr(t.fn, "rai_tool")]
 
 
 async def call_tool(tool: RaiTool, arguments: dict[str, Any]) -> CallToolResult:

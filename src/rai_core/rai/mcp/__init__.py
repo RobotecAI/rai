@@ -25,6 +25,7 @@ _LAZY = {
     "build_server": "rai.mcp.server",
     "call_tool": "rai.mcp.server",
     "mcp_tool": "rai.mcp.server",
+    "rai_tools": "rai.mcp.server",
     "ros2_tools": "rai.mcp.server",
     "serve": "rai.mcp.server",
     "connect": "rai.mcp.client",

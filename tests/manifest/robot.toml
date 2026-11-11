@@ -1,0 +1,31 @@
+name = "testbot"
+description = "A differential drive test robot with a camera."
+safety = ["Stop before any person closer than 0.5 m.", "Never drive in reverse."]
+hide = ["*/debug*"]
+forbidden = ["*/factory_reset"]
+motion_types = ["std_msgs/msg/Float64"]
+
+[frames]
+base = "base_link"
+odom = "odom"
+
+[limits]
+max_linear_speed_mps = 0.5
+max_angular_speed_radps = 1.5
+can_climb_stairs = false
+
+[[capabilities]]
+name = "drive"
+description = "Velocity control."
+topics = ["cmd_vel"]
+examples = ["publish geometry_msgs/msg/Twist with linear.x 0.2 to drive forward"]
+
+[[capabilities]]
+name = "count"
+description = "Fibonacci counting."
+actions = ["fibonacci"]
+
+[[capabilities]]
+name = "dock"
+description = "Docking station."
+actions = ["dock"]
