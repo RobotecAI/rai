@@ -20,7 +20,6 @@ import sys
 import textwrap
 import threading
 import time
-from unittest.mock import MagicMock
 
 import pytest
 import rai
@@ -31,7 +30,6 @@ from rai.agents import (
     SyncAgent,
     ThreadedAgent,
 )
-from rai.agents.langchain.agent import LangChainAgent
 
 S = AgentState
 
@@ -91,14 +89,6 @@ def test_stop_before_start_is_a_noop():
     asyncio.run(agent.stop())
     assert agent.state is S.STOPPED
     assert agent.log == []  # on_stop never runs for an agent that never started
-
-
-@pytest.mark.timeout(5)
-def test_langchain_agent_stop_before_start_does_not_hang():
-    # Regression: LangChainAgent.stop() before run() used to block forever.
-    agent = LangChainAgent(target_connectors={}, runnable=MagicMock())
-    ThreadedAgent(agent).stop()
-    assert agent.state is S.STOPPED
 
 
 def test_double_stop_is_idempotent():

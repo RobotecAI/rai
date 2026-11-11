@@ -12,49 +12,43 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-import logging
-from functools import partial
-from typing import Optional
+from typing import Any, List, TypedDict
 
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import (
-    SystemMessage,
-)
+from langchain_core.messages import BaseMessage, SystemMessage
+from langchain_core.runnables import Runnable, RunnableConfig
 from langgraph.graph import START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel
 
-from rai.agents.langchain.core.conversational_agent import State, agent
+
+class State(TypedDict):
+    messages: List[Any]
 
 
 def create_structured_output_runnable(
     llm: BaseChatModel,
     structured_output: type[BaseModel],
     system_prompt: str | SystemMessage,
-    logger: Optional[logging.Logger] = None,
-    debug: bool = False,
 ) -> CompiledStateGraph:
-    _logger = None
-    if logger:
-        _logger = logger
-    else:
-        _logger = logging.getLogger(__name__)
-
-    _logger.info("Creating structured output runnable")
-
-    llm_with_structured_output = llm.with_structured_output(
+    """One-node graph that appends ``{"raw", "parsed", "parsing_error"}`` from
+    ``llm.with_structured_output(structured_output, include_raw=True)``."""
+    model: Runnable[List[BaseMessage], Any] = llm.with_structured_output(
         schema=structured_output, include_raw=True
     )
-
-    workflow = StateGraph(State)
-
-    workflow.add_node(
-        "thinker", partial(agent, llm_with_structured_output, _logger, system_prompt)
+    system = (
+        SystemMessage(content=system_prompt)
+        if isinstance(system_prompt, str)
+        else system_prompt
     )
 
-    workflow.add_edge(START, "thinker")
+    def thinker(state: State, config: RunnableConfig) -> State:
+        if state["messages"] and not isinstance(state["messages"][0], SystemMessage):
+            state["messages"].insert(0, system)
+        state["messages"].append(model.invoke(state["messages"], config))
+        return state
 
-    app = workflow.compile(debug=debug)
-    _logger.info("State based agent created")
-    return app
+    workflow = StateGraph(State)
+    workflow.add_node("thinker", thinker)
+    workflow.add_edge(START, "thinker")
+    return workflow.compile()

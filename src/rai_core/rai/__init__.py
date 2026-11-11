@@ -18,6 +18,7 @@ import importlib
 
 _LAZY = {
     "ReActAgent": "rai.agents",
+    "StateBasedAgent": "rai.agents",
     "run": "rai.agents.runner",
     "get_llm": "rai.llm",
     "get_embeddings": "rai.llm",

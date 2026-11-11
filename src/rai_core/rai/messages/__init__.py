@@ -20,14 +20,14 @@ from langchain_core.messages import (
     ToolMessage,
 )
 
-from .artifacts import MultimodalArtifact, get_stored_artifacts, store_artifacts
+from .artifacts import MultimodalArtifact
 from .conversion import preprocess_image
 from .multimodal import (
     AIMultimodalMessage,
     HumanMultimodalMessage,
     MultimodalMessage,
     SystemMultimodalMessage,
-    ToolMultimodalMessage,
+    with_tool_images,
 )
 
 __all__ = [
@@ -40,8 +40,6 @@ __all__ = [
     "SystemMessage",
     "SystemMultimodalMessage",
     "ToolMessage",
-    "ToolMultimodalMessage",
-    "get_stored_artifacts",
     "preprocess_image",
-    "store_artifacts",
+    "with_tool_images",
 ]

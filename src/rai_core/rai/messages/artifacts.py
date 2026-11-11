@@ -12,47 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pickle
-from pathlib import Path
-from typing import Any, List, TypedDict
+from typing import List, TypedDict
 
 
 class MultimodalArtifact(TypedDict):
     images: List[str]  # base64 encoded images
     audios: List[str]
-
-
-def store_artifacts(
-    tool_call_id: str, artifacts: List[Any], db_path="artifact_database.pkl"
-):
-    # TODO(boczekbartek): refactor
-    path = Path(db_path)
-    if not path.is_file():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        artifact_database: dict = {}
-        with path.open("wb") as file:
-            pickle.dump(artifact_database, file)
-    with path.open("rb") as file:
-        artifact_database = pickle.load(file)
-        if tool_call_id not in artifact_database:
-            artifact_database[tool_call_id] = artifacts
-        else:
-            artifact_database[tool_call_id].extend(artifacts)
-    with path.open("wb") as file:
-        pickle.dump(artifact_database, file)
-
-
-def get_stored_artifacts(
-    tool_call_id: str, db_path="artifact_database.pkl"
-) -> List[Any]:
-    # TODO(boczekbartek): refactor
-    db_path = Path(db_path)
-    if not db_path.is_file():
-        return []
-
-    with db_path.open("rb") as db:
-        artifact_database = pickle.load(db)
-        if tool_call_id in artifact_database:
-            return artifact_database[tool_call_id]
-
-    return []

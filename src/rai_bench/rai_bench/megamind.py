@@ -27,6 +27,7 @@ from langchain_core.messages import (
     BaseMessage,
     HumanMessage,
     SystemMessage,
+    ToolMessage,
 )
 from langchain_core.tools import BaseTool, InjectedToolCallId, tool
 from langgraph.graph import END, START, MessagesState, StateGraph
@@ -35,10 +36,8 @@ from langgraph.prebuilt import create_react_agent
 from langgraph.types import Command
 from pydantic import BaseModel, Field
 
-from rai.agents.langchain.core.tool_runner import SubAgentToolRunner
-from rai.messages import (
-    HumanMultimodalMessage,
-)
+from rai.messages import HumanMultimodalMessage, with_tool_images
+from rai.tools import RaiTool, from_langchain
 
 
 class StepSuccess(BaseModel):
@@ -69,7 +68,7 @@ def llm_node(
         messages.insert(0, HumanMessage(state["step"]))
         messages.insert(0, SystemMessage(content=system_prompt))
 
-    ai_msg = llm.invoke(messages)
+    ai_msg = llm.invoke(with_tool_images(messages))
     # append to both
     state["step_messages"].append(ai_msg)
     state["messages"].append(ai_msg)
@@ -108,6 +107,26 @@ Below you have messages of agent doing the task:"""
     return state
 
 
+def tools_node(tools: List[RaiTool], state: MegamindState) -> MegamindState:
+    """Run the tool calls of the last step message; errors become tool messages."""
+    by_name = {t.name: t for t in tools}
+    for call in state["step_messages"][-1].tool_calls:
+        tool = by_name.get(call["name"])
+        result = (
+            tool.invoke(call)
+            if tool is not None
+            else ToolMessage(
+                f'Unknown tool: "{call["name"]}"',
+                tool_call_id=call["id"],
+                name=call["name"],
+                status="error",
+            )
+        )
+        state["step_messages"].append(result)
+        state["messages"].append(result)
+    return state
+
+
 def should_continue_or_structure(state: MegamindState) -> str:
     """Decide whether to continue with tools or return structured output."""
     last_message = state["step_messages"][-1]
@@ -132,8 +151,8 @@ def create_react_structured_agent(
     graph.add_edge(START, "llm")
 
     if tools:
-        tool_runner = SubAgentToolRunner(tools)
-        graph.add_node("tools", tool_runner)
+        tools = [t if isinstance(t, RaiTool) else from_langchain(t) for t in tools]
+        graph.add_node("tools", partial(tools_node, tools))
 
         bound_llm = llm.bind_tools(tools)
         graph.add_node("llm", partial(llm_node, bound_llm, system_prompt))

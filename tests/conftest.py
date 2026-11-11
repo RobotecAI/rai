@@ -27,21 +27,6 @@ def pytest_configure(config):
         )
 
 
-@pytest.fixture(autouse=True)
-def _artifact_store_in_tmp(tmp_path, monkeypatch):
-    """Keep ToolRunner's pickle artifact store out of the CWD."""
-    import functools
-
-    from rai.agents.langchain.core import tool_runner
-
-    db = str(tmp_path / "artifact_database.pkl")
-    monkeypatch.setattr(
-        tool_runner,
-        "store_artifacts",
-        functools.partial(tool_runner.store_artifacts, db_path=db),
-    )
-
-
 # 3D gripping point detection strategy
 def pytest_addoption(parser):
     parser.addoption(

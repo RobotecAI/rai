@@ -24,9 +24,6 @@ from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel
-from rai.agents.langchain.core import (
-    create_structured_output_runnable,
-)
 from rai.messages import HumanMultimodalMessage
 
 from rai_bench.base_benchmark import BaseBenchmark, RunSummary, TimeoutException
@@ -35,6 +32,9 @@ from rai_bench.utils import get_llm_model_name
 from rai_bench.vlm_benchmark.interfaces import ImageReasoningTask, TaskValidationError
 from rai_bench.vlm_benchmark.results_tracking import (
     TaskResult,
+)
+from rai_bench.vlm_benchmark.structured_output import (
+    create_structured_output_runnable,
 )
 
 
@@ -201,7 +201,6 @@ def run_benchmark(
             llm=llm,
             structured_output=task.structured_output,
             system_prompt=task.get_system_prompt(),
-            logger=bench_logger,
         )
 
         benchmark.run_next(agent=agent, experiment_id=experiment_id)

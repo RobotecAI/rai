@@ -125,10 +125,13 @@ def get_streamlit_cb(parent_container: DeltaGenerator) -> BaseCallbackHandler:
 def streamlit_invoke(
     graph: Runnable, messages: List[BaseMessage], callables: List[BaseCallbackHandler]
 ) -> Any:
-    """Invoke `graph` on `messages` with the given callback handlers."""
+    """Invoke `graph` on `messages` with the given callback handlers. `messages`
+    is updated in place with the new messages of the run."""
     if not isinstance(callables, list):
         raise TypeError("callables must be a list")
-    return graph.invoke(
+    result = graph.invoke(
         {"messages": messages},
         config=RunnableConfig(callbacks=callables, recursion_limit=100),
     )
+    messages[:] = result["messages"]
+    return result

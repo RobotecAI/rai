@@ -12,20 +12,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Agents. The LLM agents load LangChain on first access."""
+
+import importlib
+
 from rai.agents.base import AgentState, BaseAgent, InvalidTransitionError, SyncAgent
-from rai.agents.langchain import (
-    BaseStateBasedAgent,
-    ReActAgent,
-)
 from rai.agents.runner import ThreadedAgent, run
+
+_LAZY = {
+    "ReActAgent": "rai.agents.react",
+    "StateBasedAgent": "rai.agents.react",
+    "StateContext": "rai.agents.react",
+    "StateSource": "rai.agents.react",
+    "HRIChunk": "rai.agents.hri",
+    "HRIOutput": "rai.agents.hri",
+    "hri_connector_sender": "rai.agents.hri",
+}
 
 __all__ = [
     "AgentState",
     "BaseAgent",
-    "BaseStateBasedAgent",
     "InvalidTransitionError",
-    "ReActAgent",
     "SyncAgent",
     "ThreadedAgent",
     "run",
+    *_LAZY,
 ]
+
+
+def __getattr__(name: str):
+    if name in _LAZY:
+        return getattr(importlib.import_module(_LAZY[name]), name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

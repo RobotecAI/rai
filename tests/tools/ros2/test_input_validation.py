@@ -14,7 +14,7 @@
 
 """Tool argument constraints are declared on the args_schema, so a model that
 sends an empty topic name, a non-positive timeout or a NaN coordinate gets a
-ValidationError that ToolRunner reports back to it instead of a live call."""
+ValidationError that the agent reports back to it instead of a live call."""
 
 import math
 

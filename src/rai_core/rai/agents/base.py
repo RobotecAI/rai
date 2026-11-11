@@ -30,9 +30,11 @@ All coroutines of one agent must run on the same event loop. Use
 import asyncio
 import logging
 import threading
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 from enum import StrEnum
 from typing import Any, Self
+
+from rai.agents.events import AgentEvent, StateChanged
 
 
 class AgentState(StrEnum):
@@ -71,6 +73,9 @@ class BaseAgent:
 
     :meth:`stop` cancels the task running :meth:`on_start` / :meth:`run`, so
     whatever it awaits (an LLM call, a tool) is cancelled too.
+
+    Agents emit :mod:`rai.agents.events`; consume them with :meth:`subscribe`
+    or :meth:`events`.
     """
 
     def __init__(self, *, name: str | None = None):
@@ -82,6 +87,7 @@ class BaseAgent:
         self._task: asyncio.Task[None] | None = None
         self._done = asyncio.Event()  # set on FAILED or STOPPED
         self._stopped = asyncio.Event()
+        self._outputs: tuple[Callable[[AgentEvent], None], ...] = ()
 
     @property
     def state(self) -> AgentState:
@@ -100,6 +106,47 @@ class BaseAgent:
             self._done.set()
         if new is AgentState.STOPPED:
             self._stopped.set()
+        self.emit(StateChanged(agent=self.name, old=old, new=new))
+
+    def subscribe(self, output: Callable[[AgentEvent], None]) -> Callable[[], None]:
+        """Call ``output`` with every event, in the emitting thread. Returns a
+        function that unsubscribes it. Errors in ``output`` are logged."""
+        with self._lock:
+            self._outputs = (*self._outputs, output)
+
+        def unsubscribe() -> None:
+            with self._lock:
+                self._outputs = tuple(o for o in self._outputs if o is not output)
+
+        return unsubscribe
+
+    def emit(self, event: AgentEvent) -> None:
+        for output in self._outputs:
+            try:
+                output(event)
+            except Exception:
+                self.logger.exception("%s: event output %r failed", self.name, output)
+
+    def events(self) -> AsyncIterator[AgentEvent]:
+        """Events from now on, delivered on the calling event loop. The iterator
+        ends after the agent is STOPPED."""
+        loop = asyncio.get_running_loop()
+        queue: asyncio.Queue[AgentEvent] = asyncio.Queue()
+        unsubscribe = self.subscribe(
+            lambda event: loop.call_soon_threadsafe(queue.put_nowait, event)
+        )
+
+        async def stream() -> AsyncIterator[AgentEvent]:
+            try:
+                while True:
+                    event = await queue.get()
+                    yield event
+                    if isinstance(event, StateChanged) and event.new is _S.STOPPED:
+                        return
+            finally:
+                unsubscribe()
+
+        return stream()
 
     async def on_start(self) -> None:
         pass

@@ -23,9 +23,7 @@ from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.errors import GraphRecursionError
 from langgraph.graph.state import CompiledStateGraph
-from rai.agents.langchain.core import (
-    create_conversational_agent,
-)
+from rai.agents import ReActAgent
 from rai.messages import HumanMultimodalMessage
 
 from rai_bench.base_benchmark import BaseBenchmark, TimeoutException
@@ -118,12 +116,11 @@ class ToolCallingAgentBenchmark(BaseBenchmark):
         try:
             with self.time_limit(200 * task.max_tool_calls_number):
                 for state in agent.stream(
-                    initial_state,
-                    config=config,
+                    initial_state, config=config, stream_mode="values"
                 ):
-                    node = next(iter(state))
-                    if "messages" in state[node]:
-                        all_messages = state[node]["messages"]
+                    node = "agent"
+                    if "messages" in state:
+                        all_messages = state["messages"]
                         for new_msg in all_messages[prev_count:]:
                             messages.append(new_msg)
                             if isinstance(new_msg, AIMessage):
@@ -220,12 +217,9 @@ def run_benchmark(
     )
 
     for task in tasks:
-        agent = create_conversational_agent(
-            llm=llm,
-            tools=task.available_tools,
-            system_prompt=task.get_system_prompt(),
-            logger=bench_logger,
-        )
+        agent = ReActAgent(
+            llm, task.available_tools, system_prompt=task.get_system_prompt()
+        ).graph
         benchmark.run_next(
             agent=agent,
             initial_state={

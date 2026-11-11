@@ -13,7 +13,8 @@
 # limitations under the License.
 
 
-from typing import Any, Dict, List, Literal, Optional, Union
+from collections.abc import Sequence
+from typing import Any, Dict, List, Optional, Union
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.messages.base import BaseMessage, get_msg_title_repr
@@ -92,51 +93,31 @@ class SystemMultimodalMessage(SystemMessage, MultimodalMessage):
     pass
 
 
-class ToolMultimodalMessage(ToolMessage, MultimodalMessage):
-    """
-
-    Note
-    ----
-    When any subclass of this class is used with LangGraph agents, use
-    `rai.agents.langchain.core import ToolRunner` as the tool runner, as it automatically
-    handles multimodal ToolMessages as well as converts them to a format
-    that is compatible with the vendor.
-    ::: rai.agents.langchain.core.ToolRunner
-    """
-
-    def postprocess(self, format: Literal["openai", "bedrock"] = "openai"):
-        if format == "openai":
-            return self._postprocess_openai()
-        elif format == "bedrock":
-            return self._postprocess_bedrock()
-        else:
-            raise ValueError(f"Unsupported format: {format}")
-
-    def _postprocess_openai(self):
-        """OpenAI does not allow images in the tool message.
-        Functions dumps the message into human multimodal message and tool message.
-        """
-        if isinstance(self.images, list):
-            human_message = HumanMultimodalMessage(
-                content=f"Image returned by a tool call {self.tool_call_id}",
-                images=self.images,
-                tool_call_id=self.tool_call_id,
-            )
-            # at this point self.content is a list of dicts
-            # we need to extract the text from each dict
-            tool_message = ToolMultimodalMessage(
-                tool_call_id=self.tool_call_id,
-                name=self.name,
-                content=" ".join([part.get("text", "") for part in self.content]),
-            )
-            return [tool_message, human_message]
-        else:
-            # TODO(maciejmajek): find out if content can be a list
-            return ToolMessage(tool_call_id=self.tool_call_id, content=self.content)
-
-    def _postprocess_bedrock(self):
-        return self._postprocess_openai()
-
-
 class AIMultimodalMessage(AIMessage, MultimodalMessage):
     pass
+
+
+def with_tool_images(messages: Sequence[BaseMessage]) -> list[BaseMessage]:
+    """Show tool images to the model: after each run of tool messages, add one
+    human message with the images of their ``{"images": [...]}`` artifacts.
+
+    Most providers reject images inside tool results, so this is done per model
+    request; the history keeps the tool messages unchanged.
+    """
+    out: list[BaseMessage] = []
+    images: list[str] = []
+    for message in messages:
+        if isinstance(message, ToolMessage):
+            if isinstance(message.artifact, dict):
+                images += message.artifact.get("images") or []
+        elif images:
+            out.append(_tool_images_message(images))
+            images = []
+        out.append(message)
+    if images:
+        out.append(_tool_images_message(images))
+    return out
+
+
+def _tool_images_message(images: List[str]) -> HumanMultimodalMessage:
+    return HumanMultimodalMessage(content="Images returned by tools:", images=images)

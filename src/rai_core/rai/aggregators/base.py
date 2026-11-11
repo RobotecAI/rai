@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 from abc import ABC, abstractmethod
 from collections import deque
-from typing import Deque, Generic, List, TypeVar
+from typing import Any, Deque, Generic, List, TypeVar
 
 from langchain_core.messages import BaseMessage
 
@@ -41,6 +42,12 @@ class BaseAggregator(ABC, Generic[T]):
     @abstractmethod
     def get(self) -> BaseMessage | None:
         """Returns the outcome of processing the aggregated message"""
+
+    async def observe(self) -> str | list[Any] | None:
+        """State source for :class:`rai.agents.StateBasedAgent`: the content of
+        :meth:`get`, computed in a worker thread."""
+        message = await asyncio.to_thread(self.get)
+        return None if message is None else message.content
 
     def clear_buffer(self) -> None:
         """Clears the buffer of messages"""

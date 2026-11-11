@@ -16,15 +16,10 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from rai.agents.langchain.core import (
-    Executor,
-    create_megamind,
-    get_initial_megamind_state,
-)
-
 from rai_bench import (
     define_benchmark_logger,
 )
+from rai_bench.megamind import Executor, create_megamind, get_initial_megamind_state
 from rai_bench.tool_calling_agent.benchmark import ToolCallingAgentBenchmark
 from rai_bench.tool_calling_agent.interfaces import TaskArgs
 from rai_bench.tool_calling_agent.tasks.warehouse import SortingTask

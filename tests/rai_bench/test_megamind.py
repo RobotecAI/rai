@@ -21,7 +21,7 @@ from langchain_core.messages import (
     SystemMessage,
 )
 from langchain_core.tools import tool
-from rai.agents.langchain.core.megamind import (
+from rai_bench.megamind import (
     ContextProvider,
     Executor,
     MegamindState,

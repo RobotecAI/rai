@@ -32,9 +32,7 @@ from launch.actions import (
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from rai.agents.langchain.core import (
-    create_conversational_agent,
-)
+from rai.agents import ReActAgent
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.messages import HumanMultimodalMessage
 from rai.tools.ros2 import (
@@ -276,10 +274,11 @@ class ManipulationO3DEBenchmark(BaseBenchmark):
                     for state in agent.stream(
                         {"messages": [HumanMessage(content=scenario.task.task_prompt)]},
                         config=config,
+                        stream_mode="values",
                     ):
-                        node = next(iter(state))
-                        new_messages = state[node]["messages"][prev_count:]
-                        prev_count = len(state[node]["messages"])
+                        node = "agent"
+                        new_messages = state["messages"][prev_count:]
+                        prev_count = len(state["messages"])
 
                         for msg in new_messages:
                             if isinstance(msg, HumanMultimodalMessage):
@@ -430,9 +429,9 @@ def run_benchmark(
     try:
         for scenario in scenarios:
             # create new agent for each scenario so its independent from previous ones.
-            agent = create_conversational_agent(
-                llm, tools, scenario.task.system_prompt, logger=bench_logger
-            )
+            agent = ReActAgent(
+                llm, tools, system_prompt=scenario.task.system_prompt
+            ).graph
             benchmark.run_next(agent=agent, experiment_id=experiment_id)
             o3de.reset_arm()
             time.sleep(0.2)  # admire the end position for a second ;)
