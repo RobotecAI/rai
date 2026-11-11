@@ -39,6 +39,8 @@ plugins:
 - mkdocstrings:
     handlers:
       python:
+        # Static analysis: the docs build does not install rai.
+        paths: [src/rai_core]
         options:
           docstring_style: numpy
           show_root_heading: true

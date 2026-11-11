@@ -5,49 +5,32 @@ on:
     branches:
       - development
       - main
+  push:
+    branches:
+      - mm/rai-3.0
 
 permissions:
   contents: read
 
 jobs:
   build-mkdocs:
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft != true
 
-    runs-on:
-      - ubuntu-24.04
-    container:
-      image: python:3.12-slim
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          clean: true
-
-      - name: Install system dependencies
-        run: |
-          apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get --yes install git
-
-      - name: Cache uv and pip
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            ~/.cache/uv
-            ~/.cache/pip
-          key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-
 
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
 
+      # mkdocstrings reads src/rai_core statically, so only the docs group is needed.
       - name: Install python dependencies
-        run: uv sync --frozen --all-groups
+        run: uv sync --frozen --only-group docs
 
       - name: Build docs
-        shell: bash
-        run: |
-          uv run mkdocs build --strict
+        run: uv run --no-sync mkdocs build --strict

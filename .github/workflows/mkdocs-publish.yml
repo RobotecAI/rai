@@ -23,25 +23,15 @@ jobs:
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
 
-      - name: Cache uv and pip
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            ~/.cache/uv
-            ~/.cache/pip
-          key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-
-
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
 
       - name: Install python dependencies
-        run: uv sync --frozen --all-groups
+        run: uv sync --frozen --only-group docs
 
       - name: Build and Deploy
         shell: bash
         run: |
-          uv run mkdocs gh-deploy --force
+          uv run --no-sync mkdocs gh-deploy --force
