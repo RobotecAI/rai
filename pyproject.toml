@@ -106,7 +106,7 @@ banned-module-level-imports = [
 known-first-party = [
     "rai_bench",
     "rai_bringup",
-    "rai_core[all]",
+    "rai_core",
     "rai_extensions",
     "rai_finetune",
     "rai_interfaces",
