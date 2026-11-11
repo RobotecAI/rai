@@ -52,12 +52,15 @@ from rai.communication.ros2.exceptions import ROS2ServiceError, ROS2TimeoutError
 logger = logging.getLogger(__name__)
 
 ExecutorKind = Literal["single", "events"]
-DEFAULT_EXECUTOR: ExecutorKind = "single"
+# EventsExecutor passed the full oracle on Jazzy and Lyrical (rai3-plan/PLAN.md
+# 2.1); SingleThreadedExecutor stays available as executor="single".
+DEFAULT_EXECUTOR: ExecutorKind = "events"
 POLL_S = 0.01  # readiness and TF polling; rclpy's own waits poll at 0.25 s
 
 
 def _make_executor(kind: Optional[str], context: Context) -> Any:
-    kind = kind or DEFAULT_EXECUTOR
+    if kind is None:
+        kind = DEFAULT_EXECUTOR if compat.EventsExecutor is not None else "single"
     if kind == "single":
         return SingleThreadedExecutor(context=context)
     if kind == "events":

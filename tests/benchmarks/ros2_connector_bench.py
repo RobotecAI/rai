@@ -190,7 +190,7 @@ def close(connector: Any, timeout: float = 5.0) -> float:
 
 
 def entity_counts(connector: Any) -> dict[str, Any]:
-    node = connector.node
+    node = connector._node
     with open("/proc/self/status") as f:
         rss_kb = next(int(line.split()[1]) for line in f if line.startswith("VmRSS"))
     return {
@@ -617,7 +617,12 @@ def main() -> None:
     parser.add_argument("--out", required=True)
     parser.add_argument("--compare")
     parser.add_argument("--quick", action="store_true")
+    parser.add_argument("--executor", choices=["single", "events"])
     args = parser.parse_args()
+    if args.executor:  # the default executor of every runtime in this process
+        from rai.communication.ros2 import runtime
+
+        runtime.DEFAULT_EXECUTOR = args.executor
     k = 0.2 if args.quick else 1.0
     dispatch_s = 1.0 if args.quick else 2.0
 
@@ -665,6 +670,7 @@ def main() -> None:
             "ros_distro": os.environ.get("ROS_DISTRO"),
             "rmw": os.environ.get("RMW_IMPLEMENTATION", "default"),
             "quick": args.quick,
+            "executor": args.executor or "default",
             "total_s": round(time.perf_counter() - started, 1),
             "created": time.strftime("%Y-%m-%dT%H:%M:%S"),
         },
