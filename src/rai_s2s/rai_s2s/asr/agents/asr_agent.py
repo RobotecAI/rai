@@ -29,11 +29,7 @@ from typing_extensions import Self
 
 from rai_s2s.asr.agents.initialization import TRANSCRIBE_MODELS, load_config
 from rai_s2s.asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
-from rai_s2s.sound_device import (
-    SoundDeviceConfig,
-    SoundDeviceConnector,
-    SoundDeviceMessage,
-)
+from rai_s2s.sound_device import SoundDeviceConfig, SoundDeviceConnector
 
 
 class ThreadData(TypedDict):
@@ -195,13 +191,7 @@ class SpeechRecognitionAgent(SyncAgent):
         Start the voice recognition agent, initializing the microphone and handling incoming audio samples.
         """
         self.running = True
-        msg = SoundDeviceMessage(read=True)
-        self.listener_handle = self.microphone.start_action(
-            action_data=msg,
-            target="microphone",
-            on_feedback=self._on_new_sample,
-            on_done=lambda: None,
-        )
+        self.microphone.open_input_stream("microphone", self._on_new_sample)
         self.logger.info("Started Voice Agent")
 
     def teardown(self):
@@ -210,7 +200,7 @@ class SpeechRecognitionAgent(SyncAgent):
         """
         self.logger.info("Stopping Voice Agent")
         self.running = False
-        self.microphone.terminate_action(self.listener_handle)
+        self.microphone.close_streams()
         self.ros2_hri_connector.close()
         self.ros2_connector.close()
         while not all(

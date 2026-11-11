@@ -11,21 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import io
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 import sounddevice
 from rai.content import Audio
-from scipy.io import wavfile
 
-from rai_s2s.sound_device import (
-    SoundDeviceConfig,
-    SoundDeviceConnector,
-    SoundDeviceError,
-    SoundDeviceMessage,
-)
+from rai_s2s.sound_device import SoundDeviceConfig, SoundDeviceConnector
 
 
 @pytest.fixture
@@ -80,83 +73,49 @@ def sine_wav():
     return Audio(np.int16(wave * 32767), sample_rate)
 
 
-@pytest.fixture
-def binary_audio():
-    frequency = 440
-    duration = 2.0
-    sample_rate = 44100
-    amplitude = 0.5
-    t = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
-    wave = amplitude * np.sin(2 * np.pi * frequency * t)
-    wave_int16 = np.int16(wave * 32767)
-    wav_buffer = io.BytesIO()
-    wavfile.write(wav_buffer, sample_rate, wave_int16)
-
-    wav_binary = wav_buffer.getvalue()
-    return wav_binary
+def test_play(connector, mock_sound_device_api, sine_wav):
+    connector.play("speaker", sine_wav)
+    mock_sound_device_api.write.assert_called_once_with(sine_wav, blocking=False)
 
 
-def test_send_message_play_audio(connector, mock_sound_device_api, sine_wav):
-    message = SoundDeviceMessage(audios=[sine_wav])
-    connector.send_message(message, "speaker")
-    connector.devices["speaker"].write.assert_called_once_with(sine_wav)
+def test_play_blocking(connector, mock_sound_device_api, sine_wav):
+    connector.play("speaker", sine_wav, blocking=True)
+    mock_sound_device_api.write.assert_called_once_with(sine_wav, blocking=True)
 
 
-def test_send_message_stop_audio(connector, mock_sound_device_api):
-    message = SoundDeviceMessage(stop=True)
-    connector.send_message(message, "speaker")
-    connector.devices["speaker"].stop.assert_called_once()
+def test_stop(connector, mock_sound_device_api):
+    connector.stop("speaker")
+    mock_sound_device_api.stop.assert_called_once()
 
 
-def test_send_message_read_error(connector):
-    message = SoundDeviceMessage(read=True)
-    with pytest.raises(
-        SoundDeviceError,
-        match="For recording use start_action or service_call with read=True",
-    ):
-        connector.send_message(message, "speaker")
-
-
-def test_service_call_play_audio(connector, mock_sound_device_api, sine_wav):
-    message = SoundDeviceMessage(audios=[sine_wav])
-    result = connector.service_call(message, "speaker")
-    mock_sound_device_api.write.assert_called_once()
-    assert isinstance(result, SoundDeviceMessage)
-
-
-def test_service_call_read_audio(connector, mock_sound_device_api, sine_wav):
+def test_record(connector, mock_sound_device_api, sine_wav):
     mock_sound_device_api.read.return_value = sine_wav
-    message = SoundDeviceMessage(read=True)
-    result = connector.service_call(message, "microphone")
+    assert connector.record("microphone", 1.0) is sine_wav
     mock_sound_device_api.read.assert_called_once_with(1.0, blocking=True)
 
-    assert result.audios == [sine_wav]
 
-
-def test_service_call_stop_error(connector):
-    message = SoundDeviceMessage(stop=True)
-    with pytest.raises(
-        SoundDeviceError, match="For stopping use send_message with stop=True."
-    ):
-        connector.service_call(message, "speaker")
-
-
-def test_start_action_read(connector, mock_sound_device_api):
-    message = SoundDeviceMessage(read=True)
-    handle = connector.start_action(message, "microphone", MagicMock(), MagicMock())
+def test_open_input_stream(connector, mock_sound_device_api):
+    on_samples = MagicMock()
+    connector.open_input_stream("microphone", on_samples)
     mock_sound_device_api.open_read_stream.assert_called_once()
-    assert handle in connector.action_handles
+    assert mock_sound_device_api.open_read_stream.call_args[0][0] is on_samples
 
 
-def test_start_action_write(connector, mock_sound_device_api):
-    message = SoundDeviceMessage()
-    handle = connector.start_action(message, "speaker", MagicMock(), MagicMock())
-    mock_sound_device_api.open_write_stream.assert_called_once()
-    assert handle in connector.action_handles
+def test_open_output_stream(connector, mock_sound_device_api):
+    fill = MagicMock()
+    connector.open_output_stream("speaker", fill, sample_rate=22050, channels=2)
+    args = mock_sound_device_api.open_write_stream.call_args[0]
+    assert args[0] is fill and args[2:] == (22050, 2)
 
 
-def test_terminate_action(connector, mock_sound_device_api):
-    connector.action_handles["test_handle"] = ("speaker", False)
-    connector.terminate_action("test_handle")
+def test_close_streams(connector, mock_sound_device_api):
+    connector.close_streams("speaker")
+    mock_sound_device_api.close_read_stream.assert_called_once()
     mock_sound_device_api.close_write_stream.assert_called_once()
-    assert "test_handle" not in connector.action_handles
+
+
+def test_get_audio_params(connector, mock_sound_device_api):
+    mock_sound_device_api.sample_rate = 16000
+    mock_sound_device_api.in_channels = 1
+    mock_sound_device_api.out_channels = 2
+    assert connector.get_audio_params("speaker") == (16000, 1, 2)

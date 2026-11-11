@@ -20,12 +20,12 @@ if importlib.util.find_spec("sounddevice") is None:
     )
 
 from .api import SoundDeviceAPI, SoundDeviceConfig, SoundDeviceError
-from .connector import SoundDeviceConnector, SoundDeviceMessage
+from .connector import AudioParams, SoundDeviceConnector
 
 __all__ = [
+    "AudioParams",
     "SoundDeviceAPI",
     "SoundDeviceConfig",
     "SoundDeviceConnector",
     "SoundDeviceError",
-    "SoundDeviceMessage",
 ]

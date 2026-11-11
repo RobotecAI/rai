@@ -27,11 +27,7 @@ from rai.communication import HRIConnector, HRIMessage
 
 from rai_s2s.asr.agents.asr_agent import ThreadData
 from rai_s2s.asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
-from rai_s2s.sound_device import (
-    SoundDeviceConfig,
-    SoundDeviceConnector,
-    SoundDeviceMessage,
-)
+from rai_s2s.sound_device import SoundDeviceConfig, SoundDeviceConnector
 from rai_s2s.tts.agents.tts_agent import PlayData
 from rai_s2s.tts.models.base import TTSModel
 
@@ -134,20 +130,8 @@ class SpeechToSpeechAgent(SyncAgent):
         self.running = True
         self.logger.info("Starting SpeechToSpeechAgent...")
 
-        msg = SoundDeviceMessage(read=False)
-        self.player_handle = self.sound_connector.start_action(
-            action_data=msg,
-            target="speaker",
-            on_feedback=self._speaker_callback,
-            on_done=lambda: None,
-        )
-        msg = SoundDeviceMessage(read=True)
-        self.listener_handle = self.sound_connector.start_action(
-            action_data=msg,
-            target="microphone",
-            on_feedback=self._on_microphone_sample,
-            on_done=lambda: None,
-        )
+        self.sound_connector.open_output_stream("speaker", self._speaker_callback)
+        self.sound_connector.open_input_stream("microphone", self._on_microphone_sample)
         self.logger.info("SpeechToSpeechAgent Started!")
 
     def _speaker_callback(self, outdata, frames, time, status_dict):
@@ -351,7 +335,7 @@ class SpeechToSpeechAgent(SyncAgent):
         """
         Clean exit the speech-to-speech agent, terminating playback and joining the transcription thread.
         """
-        self.sound_connector.shutdown()
+        self.sound_connector.close()
 
         self.logger.info("Stopping TextToSpeechAgent")
         self.terminate_agent.set()

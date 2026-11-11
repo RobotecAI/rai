@@ -29,11 +29,7 @@ from rai.content import Audio
 from std_msgs.msg import String
 from typing_extensions import Self
 
-from rai_s2s.sound_device import (
-    SoundDeviceConfig,
-    SoundDeviceConnector,
-    SoundDeviceMessage,
-)
+from rai_s2s.sound_device import SoundDeviceConfig, SoundDeviceConnector
 from rai_s2s.tts.models import TTSModel
 
 from .initialization import load_config
@@ -156,13 +152,7 @@ class TextToSpeechAgent(SyncAgent):
         self.transcription_thread = Thread(target=self._transcription_thread)
         self.transcription_thread.start()
 
-        msg = SoundDeviceMessage(read=False)
-        self.speaker.start_action(
-            msg,
-            "speaker",
-            on_feedback=self._speaker_callback,
-            on_done=lambda: None,
-        )
+        self.speaker.open_output_stream("speaker", self._speaker_callback)
 
     def _speaker_callback(self, outdata, frames, time, status_dict):
         set_flags = [flag for flag, status in status_dict.items() if status]
@@ -207,6 +197,7 @@ class TextToSpeechAgent(SyncAgent):
         self.terminate_agent.set()
         if self.transcription_thread is not None:
             self.transcription_thread.join()
+        self.speaker.close()
         self.hri_ros2_connector.close()
         self.ros2_connector.close()
 

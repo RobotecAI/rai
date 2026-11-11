@@ -13,24 +13,12 @@
 # limitations under the License.
 
 
-import uuid
-from dataclasses import dataclass
-from typing import Callable, NamedTuple, Optional, Tuple
+from typing import Any, Callable, NamedTuple, Optional, Tuple
 
-from rai.communication import HRIMessage
+from numpy.typing import NDArray
+from rai.content import Audio
 
-from rai_s2s.sound_device.api import (
-    SoundDeviceAPI,
-    SoundDeviceConfig,
-    SoundDeviceError,
-)
-
-
-@dataclass
-class SoundDeviceMessage(HRIMessage):
-    read: bool = False
-    stop: bool = False
-    duration: Optional[float] = None
+from rai_s2s.sound_device.api import SoundDeviceAPI, SoundDeviceConfig
 
 
 class AudioParams(NamedTuple):
@@ -40,246 +28,66 @@ class AudioParams(NamedTuple):
 
 
 class SoundDeviceConnector:
-    """Plays and records audio on sound devices, as single clips or streams."""
+    """Plays and records audio on named sound devices, as single clips or
+    streams. Audio is :class:`rai.content.Audio`."""
 
     def __init__(
         self,
         targets: list[Tuple[str, SoundDeviceConfig]],
         sources: list[Tuple[str, SoundDeviceConfig]],
     ):
-        self.devices: dict[str, SoundDeviceAPI] = {}
-        self.action_handles: dict[str, Tuple[str, bool]] = {}
+        self.devices: dict[str, SoundDeviceAPI] = {
+            name: SoundDeviceAPI(config) for name, config in targets + sources
+        }
 
-        tmp_devs = targets + sources
-        all_names = [dev[0] for dev in tmp_devs]
-        all_configs = [dev[1] for dev in tmp_devs]
+    def get_audio_params(self, device: str) -> AudioParams:
+        """Sample rate, input channels and output channels of a device."""
+        api = self.devices[device]
+        return AudioParams(api.sample_rate, api.in_channels, api.out_channels)
 
-        for dev_target, dev_config in zip(all_names, all_configs):
-            self.configure_device(dev_target, dev_config)
+    def configure_device(self, device: str, config: SoundDeviceConfig) -> None:
+        """Register (or replace) a device under a name."""
+        self.devices[device] = SoundDeviceAPI(config)
 
-    def get_audio_params(self, target: str) -> AudioParams:
-        """
-        Retrieve audio parameters for a specified device.
+    def play(self, target: str, audio: Audio, *, blocking: bool = False) -> None:
+        """Play a clip on target; with blocking=True, return when it ends."""
+        self.devices[target].write(audio, blocking=blocking)
 
-        Parameters
-        ----------
-        target : str
-            The name of the device for which to retrieve audio parameters.
+    def record(self, source: str, duration: float) -> Audio:
+        """Record duration seconds from source (blocks)."""
+        return self.devices[source].read(duration, blocking=True)
 
-        Returns
-        -------
-        AudioParams
-            An `AudioParams` object containing the sample rate, input channels,
-            and output channels of the specified device.
-        """
-        return AudioParams(
-            self.devices[target].sample_rate,
-            self.devices[target].in_channels,
-            self.devices[target].out_channels,
-        )
+    def stop(self, device: str) -> None:
+        """Stop the clip playing or recording on device."""
+        self.devices[device].stop()
 
-    def configure_device(
+    def open_input_stream(
+        self,
+        source: str,
+        on_samples: Callable[[NDArray, dict[str, Any]], None],
+        on_done: Callable[[], None] = lambda: None,
+    ) -> None:
+        """Stream from source: on_samples(samples, status_flags) per block."""
+        self.devices[source].open_read_stream(on_samples, on_done)
+
+    def open_output_stream(
         self,
         target: str,
-        config: SoundDeviceConfig,
-    ):
-        """
-        Configure and register a new audio device.
-
-        Parameters
-        ----------
-        target : str
-            The name identifier for the device to configure.
-        config : SoundDeviceConfig
-            The configuration settings to initialize the device with.
-
-        Notes
-        -----
-        The configured device is stored in `self.devices` under the given target name.
-        """
-        self.devices[target] = SoundDeviceAPI(config)
-
-    def send_message(self, message: SoundDeviceMessage, target: str, **kwargs) -> None:
-        """
-        Send an audio message to a specified device.
-
-        Parameters
-        ----------
-        message : SoundDeviceMessage
-            The message containing audio data or control commands (e.g., stop or read request).
-        target : str
-            The name of the target device to which the message will be sent.
-        **kwargs
-            Additional keyword arguments (currently unused).
-
-        Raises
-        ------
-        SoundDeviceError
-            If the message requests reading (unsupported) or if no audio data is provided
-            when attempting to play audio.
-
-        Notes
-        -----
-        - If `message.stop` is `True`, the device will be stopped.
-        - If `message.read` is `True`, an error is raised (reading must use actions or services).
-        - Otherwise, attempts to write audio data to the device.
-        """
-        if message.stop:
-            self.devices[target].stop()
-        elif message.read:
-            raise SoundDeviceError(
-                "For recording use start_action or service_call with read=True."
-            )
-        else:
-            if message.audios:
-                self.devices[target].write(message.audios[0])
-            else:
-                raise SoundDeviceError("Failed to provice audios in message to play")
-
-    def receive_message(
-        self, source: str, timeout_sec: float = 1.0, **kwargs
-    ) -> SoundDeviceMessage:
-        """
-        SoundDeviceConnector does not support receiving messages. For recording use start_action or service_call with read=True.
-
-        """
-        raise SoundDeviceError(
-            "SoundDeviceConnector does not support receiving messages. For recording use start_action or service_call with read=True."
-        )
-
-    def service_call(
-        self,
-        message: SoundDeviceMessage,
-        target: str,
-        timeout_sec: float = 1.0,
+        fill: Callable[[NDArray, int, Any, dict[str, Any]], None],
+        on_done: Callable[[], None] = lambda: None,
         *,
-        duration: float = 1.0,
-        **kwargs,
-    ) -> SoundDeviceMessage:
-        """
-        Perform a blocking service call to a sound device for playback or recording.
+        sample_rate: Optional[int] = None,
+        channels: Optional[int] = None,
+    ) -> None:
+        """Stream to target: fill(outdata, frames, time, status_flags) writes
+        each block into outdata."""
+        self.devices[target].open_write_stream(fill, on_done, sample_rate, channels)
 
-        Depending on the message content, either records audio from the device or plays
-        provided audio data in a blocking manner.
+    def close_streams(self, device: Optional[str] = None) -> None:
+        """Close the streams of device, or of every device."""
+        for name in [device] if device is not None else list(self.devices):
+            self.devices[name].close_read_stream()
+            self.devices[name].close_write_stream()
 
-        Parameters
-        ----------
-        message : SoundDeviceMessage
-            The message specifying the operation: playback (with audio data) or recording (read flag).
-        target : str
-            The name of the target device on which to perform the action.
-        timeout_sec : float, optional
-            Timeout for the operation in seconds. Currently unused. Defaults to `1.0`.
-        duration : float, optional
-            Duration for recording audio in seconds. Only relevant when reading. Defaults to `1.0`.
-        **kwargs
-            Additional keyword arguments (currently unused).
-
-        Returns
-        -------
-        SoundDeviceMessage
-            A new message containing recorded audio if reading, or an empty message after successful playback.
-
-        Raises
-        ------
-        SoundDeviceError
-            If stopping is requested (unsupported in this method) or if playback is attempted
-            without providing audio data.
-
-        Notes
-        -----
-        - To stop a device, use `send_message` with `stop=True` instead.
-        - Audio recording is done synchronously with `blocking=True`.
-        """
-        if message.stop:
-            raise SoundDeviceError("For stopping use send_message with stop=True.")
-        elif message.read:
-            recording = self.devices[target].read(duration, blocking=True)
-
-            ret = SoundDeviceMessage(audios=[recording])
-        else:
-            if message.audios:
-                self.devices[target].write(message.audios[0], blocking=True)
-            else:
-                raise SoundDeviceError("Failed to provice audios in message to play")
-            ret = SoundDeviceMessage()
-        return ret
-
-    def start_action(
-        self,
-        action_data: Optional[SoundDeviceMessage],
-        target: str,
-        on_feedback: Callable,
-        on_done: Callable,
-        timeout_sec: float = 1.0,
-        **kwargs,
-    ) -> str:
-        """
-        Start an asynchronous streaming action on a sound device.
-
-        Depending on the action data, either opens a read (recording) or write (playback)
-        audio stream. Handles for ongoing actions are tracked internally.
-
-        Parameters
-        ----------
-        action_data : SoundDeviceMessage, optional
-            The action request containing operation details. Must not be `None`.
-            If `read` is `True`, a read (recording) stream is opened; otherwise, a write (playback) stream.
-        target : str
-            The name of the target device to interact with.
-        on_feedback : Callable
-            Callback function to handle feedback during the stream.
-        on_done : Callable
-            Callback function called upon stream completion.
-        timeout_sec : float, optional
-            Timeout for starting the stream, in seconds. Defaults to `1.0`. (Currently unused.)
-        **kwargs
-            Additional parameters:
-            - `sample_rate` (int, optional): Desired sample rate for playback streams.
-            - `channels` (int, optional): Number of channels for playback streams.
-
-        Returns
-        -------
-        str
-            A unique handle identifying the started action.
-
-        Raises
-        ------
-        SoundDeviceError
-            If `action_data` is not provided (`None`).
-
-        Notes
-        -----
-        - For recording streams, `open_read_stream` is used.
-        - For playback streams, `open_write_stream` is used, optionally customized by `sample_rate` and `channels`.
-        - Started actions are stored in `self.action_handles` with the handle as the key.
-        """
-        handle = str(uuid.uuid4())
-        if action_data is None:
-            raise SoundDeviceError("action_data must be provided")
-        elif action_data.read:
-            self.devices[target].open_read_stream(on_feedback, on_done)
-            self.action_handles[handle] = (target, True)
-        else:
-            sample_rate = kwargs.get("sample_rate", None)
-            channels = kwargs.get("channels", None)
-
-            self.devices[target].open_write_stream(
-                on_feedback, on_done, sample_rate, channels
-            )
-            self.action_handles[handle] = (target, False)
-
-        return handle
-
-    def terminate_action(self, action_handle: str, **kwargs):
-        target, read = self.action_handles[action_handle]
-        if read:
-            self.devices[target].close_read_stream()
-        else:
-            self.devices[target].close_write_stream()
-        del self.action_handles[action_handle]
-
-    def shutdown(self):
-        for target in self.devices:
-            self.devices[target].close_read_stream()
-            self.devices[target].close_write_stream()
+    def close(self) -> None:
+        self.close_streams()

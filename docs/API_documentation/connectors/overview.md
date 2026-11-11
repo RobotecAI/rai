@@ -55,7 +55,6 @@ Connectors are generic over message types derived from BaseMessage:
 -   **BaseMessage**: Foundation message type with payload and metadata
 -   **ROS2Message**: Message type for ROS 2 communication
 -   **HRIMessage**: Multimodal message with text, images, and audio (a dataclass, not a BaseMessage)
--   **SoundDeviceMessage**: Specialized message for audio operations
 
 ### Communication Patterns
 

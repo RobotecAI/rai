@@ -9,9 +9,7 @@ The `SoundDeviceConnector` provides a Human-Robot Interface (HRI) for audio stre
 ## Key Features
 
 -   Audio playback (write) and recording (read) with flexible device configuration
--   Asynchronous (streaming) and synchronous (service call) audio operations
--   Thread-safe device management and clean shutdown
--   Unified message type (`SoundDeviceMessage`) for audio and control
+-   Streaming and single-clip audio operations
 -   Audio as `rai.content.Audio` (samples shaped (n, channels) and a sample rate)
 
 ## Initialization
@@ -34,69 +32,39 @@ connector = SoundDeviceConnector(
 > [!TIP]
 > If you're experiencing audio issues and device_name is set to 'default', try specifying the exact device name instead, as this often resolves the problem.
 
-## Message Type: `SoundDeviceMessage`
-
-```python
-from rai_s2s.sound_device import SoundDeviceMessage
-
-msg = SoundDeviceMessage(
-    audios=[audio_data],   # List of audio data (bytes or numpy arrays)
-    read=False,            # Set True for recording
-    stop=False,            # Set True to stop playback/recording
-    duration=2.0           # Recording duration (seconds), if applicable
-)
-```
-
 ## Example Usage
 
-### Audio Playback (Synchronous)
+### Playback and Recording
 
 ```python
-# Play audio synchronously
-msg = SoundDeviceMessage(audios=[audio_data])
-connector.send_message(msg, target="speaker")
+connector.play("speaker", audio)                    # returns at once
+connector.play("speaker", audio, blocking=True)     # returns when the clip ends
+connector.stop("speaker")                           # stops the current clip
+recorded = connector.record("mic", duration=2.0)    # blocks, returns Audio
 ```
 
-### Audio Recording (Synchronous)
+### Streaming
 
 ```python
-# Record audio synchronously (blocking)
-msg = SoundDeviceMessage(read=True)
-recorded_msg = connector.service_call(msg, target="mic", duration=2.0)
-recorded_audio = recorded_msg.audios[0]
-```
+def on_samples(samples, status_flags):
+    print("Received", len(samples), "samples")
 
-### Audio Streaming (Asynchronous)
+connector.open_input_stream("mic", on_samples)
 
-```python
-# Start asynchronous audio recording
-msg = SoundDeviceMessage(read=True)
-def on_feedback(audio_chunk):
-    print("Received chunk", audio_chunk)
-def on_done(final_audio):
-    print("Recording finished")
-action_handle = connector.start_action(
-    action_data=msg,
-    target="mic",
-    on_feedback=on_feedback,
-    on_done=on_done
-)
+def fill(outdata, frames, time, status_flags):
+    outdata[:] = 0  # write the next `frames` frames here
 
-# Stop the stream when done
-connector.terminate_action(action_handle)
+connector.open_output_stream("speaker", fill)
+
+connector.close_streams()  # every device, or close_streams("mic")
 ```
 
 ## Device Management
 
--   Configure devices at initialization or using `configure_device(target, config)`.
--   Retrieve audio parameters using `get_audio_params(target)`.
--   All devices are managed in a thread-safe way and are properly closed on `shutdown()`.
-
-## Error Handling
-
--   All methods raise `SoundDeviceError` on invalid operations (e.g., unsupported message types, missing audio data).
--   Use `send_message` with `stop=True` to stop playback or recording.
--   `receive_message` is not supported (use actions or service calls for recording).
+-   Configure devices at initialization or using `configure_device(name, config)`.
+-   Retrieve audio parameters using `get_audio_params(name)`.
+-   `close()` closes the streams of every device.
+-   Invalid operations (for example recording on an output-only device) raise `SoundDeviceError`.
 
 ## See Also
 
