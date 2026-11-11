@@ -14,7 +14,7 @@
 
 import argparse
 
-from rai.agents import wait_for_shutdown
+import rai
 from rai.communication.ros2 import ROS2Context
 
 from rai_whoami.agents.ros2 import ROS2EmbodimentInfoAgent
@@ -30,8 +30,7 @@ def main():
         service_name="rai_whoami_embodiment_info_service",
         root_dir=args.root_dir,
     )
-    agent.run()
-    wait_for_shutdown([agent])
+    rai.run(agent)
 
 
 if __name__ == "__main__":

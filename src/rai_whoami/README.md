@@ -79,7 +79,8 @@ Integrate the generated embodiment info into your LLM-powered robot agent:
 
 ```python
 from rai_whoami import EmbodimentInfo
-from rai.agents import ReActAgent, wait_for_shutdown
+import rai
+from rai.agents import ReActAgent
 from rai.communication.ros2 import ROS2HRIConnector
 
 info = EmbodimentInfo.from_directory("output_dir/")
@@ -101,8 +102,7 @@ agent = ReActAgent(
 )
 agent.subscribe_source("/from_human", connector)
 
-agent.run()
-wait_for_shutdown([agent])
+rai.run(agent)
 ```
 
 ## Using generated Vector Database
@@ -129,7 +129,8 @@ print(
 2. Through a RAI Agent
 
 ```python
-from rai.agents import ReActAgent, wait_for_shutdown
+import rai
+from rai.agents import ReActAgent
 from rai.communication.ros2 import ROS2HRIConnector
 
 from rai_whoami.tools import QueryDatabaseTool
@@ -142,8 +143,7 @@ agent = ReActAgent(
 )
 agent.subscribe_source("/from_human", connector)
 
-agent.run()
-wait_for_shutdown([agent])
+rai.run(agent)
 ```
 
 ## Using ROS2 Vector Store Retrieval Agent
@@ -152,15 +152,14 @@ The `ROS2VectorStoreRetrievalAgent` is a ROS2 agent that can be used to retrieve
 
 ```python
 from rai_whoami.agents.ros2 import ROS2VectorStoreRetrievalAgent
-from rai.agents import wait_for_shutdown
+import rai
 
 agent = ROS2VectorStoreRetrievalAgent(
     service_name="rai_whoami_documentation_service",
     root_dir="output_dir",
     k=4,
 )
-agent.run()
-wait_for_shutdown([agent])
+rai.run(agent)
 ```
 
 With the agent running, you can query the vector database through a ROS 2 service:
@@ -175,14 +174,13 @@ The `ROS2EmbodimentInfoAgent` is a ROS2 agent that can be used to retrieve infor
 
 ```python
 from rai_whoami.agents.ros2 import ROS2EmbodimentInfoAgent
-from rai.agents import wait_for_shutdown
+import rai
 
 agent = ROS2EmbodimentInfoAgent(
     service_name="rai_whoami_embodiment_info_service",
     root_dir="output_dir",
 )
-agent.run()
-wait_for_shutdown([agent])
+rai.run(agent)
 ```
 
 With the agent running, you can query the embodiment info through a ROS 2 service:

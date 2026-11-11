@@ -21,14 +21,14 @@ if importlib.util.find_spec("rclpy") is None:
 
 import logging
 
-from rai.agents import BaseAgent
+from rai.agents import SyncAgent
 from rai.communication.ros2 import ROS2Connector
 
 from rai_interfaces.srv import EmbodimentInfo as EmbodimentInfoSrv
 from rai_whoami.models import EmbodimentInfo
 
 
-class ROS2EmbodimentInfoAgent(BaseAgent):
+class ROS2EmbodimentInfoAgent(SyncAgent):
     def __init__(self, root_dir: str, service_name: str):
         super().__init__()
         self.logger = logging.getLogger(__name__)
@@ -58,8 +58,5 @@ class ROS2EmbodimentInfoAgent(BaseAgent):
         self.logger.info("Sending response.")
         return response
 
-    def run(self):
-        pass
-
-    def stop(self):
+    def teardown(self):
         self.connector.shutdown()

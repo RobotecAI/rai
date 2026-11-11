@@ -24,14 +24,14 @@ from pathlib import Path
 from typing import Annotated
 
 from langchain_core.embeddings import Embeddings
-from rai.agents import BaseAgent
+from rai.agents import SyncAgent
 from rai.communication.ros2 import ROS2Connector
 
 from rai_interfaces.srv import VectorStoreRetrieval
 from rai_whoami.vector_db.faiss import get_faiss_client
 
 
-class ROS2VectorStoreRetrievalAgent(BaseAgent):
+class ROS2VectorStoreRetrievalAgent(SyncAgent):
     def __init__(
         self,
         service_name: str,
@@ -75,8 +75,5 @@ class ROS2VectorStoreRetrievalAgent(BaseAgent):
         self.logger.info(f"Sending response to query: {request.query}")
         return response
 
-    def run(self):
-        pass
-
-    def stop(self):
+    def teardown(self):
         self.connector.shutdown()
