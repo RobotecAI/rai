@@ -13,9 +13,20 @@
 # limitations under the License.
 
 import os
+import sys
 import tempfile
 
 import pytest
+
+
+def pytest_configure(config):
+    if sys.prefix != sys.base_prefix and not any(
+        p.endswith("dist-packages") for p in sys.path
+    ):
+        raise pytest.UsageError(
+            "The venv cannot see the system site-packages that ROS 2 needs. "
+            "Recreate it with scripts/dev_env.sh (uv venv --system-site-packages)."
+        )
 
 
 # 3D gripping point detection strategy

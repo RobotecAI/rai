@@ -16,7 +16,7 @@ dependencies = [
     "torch>=2.11.0,<3.0.0",
     "torchvision>=0.26.0,<1.0.0",
     "rai-gsam2>=1.1.2,<2.0.0",
-    "rai_core>=2.0.0a2,<3.0.0",
+    "rai_core",
     "scikit-learn>=1.5.0,<2.0.0",
     # Grounding DINO runs on the transformers implementation (AutoModelForZeroShotObjectDetection).
     "transformers>=5.10.0,<6.0.0",

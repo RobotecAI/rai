@@ -8,7 +8,7 @@ RAI is a Python monorepo for an Embodied AI agent framework integrating LLMs wit
 
 ### Environment prerequisites
 
--   **ROS 2 Jazzy** must be installed and sourced (`source /opt/ros/jazzy/setup.bash`) before any build or run step.
+-   **ROS 2 Jazzy or Lyrical** must be installed and sourced (`source /opt/ros/$ROS_DISTRO/setup.bash`) before any build or run step.
 -   **`uv`** is the Python package manager (lockfile: `uv.lock`).
 -   A C++ toolchain (`g++-14`, `libstdc++-14-dev`) is required for `colcon build` of `rai_interfaces`.
 
@@ -17,17 +17,16 @@ RAI is a Python monorepo for an Embodied AI agent framework integrating LLMs wit
 Before running anything (tests, Python scripts, imports), always source the environment:
 
 ```bash
-source /opt/ros/jazzy/setup.bash
-export SHELL=/bin/bash
+source /opt/ros/$ROS_DISTRO/setup.bash   # jazzy or lyrical
 source ./setup_shell.sh
 ```
 
-This activates the `.venv`, sources the colcon `install/` overlay, and sets `PYTHONPATH` correctly.
+This sources the colcon `install/` overlay and activates the `.venv`. The venv is created with `--system-site-packages` so it sees rclpy and the other ROS 2 Python packages; no `PYTHONPATH` changes are needed. Create it once with `scripts/dev_env.sh` (pass `--all-groups` for every optional group).
 
 ### Building
 
 ```bash
-source /opt/ros/jazzy/setup.bash
+source /opt/ros/$ROS_DISTRO/setup.bash
 colcon build --symlink-install
 ```
 

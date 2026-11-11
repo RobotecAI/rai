@@ -20,8 +20,8 @@ dependencies = [
 dev = ["pytest>=9.0.3,<10.0.0"]
 
 [tool.uv.sources]
-rai_core = { path = "../rai_core", editable = true }
-rai_perception = { path = "../rai_extensions/rai_perception", editable = true }
+rai_core = { workspace = true }
+rai_perception = { workspace = true }
 
 [tool.uv.build-backend]
 module-root = ""

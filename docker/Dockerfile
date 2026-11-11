@@ -74,7 +74,7 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=on
 ENV PIP_DEFAULT_TIMEOUT=100
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    /bin/bash -c 'if [ "${DEPENDENCIES}" = "core_only" ]; then \
+    /bin/bash -c 'uv venv --system-site-packages --python /usr/bin/python3 && if [ "${DEPENDENCIES}" = "core_only" ]; then \
       uv sync --locked; \
     else \
       uv sync --locked --all-groups; \

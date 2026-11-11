@@ -17,14 +17,16 @@ classifiers = [
 dependencies = [
     "rai_core",
     "rai_whoami",
+]
+
+[dependency-groups]
+dev = [
     "pre-commit>=4.0.0,<5.0.0",
     "tabulate>=0.10.0,<0.11.0",
     "pytest>=9.0.3,<10.0.0",
     "pytest-timeout>=2.3.1,<3.0.0",
     "pytest-cov>=7.0.0,<8.0.0",
 ]
-
-[dependency-groups]
 docs = [
     "mkdocs",
     "mkdocs-material",
@@ -40,16 +42,31 @@ perception = ["rai_perception"]
 
 [tool.uv]
 package = false
+# rclpy and the other ROS 2 Python packages are built for the system interpreter.
+# The venv must use it and see its site-packages: `uv venv --system-site-packages`.
+python-preference = "only-system"
+environments = ["sys_platform == 'linux'"]
+default-groups = ["dev"]
+
+[tool.uv.workspace]
+members = [
+    "src/rai_core",
+    "src/rai_whoami",
+    "src/rai_s2s",
+    "src/rai_semap",
+    "src/rai_sim",
+    "src/rai_bench",
+    "src/rai_extensions/rai_perception",
+]
 
 [tool.uv.sources]
-rai_core = { path = "src/rai_core", editable = true }
-rai_whoami = { path = "src/rai_whoami", editable = true }
-rai_s2s = { path = "src/rai_s2s", editable = true }
-rai_semap = { path = "src/rai_semap", editable = true }
-rai_sim = { path = "src/rai_sim", editable = true }
-rai_bench = { path = "src/rai_bench", editable = true }
-rai_perception = { path = "src/rai_extensions/rai_perception", editable = true }
-
+rai_core = { workspace = true }
+rai_whoami = { workspace = true }
+rai_s2s = { workspace = true }
+rai_semap = { workspace = true }
+rai_sim = { workspace = true }
+rai_bench = { workspace = true }
+rai_perception = { workspace = true }
 
 [tool.ruff]
 # Python snippets in docs are not formatted.

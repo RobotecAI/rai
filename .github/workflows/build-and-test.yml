@@ -56,7 +56,7 @@ jobs:
         shell: bash
         run: |
           uv export --all-groups --frozen --no-hashes | grep -vE '^(nvidia-|triton==)' > /tmp/requirements-cpu.txt
-          uv venv --python /usr/bin/python3
+          uv venv --system-site-packages --python /usr/bin/python3
           uv pip install --no-deps --torch-backend cpu -r /tmp/requirements-cpu.txt
 
       - name: Update rosdep
@@ -84,6 +84,7 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
+          source /opt/ros/${{ matrix.ros_distro }}/setup.bash
           source setup_shell.sh
           pytest -m "not billable and not manual" --timeout=120 --timeout-method=thread --cov=./src/rai_core --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
 

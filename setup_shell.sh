@@ -1,45 +1,18 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
+# Source this file from the repository root: `source setup_shell.sh`.
+# shellcheck disable=SC2317
+# Create the environment first with `scripts/dev_env.sh`.
 
-if [ -f ".venv/bin/activate" ]; then
-    # Suppress ShellCheck warning about not following external file
-    # shellcheck disable=SC1091
-    . ".venv/bin/activate"
-else
-    echo "Missing .venv. Run 'uv sync' first."
-    if (return 0 2>/dev/null); then
-        return 1
-    fi
-    exit 1
+if [ -z "$ROS_DISTRO" ]; then
+    echo "Source /opt/ros/<distro>/setup.bash first." >&2
+    return 1 2>/dev/null || exit 1
+fi
+if [ ! -f .venv/bin/activate ]; then
+    echo "Missing .venv. Run scripts/dev_env.sh first." >&2
+    return 1 2>/dev/null || exit 1
 fi
 
-# Suppress ShellCheck warning about not following external file
 # shellcheck disable=SC1091
-
-case "$SHELL" in
-    *bash)
-        . install/setup.bash
-        echo "Sourced bash install"
-        ;;
-    *zsh)
-        . install/setup.zsh
-        echo "Sourced zsh install"
-        ;;
-    *fish)
-        echo "fish is not supported"
-        ;;
-    *sh)
-        . install/setup.sh
-        echo "Sourced sh install."
-        ;;
-    *)
-        echo "Unknown shell: $0"
-        ;;
-esac
-
-export PYTHONPATH
-PYTHON_SITE_PACKAGES="$(python -c 'import site; print(site.getsitepackages()[0])')"
-PYTHONPATH="${PYTHON_SITE_PACKAGES}:$PYTHONPATH"
-PYTHONPATH="src/rai_core:$PYTHONPATH"
-PYTHONPATH="src/rai_sim:$PYTHONPATH"
-PYTHONPATH="src/rai_s2s:$PYTHONPATH"
-PYTHONPATH="src/rai_bench:$PYTHONPATH"
+[ -f install/setup.bash ] && . install/setup.bash
+# shellcheck disable=SC1091
+. .venv/bin/activate
