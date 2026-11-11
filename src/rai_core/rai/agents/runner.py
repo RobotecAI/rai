@@ -12,135 +12,143 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Sync entry points for async agents: :func:`run` and :class:`ThreadedAgent`."""
+
+import asyncio
 import logging
 import signal
-from threading import Event
-from types import FrameType
-from typing import List, Optional
+import threading
+from concurrent.futures import Future
+from typing import Any, Coroutine, Self
 
-from rai.agents.base import BaseAgent
+from rai.agents.base import AgentState, BaseAgent
 
 logger = logging.getLogger(__name__)
 
 
-def wait_for_shutdown(agents: List[BaseAgent]):
-    """Block until a shutdown signal (SIGINT or SIGTERM) is received, ensuring graceful termination.
+def run(*agents: BaseAgent, stop_timeout: float = 10.0) -> None:
+    """Start ``agents`` in order and block until SIGINT/SIGTERM or until all of
+    them have finished, then stop them in reverse order.
 
-    Parameters
-    ----------
-    agents : List[BaseAgent]
-        List of running agents to be stopped on shutdown.
-
-    Notes
-    -----
-    This method ensures a graceful shutdown of both the agent and the ROS2 node upon receiving
-    an interrupt signal (SIGINT, e.g., Ctrl+C) or SIGTERM. It installs signal handlers to
-    capture these events and invokes the agent's ``stop()`` method as part of the shutdown process.
+    Signal handlers are installed only when called from the main thread.
+    Raises an :class:`ExceptionGroup` of the errors of agents that FAILED.
     """
     if not agents:
-        raise ValueError("agents must be a non-empty list")
-    shutdown_event = Event()
+        raise ValueError("rai.run() needs at least one agent")
+    asyncio.run(_run(agents, stop_timeout))
+    if errors := [a.error for a in agents if isinstance(a.error, Exception)]:
+        raise ExceptionGroup("agents failed", errors)
 
-    def signal_handler(signum, frame):
-        shutdown_event.set()
 
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-
+async def _run(agents: tuple[BaseAgent, ...], stop_timeout: float) -> None:
+    loop = asyncio.get_running_loop()
+    shutdown = asyncio.Event()
+    signals = (signal.SIGINT, signal.SIGTERM)
+    use_signals = threading.current_thread() is threading.main_thread()
+    if use_signals:
+        for sig in signals:
+            loop.add_signal_handler(sig, shutdown.set)
+    started: list[BaseAgent] = []
     try:
-        shutdown_event.wait()
-    finally:
         for agent in agents:
-            agent.stop()
-
-
-def run_agents(agents: List[BaseAgent]):
-    """Runs the agents in the background.
-
-    Args:
-        agents: List of agent instances
-    """
-    if not agents:
-        raise ValueError("agents must be a non-empty list")
-    logger.info(
-        "run_agents is an experimental function. \
-                   If you believe that your agents are not running properly, \
-                   please run them separately (in different processes)."
-    )
-    for agent in agents:
-        agent.run()
-
-
-class AgentRunner:
-    """Runs the agents in the background.
-
-    Parameters
-    ----------
-    agents : List[BaseAgent]
-        List of agent instances
-    """
-
-    def __init__(self, agents: List[BaseAgent]):
-        """Initialize the AgentRunner with a list of agents.
-
-        Parameters
-        ----------
-        agents : List[BaseAgent]
-            List of agent instances to be managed by the runner.
-        """
-        if not agents:
-            raise ValueError("agents must be a non-empty list")
-        self.agents = agents
-        self.logger = logging.getLogger(__name__)
-
-    def run(self):
-        """Run all agents in the background.
-
-        Notes
-        -----
-        This method starts all agents by calling their `run` method.
-        It is experimental; if agents do not run properly, consider running them in separate processes.
-        """
-        self.logger.info(
-            f"{self.__class__.__name__}.{self.run.__name__} is an experimental function. \
-                            If you believe that your agents are not running properly, \
-                            please run them separately (in different processes)."
+            started.append(agent)
+            await agent.start()
+        finished = asyncio.gather(*(a.wait() for a in agents))
+        stop_requested = asyncio.ensure_future(shutdown.wait())
+        await asyncio.wait(
+            {finished, stop_requested}, return_when=asyncio.FIRST_COMPLETED
         )
-        for agent in self.agents:
-            agent.run()
+        for task in (finished, stop_requested):
+            task.cancel()
+        if shutdown.is_set():
+            logger.info("Shutdown signal received, stopping agents")
+    finally:
+        for agent in reversed(started):
+            await agent.stop(stop_timeout)
+        if use_signals:
+            for sig in signals:
+                loop.remove_signal_handler(sig)
 
-    def run_and_wait_for_shutdown(self):
-        """Run all agents and block until a shutdown signal is received.
 
-        Notes
-        -----
-        This method starts all agents and waits for a shutdown signal (SIGINT or SIGTERM), ensuring graceful termination.
-        """
-        self.run()
-        self.wait_for_shutdown()
+class ThreadedAgent:
+    """Runs one async agent on its own thread and event loop, for sync code.
 
-    def wait_for_shutdown(self):
-        """Block until a shutdown signal (SIGINT or SIGTERM) is received, ensuring graceful termination.
+    ::
 
-        Notes
-        -----
-        Installs signal handlers to capture SIGINT and SIGTERM. On receiving a signal, stops all managed agents.
-        """
-        shutdown_event = Event()
+        with ThreadedAgent(agent):  # start() ... stop()
+            ...
 
-        def signal_handler(signum: int, frame: Optional[FrameType]):
-            shutdown_event.set()
+    The thread ends when :meth:`stop` is called or when the agent finishes on its
+    own (an agent that FAILED is stopped, so its :meth:`~BaseAgent.on_stop` runs).
+    """
 
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
+    def __init__(self, agent: BaseAgent, *, stop_timeout: float = 10.0):
+        self.agent = agent
+        self.stop_timeout = stop_timeout
+        self._thread: threading.Thread | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._ready = threading.Event()
 
+    @property
+    def state(self) -> AgentState:
+        return self.agent.state
+
+    def start(self, timeout: float | None = None) -> None:
+        """Start the agent; returns once it is RUNNING. Raises what start raised."""
+        if self._thread is not None:
+            raise RuntimeError(f"{self.agent.name} was already started")
+        self._thread = threading.Thread(
+            target=asyncio.run,
+            args=(self._main(),),
+            name=f"rai-{self.agent.name}",
+            daemon=True,
+        )
+        self._thread.start()
+        self._ready.wait()
         try:
-            shutdown_event.wait()
-        finally:
-            for agent in self.agents:
-                agent.stop()
+            self._submit(self.agent.start()).result(timeout)
+        except BaseException:
+            self.stop()
+            raise
 
-    def stop(self):
-        """Stop all managed agents by calling their `stop` method."""
-        for agent in self.agents:
-            agent.stop()
+    async def _main(self) -> None:
+        self._loop = asyncio.get_running_loop()
+        self._ready.set()
+        await self.agent.wait()
+        await self.agent.stop(self.stop_timeout)
+
+    def _submit(self, coro: Coroutine[Any, Any, None]) -> Future[None]:
+        assert self._loop is not None
+        return asyncio.run_coroutine_threadsafe(coro, self._loop)
+
+    def stop(self, timeout: float | None = None) -> None:
+        """Stop the agent and join its thread. Idempotent; a no-op before start."""
+        timeout = self.stop_timeout if timeout is None else timeout
+        if self._thread is None:
+            with self.agent._lock:
+                if self.agent.state is AgentState.CREATED:
+                    self.agent._transition(AgentState.STOPPED)
+            return
+        coro = self.agent.stop(timeout)
+        try:
+            self._submit(coro)
+        except RuntimeError:  # loop closed: the agent has already finished
+            coro.close()
+        # The thread ends once the agent is STOPPED. agent.stop() is bounded by
+        # 2 * timeout, unless run() blocks the event loop with sync code.
+        if not self.join(2 * timeout + 1):
+            logger.warning("%s: thread did not end, abandoning it", self.agent.name)
+
+    def join(self, timeout: float | None = None) -> bool:
+        """Wait for the agent thread to end. Returns False on timeout."""
+        if self._thread is None:
+            return True
+        self._thread.join(timeout)
+        return not self._thread.is_alive()
+
+    def __enter__(self) -> Self:
+        self.start()
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self.stop()

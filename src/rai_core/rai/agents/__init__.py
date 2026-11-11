@@ -12,17 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai.agents.base import BaseAgent
+from rai.agents.base import AgentState, BaseAgent, InvalidTransitionError, SyncAgent
 from rai.agents.langchain import (
     BaseStateBasedAgent,
     ReActAgent,
 )
-from rai.agents.runner import AgentRunner, wait_for_shutdown
+from rai.agents.runner import ThreadedAgent, run
 
 __all__ = [
-    "AgentRunner",
+    "AgentState",
     "BaseAgent",
     "BaseStateBasedAgent",
+    "InvalidTransitionError",
     "ReActAgent",
-    "wait_for_shutdown",
+    "SyncAgent",
+    "ThreadedAgent",
+    "run",
 ]

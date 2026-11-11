@@ -121,8 +121,8 @@ class BaseStateBasedAgent(LangChainAgent, ABC):
                 )
                 self._registered_callbacks.add(callback_id)
 
-    def run(self):
-        super().run()
+    def setup(self):
+        super().setup()
         self._aggregation_thread = threading.Thread(target=self._run_state_loop)
         self._aggregation_thread.start()
 
@@ -144,7 +144,7 @@ class BaseStateBasedAgent(LangChainAgent, ABC):
                     f"{self.config.time_interval:.2f}s, got {elapsed_time:.2f}s. Consider "
                     f"increasing {self.__class__.__name__}.config.time_interval."
                 )
-            time.sleep(max(0, self.config.time_interval - (elapsed_time)))
+            self._stop_event.wait(max(0, self.config.time_interval - elapsed_time))
 
     def _on_aggregation_interval(self):
         """Runs aggregation on collected data"""
@@ -182,20 +182,13 @@ class BaseStateBasedAgent(LangChainAgent, ABC):
                     continue
                 self._aggregation_results[source] = output
 
-    def stop(self):
+    def teardown(self):
         """Stop the agent's execution loop."""
-        self._stop_event.set()
-        self._interrupt_event.set()
-        self._agent_ready_event.wait()
-        if self._thread is not None:
-            self.logger.info("Stopping the agent. Please wait...")
-            self._thread.join()
-            self._thread = None
+        super().teardown()
         if self._aggregation_thread is not None:
             self._aggregation_thread.join()
             self._aggregation_thread = None
         for callback_id in self._registered_callbacks:
             self._connector.unregister_callback(callback_id)
-        self._stop_event.clear()
         self._connector.shutdown()
         self.logger.info("Agent stopped")

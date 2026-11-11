@@ -22,7 +22,7 @@ from typing import Any, Deque, Dict, List, Literal, Optional, TypedDict
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
 
-from rai.agents.base import BaseAgent
+from rai.agents.base import SyncAgent
 from rai.agents.langchain.callback import HRICallbackHandler
 from rai.agents.langchain.core import ReActAgentState
 from rai.communication.hri_connector import HRIConnector, HRIMessage
@@ -42,7 +42,7 @@ newMessageBehaviorType = Literal[
 ]
 
 
-class LangChainAgent(BaseAgent):
+class LangChainAgent(SyncAgent):
     """
     Agent pareametrized by LangGraph runnable that communicates with environment using
     `HRIConnector`.
@@ -70,37 +70,27 @@ class LangChainAgent(BaseAgent):
         Maximum number of messages to keep in the agent's queue. If exceeded, oldest messages are dropped.
 
 
-    Agent can be started using `run` method. Then it is triggered by `HRIMessage`s submited
-    by `__call__` method. They can be submitted in 2 ways:
+    Once started, the agent is triggered by `HRIMessage`s submitted in 2 ways:
     - manually using `__call__` method.
     - by subscribing to specific source using HRIConnector with `subscribe_source` method.
-
-    Agent can be stopped using `stop` method.
-
-    Due to asynchronous processing of the Agent, it is adviced to handle it's lifetime
-    with :py:class:`rai.agents.AgentRunner` when source is subscribed.
 
     Examples:
     ```python
     # ROS2 Example - agent triggered manually
-    from rai.agents import AgentRunner
+    from rai.agents import ThreadedAgent
     hri_connector = ROS2HRIConnector()
     runnable = create_langgraph()
     agent = LangChainAgent(
         target_connectors={"/to_human": hri_connector},
         runnable=runnable,
     )
-    agent.run()
-    agent(HRIMessage(text="Hello!"))
-    agent.wait()
-    agent.stop()
+    with ThreadedAgent(agent):
+        agent(HRIMessage(text="Hello!"))
+        agent.wait_idle()
 
-    # ROS2 Example - triggered by messages on ros2 topic
-    ...
-    runner = AgentRunner([agent])
-    runner.run()
-    agent.source_callback("/from_human", hri_connector)
-    runner.wait_for_shutdown()
+    # ROS2 Example - triggered by messages on ros2 topic, until Ctrl+C
+    agent.subscribe_source("/from_human", hri_connector)
+    rai.run(agent)
 
     # Agent will act messages published to rai_interfaces.msg.HRIMessage sent to /from_human topic
     """
@@ -122,7 +112,7 @@ class LangChainAgent(BaseAgent):
         self.stream_response = stream_response
         self.new_message_behavior: newMessageBehaviorType = new_message_behavior
         self.tracing_callbacks = get_tracing_callbacks()
-        self.state = state or ReActAgentState(messages=[])
+        self.graph_state = state or ReActAgentState(messages=[])
         self._langchain_callback = HRICallbackHandler(
             connectors=target_connectors,
             aggregate_chunks=True,
@@ -159,9 +149,7 @@ class LangChainAgent(BaseAgent):
             self.logger.info(f"Received message: {msg}, {type(msg)}")
             self._received_messages.append(msg)
 
-    def run(self):
-        if self._thread is not None:
-            raise RuntimeError("Agent is already running")
+    def setup(self):
         self._thread = threading.Thread(target=self._run_loop)
         self._thread.start()
         self._agent_ready_event.set()
@@ -170,7 +158,8 @@ class LangChainAgent(BaseAgent):
     def ready(self):
         return self._agent_ready_event.is_set() and len(self._received_messages) == 0
 
-    def wait(self):
+    def wait_idle(self):
+        """Block until all received messages have been processed."""
         while len(self._received_messages) > 0:
             time.sleep(0.1)
 
@@ -197,9 +186,9 @@ class LangChainAgent(BaseAgent):
             self.logger.info("Running agent...")
             reduced_message = self._reduce_messages()
             langchain_message = reduced_message.to_langchain()
-            self.state["messages"].append(langchain_message)
+            self.graph_state["messages"].append(langchain_message)
             for _ in self.agent.stream(
-                self.state,
+                self.graph_state,
                 config={
                     "callbacks": [self._langchain_callback, *self.tracing_callbacks]
                 },
@@ -214,17 +203,15 @@ class LangChainAgent(BaseAgent):
             if self._agent_ready_event.wait(0.01):
                 self._run_agent()
 
-    def stop(self):
+    def teardown(self):
         """Stop the agent's execution loop."""
         self._stop_event.set()
         self._interrupt_event.set()
-        self._agent_ready_event.wait()
         if self._thread is not None:
             self.logger.info("Stopping the agent. Please wait...")
             self._thread.join()
             self._thread = None
             self.logger.info("Agent stopped")
-        self._stop_event.clear()
 
     @staticmethod
     def _apply_reduction_behavior(
