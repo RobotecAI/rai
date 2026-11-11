@@ -321,3 +321,12 @@ def test_ros2_connector_unique_names(ros_setup: None):
     finally:
         connector1.shutdown()
         connector2.shutdown()
+
+
+def test_ros2_connector_parameter(ros_setup: None):
+    """parameter() declares a default on first use; --ros-args overrides win."""
+    runtime = ROS2Runtime(cli_args=["--ros-args", "-p", "rate:=2.5"])
+    with ROS2Connector(runtime=runtime) as connector:
+        assert connector.declare_parameter("rate", 1.0) == 2.5
+        assert connector.declare_parameter("frame", "map") == "map"
+        assert connector.declare_parameter("frame", "odom") == "map"  # declared once
