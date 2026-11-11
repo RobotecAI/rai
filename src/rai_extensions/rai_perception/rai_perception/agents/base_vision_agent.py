@@ -16,7 +16,7 @@
 import warnings
 from pathlib import Path
 
-from rai.agents import BaseAgent
+from rai.agents import SyncAgent
 from rai.communication.ros2 import ROS2Connector
 
 from rai_perception.services.weights import (
@@ -25,7 +25,7 @@ from rai_perception.services.weights import (
 )
 
 
-class BaseVisionAgent(BaseAgent):
+class BaseVisionAgent(SyncAgent):
     """Deprecated: Use BaseVisionService from rai_perception.services instead.
 
     This base class is deprecated and will be removed in a future version.
@@ -75,5 +75,5 @@ class BaseVisionAgent(BaseAgent):
             model_class, self.weights_path, self.logger, self.WEIGHTS_URL
         )
 
-    def stop(self):
+    def teardown(self):
         self.ros2_connector.shutdown()

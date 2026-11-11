@@ -16,7 +16,7 @@
 import warnings
 from pathlib import Path
 
-from rai.agents import BaseAgent
+from rai.agents import SyncAgent
 
 from rai_perception.agents._helpers import create_service_wrapper
 from rai_perception.services.detection_service import DetectionService
@@ -25,7 +25,7 @@ GDINO_NODE_NAME = "grounding_dino"
 GDINO_SERVICE_NAME = "grounding_dino_classify"
 
 
-class GroundingDinoAgent(BaseAgent):
+class GroundingDinoAgent(SyncAgent):
     """Deprecated: Use DetectionService from rai_perception.services instead.
 
     This class is deprecated and will be removed in a future version.
@@ -64,10 +64,10 @@ class GroundingDinoAgent(BaseAgent):
         )
         self.logger = self._service.logger
 
-    def run(self):
+    def setup(self):
         """Delegate to the service."""
         self._service.run()
 
-    def stop(self):
+    def teardown(self):
         """Delegate to the service."""
         self._service.stop()

@@ -28,10 +28,6 @@ class MockBaseVisionAgent(BaseVisionAgent):
     WEIGHTS_URL = "https://example.com/test_weights.pth"
     WEIGHTS_FILENAME = "test_weights.pth"
 
-    def run(self):
-        """Dummy implementation of abstract run method for testing."""
-        pass
-
 
 def get_weights_path(tmp_path: Path) -> Path:
     """Helper to get the standard weights path for testing.
@@ -68,7 +64,7 @@ def cleanup_agent(agent: MockBaseVisionAgent) -> None:
     Args:
         agent: Agent instance to clean up
     """
-    agent.stop()
+    agent.teardown()
     if rclpy.ok():
         rclpy.shutdown()
 
@@ -152,10 +148,6 @@ class TestBaseVisionAgentInit:
         class InvalidAgent(BaseVisionAgent):
             WEIGHTS_FILENAME = ""
 
-            def run(self):
-                """Dummy implementation of abstract run method."""
-                pass
-
         with pytest.raises(ValueError, match="WEIGHTS_FILENAME is not set"):
             InvalidAgent()
 
@@ -168,7 +160,7 @@ class TestBaseVisionAgentInit:
         assert agent.weights_root_path == tmp_path
         assert agent.weights_path == weights_path
 
-        agent.stop()
+        agent.teardown()
         if rclpy.ok():
             rclpy.shutdown()
 
@@ -181,7 +173,7 @@ class TestBaseVisionAgentInit:
         assert agent.weights_root_path == tmp_path
         assert agent.weights_path == weights_path
 
-        agent.stop()
+        agent.teardown()
         if rclpy.ok():
             rclpy.shutdown()
 
@@ -199,7 +191,7 @@ class TestBaseVisionAgentInit:
             # Should not call download since file exists
             mock_download_weights.assert_not_called()
 
-        agent.stop()
+        agent.teardown()
         if rclpy.ok():
             rclpy.shutdown()
 
@@ -235,7 +227,7 @@ class TestLoadModelWithErrorHandling:
         model = agent._load_model_with_error_handling(MockModel)
         assert model.weights_path == weights_path
 
-        agent.stop()
+        agent.teardown()
         if rclpy.ok():
             rclpy.shutdown()
 
@@ -268,7 +260,7 @@ class TestLoadModelWithErrorHandling:
             assert model.weights_path == weights_path
             assert call_count == 2  # Called twice: once fails, once succeeds
 
-        agent.stop()
+        agent.teardown()
         if rclpy.ok():
             rclpy.shutdown()
 
@@ -287,7 +279,7 @@ class TestLoadModelWithErrorHandling:
         with pytest.raises(RuntimeError, match="Some other error"):
             agent._load_model_with_error_handling(MockModel)
 
-        agent.stop()
+        agent.teardown()
         if rclpy.ok():
             rclpy.shutdown()
 
@@ -321,5 +313,5 @@ class TestBaseVisionAgentMethods:
             "shutdown",
             wraps=agent.ros2_connector.shutdown,
         ) as mock_shutdown:
-            agent.stop()
+            agent.teardown()
             mock_shutdown.assert_called_once()

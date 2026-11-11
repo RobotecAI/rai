@@ -33,9 +33,7 @@ class TestRunPerceptionServices:
             patch(
                 "rai_perception.scripts.run_perception_services.SegmentationService"
             ) as mock_segmentation,
-            patch(
-                "rai_perception.scripts.run_perception_services.wait_for_shutdown"
-            ) as mock_wait,
+            patch("rai_perception.scripts.run_perception_services.run") as mock_run,
         ):
             mock_connector_instance = MagicMock()
             mock_connector.return_value = mock_connector_instance
@@ -59,9 +57,11 @@ class TestRunPerceptionServices:
             mock_segmentation.assert_called_once()
             mock_detection_instance.run.assert_called_once()
             mock_segmentation_instance.run.assert_called_once()
-            mock_wait.assert_called_once_with(
-                [mock_detection_instance, mock_segmentation_instance]
-            )
+            mock_run.assert_called_once()
+            assert [a.service for a in mock_run.call_args.args] == [
+                mock_detection_instance,
+                mock_segmentation_instance,
+            ]
             mock_rclpy.shutdown.assert_called_once()
 
     def test_main_calls_services_in_order(self):
@@ -100,7 +100,7 @@ class TestRunPerceptionServices:
                 "rai_perception.scripts.run_perception_services.SegmentationService",
                 side_effect=track_segmentation_init,
             ),
-            patch("rai_perception.scripts.run_perception_services.wait_for_shutdown"),
+            patch("rai_perception.scripts.run_perception_services.run"),
         ):
             main()
 
@@ -127,7 +127,7 @@ class TestRunPerceptionServices:
             patch(
                 "rai_perception.scripts.run_perception_services.SegmentationService"
             ) as mock_segmentation,
-            patch("rai_perception.scripts.run_perception_services.wait_for_shutdown"),
+            patch("rai_perception.scripts.run_perception_services.run"),
         ):
             mock_connector.return_value = MagicMock()
             mock_detection.return_value = MagicMock()
@@ -147,7 +147,7 @@ class TestRunPerceptionServices:
             ) as mock_connector,
             patch("rai_perception.scripts.run_perception_services.DetectionService"),
             patch("rai_perception.scripts.run_perception_services.SegmentationService"),
-            patch("rai_perception.scripts.run_perception_services.wait_for_shutdown"),
+            patch("rai_perception.scripts.run_perception_services.run"),
         ):
             mock_connector.return_value = MagicMock()
 
@@ -179,7 +179,7 @@ class TestRunPerceptionServices:
             patch(
                 "rai_perception.scripts.run_perception_services.SegmentationService"
             ) as mock_segmentation,
-            patch("rai_perception.scripts.run_perception_services.wait_for_shutdown"),
+            patch("rai_perception.scripts.run_perception_services.run"),
         ):
             detection_connector = MagicMock()
             segmentation_connector = MagicMock()

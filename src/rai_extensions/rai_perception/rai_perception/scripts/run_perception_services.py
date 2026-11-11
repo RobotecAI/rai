@@ -17,10 +17,19 @@ import os
 import threading
 
 import rclpy
-from rai.agents import wait_for_shutdown
+from rai.agents import SyncAgent, run
 from rai.communication.ros2 import ROS2Connector
 
 from rai_perception.services import DetectionService, SegmentationService
+
+
+class _StopOnShutdown(SyncAgent):
+    def __init__(self, service: DetectionService | SegmentationService):
+        super().__init__(name=type(service).__name__)
+        self.service = service
+
+    def teardown(self):
+        self.service.stop()
 
 
 def main():
@@ -70,12 +79,10 @@ def main():
     t1.join()
     t2.join()
 
-    if detection_service is not None:
-        detection_service.run()
-    if segmentation_service is not None:
-        segmentation_service.run()
-
-    wait_for_shutdown([detection_service, segmentation_service])
+    services = [s for s in (detection_service, segmentation_service) if s is not None]
+    for service in services:
+        service.run()
+    run(*(_StopOnShutdown(s) for s in services))
     rclpy.shutdown()
 
 

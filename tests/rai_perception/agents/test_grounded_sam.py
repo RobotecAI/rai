@@ -60,8 +60,8 @@ class TestGroundedSamAgent:
             weights_path.unlink()
 
     @pytest.mark.timeout(10)
-    def test_run_creates_service(self, tmp_path, mock_connector):
-        """Test that run() creates the ROS2 service."""
+    def test_setup_creates_service(self, tmp_path, mock_connector):
+        """Test that setup() creates the ROS2 service."""
         weights_path = get_segmentation_weights_path(tmp_path)
 
         with patch_segmentation_agent_dependencies(
@@ -86,7 +86,7 @@ class TestGroundedSamAgent:
             with patch.object(
                 agent.ros2_connector, "create_service"
             ) as mock_create_service:
-                agent.run()
+                agent.setup()
 
                 mock_create_service.assert_called_once()
 

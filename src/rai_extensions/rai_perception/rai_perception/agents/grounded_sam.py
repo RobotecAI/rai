@@ -16,7 +16,7 @@
 import warnings
 from pathlib import Path
 
-from rai.agents import BaseAgent
+from rai.agents import SyncAgent
 
 from rai_perception.agents._helpers import create_service_wrapper
 from rai_perception.services.segmentation_service import SegmentationService
@@ -25,7 +25,7 @@ GSAM_NODE_NAME = "grounded_sam"
 GSAM_SERVICE_NAME = "grounded_sam_segment"
 
 
-class GroundedSamAgent(BaseAgent):
+class GroundedSamAgent(SyncAgent):
     """Deprecated: Use SegmentationService from rai_perception.services instead.
 
     This class is deprecated and will be removed in a future version.
@@ -64,10 +64,10 @@ class GroundedSamAgent(BaseAgent):
         )
         self.logger = self._service.logger
 
-    def run(self):
+    def setup(self):
         """Delegate to the service."""
         self._service.run()
 
-    def stop(self):
+    def teardown(self):
         """Delegate to the service."""
         self._service.stop()
