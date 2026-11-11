@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""ROS2Connector benchmark: throughput, latency, leaks and shutdown behavior.
+"""ROS2Connector benchmark: throughput, latency, leaks and close behavior.
 
 Usage (with ROS 2 and the RAI env sourced):
     python tests/benchmarks/ros2_connector_bench.py --out bench.json
@@ -38,8 +38,7 @@ from typing import Any
 SRV_A, SRV_B, ACTION = "/bench_srv_a", "/bench_srv_b", "/bench_fib"
 PUB_SMALL, PUB_IMG, PUB_HRI = "/bench_pub_small", "/bench_pub_img", "/bench_pub_hri"
 RECV_TOPICS = [f"/bench_recv_{i}" for i in range(10)]
-STRING, TRIGGER = "std_msgs/msg/String", "std_srvs/srv/Trigger"
-FIBONACCI = "example_interfaces/action/Fibonacci"
+STRING = "std_msgs/msg/String"
 
 
 # ------------------------------------------------------------ subprocesses
@@ -190,7 +189,7 @@ def close(connector: Any, timeout: float = 5.0) -> float:
 
 
 def entity_counts(connector: Any) -> dict[str, Any]:
-    node = connector._node
+    node = connector._runtime.node
     with open("/proc/self/status") as f:
         rss_kb = next(int(line.split()[1]) for line in f if line.startswith("VmRSS"))
     return {
@@ -224,32 +223,27 @@ def connector_bench(
 def bench_publish(n: int) -> dict[str, Any]:
     import numpy as np
     from rai.communication import HRIMessage
-    from rai.communication.ros2 import ROS2Connector, ROS2HRIConnector, ROS2Message
+    from rai.communication.ros2 import ROS2Connector, ROS2HRIConnector
     from rai.content import Image
+    from sensor_msgs.msg import Image as ImageMsg
+    from std_msgs.msg import String
 
     out: dict[str, Any] = {}
     connector = ROS2Connector()
     try:
-        small = ROS2Message(payload={"data": "hello"})
+        small = String(data="hello")
         out["string"] = time_calls(
-            [lambda: connector.send_message(small, PUB_SMALL, msg_type=STRING)] * n
+            [lambda: connector.sync.publish(PUB_SMALL, small)] * n
         )
-        image = {
-            "height": 480,
-            "width": 640,
-            "encoding": "rgb8",
-            "step": 640 * 3,
-            "data": bytes(640 * 480 * 3),
-        }
+        image = ImageMsg(
+            height=480,
+            width=640,
+            encoding="rgb8",
+            step=640 * 3,
+            data=bytes(640 * 480 * 3),
+        )
         out["image_vga"] = time_calls(
-            [
-                lambda: connector.send_message(
-                    ROS2Message(payload=image),
-                    PUB_IMG,
-                    msg_type="sensor_msgs/msg/Image",
-                )
-            ]
-            * max(n // 20, 5)
+            [lambda: connector.sync.publish(PUB_IMG, image)] * max(n // 20, 5)
         )
     finally:
         close(connector)
@@ -284,9 +278,9 @@ def numpy_view(msg: Any) -> Any:
 def bench_dispatch(
     rate: float, seconds: float, kind: str = "string"
 ) -> Callable[[Any], dict[str, Any]]:
-    """Stream to a registered callback: Strings to a raw callback, VGA
-    HRIMessages to a decoded one, VGA Images and PointCloud2s to the default
-    (wrapped) callback that takes a numpy view of the data."""
+    """Stream to a subscription callback: Strings, VGA HRIMessages (decoded),
+    and VGA Images and PointCloud2s to a callback that takes a numpy view of
+    the data."""
 
     def run(connector: Any) -> dict[str, Any]:
         topic = f"/bench_dispatch_{kind}_{int(rate)}"
@@ -299,25 +293,24 @@ def bench_dispatch(
             now = time.monotonic_ns()
             if kind in ("image", "cloud"):
                 t0 = time.perf_counter()
-                numpy_view(msg.payload)
+                numpy_view(msg)
                 views.append(time.perf_counter() - t0)
-                text = msg.payload.header.frame_id
+                text = msg.header.frame_id
             else:
                 text = msg.text if kind == "hri" else msg.data
             seq, sent = map(int, text.split())
             with lock:
                 received.append((seq, (now - sent) / 1e9))
 
-        if kind == "string":
-            connector.register_callback(topic, callback, raw=True, msg_type=STRING)
-        elif kind == "hri":
+        if kind == "hri":
             connector.subscribe(topic, callback)
         else:
             msg_type = {
+                "string": STRING,
                 "image": "sensor_msgs/msg/Image",
                 "cloud": "sensor_msgs/msg/PointCloud2",
             }[kind]
-            connector.register_callback(topic, callback, msg_type=msg_type)
+            connector.subscribe(topic, callback, msg_type=msg_type)
         publisher = spawn("--stream", topic, str(rate), str(count), kind)
         try:
             publisher.wait(timeout=seconds + 15)
@@ -343,31 +336,22 @@ def bench_receive(n_warm: int) -> Callable[[Any], dict[str, Any]]:
     def run(connector: Any) -> dict[str, Any]:
         cold = time_calls(
             [
-                lambda t=t: connector.receive_message(
-                    t, timeout_sec=5.0, msg_type=STRING
-                )
+                lambda t=t: connector.sync.receive(t, timeout=5.0, msg_type=STRING)
                 for t in RECV_TOPICS
             ]
         )
         warm = time_calls(
-            [lambda: connector.receive_message(RECV_TOPICS[0], timeout_sec=1.0)]
-            * n_warm
+            [lambda: connector.sync.receive(RECV_TOPICS[0], timeout=1.0)] * n_warm
         )
         return {"cold": cold, "warm": warm}
 
     return run
 
 
-def call_trigger(connector: Any, name: str, reuse_client: bool = True) -> None:
-    from rai.communication.ros2 import ROS2Message
+def call_trigger(connector: Any, name: str) -> None:
+    from std_srvs.srv import Trigger
 
-    connector.service_call(
-        ROS2Message(payload={}),
-        name,
-        timeout_sec=2.0,
-        msg_type=TRIGGER,
-        reuse_client=reuse_client,
-    )
+    connector.sync.call(name, Trigger.Request(), timeout=2.0)
 
 
 def bench_service(n: int) -> Callable[[Any], dict[str, Any]]:
@@ -375,10 +359,6 @@ def bench_service(n: int) -> Callable[[Any], dict[str, Any]]:
         out: dict[str, Any] = {}
         out["first_call"] = time_calls([lambda: call_trigger(connector, SRV_A)])
         out["reused"] = time_calls([lambda: call_trigger(connector, SRV_A)] * n)
-        out["fresh"] = time_calls(
-            [lambda: call_trigger(connector, SRV_A, reuse_client=False)]
-            * max(n // 10, 5)
-        )
 
         latencies: list[float] = []
         errors: list[str] = []
@@ -419,7 +399,7 @@ def bench_service(n: int) -> Callable[[Any], dict[str, Any]]:
 
 
 def run_goal(connector: Any, timeout: float = 5.0) -> dict[str, float]:
-    from rai.communication.ros2 import ROS2Message
+    from example_interfaces.action import Fibonacci
 
     t0 = time.perf_counter()
     marks: dict[str, float] = {}
@@ -432,13 +412,12 @@ def run_goal(connector: Any, timeout: float = 5.0) -> dict[str, float]:
         marks["result"] = time.perf_counter() - t0
         done.set()
 
-    connector.start_action(
-        ROS2Message(payload={"order": 3}),
+    connector.sync.send_goal(
         ACTION,
+        Fibonacci.Goal(order=3),
         on_feedback=on_feedback,
         on_done=on_done,
-        timeout_sec=timeout,
-        msg_type=FIBONACCI,
+        accept_timeout=timeout,
     )
     marks["accepted"] = time.perf_counter() - t0
     if not done.wait(timeout):
@@ -471,15 +450,15 @@ def count_errors(fn: Callable[[], Any], n: int, budget_s: float) -> dict[str, An
     return {"done": done, "errors": len(errors), "first": errors[0] if errors else None}
 
 
-def bench_leak(n_calls: int, n_actions: int, n_register: int):
+def bench_leak(n_calls: int, n_actions: int, n_subscribe: int):
     def run(connector: Any) -> dict[str, Any]:
         out: dict[str, Any] = {"before": entity_counts(connector)}
         t0 = time.perf_counter()
-        out["service_call_errors"] = count_errors(
-            lambda: call_trigger(connector, SRV_A, reuse_client=False), n_calls, 30.0
+        out["call_errors"] = count_errors(
+            lambda: call_trigger(connector, SRV_A), n_calls, 30.0
         )
-        out["after_service_calls"] = entity_counts(connector)
-        out["service_calls_s"] = round(time.perf_counter() - t0, 2)
+        out["after_calls"] = entity_counts(connector)
+        out["calls_s"] = round(time.perf_counter() - t0, 2)
 
         t0 = time.perf_counter()
         out["action_errors"] = count_errors(
@@ -489,14 +468,11 @@ def bench_leak(n_calls: int, n_actions: int, n_register: int):
         out["actions_s"] = round(time.perf_counter() - t0, 2)
 
         t0 = time.perf_counter()
-        for _ in range(n_register):
-            callback_id = connector.register_callback(
-                RECV_TOPICS[0], lambda _: None, msg_type=STRING
-            )
-            connector.unregister_callback(callback_id)
-        out["after_register"] = entity_counts(connector)
-        out["register_s"] = round(time.perf_counter() - t0, 2)
-        out["register_unregister"] = n_register
+        for _ in range(n_subscribe):
+            connector.subscribe(RECV_TOPICS[0], lambda _: None, msg_type=STRING).close()
+        out["after_subscribe"] = entity_counts(connector)
+        out["subscribe_s"] = round(time.perf_counter() - t0, 2)
+        out["subscribe_close"] = n_subscribe
         return out
 
     return run
@@ -505,7 +481,8 @@ def bench_leak(n_calls: int, n_actions: int, n_register: int):
 def bench_hooks(n: int) -> Callable[[Any], dict[str, Any]]:
     """Publish cost per call (us) with no egress hook, a hook that does not
     match, one matching allow hook (sync, async) and one that grants a lease.
-    send_message is the sync path; publish the async one, timed in one loop."""
+    connector.sync.publish is the sync path; publish the async one, timed in
+    one loop."""
 
     def per_call_us(durations: list[float]) -> dict[str, Any]:
         xs = sorted(durations)
@@ -517,17 +494,15 @@ def bench_hooks(n: int) -> Callable[[Any], dict[str, Any]]:
     def run(connector: Any) -> dict[str, Any]:
         import asyncio
 
-        from rai.communication.ros2 import ROS2Message
         from std_msgs.msg import String
 
-        msg = ROS2Message(payload={"data": "hello"})
         ros_msg = String(data="hello")
 
         def sync_path() -> dict[str, Any]:
             durations = []
             for _ in range(n):
                 t0 = time.perf_counter()
-                connector.send_message(msg, PUB_SMALL, msg_type=STRING)
+                connector.sync.publish(PUB_SMALL, ros_msg)
                 durations.append(time.perf_counter() - t0)
             return per_call_us(durations)
 
@@ -574,19 +549,19 @@ def bench_hooks(n: int) -> Callable[[Any], dict[str, Any]]:
     return run
 
 
-def bench_shutdown() -> dict[str, Any]:
+def bench_close() -> dict[str, Any]:
+    """Duration of close() while slow callbacks run and more are queued."""
     from rai.communication.ros2 import ROS2Connector
 
-    """Duration of shutdown() while slow callbacks run and more are queued."""
     connector = ROS2Connector()
-    topic = "/bench_shutdown"
+    topic = "/bench_close"
     calls: list[float] = []
 
     def slow_callback(_: Any) -> None:
         time.sleep(0.05)
         calls.append(time.monotonic())
 
-    connector.register_callback(topic, slow_callback, raw=True, msg_type=STRING)
+    connector.subscribe(topic, slow_callback, msg_type=STRING)
     publisher = spawn("--stream", topic, "100", "300")
     try:
         deadline = time.monotonic() + 10.0
@@ -700,15 +675,15 @@ def main() -> None:
                 connector_bench(bench_dispatch(10, 2 * dispatch_s, "cloud")),
                 30,
             ),
-            "receive_message": (connector_bench(bench_receive(int(200 * k))), 30),
-            "service_call": (connector_bench(bench_service(int(200 * k))), 60),
-            "start_action": (connector_bench(bench_action(int(20 * k))), 60),
+            "receive": (connector_bench(bench_receive(int(200 * k))), 30),
+            "call": (connector_bench(bench_service(int(200 * k))), 60),
+            "send_goal": (connector_bench(bench_action(int(20 * k))), 60),
             "leak": (
                 connector_bench(bench_leak(int(1000 * k), int(200 * k), int(1000 * k))),
                 90,
             ),
             "hooks": (connector_bench(bench_hooks(int(2000 * k))), 60),
-            "shutdown": (bench_shutdown, 30),
+            "close": (bench_close, 30),
         }
         for name, (fn, timeout) in benches.items():
             results[name] = run_isolated(fn, timeout)

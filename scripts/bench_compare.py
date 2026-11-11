@@ -75,7 +75,7 @@ RULES: list[Rule] = [
     Rule("*.first_error", "ignore"),
     Rule("*.first", "ignore"),
     Rule("*.skipped", "ignore"),
-    Rule("leak.register_unregister", "ignore"),
+    Rule("leak.subscribe_close", "ignore"),
     # noisy: cold start, first call, fresh clients, tails, wall times (04 §4.5: CV 50-137 %)
     Rule("*elapsed_s", "report"),
     Rule("*.cold.*", "report"),
@@ -93,7 +93,7 @@ RULES: list[Rule] = [
     Rule("dispatch_*.inversions", "report"),
     Rule("dispatch_*.latency.*", "report"),
     # A cache read at ~1.5M/s; varies 1.4x between runs.
-    Rule("receive_message.warm.*", "report"),
+    Rule("receive.warm.*", "report"),
     # exact: correctness and leaks
     Rule("*.errors", "exact"),
     Rule("*.dropped", "exact"),
@@ -108,12 +108,12 @@ RULES: list[Rule] = [
     # adds hundreds.
     Rule("leak.*.threads", "ratio", min_abs=10),
     Rule("leak.*.rss_kb", "ratio", min_abs=20_000),
-    Rule("start_action.accepted.p50_ms", "ratio", threshold=1.5, min_abs=1.0),
+    Rule("send_goal.accepted.p50_ms", "ratio", threshold=1.5, min_abs=1.0),
     # The benchmark's slow callbacks sleep 50 ms; waiting for one shows up as +50 ms.
-    Rule("shutdown.duration_ms", "ratio", min_abs=25.0),
-    Rule("service_call.concurrent_8x2.p50_ms", "ratio", threshold=1.5, min_abs=0.5),
+    Rule("close.duration_ms", "ratio", min_abs=25.0),
+    Rule("call.concurrent_8x2.p50_ms", "ratio", threshold=1.5, min_abs=0.5),
     Rule(
-        "service_call.concurrent_8x2.per_s",
+        "call.concurrent_8x2.per_s",
         "ratio",
         higher_is_better=True,
         threshold=1.5,

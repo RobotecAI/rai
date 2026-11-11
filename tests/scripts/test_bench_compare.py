@@ -33,10 +33,10 @@ _spec.loader.exec_module(bc)
         ("publish.string.per_s", "ratio"),
         ("publish.image_vga.p50_ms", "ratio"),
         ("dispatch_hri_30hz.latency.p50_ms", "report"),
-        ("receive_message.warm.per_s", "report"),
-        ("service_call.reused.p50_ms", "ratio"),
-        ("start_action.result.p50_ms", "ratio"),
-        ("shutdown.duration_ms", "ratio"),
+        ("receive.warm.per_s", "report"),
+        ("call.reused.p50_ms", "ratio"),
+        ("send_goal.result.p50_ms", "ratio"),
+        ("close.duration_ms", "ratio"),
         ("leak.after_actions.rss_kb", "ratio"),
         ("leak.after_actions.threads", "ratio"),
         ("dispatch_100hz.delivered", "report"),
@@ -44,19 +44,19 @@ _spec.loader.exec_module(bc)
         ("dispatch_1khz.inversions", "report"),
         ("other_bench.delivered", "exact"),
         ("other_bench.dropped", "exact"),
-        ("leak.after_service_calls.clients", "exact"),
+        ("leak.after_calls.clients", "exact"),
         ("leak.after_actions.waitables", "exact"),
-        ("service_call.concurrent_8x2.errors", "exact"),
-        ("leak.service_call_errors.errors", "exact"),
-        ("receive_message.cold.p50_ms", "report"),
-        ("receive_message.cold.per_s", "report"),
-        ("service_call.first_call.p50_ms", "report"),
-        ("service_call.fresh.p50_ms", "report"),
-        ("service_call.fresh.per_s", "report"),
+        ("call.concurrent_8x2.errors", "exact"),
+        ("leak.call_errors.errors", "exact"),
+        ("receive.cold.p50_ms", "report"),
+        ("receive.cold.per_s", "report"),
+        ("call.first_call.p50_ms", "report"),
+        ("call.fresh.p50_ms", "report"),
+        ("call.fresh.per_s", "report"),
         ("dispatch_1khz.latency.p99_ms", "report"),
-        ("service_call.reused.p99_ms", "report"),
-        ("start_action.first_feedback.p50_ms", "report"),
-        ("leak.service_calls_s", "report"),
+        ("call.reused.p99_ms", "report"),
+        ("send_goal.first_feedback.p50_ms", "report"),
+        ("leak.calls_s", "report"),
         ("publish.elapsed_s", "report"),
         ("some_future_bench.mystery", "report"),
         ("publish.string.n", "ignore"),
@@ -74,7 +74,7 @@ def status(metric, base, head):
 
 
 def test_ratio_latency_thresholds():
-    metric = "service_call.reused.p50_ms"
+    metric = "call.reused.p50_ms"
     assert status(metric, 1.0, 1.05) == "ok"
     assert status(metric, 1.0, 1.2) == "warn"
     assert status(metric, 1.0, 1.3) == "fail"
@@ -90,8 +90,8 @@ def test_ratio_throughput_is_higher_better():
 
 
 def test_ratio_per_metric_threshold():
-    assert status("service_call.concurrent_8x2.p50_ms", 4.0, 5.6) == "warn"
-    assert status("service_call.concurrent_8x2.p50_ms", 4.0, 6.4) == "fail"
+    assert status("call.concurrent_8x2.p50_ms", 4.0, 5.6) == "warn"
+    assert status("call.concurrent_8x2.p50_ms", 4.0, 6.4) == "fail"
 
 
 def test_ratio_ignores_tiny_absolute_changes():
@@ -101,23 +101,23 @@ def test_ratio_ignores_tiny_absolute_changes():
 
 
 def test_ratio_with_zero_base_is_informational():
-    assert status("service_call.reused.p50_ms", 0, 5.0) == "info"
+    assert status("call.reused.p50_ms", 0, 5.0) == "info"
 
 
 def test_jitter_floors_from_the_aa_run():
     # Values from an A/A run of one commit on Lyrical; none of these is a regression.
-    assert status("shutdown.duration_ms", 3.3, 7.5) == "ok"
-    assert status("shutdown.duration_ms", 3.3, 55.0) == "fail"
-    assert status("start_action.accepted.p50_ms", 2.0, 2.9) == "ok"
-    assert status("start_action.accepted.p50_ms", 2.0, 4.0) == "fail"
+    assert status("close.duration_ms", 3.3, 7.5) == "ok"
+    assert status("close.duration_ms", 3.3, 55.0) == "fail"
+    assert status("send_goal.accepted.p50_ms", 2.0, 2.9) == "ok"
+    assert status("send_goal.accepted.p50_ms", 2.0, 4.0) == "fail"
     assert status("leak.after_actions.threads", 37.5, 42) == "ok"
     assert status("leak.after_actions.threads", 37, 237) == "fail"
 
 
 def test_exact_lower_is_better():
-    assert status("leak.after_service_calls.clients", 2, 2) == "ok"
-    assert status("leak.after_service_calls.clients", 200, 2) == "ok"
-    assert status("leak.after_service_calls.clients", 2, 3) == "fail"
+    assert status("leak.after_calls.clients", 2, 2) == "ok"
+    assert status("leak.after_calls.clients", 200, 2) == "ok"
+    assert status("leak.after_calls.clients", 2, 3) == "fail"
 
 
 def test_exact_higher_is_better():
@@ -126,7 +126,7 @@ def test_exact_higher_is_better():
 
 
 def test_report_never_fails():
-    assert status("receive_message.cold.p99_ms", 500, 3000) == "info"
+    assert status("receive.cold.p99_ms", 500, 3000) == "info"
     assert status("dispatch_1khz.latency.p99_ms", 26, 228) == "info"
 
 
@@ -150,7 +150,7 @@ def test_benchmark_errors():
 
 
 def test_non_numeric_value_is_informational():
-    assert status("service_call.reused.p50_ms", "n/a", 1.0) == "info"
+    assert status("call.reused.p50_ms", "n/a", 1.0) == "info"
 
 
 def write_run(path: Path, results: dict) -> Path:
