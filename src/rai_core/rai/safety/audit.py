@@ -37,6 +37,8 @@ from rai.tools.hooks import ToolDecision, ToolHooks, global_tool_hooks
 
 from ._base import Target, egress_chains
 
+_monotonic_ns = time.monotonic_ns
+
 logger = logging.getLogger(__name__)
 
 
@@ -60,7 +62,7 @@ class AuditRecord:
     payload: Any = field(default=None, compare=False)  # egress side; not in JSON
     # time.monotonic_ns() of the decision, for aligning records on another
     # clock (the flight recorder); not in JSON
-    monotonic_ns: int = field(default_factory=time.monotonic_ns, compare=False)
+    monotonic_ns: int = field(default_factory=_monotonic_ns, compare=False)
 
     def to_dict(self) -> dict[str, Any]:
         record = {

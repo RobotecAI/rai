@@ -142,6 +142,8 @@ class _Mcap(_File):
                         topics=sorted(topics), start_time=start, log_time_order=True
                     )
                 for schema, channel, message in found:
+                    if schema is None:  # schemaless: not a ROS message
+                        continue
                     yield RawMessage(
                         channel.topic, schema.name, message.log_time, message.data
                     )

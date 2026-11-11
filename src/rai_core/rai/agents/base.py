@@ -87,7 +87,7 @@ class BaseAgent:
         self._task: asyncio.Task[None] | None = None
         self._done = asyncio.Event()  # set on FAILED or STOPPED
         self._stopped = asyncio.Event()
-        self._outputs: tuple[Callable[[AgentEvent], None], ...] = ()
+        self._outputs: tuple[Callable[[AgentEvent], object], ...] = ()
 
     @property
     def state(self) -> AgentState:
@@ -108,7 +108,7 @@ class BaseAgent:
             self._stopped.set()
         self.emit(StateChanged(agent=self.name, old=old, new=new))
 
-    def subscribe(self, output: Callable[[AgentEvent], None]) -> Callable[[], None]:
+    def subscribe(self, output: Callable[[AgentEvent], object]) -> Callable[[], None]:
         """Call ``output`` with every event, in the emitting thread. Returns a
         function that unsubscribes it. Errors in ``output`` are logged."""
         with self._lock:

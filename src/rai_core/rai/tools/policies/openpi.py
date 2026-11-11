@@ -137,6 +137,8 @@ class OpenPIClient:
                     self._drop()
                     raise
                 break
+            else:  # the second attempt breaks or raises
+                raise AssertionError("unreachable")
         if isinstance(reply, str):
             self._drop()
             raise PolicyError(f"openpi policy server error: {_tail(reply)}")

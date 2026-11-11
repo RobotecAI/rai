@@ -131,6 +131,9 @@ class RaiTool(BaseTool):
 class _FunctionTool(RaiTool):
     fn: Callable[..., Awaitable[Any]] = Field(exclude=True)
 
+    def __init__(self, *, fn: Callable[..., Awaitable[Any]], **kwargs: Any) -> None:
+        super().__init__(fn=fn, **kwargs)  # RaiTool's effect and targets
+
     async def _acall(self, **kwargs: Any) -> Any:
         return await self.fn(**kwargs)
 
@@ -184,8 +187,11 @@ def from_langchain(
 
     Without `effect`, it comes from MCP annotations in `tool.metadata` (ACTUATE if none).
     """
-    if isinstance(tool, StructuredTool) and (tool.coroutine or tool.func):
-        fn = tool.coroutine or partial(asyncio.to_thread, tool.func)
+    fn: Callable[..., Awaitable[Any]]
+    if isinstance(tool, StructuredTool) and tool.coroutine:
+        fn = tool.coroutine
+    elif isinstance(tool, StructuredTool) and tool.func:
+        fn = partial(asyncio.to_thread, tool.func)
     else:
         fn = partial(_ainvoke, tool)
     return _FunctionTool(

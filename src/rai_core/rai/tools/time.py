@@ -37,7 +37,7 @@ class WaitForSecondsTool(BaseTool):
         "Maximum allowed time is 10 seconds"
     )
 
-    args_schema: Type[WaitForSecondsToolInput] = WaitForSecondsToolInput
+    args_schema: Type[WaitForSecondsToolInput] = WaitForSecondsToolInput  # pyright: ignore[reportIncompatibleVariableOverride]  # tests read this annotation
 
     def _run(self, seconds: int):
         """Waits for the specified number of seconds."""

@@ -21,7 +21,7 @@ import uuid
 from collections import deque
 from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
 from contextvars import ContextVar
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from langchain.agents import create_agent
 from langchain.agents.middleware import (
@@ -33,6 +33,7 @@ from langchain.agents.middleware import (
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import (
     AIMessage,
+    AnyMessage,
     BaseMessage,
     HumanMessage,
     SystemMessage,
@@ -90,7 +91,10 @@ class _AgentHooks(AgentMiddleware[Any, Any]):
                 ),
             )
         )
-        return request.override(messages=with_tool_images(request.messages))
+        # the input messages plus HumanMessages
+        return request.override(
+            messages=cast(list[AnyMessage], with_tool_images(request.messages))
+        )
 
     def _after_model(self, response: Any) -> None:
         result = response.result if isinstance(response, ModelResponse) else [response]
@@ -323,7 +327,7 @@ class ReActAgent(BaseAgent):
         state = {"messages": [*self.history, *new]}
         try:
             async for state in self.graph.astream(
-                {"messages": new if checkpointed else state["messages"]},
+                {"messages": new if checkpointed else state["messages"]},  # pyright: ignore[reportArgumentType]  # any BaseMessage is accepted
                 self.config,
                 stream_mode="values",
             ):
@@ -341,7 +345,7 @@ class ReActAgent(BaseAgent):
         finally:
             _TURN.reset(token)
             self.history = state["messages"]
-        final = state["messages"][-1]
+        final = cast(AIMessage, state["messages"][-1])  # the graph ends on the model
         self.emit(FinalMessage(agent=self.name, turn=turn, message=final))
         return final
 

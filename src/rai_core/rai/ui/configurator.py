@@ -100,7 +100,7 @@ def main() -> None:
         "`ollama:llama3.1:70b`. API keys go in the provider's env var "
         "(`OPENAI_API_KEY`, ...), never in this file."
     )
-    roles = {r: st.text_input(r, getattr(models, r)) for r in ROLES}
+    roles = {r: st.text_input(r, getattr(models, r)) or "" for r in ROLES}
     providers = sorted({m.partition(":")[0] for m in roles.values() if ":" in m})
     st.caption(
         "Endpoint per provider, e.g. a vLLM or remote Ollama server. Empty means the default."
@@ -109,6 +109,7 @@ def main() -> None:
         p: st.text_input(
             f"{p} base_url", models.provider_kwargs.get(p, {}).get("base_url", "")
         )
+        or ""
         for p in providers
     }
 

@@ -115,10 +115,10 @@ def _object(value: Any, media: Media) -> Any:
         return prepare(
             {f.name: getattr(value, f.name) for f in dataclasses.fields(value)}, media
         )
-    if hasattr(value, "model_dump"):  # pydantic
-        return prepare(value.model_dump(mode="json"), media)
-    if hasattr(value, "tolist"):  # numpy
-        return prepare(value.tolist(), media)
+    if (model_dump := getattr(value, "model_dump", None)) is not None:  # pydantic
+        return prepare(model_dump(mode="json"), media)
+    if (tolist := getattr(value, "tolist", None)) is not None:  # numpy
+        return prepare(tolist(), media)
     if isinstance(value, BaseException):
         return f"{type(value).__name__}: {value}"
     return repr(value)

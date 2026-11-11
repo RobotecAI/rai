@@ -48,16 +48,19 @@ def egress_chains(targets: Sequence[Target]) -> list[EgressHooks]:
 
 def _named(fn: Callable[[Any], Any], name: str) -> Callable[[Any], Any]:
     """A plain function wrapping fn whose __name__ is name (hooks report it)."""
+    hook: Callable[[Any], Any]
     if inspect.iscoroutinefunction(fn):
 
-        async def hook(arg: Any) -> Any:
+        async def async_hook(arg: Any) -> Any:
             return await fn(arg)
 
+        hook = async_hook
     else:
 
-        def hook(arg: Any) -> Any:
+        def sync_hook(arg: Any) -> Any:
             return fn(arg)
 
+        hook = sync_hook
     hook.__name__ = hook.__qualname__ = name
     return hook
 

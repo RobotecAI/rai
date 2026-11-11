@@ -16,7 +16,7 @@
 without Nav2 installed."""
 
 import time
-from typing import Any, Dict, List, Tuple, cast
+from typing import Any, Dict, List, Literal, Tuple, cast
 
 import cv2
 import numpy as np
@@ -177,7 +177,7 @@ class GetOccupancyGridTool(BaseROS2Tool):
     name: str = "GetOccupancyGridTool"
     description: str = "A tool for getting the current map as an image with the robot's position marked on it."
 
-    response_format: str = "content_and_artifact"
+    response_format: Literal["content", "content_and_artifact"] = "content_and_artifact"
     map_topic: str = "/map"
     map_frame: str = "map"
     robot_frame: str = "base_link"

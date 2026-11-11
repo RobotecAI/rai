@@ -17,7 +17,7 @@
 import asyncio
 from collections import Counter
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, cast
 
 from langchain_core.language_models import BaseChatModel
 from rcl_interfaces.msg import Log
@@ -88,7 +88,8 @@ class LastImage(Aggregator[Image | CompressedImage]):
         )
 
     async def summarize(self, msgs: Sequence[Image | CompressedImage]) -> list[Any]:
-        return human(images=[await asyncio.to_thread(encode_image, msgs[-1])]).content
+        message = human(images=[await asyncio.to_thread(encode_image, msgs[-1])])
+        return cast(list[Any], message.content)  # content blocks: there is an image
 
 
 class ImageSummary(Aggregator[Image | CompressedImage]):

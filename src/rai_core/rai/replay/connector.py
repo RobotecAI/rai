@@ -28,7 +28,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional, Union
 
-from rclpy.clock import ClockType
+from rclpy.clock_type import ClockType
 from rclpy.serialization import deserialize_message
 from rclpy.time import Time
 
@@ -651,7 +651,9 @@ class ReplayConnector(ROS2Connector):
     ) -> Any:
         """The latest recorded transform at the virtual time; waits advance
         the clock through recorded /tf. Raises tf2_ros.LookupException."""
-        from tf2_ros import LookupException
+        from tf2_ros import (
+            LookupException,  # pyright: ignore[reportAttributeAccessIssue]  # from the tf2_py C extension
+        )
 
         self._check()
         with self._lock:
