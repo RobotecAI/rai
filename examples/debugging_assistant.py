@@ -14,7 +14,7 @@
 
 import streamlit as st
 from rai import get_llm
-from rai.agents.langchain.core import create_conversational_agent
+from rai.agents import ReActAgent
 from rai.frontend import run_streamlit_app
 from rai.tools.ros2 import ROS2CLIToolkit
 
@@ -27,12 +27,11 @@ def initialize_agent():
     embodiment_info = EmbodimentInfo.from_file(
         "examples/embodiments/ros2_debugging_assistant_embodiment.json"
     )
-    agent = create_conversational_agent(
+    return ReActAgent(
         llm,
         ROS2CLIToolkit().get_tools(),
         system_prompt=embodiment_info.to_langchain(),
-    )
-    return agent
+    ).graph
 
 
 st.set_page_config(

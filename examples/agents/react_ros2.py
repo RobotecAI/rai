@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import rai
-from rai.agents.langchain.react_agent import ReActAgent
+from rai.agents import HRIOutput, ReActAgent, hri_connector_sender
 from rai.communication.ros2 import ROS2Connector, ROS2Context
 from rai.communication.ros2.connectors.hri_connector import ROS2HRIConnector
 from rai.tools.ros2 import ROS2Toolkit
@@ -24,14 +24,10 @@ def main():
     ros2_connector = ROS2Connector()
     hri_connector = ROS2HRIConnector()
 
-    agent = ReActAgent(
-        target_connectors={
-            "/to_human": hri_connector,
-        },
-        tools=ROS2Toolkit(connector=ros2_connector).get_tools(),
-    )
+    agent = ReActAgent(tools=ROS2Toolkit(connector=ros2_connector).get_tools())
+    agent.subscribe(HRIOutput(hri_connector_sender(hri_connector, "/to_human")))
     # Agent will wait for messages published to /from_human ros2 topic
-    agent.subscribe_source("/from_human", hri_connector)
+    hri_connector.register_callback("/from_human", agent.submit)
     rai.run(agent)
 
 

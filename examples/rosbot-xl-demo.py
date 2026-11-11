@@ -12,17 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, cast
+from typing import List
 
 import rclpy
 import streamlit as st
-from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
+from langgraph.graph.state import CompiledStateGraph
 from rai import get_llm
-from rai.agents.langchain import (
-    ReActAgent,
-    ReActAgentState,
-)
+from rai.agents import ReActAgent
 from rai.communication.ros2 import ROS2Connector
 from rai.frontend.streamlit import run_streamlit_app
 from rai.tools.ros2 import (
@@ -47,7 +44,7 @@ st.set_page_config(
 
 
 @st.cache_resource
-def initialize_agent() -> Runnable[ReActAgentState, ReActAgentState]:
+def initialize_agent() -> CompiledStateGraph:
     rclpy.init()
     embodiment_info = EmbodimentInfo.from_file(
         "examples/embodiments/rosbotxl_embodiment.json"
@@ -86,14 +83,13 @@ def initialize_agent() -> Runnable[ReActAgentState, ReActAgentState]:
     ]
 
     agent = ReActAgent(
-        target_connectors={},  # empty dict, since we're using the agent in direct mode
-        llm=get_llm("complex", streaming=True),
+        get_llm("complex", streaming=True),
+        tools,
         system_prompt=embodiment_info.to_langchain(),
-        tools=tools,
-    ).agent
+    ).graph
     connector.node.declare_parameter("conversion_ratio", 1.0)
 
-    return cast(Runnable[ReActAgentState, ReActAgentState], agent)
+    return agent
 
 
 def main():

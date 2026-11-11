@@ -13,8 +13,7 @@
 # limitations under the License.
 
 import rai
-from rai.agents.langchain import StateBasedConfig
-from rai.agents.ros2 import ROS2StateBasedAgent
+from rai.agents import HRIOutput, StateBasedAgent, hri_connector_sender
 from rai.aggregators.ros2 import (
     ROS2ImgVLMDiffAggregator,
     ROS2LogsAggregator,
@@ -32,23 +31,22 @@ def main():
     hri_connector = ROS2HRIConnector()
     ros2_connector = ROS2Connector()
 
-    config = StateBasedConfig(
-        aggregators={
-            ("/camera/camera/color/image_raw", "sensor_msgs/msg/Image"): [
-                ROS2ImgVLMDiffAggregator()
-            ],
-            "/rosout": [
-                ROS2LogsAggregator()
-            ],  # if msg_type is not provided, topic has to exist
-        }
+    camera, logs = ROS2ImgVLMDiffAggregator(), ROS2LogsAggregator()
+    ros2_connector.register_callback(
+        "/camera/camera/color/image_raw",
+        camera,
+        raw=True,
+        msg_type="sensor_msgs/msg/Image",
     )
+    # if msg_type is not provided, the topic has to exist
+    ros2_connector.register_callback("/rosout", logs, raw=True)
 
-    agent = ROS2StateBasedAgent(
-        config=config,
-        target_connectors={"to_human": hri_connector},
+    agent = StateBasedAgent(
         tools=ROS2Toolkit(connector=ros2_connector).get_tools(),
+        state_sources={"camera": camera.observe, "/rosout": logs.observe},
     )
-    agent.subscribe_source("/from_human", hri_connector)
+    agent.subscribe(HRIOutput(hri_connector_sender(hri_connector, "to_human")))
+    hri_connector.register_callback("/from_human", agent.submit)
     rai.run(agent)
 
 

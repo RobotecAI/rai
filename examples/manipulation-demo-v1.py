@@ -30,6 +30,7 @@ def main():
         prompt = input("Enter a prompt: ")
         messages.append(HumanMessage(content=prompt))
         output = agent.invoke({"messages": messages})
+        messages = output["messages"]
         output["messages"][-1].pretty_print()
 
 

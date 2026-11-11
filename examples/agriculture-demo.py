@@ -17,13 +17,8 @@ import asyncio
 
 import rai
 from langchain_core.messages import HumanMessage
-from langchain_core.runnables import Runnable, RunnableConfig
-from rai import get_llm, get_tracing_callbacks
-from rai.agents import BaseAgent
-from rai.agents.langchain.core import (
-    ConversationalAgentState,
-    create_conversational_agent,
-)
+from rai import get_llm
+from rai.agents import BaseAgent, ReActAgent
 from rai.communication.ros2 import (
     ROS2Connector,
     ROS2Context,
@@ -42,7 +37,7 @@ from rai_whoami.models import EmbodimentInfo
 class SafetyAgent(BaseAgent):
     def __init__(
         self,
-        agent: Runnable[ConversationalAgentState, ConversationalAgentState],
+        agent: ReActAgent,
         connector: ROS2Connector,
         tractor_number: int,
         interval: float = 1.0,
@@ -52,15 +47,24 @@ class SafetyAgent(BaseAgent):
         self.connector = connector
         self.tractor_number = tractor_number
         self.working = False
-        self.langchain_callbacks = get_tracing_callbacks()
         self.loop_interval = interval
 
     async def run(self):
         while True:
-            await asyncio.to_thread(self.check_tractor_state)
+            if await asyncio.to_thread(self.check_tractor_state):
+                self.logger.info("---------- RAI Agent invoked ----------")
+                self.working = True
+                self.agent.history = []  # every anomaly is a fresh conversation
+                await self.agent.ainvoke(
+                    HumanMessage(
+                        content="Anomaly has been detected. The tractor has stopped. Please decide what to do."
+                    )
+                )
+                self.working = False
+                self.logger.info("---------- RAI Agent done ----------")
             await asyncio.sleep(self.loop_interval)
 
-    def check_tractor_state(self):
+    def check_tractor_state(self) -> bool:
         """Check the current state of the tractor and call the RAI agent if the tractor has stopped."""
         self.logger.info("Checking tractor state...")
         response: Trigger.Response = self.connector.service_call(
@@ -71,21 +75,7 @@ class SafetyAgent(BaseAgent):
         if not self.working:
             self.logger.info(f"Tractor {self.tractor_number} state: {response.message}")
 
-        if "STOPPED" in response.message and not self.working:
-            self.logger.info("---------- RAI Agent invoked ----------")
-            self.working = True
-            self.agent.invoke(
-                ConversationalAgentState(
-                    messages=[
-                        HumanMessage(
-                            content="Anomaly has been detected. The tractor has stopped. Please decide what to do."
-                        )
-                    ]
-                ),
-                config=RunnableConfig(callbacks=self.langchain_callbacks),
-            )
-            self.working = False
-            self.logger.info("---------- RAI Agent done ----------")
+        return "STOPPED" in response.message and not self.working
 
 
 @ROS2Context()
@@ -109,8 +99,8 @@ def main():
     connector = ROS2Connector()
 
     # Initialize LangGraph Agent
-    agent = create_conversational_agent(
-        llm=get_llm("complex"),
+    agent = ReActAgent(
+        get_llm("complex"),
         system_prompt=embodiment_info.to_langchain(),
         tools=[
             GetROS2ImageConfiguredTool(

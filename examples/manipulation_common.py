@@ -18,7 +18,7 @@ from typing import List, Literal, Tuple
 
 from langchain_core.tools import BaseTool
 from rai import get_llm
-from rai.agents.langchain.core import create_react_runnable
+from rai.agents import ReActAgent
 from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2.manipulation import (
@@ -47,8 +47,8 @@ def create_agent(
     """Create and configure the manipulation agent.
 
     Args:
-        version: Agent version to create. "v1" uses legacy tools and create_react_runnable,
-                 "v2" uses GetObjectGrippingPointsTool and create_conversational_agent.
+        version: Agent version to create. "v1" uses legacy tools, "v2" uses GetObjectGrippingPointsTool.
+                 Both return the graph of a ReActAgent.
 
     Returns:
         Tuple of (agent, camera_tool) for both versions
@@ -106,11 +106,7 @@ def _create_agent_v1():
         "examples/embodiments/manipulation_embodiment.json"
     )
 
-    agent = create_react_runnable(
-        llm=llm,
-        tools=tools,
-        system_prompt=embodiment_info.to_langchain(),
-    )
+    agent = ReActAgent(llm, tools, system_prompt=embodiment_info.to_langchain()).graph
     return agent, camera_tool
 
 
@@ -163,11 +159,7 @@ def _create_agent_v2():
     embodiment_info = EmbodimentInfo.from_file(
         "examples/embodiments/manipulation_embodiment.json"
     )
-    agent = create_react_runnable(
-        llm=llm,
-        tools=tools,
-        system_prompt=embodiment_info.to_langchain(),
-    )
+    agent = ReActAgent(llm, tools, system_prompt=embodiment_info.to_langchain()).graph
     # Extract camera_tool from tools for consistency with v1
     camera_tool = tools[-1]  # camera_tool is the last tool
     return agent, camera_tool

@@ -13,9 +13,9 @@
 # limitations under the License.
 
 
-from rai.agents import ThreadedAgent
-from rai.agents.langchain import ReActAgent
-from rai.communication.hri_connector import HRIMessage
+import asyncio
+
+from rai.agents import HRIOutput, ReActAgent, hri_connector_sender
 from rai.communication.ros2 import ROS2Connector, ROS2Context, ROS2HRIConnector
 from rai.tools.ros2 import ROS2Toolkit
 
@@ -25,15 +25,11 @@ def main():
     ros2_connector = ROS2Connector()
     hri_connector = ROS2HRIConnector()
 
-    agent = ReActAgent(
-        target_connectors={
-            "/to_human": hri_connector,
-        },  # agent's output is sent to /to_human ros2 topic
-        tools=ROS2Toolkit(connector=ros2_connector).get_tools(),
-    )
-    with ThreadedAgent(agent):
-        agent(HRIMessage(text="What do you see?"))
-        agent.wait_idle()  # wait for agent to finish
+    agent = ReActAgent(tools=ROS2Toolkit(connector=ros2_connector).get_tools())
+    # agent's output is sent to /to_human ros2 topic
+    agent.subscribe(HRIOutput(hri_connector_sender(hri_connector, "/to_human")))
+    answer = asyncio.run(agent.ainvoke("What do you see?"))
+    print(answer.text)
 
 
 if __name__ == "__main__":
