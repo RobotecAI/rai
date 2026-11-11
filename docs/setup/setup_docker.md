@@ -5,41 +5,23 @@
     Docker images are experimental. For tested setup, see the
     [local setup](install.md).
 
-## 1. Build the docker image
+## 1. Get the docker image
 
-Choose the docker image based on your preferred ROS 2 version. You may build the selected image with only the core dependencies or, alternatively, with all the additional modules. To build the docker image, you must clone the RAI repository:
+Images are built from `docker/Dockerfile` on `ros:<distro>-ros-base` for ROS 2 Jazzy and Lyrical (amd64 only). They contain every dependency group except `docs`, `rai_interfaces`, jackd and PortAudio. The repository is in `/rai`, with the venv in `/rai/.venv`.
+
+The CI image (CPU-only torch) is published to GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/robotecai/rai-dev:lyrical  # or jazzy
+```
+
+To build it yourself, clone the repository and pick a target: `dev` (CUDA torch, the default) or `ci` (CPU-only torch).
 
 ```bash
 git clone https://github.com/RobotecAI/rai.git
 cd rai
-```
-
-### 1.1. Humble
-
-Core dependencies only:
-
-```bash
-docker build -t rai:humble --build-arg ROS_DISTRO=humble -f docker/Dockerfile .
-```
-
-All dependencies:
-
-```bash
-docker build -t rai:humble --build-arg ROS_DISTRO=humble --build-arg DEPENDENCIES=all_groups -f docker/Dockerfile .
-```
-
-### 1.2. Jazzy
-
-Core dependencies only:
-
-```bash
-docker build -t rai:jazzy --build-arg ROS_DISTRO=jazzy -f docker/Dockerfile .
-```
-
-All dependencies:
-
-```bash
-docker build -t rai:jazzy --build-arg ROS_DISTRO=jazzy --build-arg DEPENDENCIES=all_groups -f docker/Dockerfile .
+docker build -t rai:lyrical --build-arg ROS_DISTRO=lyrical --target dev -f docker/Dockerfile .
+docker build -t rai:jazzy --build-arg ROS_DISTRO=jazzy --target dev -f docker/Dockerfile .
 ```
 
 ## 2. Set up communications between docker and host (Optional)
@@ -60,7 +42,7 @@ To allow the container to communicate with the host machine, configure the host 
 1. Source ROS 2 on the host machine:
 
     ```shell
-    source /opt/ros/jazzy/setup.bash # or humble
+    source /opt/ros/lyrical/setup.bash # or jazzy
     ```
 
 2. If not configured, set the `ROS_DOMAIN_ID` environment variable to a domain ID between 0 and 101, inclusive. Example:
@@ -90,21 +72,15 @@ To allow the container to communicate with the host machine, configure the host 
 
 ## 3. Run the docker container
 
-### 3.1. Humble
+The entrypoint sources ROS 2, the workspace and the venv.
 
 ```bash
-docker run -e ROS_DOMAIN_ID=$ROS_DOMAIN_ID -it rai:humble
-```
-
-### 3.2. Jazzy
-
-```bash
-docker run -e ROS_DOMAIN_ID=$ROS_DOMAIN_ID -it rai:jazzy
+docker run -e ROS_DOMAIN_ID=$ROS_DOMAIN_ID -it rai:lyrical
 ```
 
 ## 4. Run the tests to confirm the setup
 
 ```sh
-source setup_shell.sh
-uv run pytest tests/{agents,messages,tools,types}
+docker/virtual-audio.sh  # virtual audio devices for the sound tests
+pytest
 ```
