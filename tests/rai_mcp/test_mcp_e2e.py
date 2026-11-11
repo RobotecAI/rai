@@ -141,7 +141,9 @@ def test_egress_hooks_deny_actuation_over_mcp(status_publisher):
     _, read, publish = asyncio.run(drive("--setup", DENY_MOTION))
     assert not read.isError
     assert publish.isError
-    assert "denied by no_motion: motion is off in this test" in publish.content[0].text
+    text = publish.content[0].text
+    assert text.startswith("Denied by no_motion (publish on ")
+    assert text.endswith("): motion is off in this test")
 
 
 def test_read_only_server_has_no_write_tools():
