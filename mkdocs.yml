@@ -108,6 +108,7 @@ nav:
         - Multimodal messages: API_documentation/langchain_integration/multimodal_messages.md
         - ROS 2 Tools: API_documentation/langchain_integration/ROS_2_tools.md
         - MCP: API_documentation/langchain_integration/mcp.md
+      - Robot manifest: API_documentation/manifest.md
       - Runners:
         - Overview: API_documentation/runners/overview.md
       - Safety:
