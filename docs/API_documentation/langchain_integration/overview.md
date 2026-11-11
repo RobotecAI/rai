@@ -27,12 +27,15 @@ llm = get_llm_model(model_type='complex_model')
 
 ```python
 from rai.agents.langchain.runnables import create_react_runnable
+from rai.communication.ros2 import ROS2Connector
+from rai.tools.ros2 import ROS2DiagnosticsToolkit
 
+connector = ROS2Connector()
 agent = create_react_runnable(
     llm=llm,
-    tools=[ros2_topic, get_image]
+    tools=ROS2DiagnosticsToolkit(connector=connector).get_tools(),
 )
-agent.invoke({"messages": [HumanMessage(content="Analyze this image")]})
+agent.invoke({"messages": [HumanMessage(content="Why is /scan not arriving?")]})
 ```
 
 ### Multimodal Communication

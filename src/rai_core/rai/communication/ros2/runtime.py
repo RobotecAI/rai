@@ -514,6 +514,21 @@ class ROS2Runtime:
         except Exception:
             logger.exception("Could not re-create the subscription to %s", key[0])
 
+    def release_topic(self, name: str, raw: bool = False) -> bool:
+        """Destroy the shared subscription to a topic if nothing consumes it
+        (its cached sample for receive() goes with it)."""
+        with self._lock:
+            if self._closed:
+                return False
+            key = (self.resolve(name), raw)
+            topic = self._topics.get(key)
+            if topic is None or topic.consumers or topic.waiters:
+                return False
+            del self._topics[key]
+        compat.destroy(self.node, topic.subscription)
+        self._wake()
+        return True
+
     def _graph_type(self, topic: str) -> Any:
         for name, types in self.node.get_topic_names_and_types():
             if name == topic:

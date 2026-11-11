@@ -15,7 +15,14 @@
 import streamlit as st
 from rai import get_llm
 from rai.agents import ReActAgent
-from rai.tools.ros2 import ROS2CLIToolkit
+from rai.communication.ros2 import ROS2Connector
+from rai.tools.ros2 import (
+    GetROS2ActionsNamesAndTypesTool,
+    GetROS2MessageInterfaceTool,
+    GetROS2ServicesNamesAndTypesTool,
+    GetROS2TopicsNamesAndTypesTool,
+    ROS2DiagnosticsToolkit,
+)
 from rai.ui.streamlit import chat
 
 from rai_whoami import EmbodimentInfo
@@ -24,12 +31,24 @@ from rai_whoami import EmbodimentInfo
 @st.cache_resource
 def initialize_agent():
     llm = get_llm("complex", streaming=True)
+    connector = ROS2Connector()
     embodiment_info = EmbodimentInfo.from_file(
         "examples/embodiments/ros2_debugging_assistant_embodiment.json"
     )
     return ReActAgent(
         llm,
-        ROS2CLIToolkit().get_tools(),
+        [
+            *ROS2DiagnosticsToolkit(connector=connector).get_tools(),
+            *(
+                tool(connector=connector)
+                for tool in (
+                    GetROS2TopicsNamesAndTypesTool,
+                    GetROS2ServicesNamesAndTypesTool,
+                    GetROS2ActionsNamesAndTypesTool,
+                    GetROS2MessageInterfaceTool,
+                )
+            ),
+        ],
         system_prompt=embodiment_info.to_langchain(),
     )
 

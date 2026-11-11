@@ -688,6 +688,61 @@ class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
         self._check()
         return rclpy.action.get_action_names_and_types(self._runtime.node)
 
+    @property
+    def node_name(self) -> str:
+        """The fully qualified name of this connector's node."""
+        return self._runtime.node.get_fully_qualified_name()
+
+    def get_node_names(self) -> list[str]:
+        """Fully qualified names of the nodes in the graph (duplicates kept)."""
+        self._check()
+        return sorted(self._runtime.node.get_fully_qualified_node_names())
+
+    def get_node_interfaces(self, node: str) -> dict[str, list[tuple[str, list[str]]]]:
+        """Names and types a node ("/ns/name") offers and uses, by kind:
+        publishers, subscribers, services, clients, action_servers and
+        action_clients. Raises ValueError if the node is not in the graph."""
+        self._check()
+        if node not in self.get_node_names():
+            raise ValueError(f"Node {node} is not in the ROS graph")
+        namespace, _, name = node.rpartition("/")
+        args = (name, namespace or "/")
+        ros = self._runtime.node
+        return {
+            "publishers": ros.get_publisher_names_and_types_by_node(*args),
+            "subscribers": ros.get_subscriber_names_and_types_by_node(*args),
+            "services": ros.get_service_names_and_types_by_node(*args),
+            "clients": ros.get_client_names_and_types_by_node(*args),
+            "action_servers": rclpy.action.get_action_server_names_and_types_by_node(
+                ros, *args
+            ),
+            "action_clients": rclpy.action.get_action_client_names_and_types_by_node(
+                ros, *args
+            ),
+        }
+
+    def get_topic_endpoints(self, topic: str) -> tuple[list[Any], list[Any]]:
+        """Publishers and subscriptions of a topic as rclpy TopicEndpointInfo
+        (node_name, node_namespace, topic_type, qos_profile)."""
+        self._check()
+        name, ros = self.resolve(topic), self._runtime.node
+        return (
+            ros.get_publishers_info_by_topic(name),
+            ros.get_subscriptions_info_by_topic(name),
+        )
+
+    def release_topic(self, topic: str, *, raw: bool = False) -> bool:
+        """Destroy the shared subscription to topic if no Subscription uses it,
+        so its publishers stop sending here. Returns whether it was destroyed."""
+        return False if self.closed else self._runtime.release_topic(topic, raw)
+
+    def tf_frames(self) -> dict[str, dict[str, Any]]:
+        """The frames in the TF buffer (listening starts on first use): child
+        frame -> parent, broadcaster, rate (Hz), most_recent_transform and
+        oldest_transform (seconds; 0 for static transforms)."""
+        self._check()
+        return _parse_frames(self._runtime.tf_buffer().all_frames_as_yaml())
+
     # ------------------------------------- R5: compatibility with the 2.x API
 
     def unregister_callback(self, callback_id: str) -> None:
@@ -810,6 +865,25 @@ class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
         self, target_frame: str, source_frame: str, timeout_sec: float = 5.0
     ) -> TransformStamped:
         return self.sync.transform(target_frame, source_frame, timeout=timeout_sec)
+
+
+def _parse_frames(text: str) -> dict[str, dict[str, Any]]:
+    """tf2's all_frames_as_yaml (a fixed, flat format) without a YAML parser."""
+    frames: dict[str, dict[str, Any]] = {}
+    frame: Optional[dict[str, Any]] = None
+    for line in text.splitlines():
+        if not line.strip() or line.strip() == "[]":
+            continue
+        if not line.startswith(" "):
+            frame = frames.setdefault(line.rstrip().removesuffix(":"), {})
+        elif frame is not None:
+            key, _, value = line.strip().partition(":")
+            value = value.strip().strip("'")
+            try:
+                frame[key] = float(value)
+            except ValueError:
+                frame[key] = value
+    return frames
 
 
 def _build(msg_type: Any, payload: Any) -> Any:

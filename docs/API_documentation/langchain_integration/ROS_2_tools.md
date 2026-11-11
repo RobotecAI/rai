@@ -125,6 +125,33 @@ tool = GetROS2TopicsNamesAndTypesTool(
 | `CancelROS2ActionTool`            | Tool for canceling running actions                     |
 | `GetROS2ActionIDsTool`            | Tool for getting action IDs                            |
 
+## Diagnostics and introspection
+
+`ROS2DiagnosticsToolkit` answers "why is my robot not moving" questions. Every tool is read-only (`Effect.READ`) and runs on the connector's graph queries, subscriptions and service calls; nothing shells out to the `ros2` CLI. Outputs are short text with units, bounded in length for the LLM.
+
+```python
+from rai.tools.ros2 import ROS2DiagnosticsToolkit
+
+tools = ROS2DiagnosticsToolkit(connector=connector).get_tools()
+```
+
+It does not repeat the listing tools of `ROS2Toolkit`; a debugging agent adds `GetROS2TopicsNamesAndTypesTool`, `GetROS2ServicesNamesAndTypesTool`, `GetROS2ActionsNamesAndTypesTool` and `GetROS2MessageInterfaceTool` (see `examples/debugging_assistant.py`).
+
+| Tool name                   | What it reports                                                                                                  |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `list_ros2_nodes`           | Nodes in the graph; flags duplicate names and the agent's own node                                               |
+| `get_ros2_node_info`        | What a node publishes, subscribes to, serves and calls, with types                                               |
+| `get_ros2_topic_info`       | A topic's type, publishers and subscribers with their QoS, and incompatible QoS pairs                            |
+| `measure_ros2_topic_rate`   | Rate (Hz), period jitter, bandwidth and header delay over a short window                                         |
+| `get_ros2_parameters`       | A node's parameter values, optionally with descriptions                                                          |
+| `get_ros2_logs`             | `/rosout` entries filtered by level, node, text and age                                                          |
+| `get_ros2_diagnostics`      | `/diagnostics` (or `/diagnostics_agg`): worst level overall and per hardware id, problems, stale ones            |
+| `get_ros2_lifecycle_states` | Lifecycle (managed) nodes and their state                                                                        |
+| `get_ros2_tf_tree`          | The TF trees with each transform's rate and age, stale transforms, and the chain or missing link of a frame pair |
+| `list_ros2_interfaces`      | Installed interface packages, or the types of one package                                                        |
+
+`get_ros2_logs`, `get_ros2_diagnostics` and `get_ros2_tf_tree` start listening at their first call and keep a bounded buffer, so the first call waits briefly for data. `/rosout` keeps each node's recent entries for late joiners, so the first call also sees entries logged shortly before it. `measure_ros2_topic_rate` subscribes for its window only and releases the subscription afterwards.
+
 ## Specific ROS 2 Tools
 
 RAI provides specific ROS 2 tools for certain ROS 2 packages.

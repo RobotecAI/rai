@@ -26,11 +26,7 @@ except ImportError:
 from langchain_core.tools import BaseTool, ToolException
 from rai.communication.ros2 import ROS2Connector
 from rai.tools import Allow, Deny, Effect, ToolCallContext, global_tool_hooks
-from rai.tools.ros2 import (
-    ROS2CLIToolkit,
-    ROS2Toolkit,
-    cli,
-)
+from rai.tools.ros2 import ListROS2NodesTool, ROS2DiagnosticsToolkit, ROS2Toolkit
 from rai.tools.ros2.manipulation import (
     GetObjectPositionsTool,
     MoveObjectFromToTool,
@@ -54,6 +50,7 @@ _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
 
 R, W, A = Effect.READ, Effect.WRITE, Effect.ACTUATE
 MANIPULATOR = ("/manipulator_move_to",)
+TF = ("/tf", "/tf_static")
 
 # tool name -> (effect, static targets, call kwargs, targets the hooks see)
 EXPECTED = {
@@ -89,7 +86,16 @@ EXPECTED = {
     "get_object_positions": (R, (), {}, ()),
     "get_ros2_camera_image": (R, ("/camera",), {}, ("/camera",)),
     "get_ros2_robot_position": (R, (), {}, ()),
-    **{t.name: (R, (), {}, ()) for t in ROS2CLIToolkit().get_tools()},
+    "list_ros2_nodes": (R, (), {}, ()),
+    "get_ros2_node_info": (R, (), {"node": "/a"}, ()),
+    "get_ros2_topic_info": (R, (), {"topic": "scan"}, ("/scan",)),
+    "measure_ros2_topic_rate": (R, (), {"topic": "scan"}, ("/scan",)),
+    "get_ros2_parameters": (R, (), {"node": "/a"}, ()),
+    "get_ros2_logs": (R, ("/rosout",), {}, ("/rosout",)),
+    "get_ros2_diagnostics": (R, (), {"topic": "diagnostics"}, ("/diagnostics",)),
+    "get_ros2_lifecycle_states": (R, (), {}, ()),
+    "get_ros2_tf_tree": (R, TF, {}, TF),
+    "list_ros2_interfaces": (R, (), {}, ()),
 }
 
 
@@ -113,13 +119,13 @@ def tools(ros_setup: None):
             camera_topic="c",
             depth_topic="d",
             camera_info_topic="e",
-            get_grabbing_point_tool=cli.ros2_node,
+            get_grabbing_point_tool=ListROS2NodesTool(connector=connector),
         ),
         GetROS2ImageConfiguredTool(connector=connector, topic="camera"),
         GetROS2TransformConfiguredTool(
             connector=connector, source_frame="a", target_frame="b"
         ),
-        *ROS2CLIToolkit().get_tools(),
+        *ROS2DiagnosticsToolkit(connector=connector).get_tools(),
     ]
     yield {tool.name: tool for tool in all_tools}
     connector.close()
