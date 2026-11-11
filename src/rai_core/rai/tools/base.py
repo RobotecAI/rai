@@ -166,16 +166,14 @@ def from_langchain(
     """
     if isinstance(tool, StructuredTool) and (tool.coroutine or tool.func):
         fn = tool.coroutine or partial(asyncio.to_thread, tool.func)
-        response_format = tool.response_format
     else:
         fn = partial(_ainvoke, tool)
-        response_format = "content"
     return _FunctionTool(
         name=tool.name,
         description=tool.description,
         args_schema=tool.args_schema or tool.get_input_schema(),
         fn=fn,
-        response_format=response_format,
+        response_format=tool.response_format,
         effect=effect or effect_from_mcp_annotations(tool.metadata),
         targets=targets,
         timeout_s=timeout_s,
@@ -184,4 +182,11 @@ def from_langchain(
 
 
 async def _ainvoke(tool: BaseTool, **kwargs: Any) -> Any:
-    return await tool.ainvoke(kwargs)
+    """Call `tool` as a tool call, so it keeps its artifact and error status."""
+    call = {"type": "tool_call", "name": tool.name, "args": kwargs, "id": "rai"}
+    message = await tool.ainvoke(call)
+    if message.status == "error":
+        raise ToolException(message.content)
+    if tool.response_format == "content_and_artifact":
+        return message.content, message.artifact
+    return message.content
