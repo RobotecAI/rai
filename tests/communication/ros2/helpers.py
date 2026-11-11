@@ -543,6 +543,11 @@ def setup_mock_clock_for_agent(agent, use_time_wrapper: bool = True):
 
 @pytest.fixture(scope="module")
 def ros_setup() -> Generator[None, None, None]:
-    rclpy.init()
+    # A connector may have initialised rclpy already (RAI keeps that context
+    # until exit); only shut down what this fixture started.
+    started = not rclpy.ok()
+    if started:
+        rclpy.init()
     yield
-    rclpy.shutdown()
+    if started and rclpy.ok():
+        rclpy.shutdown()

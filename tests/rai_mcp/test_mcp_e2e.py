@@ -106,10 +106,12 @@ async def drive(*args: str):
 
 def test_ros2_tools_groups_and_read_only(connector):
     names = {t.name for t in ros2_tools(connector, ["topics"])}
-    assert "publish_ros2_message" in names and "ros2_topic" not in names
+    assert "publish_ros2_message" in names and "get_ros2_topic_info" not in names
     read_only = ros2_tools(connector, read_only=True)
     assert read_only and all(t.effect is Effect.READ for t in read_only)
-    assert {"ros2_topic", "receive_ros2_message"} <= {t.name for t in read_only}
+    assert {"get_ros2_topic_info", "receive_ros2_message"} <= {
+        t.name for t in read_only
+    }
     with pytest.raises(ValueError, match="teleport"):
         ros2_tools(connector, ["teleport"])
 
@@ -132,7 +134,9 @@ def test_serve_lists_annotated_tools_and_reads_a_real_topic(status_publisher):
         "call_ros2_service": (False, False),
         "publish_ros2_message": (False, True),
     }
-    assert {"navigate_to_pose", "ros2_topic", "start_ros2_action"} <= set(tools)
+    assert {"navigate_to_pose", "get_ros2_topic_info", "start_ros2_action"} <= set(
+        tools
+    )
     assert not read.isError and "hello" in read.content[0].text
     assert not publish.isError, publish.content
 
