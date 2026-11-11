@@ -1,101 +1,76 @@
 # RAI
 
-RAI is a flexible AI agent framework to develop and deploy Embodied AI features for your robots.
+RAI is an agent framework for robots. It connects LLM agents to ROS 2: agents read sensors, call services and run actions through tools, talk with people by text or voice, and every action passes safety hooks that fail closed.
 
-📚 Visit [robotecai.github.io/rai](https://robotecai.github.io/rai/) for the latest documentation, setup
-guide and tutorials. 📚
-
----
+Documentation: [robotecai.github.io/rai](https://robotecai.github.io/rai/)
 
 <div align="center">
 
 ![rai-image](./docs/imgs/RAI_simple_diagram_medium.png)
 
----
-
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 ![GitHub Release](https://img.shields.io/github/v/release/RobotecAI/rai)
-![Contributors](https://img.shields.io/github/contributors/robotecai/rai)
 [![codecov](https://codecov.io/gh/RobotecAI/rai/graph/badge.svg?token=4EP49Q8GDG)](https://codecov.io/gh/RobotecAI/rai)
 [![arXiv](https://img.shields.io/badge/arXiv-2505.07532-b31b1b.svg)](https://arxiv.org/abs/2505.07532)
-
-![Static Badge](https://img.shields.io/badge/Ubuntu-24.04-orange)
-![Static Badge](https://img.shields.io/badge/Ubuntu-22.04-orange)
-![Static Badge](https://img.shields.io/badge/Python-3.12-blue)
-![Static Badge](https://img.shields.io/badge/Python-3.10-blue)
-![Static Badge](https://img.shields.io/badge/ROS2-jazzy-blue)
-![Static Badge](https://img.shields.io/badge/ROS2-humble-blue)
-
+![ROS 2 Lyrical](https://img.shields.io/badge/ROS2-lyrical-blue)
+![ROS 2 Jazzy](https://img.shields.io/badge/ROS2-jazzy-blue)
+![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.14-blue)
 [![](https://dcbadge.limes.pink/api/server/https://discord.gg/3PGHgTaJSB)](https://discord.gg/3PGHgTaJSB)
 
 </div>
 
----
+## Quick start
 
-## 🎯 Overview
+With ROS 2 Lyrical or Jazzy sourced:
 
-| Category                       | Description                                       | Features                                                                                                                                                           |
-| ------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 🤖 **Multi-Agent Systems**     | Empowering robotics with advanced AI capabilities | • Seamlessly integrate Gen AI capabilities into your robots<br>• Enable sophisticated agent-based architectures                                                    |
-| 🔄 **Robot Intelligence**      | Enhancing robotic systems with smart features     | • Add natural human-robot interaction capabilities<br>• Bring flexible problem-solving to your existing stack<br>• Provide ready-to-use AI features out of the box |
-| 🌟 **Multi-Modal Interaction** | Supporting diverse interaction capabilities       | • Handle diverse data types natively<br>• Enable rich sensory integration<br>• Process multiple input/output modalities simultaneously                             |
+```bash
+python3 -m venv --system-site-packages .venv && source .venv/bin/activate
+pip install "rai-core[openai]"
+export OPENAI_API_KEY="sk-..."
+```
 
-## RAI framework
+```python
+import asyncio
 
--   [x] rai core: Core functionality for multi-agent system, human-robot interaction and
-        multi-modalities.
--   [x] rai whoami: Tool to extract and synthesize robot embodiment information from a structured
-        directory of documentation, images, and URDFs.
--   [x] rai_asr: Speech-to-text models and tools.
--   [x] rai_tts: Text-to-speech models and tools.
--   [x] rai_sim: Package for connecting RAI to simulation environments.
--   [x] rai_bench: Benchmarking suite for RAI. Test agents, models, tools, simulators, etc.
--   [x] rai_perception: Object detection tools based on open-set models and machine learning techniques.
--   [ ] rai_finetune: Finetune LLMs on your embodied data.
+from rai.agents import ReActAgent
+from rai.communication.ros2 import ROS2Connector
+from rai.tools.ros2 import ROS2Toolkit
 
-### Getting started
+with ROS2Connector() as connector:
+    agent = ReActAgent("complex", ROS2Toolkit(connector=connector).get_tools())
+    print(asyncio.run(agent.ainvoke("Which topics are available?")).text)
+```
 
-See [Quick setup guide](https://robotecai.github.io/rai/setup/install).
+Next: [install](https://robotecai.github.io/rai/getting_started/install/), [your first agent](https://robotecai.github.io/rai/getting_started/first_agent/), [configuration](https://robotecai.github.io/rai/getting_started/configuration/). To work on RAI itself, see the [developer environment](https://robotecai.github.io/rai/getting_started/dev_env/).
 
-### Simulation demos
+## Packages
 
-Try RAI yourself with these demos:
-| Application | Robot | Description | Docs Link |
-| ------------------------------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
-| Mission and obstacle reasoning in orchards | Autonomous tractor | In a beautiful scene of a virtual orchard, RAI goes beyond obstacle detection to analyze best course of action for a given unexpected situation. | [link](https://robotecai.github.io/rai/demos/agriculture/) |
-| Manipulation tasks with natural language | Robot Arm (Franka Panda) | Complete flexible manipulation tasks thanks to RAI and Grounded SAM 2 | [link](https://robotecai.github.io/rai/demos/manipulation/) |
-| Autonomous mobile robot demo | Husarion ROSbot XL | Demonstrate RAI's interaction with an autonomous mobile robot platform for navigation and control | [link](https://robotecai.github.io/rai/demos/rosbot_xl/) |
-| Agentic mobile manipulator | RB-KAIROS | A comprehensive demo with on-board execution | [link](https://github.com/RobotecAI/agentic-mobile-manipulator) |
+| Package                                             | Purpose                                                                                     |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| [rai_core](src/rai_core)                            | Agents, tools, ROS 2 connectors, safety hooks, MCP, robot manifest, flight recorder, replay |
+| [rai_s2s](src/rai_s2s)                              | Speech recognition, text to speech and voice agents                                         |
+| [rai_whoami](src/rai_whoami)                        | Robot identity from documentation, images and URDFs                                         |
+| [rai_perception](src/rai_extensions/rai_perception) | Open-set detection and segmentation                                                         |
+| [rai_semap](src/rai_semap)                          | Semantic map of detected objects                                                            |
+| [rai_sim](src/rai_sim), [rai_bench](src/rai_bench)  | Simulator bridges and benchmarks                                                            |
+| [rai_finetune](src/rai_finetune)                    | Fine-tuning on embodied data (experimental)                                                 |
+
+## Demos
+
+| Application                                | Robot                    | Docs                                                            |
+| ------------------------------------------ | ------------------------ | --------------------------------------------------------------- |
+| Mission and obstacle reasoning in orchards | Autonomous tractor       | [link](https://robotecai.github.io/rai/demos/agriculture/)      |
+| Manipulation tasks with natural language   | Robot arm (Franka Panda) | [link](https://robotecai.github.io/rai/demos/manipulation/)     |
+| Autonomous mobile robot                    | Husarion ROSbot XL       | [link](https://robotecai.github.io/rai/demos/rosbot_xl/)        |
+| Agentic mobile manipulator                 | RB-KAIROS                | [link](https://github.com/RobotecAI/agentic-mobile-manipulator) |
 
 ## Community
 
-### Embodied AI Community Group
+RAI is one of the projects of the [Embodied AI Community Group](https://github.com/ros-wg-embodied-ai); its meetings are in the [ROS Community Calendar](https://calendar.google.com/calendar/u/0/embed?src=c_3fc5c4d6ece9d80d49f136c1dcd54d7f44e1acefdbe87228c92ff268e85e2ea0@group.calendar.google.com&ctz=Etc/UTC). Ask questions in [Q&A](https://github.com/RobotecAI/rai/discussions/categories/q-a) or on [Discord](https://discord.gg/3PGHgTaJSB). Contributions are welcome: see the [contribution guide](CONTRIBUTING.md).
 
-RAI is one of the main projects in focus of the
-[Embodied AI Community Group](https://github.com/ros-wg-embodied-ai). If you would like to join the
-next meeting, look for it in the
-[ROS Community Calendar](https://calendar.google.com/calendar/u/0/embed?src=c_3fc5c4d6ece9d80d49f136c1dcd54d7f44e1acefdbe87228c92ff268e85e2ea0@group.calendar.google.com&ctz=Etc/UTC).
+A talk about [RAI at ROSCon 2024](https://vimeo.com/1026029511).
 
-### Publicity
-
--   A talk about [RAI at ROSCon 2024](https://vimeo.com/1026029511).
-
-### RAI Q&A
-
-Please take a look at [Q&A](https://github.com/RobotecAI/rai/discussions/categories/q-a).
-
-### Developer Resources
-
-See our [documentation](https://robotecai.github.io/rai/) for a deeper dive into RAI, including
-instructions on creating a configuration specifically for your robot.
-
-### Contributing
-
-You are welcome to contribute to RAI! Please see our [Contribution Guide](CONTRIBUTING.md).
-
-### Citation
-
-If you find our work helpful for your research, please consider citing the following BibTeX entry.
+## Citation
 
 ```bibtex
 @misc{rachwał2025raiflexibleagentframework,

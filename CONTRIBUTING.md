@@ -41,7 +41,7 @@ This can be done by creating Issues and RFCs on github.
 
 ### Setting up the development environment
 
-Set up your development environment following [the instructions](../../setup/install.md).
+Set up your development environment following [the instructions](../../getting_started/dev_env.md).
 
 Additionally, setup the pre-commit:
 
@@ -54,9 +54,9 @@ pre-commit run -a # Run the checks before committing
 Optionally, install all RAI dependencies and run the tests:
 
 ```bash
-uv sync --all-groups
-colcon build --symlink-install
-pytest tests/
+scripts/dev_env.sh --all-groups
+source setup_shell.sh
+pytest
 ```
 
 ### Starting the discussion

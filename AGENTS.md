@@ -30,7 +30,7 @@ source /opt/ros/$ROS_DISTRO/setup.bash
 colcon build --symlink-install
 ```
 
-The `rai_interfaces` package (cloned via `vcs import src < ros_deps.repos`) must be present in `src/src/rai_interfaces` before building.
+The `rai_interfaces` package (cloned by `scripts/dev_env.sh`, or `vcs import . < ros_deps.repos`) must be present in `src/rai_interfaces` before building, unless it is installed from apt.
 
 ### Linting
 

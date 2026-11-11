@@ -4,14 +4,14 @@
 
 RAI Perception brings powerful computer vision capabilities to your ROS2 applications. It integrates [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO) (through its [Hugging Face transformers implementation](https://huggingface.co/docs/transformers/model_doc/grounding-dino)) and [Grounded-SAM-2](https://github.com/RobotecAI/Grounded-SAM-2) to detect objects, create segmentation masks, and calculate gripping points.
 
-The package includes model-agnostic ROS2 service nodes (`DetectionService` and `SegmentationService`) that provide detection and segmentation capabilities. It also provides tools that work seamlessly with [RAI LLM agents](../tutorials/walkthrough.md) to build conversational robot scenarios, including `GetObjectPositionsTool` for general spatial reasoning and `GetObjectGrippingPointsTool` for advanced gripping strategies.
+The package includes model-agnostic ROS2 service nodes (`DetectionService` and `SegmentationService`) that provide detection and segmentation capabilities. It also provides tools that work seamlessly with [RAI LLM agents](walkthrough.md) to build conversational robot scenarios, including `GetObjectPositionsTool` for general spatial reasoning and `GetObjectGrippingPointsTool` for advanced gripping strategies.
 
 ## Prerequisites
 
 Before installing `rai-perception`, ensure you have:
 
-1. **ROS2 installed** (Jazzy recommended, or Humble). If you don't have ROS2 yet, follow the official ROS2 installation guide for [jazzy](https://docs.ros.org/en/jazzy/Installation.html) or [humble](https://docs.ros.org/en/humble/Installation.html).
-2. **Python 3.8+** and `pip` installed (usually pre-installed on Ubuntu).
+1. **ROS 2 Lyrical or Jazzy installed**. If you do not have ROS 2 yet, follow the official installation guide for [Lyrical](https://docs.ros.org/en/lyrical/Installation.html) or [Jazzy](https://docs.ros.org/en/jazzy/Installation.html).
+2. **Python** of the ROS 2 distribution (3.14 for Lyrical, 3.12 for Jazzy) and `pip`.
 3. **NVIDIA GPU** with CUDA support (required for optimal performance).
 4. **wget** installed (required for downloading model weights):
     ```bash
@@ -23,11 +23,7 @@ Before installing `rai-perception`, ensure you have:
 **Step 1:** Source ROS2 in your terminal:
 
 ```bash
-# For ROS2 Jazzy (recommended)
-source /opt/ros/jazzy/setup.bash
-
-# For ROS2 Humble
-source /opt/ros/humble/setup.bash
+source /opt/ros/${ROS_DISTRO}/setup.bash  # lyrical or jazzy
 ```
 
 **Step 2:** Install ROS2 dependencies. `rai-perception` requires its ROS2 packages that needs to be installed separately:
@@ -37,7 +33,7 @@ source /opt/ros/humble/setup.bash
 sudo apt update
 
 # Install rai_interfaces as a debian package
-sudo apt install ros-jazzy-rai-interfaces  # or ros-humble-rai-interfaces for Humble
+sudo apt install ros-jazzy-rai-interfaces  # on Lyrical, build rai_interfaces from source
 ```
 
 **Step 3:** Install `rai-perception` via pip:
@@ -47,13 +43,13 @@ pip install rai-perception
 ```
 
 > [!TIP]
-> It's recommended to install `rai-perception` in a virtual environment to avoid conflicts with other Python packages.
+> Install `rai-perception` in a virtual environment created with `--system-site-packages`, so it sees rclpy (see [Install](../getting_started/install.md)).
 
 > [!TIP]
 > To avoid sourcing ROS2 in every new terminal, add the source command to your `~/.bashrc` file:
 >
 > ```bash
-> echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc  # or humble
+> echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
 > ```
 
 <!--- --8<-- [end:sec1] -->
@@ -71,7 +67,7 @@ After installing `rai-perception`, launch the perception services:
 **Step 1:** Open a terminal and source ROS2:
 
 ```bash
-source /opt/ros/jazzy/setup.bash  # or humble
+source /opt/ros/jazzy/setup.bash
 ```
 
 **Step 2:** Launch the perception services:
@@ -85,7 +81,7 @@ python -m rai_perception.scripts.run_perception_services
 
 > [!NOTE] > **Legacy Service Names:** The services register both new service names (`/detection`, `/segmentation`) and legacy service names (`/grounding_dino_classify`, `/grounded_sam_segment`) for backward compatibility. Legacy service names will be removed in a future release. Migrate your code to use the new service names.
 
-The services create two ROS 2 nodes: `detection_service` and `segmentation_service` using [ROS2Connector](../API_documentation/connectors/ROS_2_Connectors.md).
+The services create two ROS 2 nodes: `detection_service` and `segmentation_service` using [ROS2Connector](../concepts/connectors.md).
 
 Their ROS 2 parameters (`model_name`, `service_name`, `enable_legacy_service_names`) can be set with `--ros-args -p name:=value`.
 
@@ -96,7 +92,7 @@ The `rai_perception/talker.py` example demonstrates how to use the perception se
 **Step 1:** Open a terminal and source ROS2:
 
 ```bash
-source /opt/ros/jazzy/setup.bash  # or humble
+source /opt/ros/jazzy/setup.bash
 ```
 
 **Step 2:** Launch the perception services:
@@ -108,7 +104,7 @@ python -m rai_perception.scripts.run_perception_services
 **Step 3:** In a different terminal (remember to source ROS2 first), run the example client:
 
 ```bash
-source /opt/ros/jazzy/setup.bash  # or humble
+source /opt/ros/jazzy/setup.bash
 python -m rai_perception.examples.talker --ros-args -p image_path:="<path-to-image>"
 ```
 
@@ -143,9 +139,9 @@ This section provides information for developers looking to integrate RAI Percep
 
 ### RAI Tools
 
-`rai_perception` package contains tools that can be used by [RAI LLM agents](../tutorials/walkthrough.md)
+`rai_perception` package contains tools that can be used by [RAI LLM agents](walkthrough.md)
 to enhance their perception capabilities. For more information on RAI Tools see
-[Tool use and development](../tutorials/tools.md) tutorial.
+[Writing tools](writing_tools.md).
 
 The tools fall into two categories:
 
