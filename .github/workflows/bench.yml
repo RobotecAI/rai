@@ -1,0 +1,153 @@
+name: bench
+
+# A/B benchmark of the ROS 2 connector: base and head run interleaved on the same runner and
+# scripts/bench_compare.py compares their medians (exact, ratio and report-only metrics).
+#   pull_request: head = the PR merge commit, base = its first parent (the base branch tip)
+#   push:         head = the pushed commit, base = the previous tip of the branch
+#   schedule:     A/A run of main against itself in full (non-quick) mode. Any failure there is
+#                 runner noise, which tells whether the thresholds are too tight.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - src/rai_core/rai/communication/**
+      - tests/benchmarks/**
+      - scripts/bench_compare.py
+      - .github/workflows/bench.yml
+  push:
+    branches:
+      - mm/rai-3.0
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  IMAGE: ghcr.io/robotecai/rai-dev
+  ROS_DISTRO: lyrical
+  BENCH: tests/benchmarks/ros2_connector_bench.py
+  REPEATS: 3
+
+jobs:
+  bench:
+    if: github.event.pull_request.draft != true
+
+    runs-on: ubuntu-24.04
+
+    timeout-minutes: 60
+
+    # Non-blocking during burn-in. Per rai3-plan/PLAN.md §1 (Quality gates) this job becomes a
+    # required check after two weeks of report-only runs: then drop this line.
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          path: head
+          persist-credentials: false
+
+      - name: Pick the base commit
+        id: refs
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        working-directory: head
+        run: |
+          case "${EVENT}" in
+            pull_request) base=$(git rev-parse HEAD^1) ;;
+            push)
+              if git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+                base="${BEFORE}"
+              else
+                base=$(git rev-parse HEAD^1)
+              fi ;;
+            *) base=$(git rev-parse HEAD) ;;
+          esac
+          git worktree add --detach ../base "${base}"
+          mode=--quick
+          [ "${EVENT}" = schedule ] && mode=
+          {
+            echo "base=${base}"
+            echo "head=$(git rev-parse HEAD)"
+            echo "mode=${mode}"
+          } >> "${GITHUB_OUTPUT}"
+
+      # Fork PRs get no package token; the published image is then pulled anonymously.
+      - name: Log in to ghcr.io
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Each ref is built with its own Dockerfile. The published image is the layer cache, so
+      # usually only the source layer is rebuilt. A base that cannot be built (an old commit
+      # without the ci target) is skipped with a warning; a broken head fails the job.
+      - name: Build the base and head images
+        run: |
+          build() {
+            docker build \
+              --file "$1/docker/Dockerfile" \
+              --target ci \
+              --build-arg ROS_DISTRO="${ROS_DISTRO}" \
+              --cache-from "${IMAGE}:${ROS_DISTRO}" \
+              --tag "rai-bench:$1" \
+              "$1"
+          }
+          build base || echo "::warning::could not build the base image"
+          build head
+
+      # Interleaved (base, head, base, head, ...) so slow drift of the runner hits both refs.
+      # Each ref runs its own copy of the benchmark; a ref without one is skipped.
+      - name: Run the benchmark
+        env:
+          MODE: ${{ steps.refs.outputs.mode }}
+        run: |
+          mkdir -p bench-out
+          for i in $(seq "${REPEATS}"); do
+            for ref in base head; do
+              if [ ! -f "${ref}/${BENCH}" ] || ! docker image inspect "rai-bench:${ref}" >/dev/null 2>&1; then
+                [ "${i}" = 1 ] && echo "::warning::skipping ${ref}: no image or no ${BENCH}"
+                continue
+              fi
+              docker run --rm \
+                --env ROS_DOMAIN_ID=42 \
+                --volume "${PWD}/bench-out:/out" \
+                "rai-bench:${ref}" \
+                python "${BENCH}" ${MODE:+"${MODE}"} --out "/out/${ref}-${i}.json" \
+                || echo "::warning::${ref} run ${i} failed"
+            done
+          done
+
+      - name: Compare
+        env:
+          BASE_SHA: ${{ steps.refs.outputs.base }}
+          HEAD_SHA: ${{ steps.refs.outputs.head }}
+        run: |
+          shopt -s nullglob
+          base=(bench-out/base-*.json)
+          head=(bench-out/head-*.json)
+          echo "Base \`${BASE_SHA}\`, head \`${HEAD_SHA}\`, ${#base[@]} + ${#head[@]} runs." >> "${GITHUB_STEP_SUMMARY}"
+          if [ ${#base[@]} -eq 0 ] || [ ${#head[@]} -eq 0 ]; then
+            echo "Nothing to compare." >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+          python3 head/scripts/bench_compare.py --base "${base[@]}" --head "${head[@]}"
+
+      - name: Upload results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bench-results
+          path: bench-out/
+          if-no-files-found: ignore
