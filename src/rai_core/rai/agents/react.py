@@ -53,6 +53,7 @@ from rai.agents.events import (
     ToolEnd,
     ToolStart,
 )
+from rai.aggregators import Aggregator
 from rai.communication.hri_connector import HRIMessage
 from rai.llm import get_llm, get_tracing_callbacks
 from rai.messages import human, with_tool_images
@@ -186,10 +187,17 @@ class StateContext(AgentMiddleware[Any, Any]):
             return None
         return HumanMessage([{"type": "text", "text": "Current robot state:"}, *blocks])
 
+    def _with(self, request: ModelRequest[Any], observation: HumanMessage | None):
+        if observation is None:
+            return request
+        return request.override(messages=[*request.messages, observation])
+
+    def wrap_model_call(self, request, handler):  # type: ignore[override]
+        # sync graph.invoke: the caller's thread has no running event loop
+        return handler(self._with(request, asyncio.run(self.observe())))
+
     async def awrap_model_call(self, request, handler):  # type: ignore[override]
-        if observation := await self.observe():
-            request = request.override(messages=[*request.messages, observation])
-        return await handler(request)
+        return await handler(self._with(request, await self.observe()))
 
 
 def _to_message(message: str | BaseMessage | HRIMessage) -> BaseMessage:
@@ -349,9 +357,19 @@ class ReActAgent(BaseAgent):
 class StateBasedAgent(ReActAgent):
     """A :class:`ReActAgent` that sees the current robot state on every model call.
 
-    ``state_sources`` maps a name to an async callable, e.g. an aggregator's
-    :meth:`~rai.aggregators.BaseAggregator.observe`. The state is added to each
-    model request only; it is never written to the history.
+    ``state_sources`` maps a name to an async callable, typically an
+    :class:`~rai.aggregators.Aggregator`::
+
+        StateBasedAgent(model, tools, state_sources={
+            "camera": ImageSummary(connector, "/camera/image_raw"),
+            "logs": RosoutDigest(connector),
+        })
+
+    The agent starts (subscribes) its aggregators in :meth:`on_start` and stops
+    them in :meth:`on_stop`, so run it with :func:`rai.run` or ``async with``.
+    The state is added to each model request only; it is never written to the
+    history. ``agent.graph.invoke`` works too, from a thread without a running
+    event loop; start the aggregators yourself then.
     """
 
     def __init__(
@@ -366,3 +384,16 @@ class StateBasedAgent(ReActAgent):
     ):
         self.context = StateContext(state_sources, state_timeout_s)
         super().__init__(model, tools, middleware=[self.context, *middleware], **kwargs)
+        self.aggregators = [
+            s for s in state_sources.values() if isinstance(s, Aggregator)
+        ]
+
+    async def on_start(self) -> None:
+        for aggregator in self.aggregators:
+            aggregator.start()
+        await super().on_start()
+
+    async def on_stop(self) -> None:
+        for aggregator in self.aggregators:
+            aggregator.stop()
+        await super().on_stop()

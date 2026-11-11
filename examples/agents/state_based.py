@@ -14,10 +14,7 @@
 
 import rai
 from rai.agents import HRIOutput, StateBasedAgent, hri_connector_sender
-from rai.aggregators.ros2 import (
-    ROS2ImgVLMDiffAggregator,
-    ROS2LogsAggregator,
-)
+from rai.aggregators.ros2 import ImageSummary, RosoutDigest
 from rai.communication.ros2 import (
     ROS2Connector,
     ROS2Context,
@@ -31,16 +28,14 @@ def main():
     hri_connector = ROS2HRIConnector()
     ros2_connector = ROS2Connector()
 
-    camera, logs = ROS2ImgVLMDiffAggregator(), ROS2LogsAggregator()
-    ros2_connector.subscribe(
-        "/camera/camera/color/image_raw", camera, msg_type="sensor_msgs/msg/Image"
-    )
-    # if msg_type is not provided, the topic has to exist
-    ros2_connector.subscribe("/rosout", logs)
-
     agent = StateBasedAgent(
         tools=ROS2Toolkit(connector=ros2_connector).get_tools(),
-        state_sources={"camera": camera.observe, "/rosout": logs.observe},
+        state_sources={
+            "camera": ImageSummary(
+                ros2_connector, "/camera/camera/color/image_raw", frames=3
+            ),
+            "/rosout": RosoutDigest(ros2_connector),
+        },
     )
     agent.subscribe(HRIOutput(hri_connector_sender(hri_connector, "to_human")))
     hri_connector.subscribe("/from_human", agent.submit)

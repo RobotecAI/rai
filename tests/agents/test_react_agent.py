@@ -436,6 +436,18 @@ def test_state_sources_run_concurrently_with_own_timeouts_and_keep_last_good():
     assert elapsed < 4 * 0.45
 
 
+def test_state_based_graph_invoke_works_synchronously():
+    async def pose() -> str:
+        return "x=1"
+
+    llm = model([("get_status", {"topic": "/a"})], "done")
+    agent = StateBasedAgent(llm, [get_status], state_sources={"pose": pose})
+    result = agent.graph.invoke({"messages": [HumanMessage("hi")]}, agent.config)
+    assert result["messages"][-1].content == "done"
+    assert all("pose: x=1" in str(messages[-1].content) for messages in llm.seen)
+    assert not any("pose" in str(m.content) for m in result["messages"])
+
+
 # ---- HRI output ----
 
 

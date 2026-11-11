@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .base import BaseAggregator
+"""Robot state for :class:`rai.agents.StateBasedAgent`. The ROS 2 ones are in
+:mod:`rai.aggregators.ros2`."""
 
-__all__ = ["BaseAggregator"]
+from .base import Aggregator
+
+__all__ = ["Aggregator"]
