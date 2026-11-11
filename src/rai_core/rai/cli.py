@@ -36,7 +36,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     serve.add_argument(
         "--tools",
-        help="comma-separated tool groups: topics,services,actions,nav2,cli (default: all)",
+        help="comma-separated tool groups: topics,services,actions,nav2,diagnostics (default: all)",
     )
     serve.add_argument(
         "--read-only", action="store_true", default=None, help="expose READ tools only"
