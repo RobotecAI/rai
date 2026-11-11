@@ -107,6 +107,7 @@ class Subscription:
         callback: Optional[Callable[[Any], Any]],
         maxsize: Optional[int],
         on_close: Callable[[], None] = lambda: None,
+        replay: bool = False,
     ) -> None:
         self.topic = name
         self.closed = False
@@ -124,7 +125,7 @@ class Subscription:
             self._consume: Callable[[Any], None] = self._dispatcher.push
         else:
             self._consume = self._put
-        topic.add(self._consume)
+        topic.add(self._consume, replay)
 
     def _put(self, msg: Any) -> None:  # executor thread
         with self._lock:
@@ -416,7 +417,7 @@ class ROS2Base:
         raw: bool = False,
     ) -> tuple[str, Subscription]:
         self._check()
-        entry = self._runtime.topic(topic, msg_type, qos, raw)
+        entry, created = self._runtime.topic(topic, msg_type, qos, raw)
         key = uuid.uuid4().hex
         subscription = Subscription(
             self._runtime,
@@ -425,6 +426,7 @@ class ROS2Base:
             callback,
             maxsize,
             lambda: self._subscriptions.pop(key, None),
+            replay=created,
         )
         self._subscriptions[key] = subscription
         return key, subscription
@@ -452,7 +454,7 @@ class ROS2Base:
         qos: QoSProfile,
     ) -> tuple[Any, float, float]:
         self._check()
-        entry = self._runtime.topic(topic, msg_type, qos)
+        entry = self._runtime.topic(topic, msg_type, qos)[0]
         with entry.lock:
             sample = entry.last
             if sample is not None and (

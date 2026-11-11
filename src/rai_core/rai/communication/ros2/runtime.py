@@ -36,10 +36,11 @@ import rclpy
 from rclpy.action import ActionClient, ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.context import Context
+from rclpy.event_handler import SubscriptionEventCallbacks
 from rclpy.executors import ExternalShutdownException, SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.parameter import Parameter
-from rclpy.qos import QoSProfile
+from rclpy.qos import QoSProfile, ReliabilityPolicy
 from rclpy.signals import SignalHandlerOptions
 from rclpy.task import Future
 
@@ -169,6 +170,7 @@ class Topic:
         self.consumers: tuple[Callable[[Any], None], ...] = ()
         self.waiters: list[Waiter] = []
         self.lock = threading.Lock()
+        self.rematched = False
 
     def on_message(self, msg: Any) -> None:  # executor thread
         sample = (msg, time.monotonic(), time.time())
@@ -184,9 +186,13 @@ class Topic:
             except Exception:
                 logger.exception("Error dispatching a message")
 
-    def add(self, consume: Callable[[Any], None]) -> None:
+    def add(self, consume: Callable[[Any], None], replay: bool = False) -> None:
+        """Add a consumer; replay hands it a sample that arrived before it
+        (a new subscription may get a latched sample at once)."""
         with self.lock:
             self.consumers = (*self.consumers, consume)
+            if replay and self.last is not None:
+                consume(self.last[0])
 
     def remove(self, consume: Callable[[Any], None]) -> None:
         with self.lock:
@@ -412,7 +418,8 @@ class ROS2Runtime:
 
     def topic(
         self, name: str, msg_type: Any, qos: QoSProfile, raw: bool = False
-    ) -> Topic:
+    ) -> tuple[Topic, bool]:
+        """The shared subscription to a topic, and whether it was just created."""
         self.check()
         key = (self.resolve(name), raw)
         cls = message_class(msg_type)
@@ -420,22 +427,59 @@ class ROS2Runtime:
             self.check()
             topic = self._topics.get(key)
             if topic is None:
-                cls = cls or self._graph_type(key[0])
-                topic = Topic(cls)
-                topic.subscription = self.node.create_subscription(
-                    cls,
-                    key[0],
-                    topic.on_message,
-                    qos,
-                    raw=raw,
-                    callback_group=self.group,
-                )
+                topic = Topic(cls or self._graph_type(key[0]))
+                # BEST_AVAILABLE resolves when the subscription is created: with
+                # no publisher yet it becomes best effort, which loses fragments
+                # of large messages. Such a subscription is re-created once, at
+                # its first match, against the publishers' real offers.
+                early = qos.reliability == ReliabilityPolicy.BEST_AVAILABLE
+                if early and not self.node.count_publishers(key[0]):
+                    topic.subscription = self._subscribe(topic, key, qos, rematch=True)
+                else:
+                    topic.subscription = self._subscribe(topic, key, qos)
                 self._topics[key] = topic
-            elif cls is not None and cls is not topic.msg_type:
+                return topic, True
+            if cls is not None and cls is not topic.msg_type:
                 raise TypeError(
                     f"{key[0]} is subscribed as {topic.msg_type.__name__}, not {cls.__name__}"
                 )
-            return topic
+            return topic, False
+
+    def _subscribe(
+        self,
+        topic: Topic,
+        key: tuple[str, bool],
+        qos: QoSProfile,
+        rematch: bool = False,
+    ) -> Any:
+        events = SubscriptionEventCallbacks()
+        if rematch:
+            events.matched = lambda _: self._rematch(topic, key, qos)
+        return self.node.create_subscription(
+            topic.msg_type,
+            key[0],
+            topic.on_message,
+            qos,
+            raw=key[1],
+            callback_group=self.group,
+            event_callbacks=events,
+        )
+
+    def _rematch(self, topic: Topic, key: tuple[str, bool], qos: QoSProfile) -> None:
+        try:  # executor thread
+            with self._lock:
+                if self._closed or not self.node.count_publishers(key[0]):
+                    return
+                if self._topics.get(key) is not topic or topic.rematched:
+                    return
+                topic.rematched = True
+                old, topic.subscription = (
+                    topic.subscription,
+                    self._subscribe(topic, key, qos),
+                )
+            compat.destroy(self.node, old)
+        except Exception:
+            logger.exception("Could not re-create the subscription to %s", key[0])
 
     def _graph_type(self, topic: str) -> Any:
         for name, types in self.node.get_topic_names_and_types():
