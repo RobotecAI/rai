@@ -1,0 +1,60 @@
+name: typecheck
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - development
+      - main
+  push:
+    branches:
+      - main
+      - mm/rai-3.0
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  IMAGE: ghcr.io/robotecai/rai-dev
+
+jobs:
+  pyright:
+    if: github.event.pull_request.draft != true
+
+    runs-on: ubuntu-24.04
+
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Fork PRs get no package token; the published image is then pulled anonymously.
+      - name: Log in to ghcr.io
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Same image as the lyrical test leg (test.yml): ROS, rai_interfaces and the venv with
+      # pyright, so ROS imports resolve. Settings in pyproject.toml [tool.pyright].
+      - name: Build the image
+        run: |
+          docker build \
+            --file docker/Dockerfile \
+            --target ci \
+            --build-arg ROS_DISTRO=lyrical \
+            --cache-from "${IMAGE}:lyrical" \
+            --tag rai-typecheck \
+            .
+
+      - name: Run pyright
+        run: docker run --rm rai-typecheck pyright

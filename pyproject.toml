@@ -26,6 +26,7 @@ dev = [
     "pytest>=9.0.3,<10.0.0",
     "pytest-timeout>=2.3.1,<3.0.0",
     "pytest-cov>=7.0.0,<8.0.0",
+    "pyright[nodejs]>=1.1.408,<2.0.0",
 ]
 docs = [
     "mkdocs",
@@ -144,3 +145,11 @@ exclude_also = [
     "raise NotImplementedError",
     "@(abc\\.)?abstractmethod",
 ]
+
+[tool.pyright]
+# Run from an environment with ROS sourced and the venv active: pyright then takes its import
+# paths from that python (system site-packages, /opt/ros/<distro>, the colcon overlay).
+include = ["src/rai_core/rai"]
+strict = ["src/rai_core/rai/communication"]
+typeCheckingMode = "standard"
+pythonVersion = "3.12"
