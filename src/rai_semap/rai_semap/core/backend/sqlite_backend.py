@@ -358,5 +358,4 @@ class SQLiteBackend(SpatialDBBackend):
         self, location_id: Optional[str] = None
     ) -> List[str]:
         """Get list of distinct object classes seen in a location."""
-
-    pass
+        raise NotImplementedError

@@ -57,9 +57,13 @@ class ROS2LaunchManager:
             # but some nodes are stubborn and there is a possibility
             # that they don't close. If this will happen sending PKILL for all
             # ros nodes will be needed
-            shutdown_task = loop.create_task(
-                launch_service.shutdown(),
-            )
+            # None if the service already stopped running
+            shutdown = launch_service.shutdown()
             # shutdown task should complete when all nodes are closed
             # but wait also for launch task to close just to be sure
-            loop.run_until_complete(asyncio.gather(shutdown_task, launch_task))
+            if shutdown is not None:
+                loop.run_until_complete(
+                    asyncio.gather(loop.create_task(shutdown), launch_task)
+                )
+            else:
+                loop.run_until_complete(launch_task)

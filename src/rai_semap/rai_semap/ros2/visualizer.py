@@ -19,8 +19,8 @@ from typing import Dict
 import rclpy
 import yaml
 from builtin_interfaces.msg import Duration
-from geometry_msgs.msg import Point
 from geometry_msgs.msg import Pose as ROS2Pose
+from rai.types import Point
 from rai.types.base import ROS2BaseModel
 from rai.types.ros2.convert import to_ros2_msg
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType

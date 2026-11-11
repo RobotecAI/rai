@@ -22,7 +22,7 @@ model-agnostic support, generic RAIDetection/RAISegmentation service interfaces 
 be needed. Alternatively, model-specific tools can be created for each model.
 """
 
-from typing import Any, Sequence, Type
+from typing import Any, Literal, Sequence, Type
 
 import cv2
 import numpy as np
@@ -93,7 +93,7 @@ class GetSegmentationTool(SegmentationBaseTool):
     name: str = "GetSegmentationTool"
     description: str = "Get the segmentation masks of an object in a camera image"
     target_args = {"camera_topic": "topic"}
-    response_format: str = "content_and_artifact"
+    response_format: Literal["content", "content_and_artifact"] = "content_and_artifact"
     args_schema: Type[GetSegmentationInput] = GetSegmentationInput
 
     async def _acall(self, camera_topic: str, object_name: str) -> Any:

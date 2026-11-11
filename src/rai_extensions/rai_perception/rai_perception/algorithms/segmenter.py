@@ -24,6 +24,7 @@ from typing import List
 import hydra
 import numpy as np
 import torch
+from hydra.core.global_hydra import GlobalHydra
 from rai.communication.ros2.api import convert_ros_img_to_ndarray
 from sam2.build_sam import build_sam2
 from sam2.sam2_image_predictor import SAM2ImagePredictor
@@ -61,7 +62,7 @@ class GDSegmenter:
             self.device = "cpu"
 
         # Initialize Hydra with config module and build SAM2 model
-        hydra.core.global_hydra.GlobalHydra.instance().clear()
+        GlobalHydra.instance().clear()
         hydra.initialize_config_module("rai_perception.configs")
 
         try:

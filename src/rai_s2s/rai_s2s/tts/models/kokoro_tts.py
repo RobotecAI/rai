@@ -68,7 +68,9 @@ class KokoroTTS(TTSModel):
         cache_dir: str | Path = Path.home() / ".cache/rai/kokoro/",
     ):
         try:
-            from kokoro_onnx import Kokoro
+            from kokoro_onnx import (  # pyright: ignore[reportMissingImports]  # optional
+                Kokoro,
+            )
         except ImportError as e:
             raise ImportError(
                 "KokoroTTS requires the 'kokoro' extra: install rai_s2s[kokoro]"
@@ -166,7 +168,9 @@ class KokoroTTS(TTSModel):
         """
         try:
             # kokoro-onnx phonemizes with espeak-ng, so its languages apply.
-            from phonemizer.backend import EspeakBackend
+            from phonemizer.backend import (  # pyright: ignore[reportMissingImports]  # optional
+                EspeakBackend,
+            )
 
             return sorted(EspeakBackend.supported_languages())
         except Exception as e:

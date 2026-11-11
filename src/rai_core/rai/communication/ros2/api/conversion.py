@@ -44,7 +44,7 @@ def ros2_message_to_dict(message: Any) -> OrderedDict[str, Any]:
 
 
 @functools.cache
-def import_message_from_str(msg_type: str) -> Type[object]:
+def import_message_from_str(msg_type: str) -> Type[Any]:
     msg_namespaced_type: NamespacedType = get_namespaced_type(msg_type)
     return import_message_from_namespaced_type(msg_namespaced_type)
 

@@ -30,7 +30,7 @@ class QueryDatabaseToolInput(BaseModel):
 class QueryDatabaseTool(BaseTool):
     name: str = "query_database"
     description: str = "Query the database with a natural language query"
-    args_schema: Type[QueryDatabaseToolInput] = QueryDatabaseToolInput
+    args_schema: Type[QueryDatabaseToolInput] = QueryDatabaseToolInput  # pyright: ignore[reportIncompatibleVariableOverride]  # tests read this annotation
 
     database_type: Literal["faiss"] = Field(
         default="faiss", description="The type of database to use"
@@ -51,4 +51,5 @@ class QueryDatabaseTool(BaseTool):
             raise ValueError(f"Unsupported database type: {self.database_type}")
 
     def _run(self, query: str) -> str:
+        assert self.vdb_client is not None  # set in __init__
         return str(self.vdb_client.similarity_search(query, k=self.k))

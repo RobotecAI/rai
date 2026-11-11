@@ -536,8 +536,8 @@ class PointCloudFilter:
             return pts
 
         iso = IsolationForest(
-            max_samples=self.config.max_samples,
-            contamination=self.config.outlier_fraction,
+            max_samples=self.config.max_samples,  # pyright: ignore[reportArgumentType]  # sklearn is untyped
+            contamination=self.config.outlier_fraction,  # pyright: ignore[reportArgumentType]
             random_state=42,
         )
         pred = cast(NDArray[np.int64], iso.fit_predict(pts))  # type: ignore[no-any-return]
@@ -560,7 +560,7 @@ class PointCloudFilter:
 
         lof = LocalOutlierFactor(
             n_neighbors=self.config.neighborhood_size,
-            contamination=self.config.outlier_fraction,
+            contamination=self.config.outlier_fraction,  # pyright: ignore[reportArgumentType]  # sklearn is untyped
         )
         pred = cast(NDArray[np.int64], lof.fit_predict(pts))  # type: ignore[no-any-return]
         mask = pred == 1  # 1 = inlier, -1 = outlier

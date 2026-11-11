@@ -37,7 +37,7 @@ class GetObjectPositionsGroundTruthTool(BaseTool):
 
     simulation: SimulationBridge
 
-    args_schema: Type[GetObjectPositionsGroundTruthToolInput] = (
+    args_schema: Type[GetObjectPositionsGroundTruthToolInput] = (  # pyright: ignore[reportIncompatibleVariableOverride]  # tests read this annotation
         GetObjectPositionsGroundTruthToolInput
     )
 

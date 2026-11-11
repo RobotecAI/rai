@@ -26,10 +26,11 @@ import re
 import warnings
 from os import PathLike
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
+from builtin_interfaces.msg import Time as TimeMsg
 from PIL import Image as PILImage
 from rai.communication.ros2.images import imgmsg_to_numpy
 from rclpy.time import Time
@@ -61,7 +62,7 @@ class Box:
         self.confidence = float(confidence)
 
     def to_detection_msg(
-        self, class_dict: Dict[str, int], timestamp: Time
+        self, class_dict: Dict[str, int], timestamp: Union[Time, TimeMsg]
     ) -> Detection2D:
         """Convert Box to ROS2 Detection2D message."""
         detection = Detection2D()
@@ -71,7 +72,7 @@ class Box:
         # grounding_dino.py calls .to_msg() before passing it. Should we fix the caller or
         # change the signature to accept Union[rclpy.time.Time, builtin_interfaces.msg.Time]?
         # Handle both rclpy.time.Time (call to_msg()) and builtin_interfaces.msg.Time (use directly)
-        if hasattr(timestamp, "to_msg"):
+        if isinstance(timestamp, Time):
             detection.header.stamp = timestamp.to_msg()
         else:
             # Already a builtin_interfaces.msg.Time
@@ -181,10 +182,11 @@ class GDBoxer:
 
         packed_boxes = []
         for i in range(len(xyxy)):
-            if class_ids[i] is None:
+            class_id = class_ids[i]
+            if class_id is None:
                 continue
             x1, y1, x2, y2 = map(int, xyxy[i])
-            phrase = classes[class_ids[i]]
+            phrase = classes[class_id]
             confidence = confidences[i]
             center = ((x1 + x2) / 2, (y1 + y2) / 2)
             size_x = x2 - x1

@@ -219,7 +219,7 @@ class SemanticMapMemory(BaseMemory):
             source_frame=source_frame,
             location_id=location_id,
             vision_detection_id=vision_detection_id,
-            metadata=metadata,
+            metadata=metadata or {},
         )
         return self.backend.insert_annotation(annotation)
 
@@ -394,4 +394,4 @@ class SemanticMapMemory(BaseMemory):
         Returns:
             List of unique object class names, sorted alphabetically.
         """
-        pass
+        raise NotImplementedError

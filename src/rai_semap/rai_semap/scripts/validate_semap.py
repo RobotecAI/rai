@@ -17,7 +17,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-from geometry_msgs.msg import Point
+from rai.types import Point
 
 from rai_semap.core.backend.sqlite_backend import SQLiteBackend
 from rai_semap.core.semantic_map_memory import SemanticMapMemory

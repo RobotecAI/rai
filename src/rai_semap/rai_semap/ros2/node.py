@@ -27,6 +27,7 @@ from geometry_msgs.msg import Point, Pose, PoseStamped
 from nav_msgs.msg import OccupancyGrid
 from rai.communication.ros2 import QoS, ROS2Connector
 from rai.communication.ros2.runtime import ROS2Runtime
+from rai.types import Point as RaiPoint
 from rai_perception.components.perception_utils import extract_pointcloud_from_bbox
 from sensor_msgs.msg import CameraInfo, Image
 from tf2_geometry_msgs import do_transform_pose_stamped
@@ -373,10 +374,8 @@ class SemanticMapNode:
     ) -> bool:
         """Merge into a nearby annotation of the same class, or insert a new one."""
         radius = self.class_merge_thresholds.get(object_class, 0.5)
-        position = pose_in_map_frame.position
-        center = pointcloud_centroid_map or Point(
-            x=position.x, y=position.y, z=position.z
-        )
+        position = pointcloud_centroid_map or pose_in_map_frame.position
+        center = RaiPoint(x=position.x, y=position.y, z=position.z)
         location_id = self.memory.location_id
         metadata = {"pointcloud": pointcloud_features} if pointcloud_features else {}
         try:

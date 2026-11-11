@@ -51,15 +51,16 @@ class ROS2S2SAgent(SpeechToSpeechAgent):
             **kwargs,
         )
 
-    def _setup_hri_connector(self):
+    def _setup_hri_connector(self) -> ROS2HRIConnector:
         hri_connector = ROS2HRIConnector()
         hri_connector.subscribe(self.to_human_topic, self._on_to_human_message)
+        self._ros2_hri_connector = hri_connector  # typed: .sync is ROS 2 only
         return hri_connector
 
     def _send_from_human_message(self, data: str):
         print(f"Sending message to {self.from_human_topic}")
-        self.hri_connector.sync.send(self.from_human_topic, data)
+        self._ros2_hri_connector.sync.send(self.from_human_topic, data)
 
     def _send_to_human_message(self, data: str):
         print(f"Sending message to {self.to_human_topic}")
-        self.hri_connector.sync.send(self.to_human_topic, data)
+        self._ros2_hri_connector.sync.send(self.to_human_topic, data)

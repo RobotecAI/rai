@@ -78,7 +78,7 @@ class O3DExROS2Bridge(SimulationBridge):
         # message, so each publish carries them all.
         self._static_transforms: dict[str, TransformStamped] = {}
 
-    def init_simulation(self, simulation_config: O3DExROS2SimulationConfig):
+    def init_simulation(self, simulation_config: O3DExROS2SimulationConfig):  # pyright: ignore[reportIncompatibleMethodOverride]  # each bridge takes its own config
         if self.current_binary_path != simulation_config.binary_path:
             if self.current_sim_process:
                 self.shutdown()

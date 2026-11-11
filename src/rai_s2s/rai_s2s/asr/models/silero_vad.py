@@ -65,7 +65,7 @@ class SileroVAD(BaseVoiceDetectionModel):
             model=self.model_name,
             # Newer torch defaults to trust_repo="check", which prompts on stdin for repos
             # not yet in the local trust list and fails in non-interactive processes.
-            trust_repo=True,
+            trust_repo=True,  # pyright: ignore[reportArgumentType]  # torch accepts a bool
         )  # type: ignore
         # NOTE: See silero vad implementation: https://github.com/snakers4/silero-vad/blob/9060f664f20eabb66328e4002a41479ff288f14c/src/silero_vad/utils_vad.py#L61
         if sampling_rate == 16000:
