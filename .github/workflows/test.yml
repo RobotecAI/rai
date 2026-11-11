@@ -1,0 +1,96 @@
+name: test
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - development
+      - main
+  push:
+    branches:
+      - main
+      - mm/rai-3.0
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  IMAGE: ghcr.io/robotecai/rai-dev
+
+jobs:
+  test:
+    if: github.event.pull_request.draft != true
+
+    runs-on: ubuntu-24.04
+
+    timeout-minutes: 60
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ros_distro:
+          - jazzy
+          - lyrical
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Fork PRs get no package token; the published image is then pulled anonymously.
+      - name: Log in to ghcr.io
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The test image is built from this commit. The published image (docker-images.yml) is the
+      # layer cache, so only the source layer is rebuilt unless docker/, uv.lock, package.xml or
+      # ros_deps.repos changed.
+      - name: Build the test image
+        env:
+          ROS_DISTRO: ${{ matrix.ros_distro }}
+        run: |
+          docker build \
+            --file docker/Dockerfile \
+            --target ci \
+            --build-arg ROS_DISTRO="${ROS_DISTRO}" \
+            --cache-from "${IMAGE}:${ROS_DISTRO}" \
+            --tag rai-test \
+            .
+
+      - name: Run tests
+        env:
+          COV_ARGS: ${{ matrix.ros_distro == 'lyrical' && '--cov=src/rai_core --cov-report=xml:/out/coverage.xml' || '' }}
+        run: |
+          mkdir -p test-results
+          docker run --rm \
+            --volume "${PWD}/test-results:/out" \
+            --env COV_ARGS \
+            rai-test \
+            bash -c 'docker/virtual-audio.sh &&
+              pytest --timeout=120 --timeout-method=thread \
+                --junitxml=/out/junit.xml -o junit_family=legacy ${COV_ARGS}'
+
+      - name: Upload coverage to Codecov
+        if: ${{ matrix.ros_distro == 'lyrical' }}
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./test-results/coverage.xml
+          name: codecov-pytest
+          fail_ci_if_error: false
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() && matrix.ros_distro == 'lyrical' }}
+        uses: codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3 # v1.2.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./test-results/junit.xml

@@ -1,0 +1,77 @@
+name: docker images
+
+# Publishes ghcr.io/robotecai/rai-dev:<distro> and :<distro>-<sha> (the `ci` target of
+# docker/Dockerfile). The test workflow builds its own image from each commit and uses
+# this one as the layer cache.
+on:
+  push:
+    branches:
+      - main
+      - mm/rai-3.0
+    paths:
+      - docker/**
+      - uv.lock
+      - "**/package.xml"
+      - ros_deps.repos
+      - .github/workflows/docker-images.yml
+  schedule:
+    # Weekly, to pick up ROS sync releases and security updates.
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/robotecai/rai-dev
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-24.04
+
+    timeout-minutes: 60
+
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ros_distro:
+          - jazzy
+          - lyrical
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: ci
+          platforms: linux/amd64
+          build-args: ROS_DISTRO=${{ matrix.ros_distro }}
+          pull: true
+          # The weekly build starts from scratch so apt and rosdep packages are refreshed too.
+          no-cache: ${{ github.event_name == 'schedule' }}
+          cache-from: type=registry,ref=${{ env.IMAGE }}:${{ matrix.ros_distro }}
+          cache-to: type=inline
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ matrix.ros_distro }}
+            ${{ env.IMAGE }}:${{ matrix.ros_distro }}-${{ github.sha }}
