@@ -17,7 +17,6 @@ from io import BytesIO
 from typing import Tuple
 
 from elevenlabs.client import ElevenLabs
-from elevenlabs.types import Voice
 from elevenlabs.types.voice_settings import VoiceSettings
 from pydub import AudioSegment
 
@@ -55,7 +54,7 @@ class ElevenLabsTTS(TTSModel):
         voice_id = next((v.voice_id for v in voices if v.name == voice), None)
         if voice_id is None:
             raise TTSModelError(f"Voice {voice} not found")
-        self.voice = Voice(voice_id=voice_id, settings=self.voice_settings)
+        self.voice_id = voice_id
 
     def get_speech(self, text: str) -> AudioSegment:
         """
@@ -78,9 +77,10 @@ class ElevenLabsTTS(TTSModel):
             If the response does not contain valid audio data.
         """
         try:
-            response = self.client.generate(
+            response = self.client.text_to_speech.convert(
+                self.voice_id,
                 text=text,
-                voice=self.voice,
+                voice_settings=self.voice_settings,
                 optimize_streaming_latency=4,
             )
             audio_data = b"".join(response)

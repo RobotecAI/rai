@@ -832,7 +832,7 @@ wheels = [
 
 [[package]]
 name = "elevenlabs"
-version = "1.59.0"
+version = "2.77.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
@@ -842,9 +842,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/73/5f/01197145be5be258abdce254010eb300868b85fbf6cf1c6c1538a68caef4/elevenlabs-1.59.0.tar.gz", hash = "sha256:16e735bd594e86d415dd445d249c8cc28b09996cfd627fbc10102c0a84698859", size = 200549, upload-time = "2025-05-15T12:19:28.868Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3c/91/3f7785f29ec41c2d4a3ed1f56bc991fe6c59b5bcf9193fc2824a6b9661f6/elevenlabs-2.77.0.tar.gz", hash = "sha256:0ce354075318ddfe271a872adad94753ce75690a9dc7583f83b85aec047aa0a2", size = 927899, upload-time = "2026-11-06T15:32:59.81Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b0/1f/eaf5dc72edad9124f16daf36b9226c57893e21280d25e94b6b5c7011c86b/elevenlabs-1.59.0-py3-none-any.whl", hash = "sha256:468145db81a0bc867708b4a8619699f75583e9481b395ec1339d0b443da771ed", size = 523205, upload-time = "2025-05-15T12:19:27.568Z" },
+    { url = "https://files.pythonhosted.org/packages/25/0a/0b08bfac8f3929ed9a111bd97f08e594ddecf0f94b3294b3e31626ba62d3/elevenlabs-2.77.0-py3-none-any.whl", hash = "sha256:5b53d79ffd71665958f26b214ef3ae0d9a1d01462f1507c1ff9b4ab6529d6102", size = 2401368, upload-time = "2026-11-06T15:32:57.781Z" },
 ]
 
 [[package]]
@@ -3635,8 +3635,8 @@ whisper = [
 
 [package.metadata]
 requires-dist = [
-    { name = "elevenlabs", marker = "extra == 'all'", specifier = ">=1.4.1,<2.0.0" },
-    { name = "elevenlabs", marker = "extra == 'elevenlabs'", specifier = ">=1.4.1,<2.0.0" },
+    { name = "elevenlabs", marker = "extra == 'all'", specifier = ">=2.0.0,<3.0.0" },
+    { name = "elevenlabs", marker = "extra == 'elevenlabs'", specifier = ">=2.0.0,<3.0.0" },
     { name = "faster-whisper", marker = "extra == 'all'", specifier = ">=1.1.1,<2.0.0" },
     { name = "faster-whisper", marker = "extra == 'fasterwhisper'", specifier = ">=1.1.1,<2.0.0" },
     { name = "kokoro-onnx", marker = "extra == 'kokoro'", specifier = "==0.3.3" },

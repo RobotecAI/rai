@@ -849,7 +849,10 @@ def review_and_save():
                     from elevenlabs import ElevenLabs
 
                     client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
-                    output = client.generate(text="Hello, world!")
+                    voice_id = client.voices.get_all().voices[0].voice_id
+                    output = client.text_to_speech.convert(
+                        voice_id, text="Hello, world!"
+                    )
                     output = list(output)
                     return True
                 except Exception as e:
