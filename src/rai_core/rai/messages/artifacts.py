@@ -12,9 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, TypedDict
+from typing import TypedDict, Union
+
+from rai.content import Image
 
 
 class MultimodalArtifact(TypedDict):
-    images: List[str]  # base64 encoded images
-    audios: List[str]
+    """A tool artifact whose images the agent shows to the model
+    (see :func:`rai.messages.with_tool_images`)."""
+
+    images: list[Union[Image, str]]  # str: base64 PNG or JPEG

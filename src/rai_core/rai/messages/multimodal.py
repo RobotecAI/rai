@@ -13,10 +13,9 @@
 # limitations under the License.
 
 
-from collections.abc import Sequence
 from typing import Any, Dict, List, Optional, Union
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.messages.base import BaseMessage, get_msg_title_repr
 
 
@@ -95,29 +94,3 @@ class SystemMultimodalMessage(SystemMessage, MultimodalMessage):
 
 class AIMultimodalMessage(AIMessage, MultimodalMessage):
     pass
-
-
-def with_tool_images(messages: Sequence[BaseMessage]) -> list[BaseMessage]:
-    """Show tool images to the model: after each run of tool messages, add one
-    human message with the images of their ``{"images": [...]}`` artifacts.
-
-    Most providers reject images inside tool results, so this is done per model
-    request; the history keeps the tool messages unchanged.
-    """
-    out: list[BaseMessage] = []
-    images: list[str] = []
-    for message in messages:
-        if isinstance(message, ToolMessage):
-            if isinstance(message.artifact, dict):
-                images += message.artifact.get("images") or []
-        elif images:
-            out.append(_tool_images_message(images))
-            images = []
-        out.append(message)
-    if images:
-        out.append(_tool_images_message(images))
-    return out
-
-
-def _tool_images_message(images: List[str]) -> HumanMultimodalMessage:
-    return HumanMultimodalMessage(content="Images returned by tools:", images=images)
