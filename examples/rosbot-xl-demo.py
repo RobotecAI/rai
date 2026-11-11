@@ -49,7 +49,7 @@ def initialize_agent() -> ReActAgent:
         "examples/embodiments/rosbotxl_embodiment.json"
     )
 
-    connector = ROS2Connector(executor_type="multi_threaded", use_sim_time=True)
+    connector = ROS2Connector(use_sim_time=True)
     tools: List[BaseTool] = [
         GetROS2TransformConfiguredTool(
             connector=connector,
@@ -86,7 +86,7 @@ def initialize_agent() -> ReActAgent:
         tools,
         system_prompt=embodiment_info.to_langchain(),
     )
-    connector.node.declare_parameter("conversion_ratio", 1.0)
+    connector.declare_parameter("conversion_ratio", 1.0)
 
     return agent
 

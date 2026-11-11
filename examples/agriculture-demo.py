@@ -19,13 +19,7 @@ import rai
 from langchain_core.messages import HumanMessage
 from rai import get_llm
 from rai.agents import BaseAgent, ReActAgent
-from rai.communication.ros2 import (
-    ROS2Connector,
-    ROS2Context,
-    ROS2Message,
-    wait_for_ros2_services,
-    wait_for_ros2_topics,
-)
+from rai.communication.ros2 import ROS2Connector, ROS2Context
 from rai.tools.ros2 import GetROS2MessageInterfaceTool, ROS2ServicesToolkit
 from rai.tools.ros2.simple import GetROS2ImageConfiguredTool
 from rai.tools.time import WaitForSecondsTool
@@ -51,7 +45,7 @@ class SafetyAgent(BaseAgent):
 
     async def run(self):
         while True:
-            if await asyncio.to_thread(self.check_tractor_state):
+            if await self.check_tractor_state():
                 self.logger.info("---------- RAI Agent invoked ----------")
                 self.working = True
                 self.agent.history = []  # every anomaly is a fresh conversation
@@ -64,14 +58,12 @@ class SafetyAgent(BaseAgent):
                 self.logger.info("---------- RAI Agent done ----------")
             await asyncio.sleep(self.loop_interval)
 
-    def check_tractor_state(self) -> bool:
+    async def check_tractor_state(self) -> bool:
         """Check the current state of the tractor and call the RAI agent if the tractor has stopped."""
         self.logger.info("Checking tractor state...")
-        response: Trigger.Response = self.connector.service_call(
-            msg_type="std_srvs/srv/Trigger",
-            message=ROS2Message(payload={}),
-            target=f"/tractor{self.tractor_number}/current_state",
-        ).payload
+        response: Trigger.Response = await self.connector.call(
+            f"/tractor{self.tractor_number}/current_state", Trigger.Request()
+        )
         if not self.working:
             self.logger.info(f"Tractor {self.tractor_number} state: {response.message}")
 
@@ -121,12 +113,6 @@ def main():
             WaitForSecondsTool(),
         ],
     )
-
-    # [Optional] wait for ROS 2 topics and services to be available
-    wait_for_ros2_topics(
-        connector, [f"/tractor{args.tractor_number}/camera_image_color"]
-    )
-    wait_for_ros2_services(connector, [f"/tractor{args.tractor_number}/current_state"])
 
     # Run the safety agent
     safety_agent = SafetyAgent(agent, connector, args.tractor_number)

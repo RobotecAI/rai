@@ -26,7 +26,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from manipulation_common import create_agent
-from rai.communication.ros2.connectors.ros2_connector import ROS2Connector
+from rai.communication.ros2 import ROS2Connector, encode_image
 from rai.messages import human
 from rai.ui.streamlit import chat, reset
 
@@ -112,7 +112,7 @@ def initialize_o3de(
         scene_config=scene_config,
         scene_config_path=scenario_path,
     )
-    o3de = O3DEngineArmManipulationBridge(ROS2Connector(executor_type="multi_threaded"))
+    o3de = O3DEngineArmManipulationBridge(ROS2Connector())
 
     # Clear scene at the beginning
     o3de.init_simulation(simulation_config=simulation_config)
@@ -218,8 +218,8 @@ def main(o3de_config_path: str):
                 st.rerun()
 
     def with_camera_image(prompt: str) -> HumanMessage:
-        _, artifact = camera_tool._run()
-        return human(prompt, artifact.get("images", []) if artifact else [])
+        image = camera_tool.connector.sync.receive(camera_tool.topic, timeout=5.0)
+        return human(prompt, [encode_image(image)])
 
     chat(
         agent,

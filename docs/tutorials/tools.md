@@ -54,8 +54,8 @@ Use the `BaseTool` class when state management, or extensive configuration is re
 LangChain tools typically return either a string or a tuple containing a string and an artifact.
 
 RAI extends LangChain's tool capabilities by supporting **multimodal tools**—tools that return not
-only text but also other content types, such as images, audio, or structured data. This is achieved
-using a special object called `MultimodalArtifact` along with a custom `ToolRunner` class.
+only text but also other content types, such as images, audio, or structured data. A tool returns
+its images in a `MultimodalArtifact` (`{"images": [...]}`), and RAI agents show them to the model.
 
 ---
 
@@ -136,13 +136,13 @@ def grab_object(object_name: str) -> str:  # function name is equal to name in c
 
 ### Multimodal Tool (Text + Image Output)
 
-RAI supports multimodal tools through the `rai.agents.langchain.core.ToolRunner` class. These tools
-must use this runner either directly or via agents such as [create_react_runnable](https://github.com/RobotecAI/rai/blob/{{branch}}/src/rai_core/rai/agents/langchain/runnables.py#L86) to handle multimedia output correctly.
+`ReActAgent` passes the images of a `content_and_artifact` tool to the model.
 
 ```python
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 from typing import Type, Tuple
+from rai.content import Image
 from rai.messages import MultimodalArtifact
 
 
@@ -160,8 +160,8 @@ class Get360ImageTool(BaseTool):
 
     def _run(self, topic: str) -> Tuple[str, MultimodalArtifact]:
         try:
-            image = robot.get_360_image(topic)
-            return "Successfully retrieved 360 image", MultimodalArtifact(images=[image])
+            image = Image(robot.get_360_image(topic), "rgb8")  # an RGB numpy array
+            return "Successfully retrieved 360 image", MultimodalArtifact(images=[image.encode()])
         except Exception as e:
             return f"Failed to retrieve image: {str(e)}", MultimodalArtifact(images=[])
 ```
@@ -251,23 +251,19 @@ def initialize_tools(connector: ROS2Connector):
 ### Using Tools in a RAI Agent (Distributed Setup)
 
 ```python
-from rai.agents import ReActAgent
-from rai.communication import ROS2Connector, ROS2HRIConnector
-from rai.tools.ros2 import ROS2Toolkit
-from rai.communication.ros2 import ROS2Context
-from rai import AgentRunner
+import rai
+from rai.agents import HRIOutput, ReActAgent, hri_connector_sender
+from rai.communication.ros2 import ROS2Connector, ROS2Context, ROS2HRIConnector
 
 @ROS2Context()
 def main() -> None:
     """Initialize and run the RAI agent with configured tools."""
-    connector = ROS2HRIConnector()
+    hri_connector = ROS2HRIConnector()
     ros2_connector = ROS2Connector()
-    agent = ReActAgent(
-        connectors={"/to_human": connector},
-        tools=initialize_tools(connector=ros2_connector),
-    )
-    runner = AgentRunner([agent])
-    runner.run_and_wait_for_shutdown()
+    agent = ReActAgent(tools=initialize_tools(connector=ros2_connector))
+    agent.subscribe(HRIOutput(hri_connector_sender(hri_connector, "/to_human")))
+    hri_connector.subscribe("/from_human", agent.submit)
+    rai.run(agent)
 
 # Example:
 # ros2 topic pub /from_human rai_interfaces/msg/HRIMessage "{\"text\": \"What do you see?\"}"
@@ -276,26 +272,25 @@ def main() -> None:
 
 ---
 
-### Using Tools in LangChain/LangGraph Agent (Local Setup)
+### Using Tools in an Agent Directly (Local Setup)
 
 ```python
-from rai.agents.langchain import create_react_runnable
-from langchain.schema import HumanMessage
-from rai.communication.ros2 import ROS2Context
+import asyncio
+
+from rai.agents import ReActAgent
+from rai.communication.ros2 import ROS2Connector, ROS2Context
 
 @ROS2Context()
 def main():
     ros2_connector = ROS2Connector()
-    agent = create_react_runnable(
+    agent = ReActAgent(
         tools=initialize_tools(connector=ros2_connector),
         system_prompt="You are a helpful assistant that can answer questions and help with tasks.",
     )
-    state = {'messages': []}
     while True:
         input_text = input("Enter a prompt: ")
-        state['messages'].append(HumanMessage(content=input_text))
-        response = agent.invoke(state)
-        print(response)
+        response = asyncio.run(agent.ainvoke(input_text))  # the agent keeps the history
+        print(response.text)
 ```
 
 ---

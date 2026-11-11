@@ -32,89 +32,57 @@ robot's state.
 ```python title="PandaAgent implementation"
 from typing import List
 
-from langchain_core.runnables import RunnableConfig
+from langchain_core.messages import SystemMessage
 from langchain_core.tools import BaseTool
-from rai.agents import BaseAgent
-from rai.agents.langchain import (
-    HRICallbackHandler,
-    ReActAgentState,
-    create_react_runnable,
-)
-from rai.communication.ros2 import (
-    ROS2Connector,
-    ROS2HRIConnector,
-    ROS2HRIMessage,
-    ROS2Message,
-)
-from rai.messages.multimodal import SystemMultimodalMessage
+from rai.agents import HRIOutput, ReActAgent, hri_connector_sender
+from rai.communication import HRIMessage
+from rai.communication.ros2 import ROS2Connector, ROS2HRIConnector
 
 
-class PandaAgent(BaseAgent):
+class PandaAgent(ReActAgent):
     def __init__(
         self,
         connector: ROS2Connector,
         tools: List[BaseTool],
-        system_prompt: SystemMultimodalMessage,
+        system_prompt: SystemMessage,
         input_topic: str,
         output_topic: str,
     ):
-        super().__init__()
+        # A ReAct agent with the provided tools and system prompt
+        super().__init__(tools=tools, system_prompt=system_prompt)
         self.connector = connector
 
         # Initialize the ROS 2 HRI (Human-Robot Interface) connector
         # This handles bidirectional communication with human-facing topics
         self.hri_connector = ROS2HRIConnector()
 
-        # Create a ReAct agent with the provided tools and system prompt
-        self.agent = create_react_runnable(
-            tools=tools,
-            system_prompt=system_prompt,
-        )
-        # Initialize the agent's state with an empty message history
-        self.state = ReActAgentState(messages=[])
+        # Send what the agent says to the output topic
+        self.subscribe(HRIOutput(hri_connector_sender(self.hri_connector, output_topic)))
 
-        # Set up the callback handler to route agent outputs to ROS 2 topics
-        self.callback_handler = HRICallbackHandler(
-            connectors={output_topic: self.hri_connector},
-        )
-
-        # Register the input callback for distributed operation
-        # For simpler setups, you can directly call self.agent.invoke() in a loop
-        self.hri_connector.register_callback(input_topic, self.input_callback)
+        # Queue incoming human messages for the agent
+        self.hri_connector.subscribe(input_topic, self.input_callback)
 
         # Monitor the robot's status topic to control agent execution
         # The agent will only process messages when the arm is ready
         self.arm_ready = False
-        self.connector.register_callback("/panda_status", self.monitor_status_topic)
+        self.connector.subscribe("/panda_status", self.monitor_status_topic)
 
-    def monitor_status_topic(self, msg: ROS2Message):
+    def monitor_status_topic(self, msg):
         """Update the arm readiness status based on the status message."""
-        if msg.payload.status == "ready":
-            self.arm_ready = True
-        else:
-            self.arm_ready = False
+        self.arm_ready = msg.status == "ready"
 
-    def input_callback(self, message: ROS2HRIMessage):
+    def input_callback(self, message: HRIMessage):
         """Process incoming messages when the arm is ready."""
         if self.arm_ready:
-            self.state["messages"].append(message.to_langchain())
-            self.agent.invoke(
-                self.state, config=RunnableConfig(callbacks=[self.callback_handler])
-            )
+            self.submit(message)
         else:
             self.logger.warning("Arm is not ready, skipping the message")
 
-    def run(self):
-        """Main execution loop for the agent.
-
-        This implementation does not require any background processing, so the method is intentionally left empty.
-        """
-        pass
-
-    def stop(self):
-        """Clean up resources and shut down connections."""
-        self.connector.shutdown()
-        self.hri_connector.shutdown()
+    async def on_stop(self):
+        """Clean up resources and close connections."""
+        await super().on_stop()
+        self.connector.close()
+        self.hri_connector.close()
 
 ```
 
@@ -211,8 +179,8 @@ python src/rai_whoami/rai_whoami/build_whoami.py panda/ --build-vector-db
 ## Running the Agent
 
 ```python
+import rai
 from rai_whoami.models import EmbodimentInfo
-from rai.agents import wait_for_shutdown
 from rai.communication.ros2 import ROS2Context, ROS2Connector
 from rai.tools.ros2 import ROS2Toolkit
 
@@ -239,8 +207,8 @@ def main():
         output_topic="/to_human",
     )
 
-    # Start the agent and wait for shutdown signal (Ctrl+C)
-    wait_for_shutdown([agent])
+    # Run the agent until Ctrl+C
+    rai.run(agent)
 
 if __name__ == "__main__":
     main()

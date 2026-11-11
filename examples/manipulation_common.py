@@ -14,12 +14,12 @@
 
 
 import logging
+import time
 from typing import List, Literal, Tuple
 
 from langchain_core.tools import BaseTool
 from rai import get_llm
 from rai.agents import ReActAgent
-from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2.manipulation import (
     GetObjectPositionsTool as LegacyGetObjectPositionsTool,
@@ -56,8 +56,8 @@ def create_agent(
     For v2, GetObjectGrippingPointsTool auto-declares ROS2 parameters with defaults.
     To override parameters for your deployment, declare them before tool initialization:
 
-        node.declare_parameter(f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.camera_topic", "/your/topic")
-        node.declare_parameter(f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.target_frame", "your_frame")
+        connector.declare_parameter(f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.camera_topic", "/your/topic")
+        connector.declare_parameter(f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.target_frame", "your_frame")
         # ... etc
 
     Or set them in launch files/YAML configs. See tool logs for current parameter values.
@@ -75,15 +75,11 @@ def create_agent(
 
 def _create_agent_v1():
     """Create v1 agent with legacy tools."""
-    connector = ROS2Connector(executor_type="single_threaded")
-
-    required_services = ["/grounded_sam_segment", "/grounding_dino_classify"]
-    required_topics = ["/color_image5", "/depth_image5", "/color_camera_info5"]
-    wait_for_ros2_services(connector, required_services)
-    wait_for_ros2_topics(connector, required_topics)
-
-    node = connector.node
-    node.declare_parameter("conversion_ratio", 1.0)
+    connector = ROS2Connector()
+    connector.declare_parameter("conversion_ratio", 1.0)
+    required = {"/grounded_sam_segment", "/grounding_dino_classify"}
+    while not required <= {n for n, _ in connector.get_services_names_and_types()}:
+        time.sleep(0.5)  # the perception services start with the demo
 
     camera_tool = GetROS2ImageConfiguredTool(connector=connector, topic="/color_image5")
     tools: List[BaseTool] = [
@@ -113,27 +109,20 @@ def _create_agent_v1():
 def _create_agent_v2():
     """Create v2 agent with new gripping points tool."""
 
-    connector = ROS2Connector(executor_type="single_threaded")
-    node = connector.node
+    connector = ROS2Connector()
 
-    # Set ROS2 parameters to match robot/simulation topic and frame names
-    # For O3DE simulation, these are the default values
-    # To use different values, change these or set them in a launch file
-    node.declare_parameter(
-        f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.camera_topic", "/color_image5"
-    )
-    node.declare_parameter(
-        f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.depth_topic", "/depth_image5"
-    )
-    node.declare_parameter(
-        f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.camera_info_topic", "/color_camera_info5"
-    )
-    node.declare_parameter(
-        f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.target_frame", "panda_link0"
-    )
-    node.declare_parameter(
-        f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.source_frame", "RGBDCamera5"
-    )
+    # ROS 2 parameters naming the robot's topics and frames (the O3DE simulation
+    # values here); a launch file or --ros-args overrides them.
+    for name, value in {
+        "camera_topic": "/color_image5",
+        "depth_topic": "/depth_image5",
+        "camera_info_topic": "/color_camera_info5",
+        "target_frame": "panda_link0",
+        "source_frame": "RGBDCamera5",
+    }.items():
+        connector.declare_parameter(
+            f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.{name}", value
+        )
 
     # Initialize tools - GetObjectGrippingPointsTool will use the parameters we just set
     gripping_points_tool = GetObjectGrippingPointsTool(connector=connector)
