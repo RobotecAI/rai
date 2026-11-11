@@ -42,7 +42,7 @@ from rai.communication.base_connector import (
     ConnectorException,
 )
 from rai.communication.ros2 import compat
-from rai.communication.ros2.egress import EgressHooks
+from rai.communication.ros2.egress import EgressHooks, type_name
 from rai.communication.ros2.exceptions import ROS2GoalRejectedError
 from rai.communication.ros2.messages import ROS2Message
 from rai.communication.ros2.runtime import (
@@ -207,6 +207,7 @@ class GoalHandle:
     ) -> None:
         self.id = ""
         self.action = action
+        self.type = type_name(client.msg_type)  # "pkg/action/Name"
         self._runtime = runtime
         self._client = client
         self._groups = (client.pending, *groups)
@@ -234,6 +235,7 @@ class GoalHandle:
         self.id = uuid.UUID(bytes=bytes(goal.goal_id.uuid)).hex
         self._result_future = goal.get_result_async()
         self._result_future.add_done_callback(self._done_callback)
+        self._runtime.track_goal(self)
 
     def _done_callback(self, future: Any) -> None:  # executor thread
         try:
@@ -245,6 +247,7 @@ class GoalHandle:
         with self._lock:
             self._response = response
             waiters = set(self._waiters)
+        self._runtime.untrack_goal(self)
         for waiter in waiters:
             waiter.resolve(response, error)
         if self._dispatcher is not None and self._on_done is not None:
@@ -311,6 +314,9 @@ class SyncGoalHandle:
 
     def cancel(self, timeout: float = 2.0) -> bool:
         return self._handle._runtime.run(self._handle.cancel(timeout))
+
+
+_node_warned: set[tuple[str, int]] = set()  # call sites warned about .node
 
 
 class ROS2Base:
@@ -393,13 +399,20 @@ class ROS2Base:
 
     @property
     def node(self) -> Node:
-        """Deprecated: bypasses the connector, its lifecycle and egress hooks."""
-        warnings.warn(
-            "connector.node bypasses the connector and its egress hooks and will"
-            " be removed in RAI 3.0",
-            RuntimeWarning,
-            stacklevel=2,
-        )
+        """Deprecated: bypasses the connector, its lifecycle and egress hooks.
+        Warns once per call site."""
+        caller = sys._getframe(1)
+        site = (caller.f_code.co_filename, caller.f_lineno)
+        if site not in _node_warned:
+            _node_warned.add(site)
+            warnings.warn(
+                "connector.node bypasses the connector and its egress hooks"
+                " (rai.safety: EStop, ConfirmActuation, RateLimit, AuditLog do not"
+                " see what is sent through it) and will be removed in RAI 3.0;"
+                " use the connector API",
+                RuntimeWarning,
+                stacklevel=2,
+            )
         return self._runtime.node
 
     # ------------------------------------------------------------ topics

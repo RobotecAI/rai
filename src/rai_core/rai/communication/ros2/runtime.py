@@ -23,6 +23,10 @@ arrival order. The sync API runs the async one on a private event loop.
 Egress: every publish, service call, goal and cancel passes the egress hook
 chains (``global_egress`` then ``runtime.egress``) first; with no hooks that is
 one attribute check per call (rai.communication.ros2.egress).
+
+Goals: every accepted goal is tracked until it is done, so a stop path
+(``cancel_goals``, used by rai.safety.EStop) can reach goals sent by any
+connector on the runtime.
 """
 
 import asyncio
@@ -35,7 +39,7 @@ import time
 import uuid
 import weakref
 from collections import deque
-from typing import Any, Callable, Literal, Optional
+from typing import Any, Callable, Iterable, Literal, Optional
 
 import rclpy
 from rclpy.action import ActionClient, ActionServer, CancelResponse, GoalResponse
@@ -270,6 +274,7 @@ class ROS2Runtime:
         self._publishers: dict[str, Any] = {}
         self._clients: dict[tuple[str, bool], Client] = {}
         self._servers: list[Any] = []
+        self._goals: set[Any] = set()  # GoalHandles accepted and not done
         self._tf_buffer: Any = None
         self._tf_listener: Any = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
@@ -728,6 +733,53 @@ class ROS2Runtime:
             self._servers.append(server)
         return name
 
+    # ------------------------------------------------------------- goals
+
+    def track_goal(self, handle: Any) -> None:
+        """Called by GoalHandle once its goal is accepted; goal watchers run."""
+        with self._lock:
+            self._goals.add(handle)
+        if handle.done:  # finished while being tracked
+            self.untrack_goal(handle)
+            return
+        for watcher in _goal_watchers:
+            try:
+                watcher(self, handle)
+            except Exception:
+                logger.exception("Goal watcher %r failed", watcher)
+
+    def untrack_goal(self, handle: Any) -> None:
+        with self._lock:
+            self._goals.discard(handle)
+
+    def goals(self, types: Optional[Iterable[str]] = None) -> list[Any]:
+        """Accepted goals not yet done, optionally only of action types."""
+        wanted = None if types is None else frozenset(types)
+        with self._lock:
+            return [
+                h
+                for h in self._goals
+                if not h.done and (wanted is None or h.type in wanted)
+            ]
+
+    def cancel_goals(
+        self, types: Optional[Iterable[str]] = None, timeout: float = 2.0
+    ) -> list[concurrent.futures.Future]:
+        """Request the cancel of every active goal (of types) without waiting.
+
+        Callable from any thread, async code and callbacks included. Each
+        future resolves to the cancel's result (True if the server accepted it)
+        or its error. Cancels pass the egress hooks like any other.
+        """
+        handles = self.goals(types)
+        if not handles or self.closed:
+            return []
+        loop = self.loop()
+        return [
+            asyncio.run_coroutine_threadsafe(handle.cancel(timeout), loop)
+            for handle in handles
+        ]
+
     # ---------------------------------------------------------------- TF
 
     def tf_buffer(self) -> Any:
@@ -745,6 +797,26 @@ class ROS2Runtime:
 # Runtimes still open at interpreter exit are closed before finalization, which
 # would otherwise destroy rclpy objects under a running executor (abort).
 _live: "weakref.WeakSet[ROS2Runtime]" = weakref.WeakSet()
+
+
+_goal_watchers: tuple[Callable[[ROS2Runtime, Any], None], ...] = ()
+
+
+def watch_goals(watcher: Callable[[ROS2Runtime, Any], None]) -> None:
+    """Call watcher(runtime, handle) when any runtime accepts a goal, on the
+    thread that sent it (an e-stop cancels goals that raced its engage)."""
+    global _goal_watchers
+    _goal_watchers = (*_goal_watchers, watcher)
+
+
+def unwatch_goals(watcher: Callable[[ROS2Runtime, Any], None]) -> None:
+    global _goal_watchers
+    _goal_watchers = tuple(w for w in _goal_watchers if w is not watcher)
+
+
+def live_runtimes() -> list[ROS2Runtime]:
+    """Every runtime not yet closed."""
+    return [r for r in list(_live) if not r.closed]
 
 
 # Contexts RAI initialized itself are shut down at exit too: otherwise exit
