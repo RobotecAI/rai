@@ -334,6 +334,12 @@ def test_resolve_and_now(connector):
     assert connector.now().nanoseconds > 0
 
 
+def test_declare_parameter_keeps_the_first_value(connector):
+    name = f"ratio_{uuid.uuid4().hex[:8]}"
+    assert connector.declare_parameter(name, 1.0) == 1.0
+    assert connector.declare_parameter(name, 2.0) == 1.0
+
+
 def test_qos_presets():
     from rclpy.qos import DurabilityPolicy, ReliabilityPolicy
 

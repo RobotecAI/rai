@@ -670,6 +670,16 @@ class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
         self._check()
         return self._runtime.node.get_clock().now()
 
+    def declare_parameter(self, name: str, default: Any) -> Any:
+        """Declare a parameter on the connector's node if it is not declared
+        yet, and return its value (a launch file or --ros-args override wins
+        over default)."""
+        self._check()
+        node = self._runtime.node
+        if not node.has_parameter(name):
+            node.declare_parameter(name, default)
+        return node.get_parameter(name).value
+
     def resolve(self, name: str, kind: str = "topic") -> str:
         """The fully qualified name ("cmd_vel" -> "/cmd_vel", remaps applied);
         kind is "topic", "service" or "action"."""
