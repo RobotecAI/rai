@@ -32,6 +32,7 @@ from .connectors import (
     Subscription,
 )
 from .context import ROS2Context
+from .egress import MOTION, EgressDenied, EgressHooks, global_egress
 from .exceptions import (
     ROS2GoalRejectedError,
     ROS2ParameterError,
@@ -44,6 +45,9 @@ from .parameters import get_param_value
 from .waiters import wait_for_ros2_actions, wait_for_ros2_services, wait_for_ros2_topics
 
 __all__ = [
+    "MOTION",
+    "EgressDenied",
+    "EgressHooks",
     "GoalHandle",
     "GoalStatus",
     "IROS2Message",
@@ -60,6 +64,7 @@ __all__ = [
     "Subscription",
     "encode_image",
     "get_param_value",
+    "global_egress",
     "views",
     "wait_for_ros2_actions",
     "wait_for_ros2_services",

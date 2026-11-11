@@ -19,11 +19,16 @@ Threads: the executor thread only takes messages, completes futures and fills
 bounded queues. User code (subscription callbacks, service handlers, action
 execute callbacks) runs on the worker pool, one call at a time per callback, in
 arrival order. The sync API runs the async one on a private event loop.
+
+Egress: every publish, service call, goal and cancel passes the egress hook
+chains (``global_egress`` then ``runtime.egress``) first; with no hooks that is
+one attribute check per call (rai.communication.ros2.egress).
 """
 
 import asyncio
 import atexit
 import concurrent.futures
+import contextvars
 import logging
 import threading
 import time
@@ -47,6 +52,13 @@ from rclpy.task import Future
 from rai.communication.base_connector import ConnectorClosedError
 from rai.communication.ros2 import compat
 from rai.communication.ros2.api.conversion import import_message_from_str
+from rai.communication.ros2.egress import (
+    EgressCheck,
+    EgressHooks,
+    global_egress,
+    match,
+    type_name,
+)
 from rai.communication.ros2.exceptions import ROS2ServiceError, ROS2TimeoutError
 
 logger = logging.getLogger(__name__)
@@ -205,8 +217,9 @@ class Topic:
 class Client:
     """A cached service or action client and the waiters of its calls."""
 
-    def __init__(self, entity: Any, msg_type: Any) -> None:
+    def __init__(self, entity: Any, msg_type: Any, name: str) -> None:
         self.entity = entity
+        self.name = name  # resolved
         self.msg_type = msg_type
         self.pending: set[Waiter] = set()
         self.dropped: Optional[BaseException] = None
@@ -227,13 +240,14 @@ class ROS2Runtime:
         *,
         executor: Optional[ExecutorKind] = None,
         use_sim_time: bool = False,
+        cli_args: Optional[list[str]] = None,
     ) -> None:
         if not rclpy.ok():
             # A library must not own the process signals (rai3-plan/01 section 9).
             rclpy.init(signal_handler_options=SignalHandlerOptions.NO)
             _owned_contexts.append(rclpy.get_default_context())
             logger.info("rclpy was not initialized; RAI initialized it")
-        self.node = Node(node_name or f"rai_{uuid.uuid4().hex[:12]}")
+        self.node = Node(node_name or f"rai_{uuid.uuid4().hex[:12]}", cli_args=cli_args)
         if use_sim_time:
             self.node.set_parameters([Parameter("use_sim_time", value=True)])
         self.context = self.node.context
@@ -247,6 +261,7 @@ class ROS2Runtime:
             max_workers=64, thread_name_prefix="rai_ros2_worker"
         )
         self.users = 0  # connectors sharing this runtime
+        self.egress = EgressHooks()  # after global_egress, for this runtime only
         self._lock = threading.RLock()
         self._closed = False
         self._waiters: set[Waiter] = set()
@@ -503,8 +518,22 @@ class ROS2Runtime:
         raise ValueError(f"Topic {topic} not found; pass msg_type")
 
     def publish(self, name: str, msg: Any, qos: QoSProfile) -> None:
+        """Publish from sync code; raises EgressDenied if a hook refuses."""
         self.check()
         topic = self.resolve(name)
+        if global_egress._entries or self.egress._entries:
+            self.gate("publish", topic, type(msg), msg)
+        self._publish(topic, msg, qos)
+
+    async def apublish(self, name: str, msg: Any, qos: QoSProfile) -> None:
+        """Publish from async code; raises EgressDenied if a hook refuses."""
+        self.check()
+        topic = self.resolve(name)
+        if global_egress._entries or self.egress._entries:
+            await self.agate("publish", topic, type(msg), msg)
+        self._publish(topic, msg, qos)
+
+    def _publish(self, topic: str, msg: Any, qos: QoSProfile) -> None:
         publisher = self._publishers.get(topic)
         if publisher is None:
             with self._lock:
@@ -521,6 +550,47 @@ class ROS2Runtime:
             )
         publisher.publish(msg)
 
+    # ------------------------------------------------------------ egress
+
+    def _egress(
+        self, kind: str, name: str, cls: Any, payload: Any
+    ) -> Optional[EgressCheck]:
+        key = (kind, name, type_name(cls))
+        matched = match((global_egress, self.egress), key)
+        if not matched:
+            return None
+        check = EgressCheck(matched, key, payload)
+        if threading.current_thread() is self._spin_thread:  # no user code here
+            check.refuse("cannot run on the executor thread")
+        return check
+
+    def gate(self, kind: str, name: str, cls: Any, payload: Any) -> None:
+        """Run the egress hooks for sync callers. Sync hooks run inline; async
+        ones on the private loop (on a worker if called from that loop).
+        Raises EgressDenied."""
+        if not (global_egress._entries or self.egress._entries):
+            return
+        check = self._egress(kind, name, cls, payload)
+        if check is None:
+            return
+        pending = check.step()
+        if pending is None:
+            return
+        if threading.current_thread() is self._loop_thread:
+            ctx = contextvars.copy_context()
+            job = self.workers.submit(ctx.run, asyncio.run, check.finish(pending))
+            job.result()
+        else:
+            self.run(check.finish(pending))
+
+    async def agate(self, kind: str, name: str, cls: Any, payload: Any) -> None:
+        """Run the egress hooks on the caller's loop. Raises EgressDenied."""
+        if not (global_egress._entries or self.egress._entries):
+            return
+        check = self._egress(kind, name, cls, payload)
+        if check is not None:
+            await check.finish(check.step())
+
     # -------------------------------------------------- services and actions
 
     def client(self, name: str, msg_type: Any, action: bool) -> Client:
@@ -534,7 +604,9 @@ class ROS2Runtime:
                 self._drop(key, "replaced by a client of another type")
                 client = None
             if client is None:
-                client = self._clients[key] = Client(self._create(cls, key), cls)
+                client = self._clients[key] = Client(
+                    self._create(cls, key), cls, key[0]
+                )
             return client
 
     def _create(self, cls: Any, key: tuple[str, bool]) -> Any:

@@ -42,6 +42,7 @@ from rai.communication.base_connector import (
     ConnectorException,
 )
 from rai.communication.ros2 import compat
+from rai.communication.ros2.egress import EgressHooks
 from rai.communication.ros2.exceptions import ROS2GoalRejectedError
 from rai.communication.ros2.messages import ROS2Message
 from rai.communication.ros2.runtime import (
@@ -204,6 +205,7 @@ class GoalHandle:
         self.id = ""
         self.action = action
         self._runtime = runtime
+        self._client = client
         self._groups = (client.pending, *groups)
         self._goal: Any = None
         self._result_future: Any = None
@@ -283,9 +285,12 @@ class GoalHandle:
         return response.result
 
     async def cancel(self, timeout: float = 2.0) -> bool:
-        """Request cancellation; True if the server accepted it."""
+        """Request cancellation; True if the server accepted it. Raises
+        EgressDenied if an egress hook gating cancels refuses."""
         if self.done:
             return False
+        client = self._client
+        await self._runtime.agate("cancel", client.name, client.msg_type, self.id)
         waiter = Waiter().bind(self._goal.cancel_goal_async())
         what = f"cancel of the goal on {self.action}"
         response = await self._runtime.wait(waiter, timeout, what, *self._groups)
@@ -372,6 +377,13 @@ class ROS2Base:
 
     async def __aexit__(self, *exc: Any) -> None:
         self.close()
+
+    @property
+    def egress(self) -> EgressHooks:
+        """The egress hooks of this connector's runtime (shared by every
+        connector on it). rai.communication.ros2.egress.global_egress covers
+        every runtime."""
+        return self._runtime.egress
 
     @property
     def _node(self) -> Node:
@@ -525,9 +537,10 @@ class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
         self, topic: str, msg: Any, *, qos: QoSProfile = QoS.COMMAND
     ) -> None:
         """Publish a ROS message. COMMAND QoS never replays old commands to
-        late subscribers; use QoS.LATCHED for state such as a map."""
+        late subscribers; use QoS.LATCHED for state such as a map. Raises
+        EgressDenied if an egress hook refuses."""
         self._check()
-        self._runtime.publish(topic, msg, qos)
+        await self._runtime.apublish(topic, msg, qos)
 
     # -------------------------------------------------- services and actions
 
@@ -540,11 +553,13 @@ class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
         timeout: float = 5.0,
     ) -> Any:
         """Call a service and return its response. Raises ROS2TimeoutError if
-        the service is not available or does not answer within timeout."""
+        the service is not available or does not answer within timeout, and
+        EgressDenied if an egress hook refuses (hook time is not counted)."""
         self._check()
         client = self._runtime.client(
             service, srv_type or _companion(request, "_Request"), action=False
         )
+        await self._runtime.agate("service", client.name, client.msg_type, request)
         deadline = await self._runtime.ready(client, timeout, f"Service {service}")
         future = client.entity.call_async(request)
         waiter = Waiter().bind(future)
@@ -575,11 +590,13 @@ class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
         on_done: Optional[Callable[[GoalHandle], Any]] = None,
     ) -> GoalHandle:
         """Send a goal and return its handle once accepted. A goal accepted
-        after accept_timeout is cancelled. Raises ROS2GoalRejectedError."""
+        after accept_timeout is cancelled. Raises ROS2GoalRejectedError, and
+        EgressDenied if an egress hook refuses (hook time is not counted)."""
         self._check()
         client = self._runtime.client(
             action, action_type or _companion(goal, "_Goal"), action=True
         )
+        await self._runtime.agate("goal", client.name, client.msg_type, goal)
         deadline = await self._runtime.ready(client, accept_timeout, f"Action {action}")
         handle = GoalHandle(
             self._runtime, client, action, (self._waiters,), on_feedback, on_done
