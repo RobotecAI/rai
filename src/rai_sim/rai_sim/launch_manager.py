@@ -14,6 +14,7 @@
 
 import asyncio
 import multiprocessing
+import os
 from multiprocessing.synchronize import Event
 from typing import Optional
 
@@ -25,11 +26,15 @@ class ROS2LaunchManager:
         self._stop_event: Optional[Event] = None
         self._process: Optional[multiprocessing.Process] = None
 
-    def start(self, launch_description: LaunchDescription) -> None:
+    def start(
+        self,
+        launch_description: LaunchDescription,
+        domain_id: Optional[int] = None,
+    ) -> None:
         self._stop_event = multiprocessing.Event()
         self._process = multiprocessing.Process(
             target=self._run_process,
-            args=(self._stop_event, launch_description),
+            args=(self._stop_event, launch_description, domain_id),
             daemon=True,
         )
         self._process.start()
@@ -41,8 +46,13 @@ class ROS2LaunchManager:
             self._process.join()
 
     def _run_process(
-        self, stop_event: Event, launch_description: LaunchDescription
+        self,
+        stop_event: Event,
+        launch_description: LaunchDescription,
+        domain_id: Optional[int] = None,
     ) -> None:
+        if domain_id is not None:
+            os.environ["ROS_DOMAIN_ID"] = str(domain_id)
         loop = asyncio.get_event_loop()
         asyncio.set_event_loop(loop)
         launch_service = LaunchService()
