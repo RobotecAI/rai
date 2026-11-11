@@ -727,23 +727,6 @@ def additional_features():
     """
     )
 
-    # NOMAD Instructions
-    st.subheader("NOMAD (Navigation)")
-    st.markdown(
-        """
-    NOMAD enables navigation capabilities using transformer-based image processing.
-
-    To install NOMAD dependencies, run:
-    ```bash
-    uv sync --group nomad
-    ```
-
-    This will install:
-    - NOMAD navigation transformer
-    - Required image processing libraries
-    """
-    )
-
     st.info(
         "⚠️ Note: These features require significant disk space and may need a GPU for optimal performance."
     )

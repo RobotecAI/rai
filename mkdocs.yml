@@ -136,7 +136,6 @@ nav:
     - Simulators: simulation_and_benchmarking/simulators.md
   - Extensions:
     - Perception: extensions/perception.md
-    - NoMaD Visual Navigation: extensions/nomad.md
   - FAQ:
     - Overview: faq/faq.md
     - ROS 2: faq/ROS_2_Overview.md
