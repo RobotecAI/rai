@@ -19,6 +19,8 @@ repos:
       - id: prettier
         args: [--tab-width=4]
         files: \.md$
+        # Working notes for the 3.0 effort; edited concurrently and kept as written.
+        exclude: ^rai3-plan/
 
   - repo: https://github.com/gruntwork-io/pre-commit
     rev: v0.1.30
