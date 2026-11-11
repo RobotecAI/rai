@@ -9,71 +9,34 @@ RAI provides robust connectors for interacting with ROS 2 middleware, supporting
 
 ## `ROS2Connector`
 
-The `ROS2Connector` is the main interface for publishing, subscribing, and calling services/actions in a ROS 2 system. It is a concrete implementation of `ROS2BaseConnector` for standard ROS 2 messages.
+`ROS2Connector` publishes, subscribes, and calls services and actions. Its API is async and works from any event loop; `connector.sync` runs the same calls from blocking code. Messages are native ROS 2 messages.
 
 ### Class definition
 
-??? info "ROS2BaseConnector class definition"
-
-    !!! info "ROS2Connector vs ROS2BaseConnector"
-
-        `ROS2Connector` is a simple alias for `ROS2BaseConnector`. It exists mainly to provide a more intuitive and consistent class name for users, but does not add any new functionality.
-
-    ::: rai.communication.ros2.connectors.base.ROS2BaseConnector
-
-### Key Features
-
--   Manages ROS 2 node lifecycle and threading (via `MultiThreadedExecutor`, see [ROS 2 Executors](https://docs.ros.org/en/jazzy/Concepts/Intermediate/About-Executors.html))
--   Supports topic-based message passing (publish/subscribe, see [ROS 2 Topics](https://docs.ros.org/en/jazzy/Concepts/Basic/About-Topics.html))
--   Service calls (request/response, see [ROS 2 Services](https://docs.ros.org/en/jazzy/Concepts/Basic/About-Services.html))
--   Actions (long-running operations with feedback, see [ROS 2 Actions](https://docs.ros.org/en/jazzy/Concepts/Basic/About-Actions.html))
--   TF (Transform) operations, see [ROS 2 TF](https://docs.ros.org/en/jazzy/Tutorials/Intermediate/Tf2/Introduction-To-Tf2.html)
--   Callback registration for asynchronous notifications
+::: rai.communication.ros2.connectors.ros2_connector.ROS2Connector
 
 ### Example Usage
 
 ```python
-from rai.communication.ros2.connectors import ROS2Connector
+from geometry_msgs.msg import Twist
+from std_srvs.srv import Trigger
 
-connector = ROS2Connector()
+from rai.communication.ros2 import QoS, ROS2Connector
 
-# Send a message to a topic
-connector.send_message(
-    message=my_msg,  # ROS2Message
-    target="/my_topic",
-    msg_type="std_msgs/msg/String"
-)
+with ROS2Connector() as connector:
+    connector.sync.publish("/cmd_vel", Twist(), qos=QoS.COMMAND)
+    scan = connector.sync.receive("/scan", timeout=1.0, max_age=0.5)
+    response = connector.sync.call("/reset", Trigger.Request(), timeout=5.0)
 
-# Register a callback for a topic
-connector.register_callback(
-    source="/my_topic",
-    callback=my_callback,
-    msg_type="std_msgs/msg/String"
-)
-
-# Call a service
-response = connector.service_call(
-    message=my_request_msg,
-    target="/my_service",
-    msg_type="my_package/srv/MyService"
-)
-
-# Start an action
-handle = connector.start_action(
-    action_data=my_goal_msg,
-    target="/my_action",
-    msg_type="my_package/action/MyAction",
-    on_feedback=feedback_cb,
-    on_done=done_cb
-)
-
-# Get available topics
-topics = connector.get_topics_names_and_types()
+    sub = connector.subscribe("/odom", callback=print)  # returns a Subscription
+    sub.close()
 ```
+
+In async code, use `await connector.publish(...)`, `await connector.receive(...)`, `await connector.call(...)` and `await connector.send_goal(...)`, which returns a `GoalHandle` with `result()`, `feedback()` and `cancel()`.
 
 ### Node Lifecycle and Threading
 
-The connector creates a dedicated ROS 2 node and runs it in a background thread, using a `MultiThreadedExecutor` for asynchronous operations. This allows for concurrent message handling and callback execution.
+Connectors run on a `ROS2Runtime`: one node, one executor (`EventsExecutor` where available, otherwise `SingleThreadedExecutor`) and one spin thread. Connectors created with default arguments share one runtime per process. User callbacks never run on the executor thread. `close()`, or leaving the `with` block, cancels pending calls with `ConnectorClosedError` and destroys the node's entities.
 
 ## `ROS2HRIConnector`
 
