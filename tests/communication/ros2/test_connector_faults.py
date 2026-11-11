@@ -957,7 +957,9 @@ def test_wrong_action_type_does_not_block_action_name(connectors):
             )
     with server_process(name):
         wait_for_action(connector, name)
-        assert start_goal(connector, name)
+        # Matching the cached client to the new server is DDS discovery: up
+        # to about 3 s on Fast DDS.
+        assert start_goal(connector, name, timeout_sec=10.0)
 
 
 # ------------------------------------------------------------------ lifecycle
