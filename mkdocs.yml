@@ -110,6 +110,8 @@ nav:
         - MCP: API_documentation/langchain_integration/mcp.md
       - Runners:
         - Overview: API_documentation/runners/overview.md
+      - Safety:
+        - Overview: API_documentation/safety/overview.md
   - Speech to speech:
     - Overview: speech_to_speech/overview.md
     - Agents:

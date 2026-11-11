@@ -13,8 +13,8 @@
 # limitations under the License.
 
 """Connector-side egress hooks (R6): every write path is gated, matching by type
-and resolved name, leases, fail-closed decisions, and example EStop and
-RateLimit hooks that show the API fits A8's built-ins."""
+and resolved name, leases and fail-closed decisions. The built-in hooks on top
+of it are tested in tests/safety."""
 
 import asyncio
 import logging
@@ -414,72 +414,12 @@ def test_decisions_are_observable(
             asyncio.run(client.publish(topic, Twist()))
     finally:
         egress_origin.reset(token)
-    assert [(d.allowed, d.leased) for d in decisions] == [(True, False), (True, True)]
+    assert [(d.allowed, d.leased, d.lease_s) for d in decisions] == [
+        (True, False, 10.0),
+        (True, True, 0.0),
+    ]
     assert decisions[1].egress.origin == "test_tool"
     assert "allowed by recorder (lease)" in caplog.text
-
-
-# ---------------------------------------------- examples of A8 built-ins
-
-
-class EStop:
-    """A latch: while triggered, every MOTION write is denied. Cancels pass
-    (default kinds), so stopping a goal is never blocked."""
-
-    def __init__(self) -> None:
-        self.triggered = False
-        self.__name__ = "estop"
-
-    def __call__(self, egress: Egress) -> Any:
-        return Deny("e-stop is active") if self.triggered else Allow()
-
-
-class RateLimit:
-    """A token bucket per (kind, name)."""
-
-    def __init__(self, max_calls: int, per_s: float) -> None:
-        self.max_calls, self.per_s = max_calls, per_s
-        self.buckets: dict[tuple[str, str], tuple[float, float]] = {}
-        self.__name__ = "rate_limit"
-
-    def __call__(self, egress: Egress) -> Any:
-        now = time.monotonic()
-        key = (egress.kind, egress.name)
-        tokens, last = self.buckets.get(key, (float(self.max_calls), now))
-        tokens = min(
-            self.max_calls, tokens + (now - last) * self.max_calls / self.per_s
-        )
-        if tokens < 1:
-            self.buckets[key] = (tokens, now)
-            return Deny(f"rate limited to {self.max_calls} per {self.per_s:g} s")
-        self.buckets[key] = (tokens - 1, now)
-        return Allow()
-
-
-def test_example_estop(client: ROS2Connector, server: ROS2Connector) -> None:
-    name = serve_fibonacci(server, [], hold=10.0)
-    estop = client.egress.add(EStop(), types=MOTION | {FIBONACCI})
-    handle = client.sync.send_goal(name, Fibonacci.Goal(order=1), accept_timeout=10.0)
-    client.sync.publish(unique("cmd_vel"), Twist())
-    estop.triggered = True
-    with pytest.raises(EgressDenied, match="e-stop is active"):
-        client.sync.publish(unique("cmd_vel"), Twist())
-    with pytest.raises(EgressDenied):
-        client.sync.send_goal(name, Fibonacci.Goal(order=2), accept_timeout=10.0)
-    client.sync.publish(unique("chatter"), String())  # not MOTION
-    assert handle.sync.cancel(timeout=5.0)  # the stop path stays open
-    estop.triggered = False
-    client.sync.publish(unique("cmd_vel"), Twist())
-
-
-def test_example_rate_limit(client: ROS2Connector) -> None:
-    client.egress.add(RateLimit(5, 10.0), types={TWIST})
-    topic = unique("cmd_vel")
-    for _ in range(5):
-        client.sync.publish(topic, Twist())
-    with pytest.raises(EgressDenied, match="rate limited"):
-        client.sync.publish(topic, Twist())
-    client.sync.publish(unique("cmd_vel"), Twist())  # per name
 
 
 def test_kinds_are_validated(client: ROS2Connector) -> None:
