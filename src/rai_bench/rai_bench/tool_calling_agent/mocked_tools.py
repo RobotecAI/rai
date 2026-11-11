@@ -57,7 +57,7 @@ class MockGetROS2TopicsNamesAndTypesTool(GetROS2TopicsNamesAndTypesTool):
     connector: ROS2Connector = MagicMock(spec=ROS2Connector)
     mock_topics_names_and_types: list[str]
 
-    def _run(self) -> str:
+    async def _acall(self) -> str:
         """Mocked method that returns the mock topics and types instead of fetching from ROS2.
 
         Returns
@@ -72,7 +72,7 @@ class MockGetROS2ImageTool(GetROS2ImageTool):
     connector: ROS2Connector = MagicMock(spec=ROS2Connector)
     available_topics: List[str]
 
-    def _run(
+    async def _acall(
         self, topic: str, timeout_sec: float = 1.0
     ) -> Tuple[str, MultimodalArtifact]:
         """Method that returns a mock black image if the passed topic is correct.
@@ -121,7 +121,7 @@ class MockReceiveROS2MessageTool(ReceiveROS2MessageTool):
     connector: ROS2Connector = MagicMock(spec=ROS2Connector)
     available_topics: List[str]
 
-    def _run(self, topic: str, timeout_sec: float = 1.0) -> str:
+    async def _acall(self, topic: str, timeout_sec: float = 1.0) -> str:
         """Method that returns a mock message if the passed topic is correct.
 
         Parameters
@@ -152,7 +152,7 @@ class MockReceiveROS2MessageTool(ReceiveROS2MessageTool):
 class MockMoveToPointTool(MoveToPointTool):
     connector: ROS2Connector = MagicMock(spec=ROS2Connector)
 
-    def _run(self, x: float, y: float, z: float, task: str) -> str:
+    async def _acall(self, x: float, y: float, z: float, task: str) -> str:
         """Method that return a mock message with the end effector position.
 
         Parameters
@@ -183,7 +183,7 @@ class MockGetObjectPositionsTool(GetObjectPositionsTool):
     get_grabbing_point_tool: GetGrabbingPointTool = MagicMock(spec=GetGrabbingPointTool)
     mock_objects: dict[str, List[Point]]
 
-    def _run(self, object_name: str) -> str:
+    async def _acall(self, object_name: str) -> str:
         """Method that returns a mock message with the object positions
         if the object_name is present in the mock_objects dictionary.
 
@@ -211,7 +211,9 @@ class MockPublishROS2MessageTool(PublishROS2MessageTool):
     available_message_types: List[str]
     available_topic_models: Dict[str, Type[BaseModel]]
 
-    def _run(self, topic: str, message: Dict[str, Any], message_type: str) -> str:
+    async def _acall(
+        self, topic: str, message: Dict[str, Any], message_type: str
+    ) -> str:
         """
         Mocked method that simulates publihing to a topic and return a status string.
 
@@ -249,7 +251,7 @@ class MockGetROS2MessageInterfaceTool(GetROS2MessageInterfaceTool):
     connector: ROS2Connector = MagicMock(spec=ROS2Connector)
     mock_interfaces: Dict[str, str]
 
-    def _run(self, msg_type: str) -> str:
+    async def _acall(self, msg_type: str) -> str:
         """
         Mocked method that returns the interface definition for a given ROS2 message type.
 
@@ -357,7 +359,7 @@ class MockCallROS2ServiceTool(CallROS2ServiceTool):
         """computed field for instancinating ServiceValidator with available service models"""
         return ServiceValidator(self.available_service_models)
 
-    def _run(
+    async def _acall(
         self,
         service_name: str,
         service_type: str,
@@ -405,7 +407,7 @@ class MockGetROS2ServicesNamesAndTypesTool(GetROS2ServicesNamesAndTypesTool):
     connector: ROS2Connector = MagicMock(spec=ROS2Connector)
     mock_service_names_and_types: list[str]
 
-    def _run(self) -> str:
+    async def _acall(self) -> str:
         """Mocked method that returns the mock topics and types instead of fetching from ROS2.
 
         Returns
@@ -420,7 +422,7 @@ class MockGetROS2ActionsNamesAndTypesTool(GetROS2ActionsNamesAndTypesTool):
     connector: ROS2Connector = MagicMock(spec=ROS2Connector)
     mock_actions_names_and_types: list[str]
 
-    def _run(self) -> str:
+    async def _acall(self) -> str:
         """Mocked method that returns the mock topics and types instead of fetching from ROS2.
 
         Returns
@@ -433,11 +435,12 @@ class MockGetROS2ActionsNamesAndTypesTool(GetROS2ActionsNamesAndTypesTool):
 
 class MockStartROS2ActionTool(StartROS2ActionTool):
     connector: ROS2Connector = MagicMock(spec=ROS2Connector)
+    internal_action_id_mapping: Dict[str, str] = {}
     available_actions: List[str] = []
     available_action_types: List[str] = []
     available_action_models: Dict[str, Type[BaseModel]]
 
-    def _run(
+    async def _acall(
         self, action_name: str, action_type: str, action_args: Dict[str, Any]
     ) -> str:
         if action_name not in self.available_actions:
@@ -464,7 +467,7 @@ class MockCancelROS2ActionTool(CancelROS2ActionTool):
     connector: ROS2Connector = MagicMock(spec=ROS2Connector)
     available_action_ids: List[str] = []
 
-    def _run(self, action_id: str) -> str:
+    async def _acall(self, action_id: str) -> str:
         if action_id not in self.available_action_ids:
             raise ValueError(f"Action {action_id} is not available for cancellation.")
         return f"Action {action_id} cancelled"
@@ -478,7 +481,7 @@ class MockGetROS2ActionFeedbackTool(GetROS2ActionFeedbackTool):
     # which is a C built-in and cannot be validated as a Python type
     action_feedbacks_store_lock: SkipValidation[Lock] = Lock()
 
-    def _run(self, action_id: str) -> str:
+    async def _acall(self, action_id: str) -> str:
         if action_id not in self.internal_action_id_mapping:
             raise KeyError(f"Action ID {action_id} not found in internal mapping.")
         external_id = self.internal_action_id_mapping[action_id]
@@ -495,7 +498,7 @@ class MockGetROS2ActionResultTool(GetROS2ActionResultTool):
     # which is a C built-in and cannot be validated as a Python type
     action_results_store_lock: SkipValidation[Lock] = Lock()
 
-    def _run(self, action_id: str) -> str:
+    async def _acall(self, action_id: str) -> str:
         if action_id not in self.internal_action_id_mapping:
             raise KeyError(f"Action ID {action_id} not found in internal mapping.")
         external_id = self.internal_action_id_mapping[action_id]
@@ -509,7 +512,7 @@ class MockGetROS2ActionResultTool(GetROS2ActionResultTool):
 class MockGetROS2ActionIDsTool(GetROS2ActionIDsTool):
     internal_action_id_mapping: Dict[str, str] = {}
 
-    def _run(self) -> str:
+    async def _acall(self) -> str:
         return str(list(self.internal_action_id_mapping.keys()))
 
 
@@ -524,8 +527,6 @@ class MockActionsToolkit(ROS2ActionToolkit):
         return [
             MockStartROS2ActionTool(
                 available_actions=self.available_actions,
-                feedback_callback=self._generic_feedback_callback,
-                on_done_callback=self._generic_on_done_callback,
                 available_action_types=self.available_action_types,
                 available_action_models=self.available_action_models,
             ),

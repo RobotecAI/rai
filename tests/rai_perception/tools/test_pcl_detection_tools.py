@@ -299,11 +299,11 @@ def test_get_object_positions_tool_wrapper():
     tool.gripping_points_tool = mock_gripping_tool
 
     # Test delegation
-    mock_gripping_tool._run.return_value = "Centroids of detected apples in panda_link0 frame: [Centroid(x=0.5, y=0.3, z=0.04)]."
+    mock_gripping_tool._acall.return_value = "Centroids of detected apples in panda_link0 frame: [Centroid(x=0.5, y=0.3, z=0.04)]."
     result = tool._run("apple")
 
     assert "Centroids of detected apples" in result
-    mock_gripping_tool._run.assert_called_once_with(object_name="apple")
+    mock_gripping_tool._acall.assert_awaited_once_with(object_name="apple")
 
     # Test get_config delegation
     mock_gripping_tool.get_config.return_value = {

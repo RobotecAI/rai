@@ -174,9 +174,10 @@ RAI includes a base class for ROS 2 tools, supporting configuration of readable,
 forbidden topics/actions/services, as well as [ROS 2 connector](../API_documentation/connectors/ROS_2_Connectors.md).
 
 ```python
+from rai.tools import Effect
 from rai.tools.ros2.base import BaseROS2Tool
 from pydantic import BaseModel, Field
-from typing import Type, cast
+from typing import Type
 from sensor_msgs.msg import PointCloud2
 
 
@@ -187,18 +188,17 @@ class GetROS2LidarDataToolInput(BaseModel):
 
 class GetROS2LidarDataTool(BaseROS2Tool):
     """Tool for retrieving and processing LiDAR data."""
+    default_effect = Effect.READ
+    target_args = {"topic": "topic"}  # hooks see the resolved topic
     name: str = "get_ros2_lidar_data"
     description: str = "Retrieves and processes LiDAR data from the specified topic"
     args_schema: Type[GetROS2LidarDataToolInput] = GetROS2LidarDataToolInput
 
-    def _run(self, topic: str) -> str:
-        try:
-            lidar_data = self.connector.receive_message(topic)
-            msg = cast(PointCloud2, lidar_data.payload)
-            # Process the LiDAR data
-            return f"Successfully processed LiDAR data. Detected objects: ..."
-        except Exception as e:
-            return f"Failed to process LiDAR data: {str(e)}"
+    async def _acall(self, topic: str) -> str:
+        self.check_readable(topic)
+        msg: PointCloud2 = await self.connector.receive(topic, msg_type=PointCloud2)
+        # Process the LiDAR data; exceptions reach the LLM as tool errors
+        return "Successfully processed LiDAR data. Detected objects: ..."
 ```
 
 ??? note "For more information on BaseROS2Tool refer to the source code"

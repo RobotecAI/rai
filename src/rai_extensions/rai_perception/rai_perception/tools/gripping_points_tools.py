@@ -29,6 +29,7 @@ from typing import Any, Callable, Dict, Optional, Type
 
 import numpy as np
 from pydantic import BaseModel, Field
+from rai.tools import Effect
 from rai.tools.ros2.base import BaseROS2Tool
 from rclpy.exceptions import (
     ParameterNotDeclaredException,
@@ -89,6 +90,7 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
     Use debug=True to publish intermediate pipeline results to ROS2 topics for visualization.
     """
 
+    default_effect = Effect.READ
     name: str = "get_object_gripping_points"
     description: str = (
         "Get gripping points for all detected objects of a specified type in the target frame using advanced strategies. "
@@ -189,7 +191,8 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
         GetObjectGrippingPointsToolInput
     )
 
-    def _run(self, object_name: str, debug: bool = False) -> str:
+    def run_pipeline(self, object_name: str, debug: bool = False) -> str:
+        """The blocking pipeline; agents call the tool, which runs this in a thread."""
         # Stage 1: Point cloud extraction
         pcl, stage_time = self._run_stage(
             stage_num=1,
@@ -248,10 +251,10 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
 
         return self._format_result_message(object_name, gripping_points)
 
-    async def _arun(self, object_name: str, debug: bool = False) -> str:
+    async def _acall(self, object_name: str, debug: bool = False) -> str:
         try:
             async with asyncio.timeout(self.timeout_sec):
-                return await asyncio.to_thread(self._run, object_name, debug)
+                return await asyncio.to_thread(self.run_pipeline, object_name, debug)
         except TimeoutError:
             message = f"Timeout: Gripping point detection for object '{object_name}' exceeded {self.timeout_sec} seconds"
             self.connector.node.get_logger().warning(message)
@@ -891,6 +894,7 @@ class GetObjectPositionsTool(BaseROS2Tool):
     making it more likely to be used for spatial reasoning tasks compared to "get_object_gripping_points".
     """
 
+    default_effect = Effect.READ
     name: str = "get_object_positions"
     description: str = (
         "Retrieve the positions of all objects of a specified type in the target frame. "
@@ -929,7 +933,7 @@ class GetObjectPositionsTool(BaseROS2Tool):
             )
         return self.gripping_points_tool.get_config()
 
-    def _run(self, object_name: str) -> str:
+    async def _acall(self, object_name: str) -> str:
         """Get object positions by delegating to GetObjectGrippingPointsTool with default_grasp preset.
 
         Args:
@@ -943,4 +947,4 @@ class GetObjectPositionsTool(BaseROS2Tool):
                 "GetObjectPositionsTool not properly initialized. gripping_points_tool is None."
             )
         # Delegate to the wrapped tool - it will return centroids with default_grasp preset
-        return self.gripping_points_tool._run(object_name=object_name)
+        return await self.gripping_points_tool._acall(object_name=object_name)

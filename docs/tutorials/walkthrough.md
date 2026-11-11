@@ -130,8 +130,10 @@ For comprehensive information about tool implementation in RAI, refer to the
 from typing import Literal, Type
 
 from pydantic import BaseModel, Field
-from rai.communication.ros2 import ROS2Message
+from rai.tools import Effect
 from rai.tools.ros2.base import BaseROS2Tool
+
+from rai_interfaces.srv import ShutdownArm
 
 
 # Define the input schema for the tool
@@ -145,20 +147,19 @@ class ShutdownArmToolInput(BaseModel):
 # Define the tool
 class ShutdownArmTool(BaseROS2Tool):
     """Tool for safely shutting down the robot arm."""
+    default_effect = Effect.ACTUATE  # it moves hardware
+    target_fields = {"service": "service"}
     name: str = "shutdown_arm"
     description: str = "Shutdown the arm"
     args_schema: Type[ShutdownArmToolInput] = ShutdownArmToolInput
+    service: str = "/panda_arm/shutdown"
 
-    def _run(self, level: Literal["soft", "hard"]) -> str:
+    async def _acall(self, level: Literal["soft", "hard"]) -> str:
         """Execute the arm shutdown command."""
-        response = self.connector.service_call(
-            ROS2Message(
-                payload={"level": level}
-            ),
-            target="/panda_arm/shutdown",
-            msg_type="rai_interfaces/ShutdownArm",
+        response = await self.connector.call(
+            self.service, ShutdownArm.Request(level=level)
         )
-        if response.payload.success:
+        if response.success:
             return "Arm shutdown successful"
         else:
             return "Arm shutdown failed"
