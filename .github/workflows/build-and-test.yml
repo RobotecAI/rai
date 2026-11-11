@@ -27,6 +27,8 @@ jobs:
     timeout-minutes: 45
 
     strategy:
+      # Let both numpy legs finish, so one failing does not hide the other.
+      fail-fast: false
       matrix:
         ros_distro:
           - jazzy
