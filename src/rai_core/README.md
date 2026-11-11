@@ -13,11 +13,8 @@ RAI is a flexible AI agent framework to develop and deploy Embodied AI features 
 ![Contributors](https://img.shields.io/github/contributors/robotecai/rai)
 
 ![Static Badge](https://img.shields.io/badge/Ubuntu-24.04-orange)
-![Static Badge](https://img.shields.io/badge/Ubuntu-22.04-orange)
 ![Static Badge](https://img.shields.io/badge/Python-3.12-blue)
-![Static Badge](https://img.shields.io/badge/Python-3.10-blue)
 ![Static Badge](https://img.shields.io/badge/ROS2-jazzy-blue)
-![Static Badge](https://img.shields.io/badge/ROS2-humble-blue)
 
 [![](https://dcbadge.limes.pink/api/server/https://discord.gg/3PGHgTaJSB)](https://discord.gg/3PGHgTaJSB)
 

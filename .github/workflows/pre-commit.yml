@@ -15,12 +15,16 @@ jobs:
     runs-on: ubuntu-24.04
 
     container:
-      image: osrf/ros:humble-desktop-full
+      image: osrf/ros:jazzy-desktop-full
 
     steps:
       - name: Install pre-commit
         run: |
-          apt update && apt install -y python3-pip shellcheck python-is-python3
+          apt update && apt install -y python3-venv shellcheck
+          # Ubuntu 24.04's Python is externally managed (PEP 668), so the
+          # `pip install pre-commit` done by pre-commit/action needs a venv.
+          python3 -m venv /opt/pre-commit-venv
+          echo "/opt/pre-commit-venv/bin" >> "$GITHUB_PATH"
 
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

@@ -13,7 +13,7 @@ This document provides an overview of the available RAI demos. Each demo showcas
 
 All demos require:
 
--   ROS 2 (Humble or Jazzy)
+-   ROS 2 Jazzy
 -   RAI platform setup
 
 Make sure to follow the [installation instructions](../setup/install.md).

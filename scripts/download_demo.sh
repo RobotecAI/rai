@@ -18,19 +18,13 @@ if [ -z "$ROS_DISTRO" ]; then
     exit 1
 fi
 
-MANIPULATION_HUMBLE="https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIManipulationDemo_jammyhumble.zip"
 MANIPULATION_JAZZY="https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIManipulationDemo_noblejazzy.zip"
-ROSBOT_HUMBLE="https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIROSBotXLDemo_jammyhumble.zip"
 ROSBOT_JAZZY="https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIROSBotXLDemo_noblejazzy.zip"
-AGRICULTURE_HUMBLE="https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIAgricultureDemo_jammyhumble.zip"
 AGRICULTURE_JAZZY="https://robotec-ml-rai-public.s3.eu-north-1.amazonaws.com/RAIAgricultureDemo_noblejazzy.zip"
 
 case "$DEMO_NAME" in
     manipulation)
         case "$ROS_DISTRO" in
-            humble)
-                URL="$MANIPULATION_HUMBLE"
-                ;;
             jazzy)
                 URL="$MANIPULATION_JAZZY"
                 ;;
@@ -42,9 +36,6 @@ case "$DEMO_NAME" in
         ;;
     rosbot)
         case "$ROS_DISTRO" in
-            humble)
-                URL="$ROSBOT_HUMBLE"
-                ;;
             jazzy)
                 URL="$ROSBOT_JAZZY"
                 ;;
@@ -56,9 +47,6 @@ case "$DEMO_NAME" in
         ;;
     agriculture)
         case "$ROS_DISTRO" in
-            humble)
-                URL="$AGRICULTURE_HUMBLE"
-                ;;
             jazzy)
                 URL="$AGRICULTURE_JAZZY"
                 ;;

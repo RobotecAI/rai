@@ -84,7 +84,7 @@ Follow our [step-by-step walkthrough](../tutorials/walkthrough.md) to:
 ## How RAI Works
 
 -   Modular: Use only the parts you need
--   Works with ROS 2 (Humble, Jazzy) but is not limited to it
+-   Works with ROS 2 (Jazzy) but is not limited to it
 -   Handles communication, perception, and reasoning
 
 ---

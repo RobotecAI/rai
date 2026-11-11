@@ -28,10 +28,6 @@ RAI enables you to control your robots using natural language and helps them per
     <img src="https://img.shields.io/badge/Python-3.12-blue" alt="Python 3.12">
     <img src="https://img.shields.io/badge/ROS2-jazzy-blue" alt="ROS2 jazzy">
     <br>
-    <img src="https://img.shields.io/badge/Ubuntu-22.04-orange" alt="Ubuntu 22.04">
-    <img src="https://img.shields.io/badge/Python-3.10-blue" alt="Python 3.10">
-    <img src="https://img.shields.io/badge/ROS2-humble-blue" alt="ROS2 humble">
-    <br>
     <a href="https://discord.gg/3PGHgTaJSB">
         <img src="https://dcbadge.limes.pink/api/server/https://discord.gg/3PGHgTaJSB" alt="Discord">
     </a>
@@ -79,7 +75,7 @@ Follow our comprehensive [**walkthrough**](tutorials/walkthrough.md) to:
 
 ## Communication Protocols
 
-RAI provides first-class support for ROS 2 Humble and Jazzy distributions. While ROS 2 serves as our Tier 1 communication protocol, RAI's architecture includes a powerful abstraction layer that:
+RAI provides first-class support for the ROS 2 Jazzy distribution. While ROS 2 serves as our Tier 1 communication protocol, RAI's architecture includes a powerful abstraction layer that:
 
 -   Simplifies communication across different networks and protocols
 -   Enables seamless integration with various communication backends

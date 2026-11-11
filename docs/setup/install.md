@@ -1,6 +1,6 @@
 # Quick setup guide
 
-Before going further, make sure you have ROS 2 (jazzy or humble) installed and sourced on your system.
+Before going further, make sure you have ROS 2 Jazzy installed and sourced on your system.
 
 !!! tip "Docker images"
 
@@ -17,7 +17,7 @@ There are two ways to start using RAI:
 
 ??? tip "Virtual environment"
 
-    We recommend installing RAI in a virtual environment (e.g., [virtualenv](https://docs.python.org/3/library/venv.html) or [uv](https://docs.astral.sh/uv/)) to keep your dependencies organized. Make sure to use the same version of python as the one used for ROS 2 (typically `python3.10` for Humble and `python3.12` for Jazzy).
+    We recommend installing RAI in a virtual environment (e.g., [virtualenv](https://docs.python.org/3/library/venv.html) or [uv](https://docs.astral.sh/uv/)) to keep your dependencies organized. Make sure to use the same version of python as the one used for ROS 2 (`python3.12` for Jazzy).
 
     If you plan to use ROS 2 commands (`ros2 run` or `ros2 launch`), you'll need to add your virtual environment's Python packages to your `$PYTHONPATH`. This step is only necessary for ROS 2 integration - if you're just running RAI directly with Python, you can skip this step.
 

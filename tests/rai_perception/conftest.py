@@ -222,11 +222,9 @@ def setup_mock_clock(instance):
     However, ts is also assigned to response.detections.header.stamp which expects
     builtin_interfaces.msg.Time.
 
-    ROS2 Humble vs Jazzy difference:
-    - Humble: Strict type checking in __debug__ mode requires actual BuiltinTime
-      instances, not MagicMock objects. Using MagicMock causes AssertionError.
-    - Jazzy: More lenient with MagicMock, but BuiltinTime instances don't allow
-      dynamically adding methods (AttributeError when accessing to_msg).
+    BuiltinTime instances don't allow dynamically adding methods (AttributeError
+    when accessing to_msg), and a plain MagicMock cannot be assigned to a message
+    stamp, which needs a real BuiltinTime.
 
     Solution: Create a wrapper class that inherits from BuiltinTime and adds to_msg().
 
