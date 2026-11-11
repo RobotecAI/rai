@@ -126,6 +126,7 @@ nav:
     - Complete walkthrough: tutorials/walkthrough.md
     - Create Robot's Whoami: tutorials/create_robots_whoami.md
     - Tools: tutorials/tools.md
+    - Learned-policy skills: tutorials/policies.md
     - Voice Interface: tutorials/voice_interface.md
     - Benchmarking: tutorials/benchmarking.md
   - Demos:
