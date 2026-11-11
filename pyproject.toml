@@ -122,9 +122,10 @@ markers = [
     "billable: marks test as billable  (deselect with '-m \"not billable\"')",
     "ci_only: marks test as cli only (deselect with '-m \"not ci_only\"')",
     "manual: marks tests as manual (may require demo app to be running, deselect with '-m \"manual\")",
+    "benchmark: ROS 2 connector benchmark, report only (run with '-m benchmark tests/benchmarks -s')",
 ]
 # ROS 2 (Jazzy and Lyrical) auto-loads launch_testing pytest plugins that are incompatible with pytest 9.
 # RAI does not use launch tests, so they are disabled.
-addopts = "-m 'not billable and not ci_only and not manual' --ignore=src -p no:launch_testing -p no:launch_ros"
+addopts = "-m 'not billable and not ci_only and not manual and not benchmark' --ignore=src -p no:launch_testing -p no:launch_ros"
 log_cli = true
 log_cli_level = "INFO"
