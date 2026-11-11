@@ -60,7 +60,7 @@ In order to use it the `ELEVENLABS_API_KEY` environment variable must be set, wi
 [KokoroTTS](https://huggingface.co/hexgrad/Kokoro-82M) is an open source model for TTS.
 
 The model works locally with the use of [kokoro-onnx library](https://github.com/thewh1teagle/kokoro-onnx) in onnx format.
-`kokoro-onnx` depends on GPL-3.0 packages (`phonemizer-fork`, `espeakng-loader`), so it is not part of the `all` extra. Install it explicitly with `uv pip install -e "src/rai_s2s[kokoro]"` (a later `uv sync` removes it again unless run with `--inexact`).
+`kokoro-onnx` depends on GPL-3.0 packages (`phonemizer`, `espeakng-loader`), so it is not part of the `all` extra. Install it explicitly with `uv pip install -e "src/rai_s2s[kokoro]"` (a later `uv sync` removes it again unless run with `--inexact`).
 The model is available in 3 sizes - 310MB, 169MB, 88MB. The default size is 310MB.
 For available voices and languages supported within currently used version of the model - use `get_available_voices()` and `get_supported_languages()` methods of the `rai_s2s.tts.models.KokoroTTS` respectively.
 The model can be run on CPU or GPU:

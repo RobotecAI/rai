@@ -25,7 +25,7 @@ elevenlabs = ["elevenlabs>=2.0.0,<3.0.0"]
 whisper = ["openai-whisper>=20250625,<20250626"]
 fasterwhisper = ["faster-whisper>=1.1.1,<2.0.0"]
 wakeword = ["openwakeword @ git+https://github.com/maciejmajek/openWakeWord.git@f2340d82a39fe7bfb972c8c4114642fa87e5dc59"]
-kokoro = ["kokoro-onnx==0.3.3"]
+kokoro = ["kokoro-onnx>=0.6.1,<0.7.0"]
 # No `gpu` extra: onnxruntime-gpu installs into the same `onnxruntime/` directory as onnxruntime,
 # which faster-whisper, openwakeword and kokoro-onnx all require, so the two cannot coexist and a
 # uv `conflicts` declaration cannot exclude a transitive dependency. See README for the manual swap.

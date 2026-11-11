@@ -54,12 +54,10 @@ class KokoroTTS(TTSModel):
 
     """
 
-    BASE_MODEL_URL = (
-        "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/"
-    )
-    VOICES_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/voices.json"
+    BASE_MODEL_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/"
+    VOICES_FILENAME = "voices-v1.0.bin"
 
-    VOICES_FILENAME = "voices.json"
+    VOICES_URL = BASE_MODEL_URL + VOICES_FILENAME
 
     def __init__(
         self,
@@ -181,7 +179,10 @@ class KokoroTTS(TTSModel):
             If there is an issue with retrieving supported languages from the Kokoro TTS model.
         """
         try:
-            return self.kokoro.get_languages()
+            # kokoro-onnx phonemizes with espeak-ng, so its languages apply.
+            from phonemizer.backend import EspeakBackend
+
+            return sorted(EspeakBackend.supported_languages())
         except Exception as e:
             raise TTSModelError(f"Failed to get supported languages: {e}")
 
@@ -213,11 +214,11 @@ class KokoroTTS(TTSModel):
             The model filename for the specified model size.
         """
         if self.model_size == "large":
-            return "kokoro-v0_19.onnx"
+            return "kokoro-v1.0.onnx"
         elif self.model_size == "medium":
-            return "kokoro-v0_19.fp16.onnx"
+            return "kokoro-v1.0.fp16.onnx"
         elif self.model_size == "small":
-            return "kokoro-v0_19.int8.onnx"
+            return "kokoro-v1.0.int8.onnx"
         else:
             raise TTSModelError(f"Unsupported model size: {self.model_size}")
 
