@@ -28,7 +28,6 @@ from typing import Generator, List, Optional
 from langchain_core.tools import ToolException
 from PIL import Image
 from rai.communication.ros2.connectors import ROS2Connector
-from rai.communication.ros2.waiters import wait_for_ros2_topics
 from rai.tools.ros2 import (
     GetROS2ImageConfiguredTool,
     GetROS2ImageTool,
@@ -55,6 +54,19 @@ from tests.communication.ros2.helpers import (
 _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
 
 
+def wait_for_topics(
+    connector: ROS2Connector, topics: List[str], time_interval: float = 0.1
+) -> None:
+    """Wait until every topic is in the ROS graph (10 s at most)."""
+    deadline = time.monotonic() + 10.0
+    while time.monotonic() < deadline:
+        names = {name for name, _ in connector.get_topics_names_and_types()}
+        if names.issuperset(connector.resolve(t) for t in topics):
+            return
+        time.sleep(time_interval)
+    raise TimeoutError(f"Topics {topics} not in the ROS graph")
+
+
 @contextmanager
 def connector_and_executors_cleanup(
     executors: Optional[List[MultiThreadedExecutor]] = None,
@@ -75,7 +87,7 @@ def connector_and_executors_cleanup(
     finally:
         # Shutdown connector first (before destroying nodes it might be using)
         if connector_ref[0] is not None:
-            connector_ref[0].shutdown()
+            connector_ref[0].close()
         # Then shutdown executors and threads
         if executors is not None and threads is not None:
             shutdown_executors_and_threads(executors, threads)
@@ -135,7 +147,9 @@ def test_publish_message_tool_with_writable_topic(
         shutdown_executors_and_threads(executors, threads)
 
 
-def test_receive_message_tool(ros_setup: None, request: pytest.FixtureRequest) -> None:
+def test_receive_ros2_message_tool(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     connector = ROS2Connector()
     publisher = MessagePublisher(topic=topic_name)
@@ -168,7 +182,7 @@ def test_receive_image_tool(ros_setup: None, request: pytest.FixtureRequest) -> 
         shutdown_executors_and_threads(executors, threads)
 
 
-def test_receive_message_tool_with_forbidden_topic(
+def test_receive_ros2_message_tool_with_forbidden_topic(
     ros_setup: None, request: pytest.FixtureRequest
 ) -> None:
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
@@ -178,7 +192,7 @@ def test_receive_message_tool_with_forbidden_topic(
         tool._run(topic=topic_name)  # type: ignore
 
 
-def test_receive_message_tool_with_readable_topic(
+def test_receive_ros2_message_tool_with_readable_topic(
     ros_setup: None, request: pytest.FixtureRequest
 ) -> None:
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
@@ -233,9 +247,7 @@ def test_get_topics_names_and_types_tool_with_forbidden_topic(
     with connector_and_executors_cleanup(executors, threads) as connector_ref:
         connector = ROS2Connector()
         connector_ref[0] = connector
-        wait_for_ros2_topics(
-            connector, [topic_name, forbidden_topic], time_interval=0.1
-        )
+        wait_for_topics(connector, [topic_name, forbidden_topic], time_interval=0.1)
         tool = GetROS2TopicsNamesAndTypesTool(
             connector=connector, forbidden=[forbidden_topic]
         )
@@ -261,7 +273,7 @@ def test_get_topics_names_and_types_tool_with_readable_topic(
     executors, threads = multi_threaded_spinner([publisher1, publisher2])
     try:
         connector = ROS2Connector()
-        wait_for_ros2_topics(
+        wait_for_topics(
             connector, [readable_topic1, non_readable_topic], time_interval=0.1
         )
         readable_topics = ["/rosout", readable_topic1]
@@ -292,7 +304,7 @@ def test_get_topics_names_and_types_tool_with_writable_topic(
     executors, threads = multi_threaded_spinner([publisher1, publisher2])
     try:
         connector = ROS2Connector()
-        wait_for_ros2_topics(
+        wait_for_topics(
             connector, [writable_topic, non_writable_topic], time_interval=0.1
         )
         tool = GetROS2TopicsNamesAndTypesTool(
@@ -327,7 +339,7 @@ def test_get_topics_names_and_types_tool_with_readable_and_writable(
     )
     try:
         connector = ROS2Connector()
-        wait_for_ros2_topics(
+        wait_for_topics(
             connector,
             [
                 readable_only_topic,
@@ -377,7 +389,7 @@ def test_get_topics_names_and_types_tool_with_all_restrictions(
     )
     try:
         connector = ROS2Connector()
-        wait_for_ros2_topics(
+        wait_for_topics(
             connector,
             [readable_topic, writable_topic, forbidden_topic, allowed_topic],
             time_interval=0.1,
@@ -413,7 +425,7 @@ def test_get_topics_names_and_types_tool_empty_response_when_all_filtered(
     with connector_and_executors_cleanup(executors, threads) as connector_ref:
         connector = ROS2Connector()
         connector_ref[0] = connector
-        wait_for_ros2_topics(connector, [topic_name], time_interval=0.1)
+        wait_for_topics(connector, [topic_name], time_interval=0.1)
         # Set readable to a topic that doesn't exist, so all topics are filtered
         tool = GetROS2TopicsNamesAndTypesTool(
             connector=connector,
@@ -437,9 +449,7 @@ def test_get_topics_when_should_include_is_false(
     executors, threads = multi_threaded_spinner([publisher1, publisher2])
     try:
         connector = ROS2Connector()
-        wait_for_ros2_topics(
-            connector, [included_topic, excluded_topic], time_interval=0.1
-        )
+        wait_for_topics(connector, [included_topic, excluded_topic], time_interval=0.1)
         # Test case: only readable is set, excluded_topic is not readable
         # This triggers should_include=False for excluded_topic because it is not in readable whitelist
         tool = GetROS2TopicsNamesAndTypesTool(
@@ -471,7 +481,7 @@ def test_get_topics_names_and_types_tool_response_section_order(
     executors, threads = multi_threaded_spinner([publisher1, publisher2, publisher3])
     try:
         connector = ROS2Connector()
-        wait_for_ros2_topics(
+        wait_for_topics(
             connector,
             [readable_and_writable_topic, readable_only_topic, writable_only_topic],
             time_interval=0.1,
@@ -510,7 +520,9 @@ def test_get_message_interface_tool(
     assert "data" in response
 
 
-def test_get_transform_tool(ros_setup: None, request: pytest.FixtureRequest) -> None:
+def test_get_ros2_transform_tool(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     connector = ROS2Connector()
     publisher = TransformPublisher(topic=topic_name)
@@ -529,7 +541,7 @@ def test_get_transform_tool(ros_setup: None, request: pytest.FixtureRequest) -> 
         shutdown_executors_and_threads(executors, threads)
 
 
-def test_get_transform_tool_with_stale_tf_data(
+def test_get_ros2_transform_tool_with_stale_tf_data(
     ros_setup: None, request: pytest.FixtureRequest
 ) -> None:
     """Test that GetROS2TransformTool returns stale transform data with warning."""
@@ -586,7 +598,7 @@ def test_get_transform_tool_with_stale_tf_data(
         shutdown_executors_and_threads(executors, threads)
 
 
-def test_get_transform_tool_with_stale_tf_data_sim_time(
+def test_get_ros2_transform_tool_with_stale_tf_data_sim_time(
     ros_setup: None, request: pytest.FixtureRequest
 ) -> None:
     """Test that GetROS2TransformTool returns stale transform data with warning when using sim time."""

@@ -15,15 +15,13 @@
 """RAI 3.0 acceptance oracle for the ROS 2 connectors.
 
 One test per failure mode (races, hangs, leaks, lost or stale data), asserting
-the 3.0 behavior (rai3-plan/PLAN.md 2.1). Most tests drive the 2.x method
-names, which stay on the connector as thin shims until R5.
+the 3.0 behavior (rai3-plan/PLAN.md 2.1), through the connector API.
 
 Rules that keep the suite load tolerant: assert counts, ordering and leaks, not
 durations; every wait that may hang runs in a daemon thread with a bound, so a
 broken connector fails a test instead of the whole run.
 """
 
-import copy
 import signal
 import subprocess
 import sys
@@ -37,16 +35,14 @@ from typing import Any
 import numpy as np
 import pytest
 from example_interfaces.action import Fibonacci
-from geometry_msgs.msg import TransformStamped
-from rai.communication.base_connector import ConnectorClosedError
-from rai.communication.ros2 import (
-    ROS2Connector,
-    ROS2HRIConnector,
-    ROS2Message,
-)
+from geometry_msgs.msg import Pose, PoseArray, TransformStamped
+from rai.communication.exceptions import ConnectorClosedError
+from rai.communication.ros2 import ROS2Connector, ROS2HRIConnector
 from rai.communication.ros2.context import NodeDiscovery
 from rai.communication.ros2.images import numpy_to_imgmsg
-from rai.communication.ros2.runtime import ROS2Runtime
+from rai.communication.ros2.runtime import ROS2Runtime, message_class
+from rcl_interfaces.msg import Parameter, ParameterValue
+from rcl_interfaces.srv import SetParameters
 from rclpy.action import ActionClient, ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor
@@ -58,7 +54,7 @@ from rclpy.qos import (
     qos_profile_sensor_data,
 )
 from std_msgs.msg import Int32, String
-from std_srvs.srv import Trigger
+from std_srvs.srv import SetBool, Trigger
 from tf2_ros import LookupException, StaticTransformBroadcaster
 
 from rai_interfaces.msg import HRIMessage
@@ -68,8 +64,8 @@ from .helpers import ros_setup
 _ = ros_setup
 pytestmark = pytest.mark.timeout(60)
 
-STRING, INT32 = "std_msgs/msg/String", "std_msgs/msg/Int32"
 TRIGGER, FIBONACCI = "std_srvs/srv/Trigger", "example_interfaces/action/Fibonacci"
+NAVIGATE = message_class("nav2_msgs/action/NavigateToPose")
 LATCHED = QoSProfile(
     depth=1,
     reliability=ReliabilityPolicy.RELIABLE,
@@ -111,9 +107,11 @@ def run_bounded(fn: Callable[[], Any], timeout: float) -> tuple[bool, Any]:
 
 def close_quietly(connector: Any) -> None:
     run_bounded(connector.close, 5.0)
-    pool = getattr(connector, "callback_executor", None)
-    if pool is not None:
-        pool.shutdown(wait=False, cancel_futures=True)
+
+
+def node_of(connector: Any) -> Node:
+    """The runtime's node, to count the entities it holds."""
+    return connector._runtime.node
 
 
 @pytest.fixture
@@ -183,9 +181,12 @@ def inversions(seq: list[int]) -> int:
 
 
 def send(connector: Any, topic: str, data: Any, **kwargs: Any) -> None:
-    msg_type = STRING if isinstance(data, str) else INT32
-    payload = ROS2Message(payload={"data": data})
-    connector.send_message(payload, topic, msg_type=msg_type, **kwargs)
+    msg = String(data=data) if isinstance(data, str) else Int32(data=data)
+    connector.sync.publish(topic, msg, **kwargs)
+
+
+def call(connector: Any, name: str, timeout: float, request: Any = None) -> Any:
+    return connector.sync.call(name, request or Trigger.Request(), timeout=timeout)
 
 
 def make_trigger_service(node: Node, name: str, handler: Any = None) -> Any:
@@ -213,10 +214,9 @@ def make_fibonacci_server(node: Node, name: str, **kwargs: Any) -> ActionServer:
     return ActionServer(node, Fibonacci, name, callback_group=group, **kwargs)
 
 
-def start_goal(connector: Any, name: str, **kwargs: Any) -> str:
-    kwargs.setdefault("timeout_sec", 3.0)
-    goal = ROS2Message(payload={"order": 1})
-    return connector.start_action(goal, name, msg_type=FIBONACCI, **kwargs)
+def start_goal(connector: Any, name: str, **kwargs: Any) -> Any:
+    kwargs.setdefault("accept_timeout", 3.0)
+    return connector.sync.send_goal(name, Fibonacci.Goal(order=1), **kwargs)
 
 
 def wait_for_action(connector: Any, name: str) -> None:
@@ -246,13 +246,11 @@ def test_spin_survives_malformed_hri_image(connectors, helper_node):
     assert [i.encoding for i in decoded.images] == ["32FC1"]
 
 
-def test_dispatch_survives_register_unregister_churn(connectors, helper_node):
+def test_dispatch_survives_subscribe_close_churn(connectors, helper_node):
     topic = unique("churn")
     connector = connectors()
     got: list[int] = []
-    connector.register_callback(
-        topic, lambda m: got.append(m.data), raw=True, msg_type=INT32
-    )
+    connector.subscribe(topic, lambda m: got.append(m.data), msg_type=Int32)
     pub = helper_node().create_publisher(Int32, topic, 10)
     assert publish_until(pub, Int32(data=-1), lambda: got)
 
@@ -260,9 +258,9 @@ def test_dispatch_survives_register_unregister_churn(connectors, helper_node):
 
     def churn() -> None:
         while not stop.is_set():
-            ids = [connector.register_callback(topic, lambda m: None) for _ in range(5)]
-            for callback_id in ids:
-                connector.unregister_callback(callback_id)
+            subs = [connector.subscribe(topic, lambda m: None) for _ in range(5)]
+            for sub in subs:
+                sub.close()
 
     old_interval = sys.getswitchinterval()
     sys.setswitchinterval(1e-6)
@@ -291,7 +289,7 @@ def test_per_callback_ordering(connectors, helper_node):
             time.sleep(0.05)  # a parallel dispatcher reorders around this one
         got.append(msg.data)
 
-    connector.register_callback(topic, callback, raw=True, msg_type=INT32)
+    connector.subscribe(topic, callback, msg_type=Int32)
     pub = helper_node().create_publisher(Int32, topic, 500)
     assert publish_until(pub, Int32(data=-1), lambda: got)
     for i in range(200):
@@ -321,17 +319,16 @@ def test_hri_burst_delivered_in_order(connectors, helper_node):
     assert [i for i in got if i >= 0] == list(range(50))
 
 
-def test_receive_message_not_starved_by_slow_callbacks(connectors, helper_node):
+def test_receive_not_starved_by_slow_callbacks(connectors, helper_node):
     slow_topic, fast_topic = unique("slow"), unique("fast")
     connector = connectors()
     release = threading.Event()
     started: list[int] = []
     for _ in range(8):
-        connector.register_callback(
+        connector.subscribe(
             slow_topic,
             lambda m: (started.append(m.data), release.wait(10.0)),
-            raw=True,
-            msg_type=INT32,
+            msg_type=Int32,
         )
     node = helper_node()
     slow_pub = node.create_publisher(Int32, slow_topic, 10)
@@ -339,8 +336,8 @@ def test_receive_message_not_starved_by_slow_callbacks(connectors, helper_node):
     try:
         assert publish_until(slow_pub, Int32(data=1), lambda: len(started) >= 4)
         with publishing(fast_pub, Int32(data=1)):
-            msg = connector.receive_message(fast_topic, timeout_sec=3.0, msg_type=INT32)
-        assert msg.payload.data == 1
+            msg = connector.sync.receive(fast_topic, timeout=3.0, msg_type=Int32)
+        assert msg.data == 1
     finally:
         release.set()
 
@@ -348,64 +345,59 @@ def test_receive_message_not_starved_by_slow_callbacks(connectors, helper_node):
 # --------------------------------------------------------------------- topics
 
 
-def test_receive_message_on_topic_with_registered_callback(connectors, helper_node):
+def test_receive_on_topic_with_a_subscription(connectors, helper_node):
     topic = unique("regrecv")
     connector = connectors()
-    connector.register_callback(topic, lambda m: None, msg_type=STRING)
+    connector.subscribe(topic, lambda m: None, msg_type=String)
     pub = helper_node().create_publisher(String, topic, 10)
     wait_for_subscriber(pub)
     with publishing(pub, String(data="x")):
-        msg = connector.receive_message(topic, timeout_sec=3.0, msg_type=STRING)
-    assert msg.payload.data == "x"
+        msg = connector.sync.receive(topic, timeout=3.0, msg_type=String)
+    assert msg.data == "x"
 
 
-def test_receive_message_max_age_rejects_stale_sample(connectors, helper_node):
+def test_receive_max_age_rejects_stale_sample(connectors, helper_node):
     topic = unique("stale")
     connector = connectors()
     pub = helper_node().create_publisher(String, topic, 10)
     with publishing(pub, String(data="x")):
-        connector.receive_message(topic, timeout_sec=3.0, msg_type=STRING)
+        connector.sync.receive(topic, timeout=3.0, msg_type=String)
     time.sleep(0.5)  # the publisher is silent: the cached sample is now stale
-    try:
-        msg = connector.receive_message(topic, timeout_sec=0.3, max_age=0.3)
-    except TimeoutError:
-        return
-    pytest.fail(f"returned a sample {time.time() - msg.timestamp:.2f} s old")
+    with pytest.raises(TimeoutError):
+        connector.sync.receive(topic, timeout=0.3, max_age=0.3)
 
 
-def test_receive_message_returns_latched_sample_of_any_age(connectors, helper_node):
+def test_receive_returns_latched_sample_of_any_age(connectors, helper_node):
     """Without max_age a latched sample (like /map) is the current one."""
     topic = unique("latched")
     helper_node().create_publisher(String, topic, LATCHED).publish(String(data="map"))
     connector = connectors()
-    assert wait_until(lambda: connector._node.count_publishers(topic) == 1)
-    first = connector.receive_message(topic, timeout_sec=3.0)
+    assert wait_until(lambda: node_of(connector).count_publishers(topic) == 1)
+    first = connector.sync.receive(topic, timeout=3.0)
     time.sleep(0.4)
-    second = connector.receive_message(topic, timeout_sec=0.2)
-    assert first.payload.data == second.payload.data == "map"
+    second = connector.sync.receive(topic, timeout=0.2)
+    assert first.data == second.data == "map"
 
 
-def test_register_callback_gets_latched_sample(connectors, helper_node):
+def test_subscribe_gets_latched_sample(connectors, helper_node):
     topic = unique("latched")
     helper_node().create_publisher(String, topic, LATCHED).publish(String(data="map"))
     connector = connectors()
     got: list[Any] = []
-    assert wait_until(lambda: connector._node.count_publishers(topic) == 1)
-    connector.register_callback(topic, got.append, msg_type=STRING)
+    assert wait_until(lambda: node_of(connector).count_publishers(topic) == 1)
+    connector.subscribe(topic, got.append, msg_type=String)
     assert wait_until(lambda: got)
-    assert got[0].payload.data == "map"
+    assert got[0].data == "map"
 
 
-def test_send_message_does_not_mutate_payload(connectors):
+def test_publish_does_not_mutate_message(connectors):
     connector = connectors()
-    payload = {"poses": [{"position": {"x": 1.0}}, {"position": {"y": 2.0}}]}
-    expected = copy.deepcopy(payload)
-    connector.send_message(
-        ROS2Message(payload=payload),
-        unique("mut"),
-        msg_type="geometry_msgs/msg/PoseArray",
-    )
-    assert payload == expected
+    msg = PoseArray(poses=[Pose(), Pose()])
+    msg.poses[0].position.x = 1.0
+    expected = PoseArray(poses=[Pose(), Pose()])
+    expected.poses[0].position.x = 1.0
+    connector.sync.publish(unique("mut"), msg)
+    assert msg == expected
 
 
 def test_publish_is_not_latched_by_default(connectors, helper_node):
@@ -433,7 +425,7 @@ def test_latched_publish_reaches_late_subscriber(connectors, helper_node):
     """Latching is opt-in (LATCHED QoS), e.g. for /map or a mission state."""
     topic = unique("latch")
     connector = connectors()
-    send(connector, topic, "map", qos_profile=LATCHED)
+    send(connector, topic, "map", qos=LATCHED)
     got: list[str] = []
     helper_node().create_subscription(
         String, topic, lambda m: got.append(m.data), LATCHED
@@ -448,8 +440,8 @@ def test_publish_same_topic_different_types(connectors, helper_node):
     connector = connectors()
     send(connector, topic, 1)
     send(connector, topic, "x")
-    publishers = connector._node.get_publishers_info_by_topic(topic)
-    assert [p.topic_type for p in publishers] == [STRING]
+    publishers = node_of(connector).get_publishers_info_by_topic(topic)
+    assert [p.topic_type for p in publishers] == ["std_msgs/msg/String"]
     got: list[str] = []
     helper_node().create_subscription(String, topic, lambda m: got.append(m.data), 10)
     assert wait_until(lambda: send(connector, topic, "y") or got)
@@ -467,15 +459,13 @@ def test_concurrent_first_use_creates_one_entity(connectors):
             def receive() -> None:
                 barrier.wait()
                 try:
-                    connector.receive_message(
-                        sub_topic, timeout_sec=0.01, msg_type=INT32
-                    )
+                    connector.sync.receive(sub_topic, timeout=0.01, msg_type=Int32)
                 except TimeoutError:
                     pass
 
-            def register() -> None:
+            def subscribe() -> None:
                 barrier.wait()
-                connector.register_callback(sub_topic, lambda m: None, msg_type=INT32)
+                connector.subscribe(sub_topic, lambda m: None, msg_type=Int32)
 
             def publish() -> None:
                 barrier.wait()
@@ -483,13 +473,13 @@ def test_concurrent_first_use_creates_one_entity(connectors):
 
             threads = [
                 threading.Thread(target=fn, daemon=True)
-                for fn in [receive, receive, register, register] + [publish] * 4
+                for fn in [receive, receive, subscribe, subscribe] + [publish] * 4
             ]
             for thread in threads:
                 thread.start()
             for thread in threads:
                 thread.join(5.0)
-            node = connector._node
+            node = node_of(connector)
             subs = [s for s in node.subscriptions if s.topic_name == sub_topic]
             pubs = [p for p in node.publishers if p.topic_name == pub_topic]
             assert (len(subs), len(pubs)) == (1, 1), f"round {k}"
@@ -501,14 +491,14 @@ def test_relative_and_absolute_topic_names_are_one_topic(connectors, helper_node
     topic = unique("rel")
     connector = connectors()
     got: list[Any] = []
-    connector.register_callback(topic.lstrip("/"), got.append, msg_type=STRING)
+    connector.subscribe(topic.lstrip("/"), got.append, msg_type=String)
     pub = helper_node().create_publisher(String, topic, 10)
     assert publish_until(pub, String(data="x"), lambda: got)
     with publishing(pub, String(data="x")):
-        assert connector.receive_message(topic, timeout_sec=3.0).payload.data == "x"
+        assert connector.sync.receive(topic, timeout=3.0).data == "x"
     send(connector, topic, "a")
     send(connector, topic.lstrip("/"), "b")
-    node = connector._node
+    node = node_of(connector)
     assert len([s for s in node.subscriptions if s.topic_name == topic]) == 1
     assert len([p for p in node.publishers if p.topic_name == topic]) == 1
 
@@ -516,10 +506,8 @@ def test_relative_and_absolute_topic_names_are_one_topic(connectors, helper_node
 def test_explicit_subscription_qos_is_used(connectors):
     connector = connectors()
     topic = unique("qos_explicit")
-    connector.register_callback(
-        topic, lambda m: None, msg_type=STRING, qos_profile=LATCHED
-    )
-    (sub,) = [s for s in connector._node.subscriptions if s.topic_name == topic]
+    connector.subscribe(topic, lambda m: None, msg_type=String, qos=LATCHED)
+    (sub,) = [s for s in node_of(connector).subscriptions if s.topic_name == topic]
     assert sub.qos_profile.durability == DurabilityPolicy.TRANSIENT_LOCAL
 
 
@@ -527,7 +515,7 @@ def test_early_subscription_matches_best_effort_publisher(connectors, helper_nod
     topic = unique("sensor")
     connector = connectors()
     got: list[Any] = []
-    connector.register_callback(topic, got.append, msg_type=STRING)
+    connector.subscribe(topic, got.append, msg_type=String)
     pub = helper_node().create_publisher(String, topic, qos_profile_sensor_data)
     assert publish_until(pub, String(data="x"), lambda: got)
 
@@ -537,30 +525,26 @@ def test_hri_subscription_is_reliable_without_publishers(connectors):
     connector = connectors(ROS2HRIConnector)
     topic = unique("hri_qos")
     connector.subscribe(topic, lambda m: None)
-    (sub,) = [s for s in connector._node.subscriptions if s.topic_name == topic]
+    (sub,) = [s for s in node_of(connector).subscriptions if s.topic_name == topic]
     assert sub.qos_profile.reliability == ReliabilityPolicy.RELIABLE
 
 
 # ------------------------------------------------------------------- services
 
 
-def test_service_call_does_not_mutate_payload(connectors):
+def test_call_does_not_mutate_request(connectors):
     connector = connectors()
-    payload = {"parameters": [{"name": "a", "value": {"type": 1, "bool_value": True}}]}
-    expected = copy.deepcopy(payload)
-    run_bounded(
-        lambda: connector.service_call(
-            ROS2Message(payload=payload),
-            unique("mutsrv"),
-            timeout_sec=0.1,
-            msg_type="rcl_interfaces/srv/SetParameters",
-        ),
-        3.0,
-    )
-    assert payload == expected
+
+    def request() -> Any:
+        value = ParameterValue(type=1, bool_value=True)
+        return SetParameters.Request(parameters=[Parameter(name="a", value=value)])
+
+    sent, expected = request(), request()
+    run_bounded(lambda: call(connector, unique("mutsrv"), 0.1, sent), 3.0)
+    assert sent == expected
 
 
-def test_service_call_from_service_handler(connectors, helper_node):
+def test_call_from_service_handler(connectors, helper_node):
     inner, outer = unique("inner"), unique("outer")
     connector = connectors()
     node = helper_node()
@@ -568,10 +552,7 @@ def test_service_call_from_service_handler(connectors, helper_node):
 
     def handler(request: Any, response: Any) -> Any:
         try:
-            r = connector.service_call(
-                ROS2Message(payload={}), inner, timeout_sec=3.0, msg_type=TRIGGER
-            )
-            response.success = r.payload.success
+            response.success = call(connector, inner, 3.0).success
         except Exception as e:
             response.message = repr(e)
         return response
@@ -586,19 +567,14 @@ def test_service_call_from_service_handler(connectors, helper_node):
 @pytest.mark.parametrize("kind", ["service", "action"])
 def test_unreachable_server_raises_timeout(connectors, kind):
     connector = connectors()
-    msg = ROS2Message(payload={})
     with pytest.raises(TimeoutError):
         if kind == "service":
-            connector.service_call(
-                msg, unique("nosrv"), timeout_sec=0.3, msg_type=TRIGGER
-            )
+            call(connector, unique("nosrv"), 0.3)
         else:
-            connector.start_action(
-                msg, unique("noact"), timeout_sec=0.3, msg_type=FIBONACCI
-            )
+            start_goal(connector, unique("noact"), accept_timeout=0.3)
 
 
-def test_service_call_timeout_raises(connectors, helper_node):
+def test_call_timeout_raises(connectors, helper_node):
     name = unique("slowsrv")
     connector = connectors()
     release = threading.Event()
@@ -610,9 +586,7 @@ def test_service_call_timeout_raises(connectors, helper_node):
     make_trigger_service(helper_node(), name, slow)
     try:
         with pytest.raises(TimeoutError):
-            connector.service_call(
-                ROS2Message(payload={}), name, timeout_sec=0.5, msg_type=TRIGGER
-            )
+            call(connector, name, 0.5)
     finally:
         release.set()
 
@@ -628,7 +602,7 @@ connector.create_action("{name}", lambda goal: goal.succeed() or Fibonacci.Resul
 try:
     signal.pause()
 except KeyboardInterrupt:
-    connector.shutdown()
+    connector.close()
 """
 
 
@@ -661,19 +635,12 @@ def test_type_change_replaces_the_entity_of_the_old_type(connectors):
     for i in range(10):
         first = i % 2 == 0
         with pytest.raises(TimeoutError):  # no server: readiness times out
-            connector.service_call(
-                ROS2Message(payload={}),
-                srv,
-                timeout_sec=0.05,
-                msg_type=TRIGGER if first else "std_srvs/srv/SetBool",
+            call(
+                connector, srv, 0.05, Trigger.Request() if first else SetBool.Request()
             )
         with pytest.raises(TimeoutError):
-            connector.start_action(
-                ROS2Message(payload={}),
-                act,
-                timeout_sec=0.05,
-                msg_type=FIBONACCI if first else "nav2_msgs/action/NavigateToPose",
-            )
+            goal = Fibonacci.Goal() if first else NAVIGATE.Goal()
+            connector.sync.send_goal(act, goal, accept_timeout=0.05)
         connector.sync.publish(pub, String(data="x") if first else Int32(data=1))
         with pytest.raises(TimeoutError):
             connector.sync.receive(
@@ -692,17 +659,9 @@ def test_wrong_service_type_then_correct_type(connectors):
         srv = (name, ["std_srvs/srv/SetBool"])
         assert wait_until(lambda: srv in connector.get_services_names_and_types(), 10.0)
         with pytest.raises(Exception):
-            connector.service_call(
-                ROS2Message(payload={}), name, timeout_sec=0.3, msg_type=TRIGGER
-            )
+            call(connector, name, 0.3)
         # A poisoned cache would fail this.
-        response = connector.service_call(
-            ROS2Message(payload={"data": True}),
-            name,
-            timeout_sec=5.0,
-            msg_type="std_srvs/srv/SetBool",
-        )
-        assert response.payload.success
+        assert call(connector, name, 5.0, SetBool.Request(data=True)).success
 
 
 FRESH_CLIENTS, SERVER_PROCESSES = 200, 20
@@ -734,7 +693,7 @@ connector = ROS2Connector()
 for i in range({first}, {n}, {step}):
     connector.create_service("{prefix}_%d" % i, lambda req, res: setattr(res, "success", True) or res, service_type="std_srvs/srv/SetBool")
 """,
-    "connector.shutdown()",
+    "connector.close()",
 )
 
 
@@ -785,7 +744,7 @@ connector = ROS2Connector()
 for i in range({first}, {n}, {step}):
     connector.create_action("{prefix}_%d" % i, lambda goal: goal.succeed() or Fibonacci.Result(), action_type=Fibonacci)
 """,
-    "connector.shutdown()",
+    "connector.close()",
 )
 
 
@@ -871,7 +830,7 @@ def lost_connector_calls() -> str:
 
     prefix = unique("fresh")
     with ROS2Connector() as connector:
-        pad_readers(connector._node, prefix)
+        pad_readers(node_of(connector), prefix)
 
         async def call_all() -> list[Any]:
             calls = [
@@ -894,33 +853,25 @@ def test_fresh_connector_clients_of_new_rclpy_servers():
     print(f"lost connector calls: {in_child(lost_connector_calls)}")
 
 
-def test_no_client_leak_without_reuse(connectors, helper_node):
+def test_no_client_leak_over_calls(connectors, helper_node):
     name = unique("leak")
     connector = connectors()
     make_trigger_service(helper_node(), name)
-    before = len(list(connector._node.clients))
+    before = len(list(node_of(connector).clients))
     for _ in range(10):
-        connector.service_call(
-            ROS2Message(payload={}),
-            name,
-            timeout_sec=3.0,
-            msg_type=TRIGGER,
-            reuse_client=False,
-        )
-    assert len(list(connector._node.clients)) - before <= 1
+        call(connector, name, 3.0)
+    assert len(list(node_of(connector).clients)) - before <= 1
 
 
 def test_release_client_destroys_client(connectors, helper_node):
     name = unique("release")
     connector = connectors()
     make_trigger_service(helper_node(), name)
-    before = len(list(connector._node.clients))
-    connector.service_call(
-        ROS2Message(payload={}), name, timeout_sec=3.0, msg_type=TRIGGER
-    )
-    assert len(list(connector._node.clients)) == before + 1
+    before = len(list(node_of(connector).clients))
+    call(connector, name, 3.0)
+    assert len(list(node_of(connector).clients)) == before + 1
     assert connector.release_client(name)
-    assert len(list(connector._node.clients)) == before
+    assert len(list(node_of(connector).clients)) == before
     assert not connector.release_client(name)
 
 
@@ -935,12 +886,12 @@ def test_release_client_fails_call_in_flight(connectors, helper_node):
         return response
 
     make_trigger_service(helper_node(), name, slow)
-    call = lambda: connector.service_call(
-        ROS2Message(payload={}), name, timeout_sec=10.0, msg_type=TRIGGER
-    )
     result: list[Any] = []
     caller = threading.Thread(
-        target=lambda: result.append(run_bounded(call, 12.0)), daemon=True
+        target=lambda: result.append(
+            run_bounded(lambda: call(connector, name, 10.0), 12.0)
+        ),
+        daemon=True,
     )
     try:
         caller.start()
@@ -1070,7 +1021,7 @@ def test_slow_accept_does_not_orphan_goal(connectors, helper_node):
     )
     wait_for_action(connector, name)
     with pytest.raises(Exception):
-        start_goal(connector, name, timeout_sec=0.3)
+        start_goal(connector, name, accept_timeout=0.3)
     assert wait_until(lambda: outcomes, 5.0)
     assert outcomes == ["canceled"]
 
@@ -1088,7 +1039,7 @@ def test_rejected_goal_does_not_fire_on_done(connectors, helper_node):
     assert done == []
 
 
-def test_terminate_action_bounded_when_server_gone(connectors, ros_setup):
+def test_cancel_bounded_when_server_gone(connectors, ros_setup):
     name = unique("gone")
     connector = connectors()
     node = Node(f"fault_gone_{uuid.uuid4().hex[:8]}")
@@ -1111,7 +1062,7 @@ def test_terminate_action_bounded_when_server_gone(connectors, ros_setup):
     thread.join(timeout=2.0)
     node.destroy_node()
 
-    finished, _ = run_bounded(lambda: connector.terminate_action(handle), 5.0)
+    finished, _ = run_bounded(handle.sync.cancel, 5.0)
     assert finished
 
 
@@ -1119,15 +1070,15 @@ def test_action_entities_not_leaked(connectors, helper_node):
     name = unique("fibleak")
     connector = connectors()
     make_fibonacci_server(helper_node(), name)
-    before = len(list(connector._node.waitables))
+    before = len(list(node_of(connector).waitables))
     for _ in range(40):
         done = threading.Event()
         start_goal(connector, name, on_done=lambda _: done.set())
         assert done.wait(5.0)
-    assert len(list(connector._node.waitables)) - before <= 1
+    assert len(list(node_of(connector).waitables)) - before <= 1
 
 
-def test_start_action_from_service_handler(connectors, helper_node):
+def test_send_goal_from_service_handler(connectors, helper_node):
     action, srv = unique("innerfib"), unique("outersrv")
     connector = connectors()
     node = helper_node()
@@ -1153,16 +1104,14 @@ def test_wrong_action_type_does_not_block_action_name(connectors):
     name = unique("wrongact")
     connector = connectors()
     # No server yet: both goals fail, neither may poison the name.
-    for msg_type in ("nav2_msgs/action/NavigateToPose", FIBONACCI):
+    for goal in (NAVIGATE.Goal(), Fibonacci.Goal()):
         with pytest.raises(Exception):
-            connector.start_action(
-                ROS2Message(payload={}), name, timeout_sec=0.2, msg_type=msg_type
-            )
+            connector.sync.send_goal(name, goal, accept_timeout=0.2)
     with server_process(name):
         wait_for_action(connector, name)
         # Readiness covers DDS discovery (up to about 3 s on Fast DDS) and
         # the settling for a fresh server process (runtime.SETTLE_NEW_S).
-        assert start_goal(connector, name, timeout_sec=6.0)
+        assert start_goal(connector, name, accept_timeout=6.0)
 
 
 # ------------------------------------------------------------------ lifecycle
@@ -1179,14 +1128,14 @@ def test_no_user_callbacks_after_shutdown(connectors, helper_node):
         started.append(time.monotonic())
         gate.wait(10.0)
 
-    connector.register_callback(topic, callback, raw=True, msg_type=INT32)
+    connector.subscribe(topic, callback, msg_type=Int32)
     pub = helper_node().create_publisher(Int32, topic, 100)
     try:
         assert publish_until(pub, Int32(data=0), lambda: started)
         for i in range(20):  # queued behind the blocked callbacks
             pub.publish(Int32(data=i))
             time.sleep(0.01)
-        finished, _ = run_bounded(connector.shutdown, 5.0)
+        finished, _ = run_bounded(connector.close, 5.0)
         returned = time.monotonic()
         assert finished
     finally:
@@ -1199,7 +1148,6 @@ def test_no_user_callbacks_after_shutdown(connectors, helper_node):
 def test_every_call_after_shutdown_raises_closed(connectors, cls):
     connector = connectors(cls)
     connector.close()
-    msg = ROS2Message(payload={})
     hri = cls is ROS2HRIConnector
     calls = {
         "send": lambda: connector.sync.send("/t", "x"),
@@ -1208,40 +1156,35 @@ def test_every_call_after_shutdown_raises_closed(connectors, cls):
     }
     if not hri:  # 3.0 HRI connectors only send and receive
         calls = {
-            "send_message": lambda: connector.send_message(msg, "/t", msg_type=STRING),
-            "receive_message": lambda: connector.receive_message("/t", msg_type=STRING),
-            "register_callback": lambda: connector.register_callback(
-                "/t", print, msg_type=INT32
-            ),
-            "service_call": lambda: connector.service_call(msg, "/s", msg_type=TRIGGER),
-            "start_action": lambda: connector.start_action(
-                msg, "/a", msg_type=FIBONACCI
-            ),
-            "terminate_action": lambda: connector.terminate_action("handle"),
+            "publish": lambda: connector.sync.publish("/t", String()),
+            "receive": lambda: connector.sync.receive("/t", msg_type=String),
+            "subscribe": lambda: connector.subscribe("/t", print, msg_type=Int32),
+            "call": lambda: call(connector, "/s", 5.0),
+            "send_goal": lambda: start_goal(connector, "/a"),
             "create_service": lambda: connector.create_service(
                 "/s", print, service_type=TRIGGER
             ),
             "create_action": lambda: connector.create_action(
                 "/a", print, action_type=FIBONACCI
             ),
-            "get_transform": lambda: connector.get_transform("a", "b", timeout_sec=0.1),
+            "transform": lambda: connector.sync.transform("a", "b", timeout=0.1),
             "get_topics": connector.get_topics_names_and_types,
             "get_services": connector.get_services_names_and_types,
             "get_actions": connector.get_actions_names_and_types,
         }
-    for name, call in calls.items():
-        finished, error = run_bounded(call, 2.0)
+    for name, fn in calls.items():
+        finished, error = run_bounded(fn, 2.0)
         assert finished and isinstance(error, ConnectorClosedError), (name, error)
 
 
 def test_cleanup_after_shutdown_is_noop(connectors):
     connector = connectors()
-    callback_id = connector.register_callback(
-        unique("cleanup"), lambda _: None, msg_type=STRING
+    subscription = connector.subscribe(
+        unique("cleanup"), lambda _: None, msg_type=String
     )
-    connector.shutdown()
-    connector.unregister_callback(callback_id)
-    connector.unregister_callback(callback_id)
+    connector.close()
+    subscription.close()
+    subscription.close()
     assert connector.release_client(unique("nosrv")) is False
 
 
@@ -1250,7 +1193,7 @@ def test_concurrent_shutdown_is_safe(connectors):
     results: list[Any] = []
     threads = [
         threading.Thread(
-            target=lambda: results.append(run_bounded(connector.shutdown, 5.0))
+            target=lambda: results.append(run_bounded(connector.close, 5.0))
         )
         for _ in range(4)
     ]
@@ -1258,15 +1201,15 @@ def test_concurrent_shutdown_is_safe(connectors):
         thread.start()
     for thread in threads:
         thread.join(10.0)
-    results.append(run_bounded(connector.shutdown, 5.0))  # and once more after
+    results.append(run_bounded(connector.close, 5.0))  # and once more after
     assert all(r == (True, None) for r in results), results
 
 
-def test_shutdown_wakes_waiting_receive_message(connectors):
+def test_shutdown_wakes_waiting_receive(connectors):
     connector = connectors()
     result: list[Any] = []
-    receive = lambda: connector.receive_message(
-        unique("never"), timeout_sec=20.0, msg_type=STRING
+    receive = lambda: connector.sync.receive(
+        unique("never"), timeout=20.0, msg_type=String
     )
     threading.Thread(
         target=lambda: result.append(run_bounded(receive, 25.0)), daemon=True
@@ -1277,7 +1220,7 @@ def test_shutdown_wakes_waiting_receive_message(connectors):
     assert isinstance(result[0][1], ConnectorClosedError), result
 
 
-def test_shutdown_wakes_waiting_service_call(connectors, helper_node):
+def test_shutdown_wakes_waiting_call(connectors, helper_node):
     name = unique("stuck")
     connector = connectors()
     called, release = threading.Event(), threading.Event()
@@ -1289,11 +1232,11 @@ def test_shutdown_wakes_waiting_service_call(connectors, helper_node):
 
     make_trigger_service(helper_node(), name, stuck)
     result: list[Any] = []
-    call = lambda: connector.service_call(
-        ROS2Message(payload={}), name, timeout_sec=20.0, msg_type=TRIGGER
-    )
     threading.Thread(
-        target=lambda: result.append(run_bounded(call, 25.0)), daemon=True
+        target=lambda: result.append(
+            run_bounded(lambda: call(connector, name, 20.0), 25.0)
+        ),
+        daemon=True,
     ).start()
     try:
         assert called.wait(5.0)
@@ -1308,8 +1251,8 @@ def stuck_subscription_callback(connectors, helper_node, release):
     topic = unique("stuckcb")
     connector = connectors()
     started = threading.Event()
-    connector.register_callback(
-        topic, lambda m: (started.set(), release.wait(20.0)), raw=True, msg_type=INT32
+    connector.subscribe(
+        topic, lambda m: (started.set(), release.wait(20.0)), msg_type=Int32
     )
     pub = helper_node().create_publisher(Int32, topic, 10)
     assert publish_until(pub, Int32(data=1), started.is_set)
@@ -1345,20 +1288,20 @@ def test_shutdown_bounded_with_stuck_callback(connectors, helper_node, make_stuc
     try:
         connector = make_stuck(connectors, helper_node, release)
         # 3.0 acceptance is under 1 s; the bound is generous for loaded hosts.
-        finished, error = run_bounded(connector.shutdown, 5.0)
+        finished, error = run_bounded(connector.close, 5.0)
         assert finished and error is None, error
     finally:
         release.set()
 
 
-def test_shutdown_from_registered_callback(connectors, helper_node):
+def test_shutdown_from_subscription_callback(connectors, helper_node):
     topic = unique("stopmsg")
     connector = connectors()
     result: list[Any] = []
-    connector.register_callback(
+    connector.subscribe(
         topic,
-        lambda _: result.append(run_bounded(connector.shutdown, 5.0)),
-        msg_type=STRING,
+        lambda _: result.append(run_bounded(connector.close, 5.0)),
+        msg_type=String,
     )
     pub = helper_node().create_publisher(String, topic, 10)
     assert publish_until(pub, String(data="stop"), lambda: result)
@@ -1375,16 +1318,14 @@ def test_shutdown_joins_connector_threads(connectors, helper_node):
 
     connector = connectors()
     got: list[Any] = []
-    connector.register_callback(topic, got.append, msg_type=STRING)
+    connector.subscribe(topic, got.append, msg_type=String)
     assert publish_until(pub, String(data="x"), lambda: got)
-    connector.service_call(
-        ROS2Message(payload={}), srv, timeout_sec=3.0, msg_type=TRIGGER
-    )
+    call(connector, srv, 3.0)
     done = threading.Event()
     start_goal(connector, action, on_done=lambda _: done.set())
     assert done.wait(5.0)
 
-    finished, error = run_bounded(connector.shutdown, 5.0)
+    finished, error = run_bounded(connector.close, 5.0)
     assert finished and error is None, error
     leftover = lambda: [t.name for t in threading.enumerate() if t not in before]
     assert wait_until(lambda: not leftover()), leftover()
@@ -1395,13 +1336,13 @@ def test_hri_connectors_get_distinct_default_node_names(connectors):
     runtimes each get a fresh name, not one evaluated at import (8a625cf)."""
     first = connectors(ROS2HRIConnector, runtime=ROS2Runtime())
     second = connectors(ROS2HRIConnector, runtime=ROS2Runtime())
-    assert first._node.get_name() != second._node.get_name()
-    assert connectors(ROS2HRIConnector)._node is connectors(ROS2Connector)._node
+    assert node_of(first).get_name() != node_of(second).get_name()
+    assert node_of(connectors(ROS2HRIConnector)) is node_of(connectors(ROS2Connector))
 
 
 def test_hri_connector_forwards_use_sim_time(connectors):
     connector = connectors(ROS2HRIConnector, use_sim_time=True)
-    assert connector._node.get_parameter("use_sim_time").value is True
+    assert node_of(connector).get_parameter("use_sim_time").value is True
 
 
 def test_node_discovery_never_exposes_entries_outside_allowlist(ros_setup):
@@ -1430,14 +1371,14 @@ from rai.communication.ros2 import ROS2Connector, ROS2Context
 if {use_context}:
     with ROS2Context():
         connector = ROS2Connector()
-        connector.register_callback("/exit_test", print, msg_type="std_msgs/msg/String")
+        connector.subscribe("/exit_test", print, msg_type="std_msgs/msg/String")
     try:
         connector.get_topics_names_and_types()
     except Exception as e:
         print(type(e).__name__)
 else:
     connector = ROS2Connector()
-    connector.register_callback("/exit_test", print, msg_type="std_msgs/msg/String")
+    connector.subscribe("/exit_test", print, msg_type="std_msgs/msg/String")
 print("done")
 """
 
@@ -1471,9 +1412,7 @@ def test_steady_stream_is_delivered(connectors, helper_node):
     topic = unique("rate")
     connector = connectors()
     got: list[int] = []
-    connector.register_callback(
-        topic, lambda m: got.append(m.data), raw=True, msg_type=INT32
-    )
+    connector.subscribe(topic, lambda m: got.append(m.data), msg_type=Int32)
     pub = helper_node().create_publisher(Int32, topic, 10)
     assert publish_until(pub, Int32(data=-1), lambda: got)
     start = time.monotonic()
@@ -1490,7 +1429,7 @@ def test_steady_stream_is_delivered(connectors, helper_node):
 def test_tf_listener_created_on_first_use(connectors, helper_node):
     connector = connectors()
     has_tf = lambda: any(
-        s.topic_name in ("/tf", "/tf_static") for s in connector._node.subscriptions
+        s.topic_name in ("/tf", "/tf_static") for s in node_of(connector).subscriptions
     )
     assert not has_tf()
     transform = TransformStamped()
@@ -1498,14 +1437,14 @@ def test_tf_listener_created_on_first_use(connectors, helper_node):
     transform.child_frame_id = "lazy_child"
     transform.transform.rotation.w = 1.0
     StaticTransformBroadcaster(helper_node()).sendTransform(transform)
-    result = connector.get_transform("lazy_parent", "lazy_child", timeout_sec=3.0)
+    result = connector.sync.transform("lazy_parent", "lazy_child", timeout=3.0)
     assert result.child_frame_id == "lazy_child"
     assert has_tf()
 
 
-def test_get_transform_honors_fractional_timeout(connectors):
+def test_transform_honors_fractional_timeout(connectors):
     connector = connectors()
     start = time.monotonic()
     with pytest.raises(LookupException):
-        connector.get_transform("nowhere", "nothing", timeout_sec=0.3)
+        connector.sync.transform("nowhere", "nothing", timeout=0.3)
     assert 0.25 < time.monotonic() - start < 3.0

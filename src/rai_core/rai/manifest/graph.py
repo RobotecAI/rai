@@ -23,7 +23,7 @@ import json
 from collections.abc import Iterable
 from dataclasses import dataclass
 from fnmatch import fnmatchcase
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from rai.communication.ros2 import ROS2Connector
@@ -98,14 +98,9 @@ def query_graph(
 
     node_names: tuple[str, ...] = ()
     if nodes:
-        node: Any = connector._node  # pyright: ignore[reportPrivateUsage]
-        own = node.get_fully_qualified_name()
+        own = connector.node_name
         node_names = tuple(
-            sorted(
-                fqn
-                for name, ns in node.get_node_names_and_namespaces()
-                if (fqn := f"{ns.rstrip('/')}/{name}") != own and keep("node", fqn)
-            )
+            n for n in connector.get_node_names() if n != own and keep("node", n)
         )
     return RawGraph(
         nodes=node_names,

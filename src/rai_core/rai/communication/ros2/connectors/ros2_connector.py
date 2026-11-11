@@ -25,27 +25,20 @@ import sys
 import threading
 import time
 import uuid
-import warnings
 from collections import deque
 from typing import Any, Callable, Optional, cast
 
 import rclpy.action
 from action_msgs.srv import CancelGoal
-from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from rclpy.time import Time
 from tf2_ros import LookupException, TransformStamped
 from unique_identifier_msgs.msg import UUID
 
-from rai.communication.base_connector import (
-    BaseConnector,
-    ConnectorClosedError,
-    ConnectorException,
-)
+from rai.communication.exceptions import ConnectorClosedError
 from rai.communication.ros2 import compat
 from rai.communication.ros2.egress import EgressHooks, type_name
 from rai.communication.ros2.exceptions import ROS2GoalRejectedError, ROS2TimeoutError
-from rai.communication.ros2.messages import ROS2Message
 from rai.communication.ros2.runtime import (
     POLL_S,
     Client,
@@ -56,7 +49,6 @@ from rai.communication.ros2.runtime import (
     Waiter,
     acquire,
     fail,
-    message_class,
     release,
 )
 
@@ -120,7 +112,7 @@ class Subscription:
         self._on_close = on_close
         self._runtime = runtime
         self._topic = topic
-        self._waiters: deque[Waiter] = deque()
+        self._pending: deque[Waiter] = deque()
         self._buffer: deque[Any] = deque(maxlen=maxsize)
         self._lock = threading.Lock()
         self._dispatcher: Optional[Dispatcher] = None
@@ -135,8 +127,8 @@ class Subscription:
 
     def _put(self, msg: Any) -> None:  # executor thread
         with self._lock:
-            if self._waiters:
-                self._waiters.popleft().resolve(msg)
+            if self._pending:
+                self._pending.popleft().resolve(msg)
             else:
                 self._buffer.append(msg)
 
@@ -148,7 +140,7 @@ class Subscription:
             if self._buffer:
                 return self._decode(self._buffer.popleft())
             waiter = Waiter()
-            self._waiters.append(waiter)
+            self._pending.append(waiter)
         try:
             msg = await self._runtime.wait(
                 waiter, timeout, f"receive from {self.topic}"
@@ -156,8 +148,8 @@ class Subscription:
             return self._decode(msg)
         finally:
             with self._lock:
-                if waiter in self._waiters:
-                    self._waiters.remove(waiter)
+                if waiter in self._pending:
+                    self._pending.remove(waiter)
 
     def __aiter__(self) -> "Subscription":
         return self
@@ -173,12 +165,12 @@ class Subscription:
             if self.closed:
                 return
             self.closed = True
-            waiters, self._waiters = list(self._waiters), deque()
+            pending, self._pending = list(self._pending), deque()
         self._topic.remove(self._consume)
         self._on_close()
         if self._dispatcher is not None:
             self._dispatcher.close()
-        fail(set(waiters), ConnectorClosedError(f"Subscription to {self.topic} closed"))
+        fail(set(pending), ConnectorClosedError(f"Subscription to {self.topic} closed"))
 
 
 class GoalStatus(enum.IntEnum):
@@ -218,7 +210,7 @@ class GoalHandle:
         self._result_future: Any = None
         self._response: Any = None
         self._feedback: deque[Any] = deque(maxlen=feedback_maxlen)
-        self._waiters: set[Waiter] = set()
+        self._pending: set[Waiter] = set()
         self._lock = threading.Lock()
         self._on_feedback, self._on_done = on_feedback, on_done
         self._dispatcher = (
@@ -249,9 +241,9 @@ class GoalHandle:
             error = None
         with self._lock:
             self._response = response
-            waiters = set(self._waiters)
+            pending = set(self._pending)
         self._runtime.untrack_goal(self)
-        for waiter in waiters:
+        for waiter in pending:
             waiter.resolve(response, error)
         if self._dispatcher is not None and self._on_done is not None:
             self._dispatcher.push(self)
@@ -285,11 +277,11 @@ class GoalHandle:
             response = self._response
             if response is None:
                 waiter = Waiter()
-                self._waiters.add(waiter)
+                self._pending.add(waiter)
         if response is None:
             what = f"result of the goal on {self.action}"
             response = await self._runtime.wait(
-                waiter, timeout, what, self._waiters, *self._groups
+                waiter, timeout, what, self._pending, *self._groups
             )
         return response.result
 
@@ -319,9 +311,6 @@ class SyncGoalHandle:
         return self._handle._runtime.run(self._handle.cancel(timeout))
 
 
-_node_warned: set[tuple[str, int]] = set()  # call sites warned about .node
-
-
 class ROS2Base:
     """Runtime ownership and lifecycle shared by ROS2Connector and
     ROS2HRIConnector."""
@@ -332,15 +321,7 @@ class ROS2Base:
         runtime: Optional[ROS2Runtime],
         executor: Optional[ExecutorKind],
         use_sim_time: bool,
-        executor_type: Optional[str] = None,
     ) -> None:
-        if executor_type is not None:  # R5: remove
-            warnings.warn(
-                "executor_type is deprecated and ignored: RAI runs a single-threaded"
-                " or events executor (executor='single' | 'events')",
-                DeprecationWarning,
-                stacklevel=3,
-            )
         if runtime is None and (node_name or executor or use_sim_time):
             runtime = ROS2Runtime(
                 node_name, executor=executor, use_sim_time=use_sim_time
@@ -348,7 +329,7 @@ class ROS2Base:
         self._runtime = acquire(runtime)
         self._closed = False
         self._close_lock = threading.Lock()
-        self._waiters: set[Waiter] = set()
+        self._pending: set[Waiter] = set()
         self._subscriptions: dict[str, Subscription] = {}
         self._runtime.on_close(self.close)
 
@@ -371,7 +352,7 @@ class ROS2Base:
             self._closed = True
         for subscription in list(self._subscriptions.values()):
             subscription.close()
-        fail(self._waiters, ConnectorClosedError(f"{type(self).__name__} was closed"))
+        fail(self._pending, ConnectorClosedError(f"{type(self).__name__} was closed"))
         self._runtime.off_close(self.close)
         release(self._runtime)
 
@@ -394,30 +375,6 @@ class ROS2Base:
         every runtime."""
         return self._runtime.egress
 
-    @property
-    def _node(self) -> Node:
-        """Internal: the runtime's node, for RAI code not yet ported to the
-        connector API (listed for A9 in rai3-plan)."""
-        return self._runtime.node
-
-    @property
-    def node(self) -> Node:
-        """Deprecated: bypasses the connector, its lifecycle and egress hooks.
-        Warns once per call site."""
-        caller = sys._getframe(1)
-        site = (caller.f_code.co_filename, caller.f_lineno)
-        if site not in _node_warned:
-            _node_warned.add(site)
-            warnings.warn(
-                "connector.node bypasses the connector and its egress hooks"
-                " (rai.safety: EStop, ConfirmActuation, RateLimit, AuditLog do not"
-                " see what is sent through it) and will be removed in RAI 3.0;"
-                " use the connector API",
-                RuntimeWarning,
-                stacklevel=2,
-            )
-        return self._runtime.node
-
     # ------------------------------------------------------------ topics
 
     def _subscribe(
@@ -429,7 +386,7 @@ class ROS2Base:
         maxsize: Optional[int],
         raw: bool = False,
         decode: Callable[[Any], Any] = lambda msg: msg,
-    ) -> tuple[str, Subscription]:
+    ) -> Subscription:
         self._check()
         entry, created = self._runtime.topic(topic, msg_type, qos, raw)
         key = uuid.uuid4().hex
@@ -444,7 +401,7 @@ class ROS2Base:
             decode=decode,
         )
         self._subscriptions[key] = subscription
-        return key, subscription
+        return subscription
 
     async def _receive(
         self,
@@ -463,17 +420,17 @@ class ROS2Base:
             ):
                 return sample
             waiter = Waiter()
-            entry.waiters.append(waiter)
+            entry.pending.append(waiter)
         try:
             what = f"receive from {topic}"
-            return await self._runtime.wait(waiter, timeout, what, self._waiters)
+            return await self._runtime.wait(waiter, timeout, what, self._pending)
         finally:
             with entry.lock:
-                if waiter in entry.waiters:
-                    entry.waiters.remove(waiter)
+                if waiter in entry.pending:
+                    entry.pending.remove(waiter)
 
 
-class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
+class ROS2Connector(ROS2Base):
     """ROS 2 topics, services, actions and TF on a shared ROS2Runtime.
 
     The async methods work from any event loop; ``connector.sync`` has blocking
@@ -488,20 +445,9 @@ class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
         runtime: Optional[ROS2Runtime] = None,
         executor: Optional[ExecutorKind] = None,
         use_sim_time: bool = False,
-        executor_type: Optional[str] = None,  # R5: deprecated, ignored
-        destroy_subscribers: bool = False,  # R5: deprecated, ignored
     ) -> None:
-        BaseConnector.__init__(self)
-        self._attach(node_name, runtime, executor, use_sim_time, executor_type)
-        self._goals: dict[str, GoalHandle] = {}  # R5: handles of start_action
+        self._attach(node_name, runtime, executor, use_sim_time)
         self.sync = SyncROS2Connector(self)
-
-    def close(self) -> None:
-        super().close()
-        self.callback_executor.shutdown(wait=False)
-
-    def shutdown(self) -> None:  # R5: old name of close()
-        self.close()
 
     # ------------------------------------------------------------ topics
 
@@ -518,7 +464,7 @@ class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
         """Subscribe to a topic. msg_type (class or "pkg/msg/Name") defaults to
         the type in the ROS graph. raw=True delivers serialized bytes (relays
         and recorders only)."""
-        return self._subscribe(topic, callback, msg_type, qos, maxsize, raw)[1]
+        return self._subscribe(topic, callback, msg_type, qos, maxsize, raw)
 
     async def receive(
         self,
@@ -585,7 +531,7 @@ class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
                         remaining if last else interval,
                         f"Service call {service}",
                         client.pending,
-                        self._waiters,
+                        self._pending,
                     )
                 except TimeoutError:
                     if last:
@@ -622,7 +568,7 @@ class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
         await self._runtime.agate("goal", client.name, client.msg_type, goal)
         deadline = await self._runtime.ready(client, accept_timeout, f"Action {action}")
         handle = GoalHandle(
-            self._runtime, client, action, (self._waiters,), on_feedback, on_done
+            self._runtime, client, action, (self._pending,), on_feedback, on_done
         )
         goal_id = UUID(uuid=list(uuid.uuid4().bytes))
         future = client.entity.send_goal_async(
@@ -634,7 +580,7 @@ class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
                 max(0.0, deadline - time.monotonic()),
                 f"Goal on {action}",
                 client.pending,
-                self._waiters,
+                self._pending,
             )
         except TimeoutError:
             # The goal may run although its response is late or was lost (DDS
@@ -652,10 +598,8 @@ class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
         self,
         service_name: str,
         on_request: Callable[[Any, Any], Any],
-        on_done: Optional[Callable[[Any, Any], Any]] = None,
         *,
         service_type: Any,
-        **kwargs: Any,
     ) -> str:
         """Serve requests with on_request(request, response) -> response. It
         runs off the executor thread, one request at a time."""
@@ -783,129 +727,6 @@ class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
         self._check()
         return _parse_frames(self._runtime.tf_buffer().all_frames_as_yaml())
 
-    # ------------------------------------- R5: compatibility with the 2.x API
-
-    def unregister_callback(self, callback_id: str) -> None:
-        """Stop a callback registered with register_callback (R5: use
-        Subscription.close)."""
-        if self._closed:
-            return
-        subscription = self._subscriptions.pop(callback_id, None)
-        if subscription is None:
-            raise ConnectorException(f"Callback with id {callback_id} not found.")
-        subscription.close()
-
-    def send_message(
-        self,
-        message: ROS2Message,
-        target: str,
-        *,
-        msg_type: str,
-        auto_qos_matching: bool = True,  # ignored: publishers use QoS presets
-        qos_profile: Optional[QoSProfile] = None,
-        **kwargs: Any,
-    ) -> None:
-        self._check()
-        msg = _build(msg_type, message.payload)
-        self._runtime.publish(target, msg, qos_profile or QoS.COMMAND)
-
-    def receive_message(
-        self,
-        source: str,
-        timeout_sec: float = 1.0,
-        *,
-        msg_type: Optional[str] = None,
-        qos_profile: Optional[QoSProfile] = None,
-        auto_qos_matching: bool = True,  # ignored: QoS.AUTO is the default
-        max_age: Optional[float] = None,
-        **kwargs: Any,
-    ) -> ROS2Message:
-        msg, _, stamp = self._runtime.run(
-            self._receive(
-                source, msg_type, timeout_sec, max_age, qos_profile or QoS.AUTO
-            )
-        )
-        return ROS2Message(
-            payload=msg, metadata={"msg_type": str(type(msg))}, timestamp=stamp
-        )
-
-    def register_callback(
-        self,
-        source: str,
-        callback: Callable[[Any], Any],
-        raw: bool = False,
-        *,
-        msg_type: Optional[str] = None,
-        qos_profile: Optional[QoSProfile] = None,
-        **kwargs: Any,
-    ) -> str:
-        def wrapped(msg: Any) -> Any:
-            meta = {"msg_type": str(type(msg))}
-            return callback(ROS2Message(payload=msg, metadata=meta))
-
-        return self._subscribe(
-            source, callback if raw else wrapped, msg_type, qos_profile or QoS.AUTO, 10
-        )[0]
-
-    def service_call(
-        self,
-        message: ROS2Message,
-        target: str,
-        timeout_sec: float = 5.0,
-        *,
-        msg_type: str,
-        reuse_client: bool = True,  # clients are always cached now
-        **kwargs: Any,
-    ) -> ROS2Message:
-        self._check()
-        srv_cls = message_class(msg_type)
-        request = _build(srv_cls.Request, message.payload)
-        response = self.sync.call(
-            target, request, srv_type=srv_cls, timeout=timeout_sec
-        )
-        meta = {"msg_type": str(type(response)), "service": target}
-        return ROS2Message(payload=response, metadata=meta)
-
-    def start_action(
-        self,
-        action_data: Optional[ROS2Message],
-        target: str,
-        on_feedback: Callable[[Any], None] = lambda _: None,
-        on_done: Callable[[Any], None] = lambda _: None,
-        timeout_sec: float = 1.0,
-        *,
-        msg_type: str,
-        **kwargs: Any,
-    ) -> str:
-        self._check()
-        if not isinstance(action_data, ROS2Message):
-            raise ValueError("Action data must be of type ROS2Message")
-        action_cls = message_class(msg_type)
-        handle = self.sync.send_goal(
-            target,
-            _build(action_cls.Goal, action_data.payload),
-            action_type=action_cls,
-            accept_timeout=timeout_sec,
-            on_feedback=on_feedback,
-            on_done=lambda h: on_done(h._result_future),
-        )
-        for goal_id in [k for k, h in self._goals.items() if h.done][:-32]:
-            del self._goals[goal_id]
-        self._goals[handle.id] = handle
-        return handle.id
-
-    def terminate_action(self, action_handle: str, **kwargs: Any) -> bool:
-        self._check()
-        handle = self._goals.get(action_handle)
-        if handle is None:
-            raise ValueError(f"Unknown action handle: {action_handle}")
-        return handle.sync.cancel()
-
-    def get_transform(
-        self, target_frame: str, source_frame: str, timeout_sec: float = 5.0
-    ) -> TransformStamped:
-        return self.sync.transform(target_frame, source_frame, timeout=timeout_sec)
-
 
 def _parse_frames(text: str) -> dict[str, dict[str, Any]]:
     """tf2's all_frames_as_yaml (a fixed, flat format) without a YAML parser."""
@@ -924,13 +745,6 @@ def _parse_frames(text: str) -> dict[str, dict[str, Any]]:
             except ValueError:
                 frame[key] = value
     return frames
-
-
-def _build(msg_type: Any, payload: Any) -> Any:
-    cls = message_class(msg_type)
-    if isinstance(payload, cls):
-        return payload
-    return compat.set_message_fields(cls(), payload or {})
 
 
 def _cancel_late_goal(future: Any) -> None:  # executor thread

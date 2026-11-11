@@ -20,10 +20,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from nav2_msgs.action import NavigateToPose
-from rai.communication.ros2 import (
-    ROS2Connector,
-    ROS2Message,
-)
+from rai.communication.ros2 import ROS2Connector
 from rai.communication.ros2.runtime import ROS2Runtime
 from rclpy.callback_groups import (
     CallbackGroup,
@@ -48,54 +45,38 @@ from .helpers import (
 _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
 
 
-def test_ros2_connector_send_message(ros_setup: None, request: pytest.FixtureRequest):
+def test_ros2_connector_publish(ros_setup: None, request: pytest.FixtureRequest):
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     message_receiver = MessageSubscriber(topic_name)
     executors, threads = multi_threaded_spinner([message_receiver])
     connector = ROS2Connector()
     try:
-        message = ROS2Message(
-            payload={"data": "Hello, world!"},
-            metadata={"msg_type": "std_msgs/msg/String"},
-        )
-        connector.send_message(
-            message=message, target=topic_name, msg_type="std_msgs/msg/String"
-        )
+        connector.sync.publish(topic_name, String(data="Hello, world!"))
         time.sleep(1)  # wait for the message to be received
         assert message_receiver.received_messages == [String(data="Hello, world!")]
     finally:
-        connector.shutdown()
+        connector.close()
         shutdown_executors_and_threads(executors, threads)
 
 
-def test_ros2_connector_receive_message(
-    ros_setup: None, request: pytest.FixtureRequest
-):
+def test_ros2_connector_receive(ros_setup: None, request: pytest.FixtureRequest):
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     message_publisher = MessagePublisher(topic_name)
     executors, threads = multi_threaded_spinner([message_publisher])
     connector = ROS2Connector()
     try:
-        message = connector.receive_message(topic_name, timeout_sec=1.0)
-        assert message.payload == String(data="Hello, ROS2!")
+        message = connector.sync.receive(topic_name, timeout=1.0)
+        assert message == String(data="Hello, ROS2!")
     finally:
-        connector.shutdown()
+        connector.close()
         shutdown_executors_and_threads(executors, threads)
 
 
-def service_call_helper(
-    service_name: str, connector: ROS2Connector, timeout_sec: float = 5.0
-):
-    message = ROS2Message(payload={"data": True})
-    response = connector.service_call(
-        message,
-        target=service_name,
-        msg_type="std_srvs/srv/SetBool",
-        timeout_sec=timeout_sec,
+def call_helper(service_name: str, connector: ROS2Connector, timeout: float = 5.0):
+    response = connector.sync.call(
+        service_name, SetBool.Request(data=True), timeout=timeout
     )
-    assert response.payload == SetBool.Response(
-        success=True, message="Test service called"
-    )
+    assert response == SetBool.Response(success=True, message="Test service called")
 
 
 @pytest.mark.parametrize(
@@ -103,7 +84,7 @@ def service_call_helper(
     [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
     ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
 )
-def test_ros2_connector_service_call(
+def test_ros2_connector_call(
     ros_setup: None, request: pytest.FixtureRequest, callback_group: CallbackGroup
 ):
     service_name = f"{request.node.originalname}_service"  # type: ignore
@@ -111,9 +92,9 @@ def test_ros2_connector_service_call(
     executors, threads = multi_threaded_spinner([message_receiver])
     connector = ROS2Connector()
     try:
-        service_call_helper(service_name, connector)
+        call_helper(service_name, connector)
     finally:
-        connector.shutdown()
+        connector.close()
         shutdown_executors_and_threads(executors, threads)
 
 
@@ -122,7 +103,7 @@ def test_ros2_connector_service_call(
     [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
     ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
 )
-def test_ros2_connector_service_call_multiple_calls(
+def test_ros2_connector_call_multiple_calls(
     ros_setup: None, request: pytest.FixtureRequest, callback_group: CallbackGroup
 ):
     service_name = f"{request.node.originalname}_service"  # type: ignore
@@ -131,9 +112,9 @@ def test_ros2_connector_service_call_multiple_calls(
     connector = ROS2Connector()
     try:
         for _ in range(3):
-            service_call_helper(service_name, connector)
+            call_helper(service_name, connector)
     finally:
-        connector.shutdown()
+        connector.close()
         shutdown_executors_and_threads(executors, threads)
 
 
@@ -142,7 +123,7 @@ def test_ros2_connector_service_call_multiple_calls(
     [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
     ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
 )
-def test_ros2_connector_service_call_multiple_calls_at_the_same_time_threading(
+def test_ros2_connector_call_multiple_calls_at_the_same_time_threading(
     ros_setup: None, request: pytest.FixtureRequest, callback_group: CallbackGroup
 ):
     service_name = f"{request.node.originalname}_service"  # type: ignore
@@ -155,7 +136,7 @@ def test_ros2_connector_service_call_multiple_calls_at_the_same_time_threading(
         # The handler sleeps up to 1 s; with a mutually exclusive group the 10
         # calls run one after another, so the last answers after up to 10 s.
         try:
-            service_call_helper(service_name, connector, timeout_sec=15.0)
+            call_helper(service_name, connector, timeout=15.0)
         except BaseException as e:
             errors.append(e)
 
@@ -170,7 +151,7 @@ def test_ros2_connector_service_call_multiple_calls_at_the_same_time_threading(
             thread.join()
         assert not errors, errors
     finally:
-        connector.shutdown()
+        connector.close()
         shutdown_executors_and_threads(executors, threads)
 
 
@@ -180,7 +161,7 @@ def test_ros2_connector_service_call_multiple_calls_at_the_same_time_threading(
     [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
     ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
 )
-def test_ros2_connector_service_call_multiple_calls_at_the_same_time_multiprocessing(
+def test_ros2_connector_call_multiple_calls_at_the_same_time_multiprocessing(
     ros_setup: None, request: pytest.FixtureRequest, callback_group: CallbackGroup
 ):
     service_name = f"{request.node.originalname}_service"  # type: ignore
@@ -189,9 +170,9 @@ def test_ros2_connector_service_call_multiple_calls_at_the_same_time_multiproces
     connector = ROS2Connector()
     try:
         with Pool(10) as pool:
-            pool.map(lambda _: service_call_helper(service_name, connector), range(10))
+            pool.map(lambda _: call_helper(service_name, connector), range(10))
     finally:
-        connector.shutdown()
+        connector.close()
         shutdown_executors_and_threads(executors, threads)
 
 
@@ -201,21 +182,14 @@ def test_ros2_connector_send_goal(ros_setup: None, request: pytest.FixtureReques
     executors, threads = multi_threaded_spinner([action_server])
     connector = ROS2Connector()
     try:
-        message = ROS2Message(
-            payload={},
-        )
-        handle = connector.start_action(
-            action_data=message,
-            target=action_name,
-            msg_type="nav2_msgs/action/NavigateToPose",
-        )
-        assert handle is not None
+        handle = connector.sync.send_goal(action_name, NavigateToPose.Goal())
+        assert handle.id
     finally:
-        connector.shutdown()
+        connector.close()
         shutdown_executors_and_threads(executors, threads)
 
 
-def test_ros2_connector_send_goal_and_terminate_action(
+def test_ros2_connector_send_goal_and_cancel(
     ros_setup: None, request: pytest.FixtureRequest
 ):
     action_name = f"{request.node.originalname}_action"  # type: ignore
@@ -224,21 +198,17 @@ def test_ros2_connector_send_goal_and_terminate_action(
     connector = ROS2Connector()
     feedbacks: List[Any] = []
     try:
-        message = ROS2Message(payload={})
-        handle = connector.start_action(
-            action_data=message,
-            target=action_name,
-            on_feedback=lambda feedback: feedbacks.append(feedback),
-            msg_type="nav2_msgs/action/NavigateToPose",
+        handle = connector.sync.send_goal(
+            action_name, NavigateToPose.Goal(), on_feedback=feedbacks.append
         )
-        assert handle is not None
+        assert handle.id
         feedbacks_before = feedbacks
-        connector.terminate_action(handle)
+        handle.sync.cancel()
         time.sleep(0.2)
         feedbacks_after = feedbacks
         assert len(feedbacks_after) == len(feedbacks_before)
     finally:
-        connector.shutdown()
+        connector.close()
         shutdown_executors_and_threads(executors, threads)
 
 
@@ -250,16 +220,14 @@ def test_ros2_connector_send_goal_erroneous_callback(
     executors, threads = multi_threaded_spinner([action_server])
     connector = ROS2Connector()
     try:
-        message = ROS2Message(payload={})
-        handle = connector.start_action(
-            action_data=message,
-            target=action_name,
+        handle = connector.sync.send_goal(
+            action_name,
+            NavigateToPose.Goal(),
             on_feedback=lambda feedback: 1 / 0,  # trigger ZeroDivisionError
-            msg_type="nav2_msgs/action/NavigateToPose",
         )
-        assert handle is not None
+        assert handle.id
     finally:
-        connector.shutdown()
+        connector.close()
         shutdown_executors_and_threads(executors, threads)
 
 
@@ -283,7 +251,7 @@ def test_ros2_connector_create_service(ros_setup: None, request: pytest.FixtureR
         time.sleep(0.2)
         assert mock_callback.called
     finally:
-        connector.shutdown()
+        connector.close()
         shutdown_executors_and_threads(executors, threads)
 
 
@@ -306,6 +274,7 @@ def test_ros2_connector_action_call(ros_setup: None, request: pytest.FixtureRequ
         time.sleep(0.02)
         assert mock_callback.called
     finally:
+        connector.close()
         shutdown_executors_and_threads(executors, threads)
 
 
@@ -314,13 +283,13 @@ def test_ros2_connector_unique_names(ros_setup: None):
     connector1 = ROS2Connector(runtime=ROS2Runtime())
     connector2 = ROS2Connector(runtime=ROS2Runtime())
     try:
-        name1 = connector1._node.get_name()
-        name2 = connector2._node.get_name()
+        name1 = connector1.node_name
+        name2 = connector2.node_name
         assert name1 != name2
-        assert name1.startswith("rai_") and name2.startswith("rai_")
+        assert name1.startswith("/rai_") and name2.startswith("/rai_")
     finally:
-        connector1.shutdown()
-        connector2.shutdown()
+        connector1.close()
+        connector2.close()
 
 
 def test_ros2_connector_parameter(ros_setup: None):

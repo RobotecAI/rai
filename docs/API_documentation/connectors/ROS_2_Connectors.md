@@ -89,17 +89,19 @@ RAI provides utilities for error handling and parameter access when working with
 
 -   `get_param_value()`: Utility function for simplified ROS2 parameter access with automatic type conversion and default value support. Reduces boilerplate compared to direct ROS2 parameter API usage.
 
+`ROS2Connector` calls raise `ROS2TimeoutError` when a service or action server does not answer in time, and `ROS2GoalRejectedError` when a goal is rejected.
+
 ```python
-from rai.communication.ros2 import ROS2ServiceError, ROS2ParameterError, get_param_value
+from std_srvs.srv import Trigger
 
-# Access parameters with defaults
-service_name = get_param_value(node, "/my_service/name", default="/default_service")
+from rai.communication.ros2 import ROS2Connector, ROS2TimeoutError
 
-# Handle service errors
-try:
-    response = connector.service_call(...)
-except ROS2ServiceError as e:
-    print(f"Service {e.service_name} unavailable: {e.suggestion}")
+with ROS2Connector() as connector:
+    rate = connector.declare_parameter("rate", 1.0)  # --ros-args overrides win
+    try:
+        response = connector.sync.call("/reset", Trigger.Request(), timeout=5.0)
+    except ROS2TimeoutError as e:
+        print(f"No answer: {e}")
 ```
 
 ## See Also

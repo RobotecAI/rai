@@ -52,49 +52,39 @@ At the heart of this integration is the `rai.communication.ros2.ROS2Connector`, 
 ## Integration Examples
 
 ```python
-from rai.communication.ros2 import ROS2Connector, ROS2Context, ROS2Message
+from geometry_msgs.msg import PoseStamped
+from nav2_msgs.action import NavigateToPose
+from std_msgs.msg import String
+from std_srvs.srv import SetBool
+
+from rai.communication.ros2 import ROS2Connector, ROS2Context
 
 
 @ROS2Context()
 def main():
-    connector = ROS2Connector()
+    with ROS2Connector() as connector:
+        # Subscribe to a topic: the callback gets the ROS 2 message
+        subscription = connector.subscribe("/topic", print, msg_type=String)
+        subscription.close()
 
-    # Subscribe to a topic
-    def my_custom_callback(message: ROS2Message):
-        message.payload  # actual ROS 2 message
+        # Receive the latest message
+        message = connector.sync.receive("/topic", timeout=1.0)
 
-    connector.register_callback("/topic", my_custom_callback)
+        # Publish a message
+        connector.sync.publish("/topic", String(data="Hello, ROS 2!"))
 
-    # Receive a message
-    message = connector.receive_message("/topic")
-    message.payload  # actual ROS 2 message
+        # Call a service
+        response = connector.sync.call("/service", SetBool.Request(data=True))
 
-    # Publish a message
-    message = ROS2Message(payload={"data": "Hello, ROS 2!"})
-    connector.send_message(message, "/topic", msg_type="std_msgs/msg/String")
+        # Send an action goal and follow it through its GoalHandle
+        goal = NavigateToPose.Goal(pose=PoseStamped())
+        goal.pose.pose.position.x = 1.0
+        handle = connector.sync.send_goal(
+            "/navigate_to_pose", goal, on_feedback=print
+        )
 
-    # Call a service
-    request = ROS2Message(payload={"data": True})
-    response = connector.service_call(
-        message=request, target="/service", msg_type="std_srvs/msg/SetBool"
-    )
-
-    # Start an action
-    def my_custom_feedback_callback(feedback: ROS2Message):
-        feedback.payload  # actual ROS 2 feedback
-
-    message = ROS2Message(
-        payload={"pose": {"position": {"x": 1.0, "y": 2.0, "z": 0.0}}}
-    )
-    action_id = connector.start_action(
-        action_data=message,
-        target="/navigate_to_pose",
-        msg_type="nav2_msgs/action/NavigateToPose",
-        feedback_callback=my_custom_feedback_callback,
-    )
-
-    # Cancel an action
-    connector.terminate_action(action_id)
+        # Cancel the goal
+        handle.sync.cancel()
 ```
 
 ## Best Practices
@@ -106,7 +96,7 @@ def main():
 
 2. **Resource Management**
 
-    - Use the connector's shutdown method when done
+    - Close the connector when done (`close()` or a `with` block)
     - Handle exceptions appropriately
 
 3. **Performance Considerations**

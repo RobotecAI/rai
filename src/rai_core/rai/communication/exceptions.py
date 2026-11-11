@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Robotec.AI
+# Copyright (C) 2024 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,16 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import MagicMock
 
-import pytest
-from rai.communication.ros2.ros_async import get_future_result
+class ConnectorException(Exception):
+    """Base exception for all connector exceptions."""
 
 
-def test_get_future_result_rejects_nonpositive_timeout_sec():
-    future = MagicMock()
-    with pytest.raises(ValueError, match="timeout_sec must be positive"):
-        get_future_result(future, timeout_sec=0)
-    with pytest.raises(ValueError, match="timeout_sec must be positive"):
-        get_future_result(future, timeout_sec=-1.0)
-    future.add_done_callback.assert_not_called()
+class ConnectorClosedError(ConnectorException):
+    """The connector is closed, or was closed while the call was waiting."""

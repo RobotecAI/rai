@@ -18,7 +18,6 @@ import asyncio
 import json
 import time
 import uuid
-import warnings
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
@@ -537,12 +536,7 @@ def test_install_listens_on_ros(client: ROS2Connector) -> None:
 # ------------------------------------------------------------ bypasses
 
 
-def test_node_warns_once_per_call_site(client: ROS2Connector) -> None:
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        for _ in range(3):
-            client.node  # noqa: B018
-        client.node  # noqa: B018
-    messages = [str(w.message) for w in caught if w.category is RuntimeWarning]
-    assert len(messages) == 2
-    assert "egress hooks" in messages[0] and "EStop" in messages[0]
+def test_connector_exposes_no_node(client: ROS2Connector) -> None:
+    """A node would let callers publish around the egress hooks."""
+    with pytest.raises(AttributeError):
+        client.node  # noqa: B018  # pyright: ignore[reportAttributeAccessIssue]

@@ -54,7 +54,7 @@ To stop the agent's turn as well, use `estop.on_engage(lambda _: agent.interrupt
 
 ## Bypasses
 
-`connector.node` bypasses the egress hooks. It warns once per call site and will be removed. The ROS 2 CLI toolkit only offers read commands.
+Connectors do not expose their ROS 2 node, so every publish, service call, goal and cancel goes through the egress hooks. The ROS 2 CLI toolkit only offers read commands.
 
 ## API
 

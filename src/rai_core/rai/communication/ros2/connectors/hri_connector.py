@@ -110,7 +110,7 @@ class ROS2HRIConnector(ROS2Base):
         self._check()
         if isinstance(message, str):
             message = HRIMessage(message)
-        self._runtime.publish(target, to_ros(message), QoS.HRI)
+        await self._runtime.apublish(target, to_ros(message), QoS.HRI)
 
     def subscribe(
         self,
@@ -124,7 +124,7 @@ class ROS2HRIConnector(ROS2Base):
         never drops."""
         return self._subscribe(
             source, callback, HRI_TYPE, QoS.HRI, maxsize, decode=from_ros
-        )[1]
+        )
 
     async def receive(
         self, source: str, *, timeout: float = 1.0, max_age: Optional[float] = None

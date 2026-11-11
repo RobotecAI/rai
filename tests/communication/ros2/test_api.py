@@ -26,14 +26,13 @@ import cv2
 import numpy as np
 import pytest
 from example_interfaces.action import Fibonacci
-from rai.communication.base_connector import ConnectorClosedError
+from rai.communication.exceptions import ConnectorClosedError
 from rai.communication.ros2 import (
     GoalStatus,
     QoS,
     ROS2Connector,
     ROS2GoalRejectedError,
     ROS2HRIConnector,
-    ROS2Message,
     ROS2TimeoutError,
     encode_image,
     views,
@@ -190,7 +189,7 @@ def test_async_callback_is_awaited_in_order(connector, server):
     assert received == sorted(received) and received[-1] == 49
 
 
-def test_service_call_errors(connector, server):
+def test_call_errors(connector, server):
     srv = unique("setbool")
     server.create_service(
         SetBool, srv, lambda req, res: setattr(res, "success", req.data) or res
@@ -199,10 +198,8 @@ def test_service_call_errors(connector, server):
     with pytest.raises(ROS2TimeoutError):
         connector.sync.call(unique("missing"), SetBool.Request(), timeout=0.2)
     with pytest.raises(AttributeError):
-        connector.service_call(
-            ROS2Message(payload={}),
-            srv,
-            msg_type="std_srvs/srv/NotExistingService",
+        connector.sync.call(
+            srv, SetBool.Request(), srv_type="std_srvs/srv/NotExistingService"
         )
 
 

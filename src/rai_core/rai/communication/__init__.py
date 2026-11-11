@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .base_connector import BaseConnector, BaseMessage
+from .exceptions import ConnectorClosedError, ConnectorException
 from .hri_connector import HRIConnector, HRIMessage
 
 __all__ = [
-    "BaseConnector",
-    "BaseMessage",
+    "ConnectorClosedError",
+    "ConnectorException",
     "HRIConnector",
     "HRIMessage",
 ]

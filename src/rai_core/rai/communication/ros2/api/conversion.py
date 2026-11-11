@@ -14,7 +14,7 @@
 
 import base64
 import functools
-from typing import Any, OrderedDict, Protocol, Type, runtime_checkable
+from typing import Any, OrderedDict, Type
 
 import cv2
 import numpy as np
@@ -27,13 +27,6 @@ from rosidl_runtime_py.import_message import import_message_from_namespaced_type
 from rosidl_runtime_py.utilities import get_namespaced_type
 
 from rai.communication.ros2.images import compressed_imgmsg_to_numpy, imgmsg_to_numpy
-
-
-@runtime_checkable
-class IROS2Message(Protocol):
-    __slots__: list
-
-    def get_fields_and_field_types(self) -> dict: ...
 
 
 def ros2_message_to_dict(message: Any) -> OrderedDict[str, Any]:
@@ -90,11 +83,6 @@ def convert_ros_img_to_ndarray(
         raise ValueError(f"Unsupported encoding: {encoding}")
 
     return image
-
-
-def convert_ros_img_to_cv2mat(msg: sensor_msgs.msg.Image) -> cv2.typing.MatLike:
-    """Return the image as a bgr8 array (cv2 channel order)."""
-    return imgmsg_to_numpy(msg, "bgr8")
 
 
 def convert_ros_img_to_base64(

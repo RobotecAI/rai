@@ -39,7 +39,9 @@ from tests.communication.ros2.helpers import (
 _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
 
 
-def test_service_call_tool(ros_setup: None, request: pytest.FixtureRequest) -> None:
+def test_call_ros2_service_tool(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
     service_name = f"{request.node.originalname}_service"  # type: ignore
     connector = ROS2Connector()
     server = ServiceServer(service_name=service_name)
@@ -57,7 +59,7 @@ def test_service_call_tool(ros_setup: None, request: pytest.FixtureRequest) -> N
         shutdown_executors_and_threads(executors, threads)
 
 
-def test_service_call_tool_with_forbidden_service(
+def test_call_ros2_service_tool_with_forbidden_service(
     ros_setup: None, request: pytest.FixtureRequest
 ) -> None:
     service_name = f"{request.node.originalname}_service"  # type: ignore
@@ -71,7 +73,7 @@ def test_service_call_tool_with_forbidden_service(
         )
 
 
-def test_service_call_tool_with_writable_service(
+def test_call_ros2_service_tool_with_writable_service(
     ros_setup: None, request: pytest.FixtureRequest
 ) -> None:
     service_name = f"{request.node.originalname}_service"  # type: ignore

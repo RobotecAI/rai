@@ -39,7 +39,7 @@ _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
 def connector(ros_setup: None):
     connector = ROS2Connector()
     yield connector
-    connector.shutdown()
+    connector.close()
 
 
 @pytest.mark.parametrize(

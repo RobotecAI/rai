@@ -8,23 +8,9 @@ and other I/O systems.
 
 ## Connector Architecture
 
-The connector architecture is built on a hierarchy of abstract base classes and concrete
-implementations:
+Each transport has its own connector classes. They share no base class: a ROS 2 connector speaks native ROS 2 messages, an HRI connector speaks `HRIMessage`s.
 
-### Base Classes
-
-#### BaseConnector[T]
-
-??? info "BaseConnector class definition"
-
-    ::: rai.communication.base_connector.BaseConnector
-
-The foundation interface that defines common communication patterns:
-
--   Message passing (publish/subscribe)
--   Service calls (request/response)
--   Actions (long-running operations with feedback)
--   Callback registration for asynchronous notifications
+### Interfaces
 
 #### HRIConnector
 
@@ -50,41 +36,34 @@ A protocol for Human-Robot Interaction transports (`send`, `subscribe`, `close`)
 
 ### Message Types
 
-Connectors are generic over message types derived from BaseMessage:
-
--   **BaseMessage**: Foundation message type with payload and metadata
--   **ROS2Message**: Message type for ROS 2 communication
--   **HRIMessage**: Multimodal message with text, images, and audio (a dataclass, not a BaseMessage)
+-   **ROS 2 messages**: `ROS2Connector` takes and returns the native message, service and action types
+-   **HRIMessage**: Multimodal message with text, images, and audio
 
 ### Communication Patterns
 
-Connectors support multiple communication patterns:
+`ROS2Connector` methods are async; `connector.sync` has blocking twins of `publish`, `receive`, `call`, `send_goal` and `transform`.
 
 1.  **Publish/Subscribe**
 
-    -   `send_message(message, target, **kwargs)`: Send a message to a target
-    -   `receive_message(source, timeout_sec, **kwargs)`: Receive a message from a source
-    -   `register_callback(source, callback, **kwargs)`: Register for asynchronous notifications
+    -   `publish(topic, msg, qos=...)`: Publish a message
+    -   `receive(topic, timeout=..., max_age=...)`: The latest message on a topic
+    -   `subscribe(topic, callback=None)`: A `Subscription`, delivered to the callback or iterated
 
 2.  **Request/Response**
 
-    -   `service_call(message, target, timeout_sec, **kwargs)`: Make a synchronous service call
+    -   `call(service, request, timeout=...)`: Call a service and return its response
+    -   `create_service(name, on_request, service_type=...)`: Serve a service
 
 3.  **Actions**
 
-    -   `start_action(action_data, target, on_feedback, on_done, timeout_sec, **kwargs)`: Start a
-        long-running action
-    -   `terminate_action(action_handle, **kwargs)`: Cancel an ongoing action
-    -   `create_action(action_name, generate_feedback_callback, **kwargs)`: Create an action server
+    -   `send_goal(action, goal, on_feedback=..., on_done=...)`: A `GoalHandle` with `result()`, `feedback()` and `cancel()`
+    -   `create_action(name, execute, action_type=...)`: Serve an action
 
 ## Threading Model
 
-Connectors implement thread-safe operations:
-
--   ROS 2 connectors use a dedicated thread with MultiThreadedExecutor
--   Callbacks are executed in a ThreadPoolExecutor for concurrent processing
--   Proper synchronization for shared resources
--   Clean shutdown handling for all resources
+-   ROS 2 connectors share a runtime with one node, one executor and one spin thread
+-   User callbacks run off the executor thread, one at a time per subscription, in arrival order
+-   `close()` (or leaving a `with` block) fails pending calls with `ConnectorClosedError` and destroys the entities
 
 ## Usage Examples
 
@@ -94,12 +73,9 @@ Connectors implement thread-safe operations:
 
 ## Error Handling
 
-Connectors implement robust error handling:
-
--   All operations have appropriate timeout parameters
--   Exceptions are properly propagated and documented
--   Callbacks are executed in a protected manner to prevent crashes
--   Resources are properly cleaned up during shutdown
+-   Every wait has a timeout and raises `ROS2TimeoutError` (a `TimeoutError`) when it expires
+-   Calls on a closed connector raise `rai.communication.ConnectorClosedError`
+-   An exception in a user callback is logged and never stops message delivery
 
 ## See Also
 

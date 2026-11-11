@@ -97,7 +97,7 @@ def test_transport(qos_profile: str):
     topics = ["/image", "/text"]
     try:
         for topic in topics:
-            _ = connector.receive_message(topic, timeout_sec=15.0)
+            _ = connector.sync.receive(topic, timeout=15.0)
     finally:
         # Cancel timers before shutdown to prevent callbacks from using destroyed publishers
         try:
@@ -108,7 +108,7 @@ def test_transport(qos_profile: str):
         # Give executor time to process cancellations
         time.sleep(0.1)
         executor.shutdown()
-        connector.shutdown()
+        connector.close()
         publisher.destroy_node()
         rclpy.shutdown()
         thread.join(timeout=1.0)

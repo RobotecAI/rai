@@ -27,11 +27,7 @@ from typing import Any
 import pytest
 from example_interfaces.action import Fibonacci
 from geometry_msgs.msg import Twist, TwistStamped
-from rai.communication.ros2 import (
-    ROS2Connector,
-    ROS2HRIConnector,
-    ROS2Message,
-)
+from rai.communication.ros2 import ROS2Connector, ROS2HRIConnector
 from rai.communication.ros2 import runtime as runtime_module
 from rai.communication.ros2.egress import (
     ALL_KINDS,
@@ -150,12 +146,8 @@ def test_publish_paths_are_gated(client: ROS2Connector) -> None:
         client.sync.publish(topic, String(data="a"))
     with pytest.raises(EgressDenied):
         asyncio.run(client.publish(topic, String(data="b")))
-    with pytest.raises(EgressDenied):
-        client.send_message(
-            ROS2Message(payload={"data": "c"}), topic, msg_type="std_msgs/msg/String"
-        )
     seen = hook.seen
-    assert [e.payload.data for e in seen] == ["a", "b", "c"]
+    assert [e.payload.data for e in seen] == ["a", "b"]
     assert {(e.kind, e.name, e.type) for e in seen} == {
         ("publish", topic, "std_msgs/msg/String")
     }
@@ -175,14 +167,14 @@ def test_hri_publish_is_gated(ros_setup: None) -> None:
         hri.close()
 
 
-def test_service_call_is_gated(client: ROS2Connector, server: ROS2Connector) -> None:
+def test_call_is_gated(client: ROS2Connector, server: ROS2Connector) -> None:
     calls: list[Any] = []
     name = serve_trigger(server, calls)
     hook = client.egress.add(Recorder(Deny("no calls")), types={TRIGGER})
     with pytest.raises(EgressDenied, match="no calls"):
         client.sync.call(name, Trigger.Request(), timeout=10.0)
     with pytest.raises(EgressDenied):
-        client.service_call(ROS2Message(payload={}), name, 10.0, msg_type=TRIGGER)
+        asyncio.run(client.call(name, Trigger.Request(), timeout=10.0))
     assert [(e.kind, e.name, e.type) for e in hook.seen] == [
         ("service", name, TRIGGER)
     ] * 2
@@ -359,19 +351,16 @@ def test_hooks_never_run_on_the_executor_thread(client: ROS2Connector) -> None:
     async_hook = client.egress.add(AsyncRecorder(), types={"std_msgs/msg/String"})
     client.sync.publish(unique("t"), String())  # sync API: the private loop
     asyncio.run(client.publish(unique("t"), String()))  # async API: the caller's loop
-    client.send_message(
-        ROS2Message(payload={}), unique("t"), msg_type="std_msgs/msg/String"
-    )
     threads = sync_hook.threads + async_hook.threads
     assert "rai_ros2_spin" not in threads
-    assert async_hook.threads == ["rai_ros2_loop", "MainThread", "rai_ros2_loop"]
+    assert async_hook.threads == ["rai_ros2_loop", "MainThread"]
 
 
 def test_async_hook_from_an_async_callback(
     client: ROS2Connector, server: ROS2Connector
 ) -> None:
-    """Sync publish from a callback running on the private loop still runs
-    async hooks (on a worker), instead of deadlocking that loop."""
+    """A publish awaited in a callback running on the private loop runs async
+    hooks on that loop, instead of deadlocking it."""
     hook = client.egress.add(AsyncRecorder(), names={"/egress_relay_out_*"})
     source, sink = unique("relay_in"), unique("relay_out")
     done = threading.Event()
@@ -379,11 +368,7 @@ def test_async_hook_from_an_async_callback(
 
     async def relay(msg: Any) -> None:
         try:
-            client.send_message(
-                ROS2Message(payload={"data": msg.data}),
-                sink,
-                msg_type="std_msgs/msg/String",
-            )
+            await client.publish(sink, String(data=msg.data))
         except BaseException as e:
             errors.append(e)
         done.set()

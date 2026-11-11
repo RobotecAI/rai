@@ -33,7 +33,6 @@ import asyncio
 import atexit
 import concurrent.futures
 import contextlib
-import contextvars
 import inspect
 import logging
 import threading
@@ -55,7 +54,7 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 from rclpy.signals import SignalHandlerOptions
 from rclpy.task import Future
 
-from rai.communication.base_connector import ConnectorClosedError
+from rai.communication.exceptions import ConnectorClosedError
 from rai.communication.ros2 import compat
 from rai.communication.ros2.api.conversion import import_message_from_str
 from rai.communication.ros2.egress import (
@@ -160,8 +159,8 @@ class Waiter:
         return self
 
 
-def fail(waiters: set[Waiter], error: BaseException) -> None:
-    for waiter in list(waiters):
+def fail(pending: set[Waiter], error: BaseException) -> None:
+    for waiter in list(pending):
         waiter.resolve(error=error)
 
 
@@ -222,7 +221,7 @@ class Topic:
         self.subscription: Any = None
         self.last: Optional[tuple[Any, float, float]] = None  # msg, monotonic, wall
         self.consumers: tuple[Callable[[Any], None], ...] = ()
-        self.waiters: list[Waiter] = []
+        self.pending: list[Waiter] = []
         self.lock = threading.Lock()
         self.rematched = False
 
@@ -230,9 +229,9 @@ class Topic:
         sample = (msg, time.monotonic(), time.time())
         with self.lock:
             self.last = sample
-            waiters, self.waiters = self.waiters, []
+            pending, self.pending = self.pending, []
             consumers = self.consumers
-        for waiter in waiters:
+        for waiter in pending:
             waiter.resolve(sample)
         for consume in consumers:
             try:
@@ -254,7 +253,7 @@ class Topic:
 
 
 class Client:
-    """A cached service or action client and the waiters of its calls."""
+    """A cached service or action client and the waits of its calls."""
 
     def __init__(self, entity: Any, msg_type: Any, name: str) -> None:
         self.entity = entity
@@ -305,7 +304,7 @@ class ROS2Runtime:
         self.egress = EgressHooks()  # after global_egress, for this runtime only
         self._lock = threading.RLock()
         self._closed = False
-        self._waiters: set[Waiter] = set()
+        self._pending: set[Waiter] = set()
         self._on_close: list[Callable[[], None]] = []
         self._topics: dict[tuple[str, bool], Topic] = {}
         self._publishers: dict[str, Any] = {}
@@ -369,7 +368,7 @@ class ROS2Runtime:
                 callback()
             except Exception:
                 logger.exception("Error while closing a connector")
-        fail(self._waiters, closed)
+        fail(self._pending, closed)
         for client in self._clients.values():
             fail(client.pending, closed)
         self.workers.shutdown(wait=False, cancel_futures=True)
@@ -458,7 +457,7 @@ class ROS2Runtime:
     ) -> Any:
         """Await a waiter; ROS2TimeoutError after timeout, ConnectorClosedError
         if the runtime or an owning group is closed meanwhile."""
-        for group in (self._waiters, *groups):
+        for group in (self._pending, *groups):
             group.add(waiter)
         try:
             self.check()
@@ -466,7 +465,7 @@ class ROS2Runtime:
         except TimeoutError:
             raise ROS2TimeoutError(f"{what} timed out after {timeout:g} s") from None
         finally:
-            for group in (self._waiters, *groups):
+            for group in (self._pending, *groups):
                 group.discard(waiter)
 
     def call_in_worker(self, fn: Callable[..., Any], *args: Any) -> Future:
@@ -510,7 +509,7 @@ class ROS2Runtime:
 
     def _drop_topics(self, name: str, cls: Any) -> bool:
         """Destroy idle subscriptions to name of another type than cls (raw
-        or not); TypeError if one still has consumers or waiters."""
+        or not); TypeError if one still has consumers or pending waits."""
         stale = [
             key
             for key in ((name, False), (name, True))
@@ -520,7 +519,7 @@ class ROS2Runtime:
         ]
         for key in stale:
             topic = self._topics[key]
-            if topic.consumers or topic.waiters:
+            if topic.consumers or topic.pending:
                 raise TypeError(
                     f"{name} is subscribed as {topic.msg_type.__name__}, not {cls.__name__}"
                 )
@@ -591,7 +590,7 @@ class ROS2Runtime:
                 return False
             key = (self.resolve(name), raw)
             topic = self._topics.get(key)
-            if topic is None or topic.consumers or topic.waiters:
+            if topic is None or topic.consumers or topic.pending:
                 return False
             del self._topics[key]
         compat.destroy(self.node, topic.subscription)
@@ -605,14 +604,6 @@ class ROS2Runtime:
                     raise ValueError(f"Topic {topic} has several types: {types}")
                 return import_message_from_str(types[0])
         raise ValueError(f"Topic {topic} not found; pass msg_type")
-
-    def publish(self, name: str, msg: Any, qos: QoSProfile) -> None:
-        """Publish from sync code; raises EgressDenied if a hook refuses."""
-        self.check()
-        topic = self.resolve(name)
-        if global_egress._entries or self.egress._entries:
-            self.gate("publish", topic, type(msg), msg)
-        self._publish(topic, msg, qos)
 
     async def apublish(self, name: str, msg: Any, qos: QoSProfile) -> None:
         """Publish from async code; raises EgressDenied if a hook refuses."""
@@ -662,25 +653,6 @@ class ROS2Runtime:
         if threading.current_thread() is self._spin_thread:  # no user code here
             check.refuse("cannot run on the executor thread")
         return check
-
-    def gate(self, kind: str, name: str, cls: Any, payload: Any) -> None:
-        """Run the egress hooks for sync callers. Sync hooks run inline; async
-        ones on the private loop (on a worker if called from that loop).
-        Raises EgressDenied."""
-        if not (global_egress._entries or self.egress._entries):
-            return
-        check = self._egress(kind, name, cls, payload)
-        if check is None:
-            return
-        pending = check.step()
-        if pending is None:
-            return
-        if threading.current_thread() is self._loop_thread:
-            ctx = contextvars.copy_context()
-            job = self.workers.submit(ctx.run, asyncio.run, check.finish(pending))
-            job.result()
-        else:
-            self.run(check.finish(pending))
 
     async def agate(self, kind: str, name: str, cls: Any, payload: Any) -> None:
         """Run the egress hooks on the caller's loop. Raises EgressDenied."""

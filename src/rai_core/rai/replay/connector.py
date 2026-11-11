@@ -32,7 +32,7 @@ from rclpy.clock import ClockType
 from rclpy.serialization import deserialize_message
 from rclpy.time import Time
 
-from rai.communication.base_connector import ConnectorClosedError
+from rai.communication.exceptions import ConnectorClosedError
 from rai.communication.ros2.connectors.ros2_connector import (
     GoalStatus,
     QoS,
@@ -290,7 +290,7 @@ class ReplayConnector(ROS2Connector):
         self._closed = False
         self._hooks = EgressHooks()
         self._subs: dict[str, list[_Subscription]] = {}
-        self._goals: list[ReplayGoalHandle] = []  # type: ignore[assignment]
+        self._goals: list[ReplayGoalHandle] = []
         self._tasks: set[asyncio.Task[Any]] = set()
         self._decoded: dict[int, Any] = {}
         self._tf: Any = None

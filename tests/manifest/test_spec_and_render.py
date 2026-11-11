@@ -35,17 +35,6 @@ SPEC = Path(__file__).with_name("robot.toml")
 MOTION = frozenset({"geometry_msgs/msg/Twist"})
 
 
-class FakeNode:
-    def __init__(self, graph: "FakeConnector") -> None:
-        self.graph = graph
-
-    def get_fully_qualified_name(self) -> str:
-        return "/rai"
-
-    def get_node_names_and_namespaces(self) -> list[tuple[str, str]]:
-        return list(self.graph.nodes)
-
-
 class FakeConnector:
     """The graph queries of ROS2Connector, from lists."""
 
@@ -54,7 +43,10 @@ class FakeConnector:
         self.services = list(services)
         self.actions = list(actions)
         self.nodes = list(nodes)
-        self._node = FakeNode(self)
+        self.node_name = "/rai"
+
+    def get_node_names(self) -> list[str]:
+        return sorted(f"{ns.rstrip('/')}/{name}" for name, ns in self.nodes)
 
     def resolve(self, name: str, kind: str = "topic") -> str:
         return name if name.startswith("/") else f"/{name}"

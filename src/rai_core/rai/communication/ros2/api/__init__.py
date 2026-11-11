@@ -13,18 +13,14 @@
 # limitations under the License.
 
 from .conversion import (
-    IROS2Message,
     convert_ros_img_to_base64,
-    convert_ros_img_to_cv2mat,
     convert_ros_img_to_ndarray,
     import_message_from_str,
     ros2_message_to_dict,
 )
 
 __all__ = [
-    "IROS2Message",
     "convert_ros_img_to_base64",
-    "convert_ros_img_to_cv2mat",
     "convert_ros_img_to_ndarray",
     "import_message_from_str",
     "ros2_message_to_dict",
