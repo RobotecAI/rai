@@ -1,10 +1,14 @@
-name: Pre-commit Checks
+name: lint
 
 on:
   pull_request:
     branches:
       - main
       - development
+  push:
+    branches:
+      - main
+      - mm/rai-3.0
   workflow_dispatch:
 
 permissions:
@@ -14,28 +18,17 @@ jobs:
   pre-commit:
     runs-on: ubuntu-24.04
 
-    container:
-      image: osrf/ros:jazzy-desktop-full
-
     steps:
-      - name: Install pre-commit
-        run: |
-          apt update && apt install -y python3-pip shellcheck python-is-python3
-
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 0
 
-      - run: |
-           git config --global --add safe.directory /__w/rai/rai
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
 
-      - name: Import ros2 dependencies
-        shell: bash
-        run: |
-          vcs import . < ros_deps.repos
-
+      # shellcheck comes with the ubuntu-24.04 runner image.
       - name: Run pre-commit
         uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
         with:
