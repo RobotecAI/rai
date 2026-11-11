@@ -12,137 +12,86 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Utility functions for ROS2 service name retrieval and client creation."""
+"""Calls to the detection and segmentation services, and graph checks."""
 
-from typing import Type
+import time
+from typing import Any, Iterable, Literal, Optional
 
-from rai.communication.ros2 import (
-    ROS2ServiceError,
-    get_param_value,
-    wait_for_ros2_services,
-)
-from rai.communication.ros2.connectors import ROS2Connector
+from rai.communication.ros2 import ROS2Connector
+from sensor_msgs.msg import Image
 
+from rai_interfaces.srv import RAIGroundedSam, RAIGroundingDino
 
-def get_detection_service_name(connector: ROS2Connector) -> str:
-    """Get detection service name from ROS2 parameter or use default.
-
-    Reads from parameter: /detection_tool/service_name
-    Default: "/detection" (generic, model-agnostic)
-
-    Args:
-        connector: ROS2 connector with node
-
-    Returns:
-        Service name string
-    """
-    default_service = "/detection"
-    service_name = get_param_value(
-        connector.node, "/detection_tool/service_name", default=default_service
-    )
-    if isinstance(service_name, str) and service_name:
-        return service_name
-    connector.node.get_logger().warning(
-        f"Parameter /detection_tool/service_name is invalid, using default: {default_service}"
-    )
-    return default_service
+DETECTION_SERVICE = "/detection"
+SEGMENTATION_SERVICE = "/segmentation"
+# GroundingDINO and Grounded SAM can take long, especially on a CPU.
+SERVICE_TIMEOUT_S = 60.0
 
 
-def get_segmentation_service_name(connector: ROS2Connector) -> str:
-    """Get segmentation service name from ROS2 parameter or use default.
-
-    Reads from parameter: /segmentation_tool/service_name
-    Default: "/segmentation" (generic, model-agnostic)
-
-    Args:
-        connector: ROS2 connector with node
-
-    Returns:
-        Service name string
-    """
-    default_service = "/segmentation"
-    service_name = get_param_value(
-        connector.node, "/segmentation_tool/service_name", default=default_service
-    )
-    if isinstance(service_name, str) and service_name:
-        return service_name
-    connector.node.get_logger().warning(
-        f"Parameter /segmentation_tool/service_name is invalid, using default: {default_service}"
-    )
-    return default_service
-
-
-def check_service_available(
+async def detect(
     connector: ROS2Connector,
-    service_name: str,
-    timeout_sec: float = 0.1,  # noqa: ARG001
-) -> bool:
-    """Check if a ROS2 service is available without waiting.
-
-    Uses wait_for_ros2_services with a short timeout to check availability.
-    If timeout_sec is 0 or negative, performs a non-blocking check of current
-    service list without waiting.
-
-    Args:
-        connector: ROS2 connector with node
-        service_name: Service name to check
-        timeout_sec: Timeout for checking service availability (default: 0.1).
-            If <= 0, performs non-blocking check without waiting.
-
-    Returns:
-        True if service is available, False otherwise
-    """
-    # For non-blocking check (timeout <= 0), just check current service list
-    if timeout_sec <= 0.0:
-        available_services = [
-            service[0] for service in connector.get_services_names_and_types()
-        ]
-        return service_name in available_services
-
-    try:
-        wait_for_ros2_services(connector, [service_name], timeout=timeout_sec)
-        return True
-    except (TimeoutError, ValueError):
-        return False
+    image: Image,
+    classes: str,
+    *,
+    service: str = DETECTION_SERVICE,
+    box_threshold: float = 0.35,
+    text_threshold: float = 0.45,
+    timeout: float = SERVICE_TIMEOUT_S,
+) -> Any:
+    """Detections of classes ("cup, bottle") in image (a RAIGroundingDino response)."""
+    request = RAIGroundingDino.Request(
+        source_img=image,
+        classes=classes,
+        box_threshold=box_threshold,
+        text_threshold=text_threshold,
+    )
+    return await connector.call(service, request, timeout=timeout)
 
 
-def create_service_client(
+async def segment(
     connector: ROS2Connector,
-    service_type: Type,
-    service_name: str,
-    timeout_sec: float = 1.0,
-    max_wait_time: float = 0.0,
-) -> object:
-    """Create ROS2 service client and wait for service to be available.
+    image: Image,
+    detections: Any,
+    *,
+    service: str = SEGMENTATION_SERVICE,
+    timeout: float = SERVICE_TIMEOUT_S,
+) -> Any:
+    """Masks of the detections in image (a RAIGroundedSam response)."""
+    request = RAIGroundedSam.Request(source_img=image, detections=detections)
+    return await connector.call(service, request, timeout=timeout)
 
-    Args:
-        connector: ROS2 connector with node
-        service_type: ROS2 service type class
-        service_name: Service name to connect to
-        timeout_sec: Timeout for each wait attempt (default: 1.0, unused but kept for compatibility)
-        max_wait_time: Maximum total wait time. If 0, wait indefinitely (default: 0.0)
 
-    Returns:
-        Service client instance
+Kind = Literal["service", "topic"]
 
-    Raises:
-        ROS2ServiceError: If service is not available within max_wait_time
-    """
-    try:
-        wait_for_ros2_services(connector, [service_name], timeout=max_wait_time)
-    except TimeoutError as e:
-        available_services = [s[0] for s in connector.get_services_names_and_types()]
-        raise ROS2ServiceError(
-            service_name=service_name,
-            timeout_sec=max_wait_time,
-            service_state="unavailable",
-            suggestion=(
-                f"Service not available after {max_wait_time}s. "
-                f"Available services: {sorted(available_services)[:10]}. "
-                f"Check if service is running or verify service name."
-            ),
-            underlying_error=e,
-        ) from e
 
-    cli = connector.node.create_client(service_type, service_name)
-    return cli
+def missing(
+    connector: ROS2Connector, names: Iterable[str], kind: Kind = "service"
+) -> list[str]:
+    """The names not in the ROS graph."""
+    if kind == "service":
+        graph = connector.get_services_names_and_types()
+    else:
+        graph = connector.get_topics_names_and_types()
+    available = {name for name, _ in graph}
+    return [n for n in names if connector.resolve(n, kind) not in available]
+
+
+def service_available(connector: ROS2Connector, service: str) -> bool:
+    return not missing(connector, [service])
+
+
+def wait_for(
+    connector: ROS2Connector,
+    names: Iterable[str],
+    kind: Kind = "service",
+    timeout: Optional[float] = None,
+) -> list[str]:
+    """Wait until every name is in the ROS graph; the names still missing
+    after timeout (None waits forever)."""
+    names = list(names)
+    deadline = None if timeout is None else time.monotonic() + timeout
+    while left := missing(connector, names, kind):
+        if deadline is not None and time.monotonic() >= deadline:
+            return left
+        time.sleep(0.05)
+    return []

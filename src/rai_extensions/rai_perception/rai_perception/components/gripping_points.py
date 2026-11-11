@@ -34,22 +34,33 @@ This module provides components for extracting gripping points from segmented ob
     - GrippingPointEstimatorConfig
 """
 
+import logging
 from typing import List, Literal, Optional, cast
 
 import numpy as np
-import sensor_msgs.msg
 from numpy.typing import NDArray
 from pydantic import BaseModel, Field
 from rai.communication.ros2.api import (
     convert_ros_img_to_ndarray,  # type: ignore[reportUnknownVariableType]
 )
 from rai.communication.ros2.connectors import ROS2Connector
-from rai.communication.ros2.ros_async import get_future_result
-from rclpy import Future
+from sensor_msgs.msg import CameraInfo, Image
 
-from rai_interfaces.srv import RAIGroundedSam, RAIGroundingDino
 from rai_perception.algorithms.point_cloud import depth_to_point_cloud
-from rai_perception.components.perception_utils import convert_depth_to_meters
+from rai_perception.components.math_utils import quaternion_to_rotation_matrix
+from rai_perception.components.perception_utils import (
+    convert_depth_to_meters,
+    get_camera_intrinsics,
+)
+from rai_perception.components.service_utils import (
+    DETECTION_SERVICE,
+    SEGMENTATION_SERVICE,
+    SERVICE_TIMEOUT_S,
+    detect,
+    segment,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class PointCloudFromSegmentationConfig(BaseModel):
@@ -60,7 +71,7 @@ class PointCloudFromSegmentationConfig(BaseModel):
         default=0.45, description="Text threshold for GDINO object detection"
     )
     service_timeout: float = Field(
-        default=60.0,
+        default=SERVICE_TIMEOUT_S,
         description="Timeout in seconds for GDINO/GSAM service calls. GDINO/GSAM can take longer than the default 5s, especially on CPU.",
     )
 
@@ -170,8 +181,9 @@ class PointCloudFilterConfig(BaseModel):
 class PointCloudFromSegmentation:
     """Generate a masked point cloud for an object and transform it to a target frame.
 
-    Configure with source/target TF frames and ROS2 topics. Call run(object_name) to
-    get an Nx3 numpy array of points [X, Y, Z] expressed in the target frame.
+    Configure with source/target TF frames, ROS2 topics and service names. Await
+    run(object_name) to get one Nx3 array of points [X, Y, Z] per detected
+    instance, expressed in the target frame.
     """
 
     def __init__(
@@ -185,6 +197,8 @@ class PointCloudFromSegmentation:
         target_frame: str,
         conversion_ratio: float = 1.0,
         config: PointCloudFromSegmentationConfig,
+        detection_service: str = DETECTION_SERVICE,
+        segmentation_service: str = SEGMENTATION_SERVICE,
     ) -> None:
         self.connector = connector
         self.camera_topic = camera_topic
@@ -194,126 +208,50 @@ class PointCloudFromSegmentation:
         self.target_frame = target_frame
         self.config = config
         self.conversion_ratio = conversion_ratio
+        self.detection_service = detection_service
+        self.segmentation_service = segmentation_service
 
-    # --------------------- ROS helpers ---------------------
-    def _get_image_message(self, topic: str) -> sensor_msgs.msg.Image:
-        msg = self.connector.receive_message(topic).payload
-        if isinstance(msg, sensor_msgs.msg.Image):
-            return msg
-        raise TypeError("Received wrong message type for Image")
-
-    def _get_camera_info_message(self, topic: str) -> sensor_msgs.msg.CameraInfo:
-        for _ in range(3):
-            msg = self.connector.receive_message(topic, timeout_sec=3.0).payload
-            if isinstance(msg, sensor_msgs.msg.CameraInfo):
-                return msg
-            self.connector.node.get_logger().warn(  # type: ignore[reportUnknownMemberType]
-                "Received wrong CameraInfo message type. Retrying..."
-            )
-        raise RuntimeError("Failed to receive correct CameraInfo after 3 attempts")
-
-    def _get_intrinsic_from_camera_info(
-        self, camera_info: sensor_msgs.msg.CameraInfo
-    ) -> tuple[float, float, float, float]:
-        from rai_perception.components.perception_utils import get_camera_intrinsics
-
-        return get_camera_intrinsics(camera_info)
-
-    def _get_detection_service_name(self) -> str:
-        """Get detection service name from ROS2 parameter or use default."""
-        from rai_perception.components.service_utils import get_detection_service_name
-
-        return get_detection_service_name(self.connector)
-
-    def _get_segmentation_service_name(self) -> str:
-        """Get segmentation service name from ROS2 parameter or use default."""
-        from rai_perception.components.service_utils import (
-            get_segmentation_service_name,
-        )
-
-        return get_segmentation_service_name(self.connector)
-
-    def _create_service_client(self, service_type, service_name: str):
-        """Create a service client for the given service type and name."""
-        from rai_perception.components.service_utils import create_service_client
-
-        return create_service_client(self.connector, service_type, service_name)
-
-    def _call_gdino_node(
-        self, camera_img_message: sensor_msgs.msg.Image, object_name: str
-    ) -> Future:
-        service_name = self._get_detection_service_name()
-        cli = self._create_service_client(RAIGroundingDino, service_name)  # type: ignore[reportUnknownMemberType]
-        req = RAIGroundingDino.Request()
-        req.source_img = camera_img_message
-        req.classes = object_name
-        req.box_threshold = self.config.box_threshold
-        req.text_threshold = self.config.text_threshold
-        return cli.call_async(req)
-
-    def _call_gsam_node(
-        self, camera_img_message: sensor_msgs.msg.Image, data: RAIGroundingDino.Response
-    ) -> Future:
-        service_name = self._get_segmentation_service_name()
-        cli = self._create_service_client(RAIGroundedSam, service_name)  # type: ignore[reportUnknownMemberType]
-        req = RAIGroundedSam.Request()
-        req.detections = data.detections  # type: ignore[reportUnknownMemberType]
-        req.source_img = camera_img_message
-        return cli.call_async(req)
-
-    # --------------------- Geometry helpers ---------------------
-
-    def _transform_points_source_to_target(
+    async def _transform_points_source_to_target(
         self, points_xyz: NDArray[np.float32]
     ) -> NDArray[np.float64]:
         if points_xyz.size == 0:
             return points_xyz.reshape(0, 3).astype(np.float64)
 
-        transform = self.connector.get_transform(self.target_frame, self.source_frame)
-        t = transform.transform.translation  # type: ignore[reportUnknownMemberType]
-        r = transform.transform.rotation  # type: ignore[reportUnknownMemberType]
-        qw = float(r.w)  # type: ignore[reportUnknownMemberType]
-        qx = float(r.x)  # type: ignore[reportUnknownMemberType]
-        qy = float(r.y)  # type: ignore[reportUnknownMemberType]
-        qz = float(r.z)  # type: ignore[reportUnknownMemberType]
-
-        from rai_perception.components.math_utils import quaternion_to_rotation_matrix
-
-        rotation_matrix = quaternion_to_rotation_matrix(qx, qy, qz, qw)
-        translation = np.array([float(t.x), float(t.y), float(t.z)], dtype=np.float64)  # type: ignore[reportUnknownMemberType]
-
-        transformed = (points_xyz.astype(np.float64) @ rotation_matrix.T) + translation
-
-        return transformed
-
-    # --------------------- Public API ---------------------
-    def run(self, object_name: str) -> list[NDArray[np.float32]]:
-        """Return Nx3 numpy array [X, Y, Z] of the object's masked point cloud in target frame."""
-        logger = self.connector.node.get_logger()
-
-        camera_img_msg = self._get_image_message(self.camera_topic)
-        depth_msg = self.connector.receive_message(self.depth_topic).payload
-        camera_info = self._get_camera_info_message(self.camera_info_topic)
-
-        fx, fy, cx, cy = self._get_intrinsic_from_camera_info(camera_info)
-
-        gdino_future = self._call_gdino_node(camera_img_msg, object_name)
-        gdino_resolved = get_future_result(
-            gdino_future, timeout_sec=self.config.service_timeout
+        transform = await self.connector.transform(self.target_frame, self.source_frame)
+        t = transform.transform.translation
+        r = transform.transform.rotation
+        rotation_matrix = quaternion_to_rotation_matrix(
+            float(r.x), float(r.y), float(r.z), float(r.w)
         )
-        if gdino_resolved is None:
-            logger.warning("Detection service returned None")
-            return []
+        translation = np.array([float(t.x), float(t.y), float(t.z)], dtype=np.float64)
+        return (points_xyz.astype(np.float64) @ rotation_matrix.T) + translation
 
-        gsam_future = self._call_gsam_node(camera_img_msg, gdino_resolved)
-        gsam_resolved = get_future_result(
-            gsam_future, timeout_sec=self.config.service_timeout
+    async def run(self, object_name: str) -> list[NDArray[np.float32]]:
+        """One Nx3 array [X, Y, Z] per instance of the object, in the target frame."""
+        receive = self.connector.receive
+        image = await receive(self.camera_topic, msg_type=Image)
+        depth_msg = await receive(self.depth_topic, msg_type=Image)
+        camera_info = await receive(self.camera_info_topic, msg_type=CameraInfo)
+        fx, fy, cx, cy = get_camera_intrinsics(camera_info)
+
+        timeout = self.config.service_timeout
+        detections = await detect(
+            self.connector,
+            image,
+            object_name,
+            service=self.detection_service,
+            box_threshold=self.config.box_threshold,
+            text_threshold=self.config.text_threshold,
+            timeout=timeout,
         )
-        if gsam_resolved is None:
-            logger.warning("Segmentation service returned None")
-            return []
-
-        if not gsam_resolved.masks or len(gsam_resolved.masks) == 0:
+        segmentation = await segment(
+            self.connector,
+            image,
+            detections.detections,
+            service=self.segmentation_service,
+            timeout=timeout,
+        )
+        if not segmentation.masks:
             logger.warning("No masks returned from segmentation service")
             return []
 
@@ -327,14 +265,13 @@ class PointCloudFromSegmentation:
         if self.conversion_ratio != 1.0:
             depth = depth * float(self.conversion_ratio)
 
-        valid_depth = depth[depth > 0]
-        if valid_depth.size == 0:
+        if not (depth > 0).any():
             logger.warning(
                 "PointCloudFromSegmentation: No valid depth values found in depth image"
             )
 
         all_points: List[NDArray[np.float32]] = []
-        for i, mask_msg in enumerate(gsam_resolved.masks):
+        for i, mask_msg in enumerate(segmentation.masks):
             mask = cast(NDArray[np.uint8], convert_ros_img_to_ndarray(mask_msg))
             binary_mask = mask == 255
 
@@ -356,12 +293,10 @@ class PointCloudFromSegmentation:
             logger.warning("No valid point clouds extracted from masks")
             return []
 
-        points_target = [
-            self._transform_points_source_to_target(points_source).astype(np.float32)
-            for points_source in all_points
+        return [
+            (await self._transform_points_source_to_target(points)).astype(np.float32)
+            for points in all_points
         ]
-
-        return points_target
 
 
 class GrippingPointEstimator:

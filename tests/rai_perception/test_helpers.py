@@ -18,9 +18,6 @@ from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
-import rclpy
-from rclpy.parameter import Parameter
-
 from tests.rai_perception.conftest import (
     create_valid_model_dir,
     create_valid_weights_file,
@@ -29,31 +26,12 @@ from tests.rai_perception.conftest import (
 
 
 def setup_service_parameters(mock_connector, model_name: str, service_name: str):
-    """Setup ROS2 parameters for service tests.
-
-    Args:
-        mock_connector: Mock ROS2Connector instance
-        model_name: Model name parameter value
-        service_name: Service name parameter value
-    """
-    mock_connector.node.set_parameters(
-        [
-            Parameter(
-                "model_name",
-                rclpy.parameter.Parameter.Type.STRING,
-                model_name,
-            ),
-            Parameter(
-                "service_name",
-                rclpy.parameter.Parameter.Type.STRING,
-                service_name,
-            ),
-            Parameter(
-                "enable_legacy_service_names",
-                rclpy.parameter.Parameter.Type.BOOL,
-                False,  # Disable legacy services for tests to verify single service creation
-            ),
-        ]
+    """Set the service's ROS 2 parameters; legacy service names are off so a
+    test sees a single service."""
+    mock_connector.params.update(
+        model_name=model_name,
+        service_name=service_name,
+        enable_legacy_service_names=False,
     )
 
 
@@ -112,63 +90,6 @@ def patch_segmentation_service_dependencies(
         yield mock_get_model, mock_load_model
 
 
-@contextmanager
-def patch_detection_agent_dependencies(mock_connector, mock_boxer_class, weights_path):
-    """Context manager to patch all dependencies for GroundingDinoAgent tests.
-
-    Args:
-        mock_connector: Mock ROS2Connector instance
-        mock_boxer_class: Mock boxer class to use
-        weights_path: Path to weights file
-    """
-    from tests.rai_perception.conftest import patch_ros2_for_agent_tests
-
-    with (
-        patch("rai_perception.algorithms.boxer.GDBoxer", mock_boxer_class),
-        patch("rai_perception.models.detection.get_model") as mock_get_model,
-        patch_ros2_for_agent_tests(mock_connector),
-        patch("rai_perception.services.base_vision_service.download_weights"),
-        patch("rai_perception.services.base_vision_service.download_hf_snapshot"),
-        patch(
-            "rai_perception.services.detection_service.DetectionService._load_model_with_error_handling"
-        ) as mock_load_model,
-    ):
-        from rai_perception.algorithms.boxer import GDBoxer
-
-        mock_get_model.return_value = (GDBoxer, "config_path")
-        mock_load_model.return_value = mock_boxer_class(weights_path)
-        yield mock_get_model, mock_load_model
-
-
-@contextmanager
-def patch_segmentation_agent_dependencies(
-    mock_connector, mock_segmenter_class, weights_path
-):
-    """Context manager to patch all dependencies for GroundedSamAgent tests.
-
-    Args:
-        mock_connector: Mock ROS2Connector instance
-        mock_segmenter_class: Mock segmenter class to use
-        weights_path: Path to weights file
-    """
-    from tests.rai_perception.conftest import patch_ros2_for_agent_tests
-
-    with (
-        patch("rai_perception.algorithms.segmenter.GDSegmenter", mock_segmenter_class),
-        patch("rai_perception.models.segmentation.get_model") as mock_get_model,
-        patch_ros2_for_agent_tests(mock_connector),
-        patch("rai_perception.services.base_vision_service.download_weights"),
-        patch(
-            "rai_perception.services.segmentation_service.SegmentationService._load_model_with_error_handling"
-        ) as mock_load_model,
-    ):
-        from rai_perception.algorithms.segmenter import GDSegmenter
-
-        mock_get_model.return_value = (GDSegmenter, "config_path")
-        mock_load_model.return_value = mock_segmenter_class(weights_path)
-        yield mock_get_model, mock_load_model
-
-
 def get_detection_weights_path(tmp_path: Path) -> Path:
     """Get standard detection weights path for testing.
 
@@ -195,83 +116,6 @@ def get_segmentation_weights_path(tmp_path: Path) -> Path:
     weights_path = tmp_path / "vision" / "weights" / "sam2_hiera_large.pt"
     create_valid_weights_file(weights_path)
     return weights_path
-
-
-def get_default_detection_weights_path() -> Path:
-    """Get default detection weights path in home directory.
-
-    Returns:
-        Path to default detection model directory
-    """
-    return Path.home() / ".cache/rai/vision/weights/grounding-dino-tiny"
-
-
-def get_default_segmentation_weights_path() -> Path:
-    """Get default segmentation weights path in home directory.
-
-    Returns:
-        Path to default segmentation weights file
-    """
-    return Path.home() / ".cache/rai/vision/weights/sam2_hiera_large.pt"
-
-
-@contextmanager
-def patch_detection_agent_dependencies_default_path(
-    mock_connector, mock_boxer_class, weights_path
-):
-    """Context manager for detection agent tests with default path (no weights_root_path).
-
-    Args:
-        mock_connector: Mock ROS2Connector instance
-        mock_boxer_class: Mock boxer class to use
-        weights_path: Path to weights file
-    """
-    from tests.rai_perception.conftest import patch_ros2_for_agent_tests
-
-    with (
-        patch("rai_perception.algorithms.boxer.GDBoxer", mock_boxer_class),
-        patch("rai_perception.models.detection.get_model") as mock_get_model,
-        patch_ros2_for_agent_tests(mock_connector),
-        patch("rai_perception.services.base_vision_service.download_weights"),
-        patch("rai_perception.services.base_vision_service.download_hf_snapshot"),
-        patch(
-            "rai_perception.services.detection_service.DetectionService._load_model_with_error_handling"
-        ) as mock_load_model,
-    ):
-        from rai_perception.algorithms.boxer import GDBoxer
-
-        mock_get_model.return_value = (GDBoxer, "config_path")
-        mock_load_model.return_value = mock_boxer_class(weights_path)
-        yield mock_get_model, mock_load_model
-
-
-@contextmanager
-def patch_segmentation_agent_dependencies_default_path(
-    mock_connector, mock_segmenter_class, weights_path
-):
-    """Context manager for segmentation agent tests with default path (no weights_root_path).
-
-    Args:
-        mock_connector: Mock ROS2Connector instance
-        mock_segmenter_class: Mock segmenter class to use
-        weights_path: Path to weights file
-    """
-    from tests.rai_perception.conftest import patch_ros2_for_agent_tests
-
-    with (
-        patch("rai_perception.algorithms.segmenter.GDSegmenter", mock_segmenter_class),
-        patch("rai_perception.models.segmentation.get_model") as mock_get_model,
-        patch_ros2_for_agent_tests(mock_connector),
-        patch("rai_perception.services.base_vision_service.download_weights"),
-        patch(
-            "rai_perception.services.segmentation_service.SegmentationService._load_model_with_error_handling"
-        ) as mock_load_model,
-    ):
-        from rai_perception.algorithms.segmenter import GDSegmenter
-
-        mock_get_model.return_value = (GDSegmenter, "config_path")
-        mock_load_model.return_value = mock_segmenter_class(weights_path)
-        yield mock_get_model, mock_load_model
 
 
 def create_detection_request(

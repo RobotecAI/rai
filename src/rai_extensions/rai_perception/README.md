@@ -4,7 +4,7 @@
 
 RAI Perception brings powerful computer vision capabilities to your ROS2 applications. It integrates [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO) (through its [Hugging Face transformers implementation](https://huggingface.co/docs/transformers/model_doc/grounding-dino)) and [Grounded-SAM-2](https://github.com/RobotecAI/Grounded-SAM-2) to detect objects, create segmentation masks, and calculate gripping points.
 
-The package includes model-agnostic ROS2 service nodes (`DetectionService` and `SegmentationService`) that provide detection and segmentation capabilities. Legacy agents (`GroundedSamAgent` and `GroundingDinoAgent`) are deprecated in favor of these services. It also provides tools that work seamlessly with [RAI LLM agents](../tutorials/walkthrough.md) to build conversational robot scenarios, including `GetObjectPositionsTool` for general spatial reasoning and `GetObjectGrippingPointsTool` for advanced gripping strategies.
+The package includes model-agnostic ROS2 service nodes (`DetectionService` and `SegmentationService`) that provide detection and segmentation capabilities. It also provides tools that work seamlessly with [RAI LLM agents](../tutorials/walkthrough.md) to build conversational robot scenarios, including `GetObjectPositionsTool` for general spatial reasoning and `GetObjectGrippingPointsTool` for advanced gripping strategies.
 
 ## Prerequisites
 
@@ -87,7 +87,7 @@ python -m rai_perception.scripts.run_perception_services
 
 The services create two ROS 2 nodes: `detection_service` and `segmentation_service` using [ROS2Connector](../API_documentation/connectors/ROS_2_Connectors.md).
 
-> [!WARNING] > **Deprecated:** The legacy script `run_perception_agents` and agents (`GroundedSamAgent`, `GroundingDinoAgent`) are deprecated. Use `run_perception_services` instead, which launches `DetectionService` and `SegmentationService`.
+Their ROS 2 parameters (`model_name`, `service_name`, `enable_legacy_service_names`) can be set with `--ros-args -p name:=value`.
 
 ### Testing with Example Client
 
@@ -164,22 +164,20 @@ This tool calls the GroundingDINO service to detect objects from a comma-separat
 **Example call**
 
 ```python
-import time
-from rai_perception.tools import GetDetectionTool
-from rai.communication.ros2 import ROS2Connector, ROS2Context
+from rai_perception import GetDetectionTool, wait_for_perception_dependencies
+from rai.communication.ros2 import ROS2Connector
 
-with ROS2Context():
-    connector=ROS2Connector(node_name="test_node")
-
-    # Wait for topic discovery to complete
-    print("Waiting for topic discovery...")
-    time.sleep(3)
-
-    x = GetDetectionTool(connector=connector)._run(
-        camera_topic="/camera/camera/color/image_raw",
-        object_names=["bed", "bed pillow", "table lamp", "plant", "desk"],
+with ROS2Connector() as connector:
+    tool = GetDetectionTool(connector=connector)  # detection_service_name="/detection"
+    wait_for_perception_dependencies(connector, [tool], timeout=10.0)
+    print(
+        tool.invoke(
+            {
+                "camera_topic": "/camera/camera/color/image_raw",
+                "object_names": ["bed", "bed pillow", "table lamp", "plant", "desk"],
+            }
+        )
     )
-    print(x)
 ```
 
 **Example output**
@@ -195,25 +193,22 @@ This tool calls the GroundingDINO service to detect objects from a comma-separat
 **Example call**
 
 ```python
-from rai_perception.tools import GetDistanceToObjectsTool
-from rai.communication.ros2 import ROS2Connector, ROS2Context
-import time
+from rai_perception import GetDistanceToObjectsTool, wait_for_perception_dependencies
+from rai.communication.ros2 import ROS2Connector
 
-with ROS2Context():
-    connector=ROS2Connector(node_name="test_node")
-    connector.node.declare_parameter("conversion_ratio", 1.0)  # scale parameter for the depth map
-
-    # Wait for topic discovery to complete
-    print("Waiting for topic discovery...")
-    time.sleep(3)
-
-    x = GetDistanceToObjectsTool(connector=connector)._run(
-        camera_topic="/camera/camera/color/image_raw",
-        depth_topic="/camera/camera/depth/image_rect_raw",
-        object_names=["desk"],
+with ROS2Connector() as connector:
+    # conversion_ratio scales the depth map to meters (default 0.001: millimeters)
+    tool = GetDistanceToObjectsTool(connector=connector, conversion_ratio=0.001)
+    wait_for_perception_dependencies(connector, [tool], timeout=10.0)
+    print(
+        tool.invoke(
+            {
+                "camera_topic": "/camera/camera/color/image_raw",
+                "depth_topic": "/camera/camera/depth/image_rect_raw",
+                "object_names": ["desk"],
+            }
+        )
     )
-
-    print(x)
 ```
 
 **Example output**
@@ -234,35 +229,21 @@ The tool name `get_object_positions` provides better spatial interpretation for 
 **Example call**
 
 ```python
-import rclpy
 from rai_perception.tools import GetObjectPositionsTool
 from rai.communication.ros2 import ROS2Connector
-from rai_perception.tools.gripping_points_tools import GRIPPING_POINTS_TOOL_PARAM_PREFIX
 
-rclpy.init()
-connector = ROS2Connector(executor_type="single_threaded")
-node = connector.node
-
-# Set ROS2 parameters to match your robot/simulation setup
-node.declare_parameter(
-    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.camera_topic", "/color_image5"
+connector = ROS2Connector()
+config = dict(
+    camera_topic="/color_image5",
+    depth_topic="/depth_image5",
+    camera_info_topic="/color_camera_info5",
+    target_frame="panda_link0",
+    source_frame="RGBDCamera5",
 )
-node.declare_parameter(
-    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.depth_topic", "/depth_image5"
-)
-node.declare_parameter(
-    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.camera_info_topic", "/color_camera_info5"
-)
-node.declare_parameter(
-    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.target_frame", "panda_link0"
-)
-node.declare_parameter(
-    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.source_frame", "RGBDCamera5"
-)
-
-tool = GetObjectPositionsTool(connector=connector)
-result = tool._run(object_name="apple")
-print(result)
+# Topics, frames and service names (detection_service_name,
+# segmentation_service_name) are tool fields; set them for your robot.
+tool = GetObjectPositionsTool(connector=connector, **config)
+print(tool.invoke({"object_name": "apple"}))
 ```
 
 **Example output**
@@ -284,31 +265,17 @@ Use this tool when you need advanced gripping strategies beyond simple position 
 **Example call**
 
 ```python
-import rclpy
 from rai_perception import GetObjectGrippingPointsTool
 from rai.communication.ros2 import ROS2Connector
 from rai_perception.components.perception_presets import apply_preset
-from rai_perception.tools.gripping_points_tools import GRIPPING_POINTS_TOOL_PARAM_PREFIX
 
-rclpy.init()
-connector = ROS2Connector(executor_type="single_threaded")
-node = connector.node
-
-# Set ROS2 parameters
-node.declare_parameter(
-    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.camera_topic", "/color_image5"
-)
-node.declare_parameter(
-    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.depth_topic", "/depth_image5"
-)
-node.declare_parameter(
-    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.camera_info_topic", "/color_camera_info5"
-)
-node.declare_parameter(
-    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.target_frame", "panda_link0"
-)
-node.declare_parameter(
-    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.source_frame", "RGBDCamera5"
+connector = ROS2Connector()
+config = dict(
+    camera_topic="/color_image5",
+    depth_topic="/depth_image5",
+    camera_info_topic="/color_camera_info5",
+    target_frame="panda_link0",
+    source_frame="RGBDCamera5",
 )
 
 # Apply top_grasp preset for top-down grasping
@@ -317,9 +284,10 @@ tool = GetObjectGrippingPointsTool(
     connector=connector,
     filter_config=filter_config,
     estimator_config=estimator_config,
+    timeout_s=60.0,  # bounds the whole call, service calls included
+    **config,
 )
-result = tool._run(object_name="cube")
-print(result)
+print(tool.invoke({"object_name": "cube"}))
 ```
 
 <!--- --8<-- [start:sec3] -->
@@ -336,7 +304,7 @@ Both `GetObjectPositionsTool` and `GetObjectGrippingPointsTool` support an optio
 -   `/debug_gripping_points_markerarray` (MarkerArray) - Gripping points as red sphere markers
 
 > [!WARNING]
-> Debug mode adds computational overhead and network traffic. It is not suitable for production use. Debug topics publish for 5 seconds after each detection.
+> Debug mode adds computational overhead and network traffic. It is not suitable for production use. Debug topics are latched, so RViz2 also shows data published before it subscribed.
 
 #### Visualizing Gripping Points in RViz2 with Manipulation Demo
 
@@ -352,34 +320,19 @@ To debug gripping point locations using the manipulation demo:
 Step 1: Enable debug mode by modifying `examples/manipulation-demo.py` to pass `debug=True` when the tool is called, or call the tool directly:
 
 ```python
-import rclpy
 from rai_perception import GetObjectGrippingPointsTool
 from rai.communication.ros2 import ROS2Connector
-from rai_perception.tools.gripping_points_tools import GRIPPING_POINTS_TOOL_PARAM_PREFIX
 
-rclpy.init()
-connector = ROS2Connector(executor_type="single_threaded")
-node = connector.node
-
-# Set ROS2 parameters to match your robot/simulation setup
-node.declare_parameter(
-    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.camera_topic", "/color_image5"
+connector = ROS2Connector()
+config = dict(
+    camera_topic="/color_image5",
+    depth_topic="/depth_image5",
+    camera_info_topic="/color_camera_info5",
+    target_frame="panda_link0",
+    source_frame="RGBDCamera5",
 )
-node.declare_parameter(
-    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.depth_topic", "/depth_image5"
-)
-node.declare_parameter(
-    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.camera_info_topic", "/color_camera_info5"
-)
-node.declare_parameter(
-    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.target_frame", "panda_link0"
-)
-node.declare_parameter(
-    f"{GRIPPING_POINTS_TOOL_PARAM_PREFIX}.source_frame", "RGBDCamera5"
-)
-
-tool = GetObjectGrippingPointsTool(connector=connector)
-result = tool._run(object_name="box", debug=True)
+tool = GetObjectGrippingPointsTool(connector=connector, **config)
+result = tool.invoke({"object_name": "box", "debug": True})
 ```
 
 Alternatively, you can use the integration test which performs similar setup and includes additional visualization features:

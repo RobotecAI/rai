@@ -22,6 +22,7 @@ Note: This class is named "service" (not "agent") to avoid confusion with the RA
 abstraction (rai.agents.BaseAgent).
 """
 
+import logging
 from logging import Logger
 from pathlib import Path
 from typing import Optional
@@ -67,10 +68,8 @@ class BaseVisionService:
             self.weights_root_path / self.WEIGHTS_DIR_PATH_PART / self.WEIGHTS_FILENAME
         )
         self.weights_path.parent.mkdir(parents=True, exist_ok=True)
-        self.ros2_connector = ros2_connector or ROS2Connector(
-            ros2_name, executor_type="single_threaded"
-        )
-        self.logger = self.ros2_connector.node.get_logger()
+        self.ros2_connector = ros2_connector or ROS2Connector(ros2_name or None)
+        self.logger = logging.getLogger(type(self).__name__)
 
         if not self.weights_path.exists():
             self.fetch_weights(self.weights_path, self.logger)
@@ -109,18 +108,8 @@ class BaseVisionService:
         )
 
     def _get_param_value(self, param_name: str, default):
-        """Get ROS2 parameter value with deferred import to avoid circular dependencies.
-
-        Args:
-            param_name: Parameter name to retrieve
-            default: Default value if parameter not set
-
-        Returns:
-            Parameter value or default
-        """
-        from rai.communication.ros2 import get_param_value
-
-        return get_param_value(self.ros2_connector.node, param_name, default=default)
+        """The ROS 2 parameter of the service's node (declared with default)."""
+        return self.ros2_connector.parameter(param_name, default)
 
     def _initialize_model_from_registry(
         self, get_model_func, default_model_name: str, model_type_name: str
@@ -175,5 +164,9 @@ class BaseVisionService:
         )
         self.logger.info(f"{service_type_name} service started at '{service_name}'")
 
+    def _should_register_legacy_name(self) -> bool:
+        """ROS 2 parameter enable_legacy_service_names (default True)."""
+        return self._get_param_value("enable_legacy_service_names", True)
+
     def stop(self):
-        self.ros2_connector.shutdown()
+        self.ros2_connector.close()

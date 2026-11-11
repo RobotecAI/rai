@@ -14,185 +14,63 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+from rai_perception.scripts import run_perception_services
 from rai_perception.scripts.run_perception_services import main
 
+from tests.rai_perception.conftest import make_mock_connector
 
-class TestRunPerceptionServices:
-    """Test cases for run_perception_services.main function."""
+MODULE = "rai_perception.scripts.run_perception_services"
 
-    def test_main_initializes_services(self):
-        """Test that main function initializes both services."""
-        with (
-            patch("rai_perception.scripts.run_perception_services.rclpy") as mock_rclpy,
-            patch(
-                "rai_perception.scripts.run_perception_services.ROS2Connector"
-            ) as mock_connector,
-            patch(
-                "rai_perception.scripts.run_perception_services.DetectionService"
-            ) as mock_detection,
-            patch(
-                "rai_perception.scripts.run_perception_services.SegmentationService"
-            ) as mock_segmentation,
-            patch("rai_perception.scripts.run_perception_services.run") as mock_run,
-        ):
-            mock_connector_instance = MagicMock()
-            mock_connector.return_value = mock_connector_instance
-            mock_detection_instance = MagicMock()
-            mock_segmentation_instance = MagicMock()
-            mock_detection.return_value = mock_detection_instance
-            mock_segmentation.return_value = mock_segmentation_instance
 
-            main()
+@pytest.fixture
+def patched():
+    connectors = [make_mock_connector(), make_mock_connector()]
+    with (
+        patch(f"{MODULE}.ROS2Runtime") as runtime,
+        patch(f"{MODULE}.ROS2Connector", side_effect=connectors) as connector,
+        patch(f"{MODULE}.DetectionService") as detection,
+        patch(f"{MODULE}.SegmentationService") as segmentation,
+        patch(f"{MODULE}.run") as run,
+    ):
+        yield MagicMock(
+            runtime=runtime,
+            connector=connector,
+            connectors=connectors,
+            detection=detection,
+            segmentation=segmentation,
+            run=run,
+        )
 
-            mock_rclpy.init.assert_called_once()
-            assert mock_connector.call_count == 2
-            # Verify connectors are created with correct names
-            connector_calls = mock_connector.call_args_list
-            assert connector_calls[0][0][0] == "detection_service"
-            assert connector_calls[1][0][0] == "segmentation_service"
-            # Verify executor_type is set correctly
-            assert connector_calls[0][1]["executor_type"] == "single_threaded"
-            assert connector_calls[1][1]["executor_type"] == "single_threaded"
-            mock_detection.assert_called_once()
-            mock_segmentation.assert_called_once()
-            mock_detection_instance.run.assert_called_once()
-            mock_segmentation_instance.run.assert_called_once()
-            mock_run.assert_called_once()
-            assert [a.service for a in mock_run.call_args.args] == [
-                mock_detection_instance,
-                mock_segmentation_instance,
-            ]
-            mock_rclpy.shutdown.assert_called_once()
 
-    def test_main_calls_services_in_order(self):
-        """Test that services are called in the correct order."""
-        call_order = []
+def test_main_starts_both_services_on_their_own_nodes(patched):
+    main()
 
-        def track_connector_init(*args, **kwargs):
-            call_order.append("connector_init")
-            return MagicMock()
+    names = [c.args[0] for c in patched.runtime.call_args_list]
+    assert names == ["detection_service", "segmentation_service"]
+    detection_connector, segmentation_connector = patched.connectors
+    patched.detection.assert_called_once_with(ros2_connector=detection_connector)
+    patched.segmentation.assert_called_once_with(ros2_connector=segmentation_connector)
+    patched.detection.return_value.run.assert_called_once()
+    patched.segmentation.return_value.run.assert_called_once()
+    assert [a.service for a in patched.run.call_args.args] == [
+        patched.detection.return_value,
+        patched.segmentation.return_value,
+    ]
 
-        def track_detection_init(*args, **kwargs):
-            call_order.append("detection_init")
-            mock_instance = MagicMock()
-            mock_instance.run.side_effect = lambda: call_order.append("detection_run")
-            return mock_instance
 
-        def track_segmentation_init(*args, **kwargs):
-            call_order.append("segmentation_init")
-            mock_instance = MagicMock()
-            mock_instance.run.side_effect = lambda: call_order.append(
-                "segmentation_run"
-            )
-            return mock_instance
+@pytest.mark.parametrize("env, expected", [(None, True), ("false", False)])
+def test_legacy_service_names_follow_the_environment(
+    patched, monkeypatch, env, expected
+):
+    if env is not None:
+        monkeypatch.setenv("ENABLE_LEGACY_SERVICE_NAMES", env)
+    main()
+    for connector in patched.connectors:
+        assert connector.params["enable_legacy_service_names"] is expected
 
-        with (
-            patch("rai_perception.scripts.run_perception_services.rclpy"),
-            patch(
-                "rai_perception.scripts.run_perception_services.ROS2Connector",
-                side_effect=track_connector_init,
-            ),
-            patch(
-                "rai_perception.scripts.run_perception_services.DetectionService",
-                side_effect=track_detection_init,
-            ),
-            patch(
-                "rai_perception.scripts.run_perception_services.SegmentationService",
-                side_effect=track_segmentation_init,
-            ),
-            patch("rai_perception.scripts.run_perception_services.run"),
-        ):
-            main()
 
-            # Verify order: connectors, init detection, init segmentation, run detection, run segmentation
-            assert call_order[:4] == [
-                "connector_init",
-                "connector_init",
-                "detection_init",
-                "segmentation_init",
-            ]
-            assert "detection_run" in call_order
-            assert "segmentation_run" in call_order
-
-    def test_main_handles_shutdown(self):
-        """Test that main properly shuts down ROS2."""
-        with (
-            patch("rai_perception.scripts.run_perception_services.rclpy") as mock_rclpy,
-            patch(
-                "rai_perception.scripts.run_perception_services.ROS2Connector"
-            ) as mock_connector,
-            patch(
-                "rai_perception.scripts.run_perception_services.DetectionService"
-            ) as mock_detection,
-            patch(
-                "rai_perception.scripts.run_perception_services.SegmentationService"
-            ) as mock_segmentation,
-            patch("rai_perception.scripts.run_perception_services.run"),
-        ):
-            mock_connector.return_value = MagicMock()
-            mock_detection.return_value = MagicMock()
-            mock_segmentation.return_value = MagicMock()
-
-            main()
-
-            mock_rclpy.init.assert_called_once()
-            mock_rclpy.shutdown.assert_called_once()
-
-    def test_main_creates_connectors_with_correct_parameters(self):
-        """Test that connectors are created with correct node names and executor type."""
-        with (
-            patch("rai_perception.scripts.run_perception_services.rclpy"),
-            patch(
-                "rai_perception.scripts.run_perception_services.ROS2Connector"
-            ) as mock_connector,
-            patch("rai_perception.scripts.run_perception_services.DetectionService"),
-            patch("rai_perception.scripts.run_perception_services.SegmentationService"),
-            patch("rai_perception.scripts.run_perception_services.run"),
-        ):
-            mock_connector.return_value = MagicMock()
-
-            main()
-
-            # Verify both connectors are created
-            assert mock_connector.call_count == 2
-
-            # Verify first connector (detection) parameters
-            first_call = mock_connector.call_args_list[0]
-            assert first_call[0][0] == "detection_service"
-            assert first_call[1]["executor_type"] == "single_threaded"
-
-            # Verify second connector (segmentation) parameters
-            second_call = mock_connector.call_args_list[1]
-            assert second_call[0][0] == "segmentation_service"
-            assert second_call[1]["executor_type"] == "single_threaded"
-
-    def test_main_passes_connectors_to_services(self):
-        """Test that connectors are passed to service constructors."""
-        with (
-            patch("rai_perception.scripts.run_perception_services.rclpy"),
-            patch(
-                "rai_perception.scripts.run_perception_services.ROS2Connector"
-            ) as mock_connector,
-            patch(
-                "rai_perception.scripts.run_perception_services.DetectionService"
-            ) as mock_detection,
-            patch(
-                "rai_perception.scripts.run_perception_services.SegmentationService"
-            ) as mock_segmentation,
-            patch("rai_perception.scripts.run_perception_services.run"),
-        ):
-            detection_connector = MagicMock()
-            segmentation_connector = MagicMock()
-            mock_connector.side_effect = [detection_connector, segmentation_connector]
-
-            main()
-
-            # Verify DetectionService is called with detection_connector
-            mock_detection.assert_called_once()
-            detection_call = mock_detection.call_args
-            assert detection_call[1]["ros2_connector"] == detection_connector
-
-            # Verify SegmentationService is called with segmentation_connector
-            mock_segmentation.assert_called_once()
-            segmentation_call = mock_segmentation.call_args
-            assert segmentation_call[1]["ros2_connector"] == segmentation_connector
+def test_stop_on_shutdown_stops_the_service():
+    service = MagicMock()
+    run_perception_services._StopOnShutdown(service).teardown()
+    service.stop.assert_called_once()

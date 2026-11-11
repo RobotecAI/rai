@@ -13,12 +13,13 @@
 # limitations under the License.
 
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from langchain_core.tools import BaseTool
-from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
+from rai.communication.ros2 import ROS2ServiceError
 from rai.communication.ros2.connectors import ROS2Connector
-from rai.communication.ros2.waiters import get_missing_entities
+
+from rai_perception.components.service_utils import wait_for
 
 logger = logging.getLogger(__name__)
 
@@ -85,128 +86,57 @@ def discover_camera_topics(connector: ROS2Connector) -> Dict[str, List[str]]:
 
 
 def wait_for_perception_dependencies(
-    connector: ROS2Connector, tools: List[BaseTool]
+    connector: ROS2Connector,
+    tools: List[BaseTool],
+    timeout: Optional[float] = None,
 ) -> None:
-    """Wait for ROS2 services and topics required by perception tools.
+    """Wait for the services and topics the perception tools in tools need.
 
-    Automatically extracts service names and topics from perception tools
-    in the tools list and waits for them to be available.
-
-    Supports two types of perception tools:
-    - GetObjectGrippingPointsTool: Requires both detection and segmentation
-      services, plus camera, depth, and camera_info topics.
-    - Detection-only tools (tools with service_name property): Only requires
-      detection service; topics are optional and not waited for.
-
-    Args:
-        connector: ROS2 connector to use for waiting
-        tools: List of tools that may include perception tools
+    GetObjectGrippingPointsTool (and GetObjectPositionsTool) need the detection
+    and segmentation services and the camera, depth and camera_info topics;
+    tools with a detection_service_name need that service only. timeout=None
+    waits forever.
 
     Raises:
-        RuntimeError: If required perception tools are not found in tools list
-        TimeoutError: If topics/services don't become available
+        RuntimeError: If no perception tool is in tools
+        ROS2ServiceError: If services are not available within timeout
+        TimeoutError: If topics are not available within timeout
     """
-    # Lazy import to avoid circular dependency
     from rai_perception.tools.gripping_points_tools import GetObjectGrippingPointsTool
 
-    # Extract service names from perception tools
-    detection_service = None
-    segmentation_service = None
-    is_detection_only = False
-
+    services: list[str] = []
+    topics: list[str] = []
     for tool in tools:
         if isinstance(tool, GetObjectGrippingPointsTool):
-            detection_service = tool.detection_service_name
-            segmentation_service = tool.segmentation_service_name
-            break
-        elif hasattr(tool, "service_name"):
-            # For tools that only use detection service
-            # service_name is a property, accessing it returns the value directly
-            detection_service = tool.service_name
-            is_detection_only = True
-            break
-
-    if detection_service is None:
+            services += [tool.detection_service_name, tool.segmentation_service_name]
+            topics += [tool.camera_topic, tool.depth_topic, tool.camera_info_topic]
+        elif isinstance(getattr(tool, "detection_service_name", None), str):
+            services.append(getattr(tool, "detection_service_name"))
+    if not services:
         raise RuntimeError(
-            "Required perception tools not found in tools list. "
-            "GetObjectGrippingPointsTool or tools with service_name property required."
+            "No perception tools in the tools list: GetObjectGrippingPointsTool or "
+            "tools with a detection_service_name required."
         )
+    services, topics = list(dict.fromkeys(services)), list(dict.fromkeys(topics))
 
-    # For detection-only tools, only wait for detection service
-    # For gripping points tools, wait for both services
-    if is_detection_only:
-        required_services = [detection_service]
-    else:
-        if segmentation_service is None:
-            raise RuntimeError(
-                "GetObjectGrippingPointsTool requires both detection and segmentation services."
-            )
-        required_services = [detection_service, segmentation_service]
-
-    # Extract topics from perception tools
-    required_topics = None
-    for tool in tools:
-        if isinstance(tool, GetObjectGrippingPointsTool):
-            config = tool.get_config()
-            required_topics = [
-                config["camera_topic"],
-                config["depth_topic"],
-                config["camera_info_topic"],
-            ]
-            break
-        elif is_detection_only:
-            # For detection-only tools, topics are optional
-            # They may get topics from parameters or other sources
-            # Skip topic waiting for detection-only tools
-            required_topics = []
-            break
-
-    if required_topics is None:
-        raise RuntimeError(
-            "GetObjectGrippingPointsTool not found in tools list. "
-            "Cannot determine required topics."
-        )
-
-    # Wait for services
-    from rai.communication.ros2 import ROS2ServiceError
-
-    try:
-        wait_for_ros2_services(connector, required_services)
-    except TimeoutError as e:
-        available_services = [s[0] for s in connector.get_services_names_and_types()]
-        missing_services = set(required_services) - set(available_services)
+    if absent := wait_for(connector, services, "service", timeout):
+        available = sorted(s for s, _ in connector.get_services_names_and_types())
         raise ROS2ServiceError(
-            service_name=", ".join(missing_services)
-            if missing_services
-            else ", ".join(required_services),
-            timeout_sec=0.0,  # wait_for_ros2_services uses default timeout
+            service_name=", ".join(absent),
+            timeout_sec=timeout or 0.0,
             service_state="unavailable",
             suggestion=(
-                f"Services not available. Available: {sorted(available_services)[:10]}. "
-                f"Expected: {required_services}. "
-                f"Set ROS2 parameters '/detection_tool/service_name' and "
-                f"'/segmentation_tool/service_name' to match your service names."
+                f"Services not available. Available: {available[:10]}. "
+                f"Expected: {services}. Set the tools' detection_service_name and "
+                "segmentation_service_name to match your service names."
             ),
-            underlying_error=e,
-        ) from e
-
-    # Wait for topics (skip if empty list for detection-only tools)
-    if required_topics:
-        try:
-            wait_for_ros2_topics(connector, required_topics)
-        except TimeoutError as e:
-            get_topics = lambda: [
-                topic[0] for topic in connector.get_topics_names_and_types()
-            ]
-            missing_at_timeout = get_missing_entities(get_topics, required_topics)
-            discovered = discover_camera_topics(connector)
-
-            raise TimeoutError(
-                f"{str(e)}\n"
-                f"Missing topics: {sorted(missing_at_timeout)}\n"
-                f"Available image topics: {discovered['image_topics'][:5]}\n"
-                f"Available depth topics: {discovered['depth_topics'][:5]}\n"
-                f"Available camera_info topics: {discovered['camera_info_topics'][:5]}\n"
-                f"Tip: Override topic parameters before tool initialization:\n"
-                f"  node.declare_parameter('perception.gripping_points.camera_topic', '/your/topic')"
-            ) from e
+        )
+    if absent := wait_for(connector, topics, "topic", timeout):
+        found = discover_camera_topics(connector)
+        raise TimeoutError(
+            f"Topics {sorted(absent)} not available within {timeout} seconds\n"
+            f"Available image topics: {found['image_topics'][:5]}\n"
+            f"Available depth topics: {found['depth_topics'][:5]}\n"
+            f"Available camera_info topics: {found['camera_info_topics'][:5]}\n"
+            "Tip: set the tool's camera_topic, depth_topic and camera_info_topic"
+        )

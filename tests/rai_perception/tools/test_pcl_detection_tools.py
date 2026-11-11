@@ -15,28 +15,30 @@
 import asyncio
 import time
 
-import pytest
-
-try:
-    import rclpy
-except ImportError:
-    pytest.skip("ROS2 is not installed", allow_module_level=True)
-
-from unittest.mock import MagicMock, Mock, patch
-
 import numpy as np
-from rai.communication.ros2.connectors import ROS2Connector
+import pytest
+from rai.communication.ros2 import QoS
+from rai.communication.ros2.images import numpy_to_imgmsg
+from rai.tools import Effect
 from rai_perception import (
     GetObjectGrippingPointsTool,
     GrippingPointEstimator,
     GrippingPointEstimatorConfig,
     PointCloudFilter,
     PointCloudFilterConfig,
-    PointCloudFromSegmentation,
-    PointCloudFromSegmentationConfig,
 )
+from rai_perception.components.perception_presets import apply_preset
 from rai_perception.tools import GetObjectPositionsTool
-from rai_perception.tools.gripping_points_tools import GRIPPING_POINTS_TOOL_PARAM_PREFIX
+
+from tests.rai_perception.components.test_gripping_points import (
+    make_pipeline_connector,
+)
+
+TOPICS = {
+    "camera_topic": "/test/camera",
+    "depth_topic": "/test/depth",
+    "camera_info_topic": "/test/camera_info",
+}
 
 
 def test_gripping_point_estimator():
@@ -137,185 +139,148 @@ def test_point_cloud_filter():
     assert filtered_kmeans[0].shape[0] > 0
 
 
-def test_get_gripping_point_tool_timeout():
-    # Complete mock setup
-    mock_connector = Mock(spec=ROS2Connector)
-    mock_pcl_gen = Mock(spec=PointCloudFromSegmentation)
-    mock_filter = Mock(spec=PointCloudFilter)
-    mock_estimator = Mock(spec=GrippingPointEstimator)
+@pytest.fixture
+def pipeline(mock_connector):
+    """One 2x2 cube-ish object 2 m in front of the camera."""
+    depth = numpy_to_imgmsg(np.full((2, 2), 2.0, np.float32), "32FC1")
+    mask = np.full((2, 2), 255, np.uint8)
+    return make_pipeline_connector(mock_connector, depth, mask, (1.0, 0.0, 0.0))
 
-    # Test 1: No timeout (fast execution)
-    mock_pcl_gen.run.return_value = []
-    mock_filter.run.return_value = []
-    mock_estimator.run.return_value = []
 
+def test_defaults_effect_and_targets(mock_connector):
+    tool = GetObjectGrippingPointsTool(connector=mock_connector)
+    assert tool.effect is Effect.READ
+    assert tool.timeout_s == 60.0
+    assert tool.targets == (
+        "/camera/rgb/image_raw",
+        "/camera/depth/image_raw",
+        "/camera/rgb/camera_info",
+        "/detection",
+        "/segmentation",
+    )
+    assert tool.get_config() == {
+        "target_frame": "base_link",
+        "source_frame": "camera_link",
+        "camera_topic": "/camera/rgb/image_raw",
+        "depth_topic": "/camera/depth/image_raw",
+        "camera_info_topic": "/camera/rgb/camera_info",
+        "timeout_s": 60.0,
+        "conversion_ratio": 1.0,
+        "detection_service_name": "/detection",
+        "segmentation_service_name": "/segmentation",
+    }
+    assert tool.estimator_config == apply_preset("default_grasp")[1]
+
+
+def test_configuration_reaches_the_pipeline(mock_connector):
     tool = GetObjectGrippingPointsTool(
         connector=mock_connector,
-        segmentation_config=PointCloudFromSegmentationConfig(),
-        estimator_config=GrippingPointEstimatorConfig(),
-        filter_config=PointCloudFilterConfig(),
+        target_frame="panda_link0",
+        detection_service_name="/det",
+        conversion_ratio=0.5,
+        **TOPICS,
     )
-    # Mock the initialized components
-    tool.gripping_point_estimator = mock_estimator
-    tool.point_cloud_filter = mock_filter
-    tool.timeout_sec = 5.0
-    tool.point_cloud_from_segmentation = mock_pcl_gen
+    extraction = tool.point_cloud_from_segmentation
+    assert extraction.target_frame == "panda_link0"
+    assert extraction.camera_topic == "/test/camera"
+    assert extraction.detection_service == "/det"
+    assert extraction.conversion_ratio == 0.5
 
-    # Test fast execution - should complete without timeout
-    result = tool._run("test_object")
-    assert "No test_objects detected" in result
-    assert "timed out" not in result.lower()
 
-    # Test 2: the async path times out on time
-    def slow_operation(obj_name):
-        time.sleep(1.0)  # Longer than timeout
-        return []
+def test_pipeline_result(pipeline):
+    tool = GetObjectGrippingPointsTool(connector=pipeline, **TOPICS)
+    result = tool.invoke({"object_name": "cube"})
+    assert result.startswith("Centroids of detected cube in base_link frame: Centroid(")
+    pipeline.publish.assert_not_called()
 
-    mock_pcl_gen.run.side_effect = slow_operation
-    tool.timeout_sec = 0.2  # Short timeout
 
-    async def timed_arun():
-        start = time.monotonic()
-        result = await tool._arun("test")
-        return result, time.monotonic() - start
-
-    result, elapsed = asyncio.run(timed_arun())
-    assert (
-        result
-        == "Timeout: Gripping point detection for object 'test' exceeded 0.2 seconds"
+def test_debug_publishes_latched_pipeline_data(pipeline):
+    tool = GetObjectGrippingPointsTool(
+        connector=pipeline,
+        filter_config=PointCloudFilterConfig(min_points=100),  # keeps 4 points
+        **TOPICS,
     )
-    assert elapsed < 0.8
-
-
-def test_get_object_gripping_points_tool_auto_declaration():
-    """Test that GetObjectGrippingPointsTool auto-declares parameters with defaults."""
-    connector = None
-    rclpy.init()
-    try:
-        connector = ROS2Connector(executor_type="single_threaded")
-        node = connector.node
-
-        # Test 1: Auto-declaration with defaults when no parameters are set
-        # Clear any existing parameters
-        param_prefix = GRIPPING_POINTS_TOOL_PARAM_PREFIX
-        for param_key in [
-            "target_frame",
-            "source_frame",
-            "camera_topic",
-            "depth_topic",
-            "camera_info_topic",
-            "timeout_sec",
-            "conversion_ratio",
-        ]:
-            param_name = f"{param_prefix}.{param_key}"
-            if node.has_parameter(param_name):
-                node.undeclare_parameter(param_name)
-
-            # Initialize tool - should auto-declare with defaults
-            with (
-                patch(
-                    "rai_perception.tools.gripping_points_tools.logger"
-                ) as mock_logger,
-                patch.object(connector.node, "get_logger") as mock_get_logger,
-            ):
-                mock_node_logger = MagicMock()
-                mock_get_logger.return_value = mock_node_logger
-
-                tool = GetObjectGrippingPointsTool(connector=connector)
-
-                # Verify defaults are used
-                assert tool.target_frame == "base_link"
-                assert tool.source_frame == "camera_link"
-                assert tool.camera_topic == "/camera/rgb/image_raw"
-                assert tool.depth_topic == "/camera/depth/image_raw"
-                assert tool.camera_info_topic == "/camera/rgb/camera_info"
-                assert tool.timeout_sec == 60.0
-                assert tool.conversion_ratio == 1.0
-
-                # Verify logging occurred
-                assert mock_logger.info.called
-                log_calls = [str(call) for call in mock_logger.info.call_args_list]
-                assert any("Auto-declared parameter" in str(call) for call in log_calls)
-
-                # Verify initialization message via node logger
-                assert mock_node_logger.info.called
-                node_log_calls = [
-                    str(call) for call in mock_node_logger.info.call_args_list
-                ]
-                assert any(
-                    "GetObjectGrippingPointsTool initialized" in str(call)
-                    for call in node_log_calls
-                )
-
-        # Test 2: Override parameters before initialization
-        # Undeclare parameters from Test 1 first
-        for param_key in ["target_frame", "camera_topic"]:
-            param_name = f"{param_prefix}.{param_key}"
-            if node.has_parameter(param_name):
-                node.undeclare_parameter(param_name)
-
-        # Now declare with custom values
-        node.declare_parameter(f"{param_prefix}.target_frame", "custom_frame")
-        node.declare_parameter(f"{param_prefix}.camera_topic", "/custom/camera")
-
-        with patch("rai_perception.tools.gripping_points_tools.logger") as mock_logger:
-            tool2 = GetObjectGrippingPointsTool(connector=connector)
-
-            # Verify overrides are used
-            assert tool2.target_frame == "custom_frame"
-            assert tool2.camera_topic == "/custom/camera"
-            # Other params should still use defaults
-            assert tool2.source_frame == "camera_link"
-
-            # Verify override logging
-            log_calls = [str(call) for call in mock_logger.info.call_args_list]
-            assert any(
-                "overridden parameter" in str(call).lower() for call in log_calls
-            )
-
-        # Test 3: get_config() method
-        config = tool2.get_config()
-        assert isinstance(config, dict)
-        assert config["target_frame"] == "custom_frame"
-        assert config["camera_topic"] == "/custom/camera"
-        assert config["timeout_sec"] == 60.0
-        assert "detection_service_name" in config
-        assert "segmentation_service_name" in config
-
-    finally:
-        if connector is not None:
-            connector.shutdown()
-        if rclpy.ok():
-            rclpy.shutdown()
-
-
-def test_get_object_positions_tool_wrapper():
-    """Test GetObjectPositionsTool wrapper delegates to GetObjectGrippingPointsTool with default_grasp."""
-    mock_connector = Mock(spec=ROS2Connector)
-    mock_gripping_tool = Mock(spec=GetObjectGrippingPointsTool)
-
-    # Create tool using model_construct to bypass initialization, then set mock
-    tool = GetObjectPositionsTool.model_construct(connector=mock_connector)
-    tool.gripping_points_tool = mock_gripping_tool
-
-    # Test delegation
-    mock_gripping_tool._acall.return_value = "Centroids of detected apples in panda_link0 frame: [Centroid(x=0.5, y=0.3, z=0.04)]."
-    result = tool._run("apple")
-
-    assert "Centroids of detected apples" in result
-    mock_gripping_tool._acall.assert_awaited_once_with(object_name="apple")
-
-    # Test get_config delegation
-    mock_gripping_tool.get_config.return_value = {
-        "target_frame": "panda_link0",
-        "camera_topic": "/color_image5",
+    asyncio.run(tool.ainvoke({"object_name": "cube", "debug": True}))
+    published = {c.args[0]: c.kwargs["qos"] for c in pipeline.publish.call_args_list}
+    assert set(published) == {
+        "/debug/gripping_points/raw_point_clouds",
+        "/debug/gripping_points/filtered_point_clouds",
+        "/debug_gripping_points_pointcloud",
+        "/debug_gripping_points_markerarray",
     }
-    config = tool.get_config()
+    assert all(qos is QoS.LATCHED for qos in published.values())
 
-    assert config["target_frame"] == "panda_link0"
-    assert config["camera_topic"] == "/color_image5"
-    mock_gripping_tool.get_config.assert_called_once()
 
-    # Test tool name and description
+def test_no_objects(pipeline):
+    pipeline.call.side_effect = None
+    pipeline.call.return_value.masks = []
+    tool = GetObjectGrippingPointsTool(connector=pipeline, **TOPICS)
+    assert tool.invoke({"object_name": "cube"}) == "No cubes detected."
+
+
+@pytest.mark.parametrize("path", ["sync", "async"])
+@pytest.mark.parametrize("stage", ["ros", "cpu"])
+def test_timeout_is_enforced_on_every_path(mock_connector, monkeypatch, path, stage):
+    """The A3 regression: timeout_s bounds the call on the sync path too, and
+    also while a CPU stage runs in a thread."""
+    tool = GetObjectGrippingPointsTool(connector=mock_connector, timeout_s=0.2)
+
+    async def slow_ros(object_name):
+        await asyncio.sleep(5.0)
+
+    def slow_cpu(clouds):
+        time.sleep(1.0)
+        return clouds
+
+    if stage == "ros":
+        monkeypatch.setattr(tool.point_cloud_from_segmentation, "run", slow_ros)
+    else:
+
+        async def one_cloud(object_name):
+            return [np.zeros((3, 3), np.float32)]
+
+        monkeypatch.setattr(tool.point_cloud_from_segmentation, "run", one_cloud)
+        monkeypatch.setattr(tool.point_cloud_filter, "run", slow_cpu)
+
+    start = time.monotonic()
+    if path == "sync":
+        result = tool.invoke({"object_name": "cube"})
+    else:
+        result = asyncio.run(tool.ainvoke({"object_name": "cube"}))
+    assert result == "Timed out after 0.2s"
+    assert time.monotonic() - start < 0.8
+
+
+def test_custom_output_labels(mock_connector):
+    tool = GetObjectGrippingPointsTool(
+        connector=mock_connector,
+        output_point_label="GraspPoint",
+        output_description_suffix=" (top)",
+        estimator_config=GrippingPointEstimatorConfig(strategy="top_plane"),
+    )
+    points = [np.array([1.0, 2.0, 3.0]), np.array([4.0, 5.0, 6.0])]
+    result = tool._format_result_message("cup", points)
+    assert result.startswith("GraspPoints of detected cups (top) in base_link frame:")
+    assert "GraspPoint(x=1.000000, y=2.000000, z=3.000000)" in result
+
+
+def test_get_object_positions_tool(pipeline):
+    tool = GetObjectPositionsTool(
+        connector=pipeline,
+        estimator_config=GrippingPointEstimatorConfig(strategy="top_plane"),
+        target_frame="panda_link0",
+        **TOPICS,
+    )
     assert tool.name == "get_object_positions"
-    assert "positions" in tool.description.lower()
+    assert set(tool.args) == {"object_name"}
+    assert tool.estimator_config.strategy == "centroid"  # default_grasp preset
+    assert tool.get_config()["target_frame"] == "panda_link0"
+    assert tool.invoke({"object_name": "cube"}).startswith(
+        "Centroids of detected cube in panda_link0 frame"
+    )
+
+
+def test_estimator_and_filter_are_used(mock_connector):
+    tool = GetObjectGrippingPointsTool(connector=mock_connector)
+    assert isinstance(tool.point_cloud_filter, PointCloudFilter)
+    assert isinstance(tool.gripping_point_estimator, GrippingPointEstimator)

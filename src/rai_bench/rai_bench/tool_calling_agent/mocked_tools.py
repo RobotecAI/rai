@@ -531,11 +531,12 @@ class MockActionsToolkit(ROS2ActionToolkit):
 
 class MockGetDistanceToObjectsTool(GetDistanceToObjectsTool):
     connector: ROS2Connector = MagicMock(spec=ROS2Connector)
-    node: MagicMock = MagicMock()
     mock_distance_measurements: List[DistanceMeasurement] = []
     available_topics: List[str]
 
-    def _run(self, camera_topic: str, depth_topic: str, object_names: list[str]):
+    async def _acall(
+        self, camera_topic: str, depth_topic: str, object_names: list[str]
+    ):
         """Method that returns a mock message with the distance to the objects.
 
         Parameters

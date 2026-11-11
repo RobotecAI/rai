@@ -4,6 +4,14 @@ PR [#750 feat: redesign rai_perception API with tiered structure and improve 3D 
 
 At a high level, the migration can be a gradual process. Several backward compatibility measures have been introduced to reduce the impact on existing demos and applications.
 
+## RAI 3.0
+
+-   The deprecated `GroundingDinoAgent`, `GroundedSamAgent`, `BaseVisionAgent` and the `run_perception_agents` script are removed; use `DetectionService`, `SegmentationService`, `BaseVisionService` and `run_perception_services`.
+-   Tools are configured with fields instead of ROS 2 parameters on the agent's node: `camera_topic`, `depth_topic`, `camera_info_topic`, `target_frame`, `source_frame`, `conversion_ratio`, `detection_service_name` and `segmentation_service_name` (formerly `perception.gripping_points.*`, `perception.distance_to_objects.*`, `conversion_ratio`, `/detection_tool/service_name` and `/segmentation_tool/service_name`).
+-   Tools are `RaiTool`s with `Effect.READ`. `GetObjectGrippingPointsTool.timeout_sec` is `timeout_s`, and it bounds every call path; a timeout reaches the LLM as an error.
+-   `PointCloudFromSegmentation.run`, `transform_points_between_frames` and `save_gripping_points_annotated_image` are coroutines.
+-   Services and `DetectionPublisher` still read ROS 2 parameters, from their own nodes (`--ros-args -p name:=value`).
+
 **Quick Start:** If you're migrating existing code, start with the [Breaking Changes](#breaking-changes) section, then review [Backward Compatibility Measures](#backward-compatibility-measures) to understand your migration options. The [Post-PR Follow-ups](#post-pr-follow-ups) section outlines future improvements and deprecation timelines.
 
 ## Table of Contents
@@ -48,9 +56,7 @@ Old defaults:
 -   Detection service: `"/grounding_dino_classify"` → `"/detection"`
 -   Segmentation service: `"/grounded_sam_segment"` → `"/segmentation"`
 
-_Current delegation implementation:_ The deprecated agent classes (`GroundingDinoAgent`, `GroundedSamAgent`) are now thin compatibility wrappers that delegate to the new service classes. They emit deprecation warnings and will be removed in a future version. The delegation is implemented via the `create_service_wrapper()` helper function in `agents/_helpers.py`.
-
-_Impact:_ Code that hardcodes the old class names or service names will need updates. Tools now read service names from ROS2 parameters (defaulting to the new names), making the system model-agnostic. For backward compatibility during migration, the `enable_legacy_service_names` flag can be used to register both old and new service names simultaneously (see [Legacy Service Name Handling](#legacy-service-name-handling) for details).
+_Impact:_ Code that hardcodes the old class names or service names will need updates. Tools take service names as fields (defaulting to the new names), making the system model-agnostic. For backward compatibility during migration, the `enable_legacy_service_names` flag can be used to register both old and new service names simultaneously (see [Legacy Service Name Handling](#legacy-service-name-handling) for details).
 
 _Migration:_
 

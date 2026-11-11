@@ -93,23 +93,6 @@ class SegmentationService(BaseVisionService):
                 f"Consider migrating to '{service_name}'."
             )
 
-    def _should_register_legacy_name(self) -> bool:
-        """Check if legacy service name should be registered.
-
-        Reads ROS2 parameter: enable_legacy_service_names
-        Default: True (for backward compatibility)
-
-        Returns:
-            True if legacy service name should be registered, False otherwise
-        """
-        from rai.communication.ros2 import get_param_value
-
-        return get_param_value(
-            self.ros2_connector.node,
-            "enable_legacy_service_names",
-            default=True,
-        )
-
     def _segment_callback(self, request, response: RAIGroundedSam.Response):
         """Handle segmentation service requests."""
         try:

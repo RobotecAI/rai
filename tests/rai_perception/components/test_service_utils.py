@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Julia Jia
+# Copyright (C) 2025 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,189 +12,61 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import MagicMock, patch
+"""Tests of the detection/segmentation calls and the ROS graph checks."""
 
-import pytest
-import rclpy
+import asyncio
+
 from rai_perception.components.service_utils import (
-    check_service_available,
-    create_service_client,
-    get_detection_service_name,
-    get_segmentation_service_name,
+    detect,
+    missing,
+    segment,
+    service_available,
+    wait_for,
 )
-from rclpy.parameter import Parameter
+from sensor_msgs.msg import Image
+
+from rai_interfaces.msg import RAIDetectionArray
 
 
-def _set_service_name_parameter(mock_connector, param_name: str, value: str):
-    """Helper to set service name parameter."""
-    mock_connector.node.set_parameters(
-        [
-            Parameter(
-                param_name,
-                rclpy.parameter.Parameter.Type.STRING,
-                value,
-            )
-        ]
+def test_detect_calls_the_detection_service(mock_connector):
+    image = Image(width=4)
+    result = asyncio.run(
+        detect(mock_connector, image, "cup, box", service="/det", box_threshold=0.2)
     )
+    assert result is mock_connector.call.return_value
+    (service, request), kwargs = mock_connector.call.call_args
+    assert service == "/det"
+    assert request.source_img == image and request.classes == "cup, box"
+    assert abs(request.box_threshold - 0.2) < 1e-6
+    assert abs(request.text_threshold - 0.45) < 1e-6
+    assert kwargs == {"timeout": 60.0}
 
 
-class TestGetDetectionServiceName:
-    """Test cases for get_detection_service_name."""
-
-    def test_service_name_from_parameter(self, mock_connector):
-        """Test reads service name from ROS2 parameter."""
-        _set_service_name_parameter(
-            mock_connector, "/detection_tool/service_name", "/custom/detection"
-        )
-        service_name = get_detection_service_name(mock_connector)
-        assert service_name == "/custom/detection"
+def test_segment_calls_the_segmentation_service(mock_connector):
+    detections = RAIDetectionArray(detection_classes=["cup"])
+    asyncio.run(segment(mock_connector, Image(), detections, timeout=3.0))
+    (service, request), kwargs = mock_connector.call.call_args
+    assert service == "/segmentation"
+    assert request.detections == detections
+    assert kwargs == {"timeout": 3.0}
 
 
-class TestGetSegmentationServiceName:
-    """Test cases for get_segmentation_service_name."""
-
-    def test_service_name_from_parameter(self, mock_connector):
-        """Test reads service name from ROS2 parameter."""
-        _set_service_name_parameter(
-            mock_connector, "/segmentation_tool/service_name", "/custom/segmentation"
-        )
-        service_name = get_segmentation_service_name(mock_connector)
-        assert service_name == "/custom/segmentation"
+def test_missing_compares_resolved_names(mock_connector):
+    mock_connector.get_services_names_and_types.return_value = [
+        ("/detection", ["rai_interfaces/srv/RAIGroundingDino"])
+    ]
+    assert missing(mock_connector, ["detection", "/segmentation"]) == ["/segmentation"]
+    assert service_available(mock_connector, "/detection")
+    assert not service_available(mock_connector, "/segmentation")
 
 
-class TestCheckServiceAvailable:
-    """Test cases for check_service_available."""
-
-    def test_service_available(self, mock_connector):
-        """Test returns True when service is available."""
-        with patch(
-            "rai_perception.components.service_utils.wait_for_ros2_services"
-        ) as mock_wait:
-            mock_wait.return_value = None  # No exception means success
-
-            result = check_service_available(
-                mock_connector, "/test_service", timeout_sec=0.1
-            )
-
-            assert result is True
-            mock_wait.assert_called_once_with(
-                mock_connector, ["/test_service"], timeout=0.1
-            )
-
-    def test_service_unavailable(self, mock_connector):
-        """Test returns False when service is not available."""
-        with patch(
-            "rai_perception.components.service_utils.wait_for_ros2_services"
-        ) as mock_wait:
-            mock_wait.side_effect = TimeoutError("Service not available")
-
-            result = check_service_available(
-                mock_connector, "/test_service", timeout_sec=0.1
-            )
-
-            assert result is False
-            mock_wait.assert_called_once_with(
-                mock_connector, ["/test_service"], timeout=0.1
-            )
-
-    def test_invalid_timeout_returns_false(self, mock_connector):
-        """Test returns False when ValueError is raised (invalid timeout)."""
-        with patch(
-            "rai_perception.components.service_utils.wait_for_ros2_services"
-        ) as mock_wait:
-            mock_wait.side_effect = ValueError("Invalid timeout")
-
-            result = check_service_available(
-                mock_connector, "/test_service", timeout_sec=-1.0
-            )
-
-            assert result is False
-
-    def test_non_blocking_check_timeout_zero(self, mock_connector):
-        """Test that timeout=0 performs non-blocking check without calling wait_for_ros2_services."""
-        mock_connector.get_services_names_and_types.return_value = [
-            ("/test_service", ["std_srvs/srv/Empty"]),
-            ("/other_service", ["std_srvs/srv/Empty"]),
-        ]
-
-        with patch(
-            "rai_perception.components.service_utils.wait_for_ros2_services"
-        ) as mock_wait:
-            result = check_service_available(
-                mock_connector, "/test_service", timeout_sec=0.0
-            )
-
-            assert result is True
-            # Should not call wait_for_ros2_services when timeout <= 0
-            mock_wait.assert_not_called()
-
-        # Test with negative timeout
-        with patch(
-            "rai_perception.components.service_utils.wait_for_ros2_services"
-        ) as mock_wait:
-            result = check_service_available(
-                mock_connector, "/nonexistent_service", timeout_sec=-0.1
-            )
-
-            assert result is False
-            # Should not call wait_for_ros2_services when timeout <= 0
-            mock_wait.assert_not_called()
-
-
-class TestCreateServiceClient:
-    """Test cases for create_service_client."""
-
-    @pytest.fixture
-    def service_type(self):
-        """Service type for testing."""
-        from std_srvs.srv import Empty
-
-        return Empty
-
-    def test_service_available_immediately(self, mock_connector, service_type):
-        """Test returns client when service is available immediately."""
-        mock_client = MagicMock()
-        mock_connector.node.create_client.return_value = mock_client
-
-        with patch(
-            "rai_perception.components.service_utils.wait_for_ros2_services"
-        ) as mock_wait:
-            mock_wait.return_value = None  # No exception means success
-
-            result = create_service_client(
-                mock_connector, service_type, "/test_service", timeout_sec=1.0
-            )
-
-            assert result == mock_client
-            mock_wait.assert_called_once_with(
-                mock_connector, ["/test_service"], timeout=0.0
-            )
-            mock_connector.node.create_client.assert_called_once_with(
-                service_type, "/test_service"
-            )
-
-    def test_service_timeout_raises_error(self, mock_connector, service_type):
-        """Test raises ROS2ServiceError when service times out."""
-        from rai.communication.ros2 import ROS2ServiceError
-
-        mock_connector.get_services_names_and_types.return_value = [
-            ("/other_service", ["std_srvs/srv/Empty"])
-        ]
-
-        with patch(
-            "rai_perception.components.service_utils.wait_for_ros2_services"
-        ) as mock_wait:
-            mock_wait.side_effect = TimeoutError("Service not available")
-
-            with pytest.raises(ROS2ServiceError) as exc_info:
-                create_service_client(
-                    mock_connector,
-                    service_type,
-                    "/test_service",
-                    timeout_sec=1.0,
-                    max_wait_time=5.0,
-                )
-
-            assert exc_info.value.service_name == "/test_service"
-            assert exc_info.value.timeout_sec == 5.0
-            assert "Service not available after 5.0s" in exc_info.value.suggestion
+def test_wait_for_returns_what_is_still_missing(mock_connector):
+    mock_connector.get_topics_names_and_types.side_effect = [
+        [],
+        [("/a", ["std_msgs/msg/String"])],
+        [("/a", ["std_msgs/msg/String"]), ("/b", ["std_msgs/msg/String"])],
+    ]
+    assert wait_for(mock_connector, ["/a", "/b"], "topic", timeout=5.0) == []
+    mock_connector.get_topics_names_and_types.side_effect = None
+    mock_connector.get_topics_names_and_types.return_value = []
+    assert wait_for(mock_connector, ["/a"], "topic", timeout=0.05) == ["/a"]

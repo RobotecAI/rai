@@ -160,12 +160,12 @@ _Domain Correspondence:_
 _Consistency:_
 
 -   Input schema naming pattern: `{ToolName}Input` (e.g., `GetObjectGrippingPointsToolInput`)
--   Standardized parameter handling: `_load_parameters()` method with consistent prefixes (`perception.gripping_points.*`)
+-   Standardized configuration: topics, frames and service names are tool fields
 
 _Role Expressiveness:_
 
--   Pipeline visibility: Tools expose `pipeline_stages` attributes and `get_pipeline_info()` methods
--   Service dependency clarity: `required_services` attributes and `check_service_dependencies()` methods
+-   Pipeline visibility: `GetObjectGrippingPointsTool` exposes its stage components and logs each stage
+-   Service dependency clarity: service names are tool fields and `targets`; `check_service_dependencies()` reports availability
 
 _Progressive Evaluation:_
 

@@ -18,6 +18,7 @@ This module provides utilities for visualizing gripping points on camera images
 and saving annotated images for debugging and analysis.
 """
 
+import logging
 from typing import Optional
 
 import cv2
@@ -28,6 +29,8 @@ from sensor_msgs.msg import CameraInfo, Image
 
 from rai_perception.components.math_utils import quaternion_to_rotation_matrix
 from rai_perception.components.perception_utils import get_camera_intrinsics
+
+logger = logging.getLogger(__name__)
 
 
 def _project_3d_to_2d(
@@ -105,7 +108,7 @@ def draw_gripping_points_on_image(
     return cv_image
 
 
-def transform_points_between_frames(
+async def transform_points_between_frames(
     connector: ROS2Connector,
     points: list[np.ndarray],
     source_frame: str,
@@ -133,7 +136,7 @@ def transform_points_between_frames(
         as transform failures are not programmatically detectable from the return value.
     """
     try:
-        transform = connector.get_transform(target_frame, source_frame)
+        transform = await connector.transform(target_frame, source_frame)
         t = transform.transform.translation
         r = transform.transform.rotation
 
@@ -150,13 +153,13 @@ def transform_points_between_frames(
 
         return transformed_points
     except Exception as e:
-        connector.node.get_logger().error(
+        logger.error(
             f"Failed to transform points from {source_frame} to {target_frame}: {e}"
         )
         return points
 
 
-def save_gripping_points_annotated_image(
+async def save_gripping_points_annotated_image(
     connector: ROS2Connector,
     gripping_points_target_frame: list[np.ndarray],
     camera_topic: str,
@@ -178,23 +181,15 @@ def save_gripping_points_annotated_image(
         source_frame: Camera frame name
         target_frame: Target frame name (where gripping points are expressed)
         filename: Output filename for annotated image
-
-    Raises:
-        TypeError: If received messages are not of expected types
     """
     # Transform points from target frame to camera frame
-    camera_frame_points = transform_points_between_frames(
+    camera_frame_points = await transform_points_between_frames(
         connector, gripping_points_target_frame, target_frame, source_frame
     )
 
     # Receive camera messages
-    image_msg = connector.receive_message(camera_topic).payload
-    camera_info_msg = connector.receive_message(camera_info_topic).payload
-
-    if not isinstance(image_msg, Image):
-        raise TypeError(f"Expected Image message, got {type(image_msg)}")
-    if not isinstance(camera_info_msg, CameraInfo):
-        raise TypeError(f"Expected CameraInfo message, got {type(camera_info_msg)}")
+    image_msg = await connector.receive(camera_topic, msg_type=Image)
+    camera_info_msg = await connector.receive(camera_info_topic, msg_type=CameraInfo)
 
     # Draw gripping points and save
     annotated_image = draw_gripping_points_on_image(

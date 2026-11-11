@@ -98,23 +98,6 @@ class DetectionService(BaseVisionService):
                 f"Consider migrating to '{service_name}'."
             )
 
-    def _should_register_legacy_name(self) -> bool:
-        """Check if legacy service name should be registered.
-
-        Reads ROS2 parameter: enable_legacy_service_names
-        Default: True (for backward compatibility)
-
-        Returns:
-            True if legacy service name should be registered, False otherwise
-        """
-        from rai.communication.ros2 import get_param_value
-
-        return get_param_value(
-            self.ros2_connector.node,
-            "enable_legacy_service_names",
-            default=True,
-        )
-
     def _classify_callback(self, request, response: RAIGroundingDino.Response):
         """Handle detection service requests."""
         try:
@@ -131,7 +114,7 @@ class DetectionService(BaseVisionService):
 
             if not request.source_img.data or image_data_size == 0:
                 self.logger.error("Received empty image data in detection request")
-                ts = self.ros2_connector.node.get_clock().now().to_msg()
+                ts = self.ros2_connector.now().to_msg()
                 response.detections.detections = []  # type: ignore
                 response.detections.header.stamp = ts  # type: ignore
                 response.detections.detection_classes = class_array  # type: ignore
@@ -152,7 +135,7 @@ class DetectionService(BaseVisionService):
             if boxes is None:
                 boxes = []
 
-            ts = self.ros2_connector.node.get_clock().now().to_msg()
+            ts = self.ros2_connector.now().to_msg()
             detections_list = []
             for box in boxes:
                 try:
@@ -170,7 +153,7 @@ class DetectionService(BaseVisionService):
             self.logger.error(
                 f"Error processing detection request: {e}\n" + traceback.format_exc()
             )
-            ts = self.ros2_connector.node.get_clock().now().to_msg()
+            ts = self.ros2_connector.now().to_msg()
             # Try to preserve requested classes even on error
             try:
                 class_array = request.classes.split(",")

@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import os
+import sys
 import threading
 
-import rclpy
 from rai.agents import SyncAgent, run
 from rai.communication.ros2 import ROS2Connector
+from rai.communication.ros2.runtime import ROS2Runtime
 
 from rai_perception.services import DetectionService, SegmentationService
 
@@ -32,58 +32,35 @@ class _StopOnShutdown(SyncAgent):
         self.service.stop()
 
 
-def main():
-    rclpy.init()
-
-    # Create ROS2 connectors for each service
-    # TODO(juliaj): Re-evaluate executor_type choice (single_threaded vs multi_threaded)
-    # Current: single_threaded for consistency with BaseVisionService pattern
-    # Consider: multi_threaded if concurrent request handling is needed
-    detection_connector = ROS2Connector(
-        "detection_service", executor_type="single_threaded"
-    )
-    segmentation_connector = ROS2Connector(
-        "segmentation_service", executor_type="single_threaded"
-    )
-
-    # Read enable_legacy_service_names from environment variable or default to True (backward compatible)
-    # Set via launch file: env={'ENABLE_LEGACY_SERVICE_NAMES': 'false'} or command line
+def _connector(node_name: str) -> ROS2Connector:
+    """A connector on its own node; --ros-args parameters apply to it."""
+    connector = ROS2Connector(runtime=ROS2Runtime(node_name, cli_args=sys.argv))
+    # ENABLE_LEGACY_SERVICE_NAMES=false (e.g. from a launch file) drops the
+    # legacy service names; a --ros-args -p override still wins.
     enable_legacy = os.getenv("ENABLE_LEGACY_SERVICE_NAMES", "true").lower() == "true"
-    detection_connector.node.declare_parameter(
-        "enable_legacy_service_names", enable_legacy
-    )
-    segmentation_connector.node.declare_parameter(
-        "enable_legacy_service_names", enable_legacy
-    )
+    connector.parameter("enable_legacy_service_names", enable_legacy)
+    return connector
 
-    # Use threading to initialize and download weights concurrently
-    detection_service = None
-    segmentation_service = None
 
-    def init_detection():
-        nonlocal detection_service
-        detection_service = DetectionService(ros2_connector=detection_connector)
+def main():
+    connectors = [_connector("detection_service"), _connector("segmentation_service")]
+    classes = [DetectionService, SegmentationService]
+    services: list = [None, None]
 
-    def init_segmentation():
-        nonlocal segmentation_service
-        segmentation_service = SegmentationService(
-            ros2_connector=segmentation_connector
-        )
+    def init(i: int) -> None:
+        services[i] = classes[i](ros2_connector=connectors[i])
 
-    t1 = threading.Thread(target=init_detection)
-    t2 = threading.Thread(target=init_segmentation)
+    # Initialize and download weights concurrently.
+    threads = [threading.Thread(target=init, args=(i,)) for i in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
 
-    t1.start()
-    t2.start()
-
-    t1.join()
-    t2.join()
-
-    services = [s for s in (detection_service, segmentation_service) if s is not None]
+    services = [s for s in services if s is not None]
     for service in services:
         service.run()
     run(*(_StopOnShutdown(s) for s in services))
-    rclpy.shutdown()
 
 
 if __name__ == "__main__":

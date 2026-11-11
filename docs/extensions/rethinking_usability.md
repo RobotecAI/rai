@@ -187,9 +187,9 @@ Role expressiveness refers to how apparent the relationship between components a
 
 _Role Expressiveness Improvements (2025):_ Tools have been enhanced to make pipeline/data flow and service dependencies explicit:
 
--   Pipeline visibility: Tools now expose `pipeline_stages` class attributes and `get_pipeline_info()` methods that document the internal pipeline stages (e.g., `GetObjectGrippingPointsTool` documents its 3-stage pipeline: Point Cloud Extraction → Point Cloud Filtering → Gripping Point Estimation).
+-   Pipeline visibility: `GetObjectGrippingPointsTool` exposes its 3-stage pipeline (Point Cloud Extraction → Point Cloud Filtering → Gripping Point Estimation) as `point_cloud_from_segmentation`, `point_cloud_filter` and `gripping_point_estimator`, and logs each stage.
 
--   Service dependency clarity: Tools now expose `required_services` class attributes, `get_service_info()` methods, and `check_service_dependencies()` methods that document which ROS2 services are required and their current availability status. This makes it clear that tools depend on services (e.g., `GetDetectionTool` requires `DetectionService`), helps users understand deployment requirements, and provides better error messages when services are unavailable.
+-   Service dependency clarity: the services a tool needs are its fields (`detection_service_name`, `segmentation_service_name`) and its `targets`; `check_service_dependencies()` reports whether each is available. This makes it clear that tools depend on services (e.g., `GetDetectionTool` requires `DetectionService`), helps users understand deployment requirements, and provides better error messages when services are unavailable.
 
 These improvements address the role expressiveness dimension by making the relationship between tools, components, and services apparent without requiring users to read implementation details.
 
@@ -229,7 +229,7 @@ _2. ROS2 Service Nodes_
 
 -   `DetectionService`, `SegmentationService`: Model-agnostic ROS2 service nodes providing detection/segmentation services
 -   Launched via `rai_perception.scripts.run_perception_services`
--   Legacy agents (`GroundedSamAgent`, `GroundingDinoAgent`) are deprecated (emit deprecation warnings) and located in `agents/` folder
+-   Legacy agents (`GroundedSamAgent`, `GroundingDinoAgent`) were deprecated (emitted deprecation warnings), removed in RAI 3.0, and were located in `agents/` folder
 
 _3. Integration with Other RAI Components_
 

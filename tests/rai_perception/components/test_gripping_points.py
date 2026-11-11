@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import Mock, patch
+import asyncio
 
 import numpy as np
 import pytest
@@ -478,189 +478,98 @@ class TestPointCloudFilter:
         np.testing.assert_array_equal(result, points)
 
 
-class TestPointCloudFromSegmentationEncodingAware:
-    """Test encoding-aware depth conversion in PointCloudFromSegmentation."""
+def make_pipeline_connector(connector, depth, mask, translation=(0.0, 0.0, 0.0)):
+    """Wire mock_connector to serve a camera, depth and camera info, one
+    detection with the given mask, and a TF translation."""
+    from geometry_msgs.msg import TransformStamped
+    from sensor_msgs.msg import CameraInfo
 
-    @pytest.fixture
-    def mock_connector(self):
-        """Create a mock ROS2Connector."""
-        connector = Mock()
-        connector.node = Mock()
-        connector.node.get_logger.return_value = Mock()
-        return connector
+    from rai_interfaces.srv import RAIGroundedSam, RAIGroundingDino
 
-    def test_encoding_aware_conversion_32fc1(self, mock_connector):
-        """Test that 32FC1 encoding (meters) is handled correctly."""
-        # Mock the depth conversion to verify encoding-aware conversion is used
-        with patch(
-            "rai_perception.components.gripping_points.convert_depth_to_meters"
-        ) as mock_convert:
-            depth_array = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
-            mock_convert.return_value = depth_array  # Already in meters, no conversion
+    info = CameraInfo(k=[100.0, 0.0, 1.0, 0.0, 100.0, 1.0, 0.0, 0.0, 1.0])
+    messages = {
+        "/test/camera": numpy_to_imgmsg(np.zeros((2, 2, 3), np.uint8), "rgb8"),
+        "/test/depth": depth,
+        "/test/camera_info": info,
+    }
+    connector.receive.side_effect = lambda topic, **_: messages[topic]
 
-            config = PointCloudFromSegmentationConfig()
-            PointCloudFromSegmentation(
-                connector=mock_connector,
-                camera_topic="/test/camera",
-                depth_topic="/test/depth",
-                camera_info_topic="/test/camera_info",
-                source_frame="camera_frame",
-                target_frame="base_frame",
-                conversion_ratio=1.0,  # Recommended: use encoding-aware only
-                config=config,
-            )
+    def call(service, request, **_):
+        if isinstance(request, RAIGroundingDino.Request):
+            return RAIGroundingDino.Response()
+        masks = [] if mask is None else [numpy_to_imgmsg(mask, "mono8")]
+        return RAIGroundedSam.Response(masks=masks)
 
-            # Verify convert_depth_to_meters integration point exists
-            # (actual call happens in run() method which requires full ROS2 setup)
-            assert mock_convert is not None
+    connector.call.side_effect = call
+    transform = TransformStamped()
+    t = transform.transform.translation
+    t.x, t.y, t.z = translation
+    transform.transform.rotation.w = 1.0
+    connector.transform.return_value = transform
+    return connector
 
-    def test_conversion_ratio_default(self, mock_connector):
-        """Test that default conversion_ratio is 1.0 (no scaling)."""
-        config = PointCloudFromSegmentationConfig()
-        pcl_gen = PointCloudFromSegmentation(
-            connector=mock_connector,
-            camera_topic="/test/camera",
-            depth_topic="/test/depth",
-            camera_info_topic="/test/camera_info",
-            source_frame="camera_frame",
-            target_frame="base_frame",
+
+def make_pcl(connector, **kwargs):
+    return PointCloudFromSegmentation(
+        connector=connector,
+        camera_topic="/test/camera",
+        depth_topic="/test/depth",
+        camera_info_topic="/test/camera_info",
+        source_frame="camera_frame",
+        target_frame="base_frame",
+        **{"config": PointCloudFromSegmentationConfig(), **kwargs},
+    )
+
+
+class TestPointCloudFromSegmentation:
+    MASK = np.array([[255, 0], [0, 255]], dtype=np.uint8)
+
+    def test_points_in_target_frame(self, mock_connector):
+        depth = numpy_to_imgmsg(np.full((2, 2), 2000, np.uint16), "16UC1")  # mm
+        make_pipeline_connector(mock_connector, depth, self.MASK, (1.0, 0.0, 0.0))
+        clouds = asyncio.run(make_pcl(mock_connector).run("cup"))
+        assert len(clouds) == 1
+        np.testing.assert_allclose(clouds[0][:, 2], [2.0, 2.0])  # meters
+        np.testing.assert_allclose(clouds[0][:, 0], [0.98, 1.0], atol=1e-6)
+        mock_connector.transform.assert_awaited_with("base_frame", "camera_frame")
+
+    def test_conversion_ratio_scales_depth(self, mock_connector):
+        depth = numpy_to_imgmsg(np.full((2, 2), 2.0, np.float32), "32FC1")
+        make_pipeline_connector(mock_connector, depth, self.MASK)
+        pcl = make_pcl(mock_connector, conversion_ratio=0.5)
+        assert make_pcl(mock_connector).conversion_ratio == 1.0
+        clouds = asyncio.run(pcl.run("cup"))
+        np.testing.assert_allclose(clouds[0][:, 2], [1.0, 1.0])
+
+    def test_no_masks_means_no_clouds(self, mock_connector):
+        depth = numpy_to_imgmsg(np.full((2, 2), 2.0, np.float32), "32FC1")
+        make_pipeline_connector(mock_connector, depth, None)
+        assert asyncio.run(make_pcl(mock_connector).run("cup")) == []
+
+    def test_calls_use_configured_services_and_timeout(self, mock_connector):
+        depth = numpy_to_imgmsg(np.full((2, 2), 2.0, np.float32), "32FC1")
+        make_pipeline_connector(mock_connector, depth, self.MASK)
+        config = PointCloudFromSegmentationConfig(service_timeout=90.0)
+        assert PointCloudFromSegmentationConfig().service_timeout == 60.0
+        pcl = make_pcl(
+            mock_connector,
             config=config,
+            detection_service="/d",
+            segmentation_service="/s",
         )
+        asyncio.run(pcl.run("cup"))
+        calls = mock_connector.call.call_args_list
+        assert [c.args[0] for c in calls] == ["/d", "/s"]
+        assert all(c.kwargs["timeout"] == 90.0 for c in calls)
 
-        assert pcl_gen.conversion_ratio == 1.0
-
-    def test_encoding_aware_vs_manual_conversion(self):
-        """Test that encoding-aware conversion handles different encodings correctly."""
+    def test_encoding_aware_conversion(self):
         from rai_perception.components.perception_utils import convert_depth_to_meters
 
-        # Test 16UC1 (millimeters) - should convert to meters
         depth_mm = np.array([[1000, 2000], [3000, 4000]], dtype=np.uint16)
-        depth_msg_mm = numpy_to_imgmsg(depth_mm, "16UC1")
-        result_mm = convert_depth_to_meters(depth_mm, depth_msg_mm)
-        np.testing.assert_array_almost_equal(
-            result_mm, depth_mm.astype(np.float32) / 1000.0
+        result_mm = convert_depth_to_meters(
+            depth_mm, numpy_to_imgmsg(depth_mm, "16UC1")
         )
-        assert result_mm[0, 0] == 1.0
-        assert result_mm[0, 1] == 2.0
-
-        # Test 32FC1 (meters) - should remain unchanged
+        np.testing.assert_array_almost_equal(result_mm, depth_mm / 1000.0)
         depth_m = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
-        depth_msg_m = numpy_to_imgmsg(depth_m, "32FC1")
-        result_m = convert_depth_to_meters(depth_m, depth_msg_m)
+        result_m = convert_depth_to_meters(depth_m, numpy_to_imgmsg(depth_m, "32FC1"))
         np.testing.assert_array_almost_equal(result_m, depth_m)
-        assert result_m[0, 0] == 1.0
-        assert result_m[0, 1] == 2.0
-
-
-class TestPointCloudFromSegmentationTimeout:
-    """Test service timeout configuration for PointCloudFromSegmentation."""
-
-    @pytest.fixture
-    def mock_connector(self):
-        """Create a mock ROS2Connector."""
-        connector = Mock()
-        connector.node = Mock()
-        connector.node.get_logger.return_value = Mock()
-        return connector
-
-    def test_service_timeout_default(self, mock_connector):
-        """Test that default service_timeout is 60.0 seconds."""
-        config = PointCloudFromSegmentationConfig()
-        assert config.service_timeout == 60.0
-
-    def test_service_timeout_custom(self, mock_connector):
-        """Test that custom service_timeout can be set."""
-        config = PointCloudFromSegmentationConfig(service_timeout=120.0)
-        assert config.service_timeout == 120.0
-
-        pcl_gen = PointCloudFromSegmentation(
-            connector=mock_connector,
-            camera_topic="/test/camera",
-            depth_topic="/test/depth",
-            camera_info_topic="/test/camera_info",
-            source_frame="camera_frame",
-            target_frame="base_frame",
-            config=config,
-        )
-        assert pcl_gen.config.service_timeout == 120.0
-
-    def test_get_future_result_uses_timeout(self, mock_connector):
-        """Test that get_future_result is called with the configured timeout."""
-        from rclpy import Future
-
-        config = PointCloudFromSegmentationConfig(service_timeout=90.0)
-        pcl_gen = PointCloudFromSegmentation(
-            connector=mock_connector,
-            camera_topic="/test/camera",
-            depth_topic="/test/depth",
-            camera_info_topic="/test/camera_info",
-            source_frame="camera_frame",
-            target_frame="base_frame",
-            config=config,
-        )
-
-        # Mock the service calls and get_future_result
-        mock_gdino_future = Mock(spec=Future)
-        mock_gsam_future = Mock(spec=Future)
-        mock_gdino_response = Mock()
-        mock_gsam_response = Mock()
-        mock_gdino_response.detections = Mock()
-        mock_gsam_response.masks = [Mock()]
-
-        with (
-            patch.object(pcl_gen, "_get_image_message") as mock_get_image,
-            patch.object(pcl_gen, "_call_gdino_node", return_value=mock_gdino_future),
-            patch.object(pcl_gen, "_call_gsam_node", return_value=mock_gsam_future),
-            patch(
-                "rai_perception.components.gripping_points.get_future_result"
-            ) as mock_get_future_result,
-            patch.object(pcl_gen.connector, "receive_message") as mock_receive_message,
-            patch.object(pcl_gen, "_get_camera_info_message") as mock_get_camera_info,
-            patch.object(
-                pcl_gen, "_get_intrinsic_from_camera_info"
-            ) as mock_get_intrinsic,
-            patch(
-                "rai_perception.components.gripping_points.convert_ros_img_to_ndarray"
-            ) as mock_convert_img,
-            patch.object(
-                pcl_gen, "_transform_points_source_to_target"
-            ) as mock_transform,
-            patch(
-                "rai_perception.components.gripping_points.depth_to_point_cloud"
-            ) as mock_depth_to_pcl,
-        ):
-            # Setup mocks
-            mock_get_image.return_value = Mock()
-            mock_receive_message.return_value.payload = Mock()
-            mock_get_camera_info.return_value = Mock()
-            mock_get_intrinsic.return_value = (100.0, 100.0, 50.0, 50.0)
-            mock_convert_img.return_value = np.zeros((10, 10), dtype=np.float32)
-            mock_transform.return_value = np.array([[0.0, 0.0, 0.0]], dtype=np.float64)
-            mock_depth_to_pcl.return_value = np.array(
-                [[0.0, 0.0, 0.0]], dtype=np.float32
-            )
-
-            # Configure get_future_result to return responses
-            def get_future_side_effect(future, timeout_sec=None):
-                if future == mock_gdino_future:
-                    return mock_gdino_response
-                elif future == mock_gsam_future:
-                    return mock_gsam_response
-                return None
-
-            mock_get_future_result.side_effect = get_future_side_effect
-
-            # Call run method
-            pcl_gen.run("test_object")
-
-            # Verify get_future_result was called twice with the configured timeout
-            assert mock_get_future_result.call_count == 2
-            calls = mock_get_future_result.call_args_list
-
-            # First call should be for GDINO with timeout
-            assert calls[0][0][0] == mock_gdino_future
-            assert calls[0][1]["timeout_sec"] == 90.0
-
-            # Second call should be for GSAM with timeout
-            assert calls[1][0][0] == mock_gsam_future
-            assert calls[1][1]["timeout_sec"] == 90.0

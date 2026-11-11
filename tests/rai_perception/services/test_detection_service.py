@@ -22,9 +22,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 from rai_perception.services.detection_service import DetectionService
 
-from tests.rai_perception.conftest import (
-    setup_mock_clock,
-)
 from tests.rai_perception.test_helpers import (
     create_detection_request,
     get_detection_weights_path,
@@ -84,7 +81,6 @@ class TestDetectionService:
             request = create_detection_request("dinosaur")
             response = RAIGroundingDino.Response()
 
-            setup_mock_clock(instance)
             result = instance._classify_callback(request, response)
 
             assert len(result.detections.detections) == 0
@@ -152,7 +148,6 @@ class TestDetectionService:
             request = create_detection_request("dinosaur, dragon")
             response = RAIGroundingDino.Response()
 
-            setup_mock_clock(instance)
             result = instance._classify_callback(request, response)
 
             # Verify response
