@@ -37,7 +37,6 @@ from typing import Any
 
 import numpy as np
 import pytest
-from cv_bridge import CvBridge
 from example_interfaces.action import Fibonacci
 from geometry_msgs.msg import TransformStamped
 from PIL import Image as PILImage
@@ -49,6 +48,7 @@ from rai.communication.ros2 import (
     ROS2Message,
 )
 from rai.communication.ros2.context import NodeDiscovery
+from rai.communication.ros2.images import numpy_to_imgmsg
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
@@ -257,7 +257,7 @@ def test_spin_survives_malformed_hri_image(connectors, helper_node):
     wait_for_subscriber(pub)
 
     bad = HRIMessage(text="bad")
-    bad.images = [CvBridge().cv2_to_imgmsg(np.zeros((4, 4), np.float32), "32FC1")]
+    bad.images = [numpy_to_imgmsg(np.zeros((4, 4), np.float32), "32FC1")]
     pub.publish(bad)
     assert publish_until(pub, HRIMessage(text="good"), lambda: "good" in got)
 
