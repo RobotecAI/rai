@@ -404,3 +404,16 @@ def test_no_hooks_skips_the_chain(monkeypatch):
 
     monkeypatch.setattr("rai.tools.base.run_tool_hooks", must_not_run)
     assert asyncio.run(drive.ainvoke({"speed": 1})) == "driving 1.0"
+
+
+def test_tool_name_is_the_egress_origin_while_it_runs():
+    from rai.origin import egress_origin
+    from rai.tools import Effect, rai_tool
+
+    @rai_tool(effect=Effect.READ, name="probe")
+    async def probe() -> str:
+        """Return the egress origin."""
+        return str(egress_origin.get())
+
+    assert probe.invoke({}) == "probe"
+    assert egress_origin.get() is None

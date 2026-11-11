@@ -35,10 +35,11 @@ import logging
 import threading
 import time
 from collections.abc import Awaitable, Callable, Iterable
-from contextvars import ContextVar
 from dataclasses import dataclass, field
 from fnmatch import fnmatchcase
 from typing import Any, Literal, NoReturn, Optional, Union
+
+from rai.origin import egress_origin
 
 logger = logging.getLogger(__name__)
 
@@ -75,10 +76,6 @@ MOTION: frozenset[str] = frozenset(
 )
 """Message, service and action types that move hardware. Extend it with a union:
 ``MOTION | {"my_msgs/msg/WheelSpeeds"}``."""
-
-egress_origin: ContextVar[Optional[str]] = ContextVar("egress_origin", default=None)
-"""Who issues egress in this context (a tool or agent name), for hooks and audit.
-Set by the caller; `Egress.origin` reads it when the egress is created."""
 
 
 @dataclass(frozen=True)

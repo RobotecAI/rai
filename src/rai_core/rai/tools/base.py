@@ -27,6 +27,8 @@ from langchain_core.tools import BaseTool, StructuredTool, ToolException
 from langchain_core.tools.base import create_schema_from_function
 from pydantic import Field
 
+from rai.origin import egress_origin
+
 from .hooks import Effect, ToolCallContext, ToolHooks, global_tool_hooks, run_tool_hooks
 
 
@@ -95,6 +97,7 @@ class RaiTool(BaseTool):
             if denial := await run_tool_hooks(call, (global_tool_hooks, self.hooks)):
                 raise ToolException(denial.reason)
         timeout = asyncio.timeout(self.timeout_s)
+        origin = egress_origin.set(self.name)  # connector egress hooks see the tool
         try:
             async with timeout:
                 return await self._acall(**kwargs)
@@ -104,6 +107,8 @@ class RaiTool(BaseTool):
             if timeout.expired():
                 raise ToolException(f"Timed out after {self.timeout_s}s") from e
             raise ToolException(f"{type(e).__name__}: {e}") from e
+        finally:
+            egress_origin.reset(origin)
 
     def _run(self, *args: Any, **kwargs: Any) -> Any:
         coro = self._arun(*args, **kwargs)
