@@ -24,16 +24,18 @@ from geometry_msgs.msg import Pose as ROS2Pose
 from geometry_msgs.msg import PoseStamped as ROS2PoseStamped
 from geometry_msgs.msg import TransformStamped
 from launch import LaunchDescription
-from rai.communication.ros2 import ROS2Connector, ROS2Message
-from rai.communication.ros2.ros_async import get_future_result
+from rai.communication.ros2 import QoS, ROS2Connector
+from rai.communication.ros2.api.conversion import import_message_from_str
+from rai.tools.ros2.base import from_dict
 from rai.types import (
     Header,
     Pose,
     PoseStamped,
 )
 from rai.types.ros2 import from_ros2_msg, to_ros2_msg
+from std_srvs.srv import Trigger
 from tf2_geometry_msgs import do_transform_pose, do_transform_pose_stamped
-from tf2_ros import StaticTransformBroadcaster
+from tf2_msgs.msg import TFMessage
 
 from rai_interfaces.srv import ManipulatorMoveTo
 from rai_sim.launch_manager import ROS2LaunchManager
@@ -72,7 +74,9 @@ class O3DExROS2Bridge(SimulationBridge):
         self.manager = ROS2LaunchManager()
         self.current_sim_process = None
         self.current_binary_path = None
-        self._static_tf_broadcaster = None
+        # Every static transform published so far: /tf_static keeps one latched
+        # message, so each publish carries them all.
+        self._static_transforms: dict[str, TransformStamped] = {}
 
     def init_simulation(self, simulation_config: O3DExROS2SimulationConfig):
         if self.current_binary_path != simulation_config.binary_path:
@@ -148,23 +152,22 @@ class O3DExROS2Bridge(SimulationBridge):
         self.manager.shutdown()
 
     def get_available_spawnable_names(self) -> list[str]:
-        msg = ROS2Message(payload={})
-        response = self._try_service_call(
-            msg,
+        response = self._call_with_retries(
+            {},
             target="get_available_spawnable_names",
             msg_type="gazebo_msgs/srv/GetWorldProperties",
         )
-        if response.payload.success:
-            return response.payload.model_names
+        if response.success:
+            return response.model_names
         else:
             raise RuntimeError(
-                f"Failed to get available spawnable names. Response: {response.payload.status_message}"
+                f"Failed to get available spawnable names. Response: {response.status_message}"
             )
 
     def _spawn_entity(self, entity: Entity):
         pose: ROS2PoseStamped = do_transform_pose_stamped(
             to_ros2_msg(entity.pose),
-            self.connector.get_transform(entity.pose.header.frame_id, "world"),
+            self.connector.sync.transform(entity.pose.header.frame_id, "world"),
         )
 
         msg_content = SpawnEntityService(
@@ -174,21 +177,20 @@ class O3DExROS2Bridge(SimulationBridge):
             initial_pose=cast(Pose, from_ros2_msg(pose.pose)),
         )
 
-        msg = ROS2Message(payload=msg_content.model_dump())
-        response = self._try_service_call(
-            msg, target="spawn_entity", msg_type="gazebo_msgs/srv/SpawnEntity"
+        response = self._call_with_retries(
+            msg_content.model_dump(),
+            target="spawn_entity",
+            msg_type="gazebo_msgs/srv/SpawnEntity",
         )
-        if response and response.payload.success:
-            spawned = SpawnedEntity(
-                id=response.payload.status_message, **entity.model_dump()
-            )
+        if response and response.success:
+            spawned = SpawnedEntity(id=response.status_message, **entity.model_dump())
             self.spawned_entities.append(spawned)
             # Connect the object's TF tree (created by O3DE) to the world frame
             # This enables MoveIt's planning scene monitor to transform object poses
             self._connect_object_tf_tree_to_world(spawned, pose)
         else:
             raise RuntimeError(
-                f"Failed to spawn entity {entity.name}. Response: {response.payload.status_message}"
+                f"Failed to spawn entity {entity.name}. Response: {response.status_message}"
             )
 
     def _connect_object_tf_tree_to_world(
@@ -200,16 +202,11 @@ class O3DExROS2Bridge(SimulationBridge):
         This enables MoveIt's planning scene monitor to transform object poses
         to the planning frame.
         """
-        if self._static_tf_broadcaster is None:
-            self._static_tf_broadcaster = StaticTransformBroadcaster(
-                self.connector.node
-            )
-
         # O3DE creates frames like {entity_name}/odom for spawned objects
         object_odom_frame = f"{entity.name}/odom"
 
         transform = TransformStamped()
-        transform.header.stamp = self.connector.node.get_clock().now().to_msg()
+        transform.header.stamp = self.connector.now().to_msg()
         transform.header.frame_id = "world"
         transform.child_frame_id = object_odom_frame
 
@@ -219,7 +216,12 @@ class O3DExROS2Bridge(SimulationBridge):
         transform.transform.translation.z = pose_in_world.pose.position.z
         transform.transform.rotation = pose_in_world.pose.orientation
 
-        self._static_tf_broadcaster.sendTransform(transform)
+        self._static_transforms[object_odom_frame] = transform
+        self.connector.sync.publish(
+            "/tf_static",
+            TFMessage(transforms=list(self._static_transforms.values())),
+            qos=QoS.LATCHED,
+        )
 
         if self.logger:
             self.logger.debug(
@@ -227,28 +229,26 @@ class O3DExROS2Bridge(SimulationBridge):
             )
 
     def _despawn_entity(self, entity: SpawnedEntity):
-        msg_content = {"name": entity.id}
-
-        msg = ROS2Message(payload=msg_content)
-
-        response = self._try_service_call(
-            msg, target="delete_entity", msg_type="gazebo_msgs/srv/DeleteEntity"
+        response = self._call_with_retries(
+            {"name": entity.id},
+            target="delete_entity",
+            msg_type="gazebo_msgs/srv/DeleteEntity",
         )
-        if response.payload.success:
+        if response.success:
             self.spawned_entities.remove(entity)
         else:
             raise RuntimeError(
-                f"Failed to delete entity {entity.name}. Response: {response.payload.status_message}"
+                f"Failed to delete entity {entity.name}. Response: {response.status_message}"
             )
 
     def get_object_pose(self, entity: SpawnedEntity) -> PoseStamped:
         object_frame = entity.name + "/"
         ros2_pose = do_transform_pose(
             ROS2Pose(),
-            self.connector.get_transform(object_frame + "odom", object_frame),
+            self.connector.sync.transform(object_frame + "odom", object_frame),
         )
         ros2_pose = do_transform_pose(
-            ros2_pose, self.connector.get_transform("world", "odom")
+            ros2_pose, self.connector.sync.transform("world", "odom")
         )
         return PoseStamped(
             pose=cast(Pose, from_ros2_msg(ros2_pose)),
@@ -300,7 +300,7 @@ class O3DExROS2Bridge(SimulationBridge):
 
         while True:
             available_topics = self.connector.get_topics_names_and_types()
-            available_services = self.connector.node.get_service_names_and_types()
+            available_services = self.connector.get_services_names_and_types()
             available_topics_names = [tp[0] for tp in available_topics]
             available_services_names = [srv[0] for srv in available_services]
 
@@ -424,37 +424,31 @@ class O3DExROS2Bridge(SimulationBridge):
             time.sleep(1)
         return False
 
-    def _try_service_call(
-        self, msg: ROS2Message, target: str, msg_type: str, n_retries: int = 3
-    ) -> ROS2Message:
+    def _call_with_retries(
+        self, request: dict[str, Any], target: str, msg_type: str, n_retries: int = 3
+    ) -> Any:
         if n_retries < 1:
             raise ValueError("Number of retries must be at least 1")
+        srv_type = import_message_from_str(msg_type)
         for _ in range(n_retries):
             try:
-                response = self.connector.service_call(
-                    msg, target=target, msg_type=msg_type
+                response = self.connector.sync.call(
+                    target, from_dict(srv_type.Request, request), srv_type=srv_type
                 )
             except Exception as e:
                 error_message = f"Error while calling service {target} with msg_type {msg_type}: {e}"
                 self.logger.error(error_message)
                 raise RuntimeError(error_message)
-            if response.payload.success:
+            if response.success:
                 return response
-            self.logger.warning(
-                f"Retrying {target}, response success: {response.payload.success}"
-            )
+            self.logger.warning(f"Retrying {target}, response success: False")
         return response  # type: ignore
 
 
 class O3DEngineArmManipulationBridge(O3DExROS2Bridge):
     def reset_arm(self):
-        self.connector.service_call(
-            ROS2Message(payload={}),
-            target="/reset_manipulator",
-            msg_type="std_srvs/srv/Trigger",
-        )
-
-        self.connector.node.get_logger().debug("Reset manipulator arm: DONE")
+        self.connector.sync.call("/reset_manipulator", Trigger.Request())
+        self.logger.debug("Reset manipulator arm: DONE")
 
     def move_arm(
         self,
@@ -476,15 +470,6 @@ class O3DEngineArmManipulationBridge(O3DExROS2Bridge):
 
         request.target_pose = to_ros2_msg(pose)
 
-        client = self.connector.node.create_client(
-            ManipulatorMoveTo,
-            "/manipulator_move_to",
-        )
-        while not client.wait_for_service(timeout_sec=5.0):
-            self.connector.node.get_logger().info("Service not available, waiting...")
-
-        self.connector.node.get_logger().info("Making request to arm manipulator...")
-        future = client.call_async(request)
-        result = get_future_result(future, timeout_sec=5.0)
-
-        self.connector.node.get_logger().debug(f"Moving arm result: {result}")
+        self.logger.info("Making request to arm manipulator...")
+        result = self.connector.sync.call("/manipulator_move_to", request, timeout=10.0)
+        self.logger.debug(f"Moving arm result: {result}")

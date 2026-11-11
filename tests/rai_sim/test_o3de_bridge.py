@@ -12,19 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import inspect
 import signal
 import subprocess
-import typing
 import unittest
 from pathlib import Path
-from typing import Optional, get_args, get_origin
 from unittest.mock import MagicMock, patch
 
-import rclpy
-from geometry_msgs.msg import TransformStamped as ROS2TransformStamped
 from launch import LaunchDescription
-from rai.communication.ros2 import ROS2Connector, ROS2Message
+from rai.communication.ros2 import QoS, ROS2Connector
 from rai.types import (
     Header,
     Point,
@@ -32,8 +27,7 @@ from rai.types import (
     PoseStamped,
     Quaternion,
 )
-from rclpy.node import Node
-from rclpy.qos import QoSProfile
+from std_srvs.srv import SetBool
 
 from rai_sim.launch_manager import ROS2LaunchManager
 from rai_sim.o3de.o3de_bridge import O3DExROS2Bridge, O3DExROS2SimulationConfig
@@ -72,6 +66,7 @@ class TestO3DExROS2Bridge(unittest.TestCase):
     @patch("rai_sim.o3de.o3de_bridge.ROS2LaunchManager")
     def setUp(self, mock_launch_manager_class):
         self.mock_connector = MagicMock(spec=ROS2Connector)
+        self.mock_connector.sync = MagicMock()
         self.mock_logger = MagicMock()
 
         self.mock_launch_manager = MagicMock(spec=ROS2LaunchManager)
@@ -265,31 +260,16 @@ class TestO3DExROS2Bridge(unittest.TestCase):
     def test_get_available_spawnable_names(self):
         # Mock the response
         response = MagicMock()
-        response.payload.model_names = ["cube", "carrot"]
-        self.bridge._try_service_call = MagicMock(return_value=response)
+        response.model_names = ["cube", "carrot"]
+        self.bridge._call_with_retries = MagicMock(return_value=response)
 
         names = self.bridge.get_available_spawnable_names()
 
-        self.bridge._try_service_call.assert_called_once()
+        self.bridge._call_with_retries.assert_called_once()
         self.assertEqual(names, ["cube", "carrot"])
 
-    @patch("rai_sim.o3de.o3de_bridge.StaticTransformBroadcaster")
-    def test_connect_object_tf_tree_to_world(self, mock_broadcaster_class):
-        """Test that static transform is published from world to object's odom frame."""
-        # Setup mocks
-        mock_broadcaster = MagicMock()
-        mock_broadcaster_class.return_value = mock_broadcaster
-
-        # Use shared utility to create mock clock with proper Time message
-        from tests.communication.ros2 import setup_mock_clock_for_node
-
-        mock_node = MagicMock()
-        self.mock_connector.node = mock_node
-        mock_clock, mock_time = setup_mock_clock_for_node(
-            mock_node, use_time_wrapper=False
-        )
-
-        # Create pose in world frame
+    def test_connect_object_tf_tree_to_world(self):
+        """Every static transform so far is published latched on /tf_static."""
         from geometry_msgs.msg import PoseStamped as ROS2PoseStamped
 
         pose_in_world = ROS2PoseStamped()
@@ -299,25 +279,39 @@ class TestO3DExROS2Bridge(unittest.TestCase):
         pose_in_world.pose.position.z = 3.0
         pose_in_world.pose.orientation.w = 1.0
 
-        # Call the method
         self.bridge._connect_object_tf_tree_to_world(
             self.test_spawned_entity, pose_in_world
         )
+        other = self.test_spawned_entity.model_copy(update={"name": "other"})
+        self.bridge._connect_object_tf_tree_to_world(other, pose_in_world)
 
-        # Verify broadcaster was created
-        mock_broadcaster_class.assert_called_once_with(mock_node)
+        publish = self.mock_connector.sync.publish
+        self.assertEqual(publish.call_count, 2)
+        topic, msg = publish.call_args[0]
+        self.assertEqual(topic, "/tf_static")
+        self.assertIs(publish.call_args[1]["qos"], QoS.LATCHED)
+        self.assertEqual(
+            [t.child_frame_id for t in msg.transforms],
+            ["test_entity1/odom", "other/odom"],
+        )
+        transform = msg.transforms[0]
+        self.assertEqual(transform.header.frame_id, "world")
+        self.assertEqual(transform.transform.translation.x, 1.0)
+        self.assertEqual(transform.transform.translation.y, 2.0)
+        self.assertEqual(transform.transform.translation.z, 3.0)
+        self.assertEqual(transform.transform.rotation.w, 1.0)
 
-        # Verify sendTransform was called
-        self.assertEqual(mock_broadcaster.sendTransform.call_count, 1)
-
-        # Verify transform parameters
-        call_args = mock_broadcaster.sendTransform.call_args[0][0]
-        self.assertEqual(call_args.header.frame_id, "world")
-        self.assertEqual(call_args.child_frame_id, "test_entity1/odom")
-        self.assertEqual(call_args.transform.translation.x, 1.0)
-        self.assertEqual(call_args.transform.translation.y, 2.0)
-        self.assertEqual(call_args.transform.translation.z, 3.0)
-        self.assertEqual(call_args.transform.rotation.w, 1.0)
+    def test_call_with_retries_builds_native_request(self):
+        response = MagicMock(success=True)
+        self.mock_connector.sync.call.return_value = response
+        result = self.bridge._call_with_retries(
+            {"data": True}, target="/toggle", msg_type="std_srvs/srv/SetBool"
+        )
+        self.assertIs(result, response)
+        target, request = self.mock_connector.sync.call.call_args[0]
+        self.assertEqual(target, "/toggle")
+        self.assertIsInstance(request, SetBool.Request)
+        self.assertTrue(request.data)
 
     def test_clear_scene(self):
         self.bridge.spawned_entities = [
@@ -345,145 +339,10 @@ class TestO3DExROS2Bridge(unittest.TestCase):
         self.assertEqual(self.bridge._despawn_entity.call_count, 2)
 
 
-class TestROS2ConnectorInterface(unittest.TestCase):
-    """Tests to ensure the ROS2Connector interface meets the expectations of O3DExROS2Bridge."""
+def test_connector_has_the_methods_the_bridge_uses():
+    from rai.communication.ros2.connectors.ros2_connector import SyncROS2Connector
 
-    def setUp(self):
-        rclpy.init()
-        self.connector = ROS2Connector()
-
-    def tearDown(self):
-        rclpy.shutdown()
-
-    def test_connector_required_methods_exist(self):
-        """Test that all required methods exist on the ROS2Connector."""
-        connector = ROS2Connector()
-
-        # Check that all required methods exist
-        self.assertTrue(
-            hasattr(connector, "service_call"), "service_call method is missing"
-        )
-        self.assertTrue(
-            hasattr(connector, "get_transform"), "get_transform method is missing"
-        )
-        self.assertTrue(
-            hasattr(connector, "send_message"), "send_message method is missing"
-        )
-        self.assertTrue(
-            hasattr(connector, "receive_message"), "receive_message method is missing"
-        )
-        self.assertTrue(hasattr(connector, "shutdown"), "shutdown method is missing")
-        self.assertTrue(
-            hasattr(connector, "get_topics_names_and_types"),
-            "get_topics_names_and_types method is missing",
-        )
-        self.assertTrue(
-            hasattr(connector, "node"),
-            "node property is missing",
-        )
-
-    def resolve_annotation(self, annotation: type) -> type:
-        """Helper function to unwrap Optional types. Workaround for problem with asserting Optional types."""
-        if get_origin(annotation) is typing.Optional:
-            return get_args(annotation)[0]
-        return annotation
-
-    def test_get_transform_signature(self):
-        signature = inspect.signature(self.connector.get_transform)
-        parameters = signature.parameters
-
-        expected_params: dict[str, type] = {
-            "target_frame": str,
-            "source_frame": str,
-            "timeout_sec": float,
-        }
-
-        assert list(parameters.keys()) == list(expected_params.keys()), (
-            f"Parameter names do not match, expected: {list(expected_params.keys())}, got: {list(parameters.keys())}"
-        )
-
-        for param_name, expected_type in expected_params.items():
-            param = parameters[param_name]
-            self.assertEqual(
-                self.resolve_annotation(param.annotation),
-                self.resolve_annotation(expected_type),
-                f"Parameter '{param_name}' has incorrect type, expected: {expected_type}, got: {param.annotation}",
-            )
-
-        # Check return type explicitly
-        assert signature.return_annotation is ROS2TransformStamped, (
-            f"Return type is incorrect, expected: TransformStamped, got: {signature.return_annotation}"
-        )
-
-    def test_send_message_signature(self):
-        signature = inspect.signature(self.connector.send_message)
-        parameters = signature.parameters
-
-        expected_params: dict[str, type] = {
-            "message": ROS2Message,
-            "target": str,
-            "msg_type": str,
-            "auto_qos_matching": bool,
-            "qos_profile": Optional[QoSProfile],
-        }
-
-        self.assertListEqual(
-            list(parameters.keys())[: len(expected_params)],
-            list(expected_params.keys()),
-            f"Parameter names do not match, expected: {list(expected_params.keys())}, got: {list(parameters.keys())}",
-        )
-
-    def test_receive_message_signature(self):
-        signature = inspect.signature(self.connector.receive_message)
-        parameters = signature.parameters
-
-        expected_params: dict[str, type] = {
-            "source": str,
-            "timeout_sec": float,
-            "msg_type": Optional[str],
-            "qos_profile": Optional[QoSProfile],
-            "auto_qos_matching": bool,
-        }
-
-        self.assertListEqual(
-            list(parameters.keys())[: len(expected_params)],
-            list(expected_params.keys()),
-            f"Parameter names do not match, expected: {list(expected_params.keys())}, got: {list(parameters.keys())}",
-        )
-
-        for param_name, expected_type in expected_params.items():
-            param = parameters[param_name]
-            self.assertEqual(
-                self.resolve_annotation(param.annotation),
-                self.resolve_annotation(expected_type),
-                f"Parameter '{param_name}' has incorrect type, expected: {expected_type}, got: {param.annotation}",
-            )
-
-    def test_get_topics_names_and_types_signature(self):
-        signature = inspect.signature(self.connector.get_topics_names_and_types)
-        parameters = signature.parameters
-
-        expected_params: dict[str, type] = {}
-
-        assert list(parameters.keys()) == list(expected_params.keys()), (
-            f"Parameter names do not match, expected: {list(expected_params.keys())}, got: {list(parameters.keys())}"
-        )
-
-        for param_name, expected_type in expected_params.items():
-            param = parameters[param_name]
-            self.assertEqual(
-                self.resolve_annotation(param.annotation),
-                self.resolve_annotation(expected_type),
-                f"Parameter '{param_name}' has incorrect type, expected: {expected_type}, got: {param.annotation}",
-            )
-
-        self.assertEqual(
-            signature.return_annotation,
-            list[tuple[str, list[str]]],
-            f"Return type is incorrect, expected: list[tuple[str, list[str]]], got: {signature.return_annotation}",
-        )
-
-    def test_node_property(self):
-        """Test that the node property returns the connector's Node."""
-        self.assertIs(self.connector.node, self.connector._node)
-        self.assertIsInstance(self.connector.node, Node)
+    for name in ("now", "get_topics_names_and_types", "get_services_names_and_types"):
+        assert callable(getattr(ROS2Connector, name)), name
+    for name in ("call", "publish", "transform"):
+        assert callable(getattr(SyncROS2Connector, name)), name
