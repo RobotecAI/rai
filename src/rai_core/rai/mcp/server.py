@@ -160,7 +160,7 @@ def ros2_tools(
     from rai.tools.ros2 import (
         Nav2Toolkit,
         ROS2ActionToolkit,
-        ROS2CLIToolkit,
+        ROS2DiagnosticsToolkit,
         ROS2ServicesToolkit,
         ROS2TopicsToolkit,
     )
@@ -173,7 +173,7 @@ def ros2_tools(
         "services": lambda: ROS2ServicesToolkit(**access),
         "actions": lambda: ROS2ActionToolkit(**access),
         "nav2": lambda: Nav2Toolkit(connector=connector),
-        "cli": ROS2CLIToolkit,
+        "diagnostics": lambda: ROS2DiagnosticsToolkit(**access),
     }
     unknown = set(groups) - set(toolkits)
     if unknown:

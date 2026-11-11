@@ -218,7 +218,7 @@ def test_load_setup_from_module_and_file():
 def test_cli_flags_override_the_settings_file(tmp_path, monkeypatch):
     config = tmp_path / "rai.toml"
     config.write_text(
-        '[mcp]\nname = "robot"\ngroups = ["cli"]\nport = 9000\nsetup = ["a:b"]\n'
+        '[mcp]\nname = "robot"\ngroups = ["diagnostics"]\nport = 9000\nsetup = ["a:b"]\n'
         '[mcp.servers.robot]\ntransport = "stdio"\ncommand = "rai"\n'
     )
     served = []
@@ -231,7 +231,7 @@ def test_cli_flags_override_the_settings_file(tmp_path, monkeypatch):
     file_only, flags = served
     assert file_only == MCPSettings(
         name="robot",
-        groups=["cli"],
+        groups=["diagnostics"],
         port=9000,
         setup=["a:b"],
         servers={"robot": {"transport": "stdio", "command": "rai"}},

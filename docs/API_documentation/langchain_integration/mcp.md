@@ -9,19 +9,19 @@ RAI is both an MCP server and an MCP client. Install the extra: `pip install "ra
 ```bash
 rai mcp serve                                  # every tool group, stdio
 rai mcp serve --read-only                      # READ tools only
-rai mcp serve --tools topics,cli               # some groups
+rai mcp serve --tools topics,diagnostics               # some groups
 rai mcp serve --transport streamable-http --port 8000
 rai mcp serve --setup my_robot.safety:install  # add hooks before serving
 ```
 
-| Option                            | Meaning                                                                                     |
-| --------------------------------- | ------------------------------------------------------------------------------------------- |
-| `--tools`                         | Comma-separated groups: `topics`, `services`, `actions`, `nav2`, `cli`. Default: all.       |
-| `--read-only`                     | Expose only tools whose effect is READ.                                                     |
-| `--node-name`                     | ROS 2 node name of the server (default `rai_mcp`).                                          |
-| `--transport`, `--host`, `--port` | `stdio` (default) or `streamable-http`.                                                     |
-| `--setup MODULE:FN`               | Call `fn(server, connector)` before serving. `MODULE` may be `path/to/file.py`. Repeatable. |
-| `--config`                        | Settings file (default `$RAI_CONFIG`, then `./rai.toml`).                                   |
+| Option                            | Meaning                                                                                       |
+| --------------------------------- | --------------------------------------------------------------------------------------------- |
+| `--tools`                         | Comma-separated groups: `topics`, `services`, `actions`, `nav2`, `diagnostics`. Default: all. |
+| `--read-only`                     | Expose only tools whose effect is READ.                                                       |
+| `--node-name`                     | ROS 2 node name of the server (default `rai_mcp`).                                            |
+| `--transport`, `--host`, `--port` | `stdio` (default) or `streamable-http`.                                                       |
+| `--setup MODULE:FN`               | Call `fn(server, connector)` before serving. `MODULE` may be `path/to/file.py`. Repeatable.   |
+| `--config`                        | Settings file (default `$RAI_CONFIG`, then `./rai.toml`).                                     |
 
 Flags override the `[mcp]` table of the settings file:
 

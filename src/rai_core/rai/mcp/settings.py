@@ -21,8 +21,14 @@ from pydantic import BaseModel, ConfigDict
 
 from rai.settings import section
 
-ToolGroup = Literal["topics", "services", "actions", "nav2", "cli"]
-TOOL_GROUPS: tuple[ToolGroup, ...] = ("topics", "services", "actions", "nav2", "cli")
+ToolGroup = Literal["topics", "services", "actions", "nav2", "diagnostics"]
+TOOL_GROUPS: tuple[ToolGroup, ...] = (
+    "topics",
+    "services",
+    "actions",
+    "nav2",
+    "diagnostics",
+)
 
 
 class MCPSettings(BaseModel):

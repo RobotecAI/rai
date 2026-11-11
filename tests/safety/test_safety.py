@@ -17,7 +17,6 @@
 import asyncio
 import json
 import time
-import typing
 import uuid
 import warnings
 from collections.abc import Callable, Iterator
@@ -47,7 +46,6 @@ from rai.safety import (
     RateLimit,
 )
 from rai.tools import Effect, RaiTool, ToolDecision, global_tool_hooks, rai_tool
-from rai.tools.ros2.cli import ROS2CLIToolkit
 from rclpy.action import CancelResponse
 from std_msgs.msg import Bool, String
 from std_srvs.srv import SetBool
@@ -548,12 +546,3 @@ def test_node_warns_once_per_call_site(client: ROS2Connector) -> None:
     messages = [str(w.message) for w in caught if w.category is RuntimeWarning]
     assert len(messages) == 2
     assert "egress hooks" in messages[0] and "EStop" in messages[0]
-
-
-def test_cli_toolkit_has_no_write_commands() -> None:
-    commands = set()
-    for tool in ROS2CLIToolkit().get_tools():
-        field = tool.args_schema.model_fields["command"]  # type: ignore[union-attr]
-        commands |= set(typing.get_args(field.annotation))
-    assert commands  # the toolkit is still there
-    assert not commands & {"pub", "call", "send_goal", "set", "delete", "load"}
