@@ -74,6 +74,12 @@ To enable CUDA acceleration on NVIDIA GPUs, you need to install the following de
 -   CUDA 12.\*
 -   cuDNN 9.\*
 
+Replace the CPU ONNX Runtime with the GPU build (both install into the same `onnxruntime/` directory, so they cannot be installed side by side; a later `uv sync` reverts this):
+
+```bash
+uv pip uninstall onnxruntime && uv pip install onnxruntime-gpu
+```
+
 Set environment variable to force GPU usage:
 
 ```bash

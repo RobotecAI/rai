@@ -2560,24 +2560,6 @@ wheels = [
 ]
 
 [[package]]
-name = "onnxruntime-gpu"
-version = "1.31.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "flatbuffers" },
-    { name = "numpy" },
-    { name = "packaging" },
-    { name = "protobuf" },
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/22/97/9531b4d9e566cf2a0f04b4b5c26a3bc0ef2e2e0b6bc943a02c0eead98cf7/onnxruntime_gpu-1.31.1-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:05d548956197b9d01f59b625de740e0d6be3593f874e241a12dc0362650ecdf7", size = 255569273, upload-time = "2026-10-26T19:10:23.625Z" },
-    { url = "https://files.pythonhosted.org/packages/c5/ee/f189d535ccd8967009329682c2e9f9cc2508936d8969b70f2b0ccd29d27b/onnxruntime_gpu-1.31.1-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:f659529e07c21ec6b6179fd1bfaf82ffb7c3dc9c0916e18f6f313f9a690891be", size = 255567609, upload-time = "2026-10-26T19:10:33.509Z" },
-    { url = "https://files.pythonhosted.org/packages/62/6a/b752dafac35b575aad22c02604bea6077d6c51f0fa724ee4b2b3d0f8337c/onnxruntime_gpu-1.31.1-cp313-cp313t-manylinux_2_28_x86_64.whl", hash = "sha256:856e974257474d7226e6e1d8658a5c0258983d9ade14a6c410fa41b9c1360c06", size = 255574229, upload-time = "2026-10-26T19:10:43.456Z" },
-    { url = "https://files.pythonhosted.org/packages/fd/56/23015d5deaf361d85eacf5db7d9c2d60552c728f5c1884dbf279a3e42d19/onnxruntime_gpu-1.31.1-cp314-cp314-manylinux_2_28_x86_64.whl", hash = "sha256:52a9ec263f331678e8fcb4f71a6fa44e5f901f0aac0b61fbe5a61517f2b4cc7d", size = 255572322, upload-time = "2026-10-26T19:10:53.757Z" },
-    { url = "https://files.pythonhosted.org/packages/ee/e6/3bbf305c9123c6596e441ea510a21ba2ab2ea8e7276a9dab09c771182962/onnxruntime_gpu-1.31.1-cp314-cp314t-manylinux_2_28_x86_64.whl", hash = "sha256:bfe1bb15168f7dcc76e970eff8f07615adb87a128d53bc9f00d8def2c3dbf1b6", size = 255570599, upload-time = "2026-10-26T19:11:04.989Z" },
-]
-
-[[package]]
 name = "openai"
 version = "3.46.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3625,14 +3607,13 @@ dependencies = [
     { name = "pydub" },
     { name = "scipy" },
     { name = "sounddevice" },
-    { name = "torchaudio" },
+    { name = "torch" },
 ]
 
 [package.optional-dependencies]
 all = [
     { name = "elevenlabs" },
     { name = "faster-whisper" },
-    { name = "onnxruntime-gpu", marker = "platform_machine == 'x86_64'" },
     { name = "openai-whisper" },
     { name = "openwakeword" },
 ]
@@ -3641,9 +3622,6 @@ elevenlabs = [
 ]
 fasterwhisper = [
     { name = "faster-whisper" },
-]
-gpu = [
-    { name = "onnxruntime-gpu", marker = "platform_machine == 'x86_64'" },
 ]
 kokoro = [
     { name = "kokoro-onnx" },
@@ -3663,8 +3641,6 @@ requires-dist = [
     { name = "faster-whisper", marker = "extra == 'fasterwhisper'", specifier = ">=1.1.1,<2.0.0" },
     { name = "kokoro-onnx", marker = "extra == 'kokoro'", specifier = "==0.3.3" },
     { name = "onnxruntime", marker = "platform_machine == 'x86_64'", specifier = ">=1.24,<2.0" },
-    { name = "onnxruntime-gpu", marker = "platform_machine == 'x86_64' and extra == 'all'", specifier = ">=1.24,<2.0" },
-    { name = "onnxruntime-gpu", marker = "platform_machine == 'x86_64' and extra == 'gpu'", specifier = ">=1.24,<2.0" },
     { name = "openai-whisper", marker = "extra == 'all'", specifier = ">=20250625,<20250626" },
     { name = "openai-whisper", marker = "extra == 'whisper'", specifier = ">=20250625,<20250626" },
     { name = "openwakeword", marker = "extra == 'all'", git = "https://github.com/maciejmajek/openWakeWord.git?rev=f2340d82a39fe7bfb972c8c4114642fa87e5dc59" },
@@ -3672,9 +3648,9 @@ requires-dist = [
     { name = "pydub", specifier = ">=0.25.1,<0.26.0" },
     { name = "scipy", specifier = ">=1.14.0,<2.0.0" },
     { name = "sounddevice", specifier = ">=0.5.0,<0.6.0" },
-    { name = "torchaudio", specifier = ">=2.11.0,<3.0.0" },
+    { name = "torch", specifier = ">=2.11.0,<3.0.0" },
 ]
-provides-extras = ["elevenlabs", "whisper", "fasterwhisper", "wakeword", "kokoro", "gpu", "all"]
+provides-extras = ["elevenlabs", "whisper", "fasterwhisper", "wakeword", "kokoro", "all"]
 
 [[package]]
 name = "rai-semap"
@@ -4363,18 +4339,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/59/9b/e8e2f15272cf45fe00dd8a077a74ded59606a424f8ce754906b3fce04126/torch-2.15.0-cp314-cp314-manylinux_2_28_x86_64.whl", hash = "sha256:1412c79b0338ea61fa31e74a59d74e412c56307e226d3c6e61ccd6d4613ffc3f", size = 539172352, upload-time = "2026-10-28T15:19:10.949Z" },
     { url = "https://files.pythonhosted.org/packages/11/ff/6e4a6cb34ed2b112c7d3818a9249d99ca732e0de79ebff8a46d7ed762633/torch-2.15.0-cp314-cp314t-manylinux_2_28_aarch64.whl", hash = "sha256:2167ed5782ab62f41fb766b822ebea638c2ffcb72e8c3abdd3efc429bbe60a19", size = 483646483, upload-time = "2026-10-28T15:19:31.982Z" },
     { url = "https://files.pythonhosted.org/packages/6b/a7/9f76446e61b1306d2281d24aa5907b8ebdc3e1bfc8d9252f0ebe67aad2e6/torch-2.15.0-cp314-cp314t-manylinux_2_28_x86_64.whl", hash = "sha256:d0862b725d86a2795ff331f519fd332451ff75f2e7cff561673d61c44cef7155", size = 539145346, upload-time = "2026-10-28T15:19:57.293Z" },
-]
-
-[[package]]
-name = "torchaudio"
-version = "2.11.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "torch" },
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/90/c7/e352c0a0f34653f3f6a581b580352ab1c83e5d04019826ade4dfc26cf664/torchaudio-2.11.1-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:ad1175202b5cdb7585a38c1330845430e128c4ed8ceb770639318aa40fc1994b", size = 1678033, upload-time = "2026-10-28T15:21:43.28Z" },
-    { url = "https://files.pythonhosted.org/packages/e6/ad/b0bf9bfa9db80acf0ce660e01a67b3b735343ab51ce1410b18d2aaed254c/torchaudio-2.11.1-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:0173b5b51e1368aa88de3cbe4e98508b5e9df4d8d59356c4e1fbc830c96191ef", size = 1816417, upload-time = "2026-10-28T15:21:45.007Z" },
 ]
 
 [[package]]
