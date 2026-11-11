@@ -12,24 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import importlib
 import logging
 import os
+import tomllib
 from dataclasses import dataclass
 from typing import Any, Dict, List, Literal, Optional, Tuple, cast
 
 import coloredlogs
-import tomli
-from langchain_aws import ChatBedrock
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.embeddings import Embeddings
+from langchain_core.language_models import BaseChatModel
 from langchain_core.tracers.langchain import LangChainTracer
-from langchain_ollama import ChatOllama
-from langchain_openai import ChatOpenAI
 from langsmith import Client
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 coloredlogs.install(level="INFO")  # type: ignore
+
+
+def _import_vendor(module: str, extra: str) -> Any:
+    try:
+        return importlib.import_module(module)
+    except ImportError as e:
+        raise ImportError(
+            f"{module} is not installed. Install it with `pip install rai_core[{extra}]`."
+        ) from e
 
 
 @dataclass
@@ -117,10 +125,10 @@ _DEFAULT_TRACING = TracingConfig(
 def load_config(config_path: Optional[str] = None) -> RAIConfig:
     if config_path is None:
         with open("config.toml", "rb") as f:
-            config_dict = tomli.load(f)
+            config_dict = tomllib.load(f)
     else:
         with open(config_path, "rb") as f:
-            config_dict = tomli.load(f)
+            config_dict = tomllib.load(f)
 
     # Only require config sections for vendors actually referenced in [vendor].
     # Missing sections get safe defaults so single-vendor setups work.
@@ -181,21 +189,20 @@ def get_llm_model(
     vendor: Optional[str] = None,
     config_path: Optional[str] = None,
     **kwargs: Any,
-) -> ChatOpenAI | ChatBedrock | ChatOllama | Any:
+) -> BaseChatModel:
     model_config, vendor = get_llm_model_config_and_vendor(
         model_type, vendor, config_path
     )
     model = getattr(model_config, model_type)
     logger.info(f"Initializing {model_type}: Vendor: {vendor}, Model: {model}")
     if vendor == "openai":
-        from langchain_openai import ChatOpenAI
+        ChatOpenAI = _import_vendor("langchain_openai", "openai").ChatOpenAI
 
         model_config = cast(OpenAIConfig, model_config)
 
         return ChatOpenAI(model=model, base_url=model_config.base_url, **kwargs)
     elif vendor == "aws":
-        from langchain_aws import ChatBedrock
-
+        ChatBedrock = _import_vendor("langchain_aws", "aws").ChatBedrock
         model_config = cast(AWSConfig, model_config)
 
         return ChatBedrock(
@@ -204,12 +211,14 @@ def get_llm_model(
             **kwargs,
         )
     elif vendor == "ollama":
-        from langchain_ollama import ChatOllama
+        ChatOllama = _import_vendor("langchain_ollama", "ollama").ChatOllama
 
         model_config = cast(OllamaConfig, model_config)
         return ChatOllama(model=model, base_url=model_config.base_url, **kwargs)
     elif vendor == "google":
-        from langchain_google_genai import ChatGoogleGenerativeAI
+        ChatGoogleGenerativeAI = _import_vendor(
+            "langchain_google_genai", "google"
+        ).ChatGoogleGenerativeAI
 
         model_config = cast(GoogleConfig, model_config)
         return ChatGoogleGenerativeAI(model=model, **kwargs)
@@ -222,20 +231,19 @@ def get_llm_model_direct(
     vendor: str,
     config_path: Optional[str] = None,
     **kwargs: Any,
-) -> ChatOpenAI | ChatBedrock | ChatOllama | Any:
+) -> BaseChatModel:
     config = load_config(config_path)
     model_config = getattr(config, vendor)
 
     logger.info(f"Initializing Model: {model_name}, Vendor: {vendor}")
     if vendor == "openai":
-        from langchain_openai import ChatOpenAI
+        ChatOpenAI = _import_vendor("langchain_openai", "openai").ChatOpenAI
 
         model_config = cast(OpenAIConfig, model_config)
 
         return ChatOpenAI(model=model_name, base_url=model_config.base_url, **kwargs)
     elif vendor == "aws":
-        from langchain_aws import ChatBedrock
-
+        ChatBedrock = _import_vendor("langchain_aws", "aws").ChatBedrock
         model_config = cast(AWSConfig, model_config)
 
         return ChatBedrock(
@@ -244,14 +252,16 @@ def get_llm_model_direct(
             **kwargs,
         )
     elif vendor == "ollama":
-        from langchain_ollama import ChatOllama
+        ChatOllama = _import_vendor("langchain_ollama", "ollama").ChatOllama
 
         # Suppress httpx info logging for Ollama
         logging.getLogger("httpx").setLevel(logging.WARNING)
         model_config = cast(OllamaConfig, model_config)
         return ChatOllama(model=model_name, base_url=model_config.base_url, **kwargs)
     elif vendor == "google":
-        from langchain_google_genai import ChatGoogleGenerativeAI
+        ChatGoogleGenerativeAI = _import_vendor(
+            "langchain_google_genai", "google"
+        ).ChatGoogleGenerativeAI
 
         model_config = cast(GoogleConfig, model_config)
         return ChatGoogleGenerativeAI(model=model_name, **kwargs)
@@ -270,7 +280,7 @@ def get_embeddings_model(
 
     logger.info(f"Using embeddings model: {vendor}-{model_config.embeddings_model}")
     if vendor == "openai":
-        from langchain_openai import OpenAIEmbeddings
+        OpenAIEmbeddings = _import_vendor("langchain_openai", "openai").OpenAIEmbeddings
 
         model_config = cast(OpenAIConfig, model_config)
         embeddings = OpenAIEmbeddings(
@@ -292,7 +302,7 @@ def get_embeddings_model(
         return embeddings
 
     elif vendor == "aws":
-        from langchain_aws import BedrockEmbeddings
+        BedrockEmbeddings = _import_vendor("langchain_aws", "aws").BedrockEmbeddings
 
         model_config = cast(AWSConfig, model_config)
         embeddings = BedrockEmbeddings(
@@ -314,7 +324,7 @@ def get_embeddings_model(
         return embeddings
 
     elif vendor == "ollama":
-        from langchain_ollama import OllamaEmbeddings
+        OllamaEmbeddings = _import_vendor("langchain_ollama", "ollama").OllamaEmbeddings
 
         model_config = cast(OllamaConfig, model_config)
         embeddings = OllamaEmbeddings(
@@ -335,7 +345,9 @@ def get_embeddings_model(
             }
         return embeddings
     elif vendor == "google":
-        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+        GoogleGenerativeAIEmbeddings = _import_vendor(
+            "langchain_google_genai", "google"
+        ).GoogleGenerativeAIEmbeddings
 
         model_config = cast(GoogleConfig, model_config)
         embeddings = GoogleGenerativeAIEmbeddings(model=model_config.embeddings_model)
@@ -367,8 +379,10 @@ def get_tracing_callbacks(
 
     callbacks: List[BaseCallbackHandler] = []
     if config.tracing.langfuse.use_langfuse:
-        from langfuse import Langfuse
-        from langfuse.langchain import CallbackHandler  # type: ignore
+        Langfuse = _import_vendor("langfuse", "langfuse").Langfuse
+        CallbackHandler = _import_vendor(
+            "langfuse.langchain", "langfuse"
+        ).CallbackHandler
 
         public_key = os.getenv("LANGFUSE_PUBLIC_KEY", None)
         secret_key = os.getenv("LANGFUSE_SECRET_KEY", None)

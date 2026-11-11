@@ -13,13 +13,14 @@
 # limitations under the License.
 
 import logging
-from typing import TYPE_CHECKING, Any, Literal, Type
+from typing import Literal, Type
 
 import numpy as np
-from deprecated import deprecated
 from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 from tf2_geometry_msgs import do_transform_pose
+from typing_extensions import deprecated
 
 from rai.communication.ros2.ros_async import get_future_result
 from rai.tools.ros2.base import BaseROS2Tool
@@ -30,9 +31,6 @@ except ImportError:
     logging.warning(
         "rai_interfaces is not installed, ManipulatorMoveTo tool will not work."
     )
-
-if TYPE_CHECKING:
-    from rai_perception.tools import GetGrabbingPointTool
 
 
 class MoveToPointToolInput(BaseModel):
@@ -340,25 +338,9 @@ class GetObjectPositionsTool(BaseROS2Tool):
     camera_topic: str  # rgb camera topic
     depth_topic: str
     camera_info_topic: str  # rgb camera info topic
-    get_grabbing_point_tool: "GetGrabbingPointTool"
+    get_grabbing_point_tool: BaseTool  # rai_perception.tools.GetGrabbingPointTool
 
     args_schema: Type[GetObjectPositionsToolInput] = GetObjectPositionsToolInput
-
-    def model_post_init(self, __context: Any) -> None:
-        """Warn if the new GetObjectPositionsTool from rai_perception might be present."""
-        try:
-            from rai_perception.tools import GetObjectPositionsTool  # noqa: F401
-
-            self.connector.logger.warning(
-                f"Deprecated tool '{self.__class__.__name__}' is being used. "
-                f"A newer version exists in rai_perception.tools.GetObjectPositionsTool. "
-                f"If both tools are registered with the same name '{self.name}', "
-                f"the newer tool will overwrite this deprecated one. "
-                f"Please migrate to the new tool from rai_perception."
-            )
-        except ImportError:
-            # rai_perception not installed, no conflict possible
-            pass
 
     @staticmethod
     def format_pose(pose: Pose):

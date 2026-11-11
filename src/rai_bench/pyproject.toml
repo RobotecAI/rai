@@ -13,7 +13,7 @@ authors = [
 dependencies = [
     "inflect>=7.5.0,<8.0.0",
     "plotly>=6.0.1,<8.0.0",
-    "rai_core",
+    "rai_core[langfuse,ui]",
     "rai_sim>=0.0.2,<1.0.0",
 ]
 

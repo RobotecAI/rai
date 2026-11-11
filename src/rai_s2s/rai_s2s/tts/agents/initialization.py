@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import tomllib
 from dataclasses import dataclass
 from typing import Optional
-
-import tomli
 
 
 @dataclass
@@ -41,10 +40,10 @@ class TTSAgentConfig:
 def load_config(config_path: Optional[str] = None) -> TTSAgentConfig:
     if config_path is None:
         with open("config.toml", "rb") as f:
-            config_dict = tomli.load(f)
+            config_dict = tomllib.load(f)
     else:
         with open(config_path, "rb") as f:
-            config_dict = tomli.load(f)
+            config_dict = tomllib.load(f)
     return TTSAgentConfig(
         text_to_speech=TTSConfig(
             model_type=config_dict["tts"]["vendor"], voice=config_dict["tts"]["voice"]

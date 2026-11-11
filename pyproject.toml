@@ -15,7 +15,7 @@ classifiers = [
     "Development Status :: 4 - Beta",
 ]
 dependencies = [
-    "rai_core",
+    "rai_core[all]",
     "rai_whoami",
 ]
 
@@ -74,14 +74,38 @@ extend-exclude = ["*.md"]
 
 [tool.ruff.lint]
 # Keep the rule set that ruff used by default before 0.15; pre-commit extends it with I and RUF022.
-select = ["E4", "E7", "E9", "F"]
+select = ["E4", "E7", "E9", "F", "TID251", "TID253"]
+
+[tool.ruff.lint.per-file-ignores]
+# The layering rules below apply to rai_core only.
+"!src/rai_core/**" = ["TID251", "TID253"]
+# The Streamlit apps need streamlit at import time (rai_core[ui]).
+"src/rai_core/rai/frontend/**" = ["TID253"]
+"src/rai_core/rai/agents/integrations/streamlit.py" = ["TID253"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+# Optional dependencies (extras) must be imported lazily so the base install works.
+banned-module-level-imports = [
+    "langchain_anthropic",
+    "langchain_aws",
+    "langchain_google_genai",
+    "langchain_mcp_adapters",
+    "langchain_ollama",
+    "langchain_openai",
+    "langfuse",
+    "streamlit",
+]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"rai_s2s".msg = "rai_core must not depend on rai_s2s."
+"rai_perception".msg = "rai_core must not depend on rai_perception."
 
 [tool.ruff.lint.isort]
 # Workspace packages live in src/<name>/<name>, which newer ruff no longer resolves as first-party on its own.
 known-first-party = [
     "rai_bench",
     "rai_bringup",
-    "rai_core",
+    "rai_core[all]",
     "rai_extensions",
     "rai_finetune",
     "rai_interfaces",

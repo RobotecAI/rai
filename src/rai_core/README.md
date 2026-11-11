@@ -30,8 +30,10 @@ RAI is a flexible AI agent framework to develop and deploy Embodied AI features 
 1. Install RAI:
 
 ```bash
-pip install rai-core
+pip install "rai-core[openai]"
 ```
+
+Model providers and optional features are extras: `openai`, `anthropic`, `aws`, `google`, `ollama`, `langfuse`, `mcp`, `ui` (Streamlit apps), or `all`.
 
 2. Initialize the global configuration file:
 

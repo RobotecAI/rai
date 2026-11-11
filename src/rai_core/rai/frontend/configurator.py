@@ -19,13 +19,18 @@ from typing import Dict, List
 import numpy as np
 import requests
 import streamlit as st
-import tomli
+import tomllib
 import tomli_w
 from langchain_aws import BedrockEmbeddings, ChatBedrock
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 import logging
 import importlib.util
+
+
+def _s2s(module: str):
+    # rai_s2s is an optional extension; rai_core never imports it statically.
+    return importlib.import_module(f"rai_s2s.{module}")
 
 
 def get_sound_devices(
@@ -371,7 +376,8 @@ def tracing():
 
 def asr():
     import sounddevice as sd
-    from rai_s2s.asr import TRANSCRIBE_MODELS
+
+    TRANSCRIBE_MODELS = _s2s("asr").TRANSCRIBE_MODELS
 
     def on_recording_device_change():
         st.session_state.config["asr"]["recording_device_name"] = (
@@ -580,7 +586,7 @@ def asr():
 
 
 def tts():
-    from rai_s2s.tts import TTS_MODELS
+    TTS_MODELS = _s2s("tts").TTS_MODELS
 
     def on_tts_vendor_change():
         st.session_state.config["tts"]["vendor"] = st.session_state.tts_vendor_select
@@ -865,9 +871,7 @@ def review_and_save():
                 return False
             elif vendor == "KokoroTTS":
                 try:
-                    from rai_s2s.tts import KokoroTTS
-
-                    model = KokoroTTS()
+                    model = _s2s("tts").KokoroTTS()
                     model.get_speech(text="A")
                     return True
                 except Exception as e:
@@ -971,7 +975,7 @@ def setup_steps():
         st.session_state.features["s2s"] = True
 
         try:
-            from rai_s2s.asr import TRANSCRIBE_MODELS
+            _s2s("asr")
 
             step_names.append("🎙️ Speech Recognition")
             step_render.append(asr)
@@ -980,7 +984,7 @@ def setup_steps():
             logging.warning(f"Skipping speech recognition. {e}")
 
         try:
-            from rai_s2s.tts import TTS_MODELS
+            _s2s("tts")
 
             step_names.append("🔊 Text to Speech")
             step_render.append(tts)
@@ -1010,7 +1014,7 @@ if "config" not in st.session_state:
     # Load initial config from TOML file
     try:
         with open("config.toml", "rb") as f:
-            st.session_state.config = tomli.load(f)
+            st.session_state.config = tomllib.load(f)
     except FileNotFoundError:
         raise FileNotFoundError("config.toml not found. Please recreate it.")
 

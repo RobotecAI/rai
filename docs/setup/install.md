@@ -26,8 +26,10 @@ There are two ways to start using RAI:
 1.  Install core functionality:
 
     ```bash
-    pip install rai-core
+    pip install "rai-core[openai]"
     ```
+
+    Model providers and optional features are extras: `openai`, `anthropic`, `aws`, `google`, `ollama`, `langfuse`, `mcp`, `ui` (Streamlit apps), or `all`.
 
 2.  Initialize the global configuration file:
 

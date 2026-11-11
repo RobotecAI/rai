@@ -14,8 +14,8 @@
 
 import argparse
 import os
+import tomllib
 
-import tomli
 import tomli_w
 
 CONFIG_CONTENT = """
@@ -92,7 +92,7 @@ def main():
             )
             return
 
-        config_dict = tomli.loads(CONFIG_CONTENT)
+        config_dict = tomllib.loads(CONFIG_CONTENT)
 
         with open("config.toml", "wb") as f:
             tomli_w.dump(config_dict, f)

@@ -17,7 +17,6 @@ import logging
 from functools import partial
 from typing import List, Optional, TypedDict
 
-from deprecated import deprecated
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import (
     BaseMessage,
@@ -28,6 +27,7 @@ from langchain_core.tools import BaseTool
 from langgraph.graph import START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt.tool_node import tools_condition
+from typing_extensions import deprecated
 
 from rai.agents.langchain.core.tool_runner import ToolRunner
 from rai.agents.langchain.invocation_helpers import invoke_llm_with_tracing
