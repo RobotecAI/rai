@@ -23,8 +23,8 @@ This module contains perception layer logic:
 from typing import Optional, Tuple
 
 import numpy as np
-from cv_bridge import CvBridge
 from geometry_msgs.msg import Point, Pose, Quaternion
+from rai.communication.ros2.images import imgmsg_to_numpy
 from sensor_msgs.msg import CameraInfo, Image
 from vision_msgs.msg import Detection2D
 
@@ -67,7 +67,6 @@ def compute_3d_pose_from_bbox(
     bbox_center_y: float,
     depth_image: Image,
     camera_info: CameraInfo,
-    bridge: CvBridge,
     region_size: int = 5,
 ) -> Optional[Pose]:
     """Compute 3D pose from 2D bounding box center using depth and camera intrinsics.
@@ -79,14 +78,13 @@ def compute_3d_pose_from_bbox(
         bbox_center_y: Y coordinate of bounding box center in pixels
         depth_image: Depth image message
         camera_info: Camera info message with intrinsics
-        bridge: CvBridge instance for image conversion
 
     Returns:
         Pose in camera frame, or None if computation fails
     """
     try:
         # Convert depth image to numpy array
-        depth_array = bridge.imgmsg_to_cv2(depth_image, desired_encoding="passthrough")
+        depth_array = imgmsg_to_numpy(depth_image)
 
         # Get pixel coordinates (round to nearest integer)
         u = int(round(bbox_center_x))
@@ -138,7 +136,6 @@ def extract_pointcloud_from_bbox(
     detection,
     depth_image: Image,
     camera_info: CameraInfo,
-    bridge: CvBridge,
 ) -> Optional[Tuple[Point, float, int]]:
     """Extract point cloud from bounding box region and compute features.
 
@@ -148,7 +145,6 @@ def extract_pointcloud_from_bbox(
         detection: Detection2D message with bounding box
         depth_image: Depth image message
         camera_info: Camera info message with intrinsics
-        bridge: CvBridge instance for image conversion
 
     Returns:
         Tuple of (centroid_3d, pointcloud_size, point_count) or None if extraction fails.
@@ -158,7 +154,7 @@ def extract_pointcloud_from_bbox(
     """
     try:
         # Convert depth image to numpy array
-        depth_array = bridge.imgmsg_to_cv2(depth_image, desired_encoding="passthrough")
+        depth_array = imgmsg_to_numpy(depth_image)
 
         # Get bounding box bounds
         bbox_center_x = detection.bbox.center.position.x
@@ -228,7 +224,6 @@ def enhance_detection_with_3d_pose(
     detection: Detection2D,
     depth_image: Optional[Image],
     camera_info: Optional[CameraInfo],
-    bridge: CvBridge,
     region_size: int = 5,
 ) -> bool:
     """Enhance detection with 3D pose if pose is empty and depth data is available.
@@ -240,7 +235,6 @@ def enhance_detection_with_3d_pose(
         detection: Detection2D message to enhance
         depth_image: Optional depth image for 3D pose computation
         camera_info: Optional camera info for 3D pose computation
-        bridge: CvBridge instance for image conversion
 
     Returns:
         True if pose was enhanced, False otherwise
@@ -264,7 +258,7 @@ def enhance_detection_with_3d_pose(
     bbox_center_x = detection.bbox.center.position.x
     bbox_center_y = detection.bbox.center.position.y
     computed_pose = compute_3d_pose_from_bbox(
-        bbox_center_x, bbox_center_y, depth_image, camera_info, bridge, region_size
+        bbox_center_x, bbox_center_y, depth_image, camera_info, region_size
     )
 
     if computed_pose:

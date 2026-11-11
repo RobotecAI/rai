@@ -22,9 +22,9 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 import rclpy
-from cv_bridge import CvBridge
 from nav2_msgs.action import NavigateToPose
 from pydub import AudioSegment
+from rai.communication.ros2.images import numpy_to_imgmsg
 from rclpy.action import ActionClient, ActionServer, CancelResponse, GoalResponse
 from rclpy.action.server import ServerGoalHandle
 from rclpy.callback_groups import CallbackGroup, ReentrantCallbackGroup
@@ -44,11 +44,10 @@ class HRIMessagePublisher(Node):
         super().__init__("test_hri_message_publisher")
         self.publisher = self.create_publisher(HRIMessage, topic, 10)
         self.timer = self.create_timer(0.1, self.publish_message)
-        self.cv_bridge = CvBridge()
 
     def publish_message(self) -> None:
         msg = HRIMessage()
-        image = self.cv_bridge.cv2_to_imgmsg(np.zeros((100, 100, 3), dtype=np.uint8))
+        image = numpy_to_imgmsg(np.zeros((100, 100, 3), dtype=np.uint8), "rgb8")
         msg.images = [image]
         msg.audios = [AudioSegment.silent(duration=1000)]
         msg.text = "Hello, HRI!"

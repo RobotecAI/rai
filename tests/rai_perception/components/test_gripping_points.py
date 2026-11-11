@@ -16,7 +16,7 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest
-from cv_bridge import CvBridge
+from rai.communication.ros2.images import numpy_to_imgmsg
 from rai_perception.components.gripping_points import (
     GrippingPointEstimator,
     GrippingPointEstimatorConfig,
@@ -489,12 +489,7 @@ class TestPointCloudFromSegmentationEncodingAware:
         connector.node.get_logger.return_value = Mock()
         return connector
 
-    @pytest.fixture
-    def bridge(self):
-        """Create CvBridge for image conversion."""
-        return CvBridge()
-
-    def test_encoding_aware_conversion_32fc1(self, mock_connector, bridge):
+    def test_encoding_aware_conversion_32fc1(self, mock_connector):
         """Test that 32FC1 encoding (meters) is handled correctly."""
         # Mock the depth conversion to verify encoding-aware conversion is used
         with patch(
@@ -534,13 +529,13 @@ class TestPointCloudFromSegmentationEncodingAware:
 
         assert pcl_gen.conversion_ratio == 1.0
 
-    def test_encoding_aware_vs_manual_conversion(self, bridge):
+    def test_encoding_aware_vs_manual_conversion(self):
         """Test that encoding-aware conversion handles different encodings correctly."""
         from rai_perception.components.perception_utils import convert_depth_to_meters
 
         # Test 16UC1 (millimeters) - should convert to meters
         depth_mm = np.array([[1000, 2000], [3000, 4000]], dtype=np.uint16)
-        depth_msg_mm = bridge.cv2_to_imgmsg(depth_mm, encoding="16UC1")
+        depth_msg_mm = numpy_to_imgmsg(depth_mm, "16UC1")
         result_mm = convert_depth_to_meters(depth_mm, depth_msg_mm)
         np.testing.assert_array_almost_equal(
             result_mm, depth_mm.astype(np.float32) / 1000.0
@@ -550,7 +545,7 @@ class TestPointCloudFromSegmentationEncodingAware:
 
         # Test 32FC1 (meters) - should remain unchanged
         depth_m = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
-        depth_msg_m = bridge.cv2_to_imgmsg(depth_m, encoding="32FC1")
+        depth_msg_m = numpy_to_imgmsg(depth_m, "32FC1")
         result_m = convert_depth_to_meters(depth_m, depth_msg_m)
         np.testing.assert_array_almost_equal(result_m, depth_m)
         assert result_m[0, 0] == 1.0

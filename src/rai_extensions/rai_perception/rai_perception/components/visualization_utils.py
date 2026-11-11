@@ -22,8 +22,8 @@ from typing import Optional
 
 import cv2
 import numpy as np
-from cv_bridge import CvBridge
 from rai.communication.ros2.connectors import ROS2Connector
+from rai.communication.ros2.images import imgmsg_to_numpy
 from sensor_msgs.msg import CameraInfo, Image
 
 from rai_perception.components.math_utils import quaternion_to_rotation_matrix
@@ -82,7 +82,6 @@ def draw_gripping_points_on_image(
     image_msg: Image,
     gripping_points_3d: list[np.ndarray],
     camera_info: CameraInfo,
-    bridge: Optional[CvBridge] = None,
 ) -> np.ndarray:
     """Draw gripping points on a camera image by projecting 3D points to 2D.
 
@@ -90,15 +89,11 @@ def draw_gripping_points_on_image(
         image_msg: ROS Image message from camera
         gripping_points_3d: List of 3D gripping points in camera frame (Nx3 arrays)
         camera_info: CameraInfo message with intrinsics
-        bridge: Optional CvBridge instance (creates new one if not provided)
 
     Returns:
         Annotated OpenCV image (BGR format) with gripping points drawn
     """
-    if bridge is None:
-        bridge = CvBridge()
-
-    cv_image = bridge.imgmsg_to_cv2(image_msg, "bgr8")
+    cv_image = imgmsg_to_numpy(image_msg, "bgr8")
     fx, fy, cx, cy = get_camera_intrinsics(camera_info)
 
     for i, point in enumerate(gripping_points_3d):
@@ -169,7 +164,6 @@ def save_gripping_points_annotated_image(
     source_frame: str,
     target_frame: str,
     filename: str = "gripping_points_annotated.jpg",
-    bridge: Optional[CvBridge] = None,
 ) -> None:
     """Save an annotated image with gripping points projected onto camera view.
 
@@ -184,14 +178,10 @@ def save_gripping_points_annotated_image(
         source_frame: Camera frame name
         target_frame: Target frame name (where gripping points are expressed)
         filename: Output filename for annotated image
-        bridge: Optional CvBridge instance (creates new one if not provided)
 
     Raises:
         TypeError: If received messages are not of expected types
     """
-    if bridge is None:
-        bridge = CvBridge()
-
     # Transform points from target frame to camera frame
     camera_frame_points = transform_points_between_frames(
         connector, gripping_points_target_frame, target_frame, source_frame
@@ -208,6 +198,6 @@ def save_gripping_points_annotated_image(
 
     # Draw gripping points and save
     annotated_image = draw_gripping_points_on_image(
-        image_msg, camera_frame_points, camera_info_msg, bridge
+        image_msg, camera_frame_points, camera_info_msg
     )
     cv2.imwrite(filename, annotated_image)

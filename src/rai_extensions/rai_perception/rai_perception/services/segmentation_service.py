@@ -27,8 +27,8 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
-from cv_bridge import CvBridge
 from rai.communication.ros2 import ROS2Connector
+from rai.communication.ros2.images import numpy_to_imgmsg
 
 from rai_interfaces.srv import RAIGroundedSam
 from rai_perception.models.segmentation import get_model
@@ -61,7 +61,6 @@ class SegmentationService(BaseVisionService):
     ):
         # TODO: After agents are deprecated, make ros2_connector a required parameter
         super().__init__(weights_root_path, ros2_name, ros2_connector=ros2_connector)
-        self._bridge = CvBridge()
         self._initialize_model()
 
     def _initialize_model(self):
@@ -158,7 +157,7 @@ class SegmentationService(BaseVisionService):
                     if len(mask.shape) > 2:
                         mask = np.squeeze(mask)
                     arr = (mask * 255).astype(np.uint8)
-                    img_arr.append(self._bridge.cv2_to_imgmsg(arr, encoding="mono8"))
+                    img_arr.append(numpy_to_imgmsg(arr, "mono8"))
                     successful_masks += 1
                 except Exception as mask_error:
                     self.logger.error(

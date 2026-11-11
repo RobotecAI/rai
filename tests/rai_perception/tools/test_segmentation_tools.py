@@ -117,9 +117,9 @@ class TestGetSegmentationTool:
 
         gsam_response = RAIGroundedSam.Response()
         mask_msg1 = sensor_msgs.msg.Image()
-        mask_msg1.encoding = "mono8"  # Set encoding to avoid cv_bridge errors
+        mask_msg1.encoding = "mono8"
         mask_msg2 = sensor_msgs.msg.Image()
-        mask_msg2.encoding = "mono8"  # Set encoding to avoid cv_bridge errors
+        mask_msg2.encoding = "mono8"
         gsam_response.masks = [mask_msg1, mask_msg2]
 
         # Set ROS2 parameters
@@ -264,7 +264,7 @@ class TestGetGrabbingPointTool:
 
         gsam_response = RAIGroundedSam.Response()
         mask_msg = sensor_msgs.msg.Image()
-        mask_msg.encoding = "mono8"  # Set encoding to avoid cv_bridge errors
+        mask_msg.encoding = "mono8"
         gsam_response.masks = [mask_msg]
 
         # Set ROS2 parameters

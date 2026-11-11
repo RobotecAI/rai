@@ -28,14 +28,10 @@ dependencies = [
     "tomli-w>=1.1.0,<2.0.0",
     "opencv-python-headless>=4.9.0.80,<5.0.0.0",
     "pillow>=13.0.0,<14.0.0",
-    # tf_transformations needs it; removed together with tf_transformations.
-    "transforms3d>=0.4.1,<0.5.0",
     "pydub>=0.25.1,<0.26.0",
     # audioop was removed from the stdlib in Python 3.13; pydub needs the backport.
     "audioop-lts>=0.2.1; python_version >= '3.13'",
-    # ROS 2 Jazzy python bindings (cv_bridge) are built against numpy 1.x; Lyrical (Python 3.14) uses numpy 2.x.
-    "numpy<2.0; python_version < '3.13'",
-    "numpy>=2.0; python_version >= '3.13'",
+    "numpy>=2.0,<3.0",
 ]
 
 [project.optional-dependencies]

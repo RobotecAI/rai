@@ -20,13 +20,13 @@ from uuid import uuid4
 
 import numpy as np
 import rosidl_runtime_py.convert
-from cv_bridge import CvBridge
 from PIL import Image
 from pydub import AudioSegment
 from sensor_msgs.msg import Image as ROS2Image
 
 from rai.communication.base_connector import BaseMessage
 from rai.communication.hri_connector import HRIMessage
+from rai.communication.ros2.images import imgmsg_to_numpy, numpy_to_imgmsg
 
 if importlib.util.find_spec("rai_interfaces") is None:
     logging.warning("rai_interfaces is not installed, ROS 2 HRIMessage will not work.")
@@ -49,9 +49,8 @@ class ROS2HRIMessage(HRIMessage, ROS2Message):
         msg: "rai_interfaces.msg.HRIMessage",
         message_author: Literal["ai", "human"],
     ):
-        cv_bridge = CvBridge()
         images = [
-            cv_bridge.imgmsg_to_cv2(img_msg, "rgb8")
+            imgmsg_to_numpy(img_msg, "rgb8")
             for img_msg in cast(List[ROS2Image], msg.images)
         ]
         pil_images = [Image.fromarray(img) for img in images]
@@ -76,9 +75,8 @@ class ROS2HRIMessage(HRIMessage, ROS2Message):
         )
 
     def to_ros2_dict(self) -> OrderedDict[str, Any]:
-        cv_bridge = CvBridge()
         img_msgs = [
-            cv_bridge.cv2_to_imgmsg(np.array(img), "rgb8") for img in self.images
+            numpy_to_imgmsg(np.array(img.convert("RGB")), "rgb8") for img in self.images
         ]
         audio_msgs = [
             ROS2HRIMessage__Audio(

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import base64
-from typing import Any, OrderedDict, Type, cast
+from typing import Any, OrderedDict, Type
 
 import cv2
 import numpy as np
@@ -21,10 +21,11 @@ import rosidl_runtime_py.convert
 import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
 import sensor_msgs.msg
-from cv_bridge import CvBridge
 from rosidl_parser.definition import NamespacedType
 from rosidl_runtime_py.import_message import import_message_from_namespaced_type
 from rosidl_runtime_py.utilities import get_namespaced_type
+
+from rai.communication.ros2.images import compressed_imgmsg_to_numpy, imgmsg_to_numpy
 
 
 def ros2_message_to_dict(message: Any) -> OrderedDict[str, Any]:
@@ -83,39 +84,18 @@ def convert_ros_img_to_ndarray(
 
 
 def convert_ros_img_to_cv2mat(msg: sensor_msgs.msg.Image) -> cv2.typing.MatLike:
-    bridge = CvBridge()
-    cv_image = cast(cv2.Mat, bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough"))  # type: ignore
-    if cv_image.shape[-1] == 4:
-        cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGRA2RGB)
-    else:
-        cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
-    return cv_image
+    """Return the image as a bgr8 array (cv2 channel order)."""
+    return imgmsg_to_numpy(msg, "bgr8")
 
 
 def convert_ros_img_to_base64(
     msg: sensor_msgs.msg.Image | sensor_msgs.msg.CompressedImage,
 ) -> str:
-    bridge = CvBridge()
-    msg_type = type(msg)
-    if msg_type == sensor_msgs.msg.Image:
-        cv_image = bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
-    elif msg_type == sensor_msgs.msg.CompressedImage:
-        cv_image = bridge.compressed_imgmsg_to_cv2(msg, desired_encoding="passthrough")
+    """Encode the image as a base64 PNG."""
+    if isinstance(msg, sensor_msgs.msg.Image):
+        bgr = imgmsg_to_numpy(msg, "bgr8")
+    elif isinstance(msg, sensor_msgs.msg.CompressedImage):
+        bgr = compressed_imgmsg_to_numpy(msg, "bgr8")
     else:
-        raise ValueError(f"Unsupported message type: {msg_type}")
-
-    if cv_image.shape[-1] == 4:
-        cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGRA2RGB)
-        return base64.b64encode(bytes(cv2.imencode(".png", cv_image)[1])).decode(
-            "utf-8"
-        )
-    elif cv_image.shape[-1] == 1:
-        cv_image = cv2.cvtColor(cv_image, cv2.COLOR_GRAY2RGB)
-        return base64.b64encode(bytes(cv2.imencode(".png", cv_image)[1])).decode(
-            "utf-8"
-        )
-    else:
-        cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
-        # Use tobytes() instead of deprecated tostring() (deprecated since NumPy 1.9.0, removed in 2.0.0)
-        image_data = cv2.imencode(".png", cv_image)[1].tobytes()  # type: ignore
-        return base64.b64encode(image_data).decode("utf-8")  # type: ignore
+        raise ValueError(f"Unsupported message type: {type(msg)}")
+    return base64.b64encode(cv2.imencode(".png", bgr)[1].tobytes()).decode("utf-8")

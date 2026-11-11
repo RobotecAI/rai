@@ -33,7 +33,7 @@ class TestVisionMarkupGDBoxer(TestGDBoxerBase):
         patch_map = {
             "AutoProcessor": "rai_perception.algorithms.boxer.AutoProcessor",
             "AutoModel": "rai_perception.algorithms.boxer.AutoModelForZeroShotObjectDetection",
-            "CvBridge": "rai_perception.algorithms.boxer.CvBridge",
+            "imgmsg_to_numpy": "rai_perception.algorithms.boxer.imgmsg_to_numpy",
             "logging.getLogger": "rai_perception.algorithms.boxer.logging.getLogger",
         }
         return patch_map[target]

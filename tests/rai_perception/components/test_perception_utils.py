@@ -14,8 +14,8 @@
 
 import numpy as np
 import pytest
-from cv_bridge import CvBridge
 from geometry_msgs.msg import Point, Pose
+from rai.communication.ros2.images import numpy_to_imgmsg
 from rai_perception.components.perception_utils import (
     compute_3d_pose_from_bbox,
     convert_depth_to_meters,
@@ -34,12 +34,6 @@ from vision_msgs.msg import (
 
 
 @pytest.fixture
-def bridge():
-    """Create a CvBridge instance."""
-    return CvBridge()
-
-
-@pytest.fixture
 def camera_info():
     """Create a basic camera info message."""
     info = CameraInfo()
@@ -50,10 +44,10 @@ def camera_info():
 
 
 @pytest.fixture
-def depth_image(bridge):
+def depth_image():
     """Create a depth image message."""
     depth_array = np.ones((480, 640), dtype=np.uint16) * 1000
-    depth_msg = bridge.cv2_to_imgmsg(depth_array, encoding="16UC1")
+    depth_msg = numpy_to_imgmsg(depth_array, "16UC1")
     depth_msg.header = Header()
     depth_msg.header.frame_id = "camera_frame"
     return depth_msg
@@ -70,13 +64,13 @@ def detection2d():
     return detection
 
 
-def test_compute_3d_pose_from_bbox(bridge, camera_info, depth_image):
+def test_compute_3d_pose_from_bbox(camera_info, depth_image):
     """Test computing 3D pose from bounding box center."""
     bbox_center_x = 320.0
     bbox_center_y = 240.0
 
     pose = compute_3d_pose_from_bbox(
-        bbox_center_x, bbox_center_y, depth_image, camera_info, bridge
+        bbox_center_x, bbox_center_y, depth_image, camera_info
     )
 
     assert pose is not None
@@ -84,21 +78,21 @@ def test_compute_3d_pose_from_bbox(bridge, camera_info, depth_image):
     assert pose.orientation.w == 1.0
 
 
-def test_compute_3d_pose_from_bbox_out_of_bounds(bridge, camera_info, depth_image):
+def test_compute_3d_pose_from_bbox_out_of_bounds(camera_info, depth_image):
     """Test computing 3D pose with out-of-bounds coordinates."""
     bbox_center_x = 1000.0
     bbox_center_y = 1000.0
 
     pose = compute_3d_pose_from_bbox(
-        bbox_center_x, bbox_center_y, depth_image, camera_info, bridge
+        bbox_center_x, bbox_center_y, depth_image, camera_info
     )
 
     assert pose is None
 
 
-def test_extract_pointcloud_from_bbox(bridge, camera_info, depth_image, detection2d):
+def test_extract_pointcloud_from_bbox(camera_info, depth_image, detection2d):
     """Test extracting point cloud from bounding box."""
-    result = extract_pointcloud_from_bbox(detection2d, depth_image, camera_info, bridge)
+    result = extract_pointcloud_from_bbox(detection2d, depth_image, camera_info)
 
     assert result is not None
     centroid, size, point_count = result
@@ -109,21 +103,19 @@ def test_extract_pointcloud_from_bbox(bridge, camera_info, depth_image, detectio
     assert size >= 0
 
 
-def test_extract_pointcloud_from_bbox_empty_depth(bridge, camera_info, detection2d):
+def test_extract_pointcloud_from_bbox_empty_depth(camera_info, detection2d):
     """Test extracting point cloud with empty depth image."""
     depth_array = np.zeros((480, 640), dtype=np.uint16)
-    depth_msg = bridge.cv2_to_imgmsg(depth_array, encoding="16UC1")
+    depth_msg = numpy_to_imgmsg(depth_array, "16UC1")
     depth_msg.header = Header()
     depth_msg.header.frame_id = "camera_frame"
 
-    result = extract_pointcloud_from_bbox(detection2d, depth_msg, camera_info, bridge)
+    result = extract_pointcloud_from_bbox(detection2d, depth_msg, camera_info)
 
     assert result is None
 
 
-def test_enhance_detection_with_3d_pose_success(
-    bridge, camera_info, depth_image, detection2d
-):
+def test_enhance_detection_with_3d_pose_success(camera_info, depth_image, detection2d):
     """Test enhancing detection with 3D pose when pose is empty."""
     # Add empty result to detection
     result = ObjectHypothesisWithPose()
@@ -131,16 +123,14 @@ def test_enhance_detection_with_3d_pose_success(
     result.pose.pose.position = Point(x=0.0, y=0.0, z=0.0)
     detection2d.results = [result]
 
-    success = enhance_detection_with_3d_pose(
-        detection2d, depth_image, camera_info, bridge
-    )
+    success = enhance_detection_with_3d_pose(detection2d, depth_image, camera_info)
 
     assert success is True
     assert detection2d.results[0].pose.pose.position.z > 0
 
 
 def test_enhance_detection_with_3d_pose_already_has_pose(
-    bridge, camera_info, depth_image, detection2d
+    camera_info, depth_image, detection2d
 ):
     """Test that enhancement returns False when pose already exists."""
     result = ObjectHypothesisWithPose()
@@ -148,35 +138,31 @@ def test_enhance_detection_with_3d_pose_already_has_pose(
     result.pose.pose.position = Point(x=1.0, y=2.0, z=3.0)
     detection2d.results = [result]
 
-    success = enhance_detection_with_3d_pose(
-        detection2d, depth_image, camera_info, bridge
-    )
+    success = enhance_detection_with_3d_pose(detection2d, depth_image, camera_info)
 
     assert success is False
     assert detection2d.results[0].pose.pose.position.x == 1.0
 
 
-def test_enhance_detection_with_3d_pose_no_depth(bridge, camera_info, detection2d):
+def test_enhance_detection_with_3d_pose_no_depth(camera_info, detection2d):
     """Test that enhancement returns False when depth is missing."""
     result = ObjectHypothesisWithPose()
     result.pose.pose = Pose()
     result.pose.pose.position = Point(x=0.0, y=0.0, z=0.0)
     detection2d.results = [result]
 
-    success = enhance_detection_with_3d_pose(detection2d, None, camera_info, bridge)
+    success = enhance_detection_with_3d_pose(detection2d, None, camera_info)
 
     assert success is False
 
 
 def test_enhance_detection_with_3d_pose_no_results(
-    bridge, camera_info, depth_image, detection2d
+    camera_info, depth_image, detection2d
 ):
     """Test that enhancement returns False when detection has no results."""
     detection2d.results = []
 
-    success = enhance_detection_with_3d_pose(
-        detection2d, depth_image, camera_info, bridge
-    )
+    success = enhance_detection_with_3d_pose(detection2d, depth_image, camera_info)
 
     assert success is False
 
@@ -191,11 +177,11 @@ def test_get_camera_intrinsics(camera_info):
     assert cy == 240.0
 
 
-def test_convert_depth_to_meters_mm_encoding(bridge):
+def test_convert_depth_to_meters_mm_encoding():
     """Test converting depth from mm encoding to meters."""
     # Create depth array in mm (16UC1 encoding)
     depth_array = np.array([[1000, 2000], [3000, 4000]], dtype=np.uint16)
-    depth_image = bridge.cv2_to_imgmsg(depth_array, encoding="16UC1")
+    depth_image = numpy_to_imgmsg(depth_array, "16UC1")
 
     result = convert_depth_to_meters(depth_array, depth_image)
 
@@ -209,11 +195,11 @@ def test_convert_depth_to_meters_mm_encoding(bridge):
     assert result[1, 1] == 4.0
 
 
-def test_convert_depth_to_meters_meters_encoding(bridge):
+def test_convert_depth_to_meters_meters_encoding():
     """Test converting depth that's already in meters (32FC1 encoding)."""
     # Create depth array already in meters
     depth_array = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
-    depth_image = bridge.cv2_to_imgmsg(depth_array, encoding="32FC1")
+    depth_image = numpy_to_imgmsg(depth_array, "32FC1")
 
     result = convert_depth_to_meters(depth_array, depth_image)
 
@@ -223,10 +209,10 @@ def test_convert_depth_to_meters_meters_encoding(bridge):
     assert result[0, 1] == 2.0
 
 
-def test_convert_depth_to_meters_mono16_encoding(bridge):
+def test_convert_depth_to_meters_mono16_encoding():
     """Test converting depth from mono16 encoding (mm) to meters."""
     depth_array = np.array([[5000, 6000]], dtype=np.uint16)
-    depth_image = bridge.cv2_to_imgmsg(depth_array, encoding="mono16")
+    depth_image = numpy_to_imgmsg(depth_array, "mono16")
 
     result = convert_depth_to_meters(depth_array, depth_image)
 

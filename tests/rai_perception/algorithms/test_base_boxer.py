@@ -166,7 +166,7 @@ class TestGDBoxerBase(ABC):
         """Test get_boxes maps detections to classes, pixel boxes and confidences."""
         model_dir = create_test_model_dir(tmp_path)
         GDBoxer = self.get_boxer_class()
-        bridge_patch = self.get_patch_path("CvBridge")
+        to_numpy_patch = self.get_patch_path("imgmsg_to_numpy")
         # Token 1 is "dinosaur", token 3 is "dragon" in "dinosaur. dragon."
         outputs = make_fake_outputs(
             [
@@ -178,21 +178,15 @@ class TestGDBoxerBase(ABC):
 
         with (
             self.patch_hf(outputs),
-            patch(bridge_patch) as mock_bridge,
+            patch(to_numpy_patch, return_value=create_mock_image_array()) as to_numpy,
         ):
-            mock_bridge_instance = MagicMock()
-            mock_bridge.return_value = mock_bridge_instance
-            mock_bridge_instance.imgmsg_to_cv2.return_value = create_mock_image_array()
-
             boxer = GDBoxer(str(model_dir), use_cuda=True)
 
             image_msg = Image()
             classes = ["dinosaur", "dragon"]
             boxes = boxer.get_boxes(image_msg, classes, 0.4, 0.4)
 
-            mock_bridge_instance.imgmsg_to_cv2.assert_called_once_with(
-                image_msg, desired_encoding="rgb8"
-            )
+            to_numpy.assert_called_once_with(image_msg, "rgb8")
             assert len(boxes) == 2
             assert boxes[0].phrase == "dinosaur"
             assert abs(boxes[0].confidence - 0.9) < 1e-5
@@ -206,13 +200,13 @@ class TestGDBoxerBase(ABC):
         """A box whose tokens all fall below text_threshold matches no class and is dropped."""
         model_dir = create_test_model_dir(tmp_path)
         GDBoxer = self.get_boxer_class()
-        bridge_patch = self.get_patch_path("CvBridge")
+        to_numpy_patch = self.get_patch_path("imgmsg_to_numpy")
         outputs = make_fake_outputs([(1, 0.5, [0.5, 0.5, 0.2, 0.2])])
 
-        with self.patch_hf(outputs), patch(bridge_patch) as mock_bridge:
-            mock_bridge.return_value.imgmsg_to_cv2.return_value = (
-                create_mock_image_array()
-            )
+        with (
+            self.patch_hf(outputs),
+            patch(to_numpy_patch, return_value=create_mock_image_array()),
+        ):
             boxer = GDBoxer(str(model_dir), use_cuda=False)
 
             assert boxer.get_boxes(Image(), ["dinosaur"], 0.4, 0.4) != []
@@ -222,13 +216,12 @@ class TestGDBoxerBase(ABC):
         """Test GDBoxer get_boxes with no detections."""
         model_dir = create_test_model_dir(tmp_path)
         GDBoxer = self.get_boxer_class()
-        bridge_patch = self.get_patch_path("CvBridge")
+        to_numpy_patch = self.get_patch_path("imgmsg_to_numpy")
 
-        with self.patch_hf(), patch(bridge_patch) as mock_bridge:
-            mock_bridge_instance = MagicMock()
-            mock_bridge.return_value = mock_bridge_instance
-            mock_bridge_instance.imgmsg_to_cv2.return_value = create_mock_image_array()
-
+        with (
+            self.patch_hf(),
+            patch(to_numpy_patch, return_value=create_mock_image_array()),
+        ):
             boxer = GDBoxer(str(model_dir), use_cuda=False)
 
             image_msg = Image()

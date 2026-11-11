@@ -69,7 +69,6 @@ def test_detection_publisher_initialization(detection_publisher):
     """Test that DetectionPublisher initializes correctly."""
     assert detection_publisher is not None
     assert detection_publisher.connector.node.get_name() == "detection_publisher"
-    assert detection_publisher.bridge is not None
     assert detection_publisher.last_image is None
     assert detection_publisher.last_depth_image is None
     assert detection_publisher.last_camera_info is None

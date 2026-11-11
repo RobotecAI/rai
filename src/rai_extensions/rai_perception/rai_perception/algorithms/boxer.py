@@ -30,8 +30,8 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 import torch
-from cv_bridge import CvBridge
 from PIL import Image as PILImage
+from rai.communication.ros2.images import imgmsg_to_numpy
 from rclpy.time import Time
 from sensor_msgs.msg import Image
 from std_msgs.msg import Header
@@ -136,7 +136,6 @@ class GDBoxer:
         )
         self.model.to(self.device)
         self.model.eval()
-        self.bridge = CvBridge()
 
     def _resolve_model_source(self, weight_path: str) -> Tuple[str, Optional[str]]:
         """Map ``weight_path`` to a ``from_pretrained`` source and revision."""
@@ -174,7 +173,7 @@ class GDBoxer:
         Returns:
             List of Box objects with detections
         """
-        image = self.bridge.imgmsg_to_cv2(image_msg, desired_encoding="rgb8")
+        image = imgmsg_to_numpy(image_msg, "rgb8")
         xyxy, confidences, phrases = self._predict(
             image, ". ".join(classes), box_threshold, text_threshold
         )

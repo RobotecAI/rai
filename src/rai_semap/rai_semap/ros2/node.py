@@ -19,7 +19,6 @@ from typing import Optional, Tuple
 # ROS2 core
 import rclpy
 import yaml
-from cv_bridge import CvBridge
 
 # ROS2 geometry and transforms
 from geometry_msgs.msg import Point, Pose, PoseStamped
@@ -93,7 +92,6 @@ class SemanticMapNode:
             )
         self._parse_class_thresholds()
         self._parse_class_merge_thresholds()
-        self.bridge = CvBridge()
         self.last_depth_image: Optional[Image] = None
         self.last_camera_info: Optional[CameraInfo] = None
         self._initialize_memory()
@@ -409,7 +407,6 @@ class SemanticMapNode:
             detection,
             self.last_depth_image,
             self.last_camera_info,
-            self.bridge,
         )
 
         if result is None:

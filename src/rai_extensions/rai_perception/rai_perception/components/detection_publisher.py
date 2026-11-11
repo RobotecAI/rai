@@ -27,7 +27,6 @@ from typing import Dict, List, Optional, Tuple
 
 import rclpy
 import yaml
-from cv_bridge import CvBridge
 from rai.communication.ros2 import ROS2Connector, ROS2ServiceError
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.qos import qos_profile_sensor_data
@@ -58,7 +57,6 @@ class DetectionPublisher:
         """
         self.connector = connector
         self._initialize_parameters()
-        self.bridge = CvBridge()
         self._initialize_clients()
         self._initialize_subscriptions()
         self._initialize_publishers()
@@ -503,7 +501,6 @@ class DetectionPublisher:
                     det,
                     self.last_depth_image,
                     self.last_camera_info,
-                    self.bridge,
                     region_size,
                 ):
                     if det.results and len(det.results) > 0:

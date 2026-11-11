@@ -18,7 +18,7 @@ from typing import List
 import cv2
 import numpy as np
 import rclpy
-from cv_bridge import CvBridge
+from rai.communication.ros2.images import imgmsg_to_numpy, numpy_to_imgmsg
 from rclpy.node import Node
 
 from rai_interfaces.srv import RAIGroundedSam, RAIGroundingDino
@@ -33,7 +33,6 @@ class GDClientExample(Node):
             self.get_logger().info("service /detection not available, waiting again...")
         self.req = RAIGroundingDino.Request()
         self.detection_classes = detection_classes
-        self.bridge = CvBridge()
 
     def get_image_path(self) -> str:
         image_path = self.get_parameter("image_path").value
@@ -46,7 +45,7 @@ class GDClientExample(Node):
         img = cv2.imread(image_path)
         # convert img to numpy array
         img = np.array(img)
-        self.req.source_img = self.bridge.cv2_to_imgmsg(img, encoding="bgr8")
+        self.req.source_img = numpy_to_imgmsg(img, "bgr8")
         self.req.classes = ", ".join(self.detection_classes)
         self.req.box_threshold = 0.4
         self.req.text_threshold = 0.4
@@ -63,14 +62,13 @@ class GSClientExample(Node):
                 "service /segmentation not available, waiting again..."
             )
         self.req = RAIGroundedSam.Request()
-        self.bridge = CvBridge()
 
     def send_request(self, image_path: str, data: RAIGroundingDino.Response):
         self.req.detections = data.detections
         img = cv2.imread(image_path)
         # convert img to numpy array
         img = np.array(img)
-        self.req.source_img = self.bridge.cv2_to_imgmsg(img, encoding="bgr8")
+        self.req.source_img = numpy_to_imgmsg(img, "bgr8")
         self.future = self.cli.call_async(self.req)
 
 
@@ -100,10 +98,10 @@ def draw_bounding_box(img, detection, color=(0, 255, 0)):
     )
 
 
-def overlay_mask(img, mask_msg, bridge, mask_index):
+def overlay_mask(img, mask_msg, mask_index):
     """Overlay a single mask on the image with a unique color."""
     # Convert ROS2 Image message to numpy array
-    mask = bridge.imgmsg_to_cv2(mask_msg, desired_encoding="mono8")
+    mask = imgmsg_to_numpy(mask_msg, "mono8")
 
     # Use different colors for different masks
     colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0)]  # BGR
@@ -127,7 +125,7 @@ def create_visualization(image, masks, detections, gsam_client):
 
     # Overlay all masks
     for i, mask_msg in enumerate(masks):
-        img = overlay_mask(img, mask_msg, gsam_client.bridge, i)
+        img = overlay_mask(img, mask_msg, i)
 
     return img
 

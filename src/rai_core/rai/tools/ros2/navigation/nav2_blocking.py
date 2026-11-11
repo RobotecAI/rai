@@ -15,14 +15,14 @@
 from typing import Type
 
 from action_msgs.msg import GoalStatus
-from geometry_msgs.msg import PoseStamped, Quaternion
+from geometry_msgs.msg import PoseStamped
 from nav2_msgs.action import NavigateToPose
 from pydantic import BaseModel, Field
 from rclpy.action import ActionClient
-from tf_transformations import quaternion_from_euler
 
 from rai.tools.ros2.base import BaseROS2Tool
 from rai.tools.ros2.navigation.bounds import WorkspaceBounds
+from rai.tools.ros2.navigation.geometry import yaw_to_quaternion
 
 
 def _get_status_string(status: int) -> str:
@@ -119,8 +119,7 @@ class NavigateToPoseBlockingTool(WorkspaceBounds, BaseROS2Tool):
         pose.pose.position.x = x
         pose.pose.position.y = y
         pose.pose.position.z = z
-        quat = quaternion_from_euler(0, 0, yaw)
-        pose.pose.orientation = Quaternion(x=quat[0], y=quat[1], z=quat[2], w=quat[3])
+        pose.pose.orientation = yaw_to_quaternion(yaw)
 
         goal = NavigateToPose.Goal()
         goal.pose = pose
