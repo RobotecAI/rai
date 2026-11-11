@@ -12,50 +12,52 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from subprocess import PIPE, Popen
-from threading import Timer
+"""Read-only `ros2` CLI tools. Write commands (topic pub, service call, action
+send_goal, param set/delete/load) are not offered: they would bypass the access
+lists and the connector's egress hooks."""
+
+import asyncio
 from typing import List, Literal, Optional
 
-from langchain_core.tools import BaseTool, BaseToolkit, tool
+from langchain_core.tools import BaseTool, BaseToolkit
+
+from rai.tools.base import rai_tool
+from rai.tools.hooks import Effect
 
 FORBIDDEN_CHARACTERS = ["&", ";", "|", "&&", "||", "(", ")", "<", ">", ">>", "<<"]
 
 
-def run_with_timeout(cmd: List[str], timeout_sec: int):
-    if isinstance(timeout_sec, bool) or not isinstance(timeout_sec, (int, float)):
-        raise TypeError(
-            f"timeout_sec must be a positive number, got {type(timeout_sec).__name__}"
-        )
-    if timeout_sec <= 0:
-        raise ValueError(f"timeout_sec must be positive, got {timeout_sec!r}")
-    proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
-    timer = Timer(timeout_sec, proc.kill)
-    try:
-        timer.start()
-        stdout, stderr = proc.communicate()
-        return stdout, stderr
-    finally:
-        timer.cancel()
-
-
-def run_command(cmd: List[str], timeout: int = 5):
-    # Validate command safety by checking for shell operators
-    # Block potentially dangerous characters
+async def run_command(cmd: List[str], timeout: float = 5) -> str:
+    """Run cmd (no shell) and return its output; the process is killed after timeout."""
+    if isinstance(timeout, bool) or not isinstance(timeout, (int, float)):
+        raise TypeError(f"timeout must be a positive number, got {timeout!r}")
+    if timeout <= 0:
+        raise ValueError(f"timeout must be positive, got {timeout!r}")
     if any(char in " ".join(cmd) for char in FORBIDDEN_CHARACTERS):
         raise ValueError(
             "Command is not safe to run. The command contains forbidden characters."
         )
-    stdout, stderr = run_with_timeout(cmd, timeout)
-    output = {}
-    if stdout:
-        output["stdout"] = stdout.decode("utf-8")
-    else:
-        output["stdout"] = "Command returned no stdout output"
-    if stderr:
-        output["stderr"] = stderr.decode("utf-8")
-    else:
-        output["stderr"] = "Command returned no stderr output"
-    return str(output)
+    proc = await asyncio.create_subprocess_exec(
+        *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+    )
+    try:
+        async with asyncio.timeout(timeout):
+            stdout, stderr = await proc.communicate()
+    except TimeoutError:  # streaming commands (echo, hz) run until killed
+        proc.kill()
+        stdout, stderr = await proc.communicate()
+    return str(
+        {
+            "stdout": stdout.decode() or "Command returned no stdout output",
+            "stderr": stderr.decode() or "Command returned no stderr output",
+        }
+    )
+
+
+async def _ros2(
+    group: str, command: str, arguments: Optional[List[str]], timeout: float
+) -> str:
+    return await run_command(["ros2", group, command, *(arguments or [])], timeout)
 
 
 class ROS2CLIToolkit(BaseToolkit):
@@ -70,120 +72,101 @@ class ROS2CLIToolkit(BaseToolkit):
         ]
 
 
-@tool
-def ros2_action(
-    command: Literal["info", "list", "type", "send_goal"],
+@rai_tool(Effect.READ)
+async def ros2_action(
+    command: Literal["info", "list", "type"],
     arguments: Optional[List[str]] = None,
     timeout: int = 5,
-):
-    """Run a ROS2 action command
+) -> str:
+    """Run a read-only ROS2 action command
     Args:
         command: The action command to run (info/list/type)
         arguments: Additional arguments for the command as a list of strings
         timeout: Command timeout in seconds
     """
-    cmd = ["ros2", "action", command]
-    if arguments:
-        cmd.extend(arguments)
-    return run_command(cmd, timeout)
+    return await _ros2("action", command, arguments, timeout)
 
 
-@tool
-def ros2_service(
-    command: Literal["call", "find", "info", "list", "type"],
+@rai_tool(Effect.READ)
+async def ros2_service(
+    command: Literal["find", "info", "list", "type"],
     arguments: Optional[List[str]] = None,
     timeout: int = 5,
-):
-    """Run a ROS2 service command
+) -> str:
+    """Run a read-only ROS2 service command
     Args:
         command: The service command to run
         arguments: Additional arguments for the command as a list of strings
         timeout: Command timeout in seconds
     """
-    cmd = ["ros2", "service", command]
-    if arguments:
-        cmd.extend(arguments)
-    return run_command(cmd, timeout)
+    return await _ros2("service", command, arguments, timeout)
 
 
-@tool
-def ros2_node(
+@rai_tool(Effect.READ)
+async def ros2_node(
     command: Literal["info", "list"],
     arguments: Optional[List[str]] = None,
     timeout: int = 5,
-):
+) -> str:
     """Run a ROS2 node command
     Args:
         command: The node command to run
         arguments: Additional arguments for the command as a list of strings
         timeout: Command timeout in seconds
     """
-    cmd = ["ros2", "node", command]
-    if arguments:
-        cmd.extend(arguments)
-    return run_command(cmd, timeout)
+    return await _ros2("node", command, arguments, timeout)
 
 
-@tool
-def ros2_param(
-    command: Literal["delete", "describe", "dump", "get", "list", "set"],
+@rai_tool(Effect.READ)
+async def ros2_param(
+    command: Literal["describe", "get", "list"],
     arguments: Optional[List[str]] = None,
     timeout: int = 5,
-):
-    """Run a ROS2 parameter command
+) -> str:
+    """Run a read-only ROS2 parameter command
     Args:
         command: The parameter command to run
         arguments: Additional arguments for the command as a list of strings
         timeout: Command timeout in seconds
     """
-    cmd = ["ros2", "param", command]
-    if arguments:
-        cmd.extend(arguments)
-    return run_command(cmd, timeout)
+    return await _ros2("param", command, arguments, timeout)
 
 
-@tool
-def ros2_interface(
+@rai_tool(Effect.READ)
+async def ros2_interface(
     command: Literal["list", "package", "packages", "proto", "show"],
     arguments: Optional[List[str]] = None,
     timeout: int = 5,
-):
+) -> str:
     """Run a ROS2 interface command
     Args:
         command: The interface command to run
         arguments: Additional arguments for the command as a list of strings
         timeout: Command timeout in seconds
     """
-    cmd = ["ros2", "interface", command]
-    if arguments:
-        cmd.extend(arguments)
-    return run_command(cmd, timeout)
+    return await _ros2("interface", command, arguments, timeout)
 
 
-@tool
-def ros2_topic(
-    command: Literal[
-        "bw", "delay", "echo", "find", "hz", "info", "list", "pub", "type"
-    ],
+@rai_tool(Effect.READ)
+async def ros2_topic(
+    command: Literal["bw", "delay", "echo", "find", "hz", "info", "list", "type"],
     arguments: Optional[List[str]] = None,
     timeout: int = 5,
-):
-    """Run a ROS2 topic command
+) -> str:
+    """Run a read-only ROS2 topic command
     Args:
         command: The topic command to run:
             - bw: Display bandwidth used by topic
             - delay: Display delay of topic from timestamp in header
-            - echo: Output messages from a topic
+            - echo: Output one message from a topic
             - find: Output a list of available topics of a given type
             - hz: Print the average publishing rate to screen
             - info: Print information about a topic
             - list: Output a list of available topics
-            - pub: Publish a message to a topic
             - type: Print a topic's type
         arguments: Additional arguments for the command as a list of strings
         timeout: Command timeout in seconds
     """
-    cmd = ["ros2", "topic", command]
-    if arguments:
-        cmd.extend(arguments)
-    return run_command(cmd, timeout)
+    if command == "echo" and "--once" not in (arguments or []):
+        arguments = [*(arguments or []), "--once"]
+    return await _ros2("topic", command, arguments, timeout)

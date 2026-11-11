@@ -14,10 +14,11 @@
 
 """Offline tests for ROS2 CLI timeout guards (no ROS_DISTRO required)."""
 
+import asyncio
 import importlib.util
 import sys
+import time
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -52,31 +53,44 @@ def cli():
     return _load_cli_module()
 
 
-def test_run_with_timeout_rejects_zero(cli):
+def run(cli, cmd, timeout):
+    return asyncio.run(cli.run_command(cmd, timeout=timeout))
+
+
+@pytest.mark.parametrize("timeout", [0, -1])
+def test_run_command_rejects_nonpositive(cli, timeout):
     with pytest.raises(ValueError, match="positive"):
-        cli.run_with_timeout(["echo", "x"], 0)
+        run(cli, ["echo", "x"], timeout)
 
 
-def test_run_with_timeout_rejects_negative(cli):
-    with pytest.raises(ValueError, match="positive"):
-        cli.run_with_timeout(["echo", "x"], -1)
-
-
-def test_run_with_timeout_rejects_bool(cli):
+def test_run_command_rejects_bool(cli):
     with pytest.raises(TypeError, match="positive number"):
-        cli.run_with_timeout(["echo", "x"], False)  # type: ignore[arg-type]
+        run(cli, ["echo", "x"], False)
 
 
-def test_run_command_rejects_nonpositive(cli):
-    with pytest.raises(ValueError, match="positive"):
-        cli.run_command(["echo", "ok"], timeout=0)
+def test_run_command_rejects_shell_operators(cli):
+    with pytest.raises(ValueError, match="forbidden characters"):
+        run(cli, ["echo", "x;", "rm"], 1)
 
 
-def test_run_with_timeout_happy_path(cli, monkeypatch):
-    proc = MagicMock()
-    proc.communicate.return_value = (b"out\n", b"")
-    monkeypatch.setattr(cli, "Popen", lambda *a, **k: proc)
-    monkeypatch.setattr(cli, "Timer", lambda *a, **k: MagicMock())
-    stdout, stderr = cli.run_with_timeout(["echo", "ok"], 1.0)
-    assert stdout == b"out\n"
-    assert stderr == b""
+def test_run_command_happy_path(cli):
+    assert "'stdout': 'ok\\n'" in run(cli, ["echo", "ok"], 1.0)
+
+
+def test_run_command_kills_on_timeout(cli):
+    start = time.monotonic()
+    output = run(cli, ["sleep", "5"], 0.2)
+    assert time.monotonic() - start < 2
+    assert "no stdout output" in output
+
+
+def test_cli_offers_no_write_commands(cli):
+    """topic pub, service call, action send_goal and param set/delete/load
+    would bypass the access lists and the egress hooks."""
+    writes = {"pub", "call", "send_goal", "set", "delete", "load", "dump"}
+    for tool in cli.ROS2CLIToolkit().get_tools():
+        commands = set(
+            tool.args_schema.model_json_schema()["properties"]["command"]["enum"]
+        )
+        assert not commands & writes, tool.name
+        assert tool.effect == "read"
