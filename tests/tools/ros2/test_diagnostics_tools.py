@@ -180,10 +180,12 @@ def test_topic_rate(tools) -> None:
     out = run(tools["measure_ros2_topic_rate"], topic="/f5_pose", window_s=1.0)
     delay = re.search(r"header delay mean ([\d.]+) (ms|s)", out)
     assert delay and delay.group(2) == "ms", out
-    # The measurement's subscription is gone afterwards.
+    # The measurement's subscription is gone afterwards (the graph needs a moment).
     own = connector.node_name.rsplit("/", 1)[-1]
-    subscribers = connector.get_topic_endpoints("/f5_pose")[1]
-    assert own not in [e.node_name for e in subscribers]
+    deadline = time.monotonic() + 5.0
+    while own in [e.node_name for e in connector.get_topic_endpoints("/f5_pose")[1]]:
+        assert time.monotonic() < deadline, "the rate subscription was not released"
+        time.sleep(0.05)
     out = run(tools["measure_ros2_topic_rate"], topic="/nope")
     assert "/nope is not in the ROS graph" in out
 
