@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
 from typing import (
     Any,
     Callable,
@@ -30,15 +29,10 @@ from rclpy.qos import (
     QoSProfile,
 )
 from rclpy.subscription import Subscription
-try:
-    from rclpy.endpoint_info import TopicEndpointInfo  # Kilted+
-except ImportError:
-    from rclpy.topic_endpoint_info import TopicEndpointInfo  # Jazzy
 
 from rai.communication.ros2.api.base import (
     BaseROS2API,
 )
-from rai.communication.ros2.api.conversion import import_message_from_str
 
 
 class ROS2TopicAPI(BaseROS2API):
@@ -64,24 +58,12 @@ class ROS2TopicAPI(BaseROS2API):
         self._node = node
         self._logger = node.get_logger()
         self._publishers: Dict[str, Publisher] = {}
-
-        # TODO: These fields are a workaround to prevent subscriber destruction,
-        # which often fails as described in https://github.com/ros2/rclpy/issues/1142
-        # By setting destroy_subscriptions to False, subscribers are not destroyed.
-        # While this may lead to memory/performance issues, it's preferable to
-        # preventing node crashes.
-        self._last_msg: Dict[str, Tuple[float, Any]] = {}
-        self._subscriptions: Dict[str, rclpy.node.Subscription] = {}
-        self._destroy_subscribers: bool = destroy_subscribers
         self.node = node
         self.subscriptions: Dict[str, Subscription] = {}
         self.publishers: Dict[str, Publisher] = {}
 
     def subscriber_exists(self, topic: str) -> bool:
         return topic in self.subscriptions
-
-    def publisher_exists(self, topic: str) -> bool:
-        return topic in self.publishers
 
     def create_subscriber(
         self,
@@ -169,27 +151,6 @@ class ROS2TopicAPI(BaseROS2API):
         publisher = self._get_or_create_publisher(topic, type(msg), qos_profile)
         publisher.publish(msg)
 
-    def _verify_receive_args(
-        self, topic: str, auto_topic_type: bool, msg_type: Optional[str]
-    ) -> None:
-        if auto_topic_type and msg_type is not None:
-            raise ValueError("Cannot provide both auto_topic_type and msg_type")
-        if not auto_topic_type and msg_type is None:
-            raise ValueError("msg_type must be provided if auto_topic_type is False")
-
-    def _generic_callback(self, topic: str, msg: Any) -> None:
-        self._last_msg[topic] = (time.time(), msg)
-
-    def _is_topic_available(self, topic: str, timeout_sec: float) -> bool:
-        ts = time.time()
-        topic = topic if topic.startswith("/") else f"/{topic}"
-        while time.time() - ts < timeout_sec:
-            for topic_name, _ in self.get_topic_names_and_types():
-                if topic == topic_name:
-                    return True
-            time.sleep(0.1)
-        return False
-
     def _get_or_create_publisher(
         self, topic: str, msg_cls: Type[Any], qos_profile: QoSProfile
     ) -> Publisher:
@@ -229,22 +190,6 @@ class ROS2TopicAPI(BaseROS2API):
         raise ValueError(
             "Either auto_qos_matching must be True or qos_profile must be provided"
         )
-
-    @staticmethod
-    def _get_message_class(msg_type: str) -> Type[Any]:
-        """Convert message type string to actual message class."""
-        return import_message_from_str(msg_type)
-
-    def _verify_publisher_exists(self, topic: str) -> List[TopicEndpointInfo]:
-        """Verify that at least one publisher exists for the given topic.
-
-        Raises:
-            ValueError: If no publisher exists for the topic
-        """
-        topic_endpoints = self._node.get_publishers_info_by_topic(topic)
-        if not topic_endpoints:
-            raise ValueError(f"No publisher found for topic: {topic}")
-        return topic_endpoints
 
     def shutdown(self) -> None:
         """Cleanup publishers when object is destroyed."""
