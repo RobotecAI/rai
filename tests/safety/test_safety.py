@@ -27,7 +27,7 @@ from typing import Any
 import pytest
 from example_interfaces.action import Fibonacci
 from geometry_msgs.msg import Twist
-from langchain_core.messages import AIMessage, ToolMessage
+from langchain_core.messages import ToolMessage
 from rai import safety
 from rai.communication.ros2 import ROS2Connector, ROS2HRIConnector
 from rai.communication.ros2 import runtime as rt
@@ -373,13 +373,13 @@ def test_hri_asker(ros_setup: None) -> None:
 
     human.subscribe(to_human, answer, msg_type="rai_interfaces/msg/HRIMessage")
     received: list[Any] = []
-    hri.register_callback(from_human, received.append)
+    hri.subscribe(from_human, received.append)
     try:
         # discovery both ways: warm-up questions nobody waits for are ignored
         deadline = time.monotonic() + 10.0
         while not received:
             assert time.monotonic() < deadline
-            hri.send_message(hri.build_message(AIMessage("warm-up")), to_human)
+            hri.sync.send(to_human, "warm-up")
             time.sleep(0.2)
         assert asyncio.run(asyncio.wait_for(asker("Move?"), 10.0)) is True
         reply["text"] = "no"

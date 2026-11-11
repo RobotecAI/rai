@@ -150,9 +150,8 @@ class HRIAsker:
     the next message on ``from_human`` as the answer (a yes word approves,
     anything else denies). Questions are answered in order.
 
-    Uses ``connector.build_message``, ``send_message``, ``register_callback``
-    and ``unregister_callback``; any HRIConnector with them works. The
-    connector is not closed by ``close()``.
+    Uses the connector's ``send`` and ``subscribe``, so any HRIConnector
+    works. The connector is not closed by ``close()``.
     """
 
     def __init__(
@@ -168,9 +167,7 @@ class HRIAsker:
         self.yes = frozenset(w.lower() for w in yes)
         self._pending: deque[tuple[asyncio.AbstractEventLoop, asyncio.Future]] = deque()
         self._lock = threading.Lock()
-        self._callback_id = connector.register_callback(
-            from_human, self._on_message, raw=True
-        )
+        self._subscription = connector.subscribe(from_human, self._on_message)
 
     def _on_message(self, msg: Any) -> None:
         text = str(getattr(msg, "text", "")).strip().lower().rstrip(".!")
@@ -185,21 +182,18 @@ class HRIAsker:
         loop.call_soon_threadsafe(lambda: future.done() or future.set_result(approved))
 
     async def __call__(self, question: str) -> bool:
-        from langchain_core.messages import AIMessage
-
         loop = asyncio.get_running_loop()
         future: asyncio.Future = loop.create_future()
         with self._lock:
             self._pending.append((loop, future))
         try:
-            message = self.connector.build_message(AIMessage(question))
-            await asyncio.to_thread(self.connector.send_message, message, self.to_human)
+            await self.connector.send(self.to_human, question)
             return await future
         finally:
             future.cancel()  # a timed-out question takes no later answer
 
     def close(self) -> None:
-        self.connector.unregister_callback(self._callback_id)
+        self._subscription.close()
 
 
 __all__ = ["YES", "Asker", "ConfirmActuation", "HRIAsker", "cli_asker"]
