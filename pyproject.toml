@@ -129,3 +129,20 @@ markers = [
 addopts = "-m 'not billable and not ci_only and not manual and not benchmark' --ignore=src -p no:launch_testing -p no:launch_ros"
 log_cli = true
 log_cli_level = "INFO"
+
+# Coverage of rai_core, used by the lyrical leg of .github/workflows/test.yml (which sets the
+# floor with --cov-fail-under) and by local runs: pytest --cov=src/rai_core/rai.
+[tool.coverage.run]
+source = ["src/rai_core/rai"]
+# Streamlit UI with no tests (rai3-plan/04 §4.3). Omitted until it leaves rai_core or gets tests.
+omit = ["*/rai/frontend/*"]
+# Repo-relative paths in coverage.xml, so Codecov maps files without path fixes.
+relative_files = true
+
+[tool.coverage.report]
+skip_empty = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+]

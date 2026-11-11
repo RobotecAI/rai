@@ -66,9 +66,12 @@ jobs:
             --tag rai-test \
             .
 
+      # Coverage of rai_core on the lyrical leg only (settings in pyproject.toml [tool.coverage.*]).
+      # The floor is the measured line coverage rounded down (83.9 % on 2026-11-11, frontend
+      # omitted); raise it as tests land. New code is held to 85 % by Codecov (codecov.yml).
       - name: Run tests
         env:
-          COV_ARGS: ${{ matrix.ros_distro == 'lyrical' && '--cov=src/rai_core --cov-report=xml:/out/coverage.xml' || '' }}
+          COV_ARGS: ${{ matrix.ros_distro == 'lyrical' && '--cov=src/rai_core/rai --cov-report=xml:/out/coverage.xml --cov-report=term:skip-covered --cov-fail-under=83' || '' }}
         run: |
           mkdir -p test-results
           docker run --rm \

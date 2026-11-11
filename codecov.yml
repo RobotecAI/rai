@@ -1,2 +1,17 @@
+# Coverage gate (rai3-plan/PLAN.md §1 Quality gates, 04 §4.3). The hard floor for rai_core is
+# --cov-fail-under in .github/workflows/test.yml; Codecov adds the bar for new code.
+coverage:
+  status:
+    project:
+      default:
+        # Informational: the floor is enforced by pytest, a small drop here should not block.
+        informational: true
+        threshold: 0.5%
+    patch:
+      default:
+        target: 85%
+
+# Streamlit UI without tests; also omitted in pyproject.toml [tool.coverage.run] until it
+# leaves rai_core or gets tests.
 ignore:
   - src/rai_core/rai/frontend/*
