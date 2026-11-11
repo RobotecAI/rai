@@ -29,9 +29,6 @@ markdown_extensions:
       toc_depth: 2
   - attr_list
   - pymdownx.emoji
-  - admonition
-  - pymdownx.details
-  - pymdownx.superfences
   - pymdownx.snippets
 
 plugins:
@@ -76,81 +73,81 @@ extra:
       make our documentation better.
 
 copyright: >
-  Copyright &copy; 2025 Robotec.ai
+  Copyright &copy; 2026 Robotec.ai
   <a href="#__consent">Change cookie settings</a>
 
 nav:
   - Home:
-    - Overview: index.md
-    - Is RAI a good fit for me?: intro/what_is_rai.md
-    - Getting started: setup/install.md
+      - Overview: index.md
+      - What's new in 3.0: whats_new.md
   - Getting started:
-    - Local setup: setup/install.md
-    - Docker setup: setup/setup_docker.md
-    - Tracing setup: setup/tracing.md
-    - Vendor setup: setup/vendors.md
-  # - ROS 2:
-  #   - Debugging assistant: ROS_2/debugging_assistant.md
-  #   - Additional packages: ROS_2/ros_packages.md
-  - API documentation:
-      - Overview: API_documentation/overview.md
-      - Agents:
-        - Overview: API_documentation/agents/overview.md
-        # - ROS 2 Agents: API_documentation/agents/ROS_2_Agents.md
-      - Connectors:
-        - Overview: API_documentation/connectors/overview.md
-        - ROS 2 Connectors: API_documentation/connectors/ROS_2_Connectors.md
-      - Aggregators:
-        - Overview: API_documentation/aggregators/overview.md
-        - ROS 2 Aggregators: API_documentation/aggregators/ROS_2_Aggregators.md
-      - LangChain:
-        - Overview: API_documentation/langchain_integration/overview.md
-        - Multimodal messages: API_documentation/langchain_integration/multimodal_messages.md
-        - ROS 2 Tools: API_documentation/langchain_integration/ROS_2_tools.md
-        - MCP: API_documentation/langchain_integration/mcp.md
-      - Robot manifest: API_documentation/manifest.md
-      - Runners:
-        - Overview: API_documentation/runners/overview.md
-      - Safety:
-        - Overview: API_documentation/safety/overview.md
-      - Flight recorder:
-        - Overview: API_documentation/recorder/overview.md
-      - Record and replay:
-        - Overview: API_documentation/replay/overview.md
-  - Speech to speech:
-    - Overview: speech_to_speech/overview.md
-    - Agents:
-        - Overview: speech_to_speech/agents/overview.md
-        - Automatic Speech Recognition: speech_to_speech/agents/asr.md
-        - Text To Speech: speech_to_speech/agents/tts.md
-    - Models:
-        - Overview: speech_to_speech/models/overview.md
-    - SoundDevice Connector: speech_to_speech/sounddevice.md
-  - Tutorials:
-    - Overview: tutorials/overview.md
-    - Complete walkthrough: tutorials/walkthrough.md
-    - Create Robot's Whoami: tutorials/create_robots_whoami.md
-    - Tools: tutorials/tools.md
-    - Learned-policy skills: tutorials/policies.md
-    - Voice Interface: tutorials/voice_interface.md
-    - Benchmarking: tutorials/benchmarking.md
+      - Install: getting_started/install.md
+      - Docker: getting_started/docker.md
+      - Developer environment: getting_started/dev_env.md
+      - Your first agent: getting_started/first_agent.md
+      - Configuration: getting_started/configuration.md
+  - Concepts:
+      - Architecture: concepts/overview.md
+      - Connectors and the runtime: concepts/connectors.md
+      - Agents and lifecycle: concepts/agents.md
+      - Tools and effects: concepts/tools.md
+      - Safety: concepts/safety.md
+      - Content and HRI messages: concepts/content.md
+  - Guides:
+      - Robot integration:
+          - ROS 2 tools: guides/ros2_tools.md
+          - Writing tools: guides/writing_tools.md
+          - Build an agent for your robot: guides/walkthrough.md
+          - Robot state (aggregators): guides/aggregators.md
+          - Robot manifest: guides/manifest.md
+          - Robot identity (whoami): guides/whoami.md
+          - Perception: guides/perception.md
+          - Learned-policy skills: guides/policies.md
+      - Interfaces:
+          - MCP: guides/mcp.md
+          - Streamlit UI: guides/streamlit.md
+      - Recording and replay:
+          - Flight recorder: guides/recorder.md
+          - Record and replay: guides/replay.md
+      - Speech to speech:
+          - Overview: speech_to_speech/overview.md
+          - Voice interface: speech_to_speech/voice_interface.md
+          - Agents: speech_to_speech/agents/overview.md
+          - Speech recognition: speech_to_speech/agents/asr.md
+          - Text to speech: speech_to_speech/agents/tts.md
+          - Models: speech_to_speech/models/overview.md
+          - SoundDevice connector: speech_to_speech/sounddevice.md
+      - Simulation and benchmarking:
+          - Overview: simulation_and_benchmarking/overview.md
+          - RAI Sim: simulation_and_benchmarking/rai_sim.md
+          - RAI Bench: simulation_and_benchmarking/rai_bench.md
+          - Benchmarking tutorial: simulation_and_benchmarking/benchmarking.md
+          - Simulators: simulation_and_benchmarking/simulators.md
+  - API reference:
+      - Overview: api/index.md
+      - Settings and models: api/settings.md
+      - Agents: api/agents.md
+      - Tools: api/tools.md
+      - ROS 2 tools: api/ros2_tools.md
+      - Communication: api/communication.md
+      - Content and messages: api/content.md
+      - Aggregators: api/aggregators.md
+      - Safety: api/safety.md
+      - MCP: api/mcp.md
+      - Robot manifest: api/manifest.md
+      - Flight recorder: api/recorder.md
+      - Replay: api/replay.md
+      - Learned-policy skills: api/policies.md
+      - Streamlit UI: api/ui.md
   - Demos:
-    - Overview: demos/overview.md
-    - Robotic arm: demos/manipulation.md
-    - Autonomous vehicle: demos/rosbot_xl.md
-    - Autonomous tractor: demos/agriculture.md
-    - Debugging assistant: demos/debugging_assistant.md
-  - Simulation and benchmarking:
-    - Overview: simulation_and_benchmarking/overview.md
-    - RAI Sim: simulation_and_benchmarking/rai_sim.md
-    - RAI Bench: simulation_and_benchmarking/rai_bench.md
-    - Simulators: simulation_and_benchmarking/simulators.md
-  - Extensions:
-    - Perception: extensions/perception.md
+      - Overview: demos/overview.md
+      - Robotic arm: demos/manipulation.md
+      - Autonomous vehicle: demos/rosbot_xl.md
+      - Autonomous tractor: demos/agriculture.md
+      - Debugging assistant: demos/debugging_assistant.md
   - FAQ:
-    - Overview: faq/faq.md
-    - ROS 2: faq/ROS_2_Overview.md
-    - Contributing:
-      - Overview: faq/contributing/CONTRIBUTING.md
-      - Code of conduct: faq/contributing/CODE_OF_CONDUCT.md
-      - Security policy: faq/contributing/SECURITY.md
+      - FAQ: faq/faq.md
+      - Contributing:
+          - Overview: faq/contributing/CONTRIBUTING.md
+          - Code of conduct: faq/contributing/CODE_OF_CONDUCT.md
+          - Security policy: faq/contributing/SECURITY.md

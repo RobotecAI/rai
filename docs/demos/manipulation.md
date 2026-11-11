@@ -12,7 +12,7 @@ manipulation techniques.
 > [!TIP] LLM model
 >
 > The demo uses the `complex_model` LLM configured in `config.toml`. The model should be a
-> multimodal, tool-calling model. See [Vendors](../setup/vendors.md#llm-model-configuration-in-rai).
+> multimodal, tool-calling model. See [Vendors](../getting_started/configuration.md#models).
 
 !!! tip "ROS 2 Sourced"
 
@@ -22,7 +22,7 @@ manipulation techniques.
 
 #### Setting up the demo
 
-1. Follow the RAI setup instructions in the [quick setup guide](../setup/install.md#setting-up-developer-environment).
+1. Follow the RAI setup instructions in the [quick setup guide](../getting_started/dev_env.md).
 2. Download additional dependencies:
 
     ```shell
@@ -97,7 +97,7 @@ manipulation techniques.
 
 #### 1. Setting up the demo
 
-1.  Set up docker as outlined in the [docker setup guide](../setup/setup_docker.md). Build the base image as `rai:jazzy` with `--target dev`
+1.  Set up docker as outlined in the [docker setup guide](../getting_started/docker.md). Build the base image as `rai:jazzy` with `--target dev`
 
 2.  Build docker manipulation demo image:
 
@@ -119,7 +119,7 @@ manipulation techniques.
 
     !!! note AI vendor change
 
-        The default vendor can be changed to a different provider via the [RAI configuration tool](../setup/install.md#15-configure-rai)
+        The default vendor can be changed to a different provider via the [RAI configuration tool](../getting_started/configuration.md)
 
 5.  Run the docker container with the following command:
 

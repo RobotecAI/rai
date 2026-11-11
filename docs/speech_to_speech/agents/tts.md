@@ -34,7 +34,14 @@ The `TextToSpeechAgent` enables:
 
 ### `from_config(cfg_path: Optional[str])`
 
-Instantiates the agent from a configuration file, dynamically selecting the TTS model and setting up audio output.
+Instantiates the agent from the `[tts]` table of `rai.toml` (or `RAI_TTS__<FIELD>` env vars; `cfg_path` selects another file), dynamically selecting the TTS model and setting up audio output.
+
+```toml
+[tts]
+vendor = "ElevenLabs"      # or OpenTTS, KokoroTTS
+voice = ""
+speaker_device_name = "default"
+```
 
 ### `run()`
 
@@ -59,7 +66,7 @@ The Agent uses the `ROS2HRIConnector` for connection through 2 ROS2 topics:
 1. **Queue Management**: Properly track transcription IDs to avoid queue collisions or memory leaks.
 2. **Playback Sync**: Ensure audio queues are flushed on `stop` to avoid replaying outdated speech.
 3. **Graceful Shutdown**: Always call `stop()` to terminate threads cleanly.
-4. **Model Configuration**: Ensure model-specific settings (e.g., voice selection for ElevenLabs) are defined in config files.
+4. **Model Configuration**: Ensure model-specific settings (e.g., voice selection for ElevenLabs) are set in the `[tts]` table of `rai.toml`.
 
 ## Architecture
 
@@ -72,7 +79,7 @@ The `TextToSpeechAgent` interacts with the following core components:
 
 ## See Also
 
--   [BaseAgent](../../API_documentation/agents/overview.md#baseagent): Abstract base for all agents in RAI
+-   [BaseAgent](../../concepts/agents.md#lifecycle): Abstract base for all agents in RAI
 -   [SoundDeviceConnector](../sounddevice.md): For details on speaker configuration and streaming
 -   [Text-to-Speech Models](../models/overview.md): Supported TTS engines and usage
--   [ROS2 HRI Messaging](../../API_documentation/connectors/ROS_2_Connectors.md): Interfacing with `/to_human` and `/voice_commands`
+-   [ROS2 HRI Messaging](../../concepts/connectors.md): Interfacing with `/to_human` and `/voice_commands`

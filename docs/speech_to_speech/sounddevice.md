@@ -68,5 +68,5 @@ connector.close_streams()  # every device, or close_streams("mic")
 
 ## See Also
 
--   [Connectors Overview](../API_documentation/connectors/overview.md)
--   [Agents](../API_documentation/agents/overview.md)
+-   [Connectors Overview](../concepts/connectors.md)
+-   [Agents](../concepts/agents.md)

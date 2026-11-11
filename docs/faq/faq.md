@@ -1,156 +1,71 @@
-# RAI FAQ
+# FAQ
 
-??? tip "What is RAI and how does it work?"
+## General
 
-    ??? question "What is RAI?"
+??? question "What do I need to run RAI?"
 
-        RAI is a flexible AI agent framework to develop and deploy Embodied AI features for your robots.
+    Ubuntu 26.04 with ROS 2 Lyrical, or Ubuntu 24.04 with ROS 2 Jazzy, on amd64. A model: a cloud provider's API key, or a local model through Ollama or an OpenAI-compatible server. See [Install](../getting_started/install.md).
 
-    ??? question "How does RAI work?"
+??? question "Do I need a robot?"
 
-        <div style="text-align: center;"><img src="../../imgs/rai_steps.png" alt="rai-steps"></div>
+    No. The [demos](../demos/overview.md) run in simulation, [replay](../guides/replay.md) runs agents on recordings, and agents, tools and settings work without ROS 2 at all. With a robot, RAI builds on its existing ROS 2 stack: it does not include drivers, navigation or control.
 
-        RAI connects human instructions to robot actions in four simple steps:
+??? question "Can I use RAI without ROS 2?"
 
-        -   Human gives a command: The user interacts with the robot using speech or text.
-        -   RAI understands and reasons: RAI interprets the request, plans the response, and decides on the best action.
-        -   RAI controls the robot: It sends commands to the robot through ROS 2 or the robot's SDK.
-        -   Robot responds: The robot performs the action and can communicate back to the user, closing the loop.
+    Yes. `rai.agents`, `rai.tools`, `rai.settings`, `rai.llm` and `rai.content` do not need ROS 2. Importing `rai.communication.ros2` or `rai.tools.ros2` without a sourced ROS 2 raises `ImportError: This is a ROS2 feature`.
 
+??? question "Is RAI limited to LLMs?"
 
-    ??? question "Who is RAI for?"
+    No. `BaseAgent` is a lifecycle, not an LLM loop: implement `run()` with any model or algorithm (speech recognition in rai_s2s is one). See [Agents and lifecycle](../concepts/agents.md).
 
-        RAI is for robotics developers, researchers, educators, startups, companies, and hobbyists who want to add AI and natural language capabilities to robots, whether using ROS 2 or other robotics stacks. And anyone who’s ever looked at a robot and thought, “I wish you understood me.”
+??? question "Why is RAI not a ROS 2 package?"
 
-    ??? question "What can I do with RAI?"
+    RAI depends on fast-moving Python packages (LangChain, model SDKs) that need exact versions, which rosdep cannot express, and most of it works without ROS 2. So RAI is a set of Python packages in a uv workspace that work with ROS 2, and only `rai_interfaces` and `rai_bringup` are built with colcon.
 
-        With RAI, you can control robots using voice or text, integrate vision, speech, and sensor data, build and test complex robot behaviors, use ready-made demos, develop multi-agent systems, create custom tools, implement real-time decision making, and design interactive scenarios for human-robot interaction. Or just teach your robot to bring you snacks. We don’t judge.
+??? question "Does RAI cost money?"
 
-    ??? question "What demos are available for RAI?"
+    RAI is free and open source under the [Apache 2.0 license](https://www.apache.org/licenses/LICENSE-2.0), commercial use included. Cloud models and services bill you for what you use; local models do not.
 
-        RAI offers demos for [manipulation tasks](../demos/manipulation.md), [autonomous navigation with ROSbot XL](../demos/rosbot_xl.md) and [agricultural robotics](../demos/agriculture.md). See the documentation for details on each demo.
+??? question "Is my data sent anywhere?"
 
-        !!! info "Demos from ROSCon 2024"
+    Only to the model providers and tracing services you configure. For full privacy, use local models and leave tracing off, or use the offline [flight recorder](../guides/recorder.md).
 
-            <div style="padding:56.25% 0 0 0;position:relative;"><iframe src="https://player.vimeo.com/video/1023328281?h=1700a3cb57&amp;badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media" style="position:absolute;top:0;left:0;width:100%;height:100%;" title="RAI - Roscon &#039;24 reel demo"></iframe></div><script src="https://player.vimeo.com/api/player.js"></script>
+## Troubleshooting
 
-    ??? question "How do I build my own solution with RAI?"
+??? question "`import rclpy` fails inside the venv"
 
-        Follow the [step-by-step walkthrough](../tutorials/walkthrough.md) to deploy RAI on your robot, add custom tools and features, and create advanced multi-agent systems for complex tasks.
+    The venv was created without access to the system site-packages. Recreate it with `python3 -m venv --system-site-packages .venv` (or `scripts/dev_env.sh` in the repository), using the system Python of your ROS 2 distribution, and source ROS 2 before activating it.
 
-    ??? question "Does using RAI cost money?"
+??? question "`Provider 'x' needs langchain_x`"
 
-        RAI is free and open source software. However, if you use RAI with cloud-based models or third-party services, those may incur costs depending on the provider, model, and your usage. Please review the terms and pricing of any external services you choose to use with RAI.
-        To use RAI cost-free, make sure to use local models and services.
+    Install the provider's extra, for example `pip install "rai-core[anthropic]"`. See the extras in [Install](../getting_started/install.md#2-install-rai_core-with-extras).
 
-??? tip "How can I get started with RAI?"
+??? question "`No module named rai_interfaces`"
 
-    ??? question "How do I install RAI?"
+    Install `ros-jazzy-rai-interfaces`, or on Lyrical build `rai_interfaces` from source, and source its workspace. See [Install](../getting_started/install.md#3-install-rai_interfaces).
 
-        Check out the [Quick Setup Guide](../setup/install.md) to install RAI, try a demo, or follow the walkthrough to build your own solution.
+??? question "The first service call or goal to a node that just started is slow or times out"
 
-    ??? question "How do I try a demo?"
+    DDS discovery takes up to a few seconds. RAI waits for the server to be ready within the call's timeout; give the first call a longer one. For requests that are safe to repeat, `call(..., idempotent=True)` resends unanswered requests.
 
-        Check out the [Quick Setup Guide](../setup/install.md) to install RAI, try a demo, or follow the walkthrough to build your own solution.
+??? question "The agent does not see my topics"
 
-    ??? question "How do I build my own solution?"
+    Check that both sides use the same `ROS_DOMAIN_ID` and RMW (`RMW_IMPLEMENTATION`), and that the topic is not in the tools' `forbidden` list or missing from `readable`. `list_ros2_nodes` and `get_ros2_topic_info` from the [diagnostics toolkit](../guides/ros2_tools.md#diagnostics) show what the agent's node sees, with QoS incompatibilities.
 
-        Follow the [step-by-step walkthrough](../tutorials/walkthrough.md) to deploy RAI on your robot, add custom tools and features, and create advanced multi-agent systems for complex tasks.
+??? question "Speech recognition or text to speech fails with a PortAudio error"
 
-??? tip "How do I extend RAI?"
+    Install PortAudio (`sudo apt install portaudio19-dev`) and check the device name with `python -c "import sounddevice; print(sounddevice.query_devices())"`. See [Speech to speech](../speech_to_speech/overview.md).
 
-    ??? question "Missing a feature?"
+??? question "A tool call was denied and I do not know why"
 
-        Start by checking our [API documentation](../API_documentation/overview.md) to see if the feature you need already exists. If not, you're welcome to open a new issue or contribute your own solution! The [step-by-step walkthrough](../tutorials/walkthrough.md) is a great way to get familiar with RAI's structure. With these resources, you'll be well-equipped to add new features or customize RAI for your needs. If you have questions, don't hesitate to reach out to the community!
+    The error tool message names the hook and its reason, and the `ToolEnd` event has status `denied`. Install an `AuditLog` (`rai.safety.install(audit_path="audit.jsonl")`) to log every decision of both hook points. See [Safety](../concepts/safety.md).
 
-    ??? question "How do I integrate a new type of sensor?"
+## Contributing and support
 
-        Integration depends on what you want to achieve with your sensor data. If you'd like to use the data with an LLM or multimodal model, you'll need to write a small adapter that converts the sensor output into a format the model can understand (such as text or images). For other use cases, you can create a custom tool or agent that processes the sensor data as needed. If you need guidance, our community is happy to help—just ask on Discord or open a discussion!
+??? question "How do I contribute?"
 
-        !!! note
+    Set up the [developer environment](../getting_started/dev_env.md) and read the [contribution guide](contributing/CONTRIBUTING.md). If you are looking for something to work on, browse the [issues](https://github.com/RobotecAI/rai/issues) or ask on [Discord](https://discord.gg/3PGHgTaJSB).
 
-            At the moment, RAI does not implement a module for converting sensor data into text or images. These conversions are done on the application level/user side.
+??? question "Where do I get help?"
 
-??? tip "How do I contribute to RAI?"
-
-    ??? question "Contributtion guide"
-
-        To develop RAI, you just need to know how to run `pre-commit` (spoiler alert: just type `pre-commit`), and you’re basically a core developer. For anything more complicated (or if you like reading rules), see the [Contribution Guide](../faq/contributing/CONTRIBUTING.md).
-
-    ??? question "Existing issues/bugs/something is missings"
-
-        If you find an issue/bug/feature missing, please check the [existing issues](https://github.com/RobotecAI/rai/issues) and if it is not already reported, create a new one.
-
-    ??? question "I would like to contribute, but I don't know what"
-
-        If you would like to contribute, but don't know what to do, please join our [Discord](https://discord.gg/3PGHgTaJSB) and we will help you find something to work on. Alternatively, browse the [issues](https://github.com/RobotecAI/rai/issues) for inspiration.
-
-    ??? question "I've never contributed to open source before, how do I start?"
-
-        Welcome! We love helping newcomers get started with open source. The RAI community is friendly and supportive—no prior experience with RAI required. Check out our [Contribution Guide](../faq/contributing/CONTRIBUTING.md) for step-by-step instructions, and feel free to join our [Discord](https://discord.gg/3PGHgTaJSB) to ask questions or get guidance. We're here to help you every step of the way!
-
-??? tip "How do I get support for RAI?"
-
-    !!! question "Where can I learn more about RAI?"
-
-        You can find support by joining our [Discord](https://discord.gg/3PGHgTaJSB), or visiting the [Embodied AI Community Group](https://github.com/ros-wg-embodied-ai). For talks and demos, see the ROSCon 2024 links in the documentation.
-
-    !!! question "Where can I get support?"
-
-        You can find support and more information in the [Contribution Guide](../faq/contributing/CONTRIBUTING.md), on the [Q&A forum](https://github.com/RobotecAI/rai/discussions/categories/q-a), [issues](https://github.com/RobotecAI/rai/issues), by joining our [Discord](https://discord.gg/3PGHgTaJSB), or visiting the [Embodied AI Community Group](https://github.com/ros-wg-embodied-ai). For talks and demos, see the ROSCon 2024 links in the documentation.
-
-??? tip "What do I need to get started with RAI?"
-
-    !!! question "What are the requirements?"
-
-        -   ROS 2 Humble or Jazzy
-        -   Python 3.10 or 3.12
-        -   Ubuntu 22.04 or 24.04
-
-    !!! question "How about a robot?"
-
-        RAI is compatible with any robot that has a ROS 2 interface or exposes another type of interface. The important thing is that your robot must already have a robotic stack set up.
-        RAI builds on top of your existing robotic stack, but does not include the stack itself.
-
-    !!! question "Do I even need a robot?"
-
-        No, you can also run the demos on your computer or in custom-made simulations. Or just pretend. We won’t tell.
-
-??? tip "RAI outside of robotics"
-
-    !!! question "Can I use RAI outside of robotics?"
-
-        Yes, you can use RAI in non-robotic applications. RAI supports ROS 2, but is not limited to it.
-
-    !!! question "How do I use RAI outside of robotics?"
-
-        RAI is designed to be flexible. There are multiple abstractions, that make working with multimodal data, multi-agent system, various communication protocols easy.
-        For more information see the [RAI API documentation](../API_documentation/overview.md)
-
-??? tip "Is RAI limited to LLMs?"
-
-    !!! question "Can I use models other than LLMs in RAI?"
-
-        No, RAI is not limited to large language models. You can integrate any type of model—such as vision models, speech recognition, classical AI, or custom algorithms—into your RAI agents. The BaseAgent abstraction is designed to make it easy to plug in any form of "intelligence" or decision logic.
-
-    !!! question "How do I use other models in RAI?"
-
-        To use a different model, simply implement your logic within a custom agent using the BaseAgent abstraction. This allows you to connect vision, speech, or any other AI model to your robot or application.
-        For more details and code examples, see the [RAI API documentation](../API_documentation/overview.md).
-
-??? tip "Licensing & Commercial Use"
-
-    !!! question "Can I use RAI commercially?"
-
-        Yes, RAI is licensed under the [Apache 2.0 license](https://www.apache.org/licenses/LICENSE-2.0).
-
-    !!! question "Are there any restrictions on commercial use?"
-
-        No, RAI is licensed under the [Apache 2.0 license](https://www.apache.org/licenses/LICENSE-2.0), which allows for commercial use. Make sure to follow the license terms and give credits to the original authors.
-
-??? tip "Security & Privacy"
-
-    !!! question "How does RAI handle security and privacy?"
-
-        RAI can use both local and cloud models. For maximum privacy, we recommend using the most performing local models.
-        For cloud models, we recommend using tested and trusted providers.
+    The [Q&A forum](https://github.com/RobotecAI/rai/discussions/categories/q-a), [issues](https://github.com/RobotecAI/rai/issues), [Discord](https://discord.gg/3PGHgTaJSB) and the [Embodied AI Community Group](https://github.com/ros-wg-embodied-ai).

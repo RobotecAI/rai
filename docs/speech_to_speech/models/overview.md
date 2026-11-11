@@ -17,9 +17,9 @@ These models are designed with simple and consistent interfaces to allow chainin
 All VAD and Wake Word detection models implement a common `detect` interface:
 
 ```python
-    def detect(
-        self, audio_data: NDArray, input_parameters: dict[str, Any]
-    ) -> Tuple[bool, dict[str, Any]]:
+def detect(
+    self, audio_data: NDArray, input_parameters: dict[str, Any]
+) -> Tuple[bool, dict[str, Any]]: ...
 ```
 
 This design supports chaining multiple models together by passing the output dictionary (`input_parameters`) from one model into the next.
@@ -29,7 +29,7 @@ This design supports chaining multiple models together by passing the output dic
 Transcription models implement the `transcribe` method:
 
 ```python
-    def transcribe(self, data: NDArray[np.int16]) -> str:
+def transcribe(self, data: NDArray[np.int16]) -> str: ...
 ```
 
 This method takes raw audio data encoded as 2-byte integers and returns the corresponding text transcription.

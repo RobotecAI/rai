@@ -37,7 +37,19 @@ The `SpeechRecognitionAgent` class enables real-time voice processing with the f
 
 ### `from_config()`
 
-Creates a `SpeechRecognitionAgent` instance from a YAML config file. Dynamically loads the required transcription and VAD models.
+Creates a `SpeechRecognitionAgent` from the `[asr]` table of `rai.toml` (or `RAI_ASR__<FIELD>` env vars; `cfg_path` selects another file). Dynamically loads the required transcription and VAD models.
+
+```toml
+[asr]
+recording_device_name = "default"
+transcription_model = "LocalWhisper"
+transcription_model_name = "tiny"
+language = "en"
+vad_model = "SileroVAD"
+vad_threshold = 0.5
+silence_grace_period = 0.3
+use_wake_word = false
+```
 
 ### `run()`
 
@@ -77,7 +89,7 @@ The `SpeechRecognitionAgent` typically interacts with the following components:
 
 ## See Also
 
--   [BaseAgent](../../API_documentation/agents/overview.md): Abstract agent class providing lifecycle and logging support.
--   [ROS2 Connectors](../../API_documentation/connectors/ROS_2_Connectors.md): Communication layer for ROS2 topics.
+-   [BaseAgent](../../concepts/agents.md): Abstract agent class providing lifecycle and logging support.
+-   [ROS2 Connectors](../../concepts/connectors.md): Communication layer for ROS2 topics.
 -   [Models](../models/overview.md): For available voice based models and instructions for creating new ones.
 -   [TextToSpeech](tts.md): For TextToSpeechAgent meant for distributed deployment.

@@ -18,7 +18,7 @@ where you can ask questions about your ROS 2 setup and execute common debugging 
 
 ## Running the Assistant
 
-1. Follow the RAI setup instructions in the [quick setup guide](../setup/install.md#setting-up-developer-environment).
+1. Follow the RAI setup instructions in the [quick setup guide](../getting_started/dev_env.md).
 
 2. Launch the debugging assistant:
 

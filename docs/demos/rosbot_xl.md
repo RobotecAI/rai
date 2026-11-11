@@ -10,13 +10,13 @@ platform in a nice apartment.
 > [!TIP] LLM model
 >
 > The demo uses the `complex_model` LLM configured in `config.toml`. The model should
-> be a multimodal, tool-calling model. See [Vendors](../setup/vendors.md#llm-model-configuration-in-rai).
+> be a multimodal, tool-calling model. See [Vendors](../getting_started/configuration.md#models).
 
 !!! tip "ROS 2 Sourced"
 
     Make sure ROS 2 is sourced. (e.g. `source /opt/ros/humble/setup.bash`)
 
-1. Follow the RAI setup instructions in the [quick setup guide](../setup/install.md#setting-up-developer-environment).
+1. Follow the RAI setup instructions in the [quick setup guide](../getting_started/dev_env.md).
 
 2. Download the newest binary release:
 
@@ -77,10 +77,10 @@ platform in a nice apartment.
 
 The rosbot demo utilizes several components:
 
-1. Vision processing using Grounded SAM 2 and Grounding DINO for object detection and segmentation. See [RAI perception](../extensions/perception.md).
+1. Vision processing using Grounded SAM 2 and Grounding DINO for object detection and segmentation. See [RAI perception](../guides/perception.md).
 2. RAI agent to process the request and interact with environment via [tool-calling](https://python.langchain.com/docs/concepts/tool_calling/) mechanism.
-3. Navigation is enabled via [nav2 toolkit](../API_documentation/langchain_integration/ROS_2_tools.md#nav2), which interacts with [ROS 2 nav2](https://docs.nav2.org/) asynchronously by calling [ros2 actions](https://docs.ros.org/en/jazzy/Tutorials/Beginner-CLI-Tools/Understanding-ROS2-Actions/Understanding-ROS2-Actions.html).
-4. Embodiment of the Rosbot is achieved using [RAI Whoami](../tutorials/create_robots_whoami.md) module. This makes RAI agent aware of the hardware platform and its capabilities.
-5. Key informations can be provided to the agent in [RAI Whoami](../tutorials/create_robots_whoami.md). In this demo coordinates of `Kitchen` and `Living Room` are provided as `capabilities`.
+3. Navigation is enabled via [nav2 toolkit](../guides/ros2_tools.md#navigation-nav2), which interacts with [ROS 2 nav2](https://docs.nav2.org/) asynchronously by calling [ros2 actions](https://docs.ros.org/en/jazzy/Tutorials/Beginner-CLI-Tools/Understanding-ROS2-Actions/Understanding-ROS2-Actions.html).
+4. Embodiment of the Rosbot is achieved using [RAI Whoami](../guides/whoami.md) module. This makes RAI agent aware of the hardware platform and its capabilities.
+5. Key informations can be provided to the agent in [RAI Whoami](../guides/whoami.md). In this demo coordinates of `Kitchen` and `Living Room` are provided as `capabilities`.
 
 The details of the demo can be checked in `examples/rosbot-xl-demo.py`.

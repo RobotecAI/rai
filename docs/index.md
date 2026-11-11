@@ -1,99 +1,50 @@
-# RAI introduction
+# RAI
 
-RAI is a flexible agentic framework for developing and deploying Embodied AI features for your robots.
-
-RAI enables you to control your robots using natural language and helps them perceive and understand the world with AI. It integrates seamlessly with your current robotics stack to enhance your robots' capabilities.
-
----
+RAI is an agent framework for robots. It connects LLM agents to ROS 2: agents read sensors, call services and run actions through tools, talk with people by text or voice, and every action passes safety hooks that fail closed.
 
 ![rai-image](imgs/RAI_simple_diagram_medium.png)
 
----
-
 <div style="text-align: center;">
-    <a href="https://opensource.org/licenses/Apache-2.0">
-        <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License">
-    </a>
-    <a href="https://github.com/RobotecAI/rai/releases">
-        <img src="https://img.shields.io/github/v/release/RobotecAI/rai" alt="GitHub Release">
-    </a>
-    <a href="https://github.com/robotecai/rai/graphs/contributors">
-        <img src="https://img.shields.io/github/contributors/robotecai/rai" alt="Contributors">
-    </a>
-    <a href="https://arxiv.org/abs/2505.07532">
-        <img src="https://img.shields.io/badge/arXiv-2505.07532-b31b1b.svg" alt="arXiv: 2505.07532">
-    </a>
-    <br>
-    <img src="https://img.shields.io/badge/Ubuntu-24.04-orange" alt="Ubuntu 24.04">
-    <img src="https://img.shields.io/badge/Python-3.12-blue" alt="Python 3.12">
-    <img src="https://img.shields.io/badge/ROS2-jazzy-blue" alt="ROS2 jazzy">
-    <br>
-    <img src="https://img.shields.io/badge/Ubuntu-22.04-orange" alt="Ubuntu 22.04">
-    <img src="https://img.shields.io/badge/Python-3.10-blue" alt="Python 3.10">
-    <img src="https://img.shields.io/badge/ROS2-humble-blue" alt="ROS2 humble">
-    <br>
-    <a href="https://discord.gg/3PGHgTaJSB">
-        <img src="https://dcbadge.limes.pink/api/server/https://discord.gg/3PGHgTaJSB" alt="Discord">
-    </a>
+    <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
+    <a href="https://github.com/RobotecAI/rai/releases"><img src="https://img.shields.io/github/v/release/RobotecAI/rai" alt="GitHub Release"></a>
+    <a href="https://arxiv.org/abs/2505.07532"><img src="https://img.shields.io/badge/arXiv-2505.07532-b31b1b.svg" alt="arXiv: 2505.07532"></a>
+    <img src="https://img.shields.io/badge/ROS2-lyrical-blue" alt="ROS 2 Lyrical">
+    <img src="https://img.shields.io/badge/ROS2-jazzy-blue" alt="ROS 2 Jazzy">
+    <a href="https://discord.gg/3PGHgTaJSB"><img src="https://dcbadge.limes.pink/api/server/https://discord.gg/3PGHgTaJSB" alt="Discord"></a>
 </div>
----
 
-## RAI Framework
+## What RAI gives you
 
-The RAI Framework provides a comprehensive, end-to-end solution for developing and deploying sophisticated AI-powered robotic systems. It supports the full lifecycle of embodied AI development, from initial configuration and testing to deployment and continuous improvement.
+-   **Agents**: tool-calling `ReActAgent` and `StateBasedAgent` (which sees the robot's current state on every model call), on LangChain, with an explicit lifecycle and a typed event stream.
+-   **ROS 2 connectors**: an async `ROS2Connector` with sync twins for topics, services, actions and TF, native messages and zero-copy numpy views of images and point clouds.
+-   **Tools**: generic ROS 2, Nav2, manipulation and diagnostics tools, each with an effect (READ, WRITE, ACTUATE) and its ROS targets.
+-   **Safety**: hooks on every tool call and on every publish, service call and goal, with an e-stop you can trigger from ROS, opt-in confirmation, rate limits and an audit log.
+-   **Interfaces**: speech to speech, a Streamlit chat, and an MCP server that gives any MCP client the robot's tools.
+-   **Robot knowledge**: a manifest of what the robot is and what its ROS graph offers, and robot identity from documentation (rai_whoami).
+-   **Testing**: an MCAP flight recorder of agent runs next to ROS topics, and replay of recordings in CI without a robot.
 
-Our suite of integrated packages enables developers to seamlessly transition from concept to production, offering:
+## Supported platforms
 
--   **Complete Development Lifecycle**: From initial agent development to deployment
--   **Modular Architecture**: Choose and combine components based on your specific needs
--   **Production-Ready Tools**: Enterprise-grade packages for simulation, testing, and deployment
--   **Extensible Platform**: Easy integration with existing robotics infrastructure and custom solutions
--   **Advanced Human-Robot Interaction**: Through text, speech, and multimodal interfaces
--   **Rich Multimodal Capabilities**: Seamless integration of voice, vision, and sensor data with real-time processing of multiple input/output streams, native handling of diverse data types, and unified multi-sensory perception and action framework.
+| ROS 2             | Ubuntu | Python | Architecture |
+| ----------------- | ------ | ------ | ------------ |
+| Lyrical (primary) | 26.04  | 3.14   | amd64        |
+| Jazzy             | 24.04  | 3.12   | amd64        |
 
-The framework's components work in perfect harmony to deliver a robust foundation for your robotics projects:
+Agents, tools, settings and content types also work without ROS 2.
 
-<div style="text-align: center;"><img src="imgs/rai_packages.png" width="80%" alt="rai-packages"></div>
+## Where to start
 
-## Getting Started
+-   [Install](getting_started/install.md) RAI, then build [your first agent](getting_started/first_agent.md).
+-   [Configure](getting_started/configuration.md) models: OpenAI, Anthropic, Google, AWS Bedrock, Ollama or any OpenAI-compatible server.
+-   Read the [architecture](concepts/overview.md) to see how the pieces fit.
+-   Try a [demo](demos/overview.md): a robotic arm, a mobile robot, an autonomous tractor.
+-   [What's new in 3.0](whats_new.md).
 
-Ready to dive into RAI? Start with a [quick-setup guide](setup/install.md).
+## Community
 
-Here are two ways to begin your journey:
+RAI is one of the projects of the [Embodied AI Community Group](https://github.com/ros-wg-embodied-ai). Ask questions on [Discord](https://discord.gg/3PGHgTaJSB) or in [GitHub discussions](https://github.com/RobotecAI/rai/discussions/categories/q-a). See the [FAQ](faq/faq.md) and the [contribution guide](faq/contributing/CONTRIBUTING.md).
 
-### Option 1: Try Our Demos
-
-Experience RAI in action through our interactive demos. These showcase real-world applications across different robotic platforms:
-
--   🤖 [Manipulation Tasks](demos/manipulation.md) - Watch RAI control a Franka Panda arm using natural language
--   🚗 [Autonomous Navigation](demos/rosbot_xl.md) - Explore RAI's capabilities with the ROSbot XL platform
--   🚜 [Agricultural Robotics](demos/agriculture.md) - See how RAI handles complex decision-making in orchard environments
-
-### Option 2: Build Your Own Solution
-
-Follow our comprehensive [**walkthrough**](tutorials/walkthrough.md) to:
-
--   Deploy RAI on your robot and enable natural language interactions
--   Extend the framework with custom tools and capabilities
--   Implement complex, multi-step tasks using RAI's advanced reasoning
-
-## Communication Protocols
-
-RAI provides first-class support for ROS 2 Humble and Jazzy distributions. While ROS 2 serves as our Tier 1 communication protocol, RAI's architecture includes a powerful abstraction layer that:
-
--   Simplifies communication across different networks and protocols
--   Enables seamless integration with various communication backends
--   Allows for future protocol extensions while maintaining a consistent interface
-
-This design philosophy means that while RAI is fully compatible with ROS 2, most of its features can be utilized independently of the ROS 2 environment. The framework's modular architecture makes it suitable not only for different robotic platforms but also for non-robotic applications, offering flexibility in deployment across various domains.
-
-### Contributing
-
-You are welcome to contribute to RAI! Please see our [Contribution Guide](faq/contributing/CONTRIBUTING.md).
-
-### Citation
-
-If you find our work helpful for your research, please consider citing the following BibTeX entry.
+## Citation
 
 ```bibtex
 @misc{rachwał2025raiflexibleagentframework,
@@ -107,22 +58,6 @@ If you find our work helpful for your research, please consider citing the follo
 }
 ```
 
-!!! tip "Want to know more?"
-
-    ## Community
-
-    ### Embodied AI Community Group
-
-    RAI is one of the main projects in focus of the [Embodied AI Community Group](https://github.com/ros-wg-embodied-ai). If you would like to join the next meeting, look for it in the [ROS Community Calendar](https://calendar.google.com/calendar/u/0/embed?src=c_3fc5c4d6ece9d80d49f136c1dcd54d7f44e1acefdbe87228c92ff268e85e2ea0@group.calendar.google.com&ctz=Etc/UTC).
-
-    ### RAI FAQ
-
-    Please take a look at [FAQ](faq/faq.md).
-
 ??? tip "RAI at ROSCon 2024"
 
     <div style="padding:56.25% 0 0 0;position:relative;"><iframe src="https://player.vimeo.com/video/1026029511?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media" style="position:absolute;top:0;left:0;width:100%;height:100%;" title="Agent-based AI Framework for ROS 2"></iframe></div><script src="https://player.vimeo.com/api/player.js"></script>
-
-??? tip "RAI demos at ROSCon 2024"
-
-    <div style="padding:56.25% 0 0 0;position:relative;"><iframe src="https://player.vimeo.com/video/1023328281?h=1700a3cb57&amp;badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media" style="position:absolute;top:0;left:0;width:100%;height:100%;" title="RAI - Roscon &#039;24 reel demo"></iframe></div><script src="https://player.vimeo.com/api/player.js"></script>

@@ -15,7 +15,7 @@ optimally by calling the RAI agent to decide what to do.
     Ensure that every command is run in a sourced shell using `source setup_shell.sh`
     Ensure ROS 2 is sourced.
 
-1. Follow the RAI setup instructions in the [quick setup guide](../setup/install.md#setting-up-developer-environment).
+1. Follow the RAI setup instructions in the [quick setup guide](../getting_started/dev_env.md).
 
 2. Download the Latest Release
 
@@ -67,7 +67,7 @@ Used to replan the path/skip the alley.
 -   The tractor performs the action and the demo continues.
 
 For more details on configuring RAI for specific robots, refer to the
-[API documentation](../API_documentation/overview.md).
+[API documentation](../api/index.md).
 
 !!! tip "Building from source"
 
