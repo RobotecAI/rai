@@ -231,6 +231,7 @@ class ROS2Runtime:
         if not rclpy.ok():
             # A library must not own the process signals (rai3-plan/01 section 9).
             rclpy.init(signal_handler_options=SignalHandlerOptions.NO)
+            _owned_contexts.append(rclpy.get_default_context())
             logger.info("rclpy was not initialized; RAI initialized it")
         self.node = Node(node_name or f"rai_{uuid.uuid4().hex[:12]}")
         if use_sim_time:
@@ -274,6 +275,11 @@ class ROS2Runtime:
         if self.closed:
             raise ConnectorClosedError("The ROS 2 connector is closed")
 
+    def _wake(self) -> None:
+        executor = self.executor
+        if executor is not None:
+            executor.wake()
+
     def on_close(self, callback: Callable[[], None]) -> None:
         self._on_close.append(callback)
 
@@ -309,6 +315,10 @@ class ROS2Runtime:
         self.executor.shutdown(timeout_sec=0)
         if threading.current_thread() is not self._spin_thread:
             self._spin_thread.join(1.0)
+        if not self._spin_thread.is_alive():
+            # EventsExecutor holds the rcl context, which then outlives
+            # finalization (see _close_at_exit).
+            self.executor = None
         self._stop_loop()
         if self._tf_listener is not None:
             self._tf_listener.unregister()
@@ -541,7 +551,7 @@ class ROS2Runtime:
             except ValueError:
                 if time.monotonic() > deadline:
                     raise
-                self.executor.wake()
+                self._wake()
                 time.sleep(POLL_S)
 
     def release(self, name: str, action: bool = False) -> bool:
@@ -558,7 +568,7 @@ class ROS2Runtime:
         client.dropped = ROS2ServiceError(key[0], 0.0, f"client {why}")
         fail(client.pending, client.dropped)
         compat.destroy(self.node, client.entity)
-        self.executor.wake()
+        self._wake()
         return True
 
     async def ready(self, client: Client, timeout: float, what: str) -> float:
@@ -665,9 +675,22 @@ class ROS2Runtime:
 _live: "weakref.WeakSet[ROS2Runtime]" = weakref.WeakSet()
 
 
+# Contexts RAI initialized itself are shut down at exit too: otherwise exit
+# unloads the RMW library under live DDS threads (a segfault, seen on Lyrical).
+_owned_contexts: list[Context] = []
+
+
+def _close_at_exit() -> None:
+    for runtime in list(_live):
+        runtime.close()
+    for context in _owned_contexts:
+        rclpy.try_shutdown(context=context)
+        context.destroy()
+
+
 def _track(runtime: ROS2Runtime) -> None:
-    if not _live and not getattr(_track, "registered", False):
-        atexit.register(lambda: [r.close() for r in list(_live)])
+    if not getattr(_track, "registered", False):
+        atexit.register(_close_at_exit)
         setattr(_track, "registered", True)
     _live.add(runtime)
 
