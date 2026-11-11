@@ -12,670 +12,368 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
+"""The 3.0 connector API: async from any loop, connector.sync, Subscription,
+GoalHandle, QoS presets, views and encode_image."""
+
+import asyncio
+import base64
 import threading
 import time
-from multiprocessing import Pool
-from typing import Any, List
-from unittest.mock import MagicMock
+import uuid
+from typing import Any
 
+import cv2
+import numpy as np
 import pytest
-from action_msgs.msg import GoalStatus
-from action_msgs.srv import CancelGoal
-from nav2_msgs.action import NavigateToPose
-from rai.communication.ros2.api import (
-    ROS2ActionAPI,
-    ROS2ServiceAPI,
-    ROS2TopicAPI,
+from example_interfaces.action import Fibonacci
+from rai.communication.base_connector import ConnectorClosedError
+from rai.communication.ros2 import (
+    GoalStatus,
+    QoS,
+    ROS2Connector,
+    ROS2GoalRejectedError,
+    ROS2HRIConnector,
+    ROS2Message,
+    ROS2TimeoutError,
+    encode_image,
+    views,
 )
-from rclpy.callback_groups import (
-    CallbackGroup,
-    MutuallyExclusiveCallbackGroup,
-    ReentrantCallbackGroup,
-)
+from rai.communication.ros2.images import numpy_to_imgmsg
+from rai.communication.ros2.runtime import ROS2Runtime
+from rclpy.action import ActionServer, CancelResponse, GoalResponse
+from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
-from std_srvs.srv import SetBool
+from sensor_msgs.msg import PointCloud2, PointField
+from std_msgs.msg import Int32, String
+from std_srvs.srv import SetBool, Trigger
 
-from .helpers import (
-    MessageSubscriber,
-    ServiceServer,
-    TestActionClient,
-    TestActionServer,
-    TestServiceClient,
-    multi_threaded_spinner,
-    ros_setup,
-    shutdown_executors_and_threads,
-)
+from .helpers import ros_setup
 
-_ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
+_ = ros_setup
+pytestmark = pytest.mark.timeout(60)
 
 
-def test_ros2_single_message_publish(
-    ros_setup: None, request: pytest.FixtureRequest
-) -> None:
-    topic_name = f"{request.node.originalname}_topic"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    message_receiver = MessageSubscriber(topic_name)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([message_receiver, node])
-
-    try:
-        topic_api = ROS2TopicAPI(node)
-        topic_api.publish(
-            topic_name,
-            {"data": "Hello, ROS2!"},
-            msg_type="std_msgs/msg/String",
-        )
-        time.sleep(1)
-        assert len(message_receiver.received_messages) == 1
-        assert message_receiver.received_messages[0].data == "Hello, ROS2!"
-    finally:
-        shutdown_executors_and_threads(executors, threads)
+def unique(prefix: str) -> str:
+    return f"/api_{prefix}_{uuid.uuid4().hex[:8]}"
 
 
-def test_ros2_single_message_publish_wrong_msg_type(
-    ros_setup: None, request: pytest.FixtureRequest
-) -> None:
-    topic_name = f"{request.node.originalname}_topic"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    message_receiver = MessageSubscriber(topic_name)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([message_receiver, node])
-
-    try:
-        topic_api = ROS2TopicAPI(node)
-        with pytest.raises(AttributeError):
-            topic_api.publish(
-                topic_name,
-                {"data": "Hello, ROS2!"},
-                msg_type="std_msgs/msg/NotExistingMessage",
-            )
-    finally:
-        shutdown_executors_and_threads(executors, threads)
+@pytest.fixture
+def connector(ros_setup: None):
+    with ROS2Connector() as connector:
+        yield connector
 
 
-def test_ros2_single_message_publish_wrong_msg_content(
-    ros_setup: None, request: pytest.FixtureRequest
-) -> None:
-    topic_name = f"{request.node.originalname}_topic"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    message_receiver = MessageSubscriber(topic_name)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([message_receiver, node])
-
-    try:
-        topic_api = ROS2TopicAPI(node)
-        with pytest.raises(AttributeError):
-            topic_api.publish(
-                topic_name,
-                {"NotExistingField": "Hello, ROS2!"},
-                msg_type="std_msgs/msg/String",
-            )
-    finally:
-        shutdown_executors_and_threads(executors, threads)
+@pytest.fixture
+def server(ros_setup: None):
+    node = Node(f"api_server_{uuid.uuid4().hex[:8]}")
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
+    thread = threading.Thread(target=executor.spin, daemon=True)
+    thread.start()
+    yield node
+    executor.shutdown(timeout_sec=1.0)
+    thread.join(2.0)
+    node.destroy_node()
 
 
-def test_ros2_single_message_publish_wrong_qos_setup(
-    ros_setup: None, request: pytest.FixtureRequest
-) -> None:
-    topic_name = f"{request.node.originalname}_topic"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    message_receiver = MessageSubscriber(topic_name)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([message_receiver, node])
+def fibonacci_server(node: Node, name: str, **kwargs: Any) -> ActionServer:
+    def execute(goal_handle: Any) -> Any:
+        for i in range(goal_handle.request.order):
+            goal_handle.publish_feedback(Fibonacci.Feedback(sequence=[i]))
+            time.sleep(0.01)
+        goal_handle.succeed()
+        return Fibonacci.Result(sequence=[1, 1, 2])
 
-    try:
-        topic_api = ROS2TopicAPI(node)
-        with pytest.raises(ValueError):
-            topic_api.publish(
-                topic_name,
-                {"data": "Hello, ROS2!"},
-                msg_type="std_msgs/msg/String",
-                auto_qos_matching=False,
-                qos_profile=None,
-            )
-    finally:
-        shutdown_executors_and_threads(executors, threads)
-
-
-def invoke_set_bool_service(
-    service_name: str, service_api: ROS2ServiceAPI, reuse_client: bool = True
-):
-    response = service_api.call_service(
-        service_name,
-        service_type="std_srvs/srv/SetBool",
-        request={"data": True},
-        reuse_client=reuse_client,
+    kwargs.setdefault("execute_callback", execute)
+    return ActionServer(
+        node, Fibonacci, name, callback_group=ReentrantCallbackGroup(), **kwargs
     )
+
+
+def publish_until(publisher: Any, msg: Any, done: Any, timeout: float = 5.0) -> None:
+    deadline = time.monotonic() + timeout
+    while not done() and time.monotonic() < deadline:
+        publisher.publish(msg)
+        time.sleep(0.02)
+    assert done()
+
+
+def test_async_api_from_a_foreign_event_loop(connector, server):
+    topic, srv = unique("topic"), unique("srv")
+    server.create_service(
+        Trigger, srv, lambda req, res: setattr(res, "success", True) or res
+    )
+    publisher = server.create_publisher(String, topic, 10)
+
+    async def main() -> tuple[Any, Any]:
+        stop = asyncio.Event()
+
+        async def keep_publishing() -> None:
+            while not stop.is_set():
+                publisher.publish(String(data="hi"))
+                await asyncio.sleep(0.02)
+
+        task = asyncio.create_task(keep_publishing())
+        msg = await connector.receive(topic, msg_type=String, timeout=5.0)
+        stop.set()
+        await task
+        response = await connector.call(srv, Trigger.Request(), timeout=5.0)
+        return msg, response
+
+    msg, response = asyncio.run(main())
+    assert isinstance(msg, String) and msg.data == "hi"
     assert response.success
-    assert response.message == "Test service called"
 
 
-@pytest.mark.parametrize(
-    "callback_group",
-    [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
-    ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
-)
-def test_ros2_service_single_call(
-    ros_setup: None, request: pytest.FixtureRequest, callback_group: CallbackGroup
-) -> None:
-    service_name = f"{request.node.originalname}_service"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    service_server = ServiceServer(service_name, callback_group)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([service_server, node])
-
-    try:
-        service_api = ROS2ServiceAPI(node)
-        invoke_set_bool_service(service_name, service_api)
-    finally:
-        shutdown_executors_and_threads(executors, threads)
+def test_publish_native_message_and_type_conflict(connector, server):
+    topic = unique("pub")
+    got: list[str] = []
+    server.create_subscription(String, topic, lambda m: got.append(m.data), 10)
+    deadline = time.monotonic() + 5.0
+    while not got and time.monotonic() < deadline:
+        connector.sync.publish(topic, String(data="x"))
+        time.sleep(0.02)
+    assert got[0] == "x"
+    with pytest.raises(TypeError, match=topic):
+        connector.sync.publish(topic, Int32(data=1))
 
 
-@pytest.mark.parametrize(
-    "callback_group",
-    [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
-    ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
-)
-def test_ros2_service_multiple_calls(
-    ros_setup: None, request: pytest.FixtureRequest, callback_group: CallbackGroup
-) -> None:
-    service_name = f"{request.node.originalname}_service"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    service_server = ServiceServer(service_name, callback_group)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([service_server, node])
-
-    try:
-        service_api = ROS2ServiceAPI(node)
-        for _ in range(3):
-            invoke_set_bool_service(service_name, service_api, reuse_client=False)
-    finally:
-        shutdown_executors_and_threads(executors, threads)
+def test_receive_max_age_and_timeout(connector, server):
+    topic = unique("age")
+    publisher = server.create_publisher(String, topic, 10)
+    sub = connector.subscribe(topic, msg_type=String)
+    publish_until(publisher, String(data="x"), lambda: sub._topic.last is not None)
+    assert connector.sync.receive(topic).data == "x"  # cached, any age
+    time.sleep(0.3)
+    with pytest.raises(ROS2TimeoutError):
+        connector.sync.receive(topic, timeout=0.2, max_age=0.1)
 
 
-@pytest.mark.parametrize(
-    "callback_group",
-    [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
-    ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
-)
-def test_ros2_service_multiple_calls_with_reused_client(
-    ros_setup: None, request: pytest.FixtureRequest, callback_group: CallbackGroup
-) -> None:
-    service_name = f"{request.node.originalname}_service"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    service_server = ServiceServer(service_name, callback_group)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([service_server, node])
+def test_subscription_async_iteration_and_close(connector, server):
+    topic = unique("iter")
+    publisher = server.create_publisher(Int32, topic, 10)
+    sub = connector.subscribe(topic, msg_type=Int32, maxsize=None)
 
-    try:
-        service_api = ROS2ServiceAPI(node)
-        for _ in range(3):
-            invoke_set_bool_service(service_name, service_api, reuse_client=True)
-        assert service_api.release_client(service_name), "Client not released"
-    finally:
-        shutdown_executors_and_threads(executors, threads)
+    async def first_three() -> list[int]:
+        got = []
+        async for msg in sub:
+            got.append(msg.data)
+            if len(got) == 3:
+                sub.close()
+        return got
+
+    threading.Thread(
+        target=lambda: publish_until(publisher, Int32(data=7), lambda: sub.closed),
+        daemon=True,
+    ).start()
+    assert asyncio.run(first_three()) == [7, 7, 7]
 
 
-@pytest.mark.parametrize(
-    "callback_group",
-    [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
-    ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
-)
-def test_ros2_service_multiple_calls_at_the_same_time_threading(
-    ros_setup: None, request: pytest.FixtureRequest, callback_group: CallbackGroup
-) -> None:
-    service_name = f"{request.node.originalname}_service"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    service_server = ServiceServer(service_name, callback_group)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([service_server, node])
+def test_async_callback_is_awaited_in_order(connector, server):
+    topic = unique("acb")
+    publisher = server.create_publisher(Int32, topic, 100)
+    got: list[int] = []
 
-    try:
-        service_api = ROS2ServiceAPI(node)
-        service_threads: List[threading.Thread] = []
-        for _ in range(10):
-            thread = threading.Thread(
-                target=invoke_set_bool_service, args=(service_name, service_api)
-            )
-            service_threads.append(thread)
-            thread.start()
+    async def callback(msg: Int32) -> None:
+        await asyncio.sleep(0.001)
+        got.append(msg.data)
 
-        # Wait for all service threads to complete
-        for thread in service_threads:
-            thread.join()
-    finally:
-        shutdown_executors_and_threads(executors, threads)
+    connector.subscribe(topic, callback, msg_type=Int32, maxsize=None)
+    publish_until(publisher, Int32(data=-1), lambda: got)
+    for i in range(50):
+        publisher.publish(Int32(data=i))
+    deadline = time.monotonic() + 5.0
+    while (not got or got[-1] != 49) and time.monotonic() < deadline:
+        time.sleep(0.01)
+    received = [i for i in got if i >= 0]
+    assert received == sorted(received) and received[-1] == 49
 
 
-@pytest.mark.skip(reason="As of now, multiprocessing does not work with ROS2API")
-@pytest.mark.parametrize(
-    "callback_group",
-    [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
-    ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
-)
-def test_ros2_service_multiple_calls_at_the_same_time_multiprocessing(
-    ros_setup: None, request: pytest.FixtureRequest, callback_group: CallbackGroup
-) -> None:
-    service_name = f"{request.node.originalname}_service"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    service_server = ServiceServer(service_name, callback_group)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([service_server, node])
-
-    try:
-        service_api = ROS2ServiceAPI(node)
-        with Pool(10) as pool:
-            pool.map(
-                lambda _: invoke_set_bool_service(service_name, service_api), range(10)
-            )
-    finally:
-        shutdown_executors_and_threads(executors, threads)
-
-
-@pytest.mark.parametrize(
-    "callback_group",
-    [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
-    ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
-)
-def test_ros2_service_single_call_wrong_service_type(
-    ros_setup: None, request: pytest.FixtureRequest, callback_group: CallbackGroup
-) -> None:
-    service_name = f"{request.node.originalname}_service"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    service_server = ServiceServer(service_name, callback_group)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([service_server, node])
-
-    try:
-        service_api = ROS2ServiceAPI(node)
-        with pytest.raises(AttributeError):
-            service_api.call_service(
-                service_name,
-                service_type="std_srvs/srv/NotExistingService",
-                request={"data": True},
-            )
-    finally:
-        shutdown_executors_and_threads(executors, threads)
-
-
-@pytest.mark.parametrize(
-    "callback_group",
-    [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
-    ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
-)
-def test_ros2_service_single_call_wrong_service_content(
-    ros_setup: None, request: pytest.FixtureRequest, callback_group: CallbackGroup
-) -> None:
-    service_name = f"{request.node.originalname}_service"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    service_server = ServiceServer(service_name, callback_group)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([service_server, node])
-
-    try:
-        service_api = ROS2ServiceAPI(node)
-        with pytest.raises(AttributeError):
-            service_api.call_service(
-                service_name,
-                service_type="std_srvs/srv/SetBool",
-                request={"NotExistingField": True},
-            )
-    finally:
-        shutdown_executors_and_threads(executors, threads)
-
-
-@pytest.mark.parametrize(
-    "callback_group",
-    [MutuallyExclusiveCallbackGroup(), ReentrantCallbackGroup()],
-    ids=["MutuallyExclusiveCallbackGroup", "ReentrantCallbackGroup"],
-)
-def test_ros2_service_single_call_wrong_service_name(
-    ros_setup: None, request: pytest.FixtureRequest, callback_group: CallbackGroup
-) -> None:
-    service_name = f"{request.node.originalname}_service"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    service_server = ServiceServer(service_name, callback_group)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([service_server, node])
-
-    try:
-        service_api = ROS2ServiceAPI(node)
-        with pytest.raises(ValueError):
-            service_api.call_service(
-                f"{service_name}/wrong_service_name",
-                service_type="std_srvs/srv/SetBool",
-                request={"data": True},
-                timeout_sec=1.0,
-            )
-    finally:
-        shutdown_executors_and_threads(executors, threads)
-
-
-def test_ros2_action_send_goal(ros_setup: None, request: pytest.FixtureRequest) -> None:
-    action_name = f"{request.node.originalname}_action"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    action_server = TestActionServer(action_name)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([action_server, node])
-
-    try:
-        action_api = ROS2ActionAPI(node)
-        accepted, handle = action_api.send_goal(
-            action_name, "nav2_msgs/action/NavigateToPose", {}
-        )
-
-        assert accepted
-        assert handle != ""
-    finally:
-        shutdown_executors_and_threads(executors, threads)
-
-
-def test_ros2_action_send_goal_get_result(
-    ros_setup: None, request: pytest.FixtureRequest
-) -> None:
-    action_name = f"{request.node.originalname}_action"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    action_server = TestActionServer(action_name)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([action_server, node])
-
-    try:
-        action_api = ROS2ActionAPI(node)
-        accepted, handle = action_api.send_goal(
-            action_name, "nav2_msgs/action/NavigateToPose", {}
-        )
-        import time
-
-        wait_time = 1.0
-        start_time = time.perf_counter()
-        while not action_api.is_goal_done(handle):
-            time.sleep(0.01)
-            if time.perf_counter() - start_time > wait_time:
-                raise TimeoutError("Goal not done")
-        result = action_api.get_result(handle)
-
-        assert result.status == GoalStatus.STATUS_SUCCEEDED
-        assert accepted
-        assert handle != ""
-    finally:
-        shutdown_executors_and_threads(executors, threads)
-
-
-def test_ros2_action_send_goal_wrong_action_type(
-    ros_setup: None, request: pytest.FixtureRequest
-) -> None:
-    action_name = f"{request.node.originalname}_action"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    action_server = TestActionServer(action_name)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([action_server, node])
-
-    try:
-        action_api = ROS2ActionAPI(node)
-        with pytest.raises(ModuleNotFoundError):
-            action_api.send_goal(
-                action_name, "nav2_msgs/action/NavigateToPose/WrongActionType", {}
-            )
-        with pytest.raises(AttributeError):
-            action_api.send_goal(action_name, "nav2_msgs/action/NavigateToPoses", {})
-    finally:
-        shutdown_executors_and_threads(executors, threads)
-
-
-def test_ros2_action_send_goal_wrong_action_name(
-    ros_setup: None, request: pytest.FixtureRequest
-) -> None:
-    action_name = f"{request.node.originalname}_action"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    action_server = TestActionServer(action_name)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([action_server, node])
-
-    try:
-        action_api = ROS2ActionAPI(node)
-        accepted, handle = action_api.send_goal(
-            "WrongActionName", "nav2_msgs/action/NavigateToPose", {}
-        )
-        assert not accepted
-        assert handle == ""
-    finally:
-        shutdown_executors_and_threads(executors, threads)
-
-
-def test_ros2_action_send_goal_get_feedback(
-    ros_setup: None, request: pytest.FixtureRequest
-) -> None:
-    action_name = f"{request.node.originalname}_action"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    action_server = TestActionServer(action_name)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([action_server])
-    executor = MultiThreadedExecutor()
-    executor.add_node(node)
-    thread = threading.Thread(target=executor.spin)
-    thread.start()
-    action_api = ROS2ActionAPI(node)
-    accepted, handle = action_api.send_goal(
-        action_name, "nav2_msgs/action/NavigateToPose", {}
+def test_service_call_errors(connector, server):
+    srv = unique("setbool")
+    server.create_service(
+        SetBool, srv, lambda req, res: setattr(res, "success", req.data) or res
     )
-    assert accepted
-    assert handle != ""
-    time.sleep(0.2)
-    try:
-        feedback = action_api.get_feedback(handle)
-        distances = [x.distance_remaining for x in feedback]
-        assert sorted(distances, reverse=True) == distances, "Wrong message order"
-        assert len(distances) == 10, "Wrong number of messages"
-    finally:
-        shutdown_executors_and_threads(executors, threads)
-
-
-def test_ros2_action_feedback_callback_exception_handling(
-    ros_setup: None, request: pytest.FixtureRequest
-) -> None:
-    action_name = f"{request.node.originalname}_action"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    action_server = TestActionServer(action_name)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([action_server])
-    executor = MultiThreadedExecutor()
-    executor.add_node(node)
-    thread = threading.Thread(target=executor.spin)
-    thread.start()
-    action_api = ROS2ActionAPI(node)
-
-    error_callback_called = False
-
-    def failing_feedback_callback(feedback_msg: Any) -> None:
-        nonlocal error_callback_called
-        error_callback_called = True
-        raise ValueError("Test exception in feedback callback")
-
-    mock_logger = MagicMock()
-    action_api._logger = mock_logger
-
-    try:
-        accepted, handle = action_api.send_goal(
-            action_name,
-            "nav2_msgs/action/NavigateToPose",
-            {},
-            feedback_callback=failing_feedback_callback,
+    assert connector.sync.call(srv, SetBool.Request(data=True), timeout=5.0).success
+    with pytest.raises(ROS2TimeoutError):
+        connector.sync.call(unique("missing"), SetBool.Request(), timeout=0.2)
+    with pytest.raises(AttributeError):
+        connector.service_call(
+            ROS2Message(payload={}),
+            srv,
+            msg_type="std_srvs/srv/NotExistingService",
         )
-        assert accepted
-        assert handle != ""
 
-        wait_time = 0.5
-        start_time = time.perf_counter()
-        while not action_api.is_goal_done(handle):
+
+def test_goal_handle_feedback_result_status(connector, server):
+    name = unique("fib")
+    fibonacci_server(server, name)
+    feedback: list[int] = []
+    done = threading.Event()
+    handle = connector.sync.send_goal(
+        name,
+        Fibonacci.Goal(order=5),
+        on_feedback=lambda f: feedback.append(f.sequence[0]),
+        on_done=lambda h: done.set(),
+    )
+    assert handle.id
+    assert list(handle.sync.result(timeout=5.0).sequence) == [1, 1, 2]
+    assert handle.done and handle.status == GoalStatus.SUCCEEDED
+    assert done.wait(5.0)
+    assert feedback == sorted(feedback) and feedback[-1] == 4
+    assert not handle.sync.cancel()  # already done
+
+
+def test_goal_cancel(connector, server):
+    name = unique("cancel")
+
+    def execute(goal_handle: Any) -> Any:
+        deadline = time.monotonic() + 5.0
+        while not goal_handle.is_cancel_requested and time.monotonic() < deadline:
             time.sleep(0.01)
-            if time.perf_counter() - start_time > wait_time:
-                raise TimeoutError("Goal not done")
+        goal_handle.canceled()
+        return Fibonacci.Result()
 
-        result = action_api.get_result(handle)
-        assert result.status == GoalStatus.STATUS_SUCCEEDED
-
-        time.sleep(0.1)
-        assert error_callback_called, "Error callback should have been called"
-        mock_logger.error.assert_called()
-        error_call_args = mock_logger.error.call_args[0][0]
-        assert "Error in feedback callback" in error_call_args
-        assert "Test exception in feedback callback" in error_call_args
-    finally:
-        shutdown_executors_and_threads(executors, threads)
-
-
-def test_ros2_action_send_goal_terminate_goal(
-    ros_setup: None, request: pytest.FixtureRequest
-) -> None:
-    action_name = f"{request.node.originalname}_action"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    action_server = TestActionServer(action_name)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([action_server])
-    executor = MultiThreadedExecutor()
-    executor.add_node(node)
-    thread = threading.Thread(target=executor.spin)
-    thread.start()
-    action_api = ROS2ActionAPI(node)
-    try:
-        accepted, handle = action_api.send_goal(
-            action_name, "nav2_msgs/action/NavigateToPose", {}
-        )
-        assert accepted
-        assert handle != ""
-        feedbacks_before = action_api.get_feedback(handle)
-        response = action_api.terminate_goal(handle)
-        assert response.return_code == CancelGoal.Response.ERROR_NONE  # type: ignore
-        time.sleep(0.1)
-        assert action_api.is_goal_done(handle)
-        feedbacks_after = action_api.get_feedback(handle)
-        assert len(feedbacks_before) == len(feedbacks_after)
-    finally:
-        shutdown_executors_and_threads(executors, threads)
+    fibonacci_server(
+        server,
+        name,
+        execute_callback=execute,
+        cancel_callback=lambda _: CancelResponse.ACCEPT,
+    )
+    handle = connector.sync.send_goal(name, Fibonacci.Goal(order=1))
+    assert handle.sync.cancel()
+    handle.sync.result(timeout=5.0)
+    assert handle.status == GoalStatus.CANCELED
 
 
-def test_ros2_action_send_goal_timeout(
-    ros_setup: None, request: pytest.FixtureRequest
-) -> None:
-    """Test that send_goal returns (False, "") when goal send times out."""
-    action_name = f"{request.node.originalname}_nonexistent_action"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([node])
+def test_goal_rejected_and_slow_accept(connector, server):
+    rejected, slow = unique("reject"), unique("slow")
+    fibonacci_server(server, rejected, goal_callback=lambda _: GoalResponse.REJECT)
 
-    try:
-        action_api = ROS2ActionAPI(node)
-        # Use very short timeout - server doesn't exist so wait_for_server will timeout
-        accepted, handle = action_api.send_goal(
-            action_name, "nav2_msgs/action/NavigateToPose", {}, timeout_sec=0.01
-        )
+    def accept_late(_: Any) -> Any:
+        time.sleep(0.5)
+        return GoalResponse.ACCEPT
 
-        assert not accepted
-        assert handle == ""
-    finally:
-        shutdown_executors_and_threads(executors, threads)
+    fibonacci_server(server, slow, goal_callback=accept_late)
+    with pytest.raises(ROS2GoalRejectedError):
+        connector.sync.send_goal(rejected, Fibonacci.Goal(order=1))
+    # The server is ready but accepts after the timeout: deterministic, and
+    # one exception type on both distros.
+    with pytest.raises(ROS2TimeoutError):
+        connector.sync.send_goal(slow, Fibonacci.Goal(order=1), accept_timeout=0.2)
 
 
-def test_ros2_action_send_goal_timeout_logs_warning(
-    ros_setup: None, request: pytest.FixtureRequest, caplog
-) -> None:
-    """Test that send_goal timeout logs a warning via get_future_result."""
-    action_name = f"{request.node.originalname}_action"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    action_server = TestActionServer(action_name)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([action_server, node])
+def test_failing_feedback_callback_does_not_break_the_goal(connector, server):
+    name = unique("fbfail")
+    fibonacci_server(server, name)
 
-    try:
-        action_api = ROS2ActionAPI(node)
-        # Wait for server first
-        time.sleep(0.1)
+    def failing(_: Any) -> None:
+        raise ValueError("boom")
 
-        # Ensure logger propagates to root logger for caplog to capture
-        logger = logging.getLogger("rai.communication.ros2.ros_async")
-        logger.propagate = True
-
-        # Now use a very short timeout for goal send to trigger timeout
-        with caplog.at_level(logging.WARNING, logger=logger.name):
-            accepted, handle = action_api.send_goal(
-                action_name, "nav2_msgs/action/NavigateToPose", {}, timeout_sec=0.001
-            )
-
-        # Should timeout and log warning
-        assert not accepted
-        assert handle == ""
-        assert any("Future timed out" in record.message for record in caplog.records)
-    finally:
-        shutdown_executors_and_threads(executors, threads)
+    handle = connector.sync.send_goal(
+        name, Fibonacci.Goal(order=3), on_feedback=failing
+    )
+    handle.sync.result(timeout=5.0)
+    assert handle.status == GoalStatus.SUCCEEDED
+    assert len(handle.feedback()) == 3
 
 
-def test_ros2_action_send_goal_exception_propagates(
-    ros_setup: None, request: pytest.FixtureRequest
-) -> None:
-    """Test that exceptions from send_goal_future propagate correctly via get_future_result."""
-    action_name = f"{request.node.originalname}_action"  # type: ignore
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    action_server = TestActionServer(action_name)
-    node = Node(node_name)
-    executors, threads = multi_threaded_spinner([action_server, node])
+def test_create_service_and_action(connector, server):
+    srv, action = unique("own_srv"), unique("own_fib")
 
-    try:
-        action_api = ROS2ActionAPI(node)
-        # Invalid action type will raise during import, not in future
-        # This tests that exceptions are properly propagated through get_future_result
-        with pytest.raises((ValueError, ImportError, AttributeError)):
-            action_api.send_goal(action_name, "invalid/action/Type", {})
-    finally:
-        shutdown_executors_and_threads(executors, threads)
+    def execute(goal_handle: Any) -> Any:
+        goal_handle.succeed()
+        return Fibonacci.Result(sequence=[42])
 
-
-def test_ros2_create_action_server(
-    ros_setup: None, request: pytest.FixtureRequest
-) -> None:
-    action_name = "navigate_to_pose"
-    node_name = f"{request.node.originalname}_node"  # type: ignore
-    node = Node(node_name)
-    mock_callback = MagicMock()
-    mock_callback.return_value = NavigateToPose.Result()
-
-    try:
-        action_api = ROS2ActionAPI(node)
-        action_server_handle = action_api.create_action_server(
-            "nav2_msgs/action/NavigateToPose",
-            action_name,
-            execute_callback=mock_callback,
-        )
-        assert action_server_handle is not None
-        action_client = TestActionClient()
-        executors, threads = multi_threaded_spinner([node, action_client])
-        action_client.send_goal()
-        time.sleep(0.01)
-    finally:
-        shutdown_executors_and_threads(executors, threads)
-        assert mock_callback.called
+    connector.create_service(
+        srv,
+        lambda req, res: setattr(res, "success", True) or res,
+        service_type="std_srvs/srv/Trigger",
+    )
+    connector.create_action(action, execute, action_type=Fibonacci)
+    with ROS2Connector(runtime=ROS2Runtime()) as other:
+        assert other.sync.call(srv, Trigger.Request(), timeout=5.0).success
+        handle = other.sync.send_goal(action, Fibonacci.Goal(order=1))
+        assert list(handle.sync.result(timeout=5.0).sequence) == [42]
 
 
-def test_ros2_create_create_service(ros_setup: None, request: pytest.FixtureRequest):
-    service_name = "set_bool"
-    node_name = f"{request.node.originalname}_node"
-    node = Node(node_name)
-    mock_callback = MagicMock()
-    mock_callback.return_value = SetBool.Response()
+def test_shared_runtime_is_reference_counted(ros_setup):
+    first, second = ROS2Connector(), ROS2HRIConnector()
+    runtime = first._runtime
+    assert second._runtime is runtime
+    first.close()
+    first.close()  # idempotent
+    assert not runtime.closed
+    with pytest.raises(ConnectorClosedError):
+        first.sync.receive("/x", msg_type=String)
+    second.close()
+    assert runtime.closed
+    with ROS2Connector(node_name=f"private_{uuid.uuid4().hex[:6]}") as private:
+        assert private._runtime is not runtime
 
-    try:
-        service_api = ROS2ServiceAPI(node)
-        service_server_handle = service_api.create_service(
-            service_name,
-            "std_srvs/srv/SetBool",
-            callback=mock_callback,
-        )
-        assert service_server_handle is not None
-        client = TestServiceClient()
-        executors, threads = multi_threaded_spinner([node, client])
-        client.send_request()
-        time.sleep(0.01)
-    finally:
-        shutdown_executors_and_threads(executors, threads)
-        assert mock_callback.called
+
+def test_sync_api_from_an_async_callback_raises(connector, server):
+    topic = unique("syncinasync")
+    publisher = server.create_publisher(Int32, topic, 10)
+    errors: list[BaseException] = []
+
+    async def callback(_: Int32) -> None:
+        try:
+            connector.sync.receive(topic)
+        except RuntimeError as e:
+            errors.append(e)
+
+    connector.subscribe(topic, callback, msg_type=Int32)
+    publish_until(publisher, Int32(data=1), lambda: errors)
+
+
+def test_resolve_and_now(connector):
+    assert connector.resolve("cmd_vel") == "/cmd_vel"
+    assert connector.resolve("srv", "service") == "/srv"
+    assert connector.now().nanoseconds > 0
+
+
+def test_qos_presets():
+    from rclpy.qos import DurabilityPolicy, ReliabilityPolicy
+
+    assert QoS.COMMAND.durability == DurabilityPolicy.VOLATILE
+    assert QoS.LATCHED.durability == DurabilityPolicy.TRANSIENT_LOCAL
+    assert QoS.HRI.reliability == ReliabilityPolicy.RELIABLE
+    assert QoS.SENSOR.reliability == ReliabilityPolicy.BEST_EFFORT
+    assert QoS.AUTO.reliability == ReliabilityPolicy.BEST_AVAILABLE
+
+
+def test_image_view_is_zero_copy():
+    pixels = np.random.default_rng(0).integers(0, 255, (4, 6, 3), dtype=np.uint8)
+    msg = numpy_to_imgmsg(pixels, "rgb8")
+    view = views.image(msg)
+    assert np.array_equal(view, pixels)
+    assert np.shares_memory(view, np.frombuffer(msg.data, np.uint8))
+    padded = numpy_to_imgmsg(np.zeros((2, 3), np.uint16), "mono16")
+    padded.step, padded.data = 8, bytes(range(16))
+    assert views.image(padded).shape == (2, 3)
+
+
+def test_points_view():
+    fields = [
+        PointField(name=n, offset=4 * i, datatype=PointField.FLOAT32, count=1)
+        for i, n in enumerate("xyz")
+    ]
+    data = np.arange(12, dtype=np.float32)
+    msg = PointCloud2(height=1, width=3, point_step=16, row_step=48, fields=fields)
+    msg.data = np.pad(data.reshape(3, 4)[:, :3], ((0, 0), (0, 1))).tobytes()
+    cloud = views.points(msg)
+    assert cloud.shape == (3,)
+    assert list(cloud["y"]) == [1.0, 5.0, 9.0]
+
+
+def test_encode_image_downscales_and_encodes_jpeg():
+    image = np.zeros((2000, 1000, 3), np.uint8)
+    image[..., 0] = 255  # red in RGB
+    decoded = cv2.imdecode(
+        np.frombuffer(base64.b64decode(encode_image(image)), np.uint8),
+        cv2.IMREAD_COLOR,
+    )
+    assert decoded.shape == (1024, 512, 3)
+    assert decoded[..., 2].mean() > 200  # cv2 decodes BGR: red stays red

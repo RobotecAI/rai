@@ -28,6 +28,7 @@ from rai.communication.ros2 import (
     ROS2HRIMessage,
     ROS2Message,
 )
+from rai.communication.ros2.runtime import ROS2Runtime
 from rclpy.callback_groups import (
     CallbackGroup,
     MutuallyExclusiveCallbackGroup,
@@ -348,14 +349,14 @@ def test_ros2_connector_action_call(ros_setup: None, request: pytest.FixtureRequ
 
 
 def test_ros2_connector_unique_names(ros_setup: None):
-    connector1 = ROS2Connector()
-    connector2 = ROS2Connector()
+    """Default connectors share one node; private runtimes get unique names."""
+    connector1 = ROS2Connector(runtime=ROS2Runtime())
+    connector2 = ROS2Connector(runtime=ROS2Runtime())
     try:
-        name1 = connector1.node.get_name()
-        name2 = connector2.node.get_name()
+        name1 = connector1._node.get_name()
+        name2 = connector2._node.get_name()
         assert name1 != name2
-        assert "rai_ros2_connector_" in name1
-        assert "rai_ros2_connector_" in name2
+        assert name1.startswith("rai_") and name2.startswith("rai_")
     finally:
         connector1.shutdown()
         connector2.shutdown()

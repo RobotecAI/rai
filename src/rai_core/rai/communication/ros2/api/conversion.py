@@ -13,7 +13,8 @@
 # limitations under the License.
 
 import base64
-from typing import Any, OrderedDict, Type
+import functools
+from typing import Any, OrderedDict, Protocol, Type, runtime_checkable
 
 import cv2
 import numpy as np
@@ -26,6 +27,13 @@ from rosidl_runtime_py.import_message import import_message_from_namespaced_type
 from rosidl_runtime_py.utilities import get_namespaced_type
 
 from rai.communication.ros2.images import compressed_imgmsg_to_numpy, imgmsg_to_numpy
+
+
+@runtime_checkable
+class IROS2Message(Protocol):
+    __slots__: list
+
+    def get_fields_and_field_types(self) -> dict: ...
 
 
 def ros2_message_to_dict(message: Any) -> OrderedDict[str, Any]:
@@ -46,6 +54,7 @@ def ros2_message_to_dict(message: Any) -> OrderedDict[str, Any]:
     return msg_dict
 
 
+@functools.cache
 def import_message_from_str(msg_type: str) -> Type[object]:
     msg_namespaced_type: NamespacedType = get_namespaced_type(msg_type)
     return import_message_from_namespaced_type(msg_namespaced_type)

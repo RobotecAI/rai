@@ -14,12 +14,10 @@
 
 import importlib.util
 import logging
-from collections import OrderedDict
-from typing import Any, List, Literal, cast
+from typing import List, Literal, cast
 from uuid import uuid4
 
 import numpy as np
-import rosidl_runtime_py.convert
 from PIL import Image
 from pydub import AudioSegment
 from sensor_msgs.msg import Image as ROS2Image
@@ -74,7 +72,8 @@ class ROS2HRIMessage(HRIMessage, ROS2Message):
             seq_end=msg.seq_end,
         )
 
-    def to_ros2_dict(self) -> OrderedDict[str, Any]:
+    def to_ros2_msg(self) -> "rai_interfaces.msg.HRIMessage":
+        """The rai_interfaces message, built directly (no dict round trip)."""
         img_msgs = [
             numpy_to_imgmsg(np.array(img.convert("RGB")), "rgb8") for img in self.images
         ]
@@ -87,18 +86,13 @@ class ROS2HRIMessage(HRIMessage, ROS2Message):
             for audio in self.audios
         ]
 
-        return cast(
-            OrderedDict[str, Any],
-            rosidl_runtime_py.convert.message_to_ordereddict(
-                ROS2HRIMessage_(
-                    text=self.text,
-                    images=img_msgs,
-                    audios=audio_msgs,
-                    communication_id=self.communication_id or "",
-                    seq_no=self.seq_no,
-                    seq_end=self.seq_end,
-                )
-            ),
+        return ROS2HRIMessage_(
+            text=self.text,
+            images=img_msgs,
+            audios=audio_msgs,
+            communication_id=self.communication_id or "",
+            seq_no=self.seq_no,
+            seq_end=self.seq_end,
         )
 
     @staticmethod

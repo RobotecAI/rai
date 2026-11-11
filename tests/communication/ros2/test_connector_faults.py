@@ -15,9 +15,8 @@
 """RAI 3.0 acceptance oracle for the ROS 2 connectors.
 
 One test per failure mode (races, hangs, leaks, lost or stale data), asserting
-the 3.0 behavior (rai3-plan/PLAN.md 2.1). Tests that the current code fails are
-xfail(strict=True) with the work item that fixes them, so they turn into
-XPASS failures once it lands and the marker must be removed.
+the 3.0 behavior (rai3-plan/PLAN.md 2.1). Most tests drive the 2.x method
+names, which stay on the connector as thin shims until R5.
 
 Rules that keep the suite load tolerant: assert counts, ordering and leaks, not
 durations; every wait that may hang runs in a daemon thread with a bound, so a
@@ -25,7 +24,6 @@ broken connector fails a test instead of the whole run.
 """
 
 import copy
-import os
 import subprocess
 import sys
 import threading
@@ -41,6 +39,7 @@ from example_interfaces.action import Fibonacci
 from geometry_msgs.msg import TransformStamped
 from PIL import Image as PILImage
 from pydub import AudioSegment
+from rai.communication.base_connector import ConnectorClosedError
 from rai.communication.ros2 import (
     ROS2Connector,
     ROS2HRIConnector,
@@ -49,9 +48,10 @@ from rai.communication.ros2 import (
 )
 from rai.communication.ros2.context import NodeDiscovery
 from rai.communication.ros2.images import numpy_to_imgmsg
+from rai.communication.ros2.runtime import ROS2Runtime
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
-from rclpy.executors import MultiThreadedExecutor
+from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import (
     DurabilityPolicy,
@@ -67,14 +67,6 @@ from rai_interfaces.msg import HRIMessage
 
 from .helpers import ros_setup
 
-try:
-    from rai.communication.base_connector import ConnectorClosedError
-except ImportError:  # added by R3; until then nothing raises it
-
-    class ConnectorClosedError(Exception):
-        pass
-
-
 _ = ros_setup
 pytestmark = pytest.mark.timeout(60)
 
@@ -85,17 +77,6 @@ LATCHED = QoSProfile(
     reliability=ReliabilityPolicy.RELIABLE,
     durability=DurabilityPolicy.TRANSIENT_LOCAL,
 )
-
-
-JAZZY = os.environ.get("ROS_DISTRO") == "jazzy"
-
-
-def r2(reason: str, condition: bool = True):
-    return pytest.mark.xfail(condition, strict=True, reason=f"R2: {reason}")
-
-
-def r3(reason: str, condition: bool = True):
-    return pytest.mark.xfail(condition, strict=True, reason=f"R3: {reason}")
 
 
 # -------------------------------------------------------------------- helpers
@@ -156,9 +137,9 @@ def helper_node(ros_setup: None):
     """Factory for plain rclpy nodes spun in their own thread."""
     spun: list[tuple] = []
 
-    def make() -> Node:
+    def make(executor_cls: Any = MultiThreadedExecutor) -> Node:
         node = Node(f"fault_helper_{uuid.uuid4().hex[:8]}")
-        executor = MultiThreadedExecutor()
+        executor = executor_cls()
         executor.add_node(node)
         thread = threading.Thread(target=executor.spin, daemon=True)
         thread.start()
@@ -262,7 +243,6 @@ def test_spin_survives_malformed_hri_image(connectors, helper_node):
     assert publish_until(pub, HRIMessage(text="good"), lambda: "good" in got)
 
 
-@r3("registering callbacks while messages arrive must not break dispatch")
 def test_dispatch_survives_register_unregister_churn(connectors, helper_node):
     topic = unique("churn")
     connector = connectors()
@@ -298,7 +278,6 @@ def test_dispatch_survives_register_unregister_churn(connectors, helper_node):
     assert publish_until(pub, Int32(data=1), lambda: 1 in got)
 
 
-@r3("each callback sees messages in publish order (one consumer per callback)")
 def test_per_callback_ordering(connectors, helper_node):
     topic = unique("order")
     connector = connectors()
@@ -321,7 +300,6 @@ def test_per_callback_ordering(connectors, helper_node):
     assert inversions(received) == 0
 
 
-@r3("HRI messages from a human are never dropped and arrive in order")
 def test_hri_burst_delivered_in_order(connectors, helper_node):
     topic = unique("hriburst")
     connector = connectors(ROS2HRIConnector)
@@ -340,7 +318,6 @@ def test_hri_burst_delivered_in_order(connectors, helper_node):
     assert [i for i in got if i >= 0] == list(range(50))
 
 
-@r3("receive_message does not go through the user callback pool")
 def test_receive_message_not_starved_by_slow_callbacks(connectors, helper_node):
     slow_topic, fast_topic = unique("slow"), unique("fast")
     connector = connectors()
@@ -368,7 +345,6 @@ def test_receive_message_not_starved_by_slow_callbacks(connectors, helper_node):
 # --------------------------------------------------------------------- topics
 
 
-@r3("receive_message works on a topic that already has a registered callback")
 def test_receive_message_on_topic_with_registered_callback(connectors, helper_node):
     topic = unique("regrecv")
     connector = connectors()
@@ -380,7 +356,6 @@ def test_receive_message_on_topic_with_registered_callback(connectors, helper_no
     assert msg.payload.data == "x"
 
 
-@r3("receive_message(max_age=...) never returns a sample older than max_age")
 def test_receive_message_max_age_rejects_stale_sample(connectors, helper_node):
     topic = unique("stale")
     connector = connectors()
@@ -400,7 +375,7 @@ def test_receive_message_returns_latched_sample_of_any_age(connectors, helper_no
     topic = unique("latched")
     helper_node().create_publisher(String, topic, LATCHED).publish(String(data="map"))
     connector = connectors()
-    assert wait_until(lambda: connector.node.count_publishers(topic) == 1)
+    assert wait_until(lambda: connector._node.count_publishers(topic) == 1)
     first = connector.receive_message(topic, timeout_sec=3.0)
     time.sleep(0.4)
     second = connector.receive_message(topic, timeout_sec=0.2)
@@ -412,13 +387,12 @@ def test_register_callback_gets_latched_sample(connectors, helper_node):
     helper_node().create_publisher(String, topic, LATCHED).publish(String(data="map"))
     connector = connectors()
     got: list[Any] = []
-    assert wait_until(lambda: connector.node.count_publishers(topic) == 1)
+    assert wait_until(lambda: connector._node.count_publishers(topic) == 1)
     connector.register_callback(topic, got.append, msg_type=STRING)
     assert wait_until(lambda: got)
     assert got[0].payload.data == "map"
 
 
-@r2("send_message must not mutate the caller's payload (b119762)", JAZZY)
 def test_send_message_does_not_mutate_payload(connectors):
     connector = connectors()
     payload = {"poses": [{"position": {"x": 1.0}}, {"position": {"y": 2.0}}]}
@@ -464,7 +438,6 @@ def test_latched_publish_reaches_late_subscriber(connectors, helper_node):
     assert wait_until(lambda: got == ["map"])
 
 
-@r3("publishing a second type on one topic raises and names the topic")
 def test_publish_same_topic_different_types(connectors):
     topic = unique("types")
     connector = connectors()
@@ -473,7 +446,6 @@ def test_publish_same_topic_different_types(connectors):
         send(connector, topic, "x")
 
 
-@r3("concurrent first use creates exactly one subscription and one publisher")
 def test_concurrent_first_use_creates_one_entity(connectors):
     connector = connectors()
     old_interval = sys.getswitchinterval()
@@ -508,7 +480,7 @@ def test_concurrent_first_use_creates_one_entity(connectors):
                 thread.start()
             for thread in threads:
                 thread.join(5.0)
-            node = connector.node
+            node = connector._node
             subs = [s for s in node.subscriptions if s.topic_name == sub_topic]
             pubs = [p for p in node.publishers if p.topic_name == pub_topic]
             assert (len(subs), len(pubs)) == (1, 1), f"round {k}"
@@ -516,7 +488,6 @@ def test_concurrent_first_use_creates_one_entity(connectors):
         sys.setswitchinterval(old_interval)
 
 
-@r3("relative and absolute names resolve to one subscription and one publisher")
 def test_relative_and_absolute_topic_names_are_one_topic(connectors, helper_node):
     topic = unique("rel")
     connector = connectors()
@@ -528,23 +499,21 @@ def test_relative_and_absolute_topic_names_are_one_topic(connectors, helper_node
         assert connector.receive_message(topic, timeout_sec=3.0).payload.data == "x"
     send(connector, topic, "a")
     send(connector, topic.lstrip("/"), "b")
-    node = connector.node
+    node = connector._node
     assert len([s for s in node.subscriptions if s.topic_name == topic]) == 1
     assert len([p for p in node.publishers if p.topic_name == topic]) == 1
 
 
-@r3("an explicit qos_profile wins over automatic QoS matching")
 def test_explicit_subscription_qos_is_used(connectors):
     connector = connectors()
     topic = unique("qos_explicit")
     connector.register_callback(
         topic, lambda m: None, msg_type=STRING, qos_profile=LATCHED
     )
-    (sub,) = [s for s in connector.node.subscriptions if s.topic_name == topic]
+    (sub,) = [s for s in connector._node.subscriptions if s.topic_name == topic]
     assert sub.qos_profile.durability == DurabilityPolicy.TRANSIENT_LOCAL
 
 
-@r3("a subscription made before any publisher also matches BEST_EFFORT publishers")
 def test_early_subscription_matches_best_effort_publisher(connectors, helper_node):
     topic = unique("sensor")
     connector = connectors()
@@ -559,7 +528,7 @@ def test_hri_subscription_is_reliable_without_publishers(connectors):
     connector = connectors(ROS2HRIConnector)
     topic = unique("hri_qos")
     connector.register_callback(topic, lambda m: None)
-    (sub,) = [s for s in connector.node.subscriptions if s.topic_name == topic]
+    (sub,) = [s for s in connector._node.subscriptions if s.topic_name == topic]
     assert sub.qos_profile.reliability == ReliabilityPolicy.RELIABLE
 
 
@@ -597,7 +566,6 @@ def test_hri_message_round_trip(connectors, helper_node):
 # ------------------------------------------------------------------- services
 
 
-@r2("service_call must not mutate the caller's payload (b119762)", JAZZY)
 def test_service_call_does_not_mutate_payload(connectors):
     connector = connectors()
     payload = {"parameters": [{"name": "a", "value": {"type": 1, "bool_value": True}}]}
@@ -614,7 +582,6 @@ def test_service_call_does_not_mutate_payload(connectors):
     assert payload == expected
 
 
-@r3("a service handler can call another service through the same connector")
 def test_service_call_from_service_handler(connectors, helper_node):
     inner, outer = unique("inner"), unique("outer")
     connector = connectors()
@@ -638,7 +605,6 @@ def test_service_call_from_service_handler(connectors, helper_node):
     assert response is not None and response.success, response
 
 
-@r3("an unreachable service or action server raises TimeoutError")
 @pytest.mark.parametrize("kind", ["service", "action"])
 def test_unreachable_server_raises_timeout(connectors, kind):
     connector = connectors()
@@ -654,7 +620,6 @@ def test_unreachable_server_raises_timeout(connectors, kind):
             )
 
 
-@r3("a service call timeout raises TimeoutError on Jazzy too", JAZZY)
 def test_service_call_timeout_raises(connectors, helper_node):
     name = unique("slowsrv")
     connector = connectors()
@@ -699,7 +664,6 @@ def server_process(name: str):
         server.wait()
 
 
-@r3("a call with the wrong service type does not poison the client cache")
 def test_wrong_service_type_then_correct_type(connectors):
     name = unique("setbool")
     connector = connectors()
@@ -727,12 +691,11 @@ def test_wrong_service_type_then_correct_type(connectors):
         assert response.payload.success
 
 
-@r3("service clients are reused or destroyed, never leaked")
 def test_no_client_leak_without_reuse(connectors, helper_node):
     name = unique("leak")
     connector = connectors()
     make_trigger_service(helper_node(), name)
-    before = len(connector.node.clients)
+    before = len(list(connector._node.clients))
     for _ in range(10):
         connector.service_call(
             ROS2Message(payload={}),
@@ -741,25 +704,23 @@ def test_no_client_leak_without_reuse(connectors, helper_node):
             msg_type=TRIGGER,
             reuse_client=False,
         )
-    assert len(connector.node.clients) - before <= 1
+    assert len(list(connector._node.clients)) - before <= 1
 
 
-@r3("release_client destroys the client")
 def test_release_client_destroys_client(connectors, helper_node):
     name = unique("release")
     connector = connectors()
     make_trigger_service(helper_node(), name)
-    before = len(connector.node.clients)
+    before = len(list(connector._node.clients))
     connector.service_call(
         ROS2Message(payload={}), name, timeout_sec=3.0, msg_type=TRIGGER
     )
-    assert len(connector.node.clients) == before + 1
+    assert len(list(connector._node.clients)) == before + 1
     assert connector.release_client(name)
-    assert len(connector.node.clients) == before
+    assert len(list(connector._node.clients)) == before
     assert not connector.release_client(name)
 
 
-@r2("release_client fails the calls in flight on that client instead of blocking")
 def test_release_client_fails_call_in_flight(connectors, helper_node):
     name = unique("released")
     connector = connectors()
@@ -819,7 +780,6 @@ def test_service_handler_does_not_run_concurrently_with_itself(connectors, helpe
 # -------------------------------------------------------------------- actions
 
 
-@r3("feedback callbacks run in feedback order")
 def test_action_feedback_order(connectors, helper_node):
     name = unique("feedback")
     connector = connectors()
@@ -848,7 +808,6 @@ def test_action_feedback_order(connectors, helper_node):
     assert inversions(got) == 0
 
 
-@r3("on_done runs after every feedback callback of its goal")
 def test_on_done_runs_after_feedback(connectors, helper_node):
     name = unique("donelast")
     connector = connectors()
@@ -878,7 +837,6 @@ def test_on_done_runs_after_feedback(connectors, helper_node):
     assert events == [0, 1, 2, 3, 4, "done"]
 
 
-@r3("a goal accepted after the caller timed out is cancelled, not orphaned")
 def test_slow_accept_does_not_orphan_goal(connectors, helper_node):
     name = unique("slowaccept")
     connector = connectors()
@@ -914,7 +872,6 @@ def test_slow_accept_does_not_orphan_goal(connectors, helper_node):
     assert outcomes == ["canceled"]
 
 
-@r3("a rejected goal raises and never fires on_done")
 def test_rejected_goal_does_not_fire_on_done(connectors, helper_node):
     name = unique("reject")
     connector = connectors()
@@ -928,7 +885,6 @@ def test_rejected_goal_does_not_fire_on_done(connectors, helper_node):
     assert done == []
 
 
-@r3("cancelling a goal whose server is gone returns instead of hanging")
 def test_terminate_action_bounded_when_server_gone(connectors, ros_setup):
     name = unique("gone")
     connector = connectors()
@@ -956,20 +912,18 @@ def test_terminate_action_bounded_when_server_gone(connectors, ros_setup):
     assert finished
 
 
-@r3("finished goals release their action client and records")
 def test_action_entities_not_leaked(connectors, helper_node):
     name = unique("fibleak")
     connector = connectors()
     make_fibonacci_server(helper_node(), name)
-    before = len(connector.node.waitables)
+    before = len(list(connector._node.waitables))
     for _ in range(40):
         done = threading.Event()
         start_goal(connector, name, on_done=lambda _: done.set())
         assert done.wait(5.0)
-    assert len(connector.node.waitables) - before <= 1
+    assert len(list(connector._node.waitables)) - before <= 1
 
 
-@r3("a service handler can start an action through the same connector")
 def test_start_action_from_service_handler(connectors, helper_node):
     action, srv = unique("innerfib"), unique("outersrv")
     connector = connectors()
@@ -992,7 +946,6 @@ def test_start_action_from_service_handler(connectors, helper_node):
     assert response is not None and response.success, response
 
 
-@r3("a goal sent with the wrong action type leaves no client behind")
 def test_wrong_action_type_does_not_block_action_name(connectors):
     name = unique("wrongact")
     connector = connectors()
@@ -1010,7 +963,6 @@ def test_wrong_action_type_does_not_block_action_name(connectors):
 # ------------------------------------------------------------------ lifecycle
 
 
-@r3("no user callback starts after shutdown() returns")
 def test_no_user_callbacks_after_shutdown(connectors, helper_node):
     topic = unique("shut")
     connector = connectors()
@@ -1038,7 +990,6 @@ def test_no_user_callbacks_after_shutdown(connectors, helper_node):
     assert all(t <= returned for t in started)
 
 
-@r3("every call after shutdown() raises ConnectorClosedError")
 @pytest.mark.parametrize("cls", [ROS2Connector, ROS2HRIConnector])
 def test_every_call_after_shutdown_raises_closed(connectors, cls):
     connector = connectors(cls)
@@ -1076,7 +1027,6 @@ def test_every_call_after_shutdown_raises_closed(connectors, cls):
         assert finished and isinstance(error, ConnectorClosedError), (name, error)
 
 
-@r3("cleanup after shutdown (unregister, release) is a no-op")
 def test_cleanup_after_shutdown_is_noop(connectors):
     connector = connectors()
     callback_id = connector.register_callback(
@@ -1105,7 +1055,6 @@ def test_concurrent_shutdown_is_safe(connectors):
     assert all(r == (True, None) for r in results), results
 
 
-@r3("shutdown() wakes a waiting receive_message with ConnectorClosedError")
 def test_shutdown_wakes_waiting_receive_message(connectors):
     connector = connectors()
     result: list[Any] = []
@@ -1121,7 +1070,6 @@ def test_shutdown_wakes_waiting_receive_message(connectors):
     assert isinstance(result[0][1], ConnectorClosedError), result
 
 
-@r3("shutdown() wakes a waiting service_call with ConnectorClosedError")
 def test_shutdown_wakes_waiting_service_call(connectors, helper_node):
     name = unique("stuck")
     connector = connectors()
@@ -1182,12 +1130,7 @@ def stuck_execute_callback(connectors, helper_node, release):
     "make_stuck",
     [
         stuck_subscription_callback,
-        pytest.param(
-            stuck_execute_callback,
-            marks=r3(
-                "shutdown() returns while an execute callback is stuck", not JAZZY
-            ),
-        ),
+        stuck_execute_callback,
     ],
 )
 def test_shutdown_bounded_with_stuck_callback(connectors, helper_node, make_stuck):
@@ -1215,9 +1158,8 @@ def test_shutdown_from_registered_callback(connectors, helper_node):
     assert result[0] == (True, None)
 
 
-@r3("shutdown() joins every thread the connector started")
 def test_shutdown_joins_connector_threads(connectors, helper_node):
-    node = helper_node()
+    node = helper_node(SingleThreadedExecutor)  # no lazily started pool threads
     srv, action, topic = unique("thsrv"), unique("thfib"), unique("thtopic")
     make_trigger_service(node, srv)
     make_fibonacci_server(node, action)
@@ -1241,20 +1183,20 @@ def test_shutdown_joins_connector_threads(connectors, helper_node):
     assert wait_until(lambda: not leftover()), leftover()
 
 
-@r2("ROS2HRIConnector gets a fresh default node name per instance (8a625cf)")
 def test_hri_connectors_get_distinct_default_node_names(connectors):
-    first = connectors(ROS2HRIConnector)
-    second = connectors(ROS2HRIConnector)
-    assert first.node.get_name() != second.node.get_name()
+    """Default connectors share the process runtime (one node); private
+    runtimes each get a fresh name, not one evaluated at import (8a625cf)."""
+    first = connectors(ROS2HRIConnector, runtime=ROS2Runtime())
+    second = connectors(ROS2HRIConnector, runtime=ROS2Runtime())
+    assert first._node.get_name() != second._node.get_name()
+    assert connectors(ROS2HRIConnector)._node is connectors(ROS2Connector)._node
 
 
-@r2("ROS2HRIConnector accepts and forwards use_sim_time (8a625cf)")
 def test_hri_connector_forwards_use_sim_time(connectors):
     connector = connectors(ROS2HRIConnector, use_sim_time=True)
-    assert connector.node.get_parameter("use_sim_time").value is True
+    assert connector._node.get_parameter("use_sim_time").value is True
 
 
-@r2("NodeDiscovery never exposes entries outside its allowlist (1f06344)")
 def test_node_discovery_never_exposes_entries_outside_allowlist(ros_setup):
     """A concurrent dict() reader sees whatever the attributes hold, so every
     dict ever assigned to them must already be filtered."""
@@ -1296,10 +1238,8 @@ print("done")
 @pytest.mark.parametrize(
     "use_context",
     [
-        pytest.param(
-            False, marks=r3("the process exits without an explicit shutdown()")
-        ),
-        pytest.param(True, marks=r3("leaving ROS2Context closes its connectors")),
+        False,
+        True,
     ],
 )
 def test_process_exits_without_shutdown(use_context):
@@ -1320,7 +1260,6 @@ def test_process_exits_without_shutdown(use_context):
 # ---------------------------------------------------------------- performance
 
 
-@r3("a 100 Hz stream is delivered (no MultiThreadedExecutor, no depth 1 QoS)")
 def test_steady_stream_is_delivered(connectors, helper_node):
     topic = unique("rate")
     connector = connectors()
@@ -1341,11 +1280,10 @@ def test_steady_stream_is_delivered(connectors, helper_node):
     assert delivered() >= 190
 
 
-@r2("the TF listener is created on first use, not in the constructor (048aba0)")
 def test_tf_listener_created_on_first_use(connectors, helper_node):
     connector = connectors()
     has_tf = lambda: any(
-        s.topic_name in ("/tf", "/tf_static") for s in connector.node.subscriptions
+        s.topic_name in ("/tf", "/tf_static") for s in connector._node.subscriptions
     )
     assert not has_tf()
     transform = TransformStamped()

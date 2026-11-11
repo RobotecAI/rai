@@ -12,16 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .action_mixin import ROS2ActionMixin
-from .base import ROS2BaseConnector
 from .hri_connector import ROS2HRIConnector
-from .ros2_connector import ROS2Connector
-from .service_mixin import ROS2ServiceMixin
+from .ros2_connector import (
+    GoalHandle,
+    GoalStatus,
+    QoS,
+    ROS2Connector,
+    Subscription,
+    SyncROS2Connector,
+)
 
 __all__ = [
-    "ROS2ActionMixin",
-    "ROS2BaseConnector",
+    "GoalHandle",
+    "GoalStatus",
+    "QoS",
     "ROS2Connector",
     "ROS2HRIConnector",
-    "ROS2ServiceMixin",
+    "Subscription",
+    "SyncROS2Connector",
 ]

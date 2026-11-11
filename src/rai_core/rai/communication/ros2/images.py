@@ -14,6 +14,7 @@
 
 """sensor_msgs Image <-> numpy conversion, replacing cv_bridge."""
 
+import base64
 import sys
 from typing import Optional
 
@@ -114,3 +115,36 @@ def compressed_imgmsg_to_numpy(
     else:
         src = "bgr8" if image.shape[2] == 3 else "bgra8"
     return convert_encoding(image, src, encoding)
+
+
+def encode_image(
+    image: NDArray | Image | CompressedImage,
+    *,
+    max_side: int = 1024,
+    format: str = "jpeg",
+    quality: int = 85,
+) -> str:
+    """Base64 JPEG (or "png") of an image for the LLM; the one encode path.
+
+    Arrays are RGB (or mono); messages are converted to RGB first. Images larger
+    than max_side are downscaled, keeping the aspect ratio.
+    """
+    if isinstance(image, Image):
+        image = imgmsg_to_numpy(image, "rgb8")
+    elif isinstance(image, CompressedImage):
+        image = compressed_imgmsg_to_numpy(image, "rgb8")
+    scale = max_side / max(image.shape[:2])
+    if scale < 1:
+        size = (round(image.shape[1] * scale), round(image.shape[0] * scale))
+        image = cv2.resize(image, size, interpolation=cv2.INTER_AREA)
+    if image.ndim == 3:
+        image = cv2.cvtColor(
+            image, cv2.COLOR_RGBA2BGR if image.shape[2] == 4 else cv2.COLOR_RGB2BGR
+        )
+    if format == "png":
+        ok, data = cv2.imencode(".png", image)
+    else:
+        ok, data = cv2.imencode(".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, quality])
+    if not ok:
+        raise ValueError(f"Cannot encode the image as {format}")
+    return base64.b64encode(data.tobytes()).decode("ascii")

@@ -14,12 +14,12 @@
 
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Callable, List
+from typing import TYPE_CHECKING, Callable, List
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from rai.communication.ros2.connectors.base import ROS2BaseConnector
+    from rai.communication.ros2.connectors import ROS2Connector
 
 
 def ensure_slash(name: str) -> str:
@@ -64,7 +64,7 @@ def wait_for_ros2_entities(
 
 
 def wait_for_ros2_services(
-    connector: "ROS2BaseConnector[Any]",
+    connector: "ROS2Connector",
     requested_services: List[str],
     time_interval: float = 1.0,
     timeout: float = 0.0,
@@ -73,7 +73,7 @@ def wait_for_ros2_services(
 
     Parameters
     ----------
-    connector : ROS2BaseConnector[Any]
+    connector : ROS2Connector
         ROS2 connector providing access to system service information.
     requested_services : List[str]
         List of service names to wait for.
@@ -108,7 +108,7 @@ def wait_for_ros2_services(
 
 
 def wait_for_ros2_topics(
-    connector: "ROS2BaseConnector[Any]",
+    connector: "ROS2Connector",
     requested_topics: List[str],
     time_interval: float = 1.0,
     timeout: float = 0.0,
@@ -117,7 +117,7 @@ def wait_for_ros2_topics(
 
     Parameters
     ----------
-    connector : ROS2BaseConnector[Any]
+    connector : ROS2Connector
         ROS2 connector providing access to system topic information.
     requested_topics : List[str]
         List of topic names to wait for.
@@ -150,7 +150,7 @@ def wait_for_ros2_topics(
 
 
 def wait_for_ros2_actions(
-    connector: "ROS2BaseConnector[Any]",
+    connector: "ROS2Connector",
     requested_actions: List[str],
     time_interval: float = 1.0,
     timeout: float = 0.0,
@@ -159,7 +159,7 @@ def wait_for_ros2_actions(
 
     Parameters
     ----------
-    connector : ROS2BaseConnector[Any]
+    connector : ROS2Connector
         ROS2 connector providing access to system action information.
     requested_actions : List[str]
         List of action names to wait for.
