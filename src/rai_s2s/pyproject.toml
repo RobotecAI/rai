@@ -22,7 +22,7 @@ dependencies = [
 
 [project.optional-dependencies]
 elevenlabs = ["elevenlabs>=2.0.0,<3.0.0"]
-whisper = ["openai-whisper>=20250625,<20250626"]
+whisper = ["openai-whisper>=20250625"]
 fasterwhisper = ["faster-whisper>=1.1.1,<2.0.0"]
 wakeword = ["openwakeword @ git+https://github.com/maciejmajek/openWakeWord.git@f2340d82a39fe7bfb972c8c4114642fa87e5dc59"]
 kokoro = ["kokoro-onnx>=0.6.1,<0.7.0"]
@@ -31,7 +31,7 @@ kokoro = ["kokoro-onnx>=0.6.1,<0.7.0"]
 # uv `conflicts` declaration cannot exclude a transitive dependency. See README for the manual swap.
 all = [
     "elevenlabs>=2.0.0,<3.0.0",
-    "openai-whisper>=20250625,<20250626",
+    "openai-whisper>=20250625",
     "faster-whisper>=1.1.1,<2.0.0",
     "openwakeword @ git+https://github.com/maciejmajek/openWakeWord.git@f2340d82a39fe7bfb972c8c4114642fa87e5dc59",
 ]
