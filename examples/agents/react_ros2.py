@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-from rai.agents import AgentRunner
+import rai
 from rai.agents.langchain.react_agent import ReActAgent
 from rai.communication.ros2 import ROS2Connector, ROS2Context
 from rai.communication.ros2.connectors.hri_connector import ROS2HRIConnector
@@ -33,8 +32,7 @@ def main():
     )
     # Agent will wait for messages published to /from_human ros2 topic
     agent.subscribe_source("/from_human", hri_connector)
-    runner = AgentRunner([agent])
-    runner.run_and_wait_for_shutdown()
+    rai.run(agent)
 
 
 if __name__ == "__main__":

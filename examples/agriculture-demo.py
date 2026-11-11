@@ -13,13 +13,13 @@
 # limitations under the License.
 
 import argparse
-import threading
-import time
+import asyncio
 
+import rai
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import Runnable, RunnableConfig
 from rai import get_llm_model, get_tracing_callbacks
-from rai.agents import BaseAgent, wait_for_shutdown
+from rai.agents import BaseAgent
 from rai.agents.langchain.core import (
     ConversationalAgentState,
     create_conversational_agent,
@@ -53,28 +53,12 @@ class SafetyAgent(BaseAgent):
         self.tractor_number = tractor_number
         self.working = False
         self.langchain_callbacks = get_tracing_callbacks()
-
-        self.stop_event = threading.Event()
-        self.thread = threading.Thread(target=self.loop)
         self.loop_interval = interval
-        self.logger.info(f"{self.__class__.__name__} initialized")
 
-    def run(self):
-        self.stop_event.clear()
-        self.logger.info(f"{self.__class__.__name__} running")
-        self.thread.start()
-
-    def loop(self):
+    async def run(self):
         while True:
-            self.check_tractor_state()
-            time.sleep(self.loop_interval)
-            if self.stop_event.is_set():
-                break
-
-    def stop(self):
-        self.logger.info(f"{self.__class__.__name__} stopping")
-        self.stop_event.set()
-        self.logger.info(f"{self.__class__.__name__} stopped")
+            await asyncio.to_thread(self.check_tractor_state)
+            await asyncio.sleep(self.loop_interval)
 
     def check_tractor_state(self):
         """Check the current state of the tractor and call the RAI agent if the tractor has stopped."""
@@ -156,8 +140,7 @@ def main():
 
     # Run the safety agent
     safety_agent = SafetyAgent(agent, connector, args.tractor_number)
-    safety_agent.run()
-    wait_for_shutdown([safety_agent])
+    rai.run(safety_agent)
 
 
 if __name__ == "__main__":

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+from rai.agents import ThreadedAgent
 from rai.agents.langchain import ReActAgent
 from rai.communication.hri_connector import HRIMessage
 from rai.communication.ros2 import ROS2Connector, ROS2Context, ROS2HRIConnector
@@ -30,10 +31,9 @@ def main():
         },  # agent's output is sent to /to_human ros2 topic
         tools=ROS2Toolkit(connector=ros2_connector).get_tools(),
     )
-    agent.run()
-    agent(HRIMessage(text="What do you see?"))
-    agent.wait()  # wait for agent to finish
-    agent.stop()
+    with ThreadedAgent(agent):
+        agent(HRIMessage(text="What do you see?"))
+        agent.wait_idle()  # wait for agent to finish
 
 
 if __name__ == "__main__":

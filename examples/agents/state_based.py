@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rai.agents import wait_for_shutdown
+import rai
 from rai.agents.langchain import StateBasedConfig
 from rai.agents.ros2 import ROS2StateBasedAgent
 from rai.aggregators.ros2 import (
@@ -49,8 +49,7 @@ def main():
         tools=ROS2Toolkit(connector=ros2_connector).get_tools(),
     )
     agent.subscribe_source("/from_human", hri_connector)
-    agent.run()
-    wait_for_shutdown([agent])
+    rai.run(agent)
 
 
 if __name__ == "__main__":
