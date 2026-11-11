@@ -55,7 +55,8 @@ def get_all_tool_classes() -> set[BaseTool]:
 
 @pytest.mark.parametrize("tool", get_all_tool_classes())
 def test_tool_input_args_compatibility(tool: BaseTool):
-    tool_run_annotations = tool._run.__annotations__
+    run = tool._acall if hasattr(tool, "_acall") else tool._run  # RaiTool: _acall
+    tool_run_annotations = dict(run.__annotations__)
     if "return" in tool_run_annotations:
         tool_run_annotations.pop("return")
     if "args" in tool_run_annotations and "kwargs" in tool_run_annotations:

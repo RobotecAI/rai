@@ -19,18 +19,18 @@ rather than offering generic functionality across topics, services, and actions.
 For generic ROS2 functionality, use ROS2Toolkit.
 """
 
-from typing import Any, Literal
+from typing import Any, Dict, List, Literal, Tuple
 
 from pydantic import Field
 
+from rai.tools.hooks import Effect
 from rai.tools.ros2.base import BaseROS2Tool
-from rai.tools.ros2.generic.topics import (
-    GetROS2ImageTool,
-    GetROS2TransformTool,
-)
+from rai.tools.ros2.generic.topics import describe_transform, receive_image
 
 
 class GetROS2ImageConfiguredTool(BaseROS2Tool):
+    default_effect = Effect.READ
+    target_fields = {"topic": "topic"}
     name: str = "get_ros2_camera_image"
     description: str = "Get the current image from the camera"
     response_format: Literal["content", "content_and_artifact"] = "content_and_artifact"
@@ -38,18 +38,17 @@ class GetROS2ImageConfiguredTool(BaseROS2Tool):
     topic: str = Field(..., min_length=1, description="The topic to get the image from")
     timeout_sec: float = Field(default=5.0, gt=0, description="The timeout in seconds")
 
-    def model_post_init(self, __context: Any) -> None:
-        if not self.is_readable(topic=self.topic):
+    def model_post_init(self, context: Any) -> None:
+        super().model_post_init(context)
+        if not self.is_readable(self.topic):
             raise ValueError(f"Bad configuration: topic {self.topic} is not readable")
 
-    def _run(self) -> Any:
-        tool = GetROS2ImageTool(
-            connector=self.connector,
-        )
-        return tool._run(topic=self.topic, timeout_sec=self.timeout_sec)
+    async def _acall(self) -> Tuple[str, Dict[str, List[str]]]:
+        return await receive_image(self, self.topic, self.timeout_sec)
 
 
 class GetROS2TransformConfiguredTool(BaseROS2Tool):
+    default_effect = Effect.READ
     name: str = "get_ros2_robot_position"
     description: str = "Get the robot's position"
 
@@ -57,12 +56,7 @@ class GetROS2TransformConfiguredTool(BaseROS2Tool):
     target_frame: str = Field(..., min_length=1, description="The target frame")
     timeout_sec: float = Field(default=10.0, gt=0, description="The timeout in seconds")
 
-    def _run(self) -> Any:
-        tool = GetROS2TransformTool(
-            connector=self.connector,
-        )
-        return tool._run(
-            source_frame=self.source_frame,
-            target_frame=self.target_frame,
-            timeout_sec=self.timeout_sec,
+    async def _acall(self) -> str:
+        return await describe_transform(
+            self, self.target_frame, self.source_frame, self.timeout_sec
         )

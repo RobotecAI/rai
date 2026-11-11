@@ -25,6 +25,7 @@ import time
 from contextlib import contextmanager
 from typing import Generator, List, Optional
 
+from langchain_core.tools import ToolException
 from PIL import Image
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.communication.ros2.waiters import wait_for_ros2_topics
@@ -105,7 +106,7 @@ def test_publish_message_tool_with_forbidden_topic(
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     connector = ROS2Connector()
     tool = PublishROS2MessageTool(connector=connector, forbidden=[topic_name])
-    with pytest.raises(ValueError):
+    with pytest.raises(ToolException, match="not writable"):
         tool._run(
             topic=topic_name,
             message={"data": "test"},
@@ -173,7 +174,7 @@ def test_receive_message_tool_with_forbidden_topic(
     topic_name = f"{request.node.originalname}_topic"  # type: ignore
     connector = ROS2Connector()
     tool = ReceiveROS2MessageTool(connector=connector, forbidden=[topic_name])
-    with pytest.raises(ValueError):
+    with pytest.raises(ToolException, match="not readable"):
         tool._run(topic=topic_name)  # type: ignore
 
 
@@ -421,18 +422,6 @@ def test_get_topics_names_and_types_tool_empty_response_when_all_filtered(
         response = tool._run()
         # Response should be empty string when all topics are filtered
         assert response == ""
-
-
-def test_categorize_topic_returns_none_when_neither_readable_nor_writable(
-    ros_setup: None,
-) -> None:
-    """Test that _categorize returns None when topic is neither readable nor writable."""
-    connector = ROS2Connector()
-    tool = GetROS2TopicsNamesAndTypesTool(connector=connector)
-
-    # Test the None case: both flags are False
-    result = tool._categorize(is_readable=False, is_writable=False)
-    assert result is None
 
 
 def test_get_topics_when_should_include_is_false(

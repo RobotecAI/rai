@@ -74,6 +74,10 @@ class RaiTool(BaseTool):
     def targets(self) -> tuple[str, ...]:
         return self.metadata["targets"]  # type: ignore[index]
 
+    def call_targets(self, kwargs: Mapping[str, Any]) -> tuple[str, ...]:
+        """The targets hooks see for one call. Generic tools add the names in kwargs."""
+        return self.targets
+
     async def _acall(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError
 
@@ -81,8 +85,12 @@ class RaiTool(BaseTool):
         if args:
             kwargs = dict(zip(self.args, args)) | kwargs
         if global_tool_hooks or self.hooks:  # no hooks: no overhead
+            try:
+                targets = self.call_targets(kwargs)
+            except Exception as e:  # fail closed
+                raise ToolException(f"Cannot resolve targets: {e}") from e
             call = ToolCallContext(
-                self.name, self.effect, self.targets, MappingProxyType(kwargs)
+                self.name, self.effect, targets, MappingProxyType(kwargs)
             )
             if denial := await run_tool_hooks(call, (global_tool_hooks, self.hooks)):
                 raise ToolException(denial.reason)

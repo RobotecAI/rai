@@ -22,6 +22,7 @@ except ImportError:
 
 import time
 
+from langchain_core.tools import ToolException
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2 import (
     CallROS2ServiceTool,
@@ -51,7 +52,7 @@ def test_service_call_tool(ros_setup: None, request: pytest.FixtureRequest) -> N
             service_args={},
         )
         assert "Test service called" in response
-        assert "success=True" in response
+        assert "'success': True" in response
     finally:
         shutdown_executors_and_threads(executors, threads)
 
@@ -62,7 +63,7 @@ def test_service_call_tool_with_forbidden_service(
     service_name = f"{request.node.originalname}_service"  # type: ignore
     connector = ROS2Connector()
     tool = CallROS2ServiceTool(connector=connector, forbidden=[service_name])
-    with pytest.raises(ValueError):
+    with pytest.raises(ToolException, match="not writable"):
         tool._run(
             service_name=service_name,
             service_type="std_srvs/srv/SetBool",
@@ -85,7 +86,7 @@ def test_service_call_tool_with_writable_service(
             service_args={},
         )
         assert "Test service called" in response
-        assert "success=True" in response
+        assert "'success': True" in response
     finally:
         shutdown_executors_and_threads(executors, threads)
 

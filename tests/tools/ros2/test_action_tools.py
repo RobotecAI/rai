@@ -22,14 +22,17 @@ except ImportError:
 
 import time
 
+from langchain_core.tools import ToolException
 from rai.communication.ros2 import ROS2Connector
 from rai.tools.ros2 import (
     CancelROS2ActionTool,
     GetROS2ActionFeedbackTool,
     GetROS2ActionResultTool,
     GetROS2ActionsNamesAndTypesTool,
+    ROS2ActionToolkit,
     StartROS2ActionTool,
 )
+from rai.tools.ros2.base import GoalRegistry
 
 from tests.communication.ros2.helpers import (
     TestActionServer,
@@ -66,7 +69,7 @@ def test_action_call_tool_with_forbidden_action(
     action_name = f"{request.node.originalname}_action"  # type: ignore
     connector = ROS2Connector()
     tool = StartROS2ActionTool(connector=connector, forbidden=[action_name])
-    with pytest.raises(ValueError):
+    with pytest.raises(ToolException, match="not writable"):
         tool._run(  # type: ignore
             action_name=action_name,
             action_type="nav2_msgs/action/NavigateToPose",
@@ -100,8 +103,9 @@ def test_cancel_action_tool(ros_setup: None, request: pytest.FixtureRequest) -> 
     connector = ROS2Connector()
     server = TestActionServer(action_name=action_name)
     executors, threads = multi_threaded_spinner([server])
-    start_tool = StartROS2ActionTool(connector=connector)
-    cancel_tool = CancelROS2ActionTool(connector=connector)
+    goals = GoalRegistry()
+    start_tool = StartROS2ActionTool(connector=connector, goals=goals)
+    cancel_tool = CancelROS2ActionTool(goals=goals)
     try:
         time.sleep(0.2)  # Wait for action server to be ready
         response = start_tool._run(  # type: ignore
@@ -208,19 +212,45 @@ def test_get_actions_names_and_types_tool_with_writable_and_forbidden(
         shutdown_executors_and_threads(executors, threads)
 
 
-def test_result_and_feedback_tools_handle_unknown_and_pending_ids(
+def test_goal_tools_report_unknown_ids() -> None:
+    goals = GoalRegistry()
+    for tool in (
+        GetROS2ActionFeedbackTool(goals=goals),
+        GetROS2ActionResultTool(goals=goals),
+        CancelROS2ActionTool(goals=goals),
+    ):
+        with pytest.raises(ToolException, match="Unknown action ID: nope"):
+            tool._run(action_id="nope")
+
+
+def test_action_feedback_and_result_tools(
     ros_setup: None, request: pytest.FixtureRequest
 ) -> None:
+    """Goal ids, feedback and the result come from the toolkit's GoalHandles."""
+    action_name = f"{request.node.originalname}_action"  # type: ignore
     connector = ROS2Connector()
-    feedback_tool = GetROS2ActionFeedbackTool(connector=connector)
-    result_tool = GetROS2ActionResultTool()
+    server = TestActionServer(action_name=action_name)
+    executors, threads = multi_threaded_spinner([server])
+    tools = {
+        tool.name: tool for tool in ROS2ActionToolkit(connector=connector).get_tools()
+    }
     try:
-        assert result_tool._run(action_id="nope") == "Unknown action ID: nope"
-        assert feedback_tool._run(action_id="nope") == "Unknown action ID: nope"
-        result_tool.internal_action_id_mapping["pending"] = "pending-internal"
-        assert result_tool._run(action_id="pending") == (
-            "Action pending is not done yet."
+        response = tools["start_ros2_action"]._run(
+            action_name=action_name,
+            action_type="nav2_msgs/action/NavigateToPose",
+            action_args={},
+        )
+        action_id = response.split("Action started with ID:")[1].strip()
+        assert tools["get_ros2_action_ids"]._run() == str([action_id])
+        result_tool = tools["get_ros2_action_result"]
+        deadline = time.monotonic() + 10
+        while "not done yet" in (result := result_tool._run(action_id=action_id)):
+            assert time.monotonic() < deadline
+            time.sleep(0.1)
+        assert "'status': 'SUCCEEDED'" in result
+        assert "distance_remaining" in tools["get_ros2_action_feedback"]._run(
+            action_id=action_id
         )
     finally:
-        result_tool.internal_action_id_mapping.pop("pending", None)
-        connector.shutdown()
+        connector.close()
+        shutdown_executors_and_threads(executors, threads)

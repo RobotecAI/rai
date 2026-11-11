@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Robotec.AI
+# Copyright (C) 2025 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,8 +18,9 @@ from langchain_core.tools import BaseTool
 from langchain_core.utils import stringify_dict
 from pydantic import BaseModel, Field
 
-from rai.communication.ros2 import ROS2Message
-from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
+from rai.communication.ros2.runtime import message_class
+from rai.tools.hooks import Effect
+from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit, from_dict, to_dict
 
 
 class ROS2ServicesToolkit(BaseROS2Toolkit):
@@ -27,61 +28,22 @@ class ROS2ServicesToolkit(BaseROS2Toolkit):
     description: str = "A toolkit for ROS2 services"
 
     def get_tools(self) -> List[BaseTool]:
-        return [
-            CallROS2ServiceTool(
-                connector=self.connector,
-                readable=self.readable,
-                writable=self.writable,
-                forbidden=self.forbidden,
-            ),
-            GetROS2ServicesNamesAndTypesTool(
-                connector=self.connector,
-                readable=self.readable,
-                writable=self.writable,
-                forbidden=self.forbidden,
-            ),
-        ]
-
-
-class GetROS2ServicesNamesAndTypesToolInput(BaseModel):
-    pass
+        return self._build(CallROS2ServiceTool, GetROS2ServicesNamesAndTypesTool)
 
 
 class GetROS2ServicesNamesAndTypesTool(BaseROS2Tool):
+    """Lists the services the tool may call (all but forbidden, or the writable ones)."""
+
+    default_effect = Effect.READ
     name: str = "get_ros2_services_names_and_types"
     description: str = "Get the names and types of all ROS2 services"
-    args_schema: Type[GetROS2ServicesNamesAndTypesToolInput] = (
-        GetROS2ServicesNamesAndTypesToolInput
-    )
 
-    def _run(self) -> str:
-        services_and_types = self.connector.get_services_names_and_types()
-        if all([self.readable is None, self.writable is None, self.forbidden is None]):
-            response = [
-                {"service": service, "type": type}
-                for service, type in services_and_types
-            ]
-            return "\n".join([stringify_dict(service) for service in response])
-        else:
-            writable_services: List[Dict[str, Any]] = []
-
-            for service, type in services_and_types:
-                should_include, _, is_writable_service = (
-                    self._check_permission_and_include(
-                        service, check_readable=False, service=True
-                    )
-                )
-                # For services, only include writable ones (actionable for LLM agents)
-                if should_include and is_writable_service:
-                    writable_services.append({"service": service, "type": type})
-
-            text_response = "\n".join(
-                [
-                    stringify_dict(service_description)
-                    for service_description in writable_services
-                ]
-            )
-            return text_response
+    async def _acall(self) -> str:
+        return "\n".join(
+            stringify_dict({"service": service, "type": types})
+            for service, types in self.connector.get_services_names_and_types()
+            if self.is_writable(service, service=True)
+        )
 
 
 class CallROS2ServiceToolInput(BaseModel):
@@ -99,28 +61,25 @@ class CallROS2ServiceToolInput(BaseModel):
 
 
 class CallROS2ServiceTool(BaseROS2Tool):
+    default_effect = Effect.WRITE
+    target_args = {"service_name": "service"}
     name: str = "call_ros2_service"
     description: str = "Call a ROS2 service"
     args_schema: Type[CallROS2ServiceToolInput] = CallROS2ServiceToolInput
 
-    def _run(
+    async def _acall(
         self,
         service_name: str,
         service_type: str,
         service_args: Optional[Dict[str, Any]] = None,
         timeout_sec: float = 5.0,
     ) -> str:
-        if not self.is_writable(service_name, service=True):
-            raise ValueError(f"Service {service_name} is not writable")
-        if service_args is None:
-            service_args = {}
-        message = ROS2Message(payload=service_args)
-        response = self.connector.service_call(
-            message, service_name, msg_type=service_type, timeout_sec=timeout_sec
+        self.check_writable(service_name, "service")
+        srv_cls = message_class(service_type)
+        response = await self.connector.call(
+            service_name,
+            from_dict(srv_cls.Request, service_args),
+            srv_type=srv_cls,
+            timeout=timeout_sec,
         )
-        return str(
-            {
-                "payload": response.payload,
-                "metadata": response.metadata,
-            }
-        )
+        return str({"payload": to_dict(response)})

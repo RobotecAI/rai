@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Robotec.AI
+# Copyright (C) 2025 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,19 +15,22 @@
 import json
 from typing import Any, Dict, List, Literal, Tuple, Type
 
-import rclpy.time
-import rosidl_runtime_py.set_message
 import rosidl_runtime_py.utilities
-from langchain.tools import BaseTool
+from langchain_core.tools import BaseTool
 from langchain_core.utils import stringify_dict
 from pydantic import BaseModel, Field
+from rclpy.time import Time
 from sensor_msgs.msg import CompressedImage, Image
 
-from rai.communication.ros2 import ROS2Connector, ROS2Message
-from rai.communication.ros2.api.conversion import ros2_message_to_dict
-from rai.communication.ros2.images import compressed_imgmsg_to_numpy, imgmsg_to_numpy
-from rai.messages import MultimodalArtifact, preprocess_image
-from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
+from rai.communication.ros2 import encode_image
+from rai.tools.hooks import Effect
+from rai.tools.ros2.base import (
+    BaseROS2Tool,
+    BaseROS2Toolkit,
+    from_dict,
+    to_dict,
+    type_name,
+)
 from rai.tools.ros2.generic.interface_parser import render_interface_string
 
 
@@ -36,44 +39,14 @@ class ROS2TopicsToolkit(BaseROS2Toolkit):
     description: str = "A toolkit for ROS2 topics"
 
     def get_tools(self) -> List[BaseTool]:
-        return [
-            PublishROS2MessageTool(
-                connector=self.connector,
-                readable=self.readable,
-                writable=self.writable,
-                forbidden=self.forbidden,
-            ),
-            ReceiveROS2MessageTool(
-                connector=self.connector,
-                readable=self.readable,
-                writable=self.writable,
-                forbidden=self.forbidden,
-            ),
-            GetROS2ImageTool(
-                connector=self.connector,
-                readable=self.readable,
-                writable=self.writable,
-                forbidden=self.forbidden,
-            ),
-            GetROS2TransformTool(
-                connector=self.connector,
-                readable=self.readable,
-                writable=self.writable,
-                forbidden=self.forbidden,
-            ),
-            GetROS2TopicsNamesAndTypesTool(
-                connector=self.connector,
-                readable=self.readable,
-                writable=self.writable,
-                forbidden=self.forbidden,
-            ),
-            GetROS2MessageInterfaceTool(
-                connector=self.connector,
-                readable=self.readable,
-                writable=self.writable,
-                forbidden=self.forbidden,
-            ),
-        ]
+        return self._build(
+            PublishROS2MessageTool,
+            ReceiveROS2MessageTool,
+            GetROS2ImageTool,
+            GetROS2TransformTool,
+            GetROS2TopicsNamesAndTypesTool,
+            GetROS2MessageInterfaceTool,
+        )
 
 
 class PublishROS2MessageToolInput(BaseModel):
@@ -85,18 +58,19 @@ class PublishROS2MessageToolInput(BaseModel):
 
 
 class PublishROS2MessageTool(BaseROS2Tool):
+    """Publishing to an arbitrary topic (e.g. /cmd_vel) can move the robot."""
+
+    default_effect = Effect.ACTUATE
+    target_args = {"topic": "topic"}
     name: str = "publish_ros2_message"
     description: str = "Publish a message to a ROS2 topic"
     args_schema: Type[PublishROS2MessageToolInput] = PublishROS2MessageToolInput
 
-    def _run(self, topic: str, message: Dict[str, Any], message_type: str) -> str:
-        if not self.is_writable(topic):
-            raise ValueError(f"Topic {topic} is not writable")
-        ros_message = ROS2Message(
-            payload=message,
-            metadata={"topic": topic},
-        )
-        self.connector.send_message(ros_message, target=topic, msg_type=message_type)
+    async def _acall(
+        self, topic: str, message: Dict[str, Any], message_type: str
+    ) -> str:
+        self.check_writable(topic)
+        await self.connector.publish(topic, from_dict(message_type, message))
         return "Message published successfully"
 
 
@@ -108,16 +82,16 @@ class ReceiveROS2MessageToolInput(BaseModel):
 
 
 class ReceiveROS2MessageTool(BaseROS2Tool):
-    connector: ROS2Connector
+    default_effect = Effect.READ
+    target_args = {"topic": "topic"}
     name: str = "receive_ros2_message"
     description: str = "Receive a message from a ROS2 topic"
     args_schema: Type[ReceiveROS2MessageToolInput] = ReceiveROS2MessageToolInput
 
-    def _run(self, topic: str, timeout_sec: float = 1.0) -> str:
-        if not self.is_readable(topic):
-            raise ValueError(f"Topic {topic} is not readable")
-        message = self.connector.receive_message(topic, timeout_sec=timeout_sec)
-        return str({"payload": message.payload, "metadata": message.metadata})
+    async def _acall(self, topic: str, timeout_sec: float = 1.0) -> str:
+        self.check_readable(topic)
+        msg = await self.connector.receive(topic, timeout=timeout_sec)
+        return str({"payload": to_dict(msg), "msg_type": type_name(msg)})
 
 
 class GetROS2ImageToolInput(BaseModel):
@@ -127,96 +101,56 @@ class GetROS2ImageToolInput(BaseModel):
     timeout_sec: float = Field(1.0, gt=0, description="The timeout in seconds")
 
 
+async def receive_image(
+    tool: BaseROS2Tool, topic: str, timeout_sec: float
+) -> Tuple[str, Dict[str, List[str]]]:
+    tool.check_readable(topic)
+    msg = await tool.connector.receive(topic, timeout=timeout_sec)
+    if not isinstance(msg, (Image, CompressedImage)):
+        raise ValueError(f"Unsupported message type: {type_name(msg)}")
+    return "Image received successfully", {"images": [encode_image(msg)]}
+
+
 class GetROS2ImageTool(BaseROS2Tool):
-    connector: ROS2Connector
+    default_effect = Effect.READ
+    target_args = {"topic": "topic"}
     name: str = "get_ros2_image"
     description: str = "Get an image from a ROS2 topic"
     args_schema: Type[GetROS2ImageToolInput] = GetROS2ImageToolInput
     response_format: Literal["content", "content_and_artifact"] = "content_and_artifact"
 
-    def _run(
+    async def _acall(
         self, topic: str, timeout_sec: float = 1.0
-    ) -> Tuple[str, MultimodalArtifact]:
-        if not self.is_readable(topic):
-            raise ValueError(f"Topic {topic} is not readable")
-        message = self.connector.receive_message(topic, timeout_sec=timeout_sec)
-        msg_type = type(message.payload)
-        if msg_type == Image:
-            image = imgmsg_to_numpy(message.payload, "rgb8")
-        elif msg_type == CompressedImage:
-            image = compressed_imgmsg_to_numpy(message.payload, "rgb8")
-        else:
-            raise ValueError(
-                f"Unsupported message type: {message.metadata['msg_type']}"
-            )
-        return "Image received successfully", MultimodalArtifact(
-            images=[preprocess_image(image)]
-        )  # type: ignore
+    ) -> Tuple[str, Dict[str, List[str]]]:
+        return await receive_image(self, topic, timeout_sec)
 
 
 class GetROS2TopicsNamesAndTypesTool(BaseROS2Tool):
-    connector: ROS2Connector
+    default_effect = Effect.READ
     name: str = "get_ros2_topics_names_and_types"
     description: str = "Get the names and types of all ROS2 topics"
 
-    def _run(self) -> str:
-        topics_and_types = self.connector.get_topics_names_and_types()
-        if all([self.readable is None, self.writable is None, self.forbidden is None]):
-            response = [
-                {"topic": topic, "type": topic_type}
-                for topic, topic_type in topics_and_types
-            ]
-            return "\n".join([stringify_dict(topic) for topic in response])
-
-        readable_and_writable_topics: List[Dict[str, Any]] = []
-        readable_topics: List[Dict[str, Any]] = []
-        writable_topics: List[Dict[str, Any]] = []
-
-        for topic, topic_type in topics_and_types:
-            should_include, is_readable_topic, is_writable_topic = (
-                self._check_permission_and_include(topic, check_readable=True)
-            )
-            if not should_include:
+    async def _acall(self) -> str:
+        groups: Dict[str, List[str]] = {"both": [], "read": [], "write": []}
+        unrestricted = self.readable is None and self.writable is None
+        for topic, types in self.connector.get_topics_names_and_types():
+            if self._forbidden(topic):
                 continue
-
-            category = self._categorize(is_readable_topic, is_writable_topic)
-            if category is None:
+            readable, writable = self.is_readable(topic), self.is_writable(topic)
+            if not (
+                unrestricted
+                or (self.readable is not None and readable)
+                or (self.writable is not None and writable)
+            ):
                 continue
-
-            topic_dict = {"topic": topic, "type": topic_type}
-
-            if category == "readable_and_writable":
-                readable_and_writable_topics.append(topic_dict)
-            elif category == "readable":
-                readable_topics.append(topic_dict)
-            elif category == "writable":
-                writable_topics.append(topic_dict)
-
-        text_response = "\n".join(
-            [
-                stringify_dict(topic_description)
-                for topic_description in readable_and_writable_topics
-            ]
-        )
-        if readable_topics:
-            if text_response:
-                text_response += "\n"
-            text_response += "Readable topics:\n" + "\n".join(
-                [
-                    stringify_dict(topic_description)
-                    for topic_description in readable_topics
-                ]
-            )
-        if writable_topics:
-            if text_response:
-                text_response += "\n"
-            text_response += "Writable topics:\n" + "\n".join(
-                [
-                    stringify_dict(topic_description)
-                    for topic_description in writable_topics
-                ]
-            )
-        return text_response
+            group = "both" if readable and writable else "read" if readable else "write"
+            groups[group].append(stringify_dict({"topic": topic, "type": types}))
+        lines = groups["both"]
+        if groups["read"]:
+            lines += ["Readable topics:", *groups["read"]]
+        if groups["write"]:
+            lines += ["Writable topics:", *groups["write"]]
+        return "\n".join(lines)
 
 
 class GetROS2MessageInterfaceToolInput(BaseModel):
@@ -226,27 +160,26 @@ class GetROS2MessageInterfaceToolInput(BaseModel):
 
 
 class GetROS2MessageInterfaceTool(BaseROS2Tool):
-    connector: ROS2Connector
+    default_effect = Effect.READ
     name: str = "get_ros2_message_interface"
     description: str = "Get the interface of a ROS2 message"
     args_schema: Type[GetROS2MessageInterfaceToolInput] = (
         GetROS2MessageInterfaceToolInput
     )
 
-    def _run(self, msg_type: str) -> str:
+    async def _acall(self, msg_type: str) -> str:
         """Show ros2 message interface in json format."""
-        msg_cls: Type[object] = rosidl_runtime_py.utilities.get_interface(msg_type)
+        msg_cls: Any = rosidl_runtime_py.utilities.get_interface(msg_type)
         try:
             return render_interface_string(msg_type)
         except (ValueError, LookupError, NotImplementedError):
             # For action classes that can't be instantiated
-            goal_dict = ros2_message_to_dict(msg_cls.Goal())  # type: ignore
-
-            result_dict = ros2_message_to_dict(msg_cls.Result())  # type: ignore
-
-            feedback_dict = ros2_message_to_dict(msg_cls.Feedback())  # type: ignore
             return json.dumps(
-                {"goal": goal_dict, "result": result_dict, "feedback": feedback_dict}
+                {
+                    "goal": to_dict(msg_cls.Goal()),
+                    "result": to_dict(msg_cls.Result()),
+                    "feedback": to_dict(msg_cls.Feedback()),
+                }
             )
 
 
@@ -256,40 +189,30 @@ class GetROS2TransformToolInput(BaseModel):
     timeout_sec: float = Field(default=10.0, gt=0, description="The timeout in seconds")
 
 
+async def describe_transform(
+    tool: BaseROS2Tool, target_frame: str, source_frame: str, timeout_sec: float
+) -> str:
+    """The transform as text, with a warning if it is more than 1 s old."""
+    transform = await tool.connector.transform(
+        target_frame, source_frame, timeout=timeout_sec
+    )
+    age = (tool.connector.now() - Time.from_msg(transform.header.stamp)).nanoseconds
+    result = stringify_dict(to_dict(transform))
+    if abs(age / 1e9) > 1.0:
+        result = (
+            f"WARNING: Robot position data is {age / 1e9:.1f} seconds old"
+            " (potentially stale). The robot may have moved since then.\n\n" + result
+        )
+    return result
+
+
 class GetROS2TransformTool(BaseROS2Tool):
-    connector: ROS2Connector
+    default_effect = Effect.READ
     name: str = "get_ros2_transform"
     description: str = "Get the transform between two frames"
     args_schema: Type[GetROS2TransformToolInput] = GetROS2TransformToolInput
 
-    # Staleness threshold in seconds (10 missed cycles at 10Hz = 1 second)
-    STALE_TRANSFORM_THRESHOLD_SEC: float = 1.0
-
-    def _run(self, target_frame: str, source_frame: str, timeout_sec: float) -> str:
-        transform = self.connector.get_transform(
-            target_frame=target_frame,
-            source_frame=source_frame,
-            timeout_sec=timeout_sec,
-        )
-
-        transform_time = rclpy.time.Time.from_msg(transform.header.stamp)
-        current_time = self.connector.now()
-
-        age_seconds = (current_time - transform_time).nanoseconds / 1e9
-
-        result = stringify_dict(ros2_message_to_dict(transform))
-
-        # Add clear warning for stale data at the beginning of response
-        if abs(age_seconds) > self.STALE_TRANSFORM_THRESHOLD_SEC:
-            if age_seconds == float("inf"):
-                result = (
-                    "WARNING: Robot position data has invalid timestamp (potentially stale). The robot may have moved since then.\n\n"
-                    + result
-                )
-            else:
-                result = (
-                    f"WARNING: Robot position data is {age_seconds:.1f} seconds old (potentially stale). The robot may have moved since then.\n\n"
-                    + result
-                )
-
-        return result
+    async def _acall(
+        self, target_frame: str, source_frame: str, timeout_sec: float = 10.0
+    ) -> str:
+        return await describe_transform(self, target_frame, source_frame, timeout_sec)

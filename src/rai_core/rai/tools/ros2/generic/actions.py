@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Robotec.AI
+# Copyright (C) 2025 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,140 +12,57 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import uuid
-from collections import defaultdict
-from functools import partial
-from threading import Lock
-from typing import Any, Callable, Dict, List, Type
+"""Generic action tools. Goals live in the toolkit's GoalRegistry, so tools of
+one toolkit share them and separate toolkits (agents, robots) do not."""
 
-from langchain_core.tools import BaseTool  # type: ignore
+from typing import Any, Dict, List, Mapping, Type
+
+from langchain_core.tools import BaseTool
 from langchain_core.utils import stringify_dict
 from pydantic import BaseModel, Field
 
-from rai.communication.ros2 import ROS2Message
-from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
-
-internal_action_id_mapping: Dict[str, str] = {}
-action_results_store: Dict[str, Any] = {}
-action_results_store_lock: Any = Lock()
-action_feedbacks_store: Dict[str, List[Any]] = defaultdict(list)
-action_feedbacks_store_lock: Any = Lock()
-
-
-def get_internal_action_id_mapping():
-    return internal_action_id_mapping
-
-
-def get_action_results_store():
-    return action_results_store
-
-
-def get_action_results_store_lock():
-    return action_results_store_lock
-
-
-def get_action_feedbacks_store():
-    return action_feedbacks_store
-
-
-def get_action_feedbacks_store_lock():
-    return action_feedbacks_store_lock
+from rai.communication.ros2.runtime import message_class
+from rai.tools.base import RaiTool
+from rai.tools.hooks import Effect
+from rai.tools.ros2.base import (
+    BaseROS2Tool,
+    BaseROS2Toolkit,
+    GoalRegistry,
+    from_dict,
+    to_dict,
+)
 
 
 class ROS2ActionToolkit(BaseROS2Toolkit):
     name: str = "ros2_action"
     description: str = "A toolkit for ROS2 actions"
 
-    action_results_store: Dict[str, Any] = Field(
-        default_factory=get_action_results_store
-    )
-    action_results_store_lock: Any = Field(
-        default_factory=get_action_results_store_lock
-    )
-    action_feedbacks_store: Dict[str, List[Any]] = Field(
-        default_factory=get_action_feedbacks_store
-    )
-    action_feedbacks_store_lock: Any = Field(
-        default_factory=get_action_feedbacks_store_lock
-    )
+    goals: GoalRegistry = Field(default_factory=GoalRegistry, exclude=True)
 
     def get_tools(self) -> List[BaseTool]:
         return [
-            StartROS2ActionTool(
-                connector=self.connector,
-                feedback_callback=self._generic_feedback_callback,
-                on_done_callback=self._generic_on_done_callback,
-                readable=self.readable,
-                writable=self.writable,
-                forbidden=self.forbidden,
-            ),
-            CancelROS2ActionTool(
-                connector=self.connector,
-                readable=self.readable,
-                writable=self.writable,
-                forbidden=self.forbidden,
-            ),
-            GetROS2ActionFeedbackTool(
-                connector=self.connector,
-                readable=self.readable,
-                writable=self.writable,
-                forbidden=self.forbidden,
-            ),
-            GetROS2ActionResultTool(),
-            GetROS2ActionIDsTool(),
-            GetROS2ActionsNamesAndTypesTool(
-                connector=self.connector,
-                readable=self.readable,
-                writable=self.writable,
-                forbidden=self.forbidden,
-            ),
+            *self._build(StartROS2ActionTool, goals=self.goals),
+            CancelROS2ActionTool(goals=self.goals),
+            GetROS2ActionFeedbackTool(goals=self.goals),
+            GetROS2ActionResultTool(goals=self.goals),
+            GetROS2ActionIDsTool(goals=self.goals),
+            *self._build(GetROS2ActionsNamesAndTypesTool),
         ]
-
-    def _generic_feedback_callback(self, action_id: str, feedback: Any) -> None:
-        with self.action_feedbacks_store_lock:
-            self.action_feedbacks_store[action_id].append(feedback)
-
-    def _generic_on_done_callback(self, action_id: str, future: Any) -> None:
-        with self.action_results_store_lock:
-            self.action_results_store[action_id] = future.result().result
-
-
-class GetROS2ActionsNamesAndTypesToolInput(BaseModel):
-    pass
 
 
 class GetROS2ActionsNamesAndTypesTool(BaseROS2Tool):
+    """Lists the actions the tool may start (all but forbidden, or the writable ones)."""
+
+    default_effect = Effect.READ
     name: str = "get_ros2_actions_names_and_types"
     description: str = "Get the names and types of all ROS2 actions"
-    args_schema: Type[GetROS2ActionsNamesAndTypesToolInput] = (
-        GetROS2ActionsNamesAndTypesToolInput
-    )
 
-    def _run(self) -> str:
-        actions_and_types = self.connector.get_actions_names_and_types()
-        if all([self.readable is None, self.writable is None, self.forbidden is None]):
-            response = [
-                {"action": action, "type": type} for action, type in actions_and_types
-            ]
-            return "\n".join([stringify_dict(action) for action in response])
-        else:
-            writable_actions: List[Dict[str, Any]] = []
-
-            for action, type in actions_and_types:
-                should_include, _, is_writable_action = (
-                    self._check_permission_and_include(action, check_readable=False)
-                )
-                # For actions, only include writable ones (actionable for LLM agents)
-                if should_include and is_writable_action:
-                    writable_actions.append({"action": action, "type": type})
-
-            text_response = "\n".join(
-                [
-                    stringify_dict(action_description)
-                    for action_description in writable_actions
-                ]
-            )
-            return text_response
+    async def _acall(self) -> str:
+        return "\n".join(
+            stringify_dict({"action": action, "type": types})
+            for action, types in self.connector.get_actions_names_and_types()
+            if self.is_writable(action)
+        )
 
 
 class StartROS2ActionToolInput(BaseModel):
@@ -159,120 +76,86 @@ class StartROS2ActionToolInput(BaseModel):
 
 
 class StartROS2ActionTool(BaseROS2Tool):
-    feedback_callback: Callable[[Any, str], None] = lambda _, __: None
-    on_done_callback: Callable[[Any, str], None] = lambda _, __: None
-    internal_action_id_mapping: Dict[str, str] = Field(
-        default_factory=get_internal_action_id_mapping
-    )
+    default_effect = Effect.ACTUATE
+    target_args = {"action_name": "action"}
     name: str = "start_ros2_action"
     description: str = "Start a ROS2 action"
     args_schema: Type[StartROS2ActionToolInput] = StartROS2ActionToolInput
 
-    def _run(
+    goals: GoalRegistry = Field(default_factory=GoalRegistry, exclude=True)
+
+    async def _acall(
         self, action_name: str, action_type: str, action_args: Dict[str, Any]
     ) -> str:
-        if not self.is_writable(action_name):
-            raise ValueError(f"Action {action_name} is not writable")
-        message = ROS2Message(payload=action_args)
-        action_id = str(uuid.uuid4())
-        response = self.connector.start_action(
-            message,
-            action_name,
-            on_feedback=partial(self.feedback_callback, action_id),
-            on_done=partial(self.on_done_callback, action_id),
-            msg_type=action_type,
+        self.check_writable(action_name, "action")
+        action_cls = message_class(action_type)
+        handle = await self.connector.send_goal(
+            action_name, from_dict(action_cls.Goal, action_args), action_type=action_cls
         )
-        self.internal_action_id_mapping[response] = action_id
-        return "Action started with ID: " + response
+        return "Action started with ID: " + self.goals.add(handle)
 
 
-class GetROS2ActionFeedbackToolInput(BaseModel):
-    action_id: str = Field(..., description="The ID of the action to get feedback for")
+class _GoalTool(RaiTool):
+    """A tool on the goals of a GoalRegistry; its target is the goal's action."""
+
+    goals: GoalRegistry = Field(default_factory=GoalRegistry, exclude=True)
+
+    def call_targets(self, kwargs: Mapping[str, Any]) -> tuple[str, ...]:
+        try:
+            return (self.goals.get(kwargs["action_id"]).action,)
+        except (KeyError, ValueError):
+            return ()
 
 
-class GetROS2ActionFeedbackTool(BaseROS2Tool):
+class ActionIDInput(BaseModel):
+    action_id: str = Field(..., description="The ID of the action")
+
+
+class GetROS2ActionFeedbackTool(_GoalTool):
+    default_effect = Effect.READ
     name: str = "get_ros2_action_feedback"
-    description: str = "Get the feedback of a ROS2 action by its action ID"
-    args_schema: Type[GetROS2ActionFeedbackToolInput] = GetROS2ActionFeedbackToolInput
+    description: str = "Get the feedback of a ROS2 action received since the last call, by its action ID"
+    args_schema: Type[ActionIDInput] = ActionIDInput
 
-    action_feedbacks_store: Dict[str, List[Any]] = Field(
-        default_factory=get_action_feedbacks_store
-    )
-    action_feedbacks_store_lock: Any = Field(
-        default_factory=get_action_feedbacks_store_lock
-    )
-    internal_action_id_mapping: Dict[str, str] = Field(
-        default_factory=get_internal_action_id_mapping
-    )
-
-    def _run(self, action_id: str) -> str:
-        with self.action_feedbacks_store_lock:
-            external_action_id = self.internal_action_id_mapping.get(action_id)
-            if external_action_id is None:
-                return f"Unknown action ID: {action_id}"
-            feedbacks = self.action_feedbacks_store[external_action_id]
-            self.action_feedbacks_store[external_action_id] = []
-            return str(feedbacks)
+    async def _acall(self, action_id: str) -> str:
+        return str([to_dict(f) for f in self.goals.get(action_id).feedback()])
 
 
-class GetROS2ActionResultToolInput(BaseModel):
-    action_id: str = Field(
-        ..., description="The id of the action to get the result for"
-    )
-
-
-class GetROS2ActionResultTool(BaseTool):
+class GetROS2ActionResultTool(_GoalTool):
+    default_effect = Effect.READ
     name: str = "get_ros2_action_result"
     description: str = "Get the result of a ROS2 action by its id"
-    args_schema: Type[GetROS2ActionResultToolInput] = GetROS2ActionResultToolInput
+    args_schema: Type[ActionIDInput] = ActionIDInput
 
-    action_results_store: Dict[str, Any] = Field(
-        default_factory=get_action_results_store
-    )
-    action_results_store_lock: Any = Field(
-        default_factory=get_action_results_store_lock
-    )
-    internal_action_id_mapping: Dict[str, str] = Field(
-        default_factory=get_internal_action_id_mapping
-    )
-
-    def _run(self, action_id: str) -> str:
-        with self.action_results_store_lock:
-            external_action_id = self.internal_action_id_mapping.get(action_id)
-            if external_action_id is None:
-                return f"Unknown action ID: {action_id}"
-            if external_action_id not in self.action_results_store:
-                return f"Action {action_id} is not done yet."
-            return str(self.action_results_store[external_action_id])
+    async def _acall(self, action_id: str) -> str:
+        handle = self.goals.get(action_id)
+        if not handle.done:
+            return f"Action {action_id} is not done yet."
+        result = await handle.result(0)
+        return str({"status": handle.status.name, "result": to_dict(result)})
 
 
-class CancelROS2ActionToolInput(BaseModel):
-    action_id: str = Field(..., description="The ID of the action to cancel")
+class CancelROS2ActionTool(_GoalTool):
+    """Cancelling stops motion, so it is a WRITE, never denied as ACTUATE."""
 
-
-class CancelROS2ActionTool(BaseROS2Tool):
+    default_effect = Effect.WRITE
     name: str = "cancel_ros2_action"
     description: str = "Cancel a ROS2 action"
-    args_schema: Type[CancelROS2ActionToolInput] = CancelROS2ActionToolInput
+    args_schema: Type[ActionIDInput] = ActionIDInput
 
-    def _run(self, action_id: str) -> str:
-        if self.connector.terminate_action(action_id):
+    async def _acall(self, action_id: str) -> str:
+        handle = self.goals.get(action_id)
+        if await handle.cancel():
             return f"Action {action_id} cancelled."
-        else:
-            return f"Action {action_id} could not be cancelled."
+        return (
+            f"Action {action_id} could not be cancelled (status: {handle.status.name})."
+        )
 
 
-class GetROS2ActionIDsToolInput(BaseModel):
-    pass
-
-
-class GetROS2ActionIDsTool(BaseTool):
+class GetROS2ActionIDsTool(_GoalTool):
+    default_effect = Effect.READ
     name: str = "get_ros2_action_ids"
     description: str = "Get the IDs of all ROS2 actions"
-    args_schema: Type[GetROS2ActionIDsToolInput] = GetROS2ActionIDsToolInput
-    internal_action_id_mapping: Dict[str, str] = Field(
-        default_factory=get_internal_action_id_mapping
-    )
 
-    def _run(self) -> str:
-        return str(list(self.internal_action_id_mapping.keys()))
+    async def _acall(self) -> str:
+        return str(self.goals.ids())

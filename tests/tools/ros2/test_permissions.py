@@ -21,6 +21,7 @@ try:
 except ImportError:
     pytest.skip("ROS2 is not installed", allow_module_level=True)
 
+from langchain_core.tools import ToolException
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2 import (
     CallROS2ServiceTool,
@@ -48,10 +49,10 @@ def test_forbidden_matches_resolved_name(connector, configured, checked) -> None
     tool = PublishROS2MessageTool(connector=connector, forbidden=[configured])
     assert not tool.is_writable(checked)
     assert not tool.is_readable(checked)
-    with pytest.raises(ValueError, match="not writable"):
+    with pytest.raises(ToolException, match="not writable"):
         tool._run(topic=checked, message={}, message_type="std_msgs/msg/String")
     receive = ReceiveROS2MessageTool(connector=connector, forbidden=[configured])
-    with pytest.raises(ValueError, match="not readable"):
+    with pytest.raises(ToolException, match="not readable"):
         receive._run(topic=checked)
 
 
@@ -66,10 +67,10 @@ def test_whitelists_match_resolved_name(connector) -> None:
 
 def test_forbidden_service_and_action_match_resolved_name(connector) -> None:
     service_tool = CallROS2ServiceTool(connector=connector, forbidden=["/reset"])
-    with pytest.raises(ValueError, match="not writable"):
+    with pytest.raises(ToolException, match="not writable"):
         service_tool._run(service_name="reset", service_type="std_srvs/srv/Empty")
     action_tool = StartROS2ActionTool(connector=connector, forbidden=["/navigate"])
-    with pytest.raises(ValueError, match="not writable"):
+    with pytest.raises(ToolException, match="not writable"):
         action_tool._run(
             action_name="navigate",
             action_type="nav2_msgs/action/NavigateToPose",

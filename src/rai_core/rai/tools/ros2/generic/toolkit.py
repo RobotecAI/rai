@@ -20,31 +20,18 @@ from rai.tools.ros2.base import BaseROS2Toolkit
 
 
 class ROS2Toolkit(BaseROS2Toolkit):
+    """Topics, services and actions toolkits with shared access lists."""
+
     def get_tools(self) -> List[BaseTool]:
-        # lazy import to avoid circular import
-        from rai.tools.ros2.generic import (
+        from rai.tools.ros2.generic import (  # avoid a circular import
             ROS2ActionToolkit,
             ROS2ServicesToolkit,
             ROS2TopicsToolkit,
         )
 
+        access = self.model_dump(include={"readable", "writable", "forbidden"})
         return [
-            *ROS2TopicsToolkit(
-                connector=self.connector,
-                readable=self.readable,
-                writable=self.writable,
-                forbidden=self.forbidden,
-            ).get_tools(),
-            *ROS2ServicesToolkit(
-                connector=self.connector,
-                readable=self.readable,
-                writable=self.writable,
-                forbidden=self.forbidden,
-            ).get_tools(),
-            *ROS2ActionToolkit(
-                connector=self.connector,
-                readable=self.readable,
-                writable=self.writable,
-                forbidden=self.forbidden,
-            ).get_tools(),
+            tool
+            for toolkit in (ROS2TopicsToolkit, ROS2ServicesToolkit, ROS2ActionToolkit)
+            for tool in toolkit(connector=self.connector, **access).get_tools()
         ]
