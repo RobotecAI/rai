@@ -81,7 +81,7 @@ class SemanticMapNode:
 
     def __init__(self, connector: ROS2Connector, database_path: Optional[str] = None):
         self.connector = connector
-        config_path = connector.parameter("node_config", "") or DEFAULT_CONFIG
+        config_path = connector.declare_parameter("node_config", "") or DEFAULT_CONFIG
         with open(config_path) as f:
             groups = (yaml.safe_load(f) or {}).get("rai_semap_node", {})
         from_yaml = {
@@ -92,7 +92,7 @@ class SemanticMapNode:
         }
         self.config = SemanticMapConfig(
             **{
-                name: connector.parameter(name, from_yaml.get(name, default))
+                name: connector.declare_parameter(name, from_yaml.get(name, default))
                 for name, default in asdict(SemanticMapConfig()).items()
             }
         )

@@ -109,11 +109,13 @@ class DetectionPublisher:
 
     def _load_parameters(self) -> Dict[str, Any]:
         files = {
-            "detection_publisher": self.connector.parameter(
+            "detection_publisher": self.connector.declare_parameter(
                 "detection_publisher_config", ""
             )
             or CONFIG_DIR / "detection_publisher.yaml",
-            "perception_utils": self.connector.parameter("perception_utils_config", "")
+            "perception_utils": self.connector.declare_parameter(
+                "perception_utils_config", ""
+            )
             or CONFIG_DIR / "perception_utils.yaml",
         }
         params: Dict[str, Any] = {}
@@ -123,7 +125,7 @@ class DetectionPublisher:
         ):
             from_yaml = _yaml_parameters(Path(files[section]), section)
             for name, default in defaults.items():
-                params[name] = self.connector.parameter(
+                params[name] = self.connector.declare_parameter(
                     name, from_yaml.get(name, default)
                 )
         return params

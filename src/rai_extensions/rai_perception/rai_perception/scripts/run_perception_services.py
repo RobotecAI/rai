@@ -38,7 +38,7 @@ def _connector(node_name: str) -> ROS2Connector:
     # ENABLE_LEGACY_SERVICE_NAMES=false (e.g. from a launch file) drops the
     # legacy service names; a --ros-args -p override still wins.
     enable_legacy = os.getenv("ENABLE_LEGACY_SERVICE_NAMES", "true").lower() == "true"
-    connector.parameter("enable_legacy_service_names", enable_legacy)
+    connector.declare_parameter("enable_legacy_service_names", enable_legacy)
     return connector
 
 

@@ -375,7 +375,6 @@ def _setup_benchmark_environment(
     """Setup common benchmark environment"""
     rclpy.init()
     connector = ROS2Connector()
-    connector.declare_parameter("conversion_ratio", 1.0)
 
     # define tools
     tools: List[BaseTool] = [
@@ -386,7 +385,9 @@ def _setup_benchmark_environment(
             camera_topic="/color_image5",
             depth_topic="/depth_image5",
             camera_info_topic="/color_camera_info5",
-            get_grabbing_point_tool=GetGrabbingPointTool(connector=connector),
+            get_grabbing_point_tool=GetGrabbingPointTool(
+                connector=connector, conversion_ratio=1.0
+            ),
         ),
         MoveToPointTool(connector=connector, manipulator_frame="panda_link0"),
         GetROS2ImageConfiguredTool(connector=connector, topic="/color_image5"),

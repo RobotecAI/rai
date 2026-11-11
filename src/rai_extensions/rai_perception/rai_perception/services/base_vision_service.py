@@ -109,7 +109,7 @@ class BaseVisionService:
 
     def _get_param_value(self, param_name: str, default):
         """The ROS 2 parameter of the service's node (declared with default)."""
-        return self.ros2_connector.parameter(param_name, default)
+        return self.ros2_connector.declare_parameter(param_name, default)
 
     def _initialize_model_from_registry(
         self, get_model_func, default_model_name: str, model_type_name: str

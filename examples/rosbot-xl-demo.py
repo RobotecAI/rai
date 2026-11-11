@@ -70,7 +70,7 @@ def initialize_agent() -> ReActAgent:
             depth_topic="/camera/camera/depth/image_rect_raw",
             camera_info_topic="/camera/camera/color/camera_info",
             get_grabbing_point_tool=GetGrabbingPointTool(
-                connector=connector,
+                connector=connector, conversion_ratio=1.0
             ),
         ),
         NavigateToPoseBlockingTool(
@@ -86,8 +86,6 @@ def initialize_agent() -> ReActAgent:
         tools,
         system_prompt=embodiment_info.to_langchain(),
     )
-    connector.declare_parameter("conversion_ratio", 1.0)
-
     return agent
 
 

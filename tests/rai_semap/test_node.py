@@ -226,8 +226,8 @@ def test_node_config_defaults(node, temp_db_path):
         camera_info_topic="/camera/camera/color/camera_info",
     )
     # Parameters are declared on the node with the YAML defaults.
-    assert node.connector.parameter("confidence_threshold", 0.0) == 0.5
-    assert node.connector.parameter("map_topic", "") == "/map"
+    assert node.connector.declare_parameter("confidence_threshold", 0.0) == 0.5
+    assert node.connector.declare_parameter("map_topic", "") == "/map"
     assert node.memory.location_id == "default_location"
     assert node.memory.map_frame_id == "map"
     assert node.memory.resolution == 0.05

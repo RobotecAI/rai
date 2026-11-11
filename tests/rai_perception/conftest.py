@@ -49,13 +49,13 @@ def grasp(request):
 def make_mock_connector() -> MagicMock:
     """A stand-in ROS2Connector (it passes isinstance checks).
 
-    ROS parameters live in connector.params (connector.parameter declares a
+    ROS parameters live in connector.params (connector.declare_parameter declares a
     default there); receive, call, publish and transform are AsyncMocks; the
     ROS graph is empty; names resolve to absolute names.
     """
     connector = MagicMock(spec=ROS2Connector)
     connector.params = {}
-    connector.parameter.side_effect = connector.params.setdefault
+    connector.declare_parameter.side_effect = connector.params.setdefault
     connector.now.return_value = Time()
     connector.resolve.side_effect = lambda name, kind="topic": "/" + name.lstrip("/")
     for name in ("receive", "call", "publish", "transform"):
