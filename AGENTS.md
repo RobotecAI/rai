@@ -43,7 +43,7 @@ pre-commit run ruff-format --all-files
 
 Ruff uses `--fix` by default through pre-commit, so it auto-fixes import ordering issues.
 
-Type check with `pyright` from the repo root after the shell setup above (ROS sourced, venv active; settings in `pyproject.toml` `[tool.pyright]`: strict on `rai.communication`, standard on the rest of rai_core; CI runs it in the Lyrical image).
+Type check with `pyright` from the repo root after the shell setup above (ROS sourced, venv active; settings in `pyproject.toml` `[tool.pyright]`: strict on `rai.communication`, standard on the rest of rai_core and the other packages except rai_bench; CI runs it in the Lyrical image).
 
 ### Testing
 

@@ -149,7 +149,15 @@ exclude_also = [
 [tool.pyright]
 # Run from an environment with ROS sourced and the venv active: pyright then takes its import
 # paths from that python (system site-packages, /opt/ros/<distro>, the colcon overlay).
-include = ["src/rai_core/rai"]
+# rai_bench is not in the gate yet (69 standard errors on 2026-11-11, mostly pandas types).
+include = [
+    "src/rai_core/rai",
+    "src/rai_s2s/rai_s2s",
+    "src/rai_extensions/rai_perception/rai_perception",
+    "src/rai_semap/rai_semap",
+    "src/rai_sim/rai_sim",
+    "src/rai_whoami/rai_whoami",
+]
 strict = ["src/rai_core/rai/communication"]
 typeCheckingMode = "standard"
 pythonVersion = "3.12"
