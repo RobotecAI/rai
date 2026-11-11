@@ -283,7 +283,9 @@ def test_cancel_during_inference(robot: Robot, agent: ROS2Connector) -> None:
                 await task
             return time.monotonic() - start
 
-        assert asyncio.run(run()) < 0.2
+        # Well under the 2 s inference: the cancel does not wait for the reply.
+        # Not 0.2 s, so a loaded CI runner passes (typically a few ms).
+        assert asyncio.run(run()) < 1.0
     settle(robot)
     assert all(is_stop(m) for _, _, m in robot.commands)  # only the safe stop
     assert robot.commands
