@@ -22,7 +22,7 @@ from sensor_msgs.msg import CompressedImage, Image
 
 from rai.aggregators import BaseAggregator
 from rai.communication.ros2.api import convert_ros_img_to_base64
-from rai.initialization.model_initialization import get_llm_model
+from rai.llm import get_llm
 from rai.messages import HumanMultimodalMessage
 
 
@@ -78,7 +78,7 @@ class ROS2ImgVLMDescriptionAggregator(BaseAggregator[Image | CompressedImage]):
     ) -> None:
         super().__init__(max_size)
         if llm is None:
-            self.llm = get_llm_model(model_type="simple_model", streaming=True)
+            self.llm = get_llm("simple", streaming=True)
         else:
             self.llm = llm
 
@@ -122,7 +122,7 @@ class ROS2ImgVLMDiffAggregator(BaseAggregator[Image | CompressedImage]):
     ) -> None:
         super().__init__(max_size)
         if llm is None:
-            self.llm = get_llm_model(model_type="simple_model", streaming=True)
+            self.llm = get_llm("simple", streaming=True)
         else:
             self.llm = llm
 

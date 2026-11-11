@@ -18,7 +18,7 @@ import asyncio
 import rai
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import Runnable, RunnableConfig
-from rai import get_llm_model, get_tracing_callbacks
+from rai import get_llm, get_tracing_callbacks
 from rai.agents import BaseAgent
 from rai.agents.langchain.core import (
     ConversationalAgentState,
@@ -110,7 +110,7 @@ def main():
 
     # Initialize LangGraph Agent
     agent = create_conversational_agent(
-        llm=get_llm_model("complex_model"),
+        llm=get_llm("complex"),
         system_prompt=embodiment_info.to_langchain(),
         tools=[
             GetROS2ImageConfiguredTool(

@@ -17,7 +17,7 @@ import logging
 from typing import List, Literal, Tuple
 
 from langchain_core.tools import BaseTool
-from rai import get_llm_model
+from rai import get_llm
 from rai.agents.langchain.core import create_react_runnable
 from rai.communication.ros2 import wait_for_ros2_services, wait_for_ros2_topics
 from rai.communication.ros2.connectors import ROS2Connector
@@ -101,7 +101,7 @@ def _create_agent_v1():
         camera_tool,
     ]
 
-    llm = get_llm_model(model_type="complex_model", streaming=True)
+    llm = get_llm("complex", streaming=True)
     embodiment_info = EmbodimentInfo.from_file(
         "examples/embodiments/manipulation_embodiment.json"
     )
@@ -159,7 +159,7 @@ def _create_agent_v2():
 
     wait_for_perception_dependencies(connector, tools)
 
-    llm = get_llm_model(model_type="complex_model", streaming=True)
+    llm = get_llm("complex", streaming=True)
     embodiment_info = EmbodimentInfo.from_file(
         "examples/embodiments/manipulation_embodiment.json"
     )

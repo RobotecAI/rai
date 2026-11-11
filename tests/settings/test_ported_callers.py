@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Robotec.AI
+# Copyright (C) 2026 Robotec.AI
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,18 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .model_initialization import (
-    get_embeddings_model,
-    get_llm_model,
-    get_llm_model_config_and_vendor,
-    get_llm_model_direct,
-    get_tracing_callbacks,
-)
 
-__all__ = [
-    "get_embeddings_model",
-    "get_llm_model",
-    "get_llm_model_config_and_vendor",
-    "get_llm_model_direct",
-    "get_tracing_callbacks",
-]
+def test_benchmark_llm_from_vendor_and_name(calls):
+    from rai_bench.utils import get_llm_for_benchmark
+
+    get_llm_for_benchmark("llama3.2", "ollama")
+    get_llm_for_benchmark("gemini-3-pro", "google", temperature=0)
+    assert calls == [
+        ("llama3.2", {"model_provider": "ollama", "keep_alive": 20}),
+        ("gemini-3-pro", {"model_provider": "google_genai", "temperature": 0}),
+    ]

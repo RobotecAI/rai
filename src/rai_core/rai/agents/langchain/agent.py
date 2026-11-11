@@ -26,7 +26,7 @@ from rai.agents.base import SyncAgent
 from rai.agents.langchain.callback import HRICallbackHandler
 from rai.agents.langchain.core import ReActAgentState
 from rai.communication.hri_connector import HRIConnector, HRIMessage
-from rai.initialization import get_tracing_callbacks
+from rai.llm import get_tracing_callbacks
 
 
 class BaseState(TypedDict):

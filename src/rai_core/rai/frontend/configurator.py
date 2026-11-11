@@ -21,11 +21,94 @@ import requests
 import streamlit as st
 import tomllib
 import tomli_w
-from langchain_aws import BedrockEmbeddings, ChatBedrock
-from langchain_ollama import ChatOllama, OllamaEmbeddings
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 import logging
 import importlib.util
+
+from rai.llm import get_embeddings, get_llm
+from rai.settings import RAISettings
+
+# The wizard edits this per-vendor layout; `to_rai_toml` turns it into rai.toml.
+DEFAULTS = """
+[vendor]
+simple_model = "openai"
+complex_model = "openai"
+embeddings_model = "openai"
+
+[aws]
+simple_model = "anthropic.claude-3-haiku-20240307-v1:0"
+complex_model = "anthropic.claude-3-5-sonnet-20240620-v1:0"
+embeddings_model = "amazon.titan-embed-text-v1"
+region_name = "us-east-1"
+
+[openai]
+simple_model = "gpt-4o-mini"
+complex_model = "gpt-4o"
+embeddings_model = "text-embedding-3-small"
+base_url = "https://api.openai.com/v1/"
+
+[ollama]
+simple_model = "llama3.2"
+complex_model = "llama3.1:70b"
+embeddings_model = "llama3.2"
+base_url = "http://localhost:11434"
+
+[tracing]
+project = "rai"
+
+[tracing.langfuse]
+use_langfuse = false
+host = "http://localhost:3000"
+
+[tracing.langsmith]
+use_langsmith = false
+host = "https://api.smith.langchain.com"
+
+[asr]
+recording_device_name = "default"
+transcription_model = "LocalWhisper"
+language = "en"
+vad_model = "SileroVAD"
+silence_grace_period = 0.3
+vad_threshold = 0.3
+use_wake_word = false
+wake_word_model = ""
+wake_word_threshold = 0.5
+wake_word_model_name = ""
+transcription_model_name = "tiny"
+
+[tts]
+vendor = "ElevenLabs"
+voice = ""
+speaker_device_name = "default"
+"""
+
+_PROVIDERS = {"openai": "openai", "aws": "bedrock_converse", "ollama": "ollama"}
+
+
+def to_rai_toml(cfg: dict) -> dict:
+    """Convert the wizard state into the rai.toml schema (see `rai.settings`)."""
+    vendors = cfg["vendor"]
+    models = {
+        role: f"{_PROVIDERS[vendors[f'{role}_model']]}:{cfg[vendors[f'{role}_model']][f'{role}_model']}"
+        for role in ("simple", "complex", "embeddings")
+    }
+    models["provider_kwargs"] = {
+        "openai": {"base_url": cfg["openai"]["base_url"]},
+        "ollama": {"base_url": cfg["ollama"]["base_url"]},
+        "bedrock_converse": {"region_name": cfg["aws"]["region_name"]},
+    }
+    tracing = cfg["tracing"]
+    return {
+        "models": models,
+        "tracing": {
+            "project": tracing.get("project", "rai"),
+            "langfuse": tracing["langfuse"]["use_langfuse"],
+            "langfuse_host": tracing["langfuse"]["host"],
+            "langsmith": tracing["langsmith"]["use_langsmith"],
+            "langsmith_host": tracing["langsmith"]["host"],
+        },
+        **{k: cfg[k] for k in ("asr", "tts") if k in cfg},
+    }
 
 
 def _s2s(module: str):
@@ -761,32 +844,18 @@ def review_and_save():
 
     # Display current configuration
     st.subheader("Current Configuration")
-    toml_string = tomli_w.dumps(st.session_state.config)
+    rai_toml = to_rai_toml(st.session_state.config)
+    settings = RAISettings(**rai_toml)
+    toml_string = tomli_w.dumps(rai_toml)
     st.code(toml_string, language="toml")
 
     if st.button("Test Configuration"):
         progress = st.progress(0.0)
         test_results = {}
 
-        def create_chat_model(model_type: str):
-            vendor_name = st.session_state.config["vendor"][f"{model_type}_model"]
-            model_name = st.session_state.config[vendor_name][f"{model_type}_model"]
-
-            if vendor_name == "openai":
-                base_url = st.session_state.config["openai"]["base_url"]
-                return ChatOpenAI(model=model_name, base_url=base_url)
-            elif vendor_name == "aws":
-                return ChatBedrock(model_id=model_name)
-            elif vendor_name == "ollama":
-                return ChatOllama(
-                    model=model_name,
-                    base_url=st.session_state.config["ollama"]["base_url"],
-                )
-            raise ValueError(f"Unknown vendor: {vendor_name}")
-
         def test_chat_model(model_type: str) -> bool:
             try:
-                model = create_chat_model(model_type)
+                model = get_llm(model_type, settings=settings)
                 answer = model.invoke("Say hello!")
                 return answer.content is not None
             except Exception as e:
@@ -801,23 +870,7 @@ def review_and_save():
 
         def test_embeddings_model():
             try:
-                embeddings_model_vendor_name = st.session_state.config["vendor"][
-                    "embeddings_model"
-                ]
-                if embeddings_model_vendor_name == "openai":
-                    embeddings_model = OpenAIEmbeddings(
-                        model=st.session_state.config["openai"]["embeddings_model"],
-                        base_url=st.session_state.config["openai"]["base_url"],
-                    )
-                elif embeddings_model_vendor_name == "aws":
-                    embeddings_model = BedrockEmbeddings(
-                        model_id=st.session_state.config["aws"]["embeddings_model"]
-                    )
-                elif embeddings_model_vendor_name == "ollama":
-                    embeddings_model = OllamaEmbeddings(
-                        model=st.session_state.config["ollama"]["embeddings_model"],
-                        base_url=st.session_state.config["ollama"]["base_url"],
-                    )
+                embeddings_model = get_embeddings(settings=settings)
                 embeddings_answer = embeddings_model.embed_query("Say hello!")
                 return embeddings_answer is not None
             except Exception as e:
@@ -959,9 +1012,9 @@ def review_and_save():
     with col2:
         if st.button("Save Configuration"):
             # Save configuration to TOML file
-            with open("config.toml", "wb") as f:
-                tomli_w.dump(st.session_state.config, f)
-            st.success("Configuration saved successfully!")
+            with open("rai.toml", "wb") as f:
+                tomli_w.dump(rai_toml, f)
+            st.success("Configuration saved to rai.toml!")
 
 
 @st.cache_data
@@ -1014,12 +1067,7 @@ if "current_step" not in st.session_state:
 if "features" not in st.session_state:
     st.session_state.features = {}
 if "config" not in st.session_state:
-    # Load initial config from TOML file
-    try:
-        with open("config.toml", "rb") as f:
-            st.session_state.config = tomllib.load(f)
-    except FileNotFoundError:
-        raise FileNotFoundError("config.toml not found. Please recreate it.")
+    st.session_state.config = tomllib.loads(DEFAULTS)
 
 # Sidebar progress tracker
 st.sidebar.title("Configuration Progress")

@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 from collections import deque
 from typing import List
 from unittest.mock import MagicMock, patch
@@ -23,7 +22,6 @@ from langchain_core.language_models.fake_chat_models import ParrotFakeChatModel
 from langchain_core.runnables import RunnableConfig
 from rai.agents.langchain import invoke_llm_with_tracing
 from rai.agents.langchain.agent import LangChainAgent, newMessageBehaviorType
-from rai.initialization import get_tracing_callbacks
 from rai.messages import HumanMultimodalMessage
 
 
@@ -49,41 +47,6 @@ def test_reduce_messages(
     assert buffer == deque(out_buffer)
 
 
-class TestTracingConfiguration:
-    """Test tracing configuration integration with langchain agents."""
-
-    def test_tracing_with_missing_config_file(self):
-        """Test that tracing gracefully handles missing config.toml file in langchain context."""
-        # Mock load_config to simulate missing config file scenario.
-        # Without mocking, get_tracing_callbacks() would load the workspace's config.toml,
-        # If tracing is enabled, it'll prevent us from testing how it handles missing config files.
-        with patch("rai.initialization.model_initialization.load_config") as mock_load:
-            mock_load.side_effect = FileNotFoundError("Config file not found")
-            callbacks = get_tracing_callbacks()
-            assert len(callbacks) == 0
-
-    def test_tracing_with_config_file_present(self, test_config_toml):
-        """Test that tracing works when config.toml is present in langchain context."""
-        config_path, cleanup = test_config_toml(
-            langfuse_enabled=True, langsmith_enabled=False
-        )
-
-        try:
-            # Mock environment variables to avoid actual API calls
-            with patch.dict(
-                os.environ,
-                {
-                    "LANGFUSE_PUBLIC_KEY": "test_key",
-                    "LANGFUSE_SECRET_KEY": "test_secret",
-                },
-            ):
-                callbacks = get_tracing_callbacks(config_path=config_path)
-                # Should return 1 callback for langfuse
-                assert len(callbacks) == 1
-        finally:
-            cleanup()
-
-
 class TestInvokeLLMWithTracing:
     """Test the invoke_llm_with_tracing function."""
 
@@ -96,7 +59,7 @@ class TestInvokeLLMWithTracing:
         # Mock messages
         mock_messages = ["test message"]
 
-        # Mock get_tracing_callbacks to return empty list (no config.toml)
+        # Mock get_tracing_callbacks to return empty list (tracing off)
         with patch(
             "rai.agents.langchain.invocation_helpers.get_tracing_callbacks"
         ) as mock_get_callbacks:

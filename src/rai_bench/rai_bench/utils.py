@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from langchain_core.language_models.chat_models import BaseChatModel
-from rai.initialization import get_llm_model_direct
+from rai.llm import get_llm
 
 
 def parse_base_benchmark_args(description: str, default_out_subdir: str):
@@ -150,12 +150,8 @@ def define_benchmark_logger(out_dir: Path, level: int = logging.INFO) -> logging
 
 def get_llm_for_benchmark(model_name: str, vendor: str, **kwargs: Any) -> BaseChatModel:
     if vendor == "ollama":
-        llm = get_llm_model_direct(
-            model_name=model_name, vendor=vendor, keep_alive=20, **kwargs
-        )
-    else:
-        llm = get_llm_model_direct(model_name=model_name, vendor=vendor, **kwargs)
-    return llm
+        kwargs.setdefault("keep_alive", 20)
+    return get_llm(f"{vendor}:{model_name}", **kwargs)
 
 
 def get_llm_model_name(llm: BaseChatModel) -> str:

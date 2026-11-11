@@ -121,7 +121,7 @@ def get_tracing_callbacks() -> list["BaseCallbackHandler"]:
         if not (os.getenv("LANGFUSE_PUBLIC_KEY") and os.getenv("LANGFUSE_SECRET_KEY")):
             raise ValueError("LANGFUSE_PUBLIC_KEY or LANGFUSE_SECRET_KEY is not set")
         # configures the singleton client that CallbackHandler uses
-        Langfuse(host=tracing.langfuse_host)
+        Langfuse(base_url=tracing.langfuse_host)
         callbacks.append(CallbackHandler())
     if tracing.langsmith:
         from langchain_core.tracers.langchain import LangChainTracer

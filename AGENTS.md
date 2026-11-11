@@ -94,6 +94,6 @@ This project follows the [Conventional Commits](https://www.conventionalcommits.
 
 ### Key gotchas
 
--   The `config.toml` in the repo root is the working config file; `rai-config-init` is only for pip-installed users, not developers using the repo.
--   The Streamlit configurator (`rai/frontend/configurator.py`) is an optional GUI; all configuration can be done by editing `config.toml` directly.
+-   Settings (`rai.settings`) come from `RAI_*` env vars (nested with `__`, e.g. `RAI_MODELS__COMPLEX=ollama:llama3.1:70b`) over an optional `rai.toml` (explicit path, `$RAI_CONFIG`, or `./rai.toml`). The old `config.toml` is not read. Models are `"provider:model"` strings resolved by `rai.llm.get_llm`.
+-   The Streamlit configurator (`rai/frontend/configurator.py`) is an optional GUI that writes `rai.toml`.
 -   Many test modules import ROS 2 packages (`rclpy`, `geometry_msgs`, etc.) at module level, so ROS 2 must be sourced even to collect tests.

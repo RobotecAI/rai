@@ -35,11 +35,24 @@ pip install "rai-core[openai]"
 
 Model providers and optional features are extras: `openai`, `anthropic`, `aws`, `google`, `ollama`, `langfuse`, `mcp`, `ui` (Streamlit apps), or `all`.
 
-2. Initialize the global configuration file:
+2. Optionally pick models and tracing in a `rai.toml` (read from `$RAI_CONFIG` or the working directory). Every key can also be set with an env var, e.g. `RAI_MODELS__COMPLEX=ollama:llama3.1:70b`; env vars win over the file.
 
-```bash
-rai-config-init
+```toml
+[models]
+simple = "openai:gpt-4o-mini"         # "provider:model", as in LangChain's init_chat_model
+complex = "openai:gpt-4o"
+embeddings = "openai:text-embedding-3-small"
+aliases = { vlm = "google_genai:gemini-3-flash" }
+
+[models.provider_kwargs.openai]
+base_url = "http://localhost:8000/v1" # any OpenAI-compatible server
+
+[tracing]
+langfuse = false                      # keys in LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY
+langsmith = false                     # key in LANGSMITH_API_KEY
 ```
+
+API keys stay in each provider's own env var (`OPENAI_API_KEY`, ...).
 
 3. Optionally install ROS 2 dependencies:
 

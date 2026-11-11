@@ -17,11 +17,7 @@ It generates a comprehensive system prompt (embodiment info) for robots controll
 pip install rai-whoami
 ```
 
-2. Initialize the global configuration file (if not already done):
-
-```bash
-rai-config-init
-```
+2. Configure the models (embeddings are used for the vector database) in `rai.toml` or with `RAI_MODELS__*` env vars, see the rai_core README.
 
 3. Optionally install ROS 2 dependencies:
 

@@ -12,29 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .agents import ReActAgent
-from .initialization import (
-    get_embeddings_model,
-    get_llm_model,
-    get_llm_model_config_and_vendor,
-    get_llm_model_direct,
-    get_tracing_callbacks,
-)
+"""`import rai` stays cheap: every public name is imported on first access."""
 
-__all__ = [
-    "ReActAgent",
-    "get_embeddings_model",
-    "get_llm_model",
-    "get_llm_model_config_and_vendor",
-    "get_llm_model_direct",
-    "get_tracing_callbacks",
-    "run",
-]
+import importlib
+
+_LAZY = {
+    "ReActAgent": "rai.agents",
+    "run": "rai.agents.runner",
+    "get_llm": "rai.llm",
+    "get_embeddings": "rai.llm",
+    "get_tracing_callbacks": "rai.llm",
+    "get_settings": "rai.settings",
+    "RAISettings": "rai.settings",
+}
+
+__all__ = sorted(_LAZY)
 
 
 def __getattr__(name: str):
-    if name == "run":  # lazy, so that `import rai` stays cheap
-        from rai.agents.runner import run
-
-        return run
+    if name in _LAZY:
+        return getattr(importlib.import_module(_LAZY[name]), name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

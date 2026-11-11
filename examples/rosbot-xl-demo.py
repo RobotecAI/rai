@@ -18,7 +18,7 @@ import rclpy
 import streamlit as st
 from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
-from rai import get_llm_model
+from rai import get_llm
 from rai.agents.langchain import (
     ReActAgent,
     ReActAgentState,
@@ -87,7 +87,7 @@ def initialize_agent() -> Runnable[ReActAgentState, ReActAgentState]:
 
     agent = ReActAgent(
         target_connectors={},  # empty dict, since we're using the agent in direct mode
-        llm=get_llm_model("complex_model", streaming=True),
+        llm=get_llm("complex", streaming=True),
         system_prompt=embodiment_info.to_langchain(),
         tools=tools,
     ).agent

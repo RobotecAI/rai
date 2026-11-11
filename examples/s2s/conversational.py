@@ -23,7 +23,7 @@ import rai
 import rclpy
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from rai import get_llm_model
+from rai import get_llm
 from rai.agents import SyncAgent
 from rai.communication import BaseConnector
 from rai.communication.ros2 import IROS2Message, ROS2HRIConnector, TopicConfig
@@ -74,7 +74,7 @@ class S2SConversationalAgent(SyncAgent):
         ]
         self.speech_queue: Queue[InterfacesHRIMessage] = Queue()
 
-        self.llm = get_llm_model(model_type="complex_model", streaming=True)
+        self.llm = get_llm("complex", streaming=True)
         self._setup_ros_connector()
         self.main_thread = None
         self.stop_thread = Event()

@@ -15,7 +15,7 @@
 from typing import Optional
 
 from langchain_core.language_models import BaseChatModel
-from rai.initialization import get_llm_model
+from rai.llm import get_llm
 from rai.messages import HumanMultimodalMessage, SystemMessage
 
 from rai_whoami.models import EmbodimentInfo, EmbodimentSource
@@ -31,7 +31,7 @@ class ImagePreProcessor(DataPreProcessor):
         llm: Optional[BaseChatModel] = None,
         system_prompt: Optional[str] = None,
     ):
-        self.llm = llm or get_llm_model(model_type="complex_model")
+        self.llm = llm or get_llm("complex")
         self.system_prompt = system_prompt or self.SYSTEM_PROMPT
 
     def process(self, input: EmbodimentSource) -> EmbodimentInfo:

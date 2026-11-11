@@ -29,7 +29,7 @@ from typing_extensions import TypedDict
 
 from rai.agents.langchain.core.tool_runner import ToolRunner
 from rai.agents.langchain.invocation_helpers import invoke_llm_with_tracing
-from rai.initialization import get_llm_model
+from rai.llm import get_llm
 from rai.messages import SystemMultimodalMessage
 
 
@@ -110,7 +110,7 @@ def create_react_runnable(
         If tools are provided but invalid
     """
     if llm is None:
-        llm = get_llm_model("complex_model", streaming=True)
+        llm = get_llm("complex", streaming=True)
 
     graph = StateGraph(ReActAgentState)
     graph.add_edge(START, "llm")

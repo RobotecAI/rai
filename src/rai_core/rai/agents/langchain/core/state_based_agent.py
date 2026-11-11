@@ -33,7 +33,7 @@ from langgraph.prebuilt.tool_node import tools_condition
 
 from rai.agents.langchain.core.tool_runner import ToolRunner
 from rai.agents.langchain.invocation_helpers import invoke_llm_with_tracing
-from rai.initialization import get_llm_model
+from rai.llm import get_llm
 from rai.messages import HumanMultimodalMessage, SystemMultimodalMessage
 
 
@@ -110,7 +110,7 @@ def create_state_based_runnable(
     state_retriever: Optional[Callable[[], Dict[str, Any]]] = None,
 ) -> Runnable[ReActAgentState, ReActAgentState]:
     if llm is None:
-        llm = get_llm_model("complex_model", streaming=True)
+        llm = get_llm("complex", streaming=True)
     graph = StateGraph(ReActAgentState)
     graph.add_edge(START, "state_retriever")
     graph.add_edge("state_retriever", "llm")

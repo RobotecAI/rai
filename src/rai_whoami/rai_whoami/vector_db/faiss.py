@@ -12,16 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import inspect
 import json
 import os
-from importlib import import_module
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, cast
+from typing import Any, Dict, Optional
 
 from langchain_community.vectorstores import FAISS
 from langchain_core.embeddings import Embeddings
-from rai.initialization import get_embeddings_model
+from rai.llm import get_embeddings
+from rai.settings import get_settings
 
 from rai_whoami.models import EmbodimentSource
 from rai_whoami.vector_db.builder import VectorDBBuilder
@@ -36,10 +35,8 @@ class FAISSBuilder(VectorDBBuilder):
     ):
         self.root_dir = Path(root_dir)
         if embedding is None:
-            embedding, model_kwargs = cast(
-                Tuple[Embeddings, Dict[str, Any]],
-                get_embeddings_model(return_kwargs=True),
-            )
+            embedding = get_embeddings()
+            model_kwargs = {"spec": get_settings().models.embeddings}
         super().__init__(
             root_dir=root_dir, embedding=embedding, model_kwargs=model_kwargs
         )
@@ -57,26 +54,12 @@ class FAISSBuilder(VectorDBBuilder):
         return db
 
 
-def get_class_from_string(class_path: str) -> type:
-    module_path, class_name = class_path.rsplit(".", 1)
-    module = import_module(module_path)
-    return getattr(module, class_name)
-
-
-def initialize_embeddings(class_path: str, **kwargs: Any) -> Embeddings:
-    c = get_class_from_string(class_path)
-    kwargs = {k: kwargs[k] for k in inspect.signature(c).parameters if k in kwargs}
-    return c(**kwargs)
-
-
 def get_faiss_client(
     root_dir: str, embeddings_model: Embeddings | None = None
 ) -> FAISS:
     if embeddings_model is None:
         vdb_kwargs = json.load(open(Path(root_dir) / "vdb_kwargs.json"))
-        embeddings_model = initialize_embeddings(
-            vdb_kwargs["embeddings"]["class"], **vdb_kwargs
-        )
+        embeddings_model = get_embeddings(vdb_kwargs["embeddings"]["spec"])
 
     vdb_client = FAISS.load_local(
         folder_path=root_dir,

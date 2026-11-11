@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import streamlit as st
-from rai import get_llm_model
+from rai import get_llm
 from rai.agents.langchain.core import create_conversational_agent
 from rai.frontend import run_streamlit_app
 from rai.tools.ros2 import ROS2CLIToolkit
@@ -23,7 +23,7 @@ from rai_whoami import EmbodimentInfo
 
 @st.cache_resource
 def initialize_agent():
-    llm = get_llm_model(model_type="complex_model", streaming=True)
+    llm = get_llm("complex", streaming=True)
     embodiment_info = EmbodimentInfo.from_file(
         "examples/embodiments/ros2_debugging_assistant_embodiment.json"
     )
