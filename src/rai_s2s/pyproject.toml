@@ -1,6 +1,6 @@
 [project]
 name = "rai_s2s"
-version = "1.1.0"
+version = "2.0.0"
 description = "Speech-to-Speech module for RAI framework"
 readme = "README.md"
 license = "Apache-2.0"
@@ -12,6 +12,7 @@ classifiers = [
     "Development Status :: 4 - Beta",
 ]
 dependencies = [
+    "rai_core>=3.0.0,<4",
     "sounddevice>=0.5.0,<0.6.0",
     "scipy>=1.14.0,<2.0.0",
     # Silero VAD (base) and LocalWhisper import torch directly.

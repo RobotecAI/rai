@@ -1,6 +1,6 @@
 [project]
 name = "rai_whoami"
-version = "0.2.0"
+version = "1.0.0"
 description = "Package to extract embodiment information from robot documentation"
 readme = "README.md"
 license = "Apache-2.0"
@@ -13,6 +13,7 @@ classifiers = [
 ]
 dependencies = [
     "PyYAML",
+    "rai_core>=3.0.0,<4",
     "langchain>=1.0.0,<2.0.0",
     "langchain-community",
     "Pillow",

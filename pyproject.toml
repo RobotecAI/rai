@@ -1,6 +1,6 @@
 [project]
 name = "rai_framework"
-version = "1.0.0"
+version = "3.0.0"
 description = "RAI is a framework for building general multi-agent systems, bringing Gen AI features to ROS enabled robots."
 readme = "README.md"
 license = "Apache-2.0"
@@ -15,8 +15,8 @@ classifiers = [
     "Development Status :: 4 - Beta",
 ]
 dependencies = [
-    "rai_core[all]",
-    "rai_whoami",
+    "rai_core[all]>=3.0.0,<4",
+    "rai_whoami>=1.0.0,<2",
 ]
 
 [dependency-groups]
@@ -36,10 +36,10 @@ docs = [
     "mkdocs-markdownextradata-plugin",
     "mkdocs-callouts",
 ]
-s2s = ["rai_s2s[all]"]
-semap = ["rai_semap"]
-simbench = ["rai_sim", "rai_bench"]
-perception = ["rai_perception"]
+s2s = ["rai_s2s[all]>=2.0.0,<3"]
+semap = ["rai_semap>=1.0.0,<2"]
+simbench = ["rai_sim>=1.0.0,<2", "rai_bench>=1.0.0,<2"]
+perception = ["rai_perception>=1.0.0,<2"]
 
 [tool.uv]
 package = false

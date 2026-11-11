@@ -1,6 +1,6 @@
 [project]
 name = "rai_semap"
-version = "0.1.0"
+version = "1.0.0"
 description = "Semantic mapping and spatial memory for RAI"
 readme = "README.md"
 license = "Apache-2.0"
@@ -12,8 +12,8 @@ classifiers = [
     "Development Status :: 4 - Beta",
 ]
 dependencies = [
-    "rai_core",
-    "rai_perception",
+    "rai_core>=3.0.0,<4",
+    "rai_perception>=1.0.0,<2",
 ]
 
 [dependency-groups]

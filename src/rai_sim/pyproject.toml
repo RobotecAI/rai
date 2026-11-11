@@ -1,6 +1,6 @@
 [project]
 name = "rai-sim"
-version = "0.0.2"
+version = "1.0.0"
 description = "Package to run simulations"
 readme = "README.md"
 license = "Apache-2.0"
@@ -17,7 +17,7 @@ classifiers = [
 ]
 dependencies = [
     "PyYAML",
-    "rai_core",
+    "rai_core>=3.0.0,<4",
 ]
 
 [tool.uv.build-backend]
