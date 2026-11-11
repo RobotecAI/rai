@@ -375,8 +375,7 @@ def _setup_benchmark_environment(
     """Setup common benchmark environment"""
     rclpy.init()
     connector = ROS2Connector()
-    node = connector.node
-    node.declare_parameter("conversion_ratio", 1.0)
+    connector.declare_parameter("conversion_ratio", 1.0)
 
     # define tools
     tools: List[BaseTool] = [
@@ -442,6 +441,6 @@ def run_benchmark(
             "==============================================================="
         )
     finally:
-        connector.shutdown()
+        connector.close()
         o3de.shutdown()
         rclpy.shutdown()

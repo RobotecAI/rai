@@ -24,8 +24,8 @@ from langchain_core.tools import BaseTool
 from pydantic import BaseModel, SkipValidation, ValidationError, computed_field
 from rai.communication.ros2.api.conversion import import_message_from_str
 from rai.communication.ros2.connectors import ROS2Connector
-from rai.communication.ros2.messages import ROS2Message
-from rai.messages import MultimodalArtifact, preprocess_image
+from rai.content import Image
+from rai.messages import MultimodalArtifact
 from rai.tools.ros2 import (
     CallROS2ServiceTool,
     CancelROS2ActionTool,
@@ -98,10 +98,8 @@ class MockGetROS2ImageTool(GetROS2ImageTool):
             raise ValueError(
                 f"Topic {topic} is not available within {timeout_sec} seconds. Check if the topic exists."
             )
-        image = self.generate_mock_image()
-        return "Image received successfully", MultimodalArtifact(
-            images=[preprocess_image(image)]
-        )  # type: ignore
+        image = Image(self.generate_mock_image(), "rgb8")
+        return "Image received successfully", {"images": [image.encode()]}
 
     @staticmethod
     def generate_mock_image() -> npt.NDArray[np.uint8]:
@@ -143,10 +141,7 @@ class MockReceiveROS2MessageTool(ReceiveROS2MessageTool):
             raise ValueError(
                 f"Topic {topic} is not available within {timeout_sec} seconds. Check if the topic exists."
             )
-        message: ROS2Message = MagicMock(spec=ROS2Message)
-        message.payload = {"mock": "payload"}
-        message.metadata = {"mock": "metadata"}
-        return str({"payload": message.payload, "metadata": message.metadata})
+        return str({"payload": {"mock": "payload"}, "msg_type": "mock/msg/Mock"})
 
 
 class MockMoveToPointTool(MoveToPointTool):
@@ -392,13 +387,7 @@ class MockCallROS2ServiceTool(CallROS2ServiceTool):
             service_args = {}
         try:
             self.models_validator.validate(service_type, service_args)
-            response = ROS2Message(payload={"response": "success"})
-            return str(
-                {
-                    "payload": response.payload,
-                    "metadata": response.metadata,
-                }
-            )
+            return str({"payload": {"response": "success"}})
         except ValueError as e:
             raise ValueError(f"Failed to populate fields: {e}")
 
