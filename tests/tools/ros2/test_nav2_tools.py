@@ -15,9 +15,9 @@
 import pytest
 
 try:
-    import rclpy  # noqa: F401
+    import rclpy
 
-    _ = rclpy  # noqa: F841
+    _ = rclpy
 except ImportError:
     pytest.skip("ROS2 is not installed", allow_module_level=True)
 
@@ -151,3 +151,32 @@ def test_navigate_to_pose_blocking_tool(
         assert result == "Navigate to pose action failed. Please try again."
 
         assert mock_action_client.send_goal.call_count == 4
+
+
+def test_navigate_to_pose_tool_ignores_previous_goal_state() -> None:
+    from rai.tools.ros2.navigation import nav2
+
+    connector = MagicMock(spec=ROS2Connector)
+    tool = nav2.NavigateToPoseTool(connector=connector)
+    result_tool = nav2.GetNavigateToPoseResultTool(connector=connector)
+
+    tool._run(x=0.0, y=0.0, z=0.0, yaw=0.0)
+    first = connector.start_action.call_args.kwargs
+    first["on_feedback"]("old feedback")
+    first["on_done"](MagicMock())
+    assert result_tool._run() != "Action is not done yet"
+
+    tool._run(x=1.0, y=0.0, z=0.0, yaw=0.0)
+    assert nav2.current_feedback is None
+    assert result_tool._run() == "Action is not done yet"
+
+    # A late callback from the first goal must not leak into the second goal
+    first["on_feedback"]("old feedback")
+    first["on_done"](MagicMock())
+    assert nav2.current_feedback is None
+    assert result_tool._run() == "Action is not done yet"
+
+    second = connector.start_action.call_args.kwargs
+    future = MagicMock()
+    second["on_done"](future)
+    assert result_tool._run() == str(future.result().result)

@@ -14,6 +14,7 @@
 
 import base64
 import time
+from functools import partial
 from typing import List, Optional, Type, cast
 
 import cv2
@@ -23,6 +24,7 @@ from langchain_core.tools import BaseTool
 from nav2_msgs.action import NavigateToPose
 from nav_msgs.msg import OccupancyGrid
 from pydantic import BaseModel, Field
+from rclpy.task import Future
 
 from rai.communication.ros2 import ROS2Message
 from rai.communication.ros2.connectors import ROS2Connector
@@ -33,7 +35,10 @@ from rai.tools.ros2.navigation.geometry import quaternion_to_yaw, yaw_to_quatern
 
 current_action_id: Optional[str] = None
 current_feedback: Optional[NavigateToPose.Feedback] = None
-current_result: Optional[NavigateToPose.Result] = None
+# on_done receives the get_result future; its .result().result is NavigateToPose.Result
+current_result: Optional[Future] = None
+# Token of the newest goal; late callbacks from older goals are ignored
+current_goal: Optional[object] = None
 
 
 class Nav2Toolkit(WorkspaceBounds, BaseROS2Toolkit):
@@ -88,13 +93,15 @@ class NavigateToPoseTool(WorkspaceBounds, BaseROS2Tool):
         default="navigate_to_pose", description="The name of the NavigateToPose action"
     )
 
-    def on_feedback(self, feedback: NavigateToPose.Feedback) -> None:
+    def on_feedback(self, goal: object, feedback: NavigateToPose.Feedback) -> None:
         global current_feedback
-        current_feedback = feedback
+        if goal is current_goal:
+            current_feedback = feedback
 
-    def on_done(self, result: NavigateToPose.Result) -> None:
+    def on_done(self, goal: object, result: Future) -> None:
         global current_result
-        current_result = result
+        if goal is current_goal:
+            current_result = result
 
     def _run(self, x: float, y: float, z: float, yaw: float) -> str:
         self.reject_out_of_bounds(x, y, z)
@@ -103,7 +110,7 @@ class NavigateToPoseTool(WorkspaceBounds, BaseROS2Tool):
             "pose": {
                 "header": {
                     "frame_id": self.frame_id,
-                    "stamp": self.connector.node.get_clock().now().to_msg(),
+                    "stamp": self.connector.now().to_msg(),
                 },
                 "pose": {
                     "position": {"x": x, "y": y, "z": z},
@@ -112,13 +119,17 @@ class NavigateToPoseTool(WorkspaceBounds, BaseROS2Tool):
             }
         }
 
+        global current_goal, current_feedback, current_result
+        current_goal = token = object()
+        current_feedback = None
+        current_result = None
         msg = ROS2Message(payload=goal)
         action_id = self.connector.start_action(
             action_data=msg,
             target=self.action_name,
             msg_type="nav2_msgs/action/NavigateToPose",
-            on_feedback=self.on_feedback,
-            on_done=self.on_done,
+            on_feedback=partial(self.on_feedback, token),
+            on_done=partial(self.on_done, token),
         )
         global current_action_id
         current_action_id = action_id

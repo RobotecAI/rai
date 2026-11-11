@@ -67,7 +67,9 @@ class GetROS2ServicesNamesAndTypesTool(BaseROS2Tool):
 
             for service, type in services_and_types:
                 should_include, _, is_writable_service = (
-                    self._check_permission_and_include(service, check_readable=False)
+                    self._check_permission_and_include(
+                        service, check_readable=False, service=True
+                    )
                 )
                 # For services, only include writable ones (actionable for LLM agents)
                 if should_include and is_writable_service:
@@ -108,7 +110,7 @@ class CallROS2ServiceTool(BaseROS2Tool):
         service_args: Optional[Dict[str, Any]] = None,
         timeout_sec: float = 5.0,
     ) -> str:
-        if not self.is_writable(service_name):
+        if not self.is_writable(service_name, service=True):
             raise ValueError(f"Service {service_name} is not writable")
         if service_args is None:
             service_args = {}

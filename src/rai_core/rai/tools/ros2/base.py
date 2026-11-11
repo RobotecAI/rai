@@ -48,22 +48,29 @@ class BaseROS2Tool(BaseTool):
     name: str = ""
     description: str = ""
 
+    def _contains(self, names: List[str], name: str, service: bool = False) -> bool:
+        """Compare fully resolved names, so "cmd_vel", "/cmd_vel" and remapped forms match."""
+        kind = "service" if service else "topic"
+        resolved = self.connector.resolve(name, kind)
+        return any(self.connector.resolve(n, kind) == resolved for n in names)
+
     def is_readable(self, topic: str) -> bool:
-        if self.forbidden is not None and topic in self.forbidden:
+        if self.forbidden is not None and self._contains(self.forbidden, topic):
             return False
         if self.readable is None:
             return True
-        return topic in self.readable
+        return self._contains(self.readable, topic)
 
-    def is_writable(self, topic: str) -> bool:
-        if self.forbidden is not None and topic in self.forbidden:
+    def is_writable(self, name: str, service: bool = False) -> bool:
+        """Check a topic, action (service=False) or service (service=True) name."""
+        if self.forbidden is not None and self._contains(self.forbidden, name, service):
             return False
         if self.writable is None:
             return True
-        return topic in self.writable
+        return self._contains(self.writable, name, service)
 
     def _check_permission_and_include(
-        self, name: str, check_readable: bool = True
+        self, name: str, check_readable: bool = True, service: bool = False
     ) -> Tuple[bool, bool, bool]:
         """
         Check permissions and determine if resource should be included.
@@ -72,16 +79,17 @@ class BaseROS2Tool(BaseTool):
             name: Resource name (topic/service/action)
             check_readable: If False, only checks writable (for services/actions).
                             If True, checks both readable and writable (for topics).
+            service: Resolve names as service names.
 
         Returns:
             (should_include, is_readable, is_writable)
         """
         # Skip forbidden resources
-        if self.forbidden is not None and name in self.forbidden:
+        if self.forbidden is not None and self._contains(self.forbidden, name, service):
             return (False, False, False)
 
         is_readable_resource = self.is_readable(name) if check_readable else False
-        is_writable_resource = self.is_writable(name)
+        is_writable_resource = self.is_writable(name, service)
 
         # Determine if resource should be included based on whitelist state
         # If only readable is set: include only if resource is in readable list

@@ -194,24 +194,17 @@ class NodeDiscovery:
             setter(self)
 
     def __set(self, topics, services, actions):
+        # Build each dict fully before assigning it: dict() may run concurrently.
         def to_dict(info: List[Tuple[str, List[str]]]) -> Dict[str, str]:
-            return {k: v[0] for k, v in info}
+            return {
+                k: v[0]
+                for k, v in info
+                if self.allowlist is None or k in self.allowlist
+            }
 
         self.topics_and_types = to_dict(topics)
         self.services_and_types = to_dict(services)
         self.actions_and_types = to_dict(actions)
-        if self.allowlist is not None:
-            self.__filter(self.allowlist)
-
-    def __filter(self, allowlist: List[str]):
-        for d in [
-            self.topics_and_types,
-            self.services_and_types,
-            self.actions_and_types,
-        ]:
-            to_remove = [k for k in d if k not in allowlist]
-            for k in to_remove:
-                d.pop(k)
 
     def dict(self):
         return {

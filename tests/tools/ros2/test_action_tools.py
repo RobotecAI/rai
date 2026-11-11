@@ -25,6 +25,8 @@ import time
 from rai.communication.ros2 import ROS2Connector
 from rai.tools.ros2 import (
     CancelROS2ActionTool,
+    GetROS2ActionFeedbackTool,
+    GetROS2ActionResultTool,
     GetROS2ActionsNamesAndTypesTool,
     StartROS2ActionTool,
 )
@@ -112,6 +114,7 @@ def test_cancel_action_tool(ros_setup: None, request: pytest.FixtureRequest) -> 
         response = cancel_tool._run(  # type: ignore
             action_id=action_id,
         )
+        assert response == f"Action {action_id} cancelled."
         assert server.cancelled
 
     finally:
@@ -203,3 +206,21 @@ def test_get_actions_names_and_types_tool_with_writable_and_forbidden(
         assert forbidden_action not in response
     finally:
         shutdown_executors_and_threads(executors, threads)
+
+
+def test_result_and_feedback_tools_handle_unknown_and_pending_ids(
+    ros_setup: None, request: pytest.FixtureRequest
+) -> None:
+    connector = ROS2Connector()
+    feedback_tool = GetROS2ActionFeedbackTool(connector=connector)
+    result_tool = GetROS2ActionResultTool()
+    try:
+        assert result_tool._run(action_id="nope") == "Unknown action ID: nope"
+        assert feedback_tool._run(action_id="nope") == "Unknown action ID: nope"
+        result_tool.internal_action_id_mapping["pending"] = "pending-internal"
+        assert result_tool._run(action_id="pending") == (
+            "Action pending is not done yet."
+        )
+    finally:
+        result_tool.internal_action_id_mapping.pop("pending", None)
+        connector.shutdown()

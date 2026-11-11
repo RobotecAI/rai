@@ -21,7 +21,6 @@ from typing import Any, Callable, Dict, List, Type
 from langchain_core.tools import BaseTool  # type: ignore
 from langchain_core.utils import stringify_dict
 from pydantic import BaseModel, Field
-from rclpy.action import CancelResponse
 
 from rai.communication.ros2 import ROS2Message
 from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
@@ -208,7 +207,9 @@ class GetROS2ActionFeedbackTool(BaseROS2Tool):
 
     def _run(self, action_id: str) -> str:
         with self.action_feedbacks_store_lock:
-            external_action_id = self.internal_action_id_mapping[action_id]
+            external_action_id = self.internal_action_id_mapping.get(action_id)
+            if external_action_id is None:
+                return f"Unknown action ID: {action_id}"
             feedbacks = self.action_feedbacks_store[external_action_id]
             self.action_feedbacks_store[external_action_id] = []
             return str(feedbacks)
@@ -237,9 +238,12 @@ class GetROS2ActionResultTool(BaseTool):
 
     def _run(self, action_id: str) -> str:
         with self.action_results_store_lock:
-            external_action_id = self.internal_action_id_mapping[action_id]
-            result = self.action_results_store[external_action_id]
-            return str(result)
+            external_action_id = self.internal_action_id_mapping.get(action_id)
+            if external_action_id is None:
+                return f"Unknown action ID: {action_id}"
+            if external_action_id not in self.action_results_store:
+                return f"Action {action_id} is not done yet."
+            return str(self.action_results_store[external_action_id])
 
 
 class CancelROS2ActionToolInput(BaseModel):
@@ -252,8 +256,7 @@ class CancelROS2ActionTool(BaseROS2Tool):
     args_schema: Type[CancelROS2ActionToolInput] = CancelROS2ActionToolInput
 
     def _run(self, action_id: str) -> str:
-        response = self.connector.terminate_action(action_id)
-        if response == CancelResponse.ACCEPT:
+        if self.connector.terminate_action(action_id):
             return f"Action {action_id} cancelled."
         else:
             return f"Action {action_id} could not be cancelled."
