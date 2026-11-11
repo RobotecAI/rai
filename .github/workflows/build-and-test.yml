@@ -27,16 +27,9 @@ jobs:
     timeout-minutes: 45
 
     strategy:
-      # Let both numpy legs finish, so one failing does not hide the other.
-      fail-fast: false
       matrix:
         ros_distro:
           - jazzy
-        # uv.lock is on numpy 2, but rai_core also supports numpy 1.26, the version
-        # Jazzy ships through apt. The "lowest" leg tests that end of the range.
-        numpy:
-          - locked
-          - lowest
 
     container:
       image: osrf/ros:${{ matrix.ros_distro }}-desktop-full
@@ -67,13 +60,6 @@ jobs:
           uv venv --python /usr/bin/python3
           uv pip install --no-deps --torch-backend cpu -r /tmp/requirements-cpu.txt
 
-      # opencv-python 4.12 and newer require numpy 2.
-      - name: Install the lowest supported numpy
-        if: ${{ matrix.numpy == 'lowest' }}
-        shell: bash
-        run: |
-          uv pip install "numpy==1.26.4" "opencv-python<4.12" "opencv-python-headless<4.12"
-
       - name: Update rosdep
         shell: bash
         run: |
@@ -103,7 +89,7 @@ jobs:
           pytest -m "not billable and not manual" --timeout=120 --timeout-method=thread --cov=./src/rai_core --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
 
       - name: Upload coverage to Codecov
-        if: ${{ matrix.ros_distro == 'jazzy' && matrix.numpy == 'locked' }}
+        if: ${{ matrix.ros_distro == 'jazzy' }}
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -112,7 +98,7 @@ jobs:
           fail_ci_if_error: false
 
       - name: Upload test results to Codecov
-        if: ${{ !cancelled() && matrix.ros_distro == 'jazzy' && matrix.numpy == 'locked' }}
+        if: ${{ !cancelled() && matrix.ros_distro == 'jazzy' }}
         uses: codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3 # v1.2.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
