@@ -22,6 +22,7 @@ model-agnostic support, generic RAIDetection/RAISegmentation service interfaces 
 be needed. Alternatively, model-specific tools/services can be created for each model.
 """
 
+import asyncio
 import logging
 import time
 from typing import Any, Callable, Dict, Optional, Type
@@ -29,7 +30,6 @@ from typing import Any, Callable, Dict, Optional, Type
 import numpy as np
 from pydantic import BaseModel, Field
 from rai.tools.ros2.base import BaseROS2Tool
-from rai.tools.timeout import RaiTimeoutError, timeout
 from rclpy.exceptions import (
     ParameterNotDeclaredException,
     ParameterUninitializedException,
@@ -190,76 +190,72 @@ class GetObjectGrippingPointsTool(BaseROS2Tool):
     )
 
     def _run(self, object_name: str, debug: bool = False) -> str:
-        @timeout(
-            self.timeout_sec,
-            f"Gripping point detection for object '{object_name}' exceeded {self.timeout_sec} seconds",
+        # Stage 1: Point cloud extraction
+        pcl, stage_time = self._run_stage(
+            stage_num=1,
+            stage_name="Point Cloud Extraction",
+            stage_func=lambda: self.point_cloud_from_segmentation.run(object_name),
+            empty_result_msg=f"No {object_name}s detected.",
+            debug_config={
+                "topic": "/debug/gripping_points/raw_point_clouds",
+                "point_clouds": None,  # Will be set from result
+            }
+            if debug
+            else None,
         )
-        def _run_with_timeout():
-            # Stage 1: Point cloud extraction
-            pcl, stage_time = self._run_stage(
-                stage_num=1,
-                stage_name="Point Cloud Extraction",
-                stage_func=lambda: self.point_cloud_from_segmentation.run(object_name),
-                empty_result_msg=f"No {object_name}s detected.",
-                debug_config={
-                    "topic": "/debug/gripping_points/raw_point_clouds",
-                    "point_clouds": None,  # Will be set from result
-                }
-                if debug
-                else None,
-            )
-            if isinstance(pcl, str):  # Empty result message
-                return pcl
+        if isinstance(pcl, str):  # Empty result message
+            return pcl
 
-            # Stage 2: Point cloud filtering
-            total_points_before = sum(len(pts) for pts in pcl)
-            pcl_filtered, stage_time = self._run_stage(
-                stage_num=2,
-                stage_name="Point Cloud Filtering",
-                stage_func=lambda: self.point_cloud_filter.run(pcl),
-                empty_result_msg=f"No {object_name}s detected after applying filtering",
-                debug_config={
-                    "topic": "/debug/gripping_points/filtered_point_clouds",
-                    "point_clouds": None,  # Will be set from result
-                    "total_points_before": total_points_before,
-                }
-                if debug
-                else None,
-            )
-            if isinstance(pcl_filtered, str):  # Empty result message
-                return pcl_filtered
+        # Stage 2: Point cloud filtering
+        total_points_before = sum(len(pts) for pts in pcl)
+        pcl_filtered, stage_time = self._run_stage(
+            stage_num=2,
+            stage_name="Point Cloud Filtering",
+            stage_func=lambda: self.point_cloud_filter.run(pcl),
+            empty_result_msg=f"No {object_name}s detected after applying filtering",
+            debug_config={
+                "topic": "/debug/gripping_points/filtered_point_clouds",
+                "point_clouds": None,  # Will be set from result
+                "total_points_before": total_points_before,
+            }
+            if debug
+            else None,
+        )
+        if isinstance(pcl_filtered, str):  # Empty result message
+            return pcl_filtered
 
-            # Stage 3: Gripping point estimation
-            gripping_points, stage_time = self._run_stage(
-                stage_num=3,
-                stage_name="Gripping Point Estimation",
-                stage_func=lambda: self.gripping_point_estimator.run(pcl_filtered),
-                empty_result_msg=None,  # No early exit for stage 3
-                debug_config={
-                    "topic": None,
-                    "filtered_point_clouds": pcl_filtered,
-                }
-                if debug
-                else None,
-            )
+        # Stage 3: Gripping point estimation
+        gripping_points, stage_time = self._run_stage(
+            stage_num=3,
+            stage_name="Gripping Point Estimation",
+            stage_func=lambda: self.gripping_point_estimator.run(pcl_filtered),
+            empty_result_msg=None,  # No early exit for stage 3
+            debug_config={
+                "topic": None,
+                "filtered_point_clouds": pcl_filtered,
+            }
+            if debug
+            else None,
+        )
 
-            # Log warnings for invalid gripping points
-            node_logger = self.connector.node.get_logger()
-            for i, gp in enumerate(gripping_points):
-                if not (isinstance(gp, np.ndarray) and len(gp) >= 3):
-                    node_logger.warning(
-                        f"GetObjectGrippingPointsTool: Gripping point {i + 1} has unexpected format: {gp}"
-                    )
+        # Log warnings for invalid gripping points
+        node_logger = self.connector.node.get_logger()
+        for i, gp in enumerate(gripping_points):
+            if not (isinstance(gp, np.ndarray) and len(gp) >= 3):
+                node_logger.warning(
+                    f"GetObjectGrippingPointsTool: Gripping point {i + 1} has unexpected format: {gp}"
+                )
 
-            return self._format_result_message(object_name, gripping_points)
+        return self._format_result_message(object_name, gripping_points)
 
+    async def _arun(self, object_name: str, debug: bool = False) -> str:
         try:
-            return _run_with_timeout()
-        except RaiTimeoutError as e:
-            self.connector.node.get_logger().warning(f"Timeout: {e}")
-            return f"Timeout: Gripping point detection for object '{object_name}' exceeded {self.timeout_sec} seconds"
-        except Exception:
-            raise
+            async with asyncio.timeout(self.timeout_sec):
+                return await asyncio.to_thread(self._run, object_name, debug)
+        except TimeoutError:
+            message = f"Timeout: Gripping point detection for object '{object_name}' exceeded {self.timeout_sec} seconds"
+            self.connector.node.get_logger().warning(message)
+            return message
 
     @property
     def detection_service_name(self) -> str:

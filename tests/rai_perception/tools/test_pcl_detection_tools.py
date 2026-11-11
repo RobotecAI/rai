@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import time
 
 import pytest
@@ -165,19 +166,25 @@ def test_get_gripping_point_tool_timeout():
     assert "No test_objects detected" in result
     assert "timed out" not in result.lower()
 
-    # Test 2: Actual timeout behavior - should raise TimeoutError
+    # Test 2: the async path times out on time
     def slow_operation(obj_name):
-        time.sleep(2.0)  # Longer than timeout
+        time.sleep(1.0)  # Longer than timeout
         return []
 
     mock_pcl_gen.run.side_effect = slow_operation
-    tool.timeout_sec = 1.0  # Short timeout
+    tool.timeout_sec = 0.2  # Short timeout
 
-    # Expect TimeoutError
+    async def timed_arun():
+        start = time.monotonic()
+        result = await tool._arun("test")
+        return result, time.monotonic() - start
+
+    result, elapsed = asyncio.run(timed_arun())
     assert (
-        tool._run("test")
-        == "Timeout: Gripping point detection for object 'test' exceeded 1.0 seconds"
+        result
+        == "Timeout: Gripping point detection for object 'test' exceeded 0.2 seconds"
     )
+    assert elapsed < 0.8
 
 
 def test_get_object_gripping_points_tool_auto_declaration():
