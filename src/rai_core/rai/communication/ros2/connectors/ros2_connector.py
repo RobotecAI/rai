@@ -35,6 +35,7 @@ from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from rclpy.time import Time
 from tf2_ros import LookupException, TransformStamped
+from unique_identifier_msgs.msg import UUID
 
 from rai.communication.base_connector import (
     BaseConnector,
@@ -43,7 +44,7 @@ from rai.communication.base_connector import (
 )
 from rai.communication.ros2 import compat
 from rai.communication.ros2.egress import EgressHooks, type_name
-from rai.communication.ros2.exceptions import ROS2GoalRejectedError
+from rai.communication.ros2.exceptions import ROS2GoalRejectedError, ROS2TimeoutError
 from rai.communication.ros2.messages import ROS2Message
 from rai.communication.ros2.runtime import (
     POLL_S,
@@ -58,6 +59,8 @@ from rai.communication.ros2.runtime import (
     message_class,
     release,
 )
+
+_RESEND_S = 1.0  # first resend of an unanswered idempotent request
 
 
 def _profile(depth: int, reliability: Any, durability: Any) -> QoSProfile:
@@ -549,29 +552,51 @@ class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
         *,
         srv_type: Any = None,
         timeout: float = 5.0,
+        idempotent: bool = False,
     ) -> Any:
         """Call a service and return its response. Raises ROS2TimeoutError if
         the service is not available or does not answer within timeout, and
-        EgressDenied if an egress hook refuses (hook time is not counted)."""
+        EgressDenied if an egress hook refuses (hook time is not counted).
+
+        With idempotent=True an unanswered request is sent again after 1 s,
+        then 2 s, 4 s and so on until timeout, and the first response wins.
+        Use it only for requests that are safe to execute more than once: a
+        response lost in DDS discovery (rmw_fastrtps, a server that just
+        started) is otherwise a timeout although the server executed it."""
         self._check()
         client = self._runtime.client(
             service, srv_type or _companion(request, "_Request"), action=False
         )
         await self._runtime.agate("service", client.name, client.msg_type, request)
         deadline = await self._runtime.ready(client, timeout, f"Service {service}")
-        future = client.entity.call_async(request)
-        waiter = Waiter().bind(future)
+        futures: list[Any] = []
+        interval = _RESEND_S
         try:
-            return await self._runtime.wait(
-                waiter,
-                max(0.0, deadline - time.monotonic()),
-                f"Service call {service}",
-                client.pending,
-                self._waiters,
-            )
-        except TimeoutError:
-            client.entity.remove_pending_request(future)
-            raise
+            while True:
+                futures.append(client.entity.call_async(request))
+                waiter = Waiter()
+                for future in futures:  # a late answer to any attempt counts
+                    waiter.bind(future)
+                remaining = max(0.0, deadline - time.monotonic())
+                last = not idempotent or remaining <= interval
+                try:
+                    return await self._runtime.wait(
+                        waiter,
+                        remaining if last else interval,
+                        f"Service call {service}",
+                        client.pending,
+                        self._waiters,
+                    )
+                except TimeoutError:
+                    if last:
+                        raise ROS2TimeoutError(
+                            f"Service call {service} timed out after {timeout:g} s"
+                        ) from None
+                    interval *= 2
+        finally:
+            for future in futures:
+                if not future.done():
+                    client.entity.remove_pending_request(future)
 
     def release_client(self, service: str) -> bool:
         """Destroy the cached client of service; calls in flight on it raise."""
@@ -599,8 +624,9 @@ class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
         handle = GoalHandle(
             self._runtime, client, action, (self._waiters,), on_feedback, on_done
         )
+        goal_id = UUID(uuid=list(uuid.uuid4().bytes))
         future = client.entity.send_goal_async(
-            goal, feedback_callback=handle._feedback_callback
+            goal, feedback_callback=handle._feedback_callback, goal_uuid=goal_id
         )
         try:
             goal_handle = await self._runtime.wait(
@@ -611,7 +637,11 @@ class ROS2Connector(ROS2Base, BaseConnector[ROS2Message]):
                 self._waiters,
             )
         except TimeoutError:
+            # The goal may run although its response is late or was lost (DDS
+            # discovery, see runtime.SETTLE_S): cancel it by id either way.
             future.add_done_callback(_cancel_late_goal)
+            if not future.done() and not self._runtime.closed:
+                compat.cancel_goal_id(client.entity, goal_id)
             raise
         if not goal_handle.accepted:
             raise ROS2GoalRejectedError(f"Goal on {action} was rejected")

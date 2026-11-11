@@ -83,10 +83,15 @@ def test_ros2_connector_receive_message(
         shutdown_executors_and_threads(executors, threads)
 
 
-def service_call_helper(service_name: str, connector: ROS2Connector):
+def service_call_helper(
+    service_name: str, connector: ROS2Connector, timeout_sec: float = 5.0
+):
     message = ROS2Message(payload={"data": True})
     response = connector.service_call(
-        message, target=service_name, msg_type="std_srvs/srv/SetBool"
+        message,
+        target=service_name,
+        msg_type="std_srvs/srv/SetBool",
+        timeout_sec=timeout_sec,
     )
     assert response.payload == SetBool.Response(
         success=True, message="Test service called"
@@ -144,17 +149,26 @@ def test_ros2_connector_service_call_multiple_calls_at_the_same_time_threading(
     message_receiver = ServiceServer(service_name, callback_group)
     executors, threads = multi_threaded_spinner([message_receiver])
     connector = ROS2Connector()
+    errors: List[BaseException] = []
+
+    def call() -> None:
+        # The handler sleeps up to 1 s; with a mutually exclusive group the 10
+        # calls run one after another, so the last answers after up to 10 s.
+        try:
+            service_call_helper(service_name, connector, timeout_sec=15.0)
+        except BaseException as e:
+            errors.append(e)
+
     try:
         service_threads: List[threading.Thread] = []
         for _ in range(10):
-            thread = threading.Thread(
-                target=service_call_helper, args=(service_name, connector)
-            )
+            thread = threading.Thread(target=call)
             service_threads.append(thread)
             thread.start()
 
         for thread in service_threads:
             thread.join()
+        assert not errors, errors
     finally:
         connector.shutdown()
         shutdown_executors_and_threads(executors, threads)

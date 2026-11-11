@@ -24,6 +24,7 @@ broken connector fails a test instead of the whole run.
 """
 
 import copy
+import signal
 import subprocess
 import sys
 import threading
@@ -46,7 +47,7 @@ from rai.communication.ros2 import (
 from rai.communication.ros2.context import NodeDiscovery
 from rai.communication.ros2.images import numpy_to_imgmsg
 from rai.communication.ros2.runtime import ROS2Runtime
-from rclpy.action import ActionServer, CancelResponse, GoalResponse
+from rclpy.action import ActionClient, ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor
 from rclpy.node import Node
@@ -440,12 +441,18 @@ def test_latched_publish_reaches_late_subscriber(connectors, helper_node):
     assert wait_until(lambda: got == ["map"])
 
 
-def test_publish_same_topic_different_types(connectors):
+def test_publish_same_topic_different_types(connectors, helper_node):
+    """A publisher of a new type replaces the old one (one per name, and the
+    RMW refuses two types on one topic in a participant)."""
     topic = unique("types")
     connector = connectors()
     send(connector, topic, 1)
-    with pytest.raises(Exception, match=topic):
-        send(connector, topic, "x")
+    send(connector, topic, "x")
+    publishers = connector._node.get_publishers_info_by_topic(topic)
+    assert [p.topic_type for p in publishers] == [STRING]
+    got: list[str] = []
+    helper_node().create_subscription(String, topic, lambda m: got.append(m.data), 10)
+    assert wait_until(lambda: send(connector, topic, "y") or got)
 
 
 def test_concurrent_first_use_creates_one_entity(connectors):
@@ -611,28 +618,71 @@ def test_service_call_timeout_raises(connectors, helper_node):
 
 
 SERVER = """
-import rclpy
-from rclpy.action import ActionServer
+import signal
 from example_interfaces.action import Fibonacci
 from std_srvs.srv import SetBool
-rclpy.init()
-node = rclpy.create_node("fault_server")
-node.create_service(SetBool, "{name}", lambda req, res: setattr(res, "success", True) or res)
-ActionServer(node, Fibonacci, "{name}", lambda goal: goal.succeed() or Fibonacci.Result())
-rclpy.spin(node)
+from rai.communication.ros2 import ROS2Connector
+connector = ROS2Connector()
+connector.create_service("{name}", lambda req, res: setattr(res, "success", True) or res, service_type=SetBool)
+connector.create_action("{name}", lambda goal: goal.succeed() or Fibonacci.Result(), action_type=Fibonacci)
+try:
+    signal.pause()
+except KeyboardInterrupt:
+    connector.shutdown()
 """
 
 
 @contextmanager
 def server_process(name: str):
     """A SetBool service and a Fibonacci action named name, in another process
-    (in-process, rmw rejects a client of another type at creation)."""
+    (in-process, rmw rejects a client of another type at creation). RAI
+    servers: a plain rclpy one may drop the response to a client it has not
+    discovered yet (test_fresh_connector_clients_of_new_rclpy_servers)."""
     server = subprocess.Popen([sys.executable, "-c", SERVER.format(name=name)])
     try:
         yield
     finally:
-        server.kill()
-        server.wait()
+        server.send_signal(signal.SIGINT)  # a killed participant lingers
+        try:
+            server.wait(5.0)
+        except subprocess.TimeoutExpired:
+            server.kill()
+            server.wait()
+
+
+def test_type_change_replaces_the_entity_of_the_old_type(connectors):
+    """rmw_fastrtps refuses an entity whose type differs from one still on the
+    same topic in this participant (RCLError on both distros), and rclpy
+    destroys an entity the executor waits on only once it wakes. So the old
+    client, action client, publisher or idle subscription must be gone before
+    the one of the new type is created."""
+    connector = connectors()
+    srv, act, pub, sub = (unique(p) for p in ("tsrv", "tact", "tpub", "tsub"))
+    for i in range(10):
+        first = i % 2 == 0
+        with pytest.raises(TimeoutError):  # no server: readiness times out
+            connector.service_call(
+                ROS2Message(payload={}),
+                srv,
+                timeout_sec=0.05,
+                msg_type=TRIGGER if first else "std_srvs/srv/SetBool",
+            )
+        with pytest.raises(TimeoutError):
+            connector.start_action(
+                ROS2Message(payload={}),
+                act,
+                timeout_sec=0.05,
+                msg_type=FIBONACCI if first else "nav2_msgs/action/NavigateToPose",
+            )
+        connector.sync.publish(pub, String(data="x") if first else Int32(data=1))
+        with pytest.raises(TimeoutError):
+            connector.sync.receive(
+                sub, msg_type=String if first else Int32, timeout=0.05
+            )
+    # A subscription with consumers is never replaced under them.
+    connector.subscribe(sub, lambda _: None, msg_type=Int32)
+    with pytest.raises(TypeError, match=sub):
+        connector.sync.receive(sub, msg_type=String, timeout=0.05)
 
 
 def test_wrong_service_type_then_correct_type(connectors):
@@ -645,21 +695,203 @@ def test_wrong_service_type_then_correct_type(connectors):
             connector.service_call(
                 ROS2Message(payload={}), name, timeout_sec=0.3, msg_type=TRIGGER
             )
-        # Fast DDS may drop the first response to a fresh client (discovery
-        # race); a poisoned cache fails every attempt.
-        for attempt in range(3):
-            try:
-                response = connector.service_call(
-                    ROS2Message(payload={"data": True}),
-                    name,
-                    timeout_sec=2.0,
-                    msg_type="std_srvs/srv/SetBool",
-                )
-                break
-            except Exception:
-                if attempt == 2:
-                    raise
+        # A poisoned cache would fail this.
+        response = connector.service_call(
+            ROS2Message(payload={"data": True}),
+            name,
+            timeout_sec=5.0,
+            msg_type="std_srvs/srv/SetBool",
+        )
         assert response.payload.success
+
+
+FRESH_CLIENTS, SERVER_PROCESSES = 200, 20
+
+MANY_SERVICES = """
+import sys
+{setup}
+print("up", flush=True)
+sys.stdin.read()
+{teardown}
+"""
+RCLPY_SERVICES = (
+    """
+import rclpy
+from std_srvs.srv import SetBool
+rclpy.init()
+node = rclpy.create_node("fault_many")
+for i in range({first}, {n}, {step}):
+    node.create_service(SetBool, "{prefix}_%d" % i, lambda req, res: setattr(res, "success", True) or res)
+import threading
+threading.Thread(target=rclpy.spin, args=(node,), daemon=True).start()
+""",
+    "rclpy.shutdown()",
+)
+RAI_SERVICES = (
+    """
+from rai.communication.ros2 import ROS2Connector
+connector = ROS2Connector()
+for i in range({first}, {n}, {step}):
+    connector.create_service("{prefix}_%d" % i, lambda req, res: setattr(res, "success", True) or res, service_type="std_srvs/srv/SetBool")
+""",
+    "connector.shutdown()",
+)
+
+
+@contextmanager
+def many_services(code: tuple[str, str], prefix: str, n: int):
+    """n services {prefix}_<i> spread over SERVER_PROCESSES fresh processes:
+    each new participant is one more chance for the race. They exit cleanly:
+    a killed participant lingers in discovery and slows the next ones."""
+    setup, teardown = code
+    servers = [
+        subprocess.Popen(
+            [
+                sys.executable,
+                "-c",
+                MANY_SERVICES.format(
+                    setup=setup.format(
+                        first=first, n=n, step=SERVER_PROCESSES, prefix=prefix
+                    ),
+                    teardown=teardown,
+                ),
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+        )
+        for first in range(SERVER_PROCESSES)
+    ]
+    try:
+        for server in servers:
+            assert server.stdout is not None and server.stdout.readline() == b"up\n"
+        yield
+    finally:
+        for server in servers:
+            if server.stdin is not None:
+                server.stdin.close()
+        for server in servers:
+            try:
+                server.wait(5.0)
+            except subprocess.TimeoutExpired:
+                server.kill()
+                server.wait()
+
+
+RAI_ACTIONS = (
+    """
+from example_interfaces.action import Fibonacci
+from rai.communication.ros2 import ROS2Connector
+connector = ROS2Connector()
+for i in range({first}, {n}, {step}):
+    connector.create_action("{prefix}_%d" % i, lambda goal: goal.succeed() or Fibonacci.Result(), action_type=Fibonacci)
+""",
+    "connector.shutdown()",
+)
+
+
+def pad_readers(node: Node, prefix: str) -> None:
+    """More readers than writers in this participant: a new server learns its
+    request writers well before its reply readers (6-36 of 200 lost unfixed).
+    The churn also slows discovery of this participant for good, so the
+    clients run in a child process (in_child)."""
+    for i in range(400):
+        node.create_subscription(Int32, f"{prefix}_pad_{i}", lambda _: None, 1)
+
+
+def in_child(fn: Callable[..., Any], *args: Any) -> Any:
+    """fn(*args) in a fresh spawned process: its own DDS participant."""
+    import concurrent.futures
+    import multiprocessing
+
+    context = multiprocessing.get_context("spawn")
+    with concurrent.futures.ProcessPoolExecutor(1, mp_context=context) as pool:
+        return pool.submit(fn, *args).result(timeout=50)
+
+
+def lost_raw_responses(server: tuple[str, str], action: bool) -> str:
+    """Child process: plain rclpy clients call (or send a goal) right after
+    service_is_ready() (server_is_ready()). Returns 'lost/total'."""
+    import rclpy
+    from std_srvs.srv import SetBool
+
+    rclpy.init()
+    prefix = unique("fresh")
+    node = Node("fault_fresh_clients")
+    pad_readers(node, prefix)
+    executor = SingleThreadedExecutor()
+    executor.add_node(node)
+    threading.Thread(target=executor.spin, daemon=True).start()
+    n = 2 * SERVER_PROCESSES if action else FRESH_CLIENTS
+    if action:
+        clients = [ActionClient(node, Fibonacci, f"{prefix}_{i}") for i in range(n)]
+        ready = [c.server_is_ready for c in clients]
+        send = [lambda c=c: c.send_goal_async(Fibonacci.Goal(order=1)) for c in clients]
+    else:
+        clients = [node.create_client(SetBool, f"{prefix}_{i}") for i in range(n)]
+        ready = [c.service_is_ready for c in clients]
+        send = [lambda c=c: c.call_async(SetBool.Request(data=True)) for c in clients]
+    futures: list[Any] = [None] * n
+
+    def send_ready() -> bool:
+        for i in range(n):
+            if futures[i] is None and ready[i]():
+                futures[i] = send[i]()
+        return all(f is not None for f in futures)
+
+    with many_services(server, prefix, n):
+        assert wait_until(send_ready, 15.0), "servers not discovered"
+        wait_until(lambda: all(f.done() for f in futures), 10.0)
+    lost = sum(not f.done() for f in futures)
+    executor.shutdown(timeout_sec=1.0)
+    rclpy.try_shutdown()
+    return f"{lost}/{n}"
+
+
+def test_fresh_clients_get_every_response_from_a_rai_server():
+    """Fast DDS drops a response whose reader the server has not matched yet
+    (rmw_fastrtps waits 100 ms), and a fresh server process discovers the
+    clients late. RAI's servers wait for the requester's reply reader, so
+    clients may call right after service_is_ready()."""
+    assert in_child(lost_raw_responses, RAI_SERVICES, False) == f"0/{FRESH_CLIENTS}"
+
+
+def test_fresh_action_clients_get_every_goal_response_from_a_rai_server():
+    """A lost goal response leaves a goal running that the client timed out on.
+    RAI's action servers answer once the client's reply readers are known."""
+    n = 2 * SERVER_PROCESSES
+    assert in_child(lost_raw_responses, RAI_ACTIONS, True) == f"0/{n}"
+
+
+def lost_connector_calls() -> str:
+    """Child process: a ROS2Connector calls services of new plain rclpy server
+    processes, all at once. Returns 'lost/total' and the first error."""
+    import asyncio
+
+    from std_srvs.srv import SetBool
+
+    prefix = unique("fresh")
+    with ROS2Connector() as connector:
+        pad_readers(connector._node, prefix)
+
+        async def call_all() -> list[Any]:
+            calls = [
+                connector.call(f"{prefix}_{i}", SetBool.Request(data=True), timeout=8.0)
+                for i in range(FRESH_CLIENTS)
+            ]
+            return await asyncio.gather(*calls, return_exceptions=True)
+
+        with many_services(RCLPY_SERVICES, prefix, FRESH_CLIENTS):
+            results = asyncio.run(call_all())
+    lost = [r for r in results if isinstance(r, BaseException)]
+    return f"{len(lost)}/{FRESH_CLIENTS} {lost[0]!r}" if lost else f"0/{FRESH_CLIENTS}"
+
+
+@pytest.mark.benchmark
+def test_fresh_connector_clients_of_new_rclpy_servers():
+    """The same race against third-party (plain rclpy) servers, which RAI can
+    only mitigate on the client by settling (runtime.SETTLE_NEW_S): a residual
+    risk that grows with this participant's size and churn, so report only."""
+    print(f"lost connector calls: {in_child(lost_connector_calls)}")
 
 
 def test_no_client_leak_without_reuse(connectors, helper_node):
@@ -928,9 +1160,9 @@ def test_wrong_action_type_does_not_block_action_name(connectors):
             )
     with server_process(name):
         wait_for_action(connector, name)
-        # Matching the cached client to the new server is DDS discovery: up
-        # to about 3 s on Fast DDS.
-        assert start_goal(connector, name, timeout_sec=10.0)
+        # Readiness covers DDS discovery (up to about 3 s on Fast DDS) and
+        # the settling for a fresh server process (runtime.SETTLE_NEW_S).
+        assert start_goal(connector, name, timeout_sec=6.0)
 
 
 # ------------------------------------------------------------------ lifecycle

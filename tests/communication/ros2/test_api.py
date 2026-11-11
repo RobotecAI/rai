@@ -206,6 +206,39 @@ def test_service_call_errors(connector, server):
         )
 
 
+def test_only_idempotent_calls_are_resent(connector, server):
+    """A request is sent once unless idempotent=True; then it is resent after
+    1 s and the first answer wins (a lost response looks like a stall)."""
+    srv = unique("resend")
+    calls: list[float] = []
+    stall = threading.Event()
+
+    def handler(request: Any, response: Any) -> Any:
+        calls.append(time.monotonic())
+        if len(calls) == 1:
+            stall.wait(5.0)
+        response.success = True
+        return response
+
+    server.create_service(
+        SetBool, srv, handler, callback_group=ReentrantCallbackGroup()
+    )
+    try:
+        with pytest.raises(ROS2TimeoutError):
+            connector.sync.call(srv, SetBool.Request(), timeout=1.5)
+        assert len(calls) == 1
+    finally:
+        stall.set()
+    stall.clear()
+    calls.clear()
+    try:
+        request = SetBool.Request()
+        assert connector.sync.call(srv, request, timeout=5.0, idempotent=True).success
+        assert len(calls) == 2
+    finally:
+        stall.set()
+
+
 def test_goal_handle_feedback_result_status(connector, server):
     name = unique("fib")
     fibonacci_server(server, name)

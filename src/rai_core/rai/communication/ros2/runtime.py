@@ -32,7 +32,9 @@ connector on the runtime.
 import asyncio
 import atexit
 import concurrent.futures
+import contextlib
 import contextvars
+import inspect
 import logging
 import threading
 import time
@@ -72,6 +74,26 @@ ExecutorKind = Literal["single", "events"]
 # 2.1); SingleThreadedExecutor stays available as executor="single".
 DEFAULT_EXECUTOR: ExecutorKind = "events"
 POLL_S = 0.01  # readiness and TF polling; rclpy's own waits poll at 0.25 s
+# Discovery is asymmetric: a client is ready when IT has matched the server,
+# but the server may not have matched the client's reply reader yet, and
+# rmw_fastrtps then drops the response after 100 ms
+# (compat.requesters_without_reply_reader). No client-side signal shows the
+# server's matches, so requests settle: a client's first request to a server
+# waits SETTLE_S (the server discovers the fresh client), and the first contact
+# with another participant (a process) SETTLE_NEW_S, since that participant
+# must discover this whole one (1 s removed the losses measured under load).
+# A request never waits more than half its timeout for this. RAI's own servers
+# hold a response until the requester's reply reader is discovered, for at most
+# REPLY_WAIT_S.
+SETTLE_S = 0.1
+SETTLE_NEW_S = 1.0
+REPLY_WAIT_S = 3.0
+# rmw_fastrtps refuses an entity whose type differs from one still on the same
+# topic in this participant (RCLError, both distros), and rclpy destroys an
+# entity the executor waits on only once it wakes. An entity replaced by one of
+# another type is therefore destroyed and gone from the graph before the new
+# one is created, within DESTROY_WAIT_S.
+DESTROY_WAIT_S = 5.0
 
 
 def _make_executor(kind: Optional[str], context: Context) -> Any:
@@ -88,6 +110,19 @@ def _make_executor(kind: Optional[str], context: Context) -> Any:
 
 def message_class(msg_type: Any) -> Any:
     return import_message_from_str(msg_type) if isinstance(msg_type, str) else msg_type
+
+
+@contextlib.contextmanager
+def _type_conflict(name: str) -> Any:
+    """An entity RAI does not own (another node of this process) holds name
+    with another type: the RMW refuses the new one (RCLError; ValueError from
+    ActionClient)."""
+    try:
+        yield
+    except (compat.RCLError, ValueError) as e:
+        if "incompatible type" not in str(e):
+            raise
+        raise TypeError(f"{name} is used with another type in this process: {e}") from e
 
 
 class Waiter:
@@ -227,6 +262,8 @@ class Client:
         self.msg_type = msg_type
         self.pending: set[Waiter] = set()
         self.dropped: Optional[BaseException] = None
+        self.servers: Optional[frozenset[bytes]] = None  # last seen server ids
+        self.settled_until = 0.0  # monotonic; requests wait for it
 
 
 class ROS2Runtime:
@@ -275,6 +312,10 @@ class ROS2Runtime:
         self._clients: dict[tuple[str, bool], Client] = {}
         self._servers: list[Any] = []
         self._goals: set[Any] = set()  # GoalHandles accepted and not done
+        self._replyless: set[bytes] = set()  # participants that never showed one
+        # participant GUID prefix -> monotonic time its servers count as settled
+        self._settled: dict[bytes, float] = {}
+        self._own: Optional[bytes] = None  # this participant's GUID prefix
         self._tf_buffer: Any = None
         self._tf_listener: Any = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
@@ -456,27 +497,55 @@ class ROS2Runtime:
         self.check()
         key = (self.resolve(name), raw)
         cls = message_class(msg_type)
-        with self._lock:
-            self.check()
-            topic = self._topics.get(key)
-            if topic is None:
-                topic = Topic(cls or self._graph_type(key[0]))
-                # BEST_AVAILABLE resolves when the subscription is created: with
-                # no publisher yet it becomes best effort, which loses fragments
-                # of large messages. Such a subscription is re-created once, at
-                # its first match, against the publishers' real offers.
-                early = qos.reliability == ReliabilityPolicy.BEST_AVAILABLE
-                if early and not self.node.count_publishers(key[0]):
-                    topic.subscription = self._subscribe(topic, key, qos, rematch=True)
-                else:
-                    topic.subscription = self._subscribe(topic, key, qos)
-                self._topics[key] = topic
-                return topic, True
-            if cls is not None and cls is not topic.msg_type:
+        while True:
+            with self._lock:
+                self.check()
+                if not self._drop_topics(key[0], cls):
+                    return self._topic(key, cls, qos)
+            self._await_destroyed(
+                compat.entity_topics(key[0], "subscription"),
+                f"Subscription to {key[0]}",
+                keep_type=compat.dds_type_name(cls),
+            )
+
+    def _drop_topics(self, name: str, cls: Any) -> bool:
+        """Destroy idle subscriptions to name of another type than cls (raw
+        or not); TypeError if one still has consumers or waiters."""
+        stale = [
+            key
+            for key in ((name, False), (name, True))
+            if cls is not None
+            and key in self._topics
+            and self._topics[key].msg_type is not cls
+        ]
+        for key in stale:
+            topic = self._topics[key]
+            if topic.consumers or topic.waiters:
                 raise TypeError(
-                    f"{key[0]} is subscribed as {topic.msg_type.__name__}, not {cls.__name__}"
+                    f"{name} is subscribed as {topic.msg_type.__name__}, not {cls.__name__}"
                 )
-            return topic, False
+        for key in stale:
+            compat.destroy(self.node, self._topics.pop(key).subscription)
+        return bool(stale)
+
+    def _topic(
+        self, key: tuple[str, bool], cls: Any, qos: QoSProfile
+    ) -> tuple[Topic, bool]:
+        """Get or create the subscription for key; self._lock is held."""
+        topic = self._topics.get(key)
+        if topic is None:
+            topic = Topic(cls or self._graph_type(key[0]))
+            # BEST_AVAILABLE resolves when the subscription is created: with
+            # no publisher yet it becomes best effort, which loses fragments
+            # of large messages. Such a subscription is re-created once, at
+            # its first match, against the publishers' real offers.
+            early = qos.reliability == ReliabilityPolicy.BEST_AVAILABLE
+            rematch = early and not self.node.count_publishers(key[0])
+            with _type_conflict(key[0]):
+                topic.subscription = self._subscribe(topic, key, qos, rematch)
+            self._topics[key] = topic
+            return topic, True
+        return topic, False
 
     def _subscribe(
         self,
@@ -555,20 +624,30 @@ class ROS2Runtime:
 
     def _publish(self, topic: str, msg: Any, qos: QoSProfile) -> None:
         publisher = self._publishers.get(topic)
-        if publisher is None:
+        if publisher is None or publisher.msg_type is not type(msg):
+            publisher = self._publisher(topic, type(msg), qos)
+        publisher.publish(msg)
+
+    def _publisher(self, topic: str, cls: Any, qos: QoSProfile) -> Any:
+        """The publisher of cls on topic; one of another type is replaced."""
+        while True:
             with self._lock:
                 self.check()
-                publisher = self._publishers.get(topic)
-                if publisher is None:
-                    publisher = self.node.create_publisher(
-                        type(msg), topic, qos, callback_group=self.group
-                    )
+                old = self._publishers.get(topic)
+                if old is not None and old.msg_type is cls:
+                    return old
+                if old is None:
+                    with _type_conflict(topic):
+                        publisher = self.node.create_publisher(
+                            cls, topic, qos, callback_group=self.group
+                        )
                     self._publishers[topic] = publisher
-        if publisher.msg_type is not type(msg):
-            raise TypeError(
-                f"{topic} publishes {publisher.msg_type.__name__}, not {type(msg).__name__}"
+                    return publisher
+                del self._publishers[topic]
+                compat.destroy(self.node, old)
+            self._await_destroyed(
+                compat.entity_topics(topic, "publisher"), f"Publisher on {topic}"
             )
-        publisher.publish(msg)
 
     # ------------------------------------------------------------ egress
 
@@ -617,34 +696,49 @@ class ROS2Runtime:
         self.check()
         key = (self.resolve(name, "topic" if action else "service"), action)
         cls = message_class(msg_type)
-        with self._lock:
-            self.check()
-            client = self._clients.get(key)
-            if client is not None and client.msg_type is not cls:
+        while True:
+            with self._lock:
+                self.check()
+                client = self._clients.get(key)
+                if client is None:
+                    with _type_conflict(key[0]):
+                        entity = self._create(cls, key)
+                    client = self._clients[key] = Client(entity, cls, key[0])
+                if client.msg_type is cls:
+                    return client
                 self._drop(key, "replaced by a client of another type")
-                client = None
-            if client is None:
-                client = self._clients[key] = Client(
-                    self._create(cls, key), cls, key[0]
-                )
-            return client
+            self._await_destroyed(
+                compat.entity_topics(key[0], "action_client" if key[1] else "client"),
+                f"Client of {key[0]}",
+            )
 
     def _create(self, cls: Any, key: tuple[str, bool]) -> Any:
-        # rclpy destroys a client the executor is waiting on only after it wakes,
-        # so a client of another type may need a few tries (seen on Lyrical).
-        deadline = time.monotonic() + 1.0
+        if key[1]:
+            return ActionClient(self.node, cls, key[0], callback_group=self.group)
+        return self.node.create_client(cls, key[0], callback_group=self.group)
+
+    def _await_destroyed(
+        self, topics: list[tuple[str, bool]], what: str, keep_type: str = ""
+    ) -> None:
+        """Wait until this node has no endpoint left on topics (other than of
+        keep_type), waking the executor so rclpy finishes deferred destroys."""
+        deadline = time.monotonic() + DESTROY_WAIT_S
         while True:
-            try:
-                if key[1]:
-                    return ActionClient(
-                        self.node, cls, key[0], callback_group=self.group
-                    )
-                return self.node.create_client(cls, key[0], callback_group=self.group)
-            except ValueError:
-                if time.monotonic() > deadline:
-                    raise
-                self._wake()
-                time.sleep(POLL_S)
+            self.check()
+            left = [
+                e
+                for e in compat.own_endpoints(self.node, topics)
+                if e.topic_type != keep_type
+            ]
+            if not left:
+                return
+            if time.monotonic() >= deadline:
+                raise RuntimeError(
+                    f"{what}: the entity of the previous type was not destroyed "
+                    f"within {DESTROY_WAIT_S:g} s"
+                )
+            self._wake()
+            time.sleep(POLL_S)
 
     def release(self, name: str, action: bool = False) -> bool:
         if self.closed:
@@ -664,23 +758,81 @@ class ROS2Runtime:
         return True
 
     async def ready(self, client: Client, timeout: float, what: str) -> float:
-        """Poll readiness at POLL_S; returns the deadline."""
-        deadline = time.monotonic() + timeout
+        """Poll readiness at POLL_S, then let the server settle (SETTLE_S,
+        SETTLE_NEW_S), at most timeout / 2; returns the deadline."""
+        start = time.monotonic()
+        deadline = start + timeout
         entity = client.entity
-        is_ready = (
-            entity.server_is_ready
-            if isinstance(entity, ActionClient)
-            else entity.service_is_ready
-        )
+        action = isinstance(entity, ActionClient)
+        is_ready = entity.server_is_ready if action else entity.service_is_ready
         while True:
             self.check()
             if client.dropped is not None:
                 raise client.dropped
             if is_ready():
-                return deadline
+                break
             if time.monotonic() >= deadline:
                 raise ROS2TimeoutError(f"{what} not available within {timeout:g} s")
             await asyncio.sleep(POLL_S)
+        until = self._settle(client, action)
+        until = min(until, start + timeout / 2)
+        while time.monotonic() < until:
+            self.check()
+            if client.dropped is not None:
+                raise client.dropped
+            await asyncio.sleep(POLL_S)
+        return deadline
+
+    def _settle(self, client: Client, action: bool) -> float:
+        """The monotonic time from which client's servers count as settled.
+        Servers in this participant match synchronously and never wait."""
+        now = time.monotonic()
+        name = f"{client.name}/_action/send_goal" if action else client.name
+        try:
+            servers = compat.service_server_ids(self.node, name)
+            with self._lock:
+                if self._own is None:
+                    self._own = compat.own_participant(self.node) or b""
+        except Exception:  # the node is being destroyed
+            return now
+        remote = {server[:12] for server in servers} - {self._own}
+        if servers != client.servers:
+            client.servers = servers
+            client.settled_until = now + SETTLE_S if remote else now
+        until = client.settled_until
+        with self._lock:
+            for participant in remote:
+                first = self._settled.setdefault(participant, now + SETTLE_NEW_S)
+                until = max(until, first)
+        return until
+
+    def _reply_readers_missing(self, services: tuple[str, ...]) -> set[bytes]:
+        """Requesting participants whose reply reader is not discovered yet."""
+        missing: set[bytes] = set()
+        try:
+            for service in services:
+                missing |= compat.requesters_without_reply_reader(self.node, service)
+        except Exception:  # the node is being destroyed
+            return set()
+        return missing - self._replyless
+
+    def _await_reply_readers(self, services: tuple[str, ...]) -> None:
+        """Block (worker thread) until this node has discovered the reply reader
+        of every participant requesting services, at most REPLY_WAIT_S. One
+        that never shows one (another RMW, a broken client) is skipped after."""
+        deadline = time.monotonic() + REPLY_WAIT_S
+        while not self.closed:
+            missing = self._reply_readers_missing(services)
+            if not missing:
+                return
+            if time.monotonic() >= deadline:
+                self._replyless |= missing
+                logger.warning(
+                    "Replying on %s before its requester's reader was discovered",
+                    services[0],
+                )
+                return
+            time.sleep(POLL_S)
 
     def serve(
         self, name: str, srv_type: Any, handler: Callable[[Any, Any], Any]
@@ -688,16 +840,19 @@ class ROS2Runtime:
         """A service whose handler runs on the worker pool, one request at a time."""
         self.check()
         dispatcher = Dispatcher(self, lambda job: job(), None)
+        resolved = (self.resolve(name, "service"),)
 
         async def callback(request: Any, response: Any) -> Any:
             done: Future = Future()
 
             def job() -> None:
                 try:
-                    done.set_result(handler(request, response))
+                    result = handler(request, response)
                 except Exception:
                     logger.exception("Service handler of %s failed", name)
-                    done.set_result(response)
+                    result = response
+                self._await_reply_readers(resolved)
+                done.set_result(result)
 
             dispatcher.push(job)
             return await done
@@ -739,6 +894,23 @@ class ROS2Runtime:
         ):
             if key in kwargs:
                 kwargs[key] = guard(kwargs[key], refuse)
+        decide = kwargs.get("goal_callback", lambda _: GoalResponse.ACCEPT)
+        services = tuple(
+            f"{self.resolve(name)}/_action/{service}"
+            for service in ("send_goal", "get_result", "cancel_goal")
+        )
+
+        async def goal_callback(goal: Any) -> Any:
+            # The goal response must reach the client, or the client times out
+            # while the goal runs; answer once its reply readers are discovered.
+            response = decide(goal)
+            if inspect.isawaitable(response):
+                response = await response
+            if self._reply_readers_missing(services):
+                await self.call_in_worker(self._await_reply_readers, services)
+            return response
+
+        kwargs["goal_callback"] = goal_callback
         kwargs.setdefault("result_timeout", compat.ACTION_RESULT_TIMEOUT_S)
         kwargs.setdefault("callback_group", self.group)
         server = ActionServer(
