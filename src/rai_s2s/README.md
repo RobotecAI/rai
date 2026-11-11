@@ -113,9 +113,9 @@ You can use the following template:
 
 ```
 class MyTTSModel(TTSModel):
-    def get_speech(self, text: str) -> AudioSegment:
+    def get_speech(self, text: str) -> Audio:  # rai.content.Audio
         ...
-        return AudioSegment()
+        return Audio(samples, sample_rate)
 
     def get_tts_params(self) -> Tuple[int, int]:
         ...
@@ -129,7 +129,7 @@ class MyTTSModel(TTSModel):
 
 The `SpeechToSpeechAgent` is an abstract class which provides functionalities to enable S2S communication with RAI Agents using different communication protocols.
 ROS2 is supported through `ROS2S2SAgent`, which is configured by providing two topic names - `to_human`, and `from_human`.
-On `from_human` topic `ROS2HRIMessages` are published containing transcribed voice from the user.
+On `from_human` topic `rai_interfaces/msg/HRIMessage`s are published containing transcribed voice from the user.
 Analogically on `to_human` messages with text to be played to the user are taken as input.
 The Agent takes care of sound device configuration.
 

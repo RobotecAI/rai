@@ -22,14 +22,11 @@ from uuid import uuid4
 
 import numpy as np
 from numpy._typing import NDArray
-from pydub import AudioSegment
 from rai.agents.base import SyncAgent
-from rai.communication.ros2 import (
-    ROS2Connector,
-    ROS2HRIConnector,
-    ROS2HRIMessage,
-    ROS2Message,
-)
+from rai.communication import HRIMessage
+from rai.communication.ros2 import ROS2Connector, ROS2HRIConnector
+from rai.content import Audio
+from std_msgs.msg import String
 from typing_extensions import Self
 
 from rai_s2s.sound_device import (
@@ -52,9 +49,8 @@ from .initialization import load_config
 @dataclass
 class PlayData:
     playing: bool = False
-    current_segment: Optional[AudioSegment] = None
+    current_segment: Optional[Audio] = None
     data: Optional[NDArray] = None
-    channels: int = 1
     current_frame: int = 0
 
 
@@ -98,7 +94,7 @@ class TextToSpeechAgent(SyncAgent):
 
         self.node_base_name = ros2_name
         self.model = tts
-        self.ros2_connector = self._setup_ros2_connector()
+        self._setup_ros2_connector()
         super().__init__()
 
         self.current_transcription_id = str(uuid4())[0:8]
@@ -179,9 +175,9 @@ class TextToSpeechAgent(SyncAgent):
                     self.playback_data.current_segment = self.audio_queues[
                         self.current_transcription_id
                     ].get(block=False)
-                    self.playback_data.data = np.array(
-                        self.playback_data.current_segment.get_array_of_samples()  # type: ignore
-                    ).reshape(-1, self.playback_data.channels)
+                    self.playback_data.data = (
+                        self.playback_data.current_segment.as_int16().samples  # type: ignore
+                    )
                 except Empty:
                     pass
                 except KeyError:
@@ -211,6 +207,8 @@ class TextToSpeechAgent(SyncAgent):
         self.terminate_agent.set()
         if self.transcription_thread is not None:
             self.transcription_thread.join()
+        self.hri_ros2_connector.close()
+        self.ros2_connector.close()
 
     def _transcription_thread(self):
         while not self.terminate_agent.wait(timeout=0.01):
@@ -231,46 +229,41 @@ class TextToSpeechAgent(SyncAgent):
                     raise e
 
     def _setup_ros2_connector(self):
-        self.hri_ros2_connector = ROS2HRIConnector(
-            self.node_base_name  # , "single_threaded"
-        )
-        self.hri_ros2_connector.register_callback(
-            "/to_human", self._on_to_human_message
-        )
-        self.ros2_connector = ROS2Connector(
-            self.node_base_name  # , False, "single_threaded"
-        )
-        self.ros2_connector.register_callback(
-            "/voice_commands", self._on_command_message, msg_type="std_msgs/msg/String"
+        self.hri_ros2_connector = ROS2HRIConnector(self.node_base_name)
+        self.hri_ros2_connector.subscribe("/to_human", self._on_to_human_message)
+        self.ros2_connector = ROS2Connector(self.node_base_name)
+        self.ros2_connector.subscribe(
+            "/voice_commands", self._on_command_message, msg_type=String
         )
 
-    def _on_to_human_message(self, msg: ROS2HRIMessage):
+    def _on_to_human_message(self, msg: HRIMessage):
         self.logger.debug(f"Receieved message from human: {msg.text}")
         self.logger.warning(
             f"Starting playback, current id: {self.current_transcription_id}"
         )
+        speech_id = msg.communication_id or None
         if (
             self.current_speech_id is None
-            and msg.communication_id is not None
-            and msg.communication_id not in self.remembered_speech_ids
+            and speech_id is not None
+            and speech_id not in self.remembered_speech_ids
         ):
-            self.current_speech_id = msg.communication_id
+            self.current_speech_id = speech_id
             self.remembered_speech_ids.append(self.current_speech_id)
             if len(self.remembered_speech_ids) > 64:
                 self.remembered_speech_ids.pop(0)
-        if self.current_speech_id == msg.communication_id:
+        if self.current_speech_id == speech_id:
             self.text_queues[self.current_transcription_id].put(msg.text)
         self.playback_data.playing = True
 
-    def _on_command_message(self, message: ROS2Message):
+    def _on_command_message(self, message: String):
         self.logger.info(f"Receieved status message: {message}")
-        if message.payload.data == "tog_play":
+        if message.data == "tog_play":
             self.playback_data.playing = not self.playback_data.playing
-        elif message.payload.data == "play":
+        elif message.data == "play":
             self.playback_data.playing = True
-        elif message.payload.data == "pause":
+        elif message.data == "pause":
             self.playback_data.playing = False
-        elif message.payload.data == "stop":
+        elif message.data == "stop":
             self.current_speech_id = None
             self.playback_data.playing = False
             previous_id = self.current_transcription_id

@@ -15,7 +15,7 @@
 import logging
 from typing import Optional
 
-from rai.communication.ros2 import ROS2HRIConnector, ROS2HRIMessage
+from rai.communication.ros2 import ROS2HRIConnector
 
 from rai_s2s.asr.models import BaseTranscriptionModel, BaseVoiceDetectionModel
 from rai_s2s.s2s.agents.s2s_agent import SpeechToSpeechAgent
@@ -53,15 +53,13 @@ class ROS2S2SAgent(SpeechToSpeechAgent):
 
     def _setup_hri_connector(self):
         hri_connector = ROS2HRIConnector()
-        hri_connector.register_callback(self.to_human_topic, self._on_to_human_message)
+        hri_connector.subscribe(self.to_human_topic, self._on_to_human_message)
         return hri_connector
 
     def _send_from_human_message(self, data: str):
         print(f"Sending message to {self.from_human_topic}")
-        self.hri_connector.send_message(
-            ROS2HRIMessage(text=data), self.from_human_topic
-        )
+        self.hri_connector.sync.send(self.from_human_topic, data)
 
     def _send_to_human_message(self, data: str):
         print(f"Sending message to {self.to_human_topic}")
-        self.hri_connector.send_message(ROS2HRIMessage(text=data), self.to_human_topic)
+        self.hri_connector.sync.send(self.to_human_topic, data)

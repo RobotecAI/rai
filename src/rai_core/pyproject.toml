@@ -27,9 +27,6 @@ dependencies = [
     "requests>=2.33.0,<3.0.0",
     "opencv-python-headless>=5.0.0.93,<6.0.0.0",
     "pillow>=13.0.0,<14.0.0",
-    "pydub>=0.25.1,<0.26.0",
-    # audioop was removed from the stdlib in Python 3.13; pydub needs the backport.
-    "audioop-lts>=0.2.1; python_version >= '3.13'",
     "numpy>=2.0,<3.0",
 ]
 

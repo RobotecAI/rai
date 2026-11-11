@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
 from abc import ABC, abstractmethod
 from typing import Tuple
 
-from pydub import AudioSegment
+import numpy as np
+from rai.content import Audio
+from scipy.signal import resample_poly
 
 
 class TTSModelError(Exception):
@@ -27,7 +30,7 @@ class TTSModel(ABC):
     channels: int = 1
 
     @abstractmethod
-    def get_speech(self, text: str) -> AudioSegment:
+    def get_speech(self, text: str) -> Audio:
         pass
 
     @abstractmethod
@@ -38,13 +41,16 @@ class TTSModel(ABC):
         self.sample_rate = target_sample_rate
         self.channels = channels
 
-    def _resample(self, audio: AudioSegment) -> AudioSegment:
-        """
-        Resample an AudioSegment to a specified sample rate and number of channels.
-
-        :param audio: The input AudioSegment.
-        :param target_sample_rate: The desired sample rate in Hz.
-        :param channels: The desired number of audio channels.
-        :return: A new AudioSegment with the specified sample rate and channels.
-        """
-        return audio.set_frame_rate(self.sample_rate)
+    def _resample(self, audio: Audio) -> Audio:
+        """The audio at self.sample_rate, in its own sample type."""
+        if self.sample_rate in (-1, audio.sample_rate):
+            return audio
+        gcd = math.gcd(self.sample_rate, audio.sample_rate)
+        samples = resample_poly(
+            audio.as_float32().samples,
+            self.sample_rate // gcd,
+            audio.sample_rate // gcd,
+            axis=0,
+        )
+        out = Audio(samples.astype(np.float32), self.sample_rate)
+        return out.as_int16() if audio.samples.dtype == np.int16 else out

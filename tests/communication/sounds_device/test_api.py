@@ -11,14 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import io
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 import sounddevice
-from pydub import AudioSegment
-from scipy.io import wavfile
+from rai.content import Audio
 
 from rai_s2s.sound_device import (
     SoundDeviceAPI,
@@ -27,25 +25,14 @@ from rai_s2s.sound_device import (
 )
 
 
-def audio_to_numpy(audio):
-    samples = np.array(audio.get_array_of_samples())
-    if audio.channels == 2:  # Stereo: reshape into two columns
-        samples = samples.reshape((-1, 2))
-    return samples
-
-
-def get_audio():
+def get_audio() -> Audio:
     frequency = 440
     duration = 2.0
     sample_rate = 44100
     amplitude = 0.5
     t = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
     wave = amplitude * np.sin(2 * np.pi * frequency * t)
-    wave_int16 = np.int16(wave * 32767)
-    wav_buffer = io.BytesIO()
-    wavfile.write(wav_buffer, sample_rate, wave_int16)
-    audio = AudioSegment.from_wav(wav_buffer)
-    return audio
+    return Audio(np.int16(wave * 32767), sample_rate)
 
 
 @pytest.fixture
@@ -55,8 +42,7 @@ def sine_wav():
 
 @pytest.fixture
 def sine_wav_np():
-    wav = get_audio()
-    return audio_to_numpy(wav)
+    return get_audio().samples.ravel()
 
 
 @pytest.fixture
@@ -183,6 +169,8 @@ def test_write_unsupported(input_device_id, mock_sd, is_output, sine_wav):
     else:
         api.write(sine_wav, blocking=True)
         mock_sd["play"].assert_called_once()
+        (samples,), kwargs = mock_sd["play"].call_args
+        assert samples is sine_wav.samples and kwargs["samplerate"] == 44100
 
 
 @pytest.mark.parametrize("is_input", [True, False])
@@ -207,8 +195,8 @@ def test_read_unsupported(input_device_id, mock_sd, is_input, sine_wav, sine_wav
     else:
         mock_sd["rec"].return_value = sine_wav_np
         result = api.read(1.0, blocking=True)
-        arr = audio_to_numpy(result)
-        np.testing.assert_array_equal(arr.flatten(), sine_wav_np)
+        assert result.sample_rate == api.sample_rate
+        np.testing.assert_array_equal(result.samples.ravel(), sine_wav_np)
 
 
 @pytest.mark.parametrize("method", ["stop", "wait"])

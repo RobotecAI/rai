@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 import sounddevice
-from pydub import AudioSegment
+from rai.content import Audio
 from scipy.io import wavfile
 
 from rai_s2s.sound_device import (
@@ -77,11 +77,7 @@ def sine_wav():
     amplitude = 0.5
     t = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
     wave = amplitude * np.sin(2 * np.pi * frequency * t)
-    wave_int16 = np.int16(wave * 32767)
-    wav_buffer = io.BytesIO()
-    wavfile.write(wav_buffer, sample_rate, wave_int16)
-    audio = AudioSegment.from_wav(wav_buffer)
-    return audio
+    return Audio(np.int16(wave * 32767), sample_rate)
 
 
 @pytest.fixture
@@ -101,13 +97,9 @@ def binary_audio():
 
 
 def test_send_message_play_audio(connector, mock_sound_device_api, sine_wav):
-    message = SoundDeviceMessage(
-        text="",
-        audios=[sine_wav],
-        message_author="human",
-    )
+    message = SoundDeviceMessage(audios=[sine_wav])
     connector.send_message(message, "speaker")
-    connector.devices["speaker"].write.assert_called_once()
+    connector.devices["speaker"].write.assert_called_once_with(sine_wav)
 
 
 def test_send_message_stop_audio(connector, mock_sound_device_api):
@@ -126,7 +118,7 @@ def test_send_message_read_error(connector):
 
 
 def test_service_call_play_audio(connector, mock_sound_device_api, sine_wav):
-    message = SoundDeviceMessage(text="", audios=[sine_wav], message_author="ai")
+    message = SoundDeviceMessage(audios=[sine_wav])
     result = connector.service_call(message, "speaker")
     mock_sound_device_api.write.assert_called_once()
     assert isinstance(result, SoundDeviceMessage)

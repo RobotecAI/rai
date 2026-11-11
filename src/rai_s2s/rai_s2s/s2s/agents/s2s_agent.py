@@ -161,9 +161,9 @@ class SpeechToSpeechAgent(SyncAgent):
                     self.playback_data.current_segment = self.audio_queues[
                         self.current_transcription_id
                     ].get(block=False)
-                    self.playback_data.data = np.array(
-                        self.playback_data.current_segment.get_array_of_samples()  # type: ignore
-                    ).reshape(-1, self.playback_data.channels)
+                    self.playback_data.data = (
+                        self.playback_data.current_segment.as_int16().samples  # type: ignore
+                    )
                 except Empty:
                     pass
                 except KeyError:
@@ -277,16 +277,17 @@ class SpeechToSpeechAgent(SyncAgent):
         self.logger.warning(
             f"Starting playback, current id: {self.current_transcription_id}"
         )
+        speech_id = message.communication_id or None
         if (
             self.current_speech_id is None
-            and message.communication_id is not None
-            and message.communication_id not in self.remembered_speech_ids
+            and speech_id is not None
+            and speech_id not in self.remembered_speech_ids
         ):
-            self.current_speech_id = message.communication_id
+            self.current_speech_id = speech_id
             self.remembered_speech_ids.append(self.current_speech_id)
             if len(self.remembered_speech_ids) > 64:
                 self.remembered_speech_ids.pop(0)
-        if self.current_speech_id == message.communication_id:
+        if self.current_speech_id == speech_id:
             self.text_queues[self.current_transcription_id].put(message.text)
         self.playback_data.playing = True
 

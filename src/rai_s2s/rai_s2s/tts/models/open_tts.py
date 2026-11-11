@@ -17,7 +17,7 @@ from typing import Tuple
 
 import numpy as np
 import requests
-from pydub import AudioSegment
+from rai.content import Audio
 from scipy.io.wavfile import read
 
 from rai_s2s.tts.models import TTSModel, TTSModelError
@@ -43,7 +43,7 @@ class OpenTTS(TTSModel):
         self.url = url
         self.voice = voice
 
-    def get_speech(self, text: str) -> AudioSegment:
+    def get_speech(self, text: str) -> Audio:
         """
         Converts text into speech using the OpenTTS API.
 
@@ -54,8 +54,8 @@ class OpenTTS(TTSModel):
 
         Returns
         -------
-        AudioSegment
-            The generated speech as an `AudioSegment` object.
+        Audio
+            The generated speech, int16.
 
         Raises
         ------
@@ -92,13 +92,7 @@ class OpenTTS(TTSModel):
                 (data * 32768).clip(-32768, 32767).astype(np.int16)
             )  # Convert float32 to int16
 
-        audio = AudioSegment(
-            data.tobytes(), frame_rate=sample_rate, sample_width=2, channels=1
-        )
-        if self.sample_rate == -1:
-            return audio
-        else:
-            return self._resample(audio)
+        return self._resample(Audio(data, sample_rate))
 
     def get_tts_params(self) -> Tuple[int, int]:
         """
@@ -119,4 +113,4 @@ class OpenTTS(TTSModel):
         """
 
         data = self.get_speech("A")
-        return data.frame_rate, 1
+        return data.sample_rate, 1

@@ -13,12 +13,12 @@
 # limitations under the License.
 
 import os
-from io import BytesIO
 from typing import Tuple
 
+import numpy as np
 from elevenlabs.client import ElevenLabs
 from elevenlabs.types.voice_settings import VoiceSettings
-from pydub import AudioSegment
+from rai.content import Audio
 
 from rai_s2s.tts.models import TTSModel, TTSModelError
 
@@ -34,6 +34,8 @@ class ElevenLabsTTS(TTSModel):
     base_url : str, optional
         The API endpoint for the ElevenLabs API, by default None.
     """
+
+    PCM_RATE = 24000  # raw 16-bit mono PCM, no decoder needed
 
     def __init__(
         self,
@@ -56,7 +58,7 @@ class ElevenLabsTTS(TTSModel):
             raise TTSModelError(f"Voice {voice} not found")
         self.voice_id = voice_id
 
-    def get_speech(self, text: str) -> AudioSegment:
+    def get_speech(self, text: str) -> Audio:
         """
         Converts text into speech using the ElevenLabs API.
 
@@ -67,8 +69,8 @@ class ElevenLabsTTS(TTSModel):
 
         Returns
         -------
-        AudioSegment
-            The generated speech as an `AudioSegment` object.
+        Audio
+            The generated speech, int16.
 
         Raises
         ------
@@ -82,14 +84,14 @@ class ElevenLabsTTS(TTSModel):
                 text=text,
                 voice_settings=self.voice_settings,
                 optimize_streaming_latency=4,
+                output_format=f"pcm_{self.PCM_RATE}",
             )
             audio_data = b"".join(response)
         except Exception as e:
             raise TTSModelError(f"Error occurred while fetching audio: {e}") from e
 
-        # Load audio into memory (ElevenLabs returns MP3)
-        audio_segment = AudioSegment.from_mp3(BytesIO(audio_data))
-        return audio_segment
+        samples = np.frombuffer(audio_data, "<i2").astype(np.int16)
+        return self._resample(Audio(samples, self.PCM_RATE))
 
     def get_tts_params(self) -> Tuple[int, int]:
         """
@@ -109,4 +111,4 @@ class ElevenLabsTTS(TTSModel):
             If the response does not contain valid audio data.
         """
         data = self.get_speech("A")
-        return data.frame_rate, 1
+        return data.sample_rate, 1

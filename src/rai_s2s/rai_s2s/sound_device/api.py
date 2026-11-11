@@ -16,10 +16,9 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
-import numpy as np
 import sounddevice as sd
 from numpy._typing import NDArray
-from pydub import AudioSegment
+from rai.content import Audio
 from scipy.signal import resample
 
 
@@ -117,14 +116,14 @@ class SoundDeviceAPI:
         self.in_stream = None
         self.out_stream = None
 
-    def write(self, data: AudioSegment, blocking: bool = False, loop: bool = False):
+    def write(self, data: Audio, blocking: bool = False, loop: bool = False):
         """
         Write data to the sound device.
 
         Parameters
         ----------
-        data : NDArray
-            Data to be written.
+        data : Audio
+            Audio to be played.
         blocking : bool, optional
             If True, the function will block until the sound is played. Defaults to False.
         loop : bool, optional
@@ -141,16 +140,15 @@ class SoundDeviceAPI:
         if not self.write_flag:
             raise SoundDeviceError(f"{self.device_name} does not support writing!")
 
-        audio = np.array(data.get_array_of_samples())
         sd.play(
-            audio,
-            samplerate=data.frame_rate,
+            data.samples,
+            samplerate=data.sample_rate,
             blocking=blocking,
             loop=loop,
             device=self.device_number,
         )
 
-    def read(self, time: float, blocking: bool = False) -> AudioSegment:
+    def read(self, time: float, blocking: bool = False) -> Audio:
         """
         Read data from the sound device.
 
@@ -165,8 +163,8 @@ class SoundDeviceAPI:
 
         Returns
         -------
-        NDArray
-            Data read from the sound device.
+        Audio
+            Audio read from the sound device.
 
         Notes
         -----
@@ -192,12 +190,7 @@ class SoundDeviceAPI:
             dtype=self.config.dtype,
         )
 
-        return AudioSegment(
-            data=recording.flatten(),
-            sample_width=recording.dtype.itemsize,
-            frame_rate=self.sample_rate,
-            channels=self.in_channels,
-        )
+        return Audio(recording, self.sample_rate)
 
     def stop(self):
         """

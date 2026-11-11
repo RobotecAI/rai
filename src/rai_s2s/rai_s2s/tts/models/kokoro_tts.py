@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Literal, Tuple
 
 import numpy as np
-from pydub import AudioSegment
+from rai.content import Audio
 
 from rai_s2s.tts.models import TTSModel, TTSModelError
 
@@ -93,7 +93,7 @@ class KokoroTTS(TTSModel):
         except Exception as e:
             raise TTSModelError(f"Failed to initialize Kokoro TTS model: {e}") from e
 
-    def get_speech(self, text: str) -> AudioSegment:
+    def get_speech(self, text: str) -> Audio:
         """
         Converts text into speech using the Kokoro TTS model.
 
@@ -104,8 +104,8 @@ class KokoroTTS(TTSModel):
 
         Returns
         -------
-        AudioSegment
-            The generated speech as an `AudioSegment` object.
+        Audio
+            The generated speech, int16.
 
         Raises
         ------
@@ -119,29 +119,15 @@ class KokoroTTS(TTSModel):
                 text, voice=self.voice, speed=self.speed, lang=self.language, trim=False
             )
 
-            if samples.dtype == np.float32:
-                if np.any(samples < -1.0) or np.any(samples > 1.0):
-                    min_val = np.min(samples)
-                    max_val = np.max(samples)
-                    logging.error(
-                        f"Audio samples exceed expected range [-1, 1]. Found range: [{min_val}, {max_val}]. This may cause audio distortion during conversion."
-                    )
-                samples = (samples * 32768).clip(-32768, 32767).astype(np.int16)
-            else:
+            if samples.dtype != np.float32:
                 raise TTSModelError(
                     f"Unsupported sample format: {samples.dtype}. Expected float32."
                 )
-
-            audio = AudioSegment(
-                data=samples.tobytes(),
-                sample_width=2,
-                frame_rate=sample_rate,
-                channels=1,
-            )
-            if self.sample_rate == -1:
-                return audio
-            else:
-                return self._resample(audio)
+            if np.any(np.abs(samples) > 1.0):
+                logging.error(
+                    f"Audio samples exceed expected range [-1, 1]. Found range: [{samples.min()}, {samples.max()}]. This may cause audio distortion during conversion."
+                )
+            return self._resample(Audio(samples, sample_rate).as_int16())
         except Exception as e:
             raise TTSModelError(f"Failed to process text with Kokoro TTS model: {e}")
 
@@ -163,7 +149,7 @@ class KokoroTTS(TTSModel):
         """
 
         data = self.get_speech("A")
-        return data.frame_rate, 1
+        return data.sample_rate, 1
 
     def get_supported_languages(self) -> list[str]:
         """

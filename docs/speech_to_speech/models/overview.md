@@ -145,9 +145,9 @@ To create a custom TTS model, inherit from `rai_tts.models.base.TTSModel` and im
 
 ```python
 class MyTTSModel(TTSModel):
-    def get_speech(self, text: str) -> AudioSegment:
+    def get_speech(self, text: str) -> Audio:  # rai.content.Audio
         ...
-        return AudioSegment()
+        return Audio(samples, sample_rate)
 
     def get_tts_params(self) -> Tuple[int, int]:
         ...

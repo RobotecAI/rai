@@ -1,10 +1,10 @@
 # Sound Device Connector
 
-The `SoundDeviceConnector` provides a Human-Robot Interface (HRI) for audio streaming, playback, and recording using sound devices. It is designed for seamless integration with RAI agents and tools requiring audio input/output, and conforms to the generic `HRIConnector` interface.
+The `SoundDeviceConnector` provides a Human-Robot Interface (HRI) for audio streaming, playback, and recording using sound devices. It is designed for RAI agents and tools requiring audio input/output; audio is `rai.content.Audio`.
 
-| Connector              | Description                                                                                  | Example Usage                           |
-| ---------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------- |
-| `SoundDeviceConnector` | Audio streaming, playback, and recording via sounddevice. Implements HRIConnector for audio. | `connector = SoundDeviceConnector(...)` |
+| Connector              | Description                                               | Example Usage                           |
+| ---------------------- | --------------------------------------------------------- | --------------------------------------- |
+| `SoundDeviceConnector` | Audio streaming, playback, and recording via sounddevice. | `connector = SoundDeviceConnector(...)` |
 
 ## Key Features
 
@@ -12,7 +12,7 @@ The `SoundDeviceConnector` provides a Human-Robot Interface (HRI) for audio stre
 -   Asynchronous (streaming) and synchronous (service call) audio operations
 -   Thread-safe device management and clean shutdown
 -   Unified message type (`SoundDeviceMessage`) for audio and control
--   Full support for the HRIConnector interface
+-   Audio as `rai.content.Audio` (samples shaped (n, channels) and a sample rate)
 
 ## Initialization
 

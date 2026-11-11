@@ -22,12 +22,9 @@ from uuid import uuid4
 import numpy as np
 from numpy.typing import NDArray
 from rai.agents.base import SyncAgent
-from rai.communication.ros2 import (
-    ROS2Connector,
-    ROS2HRIConnector,
-    ROS2HRIMessage,
-    ROS2Message,
-)
+from rai.communication import HRIMessage
+from rai.communication.ros2 import ROS2Connector, ROS2HRIConnector
+from std_msgs.msg import String
 from typing_extensions import Self
 
 from rai_s2s.asr.agents.initialization import TRANSCRIBE_MODELS, load_config
@@ -214,8 +211,8 @@ class SpeechRecognitionAgent(SyncAgent):
         self.logger.info("Stopping Voice Agent")
         self.running = False
         self.microphone.terminate_action(self.listener_handle)
-        self.ros2_hri_connector.shutdown()
-        self.ros2_connector.shutdown()
+        self.ros2_hri_connector.close()
+        self.ros2_connector.close()
         while not all(
             [thread["joined"] for thread in self.transcription_threads.values()]
         ):
@@ -319,17 +316,10 @@ class SpeechRecognitionAgent(SyncAgent):
     def _send_ros2_message(self, data: str, topic: str):
         self.logger.debug(f"Sending message to {topic}: {data}")
         if topic == "/voice_commands":
-            msg = ROS2Message(payload={"data": data})
             try:
-                self.ros2_connector.send_message(
-                    msg, topic, msg_type="std_msgs/msg/String"
-                )
+                self.ros2_connector.sync.publish(topic, String(data=data))
             except Exception as e:
                 self.logger.error(f"Error sending message to {topic}: {e}")
         else:
-            msg = ROS2HRIMessage(
-                text=data,
-                message_author="human",
-                communication_id=ROS2HRIMessage.generate_conversation_id(),
-            )
-            self.ros2_hri_connector.send_message(msg, topic)
+            msg = HRIMessage(data, communication_id=HRIMessage.new_id())
+            self.ros2_hri_connector.sync.send(topic, msg)

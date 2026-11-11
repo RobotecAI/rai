@@ -13,9 +13,11 @@
 # limitations under the License.
 
 
+import uuid
+from dataclasses import dataclass
 from typing import Callable, NamedTuple, Optional, Tuple
 
-from rai.communication import HRIConnector, HRIMessage
+from rai.communication import HRIMessage
 
 from rai_s2s.sound_device.api import (
     SoundDeviceAPI,
@@ -24,6 +26,7 @@ from rai_s2s.sound_device.api import (
 )
 
 
+@dataclass
 class SoundDeviceMessage(HRIMessage):
     read: bool = False
     stop: bool = False
@@ -36,13 +39,8 @@ class AudioParams(NamedTuple):
     out_channels: int
 
 
-class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
-    """SoundDevice connector implementing the Human-Robot Interface.
-
-    This class provides audio streaming capabilities while conforming to the
-    HRIConnector interface. It supports starting and stopping audio streams
-    but does not implement message passing or service calls.
-    """
+class SoundDeviceConnector:
+    """Plays and records audio on sound devices, as single clips or streams."""
 
     def __init__(
         self,
@@ -58,8 +56,6 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
 
         for dev_target, dev_config in zip(all_names, all_configs):
             self.configure_device(dev_target, dev_config)
-
-        super().__init__()
 
     def get_audio_params(self, target: str) -> AudioParams:
         """
@@ -135,7 +131,7 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
                 "For recording use start_action or service_call with read=True."
             )
         else:
-            if message.audios is not None:
+            if message.audios:
                 self.devices[target].write(message.audios[0])
             else:
                 raise SoundDeviceError("Failed to provice audios in message to play")
@@ -200,15 +196,13 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
         elif message.read:
             recording = self.devices[target].read(duration, blocking=True)
 
-            ret = SoundDeviceMessage(
-                text="", audios=[recording], message_author="human"
-            )
+            ret = SoundDeviceMessage(audios=[recording])
         else:
-            if message.audios is not None:
+            if message.audios:
                 self.devices[target].write(message.audios[0], blocking=True)
             else:
                 raise SoundDeviceError("Failed to provice audios in message to play")
-            ret = SoundDeviceMessage(message_author="human")
+            ret = SoundDeviceMessage()
         return ret
 
     def start_action(
@@ -260,7 +254,7 @@ class SoundDeviceConnector(HRIConnector[SoundDeviceMessage]):
         - For playback streams, `open_write_stream` is used, optionally customized by `sample_rate` and `channels`.
         - Started actions are stored in `self.action_handles` with the handle as the key.
         """
-        handle = self._generate_handle()
+        handle = str(uuid.uuid4())
         if action_data is None:
             raise SoundDeviceError("action_data must be provided")
         elif action_data.read:
