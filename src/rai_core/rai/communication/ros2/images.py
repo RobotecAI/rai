@@ -14,7 +14,6 @@
 
 """sensor_msgs Image <-> numpy conversion, replacing cv_bridge."""
 
-import base64
 import sys
 from typing import Optional
 
@@ -24,40 +23,8 @@ from numpy.typing import NDArray
 from sensor_msgs.msg import CompressedImage, Image
 from std_msgs.msg import Header
 
-# encoding -> (dtype, channels)
-ENCODINGS: dict[str, tuple[type, int]] = {
-    "rgb8": (np.uint8, 3),
-    "bgr8": (np.uint8, 3),
-    "rgba8": (np.uint8, 4),
-    "bgra8": (np.uint8, 4),
-    "mono8": (np.uint8, 1),
-    "8UC1": (np.uint8, 1),
-    "8UC3": (np.uint8, 3),
-    "8UC4": (np.uint8, 4),
-    "mono16": (np.uint16, 1),
-    "16UC1": (np.uint16, 1),
-    "32FC1": (np.float32, 1),
-}
-_CANONICAL = {"8UC1": "mono8", "8UC3": "bgr8", "8UC4": "bgra8", "16UC1": "mono16"}
-# Encodings that can be converted into each other with cv2.cvtColor.
-_COLOR_NAMES = {
-    "rgb8": "RGB",
-    "bgr8": "BGR",
-    "rgba8": "RGBA",
-    "bgra8": "BGRA",
-    "mono8": "GRAY",
-}
-
-
-def convert_encoding(image: NDArray, src: str, dst: str) -> NDArray:
-    """Convert a numpy image between encodings. "passthrough" keeps the image as is."""
-    src, dst = _CANONICAL.get(src, src), _CANONICAL.get(dst, dst)
-    if dst in ("passthrough", src):
-        return image
-    if src not in _COLOR_NAMES or dst not in _COLOR_NAMES:
-        raise ValueError(f"Cannot convert image from {src} to {dst}")
-    code = getattr(cv2, f"COLOR_{_COLOR_NAMES[src]}2{_COLOR_NAMES[dst]}")
-    return cv2.cvtColor(image, code)
+from rai import content
+from rai.content import ENCODINGS, convert_encoding
 
 
 def imgmsg_to_numpy(msg: Image, encoding: str = "passthrough") -> NDArray:
@@ -118,33 +85,22 @@ def compressed_imgmsg_to_numpy(
 
 
 def encode_image(
-    image: NDArray | Image | CompressedImage,
+    image: NDArray | Image | CompressedImage | content.Image,
     *,
     max_side: int = 1024,
     format: str = "jpeg",
     quality: int = 85,
 ) -> str:
-    """Base64 JPEG (or "png") of an image for the LLM; the one encode path.
-
-    Arrays are RGB (or mono); messages are converted to RGB first. Images larger
-    than max_side are downscaled, keeping the aspect ratio.
-    """
-    if isinstance(image, Image):
-        image = imgmsg_to_numpy(image, "rgb8")
-    elif isinstance(image, CompressedImage):
+    """Base64 JPEG (or "png") of an image for the LLM, see
+    :meth:`rai.content.Image.encode`. Arrays are RGB(A) or mono."""
+    if isinstance(image, CompressedImage):
         image = compressed_imgmsg_to_numpy(image, "rgb8")
-    scale = max_side / max(image.shape[:2])
-    if scale < 1:
-        size = (round(image.shape[1] * scale), round(image.shape[0] * scale))
-        image = cv2.resize(image, size, interpolation=cv2.INTER_AREA)
-    if image.ndim == 3:
-        image = cv2.cvtColor(
-            image, cv2.COLOR_RGBA2BGR if image.shape[2] == 4 else cv2.COLOR_RGB2BGR
+    if isinstance(image, Image):
+        image = content.Image(imgmsg_to_numpy(image), image.encoding)
+    elif not isinstance(image, content.Image):
+        mono = {np.uint8: "mono8", np.uint16: "mono16", np.float32: "32FC1"}
+        encoding = "rgba8" if image.ndim == 3 and image.shape[2] == 4 else "rgb8"
+        image = content.Image(
+            image, mono[image.dtype.type] if image.ndim == 2 else encoding
         )
-    if format == "png":
-        ok, data = cv2.imencode(".png", image)
-    else:
-        ok, data = cv2.imencode(".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, quality])
-    if not ok:
-        raise ValueError(f"Cannot encode the image as {format}")
-    return base64.b64encode(data.tobytes()).decode("ascii")
+    return image.encode(max_side=max_side, format=format, quality=quality)
