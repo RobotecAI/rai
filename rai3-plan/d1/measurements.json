@@ -1,0 +1,42 @@
+{
+  "python": "3.14.4",
+  "versions": {
+    "langchain": "1.4.9",
+    "langchain-core": "1.7.6",
+    "langgraph": "1.2.20",
+    "langchain-mcp-adapters": "0.3.2",
+    "pydantic-ai-slim": "2.67.0",
+    "mcp": "1.30.0",
+    "fastmcp-slim": "3.4.11"
+  },
+  "langchain.loc": {
+    "slice.py": 107,
+    "mcp.py": 37
+  },
+  "langchain.loc_total": 144,
+  "pydanticai.loc": {
+    "slice.py": 100,
+    "mcp.py": 57
+  },
+  "pydanticai.loc_total": 157,
+  "common.loc": {
+    "ext_mcp_server.py": 9,
+    "guard.py": 48,
+    "mcp_e2e.py": 23,
+    "robot.py": 100,
+    "script.py": 32,
+    "serve.py": 29
+  },
+  "import.langchain.agents": 0.37278533808421344,
+  "import.pydantic_ai": 0.31524203799199313,
+  "import.langchain.slice+mcp": 0.47620242298580706,
+  "import.pydanticai.slice+mcp": 0.5491199831012636,
+  "langchain.step_ms.bare": 2.849106560461223,
+  "langchain.step_ms.full": 3.193754004314542,
+  "langchain.step_growth_300": 2.933953490887774,
+  "langchain.cancel_ms": 0.24207803653553128,
+  "pydanticai.step_ms.bare": 3.383212024345994,
+  "pydanticai.step_ms.full": 3.5302299656905234,
+  "pydanticai.step_growth_300": 4.048315226801021,
+  "pydanticai.cancel_ms": 0.43642596574500203
+}

@@ -25,16 +25,16 @@ Each report has file:line evidence and marks every claim as measured or inferred
 | Hardening branch (`t3/identify-core-state-machines`) | Not merged as a whole. Its fault suite and benchmark become the acceptance tests ("oracle"). About 8 small fixes are ported as code (R2 in §3). |
 | Packages | Separate rai_* packages stay. rai_finetune stays. rai_nomad is dropped. rai_bench and rai_sim are left alone apart from required API ports. rai_whoami stays. |
 | Dev env | `uv venv --system-site-packages` plus an editable uv workspace. No PYTHONPATH tricks. Measured working on both distros. |
-| Agent framework | Reuse a framework's tools, middleware and MCP support; RAI does not build its own tool or hook system. The bake-off D1 decides between LangChain 1.x (`create_agent` plus middleware) and PydanticAI (toolsets, deferred approval, built-in MCP). |
+| Agent framework | LangChain 1.x: `create_agent` plus middleware, and `langchain-mcp-adapters` for the MCP client. Decided by the D1 bake-off (`d1/REPORT.md`); D2 is not triggered. RAI does not build its own tool or hook system. The fail-closed adapter lives on the RAI tool class, so it also covers the MCP server and direct calls. |
 | Agents | Async-first with sync wrappers. ReAct and StateBased stay, rebuilt on the chosen framework. StateBased sensor context is injected per model call and never written into the history. |
 | Content types | RAI owns `Text`, `Image` (ndarray plus encoding) and `Audio` (ndarray shaped (n, channels) plus a sample rate). They are converted to framework content blocks only at the LLM boundary. pydub leaves the API. |
 | Vendors | Every provider becomes an extra. Tier 1: openai (including compatible servers), anthropic, ollama, google. Tier 2: bedrock. langchain-community is removed. |
 | Connectors | Separate classes stay (`ROS2Connector`, `ROS2HRIConnector`), sharing one internal runtime. |
 | Tool permissions | Not deny-by-default. `readable`/`writable`/`forbidden` stay, compared on resolved names. |
-| Safety | Framework middleware or toolsets on the agent side, and RAI egress hooks on the connector side (see 2.3). Both fail closed. ConfirmActuation is opt-in. EStop can be triggered from ROS. The CLI toolkit loses its write commands. Bypasses log a runtime warning. |
+| Safety | A fail-closed adapter on the RAI tool class on the agent side, and RAI egress hooks on the connector side (see 2.3). Both fail closed. ConfirmActuation is opt-in. EStop can be triggered from ROS. The CLI toolkit loses its write commands. Bypasses log a runtime warning. |
 | Messages | Native ROS messages are the API. Images and point clouds become numpy views with no copy after deserialization. Dicts only at the LLM boundary. |
 | Aggregators | Kept, split into bounded buffers plus async summarizers that run on demand. |
-| MCP | Through the chosen framework's MCP support. `rai mcp serve` exposes all RAI ROS tools, with egress hooks still enforced. Agents can use MCP tools as a client. |
+| MCP | `rai mcp serve` exposes all RAI ROS tools by registering them on the `mcp` SDK's FastMCP, with egress hooks still enforced. Agents use MCP tools as a client through `langchain-mcp-adapters`. |
 | Quality gates | pyright strict on `rai.communication` from the start and standard mode elsewhere (ruff doesn't check types). Coverage gate: the measured floor plus 85% on new code, with no hard 85% at the tag. Benchmarks report only for two weeks, then block. No arm64 images. |
 | Settings | pydantic-settings with `RAI_*` env vars and an optional `rai.toml` (TOML because `tomllib` is in the standard library). Models are `"provider:model"` strings for `init_chat_model` or the equivalent in PydanticAI. The old `config.toml` is not read. |
 | Upstream bugs | Reported to the maintainer only (01 §12.13), not filed upstream. |
@@ -82,30 +82,39 @@ ROS2Connector     ROS2HRIConnector    (separate public classes)
 
 RAI no longer builds its own tool interface, hook registry or MCP layer. It reuses a framework and owns only what's specific to robots.
 
-- **Framework bake-off (D1).** Build the same slice in LangChain 1.x and in PydanticAI, then pick one. The slice:
+- **Framework bake-off (D1): LangChain 1.x won.** The same slice was built in LangChain 1.x and in PydanticAI:
   - two ROS tools;
   - a ReAct loop;
   - StateBased sensor context;
   - an approval gate;
   - the fail-closed wrapper;
-  - MCP as server and as client.
+  - MCP as server and as client;
+  - cancellation.
 
-  Measured so far:
+  Both passed the same 25 tests on Lyrical, against a fake robot and against `ROS2Connector` with a real ROS node. Details are in `d1/REPORT.md`.
+
+  Measured:
 
   | | LangChain 1.4.9 | PydanticAI 2.67 (`pydantic-ai-slim`) |
   |---|---|---|
-  | Import time | 0.35 s (`langchain.agents`) | 0.25 s |
-  | Hook points | middleware: `before_model`, `after_model`, `wrap_model_call`, `wrap_tool_call`, plus `HumanInTheLoopMiddleware` | toolsets: `WrapperToolset`, `ApprovalRequiredToolset`, `FilteredToolset`, plus deferred tool requests |
-  | MCP | `langchain-mcp-adapters` 0.3.2 | built in |
+  | Lines of code for the slice (excluding tests and shared code) | 144 | 157 (no MCP server support, so RAI writes a 40-line adapter) |
+  | Import time, framework / whole slice | 0.35 s / 0.48 s | 0.30 s / 0.54 s |
+  | Per ReAct step, fake model, with all middleware (median) | 3.2-3.3 ms | 3.5-4.0 ms |
+  | Cancel to run end during a slow tool (median) | 0.2-0.3 ms; the tool's `finally` runs | 0.4-0.5 ms; the tool's `finally` runs |
+  | Fail-closed wrapper | Tool-level `ToolException` plus `handle_tool_error`; one wrapper covers every path | `WrapperToolset`; one wrapper covers every path |
+  | Approval | `HumanInTheLoopMiddleware`; needs a checkpointer; asks before the hooks run | `ApprovalRequiredToolset`; stateless; the order is up to RAI |
+  | StateBased context per call, not stored | `awrap_model_call`, 7 lines | `before_model_request`, 6 lines |
+  | MCP | client `langchain-mcp-adapters` 0.3.2; server `to_fastmcp` (drops annotations) | client built in; no server |
+  | Migration outside rai_core | none | rai_bench (16 files), rai_whoami (9, including the `langchain_community` RAG stack), rai_perception (3), rai_semap (1), examples (8) |
 
-  Decide on: lines of code, per-step latency, how cancellation behaves, how cleanly the safety wrapper fits, and migration effort. LangChain wins ties because existing code already uses it.
+  PydanticAI's only real edge is that its toolset wrapper composes safety in one place. LangChain gets the same by putting the adapter in the tool. LangChain is equal or better on everything else, and it needs no migration.
 - **RAI tool class.** A thin typed layer on the chosen framework's tool type, adding `effect` (READ / WRITE / ACTUATE) and ROS `targets`. Tools are async-native and the sync path is a wrapper. Tool errors go back to the LLM as tool messages and never end the run. `rai.tools.timeout` is removed; timeouts and cancellation come from the framework plus the fail-closed wrapper.
 - **Agent lifecycle.**
   - An explicit state machine: CREATED → STARTING → RUNNING → STOPPING → STOPPED, plus FAILED.
   - `stop()` before start does nothing; today it hangs forever.
   - Interrupting cancels the running task, including the current tool.
   - `rai.run()` replaces `AgentRunner`.
-- **ReAct and StateBased.** Both are built on the chosen framework's agent loop. The StateBased context is a per-call middleware or instructions hook. Its sensor summaries run concurrently, each with its own timeout, and keep the last good result. It never writes to the history; today the history piles up as `/rosout: /rosout: ...`.
+- **ReAct and StateBased.** Both are built on the chosen framework's agent loop. The StateBased context is an `awrap_model_call` middleware that appends the observation to the request only. Its sensor summaries run concurrently, each with its own timeout, and keep the last good result. It never writes to the history; today the history piles up as `/rosout: /rosout: ...`.
 - **Aggregators v2.** Bounded buffers on the connector side, plus async summarizers run only when the LLM needs context, cached for a maximum age.
 - **Content types.** RAI's `Text`, `Image` and `Audio` (see §1) replace the `*MultimodalMessage` types and pydub.
 - **Settings and models.** As in §1. `import rai` becomes lazy; today it takes 0.7 s.
@@ -113,7 +122,7 @@ RAI no longer builds its own tool interface, hook registry or MCP layer. It reus
 
 ### 2.3 Safety: two hook points
 
-- **Agent side.** Uses the chosen framework's mechanism: LangChain middleware, or PydanticAI toolsets. RAI wraps every robot hook in a fail-closed adapter: if a hook times out or crashes, the call is denied.
+- **Agent side.** The fail-closed adapter sits inside the RAI tool class: if a hook denies, times out or crashes, the tool raises `ToolException`, and the LLM gets an error tool message while the run continues. Because it is in the tool, it covers the agent, the MCP server and direct calls. Middleware is used only for agent-only concerns, such as StateBased context. D1 measured that `HumanInTheLoopMiddleware` asks the human before any tool-level hook runs, so `ConfirmActuation` is an awaiting hook in the adapter instead.
 - **Connector side (RAI-owned; this is the guarantee).** An egress chain covers every publish, service call, goal and cancel.
   - It matches on message type first and name second, because names get remapped and types don't.
   - Decisions are `Allow(lease_s=…)` or `Deny(reason)`. A lease approves a stream such as `cmd_vel` once.
@@ -157,7 +166,7 @@ Sizes: S is under 1 day, M is 1-3 days, L is 3-7 days, all assuming agentic impl
 | ID | Item | Size | Depends on |
 |---|---|---|---|
 | D1 | Framework bake-off, LangChain 1.x vs PydanticAI (see 2.2). Records the decision in this file | M | P3 |
-| D2 | Only if PydanticAI wins D1: migrate rai_bench, rai_s2s, rai_semap, rai_whoami and rai_perception to it, before any tool work | L | D1 |
+| D2 | Not triggered: LangChain won D1. (It would have migrated rai_bench, rai_s2s, rai_semap, rai_whoami and rai_perception to PydanticAI.) | none | D1 |
 | R2 | Port the small fixes from the hardening branch: `b119762`, `7e47ada`, `048aba0`, `8a625cf`, `1f06344`, the ideas from `29a709d`, and in-flight service-call cancellation | S | R1 |
 | R3 | `ROS2Runtime`, the compat layer and the async `ROS2Connector`, including the executor decision gate. Acceptance: 100% delivery at 1 kHz, no entity growth over 1000 calls and 200 goals, shutdown under 1 s even with a stuck callback | L | R1 |
 | R6 | Egress hook chain and the MOTION set in `ROS2Runtime` (RAI-owned) | S | R3 |
@@ -171,7 +180,7 @@ Sizes: S is under 1 day, M is 1-3 days, L is 3-7 days, all assuming agentic impl
 
 | ID | Item | Size | Depends on |
 |---|---|---|---|
-| A3 | RAI tool class on the chosen framework (effect, targets, async-native, errors returned as tool messages), plus the fail-closed hook adapter | S | D1 (and D2 if PydanticAI wins) |
+| A3 | RAI tool class on LangChain `BaseTool` (effect and targets in `metadata`, async-native, errors returned as tool messages), with the fail-closed hook adapter inside the tool (`ToolException` plus `handle_tool_error`), see `d1/REPORT.md` §5 | S | D1 |
 | A10 | `rai mcp serve` and the MCP client through the framework (extra `rai-core[mcp]`), with an end-to-end stdio test | S | A3, R6 |
 | R4 | `ROS2HRIConnector` on the runtime, the views and the encoder, and the RAI content types (`Text`, `Image`, `Audio`) | M | R3 |
 | A9 | Port about 35 ROS 2 tools: effects and targets, `GoalHandle` instead of globals, cached clients, the CLI read/write split, no use of `connector.node` | L | A3, R3 |
@@ -219,7 +228,7 @@ The critical path is P0 → R1 → R3 → A9 → A13 → P14, with D1 → A3 →
 ## 4. Settled during review
 
 - **rai_interfaces on Lyrical:** the bloom release is deferred. `ros_deps.repos` stays, pinned, for the whole 3.0 effort.
-- **If PydanticAI wins D1:** rai_bench and the extensions migrate first (D2), and the tool work (A3) starts after that.
+- **D1 result:** LangChain won, so D2 does not run and A3 starts right after D1.
 
 ## 5. Upstream bugs found (for the maintainer only, not filed)
 
