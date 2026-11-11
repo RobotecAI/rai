@@ -116,6 +116,8 @@ known-first-party = [
 ]
 
 [tool.pytest.ini_options]
+# rai3-plan/d1 holds spike tests; run them explicitly by path.
+testpaths = ["tests"]
 markers = [
     "billable: marks test as billable  (deselect with '-m \"not billable\"')",
     "ci_only: marks test as cli only (deselect with '-m \"not ci_only\"')",
