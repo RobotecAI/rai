@@ -420,3 +420,13 @@ class TestGetObjectPositionsTool:
             camera_info_topic="/camera/rgb/camera_info",
             object_name="cup",
         )
+
+
+def test_get_object_positions_tool_model_is_fully_defined():
+    """Regression test: the forward reference to GetGrabbingPointTool must resolve.
+
+    Building the tool with model_construct() skips this check, so look at the
+    Pydantic completeness flag directly.
+    """
+    pytest.importorskip("rai_perception.tools")
+    assert GetObjectPositionsTool.__pydantic_complete__

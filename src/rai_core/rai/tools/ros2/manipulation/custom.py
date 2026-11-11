@@ -454,3 +454,16 @@ class ResetArmTool(BaseROS2Tool):
             return "Arm successfully reset."
         else:
             return "Failed to reset the arm."
+
+
+# GetGrabbingPointTool is only imported for type checking above (to avoid a
+# circular import), so Pydantic cannot resolve the "GetGrabbingPointTool"
+# annotation on GetObjectPositionsTool by itself. Resolve it here once the real
+# class can be imported. If rai_perception is not installed, the tool stays
+# unresolved, as before.
+try:
+    from rai_perception.tools import GetGrabbingPointTool  # noqa: F811
+
+    GetObjectPositionsTool.model_rebuild()
+except ImportError:
+    pass
