@@ -14,17 +14,17 @@
 
 import argparse
 import logging
-import signal
 import time
 from queue import Queue
 from threading import Event, Thread
 from typing import Dict, List
 
+import rai
 import rclpy
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from rai import get_llm_model
-from rai.agents.base import BaseAgent
+from rai.agents import SyncAgent
 from rai.communication import BaseConnector
 from rai.communication.ros2 import IROS2Message, ROS2HRIConnector, TopicConfig
 
@@ -63,7 +63,7 @@ class LLMTextHandler(BaseCallbackHandler):
             self.token_buffer = ""
 
 
-class S2SConversationalAgent(BaseAgent):
+class S2SConversationalAgent(SyncAgent):
     def __init__(self, connectors: Dict[str, BaseConnector]):  # type: ignore
         super().__init__()
         self.connectors = connectors
@@ -80,7 +80,7 @@ class S2SConversationalAgent(BaseAgent):
         self.stop_thread = Event()
         self.current_speech_id = ""
 
-    def run(self):
+    def setup(self):
         logging.info("Running S2SConversationalAgent")
         self.main_thread = Thread(target=self._main_loop)
         self.main_thread.start()
@@ -141,7 +141,7 @@ class S2SConversationalAgent(BaseAgent):
             ],
         )
 
-    def stop(self):
+    def teardown(self):
         assert isinstance(self.connectors["ros2"], ROS2HRIConnector)
         self.connectors["ros2"].shutdown()
         self.stop_thread.set()
@@ -168,17 +168,5 @@ if __name__ == "__main__":
     args = parse_arguments()
     rclpy.init()
     agent = S2SConversationalAgent(connectors={})
-    agent.run()
-
-    def cleanup(signum, frame):
-        print("\nCustom handler: Caught SIGINT (Ctrl+C).")
-        print("Performing cleanup")
-        # Optionally exit the program
-        agent.stop()
-        rclpy.shutdown()
-        exit(0)
-
-    signal.signal(signal.SIGINT, cleanup)
-
-    while True:
-        time.sleep(1)
+    rai.run(agent)
+    rclpy.shutdown()

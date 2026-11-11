@@ -13,9 +13,8 @@
 # limitations under the License.
 
 import argparse
-import signal
-import time
 
+import rai
 import rclpy
 
 from rai_s2s.asr import LocalWhisper, OpenWakeWord, SileroVAD, SpeechRecognitionAgent
@@ -112,14 +111,5 @@ if __name__ == "__main__":
         oww = OpenWakeWord(args.wake_word_model, args.oww_threshold)
         agent.add_detection_model(oww, pipeline="record")
 
-    agent.run()
-
-    def cleanup(signum, frame):
-        agent.stop()
-        rclpy.shutdown()
-        exit(0)
-
-    signal.signal(signal.SIGINT, cleanup)
-
-    while True:
-        time.sleep(1)
+    rai.run(agent)
+    rclpy.shutdown()

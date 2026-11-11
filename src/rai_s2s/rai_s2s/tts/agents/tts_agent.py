@@ -23,7 +23,7 @@ from uuid import uuid4
 import numpy as np
 from numpy._typing import NDArray
 from pydub import AudioSegment
-from rai.agents.base import BaseAgent
+from rai.agents.base import SyncAgent
 from rai.communication.ros2 import (
     ROS2Connector,
     ROS2HRIConnector,
@@ -58,7 +58,7 @@ class PlayData:
     current_frame: int = 0
 
 
-class TextToSpeechAgent(BaseAgent):
+class TextToSpeechAgent(SyncAgent):
     """
     Agent responsible for converting text to speech and handling audio playback.
 
@@ -151,10 +151,7 @@ class TextToSpeechAgent(BaseAgent):
                 raise ValueError(f"Unknown model_type: {cfg.text_to_speech.model_type}")
         return cls(config, "rai_auto_tts", model)
 
-    def __call__(self):
-        self.run()
-
-    def run(self):
+    def setup(self):
         """
         Start the text-to-speech agent, initializing playback and launching the transcription thread.
         """
@@ -206,7 +203,7 @@ class TextToSpeechAgent(BaseAgent):
         if not self.playback_data.playing:
             outdata[:] = np.zeros(outdata.size).reshape(outdata.shape)
 
-    def stop(self):
+    def teardown(self):
         """
         Clean exit the text-to-speech agent, terminating playback and joining the transcription thread.
         """

@@ -13,9 +13,8 @@
 # limitations under the License.
 
 import argparse
-import signal
-import time
 
+import rai
 import rclpy
 
 from rai_s2s import KokoroTTS, OpenTTS, TextToSpeechAgent
@@ -71,17 +70,5 @@ if __name__ == "__main__":
         print("Using OpenTTS model")
 
     agent = TextToSpeechAgent(config, "text_to_speech", tts)
-    agent.run()
-
-    def cleanup(signum, frame):
-        print("\nCustom handler: Caught SIGINT (Ctrl+C).")
-        print("Performing cleanup")
-        # Optionally exit the program
-        agent.stop()
-        rclpy.shutdown()
-        exit(0)
-
-    signal.signal(signal.SIGINT, cleanup)
-
-    while True:
-        time.sleep(1)
+    rai.run(agent)
+    rclpy.shutdown()

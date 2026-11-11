@@ -22,7 +22,7 @@ from uuid import uuid4
 
 import numpy as np
 from numpy.typing import NDArray
-from rai.agents.base import BaseAgent
+from rai.agents.base import SyncAgent
 from rai.communication import HRIConnector, HRIMessage
 
 from rai_s2s.asr.agents.asr_agent import ThreadData
@@ -36,7 +36,7 @@ from rai_s2s.tts.agents.tts_agent import PlayData
 from rai_s2s.tts.models.base import TTSModel
 
 
-class SpeechToSpeechAgent(BaseAgent):
+class SpeechToSpeechAgent(SyncAgent):
     def __init__(
         self,
         from_human_topic: str,
@@ -127,9 +127,9 @@ class SpeechToSpeechAgent(BaseAgent):
                     )
                     raise e
 
-    def run(self):
+    def setup(self):
         """
-        Start the text-to-speech agent, initializing playback and launching the transcription thread.
+        Start the speech-to-speech agent, initializing playback and launching the transcription thread.
         """
         self.running = True
         self.logger.info("Starting SpeechToSpeechAgent...")
@@ -346,7 +346,7 @@ class SpeechToSpeechAgent(BaseAgent):
 
         self.logger.debug(f"Current status is: {self.playback_data.playing}")
 
-    def stop(self):
+    def teardown(self):
         """
         Clean exit the speech-to-speech agent, terminating playback and joining the transcription thread.
         """

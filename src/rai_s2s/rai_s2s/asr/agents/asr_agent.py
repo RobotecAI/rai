@@ -21,7 +21,7 @@ from uuid import uuid4
 
 import numpy as np
 from numpy.typing import NDArray
-from rai.agents.base import BaseAgent
+from rai.agents.base import SyncAgent
 from rai.communication.ros2 import (
     ROS2Connector,
     ROS2HRIConnector,
@@ -46,7 +46,7 @@ class ThreadData(TypedDict):
     joined: bool
 
 
-class SpeechRecognitionAgent(BaseAgent):
+class SpeechRecognitionAgent(SyncAgent):
     """
     Agent responsible for voice recognition, transcription, and processing voice activity.
 
@@ -166,9 +166,6 @@ class SpeechRecognitionAgent(BaseAgent):
                     )
         return agent
 
-    def __call__(self):
-        self.run()
-
     def add_detection_model(
         self, model: BaseVoiceDetectionModel, pipeline: str = "record"
     ):
@@ -196,7 +193,7 @@ class SpeechRecognitionAgent(BaseAgent):
         else:
             raise ValueError("Pipeline should be either 'record' or 'stop'")
 
-    def run(self):
+    def setup(self):
         """
         Start the voice recognition agent, initializing the microphone and handling incoming audio samples.
         """
@@ -210,7 +207,7 @@ class SpeechRecognitionAgent(BaseAgent):
         )
         self.logger.info("Started Voice Agent")
 
-    def stop(self):
+    def teardown(self):
         """
         Clean exit the voice recognition agent, ensuring all transcription threads finish before termination.
         """
