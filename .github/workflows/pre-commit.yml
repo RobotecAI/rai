@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-24.04
 
     container:
-      image: osrf/ros:humble-desktop-full
+      image: osrf/ros:jazzy-desktop-full
 
     steps:
       - name: Install pre-commit

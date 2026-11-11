@@ -5,7 +5,7 @@ description = "Core functionality for RAI framework"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.12,<3.15"
 authors = [
     { name = "Maciej Majek", email = "maciej.majek@robotec.ai" },
     { name = "Bartlomiej Boczek", email = "bartlomiej.boczek@robotec.ai" },
@@ -35,15 +35,15 @@ dependencies = [
     "opencv-python-headless>=4.9.0.80,<5.0.0.0",
     "lark>=1.1.9,<2.0.0",
     "transforms3d>=0.4.1,<0.5.0",
-    # Pillow 13 dropped Python 3.10 (ROS 2 Humble); 12.3 is the last 3.10-compatible line.
-    "pillow>=13.0.0,<14.0.0; python_version >= '3.11'",
-    "pillow>=12.3.0,<13.0.0; python_version < '3.11'",
+    "pillow>=13.0.0,<14.0.0",
     "langfuse>=4.0.0,<5.0.0",
     "pydub>=0.25.1,<0.26.0",
-    "streamlit>=1.67,<2.0.0; python_version >= '3.11'",
-    "streamlit>=1.65,<2.0.0; python_version < '3.11'",
-    # ROS 2 (Humble and Jazzy) python bindings such as cv_bridge are built against numpy 1.x.
-    "numpy<2.0",
+    # audioop was removed from the stdlib in Python 3.13; pydub needs the backport.
+    "audioop-lts>=0.2.1; python_version >= '3.13'",
+    "streamlit>=1.67,<2.0.0",
+    # ROS 2 Jazzy python bindings (cv_bridge) are built against numpy 1.x; Lyrical (Python 3.14) uses numpy 2.x.
+    "numpy<2.0; python_version < '3.13'",
+    "numpy>=2.0; python_version >= '3.13'",
 ]
 
 [project.scripts]

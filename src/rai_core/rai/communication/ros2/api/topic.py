@@ -30,7 +30,10 @@ from rclpy.qos import (
     QoSProfile,
 )
 from rclpy.subscription import Subscription
-from rclpy.topic_endpoint_info import TopicEndpointInfo
+try:
+    from rclpy.endpoint_info import TopicEndpointInfo  # Kilted+
+except ImportError:
+    from rclpy.topic_endpoint_info import TopicEndpointInfo  # Jazzy
 
 from rai.communication.ros2.api.base import (
     BaseROS2API,

@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import uuid
 from threading import Lock
 from typing import (
@@ -96,10 +95,7 @@ class ROS2ServiceAPI(BaseROS2API):
                     f"Service {service_name} not ready within {timeout_sec} seconds. "
                     "Try increasing the timeout or check if the service is running."
                 )
-            if os.getenv("ROS_DISTRO") == "humble":
-                return client.call(srv_msg)
-            else:
-                return client.call(srv_msg, timeout_sec=timeout_sec)
+            return client.call(srv_msg, timeout_sec=timeout_sec)
 
         if reuse_client:
             with self._persistent_clients_lock:

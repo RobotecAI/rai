@@ -5,7 +5,7 @@ description = "RAI is a framework for building general multi-agent systems, brin
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.12,<3.15"
 authors = [
     { name = "Maciej Majek", email = "maciej.majek@robotec.ai" },
     { name = "Bartlomiej Boczek", email = "bartlomiej.boczek@robotec.ai" },
@@ -88,7 +88,7 @@ markers = [
     "ci_only: marks test as cli only (deselect with '-m \"not ci_only\"')",
     "manual: marks tests as manual (may require demo app to be running, deselect with '-m \"manual\")",
 ]
-# ROS 2 (Humble and Jazzy) auto-loads launch_testing pytest plugins that are incompatible with pytest 9.
+# ROS 2 (Jazzy and Lyrical) auto-loads launch_testing pytest plugins that are incompatible with pytest 9.
 # RAI does not use launch tests, so they are disabled.
 addopts = "-m 'not billable and not ci_only and not manual' --ignore=src -p no:launch_testing -p no:launch_ros"
 log_cli = true

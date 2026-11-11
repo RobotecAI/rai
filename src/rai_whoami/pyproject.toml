@@ -5,7 +5,7 @@ description = "Package to extract embodiment information from robot documentatio
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.12,<3.15"
 authors = [{ name = "Maciej Majek", email = "maciej.majek@robotec.ai" }]
 classifiers = [
     "Programming Language :: Python :: 3",

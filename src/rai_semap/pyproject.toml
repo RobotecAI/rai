@@ -5,7 +5,7 @@ description = "Semantic mapping and spatial memory for RAI"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.12,<3.15"
 authors = [{ name = "Julia Jia" }]
 classifiers = [
     "Programming Language :: Python :: 3",

@@ -33,7 +33,10 @@ from rclpy.qos import (
     QoSProfile,
     ReliabilityPolicy,
 )
-from rclpy.topic_endpoint_info import TopicEndpointInfo
+try:
+    from rclpy.endpoint_info import TopicEndpointInfo  # Kilted+
+except ImportError:
+    from rclpy.topic_endpoint_info import TopicEndpointInfo  # Jazzy
 from rosidl_parser.definition import NamespacedType
 from rosidl_runtime_py.import_message import import_message_from_namespaced_type
 from rosidl_runtime_py.utilities import get_namespaced_type
