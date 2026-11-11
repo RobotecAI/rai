@@ -5,7 +5,7 @@ description = "RAI fine-tuning utilities using Unsloth - standalone package"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
-requires-python = ">=3.10,<3.12"  # Python3.10 is recommended for better compatibility with other Rai components' setup.
+requires-python = ">=3.10,<3.12"  # unsloth has Dynamo issues on Python 3.12; the rest of RAI requires 3.12, so use a separate venv.
 authors = [{ name = "Julia Jia", email = "juliajster@gmail.com" }]
 dependencies = [
     # Core ML dependencies
