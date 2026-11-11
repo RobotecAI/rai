@@ -14,8 +14,8 @@
 
 from typing import Optional, Type
 
-from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
+from rai.tools import Effect, RaiTool
 
 from rai_semap.core.semantic_map_memory import SemanticMapMemory
 
@@ -29,8 +29,10 @@ class QuerySemanticMapToolInput(BaseModel):
     )
 
 
-class QuerySemanticMapTool(BaseTool):
-    """Tool for querying semantic map for object locations."""
+class QuerySemanticMapTool(RaiTool):
+    """Tool for querying semantic map for object locations (not implemented yet)."""
+
+    default_effect = Effect.READ
 
     name: str = "query_semantic_map"
     description: str = "Query the semantic map for object locations"
@@ -39,9 +41,8 @@ class QuerySemanticMapTool(BaseTool):
 
     memory: SemanticMapMemory
 
-    def _run(self, query: str, room: Optional[str] = None) -> str:
-        """Execute semantic map query."""
-        pass
+    async def _acall(self, query: str, room: Optional[str] = None) -> str:
+        raise NotImplementedError("query_semantic_map is not implemented yet")
 
 
 class GetSeenObjectsToolInput(BaseModel):
@@ -53,8 +54,10 @@ class GetSeenObjectsToolInput(BaseModel):
     )
 
 
-class GetSeenObjectsTool(BaseTool):
-    """Tool for retrieving object types previously seen in a location."""
+class GetSeenObjectsTool(RaiTool):
+    """Tool for retrieving object types previously seen in a location (not implemented yet)."""
+
+    default_effect = Effect.READ
 
     name: str = "get_seen_objects"
     description: str = (
@@ -67,6 +70,5 @@ class GetSeenObjectsTool(BaseTool):
 
     memory: SemanticMapMemory
 
-    def _run(self, location_id: Optional[str] = None) -> str:
-        """Get list of distinct object classes seen in a location."""
-        pass
+    async def _acall(self, location_id: Optional[str] = None) -> str:
+        raise NotImplementedError("get_seen_objects is not implemented yet")

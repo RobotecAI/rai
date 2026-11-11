@@ -36,10 +36,14 @@ TEST_BASE_TIMESTAMP = 1234567890
 
 @pytest.fixture(scope="module")
 def ros2_context():
-    """Initialize ROS2 context for testing."""
-    rclpy.init()
+    """rclpy for nodes the tests own. A connector may have initialised rclpy
+    already (RAI keeps that context until exit); only shut down what we start."""
+    started = not rclpy.ok()
+    if started:
+        rclpy.init()
     yield
-    rclpy.shutdown()
+    if started and rclpy.ok():
+        rclpy.shutdown()
 
 
 @pytest.fixture
