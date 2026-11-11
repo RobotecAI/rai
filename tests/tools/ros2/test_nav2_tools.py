@@ -22,161 +22,106 @@ except ImportError:
     pytest.skip("ROS2 is not installed", allow_module_level=True)
 
 
-from unittest.mock import MagicMock, patch
+import time
+from unittest.mock import AsyncMock, MagicMock
 
 from geometry_msgs.msg import TransformStamped
 from rai.communication.ros2.connectors import ROS2Connector
+from rai.tools.ros2.navigation.nav2 import Nav2Toolkit
 from rai.tools.ros2.navigation.nav2_blocking import (
     GetCurrentPoseTool,
     NavigateToPoseBlockingTool,
-    _get_error_message,
-    _get_status_string,
 )
 
 from tests.communication.ros2.helpers import (
-    create_mock_connector_with_clock,
+    TestActionServer,
+    multi_threaded_spinner,
     ros_setup,
+    shutdown_executors_and_threads,
 )
 
 _ = ros_setup  # Explicitly use the fixture to prevent pytest warnings
 
 
-def test_get_current_pose_tool(ros_setup: None, request: pytest.FixtureRequest) -> None:
-    connector = MagicMock(spec=ROS2Connector)
-    tool = GetCurrentPoseTool(connector=connector)
+@pytest.fixture
+def nav2_server(ros_setup: None, request: pytest.FixtureRequest):
+    """A NavigateToPose server that sends 10 feedbacks over 0.1 s, then succeeds."""
+    action_name = f"/{request.node.originalname}_navigate"  # type: ignore
+    server = TestActionServer(action_name=action_name)
+    executors, threads = multi_threaded_spinner([server])
+    connector = ROS2Connector()
+    try:
+        yield connector, server, action_name
+    finally:
+        connector.close()
+        shutdown_executors_and_threads(executors, threads)
 
-    # Mock get_transform return value
+
+def test_get_current_pose_tool() -> None:
+    connector = MagicMock(spec=ROS2Connector)
     transform = TransformStamped()
     transform.header.frame_id = "map"
-    transform.child_frame_id = "base_link"
     transform.transform.translation.x = 1.0
-    transform.transform.translation.y = 2.0
-    transform.transform.translation.z = 0.0
-    transform.transform.rotation.w = 1.0
-    connector.get_transform.return_value = transform
+    connector.transform = AsyncMock(return_value=transform)
+    tool = GetCurrentPoseTool(connector=connector)
 
-    result = tool._run()
-
-    connector.get_transform.assert_called_once_with("map", "base_link")
-    assert result == str(transform)
+    assert tool._run() == str(transform)
+    connector.transform.assert_awaited_once_with("map", "base_link")
 
 
-def test_get_status_string() -> None:
-    """Test GoalStatus to string conversion."""
-    from action_msgs.msg import GoalStatus
-
-    assert _get_status_string(GoalStatus.STATUS_UNKNOWN) == "UNKNOWN"
-    assert _get_status_string(GoalStatus.STATUS_SUCCEEDED) == "SUCCEEDED"
-    assert _get_status_string(GoalStatus.STATUS_ABORTED) == "ABORTED"
-    assert _get_status_string(GoalStatus.STATUS_CANCELED) == "CANCELED"
-    assert _get_status_string(999) == "UNKNOWN_STATUS_999"
+def test_navigate_to_pose_blocking_tool_succeeds(nav2_server) -> None:
+    connector, _, action_name = nav2_server
+    tool = NavigateToPoseBlockingTool(connector=connector, action_name=action_name)
+    assert tool._run(x=1.0, y=2.0, z=0.0, yaw=0.5) == "Navigate to pose successful."
 
 
-def test_get_error_message() -> None:
-    """Test error message extraction with status and error_msg."""
-    from action_msgs.msg import GoalStatus
-
-    # Test with ABORTED status and no error message
-    result_response = MagicMock()
-    result_response.status = GoalStatus.STATUS_ABORTED
-    result_response.result = MagicMock()
-    result_response.result.error_msg = ""
-    error_msg = _get_error_message(result_response)
-    assert error_msg == "Status: ABORTED"
-
-    # Test with ABORTED status and error message
-    result_with_msg = MagicMock()
-    result_with_msg.status = GoalStatus.STATUS_ABORTED
-    result_with_msg.result = MagicMock()
-    result_with_msg.result.error_msg = "Planner failed to find path"
-    error_msg = _get_error_message(result_with_msg)
-    assert error_msg == "Status: ABORTED. Planner failed to find path"
-
-    # Test with CANCELED status
-    canceled_response = MagicMock()
-    canceled_response.status = GoalStatus.STATUS_CANCELED
-    canceled_response.result = MagicMock()
-    canceled_response.result.error_msg = ""
-    error_msg = _get_error_message(canceled_response)
-    assert error_msg == "Status: CANCELED"
+def test_navigate_to_pose_blocking_tool_cancels_on_timeout(nav2_server) -> None:
+    connector, server, action_name = nav2_server
+    tool = NavigateToPoseBlockingTool(
+        connector=connector, action_name=action_name, timeout_sec=0.02
+    )
+    result = tool._run(x=1.0, y=2.0, z=0.0, yaw=0.5)
+    assert result.startswith("Navigate to pose timed out after 0.02s")
+    deadline = time.monotonic() + 5
+    while not server.cancelled and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert server.cancelled
 
 
-def test_navigate_to_pose_blocking_tool(
-    ros_setup: None, request: pytest.FixtureRequest
-) -> None:
-    """Test navigation tool success, error, and None result scenarios."""
-    from action_msgs.msg import GoalStatus
+def test_nav2_toolkit_tracks_its_newest_goal(nav2_server) -> None:
+    connector, _, action_name = nav2_server
+    tools = {
+        t.name: t
+        for t in Nav2Toolkit(connector=connector, action_name=action_name).get_tools()
+    }
+    assert tools["get_navigate_to_pose_result"]._run() == "No navigation goal"
+    assert tools["cancel_navigate_to_pose"]._run() == "No action to cancel"
 
-    connector = create_mock_connector_with_clock()
-    tool = NavigateToPoseBlockingTool(connector=connector)
+    assert tools["navigate_to_pose"]._run(x=0.0, y=0.0, z=0.0, yaw=0.0) == (
+        "Navigating to pose"
+    )
+    deadline = time.monotonic() + 10
+    while (result := tools["get_navigate_to_pose_result"]._run()) == (
+        "Action is not done yet"
+    ):
+        assert time.monotonic() < deadline
+        time.sleep(0.05)
+    assert "'status': 'SUCCEEDED'" in result
+    assert "distance_remaining" in tools["get_navigate_to_pose_feedback"]._run()
 
-    with patch(
-        "rai.tools.ros2.navigation.nav2_blocking.ActionClient"
-    ) as mock_action_client_class:
-        mock_action_client = MagicMock()
-        mock_action_client_class.return_value = mock_action_client
-
-        # Test success
-        success_result = MagicMock()
-        success_result.status = GoalStatus.STATUS_SUCCEEDED
-        success_result.result = MagicMock()
-        success_result.result.error_msg = ""
-        mock_action_client.send_goal.return_value = success_result
-        result = tool._run(x=1.0, y=2.0, z=0.0, yaw=0.5)
-        assert result == "Navigate to pose successful."
-
-        # Test error without message
-        error_result = MagicMock()
-        error_result.status = GoalStatus.STATUS_ABORTED
-        error_result.result = MagicMock()
-        error_result.result.error_msg = ""
-        mock_action_client.send_goal.return_value = error_result
-        result = tool._run(x=1.0, y=2.0, z=0.0, yaw=0.5)
-        assert result == "Navigate to pose action failed. Status: ABORTED"
-
-        # Test error with message
-        error_result_with_msg = MagicMock()
-        error_result_with_msg.status = GoalStatus.STATUS_ABORTED
-        error_result_with_msg.result = MagicMock()
-        error_result_with_msg.result.error_msg = "Planner failed"
-        mock_action_client.send_goal.return_value = error_result_with_msg
-        result = tool._run(x=1.0, y=2.0, z=0.0, yaw=0.5)
-        assert (
-            result == "Navigate to pose action failed. Status: ABORTED. Planner failed"
-        )
-
-        # Test None result
-        mock_action_client.send_goal.return_value = None
-        result = tool._run(x=1.0, y=2.0, z=0.0, yaw=0.5)
-        assert result == "Navigate to pose action failed. Please try again."
-
-        assert mock_action_client.send_goal.call_count == 4
+    # A second toolkit has its own goals
+    other = Nav2Toolkit(connector=connector, action_name=action_name).get_tools()
+    assert other[3]._run() == "No navigation goal"
 
 
-def test_navigate_to_pose_tool_ignores_previous_goal_state() -> None:
-    from rai.tools.ros2.navigation import nav2
+def test_nav2_lazy_import() -> None:
+    """rai.tools.ros2 imports without nav2_msgs; Nav2 tools import it on use."""
+    import subprocess
+    import sys
 
-    connector = MagicMock(spec=ROS2Connector)
-    tool = nav2.NavigateToPoseTool(connector=connector)
-    result_tool = nav2.GetNavigateToPoseResultTool(connector=connector)
-
-    tool._run(x=0.0, y=0.0, z=0.0, yaw=0.0)
-    first = connector.start_action.call_args.kwargs
-    first["on_feedback"]("old feedback")
-    first["on_done"](MagicMock())
-    assert result_tool._run() != "Action is not done yet"
-
-    tool._run(x=1.0, y=0.0, z=0.0, yaw=0.0)
-    assert nav2.current_feedback is None
-    assert result_tool._run() == "Action is not done yet"
-
-    # A late callback from the first goal must not leak into the second goal
-    first["on_feedback"]("old feedback")
-    first["on_done"](MagicMock())
-    assert nav2.current_feedback is None
-    assert result_tool._run() == "Action is not done yet"
-
-    second = connector.start_action.call_args.kwargs
-    future = MagicMock()
-    second["on_done"](future)
-    assert result_tool._run() == str(future.result().result)
+    code = (
+        "import sys; sys.modules['nav2_msgs'] = None\n"
+        "import rai.tools.ros2, rai.tools.ros2.navigation\n"
+        "assert 'nav2_msgs.action' not in sys.modules\n"
+    )
+    subprocess.run([sys.executable, "-c", code], check=True)

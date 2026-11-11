@@ -26,6 +26,7 @@ except ImportError:
 
 from unittest.mock import MagicMock
 
+from langchain_core.tools import ToolException
 from pydantic import ValidationError
 from rai.communication.ros2.connectors import ROS2Connector
 from rai.tools.ros2.navigation.nav2 import Nav2Toolkit, NavigateToPoseTool
@@ -58,9 +59,9 @@ def bounded_tool(request, connector):
     ],
 )
 def test_goal_outside_bounds_is_refused(bounded_tool, x, y, z):
-    with pytest.raises(ValueError, match="Goal rejected"):
+    with pytest.raises(ToolException, match="Goal rejected"):
         bounded_tool._run(x=x, y=y, z=z, yaw=0.0)
-    bounded_tool.connector.start_action.assert_not_called()
+    bounded_tool.connector.send_goal.assert_not_called()
 
 
 def test_unbounded_tool_accepts_anything(connector):

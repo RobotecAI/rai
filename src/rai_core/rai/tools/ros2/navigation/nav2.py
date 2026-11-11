@@ -12,43 +12,54 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import base64
+"""Nav2 tools. nav2_msgs is imported on first use, so these tools import
+without Nav2 installed."""
+
 import time
-from functools import partial
-from typing import List, Optional, Type, cast
+from typing import Any, Dict, List, Tuple, cast
 
 import cv2
 import numpy as np
 from geometry_msgs.msg import Point, Quaternion, TransformStamped
 from langchain_core.tools import BaseTool
-from nav2_msgs.action import NavigateToPose
 from nav_msgs.msg import OccupancyGrid
 from pydantic import BaseModel, Field
-from rclpy.task import Future
 
-from rai.communication.ros2 import ROS2Message
-from rai.communication.ros2.connectors import ROS2Connector
-from rai.messages import MultimodalArtifact
-from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit
+from rai.communication.ros2 import ROS2Connector, encode_image
+from rai.tools.base import RaiTool
+from rai.tools.hooks import Effect
+from rai.tools.ros2.base import BaseROS2Tool, BaseROS2Toolkit, GoalRegistry, to_dict
 from rai.tools.ros2.navigation.bounds import WorkspaceBounds
 from rai.tools.ros2.navigation.geometry import quaternion_to_yaw, yaw_to_quaternion
 
-current_action_id: Optional[str] = None
-current_feedback: Optional[NavigateToPose.Feedback] = None
-# on_done receives the get_result future; its .result().result is NavigateToPose.Result
-current_result: Optional[Future] = None
-# Token of the newest goal; late callbacks from older goals are ignored
-current_goal: Optional[object] = None
+NAVIGATE_TO_POSE = "nav2_msgs/action/NavigateToPose"
+
+
+def navigate_to_pose_goal(
+    connector: ROS2Connector, frame_id: str, x: float, y: float, z: float, yaw: float
+) -> Any:
+    """A NavigateToPose goal for (x, y, z, yaw) in frame_id, stamped now."""
+    from nav2_msgs.action import NavigateToPose
+
+    goal = NavigateToPose.Goal()
+    goal.pose.header.frame_id = frame_id
+    goal.pose.header.stamp = connector.now().to_msg()
+    goal.pose.pose.position = Point(x=x, y=y, z=z)
+    goal.pose.pose.orientation = yaw_to_quaternion(yaw)
+    return goal
 
 
 class Nav2Toolkit(WorkspaceBounds, BaseROS2Toolkit):
-    connector: ROS2Connector
+    """Non-blocking navigation: start a goal, then poll, or cancel it. The tools
+    share the toolkit's goals; feedback, result and cancel act on the newest."""
+
     frame_id: str = Field(
         default="map", description="The frame id of the Nav2 stack (map, odom, etc.)"
     )
     action_name: str = Field(
         default="navigate_to_pose", description="The name of the NavigateToPose action"
     )
+    goals: GoalRegistry = Field(default_factory=GoalRegistry, exclude=True)
 
     def get_tools(self) -> List[BaseTool]:
         return [
@@ -58,10 +69,11 @@ class Nav2Toolkit(WorkspaceBounds, BaseROS2Toolkit):
                 action_name=self.action_name,
                 workspace_bounds_min=self.workspace_bounds_min,
                 workspace_bounds_max=self.workspace_bounds_max,
+                goals=self.goals,
             ),
-            CancelNavigateToPoseTool(connector=self.connector),
-            GetNavigateToPoseFeedbackTool(connector=self.connector),
-            GetNavigateToPoseResultTool(connector=self.connector),
+            CancelNavigateToPoseTool(goals=self.goals),
+            GetNavigateToPoseFeedbackTool(goals=self.goals),
+            GetNavigateToPoseResultTool(goals=self.goals),
         ]
 
 
@@ -81,10 +93,12 @@ class NavigateToPoseToolInput(BaseModel):
 
 
 class NavigateToPoseTool(WorkspaceBounds, BaseROS2Tool):
+    default_effect = Effect.ACTUATE
+    target_fields = {"action_name": "action"}
     name: str = "navigate_to_pose"
     description: str = "Navigate to a specific pose"
 
-    args_schema: Type[NavigateToPoseToolInput] = NavigateToPoseToolInput
+    args_schema: type[NavigateToPoseToolInput] = NavigateToPoseToolInput
 
     frame_id: str = Field(
         default="map", description="The frame id of the Nav2 stack (map, odom, etc.)"
@@ -92,90 +106,81 @@ class NavigateToPoseTool(WorkspaceBounds, BaseROS2Tool):
     action_name: str = Field(
         default="navigate_to_pose", description="The name of the NavigateToPose action"
     )
+    goals: GoalRegistry = Field(default_factory=GoalRegistry, exclude=True)
 
-    def on_feedback(self, goal: object, feedback: NavigateToPose.Feedback) -> None:
-        global current_feedback
-        if goal is current_goal:
-            current_feedback = feedback
-
-    def on_done(self, goal: object, result: Future) -> None:
-        global current_result
-        if goal is current_goal:
-            current_result = result
-
-    def _run(self, x: float, y: float, z: float, yaw: float) -> str:
+    async def _acall(self, x: float, y: float, z: float, yaw: float) -> str:
         self.reject_out_of_bounds(x, y, z)
-        q = yaw_to_quaternion(yaw)
-        goal = {
-            "pose": {
-                "header": {
-                    "frame_id": self.frame_id,
-                    "stamp": self.connector.now().to_msg(),
-                },
-                "pose": {
-                    "position": {"x": x, "y": y, "z": z},
-                    "orientation": {"x": q.x, "y": q.y, "z": q.z, "w": q.w},
-                },
-            }
-        }
-
-        global current_goal, current_feedback, current_result
-        current_goal = token = object()
-        current_feedback = None
-        current_result = None
-        msg = ROS2Message(payload=goal)
-        action_id = self.connector.start_action(
-            action_data=msg,
-            target=self.action_name,
-            msg_type="nav2_msgs/action/NavigateToPose",
-            on_feedback=partial(self.on_feedback, token),
-            on_done=partial(self.on_done, token),
+        goal = navigate_to_pose_goal(self.connector, self.frame_id, x, y, z, yaw)
+        self.goals.add(
+            await self.connector.send_goal(
+                self.action_name, goal, action_type=NAVIGATE_TO_POSE
+            )
         )
-        global current_action_id
-        current_action_id = action_id
-
         return "Navigating to pose"
 
 
-class GetNavigateToPoseFeedbackTool(BaseROS2Tool):
+class _CurrentGoalTool(RaiTool):
+    goals: GoalRegistry = Field(default_factory=GoalRegistry, exclude=True)
+
+    def call_targets(self, kwargs: Any) -> Tuple[str, ...]:
+        handle = self.goals.latest()
+        return (handle.action,) if handle else ()
+
+
+class GetNavigateToPoseFeedbackTool(_CurrentGoalTool):
+    default_effect = Effect.READ
     name: str = "get_navigate_to_pose_feedback"
-    description: str = "Get the feedback of the navigate to pose action"
+    description: str = "Get the latest feedback of the navigate to pose action"
 
-    def _run(self) -> str:
-        global current_feedback
-        return str(current_feedback)
+    async def _acall(self) -> str:
+        handle = self.goals.latest()
+        if handle is None:
+            return "No navigation goal"
+        feedback = handle.feedback()
+        return str(to_dict(feedback[-1])) if feedback else "No new feedback"
 
 
-class GetNavigateToPoseResultTool(BaseROS2Tool):
+class GetNavigateToPoseResultTool(_CurrentGoalTool):
+    default_effect = Effect.READ
     name: str = "get_navigate_to_pose_result"
     description: str = "Get the result of the navigate to pose action"
 
-    def _run(self) -> str:
-        global current_result
-        if current_result is None:
+    async def _acall(self) -> str:
+        handle = self.goals.latest()
+        if handle is None:
+            return "No navigation goal"
+        if not handle.done:
             return "Action is not done yet"
-        return str(current_result.result().result)
+        result = await handle.result(0)
+        return str({"status": handle.status.name, "result": to_dict(result)})
 
 
-class CancelNavigateToPoseTool(BaseROS2Tool):
+class CancelNavigateToPoseTool(_CurrentGoalTool):
+    default_effect = Effect.WRITE
     name: str = "cancel_navigate_to_pose"
     description: str = "Cancel the navigate to pose action"
 
-    def _run(self) -> str:
-        global current_action_id
-        if current_action_id is None:
+    async def _acall(self) -> str:
+        handle = self.goals.latest()
+        if handle is None or handle.done:
             return "No action to cancel"
-        self.connector.terminate_action(current_action_id)
-        return "Action cancelled"
+        if await handle.cancel():
+            return "Action cancelled"
+        return f"Action could not be cancelled (status: {handle.status.name})"
 
 
 class GetOccupancyGridTool(BaseROS2Tool):
-    """Get the current map as an image with the robot's position marked on it (red dot)."""
+    """Get the current map as an image with the robot's position marked on it (red arrow)."""
 
+    default_effect = Effect.READ
+    target_fields = {"map_topic": "topic"}
     name: str = "GetOccupancyGridTool"
     description: str = "A tool for getting the current map as an image with the robot's position marked on it."
 
     response_format: str = "content_and_artifact"
+    map_topic: str = "/map"
+    map_frame: str = "map"
+    robot_frame: str = "base_link"
     image_width: int = 1500
     debug: bool = False
 
@@ -225,7 +230,7 @@ class GetOccupancyGridTool(BaseROS2Tool):
             arrow_end_x = int(robot_x + arrow_length * np.cos(yaw))
             arrow_end_y = int(robot_y + arrow_length * np.sin(yaw))
             cv2.arrowedLine(
-                image, (robot_x, robot_y), (arrow_end_x, arrow_end_y), (0, 0, 255), 5
+                image, (robot_x, robot_y), (arrow_end_x, arrow_end_y), (255, 0, 0), 5
             )
 
         image = cv2.flip(image, 1)
@@ -247,7 +252,7 @@ class GetOccupancyGridTool(BaseROS2Tool):
                 org=(x, 30),
                 fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                 fontScale=1.5,
-                color=(0, 0, 255),
+                color=(255, 0, 0),
                 thickness=2,
                 lineType=cv2.LINE_AA,
             )
@@ -265,28 +270,19 @@ class GetOccupancyGridTool(BaseROS2Tool):
                 org=(15, y + 35),
                 fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                 fontScale=1.5,
-                color=(0, 0, 255),
+                color=(255, 0, 0),
                 thickness=2,
                 lineType=cv2.LINE_AA,
             )
-        # Encode into PNG base64
-        _, buffer = cv2.imencode(".png", image)
-
         if self.debug:
-            cv2.imwrite(f"map{time.time()}.png", image)
-        return base64.b64encode(buffer.tobytes()).decode("utf-8")
+            cv2.imwrite(f"map{time.time()}.png", cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+        return encode_image(image, format="png", max_side=self.image_width)
 
-    def _run(self):
-        """Gets the current map from the specified topic."""
-        map_msg = self.connector.receive_message("/map", timeout_sec=10).payload
-        transform = self.connector.get_transform(
-            target_frame="map", source_frame="base_link", timeout_sec=10
+    async def _acall(self) -> Tuple[str, Dict[str, List[str]]]:
+        """Gets the current map from the map topic."""
+        map_msg = await self.connector.receive(self.map_topic, timeout=10)
+        transform = await self.connector.transform(
+            self.map_frame, self.robot_frame, timeout=10
         )
-
-        if map_msg is None or transform is None:
-            return {"content": "Failed to get the map, wrong topic?"}
-
-        base64_image = self._postprocess_msg(map_msg, transform)
-        return "Map grabbed successfully", MultimodalArtifact(
-            images=[base64_image], audios=[]
-        )
+        image = self._postprocess_msg(map_msg, transform)
+        return "Map grabbed successfully", {"images": [image]}
