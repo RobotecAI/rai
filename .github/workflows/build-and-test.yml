@@ -23,7 +23,6 @@ jobs:
 
     runs-on: ubuntu-24.04
 
-    continue-on-error: true
     timeout-minutes: 45
 
     strategy:
